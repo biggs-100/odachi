@@ -31,6 +31,18 @@ func (osFiles) Exists(path string) (bool, error) {
 	}
 }
 
+func (osFiles) IsDir(path string) (bool, error) {
+	info, err := os.Stat(path)
+	switch {
+	case err == nil:
+		return info.IsDir(), nil
+	case os.IsNotExist(err):
+		return false, nil
+	default:
+		return false, err
+	}
+}
+
 func (osFiles) Read(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }

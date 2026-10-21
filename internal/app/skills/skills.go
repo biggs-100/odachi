@@ -39,6 +39,12 @@ type Options struct {
 // Files is the disk port: enough to read every skill and replace the registry.
 type Files interface {
 	Exists(path string) (bool, error)
+	// IsDir decides what a listed entry is. It is a question about the entry, not
+	// about the error a stat returns for its children: POSIX says ENOTDIR where
+	// Windows says the path does not exist, and inferring "not a skill" from
+	// that difference makes the same code pass on one platform and fail on the
+	// other.
+	IsDir(path string) (bool, error)
 	List(dir string) ([]string, error)
 	Read(path string) ([]byte, error)
 	Write(path string, data []byte) error
@@ -238,8 +244,19 @@ func load(root string, files Files) ([]skill.Skill, error) {
 	loaded := make([]skill.Skill, 0, len(names))
 	for _, name := range names {
 		rel := Dir + "/" + name + "/" + SkillFile
-		path := filepath.Join(root, Dir, name, SkillFile)
+		dirPath := filepath.Join(root, Dir, name)
 
+		isDir, err := files.IsDir(dirPath)
+		if err != nil {
+			return nil, fmt.Errorf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi skills", rel, oneLine(err.Error()))
+		}
+		if !isDir {
+			// A file here is not a skill and not an error: skills/embed.go lives
+			// next to the skill directories on purpose.
+			continue
+		}
+
+		path := filepath.Join(root, Dir, name, SkillFile)
 		exists, err := files.Exists(path)
 		if err != nil {
 			return nil, fmt.Errorf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi skills", rel, oneLine(err.Error()))

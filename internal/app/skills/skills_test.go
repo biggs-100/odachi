@@ -42,9 +42,34 @@ func (f *fakeFiles) get(path string) (string, bool) {
 }
 
 func (f *fakeFiles) Exists(path string) (bool, error) {
+	// A path whose ancestor is a file is not a missing file: on POSIX it is
+	// ENOTDIR. The fake models that on purpose, because treating the two as the
+	// same is exactly the cross-platform bug that let a green Windows run hide a
+	// red Linux one.
+	for parent := filepath.Dir(path); ; parent = filepath.Dir(parent) {
+		if _, ok := f.files[parent]; ok {
+			return false, fmt.Errorf("stat %s: not a directory", path)
+		}
+		if next := filepath.Dir(parent); next == parent {
+			break
+		}
+	}
+
 	if _, ok := f.files[path]; ok {
 		return true, nil
 	}
+	prefix := path + string(filepath.Separator)
+	for file := range f.files {
+		if strings.HasPrefix(file, prefix) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// IsDir reports whether path is a directory in the fake: it is one when a file
+// lives under it.
+func (f *fakeFiles) IsDir(path string) (bool, error) {
 	prefix := path + string(filepath.Separator)
 	for file := range f.files {
 		if strings.HasPrefix(file, prefix) {
