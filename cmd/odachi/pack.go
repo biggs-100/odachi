@@ -13,10 +13,12 @@ import (
 )
 
 // runPack parses the flags and wires the three pieces: the skills embedded in
-// the binary, the Files adapter and the Home adapter. `pack` has no project
-// directory: it installs into the agents' directories and never into the
-// project's skills/, which belongs to `odachi skills`.
-func runPack(args []string, stdout, stderr io.Writer) int {
+// the binary, the Files adapter and the Home adapter. `pack` takes the project
+// directory because a project-scoped agent — opencode — reads its skills from
+// inside the project; a home-scoped one still resolves against the home, and the
+// project's `skills/` and `SKILLS.md` are never touched (those belong to
+// `odachi skills`).
+func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("odachi pack", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
@@ -54,7 +56,7 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 		payload = append(payload, pack.Skill{Name: s.Name, Content: s.Content})
 	}
 
-	return reportPack(pack.Run(pack.Options{Agents: agents, DryRun: dryRun, Skills: payload}, osFiles{}, osHome{}), asJSON, stdout, stderr)
+	return reportPack(pack.Run(pack.Options{Agents: agents, DryRun: dryRun, Dir: dir, Skills: payload}, osFiles{}, osHome{}), asJSON, stdout, stderr)
 }
 
 // packAgent is one row of the machine report: the same numbers the summary line
@@ -62,6 +64,7 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 type packAgent struct {
 	Name      string   `json:"name"`
 	Dest      string   `json:"dest"`
+	Scope     string   `json:"scope"`
 	Installed int      `json:"installed"`
 	BackedUp  int      `json:"backed_up"`
 	Unchanged int      `json:"unchanged"`
@@ -84,6 +87,7 @@ func reportPack(result pack.Result, asJSON bool, stdout, stderr io.Writer) int {
 			agents = append(agents, packAgent{
 				Name:      a.Name,
 				Dest:      a.Dest,
+				Scope:     a.Scope,
 				Installed: a.Installed,
 				BackedUp:  a.BackedUp,
 				Unchanged: a.Unchanged,

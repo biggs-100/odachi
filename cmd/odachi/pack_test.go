@@ -253,6 +253,137 @@ func TestPackTwoAgents(t *testing.T) {
 	}
 }
 
+// agentProjectFile is where a project-scoped agent reads one skill: the project
+// root joined with the table's destination.
+func agentProjectFile(t *testing.T, project, agentName, skill string) string {
+	t.Helper()
+	a, err := agent.Resolve(agentName)
+	if err != nil {
+		t.Fatalf("Resolve(%q): %v", agentName, err)
+	}
+	if a.Scope != agent.ScopeProject {
+		t.Fatalf("%s is not project-scoped", agentName)
+	}
+	return filepath.Join(project, filepath.FromSlash(a.Dest), skill, "SKILL.md")
+}
+
+// TestPackOpenCodeWritesIntoTheProject: the project path is the one OpenCode
+// reads, so it is the one `pack` writes — and the home stays byte-for-byte
+// empty, which is the half of the promise a home-based test could not show.
+func TestPackOpenCodeWritesIntoTheProject(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+
+	code, out, errOut := runDir(t, project, []string{"pack", "--agents", "opencode"}, "")
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+	for _, name := range bundled {
+		got, err := os.ReadFile(agentProjectFile(t, project, "opencode", name))
+		if err != nil {
+			t.Errorf("%s was not installed in the project: %v", name, err)
+			continue
+		}
+		if string(got) != string(repoSkill(t, name)) {
+			t.Errorf("%s differs from skills/%s/SKILL.md", name, name)
+		}
+	}
+	if files := walkNames(t, home); len(files) != 0 {
+		t.Errorf("the home was touched: %v", files)
+	}
+	if !strings.Contains(out, "opencode · 5 instaladas · ./.opencode/skills") {
+		t.Errorf("stdout lacks the project-relative summary line:\n%s", out)
+	}
+	if strings.Contains(out, project) || strings.Contains(out, home) {
+		t.Errorf("stdout prints an absolute path:\n%s", out)
+	}
+}
+
+// TestPackOpenCodeSecondRunIsIdentical: the write rule does not change with the
+// scope — a repeated run says `sin cambios` and leaves no backup behind.
+func TestPackOpenCodeSecondRunIsIdentical(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+
+	if code, _, errOut := runDir(t, project, []string{"pack", "--agents", "opencode"}, ""); code != 0 {
+		t.Fatalf("first run code = %d (stderr %q)", code, errOut)
+	}
+	before := walkNames(t, project)
+
+	code, out, errOut := runDir(t, project, []string{"pack", "--agents", "opencode"}, "")
+	if code != 0 {
+		t.Fatalf("second run code = %d (stderr %q)", code, errOut)
+	}
+	if !strings.Contains(out, "opencode · 5 sin cambios · ./.opencode/skills") {
+		t.Errorf("the second run does not report sin cambios:\n%s", out)
+	}
+	after := walkNames(t, project)
+	if len(after) != len(before) {
+		t.Errorf("the second run changed the tree: before %d files, after %d", len(before), len(after))
+	}
+	for path, content := range before {
+		if after[path] != content {
+			t.Errorf("%s changed on an identical run", path)
+		}
+		if strings.Contains(path, ".bak-") {
+			t.Errorf("an identical run left a backup: %s", path)
+		}
+	}
+}
+
+// TestPackOpenCodeWorksWithoutTheDirectory: naming the agent is enough even when
+// `.opencode/` does not exist yet — that directory is what this command is
+// creating.
+func TestPackOpenCodeWorksWithoutTheDirectory(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+
+	if _, err := os.Stat(filepath.Join(project, ".opencode")); !os.IsNotExist(err) {
+		t.Fatalf(".opencode already exists in the project: %v", err)
+	}
+
+	code, out, errOut := runDir(t, project, []string{"pack", "--agents", "opencode"}, "")
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+	for _, name := range bundled {
+		if _, err := os.Stat(agentProjectFile(t, project, "opencode", name)); err != nil {
+			t.Errorf("%s was not installed: %v", name, err)
+		}
+	}
+}
+
+// TestPackDetectsOpenCodeInTheProject: with no --agents, `.opencode/` in the
+// project is the signal, and the home is still untouched.
+func TestPackDetectsOpenCodeInTheProject(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(project, ".opencode"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	code, out, errOut := runDir(t, project, []string{"pack"}, "")
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+	if !strings.Contains(out, "opencode · 5 instaladas · ./.opencode/skills") {
+		t.Errorf("the detected agent was not served:\n%s", out)
+	}
+	if _, err := os.Stat(agentProjectFile(t, project, "opencode", "acceptance")); err != nil {
+		t.Errorf("skills were not installed: %v", err)
+	}
+	if files := walkNames(t, home); len(files) != 0 {
+		t.Errorf("detection wrote into the home: %v", files)
+	}
+}
+
 // TestPackJSON is the machine shape: the same numbers the summary line shows.
 func TestPackJSON(t *testing.T) {
 	home := t.TempDir()

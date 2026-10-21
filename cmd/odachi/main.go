@@ -86,7 +86,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 	case "skill":
 		return runSkill(dir, args[1:], stdout, stderr)
 	case "pack":
-		return runPack(args[1:], stdout, stderr)
+		return runPack(dir, args[1:], stdout, stderr)
 	case "version":
 		// Reached only with arguments: `odachi version` alone was answered above.
 		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])

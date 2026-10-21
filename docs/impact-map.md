@@ -62,14 +62,17 @@ repository, and an agent only loads what is in its own skills directory.
 | What | Where | How it is verified |
 | --- | --- | --- |
 | Source | The five `skills/<name>/SKILL.md` files compiled into the binary with `//go:embed */SKILL.md`, in the `skills` package. No network, no repository at run time, no duplicated copy | `skills/embed_test.go` compares the embedded bytes with the files on disk |
-| Destination table | `internal/domain/agent`: `claude .claude/skills`, `codex .codex/skills`, `cursor .cursor/skills`, `gemini .gemini/skills`, `copilot .copilot/skills`, `qwen .qwen/skills`, `kiro .kiro/skills`, all home-relative. It is data, not branches of code, because every path was verified against the agent's adapter | `internal/domain/agent/agent_test.go` pins every row, `Display()` and `Marker()` |
-| Refusals | `pi` is refused with `Pi no usa un directorio de skills` (its adapter reports none); `opencode` is refused because its path depends on the platform and is not guessed; any other name is refused naming the supported ones | `agent_test.go`, `internal/app/pack/pack_test.go`, `cmd/odachi/pack_test.go` |
-| Write rule | `<home>/<dest>/<name>/SKILL.md` through `fsx.WriteAtomic`; an existing file that differs is backed up first; an identical one is reported as `sin cambios` and not rewritten | `pack_test.go` (second run: no write, no backup; edited file: backup before write) and the end-to-end run |
+| Destination table | `internal/domain/agent`: `claude .claude/skills`, `codex .codex/skills`, `cursor .cursor/skills`, `gemini .gemini/skills`, `copilot .copilot/skills`, `qwen .qwen/skills`, `kiro .kiro/skills`, all home-scoped, plus `opencode .opencode/skills`, the only project-scoped row. It is data, not branches of code, because every path was verified against the agent's documentation or source | `internal/domain/agent/agent_test.go` pins every row, its scope, `Display()` and `Marker()` |
+| Scopes | A `home` agent resolves its destination against the human's home; a `project` agent (`opencode`) against the project directory the verb runs in. OpenCode reads `{skill,skills}/**/SKILL.md` relative to the project, so this path has no platform-dependent shape; the global `~/.config/opencode/skills` exists but is not the one installed | `TestOpenCodeIsProjectScoped`, `TestOnlyOpenCodeIsProjectScoped`, `TestOpenCodeInstallsIntoTheProject`, `TestOnlyTheProjectAgentWritesIntoTheProject` |
+| Refusals | `pi` is refused with `Pi no usa un directorio de skills` (its adapter reports none); any other name is refused naming the supported ones, opencode included | `agent_test.go`, `internal/app/pack/pack_test.go`, `cmd/odachi/pack_test.go` |
+| Write rule | `<root>/<dest>/<name>/SKILL.md` through `fsx.WriteAtomic`; an existing file that differs is backed up first; an identical one is reported as `sin cambios` and not rewritten | `pack_test.go` (second run: no write, no backup; edited file: backup before write; opencode: same rule in the project), `TestPackOpenCodeSecondRunIsIdentical` |
 | Never deletes | Nothing is deleted or moved; a `SKILL.md` odachi did not write is reported with its path and left alone | `TestForeignFileIsReportedAndNotTouched` |
 | Failure isolation | One agent's failure does not abort the others, and the message names the agent and the path | `TestOneFailureDoesNotAbortTheOthers` |
 | `--dry-run` | Zero writes and zero backups, asserted on the double, never on the output; the report still lists the plan and says `por instalar` | `TestDryRunTouchesNothing` |
-| Project untouched | `pack` never reads or writes the project's `skills/` or `SKILLS.md`: those belong to `odachi skills --write` | `TestPackDoesNotTouchTheProject` |
-| Home | The new `Home` port resolves the home; `internal/app/pack` imports no `os`, so every write goes through the `Files` double in tests and through `osFiles` in the binary | `internal/app/pack/pack_test.go` (in-memory `Files` + `Home` doubles), `osHome` in `cmd/odachi/files.go` |
+| Detection | With no `--agents`: a home agent is here when its config directory exists in the home, a project agent when `.opencode/` exists in the project. Nothing detected exits `0` naming `--agents` | `TestDetectsInstalledAgents`, `TestDetectsOpenCodeInTheProject`, `TestPackDetectsOpenCodeInTheProject` |
+| Display | `~/.claude/skills` for a home agent, `./.opencode/skills` for a project one; an absolute path is never printed, and the JSON carries `dest` and `scope` separately | `TestOpenCodeInstallsIntoTheProject`, `TestPackOpenCodeWritesIntoTheProject` |
+| Project untouched | `pack` never reads or writes the project's `skills/` or `SKILLS.md`: those belong to `odachi skills --write`. A project-scoped agent writes inside `.opencode/skills` | `TestPackDoesNotTouchTheProject`, `TestOnlyTheProjectAgentWritesIntoTheProject` |
+| Home | The `Home` port resolves the home, and it is asked for only when a home-scoped agent is being served (or when detecting). `internal/app/pack` imports no `os`, so every write goes through the `Files` double in tests and through `osFiles` in the binary | `internal/app/pack/pack_test.go` (in-memory `Files` + `Home` doubles), `TestProjectAgentDoesNotNeedAHome`, `osHome` in `cmd/odachi/files.go` |
 
 ## Plan (T15)
 
@@ -132,13 +135,14 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
 - `init` writes the rules block between `<!-- odachi:begin -->` and
   `<!-- odachi:end -->` and the `.git/hooks/pre-commit` hook. It never replaces a
   hook it did not write: it prints the three lines to paste and exits `1`.
-- `pack` installs the bundled skills into the agents' own directories and takes
-  no project directory at all. Without `--agents` it serves the agents whose
-  config directory (`~/.claude`, `~/.codex`, ...) exists; when none does, it exits
-  `0` with one line naming `--agents`. A refused agent (`pi`, `opencode`, an
-  invented name) exits `1` and writes nothing, so a typo never leaves half a
-  payload installed. The summary is one line per agent, and it is the only
-  surface that prints a home-relative path.
+- `pack` installs the bundled skills into the agents' own directories: the home
+  for the seven home-scoped agents, the project (`.opencode/skills`) for
+  opencode. Without `--agents` it serves the agents detected here — their config
+  directory in the home, or `.opencode/` in the project; when none is detected it
+  exits `0` with one line naming `--agents`. A refused agent (`pi`, an invented
+  name) exits `1` and writes nothing, so a typo never leaves half a payload
+  installed. The summary is one line per agent, and it is the only surface that
+  prints a relative path: `~/...` for the home, `./...` for the project.
 - `skills` is the only verb that writes a generated file: `--write` regenerates
   `SKILLS.md` from the frontmatter and `skill new` runs the same writer, so the
   registry and the skills cannot disagree. `--check` exits `1` with one Spanish

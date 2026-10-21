@@ -60,6 +60,41 @@ el código.
 
 Ejemplos completos en `testdata/examples/`.
 
+## Las skills, en tu agente
+
+`odachi pack` copia las cinco skills incluidas en el binario al lugar donde tu
+agente las busca. Los soportados:
+
+| Agente | `--agents` | Destino |
+| --- | --- | --- |
+| Claude Code | `claude` | `~/.claude/skills` |
+| Codex | `codex` | `~/.codex/skills` |
+| Cursor | `cursor` | `~/.cursor/skills` |
+| Gemini | `gemini` | `~/.gemini/skills` |
+| Copilot | `copilot` | `~/.copilot/skills` |
+| Qwen | `qwen` | `~/.qwen/skills` |
+| Kiro | `kiro` | `~/.kiro/skills` |
+| **OpenCode** | `opencode` | `./.opencode/skills` (en el proyecto) |
+
+Sin `--agents` instala en los agentes que detecta: los que tienen su carpeta de
+configuración en tu home, y OpenCode si el proyecto tiene `.opencode/`. Nunca
+borra nada, respalda lo que difiere y no repite lo que ya está igual.
+
+### Probar odachi con OpenCode
+
+```sh
+mkdir mi-proyecto && cd mi-proyecto
+odachi init                   # reglas del proyecto en AGENTS.md + hook pre-commit
+odachi pack --agents opencode # las cinco skills en ./.opencode/skills/
+odachi start                  # la entrevista: brief.md, cerco y primer task doc
+odachi check                  # te dice si falta algo y cómo destrabarlo
+```
+
+Después de `pack`, abrí el proyecto con OpenCode: las skills están en
+`.opencode/skills/<nombre>/SKILL.md`, que es donde las busca. `pack --agents
+opencode` funciona igual en un proyecto que todavía no tiene `.opencode/`;
+esa carpeta la crea el comando.
+
 ## Estado
 
 Dominio puro en `internal/domain/...` con guardia de importaciones, adaptadores en
