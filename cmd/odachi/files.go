@@ -62,8 +62,9 @@ func (osFiles) Write(path string, data []byte) error {
 
 // loadProfile reads .odachi/profile.toml when it exists. The human owns that
 // file: it wins over inference, and a malformed one blocks with a sentence
-// instead of being silently replaced.
-func loadProfile(dir string) (*profile.Profile, int, string) {
+// instead of being silently replaced. The verb is the command the human has to
+// run again, so the message never sends them to the wrong one.
+func loadProfile(dir, verb string) (*profile.Profile, int, string) {
 	rel := filepath.Join(".odachi", "profile.toml")
 	path := filepath.Join(dir, rel)
 
@@ -71,16 +72,16 @@ func loadProfile(dir string) (*profile.Profile, int, string) {
 		if os.IsNotExist(err) {
 			return nil, start.CodeOK, ""
 		}
-		return nil, start.CodeBlocked, "no pude revisar " + rel + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"
+		return nil, start.CodeBlocked, "no pude revisar " + rel + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr " + verb
 	}
 
 	loaded, err := profiletoml.Load(path)
 	if err != nil {
-		return nil, start.CodeBlocked, "no pude leer " + rel + ": " + oneLine(err.Error()) + "; corregí el archivo y volvé a correr odachi start"
+		return nil, start.CodeBlocked, "no pude leer " + rel + ": " + oneLine(err.Error()) + "; corregí el archivo y volvé a correr " + verb
 	}
 	if strings.TrimSpace(loaded.Name) == "" {
 		return nil, start.CodeBlocked, fmt.Sprintf(
-			`el perfil %s no dice name; agregá name = "novato" (o "senior", "ci") y volvé a correr odachi start`, rel)
+			`el perfil %s no dice name; agregá name = "novato" (o "senior", "ci") y volvé a correr %s`, rel, verb)
 	}
 
 	// The human's file overrides the built-in profile of the same name, but a
@@ -91,7 +92,34 @@ func loadProfile(dir string) (*profile.Profile, int, string) {
 
 	resolved, err := profile.Resolve(known, loaded.Name)
 	if err != nil {
-		return nil, start.CodeBlocked, "no pude resolver el perfil de " + rel + ": " + oneLine(err.Error()) + "; corregí el archivo y volvé a correr odachi start"
+		return nil, start.CodeBlocked, "no pude resolver el perfil de " + rel + ": " + oneLine(err.Error()) + "; corregí el archivo y volvé a correr " + verb
+	}
+	return &resolved, start.CodeOK, ""
+}
+
+// currentProfile is the profile in force for a verb that does not ask anything:
+// the human's file when there is one, otherwise what `odachi start` would have
+// inferred from what the tool can see.
+func currentProfile(dir, verb string, machine bool) (*profile.Profile, int, string) {
+	loaded, code, message := loadProfile(dir, verb)
+	if code != start.CodeOK || loaded != nil {
+		return loaded, code, message
+	}
+
+	files := osFiles{}
+	hasBrief, err := files.Exists(filepath.Join(dir, "brief.md"))
+	if err != nil {
+		return nil, start.CodeBlocked, "no pude revisar brief.md: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr " + verb
+	}
+	hasRepo, err := files.Exists(filepath.Join(dir, ".git"))
+	if err != nil {
+		return nil, start.CodeBlocked, "no pude revisar el repositorio: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr " + verb
+	}
+
+	name := profile.Infer(profile.Facts{HasBrief: hasBrief, HasRepo: hasRepo, Machine: machine})
+	resolved, err := profile.Resolve(profile.Builtin(), name)
+	if err != nil {
+		return nil, start.CodeBlocked, "no pude resolver el perfil " + name + ": " + oneLine(err.Error()) + "; volvé a correr " + verb
 	}
 	return &resolved, start.CodeOK, ""
 }

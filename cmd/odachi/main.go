@@ -12,7 +12,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/biggz/odachi/internal/app/ask"
+	"github.com/biggz/odachi/internal/app/level"
 	"github.com/biggz/odachi/internal/app/start"
+	"github.com/biggz/odachi/internal/app/summary"
 )
 
 func main() {
@@ -40,8 +43,14 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 	switch args[0] {
 	case "start":
 		return runStart(dir, args[1:], stdin, stdout, stderr)
+	case "ask":
+		return runAsk(dir, args[1:], stdout, stderr)
+	case "level":
+		return runLevel(dir, args[1:], stdin, stdout, stderr)
+	case "summary":
+		return runSummary(dir, args[1:], stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (por ejemplo odachi start)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -97,7 +106,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	// flags or exits 2 naming them.
 	opts.Machine = asJSON || !isTerminal(stdin)
 
-	loaded, code, message := loadProfile(dir)
+	loaded, code, message := loadProfile(dir, "odachi start")
 	if code != start.CodeOK {
 		return report(start.Result{Code: code, Message: message}, asJSON, stdout, stderr)
 	}
@@ -111,25 +120,182 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	return report(start.Run(opts, interview, osFiles{}), asJSON, stdout, stderr)
 }
 
-// report prints the result and returns the exit code. Machine output is JSON;
-// human output is one line, on stderr when the run is blocked.
+// runAsk parses the flags, wires the Files adapter and reports the result.
+func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi ask", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		opts   ask.Options
+		asJSON bool
+	)
+
+	flags.StringVar(&opts.Answer, "answer", "", "respuesta del humano a una pregunta abierta")
+	flags.StringVar(&opts.For, "for", "", "P<n> de la pregunta que se contesta (obligatorio si hay dos o más abiertas)")
+	flags.StringVar(&opts.Craft, "craft", "", "decisión que el agente tomó sin preguntar")
+	flags.StringVar(&opts.Because, "because", "", "por qué el agente tomó esa decisión (obligatorio con --craft)")
+	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+
+	// The documented shape starts with the question, so a leading argument is
+	// the question and the flags may come after it.
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		opts.Question = args[0]
+		args = args[1:]
+	}
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi ask -h para ver los flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi ask toma una sola pregunta entre comillas\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	opts.Dir = dir
+	return reportAsk(ask.Run(opts, osFiles{}), asJSON, stdout, stderr)
+}
+
+// runLevel parses the flags, reads the profile in force and reports the result.
+func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi level", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		to     string
+		asJSON bool
+	)
+
+	flags.StringVar(&to, "to", "", "perfil a aplicar: se respalda .odachi/profile.toml y se reescribe")
+	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi level -h para ver los flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi level solo toma flags (corré odachi level -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	current, code, message := currentProfile(dir, "odachi level", asJSON || !isTerminal(stdin))
+	if code != start.CodeOK {
+		return reportLevel(level.Result{Code: code, Message: message}, asJSON, stdout, stderr)
+	}
+
+	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to}, osFiles{}), asJSON, stdout, stderr)
+}
+
+// runSummary parses the flags and prints the derived report.
+func runSummary(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi summary", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var asJSON bool
+	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi summary -h para ver los flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi summary no toma argumentos (corré odachi summary -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	return reportSummary(summary.Run(summary.Options{Dir: dir}, osFiles{}), asJSON, stdout, stderr)
+}
+
+// outcome is what every verb hands the printer: one line for a human, or JSON
+// for a machine. start, ask, level and summary all return this shape.
+type outcome struct {
+	Code    int
+	Message string
+	Lines   []string
+	Profile string
+	Task    string
+	Files   []string
+}
+
+// report prints the result of `odachi start`.
 func report(result start.Result, asJSON bool, stdout, stderr io.Writer) int {
+	return reportOutcome(outcome{
+		Code:    result.Code,
+		Message: result.Message,
+		Profile: result.Profile,
+		Task:    result.Task,
+		Files:   result.Files,
+	}, asJSON, stdout, stderr)
+}
+
+// reportAsk prints the result of `odachi ask`.
+func reportAsk(result ask.Result, asJSON bool, stdout, stderr io.Writer) int {
+	return reportOutcome(outcome{
+		Code:    result.Code,
+		Message: result.Message,
+		Lines:   result.Lines,
+		Task:    result.Task,
+		Files:   result.Files,
+	}, asJSON, stdout, stderr)
+}
+
+// reportLevel prints the result of `odachi level`.
+func reportLevel(result level.Result, asJSON bool, stdout, stderr io.Writer) int {
+	return reportOutcome(outcome{
+		Code:    result.Code,
+		Message: result.Message,
+		Lines:   result.Lines,
+		Profile: result.Profile,
+		Task:    result.Task,
+		Files:   result.Files,
+	}, asJSON, stdout, stderr)
+}
+
+// reportSummary prints the result of `odachi summary`.
+func reportSummary(result summary.Result, asJSON bool, stdout, stderr io.Writer) int {
+	return reportOutcome(outcome{
+		Code:    result.Code,
+		Message: result.Message,
+		Lines:   result.Lines,
+		Task:    result.Task,
+		Files:   result.Files,
+	}, asJSON, stdout, stderr)
+}
+
+// reportOutcome prints the result and returns the exit code. Machine output is
+// JSON; human output is the block the verb built, on stderr when the run is
+// blocked.
+func reportOutcome(o outcome, asJSON bool, stdout, stderr io.Writer) int {
 	if asJSON {
-		files := result.Files
+		files := o.Files
 		if files == nil {
 			files = []string{}
 		}
 		payload := struct {
 			Code    int      `json:"code"`
 			Message string   `json:"message"`
+			Lines   []string `json:"lines,omitempty"`
 			Profile string   `json:"profile,omitempty"`
 			Task    string   `json:"task,omitempty"`
 			Files   []string `json:"files"`
 		}{
-			Code:    result.Code,
-			Message: result.Message,
-			Profile: result.Profile,
-			Task:    result.Task,
+			Code:    o.Code,
+			Message: o.Message,
+			Lines:   o.Lines,
+			Profile: o.Profile,
+			Task:    o.Task,
 			Files:   files,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
@@ -138,15 +304,26 @@ func report(result start.Result, asJSON bool, stdout, stderr io.Writer) int {
 			return start.CodeBlocked
 		}
 		fmt.Fprintln(stdout, string(data))
-		return result.Code
+		return o.Code
 	}
 
-	if result.Code == start.CodeOK {
-		fmt.Fprintln(stdout, result.Message)
-	} else {
-		fmt.Fprintln(stderr, "odachi: "+result.Message)
+	if o.Code == start.CodeOK {
+		for _, line := range humanLines(o) {
+			fmt.Fprintln(stdout, line)
+		}
+		return o.Code
 	}
-	return result.Code
+	fmt.Fprintln(stderr, "odachi: "+o.Message)
+	return o.Code
+}
+
+// humanLines is the block a human reads: whatever the verb listed, or the one
+// line it reported when the verb has no block.
+func humanLines(o outcome) []string {
+	if len(o.Lines) > 0 {
+		return o.Lines
+	}
+	return []string{o.Message}
 }
 
 // usage is the Spanish help a human reads with `odachi start -h`.
@@ -156,6 +333,11 @@ func usage(out io.Writer) {
 uso:
   odachi                      lo mismo que odachi start
   odachi start [flags]
+  odachi ask "<pregunta>"
+  odachi ask --answer "<respuesta>" [--for P1]
+  odachi ask --craft "<decisión>" --because "<razón>"
+  odachi level [--to <perfil>]
+  odachi summary
 
 flags:
   --outcome s     respuesta 1: qué tiene que existir cuando terminemos
@@ -168,6 +350,14 @@ flags:
   --brief path    leer un brief existente en vez de preguntar
   --force         reescribir un brief.md existente (se respalda primero)
   --json          salida para máquinas
+
+después de start:
+  odachi ask "<pregunta>"                       anotar una pregunta abierta
+  odachi ask --answer "<respuesta>" [--for P1]  anotar tu respuesta
+  odachi ask --craft "<decisión>" --because "<razón>"  anotar una decisión del agente
+  odachi level                                  ver tus hechos; propone senior cuando se gana
+  odachi level --to <perfil>                    aplicar un perfil (se respalda el anterior)
+  odachi summary                                qué hay hecho en cada feature
 
 códigos de salida: 0 artefactos escritos · 1 bloqueado · 2 falta una respuesta humana
 `)
