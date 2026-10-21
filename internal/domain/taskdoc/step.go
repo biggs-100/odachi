@@ -1,0 +1,112 @@
+package taskdoc
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode/utf8"
+)
+
+// MaxStepText is the longest text a new step may carry, in characters. A step
+// is one short line the human can read in the document; anything longer is a
+// paragraph pretending to be a unit of work.
+const MaxStepText = 120
+
+// NextStep is the first unused T number. The number is max+1, never the first
+// hole: an id that was used once is never reused, so a commit message that says
+// "T3" always means the same step.
+func (d TaskDoc) NextStep() int {
+	highest := 0
+	for _, s := range d.Steps {
+		number, ok := stepNumber(s.ID)
+		if ok && number > highest {
+			highest = number
+		}
+	}
+	return highest + 1
+}
+
+// AddStep appends a step with the next T number, optionally linked to a
+// requirement the document already declares. The text is normalized to one
+// canonical line (single spaces) before it is stored, so the rendered document
+// parses back to the same step.
+//
+// An unknown requirement is an error that lists the ones the document has: the
+// agent must not invent a link the user never asked for. A bad text is an error
+// too, and in both cases the receiver is returned untouched.
+func (d TaskDoc) AddStep(text, requirement string) (TaskDoc, error) {
+	normalized, err := canonicalStepText(text)
+	if err != nil {
+		return d, err
+	}
+
+	link := strings.ToUpper(strings.TrimSpace(requirement))
+	if link != "" && !d.hasRequirement(link) {
+		return d, fmt.Errorf("el requisito %s no está en este task doc; los requisitos son %s", link, requirementIDs(d.Requirements))
+	}
+
+	step := Step{ID: "T" + strconv.Itoa(d.NextStep()), Text: normalized, Requirement: link}
+
+	steps := make([]Step, len(d.Steps), len(d.Steps)+1)
+	copy(steps, d.Steps)
+	d.Steps = append(steps, step)
+	return d, nil
+}
+
+// hasRequirement reports whether the document declares the id, ignoring case
+// because an agent typing `--req r1` means R1.
+func (d TaskDoc) hasRequirement(id string) bool {
+	for _, r := range d.Requirements {
+		if strings.EqualFold(r.ID, id) {
+			return true
+		}
+	}
+	return false
+}
+
+// canonicalStepText validates and normalizes a step's text: one line, no
+// leading dash (the render adds the checkbox), at most MaxStepText characters.
+func canonicalStepText(text string) (string, error) {
+	if strings.ContainsAny(text, "\r\n") {
+		return "", fmt.Errorf("el paso tiene que ser una sola línea, sin saltos de línea")
+	}
+
+	normalized := strings.Join(strings.Fields(text), " ")
+	switch {
+	case normalized == "":
+		return "", fmt.Errorf(`falta el texto del paso: escribí odachi plan "<texto>"`)
+	case strings.HasPrefix(normalized, "-"):
+		return "", fmt.Errorf(`el paso no lleva guión adelante: odachi plan escribe "- [ ] T<n>" solo; escribí el texto sin el guión`)
+	case utf8.RuneCountInString(normalized) > MaxStepText:
+		return "", fmt.Errorf("el paso tiene %d caracteres y el máximo es %d; resumilo en una línea",
+			utf8.RuneCountInString(normalized), MaxStepText)
+	}
+
+	return normalized, nil
+}
+
+// stepNumber reads the number of a T id.
+func stepNumber(id string) (int, bool) {
+	upper := strings.ToUpper(strings.TrimSpace(id))
+	if !strings.HasPrefix(upper, "T") {
+		return 0, false
+	}
+	number, err := strconv.Atoi(strings.TrimPrefix(upper, "T"))
+	if err != nil {
+		return 0, false
+	}
+	return number, true
+}
+
+// requirementIDs lists the requirements a document has, for an error that tells
+// the agent what it can link to without opening the file.
+func requirementIDs(requirements []Requirement) string {
+	if len(requirements) == 0 {
+		return "no hay requisitos en este task doc"
+	}
+	ids := make([]string, 0, len(requirements))
+	for _, r := range requirements {
+		ids = append(ids, r.ID)
+	}
+	return strings.Join(ids, ", ")
+}
