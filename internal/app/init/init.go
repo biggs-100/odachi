@@ -29,13 +29,27 @@ const (
 // work and is never replaced.
 const hookMarker = "# odachi: no se commitea sin prueba de este árbol"
 
-// hookContent is the hook itself: exactly three lines, the same three a human
-// is told to paste when the hook slot is already taken.
-const hookContent = "#!/bin/sh\n" + hookMarker + "\nodachi check --quiet || exit 1\n"
+// hookFor is the hook itself. It calls this binary by absolute path when the
+// binary is not on PATH, because a downloaded binary is the normal case for a
+// beginner and a hook that says "command not found" blocks every commit without
+// explaining anything. If that path later stops existing it falls back to
+// `odachi` from PATH, and the last line stays the rule: no commit without a
+// green check.
+func hookFor(exe string) string {
+	if exe == "" {
+		exe = "odachi"
+	}
+	return "#!/bin/sh\n" + hookMarker +
+		"\nODACHI='" + exe + "'" +
+		"\n[ -x \"$ODACHI\" ] || ODACHI=odachi" +
+		"\n\"$ODACHI\" check --quiet || exit 1\n"
+}
 
 // Options is one `odachi init` invocation.
 type Options struct {
 	Dir string
+	// Exe is how the hook reaches this binary. Empty means `odachi` from PATH.
+	Exe string
 }
 
 // Files is the disk port: enough to read, back up and replace the two files,
@@ -78,7 +92,7 @@ func Run(opts Options, files Files) Result {
 	if problem := r.writeAgents(); problem != nil {
 		return *problem
 	}
-	if problem := r.installHook(); problem != nil {
+	if problem := r.installHook(opts.Exe); problem != nil {
 		// The rules block may already be written: report it, so the human knows
 		// exactly how much of the job is done.
 		problem.Files = append([]string{}, r.changed...)
@@ -144,8 +158,9 @@ func (r *runner) writeAgents() *Result {
 
 // installHook installs the pre-commit hook, keeps odachi's own hook up to date,
 // and refuses to replace a hook someone else wrote.
-func (r *runner) installHook() *Result {
+func (r *runner) installHook(exe string) *Result {
 	path := filepath.Join(r.dir, hookPath)
+	hook := hookFor(exe)
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
@@ -161,10 +176,10 @@ func (r *runner) installHook() *Result {
 		}
 
 		if !strings.Contains(string(data), hookMarker) {
-			problem := foreignHook()
+			problem := foreignHook(exe)
 			return &problem
 		}
-		if string(data) == hookContent {
+		if string(data) == hook {
 			r.lines = append(r.lines, hookPath+": sin cambios")
 			return nil
 		}
@@ -175,7 +190,7 @@ func (r *runner) installHook() *Result {
 		}
 	}
 
-	if err := r.files.Write(path, []byte(hookContent)); err != nil {
+	if err := r.files.Write(path, []byte(hook)); err != nil {
 		problem := blocked("no pude escribir " + hookPath + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
 		return &problem
 	}
@@ -190,21 +205,16 @@ func (r *runner) installHook() *Result {
 }
 
 // foreignHook is the refusal: the three lines to paste, and nothing touched.
-func foreignHook() Result {
-	message := "ya existe " + hookPath + " y no es de odachi: no lo pisé; pegá estas tres líneas dentro de tu hook y volvé a correr odachi init"
+func foreignHook(exe string) Result {
+	message := "ya existe " + hookPath + " y no es de odachi: no lo pisé; pegá estas líneas dentro de tu hook y volvé a correr odachi init"
+	lines := []string{message, ""}
+	lines = append(lines, strings.Split(strings.TrimRight(hookFor(exe), "\n"), "\n")...)
+	lines = append(lines, "", "siguiente: odachi init")
 	return Result{
 		Code:    CodeBlocked,
 		Message: message,
 		Next:    "odachi init",
-		Lines: []string{
-			message,
-			"",
-			"#!/bin/sh",
-			hookMarker,
-			"odachi check --quiet || exit 1",
-			"",
-			"siguiente: odachi init",
-		},
+		Lines:   lines,
 	}
 }
 

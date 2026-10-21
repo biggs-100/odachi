@@ -37,7 +37,7 @@ func TestInitWritesBothArtifacts(t *testing.T) {
 	if !strings.HasPrefix(string(hook), "#!/bin/sh\n") {
 		t.Errorf("hook starts with %q, want the shebang", hook)
 	}
-	if !strings.Contains(string(hook), "odachi check --quiet || exit 1") {
+	if !strings.Contains(string(hook), "check --quiet || exit 1") {
 		t.Errorf("hook does not run the gate:\n%s", hook)
 	}
 }
@@ -92,7 +92,7 @@ func TestInitRefusesAForeignHook(t *testing.T) {
 	if !strings.Contains(errOut, ".git/hooks/pre-commit") {
 		t.Errorf("stderr %q does not name the file", errOut)
 	}
-	for _, want := range []string{"#!/bin/sh", "# odachi", "odachi check --quiet || exit 1"} {
+	for _, want := range []string{"#!/bin/sh", "# odachi", "check --quiet || exit 1"} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("stderr %q does not print the line %q to paste", errOut, want)
 		}

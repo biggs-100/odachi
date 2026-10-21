@@ -255,7 +255,7 @@ func TestInstallsTheHook(t *testing.T) {
 	if !strings.Contains(hook, "# odachi") {
 		t.Errorf("hook has no marker comment:\n%s", hook)
 	}
-	if !strings.Contains(hook, "odachi check --quiet || exit 1") {
+	if !strings.Contains(hook, "check --quiet || exit 1") {
 		t.Errorf("hook does not run the gate:\n%s", hook)
 	}
 	if !slices.Contains(files.events, "chmod .git/hooks/pre-commit") {
@@ -291,7 +291,7 @@ func TestForeignHookIsNotClobbered(t *testing.T) {
 	}
 
 	printed := strings.Join(got.Lines, "\n")
-	for _, want := range []string{"#!/bin/sh", "# odachi", "odachi check --quiet || exit 1"} {
+	for _, want := range []string{"#!/bin/sh", "# odachi", "check --quiet || exit 1"} {
 		if !strings.Contains(printed, want) {
 			t.Errorf("Lines = %q, want the three lines to paste (missing %q)", printed, want)
 		}
