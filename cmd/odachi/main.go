@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/biggz/odachi/internal/app/ask"
+	"github.com/biggz/odachi/internal/app/check"
+	initapp "github.com/biggz/odachi/internal/app/init"
 	"github.com/biggz/odachi/internal/app/level"
 	"github.com/biggz/odachi/internal/app/start"
 	"github.com/biggz/odachi/internal/app/summary"
@@ -49,8 +51,12 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runLevel(dir, args[1:], stdin, stdout, stderr)
 	case "summary":
 		return runSummary(dir, args[1:], stdout, stderr)
+	case "check":
+		return runCheck(dir, args[1:], stdout, stderr)
+	case "init":
+		return runInit(dir, args[1:], stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -218,6 +224,178 @@ func runSummary(dir string, args []string, stdout, stderr io.Writer) int {
 	return reportSummary(summary.Run(summary.Options{Dir: dir}, osFiles{}), asJSON, stdout, stderr)
 }
 
+// runCheck parses the flags, wires the three adapters and reports the gate.
+func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi check", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		opts   check.Options
+		asJSON bool
+	)
+
+	flags.StringVar(&opts.Run, "run", "", "corre el comando, captura la salida y escribe proof/<NNNN>-<slug>.txt")
+	flags.StringVar(&opts.Proof, "proof", "", "usa una prueba ya escrita (agentes y CI)")
+	flags.StringVar(&opts.Base, "base", "HEAD", "contra qué comparar el cerco (vacío: contra nada, todo cuenta como nuevo)")
+	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "segundos que puede tardar --run")
+	flags.BoolVar(&opts.Quiet, "quiet", false, "no imprime nada si está listo (para el hook)")
+	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi check -h para ver los flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi check solo toma flags (corré odachi check -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+	if opts.TimeoutSeconds <= 0 {
+		fmt.Fprintln(stderr, "odachi: --timeout tiene que ser mayor que cero segundos; corré odachi check -h para ver los flags")
+		return start.CodeBlocked
+	}
+	if opts.Run != "" && opts.Proof != "" {
+		fmt.Fprintln(stderr, "odachi: --run y --proof no van juntos: usá uno de los dos (odachi check --run \"<comando>\" o odachi check --proof <archivo>)")
+		return start.CodeBlocked
+	}
+
+	opts.Dir = dir
+	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
+}
+
+// reportCheck prints the gate's verdict. A ready run is silent under --quiet,
+// because the pre-commit hook runs it on every commit; a blocked run always
+// says what blocks and which command unblocks it.
+func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writer) int {
+	if asJSON {
+		files := result.Files
+		if files == nil {
+			files = []string{}
+		}
+		payload := struct {
+			Code    int      `json:"code"`
+			Reason  string   `json:"reason"`
+			Message string   `json:"message"`
+			Next    string   `json:"next,omitempty"`
+			Lines   []string `json:"lines,omitempty"`
+			Proof   string   `json:"proof,omitempty"`
+			Files   []string `json:"files"`
+		}{
+			Code:    result.Code,
+			Reason:  result.Reason,
+			Message: result.Message,
+			Next:    result.Next,
+			Lines:   result.Lines,
+			Proof:   result.Proof,
+			Files:   files,
+		}
+		data, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		fmt.Fprintln(stdout, string(data))
+		return result.Code
+	}
+
+	if result.Code == start.CodeOK && quiet {
+		return result.Code
+	}
+
+	lines := result.Lines
+	if len(lines) == 0 {
+		lines = []string{result.Message}
+	}
+
+	out := stdout
+	if result.Code != start.CodeOK {
+		out = stderr
+	}
+	for i, line := range lines {
+		if i == 0 && result.Code != start.CodeOK {
+			line = "odachi: " + line
+		}
+		fmt.Fprintln(out, line)
+	}
+	return result.Code
+}
+
+// runInit parses the flags and wires the Files adapter.
+func runInit(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi init", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var asJSON bool
+	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi init -h para ver los flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi init solo toma flags (corré odachi init -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	return reportInit(initapp.Run(initapp.Options{Dir: dir}, osFiles{}), asJSON, stdout, stderr)
+}
+
+// reportInit prints what init did. Unlike the other verbs it always prints its
+// block on a block, because the block contains the three lines the human has to
+// paste into a hook odachi did not write.
+func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) int {
+	if asJSON {
+		files := result.Files
+		if files == nil {
+			files = []string{}
+		}
+		payload := struct {
+			Code    int      `json:"code"`
+			Message string   `json:"message"`
+			Next    string   `json:"next,omitempty"`
+			Lines   []string `json:"lines,omitempty"`
+			Files   []string `json:"files"`
+		}{
+			Code:    result.Code,
+			Message: result.Message,
+			Next:    result.Next,
+			Lines:   result.Lines,
+			Files:   files,
+		}
+		data, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		fmt.Fprintln(stdout, string(data))
+		return result.Code
+	}
+
+	lines := result.Lines
+	if len(lines) == 0 {
+		lines = []string{result.Message}
+	}
+
+	out := stdout
+	if result.Code != start.CodeOK {
+		out = stderr
+	}
+	for i, line := range lines {
+		if i == 0 && result.Code != start.CodeOK {
+			line = "odachi: " + line
+		}
+		fmt.Fprintln(out, line)
+	}
+	return result.Code
+}
+
 // outcome is what every verb hands the printer: one line for a human, or JSON
 // for a machine. start, ask, level and summary all return this shape.
 type outcome struct {
@@ -338,6 +516,16 @@ uso:
   odachi ask --craft "<decisión>" --because "<razón>"
   odachi level [--to <perfil>]
   odachi summary
+  odachi check [flags]
+  odachi init [--json]
+
+flags de check:
+  --run s         corre el comando y escribe la prueba de este árbol
+  --proof path    usa una prueba ya escrita (agentes y CI)
+  --base ref      contra qué comparar el cerco (default HEAD; vacío: contra nada)
+  --timeout n     segundos que puede tardar --run (default 120)
+  --quiet         no imprime nada si está listo (para el hook)
+  --json          salida para máquinas
 
 flags:
   --outcome s     respuesta 1: qué tiene que existir cuando terminemos
@@ -358,6 +546,9 @@ después de start:
   odachi level                                  ver tus hechos; propone senior cuando se gana
   odachi level --to <perfil>                    aplicar un perfil (se respalda el anterior)
   odachi summary                                qué hay hecho en cada feature
+  odachi check                                  ¿está listo? brief, cerco, preguntas y prueba
+  odachi check --run "<comando>"                corre la prueba y la guarda con su árbol
+  odachi init                                   AGENTS.md + hook pre-commit
 
 códigos de salida: 0 artefactos escritos · 1 bloqueado · 2 falta una respuesta humana
 `)

@@ -11,19 +11,23 @@ same work unit as the code change.
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
 | `internal/app/level` | `cmd/odachi`: `level` and `level --to` | `internal/app/level/level_test.go` |
 | `internal/app/summary` | `cmd/odachi`: `summary` | `internal/app/summary/summary_test.go` |
-| `internal/domain/brief` | `internal/app/start` (render and read `brief.md`); CLI `check` later | `internal/domain/brief/brief_test.go`, `internal/domain/brief/render_test.go` |
-| `internal/domain/taskdoc` | `internal/app/start` (write the numbered task doc), `internal/app/{ask,level,summary}` (history, questions, counts); CLI `check` later | `internal/domain/taskdoc/taskdoc_test.go`, `internal/domain/taskdoc/history_test.go` |
-| `internal/domain/fence` | CLI `check` (T7); `start` when it writes `fence.toml` (T5) | `internal/domain/fence/fence_test.go` |
-| `internal/domain/gate` | CLI `check` (T7) | `internal/domain/gate/gate_test.go` |
+| `internal/app/check` | `cmd/odachi`: `check` in all its forms | `internal/app/check/check_test.go` |
+| `internal/app/init` | `cmd/odachi`: `init` (the AGENTS.md block and the pre-commit hook) | `internal/app/init/init_test.go` |
+| `internal/domain/brief` | `internal/app/start` (render and read `brief.md`), `internal/app/check` (is it complete?) | `internal/domain/brief/brief_test.go`, `internal/domain/brief/render_test.go` |
+| `internal/domain/taskdoc` | `internal/app/start` (write the numbered task doc), `internal/app/{ask,level,summary}` (history, questions, counts), `internal/app/check` (open questions) | `internal/domain/taskdoc/taskdoc_test.go`, `internal/domain/taskdoc/history_test.go` |
+| `internal/domain/fence` | `internal/app/check` (the fence gate); `start` when it writes `fence.toml` (T5) | `internal/domain/fence/fence_test.go` |
+| `internal/domain/gate` | `internal/app/check` (the four gates and the exit code) | `internal/domain/gate/gate_test.go` |
+| `internal/domain/proof` | `internal/app/check` (write and read `proof/NNNN-<slug>.txt`) | `internal/domain/proof/proof_test.go` |
 | `internal/domain/profile` | `internal/app/start`, `internal/app/level`, the profile decoder adapter | `internal/domain/profile/profile_test.go`, `internal/domain/profile/next_test.go` |
 | `internal/adapters/{fsx,gitx,profiletoml}` | `cmd/odachi` only; the domain never imports them | the matching `_test.go` in each adapter |
+| `internal/adapters/shellcmd` | `cmd/odachi` only (the `check --run` shell); one file per platform | `shellcmd_test.go` plus the per-platform `_test.go` |
 | `internal/archtest` | Nobody imports it; it guards every domain package | `internal/archtest/boundary_test.go` |
 
 ## `cmd/odachi` behaviour
 
-- Commands: `start` (default), `ask`, `level`, `summary`. `odachi` with no
-  arguments is `odachi start`; a first argument that starts with `-` is treated
-  as `start` flags.
+- Commands: `start` (default), `ask`, `level`, `summary`, `check`, `init`. `odachi`
+  with no arguments is `odachi start`; a first argument that starts with `-` is
+  treated as `start` flags.
 - Unknown command: exit `1`, message lists every available command.
 - Exit codes: `0` ok · `1` blocked (invalid flag, unreadable or nameless
   profile, existing `brief.md` without `--force`, no feature document, a
@@ -40,6 +44,17 @@ same work unit as the code change.
   same profile name.
 - `--json` is machine output and implies non-interactive. `start`'s JSON shape
   is unchanged; other verbs add `lines` only when they report a block.
+- `check` is the only verb whose exit code is the gate's, not a fixed one: `0`
+  ready · `1` the agent can act · `2` only the human can decide. `--run` returns
+  the gate's code, never the command's. Its third adapter is `shellcmd`; the
+  other two are `osFiles` and `gitRepo` (through `gitx`).
+- `check --run` keeps `proof/` out of the git tree with `proof/.gitignore`:
+  without it the proof would change the tree it certifies and every run would
+  invalidate the previous proof. `--quiet` prints nothing only when ready (the
+  pre-commit hook depends on that) and still prints the block when not.
+- `init` writes the rules block between `<!-- odachi:begin -->` and
+  `<!-- odachi:end -->` and the `.git/hooks/pre-commit` hook. It never replaces a
+  hook it did not write: it prints the three lines to paste and exits `1`.
 
 ## Notes
 

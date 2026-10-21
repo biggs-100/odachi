@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/biggz/odachi/internal/adapters/fsx"
+	"github.com/biggz/odachi/internal/adapters/gitx"
 	"github.com/biggz/odachi/internal/adapters/profiletoml"
+	"github.com/biggz/odachi/internal/adapters/shellcmd"
 	"github.com/biggz/odachi/internal/app/start"
 	"github.com/biggz/odachi/internal/domain/profile"
 )
@@ -51,6 +53,12 @@ func (osFiles) List(dir string) ([]string, error) {
 
 func (osFiles) Backup(path string) (string, error) {
 	return fsx.Backup(path)
+}
+
+// MakeExecutable is what the pre-commit hook needs: git only runs a hook that
+// is executable, and WriteAtomic writes 0644 on purpose.
+func (osFiles) MakeExecutable(path string) error {
+	return os.Chmod(path, 0o755)
 }
 
 func (osFiles) Write(path string, data []byte) error {
@@ -144,4 +152,27 @@ func withDefaults(loaded profile.Profile, known map[string]profile.Profile) prof
 	fill(&loaded.Proof, defaults.Proof)
 	fill(&loaded.Explain, defaults.Explain)
 	return loaded
+}
+
+// gitRepo is the Git adapter for `odachi check`: every repository fact comes
+// from gitx, which runs git locally and never touches the network.
+type gitRepo struct{}
+
+func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root) }
+
+func (gitRepo) ChangedPaths(root, base string) ([]string, error) {
+	return gitx.ChangedPaths(root, base)
+}
+
+func (gitRepo) AddedDeps(root, base string) ([]string, error) {
+	return gitx.AddedDeps(root, base)
+}
+
+// osShell is the Shell adapter for `odachi check`: the platform shell lives in
+// internal/adapters/shellcmd, one file per platform, and refuses where there is
+// no known shell.
+type osShell struct{}
+
+func (osShell) Run(dir, command string, timeoutSeconds int) (string, int, bool, error) {
+	return shellcmd.Run(dir, command, timeoutSeconds)
 }
