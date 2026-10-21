@@ -558,6 +558,41 @@ odachi pack --json
 - Un fallo en un agente no aborta los demás y el mensaje nombra agente y path.
 - Nada del proyecto (`skills/`, `SKILLS.md`) cambia.
 
+## Contract IX · T15 (`plan`)
+
+Hoy el agente agrega pasos editando Markdown a mano. Si escribe una sección que el render canónico no conoce, el guard de `ask` le bloquea toda escritura posterior y el proyecto queda trabado. `plan` cierra ese hueco.
+
+### Surface
+
+```text
+odachi plan "<texto>" [--req R1]           agrega el próximo paso al task doc actual
+odachi plan --done T2 [--commit abc1234]   marca un paso hecho y registra el commit
+odachi plan --json
+```
+
+### Reglas
+
+- Task doc: el de mayor número, la misma resolución que usa `ask`. Sin task doc: exit 1 nombrando `odachi start`.
+- `<texto>` obligatorio, una linea, ≤ 120 caracteres, sin guiones iniciales ni saltos de linea.
+- `--req R<n>` tiene que existir en el documento; si no, error que lista los requisitos. Sin `--req` el paso va sin vínculo, y el render lo refleja.
+- El número `T` es `max+1`: monótono, nunca se reutiliza.
+- `--done` con id desconocido: error que lista los pasos abiertos. Un paso ya hecho: no-op, exit 0, `ya estaba hecho`.
+- `--commit` sin `--done`: error. `--commit` con un paso que no se está marcando: error.
+- La escritura pasa por **el mismo guard que `ask`**: si el render canónico perdería una linea que el humano escribió, se bloquea y el mensaje dice dónde moverla. Ese guard se extrae a `internal/app/tasks` y lo usan los dos, para que haya un solo lugar que decide si se puede escribir.
+- Backup antes de escribir, escritura atómica, y `plan` no toca `brief.md`, `profile.toml` ni `fence.toml`.
+- Mensaje: `paso T3 agregado a odd/tasks/0001-x.md` / `paso T3 hecho · abc1234`.
+
+### Tests
+
+- Agrega con y sin `--req`; `--req` inexistente lista los requisitos.
+- Texto vacío, multilínea, con guión inicial y de 121 caracteres: rechazados antes de escribir.
+- Dos `plan` seguidos: `T1` y `T2`, y el documento queda canónico (round-trip).
+- `--done` marca y registra el commit; desconocido lista los abiertos; ya hecho es no-op.
+- `--commit` sin `--done` rechazado.
+- Documento con una sección extra: `plan` se bloquea con el mensaje que nombra `## Historial`, **y no escribe nada**.
+- Sin task doc: exit 1 nombrando `odachi start`.
+- `--json` con el mismo contenido que el mensaje humano.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -574,6 +609,7 @@ odachi pack --json
 - T12 · skills: registro generado, validador, creador y las 5 skills iniciales · S1,S7 · delegated (gentle-ai-worker) · [x] commits: 58282d4 (domain), f409072 (cli), 208e606 (content)
 - T13 · `pack`: llevar las skills al directorio nativo de cada agente · S1,S3 · delegated (gentle-ai-worker) · [x] commits: 511cc7c (domain), c0516e6 (embed), e036438 (app + cli)
 - T14 · `IsDir` en el escáner de skills: la clase de error de `stat` no decide qué es una entrada · S2,S4 · inline · [x] commit: 3c9f2ae
+- T15 · `plan`: agregar y cerrar pasos sin editar Markdown a mano · S3,S6 · pending
 
 ## Log
 
