@@ -188,13 +188,82 @@ func AddedDeps(root, base string) ([]string, error)   // module paths added to g
 - `gitx` runs git via `exec.Command` with `-C root`; no network; errors include git stderr.
 - `profiletoml` uses `github.com/BurntSushi/toml` and rejects a non-empty `md.Undecoded()`. Only `go.mod` gains the dependency; the domain stays stdlib-only and the boundary guard must stay green.
 
+## Contract III · T5 (`odachi start`)
+
+### Surface
+
+```text
+odachi                 == odachi start
+odachi start [flags]
+  --outcome s      answer 1     --audience s   answer 2: phone|cpu|both
+  --done s         answer 3 (repeatable)      --exclude s  answer 4 (repeatable: preset key or free text)
+  --sensitive s    answer 5: none|names|health|money
+  --deadline s     answer 6: today|week|relaxed
+  --learn s        answer 7 (repeatable)
+  --brief path     read an existing brief instead of asking (senior/ci)
+  --force          overwrite an existing brief.md
+  --json           machine output
+```
+
+Exit codes: `0` artifacts written · `1` blocked (invalid flag, or `brief.md` exists without `--force`) · `2` needs a human answer (non-interactive without the required flags; the message names the missing flags).
+
+### The seven questions (verbatim, each with the why the user sees)
+
+| # | flag | question | why |
+|---|---|---|---|
+| 1 | outcome | ¿Qué querés que exista cuando terminemos? (una frase, en tus palabras) | sin esto no hay nada que construir; y en tus palabras es lo que leés después para saber si vamos bien |
+| 2 | audience | ¿Quién lo usa y desde dónde? (1 celular · 2 compu · 3 los dos) | cambia todo lo que viene después, y es la decisión más cara de cambiar tarde |
+| 3 | done | ¿Cómo vas a saber que funcionó? (te propongo tres; podés escribir la tuya) | esto se llama criterio de aceptación: es lo que separa "anda" de "creo que anda" |
+| 4 | exclude | ¿Qué NO querés en esta primera versión? (elegí las que quieras) | es lo que evita 40 cosas a medio hacer; un senior dice no, y acá el cerco lo hace cumplir |
+| 5 | sensitive | ¿Hay datos sensibles? (1 ninguno · 2 nombres · 3 salud · 4 plata) | define qué no puede salir del proyecto desde el día uno |
+| 6 | deadline | ¿Cuánto tiempo tenés para la primera versión usable? (1 hoy · 2 esta semana · 3 sin apuro) | define cuánto recortamos; un proyecto que no se termina no enseña nada |
+| 7 | learn | ¿Qué te gustaría aprender en el camino? (elegí una o dos) | el tutor necesita saber qué explicarte más; esto es lo que te saca de novato |
+
+The why is printed with the question, in the same block, never as a second message. One line, never a paragraph.
+
+### Files written (all through `fsx.WriteAtomic`; existing file → `fsx.Backup` first)
+
+1. `brief.md` — rendered from the answers, canonical headers from Contract A.
+2. `.odachi/profile.toml` — the resolved profile, one field per line, `name` always written.
+3. `.odachi/fence.toml` — one `[[rule]]` per selected non-goal:
+
+| key | `paths` | `deps` |
+|---|---|---|
+| pagos | `payment*`, `**/payments/**` | `stripe`, `mercadopago` |
+| login | `**/login*`, `**/auth/login*` | — |
+| historia-clinica | `**/historia*`, `**/medical-record*` | — |
+| recordatorios | `**/reminder*`, `**/whatsapp*` | — |
+| (free text) | `<slug>*` | — |
+
+4. `odd/tasks/<NNNN>-<slug>.md` — `NNNN` is one more than the highest existing number (0001 when empty); `<slug>` is the first three words of the outcome, ASCII lowercase joined by `-`. Body: `## Requisitos (textual, del usuario)` with `R1 · "<outcome verbatim>"`, `## Listo cuando` from answer 3, `## Pasos` empty, `## Historial` with `L1 · "<outcome verbatim>"`.
+
+   Rerun rule: when a task document whose filename ends with `-<slug>.md` already exists, reuse it and do **not** rewrite it — its `Pasos` and `Historial` are the memory of work already done. A different outcome gets the next number. One feature is one document.
+
+### Layer and seam
+
+- `internal/app/start` is pure orchestration over ports; it must not import `os` for I/O beyond nothing: reading and writing go through small ports it declares (`Interview`, `Files`), wired in `cmd/odachi`.
+- `Interview` seam: `Ask(q Question) (string, error)` where `Question` carries text, why, and options. Test double: `ScriptedInterview` answering from a queue.
+- `profile.Infer(Facts{HasBrief, HasRepo, Machine})` decides pacing: `one-by-one` asks each question alone; `batched` asks all, then shows the answers together; `all` never asks and requires the flags or `--brief`, failing with exit 2 that names the missing flags.
+- New domain function `brief.Render(b Brief) string` (canonical, `Parse(Render(b))` round-trips). The domain stays stdlib-only: the boundary guard must stay green.
+
+### Tests (test-first, RED captured before implementation)
+
+- `brief.Render` round-trip and header order.
+- `app/start`: scripted interview produces exactly the four files with the expected content (assert the brief sections, the profile `name`, one fence rule per selected non-goal, and the task doc `R1` quoting the outcome verbatim).
+- Re-running with `--force` backs up the old `brief.md` and writes the same bytes for the same answers (idempotent).
+- Re-running without `--force` exits 1 and names `--force`.
+- Non-interactive without `--outcome` exits 2 and the message names `--outcome`.
+- Empty answer to question 1 is rejected with a Spanish message that asks again, never silently accepted.
+- Slug and task-doc numbering: empty dir → `0001-…`; existing `0007-x.md` → `0008-…`.
+- `cmd/odachi`: `odachi` with no args equals `odachi start`; unknown command exits 1 with the available commands.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
 - T2 · pure domain: fence (globs), gate (exit codes), profile (schema + reflection guard) · S2,S3,S5 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
 - T3 · pure domain: brief and task document parsing + progress · S1,S6 · delegated (gentle-ai-worker) · [x] commit: c77ca91
 - T4 · adapters: strict TOML profile decoder, filesystem, git · S5 · delegated (gentle-ai-worker) · [x] commit: f53fa1a
-- T5 · CLI `start`: interview -> brief + fence + profile · S1,S2 · pending
+- T5 · CLI `start`: interview -> brief + fence + profile · S1,S2 · delegated (gentle-ai-worker) · [x] commit: 96ccaec
 - T6 · CLI `ask` / `level` / `summary` · S3,S7 · pending
 - T7 · CLI `check` + pre-commit hook + AGENTS.md block · S2 · pending
 - T8 · tutor content: why each question exists, explanation rules · S7 · pending
@@ -212,3 +281,7 @@ L8 · T3+T4 verificados por el padre, no por el reporte: 9 paquetes ok, `go buil
 L9 · Defecto real encontrado en la entrega, con causa en mi especificación: `TreeHash` vía `git stash create` ignoraba los archivos sin trackear (una prueba vieja seguía pareciendo válida) y fallaba antes del primer commit. RED observado en `treehash_test.go` antes del arreglo. Ahora usa un índice descartable: incluye sin trackear, respeta `.gitignore`, no toca el índice real, funciona sin commits. Contract II corregido.
 L10 · Diferido a T5: `profiletoml.Decode` de un archivo sin `name` devuelve un perfil vacío en vez de error; T5 lo carga y ahí puede fallar con un mensaje humano.
 L11 · T5 no se delega con contexto recargado: la entrevista es el corazón del producto. Antes de escribirla hay que fijar las preguntas exactas y el "por qué" de cada una (adelanta parte de T8).
+L12 · El humano aprueba las 7 preguntas propuestas sin cambios: "continua". Quedan escritas verbatim en Contract III, con su "por qué" al lado. Se delega T5.
+L13 · T5 verificado por el padre (11 paquetes verdes, build, vet, gofmt) y con un run end-to-end propio, no el del reporte. Defecto encontrado: re-correr `start` con el mismo outcome dejaba dos task docs (0001 y 0002), y reescribir el existente habría borrado los `Pasos` ya hechos. Corregido: se reutiliza el doc cuyo slug coincide y no se reescribe nunca. RED observado en `cmd/odachi/reuse_test.go` antes del arreglo; dos tests del worker que fijaban la conducta vieja se actualizaron a la nueva regla.
+L14 · Riesgo de carga de revisión, registrado y no oculto: el commit 96ccaec tiene 2.948 líneas (1.450 de tests), muy por encima de las ~400 que pide la disciplina de unidades. Causa: se delegó el paquete entero. De T6 en adelante, cada verbo se entrega como unidad propia.
+L15 · Observado y diferido: (a) si no se elige ningún "NO incluye", `.odachi/fence.toml` queda vacío y el cerco no protege nada — decidir en T6/T8 si la entrevista exige al menos una exclusión o si el archivo vacío lleva un comentario que lo explique; (b) pulido de redacción para que el brief suene a la persona y no al sistema: "Quiere aprender: tests." → "Aprender en el camino: tests.", "Se usa desde el celular." → "Lo uso desde el celular."
