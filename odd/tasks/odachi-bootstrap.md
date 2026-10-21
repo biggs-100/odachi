@@ -673,6 +673,41 @@ Solo los verbos que escriben **más de un archivo**: `start` y `undo`. `plan`, `
 - Un lock con contenido basura y mtime reciente: bloquea con el mensaje que nombra el archivo.
 - `--json` reporta el mismo mensaje.
 
+## Contract XII · T18 (OpenCode, y destinos por alcance)
+
+OpenCode se rechazaba porque su path "dependía de la plataforma". Es falso para el path que importa: **`.opencode/skills/<name>/SKILL.md` es relativo al proyecto**. Verificado en la documentación y en el código de OpenCode (`OPENCODE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"`; además lee `.claude/skills/` y `.agents/skills/` como externos compatibles). El global, `~/.config/opencode/skills`, existe pero no es el que queremos.
+
+### El cambio de modelo
+
+La tabla de agentes gana **alcance**. Hasta ahora todo era `home`; ahora hay dos:
+
+| Alcance | Dónde escribe | Quién |
+|---|---|---|
+| `home` | `<home>/<Dest>` | claude, codex, cursor, gemini, copilot, qwen, kiro |
+| `project` | `<project>/<Dest>` | **opencode** → `.opencode/skills` |
+
+`opencode` sale de la lista de rechazos. `pi` se queda, con su razón verificada.
+
+### Reglas
+
+- `pack` resuelve `project` contra el directorio del proyecto (el mismo `--dir` de los demás verbos, default `.`), y `home` contra el home del usuario. Nada más cambia: escritura atómica, backup si difiere, `sin cambios` si es igual, nunca borra.
+- En los mensajes, `home` se muestra como `~/...` y `project` como `./.opencode/skills`.
+- **Detección**: un agente `project` se detecta si existe su directorio raíz en el proyecto (`.opencode/`). Un agente `home` como antes (su directorio de config en el home). `pack` sin `--agents` en un proyecto sin nada detectado sigue saliendo 0 y nombrando `--agents`.
+- `pack --agents opencode` funciona en cualquier proyecto, exista o no `.opencode/`.
+
+### Tests
+
+- `Resolve("opencode")` devuelve alcance `project` y destino `.opencode/skills`; los siete anteriores siguen en `home` con sus paths.
+- `pack --agents opencode` escribe los cinco `SKILL.md` bajo `<project>/.opencode/skills/`, y **no toca el home** (se assertea sobre el doble: cero escrituras fuera del proyecto).
+- `pack` en un proyecto con `.opencode/` detecta opencode sin `--agents`.
+- `pack --agents opencode` en un proyecto sin `.opencode/` funciona igual.
+- Los mensajes muestran `./.opencode/skills` y no una ruta absoluta.
+- `pi` sigue rechazado con su razón; un nombre inventado sigue listando los soportados, ahora con opencode incluido.
+
+### Documentación
+
+README: la lista de agentes soportados incluye opencode con `--agents opencode`, y el camino de prueba con OpenCode (init + pack + start + check).
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -692,6 +727,7 @@ Solo los verbos que escriben **más de un archivo**: `start` y `undo`. `plan`, `
 - T15 · `plan`: agregar y cerrar pasos sin editar Markdown a mano · S3,S6 · delegated (gentle-ai-worker) · [x] commits: 6dbecfc (domain), 1130ee9 (guard), 658e900 (plan), 3597bed (cli + readme)
 - T16 · `undo`: restaurar el último artefacto que odachi escribió, respaldando lo actual · S2 · delegated (gentle-ai-worker) + corrección del padre · [x] commits: 58fe726 (domain), d41b3c7 (app), 28a2791 (cli)
 - T17 · lock de escritura para `start` y `undo`: exclusión entre corridas concurrentes · S2,S4 · delegated (gentle-ai-worker) · [x] commits: a9559ac (lock), da8392c (start), 00bc89a (undo), d2889bb (cli + adr)
+- T18 · OpenCode: destinos por alcance (proyecto vs home) y `opencode` soportado · S1,S4 · pending
 
 ## Log
 
