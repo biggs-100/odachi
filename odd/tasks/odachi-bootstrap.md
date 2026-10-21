@@ -184,7 +184,7 @@ func ChangedPaths(root, base string) ([]string, error)
 func AddedDeps(root, base string) ([]string, error)   // module paths added to go.mod between base and worktree
 ```
 
-- `TreeHash` represents the current worktree: `git stash create` (which does not touch worktree or index) then `git rev-parse <sha>^{tree}`; when the worktree is clean and stash output is empty, fall back to `HEAD^{tree}`. Document the choice in a comment.
+- `TreeHash` represents the current worktree through a THROWAWAY index: `git read-tree HEAD` (or `read-tree --empty` when there is no commit yet), `git add --all -- .`, `git write-tree`, with `GIT_INDEX_FILE` pointing inside a temp directory removed afterwards. The real index, the worktree and the human's git config are never touched; untracked files are included and git-ignored files are not. (`git stash create` was the first choice and is wrong twice: it silently ignores untracked files, so a new file left the hash unchanged, and it fails before the first commit.)
 - `gitx` runs git via `exec.Command` with `-C root`; no network; errors include git stderr.
 - `profiletoml` uses `github.com/BurntSushi/toml` and rejects a non-empty `md.Undecoded()`. Only `go.mod` gains the dependency; the domain stays stdlib-only and the boundary guard must stay green.
 
@@ -192,8 +192,8 @@ func AddedDeps(root, base string) ([]string, error)   // module paths added to g
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
 - T2 · pure domain: fence (globs), gate (exit codes), profile (schema + reflection guard) · S2,S3,S5 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
-- T3 · pure domain: brief and task document parsing + progress · S1,S6 · pending
-- T4 · adapters: strict TOML profile decoder, filesystem, git · S5 · pending
+- T3 · pure domain: brief and task document parsing + progress · S1,S6 · delegated (gentle-ai-worker) · [x] commit: c77ca91
+- T4 · adapters: strict TOML profile decoder, filesystem, git · S5 · delegated (gentle-ai-worker) · [x] commit: f53fa1a
 - T5 · CLI `start`: interview -> brief + fence + profile · S1,S2 · pending
 - T6 · CLI `ask` / `level` / `summary` · S3,S7 · pending
 - T7 · CLI `check` + pre-commit hook + AGENTS.md block · S2 · pending
@@ -208,3 +208,7 @@ L4 · el humano autoriza T1 y T2: "ok, comencemos". Path C:\Users\USER\Desktop\d
 L5 · T1+T2 verificados por el padre, no por el reporte del worker: `go test ./...` (archtest + fence + gate + profile ok), `go build ./...`, `go vet ./...`, `gofmt -l` vacío; 1.189 líneas de Go; el guard confirma que el dominio solo importa stdlib.
 L6 · Riesgos que el worker marcó, resueltos como decisiones: (a) out_of_scope = NeedsDecision(2), porque la pregunta real es "¿esto entra al proyecto?" y esa es del humano; (b) prueba faltante = ProofTreeHash vacío o ProofOutput vacío, prueba vieja = hashes distintos; (c) no_brief y brief_incomplete también son NeedsDecision(2): el brief lo define el humano.
 L7 · Corrección del padre sobre la entrega: `senior.Proof` pasa de heredar "command" a "suite-or-ci", que es lo acordado en la tabla de perfiles.
+L8 · T3+T4 verificados por el padre, no por el reporte: 9 paquetes ok, `go build`, `go vet`, `gofmt -l` vacío. El fixture real del task doc tiene 3 requisitos y 3 pasos; mi brief de delegación decía 2/2 por error mío: se corrige la expectativa, no el artefacto.
+L9 · Defecto real encontrado en la entrega, con causa en mi especificación: `TreeHash` vía `git stash create` ignoraba los archivos sin trackear (una prueba vieja seguía pareciendo válida) y fallaba antes del primer commit. RED observado en `treehash_test.go` antes del arreglo. Ahora usa un índice descartable: incluye sin trackear, respeta `.gitignore`, no toca el índice real, funciona sin commits. Contract II corregido.
+L10 · Diferido a T5: `profiletoml.Decode` de un archivo sin `name` devuelve un perfil vacío en vez de error; T5 lo carga y ahí puede fallar con un mensaje humano.
+L11 · T5 no se delega con contexto recargado: la entrevista es el corazón del producto. Antes de escribirla hay que fijar las preguntas exactas y el "por qué" de cada una (adelanta parte de T8).
