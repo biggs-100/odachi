@@ -257,6 +257,73 @@ The why is printed with the question, in the same block, never as a second messa
 - Slug and task-doc numbering: empty dir → `0001-…`; existing `0007-x.md` → `0008-…`.
 - `cmd/odachi`: `odachi` with no args equals `odachi start`; unknown command exits 1 with the available commands.
 
+## Contract IV · T6 (`ask`, `level`, `summary`)
+
+### Surface
+
+```text
+odachi ask "<pregunta>"                          record an open vision question (the agent does this)
+odachi ask --answer "<respuesta>" [--for P<n>]  record the human's answer (needs exactly one open question)
+odachi ask --craft "<decisión>" --because "<razón>" record a craft decision the agent took alone
+odachi level                                      show the facts and, when earned, propose senior
+odachi level --to <profile>                       apply a profile (backup + atomic write), print what changes
+odachi summary                                    derived report of every feature: steps, decisions, open questions
+```
+
+Exit codes: `0` ok · `1` blocked (no task document, unknown profile, no open question, or two open questions without `--for`) · `2` only when a human answer is required and cannot be inferred. Every blocked message names the command or flag that unblocks it.
+
+### The history record (append-only, inside the task document)
+
+No new state file: the task document's `## Historial` is the log. Three deterministic line shapes, `L<n>` monotonic:
+
+```text
+L7 · PREGUNTA P1 · "¿Los turnos se pueden cancelar?"
+L8 · VOS P1 · "No en la primera versión"
+L9 · OFICIO · "Guardé los turnos en SQLite" (porque dos personas no pueden escribir el mismo archivo)
+```
+
+`P<n>` is monotonic per task document. An open question is a `PREGUNTA` line with no matching `VOS` line. `OFICIO` lines are the agent deciding alone and saying why — they are the tutor material, and they are never questions.
+
+### Domain additions (pure, stdlib only)
+
+```go
+package taskdoc
+// History is append-only: AppendHistory never rewrites an existing line.
+func (d TaskDoc) AppendHistory(line string) TaskDoc
+func (d TaskDoc) Events() []Event            // parsed, in file order
+func (d TaskDoc) NextLine() int              // next L number
+func (d TaskDoc) NextQuestion() int          // next P number
+func (d TaskDoc) OpenQuestions() []Question  // PREGUNTA without VOS
+func (d TaskDoc) CloseQuestion(id, answer string) (TaskDoc, error) // unknown id or already answered is an error
+type Event struct{ Line int; Kind string; ID, Text, Because string }  // Kind: question|answer|craft|note
+type Question struct{ ID, Text string }
+
+package profile
+// Next is the graduation proposal: earned, never automatic.
+func Next(current string, e Evidence) (name string, ok bool)
+func Apply(current Profile, to Profile) (Profile, []Change)  // Change{Field, From, To} for the message
+type Evidence struct{ Features, VisionAnswers, CraftDecisions int }
+// next is "senior" when Features >= 3 and VisionAnswers >= 5, and only when current == "novato".
+```
+
+### App layer
+
+- New shared helper `internal/app/tasks`: `Current(files, dir)` returns the highest-numbered task document (path + parsed doc) and a human Spanish error when there is none, and `All(files, dir)` returns every task document sorted by number.
+- `internal/app/ask`, `internal/app/level`, `internal/app/summary` orchestrate over the existing `Files` port (`Exists`, `Read`, `List`, `Write`, `Backup`) and return the same `Result` shape as `start` so `cmd/odachi` prints one line or JSON.
+- `level` reads every task document, counts `Features` (documents with at least one done step), `VisionAnswers` (answer events) and `CraftDecisions` (craft events), and shows: profile, features, preguntas contestadas, decisiones de oficio, open questions. When the proposal is earned it prints exactly what changes and how to accept it. It never rewrites the profile on its own.
+- `level --to <profile>` resolves through `profile.Builtin()` plus the current file, backs up `.odachi/profile.toml`, writes it atomically, and prints the field changes in Spanish. A profile that does not exist is blocked with the available names.
+- `summary` prints per feature: slug, `R1` verbatim, steps done/total, open questions, and the last three history lines. It ends with one line of totals. It invents no narration: the concepts the week brought are the agent's job (T8), not the binary's.
+
+### Tests
+
+- Domain RED first: history parsing (all three shapes, malformed lines become `note`), `AppendHistory` is append-only, `NextLine`/`NextQuestion` monotonic, `OpenQuestions`/`CloseQuestion` incl. unknown and already-answered, `profile.Next` thresholds and the `current != novato` refusal, `profile.Apply` change list.
+- App: `ask` with no task document is blocked naming `odachi start`; two open questions need `--for`; `--answer` closes the right one; `--craft` requires `--because`; `level --to senior` backs up before writing and the file keeps all eight fields; `level` with no evidence prints facts and proposes nothing; `summary` on an empty repo says so in one line instead of failing.
+- CLI e2e: `ask` then `level` shows one open question and one answer after closing it; `summary` lists both features after two `start` runs with different outcomes.
+
+### Process
+
+Deliver in three stages, each with its tests green before the next: (1) domain additions, (2) `ask` + `tasks` helper + wiring, (3) `level` + `summary` + wiring. Report each stage separately so the parent can commit them as three work units. No new dependency; the boundary guard must stay green; do not edit `odd/**`, `README.md`, `Contract I-III` sections, or any existing behaviour.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -285,3 +352,4 @@ L12 · El humano aprueba las 7 preguntas propuestas sin cambios: "continua". Que
 L13 · T5 verificado por el padre (11 paquetes verdes, build, vet, gofmt) y con un run end-to-end propio, no el del reporte. Defecto encontrado: re-correr `start` con el mismo outcome dejaba dos task docs (0001 y 0002), y reescribir el existente habría borrado los `Pasos` ya hechos. Corregido: se reutiliza el doc cuyo slug coincide y no se reescribe nunca. RED observado en `cmd/odachi/reuse_test.go` antes del arreglo; dos tests del worker que fijaban la conducta vieja se actualizaron a la nueva regla.
 L14 · Riesgo de carga de revisión, registrado y no oculto: el commit 96ccaec tiene 2.948 líneas (1.450 de tests), muy por encima de las ~400 que pide la disciplina de unidades. Causa: se delegó el paquete entero. De T6 en adelante, cada verbo se entrega como unidad propia.
 L15 · Observado y diferido: (a) si no se elige ningún "NO incluye", `.odachi/fence.toml` queda vacío y el cerco no protege nada — decidir en T6/T8 si la entrevista exige al menos una exclusión o si el archivo vacío lleva un comentario que lo explique; (b) pulido de redacción para que el brief suene a la persona y no al sistema: "Quiere aprender: tests." → "Aprender en el camino: tests.", "Se usa desde el celular." → "Lo uso desde el celular."
+L16 · Decisión del humano sobre cómo se gradúa: opción B con D como disparador ("continua"). Se registra cada escalación en el `Historial` del task doc —sin archivo nuevo, una sola fuente de verdad— y el agente propone en el hito; la persona acepta con `level --to`. Umbral: 3 features con pasos hechos y 5 respuestas de visión. Contract IV escrito.
