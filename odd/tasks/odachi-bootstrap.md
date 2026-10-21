@@ -505,6 +505,59 @@ Crea el directorio y el `SKILL.md` con la plantilla (frontmatter con `name` y un
 - App/CLI: `--check` verde con las 5 skills; una violación por test (cada una con su mensaje); `--write` idempotente (dos veces, mismos bytes); `--check` falla si `SKILLS.md` se editó a mano; `skill new` crea y no pisa; repo sin `skills/` sale 0 con una línea que dice cómo empezar.
 - CI: `go test ./...` ya lo cubre; no hace falta un job nuevo.
 
+## Contract VIII · T13 (`odachi pack`)
+
+Objetivo: que las skills lleguen al agente. Hoy viven en el repo; para que el agente las cargue tienen que estar donde él las busca.
+
+### Paths verificados (no supuestos)
+
+Sacados de los adaptadores de gentle-ai (`SkillsDir(homeDir)`), todos home-relativos:
+
+| Agente | Destino |
+|---|---|
+| `claude` | `~/.claude/skills` |
+| `codex` | `~/.codex/skills` |
+| `cursor` | `~/.cursor/skills` |
+| `gemini` | `~/.gemini/skills` |
+| `copilot` | `~/.copilot/skills` |
+| `qwen` | `~/.qwen/skills` |
+| `kiro` | `~/.kiro/skills` |
+
+**Pi no entra**: su adaptador devuelve `SkillsDir == ""` porque no usa un directorio de skills. Se rechaza con esa razón, no se salta en silencio. Opencode queda afuera de esta unidad: su path depende de `ConfigPath` (varía por plataforma) y no voy a escribir en una ruta que no verifiqué.
+
+### Surface
+
+```text
+odachi pack                         instala las skills incluidas en cada agente detectado
+odachi pack --agents claude,codex    solo esos
+odachi pack --dry-run               qué haría, sin escribir
+odachi pack --json
+```
+
+### Comportamiento
+
+- Fuente: las skills incluidas en el binario (`skills/*/SKILL.md` embebidas con `//go:embed`). Nada de red.
+- Escribe `<home>/<destino>/<name>/SKILL.md` con `fsx.WriteAtomic`; si el archivo existe y difiere, backup antes. Si es idéntico: `sin cambios`, sin backup.
+- **Nunca borra ni mueve nada.** Un archivo que sobra se reporta, no se toca.
+- Agente desconocido: exit 1 nombrando los soportados. `pi`: exit 1 con "Pi no usa un directorio de skills".
+- `--dry-run` no escribe nada y lista las acciones igual.
+- `pack` **no** toca `skills/` del proyecto ni `SKILLS.md`: eso es de `odachi skills --write`.
+- Resumen en español, una línea por agente: `claude · 5 instaladas · ~/.claude/skills`.
+
+### Capas
+
+- `internal/assets/skills` (o equivalente) embebe las cinco con `//go:embed`; el paquete del repo raíz `skills/` es la fuente y no se duplica.
+- `internal/app/pack` sobre los puertos `Files` (ya existe) y uno nuevo `Home` para resolver el home del usuario. Sin `os` en la app.
+- Tabla de agentes como datos en el dominio, no como ramas de código.
+
+### Tests
+
+- Tabla: cada agente soportado resuelve su path; `pi` y un nombre inventado se rechazan con su mensaje.
+- Escribe los cinco archivos; segunda corrida idéntica no escribe ni hace backup; un archivo local distinto se respalda antes de pisarse.
+- `--dry-run` no toca el filesystem (se assertea que el doble no recibió escrituras).
+- Un fallo en un agente no aborta los demás y el mensaje nombra agente y path.
+- Nada del proyecto (`skills/`, `SKILLS.md`) cambia.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -519,6 +572,7 @@ Crea el directorio y el `SKILL.md` con la plantilla (frontmatter con `name` y un
 - T10 · CI verde en Windows: el test del instalador dependía de un shim de uname · S1 · inline · [x] commit: 85694e2
 - T11 · publicación: licencia MIT, tag v0.1.0 y release verificada de punta a punta · S1,S8 · inline · [x] commit: 4d92358 · release run: 39657703108
 - T12 · skills: registro generado, validador, creador y las 5 skills iniciales · S1,S7 · delegated (gentle-ai-worker) · [x] commits: 58282d4 (domain), f409072 (cli), 208e606 (content)
+- T13 · `pack`: llevar las skills al directorio nativo de cada agente · S1,S3 · pending
 
 ## Log
 
