@@ -112,9 +112,10 @@ func quoteList(items []string) string {
 	return "[" + strings.Join(quoted, ", ") + "]"
 }
 
-// renderProfile writes the resolved profile, one field per line, name first and
-// always present, in the key order of Contract A.
-func renderProfile(p profile.Profile) string {
+// RenderProfile writes the resolved profile, one field per line, name first and
+// always present, in the key order of Contract A. It is exported because
+// `odachi level --to` writes the same file, and the format has one owner.
+func RenderProfile(p profile.Profile) string {
 	fields := []struct {
 		key   string
 		value string
@@ -166,7 +167,7 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		}
 	}
 
-	if problem := r.put(profileFile, []byte(renderProfile(r.profile))); problem != nil {
+	if problem := r.put(profileFile, []byte(RenderProfile(r.profile))); problem != nil {
 		return *problem
 	}
 	if problem := r.put(fenceFile, []byte(renderFence(rulesFor(in.nonGoals)))); problem != nil {
