@@ -3,7 +3,7 @@ package brief_test
 import (
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/brief"
 )
 
 // TestNonGoalsAreOptional: forcing an exclusion invents a rule the human never

@@ -3,7 +3,7 @@ package gate_test
 import (
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/gate"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 )
 
 // TestASilentSuccessIsAValidProof covers the most common real case: `go vet`,

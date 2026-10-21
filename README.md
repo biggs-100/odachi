@@ -19,10 +19,10 @@ sha256 y lo deja listo. Los tres comandos:
 
 ```sh
 # linux y macOS
-curl -fsSL https://raw.githubusercontent.com/biggz/odachi/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.sh | bash
 
 # windows (PowerShell)
-irm https://raw.githubusercontent.com/biggz/odachi/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 | iex
 
 # y para confirmar qué versión quedó
 odachi --version

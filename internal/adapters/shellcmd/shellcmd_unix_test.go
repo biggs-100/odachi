@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/biggz/odachi/internal/adapters/shellcmd"
+	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 )
 
 // A proof is what the command said, so both streams have to arrive. The seam is

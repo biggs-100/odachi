@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/start"
 )
 
 // TestVersionSurfacesPrintTheBuildVersion pins the two shapes a human types and

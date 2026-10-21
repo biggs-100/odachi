@@ -6,7 +6,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/biggz/odachi/internal/domain/fence"
+	"github.com/biggs-100/odachi/internal/domain/fence"
 )
 
 // fenceDocument is the TOML shape `odachi start` writes: one [[rule]] per

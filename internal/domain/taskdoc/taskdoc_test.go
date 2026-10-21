@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // example reads one of the canonical artifact examples.

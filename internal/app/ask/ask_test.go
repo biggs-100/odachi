@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/app/ask"
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/app/ask"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // fakeFiles is the disk in memory. Writes are recorded so a test can assert

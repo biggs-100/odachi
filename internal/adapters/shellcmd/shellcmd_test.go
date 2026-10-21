@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/adapters/shellcmd"
+	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 )
 
 // These two commands behave the same in sh and in cmd, so the shared contract

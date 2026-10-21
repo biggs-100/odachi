@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/app/summary"
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/app/summary"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // fakeFiles is the read-only disk this verb needs.

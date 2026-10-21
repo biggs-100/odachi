@@ -3,7 +3,7 @@ package fence_test
 import (
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/fence"
+	"github.com/biggs-100/odachi/internal/domain/fence"
 )
 
 // ruleFor builds a single-rule fence with the given paths and deps.

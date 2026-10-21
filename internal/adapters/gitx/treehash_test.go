@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/adapters/gitx"
+	"github.com/biggs-100/odachi/internal/adapters/gitx"
 )
 
 // TestTreeHashIncludesUntrackedFiles is the property the product rests on: a

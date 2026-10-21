@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
 // specFieldOrder is the closed set from odd/tasks/odachi-bootstrap.md, Contract

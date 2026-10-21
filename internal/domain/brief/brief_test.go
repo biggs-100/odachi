@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/brief"
 )
 
 // example reads the canonical brief artifact example. The path is relative to

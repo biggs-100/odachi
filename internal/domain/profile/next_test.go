@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
 // TestNextIsEarnedAndNeverAutomatic pins the graduation rule of Contract IV:

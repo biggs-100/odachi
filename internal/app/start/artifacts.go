@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/biggz/odachi/internal/domain/brief"
-	"github.com/biggz/odachi/internal/domain/fence"
-	"github.com/biggz/odachi/internal/domain/profile"
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/fence"
+	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // preset is one named non-goal from the Contract III catalog: the key a human

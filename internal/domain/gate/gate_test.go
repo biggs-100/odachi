@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/gate"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 )
 
 // A ready state is the base every blocked state is derived from, so a test
@@ -14,7 +14,7 @@ func ready() gate.State {
 		HasBrief:      true,
 		TreeHash:      "4a1c9f",
 		ProofTreeHash: "4a1c9f",
-		ProofOutput:   "ok github.com/biggz/odachi/internal/domain/gate",
+		ProofOutput:   "ok github.com/biggs-100/odachi/internal/domain/gate",
 	}
 }
 
@@ -42,7 +42,7 @@ func TestEvaluationOrder(t *testing.T) {
 
 	failedProof := ready()
 	failedProof.ProofFailed = true
-	failedProof.ProofLastLine = "FAIL github.com/biggz/odachi/internal/domain/gate 0.02s"
+	failedProof.ProofLastLine = "FAIL github.com/biggs-100/odachi/internal/domain/gate 0.02s"
 	failedProof.ProofCommand = "go test ./..."
 
 	tests := []struct {
@@ -106,7 +106,7 @@ func TestEvaluationOrder(t *testing.T) {
 			state:   failedProof,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofFailed,
-			message: "la prueba falló: FAIL github.com/biggz/odachi/internal/domain/gate 0.02s",
+			message: "la prueba falló: FAIL github.com/biggs-100/odachi/internal/domain/gate 0.02s",
 			next:    `odachi check --run "go test ./..."`,
 		},
 		{

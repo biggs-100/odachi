@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/start"
 )
 
 // fakeFiles is the Files port in memory. Every call is recorded in a shared

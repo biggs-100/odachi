@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/adapters/profiletoml"
-	"github.com/biggz/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
+	"github.com/biggs-100/odachi/internal/app/start"
 )
 
 // runDir runs the CLI inside dir with a non-terminal stdin, so the machine path

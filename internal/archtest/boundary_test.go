@@ -10,7 +10,7 @@ import (
 
 // modulePath is the module declared in go.mod. The boundary guard does not
 // trust import strings it cannot attribute to this module.
-const modulePath = "github.com/biggz/odachi"
+const modulePath = "github.com/biggs-100/odachi"
 
 // domainRoot is the only area allowed to be dependency-free.
 const domainRoot = modulePath + "/internal/domain"

@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/biggz/odachi/internal/adapters/fsx"
-	"github.com/biggz/odachi/internal/adapters/gitx"
-	"github.com/biggz/odachi/internal/adapters/profiletoml"
-	"github.com/biggz/odachi/internal/adapters/shellcmd"
-	"github.com/biggz/odachi/internal/app/start"
-	"github.com/biggz/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/adapters/fsx"
+	"github.com/biggs-100/odachi/internal/adapters/gitx"
+	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
+	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
+	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
 // osFiles is the Files adapter for `odachi start`: the only place that command

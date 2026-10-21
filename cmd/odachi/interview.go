@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/biggz/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/start"
 )
 
 // terminalInterview is the Interview adapter: it prints one question block (the

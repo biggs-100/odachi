@@ -136,7 +136,7 @@ func Builtin() map[string]Profile // novato (extends "") / senior (extends novat
 
 ### E. Non-negotiables
 
-- Module path `github.com/biggz/odachi`; zero external dependencies in this session.
+- Module path `github.com/biggs-100/odachi`; zero external dependencies in this session.
 - Code, identifiers, comments, docs and commits in English. Messages the USER reads are Spanish (see birth decision 1).
 - Guard test on import boundaries exists BEFORE domain code.
 - Test-first: the three domain test files are written and observed RED before the implementation files.
@@ -421,7 +421,7 @@ odachi version      lo mismo (el humano lo va a tipear)
 `set -euo pipefail`. Requiere `curl` y `tar`; sin ellos, error claro.
 
 1. Detecta OS (`linux`, `darwin`) y arquitectura (`amd64` desde `x86_64`, `arm64` desde `aarch64`/`arm64`). Plataforma no soportada: exit 1 diciéndolo.
-2. Versión: `$ODACHI_VERSION`, o la última release vía `api.github.com/repos/biggz/odachi/releases/latest`.
+2. Versión: `$ODACHI_VERSION`, o la última release vía `api.github.com/repos/biggs-100/odachi/releases/latest`.
 3. Base de descarga configurable: `ODACHI_BASE_URL` (default la URL de releases de GitHub para esa versión). Es lo que permite testearlo sin red.
 4. Descarga el archivo y `checksums.txt`, verifica sha256 (sin `sha256sum` usar `shasum -a 256`; si no hay ninguno de los dos, error claro en vez de saltear la verificación).
 5. Instala en `${ODACHI_BIN_DIR:-$HOME/.local/bin}`, `chmod +x`. Si no puede escribir ahí, instala en `./odachi` y lo dice.
@@ -458,7 +458,7 @@ Unidad única. No tocar el comportamiento de los seis verbos. No agregar depende
 L1 · "analiza gentle-ai y dime como crearias algo mucho mejor y que no sea complicado ni demoroso de hacer" — path C:\Users\USER\Desktop\herramientas\gentle-ai
 L2 · nombre elegido: odachi. Descartados: gentle-*, oficio, wright, koder-ai, dev-ai
 L3 · se descarta `decisions.md` como archivo aparte: lo durable va a `brief.md`, lo cronológico al `Historial` del task doc. Una sola fuente de verdad.
-L4 · el humano autoriza T1 y T2: "ok, comencemos". Path C:\Users\USER\Desktop\dev-biggz\odachi
+L4 · el humano autoriza T1 y T2: "ok, comencemos" (path local del repo omitido a propósito en un archivo que se publica).
 L5 · T1+T2 verificados por el padre, no por el reporte del worker: `go test ./...` (archtest + fence + gate + profile ok), `go build ./...`, `go vet ./...`, `gofmt -l` vacío; 1.189 líneas de Go; el guard confirma que el dominio solo importa stdlib.
 L6 · Riesgos que el worker marcó, resueltos como decisiones: (a) out_of_scope = NeedsDecision(2), porque la pregunta real es "¿esto entra al proyecto?" y esa es del humano; (b) prueba faltante = ProofTreeHash vacío o ProofOutput vacío, prueba vieja = hashes distintos; (c) no_brief y brief_incomplete también son NeedsDecision(2): el brief lo define el humano.
 L7 · Corrección del padre sobre la entrega: `senior.Proof` pasa de heredar "command" a "suite-or-ci", que es lo acordado en la tabla de perfiles.

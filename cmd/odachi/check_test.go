@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // checkBrief is a brief complete enough to pass the first two gates.

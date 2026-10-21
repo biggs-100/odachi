@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/biggz/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/brief"
 )
 
 // field identifies one of the seven answers, in the order the interview asks

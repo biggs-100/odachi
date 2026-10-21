@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	initapp "github.com/biggz/odachi/internal/app/init"
+	initapp "github.com/biggs-100/odachi/internal/app/init"
 )
 
 const dir = "/proyecto"

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/app/check"
-	"github.com/biggz/odachi/internal/domain/gate"
-	"github.com/biggz/odachi/internal/domain/proof"
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/app/check"
+	"github.com/biggs-100/odachi/internal/domain/gate"
+	"github.com/biggs-100/odachi/internal/domain/proof"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // dir is the project root the run sees. It is absolute-looking and never
@@ -285,10 +285,10 @@ deps  = ["stripe"]
 			files:   readyFiles(),
 			git:     &fakeGit{tree: currentTree},
 			opts:    check.Options{Run: "go test ./..."},
-			shell:   &fakeShell{output: "ok\nFAIL github.com/biggz/odachi 0.02s\n", exitCode: 1},
+			shell:   &fakeShell{output: "ok\nFAIL github.com/biggs-100/odachi 0.02s\n", exitCode: 1},
 			code:    int(gate.NeedsWork),
 			reason:  gate.ReasonProofFailed,
-			message: "la prueba falló: FAIL github.com/biggz/odachi 0.02s",
+			message: "la prueba falló: FAIL github.com/biggs-100/odachi 0.02s",
 			next:    `odachi check --run "go test ./..."`,
 		},
 	}
@@ -354,7 +354,7 @@ func TestRunWritesTheProofOfTheCurrentFeature(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
 	git := &fakeGit{tree: currentTree}
-	shell := &fakeShell{output: "ok  github.com/biggz/odachi 0.02s\n"}
+	shell := &fakeShell{output: "ok  github.com/biggs-100/odachi 0.02s\n"}
 
 	got := check.Run(check.Options{Dir: dir, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45}, files, git, shell)
 
@@ -381,7 +381,7 @@ func TestRunWritesTheProofOfTheCurrentFeature(t *testing.T) {
 		}
 	}
 
-	want := proofFile(currentTree, "go test ./...", "ok  github.com/biggz/odachi 0.02s\n")
+	want := proofFile(currentTree, "go test ./...", "ok  github.com/biggs-100/odachi 0.02s\n")
 	if string(files.files[wantPath]) != want {
 		t.Errorf("proof =\n%q\nwant\n%q", files.files[wantPath], want)
 	}

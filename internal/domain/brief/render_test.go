@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/brief"
 )
 
 // TestRenderUsesTheCanonicalHeaderOrder pins the exact bytes of a rendered

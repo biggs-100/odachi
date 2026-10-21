@@ -12,12 +12,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/biggz/odachi/internal/app/ask"
-	"github.com/biggz/odachi/internal/app/check"
-	initapp "github.com/biggz/odachi/internal/app/init"
-	"github.com/biggz/odachi/internal/app/level"
-	"github.com/biggz/odachi/internal/app/start"
-	"github.com/biggz/odachi/internal/app/summary"
+	"github.com/biggs-100/odachi/internal/app/ask"
+	"github.com/biggs-100/odachi/internal/app/check"
+	initapp "github.com/biggs-100/odachi/internal/app/init"
+	"github.com/biggs-100/odachi/internal/app/level"
+	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/summary"
 )
 
 // version is the release identifier this binary reports. A plain `go build`

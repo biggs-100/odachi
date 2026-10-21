@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/app/tasks"
 )
 
 // fakeFiles is the disk in memory: it lists directories and reads files, which

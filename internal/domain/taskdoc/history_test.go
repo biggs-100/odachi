@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // withHistory builds a minimal task document whose `## Historial` carries the

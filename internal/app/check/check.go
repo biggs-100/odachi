@@ -13,11 +13,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/biggz/odachi/internal/app/tasks"
-	"github.com/biggz/odachi/internal/domain/brief"
-	"github.com/biggz/odachi/internal/domain/fence"
-	"github.com/biggz/odachi/internal/domain/gate"
-	"github.com/biggz/odachi/internal/domain/proof"
+	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/fence"
+	"github.com/biggs-100/odachi/internal/domain/gate"
+	"github.com/biggs-100/odachi/internal/domain/proof"
 )
 
 // DefaultTimeout is how long the proof command may take when --timeout is not

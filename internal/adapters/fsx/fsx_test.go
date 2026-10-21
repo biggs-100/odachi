@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/biggz/odachi/internal/adapters/fsx"
+	"github.com/biggs-100/odachi/internal/adapters/fsx"
 )
 
 func TestDigestIsStableSHA256Hex(t *testing.T) {

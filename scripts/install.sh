@@ -13,7 +13,7 @@
 #   ODACHI_BIN_DIR   carpeta de destino (default: $HOME/.local/bin)
 set -euo pipefail
 
-REPO="biggz/odachi"
+REPO="biggs-100/odachi"
 
 die() {
 	printf 'odachi: %s\n' "$1" >&2

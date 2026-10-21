@@ -1,4 +1,4 @@
-module github.com/biggz/odachi
+module github.com/biggs-100/odachi
 
 go 1.25
 

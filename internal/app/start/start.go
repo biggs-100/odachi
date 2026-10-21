@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/biggz/odachi/internal/domain/brief"
-	"github.com/biggz/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
 // Exit codes (Contract III).

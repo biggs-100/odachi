@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/app/start"
-	"github.com/biggz/odachi/internal/domain/brief"
-	"github.com/biggz/odachi/internal/domain/profile"
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // The seven questions and their why, verbatim from Contract III. They live in

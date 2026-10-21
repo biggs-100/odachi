@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/app/level"
-	"github.com/biggz/odachi/internal/domain/profile"
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/app/level"
+	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // fakeFiles is the disk in memory with an ordered event log, so a test can

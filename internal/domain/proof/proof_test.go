@@ -4,21 +4,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/domain/proof"
+	"github.com/biggs-100/odachi/internal/domain/proof"
 )
 
 func TestRenderWritesTheTwoHeaderLinesThenTheVerbatimOutput(t *testing.T) {
 	p := proof.Proof{
 		Tree:    "4a1c9f7d2e3b5a6c8d9e0f1a2b3c4d5e6f7a8b9c",
 		Command: "go test ./...",
-		Output:  "ok  github.com/biggz/odachi/internal/domain/fence\t0.02s\n--- FAIL: TestX (0.00s)\n",
+		Output:  "ok  github.com/biggs-100/odachi/internal/domain/fence\t0.02s\n--- FAIL: TestX (0.00s)\n",
 	}
 
 	got := proof.Render(p)
 
 	want := "# tree 4a1c9f7d2e3b5a6c8d9e0f1a2b3c4d5e6f7a8b9c\n" +
 		"# command go test ./...\n" +
-		"ok  github.com/biggz/odachi/internal/domain/fence\t0.02s\n" +
+		"ok  github.com/biggs-100/odachi/internal/domain/fence\t0.02s\n" +
 		"--- FAIL: TestX (0.00s)\n"
 	if got != want {
 		t.Fatalf("Render =\n%q\nwant\n%q", got, want)
@@ -47,7 +47,7 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 // A proof without the tree header cannot say which tree produced it, and
 // guessing is the defect this tool exists to prevent.
 func TestParseRefusesAFileWithoutTheTreeHeader(t *testing.T) {
-	_, err := proof.Parse("ok github.com/biggz/odachi/internal/domain/fence\n")
+	_, err := proof.Parse("ok github.com/biggs-100/odachi/internal/domain/fence\n")
 	if err == nil {
 		t.Fatal("Parse accepted a file with no header")
 	}
@@ -87,9 +87,9 @@ func TestMatchesComparesTheTree(t *testing.T) {
 }
 
 func TestLastLineSkipsBlankLines(t *testing.T) {
-	p := proof.Proof{Tree: "4a1c9f", Command: "go test ./...", Output: "ok\n\nFAIL github.com/biggz/odachi 0.02s\n\n"}
+	p := proof.Proof{Tree: "4a1c9f", Command: "go test ./...", Output: "ok\n\nFAIL github.com/biggs-100/odachi 0.02s\n\n"}
 
-	if got := p.LastLine(); got != "FAIL github.com/biggz/odachi 0.02s" {
+	if got := p.LastLine(); got != "FAIL github.com/biggs-100/odachi 0.02s" {
 		t.Errorf("LastLine = %q, want the last non-empty line", got)
 	}
 

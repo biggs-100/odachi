@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/adapters/profiletoml"
-	"github.com/biggz/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
 // example is the canonical profile artifact, relative to this package:

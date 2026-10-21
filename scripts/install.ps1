@@ -26,7 +26,7 @@ $ErrorActionPreference = 'Stop'
 # El archivo en sí ya es UTF-8; lo que estaba mal era la salida.
 $OutputEncoding = [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
-$repo = 'biggz/odachi'
+$repo = 'biggs-100/odachi'
 
 function Fail([string] $message) {
     Write-Host "odachi: $message" -ForegroundColor Red

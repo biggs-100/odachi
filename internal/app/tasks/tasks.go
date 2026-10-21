@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // Dir is where task documents live, relative to the project root.

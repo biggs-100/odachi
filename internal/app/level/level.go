@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/biggz/odachi/internal/app/start"
-	"github.com/biggz/odachi/internal/app/tasks"
-	"github.com/biggz/odachi/internal/domain/profile"
-	"github.com/biggz/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // Exit codes (Contract IV).

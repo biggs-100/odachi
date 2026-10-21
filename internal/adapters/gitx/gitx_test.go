@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/biggz/odachi/internal/adapters/gitx"
+	"github.com/biggs-100/odachi/internal/adapters/gitx"
 )
 
 // git runs one git command in root and returns its trimmed stdout. Tests use

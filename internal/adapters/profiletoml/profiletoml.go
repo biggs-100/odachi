@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/biggz/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
 // file mirrors profile.Profile one field per line, with the TOML key names the
