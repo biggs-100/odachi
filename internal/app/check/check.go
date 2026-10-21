@@ -18,6 +18,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/fence"
 	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/proof"
+	reviewdomain "github.com/biggs-100/odachi/internal/domain/review"
 )
 
 // DefaultTimeout is how long the proof command may take when --timeout is not
@@ -46,6 +47,21 @@ const (
 	noFeatureSlug   = "check"
 )
 
+// The two reasons the optional review gate can add. They are not gate reasons:
+// the gate is untouched, and a review only ever participates when the human asks
+// for it with --require-review.
+const (
+	// ReasonReviewMissing means this tree has no verdict yet.
+	ReasonReviewMissing = "review_missing"
+	// ReasonReviewChanges means the verdict for this tree requests changes, and
+	// the run names the first finding that blocks.
+	ReasonReviewChanges = "review_changes_requested"
+)
+
+// nextReview is the continuation for a missing verdict, and the command that
+// shows what a changes_requested verdict says.
+const nextReview = "odachi review"
+
 // Options is one `odachi check` invocation.
 type Options struct {
 	Dir string
@@ -63,6 +79,10 @@ type Options struct {
 	// Quiet changes nothing about the result: the printer decides whether a
 	// ready run says anything (the pre-commit hook depends on the silence).
 	Quiet bool
+	// RequireReview turns the optional design gate on: a stored verdict for this
+	// exact tree, and not a changes_requested one. It is off by default because a
+	// beginner must not be blocked by a verb they have never heard of.
+	RequireReview bool
 }
 
 // Files is the disk port: enough to read the project and write one proof.
@@ -177,7 +197,17 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		haveProof = haveProof || (!ran.failed && !ran.timedOut)
 	}
 
-	return r.report(gate.Evaluate(state), haveProof)
+	verdict := gate.Evaluate(state)
+	if opts.RequireReview && verdict.Code == gate.Ready {
+		// The review gate is last on purpose: everything before it is something
+		// the agent can act on, and sending an agent to `odachi review` while the
+		// proof gate is still failing would be a dead end that resolves nothing.
+		if problem := r.requireReview(); problem != nil {
+			return *problem
+		}
+	}
+
+	return r.report(verdict, haveProof)
 }
 
 // proofIgnore keeps the evidence out of the tree the evidence describes:
@@ -385,6 +415,71 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 		return ranProof{}, &problem
 	}
 	return ranProof{output: output}, nil
+}
+
+// requireReview is the optional design gate: only a stored verdict for THIS tree
+// approves the change, and only one that does not request changes.
+//
+// It writes nothing. The store's ignore file is created by the verbs that produce
+// a verdict, so a tree with no verdict has no store to prepare either.
+func (r *runner) requireReview() *Result {
+	rel, err := reviewdomain.Path(r.tree)
+	if err != nil {
+		problem := blocked(oneLine(err.Error()) + "; revisá el árbol de git y volvé a correr odachi check --require-review")
+		return &problem
+	}
+
+	data, err := r.files.Read(filepath.Join(r.opts.Dir, filepath.FromSlash(rel)))
+	if err != nil {
+		problem := Result{
+			Code:    int(gate.NeedsDecision),
+			Reason:  ReasonReviewMissing,
+			Message: "no hay review para este árbol",
+			Next:    nextReview,
+			Lines:   []string{"no hay review para este árbol", "siguiente: " + nextReview},
+		}
+		return &problem
+	}
+
+	verdict, err := reviewdomain.Parse(data)
+	if err != nil {
+		problem := Result{
+			Code:   int(gate.NeedsDecision),
+			Reason: ReasonReviewMissing,
+			Message: fmt.Sprintf("el review de este árbol no se puede leer (%s): %s; volvé a escribirlo con odachi review --attach <archivo>",
+				rel, oneLine(err.Error())),
+			Next: nextReview,
+		}
+		problem.Lines = []string{problem.Message, "siguiente: odachi review --attach <archivo>"}
+		return &problem
+	}
+
+	if finding, blocking := reviewdomain.Blocking(verdict.Findings); blocking {
+		message := "el review pide cambios: " + oneLine(reviewFinding(finding))
+		problem := Result{
+			Code:    int(gate.NeedsDecision),
+			Reason:  ReasonReviewChanges,
+			Message: message,
+			Next:    "odachi review --show",
+			Lines: []string{
+				message,
+				"siguiente: odachi review --show",
+			},
+		}
+		return &problem
+	}
+
+	return nil
+}
+
+// reviewFinding is the one finding a human has to read first, in one line: where
+// it is, how bad it is, and the evidence.
+func reviewFinding(finding reviewdomain.Finding) string {
+	where := finding.Path
+	if finding.Line > 0 {
+		where = fmt.Sprintf("%s:%d", finding.Path, finding.Line)
+	}
+	return where + " " + string(finding.Severity) + " " + finding.Why
 }
 
 // report turns the gate's verdict into the verb's result.
