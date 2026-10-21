@@ -50,6 +50,11 @@ type Options struct {
 	Dir string
 	// Exe is how the hook reaches this binary. Empty means `odachi` from PATH.
 	Exe string
+	// PathMissing says a shell cannot run `odachi` by name. The rules block this
+	// command writes tells the agent to run exactly that command, so an
+	// unreachable name makes every rule unexecutable while the hook still works
+	// from its absolute path. init says so instead of reporting a clean install.
+	PathMissing bool
 }
 
 // Files is the disk port: enough to read, back up and replace the two files,
@@ -99,7 +104,24 @@ func Run(opts Options, files Files) Result {
 		return *problem
 	}
 
+	if opts.PathMissing {
+		r.lines = append(r.lines, pathWarning(opts.Exe)...)
+	}
+
 	return r.result()
+}
+
+// pathWarning is the half-broken install: the hook works from the absolute path,
+// the rules do not work at all. It names the folder to add, because "ponelo en el
+// PATH" is the kind of advice that leaves a beginner exactly where they were.
+func pathWarning(exe string) []string {
+	lines := []string{
+		"odachi no está en tu PATH: el bloque de AGENTS.md le pide al agente que corra `odachi`, y así no va a poder",
+	}
+	if dir := filepath.Dir(exe); exe != "" && dir != "." && dir != string(filepath.Separator) {
+		return append(lines, "el hook sí funciona porque usa la ruta absoluta; agregá esa carpeta al PATH (en sh: export PATH=\""+dir+":$PATH\")")
+	}
+	return append(lines, "el hook sí funciona porque usa la ruta absoluta; agregá la carpeta donde instalaste odachi al PATH y volvé a correr odachi init")
 }
 
 // runner holds what one run touched and what it reports.

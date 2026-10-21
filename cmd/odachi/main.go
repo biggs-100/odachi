@@ -467,7 +467,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	return reportInit(initapp.Run(initapp.Options{Dir: dir, Exe: hookExe()}, osFiles{}), asJSON, stdout, stderr)
+	return reportInit(initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing()}, osFiles{}), asJSON, stdout, stderr)
 }
 
 // reportInit prints what init did. Unlike the other verbs it always prints its

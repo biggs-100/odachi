@@ -115,6 +115,15 @@ func hookExe() string {
 	return filepath.ToSlash(self)
 }
 
+// pathMissing reports whether a shell cannot resolve `odachi` by name. The rules
+// block names that command, so an unreachable name leaves the agent unable to
+// obey a single rule — which is what happened in a real run, where the agent
+// spent seven shell calls looking for the binary.
+func pathMissing() bool {
+	_, err := exec.LookPath("odachi")
+	return err != nil
+}
+
 // MakeExecutable is what the pre-commit hook needs: git only runs a hook that
 // is executable, and WriteAtomic writes 0644 on purpose.
 func (osFiles) MakeExecutable(path string) error {
