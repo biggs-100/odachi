@@ -1,0 +1,128 @@
+package proof_test
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/biggz/odachi/internal/domain/proof"
+)
+
+func TestRenderWritesTheTwoHeaderLinesThenTheVerbatimOutput(t *testing.T) {
+	p := proof.Proof{
+		Tree:    "4a1c9f7d2e3b5a6c8d9e0f1a2b3c4d5e6f7a8b9c",
+		Command: "go test ./...",
+		Output:  "ok  github.com/biggz/odachi/internal/domain/fence\t0.02s\n--- FAIL: TestX (0.00s)\n",
+	}
+
+	got := proof.Render(p)
+
+	want := "# tree 4a1c9f7d2e3b5a6c8d9e0f1a2b3c4d5e6f7a8b9c\n" +
+		"# command go test ./...\n" +
+		"ok  github.com/biggz/odachi/internal/domain/fence\t0.02s\n" +
+		"--- FAIL: TestX (0.00s)\n"
+	if got != want {
+		t.Fatalf("Render =\n%q\nwant\n%q", got, want)
+	}
+}
+
+func TestParseReadsBackWhatRenderWrote(t *testing.T) {
+	cases := []proof.Proof{
+		{Tree: "4a1c9f", Command: "echo ok", Output: "ok\n"},
+		{Tree: "4a1c9f", Command: `go test ./... -run "TestGate"`, Output: ""},
+		{Tree: "4a1c9f", Command: "printf 'a\\nb'", Output: "a\nb"},
+		{Tree: "4a1c9f", Command: "cat", Output: "\n\nleading and trailing blank lines\n\n"},
+	}
+
+	for _, want := range cases {
+		got, err := proof.Parse(proof.Render(want))
+		if err != nil {
+			t.Fatalf("Parse(Render(%+v)): %v", want, err)
+		}
+		if got != want {
+			t.Errorf("Parse(Render(x)) = %+v, want %+v", got, want)
+		}
+	}
+}
+
+// A proof without the tree header cannot say which tree produced it, and
+// guessing is the defect this tool exists to prevent.
+func TestParseRefusesAFileWithoutTheTreeHeader(t *testing.T) {
+	_, err := proof.Parse("ok github.com/biggz/odachi/internal/domain/fence\n")
+	if err == nil {
+		t.Fatal("Parse accepted a file with no header")
+	}
+	if !strings.Contains(err.Error(), "# tree") {
+		t.Errorf("error %q does not name the missing header", err)
+	}
+}
+
+func TestParseRefusesATreeHeaderWithoutTheCommandHeader(t *testing.T) {
+	_, err := proof.Parse("# tree 4a1c9f\nok\n")
+	if err == nil {
+		t.Fatal("Parse accepted a proof with no command header")
+	}
+	if !strings.Contains(err.Error(), "# command") {
+		t.Errorf("error %q does not name the missing header", err)
+	}
+}
+
+func TestParseRefusesAnEmptyFile(t *testing.T) {
+	if _, err := proof.Parse(""); err == nil {
+		t.Fatal("Parse accepted an empty file")
+	}
+}
+
+func TestMatchesComparesTheTree(t *testing.T) {
+	p := proof.Proof{Tree: "4a1c9f", Command: "echo ok", Output: "ok\n"}
+
+	if !p.Matches("4a1c9f") {
+		t.Error("Matches rejected the tree it was produced from")
+	}
+	if p.Matches("9f2b7c") {
+		t.Error("Matches accepted a different tree")
+	}
+	if p.Matches("") {
+		t.Error("Matches accepted an empty tree hash")
+	}
+}
+
+func TestLastLineSkipsBlankLines(t *testing.T) {
+	p := proof.Proof{Tree: "4a1c9f", Command: "go test ./...", Output: "ok\n\nFAIL github.com/biggz/odachi 0.02s\n\n"}
+
+	if got := p.LastLine(); got != "FAIL github.com/biggz/odachi 0.02s" {
+		t.Errorf("LastLine = %q, want the last non-empty line", got)
+	}
+
+	empty := proof.Proof{Tree: "4a1c9f", Command: "true"}
+	if got := empty.LastLine(); got != "" {
+		t.Errorf("LastLine of an empty output = %q, want empty", got)
+	}
+}
+
+// Two runs on the same tree produce the same bytes: the header carries the tree
+// and the command, never a timestamp.
+func TestRenderIsDeterministic(t *testing.T) {
+	p := proof.Proof{Tree: "4a1c9f", Command: "echo ok", Output: "ok\n"}
+
+	if first, second := proof.Render(p), proof.Render(p); first != second {
+		t.Errorf("Render is not deterministic:\n%q\nvs\n%q", first, second)
+	}
+}
+
+// Windows editors write CRLF; the header fields are still the same tree and the
+// same command, and the output stays exactly as the command printed it.
+func TestParseToleratesCRLFHeaders(t *testing.T) {
+	p, err := proof.Parse("# tree 4a1c9f\r\n# command echo ok\r\nok\r\n")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if p.Tree != "4a1c9f" {
+		t.Errorf("Tree = %q, want 4a1c9f", p.Tree)
+	}
+	if p.Command != "echo ok" {
+		t.Errorf("Command = %q, want echo ok", p.Command)
+	}
+	if p.Output != "ok\r\n" {
+		t.Errorf("Output = %q, want the bytes as printed", p.Output)
+	}
+}

@@ -4,6 +4,7 @@ package gate
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -28,6 +29,7 @@ const (
 	ReasonOpenQuestion    = "open_question"
 	ReasonProofMissing    = "proof_missing"
 	ReasonProofStale      = "proof_stale"
+	ReasonProofFailed     = "proof_failed"
 )
 
 // Commands that resolve a block. Every blocked result names one.
@@ -47,6 +49,20 @@ type State struct {
 	ProofTreeHash string
 	ProofOutput   string
 
+	// ProofFailed says the command that produced the proof exited non-zero. The
+	// gate cannot see an exit code, so the caller that ran the command reports
+	// it, together with the last line it printed and the command itself: the
+	// continuation has to name the exact command, not a generic one.
+	ProofFailed   bool
+	ProofLastLine string
+	ProofCommand  string
+
+	// ProofTimedOut is the other way a proof command fails: it never finished.
+	// The sentence says how long the tool waited, which is what the human has to
+	// raise or what they have to fix.
+	ProofTimedOut       bool
+	ProofTimeoutSeconds int
+
 	OpenQuestions int
 	Violations    []string
 }
@@ -60,9 +76,9 @@ type Result struct {
 }
 
 // Evaluate applies the documented order: no brief -> brief incomplete -> out of
-// scope -> open question -> proof missing -> proof stale -> ready. The order
-// decides the Code too: a block only the human can clear is NeedsDecision, a
-// block the agent can clear is NeedsWork.
+// scope -> open question -> proof missing -> proof stale -> proof failed ->
+// ready. The order decides the Code too: a block only the human can clear is
+// NeedsDecision, a block the agent can clear is NeedsWork.
 func Evaluate(s State) Result {
 	switch {
 	case !s.HasBrief:
@@ -73,13 +89,43 @@ func Evaluate(s State) Result {
 		return Result{NeedsDecision, ReasonOutOfScope, "fuera de alcance: " + strings.Join(s.Violations, "; "), nextAsk}
 	case s.OpenQuestions > 0:
 		return Result{NeedsDecision, ReasonOpenQuestion, openQuestions(s.OpenQuestions), nextAsk}
-	case s.ProofTreeHash == "" || s.ProofOutput == "":
+	// A proof exists as soon as it names the tree it came from. An empty body is
+	// still a proof: `go vet`, `tsc --noEmit` and `gofmt -l` all succeed while
+	// printing nothing, and telling a human "falta la prueba" right after they
+	// ran one is a dead end that names a command which cannot resolve it.
+	case s.ProofTreeHash == "":
 		return Result{NeedsWork, ReasonProofMissing, "falta la prueba de este cambio", nextCheckProof}
 	case s.ProofTreeHash != s.TreeHash:
 		return Result{NeedsWork, ReasonProofStale, "la prueba es de otro estado del código", nextCheckProof}
+	case s.ProofTimedOut:
+		return Result{NeedsWork, ReasonProofFailed, "la prueba no terminó en " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRun(s.ProofCommand)}
+	case s.ProofFailed:
+		return Result{NeedsWork, ReasonProofFailed, "la prueba falló: " + proofLastLine(s.ProofLastLine), nextRun(s.ProofCommand)}
 	default:
 		return Result{Ready, ReasonReady, "listo: hay prueba para este árbol", ""}
 	}
+}
+
+// proofLastLine says what the failing command last printed. A command that
+// failed in silence is still a failure, and the message never ends in a colon
+// with nothing after it.
+func proofLastLine(line string) string {
+	line = strings.Join(strings.Fields(line), " ")
+	if line == "" {
+		return "sin salida"
+	}
+	return line
+}
+
+// nextRun names the command that produced the failing proof, quoted so a
+// human can paste it back exactly. Without a known command the continuation
+// keeps the placeholder the other blocked results use.
+func nextRun(command string) string {
+	command = strings.TrimSpace(command)
+	if command == "" {
+		return `odachi check --run "<comando>"`
+	}
+	return `odachi check --run "` + strings.ReplaceAll(command, `"`, `\"`) + `"`
 }
 
 // openQuestions keeps the sentence readable in Spanish for one and for many.

@@ -40,6 +40,11 @@ func TestEvaluationOrder(t *testing.T) {
 	staleProof := ready()
 	staleProof.ProofTreeHash = "9f2b7c"
 
+	failedProof := ready()
+	failedProof.ProofFailed = true
+	failedProof.ProofLastLine = "FAIL github.com/biggz/odachi/internal/domain/gate 0.02s"
+	failedProof.ProofCommand = "go test ./..."
+
 	tests := []struct {
 		name    string
 		state   gate.State
@@ -95,6 +100,14 @@ func TestEvaluationOrder(t *testing.T) {
 			reason:  gate.ReasonProofStale,
 			message: "la prueba es de otro estado del código",
 			next:    "odachi check --proof <archivo>",
+		},
+		{
+			name:    "proof failed",
+			state:   failedProof,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonProofFailed,
+			message: "la prueba falló: FAIL github.com/biggz/odachi/internal/domain/gate 0.02s",
+			next:    `odachi check --run "go test ./..."`,
 		},
 		{
 			name:    "ready",
@@ -170,6 +183,14 @@ func TestEvaluationOrderIsFirstBlockWins(t *testing.T) {
 	}
 
 	state.ProofTreeHash = state.TreeHash
+	state.ProofFailed = true
+	state.ProofLastLine = "exit status 1"
+	state.ProofCommand = "go test ./..."
+	if got := gate.Evaluate(state); got.Reason != gate.ReasonProofFailed {
+		t.Fatalf("Reason = %q, want %q (proof failed comes seventh)", got.Reason, gate.ReasonProofFailed)
+	}
+
+	state.ProofFailed = false
 	if got := gate.Evaluate(state); got.Reason != gate.ReasonReady {
 		t.Fatalf("Reason = %q, want %q (ready is last)", got.Reason, gate.ReasonReady)
 	}
@@ -186,6 +207,7 @@ func TestEveryBlockedResultNamesAContinuation(t *testing.T) {
 		{"open question", gate.State{HasBrief: true, OpenQuestions: 2}},
 		{"proof missing", gate.State{HasBrief: true, TreeHash: "4a1c9f"}},
 		{"proof stale", func() gate.State { s := ready(); s.ProofTreeHash = "otro"; return s }()},
+		{"proof failed", func() gate.State { s := ready(); s.ProofFailed = true; s.ProofCommand = "go test ./..."; return s }()},
 	}
 
 	for _, tc := range blocked {
@@ -226,6 +248,80 @@ func TestOpenQuestionPluralisation(t *testing.T) {
 	}
 	if got := gate.Evaluate(two).Message; got != "hay 2 preguntas sin contestar" {
 		t.Fatalf("2 questions: Message = %q, want %q", got, "hay 2 preguntas sin contestar")
+	}
+}
+
+// A failed proof names the exact command that produced it, quoted, so the
+// human can paste it back and rerun the same test on the same tree.
+func TestProofFailedNamesTheSameCommand(t *testing.T) {
+	state := ready()
+	state.ProofFailed = true
+	state.ProofLastLine = "2 tests fallaron"
+	state.ProofCommand = `go test ./... -run "TestGate"`
+
+	got := gate.Evaluate(state)
+
+	if got.Code != gate.NeedsWork {
+		t.Errorf("Code = %d, want %d (a failing proof is the agent's work)", got.Code, gate.NeedsWork)
+	}
+	want := `odachi check --run "go test ./... -run \"TestGate\""`
+	if got.Next != want {
+		t.Errorf("Next = %q, want %q", got.Next, want)
+	}
+	if !strings.Contains(got.Message, "2 tests fallaron") {
+		t.Errorf("Message = %q does not carry the last output line", got.Message)
+	}
+}
+
+// A command that fails without printing anything still has to say something a
+// human can act on, and still has to name a command: no dead ends.
+func TestProofFailedWithoutOutputOrCommandStillReadsAsASentence(t *testing.T) {
+	state := ready()
+	state.ProofFailed = true
+
+	got := gate.Evaluate(state)
+
+	if got.Message != "la prueba falló: sin salida" {
+		t.Errorf("Message = %q, want %q", got.Message, "la prueba falló: sin salida")
+	}
+	if got.Next != `odachi check --run "<comando>"` {
+		t.Errorf("Next = %q, want the generic --run continuation", got.Next)
+	}
+}
+
+// A timeout is a failed proof with its own sentence: the human needs to know
+// how long the tool waited, not which line was last.
+func TestProofTimedOutSaysHowLongItWaited(t *testing.T) {
+	state := ready()
+	state.ProofTimedOut = true
+	state.ProofTimeoutSeconds = 7
+	state.ProofCommand = "go test ./..."
+
+	got := gate.Evaluate(state)
+
+	if got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofFailed {
+		t.Fatalf("Code/Reason = %d/%q, want %d/%q", got.Code, got.Reason, gate.NeedsWork, gate.ReasonProofFailed)
+	}
+	if got.Message != "la prueba no terminó en 7s" {
+		t.Errorf("Message = %q, want %q", got.Message, "la prueba no terminó en 7s")
+	}
+	if got.Next != `odachi check --run "go test ./..."` {
+		t.Errorf("Next = %q, want the same command", got.Next)
+	}
+}
+
+// A command that failed after printing nothing is a failed proof, not a missing
+// one: the evidence was produced, it just says the command did not work.
+func TestFailedProofWithNoOutputIsStillAFailedProof(t *testing.T) {
+	state := ready()
+	state.ProofOutput = ""
+	state.ProofFailed = true
+	state.ProofCommand = "true"
+
+	got := gate.Evaluate(state)
+
+	if got.Reason != gate.ReasonProofFailed {
+		t.Fatalf("Reason = %q, want %q (a silent failure is a failure)", got.Reason, gate.ReasonProofFailed)
 	}
 }
 
