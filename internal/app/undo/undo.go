@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/biggs-100/odachi/internal/app/lock"
 	undodomain "github.com/biggs-100/odachi/internal/domain/undo"
 )
 
@@ -71,12 +72,30 @@ type Result struct {
 	Files   []string
 }
 
+// verbName is the lock owner: what the next run reads when this one is still
+// writing.
+const verbName = "undo"
+
 // Run performs one `odachi undo`.
-func Run(opts Options, files Files) Result {
+func Run(opts Options, files Files, guard lock.Lock) Result {
 	if opts.Dir == "" {
 		opts.Dir = "."
 	}
 
+	// undo replaces one artifact and backs up the one it replaces, so it writes
+	// more than one file and takes the lock like start does. It comes before the
+	// first listing: a refusal must not read a single backup.
+	held := lock.Take(guard, opts.Dir, verbName)
+	if held.Refusal != "" {
+		return blocked(held.Refusal)
+	}
+	defer held.Release()
+
+	return withNotice(run(opts, files), held.Notice)
+}
+
+// run does the work once the lock is held.
+func run(opts Options, files Files) Result {
 	kind, problem := parseFile(opts.File)
 	if problem != "" {
 		return blocked(problem)
@@ -286,6 +305,25 @@ func nothingToUndo(kind undodomain.Kind) string {
 	}
 	return fmt.Sprintf("%s: odachi escribe %s, y todavía no hay backups; corré odachi start para escribir el primero",
 		scope, allowedTargets())
+}
+
+// withNotice puts the lock's announcement in front of the run's own answer: a
+// run that took over an abandoned lock says so, on its own line when it
+// succeeded and at the front of the message when it did not.
+func withNotice(result Result, notice string) Result {
+	if notice == "" {
+		return result
+	}
+
+	if result.Code == CodeOK {
+		result.Lines = append([]string{notice}, result.Lines...)
+	}
+	if result.Message == "" {
+		result.Message = notice
+		return result
+	}
+	result.Message = notice + " " + result.Message
+	return result
 }
 
 // beside names a backup the way the message reads it: the artifact's directory

@@ -203,7 +203,7 @@ func TestRestoreBacksUpTheCurrentStateFirst(t *testing.T) {
 	files.put(briefRel, hand, at(21, 23, 0))
 	files.put(briefRel+".bak-"+digest(written), written, at(21, 20, 31))
 
-	res := undo.Run(undo.Options{Dir: dir}, files)
+	res := undo.Run(undo.Options{Dir: dir}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -250,11 +250,11 @@ func TestUndoingTheUndoPutsTheHandEditBack(t *testing.T) {
 	files.put(briefRel, hand, at(21, 23, 0))
 	files.put(briefRel+".bak-"+digest(written), written, at(21, 20, 31))
 
-	if res := undo.Run(undo.Options{Dir: dir}, files); res.Code != undo.CodeOK {
+	if res := undo.Run(undo.Options{Dir: dir}, files, nil); res.Code != undo.CodeOK {
 		t.Fatalf("first undo: Code = %d (message: %s)", res.Code, res.Message)
 	}
 
-	second := undo.Run(undo.Options{Dir: dir}, files)
+	second := undo.Run(undo.Options{Dir: dir}, files, nil)
 	if second.Code != undo.CodeOK {
 		t.Fatalf("second undo: Code = %d (message: %s)", second.Code, second.Message)
 	}
@@ -278,7 +278,7 @@ func TestUndoRefusesToGuessBetweenArtifacts(t *testing.T) {
 	files.put(taskRel, "documento nuevo", at(21, 23, 0))
 	files.put(taskRel+".bak-"+digest("documento viejo"), "documento viejo", at(22, 9, 30))
 
-	res := undo.Run(undo.Options{Dir: dir}, files)
+	res := undo.Run(undo.Options{Dir: dir}, files, nil)
 
 	if res.Code == undo.CodeOK {
 		t.Fatalf("Code = %d: adivinó cuál artefacto restaurar", res.Code)
@@ -303,7 +303,7 @@ func TestFileFiltersToOneArtifact(t *testing.T) {
 	files.put(taskRel, "documento nuevo", at(21, 23, 0))
 	files.put(taskRel+".bak-"+digest("documento viejo"), "documento viejo", at(22, 9, 30))
 
-	res := undo.Run(undo.Options{Dir: dir, File: "brief"}, files)
+	res := undo.Run(undo.Options{Dir: dir, File: "brief"}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -325,7 +325,7 @@ func TestListShowsOneLinePerArtifactNewestFirst(t *testing.T) {
 	files.put(profileRel, "perfil actual", at(21, 23, 0))
 	files.put(profileRel+".bak-"+digest("perfil 1"), "perfil 1", at(22, 8, 15))
 
-	res := undo.Run(undo.Options{Dir: dir, List: true}, files)
+	res := undo.Run(undo.Options{Dir: dir, List: true}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -350,7 +350,7 @@ func TestListFileFiltersToOneArtifact(t *testing.T) {
 	files.put(briefRel+".bak-"+digest("brief 1"), "brief 1", at(20, 10, 0))
 	files.put(profileRel+".bak-"+digest("perfil 1"), "perfil 1", at(22, 8, 15))
 
-	res := undo.Run(undo.Options{Dir: dir, List: true, File: "profile"}, files)
+	res := undo.Run(undo.Options{Dir: dir, List: true, File: "profile"}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -366,7 +366,7 @@ func TestNoBackupsExplainsWhatOdachiWrites(t *testing.T) {
 	files := newFakeFiles()
 	files.put(briefRel, "sin backups", at(21, 23, 0))
 
-	res := undo.Run(undo.Options{Dir: dir}, files)
+	res := undo.Run(undo.Options{Dir: dir}, files, nil)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d", res.Code, undo.CodeBlocked)
@@ -390,7 +390,7 @@ func TestUnknownFileListsTheFour(t *testing.T) {
 	files := newFakeFiles()
 	files.put(briefRel+".bak-"+digest("brief 1"), "brief 1", at(20, 10, 0))
 
-	res := undo.Run(undo.Options{Dir: dir, File: "inventado"}, files)
+	res := undo.Run(undo.Options{Dir: dir, File: "inventado"}, files, nil)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d", res.Code, undo.CodeBlocked)
@@ -416,7 +416,7 @@ func TestABackupOfSomeOtherFileIsNotUndoable(t *testing.T) {
 	files.put("odd/tasks/notas.txt", "notas", at(21, 23, 0))
 	files.put("odd/tasks/notas.txt.bak-"+digest("notas viejas"), "notas viejas", at(22, 10, 0))
 
-	res := undo.Run(undo.Options{Dir: dir}, files)
+	res := undo.Run(undo.Options{Dir: dir}, files, nil)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
@@ -437,7 +437,7 @@ func TestRestoringADeletedArtifactNeedsNoBackup(t *testing.T) {
 	fencePath := filepath.Join(dir, filepath.FromSlash(fenceRel))
 	files.put(fenceRel+".bak-"+digest("reglas viejas"), "reglas viejas", at(20, 10, 0))
 
-	res := undo.Run(undo.Options{Dir: dir}, files)
+	res := undo.Run(undo.Options{Dir: dir}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)

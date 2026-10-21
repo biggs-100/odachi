@@ -15,7 +15,7 @@ func TestTheNewestBackupWinsWithinOneArtifact(t *testing.T) {
 	files.put(briefRel+".bak-"+digest("brief viejo"), "brief viejo", at(20, 9, 0))
 	files.put(briefRel+".bak-"+digest("brief medio"), "brief medio", at(20, 12, 0))
 
-	res := undo.Run(undo.Options{Dir: dir, File: "brief"}, files)
+	res := undo.Run(undo.Options{Dir: dir, File: "brief"}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
