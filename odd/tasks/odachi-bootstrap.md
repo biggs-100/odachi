@@ -825,6 +825,48 @@ Devuelve un JSON `{"refutations":[{"id":"...","verdict":"stands|refuted","why":"
 - Refutación: refutado deja de bloquear; `stands` sigue bloqueando; refutador sin evidencia → `stands`; el archivo `.refuted.json` se escribe una vez y no se pisa.
 - Gate: falta una lente requerida → exit 2 nombrando cuál; blocker refutado → listo.
 
+## Contract XV · T22 (`doctor`) y T23 (`bench`)
+
+Dos instrumentos. Ninguno escribe: `doctor` lee el proyecto, `bench` corre el binario en directorios descartables.
+
+### `odachi doctor [--json]`
+
+Diez chequeos, **de solo lectura**, cada uno con una línea en español y, si algo está mal, el comando que lo arregla:
+
+| # | Chequeo | Problema |
+|---|---|---|
+| 1 | la versión del binario | — |
+| 2 | `odachi` resuelve desde un shell | el agente no puede ejecutar las reglas |
+| 3 | hay `.git` | no hay hook posible |
+| 4 | el bloque de odachi está en `AGENTS.md` (marcadores) | el agente no lee las reglas |
+| 5 | el hook de pre-commit existe y es nuestro | no hay gate local |
+| 6 | el binario que nombra el hook existe | el hook falla en cada commit |
+| 7 | `.odachi/profile.toml` resuelve a un perfil válido | ceremonia rota |
+| 8 | `brief.md` existe y no le falta nada | sin visión no hay nada que construir |
+| 9 | skills: cuántas y si `SKILLS.md` está al día | el catálogo se desvió |
+| 10 | el store de review y `proof/` están ignorados | cada review invalidaría la prueba |
+
+Exit 0 si no hay problemas (los avisos no fallan), 1 si hay al menos un problema. `--json` con el mismo contenido.
+
+### `odachi bench [--json] [--journeys <nombres>] [--binary <ruta>]`
+
+El instrumento que mide cómo se traba una persona. Cada recorrido corre en un directorio temporal con `HOME` controlado.
+
+- Un recorrido es una secuencia de invocaciones con su exit esperado. Una salida ≠ 0 es un **bloqueo**.
+- Cada bloqueo se clasifica por su mensaje de salida:
+  - **`in_band`**: nombra un comando concreto y, corrido en el mismo sandbox, sale 0.
+  - **`out_of_band`**: no nombra ningún comando.
+  - **`dead_end`**: nombra un comando que, corrido, **no** resuelve el bloqueo.
+  - **`templated`**: el comando trae un `<placeholder>`; no se puede correr solo. Se cuenta aparte y no falla el bench.
+- **Exit 1 si hay al menos un `dead_end`.** Es el ratchet: el bench falla el build cuando un mensaje manda a un lugar sin salida.
+- Recorridos mínimos: repo nuevo con `start`; `start` dos veces; `check` sin prueba; `check --run` verde; archivo prohibido por el cerco; `plan` + `undo`; `review` de un cambio solo de docs; repo sin commits.
+- Reporte: total de recorridos, total de bloqueos, los tres conteos, y la lista de dead ends con el comando que no resolvió y el mensaje que lo nombró. `--json` con lo mismo.
+
+### Tests
+
+- `doctor`: en un proyecto recién configurado da todo ok y exit 0; sin `AGENTS.md`, sin hook, sin `brief.md`, con perfil inválido y con `odachi` fuera del PATH (puerto de PATH falso) produce el problema correcto con el comando correcto; nunca escribe nada (se assertea sobre el doble).
+- `bench`: los tres conteos sobre un corpus inyectado (uno que resuelve, uno sin comando, uno que no resuelve, uno templated); un dead end hace fallar el bench; `--journeys` filtra; los directorios temporales se limpian.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -848,6 +890,8 @@ Devuelve un JSON `{"refutations":[{"id":"...","verdict":"stands|refuted","why":"
 - T19 · `init` avisa cuando `odachi` no resuelve desde un shell: una regla que el agente no puede ejecutar es peor que ninguna · S1,S2 · inline · [x] commit: 400eee8
 - T20 · `review`: veredicto de diseño por árbol, content-addressed, y `check --require-review` opcional · S3,S4 · delegated (gentle-ai-worker) · [x] commits: 9e5c3b8 (domain), cf1bcde (app + check), ed6bdc9 (cli + adr)
 - T21 · lentes 4R con selección por evidencia + refutador de blockers · S3,S4 · delegated (gentle-ai-worker) · [x] commits: e254f19 (assets + tier), 4f5f36b (domain), 466e940 (app + check), 74cf7c7 (cli + adr)
+- T22 · `doctor`: diez chequeos de salud, de solo lectura, cada uno con su arreglo · S1,S2 · pending
+- T23 · `bench`: medir fricción (in-band / out-of-band / dead-end) con ratchet sobre los dead ends · S2 · pending
 
 ## Log
 
