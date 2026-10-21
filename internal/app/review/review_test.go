@@ -160,9 +160,10 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, int, b
 
 // project is one run's wiring: an in-memory project, and the fakes behind it.
 type project struct {
-	files *fakeFiles
-	git   *fakeGit
-	shell *fakeShell
+	files  *fakeFiles
+	git    *fakeGit
+	shell  *fakeShell
+	lenses *fakeLenses
 }
 
 // newProject seeds a project with a brief and one changed file.
@@ -180,7 +181,10 @@ func (p *project) run(opts review.Options) review.Result {
 	if opts.Now.IsZero() {
 		opts.Now = now
 	}
-	return review.Run(opts, p.files, p.git, p.shell)
+	if p.lenses == nil {
+		p.lenses = &fakeLenses{}
+	}
+	return review.Run(opts, p.files, p.git, p.shell, p.lenses)
 }
 
 // storePath is where a verdict for one tree lives, in the spelling the app uses.
@@ -601,7 +605,7 @@ func TestBaseFallsBackToTheEmptyTreeWithoutCommits(t *testing.T) {
 	p := newProject()
 	git := &flakyGit{inner: p.git}
 
-	result := review.Run(review.Options{Dir: dir, Now: now}, p.files, git, p.shell)
+	result := review.Run(review.Options{Dir: dir, Now: now}, p.files, git, p.shell, &fakeLenses{})
 
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)

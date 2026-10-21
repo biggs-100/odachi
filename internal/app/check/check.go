@@ -47,15 +47,21 @@ const (
 	noFeatureSlug   = "check"
 )
 
-// The two reasons the optional review gate can add. They are not gate reasons:
+// The three reasons the optional review gate can add. They are not gate reasons:
 // the gate is untouched, and a review only ever participates when the human asks
 // for it with --require-review.
 const (
 	// ReasonReviewMissing means this tree has no verdict yet.
 	ReasonReviewMissing = "review_missing"
 	// ReasonReviewChanges means the verdict for this tree requests changes, and
-	// the run names the first finding that blocks.
+	// the run names the first finding that blocks and nobody refuted.
 	ReasonReviewChanges = "review_changes_requested"
+	// ReasonReviewLensMissing means the verdict exists but does not cover a lens
+	// the evidence requires.
+	ReasonReviewLensMissing = "review_lens_missing"
+	// ReasonReviewRefutedUnreadable means the refutation beside the verdict cannot
+	// be read, so nothing it might say can be taken into account.
+	ReasonReviewRefutedUnreadable = "review_refutation_unreadable"
 )
 
 // nextReview is the continuation for a missing verdict, and the command that
@@ -417,8 +423,9 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 	return ranProof{output: output}, nil
 }
 
-// requireReview is the optional design gate: only a stored verdict for THIS tree
-// approves the change, and only one that does not request changes.
+// requireReview is the optional design gate: a stored verdict for THIS tree, one
+// that covers every lens the candidate requires, and no causal BLOCKER or
+// CRITICAL finding left standing after the refutation is taken into account.
 //
 // It writes nothing. The store's ignore file is created by the verbs that produce
 // a verdict, so a tree with no verdict has no store to prepare either.
@@ -454,7 +461,23 @@ func (r *runner) requireReview() *Result {
 		return &problem
 	}
 
-	if finding, blocking := reviewdomain.Blocking(verdict.Findings); blocking {
+	// The lenses come first: a verdict that does not cover what the candidate
+	// requires did not answer the question the gate is asking.
+	required, problem := r.requiredLenses()
+	if problem != nil {
+		return problem
+	}
+	if missing := verdict.Missing(required); len(missing) > 0 {
+		problem := lensMissing(missing, rel)
+		return &problem
+	}
+
+	refutation, problem := r.refutation(verdict)
+	if problem != nil {
+		return problem
+	}
+
+	if finding, blocking := reviewdomain.BlockingAfter(verdict.Findings, refutation); blocking {
 		message := "el review pide cambios: " + oneLine(reviewFinding(finding))
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
@@ -470,6 +493,77 @@ func (r *runner) requireReview() *Result {
 	}
 
 	return nil
+}
+
+// requiredLenses is the lens selection the candidate asks for. It is the same
+// question the review verb answers before printing a prompt, asked from the same
+// changed paths, so the two can never disagree about what this tree needs.
+func (r *runner) requiredLenses() ([]string, *Result) {
+	base := baseRef(r.opts.Base)
+
+	changed, err := r.git.ChangedPaths(r.opts.Dir, base)
+	if err != nil && base == head {
+		changed, err = r.git.ChangedPaths(r.opts.Dir, EmptyTree)
+	}
+	if err != nil {
+		problem := blocked(baseProblem(base, err))
+		return nil, &problem
+	}
+
+	return reviewdomain.Lenses(reviewdomain.Classify(changed)), nil
+}
+
+// refutation reads the refutation filed beside this tree's verdict. A tree with
+// no refutation is the normal case and is not an error; a file that cannot be
+// read is, because silence would let a broken artifact look like an approval.
+func (r *runner) refutation(verdict reviewdomain.Verdict) (reviewdomain.Refutation, *Result) {
+	rel, err := reviewdomain.RefutationPath(r.tree)
+	if err != nil {
+		return reviewdomain.Refutation{}, nil
+	}
+
+	data, err := r.files.Read(filepath.Join(r.opts.Dir, filepath.FromSlash(rel)))
+	if err != nil {
+		return reviewdomain.Refutation{}, nil
+	}
+
+	parsed, err := reviewdomain.ParseRefutation(data)
+	if err != nil {
+		detail := ""
+		if finding, blocking := reviewdomain.Blocking(verdict.Findings); blocking {
+			detail = "; el finding " + reviewFinding(finding) + " sigue bloqueando"
+		}
+
+		message := fmt.Sprintf("la refutación de este árbol no se puede leer (%s): %s%s", rel, oneLine(err.Error()), detail)
+		problem := Result{
+			Code:    int(gate.NeedsDecision),
+			Reason:  ReasonReviewRefutedUnreadable,
+			Message: message,
+			Next:    "odachi review --show",
+			Lines:   []string{message, "siguiente: odachi review --show"},
+		}
+		return reviewdomain.Refutation{}, &problem
+	}
+
+	return parsed, nil
+}
+
+// lensMissing is the block for a verdict that does not cover a required lens.
+// The store cannot be rewritten, so the message says which file to remove and
+// which command produces a new verdict; the gate never deletes anything itself.
+func lensMissing(missing []string, rel string) Result {
+	message := fmt.Sprintf("falta la lente %s en el review de este árbol (%s)", missing[0], rel)
+	return Result{
+		Code:    int(gate.NeedsDecision),
+		Reason:  ReasonReviewLensMissing,
+		Message: message,
+		Next:    nextReview,
+		Lines: []string{
+			message,
+			"un veredicto no se reescribe: borrá " + rel + " y corré " + nextReview + " --lens " + missing[0],
+			"siguiente: " + nextReview,
+		},
+	}
 }
 
 // reviewFinding is the one finding a human has to read first, in one line: where

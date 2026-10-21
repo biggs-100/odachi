@@ -65,6 +65,11 @@ type Options struct {
 	Attach string
 	// Show reads this tree's verdict instead of producing one.
 	Show bool
+	// Lens is the raw --lens value: one name, a comma list, or `all`. Empty means
+	// the lenses the evidence of the diff asks for, and nothing else.
+	Lens string
+	// Refute is a verdict file, and this run prints the refuter's prompt for it.
+	Refute string
 	// Now is the instant a stored verdict records. Zero means the wall clock;
 	// tests fix it so a stored verdict is byte-stable.
 	Now time.Time
@@ -93,6 +98,13 @@ type Shell interface {
 	Run(dir, command string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error)
 }
 
+// Lenses is the port for the four specialist prompts. It returns the file
+// verbatim; the domain strips the frontmatter when it builds the prompt, so the
+// content stays complete on disk and readable by a human.
+type Lenses interface {
+	Lens(name string) (string, error)
+}
+
 // Result is what the CLI prints and exits with. It has the same shape as the
 // other verbs, plus the two things only this one produces: the prompt, and the
 // verdict it read or stored.
@@ -108,21 +120,28 @@ type Result struct {
 	Output string
 	// Verdict is the verdict that was stored or shown.
 	Verdict *domain.Verdict
+	// Lenses are the lenses this run asked for, in the fixed order. The prompt
+	// carries their rules; the stored verdict records them.
+	Lenses []string
+	// Refutation is the refutation this run stored or found beside the verdict.
+	Refutation *domain.Refutation
 	// Files are the files this run wrote, relative to the project.
 	Files []string
 }
 
 // Run performs one `odachi review`.
-func Run(opts Options, files Files, git Git, shell Shell) Result {
+func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result {
 	if opts.Dir == "" {
 		opts.Dir = "."
 	}
 
-	r := &runner{opts: opts, files: files, git: git, shell: shell}
+	r := &runner{opts: opts, files: files, git: git, shell: shell, lenses: lenses}
 
 	switch {
 	case opts.Show:
 		return r.show()
+	case opts.Refute != "":
+		return r.refute()
 	case opts.Attach != "":
 		return r.attach()
 	case opts.Exec != "":
@@ -134,10 +153,11 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 
 // runner holds one invocation.
 type runner struct {
-	opts  Options
-	files Files
-	git   Git
-	shell Shell
+	opts   Options
+	files  Files
+	git    Git
+	shell  Shell
+	lenses Lenses
 }
 
 // candidate is what is being reviewed: the brief it is judged against, the base
@@ -159,34 +179,103 @@ func (r *runner) prompt() Result {
 		return *problem
 	}
 
+	selected, problem := r.selectLenses(cand.paths)
+	if problem != nil {
+		return *problem
+	}
+
+	bodies, problem := r.lensBodies(selected)
+	if problem != nil {
+		return *problem
+	}
+
 	tree, problem := r.prepareStore()
 	if problem != nil {
 		return *problem
 	}
 
 	text := domain.Prompt(domain.PromptInput{
-		Brief: cand.brief,
-		Tree:  tree,
-		Base:  cand.base,
-		Paths: cand.paths,
-		Diff:  cand.diff,
+		Brief:  cand.brief,
+		Tree:   tree,
+		Base:   cand.base,
+		Paths:  cand.paths,
+		Diff:   cand.diff,
+		Lenses: bodies,
 	})
 
 	return Result{
 		Code:    CodeOK,
-		Message: "prompt de review del árbol " + tree,
+		Message: promptMessage(tree, selected),
 		Prompt:  text,
+		Lenses:  selected,
 		Files:   []string{ignoreRel()},
 	}
 }
 
-// attach stores a verdict someone already wrote — an agent, or a human. The file
+// refute prints the refuter's prompt for a verdict someone already filed. It is
+// the other half of the review: the reviewer argues that something is wrong, and
+// the refuter has to be able to show, with a line of the diff, that it is not.
+func (r *runner) refute() Result {
+	// The evidence is the diff in front of you. Without one there is nothing to
+	// cite, and a refutation without a citation is a vote, not a review.
+	cand, problem := r.candidate()
+	if problem != nil {
+		return *problem
+	}
+
+	tree, problem := r.treeHash()
+	if problem != nil {
+		return *problem
+	}
+
+	verdict, problem := r.namedVerdict(r.opts.Refute, tree)
+	if problem != nil {
+		return *problem
+	}
+
+	existing := domain.Refutation{}
+	if filed, _ := r.storedRefutation(tree); filed != nil {
+		existing = *filed
+	}
+	if _, blocking := domain.BlockingAfter(verdict.Findings, existing); !blocking {
+		return nothingToRefute(tree)
+	}
+
+	text := domain.RefutePrompt(domain.RefuteInput{
+		Tree:     tree,
+		Base:     cand.base,
+		Reviewer: verdict.Reviewer,
+		Findings: verdict.Findings,
+		Diff:     cand.diff,
+	})
+
+	return Result{
+		Code:    CodeOK,
+		Message: "prompt del refutador del árbol " + tree,
+		Prompt:  text,
+		Lenses:  verdict.Lenses,
+	}
+}
+
+// attach stores a document someone already wrote — an agent, or a human. The file
 // is validated before anything is written: a verdict the tool half-understands
 // stored under a tree's name would claim more than it can back.
+//
+// Two documents can be attached: a verdict, and a refutation. They share no key
+// and both are decoded strictly, so `Sniff` says which one this is instead of the
+// tool guessing from the file name.
 func (r *runner) attach() Result {
 	data, err := r.files.Read(explicitPath(r.opts.Dir, r.opts.Attach))
 	if err != nil {
 		return blocked(fmt.Sprintf("no pude leer el veredicto %s: %s; revisá la ruta", r.opts.Attach, oneLine(err.Error())))
+	}
+
+	if domain.Sniff(data) == domain.KindRefutation {
+		refutation, err := domain.ParseRefutation(data)
+		if err != nil {
+			return refused(r.opts.Attach, err.Error())
+		}
+		return r.storeRefutation(refutation, "")
 	}
 
 	parsed, err := domain.Parse(data)
@@ -220,6 +309,15 @@ func (r *runner) exec() Result {
 		return execFailed(r.opts.Exec, fmt.Sprintf("el revisor salió con código %d", exitCode), output)
 	}
 
+	// A refutation is an answer too, and it is stored beside the verdict it judges.
+	if domain.Sniff([]byte(output)) == domain.KindRefutation {
+		refutation, err := domain.ParseRefutation([]byte(output))
+		if err != nil {
+			return execFailed(r.opts.Exec, err.Error(), output)
+		}
+		return r.storeRefutation(refutation, r.opts.Exec)
+	}
+
 	parsed, err := domain.Parse([]byte(output))
 	if err != nil {
 		return execFailed(r.opts.Exec, err.Error(), output)
@@ -240,6 +338,10 @@ func (r *runner) exec() Result {
 
 // show reads this tree's verdict, or says there is none. It writes nothing: a
 // question is not a reason to touch the project.
+//
+// It also answers the two questions the gate will ask: which lenses this tree
+// requires, which ones the verdict already covers, and whether a refutation was
+// filed beside it.
 func (r *runner) show() Result {
 	tree, problem := r.treeHash()
 	if problem != nil {
@@ -262,26 +364,59 @@ func (r *runner) show() Result {
 			rel, oneLine(err.Error())))
 	}
 
+	lines := shown(tree, rel, parsed)
+	lines = append(lines, r.lensCoverage(tree, parsed)...)
+
 	result := Result{
 		Code:    CodeOK,
 		Message: "review de " + tree + ": " + parsed.Verdict,
-		Lines:   shown(tree, rel, parsed),
+		Lines:   lines,
 		Verdict: &parsed,
+		Lenses:  parsed.Lenses,
 		Files:   []string{rel},
 	}
+
+	if refutation, refRel := r.storedRefutation(tree); refutation != nil {
+		result.Refutation = refutation
+		result.Files = append(result.Files, refRel)
+		result.Lines = append(result.Lines, refutationLine(refutation, refRel, parsed.Findings))
+	}
 	return result
+}
+
+// lensCoverage is the two lines that make the optional gate predictable: what
+// this tree requires and what the verdict covers.
+func (r *runner) lensCoverage(tree string, verdict domain.Verdict) []string {
+	required := r.requiredLenses()
+
+	lines := []string{lensLine(required, verdict)}
+	missing := verdict.Missing(required)
+	if len(missing) == 0 {
+		return lines
+	}
+	return append(lines, "faltan lentes: "+strings.Join(missing, ", ")+" (odachi review --lens "+missing[0]+")")
 }
 
 // store seals a verdict for the current tree and writes it, unless this tree
 // already has one: the store is immutable, and a second verdict is reported
 // instead of applied.
+//
+// The lenses are stamped here, like the tree and the instant: the reviewer never
+// declares which lenses it used, and the candidate is what says which ones were
+// required. A stored verdict that does not cover them would leave the optional
+// gate with no way out, because the store cannot be rewritten.
 func (r *runner) store(parsed domain.Verdict, base string) Result {
 	tree, problem := r.prepareStore()
 	if problem != nil {
 		return *problem
 	}
 
-	sealed, err := domain.Seal(parsed, tree, base, r.opts.Now)
+	stamped, problem := r.stampLenses(parsed)
+	if problem != nil {
+		return *problem
+	}
+
+	sealed, err := domain.Seal(stamped, tree, base, r.opts.Now)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; no escribí nada")
 	}
@@ -309,10 +444,224 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 	return Result{
 		Code:    CodeOK,
 		Message: message,
-		Lines:   []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At},
+		Lines:   []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At, lenses(sealed.Lenses)},
 		Verdict: &sealed,
+		Lenses:  sealed.Lenses,
 		Files:   []string{rel},
 	}
+}
+
+// storeRefutation seals a refuter's answer and writes it beside the verdict,
+// once. Everything that can be wrong with it is refused before the write, so a
+// refusal leaves no file and nothing to clean up.
+func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Result {
+	// The order matters: the checks that decide whether this document may exist
+	// run before the store is prepared, so a refusal writes nothing at all.
+	tree, problem := r.treeHash()
+	if problem != nil {
+		return *problem
+	}
+
+	verdict, problem := r.storedVerdictFor(tree)
+	if problem != nil {
+		return *problem
+	}
+
+	if strings.TrimSpace(answer.Refuter) == "" {
+		answer.Refuter = refuter
+	}
+
+	sealed, err := domain.SealRefutation(answer, verdict.Findings, tree, r.opts.Now)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; no escribí nada")
+	}
+
+	prepared, problem := r.prepareStore()
+	if problem != nil {
+		return *problem
+	}
+	if prepared != tree {
+		return blocked("el árbol cambió mientras preparaba el store de reviews: volvé a correr odachi review")
+	}
+
+	rel, err := domain.RefutationPath(tree)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; no escribí nada")
+	}
+	target := fullPath(r.opts.Dir, rel)
+
+	exists, err := r.files.Exists(target)
+	if err != nil {
+		return blocked(fmt.Sprintf("no pude revisar si %s ya existe: %s; revisá los permisos", rel, oneLine(err.Error())))
+	}
+	if exists {
+		return alreadyRefuted(rel)
+	}
+
+	if err := r.files.Write(target, domain.RenderRefutation(sealed)); err != nil {
+		return blocked(fmt.Sprintf("no pude escribir la refutación %s: %s; revisá los permisos", rel, oneLine(err.Error())))
+	}
+
+	stands, refuted := counts(sealed)
+	message := "refutación guardada en " + rel + " · " + domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
+	return Result{
+		Code:       CodeOK,
+		Message:    "refutación guardada en " + rel,
+		Lines:      []string{message},
+		Refutation: &sealed,
+		Lenses:     verdict.Lenses,
+		Files:      []string{rel},
+	}
+}
+
+// stampLenses records the lenses this candidate required plus the ones the human
+// asked for, and whatever an attached verdict declared on its own.
+func (r *runner) stampLenses(verdict domain.Verdict) (domain.Verdict, *Result) {
+	extra, err := domain.ParseLenses(r.opts.Lens)
+	if err != nil {
+		problem := blocked(oneLine(err.Error()) + "; no escribí nada")
+		return domain.Verdict{}, &problem
+	}
+
+	// A tree that cannot be compared yet still has its declared lenses: the
+	// evidence list is empty, not fatal.
+	paths, _, pathErr := r.changedPaths()
+	if pathErr != nil {
+		paths = nil
+	}
+
+	stamped := verdict
+	stamped.Lenses = domain.Add(domain.Add(domain.Lenses(domain.Classify(paths)), extra), verdict.Lenses)
+	return stamped, nil
+}
+
+// selectLenses is the selection for one candidate: what the evidence asks for,
+// plus what the flags asked for. Extra lenses add, never remove.
+func (r *runner) selectLenses(paths []string) ([]string, *Result) {
+	extra, err := domain.ParseLenses(r.opts.Lens)
+	if err != nil {
+		problem := blocked(oneLine(err.Error()) + "; corré odachi review -h para ver los flags")
+		return nil, &problem
+	}
+	return domain.Add(domain.Lenses(domain.Classify(paths)), extra), nil
+}
+
+// requiredLenses is the selection for a tree read without a candidate: `--show`
+// must still answer when git cannot compare, so a failure to read the changed
+// paths is not a block here.
+func (r *runner) requiredLenses() []string {
+	extra, err := domain.ParseLenses(r.opts.Lens)
+	if err != nil {
+		extra = nil
+	}
+
+	paths, _, pathErr := r.changedPaths()
+	if pathErr != nil {
+		paths = nil
+	}
+	return domain.Add(domain.Lenses(domain.Classify(paths)), extra)
+}
+
+// lensBodies loads the prompts of the selected lenses through the port.
+func (r *runner) lensBodies(names []string) ([]domain.Lens, *Result) {
+	bodies := make([]domain.Lens, 0, len(names))
+	for _, name := range names {
+		if r.lenses == nil {
+			problem := blocked("este binario no tiene lentes: volvé a instalarlo desde una release y corré odachi review")
+			return nil, &problem
+		}
+
+		body, err := r.lenses.Lens(name)
+		if err != nil {
+			problem := blocked("no pude cargar la lente " + name + ": " + oneLine(err.Error()) + "; corré odachi review sin --lens para usar las que pide la evidencia")
+			return nil, &problem
+		}
+		bodies = append(bodies, domain.Lens{Name: name, Body: body})
+	}
+	return bodies, nil
+}
+
+// storedVerdictFor reads the verdict stored for one tree. A refutation needs the
+// findings it judges, so it cannot exist without a verdict.
+func (r *runner) storedVerdictFor(tree string) (domain.Verdict, *Result) {
+	rel, err := domain.Path(tree)
+	if err != nil {
+		problem := blocked(oneLine(err.Error()) + "; revisá el árbol de git y volvé a correr odachi review")
+		return domain.Verdict{}, &problem
+	}
+
+	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	if err != nil {
+		problem := noVerdictToRefute(tree)
+		return domain.Verdict{}, &problem
+	}
+
+	parsed, err := domain.Parse(data)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("el review de este árbol no se puede leer (%s): %s; volvé a escribirlo con odachi review --attach <archivo>",
+			rel, oneLine(err.Error())))
+		return domain.Verdict{}, &problem
+	}
+	return parsed, nil
+}
+
+// noVerdictToRefute says a refutation needs a verdict to judge, and names the
+// command that produces one. Without it, the refuter would be arguing with
+// findings nobody filed.
+func noVerdictToRefute(tree string) Result {
+	message := "no hay review para este árbol: una refutación juzga los findings de un veredicto; corré odachi review"
+	return Result{
+		Code:    CodeBlocked,
+		Message: message,
+		Lines:   []string{"no hay review para este árbol (" + tree + ")", "siguiente: odachi review"},
+	}
+}
+
+// namedVerdict reads a verdict file the human named and refuses one from another
+// tree: the evidence a refuter cites is the diff in front of it.
+func (r *runner) namedVerdict(path, tree string) (domain.Verdict, *Result) {
+	data, err := r.files.Read(explicitPath(r.opts.Dir, path))
+	if err != nil {
+		problem := blocked(fmt.Sprintf("no pude leer el veredicto %s: %s; revisá la ruta", path, oneLine(err.Error())))
+		return domain.Verdict{}, &problem
+	}
+
+	parsed, err := domain.Parse(data)
+	if err != nil {
+		problem := refused(path, err.Error())
+		return domain.Verdict{}, &problem
+	}
+	if err := parsed.Validate(); err != nil {
+		problem := refused(path, err.Error())
+		return domain.Verdict{}, &problem
+	}
+
+	if parsed.Tree != "" && parsed.Tree != tree {
+		problem := blocked(fmt.Sprintf("el veredicto %s es del árbol %s y este árbol es %s: un veredicto se refuta con el diff que lo vio nacer",
+			path, parsed.Tree, tree))
+		return domain.Verdict{}, &problem
+	}
+	return parsed, nil
+}
+
+// storedRefutation reads the refutation filed beside this tree's verdict, if
+// any. An absent one is not an error: it is the normal state of a reviewed tree.
+func (r *runner) storedRefutation(tree string) (*domain.Refutation, string) {
+	rel, err := domain.RefutationPath(tree)
+	if err != nil {
+		return nil, ""
+	}
+
+	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	if err != nil {
+		return nil, ""
+	}
+
+	parsed, err := domain.ParseRefutation(data)
+	if err != nil {
+		return nil, rel
+	}
+	return &parsed, rel
 }
 
 // candidate gathers the brief, the changed paths and the diff. Without a diff
@@ -502,6 +851,94 @@ func nothingToReview() Result {
 		Message: "no hay nada que revisar en este árbol",
 		Lines:   []string{"no hay nada que revisar en este árbol"},
 	}
+}
+
+// nothingToRefute is the answer for a verdict with nothing blocking: an approval
+// has no blocker to argue with, and inventing work is worse than saying so.
+func nothingToRefute(tree string) Result {
+	message := "el veredicto de " + tree + " no tiene BLOCKER ni CRITICAL causal: no hay nada que refutar"
+	return Result{
+		Code:    CodeBlocked,
+		Message: message,
+		Lines:   []string{message, "siguiente: odachi review --show"},
+	}
+}
+
+// alreadyRefuted says this tree already has a refutation. It is written once, so
+// the second answer is reported and dropped instead of overwriting the first.
+func alreadyRefuted(rel string) Result {
+	return Result{
+		Code:    CodeBlocked,
+		Message: "ya hay una refutación para este árbol",
+		Lines: []string{
+			"ya hay una refutación para este árbol: " + rel,
+			"siguiente: odachi review --show",
+		},
+	}
+}
+
+// promptMessage names the tree, and the lenses when the evidence asked for any.
+func promptMessage(tree string, lenses []string) string {
+	message := "prompt de review del árbol " + tree
+	if len(lenses) > 0 {
+		message += " · lentes " + strings.Join(lenses, ", ")
+	}
+	return message
+}
+
+// lenses is the one line a stored verdict adds about its coverage.
+func lenses(covered []string) string {
+	if len(covered) == 0 {
+		return "lentes: ninguna (la evidencia no pidió ninguna)"
+	}
+	return "lentes: " + strings.Join(covered, ", ")
+}
+
+// lensLine is the coverage `--show` prints: what the verdict covers and what this
+// tree requires.
+func lensLine(required []string, verdict domain.Verdict) string {
+	covered := "ninguna"
+	if len(verdict.Lenses) > 0 {
+		covered = strings.Join(verdict.Lenses, ", ")
+	}
+
+	needed := "ninguna"
+	if len(required) > 0 {
+		needed = strings.Join(required, ", ")
+	}
+	return "lentes: " + covered + " · requeridas: " + needed
+}
+
+// refutationLine is the refutation as `--show` reports it: which file, and how
+// many findings survived it.
+func refutationLine(refutation *domain.Refutation, rel string, findings []domain.Finding) string {
+	stands := 0
+	refuted := 0
+	for _, judgment := range refutation.Refutations {
+		if judgment.Verdict == domain.Refuted {
+			refuted++
+			continue
+		}
+		stands++
+	}
+
+	line := fmt.Sprintf("refutación: %s · se quedan: %d · refutados: %d", rel, stands, refuted)
+	if _, blocking := domain.BlockingAfter(findings, *refutation); !blocking {
+		return line + " · ya no bloquea nada"
+	}
+	return line + " · todavía bloquea"
+}
+
+// counts is the same arithmetic for the message a refutation prints when stored.
+func counts(refutation domain.Refutation) (stands, refuted int) {
+	for _, judgment := range refutation.Refutations {
+		if judgment.Verdict == domain.Refuted {
+			refuted++
+			continue
+		}
+		stands++
+	}
+	return stands, refuted
 }
 
 // missing is the answer for a tree without a verdict.
