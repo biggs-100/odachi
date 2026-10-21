@@ -324,6 +324,67 @@ type Evidence struct{ Features, VisionAnswers, CraftDecisions int }
 
 Deliver in three stages, each with its tests green before the next: (1) domain additions, (2) `ask` + `tasks` helper + wiring, (3) `level` + `summary` + wiring. Report each stage separately so the parent can commit them as three work units. No new dependency; the boundary guard must stay green; do not edit `odd/**`, `README.md`, `Contract I-III` sections, or any existing behaviour.
 
+## Contract V · T7 (`check` and `init`)
+
+### Why the proof carries its tree
+
+A proof is only evidence if it says what it was produced from. Every proof file starts with two header lines, written by the tool and never by hand:
+
+```text
+# tree <hash del worktree>
+# command <el comando que se corrió>
+<salida real, stdout+stderr, verbatim>
+```
+
+`check --proof <archivo>` refuses a file without the header: it cannot know which tree produced it, and guessing is exactly the defect the tool exists to prevent.
+
+### `odachi check`
+
+```text
+odachi check                             evalúa el estado actual
+  --run "<comando>"                      corre el comando, captura la salida y escribe proof/<NNNN>-<slug>.txt
+  --proof <archivo>                      usa una prueba ya escrita (agentes y CI)
+  --base <ref>                           contra qué comparar el cerco (default HEAD; sin commits: todo lo no commiteado)
+  --timeout <segundos>                   default 120
+  --quiet                                no imprime nada si está listo (para el hook)
+  --json
+```
+
+Exit codes: los del gate (`0` listo · `1` el agente puede actuar · `2` solo el humano puede destrabarlo). `--run` devuelve el código de `check`, **nunca el del comando**: si el comando falla, `check` informa `proof_failed` con la última línea de salida, porque lo que el humano necesita saber es "la prueba falló y esto dijo", no un exit code ajeno.
+
+Los cuatro gates, en el orden de `gate.Evaluate` ya existente: brief (existe y está completo), cerco (`fence.Check` con `gitx.ChangedPaths` y `gitx.AddedDeps`), preguntas abiertas (`taskdoc.OpenQuestions` del feature actual), y prueba (header presente, hash igual al del árbol actual, y el comando no falló). Sin task doc, las preguntas abiertas son cero: el proyecto puede verificarse antes de tener features.
+
+`check` no escribe nada salvo el `proof/` que crea `--run`. Nunca toca `brief.md`, `fence.toml` ni `profile.toml`.
+
+### Cambio de dominio necesario
+
+`gate` gana un reason: `ReasonProofFailed = "proof_failed"` (`NeedsWork`), mensaje `la prueba falló: <última línea de salida no vacía>` y `Next` = `odachi check --run "<el mismo comando>"` — correrlo resuelve el bloqueo una vez que el humano o el agente arregla lo que falló. Los siete reasons existentes no cambian y el test que exige `Next` en todo bloqueo sigue valiendo.
+
+### `--run` y el shell
+
+`--run` ejecuta a través de un adaptador nuevo `internal/adapters/shellcmd`, con un archivo por plataforma: `sh -c` en Unix, `cmd /c` en Windows, y una implementación que **rechaza** en plataformas sin shell conocido (regla de nacimiento 11: negarse en vez de degradar). La salida es stdout+stderr combinados. Timeout vencido: `proof_failed` con el mensaje `la prueba no terminó en <n>s`.
+
+### `odachi init`
+
+```text
+odachi init [--json]
+```
+
+1. Escribe en `AGENTS.md` el bloque de reglas (~40 líneas) entre `<!-- odachi:begin -->` y `<!-- odachi:end -->`, con backup previo y escritura atómica. Idempotente: re-correr reemplaza el bloque y conserva todo lo demás del archivo. Si no existe `AGENTS.md`, lo crea. Contenido del bloque (fijo, pineado por test): las cuatro reglas duras — brief antes de código, nada fuera del cerco (`ask`), no decir "listo" sin `check --run`, pedazos chicos con un commit — y los seis verbos con su uso en una línea.
+2. Instala `.git/hooks/pre-commit` con `#!/bin/sh` + `odachi check --quiet || exit 1` y un comentario marcador. Si ya existe un hook distinto, **no lo pisa**: imprime las tres líneas para pegarlo a mano y sale con `1` nombrando el archivo. Re-correr sobre un hook propio es idempotente.
+
+### Tests
+
+- Dominio: el reason nuevo en la tabla y en el test de `Next` obligatorio.
+- `proof`: escribir con header, leer rechazando un archivo sin header, hash que coincide y que no coincide.
+- App `check`: tabla completa de los ocho resultados (listo, sin brief, brief incompleto, fuera de alcance, pregunta abierta, falta prueba, prueba vieja, prueba fallida) usando dobles de `Files`, `Git` y `Shell`.
+- CLI e2e: `--run "echo ok"` → listo y `proof/` escrito con header; `--run "exit 1"` → exit 1 con la última línea; `--proof` sin header → bloqueado nombrando `--run`; dos corridas seguidas con el mismo árbol → mismas bytes de prueba; repo sin commits → no rompe.
+- `init`: bloque creado, idempotente, conserva el resto del archivo, backup previo, hook instalado y no pisado cuando ya existe uno ajeno.
+
+### Proceso
+
+Dos etapas, cada una verde antes de la siguiente y reportada aparte: (1) `check` (dominio + adaptador de shell + app + CLI), (2) `init` (AGENTS.md + hook). Sin dependencias nuevas. El guard de fronteras debe seguir verde.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -332,7 +393,7 @@ Deliver in three stages, each with its tests green before the next: (1) domain a
 - T4 · adapters: strict TOML profile decoder, filesystem, git · S5 · delegated (gentle-ai-worker) · [x] commit: f53fa1a
 - T5 · CLI `start`: interview -> brief + fence + profile · S1,S2 · delegated (gentle-ai-worker) · [x] commit: 96ccaec
 - T6 · CLI `ask` / `level` / `summary` · S3,S7 · delegated (gentle-ai-worker), three stages · [x] commits: bdb5a6b (domain), 1669768 (app), e113f94 (CLI)
-- T7 · CLI `check` + pre-commit hook + AGENTS.md block · S2 · pending
+- T7 · CLI `check` + pre-commit hook + AGENTS.md block · S2 · delegated (gentle-ai-worker), two stages · [ ]
 - T8 · tutor content: why each question exists, explanation rules · S7 · pending
 
 ## Log
@@ -355,4 +416,5 @@ L15 · Observado y diferido: (a) si no se elige ningún "NO incluye", `.odachi/f
 L16 · Decisión del humano sobre cómo se gradúa: opción B con D como disparador ("continua"). Se registra cada escalación en el `Historial` del task doc —sin archivo nuevo, una sola fuente de verdad— y el agente propone en el hito; la persona acepta con `level --to`. Umbral: 3 features con pasos hechos y 5 respuestas de visión. Contract IV escrito.
 L17 · T6 verificado por el padre: 15 paquetes verdes con `-count=1`, build, vet, gofmt, y end-to-end propio (start → ask ×3 → level → summary). Se commiteó en **tres unidades por capa** —dominio bdb5a6b, app 1669768, CLI e113f94— y cada una compila sola, que es lo que faltó en T5 (L14).
 L18 · Inconsistencia encontrada verificando, corregida antes de commitear: `level` decía "features: 0" mientras `summary` decía "1 feature". Misma palabra, dos significados en la misma herramienta. `level` ahora dice "features con pasos" y el umbral sigue exigiendo features con al menos un paso hecho.
-L19 · Límites aceptados de T6: (a) `ask`/`summary` solo reconocen `NNNN-<slug>.md`, así que este repo los ve como un proyecto vacío — deliberado, para no reescribir el documento escrito a mano; (b) un documento con secciones extra no se puede anexar hasta mover esas notas a `## Historial`, y el bloqueo lo dice; (c) `level` no cuenta un feature hasta que tenga un paso hecho, por eso un proyecto recién iniciado informa 0. Siguiente decisión pendiente: L15(a), el `fence.toml` vacío cuando no se elige ningún "NO incluye".
+L19 · Límites aceptados de T6: (a) `ask`/`summary` solo reconocen `NNNN-<slug>.md`, así que este repo los ve como un proyecto vacío — deliberado, para no reescribir el documento escrito a mano; (b) un documento con secciones extra no se puede anexar hasta mover esas notas a `## Historial`, y el bloqueo lo dice; (c) `level` no cuenta un feature hasta que tenga un paso hecho, por eso un proyecto recién iniciado informa 0.
+L20 · El humano delegó la decisión de T7 en el agente ("lo que tú me recomiendes para que el proyecto salga mejor"). Decidido: **B** — `check --run "<comando>"` ejecuta y captura, y `--proof <archivo>` queda para agentes y CI. Regla agregada: el archivo de prueba lleva el hash del árbol en un header; sin header se rechaza, porque una prueba que no dice de qué árbol salió no prueba nada. `--run` devuelve el exit de `check`, nunca el del comando. Contract V escrito. Siguiente decisión pendiente: L15(a), el `fence.toml` vacío cuando no se elige ningún "NO incluye".
