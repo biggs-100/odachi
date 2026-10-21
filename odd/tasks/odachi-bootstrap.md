@@ -452,6 +452,7 @@ Unidad única. No tocar el comportamiento de los seis verbos. No agregar depende
 - T7 · CLI `check` + pre-commit hook + AGENTS.md block · S2 · delegated (gentle-ai-worker), two stages · [x] commits: 0520b83 (domain), 64d51e6 (check), 56ebf87 (init + wiring)
 - T8 · tutor content: why each question exists, explanation rules · S7 · inline · [x] commits: 98290c3 (brief), 829b633 (tutor), a9b9057 (hook PATH)
 - T9 · distribución: `--version`, goreleaser, CI, install.sh y install.ps1 · S1,S8 · delegated (gentle-ai-worker) + verificación independiente · [x] commit: 0e459f0
+- T10 · CI verde en Windows: el test del instalador dependía de un shim de uname · S1 · inline · [x] commit: 85694e2
 
 ## Log
 
@@ -488,3 +489,4 @@ L30 · Validado con artefactos REALES, no con fixtures: `goreleaser release --sn
 L31 · Tres correcciones nacidas de la verificación, no del brief: (a) `install.sh` copia a un nombre temporal y hace `mv` en el mismo directorio, para que un corte no deje un binario truncado donde había uno bueno; (b) `install.ps1` fija `[Console]::OutputEncoding` en UTF-8 — medido: el archivo ya era UTF-8 válido y lo que estaba mal era la salida (`82` en vez de `c3a9`), comprobado en PowerShell 7.6 y 5.1; (c) `--version` se atiende antes de `os.Getwd()`, así que un directorio borrado ya no impide preguntar la versión (probado con el cwd eliminado).
 L32 · Lo que sigue SIN verificar, y se dice: la rama "última release" de `install.sh` (los tests siempre pasan `ODACHI_VERSION`), el fallback `shasum` (en esta máquina hay `sha256sum`), la escritura del PATH de usuario en `install.ps1` (probé una copia con esa línea neutralizada: no toco el registro del humano) y `go test` en los runners de GitHub.
 L33 · Deuda declarada del verificador: `install.ps1` no tiene test automatizado. Se cubrió a mano en Windows con un artefacto real; automatizarlo requiere un listener HTTP en CI. Siguiente decisión pendiente: L15(a), el `fence.toml` vacío cuando no se elige ningún "NO incluye".
+L34 · La primera CI en la nube encontró un defecto que esta máquina no podía encontrar: en windows-latest el shim de uname no ganaba en el PATH, el instalador se negaba correctamente a instalar en MINGW64, y el test tomaba esa negativa como una instalación verificada. Arreglado en la causa: install.sh acepta ODACHI_OS y ODACHI_ARCH validados contra la misma lista que los valores detectados, y el test declara la plataforma. Run 39657162034: los seis jobs en verde, windows-latest incluido.
