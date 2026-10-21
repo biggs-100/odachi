@@ -93,6 +93,44 @@ func Parse(md string) Brief {
 	return b
 }
 
+// Render returns the canonical brief.md: the title when the brief has a name,
+// then the four Canonical Spanish sections in the order a human reads them.
+// Parse(Render(b)) round-trips, so Render is the only way the tool writes this
+// artifact. Empty items are skipped: an empty bullet carries nothing and Parse
+// would drop it anyway.
+func Render(b Brief) string {
+	var out strings.Builder
+
+	if name := strings.TrimSpace(b.Name); name != "" {
+		out.WriteString(headerName + name + "\n")
+	}
+
+	sections := []struct {
+		header string
+		items  []string
+	}{
+		{headerOutcome, b.Outcome},
+		{headerDoneWhen, b.DoneWhen},
+		{headerNonGoals, b.NonGoals},
+		{headerDecisions, b.Decisions},
+	}
+
+	for _, section := range sections {
+		if out.Len() > 0 {
+			out.WriteString("\n")
+		}
+		out.WriteString(section.header + "\n")
+		for _, item := range section.items {
+			if strings.TrimSpace(item) == "" {
+				continue
+			}
+			out.WriteString("- " + item + "\n")
+		}
+	}
+
+	return out.String()
+}
+
 // Missing returns the Spanish labels of the required parts that are empty, in
 // the order the canonical brief declares them. An empty result means the brief
 // is complete enough to work from.
