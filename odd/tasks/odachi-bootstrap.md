@@ -593,6 +593,54 @@ odachi plan --json
 - Sin task doc: exit 1 nombrando `odachi start`.
 - `--json` con el mismo contenido que el mensaje humano.
 
+## Contract X · T16 (`undo`)
+
+`undo` deshace **lo que odachi escribió**, no tu código. El código es tuyo y de git; si la herramienta empieza a elegir commits para deshacer, se convierte en lo que critica.
+
+### Surface
+
+```text
+odachi undo                  restaura el artefacto que odachi escribió último
+odachi undo --list           qué se puede deshacer, con fecha
+odachi undo --file brief      solo ese: brief | profile | fence | task
+odachi undo --json
+```
+
+### Artefactos y backups
+
+Se consideran solo los archivos que odachi escribe: `brief.md`, `.odachi/profile.toml`, `.odachi/fence.toml` y `odd/tasks/*.md`. Un backup es `<archivo>.bak-<8 hex>` al lado del archivo (el formato que ya produce `fsx.Backup`). **Nada fuera de esa lista se lee ni se toca.**
+
+### La regla que hace `undo` seguro
+
+Antes de restaurar, **respalda el estado actual** con el mismo mecanismo. Después copia el backup elegido sobre el archivo. El resultado se imprime con las dos rutas:
+
+```text
+restauré brief.md desde brief.md.bak-466dffe6; lo que había quedado en brief.md.bak-a317e32c
+```
+
+Así `undo` es a su vez deshacible y una edición humana posterior a la última escritura del agente no se pierde.
+
+### Selección
+
+- El backup **más reciente por `mtime`** entre los artefactos permitidos. `--file` filtra a uno.
+- `--list`: una línea por artefacto con backup, de más nuevo a más viejo: `brief.md · 2 backups · último 2026-10-21 20:31`.
+- Sin backups: exit 1, una línea que dice qué escribe odachi y sugiere `odachi start`.
+- `--file` con un nombre fuera de la lista: exit 1 con los cuatro permitidos.
+- El puerto `Files` gana `ModTime(path) (time.Time, error)`; el dominio elige, la app escribe.
+
+### Lo que `undo` NO hace
+
+No toca `git`, no revierte commits, no borra backups. Si el humano quiere deshacer código, el mensaje le dice que eso es `git revert <sha>` — nombrado, no ejecutado.
+
+### Tests
+
+- Restaura el backup más reciente y deja el estado previo como backup nuevo (se assertea el orden: backup → copia).
+- `--list` ordena por fecha y muestra el conteo; sin backups, exit 1 con la línea que nombra `odachi start`.
+- `--file brief` ignora backups más nuevos de otros artefactos; `--file inventado` lista los cuatro.
+- Un `.bak-*` de un archivo ajeno al proyecto no se considera.
+- `--json` con el mismo contenido que el mensaje humano.
+- Ningún test ni ejecución toca archivos fuera de los cuatro artefactos (se assertea sobre el doble).
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -610,6 +658,7 @@ odachi plan --json
 - T13 · `pack`: llevar las skills al directorio nativo de cada agente · S1,S3 · delegated (gentle-ai-worker) · [x] commits: 511cc7c (domain), c0516e6 (embed), e036438 (app + cli)
 - T14 · `IsDir` en el escáner de skills: la clase de error de `stat` no decide qué es una entrada · S2,S4 · inline · [x] commit: 3c9f2ae
 - T15 · `plan`: agregar y cerrar pasos sin editar Markdown a mano · S3,S6 · delegated (gentle-ai-worker) · [x] commits: 6dbecfc (domain), 1130ee9 (guard), 658e900 (plan), 3597bed (cli + readme)
+- T16 · `undo`: restaurar el último artefacto que odachi escribió, respaldando lo actual · S2 · pending
 
 ## Log
 
