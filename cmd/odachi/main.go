@@ -19,6 +19,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/plan"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/summary"
+	"github.com/biggs-100/odachi/internal/app/undo"
 )
 
 // version is the release identifier this binary reports. A plain `go build`
@@ -74,6 +75,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runLevel(dir, args[1:], stdin, stdout, stderr)
 	case "summary":
 		return runSummary(dir, args[1:], stdout, stderr)
+	case "undo":
+		return runUndo(dir, args[1:], stdout, stderr)
 	case "check":
 		return runCheck(dir, args[1:], stdout, stderr)
 	case "init":
@@ -89,7 +92,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), plan (odachi plan \"<texto>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), plan (odachi plan \"<texto>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), undo (odachi undo), check (odachi check), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -355,6 +358,37 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
 }
 
+// runUndo parses the flags, wires the Files adapter and reports the result.
+func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi undo", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		opts   undo.Options
+		asJSON bool
+	)
+
+	flags.BoolVar(&opts.List, "list", false, "qué se puede deshacer, con fecha")
+	flags.StringVar(&opts.File, "file", "", "solo ese artefacto: brief | profile | fence | task")
+	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi undo -h para ver los flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi undo solo toma flags (corré odachi undo -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	opts.Dir = dir
+	return reportUndo(undo.Run(opts, osFiles{}), asJSON, stdout, stderr)
+}
+
 // reportCheck prints the gate's verdict. A ready run is silent under --quiet,
 // because the pre-commit hook runs it on every commit; a blocked run always
 // says what blocks and which command unblocks it.
@@ -551,6 +585,16 @@ func reportSummary(result summary.Result, asJSON bool, stdout, stderr io.Writer)
 	}, asJSON, stdout, stderr)
 }
 
+// reportUndo prints the result of `odachi undo`.
+func reportUndo(result undo.Result, asJSON bool, stdout, stderr io.Writer) int {
+	return reportOutcome(outcome{
+		Code:    result.Code,
+		Message: result.Message,
+		Lines:   result.Lines,
+		Files:   result.Files,
+	}, asJSON, stdout, stderr)
+}
+
 // reportOutcome prints the result and returns the exit code. Machine output is
 // JSON; human output is the block the verb built, on stderr when the run is
 // blocked.
@@ -617,6 +661,7 @@ uso:
   odachi plan --done T2 [--commit abc1234]
   odachi level [--to <perfil>]
   odachi summary
+  odachi undo [--list] [--file brief]
   odachi check [flags]
   odachi init [--json]
   odachi skills [--check | --write]
@@ -673,6 +718,9 @@ después de start:
   odachi level                                  ver tus hechos; propone senior cuando se gana
   odachi level --to <perfil>                    aplicar un perfil (se respalda el anterior)
   odachi summary                                qué hay hecho en cada feature
+  odachi undo                                   restaura lo último que escribió odachi (lo actual queda respaldado)
+  odachi undo --list                            qué se puede deshacer, con fecha
+  odachi undo --file brief                      solo ese: brief | profile | fence | task
   odachi check                                  ¿está listo? brief, cerco, preguntas y prueba
   odachi check --run "<comando>"                corre la prueba y la guarda con su árbol
   odachi init                                   AGENTS.md + hook pre-commit

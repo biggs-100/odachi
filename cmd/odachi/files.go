@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/adapters/fsx"
 	"github.com/biggs-100/odachi/internal/adapters/gitx"
@@ -66,6 +67,17 @@ func (osFiles) List(dir string) ([]string, error) {
 
 func (osFiles) Backup(path string) (string, error) {
 	return fsx.Backup(path)
+}
+
+// ModTime is what `odachi undo` chooses by: the date the filesystem recorded
+// for a backup, so the newest one is the last thing odachi wrote and not a
+// counter odachi would have to keep in sync with the disk.
+func (osFiles) ModTime(path string) (time.Time, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return info.ModTime(), nil
 }
 
 // homeDir is where the Home adapter reads the human's home from. It is a
