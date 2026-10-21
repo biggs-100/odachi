@@ -223,7 +223,7 @@ func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir stri
 	}
 	script := filepath.Join(repoRoot, "scripts", "install.sh")
 
-	_, unameS, unameM := installerTarget(t)
+	osName, unameS, unameM := installerTarget(t)
 	shim := unameShim(t, unameS, unameM)
 
 	// HOME is redirected so a default install location can never touch the real
@@ -239,8 +239,13 @@ func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir stri
 		"ODACHI_VERSION":  installVersion,
 		"ODACHI_BASE_URL": fileBaseURL(fixture.dir),
 		"ODACHI_BIN_DIR":  binDir,
-		"PATH":            shim + string(os.PathListSeparator) + os.Getenv("PATH"),
-		"HOME":            home,
+		// The target platform is passed explicitly instead of relying on the
+		// uname shim winning in PATH: on a Windows runner it does not, and the
+		// test would then be measuring the refusal path instead of the install.
+		"ODACHI_OS":   osName,
+		"ODACHI_ARCH": runtime.GOARCH,
+		"PATH":        shim + string(os.PathListSeparator) + os.Getenv("PATH"),
+		"HOME":        home,
 	})
 	out, err := command.CombinedOutput()
 	if err != nil {

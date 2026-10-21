@@ -41,20 +41,39 @@ if ! command -v sha256sum >/dev/null 2>&1 && ! command -v shasum >/dev/null 2>&1
 fi
 
 # 1 · plataforma. Lo que no está acá se dice, no se adivina.
-case "$(uname -s 2>/dev/null || echo desconocido)" in
-	Linux) os=linux ;;
-	Darwin) os=darwin ;;
-	*)
-		die "no sé instalar en $(uname -s 2>/dev/null || echo esta plataforma); este instalador cubre linux y darwin (en Windows el equivalente es scripts/install.ps1)"
-		;;
+#
+# ODACHI_OS y ODACHI_ARCH existen para dos casos concretos: un entorno que
+# reporta mal su plataforma, y los tests, que necesitan ejercitar la misma
+# detección sin depender de un uname(1) falso ganándole al real en el PATH. Los
+# dos se validan contra la misma lista: un valor inventado no instala nada.
+os=${ODACHI_OS:-}
+if [ -z "$os" ]; then
+	case "$(uname -s 2>/dev/null || echo desconocido)" in
+		Linux) os=linux ;;
+		Darwin) os=darwin ;;
+		*)
+			die "no sé instalar en $(uname -s 2>/dev/null || echo esta plataforma); este instalador cubre linux y darwin (en Windows el equivalente es scripts/install.ps1)"
+			;;
+	esac
+fi
+case "$os" in
+	linux | darwin) ;;
+	*) die "no sé instalar en $os; este instalador cubre linux y darwin (en Windows el equivalente es scripts/install.ps1)" ;;
 esac
 
-case "$(uname -m 2>/dev/null || echo desconocido)" in
-	x86_64 | amd64) arch=amd64 ;;
-	aarch64 | arm64) arch=arm64 ;;
-	*)
-		die "no sé instalar en la arquitectura $(uname -m 2>/dev/null || echo desconocida); las releases cubren amd64 y arm64"
-		;;
+arch=${ODACHI_ARCH:-}
+if [ -z "$arch" ]; then
+	case "$(uname -m 2>/dev/null || echo desconocido)" in
+		x86_64 | amd64) arch=amd64 ;;
+		aarch64 | arm64) arch=arm64 ;;
+		*)
+			die "no sé instalar en la arquitectura $(uname -m 2>/dev/null || echo desconocida); las releases cubren amd64 y arm64"
+			;;
+	esac
+fi
+case "$arch" in
+	amd64 | arm64) ;;
+	*) die "no sé instalar en la arquitectura $arch; las releases cubren amd64 y arm64" ;;
 esac
 
 # 2 · versión: la que pidió el humano, o la última release.
