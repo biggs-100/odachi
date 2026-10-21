@@ -168,20 +168,13 @@ func answer(current tasks.Document, files Files, opts Options) Result {
 	return record(current, files, closed, fmt.Sprintf("cerré la pregunta %s en %s", id, current.Rel))
 }
 
-// record rewrites the task document with the grown history and reports where it
-// happened. It refuses to rewrite a document it would damage: the log is the
-// memory of the work, and losing it is worse than not recording.
+// record rewrites the task document with the grown version and reports where it
+// happened. The write goes through the shared guard in tasks: it refuses to
+// rewrite a document it would damage, because the log is the memory of the
+// work and losing it is worse than not recording.
 func record(current tasks.Document, files Files, grown taskdoc.TaskDoc, message string) Result {
-	rendered := grown.Render()
-
-	if dropped := firstDroppedLine(current.Raw, rendered); dropped != "" {
-		return blocked(fmt.Sprintf(
-			"no anoté nada en %s: reescribirlo perdería la línea %q, que no está en el formato canónico; pasá esas notas a ## Historial y volvé a intentar",
-			current.Rel, dropped))
-	}
-	if err := files.Write(current.Path, []byte(rendered)); err != nil {
-		return blocked(fmt.Sprintf("no pude escribir %s: %s; revisá los permisos y volvé a intentar",
-			current.Rel, oneLine(err.Error())))
+	if err := tasks.Save(files, current, grown); err != nil {
+		return blocked(err.Error())
 	}
 
 	return Result{Code: CodeOK, Message: message, Task: current.Rel, Files: []string{current.Rel}}
@@ -204,27 +197,6 @@ func forChoices(open []taskdoc.Question) string {
 		ids = append(ids, question.ID)
 	}
 	return "--for " + ids[0] + " (las abiertas son " + strings.Join(ids, ", ") + ")"
-}
-
-// firstDroppedLine returns the first non-empty line of before that would not
-// survive rendering, or "" when the rewrite loses nothing. Rendering is
-// canonical: anything the agent or the human wrote outside the canonical
-// sections is not carried over, so the caller must not throw it away silently.
-func firstDroppedLine(before, after string) string {
-	present := map[string]bool{}
-	for _, line := range strings.Split(after, "\n") {
-		present[strings.TrimSpace(line)] = true
-	}
-	for _, line := range strings.Split(before, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		if !present[trimmed] {
-			return trimmed
-		}
-	}
-	return ""
 }
 
 // quoted renders text inside the canonical quotes, on one line.
