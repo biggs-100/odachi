@@ -1,0 +1,317 @@
+// Package skill owns the skills format: the frontmatter every SKILL.md declares,
+// the rules that make a skill loadable, and the generated SKILLS.md registry.
+//
+// It is pure: no filesystem, no os. The app layer reads the files over its port
+// and hands the bytes here, so `--check` gives the same answer on every machine.
+package skill
+
+import (
+	"fmt"
+	"regexp"
+	"sort"
+	"strings"
+	"unicode/utf8"
+)
+
+// RegistryHeader is the first line of the generated registry. It says who owns
+// the file: --write, never a human.
+const RegistryHeader = "<!-- generado por odachi skills --write; no lo edites a mano -->"
+
+// RegistryFile is the generated index of every skill, at the project root.
+const RegistryFile = "SKILLS.md"
+
+// The limits Contract VII fixes. They are exported so the message a human reads
+// and the rule that refuses the file can never disagree.
+const (
+	// MaxDescription is the most characters a description may have.
+	MaxDescription = 200
+	// MaxBodyLines is the most lines a skill body may have.
+	MaxBodyLines = 60
+	// TriggerPrefix is how every description starts.
+	TriggerPrefix = "Trigger:"
+	// NamePattern is the one slug shape a directory and a name share.
+	NamePattern = `^[a-z][a-z0-9-]{2,40}$`
+)
+
+// requiredSections are the three headings every skill body carries, in order.
+var requiredSections = []string{"Cuándo", "Reglas", "Nunca"}
+
+var namePattern = regexp.MustCompile(NamePattern)
+
+// Skill is one parsed SKILL.md. Dir is its directory name, which the declared
+// name has to match; Path is how the file is named in messages and the registry.
+type Skill struct {
+	Dir            string
+	Path           string
+	Name           string
+	Description    string
+	Trigger        string
+	Body           string
+	HasFrontmatter bool
+}
+
+// Problem is one violation, attributed to the file a human has to open.
+type Problem struct {
+	File   string
+	Reason string
+}
+
+// Parse reads one SKILL.md. It is total: malformed input never panics, it just
+// fails validation later.
+func Parse(dir, path, text string) Skill {
+	s := Skill{Dir: dir, Path: path, Body: text}
+
+	front, body, ok := splitFrontmatter(text)
+	if !ok {
+		return s
+	}
+
+	s.HasFrontmatter = true
+	s.Body = body
+	s.Name = frontmatterValue(front, "name")
+	s.Description = frontmatterValue(front, "description")
+	s.Trigger = strings.TrimSpace(strings.TrimPrefix(s.Description, TriggerPrefix))
+	return s
+}
+
+// Problems reports every violation in this file, one reason each.
+func (s Skill) Problems() []Problem {
+	problems := []Problem{}
+	add := func(format string, args ...any) {
+		problems = append(problems, Problem{File: s.Path, Reason: fmt.Sprintf(format, args...)})
+	}
+
+	if !s.HasFrontmatter {
+		return []Problem{{File: s.Path, Reason: "no tiene frontmatter: el archivo tiene que empezar con --- y cerrarlo con ---"}}
+	}
+
+	if s.Name == "" {
+		add("el frontmatter no dice name")
+	} else {
+		if !namePattern.MatchString(s.Name) {
+			add("el name %q no cumple la forma %s (minúsculas, números y guiones, empieza con una letra)", s.Name, NamePattern)
+		}
+		if s.Name != s.Dir {
+			add("el name %q no coincide con el directorio %q", s.Name, s.Dir)
+		}
+	}
+
+	if s.Description == "" {
+		add("el frontmatter no dice description")
+	} else {
+		if !strings.HasPrefix(s.Description, TriggerPrefix) {
+			add("la description no empieza con %q: así nadie sabe cuándo cargar la skill", TriggerPrefix)
+		}
+		if length := utf8.RuneCountInString(s.Description); length > MaxDescription {
+			add("la description tiene %d caracteres; el máximo es %d", length, MaxDescription)
+		}
+	}
+
+	body := bodyLines(s.Body)
+	if len(body) > MaxBodyLines {
+		add("el cuerpo tiene %d líneas; el máximo es %d", len(body), MaxBodyLines)
+	}
+	if strings.Contains(s.Body, "TODO") {
+		add("el cuerpo contiene TODO: una skill se entrega completa o no se entrega")
+	}
+
+	for _, section := range requiredSections {
+		content, ok := sectionContent(body, section)
+		switch {
+		case !ok:
+			add("falta la sección «%s»", section)
+		case content == "":
+			add("la sección «%s» está vacía", section)
+		}
+	}
+
+	return problems
+}
+
+// Check validates a whole project: every file, unique names, and a registry that
+// is exactly what --write would generate. hasRegistry is false when SKILLS.md
+// does not exist, which is a violation with its own reason.
+func Check(skills []Skill, registry string, hasRegistry bool) []Problem {
+	problems := []Problem{}
+
+	ordered := sortedByDir(skills)
+	seen := make(map[string]Skill, len(ordered))
+	for _, s := range ordered {
+		problems = append(problems, s.Problems()...)
+		if s.Name == "" {
+			continue
+		}
+		if first, ok := seen[s.Name]; ok {
+			problems = append(problems, Problem{
+				File:   s.Path,
+				Reason: fmt.Sprintf("el name %q está repetido: también lo usa %s", s.Name, first.Path),
+			})
+			continue
+		}
+		seen[s.Name] = s
+	}
+
+	if !hasRegistry {
+		problems = append(problems, Problem{
+			File:   RegistryFile,
+			Reason: "falta SKILLS.md: corré odachi skills --write para generarlo",
+		})
+		return problems
+	}
+	if want := Registry(ordered); registry != want {
+		problems = append(problems, Problem{
+			File:   RegistryFile,
+			Reason: "no es lo que generaría odachi skills --write: no lo edites a mano, corré odachi skills --write",
+		})
+	}
+
+	return problems
+}
+
+// Registry renders SKILLS.md: the marker line, then the table sorted by name, and
+// nothing else. Two runs over the same skills produce the same bytes.
+func Registry(skills []Skill) string {
+	ordered := append([]Skill(nil), skills...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		if ordered[i].Name != ordered[j].Name {
+			return ordered[i].Name < ordered[j].Name
+		}
+		return ordered[i].Path < ordered[j].Path
+	})
+
+	var out strings.Builder
+	out.WriteString(RegistryHeader + "\n")
+	out.WriteString("| Skill | Trigger | Path |\n")
+	out.WriteString("| --- | --- | --- |\n")
+	for _, s := range ordered {
+		name := s.Name
+		if name == "" {
+			name = s.Dir
+		}
+		path := s.Path
+		if path == "" {
+			path = "skills/" + s.Dir + "/SKILL.md"
+		}
+		fmt.Fprintf(&out, "| %s | %s | %s |\n", cell(name), cell(s.Trigger), cell(path))
+	}
+	return out.String()
+}
+
+// ValidSlug reports whether a slug may become a skill directory. `skill new`
+// checks this before it writes anything.
+func ValidSlug(slug string) bool {
+	return namePattern.MatchString(slug)
+}
+
+// Template renders the SKILL.md `skill new` starts from: the three sections with
+// a line to fill each, and a Trigger: the human completes. It is a valid skill
+// as it stands, so `skills --check` stays green while the human writes.
+func Template(name string) string {
+	return "---\nname: " + name + "\ndescription: Trigger: (completá cuándo se usa esta skill)\n---\n\n" +
+		"## Cuándo\n\n(completá cuándo hay que cargar esta skill)\n\n" +
+		"## Reglas\n\n(completá las reglas que un senior haría cumplir)\n\n" +
+		"## Nunca\n\n(completá lo que esta skill no hace nunca)\n"
+}
+
+// splitFrontmatter cuts the --- block from the body. A file without both fences
+// has no frontmatter at all; a truncated one is not half-accepted.
+func splitFrontmatter(text string) (front, body string, ok bool) {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	text = strings.TrimPrefix(text, "\ufeff")
+
+	lines := strings.Split(text, "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return "", "", false
+	}
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == "---" {
+			return strings.Join(lines[1:i], "\n"), strings.Join(lines[i+1:], "\n"), true
+		}
+	}
+	return "", "", false
+}
+
+// frontmatterValue reads one `key: value` line. Unknown keys are ignored: the
+// format owns name and description, and a skill may keep its own notes.
+func frontmatterValue(front, key string) string {
+	for _, line := range strings.Split(front, "\n") {
+		name, value, found := strings.Cut(line, ":")
+		if !found || strings.TrimSpace(name) != key {
+			continue
+		}
+		return unquote(strings.TrimSpace(value))
+	}
+	return ""
+}
+
+// unquote removes one pair of matching quotes, which YAML accepts and a human
+// writing a trigger sentence sometimes uses.
+func unquote(value string) string {
+	if len(value) >= 2 {
+		first, last := value[0], value[len(value)-1]
+		if (first == '"' && last == '"') || (first == '\'' && last == '\'') {
+			return value[1 : len(value)-1]
+		}
+	}
+	return value
+}
+
+// bodyLines splits the body and drops the blank lines at both ends, so the
+// count is about content, not about spacing around it.
+func bodyLines(body string) []string {
+	lines := strings.Split(body, "\n")
+	for len(lines) > 0 && strings.TrimSpace(lines[0]) == "" {
+		lines = lines[1:]
+	}
+	for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+		lines = lines[:len(lines)-1]
+	}
+	return lines
+}
+
+// sectionContent returns what follows a `## <heading>` line up to the next
+// heading. ok is false when the section does not exist.
+func sectionContent(lines []string, heading string) (content string, ok bool) {
+	target := "## " + heading
+	start := -1
+	for i, line := range lines {
+		if strings.TrimSpace(line) == target {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return "", false
+	}
+
+	var out strings.Builder
+	for i := start + 1; i < len(lines); i++ {
+		if strings.HasPrefix(strings.TrimSpace(lines[i]), "## ") {
+			break
+		}
+		out.WriteString(lines[i])
+		out.WriteString("\n")
+	}
+	return strings.TrimSpace(out.String()), true
+}
+
+// cell keeps one table cell on one line: a pipe inside a trigger would otherwise
+// break the generated table.
+func cell(value string) string {
+	value = strings.ReplaceAll(value, "|", `\|`)
+	value = strings.Join(strings.Fields(value), " ")
+	return strings.TrimSpace(value)
+}
+
+// sortedByDir orders skills the way their directories are listed, which is also
+// the order a human reads the messages in.
+func sortedByDir(skills []Skill) []Skill {
+	ordered := append([]Skill(nil), skills...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		if ordered[i].Dir != ordered[j].Dir {
+			return ordered[i].Dir < ordered[j].Dir
+		}
+		return ordered[i].Path < ordered[j].Path
+	})
+	return ordered
+}
