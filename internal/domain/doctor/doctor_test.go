@@ -1,0 +1,204 @@
+package doctor
+
+import (
+	"strings"
+	"testing"
+)
+
+// TestEveryCheckHasATitle pins the numbering Contract XV fixes at ten. The
+// number is how a report and a test name the same check, so it cannot drift.
+func TestEveryCheckHasATitle(t *testing.T) {
+	for number := CheckVersion; number <= CheckIgnored; number++ {
+		if title(number) == "" {
+			t.Errorf("check %d has no title", number)
+		}
+	}
+	if CheckIgnored != CheckVersion+CheckCount-1 {
+		t.Fatalf("the ten checks are numbered %d..%d, got %d", CheckVersion, CheckIgnored, CheckVersion+CheckCount-1)
+	}
+	if CheckCount != 10 {
+		t.Fatalf("Contract XV fixes ten checks, got %d", CheckCount)
+	}
+}
+
+// TestTitleOutOfRange: a number no check owns has no name, and inventing one
+// would let a report name a check that does not exist.
+func TestTitleOutOfRange(t *testing.T) {
+	if title(0) != "" || title(99) != "" {
+		t.Fatalf("unknown check numbers must have no title")
+	}
+}
+
+// TestLineIsOneSpanishLine: the whole report is ten of these, so the shape is
+// the contract a human reads.
+func TestLineIsOneSpanishLine(t *testing.T) {
+	cases := []struct {
+		name  string
+		check Check
+		want  string
+	}{
+		{
+			name:  "ok",
+			check: OK(CheckVersion, "odachi 0.5.0"),
+			want:  "ok 1 · la versión del binario: odachi 0.5.0",
+		},
+		{
+			name:  "problem names the command that fixes it",
+			check: Broken(CheckHook, "no hay hook de pre-commit: no hay gate local", "corré odachi init"),
+			want:  "mal 5 · el hook de pre-commit es de odachi: no hay hook de pre-commit: no hay gate local; corré odachi init",
+		},
+		{
+			name:  "warning is said and never carries a fix",
+			check: Warning(CheckIgnored, "proof/ está vacío"),
+			want:  "aviso 10 · el store de review y proof/ están ignorados: proof/ está vacío",
+		},
+		{
+			name:  "ok without detail",
+			check: OK(CheckGit, ""),
+			want:  "ok 3 · hay .git",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := Line(c.check); got != c.want {
+				t.Fatalf("Line() = %q, want %q", got, c.want)
+			}
+			if strings.Count(Line(c.check), "\n") != 0 {
+				t.Fatalf("a check is one line: %q", Line(c.check))
+			}
+		})
+	}
+}
+
+// TestTallyAndCode: only a problem fails the run. A warning is said and does
+// not change the exit code.
+func TestTallyAndCode(t *testing.T) {
+	cases := []struct {
+		name     string
+		checks   []Check
+		problems int
+		warnings int
+		code     int
+	}{
+		{"all ok", []Check{OK(CheckVersion, "x"), OK(CheckGit, "sí")}, 0, 0, 0},
+		{"warning only", []Check{OK(CheckVersion, "x"), Warning(CheckIgnored, "nada todavía")}, 0, 1, 0},
+		{"one problem", []Check{OK(CheckVersion, "x"), Broken(CheckGit, "no hay .git", "corré git init")}, 1, 0, 1},
+		{"problem and warning", []Check{Broken(CheckGit, "no hay .git", "corré git init"), Warning(CheckIgnored, "nada")}, 1, 1, 1},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			problems, warnings := Tally(c.checks)
+			if problems != c.problems || warnings != c.warnings {
+				t.Fatalf("Tally() = %d problems, %d warnings; want %d, %d", problems, warnings, c.problems, c.warnings)
+			}
+			if got := Code(c.checks); got != c.code {
+				t.Fatalf("Code() = %d, want %d", got, c.code)
+			}
+		})
+	}
+}
+
+// TestSummary: the closing line says how many checks ran and what they found,
+// so a human can read the verdict without counting lines.
+func TestSummary(t *testing.T) {
+	cases := []struct {
+		name   string
+		checks []Check
+		want   string
+	}{
+		{"clean", []Check{OK(CheckVersion, "x"), OK(CheckGit, "sí")}, "todo en orden: 2 chequeos, ningún problema"},
+		{"warning", []Check{OK(CheckVersion, "x"), Warning(CheckGit, "nada")}, "todo en orden: 2 chequeos, 1 aviso, ningún problema"},
+		{"problem", []Check{OK(CheckVersion, "x"), Broken(CheckGit, "no hay .git", "corré git init")}, "1 problema de 2 chequeos: corré el comando que nombra cada línea"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := Summary(c.checks); got != c.want {
+				t.Fatalf("Summary() = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// TestIsOurHook: a hook is odachi's when it carries the marker `odachi init`
+// writes. Any other hook is somebody else's work, and `init` refuses to
+// replace it.
+func TestIsOurHook(t *testing.T) {
+	ours := "#!/bin/sh\n" + HookMarker + " no se commitea sin prueba de este árbol\n" +
+		"ODACHI='odachi'\n[ -x \"$ODACHI\" ] || ODACHI=odachi\n\"$ODACHI\" check --quiet || exit 1\n"
+	if !IsOurHook(ours) {
+		t.Fatalf("the hook init writes must be recognised: %q", ours)
+	}
+	if IsOurHook("#!/bin/sh\nnpm test\n") {
+		t.Fatalf("a foreign hook is not ours")
+	}
+	if IsOurHook("") {
+		t.Fatalf("an empty hook is not ours")
+	}
+}
+
+// TestHookExe: the hook reaches the binary through the ODACHI= line, which is
+// the only record of what it runs.
+func TestHookExe(t *testing.T) {
+	cases := []struct {
+		name string
+		hook string
+		want string
+	}{
+		{"absolute", "ODACHI='/usr/local/bin/odachi'\n", "/usr/local/bin/odachi"},
+		{"windows", "ODACHI='C:/Users/ana/bin/odachi.exe'\n", "C:/Users/ana/bin/odachi.exe"},
+		{"bare name", "ODACHI='odachi'\n", "odachi"},
+		{"not quoted", "ODACHI=/opt/odachi\n", "/opt/odachi"},
+		{"missing", "#!/bin/sh\nexit 0\n", ""},
+		{"empty value", "ODACHI=''\n", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := HookExe(c.hook); got != c.want {
+				t.Fatalf("HookExe() = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// TestHasBlock: the agent reads the rules only if both markers are there. One
+// marker alone is a truncated block, and a truncated block is not a block.
+func TestHasBlock(t *testing.T) {
+	cases := []struct {
+		name   string
+		agents string
+		want   bool
+	}{
+		{"both", "# proyecto\n\n" + AgentsBegin + "\nreglas\n" + AgentsEnd + "\n", true},
+		{"only begin", AgentsBegin + "\nreglas\n", false},
+		{"only end", "reglas\n" + AgentsEnd + "\n", false},
+		{"none", "# proyecto\n", false},
+		{"empty", "", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := HasBlock(c.agents); got != c.want {
+				t.Fatalf("HasBlock() = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+// TestPathFix names the folder of the binary the human already has: the advice
+// that leaves a beginner where they were is the advice that costs nothing to
+// give, and this tool does not give it.
+func TestPathFix(t *testing.T) {
+	fix := PathFix("/home/ana/.local/bin/odachi")
+	if !strings.Contains(fix, "/home/ana/.local/bin") {
+		t.Fatalf("PathFix must name the folder of the running binary, got %q", fix)
+	}
+	if !strings.Contains(fix, "PATH") {
+		t.Fatalf("PathFix must name the PATH, got %q", fix)
+	}
+
+	// Without a path there is no folder to name, and inventing one would be
+	// worse than asking.
+	generic := PathFix("")
+	if strings.Contains(generic, "  ") || !strings.Contains(generic, "PATH") {
+		t.Fatalf("PathFix(\"\") must stay a sentence about the PATH, got %q", generic)
+	}
+}
