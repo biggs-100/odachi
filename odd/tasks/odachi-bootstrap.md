@@ -441,6 +441,70 @@ Equivalente para Windows: detecta `AMD64`/`ARM64`, descarga el `zip`, verifica s
 
 Unidad única. No tocar el comportamiento de los seis verbos. No agregar dependencias Go. Si `LICENSE` no existe, los archivos de release no lo mencionan.
 
+## Contract VII · T12 (skills: registro y creador)
+
+### Surface
+
+```text
+odachi skills                lista las skills del proyecto con su trigger (humano)
+odachi skills --json
+odachi skills --check        valida; exit 1 si algo no cumple (lo corre CI)
+odachi skills --write        regenera SKILLS.md desde los frontmatter
+odachi skill new <slug>      crea skills/<slug>/SKILL.md desde la plantilla
+```
+
+### Formato (única fuente de verdad)
+
+```markdown
+---
+name: acceptance
+description: Trigger: cuando hay que decidir si algo está terminado. Convierte un pedido en criterios observables.
+---
+
+## Cuándo
+...
+
+## Reglas
+...
+
+## Nunca
+...
+```
+
+### Validaciones de `--check` (una razón por violación, en español)
+
+- `name` == nombre del directorio, `^[a-z][a-z0-9-]{2,40}$`.
+- `description` empieza con `Trigger:` y tiene ≤ 200 caracteres.
+- Cuerpo ≤ 60 líneas; sin secciones vacías; sin `TODO`.
+- Nombres únicos.
+- Toda skill del disco aparece en `SKILLS.md`, y `SKILLS.md` tiene que ser **exactamente** lo que `--write` generaría: si alguien lo editó a mano, `--check` falla y dice que corra `--write`.
+
+### SKILLS.md (generado)
+
+Primera línea: `<!-- generado por odachi skills --write; no lo edites a mano -->`. Después una tabla `Skill | Trigger | Path`, ordenada por nombre. Nada más.
+
+### `skill new`
+
+Crea el directorio y el `SKILL.md` con la plantilla (frontmatter con `name` y una `description` de `Trigger:` vacía para completar, y las tres secciones). Si ya existe: exit 1, sin tocar. Al terminar corre el equivalente de `--write` para que el registro quede al día, e imprime el path y qué sigue.
+
+### Integración
+
+- `odachi init` **no** escribe skills: no las posee. Su bloque gana **una** línea: `Skills: ver SKILLS.md; cargá la que matchee el trigger antes de escribir código.`
+- `pack` (unidad siguiente) es quien copia las skills incluidas al proyecto; esta unidad no lo implementa.
+- Las 5 skills iniciales se entregan dentro de este repo (`skills/`), dogfooding: `acceptance`, `slices`, `tests`, `data`, `ship`, cada una ≤ 60 líneas con `## Cuándo / ## Reglas / ## Nunca`.
+
+### Capas
+
+- Dominio puro: parseo de frontmatter, validación, y generación de la tabla. Sin `os`.
+- La app lee y escribe con el puerto `Files` que ya existe; el CLI cablea.
+- Sin dependencias nuevas.
+
+### Tests
+
+- Dominio: frontmatter válido, sin frontmatter, CRLF, `description` sin `Trigger:`, nombre que no coincide con el directorio, cuerpo de 61 líneas, `TODO`, tabla generada y ordenada.
+- App/CLI: `--check` verde con las 5 skills; una violación por test (cada una con su mensaje); `--write` idempotente (dos veces, mismos bytes); `--check` falla si `SKILLS.md` se editó a mano; `skill new` crea y no pisa; repo sin `skills/` sale 0 con una línea que dice cómo empezar.
+- CI: `go test ./...` ya lo cubre; no hace falta un job nuevo.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -454,6 +518,7 @@ Unidad única. No tocar el comportamiento de los seis verbos. No agregar depende
 - T9 · distribución: `--version`, goreleaser, CI, install.sh y install.ps1 · S1,S8 · delegated (gentle-ai-worker) + verificación independiente · [x] commit: 0e459f0
 - T10 · CI verde en Windows: el test del instalador dependía de un shim de uname · S1 · inline · [x] commit: 85694e2
 - T11 · publicación: licencia MIT, tag v0.1.0 y release verificada de punta a punta · S1,S8 · inline · [x] commit: 4d92358 · release run: 39657703108
+- T12 · skills: registro generado, validador, creador y las 5 skills iniciales · S1,S7 · pending
 
 ## Log
 
