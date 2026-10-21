@@ -641,6 +641,38 @@ No toca `git`, no revierte commits, no borra backups. Si el humano quiere deshac
 - `--json` con el mismo contenido que el mensaje humano.
 - Ningún test ni ejecución toca archivos fuera de los cuatro artefactos (se assertea sobre el doble).
 
+## Contract XI · T17 (lock de escritura)
+
+Es el último riesgo real del diseño. Los archivos se escriben de forma atómica uno por uno, así que no hay corrupción: lo que puede pasar es que dos corridas se intercalen y dejen un conjunto **coherente por archivo e incoherente entre sí** (el `brief.md` de una corrida con el `fence.toml` de la otra).
+
+### Alcance
+
+Solo los verbos que escriben **más de un archivo**: `start` y `undo`. `plan`, `ask` y `level --to` escriben un solo archivo de forma atómica; no necesitan lock y no lo toman (un lock que no protege nada es fricción).
+
+### Mecánica
+
+- Archivo `.odachi/lock`, creado en modo exclusivo (`O_CREATE|O_EXCL`). Contenido: una línea con el verbo, el pid y el instante. Se libera al terminar, incluso si el verbo falla.
+- Si ya existe: se lee.
+  - Más viejo que **10 minutos** → se considera abandonado: se toma, se avisa en una línea (`había un lock viejo de <verbo>, hace <X>; lo tomé`) y sigue.
+  - Más nuevo → exit 1: `otra corrida de odachi está escribiendo en este proyecto (<verbo>, pid <n>, hace <X>s); esperá y volvé a intentar`. Nombra el archivo y el comando que lo libera a mano (borrarlo), nunca lo borra.
+- Un lock ilegible o con contenido inesperado **no bloquea para siempre**: se trata como viejo si su mtime lo es, y si no, se bloquea con el mensaje que nombra el archivo.
+- Nunca se borra un lock ajeno vivo. Nunca se ignora un lock presente sin decirlo.
+
+### Capas
+
+- Puerto `Lock` nuevo en `internal/app/lock`: `Acquire(path, owner string) (held bool, stale string, err error)` y `Release()`. Sin `os` en la app; el adaptador lo implementa con `O_EXCL`, `ModTime` y `Remove`.
+- El dominio no participa: no hay regla de negocio, solo exclusión.
+- `start` y `undo` toman el lock **antes de la primera lectura** que decide algo y lo liberan con `defer`.
+
+### Tests
+
+- Segundo `start` mientras el primero tiene el lock: exit 1, mensaje con verbo/pid/antigüedad, y **ningún archivo tocado** (se assertea sobre el doble).
+- Lock viejo (mtime > 10 min): se toma, se avisa, la corrida completa y el lock queda liberado.
+- Lock liberado tras un fallo del verbo (se assertea que el release se llamó).
+- `plan`/`ask`/`level` no crean `.odachi/lock`.
+- Un lock con contenido basura y mtime reciente: bloquea con el mensaje que nombra el archivo.
+- `--json` reporta el mismo mensaje.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -659,6 +691,7 @@ No toca `git`, no revierte commits, no borra backups. Si el humano quiere deshac
 - T14 · `IsDir` en el escáner de skills: la clase de error de `stat` no decide qué es una entrada · S2,S4 · inline · [x] commit: 3c9f2ae
 - T15 · `plan`: agregar y cerrar pasos sin editar Markdown a mano · S3,S6 · delegated (gentle-ai-worker) · [x] commits: 6dbecfc (domain), 1130ee9 (guard), 658e900 (plan), 3597bed (cli + readme)
 - T16 · `undo`: restaurar el último artefacto que odachi escribió, respaldando lo actual · S2 · delegated (gentle-ai-worker) + corrección del padre · [x] commits: 58fe726 (domain), d41b3c7 (app), 28a2791 (cli)
+- T17 · lock de escritura para `start` y `undo`: exclusión entre corridas concurrentes · S2,S4 · pending
 
 ## Log
 
