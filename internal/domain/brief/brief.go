@@ -142,9 +142,10 @@ func (b Brief) Missing() []string {
 	if len(b.DoneWhen) == 0 {
 		missing = append(missing, "listo cuando")
 	}
-	if len(b.NonGoals) == 0 {
-		missing = append(missing, "no incluye")
-	}
+	// Non-goals are deliberately not required. The interview lets the human pick
+	// none, and forcing one invents a rule they never meant; a false fence
+	// violation teaches the wrong lesson. When the list is empty, fence.toml
+	// explains what a rule is for instead of pretending to protect something.
 	return missing
 }
 

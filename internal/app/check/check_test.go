@@ -241,7 +241,7 @@ deps  = ["stripe"]
 			git:     &fakeGit{tree: currentTree},
 			code:    int(gate.NeedsDecision),
 			reason:  gate.ReasonBriefIncomplete,
-			message: "el brief está incompleto: falta listo cuando, no incluye",
+			message: "el brief está incompleto: falta listo cuando",
 			next:    "odachi start",
 		},
 		{
