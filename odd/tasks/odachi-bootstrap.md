@@ -141,10 +141,57 @@ func Builtin() map[string]Profile // novato (extends "") / senior (extends novat
 - Guard test on import boundaries exists BEFORE domain code.
 - Test-first: the three domain test files are written and observed RED before the implementation files.
 
+## Contract II · T3 and T4
+
+### T3 — `internal/domain/brief` and `internal/domain/taskdoc` (pure)
+
+```go
+package brief
+type Brief struct{ Name string; Outcome, DoneWhen, NonGoals, Decisions []string }
+func Parse(md string) Brief       // canonical Spanish headers; unknown sections ignored; never panics
+func (b Brief) Missing() []string // Spanish labels of empty required parts, e.g. "qué tiene que existir", "no incluye"
+// required: "Qué tiene que existir", "Listo cuando", "NO incluye (primera versión)"
+
+package taskdoc
+type Requirement struct{ ID, Text string }
+type Step struct{ ID, Text, Requirement, Commit string; Done bool }
+type TaskDoc struct{ Title string; Requirements []Requirement; DoneWhen []string; Steps []Step; History []string }
+func Parse(md string) TaskDoc
+func (d TaskDoc) Next() (Step, bool)                        // first not-done step, in order
+func (d TaskDoc) Progress() (done, total int)
+func (d TaskDoc) Record(id, commit string) (TaskDoc, error) // marks done, records the commit; unknown id is an error
+func (d TaskDoc) Render() string                            // canonical, stable, for round-trip
+```
+
+- Round-trip: `Parse(Render(Parse(x)))` equals `Parse(x)` for both `testdata/examples/`.md files.
+- Tolerate an agent appending history lines; never panic on malformed input.
+
+### T4 — adapters (may carry dependencies; the domain may not)
+
+```go
+package profiletoml // internal/adapters/profiletoml
+func Decode(data []byte) (profile.Profile, error) // STRICT: unknown keys are an error naming the key
+func Load(path string) (profile.Profile, error)
+
+package fsx // internal/adapters/fsx
+func Digest(data []byte) string                                    // sha256 hex
+func WriteAtomic(path string, data []byte, perm fs.FileMode) error // temp in same dir + rename
+func Backup(path string) (string, error)                           // path + ".bak-<digest8>"
+
+package gitx // internal/adapters/gitx
+func TreeHash(root string) (string, error)            // the CURRENT worktree, not just HEAD
+func ChangedPaths(root, base string) ([]string, error)
+func AddedDeps(root, base string) ([]string, error)   // module paths added to go.mod between base and worktree
+```
+
+- `TreeHash` represents the current worktree: `git stash create` (which does not touch worktree or index) then `git rev-parse <sha>^{tree}`; when the worktree is clean and stash output is empty, fall back to `HEAD^{tree}`. Document the choice in a comment.
+- `gitx` runs git via `exec.Command` with `-C root`; no network; errors include git stderr.
+- `profiletoml` uses `github.com/BurntSushi/toml` and rejects a non-empty `md.Undecoded()`. Only `go.mod` gains the dependency; the domain stays stdlib-only and the boundary guard must stay green.
+
 ## Tasks
 
-- T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: PENDING_HASH
-- T2 · pure domain: fence (globs), gate (exit codes), profile (schema + reflection guard) · S2,S3,S5 · delegated (gentle-ai-worker) · [x] commit: PENDING_HASH
+- T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
+- T2 · pure domain: fence (globs), gate (exit codes), profile (schema + reflection guard) · S2,S3,S5 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
 - T3 · pure domain: brief and task document parsing + progress · S1,S6 · pending
 - T4 · adapters: strict TOML profile decoder, filesystem, git · S5 · pending
 - T5 · CLI `start`: interview -> brief + fence + profile · S1,S2 · pending
