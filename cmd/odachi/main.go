@@ -17,9 +17,11 @@ import (
 	initapp "github.com/biggs-100/odachi/internal/app/init"
 	"github.com/biggs-100/odachi/internal/app/level"
 	"github.com/biggs-100/odachi/internal/app/plan"
+	reviewapp "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
+	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 )
 
 // version is the release identifier this binary reports. A plain `go build`
@@ -87,12 +89,14 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runSkill(dir, args[1:], stdout, stderr)
 	case "pack":
 		return runPack(dir, args[1:], stdout, stderr)
+	case "review":
+		return runReview(dir, args[1:], stdout, stderr)
 	case "version":
 		// Reached only with arguments: `odachi version` alone was answered above.
 		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), plan (odachi plan \"<texto>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), undo (odachi undo), check (odachi check), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), plan (odachi plan \"<texto>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), undo (odachi undo), check (odachi check), review (odachi review), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -331,6 +335,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.Base, "base", "HEAD", "contra qué comparar el cerco (vacío: contra nada, todo cuenta como nuevo)")
 	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "segundos que puede tardar --run")
 	flags.BoolVar(&opts.Quiet, "quiet", false, "no imprime nada si está listo (para el hook)")
+	flags.BoolVar(&opts.RequireReview, "require-review", false, "exige un veredicto de review para este árbol (apagado por defecto)")
 	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
 
 	if err := flags.Parse(args); err != nil {
@@ -356,6 +361,52 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
+}
+
+// runReview parses the flags, wires the three adapters and reports the verdict.
+func runReview(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi review", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		opts   reviewapp.Options
+		asJSON bool
+	)
+
+	flags.StringVar(&opts.Exec, "exec", "", "corre este comando y guarda el veredicto que contesta")
+	flags.StringVar(&opts.Attach, "attach", "", "guarda un veredicto ya escrito en este archivo")
+	flags.BoolVar(&opts.Show, "show", false, "qué veredicto hay para este árbol, o que no hay")
+	flags.StringVar(&opts.Base, "base", reviewapp.DefaultBase, "contra qué comparar el candidato (vacío: contra nada, todo cuenta como nuevo)")
+	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi review -h para ver los flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi review solo toma flags (corré odachi review -h)\\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	// The three forms answer different questions, and asking for two at once is a
+	// mistake worth naming instead of resolving by precedence.
+	forms := 0
+	for _, used := range []bool{opts.Exec != "", opts.Attach != "", opts.Show} {
+		if used {
+			forms++
+		}
+	}
+	if forms > 1 {
+		fmt.Fprintln(stderr, `odachi: --exec, --attach y --show no van juntos: elegí una sola forma (odachi review | odachi review --exec "<comando>" | odachi review --attach <archivo> | odachi review --show)`)
+		return start.CodeBlocked
+	}
+
+	opts.Dir = dir
+	return reportReview(reviewapp.Run(opts, osFiles{}, reviewGit{}, osShell{}), asJSON, stdout, stderr)
 }
 
 // runUndo parses the flags, wires the Files adapter and reports the result.
@@ -442,6 +493,74 @@ func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writ
 			line = "odachi: " + line
 		}
 		fmt.Fprintln(out, line)
+	}
+	return result.Code
+}
+
+// reportReview prints the review. The prompt is the deliverable of the bare form,
+// so it is printed as one block exactly as the reviewer will read it; a failed
+// review prints the command's own output, because that is the diagnosis.
+func reportReview(result reviewapp.Result, asJSON bool, stdout, stderr io.Writer) int {
+	if asJSON {
+		files := result.Files
+		if files == nil {
+			files = []string{}
+		}
+		payload := struct {
+			Code    int                   `json:"code"`
+			Message string                `json:"message"`
+			Lines   []string              `json:"lines,omitempty"`
+			Prompt  string                `json:"prompt,omitempty"`
+			Output  string                `json:"output,omitempty"`
+			Verdict *domainreview.Verdict `json:"verdict,omitempty"`
+			Files   []string              `json:"files"`
+		}{
+			Code:    result.Code,
+			Message: result.Message,
+			Lines:   result.Lines,
+			Prompt:  result.Prompt,
+			Output:  result.Output,
+			Verdict: result.Verdict,
+			Files:   files,
+		}
+		data, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		fmt.Fprintln(stdout, string(data))
+		return result.Code
+	}
+
+	if result.Prompt != "" {
+		fmt.Fprint(stdout, result.Prompt)
+		if !strings.HasSuffix(result.Prompt, "\n") {
+			fmt.Fprintln(stdout)
+		}
+		return result.Code
+	}
+
+	if result.Code == start.CodeOK {
+		for _, line := range result.Lines {
+			fmt.Fprintln(stdout, line)
+		}
+		if len(result.Lines) == 0 {
+			fmt.Fprintln(stdout, result.Message)
+		}
+		return result.Code
+	}
+
+	fmt.Fprintln(stderr, "odachi: "+result.Message)
+	if len(result.Lines) > 1 {
+		for _, line := range result.Lines[1:] {
+			fmt.Fprintln(stderr, line)
+		}
+	}
+	if result.Output != "" {
+		fmt.Fprint(stderr, result.Output)
+		if !strings.HasSuffix(result.Output, "\n") {
+			fmt.Fprintln(stderr)
+		}
 	}
 	return result.Code
 }
@@ -664,6 +783,7 @@ uso:
   odachi summary
   odachi undo [--list] [--file brief]
   odachi check [flags]
+  odachi review [--exec "<comando>" | --attach <archivo> | --show]
   odachi init [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
@@ -680,6 +800,14 @@ flags de check:
   --base ref      contra qué comparar el cerco (default HEAD; vacío: contra nada)
   --timeout n     segundos que puede tardar --run (default 120)
   --quiet         no imprime nada si está listo (para el hook)
+  --require-review  exige un veredicto de review para este árbol (apagado por defecto)
+  --json          salida para máquinas
+
+flags de review:
+  --exec s        corre este comando y guarda el veredicto que contesta
+  --attach path   guarda un veredicto ya escrito (agente o humano)
+  --show          qué veredicto hay para este árbol, o que no hay
+  --base ref      contra qué comparar el candidato (default HEAD; vacío: contra nada)
   --json          salida para máquinas
 
 flags de plan:
@@ -724,6 +852,11 @@ después de start:
   odachi undo --file brief                      solo ese: brief | profile | fence | task
   odachi check                                  ¿está listo? brief, cerco, preguntas y prueba
   odachi check --run "<comando>"                corre la prueba y la guarda con su árbol
+  odachi review                                 el prompt de review de este candidato
+  odachi review --exec "<comando>"              corre el revisor y guarda su veredicto
+  odachi review --attach <archivo>              guarda un veredicto ya escrito
+  odachi review --show                          qué veredicto hay para este árbol
+  odachi check --require-review                 exige review para este árbol (apagado por defecto)
   odachi init                                   AGENTS.md + hook pre-commit
   odachi skills                                 las skills del proyecto y su trigger
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple

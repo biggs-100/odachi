@@ -5,14 +5,15 @@ same work unit as the code change.
 
 | Package | Who depends on it | Tests that cover it |
 | --- | --- | --- |
-| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/lock_test.go` |
+| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/lock_test.go`, `cmd/odachi/review_test.go` |
 | `internal/app/start` | `cmd/odachi`: `start` and `odachi` with no arguments | `internal/app/start/start_test.go` |
 | `internal/app/tasks` | `internal/app/{ask,plan,level,summary}`: find the current or every feature document, and the single write guard every task-document rewrite goes through | `internal/app/tasks/tasks_test.go`, `internal/app/tasks/save_test.go` |
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
 | `internal/app/plan` | `cmd/odachi`: `plan` (add a step, close a step) | `internal/app/plan/plan_test.go` |
 | `internal/app/level` | `cmd/odachi`: `level` and `level --to` | `internal/app/level/level_test.go` |
 | `internal/app/summary` | `cmd/odachi`: `summary` | `internal/app/summary/summary_test.go` |
-| `internal/app/check` | `cmd/odachi`: `check` in all its forms | `internal/app/check/check_test.go` |
+| `internal/app/check` | `cmd/odachi`: `check` in all its forms, plus the optional `--require-review` gate | `internal/app/check/check_test.go`, `internal/app/check/review_test.go` |
+| `internal/app/review` | `cmd/odachi`: `review` in its four forms. Reads the brief, the changed paths and the diff through ports, and takes the lock on nothing: it writes one file, atomically, inside `.odachi/reviews/` | `internal/app/review/review_test.go` |
 | `internal/app/init` | `cmd/odachi`: `init` (the AGENTS.md block and the pre-commit hook) | `internal/app/init/init_test.go` |
 | `internal/app/skills` | `cmd/odachi`: `skills` (list, `--check`, `--write`) and `skill new` | `internal/app/skills/skills_test.go` |
 | `internal/app/pack` | `cmd/odachi`: `pack` (the detected agents, `--agents`, `--dry-run`) | `internal/app/pack/pack_test.go` |
@@ -22,6 +23,7 @@ same work unit as the code change.
 | `internal/domain/fence` | `internal/app/check` (the fence gate); `start` when it writes `fence.toml` (T5) | `internal/domain/fence/fence_test.go` |
 | `internal/domain/gate` | `internal/app/check` (the four gates and the exit code) | `internal/domain/gate/gate_test.go` |
 | `internal/domain/proof` | `internal/app/check` (write and read `proof/NNNN-<slug>.txt`) | `internal/domain/proof/proof_test.go` |
+| `internal/domain/review` | `internal/app/review` (parse, seal and render a verdict; name the store's file), `internal/app/check` (does this tree have a verdict, and does it block?), `cmd/odachi` (the JSON payload it prints back) | `internal/domain/review/review_test.go`, `internal/domain/review/prompt_test.go` |
 | `internal/domain/profile` | `internal/app/start`, `internal/app/level`, the profile decoder adapter | `internal/domain/profile/profile_test.go`, `internal/domain/profile/next_test.go` |
 | `internal/domain/skill` | `internal/app/skills` (parse each `SKILL.md`, validate the set, generate `SKILLS.md`) | `internal/domain/skill/skill_test.go` |
 | `internal/domain/agent` | `internal/app/pack`: the verified agent → skills directory table and the refused names | `internal/domain/agent/agent_test.go` |
