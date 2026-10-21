@@ -131,23 +131,34 @@ func (h fakeHome) Home() (string, error) {
 // home builds a home directory string the way the app joins it.
 func home() string { return filepath.Join("/", "home", "prueba") }
 
-// dest is where one agent's skills live, joined the way the app joins it.
-func dest(home, name string) string {
+// projectDir is the project root a project-scoped agent resolves against: owned
+// by the test, exactly like the home.
+func projectDir() string { return filepath.Join("/", "work", "proyecto") }
+
+// dest is where one agent's skills live: the root it belongs to joined with the
+// table's destination. Callers pass the home for a home agent and the project
+// for a project one, which is the whole point of the scope.
+func dest(root, name string) string {
 	a, err := agent.Resolve(name)
 	if err != nil {
 		panic(err)
 	}
-	return filepath.Join(home, filepath.FromSlash(a.Dest))
+	return filepath.Join(root, filepath.FromSlash(a.Dest))
 }
 
 // target is one installed SKILL.md.
-func target(home, agentName, skill string) string {
-	return filepath.Join(dest(home, agentName), skill, "SKILL.md")
+func target(root, agentName, skill string) string {
+	return filepath.Join(dest(root, agentName), skill, "SKILL.md")
 }
 
 func run(files *fakeFiles, h fakeHome, opts pack.Options) pack.Result {
 	if opts.Skills == nil {
 		opts.Skills = bundled()
+	}
+	// Every run resolves the project against a root the test owns, never the
+	// working directory of the suite.
+	if opts.Dir == "" {
+		opts.Dir = projectDir()
 	}
 	return pack.Run(opts, files, h)
 }
@@ -324,6 +335,167 @@ func TestOneFailureDoesNotAbortTheOthers(t *testing.T) {
 	}
 }
 
+// TestOpenCodeInstallsIntoTheProject: OpenCode reads its skills from inside the
+// project, so that is where they go — and the home is not touched at all: not
+// one write, not one backup, asserted on the double.
+func TestOpenCodeInstallsIntoTheProject(t *testing.T) {
+	homeRoot, project := home(), projectDir()
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: homeRoot}, pack.Options{Agents: "opencode"})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	for _, skill := range bundled() {
+		got, ok := files.content(target(project, "opencode", skill.Name))
+		if !ok {
+			t.Errorf("%s was not installed in the project", skill.Name)
+			continue
+		}
+		if got != string(skill.Content) {
+			t.Errorf("%s content = %q, want %q", skill.Name, got, skill.Content)
+		}
+	}
+	if len(files.writes) != len(bundled()) {
+		t.Errorf("writes = %d, want %d: %v", len(files.writes), len(bundled()), files.writes)
+	}
+	// Nothing in the home, and nothing outside the project either.
+	for _, path := range append(append([]string{}, files.writes...), files.backups...) {
+		if strings.HasPrefix(path, homeRoot) {
+			t.Errorf("touched the home: %s", path)
+		}
+		if !strings.HasPrefix(path, project) {
+			t.Errorf("touched a path outside the project: %s", path)
+		}
+	}
+	if !slices.Contains(result.Lines, "opencode · 5 instaladas · ./.opencode/skills") {
+		t.Errorf("the summary does not show the project-relative path, lines: %v", result.Lines)
+	}
+	for _, line := range append(append([]string{}, result.Lines...), result.Message) {
+		if strings.Contains(line, project) || strings.Contains(line, homeRoot) {
+			t.Errorf("a message prints an absolute path: %q", line)
+		}
+	}
+}
+
+// TestOpenCodeSecondRunIsIdenticalInTheProject: the write rule does not change
+// with the scope — identical bytes are reported as `sin cambios` and the file is
+// not rewritten.
+func TestOpenCodeSecondRunIsIdenticalInTheProject(t *testing.T) {
+	files := newFakeFiles(nil)
+	run(files, fakeHome{dir: home()}, pack.Options{Agents: "opencode"})
+	files.writes, files.backups, files.events = nil, nil, nil
+
+	second := run(files, fakeHome{dir: home()}, pack.Options{Agents: "opencode"})
+
+	if second.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", second.Code, second.Message)
+	}
+	if len(files.writes) != 0 || len(files.backups) != 0 {
+		t.Errorf("the second run wrote %v and backed up %v, want nothing", files.writes, files.backups)
+	}
+	if !slices.Contains(second.Lines, "opencode · 5 sin cambios · ./.opencode/skills") {
+		t.Errorf("the second run does not report sin cambios, lines: %v", second.Lines)
+	}
+}
+
+// TestOpenCodeWorksWithoutTheDirectory: naming the agent is enough. `pack`
+// creates what is missing; requiring `.opencode/` to exist first would make the
+// one command that installs it refuse to install it.
+func TestOpenCodeWorksWithoutTheDirectory(t *testing.T) {
+	project := projectDir()
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "opencode"})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if _, err := files.Exists(filepath.Join(project, ".opencode")); err != nil {
+		t.Fatalf("Exists: %v", err)
+	}
+	for _, skill := range bundled() {
+		if _, ok := files.content(target(project, "opencode", skill.Name)); !ok {
+			t.Errorf("%s was not installed", skill.Name)
+		}
+	}
+}
+
+// TestProjectAgentDoesNotNeedAHome: a project-scoped install resolves against
+// the project. Asking for a home it never writes into would turn an unrelated
+// problem into a blocked run.
+func TestProjectAgentDoesNotNeedAHome(t *testing.T) {
+	project := projectDir()
+	files := newFakeFiles(nil)
+
+	result := pack.Run(pack.Options{Agents: "opencode", Skills: bundled(), Dir: project}, files, fakeHome{err: errors.New("no hay home")})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	for _, skill := range bundled() {
+		if _, ok := files.content(target(project, "opencode", skill.Name)); !ok {
+			t.Errorf("%s was not installed", skill.Name)
+		}
+	}
+}
+
+// TestDetectsOpenCodeInTheProject: with no --agents, an agent is detected when
+// its own config directory exists in the root it belongs to — `.opencode/` in
+// the project, `.codex/` in the home.
+func TestDetectsOpenCodeInTheProject(t *testing.T) {
+	project := projectDir()
+	files := newFakeFiles(map[string]string{
+		filepath.Join(project, ".opencode", "config.json"): "{}",
+	})
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if len(result.Agents) != 1 || result.Agents[0].Name != "opencode" {
+		t.Fatalf("agents = %+v, want only opencode", result.Agents)
+	}
+	if !slices.Contains(result.Lines, "opencode · 5 instaladas · ./.opencode/skills") {
+		t.Errorf("the detected agent has no summary, lines: %v", result.Lines)
+	}
+	for _, path := range files.writes {
+		if !strings.HasPrefix(path, dest(project, "opencode")) {
+			t.Errorf("wrote outside the project agent: %s", path)
+		}
+	}
+}
+
+// TestOpenCodeBacksUpAModifiedFile: the write rule does not change with the
+// scope either — a file the human edited is saved before it is replaced.
+func TestOpenCodeBacksUpAModifiedFile(t *testing.T) {
+	project := projectDir()
+	edited := target(project, "opencode", "acceptance")
+	files := newFakeFiles(map[string]string{edited: "editado a mano\n"})
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "opencode"})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if len(files.backups) != 1 || files.backups[0] != edited {
+		t.Fatalf("backups = %v, want [%s]", files.backups, edited)
+	}
+	backupAt := slices.Index(files.events, "backup "+edited)
+	writeAt := slices.Index(files.events, "write "+edited)
+	if backupAt < 0 || writeAt < 0 || backupAt > writeAt {
+		t.Errorf("the backup must come before the write, events: %v", files.events)
+	}
+	if got, _ := files.content(edited); got != string(bundled()[0].Content) {
+		t.Errorf("the file was not replaced with the bundled bytes: %q", got)
+	}
+	if !slices.Contains(result.Lines, "opencode · 4 instaladas · 1 respaldada · ./.opencode/skills") {
+		t.Errorf("the summary line is missing or wrong, lines: %v", result.Lines)
+	}
+}
+
 // TestUnknownAgentWritesNothing: a bad flag blocks the whole run, so a typo
 // never leaves half the skills installed.
 func TestUnknownAgentWritesNothing(t *testing.T) {
@@ -442,16 +614,23 @@ func TestNoBundledSkillsIsBlocked(t *testing.T) {
 }
 
 // TestEverySupportedAgentResolvesItsOwnDestination: the table, not a branch of
-// code, decides where each agent is served.
+// code, decides where each agent is served — and the scope decides which root
+// that destination is joined to.
 func TestEverySupportedAgentResolvesItsOwnDestination(t *testing.T) {
-	root := home()
+	homeRoot, project := home(), projectDir()
+	root := func(a agent.Agent) string {
+		if a.Scope == agent.ScopeProject {
+			return project
+		}
+		return homeRoot
+	}
 	seed := map[string]string{}
 	for _, a := range agent.Supported() {
-		seed[filepath.Join(root, filepath.FromSlash(a.Marker()), "config")] = "x"
+		seed[filepath.Join(root(a), filepath.FromSlash(a.Marker()), "config")] = "x"
 	}
 	files := newFakeFiles(seed)
 
-	result := run(files, fakeHome{dir: root}, pack.Options{})
+	result := run(files, fakeHome{dir: homeRoot}, pack.Options{})
 
 	if result.Code != pack.CodeOK {
 		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
@@ -464,9 +643,29 @@ func TestEverySupportedAgentResolvesItsOwnDestination(t *testing.T) {
 			t.Errorf("no summary for %s, lines: %v", a.Name, result.Lines)
 		}
 		for _, skill := range bundled() {
-			if _, ok := files.content(filepath.Join(root, filepath.FromSlash(a.Dest), skill.Name, "SKILL.md")); !ok {
+			if _, ok := files.content(filepath.Join(root(a), filepath.FromSlash(a.Dest), skill.Name, "SKILL.md")); !ok {
 				t.Errorf("%s: %s was not installed", a.Name, skill.Name)
 			}
+		}
+	}
+}
+
+// TestOnlyTheProjectAgentWritesIntoTheProject: a home agent still writes into
+// the home and never into the project, so adding a scope moved nobody.
+func TestOnlyTheProjectAgentWritesIntoTheProject(t *testing.T) {
+	project := projectDir()
+	files := newFakeFiles(nil)
+
+	run(files, fakeHome{dir: home()}, pack.Options{Agents: "claude,opencode"})
+
+	for _, path := range files.writes {
+		intoProject := strings.HasPrefix(path, project)
+		intoHome := strings.HasPrefix(path, home())
+		if intoProject == intoHome {
+			t.Errorf("path is neither in the project nor in the home: %s", path)
+		}
+		if intoProject && !strings.Contains(path, filepath.Join(".opencode", "skills")) {
+			t.Errorf("a non-opencode agent wrote into the project: %s", path)
 		}
 	}
 }

@@ -4,12 +4,15 @@
 // It is pure orchestration over two ports: Files (the disk) and Home (where the
 // human's home is). It never imports os, so the whole behaviour — including
 // "dry-run writes nothing" — is observable at this seam with an in-memory
-// double.
+// double. The project root arrives as an option, because a project-scoped agent
+// reads its skills from inside the project and there is nothing to resolve.
 //
 // Three rules shape it, and they come from Contract VIII:
 //
 //   - The destination table is data in internal/domain/agent, never a branch of
 //     code, because every path in it was verified and a guess does not ship.
+//     The table also carries the scope: a `home` agent resolves against the
+//     home, a `project` agent against the project.
 //   - A configured file that differs is backed up before it is replaced; an
 //     identical file is reported as `sin cambios` and not rewritten.
 //   - Nothing is ever deleted or moved. A skill this tool did not write is
@@ -50,6 +53,9 @@ type Options struct {
 	Agents string
 	// DryRun reports what would happen and writes nothing.
 	DryRun bool
+	// Dir is the project root a project-scoped agent resolves against. Empty
+	// means the current directory.
+	Dir string
 	// Skills is the bundled payload, wired by the CLI from the embedded bytes.
 	Skills []Skill
 }
@@ -74,6 +80,7 @@ type Home interface {
 type AgentResult struct {
 	Name      string
 	Dest      string
+	Scope     string
 	Installed int
 	BackedUp  int
 	Unchanged int
@@ -111,17 +118,28 @@ func Run(opts Options, files Files, home Home) Result {
 		return blocked(oneLine(err.Error()))
 	}
 
-	root, err := home.Home()
-	if err != nil {
-		return blocked("no pude encontrar tu home: " + oneLine(err.Error()) + "; definí HOME (o USERPROFILE en Windows) y volvé a correr odachi pack")
+	roots := roots{project: strings.TrimSpace(opts.Dir)}
+	if roots.project == "" {
+		roots.project = "."
 	}
-	root = strings.TrimSpace(root)
-	if root == "" {
-		return blocked("tu home llegó vacío; definí HOME (o USERPROFILE en Windows) y volvé a correr odachi pack")
+
+	// The home is asked for only when something will use it: a project-scoped
+	// install must not fail because an unrelated home is unavailable, and it
+	// must not read the home at all.
+	if len(selected) == 0 || anyHomeScoped(selected) {
+		root, err := home.Home()
+		if err != nil {
+			return blocked("no pude encontrar tu home: " + oneLine(err.Error()) + "; definí HOME (o USERPROFILE en Windows) y volvé a correr odachi pack")
+		}
+		root = strings.TrimSpace(root)
+		if root == "" {
+			return blocked("tu home llegó vacío; definí HOME (o USERPROFILE en Windows) y volvé a correr odachi pack")
+		}
+		roots.home = root
 	}
 
 	if len(selected) == 0 {
-		selected, err = detect(root, files)
+		selected, err = detect(roots, files)
 		if err != nil {
 			return blocked(err.Error())
 		}
@@ -135,7 +153,7 @@ func Run(opts Options, files Files, home Home) Result {
 	summaries := make([]string, 0, len(selected))
 	names := make([]string, 0, len(selected))
 	for _, a := range selected {
-		result := install(root, a, skills, files, opts.DryRun)
+		result := install(roots.base(a), a, skills, files, opts.DryRun)
 		out.Agents = append(out.Agents, result)
 		out.Lines = append(out.Lines, result.Lines...)
 		out.Files = append(out.Files, result.Files...)
@@ -164,10 +182,36 @@ func Run(opts Options, files Files, home Home) Result {
 	return out
 }
 
+// roots are the two directories an agent's skills directory can live in: the
+// home a human owns, and the project being worked on.
+type roots struct {
+	home    string
+	project string
+}
+
+// base is the root an agent's destination belongs to. The table says the scope;
+// this is the only place that turns it into a directory.
+func (r roots) base(a agent.Agent) string {
+	if a.Scope == agent.ScopeProject {
+		return r.project
+	}
+	return r.home
+}
+
+// anyHomeScoped reports whether one of these agents needs the home at all.
+func anyHomeScoped(agents []agent.Agent) bool {
+	for _, a := range agents {
+		if a.Scope != agent.ScopeProject {
+			return true
+		}
+	}
+	return false
+}
+
 // install puts every bundled skill where one agent looks, and reports what it
 // found there besides its own files.
 func install(root string, a agent.Agent, skills []Skill, files Files, dryRun bool) AgentResult {
-	result := AgentResult{Name: a.Name, Dest: a.Display()}
+	result := AgentResult{Name: a.Name, Dest: a.Display(), Scope: string(a.Scope)}
 	destDir := filepath.Join(root, filepath.FromSlash(a.Dest))
 
 	seen := make(map[string]bool, len(skills))
@@ -296,13 +340,14 @@ func (r AgentResult) summary(dryRun bool) string {
 	return strings.Join(parts, " · ")
 }
 
-// detect returns the agents whose config directory exists in this home: the
-// ones a human actually uses here. An agent that is not installed is not
-// invented into existence.
-func detect(root string, files Files) ([]agent.Agent, error) {
+// detect returns the agents installed here: the ones a human actually uses in
+// this home or this project. A home agent is here when its config directory
+// exists in the home; a project agent when its config directory exists in the
+// project. An agent that is not installed is not invented into existence.
+func detect(roots roots, files Files) ([]agent.Agent, error) {
 	found := make([]agent.Agent, 0, len(agent.Supported()))
 	for _, a := range agent.Supported() {
-		marker := filepath.Join(root, filepath.FromSlash(a.Marker()))
+		marker := filepath.Join(roots.base(a), filepath.FromSlash(a.Marker()))
 		exists, err := files.Exists(marker)
 		if err != nil {
 			return nil, fmt.Errorf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi pack --agents %s", a.Display(), oneLine(err.Error()), a.Name)
