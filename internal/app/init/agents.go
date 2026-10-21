@@ -26,6 +26,8 @@ Cuatro reglas duras. No son consejos: ` + "`odachi check`" + ` las hace cumplir.
    verde, con la salida guardada en ` + "`proof/`" + `. Sin eso, no está listo.
 4. Pedazos chicos, un commit cada uno. Un paso del task doc, un commit.
 
+Skills: ver SKILLS.md; cargá la que matchee el trigger antes de escribir código.
+
 ## Si el perfil es novato
 
 El objetivo no es solo que funcione: es que la persona aprenda el oficio. Estas

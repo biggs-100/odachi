@@ -123,6 +123,9 @@ func TestCreatesAgentsMDWithTheBlock(t *testing.T) {
 	if strings.Count(content, "<!-- odachi:begin -->") != 1 || strings.Count(content, "<!-- odachi:end -->") != 1 {
 		t.Errorf("the block appears more than once:\n%s", content)
 	}
+	if line := "Skills: ver SKILLS.md; cargá la que matchee el trigger antes de escribir código."; strings.Count(content, line) != 1 {
+		t.Errorf("the line %q appears %d times, want exactly one:\n%s", line, strings.Count(content, line), content)
+	}
 
 	for _, want := range []string{
 		"Brief antes de código",
@@ -130,6 +133,7 @@ func TestCreatesAgentsMDWithTheBlock(t *testing.T) {
 		"odachi ask",
 		`odachi check --run`,
 		"un commit",
+		"Skills: ver SKILLS.md; cargá la que matchee el trigger antes de escribir código.",
 		"odachi start",
 		"odachi level",
 		"odachi summary",

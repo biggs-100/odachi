@@ -75,12 +75,16 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runCheck(dir, args[1:], stdout, stderr)
 	case "init":
 		return runInit(dir, args[1:], stdout, stderr)
+	case "skills":
+		return runSkills(dir, args[1:], stdout, stderr)
+	case "skill":
+		return runSkill(dir, args[1:], stdout, stderr)
 	case "version":
 		// Reached only with arguments: `odachi version` alone was answered above.
 		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -552,6 +556,8 @@ uso:
   odachi summary
   odachi check [flags]
   odachi init [--json]
+  odachi skills [--check | --write]
+  odachi skill new <slug>
   odachi --version
   odachi version
 
@@ -564,6 +570,11 @@ flags de check:
   --base ref      contra qué comparar el cerco (default HEAD; vacío: contra nada)
   --timeout n     segundos que puede tardar --run (default 120)
   --quiet         no imprime nada si está listo (para el hook)
+  --json          salida para máquinas
+
+flags de skills:
+  --check         valida cada skill y SKILLS.md; sale con 1 si algo no cumple
+  --write         regenera SKILLS.md desde los frontmatter
   --json          salida para máquinas
 
 flags:
@@ -588,6 +599,10 @@ después de start:
   odachi check                                  ¿está listo? brief, cerco, preguntas y prueba
   odachi check --run "<comando>"                corre la prueba y la guarda con su árbol
   odachi init                                   AGENTS.md + hook pre-commit
+  odachi skills                                 las skills del proyecto y su trigger
+  odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
+  odachi skills --write                         regenera SKILLS.md desde los frontmatter
+  odachi skill new <slug>                       crea skills/<slug>/SKILL.md y actualiza el registro
 
 códigos de salida: 0 artefactos escritos · 1 bloqueado · 2 falta una respuesta humana
 `)
