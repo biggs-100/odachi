@@ -34,8 +34,11 @@ const (
 
 // Commands that resolve a block. Every blocked result names one.
 const (
-	nextStart      = "odachi start"
-	nextAsk        = "odachi ask"
+	nextStart = "odachi start"
+	// nextAsk carries the shape of the answer. A bare `odachi ask` prints usage:
+	// naming it would be a dead end for a human too, and the bench measures exactly
+	// that.
+	nextAsk        = "odachi ask \"<tu decisión>\""
 	nextCheckProof = "odachi check --proof <archivo>"
 )
 

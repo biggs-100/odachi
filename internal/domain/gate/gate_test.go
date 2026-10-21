@@ -75,7 +75,7 @@ func TestEvaluationOrder(t *testing.T) {
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonOutOfScope,
 			message: "fuera de alcance: pagos: internal/payments/stripe.go; pagos: github.com/stripe/stripe-go/v76",
-			next:    "odachi ask",
+			next:    "odachi ask \"<tu decisión>\"",
 		},
 		{
 			name:    "open question",
@@ -83,7 +83,7 @@ func TestEvaluationOrder(t *testing.T) {
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonOpenQuestion,
 			message: "hay 1 pregunta sin contestar",
-			next:    "odachi ask",
+			next:    "odachi ask \"<tu decisión>\"",
 		},
 		{
 			name:    "proof missing",
