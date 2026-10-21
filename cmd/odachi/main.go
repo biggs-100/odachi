@@ -91,12 +91,16 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runPack(dir, args[1:], stdout, stderr)
 	case "review":
 		return runReview(dir, args[1:], stdout, stderr)
+	case "doctor":
+		return runDoctor(dir, args[1:], stdout, stderr)
+	case "bench":
+		return runBench(dir, args[1:], stdout, stderr)
 	case "version":
 		// Reached only with arguments: `odachi version` alone was answered above.
 		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), plan (odachi plan \"<texto>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), undo (odachi undo), check (odachi check), review (odachi review), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), plan (odachi plan \"<texto>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), undo (odachi undo), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -809,6 +813,8 @@ uso:
   odachi check [flags]
   odachi review [--exec "<comando>" | --attach <archivo> | --show | --refute <veredicto>]
   odachi review [--lens <lente>]
+  odachi doctor [--json]
+  odachi bench [--journeys <nombres>] [--binary <ruta>] [--json]
   odachi init [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
@@ -853,6 +859,11 @@ flags de pack:
   --dry-run       qué haría, sin escribir nada
   --json          salida para máquinas
 
+flags de bench:
+  --journeys s    solo estos recorridos, separados por coma
+  --binary path   el binario que corre cada recorrido (default: el que está corriendo)
+  --json          salida para máquinas
+
 flags:
   --outcome s     respuesta 1: qué tiene que existir cuando terminemos
   --audience s    respuesta 2: phone | cpu | both
@@ -887,6 +898,8 @@ después de start:
   odachi review --lens --show                   qué lentes pide este árbol y cuáles faltan
   odachi review --refute <veredicto>            el prompt del refutador para ese veredicto
   odachi check --require-review                 exige review para este árbol y sus lentes
+  odachi doctor                                 diez chequeos de salud, de solo lectura
+  odachi bench                                  mide cómo se traba una persona (in-band / dead-end)
   odachi init                                   AGENTS.md + hook pre-commit
   odachi skills                                 las skills del proyecto y su trigger
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple

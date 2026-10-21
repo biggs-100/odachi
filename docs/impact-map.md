@@ -5,7 +5,7 @@ same work unit as the code change.
 
 | Package | Who depends on it | Tests that cover it |
 | --- | --- | --- |
-| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/lock_test.go`, `cmd/odachi/review_test.go` |
+| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/lock_test.go`, `cmd/odachi/review_test.go`, `cmd/odachi/reviewlens_test.go`, `cmd/odachi/doctor_test.go`, `cmd/odachi/bench_test.go` |
 | `internal/app/start` | `cmd/odachi`: `start` and `odachi` with no arguments | `internal/app/start/start_test.go` |
 | `internal/app/tasks` | `internal/app/{ask,plan,level,summary}`: find the current or every feature document, and the single write guard every task-document rewrite goes through | `internal/app/tasks/tasks_test.go`, `internal/app/tasks/save_test.go` |
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
@@ -17,6 +17,10 @@ same work unit as the code change.
 | `internal/app/init` | `cmd/odachi`: `init` (the AGENTS.md block and the pre-commit hook) | `internal/app/init/init_test.go` |
 | `internal/app/skills` | `cmd/odachi`: `skills` (list, `--check`, `--write`) and `skill new` | `internal/app/skills/skills_test.go` |
 | `internal/app/pack` | `cmd/odachi`: `pack` (the detected agents, `--agents`, `--dry-run`) | `internal/app/pack/pack_test.go` |
+| `internal/domain/doctor` | `internal/app/doctor` (the ten checks' numbering, titles, hook and AGENTS.md reading, the PATH fix and the one-line rendering), `cmd/odachi` (`--json` prints the same checks) | `internal/domain/doctor/doctor_test.go` |
+| `internal/app/doctor` | `cmd/odachi`: `doctor` (the ten read-only checks over three ports) | `internal/app/doctor/doctor_test.go`, `cmd/odachi/doctor_test.go` |
+| `internal/bench` | `internal/app/bench` (the corpus, the command a blocked message names, the four-way classification, the sandbox environment) | `internal/bench/bench_test.go` |
+| `internal/app/bench` | `cmd/odachi`: `bench` (runs each journey in its own sandbox and removes it) | `internal/app/bench/bench_test.go`, `cmd/odachi/bench_test.go` |
 | `internal/app/lock` | `cmd/odachi` (the `Lock` adapter, wired into `start` and `undo`), `internal/app/start` and `internal/app/undo` (they take the lock before their first deciding read and release it with `defer`) | `internal/app/lock/lock_test.go`, `internal/app/start/lock_test.go`, `internal/app/undo/lock_test.go`, `cmd/odachi/lock_test.go` |
 | `internal/domain/brief` | `internal/app/start` (render and read `brief.md`), `internal/app/check` (is it complete?) | `internal/domain/brief/brief_test.go`, `internal/domain/brief/render_test.go` |
 | `internal/domain/taskdoc` | `internal/app/start` (write the numbered task doc), `internal/app/{ask,plan,level,summary}` (history, questions, steps, counts), `internal/app/check` (open questions), `internal/app/tasks` (which lines a canonical rewrite would drop) | `internal/domain/taskdoc/taskdoc_test.go`, `internal/domain/taskdoc/history_test.go`, `internal/domain/taskdoc/step_test.go`, `internal/domain/taskdoc/unaccounted_test.go` |
@@ -181,3 +185,26 @@ header, next to the code that selects them, and a test counts their rules.
 | One refutation per tree | `.odachi/reviews/<treehash>.refuted.json`, written once, listed by `--show` | `internal/app/review/lenses_test.go`, `cmd/odachi/reviewlens_test.go` |
 | Stricter gate | `check --require-review` requires the verdict, every required lens, and no unrefuted blocker; a refuted blocker stops blocking | `internal/app/check/lens_test.go`, `cmd/odachi/reviewlens_test.go` |
 | No new dependency | the domain stays stdlib-only; the assets package embeds content | `internal/archtest/boundary_test.go` stays green |
+
+## Doctor and bench (T22, T23)
+
+Two instruments, not two features: one reads the project and writes nothing, the
+other runs the binary in throwaway directories and measures how a person gets
+stuck. Neither changes any existing verb.
+
+| What | Where | How it is verified |
+| --- | --- | --- |
+| Ten checks, fixed order | `internal/domain/doctor`: `CheckVersion` … `CheckIgnored`, `CheckCount = 10`, a `title(number)` for each, and a test that asserts the numbering and the count | `internal/domain/doctor/doctor_test.go` |
+| One line each, Spanish | `doctor.Line`: `ok/mal/aviso · <n> · <título>: <detalle>[; <arreglo>]`; a problem always carries the phrase that repairs it | `doctor_test.go`, `cmd/odachi/doctor_test.go` |
+| Exit code | `doctor.Code`: 1 as soon as one check found a problem. A warning is said and never fails | `TestTallyAndCode`, `TestEmptyProtectedDirectoryIsAWarning` |
+| Read-only, structurally | `internal/app/doctor.Files` has no write method: a write is not expressible. The CLI test compares the whole project tree before and after | `TestDoctorNeverWrites`, `cmd/odachi/doctor_test.go` `TestDoctorWritesNothing` |
+| The check that matters most | `odachi` on the PATH, with the exact `export PATH=…` line built from the running binary's folder (`selfExe`) | `TestEachProblemNamesItsCommand` (PATH case), `TestHookNamingOdachiByNameUsesThePath`, `TestPathFix` |
+| Hook and AGENTS.md markers | `doctor.IsOurHook` reads the marker `init` writes, `doctor.HookExe` reads the `ODACHI=` line, `doctor.HasBlock` needs both markers. The CLI test runs `init` and then `doctor`, so the writer and the reader cannot drift apart | `doctor_test.go`, `cmd/odachi/doctor_test.go` `TestDoctorSaysAConfiguredProjectIsFine` |
+| Corpora as data | `internal/bench.Journeys()`: eight recorridos with setup actions and measured steps, no logic | `TestJourneysAreTheCorpusContractXVAsksFor` |
+| Four-way classification | `bench.Command` finds only `odachi <verb> …` in the message; `bench.IsTemplated`; `bench.KindOf` → `in_band` (ran, exit 0), `out_of_band` (named nothing), `dead_end` (ran, did not resolve), `templated` (a `<placeholder>`) | `TestCommandFindsTheContinuation`, `TestIsTemplated`, `TestKindOf` |
+| Never a shell | `bench.Command` returns only commands starting with `odachi`, and `internal/app/bench` runs that command as the binary under test. Setup commands (`git init`) are the only other thing it executes | `TestTheBinaryUnderTestRunsTheContinuation`, `TestTemplatedIsNeverRun` |
+| Controlled HOME | `bench.SandboxEnv` replaces `HOME`, `USERPROFILE` and the git config with paths inside the sandbox, in a fixed order | `TestSandboxEnvIsAControlledHome`, `TestSandboxGetsAControlledHome` |
+| Removed sandboxes | `internal/app/bench` creates one directory per journey and always removes it; a directory that cannot be removed is said out loud | `TestSandboxesAreRemoved`, `cmd/odachi/bench_test.go` `TestBenchRemovesItsSandboxes` (real temp directory) |
+| Ratchet | exit 1 when a `dead_end` exists, and also when a journey could not be measured at all | `TestTheThreeCounts`, `TestNoDeadEndIsGreen`, `TestSandboxFailureIsAReport` |
+| Report | journeys, steps, blocks, the four counts, one line per journey, and the dead ends with the command, its exit and the message that named it; `--json` carries the same | `TestHumanLinesCarryTheCounts`, `cmd/odachi/bench_test.go` `TestBenchJSONSaysTheSameThing` |
+| No new dependency | `internal/domain/doctor` and `internal/bench` are stdlib-only; the app layers use the existing ports | `internal/archtest/boundary_test.go` stays green |
