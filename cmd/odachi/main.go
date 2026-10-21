@@ -79,12 +79,14 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runSkills(dir, args[1:], stdout, stderr)
 	case "skill":
 		return runSkill(dir, args[1:], stdout, stderr)
+	case "pack":
+		return runPack(args[1:], stdout, stderr)
 	case "version":
 		// Reached only with arguments: `odachi version` alone was answered above.
 		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -558,6 +560,7 @@ uso:
   odachi init [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
+  odachi pack [--agents claude,codex] [--dry-run]
   odachi --version
   odachi version
 
@@ -575,6 +578,11 @@ flags de check:
 flags de skills:
   --check         valida cada skill y SKILLS.md; sale con 1 si algo no cumple
   --write         regenera SKILLS.md desde los frontmatter
+  --json          salida para máquinas
+
+flags de pack:
+  --agents s      solo estos agentes, separados por coma (default: los detectados)
+  --dry-run       qué haría, sin escribir nada
   --json          salida para máquinas
 
 flags:
@@ -603,6 +611,8 @@ después de start:
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
   odachi skills --write                         regenera SKILLS.md desde los frontmatter
   odachi skill new <slug>                       crea skills/<slug>/SKILL.md y actualiza el registro
+  odachi pack --agents claude,codex             instala las skills incluidas en cada agente
+  odachi pack --dry-run                         qué copiaría, sin escribir nada
 
 códigos de salida: 0 artefactos escritos · 1 bloqueado · 2 falta una respuesta humana
 `)

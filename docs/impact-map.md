@@ -5,7 +5,7 @@ same work unit as the code change.
 
 | Package | Who depends on it | Tests that cover it |
 | --- | --- | --- |
-| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go` |
+| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go` |
 | `internal/app/start` | `cmd/odachi`: `start` and `odachi` with no arguments | `internal/app/start/start_test.go` |
 | `internal/app/tasks` | `internal/app/{ask,level,summary}`: find the current or every feature document | `internal/app/tasks/tasks_test.go` |
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
@@ -14,6 +14,7 @@ same work unit as the code change.
 | `internal/app/check` | `cmd/odachi`: `check` in all its forms | `internal/app/check/check_test.go` |
 | `internal/app/init` | `cmd/odachi`: `init` (the AGENTS.md block and the pre-commit hook) | `internal/app/init/init_test.go` |
 | `internal/app/skills` | `cmd/odachi`: `skills` (list, `--check`, `--write`) and `skill new` | `internal/app/skills/skills_test.go` |
+| `internal/app/pack` | `cmd/odachi`: `pack` (the detected agents, `--agents`, `--dry-run`) | `internal/app/pack/pack_test.go` |
 | `internal/domain/brief` | `internal/app/start` (render and read `brief.md`), `internal/app/check` (is it complete?) | `internal/domain/brief/brief_test.go`, `internal/domain/brief/render_test.go` |
 | `internal/domain/taskdoc` | `internal/app/start` (write the numbered task doc), `internal/app/{ask,level,summary}` (history, questions, counts), `internal/app/check` (open questions) | `internal/domain/taskdoc/taskdoc_test.go`, `internal/domain/taskdoc/history_test.go` |
 | `internal/domain/fence` | `internal/app/check` (the fence gate); `start` when it writes `fence.toml` (T5) | `internal/domain/fence/fence_test.go` |
@@ -21,6 +22,8 @@ same work unit as the code change.
 | `internal/domain/proof` | `internal/app/check` (write and read `proof/NNNN-<slug>.txt`) | `internal/domain/proof/proof_test.go` |
 | `internal/domain/profile` | `internal/app/start`, `internal/app/level`, the profile decoder adapter | `internal/domain/profile/profile_test.go`, `internal/domain/profile/next_test.go` |
 | `internal/domain/skill` | `internal/app/skills` (parse each `SKILL.md`, validate the set, generate `SKILLS.md`) | `internal/domain/skill/skill_test.go` |
+| `internal/domain/agent` | `internal/app/pack`: the verified agent → skills directory table and the refused names | `internal/domain/agent/agent_test.go` |
+| `skills` (repository root) | `cmd/odachi` (`pack` reads the embedded payload); the Go package lives in the same directory as the `SKILL.md` files it embeds, so there is no second copy | `skills/embed_test.go` |
 | `internal/adapters/{fsx,gitx,profiletoml}` | `cmd/odachi` only; the domain never imports them | the matching `_test.go` in each adapter |
 | `internal/adapters/shellcmd` | `cmd/odachi` only (the `check --run` shell); one file per platform | `shellcmd_test.go` plus the per-platform `_test.go` |
 | `internal/archtest` | Nobody imports it; it guards every domain package | `internal/archtest/boundary_test.go` |
@@ -49,10 +52,27 @@ same work unit as the code change.
 at `SKILLS.md`. Copying the bundled skills into a project is `pack`, a later
 unit.
 
+## Pack (T13)
+
+`odachi pack` is what makes the skills reachable by the agent: they live in this
+repository, and an agent only loads what is in its own skills directory.
+
+| What | Where | How it is verified |
+| --- | --- | --- |
+| Source | The five `skills/<name>/SKILL.md` files compiled into the binary with `//go:embed */SKILL.md`, in the `skills` package. No network, no repository at run time, no duplicated copy | `skills/embed_test.go` compares the embedded bytes with the files on disk |
+| Destination table | `internal/domain/agent`: `claude .claude/skills`, `codex .codex/skills`, `cursor .cursor/skills`, `gemini .gemini/skills`, `copilot .copilot/skills`, `qwen .qwen/skills`, `kiro .kiro/skills`, all home-relative. It is data, not branches of code, because every path was verified against the agent's adapter | `internal/domain/agent/agent_test.go` pins every row, `Display()` and `Marker()` |
+| Refusals | `pi` is refused with `Pi no usa un directorio de skills` (its adapter reports none); `opencode` is refused because its path depends on the platform and is not guessed; any other name is refused naming the supported ones | `agent_test.go`, `internal/app/pack/pack_test.go`, `cmd/odachi/pack_test.go` |
+| Write rule | `<home>/<dest>/<name>/SKILL.md` through `fsx.WriteAtomic`; an existing file that differs is backed up first; an identical one is reported as `sin cambios` and not rewritten | `pack_test.go` (second run: no write, no backup; edited file: backup before write) and the end-to-end run |
+| Never deletes | Nothing is deleted or moved; a `SKILL.md` odachi did not write is reported with its path and left alone | `TestForeignFileIsReportedAndNotTouched` |
+| Failure isolation | One agent's failure does not abort the others, and the message names the agent and the path | `TestOneFailureDoesNotAbortTheOthers` |
+| `--dry-run` | Zero writes and zero backups, asserted on the double, never on the output; the report still lists the plan and says `por instalar` | `TestDryRunTouchesNothing` |
+| Project untouched | `pack` never reads or writes the project's `skills/` or `SKILLS.md`: those belong to `odachi skills --write` | `TestPackDoesNotTouchTheProject` |
+| Home | The new `Home` port resolves the home; `internal/app/pack` imports no `os`, so every write goes through the `Files` double in tests and through `osFiles` in the binary | `internal/app/pack/pack_test.go` (in-memory `Files` + `Home` doubles), `osHome` in `cmd/odachi/files.go` |
+
 ## `cmd/odachi` behaviour
 
 - Commands: `start` (default), `ask`, `level`, `summary`, `check`, `init`,
-  `skills`, `skill new`, `version`. `odachi`
+  `skills`, `skill new`, `pack`, `version`. `odachi`
   with no arguments is `odachi start`; a first argument that starts with `-` is
   treated as `start` flags, except `--version`, which is answered before the
   dispatch.
@@ -89,6 +109,13 @@ unit.
 - `init` writes the rules block between `<!-- odachi:begin -->` and
   `<!-- odachi:end -->` and the `.git/hooks/pre-commit` hook. It never replaces a
   hook it did not write: it prints the three lines to paste and exits `1`.
+- `pack` installs the bundled skills into the agents' own directories and takes
+  no project directory at all. Without `--agents` it serves the agents whose
+  config directory (`~/.claude`, `~/.codex`, ...) exists; when none does, it exits
+  `0` with one line naming `--agents`. A refused agent (`pi`, `opencode`, an
+  invented name) exits `1` and writes nothing, so a typo never leaves half a
+  payload installed. The summary is one line per agent, and it is the only
+  surface that prints a home-relative path.
 - `skills` is the only verb that writes a generated file: `--write` regenerates
   `SKILLS.md` from the frontmatter and `skill new` runs the same writer, so the
   registry and the skills cannot disagree. `--check` exits `1` with one Spanish

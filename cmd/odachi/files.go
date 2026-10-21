@@ -56,6 +56,26 @@ func (osFiles) Backup(path string) (string, error) {
 	return fsx.Backup(path)
 }
 
+// homeDir is where the Home adapter reads the human's home from. It is a
+// variable so a test can point it at a directory it owns: `pack` writes outside
+// the project, and no test may touch the real home of whoever runs the suite.
+var homeDir = os.UserHomeDir
+
+// osHome is the Home adapter for `odachi pack`: the one place the command asks
+// where the human lives. The destination inside it comes from the domain table.
+type osHome struct{}
+
+func (osHome) Home() (string, error) {
+	home, err := homeDir()
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(home) == "" {
+		return "", fmt.Errorf("el sistema no reportó ningún home")
+	}
+	return home, nil
+}
+
 // hookExe is how the pre-commit hook will reach this binary: the name when it is
 // on PATH, otherwise the absolute path of the running executable. A downloaded
 // binary is the normal case for a beginner, and a hook that cannot find it
