@@ -622,7 +622,7 @@ Así `undo` es a su vez deshacible y una edición humana posterior a la última 
 
 ### Selección
 
-- El backup **más reciente por `mtime`** entre los artefactos permitidos. `--file` filtra a uno.
+- El backup **más reciente por `mtime`** entre los artefactos permitidos. `--file` filtra a uno. **Un solo candidato restaura; varios se rechazan** listándolos y pidiendo `--file`: "el más reciente" entre artefactos distintos lo decide el orden interno de escritura, no lo que el humano quiso. Si los bytes actuales ya son los del backup, dice `no hubo cambios` y no escribe.
 - `--list`: una línea por artefacto con backup, de más nuevo a más viejo: `brief.md · 2 backups · último 2026-10-21 20:31`.
 - Sin backups: exit 1, una línea que dice qué escribe odachi y sugiere `odachi start`.
 - `--file` con un nombre fuera de la lista: exit 1 con los cuatro permitidos.
@@ -658,7 +658,7 @@ No toca `git`, no revierte commits, no borra backups. Si el humano quiere deshac
 - T13 · `pack`: llevar las skills al directorio nativo de cada agente · S1,S3 · delegated (gentle-ai-worker) · [x] commits: 511cc7c (domain), c0516e6 (embed), e036438 (app + cli)
 - T14 · `IsDir` en el escáner de skills: la clase de error de `stat` no decide qué es una entrada · S2,S4 · inline · [x] commit: 3c9f2ae
 - T15 · `plan`: agregar y cerrar pasos sin editar Markdown a mano · S3,S6 · delegated (gentle-ai-worker) · [x] commits: 6dbecfc (domain), 1130ee9 (guard), 658e900 (plan), 3597bed (cli + readme)
-- T16 · `undo`: restaurar el último artefacto que odachi escribió, respaldando lo actual · S2 · pending
+- T16 · `undo`: restaurar el último artefacto que odachi escribió, respaldando lo actual · S2 · delegated (gentle-ai-worker) + corrección del padre · [x] commits: 58fe726 (domain), d41b3c7 (app), 28a2791 (cli)
 
 ## Log
 
@@ -702,3 +702,4 @@ L37 · T13 verificado por el padre: 24 paquetes verdes y un e2e propio con home 
 L38 · Mantenimiento: las tres acciones de CI iban tres majors atrás (checkout v4, setup-go v5, goreleaser-action v6) y el runner las forzaba a Node 24. Subidas a v7, v7 y v7; la suite lo verifica en el mismo push que las lleva.
 L39 · CI roja en ubuntu y macOS, verde en Windows, para el mismo commit: el escáner de skills deducía "no es una skill" de la clase de error (`ENOTDIR` en POSIX, "no existe" en Windows), y `skills/embed.go` —un archivo dentro de `skills/`, puesto ahí a propósito para que `//go:embed` no duplique los archivos— rompía en Linux. Arreglado en la causa: el puerto gana `IsDir` y la entrada responde qué es. El doble de test ahora modela POSIX, así que el defecto se reproduce en cualquier máquina. RED observado antes del arreglo. Run 39667468391: 24 paquetes y 6 jobs verdes. Regla nueva del proyecto: cuando un test puede pasar por la clase de error de una plataforma, el doble modela la plataforma difícil.
 L40 · T15 verificado por el padre: 25 paquetes verdes y un e2e propio sobre un proyecto nuevo. `plan` agregó T1 con `--req R1` y T2 sin vínculo; `--done T1 --commit deadbee` marcó y registró; repetirlo fue no-op (`ya estaba hecho`); `--done T9` listó el paso abierto. Con una sección `## Notas` agregada a mano, `plan` se negó y el sha256 del documento quedó idéntico: no escribió nada y no dejó backup. El worker encontró un defecto real en el camino: el guard comparaba líneas y bloqueaba marcar un paso, porque su propia línea canónica cambia. La respuesta fue `taskdoc.Unaccounted`: solo cuenta como pérdida lo que la gramática no puede representar.
+L41 · Mi e2e encontró un defecto de UX que el reporte del worker había tapado usando `--file`: `undo` sin filtro restauraba `fence.toml`, porque "el más reciente por mtime" queda dominado por el orden interno de escritura de `start`. Ahora un solo candidato restaura, varios se rechazan listándolos y pidiendo `--file`; y si los bytes actuales ya son los del backup dice `no hubo cambios` sin escribir (antes imprimía el mismo backup como origen y destino). Dos tests fijaban la regla vieja y se actualizaron: **es un cambio de contrato, no un defecto del worker**, y quedó anotado en Contract X.
