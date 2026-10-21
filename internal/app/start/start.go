@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/lock"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 )
@@ -89,28 +90,69 @@ type Options struct {
 type Result struct {
 	Code    int
 	Message string
+	// Lines is the block a successful run prints, one item per line. It is
+	// empty for a run with nothing extra to say, which prints Message.
+	Lines   []string
 	Profile string
 	Task    string
 	Files   []string
 }
 
+// verbName is the lock owner: what the next run reads when this one is still
+// writing.
+const verbName = "start"
+
 // Run performs one `odachi start`.
-func Run(opts Options, interview Interview, files Files) Result {
+func Run(opts Options, interview Interview, files Files, guard lock.Lock) Result {
 	r := &runner{opts: opts, interview: interview, files: files}
 	if r.opts.Dir == "" {
 		r.opts.Dir = "."
 	}
 
-	fromFlags, err := answersFromFlags(opts)
+	// The lock comes before the first read that decides anything. These four
+	// artifacts are written one by one, so two interleaved runs would leave every
+	// file valid and the set incoherent; the defer is what releases it when the
+	// run stops on its own rules, not only when it succeeds.
+	held := lock.Take(guard, r.opts.Dir, verbName)
+	if held.Refusal != "" {
+		return blocked(held.Refusal)
+	}
+	defer held.Release()
+
+	return withNotice(r.run(), held.Notice)
+}
+
+// run does the work once the lock is held.
+func (r *runner) run() Result {
+	fromFlags, err := answersFromFlags(r.opts)
 	if err != nil {
 		return blocked(err.Error())
 	}
 	r.answers = fromFlags
 
-	if opts.BriefPath != "" {
+	if r.opts.BriefPath != "" {
 		return r.runFromBrief()
 	}
 	return r.runFromInterview()
+}
+
+// withNotice puts the lock's announcement in front of the run's own answer: a
+// run that took over an abandoned lock says so, on its own line when it
+// succeeded and at the front of the message when it did not.
+func withNotice(result Result, notice string) Result {
+	if notice == "" {
+		return result
+	}
+
+	if result.Code == CodeOK {
+		result.Lines = append([]string{notice}, result.Message)
+	}
+	if result.Message == "" {
+		result.Message = notice
+		return result
+	}
+	result.Message = notice + " " + result.Message
+	return result
 }
 
 // runner holds the mutable state of one run.

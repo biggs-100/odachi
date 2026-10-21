@@ -135,7 +135,7 @@ func TestScriptedInterviewWritesExactlyTheFourArtifacts(t *testing.T) {
 	files := newFakeFiles(nil, &events)
 	interview := newScriptedInterview(&events, interviewAnswers()...)
 
-	got := start.Run(start.Options{}, interview, files)
+	got := start.Run(start.Options{}, interview, files, nil)
 
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
@@ -198,7 +198,7 @@ func TestWhyTravelsWithTheQuestionAndNeverAlone(t *testing.T) {
 	var events []string
 	interview := newScriptedInterview(&events, interviewAnswers()...)
 
-	start.Run(start.Options{}, interview, newFakeFiles(nil, &events))
+	start.Run(start.Options{}, interview, newFakeFiles(nil, &events), nil)
 
 	if len(interview.questions) != len(wantQuestions) {
 		t.Fatalf("asked %d questions, want %d", len(interview.questions), len(wantQuestions))
@@ -227,7 +227,7 @@ func TestEmptyOutcomeIsRejectedAndAskedAgain(t *testing.T) {
 	answers := append([]string{"", "   ", outcome}, interviewAnswers()[1:]...)
 	interview := newScriptedInterview(&events, answers...)
 
-	got := start.Run(start.Options{}, interview, newFakeFiles(nil, &events))
+	got := start.Run(start.Options{}, interview, newFakeFiles(nil, &events), nil)
 
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
@@ -259,7 +259,7 @@ func TestInvalidAudienceAnswerIsExplainedAndAskedAgain(t *testing.T) {
 	answers = append(answers, interviewAnswers()[2:]...)
 	interview := newScriptedInterview(&events, answers...)
 
-	got := start.Run(start.Options{}, interview, newFakeFiles(nil, &events))
+	got := start.Run(start.Options{}, interview, newFakeFiles(nil, &events), nil)
 
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
@@ -282,7 +282,7 @@ func TestBatchedShowsEveryAnswerTogetherBeforeWriting(t *testing.T) {
 		t.Fatalf("resolve senior: %v", err)
 	}
 
-	got := start.Run(start.Options{Profile: &senior}, interview, newFakeFiles(nil, &events))
+	got := start.Run(start.Options{Profile: &senior}, interview, newFakeFiles(nil, &events), nil)
 
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
@@ -322,7 +322,7 @@ func TestForceBacksUpTheBriefAndWritesTheSameBytes(t *testing.T) {
 	opts := flagsCarryTheSameAnswers()
 	opts.Profile = novatoProfile(t)
 
-	if got := start.Run(opts, nil, first); got.Code != start.CodeOK {
+	if got := start.Run(opts, nil, first, nil); got.Code != start.CodeOK {
 		t.Fatalf("first run Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
 	}
 	firstBrief := first.content(t, "brief.md")
@@ -333,7 +333,7 @@ func TestForceBacksUpTheBriefAndWritesTheSameBytes(t *testing.T) {
 	second := &fakeFiles{files: first.files, events: &secondEvents}
 	opts.Force = true
 
-	got := start.Run(opts, nil, second)
+	got := start.Run(opts, nil, second, nil)
 	if got.Code != start.CodeOK {
 		t.Fatalf("second run Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
 	}
@@ -367,7 +367,7 @@ func TestExistingBriefWithoutForceIsBlocked(t *testing.T) {
 	files := newFakeFiles(map[string]string{"brief.md": "viejo\n"}, &events)
 	opts := flagsCarryTheSameAnswers()
 
-	got := start.Run(opts, nil, files)
+	got := start.Run(opts, nil, files, nil)
 
 	if got.Code != start.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
@@ -393,7 +393,7 @@ func TestNonInteractiveWithoutAnswersAsksTheHuman(t *testing.T) {
 	var events []string
 	files := newFakeFiles(nil, &events)
 
-	got := start.Run(start.Options{Machine: true}, nil, files)
+	got := start.Run(start.Options{Machine: true}, nil, files, nil)
 
 	if got.Code != start.CodeNeedsAnswer {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeNeedsAnswer, got.Message)
@@ -422,7 +422,7 @@ func TestAllPacingNeverAsks(t *testing.T) {
 	}
 	interview := newScriptedInterview(&events) // no answers: any ask would fail
 
-	got := start.Run(start.Options{Profile: &ci, Machine: true}, interview, newFakeFiles(nil, &events))
+	got := start.Run(start.Options{Profile: &ci, Machine: true}, interview, newFakeFiles(nil, &events), nil)
 
 	if got.Code != start.CodeNeedsAnswer {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeNeedsAnswer, got.Message)
@@ -437,7 +437,7 @@ func TestAllPacingNeverAsks(t *testing.T) {
 	opts.Machine = true
 	interview = newScriptedInterview(&events)
 
-	got = start.Run(opts, interview, newFakeFiles(nil, &events))
+	got = start.Run(opts, interview, newFakeFiles(nil, &events), nil)
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code with flags = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
 	}
@@ -453,7 +453,7 @@ func TestInvalidFlagIsBlockedNamingTheFlagAndItsValues(t *testing.T) {
 	opts := flagsCarryTheSameAnswers()
 	opts.Audience = "tablet"
 
-	got := start.Run(opts, nil, newFakeFiles(nil, &events))
+	got := start.Run(opts, nil, newFakeFiles(nil, &events), nil)
 
 	if got.Code != start.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
@@ -480,7 +480,7 @@ func TestTaskNumberIsOneMoreThanTheHighestExisting(t *testing.T) {
 	opts.Profile = novatoProfile(t)
 	opts.Machine = true
 
-	got := start.Run(opts, nil, newFakeFiles(seed, nil))
+	got := start.Run(opts, nil, newFakeFiles(seed, nil), nil)
 
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
@@ -500,7 +500,7 @@ func TestFreeTextNonGoalBecomesItsOwnRule(t *testing.T) {
 	opts.Exclude = []string{"Pagos", "datos de pacientes"}
 
 	files := newFakeFiles(nil, nil)
-	start.Run(opts, nil, files)
+	start.Run(opts, nil, files, nil)
 
 	want := `[[rule]]
 not   = "pagos"
@@ -526,7 +526,7 @@ func TestPresetNonGoalIsMatchedCaseAndAccentInsensitively(t *testing.T) {
 	opts.Exclude = []string{"Historia Clínica", "Recordatorios"}
 
 	files := newFakeFiles(nil, nil)
-	if got := start.Run(opts, nil, files); got.Code != start.CodeOK {
+	if got := start.Run(opts, nil, files, nil); got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
 	}
 
@@ -553,7 +553,7 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 	files := newFakeFiles(map[string]string{"mi-brief.md": string(data)}, &events)
 	opts := start.Options{BriefPath: "mi-brief.md", Machine: true}
 
-	got := start.Run(opts, nil, files)
+	got := start.Run(opts, nil, files, nil)
 
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
@@ -602,7 +602,7 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 func TestMissingBriefFileIsBlocked(t *testing.T) {
 	opts := start.Options{BriefPath: "no-existe.md", Machine: true}
 
-	got := start.Run(opts, nil, newFakeFiles(nil, nil))
+	got := start.Run(opts, nil, newFakeFiles(nil, nil), nil)
 
 	if got.Code != start.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
