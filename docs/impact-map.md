@@ -5,7 +5,7 @@ same work unit as the code change.
 
 | Package | Who depends on it | Tests that cover it |
 | --- | --- | --- |
-| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go` |
+| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go` |
 | `internal/app/start` | `cmd/odachi`: `start` and `odachi` with no arguments | `internal/app/start/start_test.go` |
 | `internal/app/tasks` | `internal/app/{ask,level,summary}`: find the current or every feature document | `internal/app/tasks/tasks_test.go` |
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
@@ -13,12 +13,14 @@ same work unit as the code change.
 | `internal/app/summary` | `cmd/odachi`: `summary` | `internal/app/summary/summary_test.go` |
 | `internal/app/check` | `cmd/odachi`: `check` in all its forms | `internal/app/check/check_test.go` |
 | `internal/app/init` | `cmd/odachi`: `init` (the AGENTS.md block and the pre-commit hook) | `internal/app/init/init_test.go` |
+| `internal/app/skills` | `cmd/odachi`: `skills` (list, `--check`, `--write`) and `skill new` | `internal/app/skills/skills_test.go` |
 | `internal/domain/brief` | `internal/app/start` (render and read `brief.md`), `internal/app/check` (is it complete?) | `internal/domain/brief/brief_test.go`, `internal/domain/brief/render_test.go` |
 | `internal/domain/taskdoc` | `internal/app/start` (write the numbered task doc), `internal/app/{ask,level,summary}` (history, questions, counts), `internal/app/check` (open questions) | `internal/domain/taskdoc/taskdoc_test.go`, `internal/domain/taskdoc/history_test.go` |
 | `internal/domain/fence` | `internal/app/check` (the fence gate); `start` when it writes `fence.toml` (T5) | `internal/domain/fence/fence_test.go` |
 | `internal/domain/gate` | `internal/app/check` (the four gates and the exit code) | `internal/domain/gate/gate_test.go` |
 | `internal/domain/proof` | `internal/app/check` (write and read `proof/NNNN-<slug>.txt`) | `internal/domain/proof/proof_test.go` |
 | `internal/domain/profile` | `internal/app/start`, `internal/app/level`, the profile decoder adapter | `internal/domain/profile/profile_test.go`, `internal/domain/profile/next_test.go` |
+| `internal/domain/skill` | `internal/app/skills` (parse each `SKILL.md`, validate the set, generate `SKILLS.md`) | `internal/domain/skill/skill_test.go` |
 | `internal/adapters/{fsx,gitx,profiletoml}` | `cmd/odachi` only; the domain never imports them | the matching `_test.go` in each adapter |
 | `internal/adapters/shellcmd` | `cmd/odachi` only (the `check --run` shell); one file per platform | `shellcmd_test.go` plus the per-platform `_test.go` |
 | `internal/archtest` | Nobody imports it; it guards every domain package | `internal/archtest/boundary_test.go` |
@@ -33,9 +35,24 @@ same work unit as the code change.
 | `scripts/install.sh` | POSIX shell installer: platform and arch detection, version from `ODACHI_VERSION` or the latest release, download base from `ODACHI_BASE_URL`, sha256 verification before touching the destination, install to `${ODACHI_BIN_DIR:-$HOME/.local/bin}` (falling back to `./odachi`), version line and `PATH` hint | `cmd/odachi/install_test.go`: builds a real binary with `-ldflags -X main.version=1.2.3`, packs a real tarball and a real `checksums.txt`, runs the script offline over `file://`, then runs the installed binary and reads `odachi 1.2.3`. Second case: a tampered `checksums.txt` exits non-zero and leaves nothing installed |
 | `scripts/install.ps1` | Windows equivalent: `AMD64`/`ARM64`, zip download, `Get-FileHash -Algorithm SHA256`, install to `%LOCALAPPDATA%\odachi\bin`, user `PATH` entry when missing | Not verified: it needs a Windows PowerShell run that this work unit did not perform. See the T9 report |
 
+## Skills (T12)
+
+| What | Where | How it is verified |
+| --- | --- | --- |
+| Format | `skills/<name>/SKILL.md`: frontmatter with `name` and a `description` that starts with `Trigger:`, then `## Cuándo`, `## Reglas`, `## Nunca` | `internal/domain/skill/skill_test.go` (valid file, CRLF, no frontmatter) |
+| Rules | `name` equals the directory and matches `^[a-z][a-z0-9-]{2,40}$`; description starts with `Trigger:` and is at most 200 characters; body at most 60 lines; no empty section; no `TODO`; unique names; the registry is exactly what `--write` generates | `skill_test.go` plus `internal/app/skills/skills_test.go` and the `cmd/odachi/skills_test.go` table, one violation per case |
+| Registry | `SKILLS.md`, first line `<!-- generado por odachi skills --write; no lo edites a mano -->`, then the `Skill \| Trigger \| Path` table sorted by name | `skill_test.go` pins the exact bytes; `cmd/odachi/skills_test.go` proves two `--write` runs are identical and a hand edit makes `--check` fail naming `--write` |
+| `skill new` | validates the slug before any write, refuses an existing one, writes the template, then regenerates the registry | `internal/app/skills/skills_test.go` and `cmd/odachi/skills_test.go` |
+| Bundled five | `skills/{acceptance,data,ship,slices,tests}/SKILL.md`, each with the three sections and at most 60 lines | `cmd/odachi/skills_test.go` runs `skills --check` over this repository |
+
+`odachi init` does not own the skills: its block only gains the line that points
+at `SKILLS.md`. Copying the bundled skills into a project is `pack`, a later
+unit.
+
 ## `cmd/odachi` behaviour
 
-- Commands: `start` (default), `ask`, `level`, `summary`, `check`, `init`, `version`. `odachi`
+- Commands: `start` (default), `ask`, `level`, `summary`, `check`, `init`,
+  `skills`, `skill new`, `version`. `odachi`
   with no arguments is `odachi start`; a first argument that starts with `-` is
   treated as `start` flags, except `--version`, which is answered before the
   dispatch.
@@ -72,6 +89,11 @@ same work unit as the code change.
 - `init` writes the rules block between `<!-- odachi:begin -->` and
   `<!-- odachi:end -->` and the `.git/hooks/pre-commit` hook. It never replaces a
   hook it did not write: it prints the three lines to paste and exits `1`.
+- `skills` is the only verb that writes a generated file: `--write` regenerates
+  `SKILLS.md` from the frontmatter and `skill new` runs the same writer, so the
+  registry and the skills cannot disagree. `--check` exits `1` with one Spanish
+  line per violation, each naming the file; a repository without `skills/` exits
+  `0` and says `odachi skill new <slug>`. No skill means no error.
 
 ## Notes
 
