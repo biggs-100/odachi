@@ -1,7 +1,7 @@
 # odachi · bootstrap
 
 Feature: a CLI that makes the agent do the dirty work with senior discipline while the human decides vision, and that teaches the human until they no longer need the teaching.
-Status: in progress · Branch: main · Owner: human (vision) / agent (execution) · Session: 1
+Status: complete · Branch: main · Owner: human (vision) / agent (execution) · Closed in a9b9057
 
 ## Specs
 
@@ -394,7 +394,7 @@ Dos etapas, cada una verde antes de la siguiente y reportada aparte: (1) `check`
 - T5 · CLI `start`: interview -> brief + fence + profile · S1,S2 · delegated (gentle-ai-worker) · [x] commit: 96ccaec
 - T6 · CLI `ask` / `level` / `summary` · S3,S7 · delegated (gentle-ai-worker), three stages · [x] commits: bdb5a6b (domain), 1669768 (app), e113f94 (CLI)
 - T7 · CLI `check` + pre-commit hook + AGENTS.md block · S2 · delegated (gentle-ai-worker), two stages · [x] commits: 0520b83 (domain), 64d51e6 (check), 56ebf87 (init + wiring)
-- T8 · tutor content: why each question exists, explanation rules · S7 · pending
+- T8 · tutor content: why each question exists, explanation rules · S7 · inline · [x] commits: 98290c3 (brief), 829b633 (tutor), a9b9057 (hook PATH)
 
 ## Log
 
@@ -421,4 +421,8 @@ L20 · El humano delegó la decisión de T7 en el agente ("lo que tú me recomie
 L21 · T7 verificado por el padre: 19 paquetes verdes con `-count=1`, build, vet, gofmt, compilación cruzada de `shellcmd` (linux, darwin, windows, wasm, plan9) y un end-to-end propio de ocho pasos: start → check (falta) → `--run true` → editar y ver `stale` → `--run "echo ok"` → archivo prohibido (exit 2) → init → hook ejecutable. Tres commits por capa: 0520b83, 64d51e6, 56ebf87.
 L22 · Defecto encontrado verificando, corregido test-first: `check --run "true"` informaba "falta la prueba" y mandaba a `--proof`, un dead end que no resuelve nada. Causa: la regla de L6 ("salida vacía = falta la prueba") era anterior al header de árbol. Con header, un silencio exitoso **es** prueba válida — `go vet`, `tsc --noEmit` y `gofmt -l` callan cuando están bien. Ahora "falta" significa solo "no hay prueba con árbol". RED en `internal/domain/gate/silent_test.go`.
 L23 · Decisión de implementación que vale registrar: `--run` escribe `proof/.gitignore` **antes** de hashear, porque la prueba vive dentro del worktree y escribirla cambiaría el hash que certifica (se autoinvalidaría). Las pruebas son generadas; el `.gitignore` se versiona. Riesgo aceptado: una corrida fallida no escribe prueba, así que una prueba buena anterior del mismo árbol sigue valiendo — el árbol es byte-idéntico, así que la evidencia es correcta, y la falla ya se informó en esa misma corrida.
-L24 · Sigue abierto L15(a). Decisión tomada para T8: si no se elige ningún "NO incluye", `fence.toml` se escribe con un comentario que explica que está vacío y cómo agregar una regla, en vez de un archivo vacío que no explica nada. Siguiente decisión pendiente: L15(a), el `fence.toml` vacío cuando no se elige ningún "NO incluye".
+L24 · Sigue abierto L15(a). Decisión tomada para T8: si no se elige ningún "NO incluye", `fence.toml` se escribe con un comentario que explica que está vacío y cómo agregar una regla, en vez de un archivo vacío que no explica nada.
+L25 · T8 se hizo **inline, no delegado**: la voz del tutor es oficio de escritura, no implementación. Se agregó al bloque de `AGENTS.md` la sección `## Si el perfil es novato` con seis reglas: porqué en una línea por decisión, `ask --craft` con su razón, decir por qué cuando se frena algo, una pregunta de vuelta de cada cinco, nunca un sermón ni un glosario, y `summary` narrado en tres líneas al cerrar una feature.
+L26 · Dead end encontrado en el e2e: sin exclusiones, `check` decía "el brief está incompleto: falta no incluye" y mandaba a `odachi start`, que con las mismas respuestas reproduce lo mismo. Causa: `brief.Missing()` exigía "no incluye" mientras la entrevista lo deja opcional. Resuelto haciendo opcional esa parte: forzar una exclusión inventa una regla que la persona no quiso, y una violación falsa del cerco enseña mal. `Missing()` exige solo "qué tiene que existir" y "listo cuando". RED en `nongoals_test.go`.
+L27 · Defecto encontrado en el e2e del hook: sin `odachi` en el PATH, el hook terminaba en `command not found` y bloqueaba cada commit sin explicar nada — el caso normal de alguien que bajó el binario. `init` ahora escribe la ruta absoluta del ejecutable (`Options.Exe`, resuelta por `hookExe()` en el CLI) con fallback a `odachi` del PATH, y la última línea sigue siendo la regla. Verificado: bloquea sin prueba nombrando la salida, pasa con prueba, y un commit real entra.
+L28 · Límite conocido y aceptado: el bloque de `AGENTS.md` solo está fijado por aserciones `contains`, así que un cambio futuro podría borrar la sección del tutor sin que ningún test falle. Es contenido, no comportamiento; si vuelve a pasar, se pinea el bloque completo. Siguiente decisión pendiente: L15(a), el `fence.toml` vacío cuando no se elige ningún "NO incluye".
