@@ -5,7 +5,7 @@ same work unit as the code change.
 
 | Package | Who depends on it | Tests that cover it |
 | --- | --- | --- |
-| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go` |
+| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go` |
 | `internal/app/start` | `cmd/odachi`: `start` and `odachi` with no arguments | `internal/app/start/start_test.go` |
 | `internal/app/tasks` | `internal/app/{ask,level,summary}`: find the current or every feature document | `internal/app/tasks/tasks_test.go` |
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
@@ -23,11 +23,28 @@ same work unit as the code change.
 | `internal/adapters/shellcmd` | `cmd/odachi` only (the `check --run` shell); one file per platform | `shellcmd_test.go` plus the per-platform `_test.go` |
 | `internal/archtest` | Nobody imports it; it guards every domain package | `internal/archtest/boundary_test.go` |
 
+## Distribution (T9)
+
+| File | What it is | How it is verified |
+| --- | --- | --- |
+| `cmd/odachi` (`var version`, `--version`, `version`) | The two surfaces that report the version; the variable is the ldflags seam `-X main.version=<tag>` | `cmd/odachi/version_test.go`: `--version` and `version` print `odachi dev` and exit `0`; the injected value is what gets printed; an unknown command still exits `1` |
+| `.goreleaser.yaml` | v2 config: `CGO_ENABLED=0`, `-trimpath`, `-s -w -X main.version={{ .Version }}`, linux/darwin/windows × amd64/arm64, `tar.gz` (zip on windows), `checksums.txt` (sha256), snapshot named `dev`. No `brews`, no signing, no provenance — the comment at the top says why | `goreleaser check` (locally or in the `release-check` CI job). It cannot complete in this repository yet: there is no git remote, and the scm step needs one |
+| `.github/workflows/ci.yml` | `test` matrix on ubuntu/macos/windows (+ `go vet` and `gofmt -l .` on ubuntu), `race` on `./internal/...`, `build`, `release-check`; `permissions: contents: read`, no secrets | The workflow itself is not executed by any Go test; the commands inside it are exactly the ones run in the verification section of this work unit |
+| `scripts/install.sh` | POSIX shell installer: platform and arch detection, version from `ODACHI_VERSION` or the latest release, download base from `ODACHI_BASE_URL`, sha256 verification before touching the destination, install to `${ODACHI_BIN_DIR:-$HOME/.local/bin}` (falling back to `./odachi`), version line and `PATH` hint | `cmd/odachi/install_test.go`: builds a real binary with `-ldflags -X main.version=1.2.3`, packs a real tarball and a real `checksums.txt`, runs the script offline over `file://`, then runs the installed binary and reads `odachi 1.2.3`. Second case: a tampered `checksums.txt` exits non-zero and leaves nothing installed |
+| `scripts/install.ps1` | Windows equivalent: `AMD64`/`ARM64`, zip download, `Get-FileHash -Algorithm SHA256`, install to `%LOCALAPPDATA%\odachi\bin`, user `PATH` entry when missing | Not verified: it needs a Windows PowerShell run that this work unit did not perform. See the T9 report |
+
 ## `cmd/odachi` behaviour
 
-- Commands: `start` (default), `ask`, `level`, `summary`, `check`, `init`. `odachi`
+- Commands: `start` (default), `ask`, `level`, `summary`, `check`, `init`, `version`. `odachi`
   with no arguments is `odachi start`; a first argument that starts with `-` is
-  treated as `start` flags.
+  treated as `start` flags, except `--version`, which is answered before the
+  dispatch.
+- `odachi --version` and `odachi version` print exactly `odachi <version>` and
+  exit `0`. `version` is a package variable, `"dev"` unless goreleaser injects
+  the tag with `-X main.version=...`; both surfaces print the same variable so
+  there is one source of truth. `-v` and `-version` are deliberately not
+  accepted: two spellings are enough, and a third would be a silent alias nobody
+  documents.
 - Unknown command: exit `1`, message lists every available command.
 - Exit codes: `0` ok · `1` blocked (invalid flag, unreadable or nameless
   profile, existing `brief.md` without `--force`, no feature document, a

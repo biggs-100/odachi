@@ -1,0 +1,72 @@
+# odachi · release config (goreleaser v2)
+#
+# Lo que NO está en este archivo, a propósito:
+#
+#   - `brews`: no hay un tap de Homebrew. Un tap vacío enseña a instalar algo
+#     que después no se actualiza, y eso es peor que no tener la receta.
+#   - firma y notarización (cosign, signing, notarize): no hay claves ni
+#     identidad de Apple.
+#   - `sboms` / provenance: nadie lo va a verificar todavía y declararlo sin
+#     llaves sería fingir que la cadena de suministro está resuelta.
+#
+# Cuando existan el tap y las llaves se agregan acá. Hasta entonces, este
+# archivo dice la verdad sobre lo que publica: binarios, un tar.gz (zip en
+# Windows) y checksums.txt.
+#
+# Tampoco hay LICENSE en el repo: los archivos de release incluyen README.md y
+# una LICENSE sólo si existen (`LICENSE*` es un glob, así que hoy no incluye
+# nada). No se inventa una licencia.
+
+version: 2
+
+project_name: odachi
+
+builds:
+  - id: odachi
+    main: ./cmd/odachi
+    binary: odachi
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: odachi
+    ids:
+      - odachi
+    name_template: "odachi_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    # En Windows el archivo va en zip: es lo que el explorador abre con doble clic.
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+# Un snapshot lleva "dev" en el nombre para que nunca se confunda con una release.
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

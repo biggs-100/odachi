@@ -20,6 +20,12 @@ import (
 	"github.com/biggz/odachi/internal/app/summary"
 )
 
+// version is the release identifier this binary reports. A plain `go build`
+// leaves it as "dev"; goreleaser injects it with -ldflags -X main.version=<tag>,
+// so the number a human reads always comes from the release, never from a hand
+// edit of a source file.
+var version = "dev"
+
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
@@ -27,6 +33,13 @@ func main() {
 // run runs the CLI in the current directory. It returns the exit code instead
 // of calling os.Exit so the behaviour is testable.
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	// The version ask comes before anything that can fail: a deleted working
+	// directory must not stop a human from asking what they installed.
+	if isVersionAsk(args) {
+		fmt.Fprintln(stdout, "odachi "+version)
+		return start.CodeOK
+	}
+
 	dir, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintln(stderr, "odachi: no pude leer el directorio actual: "+oneLine(err.Error()))
@@ -38,6 +51,13 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 // runIn dispatches one command. `odachi` and `odachi --flag ...` are both
 // `odachi start`; an unknown command lists what exists.
 func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	// The version ask comes before the dispatch: a leading dash is otherwise a
+	// `odachi start` flag, and `--version` is the one a human types first.
+	if isVersionAsk(args) {
+		fmt.Fprintln(stdout, "odachi "+version)
+		return start.CodeOK
+	}
+
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		return runStart(dir, args, stdin, stdout, stderr)
 	}
@@ -55,10 +75,24 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runCheck(dir, args[1:], stdout, stderr)
 	case "init":
 		return runInit(dir, args[1:], stdout, stderr)
+	case "version":
+		// Reached only with arguments: `odachi version` alone was answered above.
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])
+		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
+}
+
+// isVersionAsk reports whether this is exactly the version request. `--version`
+// and `version` are the only two surfaces; anything longer is a mistake the
+// normal error path explains.
+func isVersionAsk(args []string) bool {
+	if len(args) != 1 {
+		return false
+	}
+	return args[0] == "--version" || args[0] == "version"
 }
 
 // runStart parses the flags, wires the two adapters and reports the result.
@@ -518,6 +552,11 @@ uso:
   odachi summary
   odachi check [flags]
   odachi init [--json]
+  odachi --version
+  odachi version
+
+la versión:
+  --version       imprime "odachi <versión>" y sale con 0 (un build sin ldflags dice dev)
 
 flags de check:
   --run s         corre el comando y escribe la prueba de este árbol

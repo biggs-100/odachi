@@ -1,4 +1,5 @@
 bin/
+dist/
 /odachi
 /odachi.exe
 .DS_Store

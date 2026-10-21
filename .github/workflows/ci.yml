@@ -1,0 +1,103 @@
+# odachi · CI
+#
+# Nada de esto publica nada: valida. El único trabajo que toca el pipeline de
+# release es `release-check`, que corre `goreleaser check` para que una config
+# rota falle en el PR y no en el día que alguien etiqueta una versión.
+#
+# Sin secretos y con `contents: read`: el CI no necesita escribir en el repo, y
+# lo que no necesita no se pide.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Los mismos tests en los tres sistemas donde corre el binario. En ubuntu se
+  # suman vet y gofmt, que son baratos y no hace falta repetir en tres lados.
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: go test ./...
+        run: go test ./...
+
+      - name: go vet ./...
+        if: runner.os == 'Linux'
+        run: go vet ./...
+
+      - name: gofmt -l . (falla si imprime algo)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "estos archivos no están formateados; corré gofmt -w . :"
+            echo "$unformatted"
+            exit 1
+          fi
+
+  # El dominio se usa desde varios paquetes y `taskdoc` mezcla slices por valor:
+  # el detector de carreras es obligatorio ahí. Race no compila en Windows sin
+  # CGO, así que corre sólo en ubuntu.
+  race:
+    name: race (internal)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: go test -race ./internal/...
+        run: go test -race ./internal/...
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: go build ./...
+        run: go build ./...
+
+  # Valida la config de release (esquema y campos deprecados). No publica y no
+  # necesita ningún secreto: `check` no firma ni sube nada.
+  release-check:
+    name: release-check (goreleaser)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check

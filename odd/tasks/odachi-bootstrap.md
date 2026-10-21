@@ -385,6 +385,62 @@ odachi init [--json]
 
 Dos etapas, cada una verde antes de la siguiente y reportada aparte: (1) `check` (dominio + adaptador de shell + app + CLI), (2) `init` (AGENTS.md + hook). Sin dependencias nuevas. El guard de fronteras debe seguir verde.
 
+## Contract VI · T9 (distribución)
+
+Objetivo: que alguien sin Go pueda instalarlo y verificar que anda. Nada más.
+
+### Superficie
+
+```text
+odachi --version    imprime "odachi <version>" y sale con 0
+odachi version      lo mismo (el humano lo va a tipear)
+```
+
+`version` es una variable de paquete en `cmd/odachi`, default `"dev"`, inyectada por ldflags. Sin dependencias nuevas.
+
+### `.goreleaser.yaml` (v2)
+
+- `builds`: `./cmd/odachi`, `CGO_ENABLED=0`, `-trimpath`, `ldflags: -s -w -X main.version={{ .Version }}`.
+- `goos`: linux, darwin, windows · `goarch`: amd64, arm64.
+- `archives`: `tar.gz` con nombre `odachi_{{ .Version }}_{{ .Os }}_{{ .Arch }}`; windows en `zip` vía `format_overrides`. Incluir `README.md` y `LICENSE` **solo si existen** (todavía no hay LICENSE: no inventar una).
+- `checksum`: sha256, nombre `checksums.txt`.
+- Snapshot con `dev` en el nombre.
+- Sin `brews`, sin firma, sin provenance: un comentario al inicio dice que no están y por qué (no hay tap, no hay claves). No fingir que están.
+
+### `.github/workflows/ci.yml`
+
+- `push` y `pull_request`.
+- `test`: matriz `ubuntu-latest`, `macos-latest`, `windows-latest` → `go test ./...`; en ubuntu además `go vet ./...` y `gofmt -l .` (falla si imprime algo).
+- `race`: ubuntu → `go test -race ./internal/...`.
+- `build`: `go build ./...`.
+- `release-check`: ubuntu → `goreleaser/goreleaser-action` con `args: check` (valida la config, no publica).
+- `permissions: contents: read`. Sin secretos.
+
+### `scripts/install.sh`
+
+`set -euo pipefail`. Requiere `curl` y `tar`; sin ellos, error claro.
+
+1. Detecta OS (`linux`, `darwin`) y arquitectura (`amd64` desde `x86_64`, `arm64` desde `aarch64`/`arm64`). Plataforma no soportada: exit 1 diciéndolo.
+2. Versión: `$ODACHI_VERSION`, o la última release vía `api.github.com/repos/biggz/odachi/releases/latest`.
+3. Base de descarga configurable: `ODACHI_BASE_URL` (default la URL de releases de GitHub para esa versión). Es lo que permite testearlo sin red.
+4. Descarga el archivo y `checksums.txt`, verifica sha256 (sin `sha256sum` usar `shasum -a 256`; si no hay ninguno de los dos, error claro en vez de saltear la verificación).
+5. Instala en `${ODACHI_BIN_DIR:-$HOME/.local/bin}`, `chmod +x`. Si no puede escribir ahí, instala en `./odachi` y lo dice.
+6. Imprime `odachi <versión> instalado en <ruta>` y, si la ruta no está en `PATH`, el hint exacto a pegar.
+
+### `scripts/install.ps1`
+
+Equivalente para Windows: detecta `AMD64`/`ARM64`, descarga el `zip`, verifica sha256 con `Get-FileHash`, instala en `$env:LOCALAPPDATA\odachi\bin`, agrega esa carpeta al `PATH` del usuario si falta, imprime la versión. Mismos errores claros.
+
+### Tests (sin red, obligatorios)
+
+- `cmd/odachi`: `--version` y `version` imprimen `odachi dev` en un build sin ldflags y salen con 0; un comando desconocido sigue saliendo con 1.
+- `cmd/odachi/install_test.go` (package main, usa `bash`): construye un binario real con `-ldflags -X main.version=1.2.3` en `t.TempDir()`, arma `odachi_1.2.3_<os>_amd64.tar.gz` + `checksums.txt` en un directorio de release, y corre `bash scripts/install.sh` con `ODACHI_BASE_URL=file://<release> ODACHI_VERSION=1.2.3 ODACHI_BIN_DIR=<bin>`. Asserta: exit 0, el binario existe, y `<bin>/odachi --version` dice `odachi 1.2.3`. Segundo caso: checksums.txt alterado → exit != 0 y **el binario no queda instalado**. Si `bash` no está disponible, `t.Skip` con la razón.
+- Nada de tests que dependan de la red ni de una release real.
+
+### Proceso
+
+Unidad única. No tocar el comportamiento de los seis verbos. No agregar dependencias Go. Si `LICENSE` no existe, los archivos de release no lo mencionan.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -395,6 +451,7 @@ Dos etapas, cada una verde antes de la siguiente y reportada aparte: (1) `check`
 - T6 · CLI `ask` / `level` / `summary` · S3,S7 · delegated (gentle-ai-worker), three stages · [x] commits: bdb5a6b (domain), 1669768 (app), e113f94 (CLI)
 - T7 · CLI `check` + pre-commit hook + AGENTS.md block · S2 · delegated (gentle-ai-worker), two stages · [x] commits: 0520b83 (domain), 64d51e6 (check), 56ebf87 (init + wiring)
 - T8 · tutor content: why each question exists, explanation rules · S7 · inline · [x] commits: 98290c3 (brief), 829b633 (tutor), a9b9057 (hook PATH)
+- T9 · distribución: `--version`, goreleaser, CI, install.sh y install.ps1 · S1,S8 · pending
 
 ## Log
 
