@@ -1,0 +1,9 @@
+[[rule]]
+not   = "pagos"
+paths = ["payment*", "**/payments/**"]
+deps  = ["stripe", "mercadopago"]
+
+[[rule]]
+not   = "datos de pacientes"
+paths = ["**/patients/export*"]
+deps  = []

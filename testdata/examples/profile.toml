@@ -1,0 +1,8 @@
+name         = "novato"
+extends      = ""
+brief_source = "interview"   # interview | repo | file
+questions    = "one-by-one"  # one-by-one | batched | all
+assumptions  = "never"       # never | declare | prefer-safe
+output       = "line"        # line | detail | json
+proof        = "command"     # command | suite-or-ci
+explain      = "why"         # why | none
