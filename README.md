@@ -74,3 +74,7 @@ verificar: no se corrió en Windows PowerShell). La config de release **no tiene
 `brews`, firma ni provenance**: no hay tap ni llaves, y fingir que están sería
 peor que no tenerlos. Cuando exista el remoto, el primer `goreleaser release`
 convierte todo esto en releases de verdad.
+
+## Licencia
+
+MIT. Ver [LICENSE](LICENSE).
