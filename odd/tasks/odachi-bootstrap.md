@@ -331,7 +331,7 @@ Deliver in three stages, each with its tests green before the next: (1) domain a
 - T3 · pure domain: brief and task document parsing + progress · S1,S6 · delegated (gentle-ai-worker) · [x] commit: c77ca91
 - T4 · adapters: strict TOML profile decoder, filesystem, git · S5 · delegated (gentle-ai-worker) · [x] commit: f53fa1a
 - T5 · CLI `start`: interview -> brief + fence + profile · S1,S2 · delegated (gentle-ai-worker) · [x] commit: 96ccaec
-- T6 · CLI `ask` / `level` / `summary` · S3,S7 · pending
+- T6 · CLI `ask` / `level` / `summary` · S3,S7 · delegated (gentle-ai-worker), three stages · [x] commits: bdb5a6b (domain), 1669768 (app), e113f94 (CLI)
 - T7 · CLI `check` + pre-commit hook + AGENTS.md block · S2 · pending
 - T8 · tutor content: why each question exists, explanation rules · S7 · pending
 
@@ -353,3 +353,6 @@ L13 · T5 verificado por el padre (11 paquetes verdes, build, vet, gofmt) y con 
 L14 · Riesgo de carga de revisión, registrado y no oculto: el commit 96ccaec tiene 2.948 líneas (1.450 de tests), muy por encima de las ~400 que pide la disciplina de unidades. Causa: se delegó el paquete entero. De T6 en adelante, cada verbo se entrega como unidad propia.
 L15 · Observado y diferido: (a) si no se elige ningún "NO incluye", `.odachi/fence.toml` queda vacío y el cerco no protege nada — decidir en T6/T8 si la entrevista exige al menos una exclusión o si el archivo vacío lleva un comentario que lo explique; (b) pulido de redacción para que el brief suene a la persona y no al sistema: "Quiere aprender: tests." → "Aprender en el camino: tests.", "Se usa desde el celular." → "Lo uso desde el celular."
 L16 · Decisión del humano sobre cómo se gradúa: opción B con D como disparador ("continua"). Se registra cada escalación en el `Historial` del task doc —sin archivo nuevo, una sola fuente de verdad— y el agente propone en el hito; la persona acepta con `level --to`. Umbral: 3 features con pasos hechos y 5 respuestas de visión. Contract IV escrito.
+L17 · T6 verificado por el padre: 15 paquetes verdes con `-count=1`, build, vet, gofmt, y end-to-end propio (start → ask ×3 → level → summary). Se commiteó en **tres unidades por capa** —dominio bdb5a6b, app 1669768, CLI e113f94— y cada una compila sola, que es lo que faltó en T5 (L14).
+L18 · Inconsistencia encontrada verificando, corregida antes de commitear: `level` decía "features: 0" mientras `summary` decía "1 feature". Misma palabra, dos significados en la misma herramienta. `level` ahora dice "features con pasos" y el umbral sigue exigiendo features con al menos un paso hecho.
+L19 · Límites aceptados de T6: (a) `ask`/`summary` solo reconocen `NNNN-<slug>.md`, así que este repo los ve como un proyecto vacío — deliberado, para no reescribir el documento escrito a mano; (b) un documento con secciones extra no se puede anexar hasta mover esas notas a `## Historial`, y el bloqueo lo dice; (c) `level` no cuenta un feature hasta que tenga un paso hecho, por eso un proyecto recién iniciado informa 0. Siguiente decisión pendiente: L15(a), el `fence.toml` vacío cuando no se elige ningún "NO incluye".
