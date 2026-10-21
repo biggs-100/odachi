@@ -4,3 +4,6 @@ dist/
 /odachi.exe
 .DS_Store
 .atl/
+
+# a killed run leaves the write lock behind on purpose; it is not content
+.odachi/lock

@@ -169,7 +169,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		interview = &terminalInterview{in: bufio.NewReader(stdin), out: stdout}
 	}
 
-	return report(start.Run(opts, interview, osFiles{}), asJSON, stdout, stderr)
+	return report(start.Run(opts, interview, osFiles{}, &osLock{}), asJSON, stdout, stderr)
 }
 
 // runAsk parses the flags, wires the Files adapter and reports the result.
@@ -386,7 +386,7 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
-	return reportUndo(undo.Run(opts, osFiles{}), asJSON, stdout, stderr)
+	return reportUndo(undo.Run(opts, osFiles{}, &osLock{}), asJSON, stdout, stderr)
 }
 
 // reportCheck prints the gate's verdict. A ready run is silent under --quiet,
@@ -535,6 +535,7 @@ func report(result start.Result, asJSON bool, stdout, stderr io.Writer) int {
 	return reportOutcome(outcome{
 		Code:    result.Code,
 		Message: result.Message,
+		Lines:   result.Lines,
 		Profile: result.Profile,
 		Task:    result.Task,
 		Files:   result.Files,
