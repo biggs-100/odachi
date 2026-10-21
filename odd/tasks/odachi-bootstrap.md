@@ -572,7 +572,7 @@ odachi pack --json
 - T10 · CI verde en Windows: el test del instalador dependía de un shim de uname · S1 · inline · [x] commit: 85694e2
 - T11 · publicación: licencia MIT, tag v0.1.0 y release verificada de punta a punta · S1,S8 · inline · [x] commit: 4d92358 · release run: 39657703108
 - T12 · skills: registro generado, validador, creador y las 5 skills iniciales · S1,S7 · delegated (gentle-ai-worker) · [x] commits: 58282d4 (domain), f409072 (cli), 208e606 (content)
-- T13 · `pack`: llevar las skills al directorio nativo de cada agente · S1,S3 · delegated (gentle-ai-worker) · [x] commits: e036438 (+ domain and embed in the same push)
+- T13 · `pack`: llevar las skills al directorio nativo de cada agente · S1,S3 · delegated (gentle-ai-worker) · [x] commits: 511cc7c (domain), c0516e6 (embed), e036438 (app + cli)
 
 ## Log
 
