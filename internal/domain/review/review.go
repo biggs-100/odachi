@@ -97,29 +97,44 @@ type Verdict struct {
 	Reviewer string    `json:"reviewer"`
 	At       string    `json:"at"`
 	Findings []Finding `json:"findings"`
-	Verdict  string    `json:"verdict"`
+	// Lenses are the specialists the prompt asked this verdict to answer. The tool
+	// stamps them, because the reviewer's opinion about which lenses it used is not
+	// evidence; the prompt it was given is. A verdict stored before lenses existed
+	// has none, and the optional gate treats that as "covers nothing".
+	Lenses  []string `json:"lenses,omitempty"`
+	Verdict string   `json:"verdict"`
+}
+
+// Missing reports which required lenses this verdict does not cover, in the order
+// they were required. It is the question both `--show` and the optional gate ask,
+// so it is answered in one place.
+func (v Verdict) Missing(required []string) []string {
+	covered := make(map[string]bool, len(v.Lenses))
+	for _, lens := range v.Lenses {
+		covered[strings.ToLower(strings.TrimSpace(lens))] = true
+	}
+
+	var missing []string
+	for _, lens := range required {
+		if !covered[strings.ToLower(strings.TrimSpace(lens))] {
+			missing = append(missing, lens)
+		}
+	}
+	return missing
 }
 
 // Derive is the whole rule: a causal finding at BLOCKER or CRITICAL requests
 // changes, everything else approves. Style findings, non-causal findings and
 // suggestions are recorded, and never block.
 func Derive(findings []Finding) string {
-	if _, blocking := Blocking(findings); blocking {
-		return ChangesRequested
-	}
-	return Approved
+	return DeriveAfter(findings, Refutation{})
 }
 
 // Blocking returns the first finding that blocks: causal, and BLOCKER or
 // CRITICAL. "First" is the file order, so the message a human reads is the same
 // on every run of the same verdict.
 func Blocking(findings []Finding) (Finding, bool) {
-	for _, finding := range findings {
-		if finding.Causal && finding.Severity.Blocks() {
-			return finding, true
-		}
-	}
-	return Finding{}, false
+	return BlockingAfter(findings, Refutation{})
 }
 
 // Parse reads a verdict. It accepts exactly two shapes: the canonical empty
@@ -201,6 +216,13 @@ func (v Verdict) Validate() error {
 			v.Verdict, Approved, ChangesRequested)
 	}
 
+	for _, lens := range v.Lenses {
+		if !IsLens(lens) {
+			return fmt.Errorf("el veredicto dice que cubrió la lente %q; las lentes son %s",
+				lens, strings.Join(order, ", "))
+		}
+	}
+
 	// The verdict is derived, never administered: an author who declares one that
 	// contradicts their own findings has misread the rule, and storing it would
 	// hide the finding with the severity vocabulary.
@@ -256,6 +278,7 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 	sealed.Base = strings.TrimSpace(base)
 	sealed.Reviewer = strings.TrimSpace(v.Reviewer)
 	sealed.At = instant(v.At, now)
+	sealed.Lenses = inOrder(v.Lenses)
 	sealed.Verdict = Derive(v.Findings)
 	if sealed.Findings == nil {
 		sealed.Findings = []Finding{}

@@ -16,6 +16,18 @@ type PromptInput struct {
 	Paths []string
 	// Diff is the unified diff of the worktree against Base.
 	Diff string
+	// Lenses are the specialists this candidate asks for, in the order Lenses
+	// returned them. Each body is the lens file as it lives in
+	// internal/assets/review; the prompt strips its frontmatter, because the
+	// metadata is for the registry and not for the model. No lenses is exactly
+	// the prompt this verb printed before lenses existed.
+	Lenses []Lens
+}
+
+// Lens is one specialist prompt: its name and its body.
+type Lens struct {
+	Name string
+	Body string
 }
 
 // Prompt renders the review prompt. The content is fixed and pinned by tests: a
@@ -31,7 +43,11 @@ type PromptInput struct {
 func Prompt(in PromptInput) string {
 	var out strings.Builder
 
-	out.WriteString("# odachi review · árbol " + in.Tree + " · base " + in.Base + "\n\n")
+	out.WriteString("# odachi review · árbol " + in.Tree + " · base " + in.Base)
+	if names := lensNames(in.Lenses); len(names) > 0 {
+		out.WriteString(" · lentes " + strings.Join(names, ", "))
+	}
+	out.WriteString("\n\n")
 	out.WriteString("Sos el reviewer de diseño de este candidato. Revisás diseño, no estilo:\n")
 	out.WriteString("un review con ruido se ignora, y un review ignorado no protege a nadie.\n\n")
 
@@ -64,15 +80,68 @@ func Prompt(in PromptInput) string {
 	out.WriteString("5. Un solo barrido por lente. No vuelvas a escanear hasta que no quede nada.\n")
 	out.WriteString("\n")
 
+	out.WriteString(lensSection(in.Lenses))
+
 	out.WriteString("## Qué devolver\n")
 	out.WriteString(schema(in))
 	out.WriteString("\n")
 	out.WriteString("El veredicto se deriva de los findings: si hay un finding con \"causal\": true y\n")
 	out.WriteString("severidad BLOCKER o CRITICAL, el veredicto es " + ChangesRequested + "; si no, es " + Approved + ".\n")
-	out.WriteString("No lo decidas vos: lo decide la regla.\n\n")
+	out.WriteString("No lo decidas vos: lo decide la regla.\n")
+	if len(in.Lenses) > 0 {
+		out.WriteString("Las lentes que cubriste las anota la herramienta: no las escribas en el JSON.\n")
+	}
+	out.WriteString("\n")
+
 	out.WriteString("Contestá solo con el JSON, sin texto alrededor.\n")
 
 	return out.String()
+}
+
+// lensSection is the block that turns one generic prompt into a specialist's,
+// without repeating the five rules: they are stated once, above, and every lens
+// inherits them.
+func lensSection(lenses []Lens) string {
+	if len(lenses) == 0 {
+		return ""
+	}
+
+	var out strings.Builder
+	out.WriteString("## Las lentes de este árbol\n")
+	out.WriteString("Las lentes las eligió la evidencia del diff, no el gusto de nadie. Hacé un barrido por lente,\n")
+	out.WriteString("en el orden de esta lista, y reportá cada finding una sola vez.\n\n")
+
+	for _, lens := range lenses {
+		out.WriteString("### " + lens.Name + "\n")
+		out.WriteString(strings.TrimRight(stripFrontmatter(lens.Body), " \n") + "\n\n")
+	}
+	return out.String()
+}
+
+// lensNames is the names of the lenses, in the order given.
+func lensNames(lenses []Lens) []string {
+	names := make([]string, 0, len(lenses))
+	for _, lens := range lenses {
+		names = append(names, lens.Name)
+	}
+	return names
+}
+
+// stripFrontmatter removes the `---` block a lens file starts with. The
+// frontmatter is registry metadata; a model that reads it spends attention on a
+// `name:` field that adds nothing to the review.
+func stripFrontmatter(body string) string {
+	text := strings.ReplaceAll(body, "\r\n", "\n")
+	if !strings.HasPrefix(text, "---\n") {
+		return text
+	}
+
+	rest := strings.TrimPrefix(text, "---\n")
+	end := strings.Index(rest, "\n---\n")
+	if end < 0 {
+		return text
+	}
+	return strings.TrimPrefix(rest[end+len("\n---\n"):], "\n")
 }
 
 // schema is the expected answer, with the keys the domain parses. The tree is
