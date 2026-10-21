@@ -16,6 +16,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/check"
 	initapp "github.com/biggs-100/odachi/internal/app/init"
 	"github.com/biggs-100/odachi/internal/app/level"
+	"github.com/biggs-100/odachi/internal/app/plan"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/summary"
 )
@@ -67,6 +68,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runStart(dir, args[1:], stdin, stdout, stderr)
 	case "ask":
 		return runAsk(dir, args[1:], stdout, stderr)
+	case "plan":
+		return runPlan(dir, args[1:], stdout, stderr)
 	case "level":
 		return runLevel(dir, args[1:], stdin, stdout, stderr)
 	case "summary":
@@ -86,7 +89,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), plan (odachi plan \"<texto>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), check (odachi check), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -204,6 +207,52 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	return reportAsk(ask.Run(opts, osFiles{}), asJSON, stdout, stderr)
+}
+
+// runPlan parses the flags, wires the Files adapter and reports the result.
+func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi plan", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		opts   plan.Options
+		asJSON bool
+	)
+
+	flags.StringVar(&opts.Requirement, "req", "", "R<n> del requisito al que se ata el paso nuevo")
+	flags.StringVar(&opts.Done, "done", "", "T<n> del paso que se marca hecho")
+	flags.StringVar(&opts.Commit, "commit", "", "commit que cerró el paso (acompaña a --done)")
+	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+
+	// The documented shape starts with the step text, so a leading argument is
+	// the text and the flags may come after it.
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		opts.Text = args[0]
+		args = args[1:]
+	}
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi plan -h para ver los flags")
+		return start.CodeBlocked
+	}
+
+	// The text may also come after the flags: `plan --req R1 "texto"`.
+	rest := flags.Args()
+	if opts.Text == "" && len(rest) == 1 {
+		opts.Text = rest[0]
+		rest = nil
+	}
+	if len(rest) > 0 {
+		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi plan toma un solo texto entre comillas\n", rest[0])
+		return start.CodeBlocked
+	}
+
+	opts.Dir = dir
+	return reportPlan(plan.Run(opts, osFiles{}), asJSON, stdout, stderr)
 }
 
 // runLevel parses the flags, reads the profile in force and reports the result.
@@ -469,6 +518,16 @@ func reportAsk(result ask.Result, asJSON bool, stdout, stderr io.Writer) int {
 	}, asJSON, stdout, stderr)
 }
 
+// reportPlan prints the result of `odachi plan`.
+func reportPlan(result plan.Result, asJSON bool, stdout, stderr io.Writer) int {
+	return reportOutcome(outcome{
+		Code:    result.Code,
+		Message: result.Message,
+		Task:    result.Task,
+		Files:   result.Files,
+	}, asJSON, stdout, stderr)
+}
+
 // reportLevel prints the result of `odachi level`.
 func reportLevel(result level.Result, asJSON bool, stdout, stderr io.Writer) int {
 	return reportOutcome(outcome{
@@ -554,6 +613,8 @@ uso:
   odachi ask "<pregunta>"
   odachi ask --answer "<respuesta>" [--for P1]
   odachi ask --craft "<decisión>" --because "<razón>"
+  odachi plan "<texto>" [--req R1]
+  odachi plan --done T2 [--commit abc1234]
   odachi level [--to <perfil>]
   odachi summary
   odachi check [flags]
@@ -573,6 +634,12 @@ flags de check:
   --base ref      contra qué comparar el cerco (default HEAD; vacío: contra nada)
   --timeout n     segundos que puede tardar --run (default 120)
   --quiet         no imprime nada si está listo (para el hook)
+  --json          salida para máquinas
+
+flags de plan:
+  --req R<n>      requisito al que se ata el paso nuevo
+  --done T<n>     paso que se marca hecho
+  --commit sha    commit que cerró el paso (acompaña a --done)
   --json          salida para máquinas
 
 flags de skills:
@@ -601,6 +668,8 @@ después de start:
   odachi ask "<pregunta>"                       anotar una pregunta abierta
   odachi ask --answer "<respuesta>" [--for P1]  anotar tu respuesta
   odachi ask --craft "<decisión>" --because "<razón>"  anotar una decisión del agente
+  odachi plan "<texto>" [--req R1]              agrega el próximo paso al task doc
+  odachi plan --done T2 [--commit abc1234]      marca un paso hecho y registra el commit
   odachi level                                  ver tus hechos; propone senior cuando se gana
   odachi level --to <perfil>                    aplicar un perfil (se respalda el anterior)
   odachi summary                                qué hay hecho en cada feature

@@ -5,10 +5,11 @@ same work unit as the code change.
 
 | Package | Who depends on it | Tests that cover it |
 | --- | --- | --- |
-| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go` |
+| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go` |
 | `internal/app/start` | `cmd/odachi`: `start` and `odachi` with no arguments | `internal/app/start/start_test.go` |
-| `internal/app/tasks` | `internal/app/{ask,level,summary}`: find the current or every feature document | `internal/app/tasks/tasks_test.go` |
+| `internal/app/tasks` | `internal/app/{ask,plan,level,summary}`: find the current or every feature document, and the single write guard every task-document rewrite goes through | `internal/app/tasks/tasks_test.go`, `internal/app/tasks/save_test.go` |
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
+| `internal/app/plan` | `cmd/odachi`: `plan` (add a step, close a step) | `internal/app/plan/plan_test.go` |
 | `internal/app/level` | `cmd/odachi`: `level` and `level --to` | `internal/app/level/level_test.go` |
 | `internal/app/summary` | `cmd/odachi`: `summary` | `internal/app/summary/summary_test.go` |
 | `internal/app/check` | `cmd/odachi`: `check` in all its forms | `internal/app/check/check_test.go` |
@@ -16,7 +17,7 @@ same work unit as the code change.
 | `internal/app/skills` | `cmd/odachi`: `skills` (list, `--check`, `--write`) and `skill new` | `internal/app/skills/skills_test.go` |
 | `internal/app/pack` | `cmd/odachi`: `pack` (the detected agents, `--agents`, `--dry-run`) | `internal/app/pack/pack_test.go` |
 | `internal/domain/brief` | `internal/app/start` (render and read `brief.md`), `internal/app/check` (is it complete?) | `internal/domain/brief/brief_test.go`, `internal/domain/brief/render_test.go` |
-| `internal/domain/taskdoc` | `internal/app/start` (write the numbered task doc), `internal/app/{ask,level,summary}` (history, questions, counts), `internal/app/check` (open questions) | `internal/domain/taskdoc/taskdoc_test.go`, `internal/domain/taskdoc/history_test.go` |
+| `internal/domain/taskdoc` | `internal/app/start` (write the numbered task doc), `internal/app/{ask,plan,level,summary}` (history, questions, steps, counts), `internal/app/check` (open questions), `internal/app/tasks` (which lines a canonical rewrite would drop) | `internal/domain/taskdoc/taskdoc_test.go`, `internal/domain/taskdoc/history_test.go`, `internal/domain/taskdoc/step_test.go`, `internal/domain/taskdoc/unaccounted_test.go` |
 | `internal/domain/fence` | `internal/app/check` (the fence gate); `start` when it writes `fence.toml` (T5) | `internal/domain/fence/fence_test.go` |
 | `internal/domain/gate` | `internal/app/check` (the four gates and the exit code) | `internal/domain/gate/gate_test.go` |
 | `internal/domain/proof` | `internal/app/check` (write and read `proof/NNNN-<slug>.txt`) | `internal/domain/proof/proof_test.go` |
@@ -69,10 +70,31 @@ repository, and an agent only loads what is in its own skills directory.
 | Project untouched | `pack` never reads or writes the project's `skills/` or `SKILLS.md`: those belong to `odachi skills --write` | `TestPackDoesNotTouchTheProject` |
 | Home | The new `Home` port resolves the home; `internal/app/pack` imports no `os`, so every write goes through the `Files` double in tests and through `osFiles` in the binary | `internal/app/pack/pack_test.go` (in-memory `Files` + `Home` doubles), `osHome` in `cmd/odachi/files.go` |
 
+## Plan (T15)
+
+`odachi plan` is how the agent adds and closes steps without editing Markdown
+by hand. The step is appended to the parsed document and the file is written
+back through the canonical renderer, so the document cannot drift out of shape.
+
+| What | Where | How it is verified |
+| --- | --- | --- |
+| Add a step | `odachi plan "<texto>" [--req R1]`; the id is `max+1` (never a reused hole); `--req` must be a requirement the document declares | `internal/domain/taskdoc/step_test.go` (numbering, link, bad text), `internal/app/plan/plan_test.go`, `cmd/odachi/plan_test.go` |
+| Text rule | one line, no leading dash, at most `taskdoc.MaxStepText` (120) characters; runs of spaces collapse to one so the rendered step parses back to the same text | `step_test.go`, `plan_test.go` |
+| Close a step | `odachi plan --done T2 [--commit abc1234]`; unknown id lists the open steps; an already-done step is a no-op with exit `0` and `ya estaba hecho`, writing nothing | `internal/app/plan/plan_test.go`, `cmd/odachi/plan_test.go` |
+| Flag contradictions | `--commit` without `--done`, both forms at once, `--req` without a new step: blocked before the document is read | `internal/app/plan/plan_test.go` |
+| The one write guard | `internal/app/tasks.Save` / `SaveWithBackup`: canonical render, then `taskdoc.Unaccounted` decides whether any human line would be lost; `SaveWithBackup` backs up only after the guard allows the write | `internal/app/tasks/save_test.go` (`ask` and `plan` share it), `internal/domain/taskdoc/unaccounted_test.go` |
+| Refusal is real | a document with an extra section is refused naming `## Historial`, and the filesystem bytes are unchanged with no backup left behind | `internal/app/plan/plan_test.go`, `cmd/odachi/plan_test.go` |
+| Never touches other artifacts | `brief.md`, `.odachi/profile.toml` and `.odachi/fence.toml` are byte-identical after a plan | `internal/app/plan/plan_test.go`, `cmd/odachi/plan_test.go` |
+
+The guard distinguishes canonical lines from unaccounted ones: a step marked
+done legitimately rewrites its own line, while a `## Notas` section cannot be
+represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
+"what would be lost", and it is the only place that answer is computed.
+
 ## `cmd/odachi` behaviour
 
-- Commands: `start` (default), `ask`, `level`, `summary`, `check`, `init`,
-  `skills`, `skill new`, `pack`, `version`. `odachi`
+- Commands: `start` (default), `ask`, `plan`, `level`, `summary`, `check`,
+  `init`, `skills`, `skill new`, `pack`, `version`. `odachi`
   with no arguments is `odachi start`; a first argument that starts with `-` is
   treated as `start` flags, except `--version`, which is answered before the
   dispatch.
@@ -133,4 +155,5 @@ repository, and an agent only loads what is in its own skills directory.
   in-memory double, and `cmd/odachi` exercises the real adapter end to end.
 - `ask` and `summary` only recognise `NNNN-<slug>.md`. A hand-written document
   such as this repository's own `odd/tasks/odachi-bootstrap.md` is deliberately
-  invisible to them, so their canonical render can never rewrite it.
+  invisible to them, so their canonical render can never rewrite it. `plan`
+  resolves the current document the same way, so it inherits the same limit.

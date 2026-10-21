@@ -62,18 +62,19 @@ Ejemplos completos en `testdata/examples/`.
 
 ## Estado
 
-Bootstrap completo: dominio puro en `internal/domain/...` con guardia de
-importaciones, adaptadores en `internal/adapters/...`, seis verbos funcionando
-(`start`, `ask`, `level`, `summary`, `check`, `init`) más `--version`, y 19
-paquetes de tests en verde.
+Dominio puro en `internal/domain/...` con guardia de importaciones, adaptadores en
+`internal/adapters/...`, y diez superficies funcionando: `start`, `ask`, `plan`,
+`level`, `summary`, `check`, `init`, `skills`, `skill new`, `pack`, más
+`--version`. 25 paquetes de tests en verde en Linux, macOS y Windows.
 
-La distribución está escrita y probada de este lado salvo lo que el propio
-código no puede probar solo: `.goreleaser.yaml`, `.github/workflows/ci.yml`,
-`scripts/install.sh` (con test real, sin red) y `scripts/install.ps1` (sin
-verificar: no se corrió en Windows PowerShell). La config de release **no tiene
-`brews`, firma ni provenance**: no hay tap ni llaves, y fingir que están sería
-peor que no tenerlos. Cuando exista el remoto, el primer `goreleaser release`
-convierte todo esto en releases de verdad.
+Publicado: `v0.2.0`, con seis binarios y `checksums.txt`. La instalación de una
+línea está probada contra la release real, no contra un fixture: el script
+resuelve la última versión por API, verifica el sha256, extrae e instala; un
+checksum que no coincide no deja nada en el destino. `install.ps1` se verificó a
+mano en Windows con la release publicada.
+
+La config de release **no tiene `brews`, firma ni provenance**: no hay tap ni
+llaves, y fingir que están sería peor que no tenerlos.
 
 ## Licencia
 
