@@ -708,6 +708,57 @@ La tabla de agentes gana **alcance**. Hasta ahora todo era `home`; ahora hay dos
 
 README: la lista de agentes soportados incluye opencode con `--agents opencode`, y el camino de prueba con OpenCode (init + pack + start + check).
 
+## Contract XIII · T20 (`review`)
+
+Lo que odachi todavía no contesta: *¿está bien diseñado?* El gate dice si está probado. Esto agrega un veredicto sobre el diseño, sin heredar la máquina de estados de gentle-ai: **un archivo por árbol, content-addressed, inmutable.**
+
+### De gentle-ai se toma esto (y solo esto)
+
+1. **Compuerta de precisión**: reportar solo defectos reales que afecten al usuario y que se puedan defender con evidencia concreta; ante la duda, callarse. Estilo y preferencia prohibidos salvo que oculten un defecto.
+2. **Vocabulario de severidad**: `BLOCKER | CRITICAL | WARNING | SUGGESTION`.
+3. **Resultado vacío canónico**: si está limpio, exactamente `No findings.`
+4. **Causalidad**: un finding cuenta solo si el candidato lo **introdujo, activó o empeoró**. Lo que ya estaba es follow-up, no bloqueo.
+5. **Un barrido por lente, sin loop hasta que se seque.**
+
+No se toma: ledger en Engram, refuters con voto 2-de-3, envelopes de consentimiento, lineages.
+
+### Surface
+
+```text
+odachi review                     imprime el prompt de review del candidato actual
+odachi review --exec "<comando>"   lo corre, lee el veredicto JSON y lo guarda
+odachi review --attach <archivo>   guarda un veredicto ya escrito (agente o humano)
+odachi review --show              qué veredicto hay para este árbol, o que no hay
+odachi review --json
+```
+
+### El candidato y el almacenamiento
+
+- Candidato = `TreeHash` actual + `ChangedPaths` contra `--base` (default `HEAD`) + el `brief.md`. Sin lineage, sin revisiones, sin autoridad.
+- Almacenamiento: `.odachi/reviews/<treehash>.json`, un archivo por árbol. Inmutable: si ya existe, `--exec`/`--attach` lo respetan y avisan (`ya hay un veredicto para este árbol`); `--show` lo lee.
+- Un árbol distinto es un veredicto distinto. La aprobación no puede flotar: es literalmente el nombre del archivo.
+- El veredicto guardado lleva: `tree`, `base`, `reviewer` (texto libre: el comando o el humano), `at` (RFC3339), `findings[]` con `{path, line, severity, causal, why}` y `verdict`: `approved | changes_requested`.
+- **Regla derivada, no administrada**: si algún finding tiene `causal: true` y severidad `BLOCKER` o `CRITICAL`, el veredicto es `changes_requested`. El resto es `approved`. No hay presupuesto de corrección ni estados.
+
+### El prompt que imprime
+
+Contenido fijo (contenido, no código): el brief, las rutas cambiadas, el diff, las cinco reglas tomadas de gentle-ai, el schema JSON esperado y la instrucción de contestar solo con el JSON. Sin el diff no hay review: si no cambió nada, exit 1 (`no hay nada que revisar en este árbol`).
+
+### El gate
+
+`check` gana un flag opcional `--require-review`: apagado por defecto (un novato no debe quedar bloqueado por no saber qué es un review). Cuando está encendido y no hay veredicto para el árbol actual: exit 2, mensaje `no hay review para este árbol` y `Next` = `odachi review`. Si hay veredicto `changes_requested`: exit 2 con la primera finding causal. Si `approved`: sigue.
+
+### Tests
+
+- Veredicto: escritura del archivo con el nombre del árbol; segundo intento avisa y no pisa; `--show` lee; sin veredicto dice que no hay.
+- Derivación: BLOCKER causal → `changes_requested`; CRITICAL no causal → `approved`; solo WARNING → `approved`.
+- Un árbol distinto no ve el veredicto del anterior (se assertea el nombre del archivo).
+- `--attach` rechaza un JSON inválido con un mensaje en español y no escribe nada.
+- `--exec` con un comando que falla: exit 1, no escribe, y muestra la salida del comando.
+- El prompt contiene el brief, las reglas y el schema; y sin diff no hay prompt (exit 1).
+- `check --require-review` en las tres situaciones; sin el flag, el review no influye.
+- Nada fuera de `.odachi/reviews/` se escribe.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -729,6 +780,7 @@ README: la lista de agentes soportados incluye opencode con `--agents opencode`,
 - T17 · lock de escritura para `start` y `undo`: exclusión entre corridas concurrentes · S2,S4 · delegated (gentle-ai-worker) · [x] commits: a9559ac (lock), da8392c (start), 00bc89a (undo), d2889bb (cli + adr)
 - T18 · OpenCode: destinos por alcance (proyecto vs home) y `opencode` soportado · S1,S4 · delegated (gentle-ai-worker) · [x] commits: ed56b2f (domain), 911ec0d (app), 57e3669 (cli + readme)
 - T19 · `init` avisa cuando `odachi` no resuelve desde un shell: una regla que el agente no puede ejecutar es peor que ninguna · S1,S2 · inline · [x] commit: 400eee8
+- T20 · `review`: veredicto de diseño por árbol, content-addressed, y `check --require-review` opcional · S3,S4 · pending
 
 ## Log
 
@@ -777,3 +829,4 @@ L42 · T17 verificado por el padre con el binario: un lock fresco se rechaza con
 L43 · T18 verificado por el padre con el binario y un home vacío: `pack --agents opencode` escribió las 5 skills en `.opencode/skills/` del proyecto con bytes idénticos a la fuente y el home quedó **vacío**; la segunda corrida no escribió ni dejó backups; `pack` sin `--agents` detectó opencode por `.opencode/`; `pi` sigue rechazado y la lista de soportados ahora incluye opencode. Corrección de un argumento mío: rechacé opencode por "path dependiente de la plataforma", y eso solo era cierto del path global. El del proyecto es relativo, viaja con el repo, y es el correcto para una herramienta de proyecto. Fuente: la documentación de OpenCode y su código (`{skill,skills}/**/SKILL.md`).
 L44 · Primera corrida real con OpenCode como agente, en un proyecto con brief, cerco y skills. Con `odachi` **fuera** del PATH: 41 shell calls, 7 buscando el binario (incluida una recursión de PowerShell sobre `C:\`) y **cero** verbos ejecutados. Con `odachi` en `~/bin`: 12 shell calls y **sí** usó `odachi check`, `--help` y `--version`. Las skills de odachi (`acceptance`, `data`, `tests`) se cargaron en las dos por trigger. Conclusión: el contenido funciona cuando la herramienta es alcanzable; lo que fallaba no era la obediencia sino la instalación. Ambas corridas murieron con `503 Endpoint is unavailable` del proveedor antes de terminar la implementación, así que el veredicto sobre `plan` y `craft` sigue pendiente. Segundo hallazgo: el prompt completo de gentle-ai está **embebido en `opencode.jsonc`** (148 KB), así que desinstalarlo de OpenCode no es mover archivos; para aislar odachi hace falta un HOME con solo `auth.json` y una config mínima.
 L45 · Tercera corrida, la que vale: HOME aislado con solo `auth.json` (sin `opencode.jsonc`, sin skills globales), `--standalone`, mismo proyecto y mismo prompt. **exit 0, 54 shell calls, cero errores.** Resultado: 3 pasos agregados con `odachi plan` y cerrados con `plan --done` registrando su commit; 6 decisiones `OFICIO` con su `porque`, cada una citando una línea del brief; `check --run "go test ./..."` corrido varias veces con `proof/0001-…txt` atado al hash del árbol; 4 commits, uno por paso; **cero archivos de pagos** (el cerco se respetó sin que nadie lo mirara). El agente además descubrió `--help`, `--json`, `skills --check` y `check --base ""` por su cuenta. Veredicto: el contenido se obedece cuando (a) el binario es alcanzable y (b) no hay instrucciones compitiendo. Dos observaciones del entorno, no del producto: los mensajes de commit salieron con acentos rotos por la code page CP1252 de PowerShell (el mismo defecto que arreglamos en `install.ps1`), y el agente se puso `git config user.name "odachi"` en vez de usar la identidad del humano.
+L46 · Consulta a gentle-ai para diseñar el review. Se toma: la compuerta de precisión ("si dudás, callate; estilo y preferencia prohibidos salvo que oculten un defecto"), el vocabulario `BLOCKER|CRITICAL|WARNING|SUGGESTION`, la regla de que sin findings la respuesta es exactamente `No findings.`, la causalidad (`introducido/activado/empeorado` por el candidato) y un barrido por lente sin loop hasta secarse. No se toma: ledger en Engram, refuters con voto 2-de-3, envelopes de consentimiento ni lineages. El review de odachi es un archivo por árbol (` .odachi/reviews/<treehash>.json`): la aprobación no puede flotar porque es literalmente el nombre del archivo.
