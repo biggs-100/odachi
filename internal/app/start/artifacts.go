@@ -88,6 +88,22 @@ func rulesFor(selections []string) []fence.Rule {
 // renderFence writes the fence in the canonical TOML shape: one [[rule]] per
 // non-goal, one key per line.
 func renderFence(rules []fence.Rule) string {
+	if len(rules) == 0 {
+		// An empty file teaches nothing. The fence is the mechanism that keeps
+		// scope small, so when the human chose no exclusion the file explains
+		// what it is for and what a rule looks like.
+		return "# Vacío a propósito: no elegiste ningún \"NO incluye\".\n" +
+			"# El cerco es lo que frena el crecimiento del alcance: sin reglas, nada\n" +
+			"# te avisa cuando el trabajo se va de lo que pediste.\n" +
+			"#\n" +
+			"# Cuando decidas algo que no va en esta primera versión, agregalo acá:\n" +
+			"#\n" +
+			"# [[rule]]\n" +
+			"# not   = \"pagos\"\n" +
+			"# paths = [\"payment*\", \"**/payments/**\"]\n" +
+			"# deps  = [\"stripe\", \"mercadopago\"]\n"
+	}
+
 	var out strings.Builder
 
 	for i, rule := range rules {

@@ -26,6 +26,19 @@ Cuatro reglas duras. No son consejos: ` + "`odachi check`" + ` las hace cumplir.
    verde, con la salida guardada en ` + "`proof/`" + `. Sin eso, no está listo.
 4. Pedazos chicos, un commit cada uno. Un paso del task doc, un commit.
 
+## Si el perfil es novato
+
+El objetivo no es solo que funcione: es que la persona aprenda el oficio. Estas
+reglas son la diferencia entre un agente que ejecuta y un agente que enseña.
+
+- Explicá el porqué de cada decisión en UNA línea, en el momento en que la tomás.
+- Cada decisión de oficio se anota: ` + "`odachi ask --craft \"<decisión>\" --because \"<razón>\"`" + `.
+- Cuando frenás algo, decí por qué en una línea: es el momento que más enseña.
+- Una de cada cinco decisiones, preguntá de vuelta "¿por qué elegiste esto?".
+- Nunca un sermón, nunca un glosario, nunca dos explicaciones seguidas.
+- Al cerrar una feature, corré ` + "`odachi summary`" + ` y contá en tres líneas qué
+  decidió la persona y qué concepto apareció.
+
 ## Los seis verbos
 
 - ` + "`odachi start`" + ` — la entrevista: escribe brief, perfil, cerco y task doc.
