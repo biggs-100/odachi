@@ -759,6 +759,72 @@ Contenido fijo (contenido, no código): el brief, las rutas cambiadas, el diff, 
 - `check --require-review` en las tres situaciones; sin el flag, el review no influye.
 - Nada fuera de `.odachi/reviews/` se escribe.
 
+## Contract XIV · T21 (lentes y refutador)
+
+Objetivo: paridad de potencia con el 4R de gentle-ai sin heredar su máquina de estados. Potencia = cuatro prompts especializados + selección por evidencia + refutación de blockers. Lo que no se copia no aporta potencia: ledger persistido, consentimiento, voto 2-de-3.
+
+### Surface
+
+```text
+odachi review                       usa las lentes que pide la evidencia del diff
+odachi review --lens risk            una lente explícita (repetible o separada por comas)
+odachi review --lens all             las cuatro
+odachi review --refute <verdict>     imprime el prompt del refutador para ese veredicto
+odachi review --lens --show          qué lentes hay para este árbol y cuáles faltan
+```
+
+### Las cuatro lentes (contenido embebido, `internal/assets/review/<lente>.md`)
+
+Cada archivo es el prompt de un especialista. Frontmatter `name` y `description: Trigger: ...`; cuerpo con `## Qué mirar` (entre 12 y 20 reglas **concretas y accionables**, del estilo "una consulta armada concatenando entrada del request" o "un retry sin backoff ni techo") y `## Qué NO reportar`. Nada de adjetivos sueltos.
+
+| Lente | Territorio |
+|---|---|
+| `risk` | seguridad, límites de privilegio, exposición de datos, dependencias, sinks peligrosos |
+| `readability` | nombres, complejidad, duplicación, código muerto, tamaño de revisión, intención |
+| `reliability` | tests por comportamiento, casos borde, determinismo, contratos, regresiones |
+| `resilience` | fallbacks, retry/backoff, degradación, observabilidad, carga, rollback |
+
+Todas heredan las cinco reglas de Contract XIII y agregan el piso de severidad: `WARNING` y `SUGGESTION` nunca bloquean.
+
+### Selección por evidencia (determinista, pura)
+
+`internal/domain/review/tier.go`:
+
+```go
+type Tier string // "passive" | "focused" | "full"
+func Classify(changedPaths []string) Tier
+func Lenses(t Tier) []string // passive: ninguna · focused: [reliability] · full: las cuatro
+```
+
+- `passive`: **solo** documentación (`.md`, `.txt`, `docs/**`, `README*`) y ningún archivo de código ni configuración de ejecución.
+- `full`: cualquier ruta o diff que toque señales sensibles — `auth`, `login`, `session`, `token`, `password`, `secret`, `permission`, `role`, `payment`, `billing`, `migrat`, `schema`, `.env`, `docker`, `ci`, `deploy`, `Makefile`, `go.mod`. Es la misma lista de señales que ya usa el cerco, no una segunda taxonomía inventada.
+- `focused`: todo lo demás → una sola lente, `reliability`.
+- **El volumen no decide**: mil líneas de documentación siguen siendo `passive`, y cinco líneas de `auth` son `full`. Un test por cada regla.
+- El agente o el humano pueden **agregar** lentes con `--lens`; no pueden quitar las que la evidencia pide: `check --require-review` verifica que exista veredicto para **cada lente requerida**.
+
+### Refutador (`--refute <verdict>`)
+
+Imprime un prompt que recibe el veredicto y le pide refutar **solo los BLOCKER y CRITICAL**, con tres preguntas por finding:
+
+1. ¿Es causal del diff, o ya estaba? (cita la línea del diff)
+2. ¿Es un defecto real que afecta al usuario, o una preferencia?
+3. ¿La evidencia alcanza para defenderlo ante el autor?
+
+Devuelve un JSON `{"refutations":[{"id":"...","verdict":"stands|refuted","why":"..."}]}`. Regla: **si el refutador no puede citar la evidencia, el finding no se refuta** (default `stands`, nunca al revés). Se guarda en `.odachi/reviews/<treehash>.refuted.json` y el veredicto derivado lo tiene en cuenta: un blocker refutado deja de bloquear, y el archivo de refutación se lista en `--show`.
+
+### El gate
+
+`check --require-review` ahora exige: veredicto para el árbol **y para cada lente requerida**; bloquea si cualquier finding causal BLOCKER/CRITICAL **no refutado** existe en cualquier lente. Un blocker refutado no bloquea. Sigue siendo opt-in.
+
+### Tests
+
+- `Classify`: docs-only → passive; `auth/session.go` → full; `internal/gastos/x.go` → focused; docs grandes → passive (volumen no decide); cada señal de la lista, una por test.
+- `Lenses(t)`: passive vacío, focused `[reliability]`, full las cuatro en orden fijo.
+- Lentes: cada archivo embebido existe, tiene frontmatter válido, entre 12 y 20 reglas, y `## Qué NO reportar`. Un test que cuenta las reglas.
+- `--lens` explícito genera el prompt de esa lente; `--lens all` las cuatro; `--show` dice cuáles faltan.
+- Refutación: refutado deja de bloquear; `stands` sigue bloqueando; refutador sin evidencia → `stands`; el archivo `.refuted.json` se escribe una vez y no se pisa.
+- Gate: falta una lente requerida → exit 2 nombrando cuál; blocker refutado → listo.
+
 ## Tasks
 
 - T1 · repo, go.mod, boundary guard test, ADR 0001, birth decisions, change checklist, impact map, artifact examples · S1-S8 · delegated (gentle-ai-worker) · [x] commit: 7aaf628
@@ -781,6 +847,7 @@ Contenido fijo (contenido, no código): el brief, las rutas cambiadas, el diff, 
 - T18 · OpenCode: destinos por alcance (proyecto vs home) y `opencode` soportado · S1,S4 · delegated (gentle-ai-worker) · [x] commits: ed56b2f (domain), 911ec0d (app), 57e3669 (cli + readme)
 - T19 · `init` avisa cuando `odachi` no resuelve desde un shell: una regla que el agente no puede ejecutar es peor que ninguna · S1,S2 · inline · [x] commit: 400eee8
 - T20 · `review`: veredicto de diseño por árbol, content-addressed, y `check --require-review` opcional · S3,S4 · delegated (gentle-ai-worker) · [x] commits: 9e5c3b8 (domain), cf1bcde (app + check), ed6bdc9 (cli + adr)
+- T21 · lentes 4R con selección por evidencia + refutador de blockers · S3,S4 · pending
 
 ## Log
 
