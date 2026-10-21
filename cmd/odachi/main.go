@@ -363,7 +363,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
 }
 
-// runReview parses the flags, wires the three adapters and reports the verdict.
+// runReview parses the flags, wires the four adapters and reports the verdict.
 func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("odachi review", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -374,12 +374,14 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.StringVar(&opts.Exec, "exec", "", "corre este comando y guarda el veredicto que contesta")
-	flags.StringVar(&opts.Attach, "attach", "", "guarda un veredicto ya escrito en este archivo")
+	flags.StringVar(&opts.Attach, "attach", "", "guarda un veredicto o una refutación ya escrita en este archivo")
 	flags.BoolVar(&opts.Show, "show", false, "qué veredicto hay para este árbol, o que no hay")
+	flags.StringVar(&opts.Lens, "lens", "", "lente explícita: risk | readability | reliability | resilience | all (repetible o separada por comas)")
+	flags.StringVar(&opts.Refute, "refute", "", "imprime el prompt del refutador para este veredicto")
 	flags.StringVar(&opts.Base, "base", reviewapp.DefaultBase, "contra qué comparar el candidato (vacío: contra nada, todo cuenta como nuevo)")
 	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
 
-	if err := flags.Parse(args); err != nil {
+	if err := flags.Parse(withoutEmptyLens(args)); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
@@ -392,21 +394,39 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	// The three forms answer different questions, and asking for two at once is a
+	// The four forms answer different questions, and asking for two at once is a
 	// mistake worth naming instead of resolving by precedence.
 	forms := 0
-	for _, used := range []bool{opts.Exec != "", opts.Attach != "", opts.Show} {
+	for _, used := range []bool{opts.Exec != "", opts.Attach != "", opts.Show, opts.Refute != ""} {
 		if used {
 			forms++
 		}
 	}
 	if forms > 1 {
-		fmt.Fprintln(stderr, `odachi: --exec, --attach y --show no van juntos: elegí una sola forma (odachi review | odachi review --exec "<comando>" | odachi review --attach <archivo> | odachi review --show)`)
+		fmt.Fprintln(stderr, `odachi: --exec, --attach, --show y --refute no van juntos: elegí una sola forma (odachi review | odachi review --exec "<comando>" | odachi review --attach <archivo> | odachi review --show | odachi review --refute <veredicto>)`)
 		return start.CodeBlocked
 	}
 
 	opts.Dir = dir
-	return reportReview(reviewapp.Run(opts, osFiles{}, reviewGit{}, osShell{}), asJSON, stdout, stderr)
+	return reportReview(reviewapp.Run(opts, osFiles{}, reviewGit{}, osShell{}, reviewLenses{}), asJSON, stdout, stderr)
+}
+
+// withoutEmptyLens is what makes `odachi review --lens --show` work: the flag
+// package would read `--show` as the value of `--lens`, and a lens with no value
+// means "the lenses the evidence asks for". Only the bare flag is rewritten, so
+// `--lens risk` is untouched.
+func withoutEmptyLens(args []string) []string {
+	normalized := make([]string, 0, len(args))
+	for i, arg := range args {
+		if arg == "-lens" || arg == "--lens" {
+			if i+1 == len(args) || strings.HasPrefix(args[i+1], "-") {
+				normalized = append(normalized, arg+"=")
+				continue
+			}
+		}
+		normalized = append(normalized, arg)
+	}
+	return normalized
 }
 
 // runUndo parses the flags, wires the Files adapter and reports the result.
@@ -507,21 +527,25 @@ func reportReview(result reviewapp.Result, asJSON bool, stdout, stderr io.Writer
 			files = []string{}
 		}
 		payload := struct {
-			Code    int                   `json:"code"`
-			Message string                `json:"message"`
-			Lines   []string              `json:"lines,omitempty"`
-			Prompt  string                `json:"prompt,omitempty"`
-			Output  string                `json:"output,omitempty"`
-			Verdict *domainreview.Verdict `json:"verdict,omitempty"`
-			Files   []string              `json:"files"`
+			Code       int                   `json:"code"`
+			Message    string                `json:"message"`
+			Lines      []string              `json:"lines,omitempty"`
+			Prompt     string                `json:"prompt,omitempty"`
+			Output     string                `json:"output,omitempty"`
+			Verdict    *domainreview.Verdict `json:"verdict,omitempty"`
+			Lenses     []string              `json:"lenses,omitempty"`
+			Refutation any                   `json:"refutation,omitempty"`
+			Files      []string              `json:"files"`
 		}{
-			Code:    result.Code,
-			Message: result.Message,
-			Lines:   result.Lines,
-			Prompt:  result.Prompt,
-			Output:  result.Output,
-			Verdict: result.Verdict,
-			Files:   files,
+			Code:       result.Code,
+			Message:    result.Message,
+			Lines:      result.Lines,
+			Prompt:     result.Prompt,
+			Output:     result.Output,
+			Verdict:    result.Verdict,
+			Lenses:     result.Lenses,
+			Refutation: result.Refutation,
+			Files:      files,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
@@ -783,7 +807,8 @@ uso:
   odachi summary
   odachi undo [--list] [--file brief]
   odachi check [flags]
-  odachi review [--exec "<comando>" | --attach <archivo> | --show]
+  odachi review [--exec "<comando>" | --attach <archivo> | --show | --refute <veredicto>]
+  odachi review [--lens <lente>]
   odachi init [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
@@ -805,8 +830,10 @@ flags de check:
 
 flags de review:
   --exec s        corre este comando y guarda el veredicto que contesta
-  --attach path   guarda un veredicto ya escrito (agente o humano)
+  --attach path   guarda un veredicto o una refutación ya escrita (agente o humano)
   --show          qué veredicto hay para este árbol, o que no hay
+  --lens s        lente explícita: risk | readability | reliability | resilience | all
+  --refute path   imprime el prompt del refutador para ese veredicto
   --base ref      contra qué comparar el candidato (default HEAD; vacío: contra nada)
   --json          salida para máquinas
 
@@ -854,9 +881,12 @@ después de start:
   odachi check --run "<comando>"                corre la prueba y la guarda con su árbol
   odachi review                                 el prompt de review de este candidato
   odachi review --exec "<comando>"              corre el revisor y guarda su veredicto
-  odachi review --attach <archivo>              guarda un veredicto ya escrito
+  odachi review --attach <archivo>              guarda un veredicto o una refutación ya escrita
   odachi review --show                          qué veredicto hay para este árbol
-  odachi check --require-review                 exige review para este árbol (apagado por defecto)
+  odachi review --lens risk                     agrega una lente a las que pide la evidencia
+  odachi review --lens --show                   qué lentes pide este árbol y cuáles faltan
+  odachi review --refute <veredicto>            el prompt del refutador para ese veredicto
+  odachi check --require-review                 exige review para este árbol y sus lentes
   odachi init                                   AGENTS.md + hook pre-commit
   odachi skills                                 las skills del proyecto y su trigger
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
