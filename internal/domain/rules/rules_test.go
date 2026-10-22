@@ -332,6 +332,46 @@ func TestWithVoiceAddsTheSectionToAnOldBlock(t *testing.T) {
 	}
 }
 
+// TestBodyIsTheBlockWithoutItsMarkers: the native agent mirrors exactly what the
+// agent reads, and the markers are plumbing for in-place edits, not rules.
+func TestBodyIsTheBlockWithoutItsMarkers(t *testing.T) {
+	block, err := rules.Block(persona.Senior)
+	if err != nil {
+		t.Fatalf("Block(senior): %v", err)
+	}
+	body, err := rules.Body(persona.Senior)
+	if err != nil {
+		t.Fatalf("Body(senior): %v", err)
+	}
+
+	if strings.Contains(body, rules.Begin) || strings.Contains(body, rules.End) {
+		t.Errorf("el cuerpo del bloque lleva los marcadores:\n%s", body)
+	}
+	if strings.HasPrefix(body, "\n") {
+		t.Errorf("el cuerpo arranca con un salto de línea: %q", body[:10])
+	}
+	if !strings.HasSuffix(body, "\n") || strings.HasSuffix(body, "\n\n") {
+		t.Errorf("el cuerpo no termina en exactamente un salto de línea: %q", body[len(body)-10:])
+	}
+	want := rules.Begin + "\n" + body + rules.End + "\n"
+	if block != want {
+		t.Errorf("Block no es Begin + Body + End:\n%q\nvs\n%q", block, want)
+	}
+
+	got, ok := rules.BodyIn(block)
+	if !ok {
+		t.Fatalf("BodyIn no reconoció el bloque")
+	}
+	if got != body {
+		t.Errorf("BodyIn no devuelve el cuerpo:\n%q\nvs\n%q", got, body)
+	}
+	for _, content := range []string{"", "sin bloque\n", rules.Begin + "\ntruncado\n"} {
+		if _, ok := rules.BodyIn(content); ok {
+			t.Errorf("BodyIn inventó un cuerpo para %q", content)
+		}
+	}
+}
+
 // mustVoice is the voice text, or a failed test: the template tests compare
 // against the persona text, so a missing one is not a test to skip.
 func mustVoice(t *testing.T, name string) string {

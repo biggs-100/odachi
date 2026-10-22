@@ -38,10 +38,10 @@ const (
 )
 
 // head is the block up to and including the blank line that opens the voice
-// section. It is written once and closed by Block, which is what keeps the two
+// section. It is written once and closed by Body, which is what keeps the two
 // voices from differing anywhere but in that section: everything here is the
 // same bytes whatever voice is in force.
-const head = Begin + `
+const head = `
 # Reglas del proyecto (odachi)
 
 odachi es un binario y cuatro artefactos de texto plano —brief, task doc, prueba y
@@ -75,16 +75,47 @@ Skills: las que hay en ` + "`.agents/skills/`" + `; dentro de este proyecto, car
 
 `
 
-// Block returns the whole block for one voice, trailing newline included. voice
-// is a profile name: novato and senior are their own, and `ci` gets senior's.
-// An unknown voice is an error naming the two that exist — nothing here guesses
-// what an unrecognised name should sound like.
-func Block(voice string) (string, error) {
+// Body returns the text of the block without its markers, trailing newline
+// included. It is what a native agent file mirrors: the agent must read the same
+// words as the block, and the markers only exist so AGENTS.md can be edited in
+// place.
+//
+// voice is a profile name: novato and senior are their own, and `ci` gets
+// senior's. An unknown voice is an error naming the two that exist — nothing here
+// guesses what an unrecognised name should sound like.
+func Body(voice string) (string, error) {
 	body, err := persona.Voice(voice)
 	if err != nil {
 		return "", err
 	}
-	return head + body + End + "\n", nil
+	return strings.TrimPrefix(head, "\n") + body, nil
+}
+
+// Block returns the whole block for one voice, trailing newline included, with
+// the markers that let WithBlock replace it in place.
+func Block(voice string) (string, error) {
+	body, err := Body(voice)
+	if err != nil {
+		return "", err
+	}
+	return Begin + "\n" + body + End + "\n", nil
+}
+
+// BodyIn returns the text between the markers of a complete block, or false when
+// the file has no complete block. It is the mirror's source of truth: a native
+// agent file written from this text cannot disagree with the block the agent
+// reads, even after the human edited the rules by hand.
+func BodyIn(content string) (string, bool) {
+	begin := lineStart(content, Begin)
+	if begin < 0 {
+		return "", false
+	}
+	offset := lineStart(content[begin:], End)
+	if offset < 0 {
+		return "", false
+	}
+	body := content[begin+len(Begin) : begin+offset]
+	return strings.TrimPrefix(body, "\n"), true
 }
 
 // WithBlock returns content with the block replaced in place, or appended when

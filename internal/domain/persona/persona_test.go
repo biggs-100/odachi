@@ -138,6 +138,68 @@ func TestDeprecatedIsTheV0100Install(t *testing.T) {
 	}
 }
 
+// TestFilesMirrorTheBlockForEveryClient: one generated file per client, in the
+// client's own selector directory, and the block is the last thing in it. The
+// mirror is the whole point: the agent a human picks reads the same words as the
+// block, so the voice and the rules cannot drift.
+func TestFilesMirrorTheBlockForEveryClient(t *testing.T) {
+	block := "# Reglas del proyecto (odachi)\n\nla voz del perfil\n"
+	files := persona.Files(block)
+
+	if len(files) != len(persona.Clients()) {
+		t.Fatalf("Files() = %d archivos, want %d (uno por cliente)", len(files), len(persona.Clients()))
+	}
+	wantPaths := []string{
+		".opencode/agents/odachi.md",
+		".claude/output-styles/odachi.md",
+	}
+	for i, want := range wantPaths {
+		if files[i].Path != want {
+			t.Errorf("Files()[%d].Path = %q, want %q", i, files[i].Path, want)
+		}
+		if !strings.HasSuffix(files[i].Content, block) {
+			t.Errorf("%s no termina con el bloque:\n%s", files[i].Path, files[i].Content)
+		}
+		if !strings.Contains(files[i].Content, "generado por odachi init") {
+			t.Errorf("%s no dice que es generado:\n%s", files[i].Path, files[i].Content)
+		}
+	}
+}
+
+// TestOpenCodeFileIsAPrimaryAgent: Tab only cycles primary agents. A file the
+// model alone can reach is not the selector the human asked for.
+func TestOpenCodeFileIsAPrimaryAgent(t *testing.T) {
+	for _, file := range persona.Files("bloque\n") {
+		if file.Path != ".opencode/agents/odachi.md" {
+			continue
+		}
+		for _, want := range []string{"mode: primary", "description:", "odachi:"} {
+			if !strings.Contains(file.Content, want) {
+				t.Errorf("%s no lleva %q:\n%s", file.Path, want, file.Content)
+			}
+		}
+		return
+	}
+	t.Fatalf("Files() no escribió el agente de OpenCode")
+}
+
+// TestClaudeFileKeepsTheCodingInstructions: a style without that flag replaces
+// Claude Code's own software engineering instructions, which is not a voice.
+func TestClaudeFileKeepsTheCodingInstructions(t *testing.T) {
+	for _, file := range persona.Files("bloque\n") {
+		if file.Path != ".claude/output-styles/odachi.md" {
+			continue
+		}
+		for _, want := range []string{"name: odachi", "keep-coding-instructions: true"} {
+			if !strings.Contains(file.Content, want) {
+				t.Errorf("%s no lleva %q:\n%s", file.Path, want, file.Content)
+			}
+		}
+		return
+	}
+	t.Fatalf("Files() no escribió el agente de Claude")
+}
+
 // TestTheRendererDoesNotReadTheProfile: the voices do not depend on
 // .odachi/profile.toml. If the two axes ever get wired together, this fails.
 func TestTheRendererDoesNotReadTheProfile(t *testing.T) {
