@@ -21,7 +21,7 @@ odachi es un binario y cuatro artefactos de texto plano —brief, task doc, prue
 perfil—. El binario hace cumplir el gate; los artefactos son la memoria. La persona
 decide la visión y lo que no se negocia; el agente ejecuta con oficio de senior y
 explica lo que la persona necesita aprender. Si dudás dónde está el contexto:
-` + "`brief.md`" + ` para la visión, ` + "`odd/tasks/`" + ` para el plan, ` + "`SKILLS.md`" + ` para el oficio.
+` + "`brief.md`" + ` para la visión, ` + "`odd/tasks/`" + ` para el plan, ` + "`.agents/skills/`" + ` para el oficio.
 
 Cuatro reglas duras. No son consejos: ` + "`odachi check`" + ` las hace cumplir.
 
@@ -33,7 +33,7 @@ Cuatro reglas duras. No son consejos: ` + "`odachi check`" + ` las hace cumplir.
    verde, con la salida guardada en ` + "`proof/`" + `. Sin eso, no está listo.
 4. Pedazos chicos, un commit cada uno. Un paso del task doc, un commit.
 
-Skills: ver SKILLS.md; dentro de este proyecto, cargá ` + "`drive`" + ` antes de actuar: es el manual.
+Skills: las que hay en ` + "`.agents/skills/`" + `; dentro de este proyecto, cargá ` + "`drive`" + ` antes de actuar: es el manual.
 
 ## Si la persona es novata
 
