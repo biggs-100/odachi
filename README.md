@@ -206,7 +206,8 @@ Dominio puro en `internal/domain/...` con guardia de importaciones, adaptadores 
 `skill new`, `pack` y `--version`. 36 paquetes, en verde en Linux, macOS y
 Windows —ubuntu repite la suite interna con el detector de carreras—.
 
-Publicado: `v0.9.1`. La instalación de una línea está probada contra la release
+Publicado: `v0.10.0`. Lo que cambió en cada versión está en [CHANGELOG.md](CHANGELOG.md).
+La instalación de una línea está probada contra la release
 real, no contra un fixture. `install.ps1` se verificó a mano en Windows con la
 release publicada: no hay test automatizado porque haría falta un listener HTTP
 en CI.
