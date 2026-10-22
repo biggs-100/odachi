@@ -62,12 +62,22 @@ says.
 
 ## Consequences
 
-- **The tree moves once, the first time a project gets a review.** The store's
-  ignore file is a new file in the worktree, so a proof taken before the first
-  review no longer matches and the agent retakes it once. From then on every run
-  agrees. Removing even that single step would mean `check --run` preparing
-  `.odachi/reviews/`, which would make `check` write an artifact it does not own;
-  the single retake is the cheaper price, and the message names the command.
+- **The project ignores its own evidence, and `init` owns that rule.** The store
+  and `proof/` live inside the worktree they certify, so their ignore rule cannot
+  arrive one run late: written lazily, each first use moved the tree and
+  invalidated the evidence taken before it. `init` now keeps a marked block in
+  the project's `.gitignore` —`/proof/` and `/.odachi/reviews/`— which survives a
+  clone, is readable by a person, and is refreshed in place on every run.
+  Verified end to end: `init`, `check --run`, `review --attach`, `check
+  --require-review` passes with the proof byte-identical, and no second
+  `.gitignore` exists anywhere in the project.
+- **A project that never ran `init` still protects itself.** `check --run` and
+  `review` ask the repository first (`git check-ignore`), and only when nothing
+  ignores the path do they write the old per-directory `.gitignore` —before
+  hashing, as always—. That is the legacy mechanism, kept for the projects that
+  have not migrated and for the case where git cannot answer at all: evidence
+  must never be allowed to move the tree because a probe failed. The price stays
+  the old one for those projects: one retake each, once.
 - **A hand-mangled verdict is reported, not ignored.** The store is a plain file
   a human can edit, so both `review --show` and `check --require-review` say the
   file cannot be read and name `odachi review --attach`.

@@ -61,14 +61,17 @@ Ejemplos completos en `testdata/examples/`.
 
 `proof/` y `.odachi/reviews/` son **evidencia generada**, no se versiona: la
 prueba lleva el hash del árbol que la produjo y el veredicto se llama igual que
-el árbol que juzga. Cada uno escribe su propio `.gitignore` la primera vez que lo
-necesita, y eso tiene un precio que conviene saber: el primer `check --run` de un
-proyecto invalida un review anterior y el primer `review` invalida una prueba
-anterior, una sola vez cada uno.
+el árbol que juzga. Por eso los dos tienen que quedar fuera de git: si no, la
+primera prueba invalidaría el review anterior y el primer review invalidaría la
+prueba anterior.
 
-`init` agrega dos cosas que no son artefactos: un bloque de reglas en `AGENTS.md`
-—lo que el agente lee antes de tocar nada— y un hook de pre-commit que corre
-`odachi check --quiet` sobre la prueba de este árbol.
+`init` se ocupa de eso por vos, y de dos cosas más que no son artefactos: deja un
+bloque marcado en el `.gitignore` del proyecto (`/proof/` y `/.odachi/reviews/`,
+versionado, así que sobrevive a un clon) y un bloque de reglas en `AGENTS.md` —lo
+que el agente lee antes de tocar nada— además del hook de pre-commit que corre
+`odachi check --quiet` sobre la prueba de este árbol. En un proyecto sin `init`,
+`check --run` y `review` se protegen solos con su propio `.gitignore` interno, al
+precio de mover el árbol una vez.
 
 ## Las skills, en tu agente
 

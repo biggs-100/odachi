@@ -135,18 +135,26 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
   ready · `1` the agent can act · `2` only the human can decide. `--run` returns
   the gate's code, never the command's. Its third adapter is `shellcmd`; the
   other two are `osFiles` and `gitRepo` (through `gitx`).
-- `check --run` keeps `proof/` out of the git tree with `proof/.gitignore`:
-  without it the proof would change the tree it certifies and every run would
-  invalidate the previous proof. `--quiet` prints nothing only when ready (the
-  pre-commit hook depends on that) and still prints the block when not.
+- `check --run` keeps `proof/` out of the git tree, and which mechanism it uses
+  is decided by the repository: it asks the Git port (`gitx.Ignored`) whether the
+  proof it is about to write is already ignored, and only when nothing ignores it
+  does it write `proof/.gitignore` —before hashing— as a fallback. A probe that
+  fails writes the fallback too: evidence must never move the tree because git
+  could not answer. `--quiet` prints nothing only when ready (the pre-commit hook
+  depends on that) and still prints the block when not.
 - The diff a review reads is `gitx.Diff`, and `cmd/odachi` has ONE Git adapter
   (`gitRepo`) for both `check` and `review`. gitx decides that "no base" means
   the empty tree, so the app never spells that hash. The diff builds a throwaway
   `GIT_INDEX_FILE` exactly like `TreeHash`: untracked files enter the candidate,
   git-ignored files do not, and the human's real index is never staged.
-- `init` writes the rules block between `<!-- odachi:begin -->` and
-  `<!-- odachi:end -->` and the `.git/hooks/pre-commit` hook. It never replaces a
-  hook it did not write: it prints the three lines to paste and exits `1`.
+- `init` owns three artifacts: the rules block in `AGENTS.md` between
+  `<!-- odachi:begin -->` and `<!-- odachi:end -->`, the marked block in the
+  project's `.gitignore` between `# odachi:begin` and `# odachi:end` (`/proof/`
+  and `/.odachi/reviews/`, refreshed in place, every other byte preserved, never
+  backed up because the edit is additive), and the `.git/hooks/pre-commit` hook.
+  It never replaces a hook it did not write: it prints the three lines to paste
+  and exits `1`. Order matters: AGENTS.md, then `.gitignore`, then the hook, so a
+  foreign hook still leaves the ignore rule in place.
 - `pack` installs the bundled skills into the agents' own directories: the home
   for the seven home-scoped agents, the project (`.opencode/skills`) for
   opencode. Without `--agents` it serves the agents detected here — their config
