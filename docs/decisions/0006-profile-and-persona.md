@@ -237,6 +237,15 @@ What the correction adds:
   appends the mirror's state: it names a missing file or a hand edit and points
   at `odachi init`. The block still works without a selector, so this is a note,
   not a failed check.
+- **The door in the home.** A project-only file is not what a human means by
+  "open odachi and start working": outside that project the selector is empty.
+  `init` also writes `~/.config/opencode/agents/odachi.md` and
+  `~/.claude/output-styles/odachi.md`. That file is deliberately **not** a copy
+  of the block: it is a short dispatcher that reads the project's block and
+  adopts its voice when there is one, and hands over to the `bootstrap` skill
+  when there is not. Both paths are the documented global locations of the two
+  clients; the project mirror stays because it is the file that can be compared
+  byte for byte with the block.
 - **The v0.10.0 per-profile files are leftovers.** `.opencode/agents/odachi-novato.md`,
   `odachi-senior.md` and their Claude counterparts still work as a voice, but
   they do not mirror the block. `init` and `doctor` name them once and never

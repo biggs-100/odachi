@@ -21,6 +21,12 @@ La voz vive en el bloque, el agente nativo la espeja, y el doctor ve lo que `ini
   `agents/`. `level --to` y `start` refrescan el espejo si ya existe; `doctor`
   avisa si dejó de coincidir. Las dos personas por perfil de la v0.10.0 quedan
   como restos: `init` las nombra y no las borra.
+- **La puerta del home**: el mismo `init` deja `odachi` en
+  `~/.config/opencode/agents/odachi.md` y `~/.claude/output-styles/odachi.md`, así
+  que aparece en **cualquier** carpeta, no solo en la que corrió `init`. Es un
+  despachador corto, no una copia de las reglas: si la carpeta tiene el bloque de
+  `AGENTS.md`, lo lee y adopta su voz; si no, carga la skill `bootstrap` y guía
+  para arrancar con `odachi init` y `odachi start`.
 - **`doctor` pasa a once chequeos**: el 9 dice las dos verdades de las skills (el
   registro del proyecto y lo instalado en `.agents/skills`), y el 11 compara la voz
   del bloque con el perfil, y el agente nativo con el bloque.

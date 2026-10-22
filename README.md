@@ -145,10 +145,10 @@ odachi check   # te dice si falta algo y cómo destrabarlo
 ```
 
 `odachi init` deja el proyecto listo en un paso: la historia de git si faltaba,
-el bloque de reglas que el agente lee, el agente nativo que se elige con Tab, el
-bloque de `.gitignore`, el hook de pre-commit, las ocho skills en
-`./.agents/skills`, la skill de arranque en `~/.agents/skills` y la voz del perfil
-en el bloque de `AGENTS.md`.
+el bloque de reglas que el agente lee, el agente del proyecto y la puerta del home
+(los dos se eligen con Tab), el bloque de `.gitignore`, el hook de pre-commit, las
+ocho skills en `./.agents/skills`, la skill de arranque en `~/.agents/skills` y la
+voz del perfil en el bloque de `AGENTS.md`.
 
 Abrí el proyecto con OpenCode y ya está: lee `.agents/skills` como directorio
 externo además del propio, así que ve las ocho sin `pack`. `pack` queda para
@@ -169,14 +169,21 @@ hablás`, y en el agente nativo que espeja ese bloque. `odachi init` escribe la 
 de `novato` si todavía no hay perfil, y `odachi level --to <perfil>` cambia el
 perfil, esa sección y el espejo juntas —y nada más del bloque—.
 
-El agente nativo es el mismo bloque en la carpeta donde tu cliente ya elige
-agentes: `.opencode/agents/odachi.md` (Tab en OpenCode) y
-`.claude/output-styles/odachi.md` (`/config` en Claude Code). Es generado: si lo
-editás a mano, `odachi init` lo respalda antes de reescribirlo y `doctor` te avisa
-que dejó de coincidir. Medido en OpenCode 2.1.3: un proyecto con `.git` lista el
-archivo como agente primario; una carpeta sin `.git` no lista ninguno. Las dos
-personas por perfil de la v0.10.0 quedaron como restos: `init` las nombra y no las
-borra, son tuyas.
+El agente nativo tiene dos copias. La del **proyecto** es el mismo bloque en la
+carpeta donde tu cliente ya elige agentes: `.opencode/agents/odachi.md` (Tab en
+OpenCode) y `.claude/output-styles/odachi.md` (`/config` en Claude Code). Es
+generado: si lo editás a mano, `odachi init` lo respalda antes de reescribirlo y
+`doctor` te avisa que dejó de coincidir. Medido en OpenCode 2.1.3: un proyecto con
+`.git` lista el archivo como agente primario; una carpeta sin `.git` no lista
+ninguno.
+
+La copia del **home** es la puerta: `~/.config/opencode/agents/odachi.md` y
+`~/.claude/output-styles/odachi.md`. Aparece en cualquier carpeta, no solo en la
+que corrió `init`. Si la carpeta tiene el bloque de `odachi`, lo lee y adopta su
+voz; si no, carga la skill de arranque y guía para empezar un proyecto. Es corta a
+propósito: no repite las reglas, solo dice dónde están. Las dos personas por
+perfil de la v0.10.0 quedaron como restos: `init` las nombra y no las borra, son
+tuyas.
 
 ## El review: cuatro lentes, sin ceremonia
 
