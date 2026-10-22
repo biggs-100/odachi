@@ -15,20 +15,24 @@ import (
 // runPack parses the flags and wires the three pieces: the skills embedded in
 // the binary, the Files adapter and the Home adapter. `pack` takes the project
 // directory because a project-scoped agent — opencode — reads its skills from
-// inside the project; a home-scoped one still resolves against the home, and the
-// project's `skills/` and `SKILLS.md` are never touched (those belong to
-// `odachi skills`).
+// inside the project, because a relative --dest is resolved against it, and
+// because a home-scoped agent still resolves against the home; the project's
+// `skills/` and `SKILLS.md` are never touched (those belong to `odachi skills`).
 func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("odachi pack", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
 	var (
 		agents string
+		scope  string
+		dest   string
 		dryRun bool
 		asJSON bool
 	)
 
-	flags.StringVar(&agents, "agents", "", "solo estos agentes, separados por coma (default: los detectados)")
+	flags.StringVar(&agents, "agents", "", "solo estos agentes, separados por coma (default: los detectados; standard = la carpeta que leen todos los clientes)")
+	flags.StringVar(&scope, "scope", "", "project | home: el mismo agente, en la otra raíz (default: el de la tabla)")
+	flags.StringVar(&dest, "dest", "", "instala todo en esta carpeta: absoluta, o relativa al proyecto")
 	flags.BoolVar(&dryRun, "dry-run", false, "qué haría, sin escribir nada")
 	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
 
@@ -56,13 +60,14 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 		payload = append(payload, pack.Skill{Name: s.Name, Content: s.Content})
 	}
 
-	return reportPack(pack.Run(pack.Options{Agents: agents, DryRun: dryRun, Dir: dir, Skills: payload}, osFiles{}, osHome{}), asJSON, stdout, stderr)
+	return reportPack(pack.Run(pack.Options{Agents: agents, Scope: scope, Dest: dest, DryRun: dryRun, Dir: dir, Skills: payload}, osFiles{}, osHome{}), asJSON, stdout, stderr)
 }
 
-// packAgent is one row of the machine report: the same numbers the summary line
-// a human reads is built from.
-type packAgent struct {
-	Name      string   `json:"name"`
+// packDest is one row of the machine report: the same numbers the summary line a
+// human reads is built from. Agents is a list because --dest can put several
+// named agents into one destination, and the destination is reported once.
+type packDest struct {
+	Agents    []string `json:"agents"`
 	Dest      string   `json:"dest"`
 	Scope     string   `json:"scope"`
 	Installed int      `json:"installed"`
@@ -73,26 +78,30 @@ type packAgent struct {
 	Files     []string `json:"files"`
 }
 
-// reportPack prints one line per action and one summary line per agent. On a
-// blocked run every line goes to stderr, because each of them is a file a human
+// reportPack prints one line per action and one summary line per destination. On
+// a blocked run every line goes to stderr, because each of them is a file a human
 // has to look at.
 func reportPack(result pack.Result, asJSON bool, stdout, stderr io.Writer) int {
 	if asJSON {
-		agents := make([]packAgent, 0, len(result.Agents))
-		for _, a := range result.Agents {
-			files := a.Files
+		dests := make([]packDest, 0, len(result.Dests))
+		for _, d := range result.Dests {
+			files := d.Files
 			if files == nil {
 				files = []string{}
 			}
-			agents = append(agents, packAgent{
-				Name:      a.Name,
-				Dest:      a.Dest,
-				Scope:     a.Scope,
-				Installed: a.Installed,
-				BackedUp:  a.BackedUp,
-				Unchanged: a.Unchanged,
-				Foreign:   a.Foreign,
-				Failed:    a.Failed,
+			agents := d.Names
+			if agents == nil {
+				agents = []string{}
+			}
+			dests = append(dests, packDest{
+				Agents:    agents,
+				Dest:      d.Dest,
+				Scope:     d.Scope,
+				Installed: d.Installed,
+				BackedUp:  d.BackedUp,
+				Unchanged: d.Unchanged,
+				Foreign:   d.Foreign,
+				Failed:    d.Failed,
 				Files:     files,
 			})
 		}
@@ -102,19 +111,19 @@ func reportPack(result pack.Result, asJSON bool, stdout, stderr io.Writer) int {
 			files = []string{}
 		}
 		payload := struct {
-			Code    int         `json:"code"`
-			Message string      `json:"message"`
-			DryRun  bool        `json:"dry_run"`
-			Lines   []string    `json:"lines,omitempty"`
-			Files   []string    `json:"files"`
-			Agents  []packAgent `json:"agents"`
+			Code    int        `json:"code"`
+			Message string     `json:"message"`
+			DryRun  bool       `json:"dry_run"`
+			Lines   []string   `json:"lines,omitempty"`
+			Files   []string   `json:"files"`
+			Dests   []packDest `json:"dests"`
 		}{
 			Code:    result.Code,
 			Message: result.Message,
 			DryRun:  result.DryRun,
 			Lines:   result.Lines,
 			Files:   files,
-			Agents:  agents,
+			Dests:   dests,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {

@@ -455,8 +455,8 @@ func TestDetectsOpenCodeInTheProject(t *testing.T) {
 	if result.Code != pack.CodeOK {
 		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
 	}
-	if len(result.Agents) != 1 || result.Agents[0].Name != "opencode" {
-		t.Fatalf("agents = %+v, want only opencode", result.Agents)
+	if len(result.Dests) != 1 || !slices.Equal(result.Dests[0].Names, []string{"opencode"}) {
+		t.Fatalf("dests = %+v, want only opencode", result.Dests)
 	}
 	if !slices.Contains(result.Lines, "opencode · 5 instaladas · ./.opencode/skills") {
 		t.Errorf("the detected agent has no summary, lines: %v", result.Lines)
@@ -572,8 +572,8 @@ func TestDetectsInstalledAgents(t *testing.T) {
 	if result.Code != pack.CodeOK {
 		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
 	}
-	if len(result.Agents) != 1 || result.Agents[0].Name != "codex" {
-		t.Fatalf("agents = %+v, want only codex", result.Agents)
+	if len(result.Dests) != 1 || !slices.Equal(result.Dests[0].Names, []string{"codex"}) {
+		t.Fatalf("dests = %+v, want only codex", result.Dests)
 	}
 	for _, path := range files.writes {
 		if !strings.HasPrefix(path, dest(root, "codex")) {
@@ -635,8 +635,8 @@ func TestEverySupportedAgentResolvesItsOwnDestination(t *testing.T) {
 	if result.Code != pack.CodeOK {
 		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
 	}
-	if len(result.Agents) != len(agent.Supported()) {
-		t.Fatalf("served %d agents, want %d: %+v", len(result.Agents), len(agent.Supported()), result.Agents)
+	if len(result.Dests) != len(agent.Supported()) {
+		t.Fatalf("served %d destinations, want %d: %+v", len(result.Dests), len(agent.Supported()), result.Dests)
 	}
 	for _, a := range agent.Supported() {
 		if !slices.Contains(result.Lines, a.Name+" · 5 instaladas · "+a.Display()) {
@@ -684,5 +684,314 @@ func TestUnresolvableHomeIsBlocked(t *testing.T) {
 	}
 	if !strings.Contains(result.Message, "home") {
 		t.Errorf("the message does not say what failed: %q", result.Message)
+	}
+}
+
+// scopedTarget is one installed SKILL.md once --scope has been applied: the
+// root the override names, joined with the agent's destination under it.
+func scopedTarget(t *testing.T, root, name string, scope agent.Scope, skill string) string {
+	t.Helper()
+	a, err := agent.Resolve(name)
+	if err != nil {
+		t.Fatalf("Resolve(%q): %v", name, err)
+	}
+	return filepath.Join(root, filepath.FromSlash(a.In(scope).Dest), skill, "SKILL.md")
+}
+
+// TestScopePutsTheSameAgentInTheOtherRoot: `--scope project` installs a home
+// agent inside the project and never touches the home; `--scope home` installs
+// the project agent in the home, at OpenCode's documented global config dir.
+func TestScopePutsTheSameAgentInTheOtherRoot(t *testing.T) {
+	homeRoot, project := home(), projectDir()
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: homeRoot}, pack.Options{Agents: "claude,opencode", Scope: "project"})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	for _, name := range []string{"claude", "opencode"} {
+		for _, skill := range bundled() {
+			if _, ok := files.content(scopedTarget(t, project, name, agent.ScopeProject, skill.Name)); !ok {
+				t.Errorf("%s: %s was not installed in the project", name, skill.Name)
+			}
+		}
+	}
+	for _, path := range append(append([]string{}, files.writes...), files.backups...) {
+		if strings.HasPrefix(path, homeRoot) {
+			t.Errorf("--scope project touched the home: %s", path)
+		}
+	}
+	for _, want := range []string{
+		"claude · 5 instaladas · ./.claude/skills",
+		"opencode · 5 instaladas · ./.opencode/skills",
+	} {
+		if !slices.Contains(result.Lines, want) {
+			t.Errorf("missing summary %q, lines: %v", want, result.Lines)
+		}
+	}
+
+	// The other root: OpenCode's home destination is its global config dir.
+	homeFiles := newFakeFiles(nil)
+	homeResult := run(homeFiles, fakeHome{dir: homeRoot}, pack.Options{Agents: "opencode", Scope: "home"})
+	if homeResult.Code != pack.CodeOK {
+		t.Fatalf("home run code = %d, want 0 (message %q)", homeResult.Code, homeResult.Message)
+	}
+	for _, skill := range bundled() {
+		if _, ok := homeFiles.content(scopedTarget(t, homeRoot, "opencode", agent.ScopeHome, skill.Name)); !ok {
+			t.Errorf("opencode: %s was not installed in the home", skill.Name)
+		}
+	}
+	if !slices.Contains(homeResult.Lines, "opencode · 5 instaladas · ~/.config/opencode/skills") {
+		t.Errorf("the home summary does not show the global config dir, lines: %v", homeResult.Lines)
+	}
+	for _, path := range append(append([]string{}, homeFiles.writes...), homeFiles.backups...) {
+		if strings.HasPrefix(path, project) {
+			t.Errorf("--scope home touched the project: %s", path)
+		}
+	}
+}
+
+// TestDestServesAClientTheTableDoesNotKnow: --dest is the escape hatch that does
+// not depend on odachi predicting anything. The name is a label, the folder is
+// the human's, and neither the table nor the home enters the picture.
+func TestDestServesAClientTheTableDoesNotKnow(t *testing.T) {
+	project := projectDir()
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{err: errors.New("no hay home")}, pack.Options{Agents: "inventado,claude", Dest: "./skills-x"})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	for _, skill := range bundled() {
+		got, ok := files.content(filepath.Join(project, "skills-x", skill.Name, "SKILL.md"))
+		if !ok {
+			t.Errorf("%s was not installed in --dest", skill.Name)
+			continue
+		}
+		if got != string(skill.Content) {
+			t.Errorf("%s content = %q, want %q", skill.Name, got, skill.Content)
+		}
+	}
+	// One copy, not one per agent: both names share the folder.
+	if len(files.writes) != len(bundled()) {
+		t.Errorf("writes = %d, want %d: %v", len(files.writes), len(bundled()), files.writes)
+	}
+	// One summary per destination, naming every agent that landed there.
+	if !slices.Contains(result.Lines, "inventado, claude · 5 instaladas · ./skills-x") {
+		t.Errorf("the shared destination has no summary, lines: %v", result.Lines)
+	}
+
+	// The write rule does not change: an identical second run writes nothing.
+	files.writes, files.backups, files.events = nil, nil, nil
+	second := run(files, fakeHome{err: errors.New("no hay home")}, pack.Options{Agents: "inventado,claude", Dest: "./skills-x"})
+	if second.Code != pack.CodeOK {
+		t.Fatalf("second run code = %d, want 0 (message %q)", second.Code, second.Message)
+	}
+	if len(files.writes) != 0 || len(files.backups) != 0 {
+		t.Errorf("the second run wrote %v and backed up %v, want nothing", files.writes, files.backups)
+	}
+	if !slices.Contains(second.Lines, "inventado, claude · 5 sin cambios · ./skills-x") {
+		t.Errorf("the second run does not report sin cambios, lines: %v", second.Lines)
+	}
+}
+
+// TestDestAbsoluteIsUsedAsGiven: an absolute path is the path, not a path
+// relative to the project, and the summary shows it as the human typed it.
+func TestDestAbsoluteIsUsedAsGiven(t *testing.T) {
+	// An absolute path for this platform: a temp directory the test owns. The
+	// fake Files never touches the disk, so nothing is written outside it.
+	outside := filepath.Join(t.TempDir(), "mi-cliente")
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "claude", Dest: outside})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	for _, skill := range bundled() {
+		if _, ok := files.content(filepath.Join(outside, skill.Name, "SKILL.md")); !ok {
+			t.Errorf("%s was not installed in the absolute --dest", skill.Name)
+		}
+	}
+	label := filepath.ToSlash(filepath.Clean(outside))
+	if !slices.Contains(result.Lines, "claude · 5 instaladas · "+label) {
+		t.Errorf("the summary does not show %q, lines: %v", label, result.Lines)
+	}
+}
+
+// TestDestAndScopeAreRefusedTogether: two flags that both say where, refused
+// with a message that says which one wins where.
+func TestDestAndScopeAreRefusedTogether(t *testing.T) {
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "claude", Dest: "./skills-x", Scope: "home"})
+
+	if result.Code != pack.CodeBlocked {
+		t.Fatalf("code = %d, want %d", result.Code, pack.CodeBlocked)
+	}
+	for _, want := range []string{"--dest", "--scope", "elegí uno"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the refusal does not name %q: %q", want, result.Message)
+		}
+	}
+	if len(files.writes) != 0 || len(files.backups) != 0 {
+		t.Errorf("a refused combination wrote: %v %v", files.writes, files.backups)
+	}
+}
+
+// TestDestAndScopeNeedNamedAgents: both flags speak about the agents the human
+// named, so without --agents they refuse and name the command that unblocks it.
+func TestDestAndScopeNeedNamedAgents(t *testing.T) {
+	cases := map[string]pack.Options{
+		"--dest":  {Dest: "./skills-x"},
+		"--scope": {Scope: "home"},
+	}
+	for name, opts := range cases {
+		t.Run(name, func(t *testing.T) {
+			files := newFakeFiles(nil)
+			result := run(files, fakeHome{dir: home()}, opts)
+
+			if result.Code != pack.CodeBlocked {
+				t.Fatalf("code = %d, want %d (message %q)", result.Code, pack.CodeBlocked, result.Message)
+			}
+			if !strings.Contains(result.Message, "--agents") || !strings.Contains(result.Message, name) {
+				t.Errorf("the refusal names neither the flag nor --agents: %q", result.Message)
+			}
+			if len(files.writes) != 0 {
+				t.Errorf("wrote with no named agent: %v", files.writes)
+			}
+		})
+	}
+}
+
+// TestInvalidScopeIsRefused: the flag is read before anything is written, and a
+// typo names the two values that exist.
+func TestInvalidScopeIsRefused(t *testing.T) {
+	files := newFakeFiles(nil)
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "claude", Scope: "cualquier-cosa"})
+
+	if result.Code != pack.CodeBlocked {
+		t.Fatalf("code = %d, want %d", result.Code, pack.CodeBlocked)
+	}
+	for _, want := range []string{"--scope", "project", "home"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the refusal does not name %q: %q", want, result.Message)
+		}
+	}
+	if len(files.writes) != 0 {
+		t.Errorf("an invalid scope wrote: %v", files.writes)
+	}
+}
+
+// TestStandardInstallsTheCrossClientLocation: one copy in a location every
+// client can read, in either root, without a single marker on disk.
+func TestStandardInstallsTheCrossClientLocation(t *testing.T) {
+	homeRoot, project := home(), projectDir()
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: homeRoot}, pack.Options{Agents: "standard"})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	for _, skill := range bundled() {
+		if _, ok := files.content(filepath.Join(project, ".agents", "skills", skill.Name, "SKILL.md")); !ok {
+			t.Errorf("%s was not installed in ./.agents/skills", skill.Name)
+		}
+	}
+	for _, path := range append(append([]string{}, files.writes...), files.backups...) {
+		if strings.HasPrefix(path, homeRoot) {
+			t.Errorf("the project copy touched the home: %s", path)
+		}
+	}
+	if !slices.Contains(result.Lines, "standard · 5 instaladas · ./.agents/skills") {
+		t.Errorf("the summary does not show the cross-client path, lines: %v", result.Lines)
+	}
+
+	homeFiles := newFakeFiles(nil)
+	homeResult := run(homeFiles, fakeHome{dir: homeRoot}, pack.Options{Agents: "standard", Scope: "home"})
+	if homeResult.Code != pack.CodeOK {
+		t.Fatalf("home run code = %d, want 0 (message %q)", homeResult.Code, homeResult.Message)
+	}
+	for _, skill := range bundled() {
+		if _, ok := homeFiles.content(filepath.Join(homeRoot, ".agents", "skills", skill.Name, "SKILL.md")); !ok {
+			t.Errorf("%s was not installed in ~/.agents/skills", skill.Name)
+		}
+	}
+	if !slices.Contains(homeResult.Lines, "standard · 5 instaladas · ~/.agents/skills") {
+		t.Errorf("the home summary is wrong, lines: %v", homeResult.Lines)
+	}
+	for _, path := range append(append([]string{}, homeFiles.writes...), homeFiles.backups...) {
+		if strings.HasPrefix(path, project) {
+			t.Errorf("the home copy touched the project: %s", path)
+		}
+	}
+}
+
+// TestStandardTravelsWithARealAgent: the portable copy and a named client in the
+// same run, each to its own destination, one summary each.
+func TestStandardTravelsWithARealAgent(t *testing.T) {
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "standard,opencode", Scope: "project"})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if len(files.writes) != 2*len(bundled()) {
+		t.Errorf("writes = %d, want %d", len(files.writes), 2*len(bundled()))
+	}
+	for _, want := range []string{
+		"standard · 5 instaladas · ./.agents/skills",
+		"opencode · 5 instaladas · ./.opencode/skills",
+	} {
+		if !slices.Contains(result.Lines, want) {
+			t.Errorf("missing summary %q, lines: %v", want, result.Lines)
+		}
+	}
+}
+
+// TestDetectionIsUnchangedAndNeverInventsStandard: `.agents/` on disk is not a
+// signal, because `standard` names a location and not an installed program.
+func TestDetectionIsUnchangedAndNeverInventsStandard(t *testing.T) {
+	project := projectDir()
+	files := newFakeFiles(map[string]string{
+		filepath.Join(project, ".agents", "skills", "mia", "SKILL.md"): "mi skill\n",
+	})
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if len(result.Dests) != 0 {
+		t.Errorf("detection served %+v, want nobody", result.Dests)
+	}
+	if len(files.writes) != 0 {
+		t.Errorf("detection wrote %v", files.writes)
+	}
+	if !strings.Contains(result.Message, "--agents") {
+		t.Errorf("the message does not name the flag: %q", result.Message)
+	}
+}
+
+// TestUnknownAgentRefusalNamesTheWayOut: still refused, never guessed — and the
+// message now carries the two escape hatches, so the future is not a dead end.
+func TestUnknownAgentRefusalNamesTheWayOut(t *testing.T) {
+	files := newFakeFiles(nil)
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "inventado"})
+
+	if result.Code != pack.CodeBlocked {
+		t.Fatalf("code = %d, want %d", result.Code, pack.CodeBlocked)
+	}
+	for _, want := range []string{"agente desconocido: inventado", "--agents standard", "--dest"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the refusal does not say %q: %q", want, result.Message)
+		}
+	}
+	if len(files.writes) != 0 {
+		t.Errorf("a refused agent wrote: %v", files.writes)
 	}
 }

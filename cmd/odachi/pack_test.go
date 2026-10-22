@@ -401,12 +401,13 @@ func TestPackJSON(t *testing.T) {
 		Message string `json:"message"`
 		DryRun  bool   `json:"dry_run"`
 		Files   []string
-		Agents  []struct {
-			Name      string `json:"name"`
-			Dest      string `json:"dest"`
-			Installed int    `json:"installed"`
-			Failed    int    `json:"failed"`
-		} `json:"agents"`
+		Dests   []struct {
+			Agents    []string `json:"agents"`
+			Dest      string   `json:"dest"`
+			Scope     string   `json:"scope"`
+			Installed int      `json:"installed"`
+			Failed    int      `json:"failed"`
+		} `json:"dests"`
 	}
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
 		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
@@ -417,11 +418,14 @@ func TestPackJSON(t *testing.T) {
 	if payload.DryRun {
 		t.Errorf("JSON says dry_run for a real run")
 	}
-	if len(payload.Agents) != 1 || payload.Agents[0].Name != "claude" {
-		t.Fatalf("JSON agents = %+v, want one claude", payload.Agents)
+	if len(payload.Dests) != 1 || len(payload.Dests[0].Agents) != 1 || payload.Dests[0].Agents[0] != "claude" {
+		t.Fatalf("JSON dests = %+v, want one claude", payload.Dests)
 	}
-	if payload.Agents[0].Installed != len(bundled) {
-		t.Errorf("JSON installed = %d, want %d", payload.Agents[0].Installed, len(bundled))
+	if payload.Dests[0].Scope != string(agent.ScopeHome) {
+		t.Errorf("JSON scope = %q, want %q", payload.Dests[0].Scope, agent.ScopeHome)
+	}
+	if payload.Dests[0].Installed != len(bundled) {
+		t.Errorf("JSON installed = %d, want %d", payload.Dests[0].Installed, len(bundled))
 	}
 	if len(payload.Files) != len(bundled) {
 		t.Errorf("JSON files = %d, want %d: %v", len(payload.Files), len(bundled), payload.Files)
@@ -506,15 +510,209 @@ func TestUnknownCommandListsPack(t *testing.T) {
 	}
 }
 
-// TestPackUsage: `pack -h` exists and names its three flags.
+// TestPackUsage: `pack -h` exists and names its flags, including the two escape
+// hatches and the portable pseudo-agent.
 func TestPackUsage(t *testing.T) {
 	code, out, errOut := runDir(t, t.TempDir(), []string{"pack", "-h"}, "")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stderr %q)", code, errOut)
 	}
-	for _, want := range []string{"odachi pack", "--agents", "--dry-run", "--json"} {
+	for _, want := range []string{"odachi pack", "--agents", "--dry-run", "--json", "--scope", "--dest", "standard"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("usage does not mention %q:\n%s", want, out)
 		}
+	}
+}
+
+// scopedAgentFile is where one agent reads one skill once --scope has been
+// applied: the root the override names, joined with its destination under it.
+func scopedAgentFile(t *testing.T, root, agentName string, scope agent.Scope, skill string) string {
+	t.Helper()
+	a, err := agent.Resolve(agentName)
+	if err != nil {
+		t.Fatalf("Resolve(%q): %v", agentName, err)
+	}
+	return filepath.Join(root, filepath.FromSlash(a.In(scope).Dest), skill, "SKILL.md")
+}
+
+// TestPackScopeHomeServesOpenCodeFromTheHome: the case the human asked for —
+// OpenCode reading skills from every project without running pack per project.
+// The destination is OpenCode's documented global config dir.
+func TestPackScopeHomeServesOpenCodeFromTheHome(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+
+	code, out, errOut := runDir(t, project, []string{"pack", "--agents", "opencode", "--scope", "home"}, "")
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+	for _, name := range bundled {
+		got, err := os.ReadFile(scopedAgentFile(t, home, "opencode", agent.ScopeHome, name))
+		if err != nil {
+			t.Errorf("%s was not installed in ~/.config/opencode/skills: %v", name, err)
+			continue
+		}
+		if string(got) != string(repoSkill(t, name)) {
+			t.Errorf("%s differs from skills/%s/SKILL.md", name, name)
+		}
+	}
+	if files := walkNames(t, project); len(files) != 0 {
+		t.Errorf("--scope home wrote into the project: %v", files)
+	}
+	if !strings.Contains(out, fmt.Sprintf("opencode · %d instaladas · ~/.config/opencode/skills", len(bundled))) {
+		t.Errorf("stdout lacks the home summary line:\n%s", out)
+	}
+}
+
+// TestPackStandardInstallsTheCrossClientLocation: the portable default, in both
+// roots, and nothing written into the other one.
+func TestPackStandardInstallsTheCrossClientLocation(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+
+	code, out, errOut := runDir(t, project, []string{"pack", "--agents", "standard"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+	for _, name := range bundled {
+		if _, err := os.Stat(filepath.Join(project, ".agents", "skills", name, "SKILL.md")); err != nil {
+			t.Errorf("%s was not installed in ./.agents/skills: %v", name, err)
+		}
+	}
+	if files := walkNames(t, home); len(files) != 0 {
+		t.Errorf("the project copy touched the home: %v", files)
+	}
+	if !strings.Contains(out, fmt.Sprintf("standard · %d instaladas · ./.agents/skills", len(bundled))) {
+		t.Errorf("stdout lacks the cross-client summary:\n%s", out)
+	}
+
+	home2, project2 := t.TempDir(), t.TempDir()
+	withHome(t, home2)
+	code, out, errOut = runDir(t, project2, []string{"pack", "--agents", "standard", "--scope", "home"}, "")
+	if code != 0 {
+		t.Fatalf("home run code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+	for _, name := range bundled {
+		if _, err := os.Stat(filepath.Join(home2, ".agents", "skills", name, "SKILL.md")); err != nil {
+			t.Errorf("%s was not installed in ~/.agents/skills: %v", name, err)
+		}
+	}
+	if files := walkNames(t, project2); len(files) != 0 {
+		t.Errorf("the home copy touched the project: %v", files)
+	}
+	if !strings.Contains(out, fmt.Sprintf("standard · %d instaladas · ~/.agents/skills", len(bundled))) {
+		t.Errorf("stdout lacks the home cross-client summary:\n%s", out)
+	}
+}
+
+// TestPackDestServesAClientTheTableDoesNotKnow: the refusal of an unknown name
+// names the way out, and the way out works — the files land in the folder the
+// human typed, and a second identical run writes nothing.
+func TestPackDestServesAClientTheTableDoesNotKnow(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+
+	code, out, errOut := runDir(t, project, []string{"pack", "--agents", "inventado"}, "")
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stdout %q)", code, out)
+	}
+	for _, want := range []string{"agente desconocido: inventado", "--agents standard", "--dest"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the refusal does not say %q:\n%s", want, errOut)
+		}
+	}
+	if files := walkNames(t, home); len(files) != 0 {
+		t.Errorf("the refusal wrote into the home: %v", files)
+	}
+
+	code, out, errOut = runDir(t, project, []string{"pack", "--agents", "inventado", "--dest", "./skills-x"}, "")
+	if code != 0 {
+		t.Fatalf("escape-hatch run code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+	for _, name := range bundled {
+		got, err := os.ReadFile(filepath.Join(project, "skills-x", name, "SKILL.md"))
+		if err != nil {
+			t.Errorf("%s did not land in --dest: %v", name, err)
+			continue
+		}
+		if string(got) != string(repoSkill(t, name)) {
+			t.Errorf("%s differs from skills/%s/SKILL.md", name, name)
+		}
+	}
+	if !strings.Contains(out, fmt.Sprintf("inventado · %d instaladas · ./skills-x", len(bundled))) {
+		t.Errorf("stdout lacks the --dest summary:\n%s", out)
+	}
+
+	before := walkNames(t, project)
+	code, out, errOut = runDir(t, project, []string{"pack", "--agents", "inventado", "--dest", "./skills-x"}, "")
+	if code != 0 {
+		t.Fatalf("second run code = %d, want 0 (stderr %q)", code, errOut)
+	}
+	if !strings.Contains(out, fmt.Sprintf("inventado · %d sin cambios · ./skills-x", len(bundled))) {
+		t.Errorf("the second run does not report sin cambios:\n%s", out)
+	}
+	after := walkNames(t, project)
+	if len(after) != len(before) {
+		t.Errorf("the second run changed the tree: before %d files, after %d", len(before), len(after))
+	}
+	for path := range after {
+		if strings.Contains(path, ".bak-") {
+			t.Errorf("an identical run left a backup: %s", path)
+		}
+	}
+}
+
+// TestPackRefusesDestAndScopeTogether: two flags that both say where are a
+// contradiction, and nothing is written while it is unresolved.
+func TestPackRefusesDestAndScopeTogether(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+
+	code, out, errOut := runDir(t, project, []string{"pack", "--agents", "claude", "--dest", "./skills-x", "--scope", "home"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stdout %q)", code, out)
+	}
+	for _, want := range []string{"--dest", "--scope", "elegí uno"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("stderr does not say %q:\n%s", want, errOut)
+		}
+	}
+	if files := walkNames(t, home); len(files) != 0 {
+		t.Errorf("a refused combination wrote into the home: %v", files)
+	}
+	if files := walkNames(t, project); len(files) != 0 {
+		t.Errorf("a refused combination wrote into the project: %v", files)
+	}
+}
+
+// TestPackScopeNeedsNamedAgents: --scope and --dest speak about the agents the
+// human named, so on their own they refuse and name --agents.
+func TestPackScopeNeedsNamedAgents(t *testing.T) {
+	for _, flag := range [][]string{{"--scope", "home"}, {"--dest", "./skills-x"}} {
+		t.Run(flag[0], func(t *testing.T) {
+			home := t.TempDir()
+			withHome(t, home)
+			project := t.TempDir()
+
+			code, out, errOut := runDir(t, project, append([]string{"pack"}, flag...), "")
+
+			if code != 1 {
+				t.Fatalf("code = %d, want 1 (stdout %q)", code, out)
+			}
+			for _, want := range []string{flag[0], "--agents"} {
+				if !strings.Contains(errOut, want) {
+					t.Errorf("stderr does not say %q:\n%s", want, errOut)
+				}
+			}
+			if files := walkNames(t, project); len(files) != 0 {
+				t.Errorf("wrote without a named agent: %v", files)
+			}
+		})
 	}
 }

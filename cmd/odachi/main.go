@@ -833,7 +833,7 @@ uso:
   odachi init [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
-  odachi pack [--agents claude,codex] [--dry-run]
+  odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <carpeta>] [--dry-run]
   odachi --version
   odachi version
 
@@ -871,7 +871,10 @@ flags de skills:
   --json          salida para máquinas
 
 flags de pack:
-  --agents s      solo estos agentes, separados por coma (default: los detectados)
+  --agents s      solo estos agentes, separados por coma (default: los detectados);
+                  standard es la carpeta que leen todos los clientes (.agents/skills)
+  --scope s       project | home: el mismo agente, en la otra raíz (default: el de la tabla)
+  --dest path     instala todo en esta carpeta: absoluta, o relativa al proyecto
   --dry-run       qué haría, sin escribir nada
   --json          salida para máquinas
 
@@ -923,6 +926,10 @@ después de start:
   odachi skills --write                         regenera SKILLS.md desde los frontmatter
   odachi skill new <slug>                       crea skills/<slug>/SKILL.md y actualiza el registro
   odachi pack --agents claude,codex             instala las skills incluidas en cada agente
+  odachi pack --agents standard                 en ./.agents/skills, la carpeta que leen todos los clientes
+  odachi pack --agents standard --scope home    en ~/.agents/skills: una copia para todos los proyectos
+  odachi pack --agents opencode --scope home    el agente que es de proyecto, instalado en tu home
+  odachi pack --agents mi-cliente --dest ./skills-x  un cliente con su propia ruta
   odachi pack --dry-run                         qué copiaría, sin escribir nada
 
 códigos de salida: 0 artefactos escritos · 1 bloqueado · 2 falta una respuesta humana
