@@ -275,6 +275,11 @@ func (gitRepo) AddedDeps(root, base string) ([]string, error) {
 
 func (gitRepo) Diff(root, base string) (string, error) { return gitx.Diff(root, base) }
 
+// Ignored is how both verbs ask whether the project already keeps its own
+// evidence out of the tree: `odachi init` writes that rule into .gitignore, and
+// the lazy per-directory file is only the fallback for a project that never ran it.
+func (gitRepo) Ignored(root, path string) (bool, error) { return gitx.Ignored(root, path) }
+
 // osShell is the Shell adapter for `odachi check` and `odachi review`: the
 // platform shell lives in internal/adapters/shellcmd, one file per platform, and
 // refuses where there is no known shell.
