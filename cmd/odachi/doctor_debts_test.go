@@ -182,7 +182,7 @@ func TestDoctorReportsABlockWithoutTheVoiceSection(t *testing.T) {
 	}
 }
 
-// Las personas por cliente de v0.10.0 ya no se leen. Son archivos del humano, no
+// Las personas por perfil de v0.10.0 ya no son el agente de esta versión. Son archivos del humano, no
 // un defecto: el chequeo lo dice en la misma línea verde, nombra las carpetas, y
 // no falla por eso.
 func TestDoctorSaysTheV0100PersonaFilesAreLeftovers(t *testing.T) {
@@ -197,7 +197,7 @@ func TestDoctorSaysTheV0100PersonaFilesAreLeftovers(t *testing.T) {
 	if !strings.HasPrefix(line, "ok 11") {
 		t.Fatalf("el chequeo 11 tiene que ser ok con leftovers: %s", line)
 	}
-	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlos"} {
+	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlas"} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
 		}

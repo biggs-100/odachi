@@ -48,10 +48,10 @@ const (
 	// CheckIgnored asks whether the review store and proof/ are ignored: without
 	// that, every review would invalidate the proof and the other way round.
 	CheckIgnored
-	// CheckVoice asks the question that replaced the per-client persona files:
-	// does the last section of the AGENTS.md block talk the way the profile in
-	// .odachi/profile.toml says it should? The binary writes that section, so the
-	// two halves disagreeing is a project that prints one register and talks in
+	// CheckVoice asks whether the last section of the AGENTS.md block talks the
+	// way the profile in .odachi/profile.toml says it should, and whether the
+	// native agent still mirrors that block. The binary writes both, so the
+	// halves disagreeing is a project that prints one register and talks in
 	// another. It is appended after the ten Contract XV named, so no existing
 	// check changes its number.
 	CheckVoice

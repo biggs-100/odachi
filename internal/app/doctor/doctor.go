@@ -477,11 +477,10 @@ func (r *runner) installedSkills() (string, error) {
 // contradict it. Saying which voice is in force is still information.
 const noProfileFile = "sin " + profileFile + " no hay perfil que comparar"
 
-// voice answers the question the per-client persona files used to answer with a
-// directory listing: does the block talk the way the profile says it should? The
-// binary writes that section, so the two halves disagreeing is a project that
-// prints one register and talks in another, and nobody notices until the agent
-// sounds wrong.
+// voice answers the question a directory listing cannot: does the block talk the
+// way the profile says it should, and does the native agent still mirror it? The
+// binary writes both, so the halves disagreeing is a project that prints one
+// register and talks in another, and nobody notices until the agent sounds wrong.
 //
 // No profile file is not a problem: there is no claim to compare against, and the
 // block carries the voice `odachi init` wrote. The persona files v0.10.0 left
@@ -495,12 +494,12 @@ func (r *runner) voice() domaindoctor.Check {
 	if !exists {
 		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
 			"no hay "+agentsFile+": la voz no está en el proyecto",
-			"corré odachi init"))
+			"corré odachi init"), "")
 	}
 	if !rules.HasBlock(content) {
 		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
 			agentsFile+" no tiene el bloque de odachi: no hay voz que comparar",
-			"corré odachi init"))
+			"corré odachi init"), content)
 	}
 
 	published, hasVoice := rules.VoiceIn(content)
@@ -510,7 +509,7 @@ func (r *runner) voice() domaindoctor.Check {
 		// The profile is check 7's to report. Here it only means there is
 		// nothing to compare the voice against.
 		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
-			"no comparé la voz: el perfil no resuelve (ver el chequeo 7)"))
+			"no comparé la voz: el perfil no resuelve (ver el chequeo 7)"), content)
 	}
 	if inferred {
 		detail := noProfileFile
@@ -519,53 +518,104 @@ func (r *runner) voice() domaindoctor.Check {
 		} else {
 			detail += " y el bloque no tiene sección de voz"
 		}
-		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice, detail))
+		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice, detail), content)
 	}
 
 	want, err := persona.Voice(name)
 	if err != nil {
 		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
-			"no comparé la voz: "+profileFile+" nombra un perfil sin voz ("+oneLine(err.Error())+")"))
+			"no comparé la voz: "+profileFile+" nombra un perfil sin voz ("+oneLine(err.Error())+")"), content)
 	}
 
 	if !hasVoice {
 		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
 			"el bloque no tiene la sección «"+rules.Section+"» y "+profileFile+" dice "+name+": la voz no está en el bloque",
-			"corré odachi init"))
+			"corré odachi init"), content)
 	}
 
 	if published != strings.TrimSpace(want) {
 		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
 			"la voz del bloque es la de "+named(published)+" y "+profileFile+" dice "+name+
 				": el agente habla distinto de lo que el perfil promete",
-			"corré odachi level --to "+name))
+			"corré odachi level --to "+name), content)
 	}
 
 	return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
-		"la voz del bloque es la de "+name+", la misma que dice "+profileFile))
+		"la voz del bloque es la de "+name+", la misma que dice "+profileFile), content)
 }
 
-// voiceCheck appends the leftovers of v0.10.0 to a line about the voice. They are
-// never a problem and never change the status: nothing reads them, and odachi
-// does not delete files it did not write in this version.
-func (r *runner) voiceCheck(check domaindoctor.Check) domaindoctor.Check {
+// voiceCheck appends the native agent mirror and the leftovers of v0.10.0 to a
+// line about the voice. Neither changes the status: the block is the invariant,
+// the mirror is a convenience, and odachi does not delete files it did not write
+// in this version.
+func (r *runner) voiceCheck(check domaindoctor.Check, content string) domaindoctor.Check {
+	notes := make([]string, 0, 2)
+	if note := r.personaNote(content); note != "" {
+		notes = append(notes, note)
+	}
 	note, err := r.leftovers()
 	if err != nil {
 		return r.unreadable(domaindoctor.CheckVoice, agentsFile, err)
 	}
-	if note == "" {
+	if note != "" {
+		notes = append(notes, note)
+	}
+	if len(notes) == 0 {
 		return check
 	}
-	if check.Detail == "" {
-		check.Detail = note
-		return check
+	detail := strings.Join(notes, "; ")
+	switch {
+	case check.Detail == "":
+		check.Detail = detail
+	default:
+		check.Detail += "; " + detail
 	}
-	check.Detail += "; " + note
 	return check
 }
 
+// personaNote compares the native agent files with the block the human has. A
+// file that is missing or different is the one thing a selector cannot explain:
+// the agent a human picks would read a voice the project no longer promises. It
+// is a note and not a Problem because the block still works without a selector;
+// the fix is the same command that installs the mirror.
+func (r *runner) personaNote(content string) string {
+	body, ok := rules.BodyIn(content)
+	if !ok {
+		return ""
+	}
+
+	missing, stale := []string{}, []string{}
+	for _, file := range persona.Files(body) {
+		current, exists, err := r.read(file.Path)
+		switch {
+		case err != nil:
+			return "no pude leer " + file.Path + ": " + oneLine(err.Error()) + "; corré odachi init"
+		case !exists:
+			missing = append(missing, file.Path)
+		case current != file.Content:
+			stale = append(stale, file.Path)
+		}
+	}
+
+	dirs := make([]string, 0, len(persona.Clients()))
+	for _, client := range persona.Clients() {
+		dirs = append(dirs, client.Dir)
+	}
+
+	switch {
+	case len(missing) > 0:
+		return "el agente nativo no está en " + strings.Join(missing, ", ") + "; corré odachi init (el bloque alcanza, pero no se elige con Tab)"
+	case len(stale) > 0:
+		return "el agente nativo no coincide con el bloque en " + strings.Join(stale, ", ") + "; corré odachi init"
+	default:
+		return "el agente nativo coincide con el bloque en " + strings.Join(dirs, " y ")
+	}
+}
+
 // leftovers names the per-client persona files v0.10.0 wrote, when they are still
-// there: one line for the human to read, or empty when there are none.
+// there: one line for the human to read, or empty when there are none. They still
+// work as a voice, but they no longer mirror the block, so the new agent is the
+// one to pick.
 func (r *runner) leftovers() (string, error) {
 	found := make([]string, 0, len(persona.Deprecated()))
 	for _, file := range persona.Deprecated() {
@@ -581,7 +631,7 @@ func (r *runner) leftovers() (string, error) {
 		return "", nil
 	}
 	return "quedaron de v0.10.0 " + strings.Join(persona.DeprecatedDirs(), " y ") +
-		" (las personas por cliente): ya no se usan, la voz vive en " + agentsFile + "; podés borrarlos", nil
+		" (las personas viejas): el agente de esta versión es " + persona.FileName + "; podés borrarlas", nil
 }
 
 // named is the voice a body belongs to, by name. Text that is neither is text

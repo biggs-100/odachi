@@ -170,6 +170,13 @@ func configured() *fakeFiles {
 	// The block `odachi init` writes, with the voice of the profile in the file:
 	// check 11 compares the two, so a configured project has to carry both.
 	files.put("AGENTS.md", blockOf(persona.Novato))
+	body, err := rules.Body(persona.Novato)
+	if err != nil {
+		panic(err)
+	}
+	for _, file := range persona.Files(body) {
+		files.put(file.Path, file.Content)
+	}
 	files.put("brief.md", briefComplete)
 	files.put(".odachi/profile.toml", "name = \"novato\"\n")
 	files.put("skills/acceptance/SKILL.md", skill.Template("acceptance"))
@@ -628,9 +635,47 @@ func TestLeftoverPersonaFilesAreNotAProblem(t *testing.T) {
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("check 11 must be ok with leftovers: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlos"} {
+	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlas"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the line must say %q, got %q", want, got.Detail)
+		}
+	}
+}
+
+// TestAStaleNativeAgentIsSaidAndNotAFailure: the mirror is generated, so a hand
+// edit is lost work — but the block still works. The line names the file and the
+// command that regenerates it, and the run does not fail.
+func TestAStaleNativeAgentIsSaidAndNotAFailure(t *testing.T) {
+	files := configured().put(".opencode/agents/odachi.md", "editado a mano\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeOK {
+		t.Fatalf("un espejo editado no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"no coincide", ".opencode/agents/odachi.md", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+		}
+	}
+}
+
+// TestAMissingNativeAgentIsSaidAndNotAFailure: a project that never ran the new
+// init still has the block; the selector is what is missing. One note, exit 0.
+func TestAMissingNativeAgentIsSaidAndNotAFailure(t *testing.T) {
+	files := configured()
+	delete(files.files, at(".opencode/agents/odachi.md"))
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeOK {
+		t.Fatalf("un agente ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"no está", ".opencode/agents/odachi.md", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
 		}
 	}
 }
