@@ -188,3 +188,19 @@ func TestInitJSONListsTheFiles(t *testing.T) {
 		t.Errorf("JSON files = %v, want both artifacts", payload.Files)
 	}
 }
+
+// The human does not commit: the agent does. The closing line used to say
+// "commiteá", which assumed the one thing this tool exists to take off their plate.
+func TestInitDoesNotAskTheHumanToCommit(t *testing.T) {
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	_, out, _ := runDir(t, dir, []string{"init"}, "")
+
+	if strings.Contains(out, "commiteá") {
+		t.Fatalf("init asks the human to commit: %q", out)
+	}
+	if !strings.Contains(out, "el agente guarda el avance") {
+		t.Fatalf("init does not say who saves the progress: %q", out)
+	}
+}

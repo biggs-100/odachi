@@ -250,7 +250,9 @@ func (r *runner) result() Result {
 
 	message := "listo: " + humanList(r.changed) + " quedaron al día"
 	lines := append([]string{}, r.lines...)
-	lines = append(lines, "siguiente: revisá "+agentsFile+" y commiteá cuando odachi check --quiet esté en verde")
+	// The human does not commit: the agent does. Saying "commiteá" here assumed the
+	// one thing this tool exists to remove from their plate.
+	lines = append(lines, "siguiente: revisá "+agentsFile+"; cuando odachi check --quiet esté en verde, el agente guarda el avance")
 
 	return Result{Code: CodeOK, Message: message, Lines: lines, Files: r.changed}
 }
