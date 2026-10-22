@@ -88,6 +88,15 @@ type Home interface {
 	Home() (string, error)
 }
 
+// Failure is one file a destination could not write, with the reason the adapter
+// gave. It is kept as fields so a caller that composes its own report — `odachi
+// init` says which half of the job is pending — does not have to parse a line
+// back into a path and a reason.
+type Failure struct {
+	Path   string
+	Reason string
+}
+
 // DestResult is what one destination got. The counts are what the summary line
 // is built from, so the line and the JSON can never disagree. Names is the label
 // a human reads: one agent, or every agent that shares this destination because
@@ -101,8 +110,10 @@ type DestResult struct {
 	Unchanged int
 	Foreign   int
 	Failed    int
-	Lines     []string
-	Files     []string
+	// Failure is the first file this destination could not write, or nil.
+	Failure *Failure
+	Lines   []string
+	Files   []string
 }
 
 // Result is what the CLI prints and exits with. Files carries the display paths
@@ -419,10 +430,15 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 }
 
 // fail records one failed file and keeps going: one unreadable directory must
-// not cost the human the other forty-nine files.
+// not cost the human the other forty-nine files. The first failure is also kept
+// as fields, because it is the one a caller quotes.
 func (r *DestResult) fail(who, label string, err error) {
+	reason := oneLine(err.Error())
 	r.Failed++
-	r.Lines = append(r.Lines, who+" · falló · "+label+": "+oneLine(err.Error()))
+	if r.Failure == nil {
+		r.Failure = &Failure{Path: label, Reason: reason}
+	}
+	r.Lines = append(r.Lines, who+" · falló · "+label+": "+reason)
 }
 
 // summary is the one line Contract VIII fixes: `claude · 5 instaladas ·

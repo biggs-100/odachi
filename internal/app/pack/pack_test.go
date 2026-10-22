@@ -995,3 +995,35 @@ func TestUnknownAgentRefusalNamesTheWayOut(t *testing.T) {
 		t.Errorf("a refused agent wrote: %v", files.writes)
 	}
 }
+
+// TestTheFirstFailedFileKeepsItsPathAndReason: `odachi init` composes its own
+// report from a pack run, so a destination that could not be written has to hand
+// back the file and the reason as fields. Parsing a line back into a path and an
+// error is how the two reports drift apart.
+func TestTheFirstFailedFileKeepsItsPathAndReason(t *testing.T) {
+	root := home()
+	files := newFakeFiles(nil)
+	files.denyWrite = []string{dest(root, "claude")}
+
+	result := run(files, fakeHome{dir: root}, pack.Options{Agents: "claude"})
+
+	if result.Code != pack.CodeBlocked {
+		t.Fatalf("code = %d, want %d", result.Code, pack.CodeBlocked)
+	}
+	if len(result.Dests) != 1 {
+		t.Fatalf("dests = %d, want 1", len(result.Dests))
+	}
+	failure := result.Dests[0].Failure
+	if failure == nil {
+		t.Fatalf("el destino no guardó la falla: %+v", result.Dests[0])
+	}
+	if want := "~/.claude/skills/acceptance/SKILL.md"; failure.Path != want {
+		t.Errorf("Path = %q, want %q", failure.Path, want)
+	}
+	if want := "permiso denegado"; failure.Reason != want {
+		t.Errorf("Reason = %q, want %q", failure.Reason, want)
+	}
+	if result.Dests[0].Failed != len(bundled()) {
+		t.Errorf("Failed = %d, want %d", result.Dests[0].Failed, len(bundled()))
+	}
+}
