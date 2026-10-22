@@ -1,7 +1,9 @@
 // Package init implements `odachi init`: the rules block in AGENTS.md, the
 // marked block in .gitignore that keeps the generated evidence out of the tree,
-// and the pre-commit hook that refuses a commit without a proof for the current
-// tree.
+// the pre-commit hook that refuses a commit without a proof for the current
+// tree, and the skills the agent reads — the curriculum in the project and the
+// bootstrap skill in the human's home, so an agent can learn how to start a
+// project in a folder where nothing exists yet.
 //
 // Every artifact is idempotent. A file that is already right is not rewritten, a
 // file that exists is backed up before the rewrite (except .gitignore, whose
@@ -71,18 +73,20 @@ type Files interface {
 }
 
 // Result is what the CLI prints and exits with. It has the same shape as the
-// other verbs; Next names the command that finishes a blocked run.
+// other verbs; Next names the command that finishes a blocked run, and SkillDests
+// is what the skills half wrote, so `--json` can carry the destinations too.
 type Result struct {
-	Code    int
-	Message string
-	Next    string
-	Lines   []string
-	Files   []string
+	Code       int
+	Message    string
+	Next       string
+	Lines      []string
+	Files      []string
+	SkillDests []SkillDest
 }
 
 // Run performs one `odachi init`.
-func Run(opts Options, files Files) Result {
-	r := &runner{dir: opts.Dir, files: files}
+func Run(opts Options, files Files, skills Skills) Result {
+	r := &runner{dir: opts.Dir, files: files, skills: skills}
 	if r.dir == "" {
 		r.dir = "."
 	}
@@ -113,6 +117,8 @@ func Run(opts Options, files Files) Result {
 		return *problem
 	}
 
+	r.installSkills()
+
 	if opts.PathMissing {
 		r.lines = append(r.lines, pathWarning(opts.Exe)...)
 	}
@@ -137,8 +143,19 @@ func pathWarning(exe string) []string {
 type runner struct {
 	dir     string
 	files   Files
+	skills  Skills
 	changed []string
 	lines   []string
+
+	// The skills half. skillFiles are the display paths this run wrote, kept
+	// apart from changed because the summary names the project artifacts and
+	// not forty-nine files.
+	skillDests   []SkillDest
+	skillLabels  []string
+	skillFiles   []string
+	skillBlocked string
+	skillNext    string
+	skillFatal   bool
 }
 
 // writeAgents writes the rules block, replacing it in place when it is already
@@ -250,20 +267,64 @@ func foreignHook(exe string) Result {
 }
 
 // result reports what changed. A rerun that changed nothing says so instead of
-// claiming work it did not do.
+// claiming work it did not do, skills included.
 func (r *runner) result() Result {
-	if len(r.changed) == 0 {
+	files := append(append([]string{}, r.changed...), r.skillFiles...)
+
+	if len(r.changed) == 0 && len(r.skillFiles) == 0 {
 		message := "sin cambios: " + agentsFile + ", " + ignoreFile + " y el hook " + hookPath + " ya estaban al día"
-		return Result{Code: CodeOK, Message: message, Lines: r.lines}
+		if len(r.skillLabels) > 0 {
+			message += ", y las skills de " + humanList(r.skillLabels) + " también"
+		}
+		return Result{
+			Code:       r.code(),
+			Message:    r.withBlocked(message),
+			Next:       r.skillNext,
+			Lines:      r.lines,
+			SkillDests: r.skillDests,
+		}
 	}
 
 	message := "listo: " + humanList(r.changed) + " quedaron al día"
+	switch {
+	case len(r.changed) == 0:
+		message = "listo: las skills de " + humanList(r.skillLabels) + " quedaron al día"
+	case len(r.skillFiles) > 0:
+		message += ", y las skills también"
+	}
+
 	lines := append([]string{}, r.lines...)
 	// The human does not commit: the agent does. Saying "commiteá" here assumed the
 	// one thing this tool exists to remove from their plate.
 	lines = append(lines, "siguiente: revisá "+agentsFile+"; cuando odachi check --quiet esté en verde, el agente guarda el avance")
 
-	return Result{Code: CodeOK, Message: message, Lines: lines, Files: r.changed}
+	return Result{
+		Code:       r.code(),
+		Message:    r.withBlocked(message),
+		Next:       r.skillNext,
+		Lines:      lines,
+		Files:      files,
+		SkillDests: r.skillDests,
+	}
+}
+
+// code is the exit code of a finished run. A block inside the project is a
+// blocked run: the artifacts are written, but the agent would work without the
+// skills it reads. A block in the home is not, because the project is done.
+func (r *runner) code() int {
+	if r.skillFatal {
+		return CodeBlocked
+	}
+	return CodeOK
+}
+
+// withBlocked adds the pending half to the one-line message, so a caller that
+// reads only `message` still learns the run left something behind.
+func (r *runner) withBlocked(message string) string {
+	if r.skillBlocked == "" {
+		return message
+	}
+	return message + "; " + r.skillBlocked
 }
 
 // blocked is a result the human can act on, with the command that retries it.

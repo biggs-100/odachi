@@ -10,18 +10,22 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/app/ask"
 	"github.com/biggs-100/odachi/internal/app/check"
 	initapp "github.com/biggs-100/odachi/internal/app/init"
 	"github.com/biggs-100/odachi/internal/app/level"
+	"github.com/biggs-100/odachi/internal/app/pack"
 	"github.com/biggs-100/odachi/internal/app/plan"
 	reviewapp "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
+	"github.com/biggs-100/odachi/internal/domain/agent"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
+	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
 // version is the release identifier this binary reports. A plain `go build`
@@ -620,7 +624,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing()}, osFiles{})
+	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing()}, osFiles{}, &initSkills{dir: dir})
 	if created {
 		line := "historial del proyecto: lo creé en esta carpeta (git init); es lo que me deja probar que una prueba corresponde a este estado del código"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -632,6 +636,119 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	return reportInit(result, asJSON, stdout, stderr)
 }
 
+// initSkills is the join between `odachi init` and `odachi pack`. init decides
+// that two destinations get skills — the project's cross-client directory and the
+// human's home, so an agent can learn how to start a project before one exists —
+// and pack owns how a skill is installed: the destination table, the backup
+// before a differing file, the identical bytes skipped.
+//
+// The join lives here, in the CLI, and not in internal/app/init importing
+// internal/app/pack: the CLI is the only layer that already wires pack's payload
+// and its two adapters, and an app that imports another app would inherit its
+// error strings and its destination table for a job that is not its own.
+type initSkills struct {
+	dir string
+}
+
+// Install writes the two halves of the skills job and turns what pack reports
+// into the two lines a human reads.
+func (s initSkills) Install() initapp.SkillReport {
+	curriculum, err := bundledskills.Curriculum()
+	if err != nil {
+		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; volvé a bajar odachi", Next: "odachi init"}
+	}
+	bootstrap, ok := bundledskills.Bootstrap()
+	if !ok {
+		return initapp.SkillReport{
+			Blocked: "este binario no trae la skill " + bundledskills.BootstrapName + ": es una instalación incompleta; volvé a bajar odachi",
+			Next:    "odachi init",
+		}
+	}
+
+	// The project gets the craft, in the cross-client location every client
+	// reads. The home gets the one skill that teaches how to arrive, because
+	// before a project exists the home is the only place a skill can live.
+	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum)}, osFiles{}, osHome{})
+	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap})}, osFiles{}, osHome{})
+
+	report := initapp.SkillReport{}
+	for _, result := range []pack.Result{project, home} {
+		for _, dest := range result.Dests {
+			report.Dests = append(report.Dests, initapp.SkillDest{
+				Label:     dest.Dest,
+				Installed: dest.Installed,
+				Unchanged: dest.Unchanged,
+				Files:     dest.Files,
+			})
+		}
+		if result.Code == pack.CodeOK || report.Blocked != "" {
+			continue
+		}
+		report.Blocked = blockedSkills(result)
+		report.Next = "odachi init"
+		// A destination inside the project leaves the project unready; the home
+		// is the only half whose failure does not fail the run.
+		report.Fatal = destScope(result) == string(agent.ScopeProject)
+	}
+
+	report.Notice = s.otherProjectCopy()
+	return report
+}
+
+// destScope is the scope pack resolved for a run: the project copy says so, the
+// home copy says `home`, and a run with no destination falls back to the project.
+func destScope(result pack.Result) string {
+	for _, dest := range result.Dests {
+		return dest.Scope
+	}
+	return string(agent.ScopeProject)
+}
+
+// otherProjectCopy acknowledges a second project location: somebody who ran
+// `pack --agents opencode` before init has the curriculum in that client's native
+// directory too. init writes one project location and never deletes, so it says
+// the other copy is there instead of pretending it is not.
+func (s initSkills) otherProjectCopy() []string {
+	files := osFiles{}
+	standard, err := agent.Resolve(agent.Standard)
+	if err != nil {
+		return nil
+	}
+	lines := []string{}
+	for _, a := range agent.Supported() {
+		if a.Scope != agent.ScopeProject {
+			continue
+		}
+		exists, err := files.Exists(filepath.Join(s.dir, filepath.FromSlash(a.Dest)))
+		if err != nil || !exists {
+			continue
+		}
+		lines = append(lines, a.Display()+": ya tiene una copia de las skills (la puso odachi pack --agents "+a.Name+"); no la toco: la del proyecto es "+standard.Display())
+	}
+	return lines
+}
+
+// blockedSkills is the sentence for a destination that could not be written:
+// the file, the reason the adapter gave, and the command that retries it.
+func blockedSkills(result pack.Result) string {
+	for _, dest := range result.Dests {
+		if dest.Failure == nil {
+			continue
+		}
+		return "no pude escribir " + dest.Failure.Path + ": " + dest.Failure.Reason + "; revisá los permisos y volvé a correr odachi init"
+	}
+	return oneLine(result.Message)
+}
+
+// payload converts the embedded skills into the shape pack installs.
+func payload(skills []bundledskills.Skill) []pack.Skill {
+	out := make([]pack.Skill, 0, len(skills))
+	for _, s := range skills {
+		out = append(out, pack.Skill{Name: s.Name, Content: s.Content})
+	}
+	return out
+}
+
 // reportInit prints what init did. Unlike the other verbs it always prints its
 // block on a block, because the block contains the three lines the human has to
 // paste into a hook odachi did not write.
@@ -641,18 +758,33 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 		if files == nil {
 			files = []string{}
 		}
+		skills := make([]initSkillDest, 0, len(result.SkillDests))
+		for _, dest := range result.SkillDests {
+			destFiles := dest.Files
+			if destFiles == nil {
+				destFiles = []string{}
+			}
+			skills = append(skills, initSkillDest{
+				Dest:      dest.Label,
+				Installed: dest.Installed,
+				Unchanged: dest.Unchanged,
+				Files:     destFiles,
+			})
+		}
 		payload := struct {
-			Code    int      `json:"code"`
-			Message string   `json:"message"`
-			Next    string   `json:"next,omitempty"`
-			Lines   []string `json:"lines,omitempty"`
-			Files   []string `json:"files"`
+			Code    int             `json:"code"`
+			Message string          `json:"message"`
+			Next    string          `json:"next,omitempty"`
+			Lines   []string        `json:"lines,omitempty"`
+			Files   []string        `json:"files"`
+			Skills  []initSkillDest `json:"skills"`
 		}{
 			Code:    result.Code,
 			Message: result.Message,
 			Next:    result.Next,
 			Lines:   result.Lines,
 			Files:   files,
+			Skills:  skills,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
@@ -679,6 +811,15 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 		fmt.Fprintln(out, line)
 	}
 	return result.Code
+}
+
+// initSkillDest is one row of the machine report: the same destination a human
+// reads on the same run, with what it got.
+type initSkillDest struct {
+	Dest      string   `json:"dest"`
+	Installed int      `json:"installed"`
+	Unchanged int      `json:"unchanged"`
+	Files     []string `json:"files"`
 }
 
 // outcome is what every verb hands the printer: one line for a human, or JSON
@@ -883,6 +1024,16 @@ flags de bench:
   --binary path   el binario que corre cada recorrido (default: el que está corriendo)
   --json          salida para máquinas
 
+flags de init:
+  --json          salida para máquinas, con los destinos de las skills
+
+qué deja escrito init, en un solo comando:
+  AGENTS.md              el bloque de reglas que el agente lee
+  .gitignore             /proof/ y /.odachi/reviews/ no ensucian el árbol que certifican
+  .git/hooks/pre-commit  no se commitea sin odachi check --quiet en verde
+  .agents/skills         las 8 skills del proyecto: la carpeta que leen todos los clientes
+  ~/.agents/skills       la skill de arranque: cómo empezar un proyecto desde cero
+
 flags:
   --outcome s     respuesta 1: qué tiene que existir cuando terminemos
   --audience s    respuesta 2: phone | cpu | both
@@ -920,7 +1071,8 @@ después de start:
   odachi check --require-review                 exige review para este árbol y sus lentes
   odachi doctor                                 diez chequeos de salud, de solo lectura
   odachi bench                                  mide cómo se traba una persona (in-band / dead-end)
-  odachi init                                   AGENTS.md + hook pre-commit
+  odachi init                                   AGENTS.md + hook + las skills del proyecto en
+                                                 .agents/skills (y la de arranque en ~/.agents/skills)
   odachi skills                                 las skills del proyecto y su trigger
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
   odachi skills --write                         regenera SKILLS.md desde los frontmatter

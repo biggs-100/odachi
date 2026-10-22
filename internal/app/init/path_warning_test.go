@@ -24,7 +24,7 @@ func TestInitWarnsWhenTheBinaryIsNotOnPath(t *testing.T) {
 		Dir:         dir,
 		Exe:         exe,
 		PathMissing: true,
-	}, files)
+	}, files, &fakeSkills{})
 
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0: the artifacts were written (lines %q)", got.Code, got.Lines)
@@ -46,7 +46,7 @@ func TestInitWarnsWhenTheBinaryIsNotOnPath(t *testing.T) {
 func TestInitSaysNothingAboutThePathWhenTheBinaryResolves(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
-	got := initapp.Run(initapp.Options{Dir: dir, Exe: "odachi"}, files)
+	got := initapp.Run(initapp.Options{Dir: dir, Exe: "odachi"}, files, &fakeSkills{})
 
 	for _, line := range got.Lines {
 		if strings.Contains(line, "PATH") {
