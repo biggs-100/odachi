@@ -1,12 +1,13 @@
 ---
 name: slices
-description: Trigger: cuando hay que partir un pedido grande en pasos chicos que se puedan revisar y commitear uno por uno.
+description: Trigger: cuando hay que partir un pedido grande en pasos chicos, o cuando entender el código que hay que tocar ya no entra en una lectura.
 ---
 
 ## Cuándo
 
 Cuando el pedido no entra en un commit, cuando hay que decir "por dónde empiezo",
-o cuando el diff ya pasó las 400 líneas y nadie puede revisarlo en serio.
+cuando el diff ya pasó las 400 líneas y nadie puede revisarlo en serio, o cuando
+entender lo que hay que tocar te llevó más de tres lecturas.
 
 ## Reglas
 
@@ -25,18 +26,22 @@ o cuando el diff ya pasó las 400 líneas y nadie puede revisarlo en serio.
 
 ## Si delegás
 
-Un subagente cuesta una sesión nueva, lecturas sin caché y un handoff. Delegá por
-razón, nunca por tamaño: entender algo que no entra en una lectura, dos unidades
-independientes que no se tocan, o el contexto ya lleno.
+Un subagente arranca sin caché: re-lee el prompt y los archivos. **No ahorra tokens
+totales, protege tu contexto.** Por eso la regla no es el tamaño de la tarea.
 
-- Al subagente le pasás **el path del task doc y el paso**, no un resumen. El brief y
-  los requisitos se leen; parafrasearlos es cómo se pierden.
-- Pedile que anote lo que hace con `odachi plan` y que no diga "listo" sin
-  `odachi check --run`. Si no puede, que lo diga, en vez de reportar éxito.
+- Presupuesto: si entender esto pasó de ~3 lecturas o de ~10k tokens, o si la sesión
+  ya viene larga, la próxima unidad va a un subagente. Delegá por razón —explorar
+  mucho, dos unidades que no se tocan, contexto lleno—, nunca por tamaño.
+- Lo que **se lee mucho** se delega; lo que **se escribe poco** no. Explorar un
+  módulo desconocido: delegá. Cambiar una línea que ya encontraste: hacelo vos.
+- El pedido lleva el **path del task doc y el paso**, no un resumen. Parafrasear los
+  requisitos es cómo se pierden.
+- El retorno está acotado: **≤2k tokens**, evidencia `path:line`, y la lista de
+  archivos que leyó. Todo lo demás se queda adentro del subagente: eso es lo que no
+  contamina.
+- Pedile que anote con `odachi plan` y que no diga "listo" sin `odachi check --run`.
 - Cuando vuelve, verificá su salida contra `brief.md` y contra el diff, **no contra su
   resumen**: el subagente puede mentir igual que el principal, y con menos testigos.
-- Si tocó algo fuera del cerco, no lo arregles en silencio: es una decisión del humano
-  y va con `odachi ask`.
 - **Nunca delegues la decisión de visión.** El subagente ejecuta; quién decide qué se
   construye es la persona.
 
@@ -46,4 +51,4 @@ independientes que no se tocan, o el contexto ya lleno.
 - Mezclar un refactor con un cambio de comportamiento en el mismo paso.
 - Partir por archivos o por capas en vez de por comportamiento entregable.
 - Dejar pasos de limpieza sin criterio de terminado: crecen y nunca se cierran.
-- Commitear el trabajo de otra persona que ya estaba en el árbol.
+- Delegar para ahorrar tokens en algo que hacés en un turno.
