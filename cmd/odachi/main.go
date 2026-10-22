@@ -771,20 +771,36 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 				Files:     destFiles,
 			})
 		}
+		personas := make([]initPersonaDest, 0, len(result.PersonaDests))
+		for _, dest := range result.PersonaDests {
+			destFiles := dest.Files
+			if destFiles == nil {
+				destFiles = []string{}
+			}
+			personas = append(personas, initPersonaDest{
+				Client:    dest.Client,
+				Dir:       dest.Dir,
+				Written:   dest.Written,
+				Unchanged: dest.Kept,
+				Files:     destFiles,
+			})
+		}
 		payload := struct {
-			Code    int             `json:"code"`
-			Message string          `json:"message"`
-			Next    string          `json:"next,omitempty"`
-			Lines   []string        `json:"lines,omitempty"`
-			Files   []string        `json:"files"`
-			Skills  []initSkillDest `json:"skills"`
+			Code     int               `json:"code"`
+			Message  string            `json:"message"`
+			Next     string            `json:"next,omitempty"`
+			Lines    []string          `json:"lines,omitempty"`
+			Files    []string          `json:"files"`
+			Skills   []initSkillDest   `json:"skills"`
+			Personas []initPersonaDest `json:"personas"`
 		}{
-			Code:    result.Code,
-			Message: result.Message,
-			Next:    result.Next,
-			Lines:   result.Lines,
-			Files:   files,
-			Skills:  skills,
+			Code:     result.Code,
+			Message:  result.Message,
+			Next:     result.Next,
+			Lines:    result.Lines,
+			Files:    files,
+			Skills:   skills,
+			Personas: personas,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
@@ -818,6 +834,16 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 type initSkillDest struct {
 	Dest      string   `json:"dest"`
 	Installed int      `json:"installed"`
+	Unchanged int      `json:"unchanged"`
+	Files     []string `json:"files"`
+}
+
+// initPersonaDest is one client's native agent in the same report: which client,
+// where it reads agents from, what this run did there, and the file it owns.
+type initPersonaDest struct {
+	Client    string   `json:"client"`
+	Dir       string   `json:"dir"`
+	Written   int      `json:"written"`
 	Unchanged int      `json:"unchanged"`
 	Files     []string `json:"files"`
 }
@@ -1025,10 +1051,12 @@ flags de bench:
   --json          salida para máquinas
 
 flags de init:
-  --json          salida para máquinas, con los destinos de las skills
+  --json          salida para máquinas, con los destinos de las skills y del agente
 
 qué deja escrito init, en un solo comando:
   AGENTS.md              el bloque de reglas que el agente lee, con la voz al final
+  .opencode/agents       odachi.md: el mismo bloque, para elegirlo con Tab
+  .claude/output-styles  odachi.md: el mismo bloque, para elegirlo con /config
   .gitignore             /proof/ y /.odachi/reviews/ no ensucian el árbol que certifican
   .git/hooks/pre-commit  no se commitea sin odachi check --quiet en verde
   .agents/skills         las skills del proyecto: la carpeta que leen todos los clientes
@@ -1036,9 +1064,9 @@ qué deja escrito init, en un solo comando:
 
 la voz —cómo te habla el agente— es la última sección del bloque, y la escribe el
 binario: novato si todavía no hay .odachi/profile.toml, si no la del perfil que
-diga. Todos los clientes leen AGENTS.md, así que no hay un archivo por cliente ni
-una tecla que aprender. odachi level --to <perfil> cambia el perfil y esa sección,
-y no toca nada más del bloque.
+diga. El agente nativo es un espejo generado de ese bloque: las mismas reglas y la
+misma voz, en la carpeta donde tu cliente ya elige agentes. odachi level --to
+<perfil> cambia el perfil, esa sección y el espejo, y no toca nada más del bloque.
 
 flags:
   --outcome s     respuesta 1: qué tiene que existir cuando terminemos
@@ -1077,9 +1105,9 @@ después de start:
   odachi check --require-review                 exige review para este árbol y sus lentes
   odachi doctor                                 once chequeos de salud, de solo lectura
   odachi bench                                  mide cómo se traba una persona (in-band / dead-end)
-  odachi init                                   AGENTS.md (con la voz del perfil) + hook + las skills
-                                                 del proyecto en .agents/skills, y la de arranque
-                                                 en ~/.agents/skills
+  odachi init                                   AGENTS.md (con la voz del perfil) + el agente que
+                                                 se elige con Tab + hook + las skills del proyecto
+                                                 en .agents/skills, y la de arranque en ~/.agents/skills
   odachi skills                                 las skills del proyecto y su trigger
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
   odachi skills --write                         regenera SKILLS.md desde los frontmatter

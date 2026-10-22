@@ -199,10 +199,11 @@ func apply(opts Options, target string, files Files) Result {
 		}
 	}
 
-	// The voice: the last section of the rules block, and the only part of it
-	// this command owns.
+	// The voice: the last section of the rules block, the only part of it this
+	// command owns, and the native agent that mirrors the block.
 	voiceName, voiceErr := persona.VoiceName(to.Name)
 	voiced := false
+	personaFiles := []string{}
 	switch {
 	case voiceErr != nil:
 		// A profile name odachi has no voice for. The ceremony is still the
@@ -226,11 +227,28 @@ func apply(opts Options, target string, files Files) Result {
 		if line != "" {
 			lines = append(lines, line)
 		}
+
+		// The native agent mirrors the block the human already has, so the
+		// selector and AGENTS.md cannot disagree after a profile change. A
+		// missing file is init's to install, not level's: this command refreshes
+		// what is there.
+		refreshed, personaLine, problem := refreshPersonas(opts.Dir, files)
+		if problem != nil {
+			problem.Message = "apliqué el perfil " + to.Name + " en " + profileFile + "; " + problem.Message
+			problem.Lines = lines
+			problem.Files = append(append([]string{}, written...), refreshed...)
+			return *problem
+		}
+		personaFiles = refreshed
+		if personaLine != "" {
+			lines = append(lines, personaLine)
+		}
+		written = append(written, refreshed...)
 	}
 
-	// One line, and it says what happened to both halves: the profile and the
-	// voice. A run that changed nothing says so instead of claiming work it did
-	// not do, which is also what keeps the second run of the same command silent.
+	// One line, and it says what happened to every surface of the same choice.
+	// A run that changed nothing says so instead of claiming work it did not do,
+	// which is also what keeps the second run of the same command silent.
 	message := fmt.Sprintf("el perfil ya era %s", to.Name)
 	switch {
 	case voiceErr != nil:
@@ -241,8 +259,13 @@ func apply(opts Options, target string, files Files) Result {
 		message = fmt.Sprintf("listo: apliqué el perfil %s en %s; la voz del bloque ya era %s", to.Name, profileFile, voiceName)
 	case voiced:
 		message = fmt.Sprintf("listo: el perfil ya era %s; actualicé la voz del bloque a %s", to.Name, voiceName)
+	case len(personaFiles) > 0:
+		message = fmt.Sprintf("listo: el perfil ya era %s y la voz del bloque también es %s; actualicé el agente nativo", to.Name, voiceName)
 	default:
 		message = fmt.Sprintf("el perfil ya era %s y la voz del bloque también es %s; no escribí nada", to.Name, voiceName)
+	}
+	if len(personaFiles) > 0 && (applied || voiced) {
+		message += "; actualicé el agente nativo (" + strings.Join(personaFiles, ", ") + ")"
 	}
 
 	// The message goes first, because the printer prints Lines and not the
@@ -315,6 +338,78 @@ func rewriteVoice(dir, voiceName string, files Files) (line string, wrote bool, 
 	}
 
 	return "AGENTS.md: voz " + voiceName + " en el bloque (el anterior quedó en " + relative(dir, backup) + ")", true, nil
+}
+
+// refreshPersonas keeps the native agent in step with the block the human
+// already has. It mirrors the block's own bytes, not a freshly rendered copy, so
+// a human who edited the rules by hand gets the edit in the selector too.
+//
+// Only files that already exist are refreshed: installing them is `odachi init`'s
+// job, and a level run on a project without them still applies the profile. A
+// project without a block has nothing to mirror and is left alone.
+func refreshPersonas(dir string, files Files) (changed []string, line string, problem *Result) {
+	agentsPath := filepath.Join(dir, agentsFile)
+	exists, err := files.Exists(agentsPath)
+	if err != nil {
+		failure := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+			agentsFile, oneLine(err.Error())))
+		return nil, "", &failure
+	}
+	if !exists {
+		return nil, "", nil
+	}
+
+	data, err := files.Read(agentsPath)
+	if err != nil {
+		failure := blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+			agentsFile, oneLine(err.Error())))
+		return nil, "", &failure
+	}
+	body, ok := rules.BodyIn(string(data))
+	if !ok {
+		return nil, "", nil
+	}
+
+	for _, file := range persona.Files(body) {
+		path := filepath.Join(dir, filepath.FromSlash(file.Path))
+
+		exists, err := files.Exists(path)
+		if err != nil {
+			failure := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+				file.Path, oneLine(err.Error())))
+			return changed, "", &failure
+		}
+		if !exists {
+			continue
+		}
+
+		current, err := files.Read(path)
+		if err != nil {
+			failure := blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+				file.Path, oneLine(err.Error())))
+			return changed, "", &failure
+		}
+		if string(current) == file.Content {
+			continue
+		}
+
+		if _, err := files.Backup(path); err != nil {
+			failure := blocked(fmt.Sprintf("no pude respaldar %s antes de reescribirlo: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+				file.Path, oneLine(err.Error())))
+			return changed, "", &failure
+		}
+		if err := files.Write(path, []byte(file.Content)); err != nil {
+			failure := blocked(fmt.Sprintf("no pude escribir %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+				file.Path, oneLine(err.Error())))
+			return changed, "", &failure
+		}
+		changed = append(changed, file.Path)
+	}
+
+	if len(changed) == 0 {
+		return nil, "", nil
+	}
+	return changed, "el agente nativo quedó al día: " + strings.Join(changed, ", "), nil
 }
 
 // shown renders an empty field value the way the human sees it in the file.

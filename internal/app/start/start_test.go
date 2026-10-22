@@ -639,6 +639,39 @@ func TestStartPutsTheVoiceOfTheProfileItWrote(t *testing.T) {
 	}
 }
 
+// TestStartRefreshesTheNativeAgentItFinds: the selector mirrors the block, and
+// this run just changed the block's voice. Leaving the old mirror behind would
+// make the agent a human picks read a voice the project no longer promises.
+func TestStartRefreshesTheNativeAgentItFinds(t *testing.T) {
+	var events []string
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+
+	seed := map[string]string{"AGENTS.md": blockText(t, persona.Senior)}
+	oldBody, err := rules.Body(persona.Senior)
+	if err != nil {
+		t.Fatalf("rules.Body(senior): %v", err)
+	}
+	for _, file := range persona.Files(oldBody) {
+		seed[file.Path] = file.Content
+	}
+	files := newFakeFiles(seed, &events)
+
+	got := start.Run(start.Options{}, interview, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
+	}
+	newBody, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, file := range persona.Files(newBody) {
+		if got := files.content(t, file.Path); got != file.Content {
+			t.Errorf("%s no quedó con la voz nueva:\n%q\nvs\n%q", file.Path, got, file.Content)
+		}
+	}
+}
+
 // TestStartLeavesAProjectWithoutABlockAlone: the block belongs to init. Creating
 // it here would give the same artifact two owners.
 func TestStartLeavesAProjectWithoutABlockAlone(t *testing.T) {

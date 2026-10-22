@@ -387,6 +387,72 @@ func TestLevelToRewritesTheVoiceSectionAndNothingElse(t *testing.T) {
 	}
 }
 
+// TestLevelToRefreshesTheNativeAgentWhenItExists: the selector and the block are
+// two surfaces of one voice. After a profile change they read the same words, and
+// the old file is backed up before the rewrite.
+func TestLevelToRefreshesTheNativeAgentWhenItExists(t *testing.T) {
+	oldBody, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	seed := map[string]string{
+		profilePath: "name = \"novato\"\n",
+		agentsPath:  blockOf(t, persona.Novato),
+	}
+	for _, file := range persona.Files(oldBody) {
+		seed[filepath.Join("raiz", filepath.FromSlash(file.Path))] = file.Content
+	}
+	files := newFakeFiles(seed)
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "novato"), To: "senior"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	newBody, err := rules.Body(persona.Senior)
+	if err != nil {
+		t.Fatalf("rules.Body(senior): %v", err)
+	}
+	for _, file := range persona.Files(newBody) {
+		path := filepath.Join("raiz", filepath.FromSlash(file.Path))
+		if got := files.content(t, path); got != file.Content {
+			t.Errorf("%s no quedó espejado:\n%q\nvs\n%q", file.Path, got, file.Content)
+		}
+		if !slices.Contains(res.Files, file.Path) {
+			t.Errorf("Files = %v, want it to name %s", res.Files, file.Path)
+		}
+		backup := slices.Index(files.events, "backup "+path)
+		rewrite := slices.Index(files.events, "write "+path)
+		if backup < 0 || rewrite < 0 || backup > rewrite {
+			t.Errorf("events = %v, want %s backed up before the rewrite", files.events, file.Path)
+		}
+	}
+	if !strings.Contains(strings.Join(res.Lines, "\n"), "agente nativo") {
+		t.Errorf("las líneas no reportan el agente nativo:\n%s", strings.Join(res.Lines, "\n"))
+	}
+}
+
+// TestLevelToDoesNotInstallAMissingNativeAgent: level refreshes what init
+// installed; it does not turn a missing file into a second installer.
+func TestLevelToDoesNotInstallAMissingNativeAgent(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		profilePath: "name = \"novato\"\n",
+		agentsPath:  blockOf(t, persona.Novato),
+	})
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "novato"), To: "senior"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	for _, file := range persona.Files("") {
+		path := filepath.Join("raiz", filepath.FromSlash(file.Path))
+		if slices.Contains(files.events, "write "+path) {
+			t.Errorf("level escribió %s: instalar es init", file.Path)
+		}
+	}
+}
+
 // TestLevelToTheSameVoiceTwiceWritesNothing: the second run of the same command
 // is not an event, and the message says so instead of claiming work it did not do.
 func TestLevelToTheSameVoiceTwiceWritesNothing(t *testing.T) {

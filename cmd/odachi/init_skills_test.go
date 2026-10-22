@@ -121,11 +121,11 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 	if _, err := os.Stat(skillPath(dir, bundledskills.BootstrapName)); err == nil {
 		t.Errorf("el proyecto recibió la skill de arranque: esa vive en el home")
 	}
-	// No client directory at all: the order's one location is the project's
-	// cross-client folder, and the voice travels in AGENTS.md.
-	for _, rel := range []string{".opencode", ".claude"} {
-		if _, err := os.Stat(filepath.Join(dir, rel)); err == nil {
-			t.Errorf("init escribió en %s: el proyecto usa una sola carpeta", rel)
+	// The client directories hold the native agent, never a second copy of the
+	// skills: the project's one location is the cross-client folder.
+	for _, rel := range []string{".opencode/skills", ".opencode/skill", ".claude/skills"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err == nil {
+			t.Errorf("init instaló skills en %s: el proyecto usa una sola carpeta", rel)
 		}
 	}
 

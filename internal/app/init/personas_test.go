@@ -24,10 +24,10 @@ func runProfiled(files *fakeFiles, profiles fakeProfiles) initapp.Result {
 	return initapp.Run(initapp.Options{Dir: dir, Profiles: profiles}, files, &fakeSkills{})
 }
 
-// TestInitWritesNoPersonaFiles: the voice lives in AGENTS.md now, and the client
-// directories odachi used to fill are not touched at all. A file nobody's
-// selector lists is worse than no file: it looks installed.
-func TestInitWritesNoPersonaFiles(t *testing.T) {
+// TestInitWritesTheNativeAgent: one file per client, the same block the agent
+// reads in AGENTS.md, and the report says how the human picks it. The old
+// v0.10.0 files are not rewritten under their old names.
+func TestInitWritesTheNativeAgent(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
 	got := run(files)
@@ -35,20 +35,66 @@ func TestInitWritesNoPersonaFiles(t *testing.T) {
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
-	for _, client := range []string{".opencode", ".claude"} {
-		for _, path := range files.events {
-			if strings.Contains(path, client) {
-				t.Errorf("init tocó %s: %s", client, path)
-			}
+
+	block, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, client := range persona.Clients() {
+		file, ok := persona.FilesFor(client.Agent, block)
+		if !ok {
+			t.Fatalf("persona.FilesFor(%q) no existe", client.Agent)
+		}
+		content, ok := files.get(file.Path)
+		if !ok {
+			t.Errorf("%s no se escribió", file.Path)
+			continue
+		}
+		if content != file.Content {
+			t.Errorf("%s no es el espejo del bloque:\n%q\nvs\n%q", file.Path, content, file.Content)
+		}
+		if !strings.Contains(strings.Join(got.Lines, "\n"), client.Dir) {
+			t.Errorf("las líneas no nombran %s:\n%s", client.Dir, strings.Join(got.Lines, "\n"))
 		}
 	}
 	for _, file := range persona.Deprecated() {
 		if _, ok := files.get(file); ok {
-			t.Errorf("%s se escribió otra vez", file)
+			t.Errorf("%s se escribió otra vez: el agente de esta versión es %s", file, persona.FileName)
 		}
 	}
-	if joined := strings.Join(got.Lines, "\n"); strings.Contains(joined, "personas") && !strings.Contains(joined, "v0.10.0") {
-		t.Errorf("las líneas todavía hablan de escribir personas:\n%s", joined)
+}
+
+// TestInitBacksUpAHandEditedAgent: the file is generated, so a human edit is
+// lost work. init keeps it in a .bak before replacing it and says it wrote.
+func TestInitBacksUpAHandEditedAgent(t *testing.T) {
+	path := ".opencode/agents/odachi.md"
+	files := newFakeFiles(map[string]string{
+		".git/HEAD": "ref: refs/heads/main\n",
+		path:        "editado a mano\n",
+	})
+
+	got := run(files)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	backup, wrote := -1, -1
+	for i, event := range files.events {
+		switch {
+		case event == "backup "+path:
+			backup = i
+		case event == "write "+path:
+			wrote = i
+		}
+	}
+	if backup < 0 || wrote < 0 || backup > wrote {
+		t.Fatalf("el respaldo tiene que ir antes de la escritura: %v", files.events)
+	}
+	if content, _ := files.get(path); content == "editado a mano\n" {
+		t.Errorf("el agente quedó con la edición a mano en vez del espejo")
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), persona.FileName) {
+		t.Errorf("las líneas no dicen qué agente se escribió:\n%s", strings.Join(got.Lines, "\n"))
 	}
 }
 
@@ -150,7 +196,7 @@ func TestInitReportsTheV0100PersonaFilesAndTouchesNothing(t *testing.T) {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
 	joined := strings.Join(got.Lines, "\n")
-	for _, want := range []string{"v0.10.0", ".opencode/agents", rules.File, "borralos"} {
+	for _, want := range []string{"v0.10.0", ".opencode/agents", rules.File, "borralas"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("las líneas no dicen %q:\n%s", want, joined)
 		}

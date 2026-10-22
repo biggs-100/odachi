@@ -54,16 +54,30 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 		t.Errorf("la salida no dice con qué voz se escribió el bloque:\n%s", out)
 	}
 
-	// No per-client directory is created at all: a file nobody's selector lists
-	// is worse than no file, because it looks installed.
-	for _, legacy := range personaLegacyFiles {
-		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(legacy))); err == nil {
-			t.Errorf("init escribió %s: la voz vive en AGENTS.md", legacy)
+	// The native agent mirrors the same block, so the human can pick odachi with
+	// the client's own selector. The v0.10.0 files are not rewritten under their
+	// old names.
+	block, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, client := range persona.Clients() {
+		file, ok := persona.FilesFor(client.Agent, block)
+		if !ok {
+			t.Fatalf("persona.FilesFor(%q) no existe", client.Agent)
+		}
+		got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(file.Path)))
+		if err != nil {
+			t.Errorf("%s no se escribió: %v", file.Path, err)
+			continue
+		}
+		if string(got) != file.Content {
+			t.Errorf("%s no es el espejo del bloque:\n%q\nvs\n%q", file.Path, got, file.Content)
 		}
 	}
-	for _, dirPath := range []string{".opencode", ".claude"} {
-		if _, err := os.Stat(filepath.Join(dir, dirPath)); err == nil {
-			t.Errorf("init creó %s: no hay nada de odachi ahí", dirPath)
+	for _, legacy := range personaLegacyFiles {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(legacy))); err == nil {
+			t.Errorf("init escribió %s: el agente de esta versión es %s", legacy, persona.FileName)
 		}
 	}
 }
@@ -125,7 +139,7 @@ func TestInitReportsAndKeepsTheLegacyPersonaFiles(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
 
-	for _, want := range []string{"v0.10.0", ".opencode/agents", "AGENTS.md", "borralos"} {
+	for _, want := range []string{"v0.10.0", ".opencode/agents", "AGENTS.md", "borralas"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("la salida no dice %q:\n%s", want, out)
 		}
@@ -146,9 +160,9 @@ func TestInitReportsAndKeepsTheLegacyPersonaFiles(t *testing.T) {
 	}
 }
 
-// TestInitJSONCarriesNoPersonas: the voice is a section of the block now, so the
-// machine report has no persona rows to carry.
-func TestInitJSONCarriesNoPersonas(t *testing.T) {
+// TestInitJSONCarriesTheNativeAgent: the machine report says where the agent
+// landed and what this run did there, the same two facts the human line carries.
+func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -162,13 +176,24 @@ func TestInitJSONCarriesNoPersonas(t *testing.T) {
 		Skills []struct {
 			Dest string `json:"dest"`
 		} `json:"skills"`
-		Personas *json.RawMessage `json:"personas"`
+		Personas []struct {
+			Client    string   `json:"client"`
+			Dir       string   `json:"dir"`
+			Written   int      `json:"written"`
+			Unchanged int      `json:"unchanged"`
+			Files     []string `json:"files"`
+		} `json:"personas"`
 	}
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
 		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
 	}
-	if payload.Personas != nil {
-		t.Errorf("el reporte todavía trae personas: %s", *payload.Personas)
+	if len(payload.Personas) != len(persona.Clients()) {
+		t.Fatalf("personas = %+v, want one row per client", payload.Personas)
+	}
+	for _, row := range payload.Personas {
+		if row.Written != 1 || len(row.Files) != 1 || row.Files[0] != row.Dir+"/"+persona.FileName {
+			t.Errorf("fila de %s = %+v, want one written %s", row.Client, row, persona.FileName)
+		}
 	}
 	if !slicesContains(payload.Files, "AGENTS.md") {
 		t.Errorf("files = %v, want it to name AGENTS.md", payload.Files)

@@ -257,10 +257,46 @@ func (r *runner) refreshVoice() *Result {
 	if err != nil {
 		return failure(blocked("no pude leer la voz del perfil " + r.profile.Name + ": " + oneLine(err.Error()) + "; volvé a correr odachi init"))
 	}
-	if !changed {
+	if changed {
+		if problem := r.put(rules.File, []byte(updated)); problem != nil {
+			return problem
+		}
+		return r.refreshPersonas(updated)
+	}
+	return r.refreshPersonas(string(data))
+}
+
+// refreshPersonas keeps the native agent in step with the block this run just
+// wrote. Only files that already exist are refreshed: installing them is
+// `odachi init`'s job, and a project started without init still gets its four
+// artifacts.
+func (r *runner) refreshPersonas(agents string) *Result {
+	body, ok := rules.BodyIn(agents)
+	if !ok {
 		return nil
 	}
-	return r.put(rules.File, []byte(updated))
+	for _, file := range persona.Files(body) {
+		path := filepath.Join(r.opts.Dir, filepath.FromSlash(file.Path))
+
+		exists, err := r.files.Exists(path)
+		if err != nil {
+			return failure(blocked("no pude revisar " + file.Path + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		}
+		if !exists {
+			continue
+		}
+		current, err := r.files.Read(path)
+		if err != nil {
+			return failure(blocked("no pude leer " + file.Path + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		}
+		if string(current) == file.Content {
+			continue
+		}
+		if problem := r.put(file.Path, []byte(file.Content)); problem != nil {
+			return problem
+		}
+	}
+	return nil
 }
 
 // put backs up an existing file and then replaces it atomically. Backup runs

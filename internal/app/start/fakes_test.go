@@ -21,10 +21,15 @@ type fakeFiles struct {
 func newFakeFiles(seed map[string]string, events *[]string) *fakeFiles {
 	f := &fakeFiles{files: map[string][]byte{}, events: events}
 	for path, content := range seed {
-		f.files[path] = []byte(content)
+		f.files[f.key(path)] = []byte(content)
 	}
 	return f
 }
+
+// key normalizes a path the way the port documents relative paths: with forward
+// slashes on every OS. The real adapter accepts native separators; the double
+// models the contract, so a test with a slash path passes on Windows too.
+func (f *fakeFiles) key(path string) string { return filepath.ToSlash(path) }
 
 func (f *fakeFiles) record(event string) {
 	if f.events != nil {
@@ -33,13 +38,13 @@ func (f *fakeFiles) record(event string) {
 }
 
 func (f *fakeFiles) Exists(path string) (bool, error) {
-	_, ok := f.files[path]
+	_, ok := f.files[f.key(path)]
 	f.record("exists " + path)
 	return ok, nil
 }
 
 func (f *fakeFiles) Read(path string) ([]byte, error) {
-	data, ok := f.files[path]
+	data, ok := f.files[f.key(path)]
 	if !ok {
 		return nil, fmt.Errorf("archivo inexistente: %s", path)
 	}
@@ -50,7 +55,7 @@ func (f *fakeFiles) Read(path string) ([]byte, error) {
 func (f *fakeFiles) List(dir string) ([]string, error) {
 	var names []string
 	for path := range f.files {
-		if filepath.Dir(path) == dir {
+		if filepath.ToSlash(filepath.Dir(path)) == f.key(dir) {
 			names = append(names, filepath.Base(path))
 		}
 	}
@@ -60,7 +65,7 @@ func (f *fakeFiles) List(dir string) ([]string, error) {
 }
 
 func (f *fakeFiles) Backup(path string) (string, error) {
-	if _, ok := f.files[path]; !ok {
+	if _, ok := f.files[f.key(path)]; !ok {
 		return "", fmt.Errorf("no se puede respaldar %s: no existe", path)
 	}
 	f.record("backup " + path)
@@ -69,13 +74,13 @@ func (f *fakeFiles) Backup(path string) (string, error) {
 
 func (f *fakeFiles) Write(path string, data []byte) error {
 	f.record("write " + path)
-	f.files[path] = data
+	f.files[f.key(path)] = data
 	return nil
 }
 
 func (f *fakeFiles) content(t *testing.T, path string) string {
 	t.Helper()
-	data, ok := f.files[path]
+	data, ok := f.files[f.key(path)]
 	if !ok {
 		t.Fatalf("el archivo %q no fue escrito; archivos: %v", path, f.paths())
 	}

@@ -20,6 +20,7 @@ const profileFile = ".odachi/profile.toml"
 // before touching it.
 func (r *runner) writeAgents() *Result {
 	voice := r.voice()
+	r.voiceName = voice
 
 	path := filepath.Join(r.dir, agentsFile)
 
@@ -104,10 +105,10 @@ func (r *runner) voice() string {
 	return resolved
 }
 
-// reportLeftovers names the per-client persona files v0.10.0 wrote, when they are
-// still there. They are not an error: the voice lives in the block now, nothing
-// reads them, and odachi never deletes a file it did not write in this version.
-// The human may, and the line says so.
+// reportLeftovers names the per-profile persona files v0.10.0 wrote, when they
+// are still there. They still work as a voice, but they do not mirror the block,
+// and odachi never deletes a file it did not write in this version. The human
+// may, and the line says so.
 func (r *runner) reportLeftovers() {
 	found := make([]string, 0, len(persona.Deprecated()))
 	for _, file := range persona.Deprecated() {
@@ -124,6 +125,6 @@ func (r *runner) reportLeftovers() {
 		return
 	}
 
-	r.lines = append(r.lines, "quedaron de v0.10.0 "+humanList(persona.DeprecatedDirs())+" (las personas por cliente): ya no se usan, la voz vive en "+
-		agentsFile+"; no los toqué: borralos si querés")
+	r.lines = append(r.lines, "quedaron de v0.10.0 "+humanList(persona.DeprecatedDirs())+" (las personas viejas): el agente de esta versión es "+
+		persona.FileName+" y su fuente es "+agentsFile+"; no las toqué: borralas si querés")
 }
