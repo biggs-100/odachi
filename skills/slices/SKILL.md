@@ -23,6 +23,23 @@ o cuando el diff ya pasó las 400 líneas y nadie puede revisarlo en serio.
 - Un paso incluye su prueba y su documentación. No hay un paso posterior llamado
   "tests" o "docs".
 
+## Si delegás
+
+Un subagente cuesta una sesión nueva, lecturas sin caché y un handoff. Delegá por
+razón, nunca por tamaño: entender algo que no entra en una lectura, dos unidades
+independientes que no se tocan, o el contexto ya lleno.
+
+- Al subagente le pasás **el path del task doc y el paso**, no un resumen. El brief y
+  los requisitos se leen; parafrasearlos es cómo se pierden.
+- Pedile que anote lo que hace con `odachi plan` y que no diga "listo" sin
+  `odachi check --run`. Si no puede, que lo diga, en vez de reportar éxito.
+- Cuando vuelve, verificá su salida contra `brief.md` y contra el diff, **no contra su
+  resumen**: el subagente puede mentir igual que el principal, y con menos testigos.
+- Si tocó algo fuera del cerco, no lo arregles en silencio: es una decisión del humano
+  y va con `odachi ask`.
+- **Nunca delegues la decisión de visión.** El subagente ejecuta; quién decide qué se
+  construye es la persona.
+
 ## Nunca
 
 - Commitear con tests rojos "para no perder el trabajo".
