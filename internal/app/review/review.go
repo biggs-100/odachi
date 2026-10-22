@@ -59,7 +59,8 @@ type Options struct {
 	// Base is what the candidate is compared against. Empty means the empty
 	// tree: everything counts as new.
 	Base string
-	// Exec is the reviewer command: it is run, and its answer is the verdict.
+	// Exec is the reviewer command: it is run with the review prompt as its
+	// input, and its answer is the verdict.
 	Exec string
 	// Attach is a verdict someone already wrote.
 	Attach string
@@ -94,8 +95,14 @@ type Git interface {
 
 // Shell is the command port for --exec. A non-zero exit is the command's result,
 // not an adapter error: err means it could not be run at all.
+//
+// RunInput is the form this verb uses: the reviewer is a reviewer because it
+// receives the prompt, and how a prompt reaches a command is the shell adapter's
+// business (stdin, and a file path for a command that takes one), not a decision
+// this layer should know how to make.
 type Shell interface {
 	Run(dir, command string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error)
+	RunInput(dir, command, input string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error)
 }
 
 // Lenses is the port for the four specialist prompts. It returns the file
@@ -179,29 +186,10 @@ func (r *runner) prompt() Result {
 		return *problem
 	}
 
-	selected, problem := r.selectLenses(cand.paths)
+	text, tree, selected, problem := r.promptText(cand)
 	if problem != nil {
 		return *problem
 	}
-
-	bodies, problem := r.lensBodies(selected)
-	if problem != nil {
-		return *problem
-	}
-
-	tree, problem := r.prepareStore()
-	if problem != nil {
-		return *problem
-	}
-
-	text := domain.Prompt(domain.PromptInput{
-		Brief:  cand.brief,
-		Tree:   tree,
-		Base:   cand.base,
-		Paths:  cand.paths,
-		Diff:   cand.diff,
-		Lenses: bodies,
-	})
 
 	return Result{
 		Code:    CodeOK,
@@ -210,6 +198,41 @@ func (r *runner) prompt() Result {
 		Lenses:  selected,
 		Files:   []string{ignoreRel()},
 	}
+}
+
+// promptText is the prompt for one candidate, plus the tree it names and the
+// lenses it asks for.
+//
+// It is one function because --exec and the printed form must hand the reviewer
+// the SAME text: two builders would drift, and a reviewer answering a different
+// question than the one the gate asked is worse than no review. The store is
+// prepared first, exactly as for the printed form: the verdict lives inside the
+// candidate, so the directory has to be ignored before the tree is hashed.
+func (r *runner) promptText(cand candidate) (text, tree string, selected []string, problem *Result) {
+	selected, problem = r.selectLenses(cand.paths)
+	if problem != nil {
+		return "", "", nil, problem
+	}
+
+	bodies, problem := r.lensBodies(selected)
+	if problem != nil {
+		return "", "", nil, problem
+	}
+
+	tree, problem = r.prepareStore()
+	if problem != nil {
+		return "", "", nil, problem
+	}
+
+	text = domain.Prompt(domain.PromptInput{
+		Brief:  cand.brief,
+		Tree:   tree,
+		Base:   cand.base,
+		Paths:  cand.paths,
+		Diff:   cand.diff,
+		Lenses: bodies,
+	})
+	return text, tree, selected, nil
 }
 
 // refute prints the refuter's prompt for a verdict someone already filed. It is
@@ -299,7 +322,15 @@ func (r *runner) exec() Result {
 		return *problem
 	}
 
-	output, exitCode, timedOut, err := r.shell.Run(r.opts.Dir, r.opts.Exec, ExecTimeoutSeconds)
+	// The command is a reviewer, so it gets the prompt the verb prints. A
+	// reviewer started without one reviews whatever it decides to look at, and
+	// that is not the candidate this verdict is filed under.
+	text, _, _, problem := r.promptText(cand)
+	if problem != nil {
+		return *problem
+	}
+
+	output, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, r.opts.Exec, text, ExecTimeoutSeconds)
 	switch {
 	case err != nil:
 		return execFailed(r.opts.Exec, "no pude correr el revisor: "+oneLine(err.Error()), output)

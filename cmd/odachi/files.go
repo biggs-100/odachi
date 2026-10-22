@@ -271,11 +271,16 @@ func (gitRepo) AddedDeps(root, base string) ([]string, error) {
 	return gitx.AddedDeps(root, base)
 }
 
-// osShell is the Shell adapter for `odachi check`: the platform shell lives in
-// internal/adapters/shellcmd, one file per platform, and refuses where there is
-// no known shell.
+// osShell is the Shell adapter for `odachi check` and `odachi review`: the
+// platform shell lives in internal/adapters/shellcmd, one file per platform, and
+// refuses where there is no known shell.
 type osShell struct{}
 
 func (osShell) Run(dir, command string, timeoutSeconds int) (string, int, bool, error) {
 	return shellcmd.Run(dir, command, timeoutSeconds)
+}
+
+// RunInput is the review's form: the reviewer receives the prompt the verb built.
+func (osShell) RunInput(dir, command, input string, timeoutSeconds int) (string, int, bool, error) {
+	return shellcmd.RunInput(dir, command, input, timeoutSeconds)
 }

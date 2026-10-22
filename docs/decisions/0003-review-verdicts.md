@@ -76,11 +76,24 @@ says.
   declared tree that disagrees with the current one is refused instead of being
   rewritten, and a declared verdict that contradicts the rule is refused instead
   of being silently replaced: the author has to see why.
-- **`--exec` receives its prompt from the caller**, because the shell adapter
-  passes no stdin: `odachi review --exec 'agent "$(odachi review)"'`. Its answer
+- **`--exec` gives the reviewer the prompt it prints.** The command is started
+  with the same text `odachi review` prints — one builder, so the reviewer cannot
+  be asked a different question than the gate asked — delivered two ways from one
+  temporary file: the file is the command's stdin, and every `{prompt}` in the
+  command is replaced by its quoted path. Both because neither is enough alone:
+  a command that reads stdin needs no quoting and no knowledge of the shell, and
+  an agent CLI that takes a file needs a path, while `$(cat)` does not exist in
+  `cmd /c`. stdin is fed from a file rather than a pipe, so a reviewer that
+  ignores its input cannot block the run by leaving the buffer full. Its answer
   is read from stdout, and when the answer omits `reviewer` the command itself is
   stamped as the reviewer — it is the one fact the tool knows about an answer
   that came out of a shell.
+
+  Accepted limit: the prompt names the tree the verdict will be filed under, so a
+  reviewer that writes into the worktree shifts that tree. The verdict is then
+  filed under the shifted tree and the gate asks for a fresh proof, which is the
+  same self-healing path any other change takes. A reviewer that writes is not
+  reviewing; nothing is silently approved.
 
 ## Alternatives rejected
 

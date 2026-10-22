@@ -377,7 +377,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
-	flags.StringVar(&opts.Exec, "exec", "", "corre este comando y guarda el veredicto que contesta")
+	flags.StringVar(&opts.Exec, "exec", "", "corre este comando con el prompt por stdin y guarda el veredicto que contesta")
 	flags.StringVar(&opts.Attach, "attach", "", "guarda un veredicto o una refutación ya escrita en este archivo")
 	flags.BoolVar(&opts.Show, "show", false, "qué veredicto hay para este árbol, o que no hay")
 	flags.StringVar(&opts.Lens, "lens", "", "lente explícita: risk | readability | reliability | resilience | all (repetible o separada por comas)")
@@ -850,7 +850,8 @@ flags de check:
   --json          salida para máquinas
 
 flags de review:
-  --exec s        corre este comando y guarda el veredicto que contesta
+  --exec s        corre este comando con el prompt por stdin (y {prompt} como ruta a ese
+                  mismo archivo) y guarda el veredicto que contesta
   --attach path   guarda un veredicto o una refutación ya escrita (agente o humano)
   --show          qué veredicto hay para este árbol, o que no hay
   --lens s        lente explícita: risk | readability | reliability | resilience | all
@@ -906,7 +907,8 @@ después de start:
   odachi check                                  ¿está listo? brief, cerco, preguntas y prueba
   odachi check --run "<comando>"                corre la prueba y la guarda con su árbol
   odachi review                                 el prompt de review de este candidato
-  odachi review --exec "<comando>"              corre el revisor y guarda su veredicto
+  odachi review --exec "<comando>"              corre el revisor con el prompt por stdin y guarda su veredicto
+  odachi review --exec "agente {prompt}"        igual, pero el revisor recibe la ruta del prompt
   odachi review --attach <archivo>              guarda un veredicto o una refutación ya escrita
   odachi review --show                          qué veredicto hay para este árbol
   odachi review --lens risk                     agrega una lente a las que pide la evidencia

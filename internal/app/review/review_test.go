@@ -149,6 +149,9 @@ type fakeShell struct {
 	asked   bool
 	command string
 	timeout int
+
+	// input is the prompt the reviewer was given, once --exec delivers one.
+	input string
 }
 
 func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, int, bool, error) {
@@ -156,6 +159,11 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, int, b
 	s.command = command
 	s.timeout = timeoutSeconds
 	return s.output, s.exitCode, s.timedOut, s.err
+}
+
+func (s *fakeShell) RunInput(dir, command, input string, timeoutSeconds int) (string, int, bool, error) {
+	s.input = input
+	return s.Run(dir, command, timeoutSeconds)
 }
 
 // project is one run's wiring: an in-memory project, and the fakes behind it.
@@ -185,6 +193,21 @@ func (p *project) run(opts review.Options) review.Result {
 		p.lenses = &fakeLenses{}
 	}
 	return review.Run(opts, p.files, p.git, p.shell, p.lenses)
+}
+
+// verdictWrites is what a run wrote that claims something. The store's own
+// ignore file is plumbing, not an answer: --exec prepares the store before the
+// reviewer starts, because the prompt names the tree the verdict will be filed
+// under and creating that file changes the tree.
+func (p *project) verdictWrites() []string {
+	var claims []string
+	for _, written := range p.files.written() {
+		if strings.HasSuffix(filepath.ToSlash(written), ".gitignore") {
+			continue
+		}
+		claims = append(claims, written)
+	}
+	return claims
 }
 
 // storePath is where a verdict for one tree lives, in the spelling the app uses.
@@ -371,8 +394,8 @@ func TestAttachRefusesABrokenVerdictWithoutWriting(t *testing.T) {
 			if strings.Contains(result.Message, "\n") {
 				t.Errorf("message %q is more than one line", result.Message)
 			}
-			if writes := p.files.written(); len(writes) != 0 {
-				t.Fatalf("writes = %v, want none", writes)
+			if writes := p.verdictWrites(); len(writes) != 0 {
+				t.Fatalf("a failed reviewer wrote %v, want no verdict", writes)
 			}
 			if _, ok := p.files.files[storePath(currentTree)]; ok {
 				t.Fatal("a verdict was stored from an invalid file")
@@ -549,6 +572,30 @@ func TestExecStoresWhatTheCommandAnswered(t *testing.T) {
 	}
 }
 
+// TestExecGivesTheReviewerThePrompt: --exec starts a reviewer, so the command has
+// to receive the same prompt `odachi review` prints. Until this rule it received
+// nothing, and the only way to give it the prompt was a POSIX-only
+// `agent "$(odachi review)"` that computed the diff twice.
+func TestExecGivesTheReviewerThePrompt(t *testing.T) {
+	printed := newProject().run(review.Options{})
+	if printed.Prompt == "" {
+		t.Fatalf("the printed form has no prompt, so comparing against it proves nothing")
+	}
+
+	p := newProject()
+	p.shell.output = `{"findings":[]}`
+
+	if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	if p.shell.input != printed.Prompt {
+		t.Errorf("the reviewer was given a different prompt than `odachi review` prints")
+		t.Logf("what the reviewer got: %s", p.shell.input)
+		t.Logf("what the verb prints: %s", printed.Prompt)
+	}
+}
+
 // TestExecFailureWritesNothing: a reviewer that fails is not a review. Exit 1, no
 // file, and the command's own output shown.
 func TestExecFailureWritesNothing(t *testing.T) {
@@ -569,8 +616,8 @@ func TestExecFailureWritesNothing(t *testing.T) {
 			if result.Code != review.CodeBlocked {
 				t.Fatalf("code = %d, want 1", result.Code)
 			}
-			if writes := p.files.written(); len(writes) != 0 {
-				t.Fatalf("writes = %v, want none", writes)
+			if writes := p.verdictWrites(); len(writes) != 0 {
+				t.Fatalf("a failed reviewer wrote %v, want no verdict", writes)
 			}
 			if !strings.Contains(result.Output, shell.output) {
 				t.Errorf("output %q does not carry the command's %q", result.Output, shell.output)

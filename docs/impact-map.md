@@ -5,7 +5,7 @@ same work unit as the code change.
 
 | Package | Who depends on it | Tests that cover it |
 | --- | --- | --- |
-| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/lock_test.go`, `cmd/odachi/review_test.go`, `cmd/odachi/reviewlens_test.go`, `cmd/odachi/doctor_test.go`, `cmd/odachi/bench_test.go` |
+| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/lock_test.go`, `cmd/odachi/review_test.go`, `cmd/odachi/reviewlens_test.go`, `cmd/odachi/reviewexec_unix_test.go`, `cmd/odachi/reviewexec_windows_test.go`, `cmd/odachi/doctor_test.go`, `cmd/odachi/bench_test.go` |
 | `internal/app/start` | `cmd/odachi`: `start` and `odachi` with no arguments | `internal/app/start/start_test.go` |
 | `internal/app/tasks` | `internal/app/{ask,plan,level,summary}`: find the current or every feature document, and the single write guard every task-document rewrite goes through | `internal/app/tasks/tasks_test.go`, `internal/app/tasks/save_test.go` |
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
@@ -13,7 +13,7 @@ same work unit as the code change.
 | `internal/app/level` | `cmd/odachi`: `level` and `level --to` | `internal/app/level/level_test.go` |
 | `internal/app/summary` | `cmd/odachi`: `summary` | `internal/app/summary/summary_test.go` |
 | `internal/app/check` | `cmd/odachi`: `check` in all its forms, plus the optional `--require-review` gate: verdict per tree, verdict per required lens, and no unrefuted blocker | `internal/app/check/check_test.go`, `internal/app/check/review_test.go`, `internal/app/check/lens_test.go` |
-| `internal/app/review` | `cmd/odachi`: `review` in its five forms. Reads the brief, the changed paths and the diff through ports, loads the selected lens prompts through the `Lenses` port, and takes the lock on nothing: it writes one verdict or one refutation, atomically, inside `.odachi/reviews/` | `internal/app/review/review_test.go`, `internal/app/review/lenses_test.go` |
+| `internal/app/review` | `cmd/odachi`: `review` in its five forms. Reads the brief, the changed paths and the diff through ports, loads the selected lens prompts through the `Lenses` port, and hands the reviewer the same prompt the verb prints (one builder, two verbs); takes the lock on nothing: it writes one verdict or one refutation, atomically, inside `.odachi/reviews/` | `internal/app/review/review_test.go`, `internal/app/review/lenses_test.go` |
 | `internal/app/init` | `cmd/odachi`: `init` (the AGENTS.md block and the pre-commit hook) | `internal/app/init/init_test.go` |
 | `internal/app/skills` | `cmd/odachi`: `skills` (list, `--check`, `--write`) and `skill new` | `internal/app/skills/skills_test.go` |
 | `internal/app/pack` | `cmd/odachi`: `pack` (the detected agents, `--agents`, `--dry-run`) | `internal/app/pack/pack_test.go` |
@@ -34,7 +34,7 @@ same work unit as the code change.
 | `internal/domain/agent` | `internal/app/pack`: the verified agent → skills directory table and the refused names | `internal/domain/agent/agent_test.go` |
 | `skills` (repository root) | `cmd/odachi` (`pack` reads the embedded payload); the Go package lives in the same directory as the `SKILL.md` files it embeds, so there is no second copy | `skills/embed_test.go` |
 | `internal/adapters/{fsx,gitx,profiletoml}` | `cmd/odachi` only; the domain never imports them | the matching `_test.go` in each adapter |
-| `internal/adapters/shellcmd` | `cmd/odachi` only (the `check --run` shell); one file per platform | `shellcmd_test.go` plus the per-platform `_test.go` |
+| `internal/adapters/shellcmd` | `cmd/odachi` only (the `check --run` and `review --exec` shell); one file per platform. `RunInput` delivers a prompt as the command's stdin from a file, and `{prompt}` as that file's quoted path; Windows builds the `cmd` command line with `/s /c "…"` because `cmd.exe` does not understand the backslash escaping Go applies to a quoted argument | `shellcmd_test.go` plus the per-platform `_test.go` |
 | `internal/archtest` | Nobody imports it; it guards every domain package | `internal/archtest/boundary_test.go` |
 
 ## Distribution (T9)
