@@ -100,11 +100,15 @@ type Files interface {
 }
 
 // Git is the repository port: which tree is here, what changed since a base,
-// and which dependencies appeared.
+// which dependencies appeared, and whether the repository already ignores a path.
 type Git interface {
 	TreeHash(root string) (string, error)
 	ChangedPaths(root, base string) ([]string, error)
 	AddedDeps(root, base string) ([]string, error)
+	// Ignored reports whether the repository's own rules already keep path out
+	// of the tree. It is what makes the lazy ignore file unnecessary in a project
+	// that ran `odachi init`.
+	Ignored(root, path string) (bool, error)
 }
 
 // Shell is the command port. A non-zero exit is the command's result, not an
@@ -223,10 +227,21 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 // the project instead of inside the tool.
 const proofIgnore = "# odachi: las pruebas se generan, no se versionan\n*\n!.gitignore\n"
 
-// ensureProofDir creates proof/.gitignore before the tree is hashed, so the
-// first run and every later run hash the same worktree. Only --run writes it:
-// a plain check never touches the disk.
+// ensureProofDir keeps the evidence out of the tree the evidence describes:
+// without an ignore rule, writing the proof changes the worktree, the next run
+// computes a different tree hash and every proof invalidates the one before it.
+//
+// The rule is asked of the repository first. A project that ran `odachi init`
+// carries the block in its own .gitignore, and there the per-directory file would
+// only be a new path in the worktree — the very shift this function exists to
+// avoid. A probe that cannot answer is NOT a reason to write nothing: evidence
+// must never be allowed to move the tree because git failed, so the fallback is
+// the per-directory file, exactly as before, written before the tree is hashed.
 func (r *runner) ensureProofDir() *Result {
+	if ignored, err := r.git.Ignored(r.opts.Dir, proofDir); err == nil && ignored {
+		return nil
+	}
+
 	path := filepath.Join(r.opts.Dir, proofDir, ".gitignore")
 
 	exists, err := r.files.Exists(path)

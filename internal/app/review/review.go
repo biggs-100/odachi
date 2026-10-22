@@ -85,12 +85,17 @@ type Files interface {
 }
 
 // Git is the repository port: which tree is here, what changed since the base,
-// and the diff itself. The diff is what the prompt is built from, so a
-// repository port without it could not describe a candidate.
+// the diff itself, and whether the repository already ignores a path. The diff is
+// what the prompt is built from, so a repository port without it could not
+// describe a candidate.
 type Git interface {
 	TreeHash(root string) (string, error)
 	ChangedPaths(root, base string) ([]string, error)
 	Diff(root, base string) (string, error)
+	// Ignored reports whether the repository's own rules already keep path out
+	// of the tree. It is what makes the lazy ignore file unnecessary in a project
+	// that ran `odachi init`.
+	Ignored(root, path string) (bool, error)
 }
 
 // Shell is the command port for --exec. A non-zero exit is the command's result,
@@ -165,6 +170,9 @@ type runner struct {
 	git    Git
 	shell  Shell
 	lenses Lenses
+	// storeIgnoreWritten is whether this run had to write the store's own
+	// ignore file, so the result reports only files it really wrote.
+	storeIgnoreWritten bool
 }
 
 // candidate is what is being reviewed: the brief it is judged against, the base
@@ -191,12 +199,20 @@ func (r *runner) prompt() Result {
 		return *problem
 	}
 
+	files := []string{}
+	if r.storeIgnoreWritten {
+		// Only what this run actually wrote: a project whose .gitignore already
+		// ignores the store gets no second ignore file, and claiming one would be
+		// machine output that lies about the worktree.
+		files = append(files, ignoreRel())
+	}
+
 	return Result{
 		Code:    CodeOK,
 		Message: promptMessage(tree, selected),
 		Prompt:  text,
 		Lenses:  selected,
-		Files:   []string{ignoreRel()},
+		Files:   files,
 	}
 }
 
@@ -786,9 +802,20 @@ func (r *runner) base() string {
 
 // prepareStore makes the store's directory ignorable and then hashes the
 // worktree. The order is the whole trick: the verdict is written inside the
-// candidate, so without the ignore file, writing it would change the tree that
+// candidate, so without an ignore rule, writing it would change the tree that
 // names it and every verdict would invalidate itself.
+//
+// The rule is asked of the repository first. A project that ran `odachi init`
+// carries the block in its own .gitignore, and there the store's own file would
+// only be a new path in the worktree — the shift this function exists to avoid.
+// A probe that cannot answer is not permission to skip the file: a verdict must
+// never move the tree because git failed, so the fallback is the store's own
+// ignore file, written before the hash as it always was.
 func (r *runner) prepareStore() (string, *Result) {
+	if ignored, err := r.git.Ignored(r.opts.Dir, domain.Dir); err == nil && ignored {
+		return r.treeHash()
+	}
+
 	rel := ignoreRel()
 	path := fullPath(r.opts.Dir, rel)
 
@@ -802,6 +829,7 @@ func (r *runner) prepareStore() (string, *Result) {
 			problem := blocked(fmt.Sprintf("no pude preparar %s: %s; revisá los permisos", rel, oneLine(err.Error())))
 			return "", &problem
 		}
+		r.storeIgnoreWritten = true
 	}
 
 	return r.treeHash()

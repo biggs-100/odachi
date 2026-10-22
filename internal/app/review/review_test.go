@@ -114,6 +114,13 @@ type fakeGit struct {
 	diff    string
 	bases   []string
 	err     error
+
+	// ignored is what the repository's rules answer about the store, and
+	// ignoredErr is the probe failing. A failed probe must never be read as "the
+	// store is already protected".
+	ignored    bool
+	ignoredErr error
+	ignoredAs  []string
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) {
@@ -137,6 +144,14 @@ func (g *fakeGit) Diff(root, base string) (string, error) {
 		return "", g.err
 	}
 	return g.diff, nil
+}
+
+func (g *fakeGit) Ignored(root, path string) (bool, error) {
+	g.ignoredAs = append(g.ignoredAs, path)
+	if g.ignoredErr != nil {
+		return false, g.ignoredErr
+	}
+	return g.ignored, nil
 }
 
 // fakeShell is the Shell port for --exec.
@@ -688,6 +703,8 @@ func (g *flakyGit) ChangedPaths(root, base string) ([]string, error) {
 }
 
 func (g *flakyGit) Diff(root, base string) (string, error) { return g.inner.Diff(root, base) }
+
+func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ignored(root, path) }
 
 // TestNothingOutsideTheStoreIsWritten: the whole surface of this verb is
 // .odachi/reviews/. A review that touched the brief or the code would be a

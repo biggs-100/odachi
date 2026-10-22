@@ -96,6 +96,13 @@ type fakeGit struct {
 	deps       []string
 	changedErr error
 	bases      []string
+
+	// ignored is what the repository's rules answer about the evidence, and
+	// ignoredErr is the probe failing. A failed probe must never be read as
+	// "the tree is already protected".
+	ignored    bool
+	ignoredErr error
+	ignoredAs  []string
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
@@ -109,6 +116,14 @@ func (g *fakeGit) ChangedPaths(root, base string) ([]string, error) {
 }
 
 func (g *fakeGit) AddedDeps(root, base string) ([]string, error) { return g.deps, nil }
+
+func (g *fakeGit) Ignored(root, path string) (bool, error) {
+	g.ignoredAs = append(g.ignoredAs, path)
+	if g.ignoredErr != nil {
+		return false, g.ignoredErr
+	}
+	return g.ignored, nil
+}
 
 // fakeShell is the Shell port: it reports the run it was asked for.
 type fakeShell struct {
