@@ -163,9 +163,9 @@ func run(files *fakeFiles, h fakeHome, opts pack.Options) pack.Result {
 	return pack.Run(opts, files, h)
 }
 
-// TestInstallsTheFiveSkillsForOneAgent: one agent, five files, the exact bytes,
+// TestInstallsEverySkillOfThePayloadForOneAgent: one agent, every file, the exact bytes,
 // and the one-line summary Contract VIII fixes.
-func TestInstallsTheFiveSkillsForOneAgent(t *testing.T) {
+func TestInstallsEverySkillOfThePayloadForOneAgent(t *testing.T) {
 	root := home()
 	files := newFakeFiles(nil)
 	result := run(files, fakeHome{dir: root}, pack.Options{Agents: "claude"})

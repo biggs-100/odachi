@@ -59,7 +59,7 @@ reglas son la diferencia entre un agente que ejecuta y un agente que enseña.
 - ` + "`odachi level`" + ` — muestra tus hechos y propone senior cuando se gana.
 - ` + "`odachi summary`" + ` — qué hay hecho en cada feature.
 - ` + "`odachi check`" + ` — ¿está listo? brief, cerco, preguntas y prueba; con ` + "`--run`" + ` corre la prueba.
-- ` + "`odachi init`" + ` — escribe este bloque y el hook pre-commit.
+- ` + "`odachi init`" + ` — escribe este bloque, el hook, las skills y las dos personas.
 ` + agentsEnd + "\n"
 
 // withBlock returns content with the odachi block replaced in place, or appended

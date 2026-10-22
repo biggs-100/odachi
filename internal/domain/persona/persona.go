@@ -49,7 +49,8 @@ const (
 // and the human deserves to know before making it.
 const generated = "<!-- generado por odachi init; no lo edites a mano: se reescribe entero cada vez que volvés a correr odachi init -->"
 
-// nonDivergence is the second line of every persona file: the answer to the one
+// nonDivergence is the second line of every persona body (the first after the
+// frontmatter a client needs): the answer to the one
 // question two files about the same word create. It stays on a single line
 // because it is the line an agent reads when the two disagree.
 const nonDivergence = "La ceremonia la decide .odachi/profile.toml; este archivo decide solo cómo hablás. Si los dos no coinciden, decilo y pedí odachi level --to <perfil>."
