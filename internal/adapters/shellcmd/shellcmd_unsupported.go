@@ -13,3 +13,9 @@ import (
 func newCommand(ctx context.Context, dir, command string) (*exec.Cmd, error) {
 	return nil, ErrUnsupported
 }
+
+// quotePath is unreachable: newCommand refuses on this platform before any
+// command is prepared.
+func quotePath(path string) string {
+	return path
+}

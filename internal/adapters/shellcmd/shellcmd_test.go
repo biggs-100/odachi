@@ -3,6 +3,7 @@ package shellcmd_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 )
@@ -49,5 +50,47 @@ func TestRunRejectsAnEmptyCommand(t *testing.T) {
 func TestRunRejectsANonPositiveTimeout(t *testing.T) {
 	if _, _, _, err := shellcmd.Run(".", "echo ok", 0); err == nil {
 		t.Fatal("Run accepted a timeout of zero seconds")
+	}
+}
+
+// A prompt is much bigger than a pipe buffer, and a reviewer that never reads its
+// stdin must not be able to block odachi: the input goes to a file, not a pipe.
+func TestRunInputDoesNotHangWhenTheCommandIgnoresItsStdin(t *testing.T) {
+	input := strings.Repeat("linea del prompt que el comando ignora\n", 20000)
+
+	done := make(chan struct{})
+	var output string
+	var err error
+	go func() {
+		defer close(done)
+		output, _, _, err = shellcmd.RunInput(".", "exit 0", input, 30)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(20 * time.Second):
+		t.Fatal("RunInput blocked on a command that never read its stdin")
+	}
+
+	if err != nil {
+		t.Fatalf("RunInput: %v", err)
+	}
+	if output != "" {
+		t.Errorf("output = %q, want nothing", output)
+	}
+}
+
+// A command without the token is untouched, and a command with the token but no
+// prompt is left alone too: nothing is invented.
+func TestRunInputLeavesTheTokenAloneWhenThereIsNoPrompt(t *testing.T) {
+	output, exitCode, _, err := shellcmd.RunInput(".", "echo {prompt}", "", 30)
+	if err != nil {
+		t.Fatalf("RunInput: %v", err)
+	}
+	if exitCode != 0 {
+		t.Errorf("exit code = %d, want 0", exitCode)
+	}
+	if !strings.Contains(output, "{prompt}") {
+		t.Errorf("output = %q, want the token untouched", output)
 	}
 }
