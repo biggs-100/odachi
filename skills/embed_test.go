@@ -3,6 +3,7 @@ package skills_test
 import (
 	"os"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/biggs-100/odachi/skills"
@@ -65,6 +66,36 @@ func TestEmbeddedBytesAreTheFilesInTheRepo(t *testing.T) {
 		if string(s.Content) != string(onDisk) {
 			t.Errorf("%s: the embedded bytes differ from %s/SKILL.md", s.Name, s.Name)
 		}
+	}
+}
+
+// TestDelegationPolicyLivesInSlicesAndDrive: the policy that decides when a
+// subagent is used is content, and content drifts. `slices` owns the triggers and
+// the handoff; `drive` is what the block loads before acting, so it is the one
+// that has to send the agent to `slices` when the request does not fit.
+func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	for _, want := range []string{
+		"gana esta",
+		"Nunca por tamaño",
+		"path del task doc",
+		"≤2k tokens",
+		"Nunca delegues la decisión de visión",
+	} {
+		if !strings.Contains(byName["slices"], want) {
+			t.Errorf("slices no dice %q: la política de delegación se perdió", want)
+		}
+	}
+	if !strings.Contains(byName["drive"], "cargá `slices` antes de partir") {
+		t.Errorf("drive no manda a cargar slices cuando el pedido no entra en una lectura")
 	}
 }
 

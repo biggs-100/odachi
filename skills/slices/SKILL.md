@@ -1,6 +1,6 @@
 ---
 name: slices
-description: Trigger: cuando hay que partir un pedido grande en pasos chicos, o cuando entender el código que hay que tocar ya no entra en una lectura.
+description: Trigger: cuando hay que partir un pedido grande en pasos chicos, cuando el código ya no entra en una lectura, o hay que decidir si delegar a un subagente.
 ---
 
 ## Cuándo
@@ -26,6 +26,9 @@ entender lo que hay que tocar te llevó más de tres lecturas.
 
 ## Si delegás
 
+Dentro de un proyecto odachi, esta es la política de delegación: si otra skill
+global dice otra cosa, gana esta.
+
 Un subagente arranca sin caché: re-lee el prompt y los archivos. **No ahorra tokens
 totales, protege tu contexto.** Por eso la regla no es el tamaño de la tarea.
 
@@ -34,6 +37,13 @@ totales, protege tu contexto.** Por eso la regla no es el tamaño de la tarea.
   mucho, dos unidades que no se tocan, contexto lleno—, nunca por tamaño.
 - Lo que **se lee mucho** se delega; lo que **se escribe poco** no. Explorar un
   módulo desconocido: delegá. Cambiar una línea que ya encontraste: hacelo vos.
+- Un **escritor** se delega solo por una razón con nombre: dos o más unidades
+  independientes con superficies de edición disjuntas, cada una más pesada que
+  arrancar un subagente; o la sesión llegó a ~150k tokens. Nunca por tamaño,
+  cantidad de archivos ni precio. Sin razón, escribí vos, aunque toques varios.
+- Un escritor por unidad. Si van en paralelo, no comparten archivos y vos sos dueño
+  de git y del control final. Si delegás la escritura, delegá también la lectura que
+  la prepara; si escribís vos, leé vos.
 - El pedido lleva el **path del task doc y el paso**, no un resumen. Parafrasear los
   requisitos es cómo se pierden.
 - El retorno está acotado: **≤2k tokens**, evidencia `path:line`, y la lista de
@@ -51,4 +61,5 @@ totales, protege tu contexto.** Por eso la regla no es el tamaño de la tarea.
 - Mezclar un refactor con un cambio de comportamiento en el mismo paso.
 - Partir por archivos o por capas en vez de por comportamiento entregable.
 - Dejar pasos de limpieza sin criterio de terminado: crecen y nunca se cierran.
-- Delegar para ahorrar tokens en algo que hacés en un turno.
+- Delegar por tamaño o cantidad de archivos, o para ahorrar tokens en algo que hacés
+  en un turno.

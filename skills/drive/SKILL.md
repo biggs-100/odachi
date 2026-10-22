@@ -28,6 +28,10 @@ El ciclo de una feature, en orden:
 5. Un commit por paso, y `odachi plan --done T1 --commit <sha>`.
 6. Al cerrar, `odachi summary` y contá en tres líneas qué decidió la persona.
 
+Si el pedido no entra en una lectura, cargá `slices` antes de partir. Su política de
+delegación gana sobre otras skills globales: un escritor solo por paralelismo real o
+sesión larga, nunca por tamaño ni cantidad de archivos.
+
 Los verbos: `start` entrevista · `ask` pregunta o decisión de oficio (`--craft`) · `plan`
 abre y cierra pasos · `check` compuertas y prueba · `review` veredicto por árbol · `doctor`
 salud sin escribir · `level` perfil · `summary` estado · `undo` deshace lo último · `init`,
