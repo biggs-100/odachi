@@ -67,3 +67,46 @@ func TestEmbeddedBytesAreTheFilesInTheRepo(t *testing.T) {
 		}
 	}
 }
+
+// TestBootstrapIsTheEntryPoint: the payload has exactly one skill that teaches
+// how to start a project, and it is the one `odachi init` installs in the
+// human's home. Splitting it out of the curriculum is the whole reason the
+// helper exists: a project carries craft, the home carries how to arrive.
+func TestBootstrapIsTheEntryPoint(t *testing.T) {
+	bootstrap, ok := skills.Bootstrap()
+	if !ok {
+		t.Fatalf("el payload no tiene la skill %q: un agente no puede aprender a arrancar", skills.BootstrapName)
+	}
+	if bootstrap.Name != skills.BootstrapName {
+		t.Errorf("Bootstrap() = %q, want %q", bootstrap.Name, skills.BootstrapName)
+	}
+	if len(bootstrap.Content) == 0 {
+		t.Error("la skill de arranque vino vacía")
+	}
+}
+
+// TestCurriculumIsEverySkillButTheEntryPoint: the project copy is the craft and
+// nothing else, so init never installs the same two skills in both roots.
+func TestCurriculumIsEverySkillButTheEntryPoint(t *testing.T) {
+	curriculum, err := skills.Curriculum()
+	if err != nil {
+		t.Fatalf("Curriculum(): %v", err)
+	}
+
+	want := make([]string, 0, len(bundled))
+	for _, name := range bundled {
+		if name != skills.BootstrapName {
+			want = append(want, name)
+		}
+	}
+	got := make([]string, 0, len(curriculum))
+	for _, s := range curriculum {
+		got = append(got, s.Name)
+		if s.Name == skills.BootstrapName {
+			t.Errorf("el currículum del proyecto incluye la skill de arranque")
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("Curriculum() = %v, want %v", got, want)
+	}
+}

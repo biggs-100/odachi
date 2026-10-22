@@ -22,6 +22,13 @@ import (
 //go:embed */SKILL.md
 var bundled embed.FS
 
+// BootstrapName is the one skill that explains how a project starts. It is a
+// different kind of thing from the others: the rest are craft a project carries,
+// and this one is how an agent arrives at a folder where nothing exists yet. It
+// lives in the human's home for that reason, and it is the only bundled skill
+// `odachi init` keeps out of the project copy.
+const BootstrapName = "bootstrap"
+
 // Skill is one starter skill: its name (its directory) and its exact bytes.
 type Skill struct {
 	Name    string
@@ -46,6 +53,40 @@ func All() ([]Skill, error) {
 	}
 	sort.SliceStable(all, func(i, j int) bool { return all[i].Name < all[j].Name })
 	return all, nil
+}
+
+// Bootstrap returns the entry-point skill. ok is false when a payload was built
+// without it, which can only happen on a broken build: the caller says so instead
+// of installing nothing and reporting success.
+func Bootstrap() (Skill, bool) {
+	all, err := All()
+	if err != nil {
+		return Skill{}, false
+	}
+	for _, s := range all {
+		if s.Name == BootstrapName {
+			return s, true
+		}
+	}
+	return Skill{}, false
+}
+
+// Curriculum returns every bundled skill except the entry point: the craft a
+// project carries. The order is the same All returns, so two runs of `odachi
+// init` write the same bytes in the same order.
+func Curriculum() ([]Skill, error) {
+	all, err := All()
+	if err != nil {
+		return nil, err
+	}
+	craft := make([]Skill, 0, len(all))
+	for _, s := range all {
+		if s.Name == BootstrapName {
+			continue
+		}
+		craft = append(craft, s)
+	}
+	return craft, nil
 }
 
 // Names returns the bundled skill names, in the order All returns them.
