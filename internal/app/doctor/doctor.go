@@ -174,9 +174,26 @@ func (r *runner) repository() domaindoctor.Check {
 		return r.unreadable(domaindoctor.CheckGit, gitDir, err)
 	}
 	if !found {
+		// In a linked worktree .git is a file pointing at the main repository.
+		// Saying "there is no .git, run git init" there is a lie and a dead end:
+		// git init is already done, in the main repository.
+		if exists, err := r.files.Exists(filepath.Join(r.opts.Dir, filepath.FromSlash(gitDir))); err == nil && exists {
+			return domaindoctor.OK(domaindoctor.CheckGit, "sí: worktree (el .git real está en el repo principal)")
+		}
 		return domaindoctor.Broken(domaindoctor.CheckGit, "no hay "+gitDir+": no hay hook posible", "corré git init")
 	}
 	return domaindoctor.OK(domaindoctor.CheckGit, "sí")
+}
+
+// inWorktree reports whether this project is a linked worktree, where the hook
+// lives in the main repository and init cannot install it here.
+func (r *runner) inWorktree() bool {
+	isDir, err := r.isDir(gitDir)
+	if err != nil || isDir {
+		return false
+	}
+	exists, err := r.files.Exists(filepath.Join(r.opts.Dir, filepath.FromSlash(gitDir)))
+	return err == nil && exists
 }
 
 // agents: the rules block is what makes the agent read them at all.
@@ -206,6 +223,10 @@ func (r *runner) hook() domaindoctor.Check {
 		return r.unreadable(domaindoctor.CheckHook, hookRel, err)
 	}
 	switch {
+	case !exists && r.inWorktree():
+		return domaindoctor.Broken(domaindoctor.CheckHook,
+			"estás en un worktree: los hooks viven en el repo principal, así que acá no hay gate local",
+			"corré odachi init desde el repo principal (donde "+gitDir+" es un directorio)")
 	case !exists:
 		return domaindoctor.Broken(domaindoctor.CheckHook,
 			"no hay "+hookRel+": no hay gate local",

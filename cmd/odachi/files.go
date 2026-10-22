@@ -160,6 +160,15 @@ func loadProfile(dir, verb string) (*profile.Profile, int, string) {
 		return nil, start.CodeBlocked, fmt.Sprintf(
 			`el perfil %s no dice name; agregá name = "novato" (o "senior", "ci") y volvé a correr %s`, rel, verb)
 	}
+	// A name nobody shipped and that inherits from nothing resolves to a profile
+	// with every field empty: it validates field by field and configures nothing.
+	// That is the broken-ceremony case, and it is refused here because this is the
+	// one place that knows which profiles exist.
+	if _, shipped := profile.Builtin()[loaded.Name]; !shipped && strings.TrimSpace(loaded.Extends) == "" {
+		return nil, start.CodeBlocked, fmt.Sprintf(
+			`el perfil %s dice name = %q, que no existe y no hereda de nadie: usá "novato", "senior" o "ci", o poné extends apuntando a uno de ellos, y volvé a correr %s`,
+			rel, loaded.Name, verb)
+	}
 
 	// The human's file overrides the built-in profile of the same name, but a
 	// field left out keeps the built-in default: a profile may change ceremony,

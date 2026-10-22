@@ -9,9 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
-	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
 	doctorapp "github.com/biggs-100/odachi/internal/app/doctor"
 	"github.com/biggs-100/odachi/internal/app/start"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
@@ -126,38 +124,20 @@ func (osLookup) LookPath(name string) (string, error) {
 type osProfiles struct{}
 
 func (osProfiles) Resolve(dir string) (string, bool, error) {
-	path := filepath.Join(dir, ".odachi", "profile.toml")
-
-	exists, err := osFiles{}.Exists(path)
-	if err != nil {
-		return "", false, fmt.Errorf("no pude revisar .odachi/profile.toml: %w", err)
+	// One owner for the decision. Answering this twice is how the two answers
+	// drift apart, and doctor exists to report what the verbs would do.
+	loaded, code, message := loadProfile(dir, "odachi doctor")
+	if code != start.CodeOK {
+		return "", false, errors.New(message)
 	}
-	if !exists {
+	if loaded == nil {
 		name, err := inferProfile(dir)
 		if err != nil {
 			return "", false, err
 		}
 		return name, true, nil
 	}
-
-	loaded, err := profiletoml.Load(path)
-	if err != nil {
-		return "", false, fmt.Errorf("no pude leerlo: %w", err)
-	}
-	if strings.TrimSpace(loaded.Name) == "" {
-		return "", false, fmt.Errorf(`no dice name: agregá name = "novato" (o "senior", "ci")`)
-	}
-
-	// The human's file overrides the built-in of the same name, but a field left
-	// out keeps the built-in default: the same rule every other verb applies.
-	known := profile.Builtin()
-	known[loaded.Name] = withDefaults(loaded, known)
-
-	resolved, err := profile.Resolve(known, loaded.Name)
-	if err != nil {
-		return "", false, err
-	}
-	return resolved.Name, false, nil
+	return loaded.Name, false, nil
 }
 
 // inferProfile is what the profile would be with no file at all: the inference
