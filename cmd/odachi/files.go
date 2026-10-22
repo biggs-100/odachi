@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,6 +100,29 @@ func (osHome) Home() (string, error) {
 		return "", fmt.Errorf("el sistema no reportó ningún home")
 	}
 	return home, nil
+}
+
+// ensureHistory creates the version history odachi needs, because owning a project
+// does not require knowing what git is. Refusing with "corré git init" in front of
+// somebody who has never heard of git is the opposite of this tool: creating the
+// history is dirty work, and dirty work is the agent's job.
+//
+// It returns whether it created one, so the caller can say so in plain Spanish and
+// name git only in parentheses, next to what it is for.
+func ensureHistory(dir string) (bool, error) {
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+		return false, nil
+	}
+	git, err := exec.LookPath("git")
+	if err != nil {
+		return false, errors.New("necesito un programa que guarde el historial del proyecto y no lo encontré: instalá git (git-scm.com) y volvé a correr odachi init")
+	}
+	cmd := exec.Command(git, "init", dir)
+	cmd.Stdout, cmd.Stderr = io.Discard, io.Discard
+	if err := cmd.Run(); err != nil {
+		return false, fmt.Errorf("no pude crear el historial del proyecto: %s", oneLine(err.Error()))
+	}
+	return true, nil
 }
 
 // hookExe is how the pre-commit hook will reach this binary: the name when it is

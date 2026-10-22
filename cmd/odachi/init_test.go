@@ -107,21 +107,29 @@ func TestInitRefusesAForeignHook(t *testing.T) {
 	}
 }
 
-// Without a repository the command says what to run instead of half-doing the
-// job.
-func TestInitWithoutGitBlocks(t *testing.T) {
+// Without a repository the command creates the history itself. Owning a project
+// does not require knowing what git is, and refusing with "corré git init" in front
+// of a beginner is the opposite of what this tool promises: creating the history is
+// dirty work, and dirty work is the agent's job.
+func TestInitCreatesTheHistoryWhenThereIsNone(t *testing.T) {
 	dir := t.TempDir()
 
-	code, _, errOut := runDir(t, dir, []string{"init"}, "")
+	code, out, errOut := runDir(t, dir, []string{"init"}, "")
 
-	if code != 1 {
-		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stderr: %q)", code, errOut)
 	}
-	if !strings.Contains(errOut, "git init") {
-		t.Errorf("stderr %q does not name git init", errOut)
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
+		t.Fatalf("init did not create the history: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); !os.IsNotExist(err) {
-		t.Errorf("AGENTS.md was written without a repository: %v", err)
+	if !strings.Contains(out, "historial del proyecto") {
+		t.Errorf("stdout %q does not say what it created", out)
+	}
+	if !strings.Contains(out, "git init") {
+		t.Errorf("stdout %q does not name git in parentheses, so a dev can see what it did", out)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); err != nil {
+		t.Errorf("AGENTS.md was not written: %v", err)
 	}
 }
 

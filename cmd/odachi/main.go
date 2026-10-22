@@ -614,7 +614,22 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	return reportInit(initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing()}, osFiles{}), asJSON, stdout, stderr)
+	created, err := ensureHistory(dir)
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: "+err.Error())
+		return start.CodeBlocked
+	}
+
+	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing()}, osFiles{})
+	if created {
+		line := "historial del proyecto: lo creé en esta carpeta (git init); es lo que me deja probar que una prueba corresponde a este estado del código"
+		result.Lines = append([]string{line}, result.Lines...)
+	}
+	if len(result.Files) > 0 || created {
+		result.Files = append([]string{".git/"}, result.Files...)
+	}
+
+	return reportInit(result, asJSON, stdout, stderr)
 }
 
 // reportInit prints what init did. Unlike the other verbs it always prints its
