@@ -236,12 +236,8 @@ func (r *runner) resolveProfile() (profile.Profile, *Result) {
 	if err != nil {
 		return profile.Profile{}, failure(blocked("no pude leer el directorio del proyecto: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
 	}
-	hasRepo, err := r.files.Exists(filepath.Join(r.opts.Dir, ".git"))
-	if err != nil {
-		return profile.Profile{}, failure(blocked("no pude leer el directorio del proyecto: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
-	}
 
-	name := profile.Infer(profile.Facts{HasBrief: hasBrief, HasRepo: hasRepo, Machine: r.opts.Machine})
+	name := profile.Infer(profile.Facts{HasBrief: hasBrief, Machine: r.opts.Machine})
 	resolved, err := profile.Resolve(profile.Builtin(), name)
 	if err != nil {
 		return profile.Profile{}, failure(blocked("no pude resolver el perfil " + name + ": " + oneLine(err.Error())))

@@ -168,9 +168,8 @@ func TestInfer(t *testing.T) {
 		want  string
 	}{
 		{"machine", profile.Facts{Machine: true}, "ci"},
-		{"machine wins over repo and brief", profile.Facts{Machine: true, HasRepo: true, HasBrief: true}, "ci"},
+		{"machine wins over brief", profile.Facts{Machine: true, HasBrief: true}, "ci"},
 		{"has brief", profile.Facts{HasBrief: true}, "senior"},
-		{"has repo", profile.Facts{HasRepo: true}, "senior"},
 		{"nothing", profile.Facts{}, "novato"},
 	}
 

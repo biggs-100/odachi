@@ -154,11 +154,7 @@ func inferProfile(dir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("no pude revisar brief.md: %w", err)
 	}
-	hasRepo, err := files.Exists(filepath.Join(dir, ".git"))
-	if err != nil {
-		return "", fmt.Errorf("no pude revisar .git: %w", err)
-	}
-	return profile.Infer(profile.Facts{HasBrief: hasBrief, HasRepo: hasRepo}), nil
+	return profile.Infer(profile.Facts{HasBrief: hasBrief}), nil
 }
 
 // selfExe is the path of the binary that is running. `odachi doctor` uses it to

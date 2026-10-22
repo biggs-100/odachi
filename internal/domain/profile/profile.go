@@ -27,7 +27,6 @@ type Profile struct {
 // Facts is what the tool can observe before asking anything.
 type Facts struct {
 	HasBrief bool
-	HasRepo  bool
 	Machine  bool
 }
 
@@ -109,11 +108,17 @@ func Resolve(known map[string]Profile, name string) (Profile, error) {
 }
 
 // Infer picks a profile from what the tool can see, never from what it assumes.
+//
+// A brief is the one signal that the human already defined a project; a git
+// repository is not, because `odachi init` creates one before `start` decides the
+// profile. Inferring senior from `.git` turned every new beginner project into a
+// senior one — exactly backwards. Senior is earned with `odachi level --to`, or
+// inferred from a brief the human brought.
 func Infer(f Facts) string {
 	switch {
 	case f.Machine:
 		return "ci"
-	case f.HasBrief || f.HasRepo:
+	case f.HasBrief:
 		return "senior"
 	default:
 		return "novato"

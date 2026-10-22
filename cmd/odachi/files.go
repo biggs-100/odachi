@@ -240,12 +240,8 @@ func currentProfile(dir, verb string, machine bool) (*profile.Profile, int, stri
 	if err != nil {
 		return nil, start.CodeBlocked, "no pude revisar brief.md: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr " + verb
 	}
-	hasRepo, err := files.Exists(filepath.Join(dir, ".git"))
-	if err != nil {
-		return nil, start.CodeBlocked, "no pude revisar el repositorio: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr " + verb
-	}
 
-	name := profile.Infer(profile.Facts{HasBrief: hasBrief, HasRepo: hasRepo, Machine: machine})
+	name := profile.Infer(profile.Facts{HasBrief: hasBrief, Machine: machine})
 	resolved, err := profile.Resolve(profile.Builtin(), name)
 	if err != nil {
 		return nil, start.CodeBlocked, "no pude resolver el perfil " + name + ": " + oneLine(err.Error()) + "; volvé a correr " + verb

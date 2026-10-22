@@ -615,6 +615,26 @@ func TestMissingBriefFileIsBlocked(t *testing.T) {
 	}
 }
 
+// TestStartDoesNotInferSeniorFromRepository: `odachi init` creates `.git` before
+// `start` decides the profile, so a repository is not evidence of experience. A
+// beginner's first project must start on novato; senior is earned with
+// `odachi level --to` or inferred from a brief the human brought.
+func TestStartDoesNotInferSeniorFromRepository(t *testing.T) {
+	var events []string
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+	files := newFakeFiles(map[string]string{".git": "gitdir: ../.git/worktrees/x\n"}, &events)
+
+	got := start.Run(start.Options{}, interview, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
+	}
+	profile := files.content(t, ".odachi/profile.toml")
+	if !strings.Contains(profile, `name         = "novato"`) {
+		t.Errorf("un repo sin brief tiene que arrancar en novato:\n%s", profile)
+	}
+}
+
 // TestStartPutsTheVoiceOfTheProfileItWrote: the profile decides how the agent
 // talks, and this run is what decided the profile. A block left at the old voice
 // is an agent that speaks differently from what the project promises, which is
