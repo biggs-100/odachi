@@ -5,7 +5,7 @@ same work unit as the code change.
 
 | Package | Who depends on it | Tests that cover it |
 | --- | --- | --- |
-| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/version_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/lock_test.go`, `cmd/odachi/review_test.go`, `cmd/odachi/reviewlens_test.go`, `cmd/odachi/reviewexec_unix_test.go`, `cmd/odachi/reviewexec_windows_test.go`, `cmd/odachi/doctor_test.go`, `cmd/odachi/bench_test.go` |
+| `cmd/odachi` | Nobody imports it; it is the binary | `cmd/odachi/main_test.go`, `cmd/odachi/ask_test.go`, `cmd/odachi/bench_test.go`, `cmd/odachi/check_test.go`, `cmd/odachi/doctor_test.go`, `cmd/odachi/doctor_debts_test.go`, `cmd/odachi/evidence_test.go`, `cmd/odachi/init_test.go`, `cmd/odachi/init_personas_test.go`, `cmd/odachi/init_skills_test.go`, `cmd/odachi/install_test.go`, `cmd/odachi/level_test.go`, `cmd/odachi/lock_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/plan_test.go`, `cmd/odachi/reuse_test.go`, `cmd/odachi/review_test.go`, `cmd/odachi/reviewexec_unix_test.go`, `cmd/odachi/reviewexec_windows_test.go`, `cmd/odachi/reviewlens_test.go`, `cmd/odachi/skills_test.go`, `cmd/odachi/undo_test.go`, `cmd/odachi/undo_ambiguous_test.go`, `cmd/odachi/version_test.go` |
 | `internal/app/start` | `cmd/odachi`: `start` and `odachi` with no arguments | `internal/app/start/start_test.go` |
 | `internal/app/tasks` | `internal/app/{ask,plan,level,summary}`: find the current or every feature document, and the single write guard every task-document rewrite goes through | `internal/app/tasks/tasks_test.go`, `internal/app/tasks/save_test.go` |
 | `internal/app/ask` | `cmd/odachi`: `ask` in its three forms | `internal/app/ask/ask_test.go` |
@@ -14,11 +14,11 @@ same work unit as the code change.
 | `internal/app/summary` | `cmd/odachi`: `summary` | `internal/app/summary/summary_test.go` |
 | `internal/app/check` | `cmd/odachi`: `check` in all its forms, plus the optional `--require-review` gate: verdict per tree, verdict per required lens, and no unrefuted blocker | `internal/app/check/check_test.go`, `internal/app/check/review_test.go`, `internal/app/check/lens_test.go` |
 | `internal/app/review` | `cmd/odachi`: `review` in its five forms. Reads the brief, the changed paths and the diff through ports, loads the selected lens prompts through the `Lenses` port, and hands the reviewer the same prompt the verb prints (one builder, two verbs); takes the lock on nothing: it writes one verdict or one refutation, atomically, inside `.odachi/reviews/` | `internal/app/review/review_test.go`, `internal/app/review/lenses_test.go` |
-| `internal/app/init` | `cmd/odachi`: `init` (the AGENTS.md block and the pre-commit hook) | `internal/app/init/init_test.go` |
+| `internal/app/init` | `cmd/odachi`: `init` — the rules block in `AGENTS.md`, the marked block in `.gitignore`, the pre-commit hook, the two personas per client (writes `internal/domain/persona`, never reads the profile), and the `Skills` port the CLI joins to `pack`: the project's curriculum and the home's bootstrap skill | `internal/app/init/init_test.go`, `internal/app/init/personas_test.go`, `internal/app/init/agents_block_internal_test.go`, `internal/app/init/gitignore_internal_test.go`, `internal/app/init/path_warning_test.go`, `cmd/odachi/init_test.go`, `cmd/odachi/init_skills_test.go`, `cmd/odachi/init_personas_test.go`, `cmd/odachi/evidence_test.go` |
 | `internal/app/skills` | `cmd/odachi`: `skills` (list, `--check`, `--write`) and `skill new` | `internal/app/skills/skills_test.go` |
-| `internal/app/pack` | `cmd/odachi`: `pack` (the detected agents, `--agents`, `--dry-run`) | `internal/app/pack/pack_test.go` |
-| `internal/domain/doctor` | `internal/app/doctor` (the ten checks' numbering, titles, hook and AGENTS.md reading, the PATH fix and the one-line rendering), `cmd/odachi` (`--json` prints the same checks) | `internal/domain/doctor/doctor_test.go` |
-| `internal/app/doctor` | `cmd/odachi`: `doctor` (the ten read-only checks over three ports) | `internal/app/doctor/doctor_test.go`, `cmd/odachi/doctor_test.go` |
+| `internal/app/pack` | `cmd/odachi`: `pack` (the detected agents, `--agents`, `--scope`, `--dest`, `--dry-run`), and `init` through the CLI's `initSkills` join — two destinations, one report. Resolves every name to a target directory, groups agents that share one, and refuses `--dest` with `--scope` before reading anything | `internal/app/pack/pack_test.go`, `cmd/odachi/pack_test.go`, `cmd/odachi/init_skills_test.go` |
+| `internal/domain/doctor` | `internal/app/doctor` (the ten checks' numbering, titles, hook and AGENTS.md reading, the PATH fix and the one-line rendering, plus the two-line pre-flight for a folder that never was a project), `cmd/odachi` (`--json` prints the same lines) | `internal/domain/doctor/doctor_test.go` |
+| `internal/app/doctor` | `cmd/odachi`: `doctor` — the pre-flight for a folder that is not a project yet, and otherwise the ten read-only checks over three ports | `internal/app/doctor/doctor_test.go`, `internal/app/doctor/preflight_test.go`, `internal/app/doctor/ignore_test.go`, `cmd/odachi/doctor_test.go` |
 | `internal/bench` | `internal/app/bench` (the corpus, the command a blocked message names, the four-way classification, the sandbox environment) | `internal/bench/bench_test.go` |
 | `internal/app/bench` | `cmd/odachi`: `bench` (runs each journey in its own sandbox and removes it) | `internal/app/bench/bench_test.go`, `cmd/odachi/bench_test.go` |
 | `internal/app/lock` | `cmd/odachi` (the `Lock` adapter, wired into `start` and `undo`), `internal/app/start` and `internal/app/undo` (they take the lock before their first deciding read and release it with `defer`) | `internal/app/lock/lock_test.go`, `internal/app/start/lock_test.go`, `internal/app/undo/lock_test.go`, `cmd/odachi/lock_test.go` |
@@ -31,8 +31,9 @@ same work unit as the code change.
 | `internal/assets/review` | `cmd/odachi` (the `Lenses` adapter): the four lens prompts, embedded with `//go:embed` | `internal/assets/review/lens_test.go` |
 | `internal/domain/profile` | `internal/app/start`, `internal/app/level`, the profile decoder adapter | `internal/domain/profile/profile_test.go`, `internal/domain/profile/next_test.go` |
 | `internal/domain/skill` | `internal/app/skills` (parse each `SKILL.md`, validate the set, generate `SKILLS.md`) | `internal/domain/skill/skill_test.go` |
-| `internal/domain/agent` | `internal/app/pack`: the verified agent → skills directory table and the refused names | `internal/domain/agent/agent_test.go` |
-| `skills` (repository root) | `cmd/odachi` (`pack` reads the embedded payload); the Go package lives in the same directory as the `SKILL.md` files it embeds, so there is no second copy | `skills/embed_test.go` |
+| `internal/domain/agent` | `internal/app/pack`: the verified agent → skills directory table, its two scopes, the `standard` pseudo-agent (`.agents/skills`, the cross-client location, never detected), the one scope override the table cannot predict (`opencode` under home is `~/.config/opencode/skills`), `--dest` labels that skip the table, and the refused names | `internal/domain/agent/agent_test.go` |
+| `internal/domain/persona` | `internal/app/init`: renders both personas (`novato`, `senior`) into each client's own selector — `.opencode/agents/*.md` and `.claude/output-styles/*.md` — with one shared body and a per-client frontmatter; it never reads the profile and every file carries the non-divergence line. `cmd/odachi` only carries the destinations in `init --json` | `internal/domain/persona/persona_test.go`, `cmd/odachi/init_personas_test.go` |
+| `skills` (repository root) | `cmd/odachi` (`pack` reads the embedded payload; `init` reads `Curriculum()` and `Bootstrap()` from it); the Go package lives in the same directory as the `SKILL.md` files it embeds, so there is no second copy | `skills/embed_test.go` |
 | `internal/adapters/{fsx,gitx,profiletoml}` | `cmd/odachi` only; the domain never imports them | the matching `_test.go` in each adapter |
 | `internal/adapters/shellcmd` | `cmd/odachi` only (the `check --run` and `review --exec` shell); one file per platform. `RunInput` delivers a prompt as the command's stdin from a file, and `{prompt}` as that file's quoted path; Windows builds the `cmd` command line with `/s /c "…"` because `cmd.exe` does not understand the backslash escaping Go applies to a quoted argument | `shellcmd_test.go` plus the per-platform `_test.go` |
 | `internal/archtest` | Nobody imports it; it guards every domain package | `internal/archtest/boundary_test.go` |
@@ -55,11 +56,12 @@ same work unit as the code change.
 | Rules | `name` equals the directory and matches `^[a-z][a-z0-9-]{2,40}$`; description starts with `Trigger:` and is at most 200 characters; body at most 60 lines; no empty section; no `TODO`; unique names; the registry is exactly what `--write` generates | `skill_test.go` plus `internal/app/skills/skills_test.go` and the `cmd/odachi/skills_test.go` table, one violation per case |
 | Registry | `SKILLS.md`, first line `<!-- generado por odachi skills --write; no lo edites a mano -->`, then the `Skill \| Trigger \| Path` table sorted by name | `skill_test.go` pins the exact bytes; `cmd/odachi/skills_test.go` proves two `--write` runs are identical and a hand edit makes `--check` fail naming `--write` |
 | `skill new` | validates the slug before any write, refuses an existing one, writes the template, then regenerates the registry | `internal/app/skills/skills_test.go` and `cmd/odachi/skills_test.go` |
-| Bundled five | `skills/{acceptance,data,ship,slices,tests}/SKILL.md`, each with the three sections and at most 60 lines | `cmd/odachi/skills_test.go` runs `skills --check` over this repository |
+| Bundled nine | `skills/{acceptance,bootstrap,commits,data,ship,skill-craft,slices,tests,writing}/SKILL.md`, each with the three sections and at most 60 lines | `cmd/odachi/skills_test.go` runs `skills --check` over this repository |
 
-`odachi init` does not own the skills: its block only gains the line that points
-at `SKILLS.md`. Copying the bundled skills into a project is `pack`, a later
-unit.
+`odachi init` copies the skills now: the eight that are craft go to the project's
+`.agents/skills` and `bootstrap` goes to `~/.agents/skills`. Its block still only
+gains the line that points at `SKILLS.md`, and that registry is the project's
+own — not the installed set.
 
 ## Pack (T13)
 
@@ -68,9 +70,9 @@ repository, and an agent only loads what is in its own skills directory.
 
 | What | Where | How it is verified |
 | --- | --- | --- |
-| Source | The five `skills/<name>/SKILL.md` files compiled into the binary with `//go:embed */SKILL.md`, in the `skills` package. No network, no repository at run time, no duplicated copy | `skills/embed_test.go` compares the embedded bytes with the files on disk |
+| Source | The nine `skills/<name>/SKILL.md` files compiled into the binary with `//go:embed */SKILL.md`, in the `skills` package. No network, no repository at run time, no duplicated copy. `All()` is the payload `pack` installs; `Curriculum()` is the eight that are not the entry point; `Bootstrap()` is that one | `skills/embed_test.go` compares the embedded bytes with the files on disk |
 | Destination table | `internal/domain/agent`: `claude .claude/skills`, `codex .codex/skills`, `cursor .cursor/skills`, `gemini .gemini/skills`, `copilot .copilot/skills`, `qwen .qwen/skills`, `kiro .kiro/skills`, all home-scoped, plus `opencode .opencode/skills`, the only project-scoped row. It is data, not branches of code, because every path was verified against the agent's documentation or source | `internal/domain/agent/agent_test.go` pins every row, its scope, `Display()` and `Marker()` |
-| Scopes | A `home` agent resolves its destination against the human's home; a `project` agent (`opencode`) against the project directory the verb runs in. OpenCode reads `{skill,skills}/**/SKILL.md` relative to the project, so this path has no platform-dependent shape; the global `~/.config/opencode/skills` exists but is not the one installed | `TestOpenCodeIsProjectScoped`, `TestOnlyOpenCodeIsProjectScoped`, `TestOpenCodeInstallsIntoTheProject`, `TestOnlyTheProjectAgentWritesIntoTheProject` |
+| Scopes | A `home` agent resolves its destination against the human's home; a `project` agent (`opencode`) against the project directory the verb runs in. OpenCode reads `{skill,skills}/**/SKILL.md` relative to the project, so this path has no platform-dependent shape; the global `~/.config/opencode/skills` exists but is not the default — `--scope home` is what installs there | `TestOpenCodeIsProjectScoped`, `TestOnlyOpenCodeIsProjectScoped`, `TestOpenCodeInstallsIntoTheProject`, `TestOnlyTheProjectAgentWritesIntoTheProject`, `TestOpenCodeHomeLandsInItsGlobalConfigDir` |
 | Refusals | `pi` is refused with `Pi no usa un directorio de skills` (its adapter reports none); any other name is refused naming the supported ones, opencode included | `agent_test.go`, `internal/app/pack/pack_test.go`, `cmd/odachi/pack_test.go` |
 | Write rule | `<root>/<dest>/<name>/SKILL.md` through `fsx.WriteAtomic`; an existing file that differs is backed up first; an identical one is reported as `sin cambios` and not rewritten | `pack_test.go` (second run: no write, no backup; edited file: backup before write; opencode: same rule in the project), `TestPackOpenCodeSecondRunIsIdentical` |
 | Never deletes | Nothing is deleted or moved; a `SKILL.md` odachi did not write is reported with its path and left alone | `TestForeignFileIsReportedAndNotTouched` |
@@ -104,8 +106,9 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
 
 ## `cmd/odachi` behaviour
 
-- Commands: `start` (default), `ask`, `plan`, `level`, `summary`, `check`,
-  `init`, `skills`, `skill new`, `pack`, `version`. `odachi`
+- Commands: `start` (default), `ask`, `plan`, `level`, `summary`, `undo`,
+  `check`, `review`, `doctor`, `bench`, `init`, `skills`, `skill new`, `pack`,
+  `version`. `odachi`
   with no arguments is `odachi start`; a first argument that starts with `-` is
   treated as `start` flags, except `--version`, which is answered before the
   dispatch.
@@ -130,7 +133,8 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
   the human owns that file. A field left out keeps the built-in default of the
   same profile name.
 - `--json` is machine output and implies non-interactive. `start`'s JSON shape
-  is unchanged; other verbs add `lines` only when they report a block.
+  is unchanged; other verbs add `lines` whenever they print a human block —
+  `doctor` included, in both of its shapes.
 - `check` is the only verb whose exit code is the gate's, not a fixed one: `0`
   ready · `1` the agent can act · `2` only the human can decide. `--run` returns
   the gate's code, never the command's. Its third adapter is `shellcmd`; the
@@ -147,22 +151,36 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
   the empty tree, so the app never spells that hash. The diff builds a throwaway
   `GIT_INDEX_FILE` exactly like `TreeHash`: untracked files enter the candidate,
   git-ignored files do not, and the human's real index is never staged.
-- `init` owns three artifacts: the rules block in `AGENTS.md` between
+- `init` leaves the project ready in one command. It runs `git init` when there
+  is no `.git` (a proof is only a proof against a tree, and a tree needs
+  history), then owns five artifacts: the rules block in `AGENTS.md` between
   `<!-- odachi:begin -->` and `<!-- odachi:end -->`, the marked block in the
   project's `.gitignore` between `# odachi:begin` and `# odachi:end` (`/proof/`
   and `/.odachi/reviews/`, refreshed in place, every other byte preserved, never
-  backed up because the edit is additive), and the `.git/hooks/pre-commit` hook.
-  It never replaces a hook it did not write: it prints the three lines to paste
-  and exits `1`. Order matters: AGENTS.md, then `.gitignore`, then the hook, so a
-  foreign hook still leaves the ignore rule in place.
+  backed up because the edit is additive), the `.git/hooks/pre-commit` hook, the
+  two personas per client (see the T29–T32 section below), and the skills: the
+  curriculum to `./.agents/skills` and `bootstrap` to `~/.agents/skills`, through
+  the `Skills` port that the CLI wires to `pack`. It never replaces a hook it did
+  not write: it prints the three lines to paste and exits `1`. Order matters:
+  AGENTS.md, `.gitignore`, the hook, the personas, then the skills, so a later
+  refusal still reports what was already written. A failure inside the project is
+  exit `1`; a home that cannot be written is `pendiente:` and exit `0`, because
+  the project is done.
 - `pack` installs the bundled skills into the agents' own directories: the home
   for the seven home-scoped agents, the project (`.opencode/skills`) for
-  opencode. Without `--agents` it serves the agents detected here — their config
-  directory in the home, or `.opencode/` in the project; when none is detected it
-  exits `0` with one line naming `--agents`. A refused agent (`pi`, an invented
-  name) exits `1` and writes nothing, so a typo never leaves half a payload
-  installed. The summary is one line per agent, and it is the only surface that
-  prints a relative path: `~/...` for the home, `./...` for the project.
+  opencode, and `./.agents/skills` or `~/.agents/skills` for the `standard`
+  pseudo-agent. Without `--agents` it serves the agents detected here — their
+  config directory in the home, or `.opencode/` in the project; when none is
+  detected it exits `0` with one line naming `--agents`. A refused agent (`pi`,
+  an invented name) exits `1` and writes nothing, so a typo never leaves half a
+  payload installed. `--scope` installs the named agents under the other root,
+  `--dest` installs them all into one directory the human typed (the names stop
+  being lookups and become labels), and the two flags are refused together
+  before anything is read. The report is grouped per destination — two agents
+  that share a folder share a line — and `--json` has one row per destination
+  with `agents: []` inside. The summary is the only surface that prints a
+  relative path: `~/...` for the home, `./...` for the project, the typed path
+  for `--dest`.
 - `skills` is the only verb that writes a generated file: `--write` regenerates
   `SKILLS.md` from the frontmatter and `skill new` runs the same writer, so the
   registry and the skills cannot disagree. `--check` exits `1` with one Spanish
@@ -221,3 +239,32 @@ stuck. Neither changes any existing verb.
 | Ratchet | exit 1 when a `dead_end` exists, and also when a journey could not be measured at all | `TestTheThreeCounts`, `TestNoDeadEndIsGreen`, `TestSandboxFailureIsAReport` |
 | Report | journeys, steps, blocks, the four counts, one line per journey, and the dead ends with the command, its exit and the message that named it; `--json` carries the same | `TestHumanLinesCarryTheCounts`, `cmd/odachi/bench_test.go` `TestBenchJSONSaysTheSameThing` |
 | No new dependency | `internal/domain/doctor` and `internal/bench` are stdlib-only; the app layers use the existing ports | `internal/archtest/boundary_test.go` stays green |
+
+## Init, personas and portability (T29–T32)
+
+The block that turned three steps into one, and gave the persona its own axis:
+`init` leaves the project ready, `pack` says where, and the voice stops living
+inside the file the model never reads.
+
+| What | Where | How it is verified |
+| --- | --- | --- |
+| One command | `init` runs `git init` when `.git` is missing, then writes the AGENTS.md block, the `.gitignore` block, the hook, the personas and the skills, in that order, each step idempotent | `cmd/odachi/init_skills_test.go` `TestInitInstallsTheSkillsInOneCommand`, `TestInitSecondRunWritesNothing`; `internal/app/init/init_test.go` |
+| The block says what odachi is | `internal/app/init/agents.go`: the block opens with what odachi is, who decides what, and where the context lives (`brief.md`, `odd/tasks/`, `SKILLS.md`), then the four hard rules and the six verbs | `internal/app/init/agents_block_internal_test.go` (byte for byte, and the novice sentences must still match `persona.Body(novato)`) |
+| Curriculum vs entry point | eight skills to `./.agents/skills`, `bootstrap` to `~/.agents/skills`; `internal/app/init` decides the two destinations and the CLI's `initSkills` join lets `pack` own how a skill is written | `TestInitInstallsTheSkillsInOneCommand`, `TestInitWritesOnlyTheBootstrapSkillIntoAnIsolatedHome` |
+| The suite never reaches the real home | `cmd/odachi/init_skills_test.go` `TestMain` points the home adapter at a temp directory before any test runs, and removes it after | `TestMain` in `cmd/odachi/init_skills_test.go` |
+| A second project copy is named, not touched | somebody who ran `pack --agents opencode` before `init` keeps that copy; `init` says so and leaves `.agents/skills` as the project's | `TestInitAcknowledgesTheOpenCodeCopy`, `internal/app/init/skills.go` `Notice` |
+| A home that cannot be written is not a failed project | the project half is written, exit `0`, and the line starts with `pendiente:` plus the command that retries | `TestInitKeepsTheProjectWhenTheHomeIsNotWritable` |
+| Two personas per client | `.opencode/agents/odachi-{novato,senior}.md` (`description`, `mode: primary`) and `.claude/output-styles/odachi-{novato,senior}.md` (`name`, `description`, `keep-coding-instructions: true`); one shared body, a per-client wrapper | `internal/domain/persona/persona_test.go`, `cmd/odachi/init_personas_test.go` `TestInitWritesBothPersonasForEachClient` |
+| The persona never comes from the profile | both files are the same bytes under any profile, and `level --to` rewrites the profile without touching them: two axes, two owners | `TestInitPersonasDoNotDependOnTheProfile`, `TestLevelToDoesNotRewriteThePersonas`, `internal/domain/persona/persona_test.go` `TestTheRendererDoesNotReadTheProfile` |
+| Every file says which axis it owns | the second line of the body (after the `generado` note): the ceremony is `.odachi/profile.toml`'s, the file decides only how the agent talks, and a disagreement is said out loud with `odachi level --to <perfil>` | `TestEveryFileStartsWithTheGeneratedNoteAndTheNonDivergence`, `TestInitPersonaFilesSayTheyAreGenerated` |
+| Generated, therefore backed up | a hand edit is lost work: the first line of the body says the file is generated, an identical file is not rewritten, a differing one is backed up first | `TestInitPersonaRerunWritesNothing`, `internal/app/init/personas_test.go` |
+| `standard` | a pseudo-agent for the cross-client location: `.agents/skills` in the project, `~/.agents/skills` in the home. Offered by name, refused by nobody, never detected | `internal/domain/agent/agent_test.go` `TestStandardIsTheCrossClientLocation`, `pack_test.go` `TestStandardInstallsTheCrossClientLocation`, `TestDetectionIsUnchangedAndNeverInventsStandard` |
+| `--scope` | the same agent under the other root; the one exception the table cannot predict is `opencode` under home, which is `~/.config/opencode/skills` because that is the config dir its own docs name | `TestScopeOverridesTheRootAndKeepsTheAgent`, `TestOpenCodeHomeLandsInItsGlobalConfigDir`, `TestEveryAgentHasADestinationInBothRoots`, `pack_test.go` `TestScopePutsTheSameAgentInTheOtherRoot` |
+| `--dest` | one directory for every named agent, absolute as typed or relative to the project; the names stop being lookups and become labels, so a client odachi has never heard of is served | `TestLabelsServeAClientTheTableDoesNotKnow`, `pack_test.go` `TestDestServesAClientTheTableDoesNotKnow`, `TestDestAbsoluteIsUsedAsGiven` |
+| Two answers are no answer | `--dest` with `--scope` is refused before anything is read, and each flag needs named agents | `TestDestAndScopeAreRefusedTogether`, `TestDestAndScopeNeedNamedAgents` |
+| Grouped report | one target per directory, so agents that share one share a line; `--json` has one row per destination with `agents: []` inside | `internal/app/pack/pack.go` `targetsFor`, `cmd/odachi/pack.go` `packDest`, `cmd/odachi/pack_test.go` |
+| The failure names the file | a destination that fails keeps the first `Path` and `Reason` as fields, so `init` can say which half is pending without parsing a line | `TestTheFirstFailedFileKeepsItsPathAndReason`, `cmd/odachi/init_skills_test.go` |
+| Pre-flight | a folder with no `.git`, no `brief.md`, no `AGENTS.md` and no `.odachi/` gets one situation and one step (`init`, then `start`), exit `1`, nothing written | `internal/app/doctor/preflight_test.go`, `internal/domain/doctor/doctor_test.go` `TestNotAProjectNamesBothCommandsInOrder`, `cmd/odachi/doctor_test.go` `TestDoctorOnAFolderThatIsNotAProject` |
+| The second shape does not leak | a folder with any one of those four keeps the ten checks with their per-check fixes, and a read error falls through to the checks instead of claiming there is no project | `TestThePreflightOnlyFiresWhenThereIsNothing`, `TestAnUnreadableFolderFallsThroughToTheChecks` |
+| `--json` says the same two lines | the machine payload gains `lines`, and `checks` is empty in the pre-flight shape | `cmd/odachi/doctor_test.go` `TestDoctorJSONSaysTheSameThing` |
+| No new dependency | `internal/domain/persona` and `internal/domain/agent` are stdlib-only, and the persona table hangs off the agent names with a test that fails on a client the skills table does not have | `internal/archtest/boundary_test.go`, `internal/domain/persona/persona_test.go` `TestClientsAreTheAgentsTheSkillsTableKnows` |

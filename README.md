@@ -75,12 +75,15 @@ precio de mover el árbol una vez.
 
 ## Las skills, en tu agente
 
-`odachi pack` copia las ocho skills incluidas en el binario al lugar donde tu
-agente las busca. Cada una se dispara con una situación, no con un comando:
+Son nueve skills, y `odachi init` ya deja ocho en el proyecto y una en tu home.
+`odachi pack` copia las nueve al lugar donde tu agente las busca, para todo lo
+que `init` no hace: otro cliente, otra carpeta, otro scope. Cada una se dispara
+con una situación, no con un comando:
 
 | Skill | Cuándo se dispara |
 | --- | --- |
 | `acceptance` | hay que decidir si algo está terminado |
+| `bootstrap` | arrancar un proyecto desde cero, o explicar qué es odachi |
 | `commits` | qué entra en un commit, cómo se parte, qué dice el mensaje |
 | `data` | guardar, migrar, leer o borrar datos: dueño, vida y respaldo |
 | `ship` | algo está listo para que otra persona lo use |
@@ -88,6 +91,15 @@ agente las busca. Cada una se dispara con una situación, no con un comando:
 | `slices` | partir un pedido grande, o cuando el código ya no entra en una lectura |
 | `tests` | qué prueba un cambio: primero la que falla, después el código |
 | `writing` | un mensaje, un PR, un comentario o documentación que alguien va a leer |
+
+`bootstrap` es la de entrada, y es la única que vive en `~/.agents/skills` y no
+en el proyecto: enseña a arrancar en una carpeta vacía, y en una carpeta vacía
+todavía no hay proyecto donde ponerla. Las otras ocho son el oficio que un
+proyecto lleva, y `init` las copia a `./.agents/skills`. Esa carpeta es la
+convención que pide el estándar de Agent Skills, así que la encuentran los
+clientes que odachi no conoce; también viaja con el repositorio, y por eso el
+contenido de un repo ajeno es input no confiable. `bootstrap` solo explica el
+flujo: no ejecuta nada.
 
 Los agentes soportados:
 
@@ -106,20 +118,62 @@ Sin `--agents` instala en los agentes que detecta: los que tienen su carpeta de
 configuración en tu home, y OpenCode si el proyecto tiene `.opencode/`. Nunca
 borra nada, respalda lo que difiere y no repite lo que ya está igual.
 
+### Tres formas más de decir dónde
+
+- `odachi pack --agents standard`: no un cliente, la carpeta que leen todos;
+  `./.agents/skills` en el proyecto, `~/.agents/skills` en el home. Es la que
+  `init` ya deja puesta.
+- `odachi pack --agents opencode --scope home`: el mismo cliente, en la otra
+  raíz (`~/.config/opencode/skills`), para tener una copia para todos tus
+  proyectos en vez de una por proyecto.
+- `odachi pack --agents claude --dest ./skills-x`: la carpeta que le digas, para
+  un cliente que no está en la tabla. `--dest` y `--scope` no van juntos: los
+  dos contestan "dónde", y dos respuestas no son ninguna.
+
+`odachi pack --agents opencode` sigue existiendo y escribe en `./.opencode/skills`,
+la carpeta nativa de OpenCode, para cuando la querés ahí y no en `.agents/skills`.
+`init` no la borra ni la mueve: si la encuentra, la nombra y deja la del proyecto
+como la de `.agents/skills`.
+
 ### Probar odachi con OpenCode
 
 ```sh
 mkdir mi-proyecto && cd mi-proyecto
-odachi init                   # reglas del proyecto en AGENTS.md + hook pre-commit
-odachi pack --agents opencode # las ocho skills en ./.opencode/skills/
-odachi start                  # la entrevista: brief.md, cerco y primer task doc
-odachi check                  # te dice si falta algo y cómo destrabarlo
+odachi init    # deja el proyecto listo de una sola vez
+odachi start   # la entrevista: brief.md, cerco y primer task doc
+odachi check   # te dice si falta algo y cómo destrabarlo
 ```
 
-Después de `pack`, abrí el proyecto con OpenCode: las skills están en
-`.opencode/skills/<nombre>/SKILL.md`, que es donde las busca. `pack --agents
-opencode` funciona igual en un proyecto que todavía no tiene `.opencode/`;
-esa carpeta la crea el comando.
+`odachi init` deja el proyecto listo en un paso: la historia de git si faltaba,
+el bloque de reglas que el agente lee, el bloque de `.gitignore`, el hook de
+pre-commit, las ocho skills en `./.agents/skills`, la skill de arranque en
+`~/.agents/skills` y las dos personas donde cada cliente las elige.
+
+Abrí el proyecto con OpenCode y ya está: lee `.agents/skills` como directorio
+externo además del propio, así que ve las ocho sin `pack`. `pack` queda para
+llevar las skills a la carpeta nativa de otro cliente, o a donde vos digas.
+
+## Dos ejes: la ceremonia y la voz
+
+Dos cosas distintas, con dueños distintos.
+
+El **perfil** es la ceremonia que el binario hace cumplir: cuánto pregunta,
+cuánto imprime, qué cuenta como prueba. Vive en `.odachi/profile.toml`, lo
+escribe `odachi start` con tus respuestas y lo lee el binario. El agente no lo
+lee: no puede aflojar una compuerta ni cambiarla.
+
+La **persona** es cómo habla el agente: si te explica el porqué de cada decisión
+o si va al hueso. La elige el cliente con el interruptor que ya tenés —en
+OpenCode con Tab (`switch_agent`; si lo remapeaste, el que hayas puesto), en
+Claude Code desde `/config`, como estilo de salida—. `odachi init` escribe las
+dos, `odachi-novato` y `odachi-senior`, en `.opencode/agents/` y en
+`.claude/output-styles/`, y no elige por vos: no sabe quién sos, y elegirla desde
+el perfil sería devolver al TOML la decisión que estos archivos sacan de ahí.
+
+Las dos personas lo dicen en la segunda línea del cuerpo, la que sigue a la que
+avisa que el archivo se genera: la ceremonia la decide `.odachi/profile.toml`, el
+archivo decide solo cómo habla, y si los dos no coinciden el agente lo dice y
+pide `odachi level --to <perfil>`.
 
 ## El review: cuatro lentes, sin ceremonia
 
@@ -149,7 +203,7 @@ refuta queda en pie. Para que el review sea obligatorio antes de commitear,
 Dominio puro en `internal/domain/...` con guardia de importaciones, adaptadores en
 `internal/adapters/...`, y quince superficies: `start`, `ask`, `plan`, `level`,
 `summary`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `skills`,
-`skill new`, `pack` y `--version`. 35 paquetes, en verde en Linux, macOS y
+`skill new`, `pack` y `--version`. 36 paquetes, en verde en Linux, macOS y
 Windows —ubuntu repite la suite interna con el detector de carreras—.
 
 Publicado: `v0.9.1`. La instalación de una línea está probada contra la release

@@ -1,6 +1,6 @@
 # 0005 · Two instruments: a health report and a friction bench
 
-Status: accepted · Date: 2026-10 · Session: T22, T23
+Status: accepted · Date: 2026-10 · Session: T22, T23 (the pre-flight: T29)
 
 ## Context
 
@@ -32,7 +32,8 @@ path.
 The ten checks, their order and their numbering live in `internal/domain/doctor`
 and are pinned by a test. The ordering is not cosmetic: the number is the line's
 number, and inserting a check in the middle would silently rename every check
-after it.
+after it. There is exactly one folder where these ten lines are the wrong
+answer —one where odachi was never started— and it has its own section below.
 
 Read-only is structural, not a promise: `internal/app/doctor.Files` has no write
 method, so "doctor never writes" is a property of the type. The CLI test also
@@ -69,6 +70,39 @@ The exit code is 0 as soon as there is no problem, warnings included. The one
 warning today is a `proof/` or `.odachi/reviews/` directory that exists, is empty,
 and has no `.gitignore`: nothing is broken yet, and the next write is the one that
 would invalidate the evidence already there.
+
+### A folder that is not a project yet gets one step, not ten checks
+
+Measured, in an empty folder: the ten checks answered `4 problemas de 10
+chequeos` and named three different commands —`git init`, `odachi init` twice,
+`odachi start`— and none of the four problem lines said the only thing that
+person needed: this folder is not a project yet, start here. A beginner cannot
+order three commands out of a health report, and the two that come first were
+not even distinguishable in it.
+
+So `doctor` has two shapes. The pre-flight comes first and asks four questions:
+is there a `.git` (a directory, or the file a linked worktree has), a
+`brief.md`, an `AGENTS.md`, a `.odachi/`? When the answer is no to all four, the
+report is one situation and one step —`odachi init` first, because it leaves the
+rules the agent reads, and `odachi start` after, because it is the interview—
+with exit `1` and no check lines at all. The two commands appear in the order a
+person runs them, and each says what it leaves behind.
+
+Everything else keeps the ten checks. A git repository that never ran `init`, a
+project with an `AGENTS.md` and nothing else, an empty folder with a `.odachi/`
+from a half-finished `start`: all of them get their ten lines with their
+per-check fixes, because they are projects and their problems are per check. The
+pre-flight is not a shortcut for the healthy case; it is the answer to the only
+case the ten checks cannot phrase.
+
+A read error is not a verdict. Saying "esta carpeta todavía no es un proyecto"
+about a folder odachi could not read would be a lie, so an unreadable `.git`
+falls through to the checks, where the unreadable path becomes its own line.
+
+The pre-flight is read-only for the same structural reason as the rest:
+`internal/app/doctor.Files` has no write method, and the test asserts no file and
+no directory was created. `--json` carries the same two lines in `lines` and an
+empty `checks` array, so a machine never gets a different story than a person.
 
 ### `bench` runs journeys, not code
 
@@ -149,3 +183,9 @@ end is a product decision, and it is now a visible one.
 - The bench's journeys drive a real binary and a real `git`; they will notice a
   change in the CLI's exit codes as a "surprise", which is a signal and not a
   failure.
+- Check 9 reads the **project's own** registry: `skills/` and `SKILLS.md`, the
+  ones `odachi skills --write` generates. It does not read the installed
+  `./.agents/skills` that `init` writes, because a project that never wrote its
+  own skills has not drifted — it has not started. A person who just ran `init`
+  reads `ninguna: no hay skills/` on that line and it is not an error: it is a
+  different question, and the tool has no line that asks the other one.
