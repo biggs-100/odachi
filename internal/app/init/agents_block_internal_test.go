@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
 // linesOf splits the block into the lines a model reads.
@@ -193,5 +195,66 @@ func TestAgentsBlockKeepsTheFourRulesAndTheSixVerbs(t *testing.T) {
 	}
 	if !slices.Equal(verbs, wantVerbs) {
 		t.Fatalf("los verbos son %v, se esperaban %v", verbs, wantVerbs)
+	}
+}
+
+// flatText is one string compared by meaning instead of by line breaks: wrapping
+// is formatting, and the two texts wrap differently on purpose. Backticks are the
+// block's markdown, not part of what it says.
+func flatText(text string) string {
+	return strings.Join(strings.Fields(strings.ReplaceAll(text, "`", "")), " ")
+}
+
+// bulletsOf joins the wrapped continuation lines of a list, so a rule that spans
+// two lines is compared as one sentence.
+func bulletsOf(section string) []string {
+	var bullets []string
+	for _, line := range linesOf(section) {
+		switch {
+		case strings.HasPrefix(line, "- "):
+			bullets = append(bullets, line[2:])
+		case strings.HasPrefix(line, "  ") && len(bullets) > 0:
+			bullets[len(bullets)-1] += " " + strings.TrimSpace(line)
+		}
+	}
+	return bullets
+}
+
+// TestTheNovatoPersonaRepeatsTheTutorSection: the block teaches the agent how to
+// behave with a novice, and the persona says the same thing in the file the
+// client loads as a system prompt. Two texts, one voice: if they drift, odachi
+// contradicts itself depending on which file the agent read, and the human gets
+// two rules for the same situation.
+func TestTheNovatoPersonaRepeatsTheTutorSection(t *testing.T) {
+	body, err := persona.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("persona.Body(novato): %v", err)
+	}
+	flatBody := flatText(body)
+
+	begin := strings.Index(agentsBlock, "## Si la persona es novata")
+	end := strings.Index(agentsBlock, "## Los seis verbos")
+	if begin < 0 || end < begin {
+		t.Fatalf("el bloque perdió la sección del tutor")
+	}
+	section := agentsBlock[begin:end]
+
+	for _, want := range []string{
+		"El objetivo no es solo que funcione: es que la persona aprenda el oficio.",
+		"Estas reglas son la diferencia entre un agente que ejecuta y un agente que enseña.",
+	} {
+		if !strings.Contains(flatBody, want) {
+			t.Errorf("la persona novato no repite la frase del bloque %q:\n%s", want, body)
+		}
+	}
+
+	rules := bulletsOf(section)
+	if len(rules) == 0 {
+		t.Fatalf("la sección del tutor no tiene reglas")
+	}
+	for _, rule := range rules {
+		if !strings.Contains(flatBody, flatText(rule)) {
+			t.Errorf("la persona novato no repite la regla del bloque %q:\n%s", flatText(rule), body)
+		}
 	}
 }

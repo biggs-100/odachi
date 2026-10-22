@@ -1,9 +1,17 @@
 // Package init implements `odachi init`: the rules block in AGENTS.md, the
 // marked block in .gitignore that keeps the generated evidence out of the tree,
 // the pre-commit hook that refuses a commit without a proof for the current
-// tree, and the skills the agent reads — the curriculum in the project and the
+// tree, the skills the agent reads — the curriculum in the project and the
 // bootstrap skill in the human's home, so an agent can learn how to start a
-// project in a folder where nothing exists yet.
+// project in a folder where nothing exists yet — and the two personas in the
+// native mechanism of every client that has one, so the human picks how the
+// agent talks with the keystroke they already know.
+//
+// Two axes, and this command writes both without joining them: the profile (in
+// .odachi/profile.toml, owned by `odachi start`) decides the ceremony, and the
+// personas decide the voice. init writes both personas regardless of which
+// profile is in force, because it cannot know who the human is and choosing for
+// them is exactly the confusion this split removes.
 //
 // Every artifact is idempotent. A file that is already right is not rewritten, a
 // file that exists is backed up before the rewrite (except .gitignore, whose
@@ -74,14 +82,16 @@ type Files interface {
 
 // Result is what the CLI prints and exits with. It has the same shape as the
 // other verbs; Next names the command that finishes a blocked run, and SkillDests
-// is what the skills half wrote, so `--json` can carry the destinations too.
+// and PersonaDests are what the two generated halves wrote, so `--json` can carry
+// the destinations too.
 type Result struct {
-	Code       int
-	Message    string
-	Next       string
-	Lines      []string
-	Files      []string
-	SkillDests []SkillDest
+	Code         int
+	Message      string
+	Next         string
+	Lines        []string
+	Files        []string
+	SkillDests   []SkillDest
+	PersonaDests []PersonaDest
 }
 
 // Run performs one `odachi init`.
@@ -114,6 +124,14 @@ func Run(opts Options, files Files, skills Skills) Result {
 		// The rules block may already be written: report it, so the human knows
 		// exactly how much of the job is done.
 		problem.Files = append([]string{}, r.changed...)
+		return *problem
+	}
+
+	if problem := r.writePersonas(); problem != nil {
+		// The hook and the rules block are already in place: report how much of
+		// the job is done instead of pretending nothing happened.
+		problem.Files = append(append([]string{}, r.changed...), r.personaFiles...)
+		problem.PersonaDests = r.personaDests
 		return *problem
 	}
 
@@ -156,6 +174,12 @@ type runner struct {
 	skillBlocked string
 	skillNext    string
 	skillFatal   bool
+
+	// The persona half: the same split between what a human reads (dirs) and
+	// what --json carries (files), for the same reason.
+	personaDests  []PersonaDest
+	personaLabels []string
+	personaFiles  []string
 }
 
 // writeAgents writes the rules block, replacing it in place when it is already
@@ -267,31 +291,42 @@ func foreignHook(exe string) Result {
 }
 
 // result reports what changed. A rerun that changed nothing says so instead of
-// claiming work it did not do, skills included.
+// claiming work it did not do, skills and personas included.
 func (r *runner) result() Result {
-	files := append(append([]string{}, r.changed...), r.skillFiles...)
+	files := append(append(append([]string{}, r.changed...), r.skillFiles...), r.personaFiles...)
 
-	if len(r.changed) == 0 && len(r.skillFiles) == 0 {
+	if len(r.changed) == 0 && len(r.skillFiles) == 0 && len(r.personaFiles) == 0 {
 		message := "sin cambios: " + agentsFile + ", " + ignoreFile + " y el hook " + hookPath + " ya estaban al día"
 		if len(r.skillLabels) > 0 {
-			message += ", y las skills de " + humanList(r.skillLabels) + " también"
+			message += "; las skills de " + humanList(r.skillLabels) + " también"
+		}
+		if len(r.personaLabels) > 0 {
+			message += "; las personas de " + humanList(r.personaLabels) + " también"
 		}
 		return Result{
-			Code:       r.code(),
-			Message:    r.withBlocked(message),
-			Next:       r.skillNext,
-			Lines:      r.lines,
-			SkillDests: r.skillDests,
+			Code:         r.code(),
+			Message:      r.withBlocked(message),
+			Next:         r.skillNext,
+			Lines:        r.lines,
+			SkillDests:   r.skillDests,
+			PersonaDests: r.personaDests,
 		}
 	}
 
-	message := "listo: " + humanList(r.changed) + " quedaron al día"
-	switch {
-	case len(r.changed) == 0:
-		message = "listo: las skills de " + humanList(r.skillLabels) + " quedaron al día"
-	case len(r.skillFiles) > 0:
-		message += ", y las skills también"
+	// What this run finished, in the three kinds the job has: it can be none of
+	// the project artifacts and still be real work (a persona that changed, a
+	// skill that arrived).
+	written := make([]string, 0, 3)
+	if len(r.changed) > 0 {
+		written = append(written, humanList(r.changed))
 	}
+	if len(r.skillFiles) > 0 {
+		written = append(written, "las skills ("+humanList(r.skillLabels)+")")
+	}
+	if len(r.personaFiles) > 0 {
+		written = append(written, "las personas ("+humanList(r.personaLabels)+")")
+	}
+	message := "listo: " + humanList(written) + " quedaron al día"
 
 	lines := append([]string{}, r.lines...)
 	// The human does not commit: the agent does. Saying "commiteá" here assumed the
@@ -299,12 +334,13 @@ func (r *runner) result() Result {
 	lines = append(lines, "siguiente: revisá "+agentsFile+"; cuando odachi check --quiet esté en verde, el agente guarda el avance")
 
 	return Result{
-		Code:       r.code(),
-		Message:    r.withBlocked(message),
-		Next:       r.skillNext,
-		Lines:      lines,
-		Files:      files,
-		SkillDests: r.skillDests,
+		Code:         r.code(),
+		Message:      r.withBlocked(message),
+		Next:         r.skillNext,
+		Lines:        lines,
+		Files:        files,
+		SkillDests:   r.skillDests,
+		PersonaDests: r.personaDests,
 	}
 }
 

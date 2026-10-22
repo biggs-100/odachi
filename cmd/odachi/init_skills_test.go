@@ -105,8 +105,15 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 	if _, err := os.Stat(skillPath(dir, bundledskills.BootstrapName)); err == nil {
 		t.Errorf("el proyecto recibió la skill de arranque: esa vive en el home")
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".opencode")); err == nil {
+	// `.opencode/` itself is expected after init: it holds the generated personas.
+	// What must not be there is a second copy of the curriculum.
+	if _, err := os.Stat(filepath.Join(dir, ".opencode", "skills")); err == nil {
 		t.Errorf("init escribió en .opencode/skills: el proyecto usa una sola carpeta")
+	}
+	for _, persona := range []string{"odachi-novato.md", "odachi-senior.md"} {
+		if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", persona)); err != nil {
+			t.Errorf("init no escribió la persona %s en .opencode/agents: %v", persona, err)
+		}
 	}
 
 	bootstrap, ok := bundledskills.Bootstrap()
