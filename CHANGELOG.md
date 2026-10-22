@@ -30,6 +30,10 @@ La voz vive en el bloque, el agente nativo la espeja, y el doctor ve lo que `ini
 - **`doctor` pasa a once chequeos**: el 9 dice las dos verdades de las skills (el
   registro del proyecto y lo instalado en `.agents/skills`), y el 11 compara la voz
   del bloque con el perfil, y el agente nativo con el bloque.
+- **Un proyecto nuevo arranca en `novato`**: `start` ya no infiere `senior` porque
+  haya `.git`; `init` es justamente quien crea ese repo. Sin perfil escrito y sin
+  brief, el default es `novato`. `senior` se gana con `odachi level --to`, o se
+  infiere de un brief que la persona ya trajo.
 - **El instalador no depende de `Get-FileHash`**: si el cmdlet no existe —pasa en
   Windows PowerShell 5.1—, verifica el sha256 con `certutil`. Probado con las dos
   herramientas sobre la release real.

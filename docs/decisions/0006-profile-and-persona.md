@@ -220,6 +220,11 @@ What survives from the first amendment:
   `.odachi/profile.toml` when it exists and `novato` otherwise — never
   inferred, because inference turned every new repository into `senior`.
   `level --to <perfil>` writes the profile and the section together.
+- **A repository is not evidence of experience.** `start` used to infer
+  `senior` from `.git`, but `init` is the command that creates `.git` before
+  `start` runs, so the beginner's first project always ended senior. `Infer` now
+  promotes to `senior` only when a brief already exists; everything else starts
+  on `novato`. Senior is earned with `level --to`.
 - **Doctor compares instead of guessing.** Check 11 asks whether the block's
   voice matches the profile, and names `level --to` or `init` as the fix.
 

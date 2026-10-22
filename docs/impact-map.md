@@ -132,7 +132,8 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
   declare the ports and never import `os`.
 - `.odachi/profile.toml` is read when it exists and wins over `profile.Infer`:
   the human owns that file. A field left out keeps the built-in default of the
-  same profile name.
+  same profile name. With no file, `Infer` starts on `novato` unless a brief
+  already exists: `.git` is not a signal because `init` creates it.
 - `--json` is machine output and implies non-interactive. `start`'s JSON shape
   is unchanged; other verbs add `lines` whenever they print a human block —
   `doctor` included, in both of its shapes.

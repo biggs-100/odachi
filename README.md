@@ -163,6 +163,10 @@ cuánto imprime, qué cuenta como prueba. Vive en `.odachi/profile.toml`, lo
 escribe `odachi start` con tus respuestas y lo lee el binario. El agente no lo
 lee: no puede aflojar una compuerta ni cambiarla.
 
+Sin archivo, el perfil por defecto es `novato`. `start` no lo sube a `senior`
+solo porque haya `.git`: `init` es quien crea ese repo. `senior` se gana con
+`odachi level --to`, o se infiere de un brief que la persona ya trajo.
+
 La **voz** es cómo habla el agente: si te explica el porqué de cada decisión o si
 va al hueso. Vive en la última sección del bloque de `AGENTS.md`, `## Cómo
 hablás`, y en el agente nativo que espeja ese bloque. `odachi init` escribe la voz
