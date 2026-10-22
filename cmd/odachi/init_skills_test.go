@@ -146,10 +146,10 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 	}
 }
 
-// TestInitWritesOnlyTheBootstrapSkillIntoAnIsolatedHome is the fence in test
+// TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome is the fence in test
 // form: init writes outside the project now, so the home it touches has to be
-// exactly one skill directory and nothing else.
-func TestInitWritesOnlyTheBootstrapSkillIntoAnIsolatedHome(t *testing.T) {
+// exactly the bootstrap skill and the two global agents, and nothing else.
+func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	dir := t.TempDir()
@@ -159,7 +159,11 @@ func TestInitWritesOnlyTheBootstrapSkillIntoAnIsolatedHome(t *testing.T) {
 		t.Fatalf("code = %d (stdout %q, stderr %q)", code, out, errOut)
 	}
 
-	want := []string{".agents/skills/bootstrap/SKILL.md"}
+	want := []string{
+		".agents/skills/bootstrap/SKILL.md",
+		".claude/output-styles/odachi.md",
+		".config/opencode/agents/odachi.md",
+	}
 	if got := homeTree(t, home); !slices.Equal(got, want) {
 		t.Fatalf("el home tiene %v, want exactamente %v", got, want)
 	}

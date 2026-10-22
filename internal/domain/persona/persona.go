@@ -1,12 +1,18 @@
-// Package persona owns the two voices odachi writes and the native agent file
-// that lets a client select the project's agent with its own keystroke.
+// Package persona owns the two voices odachi writes and the native agent files
+// that let a client select odachi with its own keystroke.
 //
 // One voice, one owner. `.odachi/profile.toml` decides the ceremony and the
 // voice; `AGENTS.md` publishes that voice as the last section of the block; the
-// native agent file mirrors the same block for the clients that have a selector.
-// The mirror is generated, never hand-written, and `odachi init`, `odachi level
-// --to` and `odachi start` keep it in step. There are no two axes: a human who
-// wants a different voice runs `odachi level --to`, and every surface follows.
+// project agent mirrors the same block. The mirror is generated, never
+// hand-written, and `odachi init`, `odachi level --to` and `odachi start` keep it
+// in step. There are no two axes: a human who wants a different voice runs
+// `odachi level --to`, and every surface follows.
+//
+// The home agent is not a mirror: it is the door. `GlobalFiles` writes a short
+// dispatcher in the client's global directory, so the human finds `odachi` in
+// any folder. Inside an initialized project the door reads the block and its
+// voice; outside one it hands over to the bootstrap skill. That is the difference
+// between "my project has an agent" and "I can open my agent and start working".
 //
 // The text is one template. Body is the same bytes for every client; a client
 // only supplies the wrapper it needs (frontmatter and directory). The client
@@ -89,11 +95,13 @@ Sos el tutor, no el que hace.
 
 // Client is one client's native mechanism for an agent: the name the skills
 // table uses, the project directory that client reads agents from (relative to
-// the project root, forward slashes), and how the human picks one there.
+// the project root, forward slashes), the home directory it reads global agents
+// from (relative to the home), and how the human picks one there.
 type Client struct {
-	Agent  string
-	Dir    string
-	Switch string
+	Agent   string
+	Dir     string
+	HomeDir string
+	Switch  string
 }
 
 // clients is the verified table, in the order the skills table lists the same
@@ -108,9 +116,10 @@ var clients = []Client{
 	// OpenCode 2.1.3: both `.opencode/agents/` and `.opencode/mode/` are listed
 	// as primary, and a directory without `.git` lists nothing at all.
 	{
-		Agent:  "opencode",
-		Dir:    ".opencode/agents",
-		Switch: "se elige con Tab",
+		Agent:   "opencode",
+		Dir:     ".opencode/agents",
+		HomeDir: ".config/opencode/agents",
+		Switch:  "se elige con Tab",
 	},
 	// Claude Code: `.claude/output-styles/<name>.md`, frontmatter `name`,
 	// `description` and `keep-coding-instructions: true`, and the body becomes
@@ -120,9 +129,10 @@ var clients = []Client{
 	// dropping its tools. The human picks it in /config (the /output-style
 	// command that used to do it only prints a deprecation notice now).
 	{
-		Agent:  "claude",
-		Dir:    ".claude/output-styles",
-		Switch: "se elige con /config (estilo de salida)",
+		Agent:   "claude",
+		Dir:     ".claude/output-styles",
+		HomeDir: ".claude/output-styles",
+		Switch:  "se elige con /config (estilo de salida)",
 	},
 }
 
@@ -132,6 +142,30 @@ var clients = []Client{
 var wrappers = map[string]string{
 	"opencode": "---\ndescription: \"odachi: las reglas del proyecto y la voz del perfil\"\nmode: primary\n---\n",
 	"claude":   "---\nname: " + AgentName + "\ndescription: \"odachi: las reglas del proyecto y la voz del perfil\"\nkeep-coding-instructions: true\n---\n",
+}
+
+// globalDoor is the body of the agent installed in the home. It is a door, not
+// a second set of rules: it is selected in any folder, reads the project's block
+// when there is one, and falls back to the bootstrap skill when there is not.
+// That is what makes "open odachi and start working" work outside the project
+// that ran init, and it is why this body never contains a voice: the project's
+// `## Cómo hablás` wins.
+const globalDoor = `Sos odachi. Este archivo es la puerta de entrada, no las reglas: las reglas viven en el proyecto.
+
+Antes de actuar, mirá la carpeta donde estás:
+
+1. Si ` + "`AGENTS.md`" + ` existe y tiene el bloque de odachi (` + "`<!-- odachi:begin -->`" + `), leé ese bloque y su sección ` + "`## Cómo hablás`" + `. Esa voz manda sobre este archivo. Cargá ` + "`.agents/skills/drive/SKILL.md`" + ` (o ` + "`~/.agents/skills/drive/SKILL.md`" + `) antes de tocar código.
+2. Si no hay bloque, esta carpeta todavía no es un proyecto de odachi. Cargá ` + "`~/.agents/skills/bootstrap/SKILL.md`" + ` y guiá a la persona: primero ` + "`odachi init`" + `, después ` + "`odachi start`" + `. No corras compuertas ni ` + "`init`" + ` en un repositorio ajeno sin permiso.
+3. Si no podés leer esos archivos, decilo y no inventes reglas ni rutas.
+`
+
+// globalWrappers is the frontmatter of the global agent: the description says it
+// is the door, and primary keeps it in the Tab cycle. The name is the same as
+// the project agent on purpose: the project copy wins inside an initialized
+// project, and the global copy is what the human finds everywhere else.
+var globalWrappers = map[string]string{
+	"opencode": "---\ndescription: \"odachi: abrí cualquier carpeta y trabajá con las reglas del proyecto; en una carpeta nueva, te guía para arrancar\"\nmode: primary\n---\n",
+	"claude":   "---\nname: " + AgentName + "\ndescription: \"odachi: abrí cualquier carpeta y trabajá con las reglas del proyecto; en una carpeta nueva, te guía para arrancar\"\nkeep-coding-instructions: true\n---\n",
 }
 
 // File is one native agent file: where it goes relative to the project root, and
@@ -179,6 +213,37 @@ func fileFor(row Client, block string) File {
 	return File{
 		Path:    row.Dir + "/" + FileName,
 		Content: wrappers[row.Agent] + generated + "\n" + voiceSeal + "\n\n" + block,
+	}
+}
+
+// GlobalFiles returns the agent odachi installs in the human's home: one file per
+// client, in the directory that client reads global agents from. It is the door
+// the human finds in any folder, not a mirror of one project's block.
+func GlobalFiles() []File {
+	out := make([]File, 0, len(clients))
+	for _, row := range clients {
+		out = append(out, globalFileFor(row))
+	}
+	return out
+}
+
+// GlobalFilesFor returns the global file a named client gets, and false for a
+// client without a native mechanism.
+func GlobalFilesFor(client string) (File, bool) {
+	key := strings.ToLower(strings.TrimSpace(client))
+	for _, row := range clients {
+		if row.Agent == key {
+			return globalFileFor(row), true
+		}
+	}
+	return File{}, false
+}
+
+// globalFileFor composes the door for one client.
+func globalFileFor(row Client) File {
+	return File{
+		Path:    row.HomeDir + "/" + FileName,
+		Content: globalWrappers[row.Agent] + generated + "\n" + globalDoor,
 	}
 }
 

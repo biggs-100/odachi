@@ -14,7 +14,11 @@ import (
 type PersonaDest struct {
 	// Client is the name the skills table uses for the same program.
 	Client string
-	// Dir is the project-relative directory the client reads agents from.
+	// Scope is "project" or "home": the same client has a mirror inside an
+	// initialized project and a door in the home for every other folder.
+	Scope string
+	// Dir is the directory the client reads agents from, as the human reads it
+	// (`./.opencode/agents` or `~/.config/opencode/agents`).
 	Dir string
 	// Written counts the file this run wrote; Kept is 1 when it was already
 	// right.
@@ -23,6 +27,12 @@ type PersonaDest struct {
 	// Files is every agent path this run owns in that directory.
 	Files []string
 }
+
+// The two scopes a native agent has.
+const (
+	ScopeProject = "project"
+	ScopeHome    = "home"
+)
 
 // writePersonas writes the native agent every client that has a selector gets.
 // The file mirrors the block: same rules, same voice, so a human who picks it
@@ -45,7 +55,7 @@ func (r *runner) writePersonas() *Result {
 			continue
 		}
 
-		dest := PersonaDest{Client: client.Agent, Dir: client.Dir}
+		dest := PersonaDest{Client: client.Agent, Scope: ScopeProject, Dir: client.Dir}
 		path := filepath.Join(r.dir, filepath.FromSlash(file.Path))
 		name := filepath.Base(path)
 
@@ -63,7 +73,7 @@ func (r *runner) writePersonas() *Result {
 				dest.Files = append(dest.Files, file.Path)
 				r.personaDests = append(r.personaDests, dest)
 				r.personaLabels = append(r.personaLabels, client.Dir)
-				r.lines = append(r.lines, personaLine(client, nil, []string{name}))
+				r.lines = append(r.lines, personaLine(client.Dir, client.Switch, nil, []string{name}))
 				continue
 			}
 			if _, err := r.files.Backup(path); err != nil {
@@ -79,9 +89,84 @@ func (r *runner) writePersonas() *Result {
 		r.personaDests = append(r.personaDests, dest)
 		r.personaLabels = append(r.personaLabels, client.Dir)
 		r.personaFiles = append(r.personaFiles, file.Path)
-		r.lines = append(r.lines, personaLine(client, []string{name}, nil))
+		r.lines = append(r.lines, personaLine(client.Dir, client.Switch, []string{name}, nil))
 	}
 	return nil
+}
+
+// installGlobalPersonas writes the door in the human's home: the agent that
+// appears in every folder, not only in the project that ran init. A home that
+// cannot be written is `pendiente:` and exit 0, because the project half is done;
+// a failure inside the project is the caller's blocked result.
+func (r *runner) installGlobalPersonas() {
+	if r.home == nil {
+		return
+	}
+	home, err := r.home.Home()
+	if err != nil || strings.TrimSpace(home) == "" {
+		reason := "el sistema no reportó ningún home"
+		if err != nil {
+			reason = oneLine(err.Error())
+		}
+		r.pendGlobal("no pude resolver el home para instalar el agente global: " + reason + "; volvé a correr odachi init")
+		return
+	}
+
+	for _, client := range persona.Clients() {
+		file, ok := persona.GlobalFilesFor(client.Agent)
+		if !ok {
+			continue
+		}
+
+		display := "~/" + file.Path
+		dest := PersonaDest{Client: client.Agent, Scope: ScopeHome, Dir: "~/" + client.HomeDir}
+		path := filepath.Join(home, filepath.FromSlash(file.Path))
+
+		exists, err := r.files.Exists(path)
+		if err != nil {
+			r.pendGlobal("no pude revisar " + display + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			continue
+		}
+		if exists {
+			current, err := r.files.Read(path)
+			if err != nil {
+				r.pendGlobal("no pude leer " + display + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+				continue
+			}
+			if string(current) == file.Content {
+				dest.Kept = 1
+				dest.Files = append(dest.Files, display)
+				r.personaDests = append(r.personaDests, dest)
+				r.personaLabels = append(r.personaLabels, dest.Dir)
+				r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, nil, []string{persona.FileName}))
+				continue
+			}
+			if _, err := r.files.Backup(path); err != nil {
+				r.pendGlobal("no pude respaldar " + display + " antes de reescribirlo: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+				continue
+			}
+		}
+
+		if err := r.files.Write(path, []byte(file.Content)); err != nil {
+			r.pendGlobal("no pude escribir " + display + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			continue
+		}
+		dest.Written = 1
+		dest.Files = append(dest.Files, display)
+		r.personaDests = append(r.personaDests, dest)
+		r.personaLabels = append(r.personaLabels, dest.Dir)
+		r.personaFiles = append(r.personaFiles, display)
+		r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, []string{persona.FileName}, nil))
+	}
+}
+
+// pendGlobal keeps one pending line for the home half. It never changes the exit
+// code: the project is ready, and the human can retry the home half alone.
+func (r *runner) pendGlobal(message string) {
+	if r.homePending == "" {
+		r.homePending = "pendiente: " + message
+	}
+	r.lines = append(r.lines, "pendiente: "+message)
 }
 
 // personaBlocked is the persona half's refusal: the file, the reason the adapter
@@ -91,10 +176,10 @@ func personaBlocked(what string, err error) *Result {
 	return &result
 }
 
-// personaLine is one client in one line: what arrived, what was already there, and
-// how the human selects the agent in that client. The last part is the point of
-// the whole job — a file nobody knows how to pick is a file nobody uses.
-func personaLine(client persona.Client, written, kept []string) string {
+// personaLine is one destination in one line: what arrived, what was already
+// there, and how the human selects the agent in that client. The last part is the
+// point of the whole job — a file nobody knows how to pick is a file nobody uses.
+func personaLine(dir, switchText string, written, kept []string) string {
 	parts := make([]string, 0, 2)
 	if len(written) > 0 {
 		parts = append(parts, "escribí "+humanList(written))
@@ -102,9 +187,9 @@ func personaLine(client persona.Client, written, kept []string) string {
 	if len(kept) > 0 {
 		parts = append(parts, humanList(kept)+" sin cambios")
 	}
-	line := client.Dir + ": " + strings.Join(parts, ", ")
+	line := dir + ": " + strings.Join(parts, ", ")
 	if len(written) > 0 {
-		line += "; " + client.Switch
+		line += "; " + switchText
 	}
 	return line
 }

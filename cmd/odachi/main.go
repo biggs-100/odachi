@@ -624,7 +624,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing(), Profiles: writtenProfile{}}, osFiles{}, &initSkills{dir: dir})
+	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing(), Profiles: writtenProfile{}, Home: osHome{}}, osFiles{}, &initSkills{dir: dir})
 	if created {
 		line := "historial del proyecto: lo creé en esta carpeta (git init); es lo que me deja probar que una prueba corresponde a este estado del código"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -779,6 +779,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 			}
 			personas = append(personas, initPersonaDest{
 				Client:    dest.Client,
+				Scope:     dest.Scope,
 				Dir:       dest.Dir,
 				Written:   dest.Written,
 				Unchanged: dest.Kept,
@@ -839,9 +840,12 @@ type initSkillDest struct {
 }
 
 // initPersonaDest is one client's native agent in the same report: which client,
-// where it reads agents from, what this run did there, and the file it owns.
+// which scope, where it reads agents from, what this run did there, and the file
+// it owns. Project and home are two rows because they are two files with two
+// jobs: the mirror obeys the project, the door works in any folder.
 type initPersonaDest struct {
 	Client    string   `json:"client"`
+	Scope     string   `json:"scope"`
 	Dir       string   `json:"dir"`
 	Written   int      `json:"written"`
 	Unchanged int      `json:"unchanged"`
@@ -1055,8 +1059,10 @@ flags de init:
 
 qué deja escrito init, en un solo comando:
   AGENTS.md              el bloque de reglas que el agente lee, con la voz al final
-  .opencode/agents       odachi.md: el mismo bloque, para elegirlo con Tab
-  .claude/output-styles  odachi.md: el mismo bloque, para elegirlo con /config
+  .opencode/agents       odachi.md: el mismo bloque, para elegirlo con Tab en este proyecto
+  .claude/output-styles  odachi.md: el mismo bloque, para elegirlo con /config en este proyecto
+  ~/.config/opencode/agents  odachi.md: la puerta que aparece en cualquier carpeta (Tab)
+  ~/.claude/output-styles    odachi.md: la misma puerta en el home (/config)
   .gitignore             /proof/ y /.odachi/reviews/ no ensucian el árbol que certifican
   .git/hooks/pre-commit  no se commitea sin odachi check --quiet en verde
   .agents/skills         las skills del proyecto: la carpeta que leen todos los clientes
@@ -1064,9 +1070,11 @@ qué deja escrito init, en un solo comando:
 
 la voz —cómo te habla el agente— es la última sección del bloque, y la escribe el
 binario: novato si todavía no hay .odachi/profile.toml, si no la del perfil que
-diga. El agente nativo es un espejo generado de ese bloque: las mismas reglas y la
-misma voz, en la carpeta donde tu cliente ya elige agentes. odachi level --to
-<perfil> cambia el perfil, esa sección y el espejo, y no toca nada más del bloque.
+diga. El agente nativo tiene dos copias: el espejo del proyecto, con las mismas
+reglas y la misma voz, y la puerta del home, que aparece en cualquier carpeta y
+lee el bloque del proyecto cuando existe; si no existe, guía para arrancar con
+odachi init y odachi start. odachi level --to <perfil> cambia el perfil, esa
+sección y el espejo del proyecto, y no toca nada más del bloque.
 
 flags:
   --outcome s     respuesta 1: qué tiene que existir cuando terminemos
@@ -1105,9 +1113,10 @@ después de start:
   odachi check --require-review                 exige review para este árbol y sus lentes
   odachi doctor                                 once chequeos de salud, de solo lectura
   odachi bench                                  mide cómo se traba una persona (in-band / dead-end)
-  odachi init                                   AGENTS.md (con la voz del perfil) + el agente que
-                                                 se elige con Tab + hook + las skills del proyecto
-                                                 en .agents/skills, y la de arranque en ~/.agents/skills
+  odachi init                                   AGENTS.md (con la voz del perfil) + el agente del
+                                                 proyecto y la puerta del home (se eligen con Tab)
+                                                 + hook + las skills del proyecto en .agents/skills,
+                                                 y la de arranque en ~/.agents/skills
   odachi skills                                 las skills del proyecto y su trigger
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
   odachi skills --write                         regenera SKILLS.md desde los frontmatter

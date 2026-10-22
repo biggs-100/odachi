@@ -1,17 +1,17 @@
 // Package init implements `odachi init`: the rules block in AGENTS.md —with the
 // voice of the profile at hand as its last section—, the native agent that
-// mirrors that block in every client with a selector, the marked block in
-// .gitignore that keeps the generated evidence out of the tree, the pre-commit
-// hook that refuses a commit without a proof for the current tree, and the skills
-// the agent reads — the curriculum in the project and the bootstrap skill in the
-// human's home, so an agent can learn how to start a project in a folder where
-// nothing exists yet.
+// mirrors that block in the project, the door in the human's home that makes
+// odachi available in any folder, the marked block in .gitignore that keeps the
+// generated evidence out of the tree, the pre-commit hook that refuses a commit
+// without a proof for the current tree, and the skills the agent reads — the
+// curriculum in the project and the bootstrap skill in the human's home, so an
+// agent can learn how to start a project in a folder where nothing exists yet.
 //
 // One voice, one owner. The profile (in .odachi/profile.toml, owned by `odachi
 // start`) decides the ceremony and the voice; the block publishes it where every
-// client reads it, and the native agent mirrors the same block so a human can
-// pick odachi with Tab. init reads the profile only to know which voice to write,
-// and never rewrites it.
+// client reads it, the project agent mirrors the same block, and the home agent
+// is the door that reads the project's block when there is one. init reads the
+// profile only to know which voice to write, and never rewrites it.
 //
 // Every artifact is idempotent. A file that is already right is not rewritten, a
 // file that exists is backed up before the rewrite (except .gitignore, whose
@@ -71,6 +71,17 @@ type Options struct {
 	// Profiles is the profile at hand, read and not inferred. nil means the
 	// tool's default audience: novato.
 	Profiles Profiles
+	// Home resolves the human's home, where the global agent lives. nil means
+	// this run does not install the global half (tests that only care about the
+	// project); the binary always passes an adapter.
+	Home Home
+}
+
+// Home is the port that answers where the human lives. The global agent is the
+// door of every folder, so `init` writes it once per machine; the app never
+// touches os.
+type Home interface {
+	Home() (string, error)
 }
 
 // Profiles is the profile port, one question wide: which profile did the human
@@ -109,7 +120,7 @@ type Result struct {
 
 // Run performs one `odachi init`.
 func Run(opts Options, files Files, skills Skills) Result {
-	r := &runner{dir: opts.Dir, files: files, skills: skills, profiles: opts.Profiles}
+	r := &runner{dir: opts.Dir, files: files, skills: skills, profiles: opts.Profiles, home: opts.Home}
 	if r.dir == "" {
 		r.dir = "."
 	}
@@ -149,6 +160,10 @@ func Run(opts Options, files Files, skills Skills) Result {
 		problem.PersonaDests = r.personaDests
 		return *problem
 	}
+	// The project has its mirror; the home gets the door that appears in every
+	// other folder. A home that cannot be written is pending, never a failed
+	// project.
+	r.installGlobalPersonas()
 
 	r.installSkills()
 
@@ -183,6 +198,7 @@ type runner struct {
 	files    Files
 	skills   Skills
 	profiles Profiles
+	home     Home
 	changed  []string
 	lines    []string
 	// voiceNote is the sentence for a profile init could not read or name: the
@@ -207,6 +223,9 @@ type runner struct {
 	personaDests  []PersonaDest
 	personaLabels []string
 	personaFiles  []string
+	// homePending is the sentence for a home that could not take the global
+	// agent. It is said in the message and never changes the exit code.
+	homePending string
 }
 
 // installHook installs the pre-commit hook, keeps odachi's own hook up to date,
@@ -335,10 +354,13 @@ func (r *runner) code() int {
 // withBlocked adds the pending half to the one-line message, so a caller that
 // reads only `message` still learns the run left something behind.
 func (r *runner) withBlocked(message string) string {
-	if r.skillBlocked == "" {
-		return message
+	if r.skillBlocked != "" {
+		message += "; " + r.skillBlocked
 	}
-	return message + "; " + r.skillBlocked
+	if r.homePending != "" {
+		message += "; " + r.homePending
+	}
+	return message
 }
 
 // blocked is a result the human can act on, with the command that retries it.

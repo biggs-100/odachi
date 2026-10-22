@@ -2,6 +2,7 @@ package init_test
 
 import (
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -95,6 +96,79 @@ func TestInitBacksUpAHandEditedAgent(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(got.Lines, "\n"), persona.FileName) {
 		t.Errorf("las líneas no dicen qué agente se escribió:\n%s", strings.Join(got.Lines, "\n"))
+	}
+}
+
+// fakeHome is the Home port: where the human lives, or the reason there is no
+// answer. init must not reach os to find it.
+type fakeHome struct {
+	dir string
+	err error
+}
+
+func (h fakeHome) Home() (string, error) { return h.dir, h.err }
+
+// TestInitInstallsTheGlobalDoor: one command leaves odachi available in every
+// folder, not only in the project. The door is generated, so a second run keeps
+// it and says so.
+func TestInitInstallsTheGlobalDoor(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+	runHome := func() initapp.Result {
+		return initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}}, files, &fakeSkills{})
+	}
+
+	got := runHome()
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	for _, file := range persona.GlobalFiles() {
+		abs := filepath.Join(home, filepath.FromSlash(file.Path))
+		content, ok := files.files[abs]
+		if !ok {
+			t.Errorf("%s no se instaló en el home", file.Path)
+			continue
+		}
+		if string(content) != file.Content {
+			t.Errorf("%s no es la puerta:\n%q\nvs\n%q", file.Path, content, file.Content)
+		}
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "~/"+persona.Clients()[0].HomeDir) {
+		t.Errorf("las líneas no nombran el destino del home:\n%s", strings.Join(got.Lines, "\n"))
+	}
+
+	files.events = nil
+	again := runHome()
+	if len(files.events) != 0 {
+		t.Errorf("la segunda corrida tocó el home: %v", files.events)
+	}
+	if !strings.Contains(strings.Join(again.Lines, "\n"), "sin cambios") {
+		t.Errorf("la segunda corrida no dice que la puerta ya estaba:\n%s", strings.Join(again.Lines, "\n"))
+	}
+}
+
+// TestInitKeepsTheProjectWhenTheHomeIsNotWritable: the project half is done and
+// the home half is pending. Exit 0, because the project is ready; the line names
+// the command that retries it.
+func TestInitKeepsTheProjectWhenTheHomeIsNotWritable(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{err: errors.New("sin home")}}, files, &fakeSkills{})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	for _, path := range []string{"AGENTS.md", ".opencode/agents/odachi.md", ".claude/output-styles/odachi.md"} {
+		if _, ok := files.get(path); !ok {
+			t.Errorf("%s no se escribió: el proyecto quedó a medias", path)
+		}
+	}
+	joined := strings.Join(got.Lines, "\n")
+	for _, want := range []string{"pendiente:", "home", "odachi init"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("las líneas no dicen %q:\n%s", want, joined)
+		}
 	}
 }
 

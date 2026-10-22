@@ -80,6 +80,23 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 			t.Errorf("init escribió %s: el agente de esta versión es %s", legacy, persona.FileName)
 		}
 	}
+
+	// The door in the home: the same command leaves odachi available in every
+	// folder, not only in the project that ran init.
+	home, err := homeDir()
+	if err != nil {
+		t.Fatalf("homeDir: %v", err)
+	}
+	for _, file := range persona.GlobalFiles() {
+		got, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(file.Path)))
+		if err != nil {
+			t.Errorf("%s no se instaló en el home: %v", file.Path, err)
+			continue
+		}
+		if string(got) != file.Content {
+			t.Errorf("%s no es la puerta del home:\n%q\nvs\n%q", file.Path, got, file.Content)
+		}
+	}
 }
 
 // TestInitUsesTheProfileTheHumanWroteDown: init cannot know the person, so the
@@ -110,7 +127,12 @@ func TestInitRerunWritesNothing(t *testing.T) {
 	if code, _, errOut := runDir(t, dir, []string{"init"}, ""); code != 0 {
 		t.Fatalf("first run code = %d (stderr %q)", code, errOut)
 	}
+	home, err := homeDir()
+	if err != nil {
+		t.Fatalf("homeDir: %v", err)
+	}
 	before := tree(t, dir)
+	beforeHome := homeTree(t, home)
 
 	code, out, errOut := runDir(t, dir, []string{"init"}, "")
 
@@ -119,6 +141,9 @@ func TestInitRerunWritesNothing(t *testing.T) {
 	}
 	if after := tree(t, dir); strings.Join(keys(before), ",") != strings.Join(keys(after), ",") {
 		t.Errorf("el segundo init tocó el proyecto: before %v after %v", keys(before), keys(after))
+	}
+	if afterHome := homeTree(t, home); strings.Join(beforeHome, ",") != strings.Join(afterHome, ",") {
+		t.Errorf("el segundo init tocó el home: before %v after %v", beforeHome, afterHome)
 	}
 	if !strings.Contains(out, "sin cambios") {
 		t.Errorf("la salida no dice que no cambió nada:\n%s", out)
@@ -178,6 +203,7 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 		} `json:"skills"`
 		Personas []struct {
 			Client    string   `json:"client"`
+			Scope     string   `json:"scope"`
 			Dir       string   `json:"dir"`
 			Written   int      `json:"written"`
 			Unchanged int      `json:"unchanged"`
@@ -187,12 +213,23 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
 		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
 	}
-	if len(payload.Personas) != len(persona.Clients()) {
-		t.Fatalf("personas = %+v, want one row per client", payload.Personas)
+	if len(payload.Personas) != 2*len(persona.Clients()) {
+		t.Fatalf("personas = %+v, want one project and one home row per client", payload.Personas)
 	}
+	scopes := map[string]bool{}
 	for _, row := range payload.Personas {
-		if row.Written != 1 || len(row.Files) != 1 || row.Files[0] != row.Dir+"/"+persona.FileName {
-			t.Errorf("fila de %s = %+v, want one written %s", row.Client, row, persona.FileName)
+		scopes[row.Scope] = true
+		if row.Written+row.Unchanged != 1 || len(row.Files) != 1 {
+			t.Errorf("fila de %s/%s = %+v, want one file owned", row.Client, row.Scope, row)
+			continue
+		}
+		if want := row.Dir + "/" + persona.FileName; row.Files[0] != want {
+			t.Errorf("fila de %s/%s = %+v, want %s", row.Client, row.Scope, row, want)
+		}
+	}
+	for _, scope := range []string{"project", "home"} {
+		if !scopes[scope] {
+			t.Errorf("el reporte no trae la fila de scope %q: %+v", scope, payload.Personas)
 		}
 	}
 	if !slicesContains(payload.Files, "AGENTS.md") {

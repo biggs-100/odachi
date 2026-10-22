@@ -2,6 +2,7 @@ package persona_test
 
 import (
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -198,6 +199,58 @@ func TestClaudeFileKeepsTheCodingInstructions(t *testing.T) {
 		return
 	}
 	t.Fatalf("Files() no escribió el agente de Claude")
+}
+
+// TestGlobalFilesAreTheDoorInTheHome: the file the human finds in any folder is
+// a door, not a project mirror. It lives in the client's global directory, reads
+// the project's block when there is one, and sends a new folder to bootstrap.
+func TestGlobalFilesAreTheDoorInTheHome(t *testing.T) {
+	files := persona.GlobalFiles()
+
+	wantPaths := []string{
+		".config/opencode/agents/odachi.md",
+		".claude/output-styles/odachi.md",
+	}
+	if len(files) != len(wantPaths) {
+		t.Fatalf("GlobalFiles() = %d archivos, want %d", len(files), len(wantPaths))
+	}
+	for i, want := range wantPaths {
+		if files[i].Path != want {
+			t.Errorf("GlobalFiles()[%d].Path = %q, want %q", i, files[i].Path, want)
+		}
+		for _, marker := range []string{
+			"puerta de entrada",
+			"AGENTS.md",
+			"<!-- odachi:begin -->",
+			"drive/SKILL.md",
+			"bootstrap/SKILL.md",
+			"odachi init",
+			"odachi start",
+		} {
+			if !strings.Contains(files[i].Content, marker) {
+				t.Errorf("%s no dice %q:\n%s", want, marker, files[i].Content)
+			}
+		}
+		if strings.Contains(files[i].Content, "# Reglas del proyecto (odachi)") {
+			t.Errorf("%s copia las reglas del proyecto: la puerta no es un segundo dueño", want)
+		}
+	}
+}
+
+// TestProjectAndGlobalShareTheName: the project copy wins inside an initialized
+// project, and the global copy is the same name everywhere else. Two names would
+// make the human learn which one to pick.
+func TestProjectAndGlobalShareTheName(t *testing.T) {
+	project := persona.Files("bloque\n")
+	global := persona.GlobalFiles()
+	if len(project) != len(global) {
+		t.Fatalf("project %d files, global %d", len(project), len(global))
+	}
+	for i := range project {
+		if filepath.Base(project[i].Path) != filepath.Base(global[i].Path) {
+			t.Errorf("%s y %s no comparten nombre", project[i].Path, global[i].Path)
+		}
+	}
 }
 
 // TestTheRendererDoesNotReadTheProfile: the voices do not depend on
