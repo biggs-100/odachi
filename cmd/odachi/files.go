@@ -257,8 +257,10 @@ func withDefaults(loaded profile.Profile, known map[string]profile.Profile) prof
 	return loaded
 }
 
-// gitRepo is the Git adapter for `odachi check`: every repository fact comes
-// from gitx, which runs git locally and never touches the network.
+// gitRepo is the Git adapter for `odachi check` and `odachi review`: every
+// repository fact comes from gitx, which runs git locally and never touches the
+// network. Both verbs read the same tree and the same diff, so they share one
+// adapter and a review can never be produced for a candidate `check` did not see.
 type gitRepo struct{}
 
 func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root) }
@@ -270,6 +272,8 @@ func (gitRepo) ChangedPaths(root, base string) ([]string, error) {
 func (gitRepo) AddedDeps(root, base string) ([]string, error) {
 	return gitx.AddedDeps(root, base)
 }
+
+func (gitRepo) Diff(root, base string) (string, error) { return gitx.Diff(root, base) }
 
 // osShell is the Shell adapter for `odachi check` and `odachi review`: the
 // platform shell lives in internal/adapters/shellcmd, one file per platform, and

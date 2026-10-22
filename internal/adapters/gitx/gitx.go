@@ -1,6 +1,7 @@
-// Package gitx is the git edge. It answers three questions the gates need:
+// Package gitx is the git edge. It answers four questions the gates need:
 // which tree is in the worktree right now, which paths changed since the base
-// commit, and which modules were added to go.mod.
+// commit, which modules were added to go.mod, and what the candidate looks like
+// as a diff.
 //
 // Every command is local. There is no fetch, no pull, no remote: a gate must
 // work offline and must never wait on the network.

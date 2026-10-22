@@ -412,7 +412,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
-	return reportReview(reviewapp.Run(opts, osFiles{}, reviewGit{}, osShell{}, reviewLenses{}), asJSON, stdout, stderr)
+	return reportReview(reviewapp.Run(opts, osFiles{}, gitRepo{}, osShell{}, reviewLenses{}), asJSON, stdout, stderr)
 }
 
 // withoutEmptyLens is what makes `odachi review --lens --show` work: the flag

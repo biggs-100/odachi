@@ -139,6 +139,11 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
   without it the proof would change the tree it certifies and every run would
   invalidate the previous proof. `--quiet` prints nothing only when ready (the
   pre-commit hook depends on that) and still prints the block when not.
+- The diff a review reads is `gitx.Diff`, and `cmd/odachi` has ONE Git adapter
+  (`gitRepo`) for both `check` and `review`. gitx decides that "no base" means
+  the empty tree, so the app never spells that hash. The diff builds a throwaway
+  `GIT_INDEX_FILE` exactly like `TreeHash`: untracked files enter the candidate,
+  git-ignored files do not, and the human's real index is never staged.
 - `init` writes the rules block between `<!-- odachi:begin -->` and
   `<!-- odachi:end -->` and the `.git/hooks/pre-commit` hook. It never replaces a
   hook it did not write: it prints the three lines to paste and exits `1`.
