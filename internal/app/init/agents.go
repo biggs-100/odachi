@@ -1,95 +1,129 @@
 package init
 
-import "strings"
+import (
+	"path/filepath"
 
-// The AGENTS.md block lives between two HTML comments, so replacing it never
-// touches a line the human wrote around it.
-const (
-	agentsFile  = "AGENTS.md"
-	agentsBegin = "<!-- odachi:begin -->"
-	agentsEnd   = "<!-- odachi:end -->"
+	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 )
 
-// agentsBlock is the fixed block `odachi init` writes: what odachi is, the four
-// hard rules and the six verbs, each with its use in one line. It is pinned byte
-// for byte by test because it is the contract the agent reads on every session,
-// and it has to make sense to an agent that knows nothing about this project.
-const agentsBlock = agentsBegin + `
-# Reglas del proyecto (odachi)
+// agentsFile is the file the block lives in. The renderer owns the name, the
+// markers and the text; this package only decides when to write them.
+const agentsFile = rules.File
 
-odachi es un binario y cuatro artefactos de texto plano —brief, task doc, prueba y
-perfil—. El binario hace cumplir el gate; los artefactos son la memoria. La persona
-decide la visión y lo que no se negocia; el agente ejecuta con oficio de senior y
-explica lo que la persona necesita aprender. Si dudás dónde está el contexto:
-` + "`brief.md`" + ` para la visión, ` + "`odd/tasks/`" + ` para el plan, ` + "`.agents/skills/`" + ` para el oficio.
+// profileFile is the human's profile, relative to the project root. init reads it
+// to know which voice the block gets and never writes it.
+const profileFile = ".odachi/profile.toml"
 
-Cuatro reglas duras. No son consejos: ` + "`odachi check`" + ` las hace cumplir.
+// writeAgents writes the rules block with the voice of the profile at hand,
+// replacing it in place when it is already there and backing up the human's file
+// before touching it.
+func (r *runner) writeAgents() *Result {
+	voice := r.voice()
 
-1. Brief antes de código. Si no hay ` + "`brief.md`" + ` completo, primero ` + "`odachi start`" + `.
-   Sin visión escrita no se construye.
-2. Nada fuera del cerco. Si algo está en "NO incluye", no se toca: se pregunta
-   con ` + "`odachi ask \"<pregunta>\"`" + `. El cerco lo hace cumplir ` + "`check`" + `.
-3. No decir "listo" sin prueba. Listo es ` + "`odachi check --run \"<comando>\"`" + ` en
-   verde, con la salida guardada en ` + "`proof/`" + `. Sin eso, no está listo.
-4. Pedazos chicos, un commit cada uno. Un paso del task doc, un commit.
+	path := filepath.Join(r.dir, agentsFile)
 
-Skills: las que hay en ` + "`.agents/skills/`" + `; dentro de este proyecto, cargá ` + "`drive`" + ` antes de actuar: es el manual.
-
-## Si la persona es novata
-
-No lo adivines: si no sabés el nivel, preguntá una vez
-"¿preferís que te explique el porqué o que vaya al hueso?" y aplicá lo de abajo
-solo si la respuesta es novato.
-
-El objetivo no es solo que funcione: es que la persona aprenda el oficio. Estas
-reglas son la diferencia entre un agente que ejecuta y un agente que enseña.
-
-- Explicá el porqué de cada decisión en UNA línea, en el momento en que la tomás.
-- Cada decisión de oficio se anota: ` + "`odachi ask --craft \"<decisión>\" --because \"<razón>\"`" + `.
-- Cuando frenás algo, decí por qué en una línea: es el momento que más enseña.
-- Una de cada cinco decisiones, preguntá de vuelta "¿por qué elegiste esto?".
-- Nunca un sermón, nunca un glosario, nunca dos explicaciones seguidas.
-- Al cerrar una feature, corré ` + "`odachi summary`" + ` y contá en tres líneas qué
-  decidió la persona y qué concepto apareció.
-
-## Los seis verbos
-
-- ` + "`odachi start`" + ` — la entrevista: escribe brief, perfil, cerco y task doc.
-- ` + "`odachi ask \"<pregunta>\"`" + ` — anota una pregunta abierta; con ` + "`--answer`" + ` la contesta.
-- ` + "`odachi level`" + ` — muestra tus hechos y propone senior cuando se gana.
-- ` + "`odachi summary`" + ` — qué hay hecho en cada feature.
-- ` + "`odachi check`" + ` — ¿está listo? brief, cerco, preguntas y prueba; con ` + "`--run`" + ` corre la prueba.
-- ` + "`odachi init`" + ` — escribe este bloque, el hook, las skills y las dos personas.
-` + agentsEnd + "\n"
-
-// withBlock returns content with the odachi block replaced in place, or appended
-// when the file has no block yet. A file with an opening marker and no closing
-// one is treated as a truncated block: it is replaced from the marker to the end
-// instead of gaining a second one.
-func withBlock(content string) string {
-	begin := strings.Index(content, agentsBegin)
-	if begin < 0 {
-		return appendBlock(content)
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		problem := blocked("no pude revisar " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		return &problem
 	}
 
-	end := strings.Index(content[begin:], agentsEnd)
-	if end < 0 {
-		return content[:begin] + agentsBlock
+	current := ""
+	if exists {
+		data, err := r.files.Read(path)
+		if err != nil {
+			problem := blocked("no pude leer " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			return &problem
+		}
+		current = string(data)
 	}
-	rest := content[begin+end+len(agentsEnd):]
-	if newline := strings.IndexByte(rest, '\n'); newline >= 0 {
-		rest = rest[newline+1:]
+
+	updated, err := rules.WithBlock(current, voice)
+	if err != nil {
+		problem := blocked("no pude armar el bloque de " + agentsFile + ": " + oneLine(err.Error()) + "; volvé a correr odachi init")
+		return &problem
+	}
+
+	if exists && updated == current {
+		r.lines = append(r.lines, agentsFile+": sin cambios")
+		return nil
+	}
+
+	if exists {
+		backup, err := r.files.Backup(path)
+		if err != nil {
+			problem := blocked("no pude respaldar " + agentsFile + " antes de reescribirlo: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			return &problem
+		}
+		r.lines = append(r.lines, agentsFile+": bloque actualizado con la voz "+voice+" (el anterior quedó en "+relative(r.dir, backup)+")")
 	} else {
-		rest = ""
+		r.lines = append(r.lines, agentsFile+": creado con el bloque de odachi y la voz "+voice)
 	}
-	return content[:begin] + agentsBlock + rest
+
+	if err := r.files.Write(path, []byte(updated)); err != nil {
+		problem := blocked("no pude escribir " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		return &problem
+	}
+	r.changed = append(r.changed, agentsFile)
+	return nil
 }
 
-// appendBlock puts the block at the end of a file that does not have one,
-// separated by one blank line, and keeps every byte that was already there.
-func appendBlock(content string) string {
-	if strings.TrimSpace(content) == "" {
-		return agentsBlock
+// voice is the voice the block gets: the one the profile at hand asks for, or
+// novato when there is no profile file yet. When it had to fall back it leaves
+// the sentence to say so in r.voiceNote, which the caller reports on every run:
+// a broken profile is worth saying again after a rerun that changed nothing.
+//
+// It never infers the profile. init runs before the interview, so "there is a
+// repository here" would make every new project senior — exactly backwards. The
+// tool's default audience is the person who does not know yet, and the only thing
+// that can say otherwise is a profile the human already accepted.
+//
+// A profile that does not resolve, or names something odachi has no voice for,
+// does not fail the run: the block, the hook and the skills are still what the
+// project needs. It falls back to novato and says in one line what to fix.
+func (r *runner) voice() string {
+	if r.profiles == nil {
+		return persona.Novato
 	}
-	return strings.TrimRight(content, "\n") + "\n\n" + agentsBlock
+
+	written, err := r.profiles.Written(r.dir)
+	if err != nil {
+		r.voiceNote = "la voz es la de novato porque " + profileFile + " no resuelve (" + oneLine(err.Error()) + "); corregí el archivo o borralo y volvé a correr odachi init"
+		return persona.Novato
+	}
+	if written == "" {
+		return persona.Novato
+	}
+
+	resolved, err := persona.VoiceName(written)
+	if err != nil {
+		r.voiceNote = "la voz es la de novato porque el perfil no es uno de los que tienen voz (" + oneLine(err.Error()) + "); usá novato, senior o ci en " + profileFile + " y volvé a correr odachi init"
+		return persona.Novato
+	}
+	return resolved
+}
+
+// reportLeftovers names the per-client persona files v0.10.0 wrote, when they are
+// still there. They are not an error: the voice lives in the block now, nothing
+// reads them, and odachi never deletes a file it did not write in this version.
+// The human may, and the line says so.
+func (r *runner) reportLeftovers() {
+	found := make([]string, 0, len(persona.Deprecated()))
+	for _, file := range persona.Deprecated() {
+		exists, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(file)))
+		if err != nil {
+			r.lines = append(r.lines, "no pude revisar "+file+": "+oneLine(err.Error())+"; revisá los permisos y volvé a correr odachi init")
+			continue
+		}
+		if exists {
+			found = append(found, file)
+		}
+	}
+	if len(found) == 0 {
+		return
+	}
+
+	r.lines = append(r.lines, "quedaron de v0.10.0 "+humanList(persona.DeprecatedDirs())+" (las personas por cliente): ya no se usan, la voz vive en "+
+		agentsFile+"; no los toqué: borralos si querés")
 }

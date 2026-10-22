@@ -1,17 +1,33 @@
 package init_test
 
 import (
-	"slices"
+	"errors"
 	"strings"
 	"testing"
 
+	initapp "github.com/biggs-100/odachi/internal/app/init"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 )
 
-// TestInitWritesBothPersonasForEveryClient: `odachi init` leaves each client that
-// has a native mechanism with both personas, so the human can pick one with the
-// client's own switch instead of learning a TOML.
-func TestInitWritesBothPersonasForEveryClient(t *testing.T) {
+// fakeProfiles is the profile port: the profile the human wrote down, or none.
+// init must not infer one, so the double has no way to say "inferred".
+type fakeProfiles struct {
+	name string
+	err  error
+}
+
+func (p fakeProfiles) Written(string) (string, error) { return p.name, p.err }
+
+// runProfiled performs one `odachi init` with a profile already written down.
+func runProfiled(files *fakeFiles, profiles fakeProfiles) initapp.Result {
+	return initapp.Run(initapp.Options{Dir: dir, Profiles: profiles}, files, &fakeSkills{})
+}
+
+// TestInitWritesNoPersonaFiles: the voice lives in AGENTS.md now, and the client
+// directories odachi used to fill are not touched at all. A file nobody's
+// selector lists is worse than no file: it looks installed.
+func TestInitWritesNoPersonaFiles(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
 	got := run(files)
@@ -19,42 +35,139 @@ func TestInitWritesBothPersonasForEveryClient(t *testing.T) {
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
-
-	wrote := persona.All()
-	if len(wrote) == 0 {
-		t.Fatalf("persona.All() vino vacío: no hay nada que escribir")
-	}
-	for _, file := range wrote {
-		content, ok := files.get(file.Path)
-		if !ok {
-			t.Errorf("%s no se escribió; events: %v", file.Path, files.events)
-			continue
-		}
-		if content != file.Content {
-			t.Errorf("%s no tiene el cuerpo de la plantilla:\n%q\nvs\n%q", file.Path, content, file.Content)
-		}
-		if !slices.Contains(got.Files, file.Path) {
-			t.Errorf("Files = %v, want it to name %s", got.Files, file.Path)
+	for _, client := range []string{".opencode", ".claude"} {
+		for _, path := range files.events {
+			if strings.Contains(path, client) {
+				t.Errorf("init tocó %s: %s", client, path)
+			}
 		}
 	}
+	for _, file := range persona.Deprecated() {
+		if _, ok := files.get(file); ok {
+			t.Errorf("%s se escribió otra vez", file)
+		}
+	}
+	if joined := strings.Join(got.Lines, "\n"); strings.Contains(joined, "personas") && !strings.Contains(joined, "v0.10.0") {
+		t.Errorf("las líneas todavía hablan de escribir personas:\n%s", joined)
+	}
+}
 
-	if len(got.PersonaDests) != len(persona.Clients()) {
-		t.Fatalf("PersonaDests = %v, want one row per client (%d)", got.PersonaDests, len(persona.Clients()))
+// TestInitWritesTheVoiceOfTheProfileAtHand: the block carries the voice of the
+// profile the human accepted, and novato when there is no file yet — init runs
+// before the interview and cannot know the person.
+func TestInitWritesTheVoiceOfTheProfileAtHand(t *testing.T) {
+	cases := []struct {
+		name     string
+		profiles fakeProfiles
+		want     string
+	}{
+		{"sin perfil es novato", fakeProfiles{}, persona.Novato},
+		{"novato escrito", fakeProfiles{name: "novato"}, persona.Novato},
+		{"senior escrito", fakeProfiles{name: "senior"}, persona.Senior},
+		{"ci usa la voz de senior", fakeProfiles{name: "ci"}, persona.Senior},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+			got := runProfiled(files, c.profiles)
+
+			if got.Code != 0 {
+				t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+			}
+			want, err := rules.Block(c.want)
+			if err != nil {
+				t.Fatalf("rules.Block(%q): %v", c.want, err)
+			}
+			content, _ := files.get("AGENTS.md")
+			if content != want {
+				t.Fatalf("el bloque no lleva la voz %s:\n%q\nvs\n%q", c.want, content, want)
+			}
+			if !strings.Contains(strings.Join(got.Lines, "\n"), c.want) {
+				t.Errorf("las líneas no dicen con qué voz se escribió el bloque:\n%s", strings.Join(got.Lines, "\n"))
+			}
+		})
+	}
+}
+
+// A profile that cannot be read is not a failed install: the hook and the skills
+// are what the project needs, and the voice falls back to novato with the file
+// named and the action that fixes it.
+func TestInitNamesABrokenProfileAndKeepsGoing(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := runProfiled(files, fakeProfiles{err: errors.New("perfil: TOML inválido")})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	want, err := rules.Block(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Block(novato): %v", err)
+	}
+	if content, _ := files.get("AGENTS.md"); content != want {
+		t.Errorf("el bloque no salió con la voz de novato:\n%q", content)
 	}
 	joined := strings.Join(got.Lines, "\n")
-	for _, client := range persona.Clients() {
-		if !strings.Contains(joined, client.Dir) {
-			t.Errorf("las líneas no nombran %s:\n%s", client.Dir, joined)
-		}
-		if !strings.Contains(joined, client.Switch) {
-			t.Errorf("las líneas no dicen cómo se elige la persona en %s (%q):\n%s", client.Agent, client.Switch, joined)
+	for _, want := range []string{".odachi/profile.toml", "odachi init"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("las líneas no nombran %q:\n%s", want, joined)
 		}
 	}
 }
 
-// TestInitPersonaRerunWritesNothing: the files are generated, so a second run
-// rewrites nothing and does not back up a file it just wrote.
-func TestInitPersonaRerunWritesNothing(t *testing.T) {
+// A profile name odachi has no voice for is the same case: fall back, say it, and
+// name the three names that have a voice.
+func TestInitNamesAProfileWithoutAVoice(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := runProfiled(files, fakeProfiles{name: "mio"})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	joined := strings.Join(got.Lines, "\n")
+	for _, want := range []string{"mio", "novato", "senior", "ci"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("las líneas no nombran %q:\n%s", want, joined)
+		}
+	}
+}
+
+// TestInitReportsTheV0100PersonaFilesAndTouchesNothing: the human's disk is not
+// odachi's to clean. One line says what those files are and that they can go.
+func TestInitReportsTheV0100PersonaFilesAndTouchesNothing(t *testing.T) {
+	leftover := ".opencode/agents/odachi-senior.md"
+	files := newFakeFiles(map[string]string{
+		".git/HEAD": "ref: refs/heads/main\n",
+		leftover:    "la versión vieja\n",
+	})
+
+	got := run(files)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	joined := strings.Join(got.Lines, "\n")
+	for _, want := range []string{"v0.10.0", ".opencode/agents", rules.File, "borralos"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("las líneas no dicen %q:\n%s", want, joined)
+		}
+	}
+	if content, _ := files.get(leftover); content != "la versión vieja\n" {
+		t.Errorf("init tocó el archivo viejo: %q", content)
+	}
+	for _, event := range files.events {
+		if strings.Contains(event, leftover) {
+			t.Errorf("init escribió o respaldó el archivo viejo: %s", event)
+		}
+	}
+}
+
+// TestInitRerunStillWritesNothing: the block is generated, so a second run leaves
+// no backup behind and says it changed nothing.
+func TestInitRerunStillWritesNothing(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	if code := run(files).Code; code != 0 {
 		t.Fatalf("first run code = %d", code)
@@ -72,45 +185,7 @@ func TestInitPersonaRerunWritesNothing(t *testing.T) {
 	if len(got.Files) != 0 {
 		t.Errorf("Files = %v, want none on a rerun that wrote nothing", got.Files)
 	}
-	for _, dest := range got.PersonaDests {
-		if dest.Written != 0 || dest.Kept != len(persona.Names()) {
-			t.Errorf("PersonaDests[%s] = %+v, want every persona kept", dest.Dir, dest)
-		}
-	}
-	joined := strings.Join(got.Lines, "\n")
-	if !strings.Contains(joined, "sin cambios") {
-		t.Errorf("las líneas no dicen que no cambió nada:\n%s", joined)
-	}
-	if !strings.Contains(got.Message, "personas") {
-		t.Errorf("Message = %q, want it to say the personas were already there", got.Message)
-	}
-}
-
-// TestInitBacksUpAHandEditedPersona: the file says it is generated, so a hand
-// edit is not thrown away silently either.
-func TestInitBacksUpAHandEditedPersona(t *testing.T) {
-	files := newFakeFiles(map[string]string{
-		".git/HEAD":                         "ref: refs/heads/main\n",
-		".opencode/agents/odachi-novato.md": "mi versión a mano\n",
-	})
-
-	got := run(files)
-
-	if got.Code != 0 {
-		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
-	}
-	if !slices.Contains(files.events, "backup .opencode/agents/odachi-novato.md") {
-		t.Errorf("events = %v, want a backup of the hand-edited persona", files.events)
-	}
-	if indexOf(files.events, "backup .opencode/agents/odachi-novato.md") > indexOf(files.events, "write .opencode/agents/odachi-novato.md") {
-		t.Errorf("events = %v, want the backup before the write", files.events)
-	}
-	content, _ := files.get(".opencode/agents/odachi-novato.md")
-	body, err := persona.Body(persona.Novato)
-	if err != nil {
-		t.Fatalf("Body(novato): %v", err)
-	}
-	if !strings.HasSuffix(content, body) {
-		t.Errorf("la persona no se regeneró:\n%q", content)
+	if !strings.Contains(got.Message, "sin cambios") {
+		t.Errorf("Message = %q, want it to say nothing changed", got.Message)
 	}
 }

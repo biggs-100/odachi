@@ -7,12 +7,28 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
+
+// El currículum crece (drive) y el uso no puede quedarse con un número
+// escrito a mano: la ayuda nombra la carpeta, no cuántas van. Un número acá se
+// queda viejo en la versión siguiente y nadie lo nota hasta que un humano lo lee.
+func TestInitUsageDoesNotHardCodeTheSkillCount(t *testing.T) {
+	dir := configuredProject(t)
+
+	out, _ := output(t, dir, []string{"init", "-h"})
+	if !strings.Contains(out, ".agents/skills") {
+		t.Fatalf("el uso no nombra .agents/skills:\n%s", out)
+	}
+	if hardCoded := regexp.MustCompile(`\b\d+ skills\b`); hardCoded.MatchString(out) {
+		t.Fatalf("el uso escribe a mano cuántas skills van: %q", hardCoded.FindString(out))
+	}
+}
 
 // TestMain points the home adapter at a directory this process owns before any
 // test runs. `odachi init` writes the bootstrap skill into the human's home now,
@@ -105,14 +121,11 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 	if _, err := os.Stat(skillPath(dir, bundledskills.BootstrapName)); err == nil {
 		t.Errorf("el proyecto recibió la skill de arranque: esa vive en el home")
 	}
-	// `.opencode/` itself is expected after init: it holds the generated personas.
-	// What must not be there is a second copy of the curriculum.
-	if _, err := os.Stat(filepath.Join(dir, ".opencode", "skills")); err == nil {
-		t.Errorf("init escribió en .opencode/skills: el proyecto usa una sola carpeta")
-	}
-	for _, persona := range []string{"odachi-novato.md", "odachi-senior.md"} {
-		if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", persona)); err != nil {
-			t.Errorf("init no escribió la persona %s en .opencode/agents: %v", persona, err)
+	// No client directory at all: the order's one location is the project's
+	// cross-client folder, and the voice travels in AGENTS.md.
+	for _, rel := range []string{".opencode", ".claude"} {
+		if _, err := os.Stat(filepath.Join(dir, rel)); err == nil {
+			t.Errorf("init escribió en %s: el proyecto usa una sola carpeta", rel)
 		}
 	}
 

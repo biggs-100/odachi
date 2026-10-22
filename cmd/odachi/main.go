@@ -624,7 +624,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing()}, osFiles{}, &initSkills{dir: dir})
+	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing(), Profiles: writtenProfile{}}, osFiles{}, &initSkills{dir: dir})
 	if created {
 		line := "historial del proyecto: lo creé en esta carpeta (git init); es lo que me deja probar que una prueba corresponde a este estado del código"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -771,36 +771,20 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 				Files:     destFiles,
 			})
 		}
-		personas := make([]initPersonaDest, 0, len(result.PersonaDests))
-		for _, dest := range result.PersonaDests {
-			destFiles := dest.Files
-			if destFiles == nil {
-				destFiles = []string{}
-			}
-			personas = append(personas, initPersonaDest{
-				Client:    dest.Client,
-				Dir:       dest.Dir,
-				Written:   dest.Written,
-				Unchanged: dest.Kept,
-				Files:     destFiles,
-			})
-		}
 		payload := struct {
-			Code     int               `json:"code"`
-			Message  string            `json:"message"`
-			Next     string            `json:"next,omitempty"`
-			Lines    []string          `json:"lines,omitempty"`
-			Files    []string          `json:"files"`
-			Skills   []initSkillDest   `json:"skills"`
-			Personas []initPersonaDest `json:"personas"`
+			Code    int             `json:"code"`
+			Message string          `json:"message"`
+			Next    string          `json:"next,omitempty"`
+			Lines   []string        `json:"lines,omitempty"`
+			Files   []string        `json:"files"`
+			Skills  []initSkillDest `json:"skills"`
 		}{
-			Code:     result.Code,
-			Message:  result.Message,
-			Next:     result.Next,
-			Lines:    result.Lines,
-			Files:    files,
-			Skills:   skills,
-			Personas: personas,
+			Code:    result.Code,
+			Message: result.Message,
+			Next:    result.Next,
+			Lines:   result.Lines,
+			Files:   files,
+			Skills:  skills,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
@@ -834,17 +818,6 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 type initSkillDest struct {
 	Dest      string   `json:"dest"`
 	Installed int      `json:"installed"`
-	Unchanged int      `json:"unchanged"`
-	Files     []string `json:"files"`
-}
-
-// initPersonaDest is one client's persona directory in the same report: which
-// client, where it reads personas from, what this run did there, and the files it
-// owns.
-type initPersonaDest struct {
-	Client    string   `json:"client"`
-	Dir       string   `json:"dir"`
-	Written   int      `json:"written"`
 	Unchanged int      `json:"unchanged"`
 	Files     []string `json:"files"`
 }
@@ -1052,21 +1025,20 @@ flags de bench:
   --json          salida para máquinas
 
 flags de init:
-  --json          salida para máquinas, con los destinos de las skills y las personas
+  --json          salida para máquinas, con los destinos de las skills
 
 qué deja escrito init, en un solo comando:
-  AGENTS.md              el bloque de reglas que el agente lee
+  AGENTS.md              el bloque de reglas que el agente lee, con la voz al final
   .gitignore             /proof/ y /.odachi/reviews/ no ensucian el árbol que certifican
   .git/hooks/pre-commit  no se commitea sin odachi check --quiet en verde
-  .agents/skills         las 8 skills del proyecto: la carpeta que leen todos los clientes
+  .agents/skills         las skills del proyecto: la carpeta que leen todos los clientes
   ~/.agents/skills       la skill de arranque: cómo empezar un proyecto desde cero
-  .opencode/agents       las dos personas, novato y senior: se eligen con Tab
-  .claude/output-styles  las mismas dos personas: se eligen con /config
 
-las personas se escriben siempre, para cada cliente que sepa elegirlas: init no
-sabe quién sos, y la persona la elegís vos con la tecla de tu cliente. El
-ceremonial lo sigue decidiendo .odachi/profile.toml, y el perfil no cambia la
-persona: son dos ejes.
+la voz —cómo te habla el agente— es la última sección del bloque, y la escribe el
+binario: novato si todavía no hay .odachi/profile.toml, si no la del perfil que
+diga. Todos los clientes leen AGENTS.md, así que no hay un archivo por cliente ni
+una tecla que aprender. odachi level --to <perfil> cambia el perfil y esa sección,
+y no toca nada más del bloque.
 
 flags:
   --outcome s     respuesta 1: qué tiene que existir cuando terminemos
@@ -1087,7 +1059,7 @@ después de start:
   odachi plan "<texto>" [--req R1]              agrega el próximo paso al task doc
   odachi plan --done T2 [--commit abc1234]      marca un paso hecho y registra el commit
   odachi level                                  ver tus hechos; propone senior cuando se gana
-  odachi level --to <perfil>                    aplicar un perfil (se respalda el anterior)
+  odachi level --to <perfil>                    aplicar un perfil y su voz (se respaldan los dos)
   odachi summary                                qué hay hecho en cada feature
   odachi undo                                   restaura lo último que escribió odachi (lo actual queda respaldado)
   odachi undo --list                            qué se puede deshacer, con fecha
@@ -1105,9 +1077,9 @@ después de start:
   odachi check --require-review                 exige review para este árbol y sus lentes
   odachi doctor                                 once chequeos de salud, de solo lectura
   odachi bench                                  mide cómo se traba una persona (in-band / dead-end)
-  odachi init                                   AGENTS.md + hook + las skills del proyecto en
-                                                 .agents/skills (y la de arranque en ~/.agents/skills)
-                                                 + las dos personas en cada cliente que las elige
+  odachi init                                   AGENTS.md (con la voz del perfil) + hook + las skills
+                                                 del proyecto en .agents/skills, y la de arranque
+                                                 en ~/.agents/skills
   odachi skills                                 las skills del proyecto y su trigger
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
   odachi skills --write                         regenera SKILLS.md desde los frontmatter

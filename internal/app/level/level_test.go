@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/level"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -339,5 +341,173 @@ func TestLevelToTheSameProfileWritesNothing(t *testing.T) {
 	}
 	if !strings.Contains(res.Message, "senior") {
 		t.Errorf("message %q does not say the profile was already senior", res.Message)
+	}
+}
+
+// agentsPath is the file whose last section holds the voice.
+var agentsPath = filepath.Join("raiz", "AGENTS.md")
+
+// blockOf returns the block the renderer writes for one voice, or a failed test.
+func blockOf(t *testing.T, voice string) string {
+	t.Helper()
+	block, err := rules.Block(voice)
+	if err != nil {
+		t.Fatalf("rules.Block(%q): %v", voice, err)
+	}
+	return block
+}
+
+// TestLevelToRewritesTheVoiceSectionAndNothingElse: accepting a profile changes
+// how the agent talks, so the block's last section follows — and every other byte
+// of the file, including what the human wrote around the block, survives. It is
+// the same promise the .gitignore block makes.
+func TestLevelToRewritesTheVoiceSectionAndNothingElse(t *testing.T) {
+	before := "mío arriba\n\n" + blockOf(t, persona.Novato) + "\nmío abajo\n"
+	files := newFakeFiles(map[string]string{agentsPath: before})
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "novato"), To: "senior"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	want := "mío arriba\n\n" + blockOf(t, persona.Senior) + "\nmío abajo\n"
+	if got := files.content(t, agentsPath); got != want {
+		t.Fatalf("la voz no se reemplazó en su lugar:\n%q\nvs\n%q", got, want)
+	}
+	if !slices.Contains(res.Files, "AGENTS.md") {
+		t.Errorf("Files = %v, want it to name AGENTS.md", res.Files)
+	}
+	if !strings.Contains(strings.Join(res.Lines, "\n"), "voz senior") {
+		t.Errorf("las líneas no reportan la voz:\n%s", strings.Join(res.Lines, "\n"))
+	}
+	backup := slices.Index(files.events, "backup "+agentsPath)
+	rewrite := slices.Index(files.events, "write "+agentsPath)
+	if backup < 0 || rewrite < 0 || backup > rewrite {
+		t.Errorf("events = %v, want the block backed up before it is rewritten", files.events)
+	}
+}
+
+// TestLevelToTheSameVoiceTwiceWritesNothing: the second run of the same command
+// is not an event, and the message says so instead of claiming work it did not do.
+func TestLevelToTheSameVoiceTwiceWritesNothing(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		profilePath: "name = \"senior\"\n",
+		agentsPath:  blockOf(t, persona.Novato),
+	})
+
+	if res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "senior"), To: "senior"}, files); res.Code != level.CodeOK {
+		t.Fatalf("first run Code = %d (message: %s)", res.Code, res.Message)
+	}
+	files.events = nil
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "senior"), To: "senior"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	if len(files.events) != 0 {
+		t.Errorf("el segundo level escribió: %v", files.events)
+	}
+	if !strings.Contains(res.Message, "no escribí nada") {
+		t.Errorf("Message = %q, want it to say nothing was written", res.Message)
+	}
+}
+
+// TestLevelToGivesAnOldBlockAVoiceSection: a project initialised before the voice
+// moved into the block has no section. It gains one at the end of the block, and
+// the rules it already had stay exactly as they were.
+func TestLevelToGivesAnOldBlockAVoiceSection(t *testing.T) {
+	old := "<!-- odachi:begin -->\n# Reglas del proyecto (odachi)\n\nreglas de la versión vieja\n<!-- odachi:end -->\n"
+	files := newFakeFiles(map[string]string{
+		profilePath: "name = \"novato\"\n",
+		agentsPath:  old,
+	})
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "novato"), To: "senior"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+
+	want := "<!-- odachi:begin -->\n# Reglas del proyecto (odachi)\n\nreglas de la versión vieja\n\n" +
+		rules.Section + "\n\n" + voiceOf(t, persona.Senior) + "<!-- odachi:end -->\n"
+	if got := files.content(t, agentsPath); got != want {
+		t.Fatalf("la sección no se agregó al final del bloque:\n%q\nvs\n%q", got, want)
+	}
+}
+
+// TestLevelToWithoutABlockNamesInit: a file odachi did not write is not odachi's
+// to invent. The profile is applied, the block is left alone, and the line names
+// the command that writes it.
+func TestLevelToWithoutABlockNamesInit(t *testing.T) {
+	files := newFakeFiles(map[string]string{agentsPath: "solo mío\n"})
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "novato"), To: "senior"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	if got := files.content(t, agentsPath); got != "solo mío\n" {
+		t.Errorf("level escribió en un archivo sin bloque: %q", got)
+	}
+	if !strings.Contains(strings.Join(res.Lines, "\n"), "odachi init") {
+		t.Errorf("las líneas no nombran el comando que escribe el bloque:\n%s", strings.Join(res.Lines, "\n"))
+	}
+}
+
+// TestLevelToCIWritesTheSeniorVoice: ci is a profile, not a person, and the block
+// it gets is the one nobody has to teach.
+func TestLevelToCIWritesTheSeniorVoice(t *testing.T) {
+	files := newFakeFiles(map[string]string{agentsPath: blockOf(t, persona.Novato)})
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "novato"), To: "ci"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	if got := files.content(t, agentsPath); got != blockOf(t, persona.Senior) {
+		t.Fatalf("el bloque de ci no es el de senior:\n%q", got)
+	}
+	if !strings.Contains(res.Message, "senior") {
+		t.Errorf("Message = %q, want it to name the voice that was written", res.Message)
+	}
+}
+
+// voiceOf is the body of one voice, or a failed test.
+func voiceOf(t *testing.T, name string) string {
+	t.Helper()
+	voice, err := persona.Voice(name)
+	if err != nil {
+		t.Fatalf("persona.Voice(%q): %v", name, err)
+	}
+	return voice
+}
+
+// TestLevelToAProfileWithoutAVoiceSaysWhichNamesHaveOne: a human may write a
+// profile of their own that extends a shipped one. The ceremony is still theirs to
+// accept, the block is left alone, and the line says why and which names have a
+// voice — a blank or a guess would both be worse.
+func TestLevelToAProfileWithoutAVoiceSaysWhichNamesHaveOne(t *testing.T) {
+	mine, err := profile.Resolve(profile.Builtin(), "senior")
+	if err != nil {
+		t.Fatalf("Resolve(senior): %v", err)
+	}
+	mine.Name = "mio"
+
+	files := newFakeFiles(map[string]string{agentsPath: blockOf(t, persona.Novato)})
+
+	res := level.Run(level.Options{Dir: "raiz", Current: mine, To: "mio"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	if got := files.content(t, agentsPath); got != blockOf(t, persona.Novato) {
+		t.Errorf("la voz se tocó para un perfil sin voz:\n%q", got)
+	}
+	block := strings.Join(res.Lines, "\n") + res.Message
+	for _, want := range []string{"mio", "novato", "senior", "ci"} {
+		if !strings.Contains(block, want) {
+			t.Errorf("las líneas no nombran %q:\n%s", want, block)
+		}
 	}
 }

@@ -28,7 +28,14 @@ func withOdachiOnPath(t *testing.T) string {
 }
 
 // configuredProject is the state `odachi doctor` must call clean: a repository,
-// the rules block, the hook, and the four artifacts `start` writes.
+// the rules block with the voice matching the profile, the hook, and the four
+// artifacts `start` writes.
+//
+// The last step is `level --to <perfil>` and not `start`. `start` writes the
+// profile the binary inferred from what it could see — with --json that is `ci` —
+// and the block still carries the voice `init` wrote before that profile existed.
+// The two have to agree for doctor to call the project clean, and `level --to` is
+// the command that makes them agree: it writes the profile and the voice.
 func configuredProject(t *testing.T) string {
 	t.Helper()
 	withOdachiOnPath(t)
@@ -41,6 +48,9 @@ func configuredProject(t *testing.T) string {
 	}
 	if code, _, stderr := runDir(t, dir, append([]string{"start"}, allFlags()...), ""); code != 0 {
 		t.Fatalf("odachi start: exit %d: %s", code, stderr)
+	}
+	if code, _, stderr := runDir(t, dir, []string{"level", "--to", readProfileName(t, dir)}, ""); code != 0 {
+		t.Fatalf("odachi level --to: exit %d: %s", code, stderr)
 	}
 	return dir
 }

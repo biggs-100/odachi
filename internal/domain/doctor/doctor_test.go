@@ -6,20 +6,20 @@ import (
 )
 
 // TestEveryCheckHasATitle pins the numbering Contract XV fixes. The number is
-// how a report and a test name the same check, so it cannot drift; the persona
+// how a report and a test name the same check, so it cannot drift; the voice
 // check is appended after the ten the contract named, because inserting one in
 // the middle would silently rename every check after it.
 func TestEveryCheckHasATitle(t *testing.T) {
-	for number := CheckVersion; number <= CheckPersonas; number++ {
+	for number := CheckVersion; number <= CheckVoice; number++ {
 		if title(number) == "" {
 			t.Errorf("check %d has no title", number)
 		}
 	}
-	if CheckPersonas != CheckVersion+CheckCount-1 {
-		t.Fatalf("the eleven checks are numbered %d..%d, got %d", CheckVersion, CheckPersonas, CheckVersion+CheckCount-1)
+	if CheckVoice != CheckVersion+CheckCount-1 {
+		t.Fatalf("the eleven checks are numbered %d..%d, got %d", CheckVersion, CheckVoice, CheckVersion+CheckCount-1)
 	}
 	if CheckCount != 11 {
-		t.Fatalf("ten checks from Contract XV plus the persona one, got %d", CheckCount)
+		t.Fatalf("ten checks from Contract XV plus the voice one, got %d", CheckCount)
 	}
 }
 

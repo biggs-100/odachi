@@ -8,7 +8,9 @@ import (
 
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/fence"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -186,6 +188,12 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	if problem := r.put(profileFile, []byte(RenderProfile(r.profile))); problem != nil {
 		return *problem
 	}
+	// The profile decides the voice, and this run is what decided the profile:
+	// leaving the block at `novato` while the profile says `senior` is an agent
+	// that talks differently from what the project promises.
+	if problem := r.refreshVoice(); problem != nil {
+		return *problem
+	}
 	if problem := r.put(fenceFile, []byte(renderFence(rulesFor(in.nonGoals)))); problem != nil {
 		return *problem
 	}
@@ -217,6 +225,42 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		Task:    filepath.ToSlash(taskPath),
 		Files:   r.written,
 	}
+}
+
+// refreshVoice keeps the block's voice in step with the profile this run wrote.
+//
+// The block belongs to `init`, so a project without one is left alone: creating
+// it here would make two commands own the same artifact. A profile with no voice
+// of its own (a custom name that extends another) changes nothing about how the
+// agent talks, so it is not an error here.
+func (r *runner) refreshVoice() *Result {
+	voice, err := persona.VoiceName(r.profile.Name)
+	if err != nil {
+		return nil
+	}
+
+	path := filepath.Join(r.opts.Dir, rules.File)
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		return failure(blocked("no pude revisar " + rules.File + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+	}
+	if !exists {
+		return nil
+	}
+
+	data, err := r.files.Read(path)
+	if err != nil {
+		return failure(blocked("no pude leer " + rules.File + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+	}
+
+	updated, changed, err := rules.WithVoice(string(data), voice)
+	if err != nil {
+		return failure(blocked("no pude leer la voz del perfil " + r.profile.Name + ": " + oneLine(err.Error()) + "; volvé a correr odachi init"))
+	}
+	if !changed {
+		return nil
+	}
+	return r.put(rules.File, []byte(updated))
 }
 
 // put backs up an existing file and then replaces it atomically. Backup runs

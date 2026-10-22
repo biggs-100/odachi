@@ -9,6 +9,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/agent"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/skill"
 )
 
@@ -160,41 +161,31 @@ func hookOf(exe string) string {
 }
 
 // configured is a project that went through `git init`, `odachi init`,
-// `odachi start` and `odachi skills --write`: the state doctor must call clean.
+// `odachi level --to <perfil>` and `odachi skills --write`: the state doctor must
+// call clean.
 func configured() *fakeFiles {
 	files := newFakeFiles()
 	files.mkdir(".git")
 	files.put(".git/hooks/pre-commit", hookOf("odachi"))
-	files.put("AGENTS.md", "# turnos\n\n"+domaindoctor.AgentsBegin+"\nreglas\n"+domaindoctor.AgentsEnd+"\n")
+	// The block `odachi init` writes, with the voice of the profile in the file:
+	// check 11 compares the two, so a configured project has to carry both.
+	files.put("AGENTS.md", blockOf(persona.Novato))
 	files.put("brief.md", briefComplete)
 	files.put(".odachi/profile.toml", "name = \"novato\"\n")
 	files.put("skills/acceptance/SKILL.md", skill.Template("acceptance"))
 	files.put(skill.RegistryFile, skill.Registry([]skill.Skill{
 		skill.Parse("acceptance", "skills/acceptance/SKILL.md", skill.Template("acceptance")),
 	}))
-	// `odachi init` also writes the two personas into every client that has a
-	// selector, so a configured project carries them and no other command does.
-	for _, file := range persona.All() {
-		files.put(file.Path, file.Content)
-	}
 	return files
 }
 
-// withoutPersonas removes every persona file and every client directory: a
-// project whose humans use no client with a selector.
-func (f *fakeFiles) withoutPersonas() *fakeFiles {
-	for _, file := range persona.All() {
-		delete(f.files, at(file.Path))
+// blockOf is the rules block for one voice.
+func blockOf(voice string) string {
+	block, err := rules.Block(voice)
+	if err != nil {
+		panic(err)
 	}
-	for _, client := range persona.Clients() {
-		root := at(filepath.Dir(filepath.FromSlash(client.Dir)))
-		for dir := range f.dirs {
-			if dir == root || strings.HasPrefix(dir, root+string(filepath.Separator)) {
-				delete(f.dirs, dir)
-			}
-		}
-	}
-	return f
+	return block
 }
 
 func cleanLookup() *fakeLookup { return &fakeLookup{resolved: "/home/ana/bin/odachi"} }
@@ -537,24 +528,45 @@ func TestCheckNineSaysWhenNothingIsInstalled(t *testing.T) {
 	}
 }
 
-// TestMissingPersonaIsAProblemThatNamesInit: the client reads the persona from
-// its own directory, so a file that is not there is an empty selector the human
-// discovers while trying to pick a voice. The repair is the command that writes
-// it.
-func TestMissingPersonaIsAProblemThatNamesInit(t *testing.T) {
-	files := configured()
-	delete(files.files, at(".opencode/agents/odachi-senior.md"))
+// TestAVoiceThatDoesNotMatchTheProfileIsAProblem: the block says one thing and
+// the file the binary reads says another, so the agent talks in a register the
+// tool did not promise. The line names both and the one command that settles it.
+func TestAVoiceThatDoesNotMatchTheProfileIsAProblem(t *testing.T) {
+	files := configured().put("AGENTS.md", blockOf(persona.Senior))
 
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	if result.Code != CodeProblems {
-		t.Fatalf("a missing persona must exit 1:\n%s", strings.Join(result.Lines, "\n"))
+		t.Fatalf("a mismatched voice must exit 1: %s", strings.Join(result.Lines, " / "))
 	}
-	got := checkOf(t, result, domaindoctor.CheckPersonas)
+	got := checkOf(t, result, domaindoctor.CheckVoice)
 	if got.Status != domaindoctor.StatusProblem {
 		t.Fatalf("check 11 must be a problem: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{".opencode/agents/odachi-senior.md", "el selector de opencode queda vacío"} {
+	for _, want := range []string{"senior", ".odachi/profile.toml dice novato", "el agente habla distinto"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
+		}
+	}
+	if !strings.Contains(got.Fix, "odachi level --to novato") {
+		t.Fatalf("the fix must name odachi level --to novato, got %q", got.Fix)
+	}
+}
+
+// TestABlockWithoutTheVoiceSectionAndAProfileIsAProblem: a project initialised
+// before the voice moved into the block, with a profile on disk, has a voice that
+// is nowhere. `init` is the command that writes the section.
+func TestABlockWithoutTheVoiceSectionAndAProfileIsAProblem(t *testing.T) {
+	old := "<!-- odachi:begin -->\n# Reglas del proyecto (odachi)\n\nreglas\n<!-- odachi:end -->\n"
+	files := configured().put("AGENTS.md", old)
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+
+	if got.Status != domaindoctor.StatusProblem {
+		t.Fatalf("a block with no voice and a profile is a problem: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{rules.Section, ".odachi/profile.toml dice novato"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
 		}
@@ -564,57 +576,61 @@ func TestMissingPersonaIsAProblemThatNamesInit(t *testing.T) {
 	}
 }
 
-// TestAPersonaDirectoryInUseWithoutPersonasIsAProblem: the client is here — its
-// directory exists — and the personas it would show are not. Skipping that is
-// exactly the empty selector this check exists to catch.
-func TestAPersonaDirectoryInUseWithoutPersonasIsAProblem(t *testing.T) {
-	files := configured().withoutPersonas().mkdir(".claude")
+// TestNoProfileFileIsNotAProblem: with no .odachi/profile.toml there is no claim
+// to compare against, and the block carries the voice init wrote. Failing here
+// would tell a person who just ran init that their green project is broken.
+func TestNoProfileFileIsNotAProblem(t *testing.T) {
+	files := configured()
+	delete(files.files, at(".odachi/profile.toml"))
+	profiles := &fakeProfiles{name: "novato", inferred: true}
 
-	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
-	got := checkOf(t, result, domaindoctor.CheckPersonas)
+	result := run(files, cleanLookup(), profiles, "/home/ana/bin/odachi")
 
-	if got.Status != domaindoctor.StatusProblem {
-		t.Fatalf("a client in use with no personas is a problem: %s", domaindoctor.Line(got))
-	}
-	if !strings.Contains(got.Detail, ".claude/output-styles") {
-		t.Fatalf("the detail must name what is missing: %q", got.Detail)
-	}
-	if strings.Contains(got.Detail, ".opencode") {
-		t.Fatalf("a client that is not here is not a problem: %q", got.Detail)
-	}
-}
-
-// TestNoPersonasYetIsClean: a project that uses no client with a selector has no
-// personas to read and nothing broken. Doctor says so with the same shape it uses
-// for "no hay nada que revisar todavía" in the other checks, and does not fail.
-func TestNoPersonasYetIsClean(t *testing.T) {
-	files := configured().withoutPersonas()
-
-	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
-	if result.Code != CodeOK {
-		t.Fatalf("no clients, no personas, nothing broken:\n%s", strings.Join(result.Lines, "\n"))
-	}
-	got := checkOf(t, result, domaindoctor.CheckPersonas)
+	got := checkOf(t, result, domaindoctor.CheckVoice)
 	if got.Status != domaindoctor.StatusOK {
-		t.Fatalf("check 11 must be ok when there is nothing to check: %s", domaindoctor.Line(got))
+		t.Fatalf("check 11 must be ok with no profile file: %s", domaindoctor.Line(got))
 	}
-	if !strings.Contains(got.Detail, "todavía no hay personas") {
-		t.Fatalf("the line must say there are no personas yet: %q", got.Detail)
+	for _, want := range []string{"no hay perfil que comparar", "novato"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("the line must say %q, got %q", want, got.Detail)
+		}
 	}
 }
 
-// TestPersonasAreNamedWhereTheyAre: the useful half of a green line is the
-// directory the client reads, so a human knows where the selector looks.
-func TestPersonasAreNamedWhereTheyAre(t *testing.T) {
+// TestAVoiceThatMatchesTheProfileIsClean: the useful half of a green line names
+// the voice and the file it agrees with.
+func TestAVoiceThatMatchesTheProfileIsClean(t *testing.T) {
 	result := run(configured(), cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
-	got := checkOf(t, result, domaindoctor.CheckPersonas)
+	got := checkOf(t, result, domaindoctor.CheckVoice)
 
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("check 11 must be ok in a configured project: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{".opencode/agents", ".claude/output-styles"} {
+	for _, want := range []string{"novato", ".odachi/profile.toml"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the line must name %q, got %q", want, got.Detail)
+		}
+	}
+}
+
+// TestLeftoverPersonaFilesAreNotAProblem: v0.10.0 wrote one persona file per
+// client, and this version does not read them. They are leftovers, not a defect:
+// the line says so, names the folders, and the run still exits 0.
+func TestLeftoverPersonaFilesAreNotAProblem(t *testing.T) {
+	files := configured().put(".opencode/agents/odachi-senior.md", "viejo")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeOK {
+		t.Fatalf("leftover files are not a problem: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("check 11 must be ok with leftovers: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlos"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("the line must say %q, got %q", want, got.Detail)
 		}
 	}
 }

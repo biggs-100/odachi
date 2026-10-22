@@ -27,6 +27,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/skill"
 )
 
@@ -144,7 +145,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.brief(),
 		r.skills(),
 		r.ignored(),
-		r.personas(),
+		r.voice(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)
@@ -471,92 +472,132 @@ func (r *runner) installedSkills() (string, error) {
 	return count(installed, "instalada", "instaladas"), nil
 }
 
-// noPersonasYet is the line for a project whose humans use no client with a
-// selector. It is ok and not a warning for the same reason "no hay review ni
-// pruebas todavía" is ok: a warning is for something that exists and is not
-// protected, and here nothing exists. A warning would teach a human to scroll
-// past the word.
-const noPersonasYet = "todavía no hay personas: ningún cliente de este proyecto las lee"
+// noProfileFile is the second half of check 11 when there is nothing to compare:
+// the voice comes from the block, and the profile file is the only thing that can
+// contradict it. Saying which voice is in force is still information.
+const noProfileFile = "sin " + profileFile + " no hay perfil que comparar"
 
-// personas asks the question nobody could answer before: are the two files
-// `odachi init` generates still where the client reads them? A client that moved
-// its directory or a deleted file leaves an empty selector, and the human finds
-// out by trying to pick a voice.
+// voice answers the question the per-client persona files used to answer with a
+// directory listing: does the block talk the way the profile says it should? The
+// binary writes that section, so the two halves disagreeing is a project that
+// prints one register and talks in another, and nobody notices until the agent
+// sounds wrong.
 //
-// A client that is not here has no selector to be empty: init writes both
-// personas for every client it knows, and a project that uses none of them is not
-// broken. A client whose directory exists and whose personas do not is exactly
-// the case this check exists for.
-func (r *runner) personas() domaindoctor.Check {
-	present := make([]string, 0, len(persona.Clients()))
-	problems := []string{}
-
-	for _, client := range persona.Clients() {
-		files, ok := persona.Files(client.Agent)
-		if !ok {
-			// Unreachable: the row came from the same table. Skipping beats
-			// guessing a directory for a client odachi does not know.
-			continue
-		}
-
-		missing := make([]string, 0, len(files))
-		for _, file := range files {
-			found, err := r.exists(file.Path)
-			if err != nil {
-				return r.unreadable(domaindoctor.CheckPersonas, file.Path, err)
-			}
-			if !found {
-				missing = append(missing, file.Path)
-			}
-		}
-
-		if len(missing) == 0 {
-			present = append(present, client.Dir)
-			continue
-		}
-
-		if len(missing) == len(files) {
-			root := clientRoot(client.Dir)
-			used, err := r.exists(root)
-			if err != nil {
-				return r.unreadable(domaindoctor.CheckPersonas, root, err)
-			}
-			if !used {
-				continue
-			}
-		}
-
-		problems = append(problems, strings.Join(missing, ", ")+" "+absent(len(missing))+
-			": el selector de "+client.Agent+" queda vacío")
+// No profile file is not a problem: there is no claim to compare against, and the
+// block carries the voice `odachi init` wrote. The persona files v0.10.0 left
+// behind are reported in the same line as leftovers — ok, not a warning: nothing
+// reads them and nothing is broken.
+func (r *runner) voice() domaindoctor.Check {
+	content, exists, err := r.read(agentsFile)
+	if err != nil {
+		return r.unreadable(domaindoctor.CheckVoice, agentsFile, err)
+	}
+	if !exists {
+		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
+			"no hay "+agentsFile+": la voz no está en el proyecto",
+			"corré odachi init"))
+	}
+	if !rules.HasBlock(content) {
+		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
+			agentsFile+" no tiene el bloque de odachi: no hay voz que comparar",
+			"corré odachi init"))
 	}
 
-	switch {
-	case len(problems) > 0:
-		return domaindoctor.Broken(domaindoctor.CheckPersonas, strings.Join(problems, "; "), "corré odachi init")
-	case len(present) > 0:
-		return domaindoctor.OK(domaindoctor.CheckPersonas, "sí: "+strings.Join(present, " y "))
-	default:
-		return domaindoctor.OK(domaindoctor.CheckPersonas, noPersonasYet)
+	published, hasVoice := rules.VoiceIn(content)
+
+	name, inferred, err := r.profiles.Resolve(r.opts.Dir)
+	if err != nil {
+		// The profile is check 7's to report. Here it only means there is
+		// nothing to compare the voice against.
+		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
+			"no comparé la voz: el perfil no resuelve (ver el chequeo 7)"))
 	}
+	if inferred {
+		detail := noProfileFile
+		if hasVoice {
+			detail += "; la voz del bloque es la de " + named(published)
+		} else {
+			detail += " y el bloque no tiene sección de voz"
+		}
+		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice, detail))
+	}
+
+	want, err := persona.Voice(name)
+	if err != nil {
+		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
+			"no comparé la voz: "+profileFile+" nombra un perfil sin voz ("+oneLine(err.Error())+")"))
+	}
+
+	if !hasVoice {
+		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
+			"el bloque no tiene la sección «"+rules.Section+"» y "+profileFile+" dice "+name+": la voz no está en el bloque",
+			"corré odachi init"))
+	}
+
+	if published != strings.TrimSpace(want) {
+		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
+			"la voz del bloque es la de "+named(published)+" y "+profileFile+" dice "+name+
+				": el agente habla distinto de lo que el perfil promete",
+			"corré odachi level --to "+name))
+	}
+
+	return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
+		"la voz del bloque es la de "+name+", la misma que dice "+profileFile))
 }
 
-// clientRoot is the client's own config directory: the parent of the directory it
-// reads personas from, and the marker that says this project uses that client.
-// The path is always relative and forward-slashed, which is why this does not go
-// through the filesystem's separator.
-func clientRoot(dir string) string {
-	if i := strings.LastIndex(dir, "/"); i > 0 {
-		return dir[:i]
+// voiceCheck appends the leftovers of v0.10.0 to a line about the voice. They are
+// never a problem and never change the status: nothing reads them, and odachi
+// does not delete files it did not write in this version.
+func (r *runner) voiceCheck(check domaindoctor.Check) domaindoctor.Check {
+	note, err := r.leftovers()
+	if err != nil {
+		return r.unreadable(domaindoctor.CheckVoice, agentsFile, err)
 	}
-	return dir
+	if note == "" {
+		return check
+	}
+	if check.Detail == "" {
+		check.Detail = note
+		return check
+	}
+	check.Detail += "; " + note
+	return check
 }
 
-// absent is how a Spanish sentence says a file is not there, for one or many.
-func absent(n int) string {
-	if n == 1 {
-		return "no existe"
+// leftovers names the per-client persona files v0.10.0 wrote, when they are still
+// there: one line for the human to read, or empty when there are none.
+func (r *runner) leftovers() (string, error) {
+	found := make([]string, 0, len(persona.Deprecated()))
+	for _, file := range persona.Deprecated() {
+		exists, err := r.exists(file)
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			found = append(found, file)
+		}
 	}
-	return "no existen"
+	if len(found) == 0 {
+		return "", nil
+	}
+	return "quedaron de v0.10.0 " + strings.Join(persona.DeprecatedDirs(), " y ") +
+		" (las personas por cliente): ya no se usan, la voz vive en " + agentsFile + "; podés borrarlos", nil
+}
+
+// named is the voice a body belongs to, by name. Text that is neither is text
+// somebody edited by hand, and saying so is more useful than naming a voice that
+// is not there.
+func named(body string) string {
+	for _, name := range persona.Names() {
+		voice, err := persona.Voice(name)
+		if err != nil {
+			continue
+		}
+		if strings.TrimSpace(voice) == body {
+			return name
+		}
+	}
+	return "ninguna de las dos: la editaron a mano"
 }
 
 // loadSkills reads every skills/<name>/SKILL.md. A directory without a SKILL.md

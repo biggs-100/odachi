@@ -1,17 +1,19 @@
-// Package init implements `odachi init`: the rules block in AGENTS.md, the
-// marked block in .gitignore that keeps the generated evidence out of the tree,
-// the pre-commit hook that refuses a commit without a proof for the current
-// tree, the skills the agent reads — the curriculum in the project and the
-// bootstrap skill in the human's home, so an agent can learn how to start a
-// project in a folder where nothing exists yet — and the two personas in the
-// native mechanism of every client that has one, so the human picks how the
-// agent talks with the keystroke they already know.
+// Package init implements `odachi init`: the rules block in AGENTS.md —with the
+// voice of the profile at hand as its last section—, the marked block in
+// .gitignore that keeps the generated evidence out of the tree, the pre-commit
+// hook that refuses a commit without a proof for the current tree, and the skills
+// the agent reads — the curriculum in the project and the bootstrap skill in the
+// human's home, so an agent can learn how to start a project in a folder where
+// nothing exists yet.
+//
+// The voice is a section of the block, and no longer a file per client. One
+// channel, every client that reads AGENTS.md, and no dependency on a selector
+// that does not list what odachi writes.
 //
 // Two axes, and this command writes both without joining them: the profile (in
 // .odachi/profile.toml, owned by `odachi start`) decides the ceremony, and the
-// personas decide the voice. init writes both personas regardless of which
-// profile is in force, because it cannot know who the human is and choosing for
-// them is exactly the confusion this split removes.
+// block's last section decides the voice. init reads the profile only to know
+// which voice to write, and never rewrites it.
 //
 // Every artifact is idempotent. A file that is already right is not rewritten, a
 // file that exists is backed up before the rewrite (except .gitignore, whose
@@ -68,6 +70,19 @@ type Options struct {
 	// unreachable name makes every rule unexecutable while the hook still works
 	// from its absolute path. init says so instead of reporting a clean install.
 	PathMissing bool
+	// Profiles is the profile at hand, read and not inferred. nil means the
+	// tool's default audience: novato.
+	Profiles Profiles
+}
+
+// Profiles is the profile port, one question wide: which profile did the human
+// write down, if any? Written returns the profile named in .odachi/profile.toml
+// and an empty name when there is no file. It is a port and not a read of the
+// TOML here because the domain owns the names and the adapter owns the format,
+// and because init must not infer a profile: inference is a guess about a person
+// and the voice is a decision.
+type Profiles interface {
+	Written(dir string) (name string, err error)
 }
 
 // Files is the disk port: enough to read, back up and replace the two files,
@@ -82,21 +97,19 @@ type Files interface {
 
 // Result is what the CLI prints and exits with. It has the same shape as the
 // other verbs; Next names the command that finishes a blocked run, and SkillDests
-// and PersonaDests are what the two generated halves wrote, so `--json` can carry
-// the destinations too.
+// is what the generated half wrote, so `--json` can carry the destinations too.
 type Result struct {
-	Code         int
-	Message      string
-	Next         string
-	Lines        []string
-	Files        []string
-	SkillDests   []SkillDest
-	PersonaDests []PersonaDest
+	Code       int
+	Message    string
+	Next       string
+	Lines      []string
+	Files      []string
+	SkillDests []SkillDest
 }
 
 // Run performs one `odachi init`.
 func Run(opts Options, files Files, skills Skills) Result {
-	r := &runner{dir: opts.Dir, files: files, skills: skills}
+	r := &runner{dir: opts.Dir, files: files, skills: skills, profiles: opts.Profiles}
 	if r.dir == "" {
 		r.dir = "."
 	}
@@ -114,6 +127,9 @@ func Run(opts Options, files Files, skills Skills) Result {
 	if problem := r.writeAgents(); problem != nil {
 		return *problem
 	}
+	if r.voiceNote != "" {
+		r.lines = append(r.lines, r.voiceNote)
+	}
 	if problem := r.writeIgnore(); problem != nil {
 		// The rules block may already be written: report it, so the human knows
 		// exactly how much of the job is done.
@@ -127,15 +143,12 @@ func Run(opts Options, files Files, skills Skills) Result {
 		return *problem
 	}
 
-	if problem := r.writePersonas(); problem != nil {
-		// The hook and the rules block are already in place: report how much of
-		// the job is done instead of pretending nothing happened.
-		problem.Files = append(append([]string{}, r.changed...), r.personaFiles...)
-		problem.PersonaDests = r.personaDests
-		return *problem
-	}
-
 	r.installSkills()
+
+	// Nothing here is broken: an earlier version wrote one persona file per
+	// client, they are still on disk, and the human is the one who decides
+	// whether they go. One line says what they are, not what to do with them.
+	r.reportLeftovers()
 
 	if opts.PathMissing {
 		r.lines = append(r.lines, pathWarning(opts.Exe)...)
@@ -159,11 +172,15 @@ func pathWarning(exe string) []string {
 
 // runner holds what one run touched and what it reports.
 type runner struct {
-	dir     string
-	files   Files
-	skills  Skills
-	changed []string
-	lines   []string
+	dir      string
+	files    Files
+	skills   Skills
+	profiles Profiles
+	changed  []string
+	lines    []string
+	// voiceNote is the sentence for a profile init could not read or name: the
+	// block still gets the default voice, and the human learns why.
+	voiceNote string
 
 	// The skills half. skillFiles are the display paths this run wrote, kept
 	// apart from changed because the summary names the project artifacts and
@@ -174,58 +191,6 @@ type runner struct {
 	skillBlocked string
 	skillNext    string
 	skillFatal   bool
-
-	// The persona half: the same split between what a human reads (dirs) and
-	// what --json carries (files), for the same reason.
-	personaDests  []PersonaDest
-	personaLabels []string
-	personaFiles  []string
-}
-
-// writeAgents writes the rules block, replacing it in place when it is already
-// there and backing up the human's file before touching it.
-func (r *runner) writeAgents() *Result {
-	path := filepath.Join(r.dir, agentsFile)
-
-	exists, err := r.files.Exists(path)
-	if err != nil {
-		problem := blocked("no pude revisar " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
-		return &problem
-	}
-
-	current := ""
-	if exists {
-		data, err := r.files.Read(path)
-		if err != nil {
-			problem := blocked("no pude leer " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
-			return &problem
-		}
-		current = string(data)
-	}
-
-	updated := withBlock(current)
-	if exists && updated == current {
-		r.lines = append(r.lines, agentsFile+": sin cambios")
-		return nil
-	}
-
-	if exists {
-		backup, err := r.files.Backup(path)
-		if err != nil {
-			problem := blocked("no pude respaldar " + agentsFile + " antes de reescribirlo: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
-			return &problem
-		}
-		r.lines = append(r.lines, agentsFile+": bloque actualizado (el anterior quedó en "+relative(r.dir, backup)+")")
-	} else {
-		r.lines = append(r.lines, agentsFile+": creado con el bloque de odachi")
-	}
-
-	if err := r.files.Write(path, []byte(updated)); err != nil {
-		problem := blocked("no pude escribir " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
-		return &problem
-	}
-	r.changed = append(r.changed, agentsFile)
-	return nil
 }
 
 // installHook installs the pre-commit hook, keeps odachi's own hook up to date,
@@ -291,40 +256,32 @@ func foreignHook(exe string) Result {
 }
 
 // result reports what changed. A rerun that changed nothing says so instead of
-// claiming work it did not do, skills and personas included.
+// claiming work it did not do, skills included.
 func (r *runner) result() Result {
-	files := append(append(append([]string{}, r.changed...), r.skillFiles...), r.personaFiles...)
+	files := append(append([]string{}, r.changed...), r.skillFiles...)
 
-	if len(r.changed) == 0 && len(r.skillFiles) == 0 && len(r.personaFiles) == 0 {
+	if len(r.changed) == 0 && len(r.skillFiles) == 0 {
 		message := "sin cambios: " + agentsFile + ", " + ignoreFile + " y el hook " + hookPath + " ya estaban al día"
 		if len(r.skillLabels) > 0 {
 			message += "; las skills de " + humanList(r.skillLabels) + " también"
 		}
-		if len(r.personaLabels) > 0 {
-			message += "; las personas de " + humanList(r.personaLabels) + " también"
-		}
 		return Result{
-			Code:         r.code(),
-			Message:      r.withBlocked(message),
-			Next:         r.skillNext,
-			Lines:        r.lines,
-			SkillDests:   r.skillDests,
-			PersonaDests: r.personaDests,
+			Code:       r.code(),
+			Message:    r.withBlocked(message),
+			Next:       r.skillNext,
+			Lines:      r.lines,
+			SkillDests: r.skillDests,
 		}
 	}
 
-	// What this run finished, in the three kinds the job has: it can be none of
-	// the project artifacts and still be real work (a persona that changed, a
-	// skill that arrived).
-	written := make([]string, 0, 3)
+	// What this run finished, in the two kinds the job has: it can be none of
+	// the project artifacts and still be real work (a skill that arrived).
+	written := make([]string, 0, 2)
 	if len(r.changed) > 0 {
 		written = append(written, humanList(r.changed))
 	}
 	if len(r.skillFiles) > 0 {
 		written = append(written, "las skills ("+humanList(r.skillLabels)+")")
-	}
-	if len(r.personaFiles) > 0 {
-		written = append(written, "las personas ("+humanList(r.personaLabels)+")")
 	}
 	message := "listo: " + humanList(written) + " quedaron al día"
 
@@ -334,13 +291,12 @@ func (r *runner) result() Result {
 	lines = append(lines, "siguiente: revisá "+agentsFile+"; cuando odachi check --quiet esté en verde, el agente guarda el avance")
 
 	return Result{
-		Code:         r.code(),
-		Message:      r.withBlocked(message),
-		Next:         r.skillNext,
-		Lines:        lines,
-		Files:        files,
-		SkillDests:   r.skillDests,
-		PersonaDests: r.personaDests,
+		Code:       r.code(),
+		Message:    r.withBlocked(message),
+		Next:       r.skillNext,
+		Lines:      lines,
+		Files:      files,
+		SkillDests: r.skillDests,
 	}
 }
 

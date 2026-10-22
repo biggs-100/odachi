@@ -8,7 +8,9 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -611,4 +613,72 @@ func TestMissingBriefFileIsBlocked(t *testing.T) {
 	if !strings.Contains(got.Message, "--brief") || !strings.Contains(got.Message, "no-existe.md") {
 		t.Errorf("message %q does not name --brief and the path", got.Message)
 	}
+}
+
+// TestStartPutsTheVoiceOfTheProfileItWrote: the profile decides how the agent
+// talks, and this run is what decided the profile. A block left at the old voice
+// is an agent that speaks differently from what the project promises, which is
+// the one thing doctor's eleventh check can catch and nobody wants to read.
+func TestStartPutsTheVoiceOfTheProfileItWrote(t *testing.T) {
+	var events []string
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+	files := newFakeFiles(map[string]string{"AGENTS.md": blockText(t, persona.Senior)}, &events)
+
+	got := start.Run(start.Options{}, interview, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
+	}
+
+	blockBytes, err := files.Read("AGENTS.md")
+	if err != nil {
+		t.Fatalf("AGENTS.md: %v", err)
+	}
+	if want := blockText(t, persona.Novato); string(blockBytes) != want {
+		t.Errorf("the block kept the wrong voice:\n%s", blockBytes)
+	}
+}
+
+// TestStartLeavesAProjectWithoutABlockAlone: the block belongs to init. Creating
+// it here would give the same artifact two owners.
+func TestStartLeavesAProjectWithoutABlockAlone(t *testing.T) {
+	var events []string
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+	files := newFakeFiles(nil, &events)
+
+	start.Run(start.Options{}, interview, files, nil)
+
+	if exists, _ := files.Exists("AGENTS.md"); exists {
+		t.Error("start created AGENTS.md; the block belongs to odachi init")
+	}
+}
+
+// TestStartDoesNotRewriteABlockAlreadyInTheRightVoice: a second run that changes
+// nothing must write nothing, byte for byte.
+func TestStartDoesNotRewriteABlockAlreadyInTheRightVoice(t *testing.T) {
+	var events []string
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+	files := newFakeFiles(map[string]string{"AGENTS.md": blockText(t, persona.Novato)}, &events)
+
+	got := start.Run(start.Options{}, interview, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
+	}
+	for _, written := range got.Files {
+		if written == "AGENTS.md" {
+			t.Errorf("start rewrote a block that was already right: %v", got.Files)
+		}
+	}
+}
+
+// block renders the canonical block for one voice, so the tests compare against
+// the renderer instead of a copy of its text.
+func blockText(t *testing.T, voice string) string {
+	t.Helper()
+	content, err := rules.Block(voice)
+	if err != nil {
+		t.Fatalf("rules.Block(%s): %v", voice, err)
+	}
+	return content
 }

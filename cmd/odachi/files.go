@@ -208,6 +208,24 @@ func loadProfile(dir, verb string) (*profile.Profile, int, string) {
 	return &resolved, start.CodeOK, ""
 }
 
+// writtenProfile answers init's one question: the profile the human wrote down,
+// or none. It is not the profile in force — init must not infer one, because
+// inferring a voice is guessing who the person is, and the tool's default
+// audience is the person who does not know yet.
+type writtenProfile struct{}
+
+func (writtenProfile) Written(dir string) (string, error) {
+	loaded, code, message := loadProfile(dir, "odachi init")
+	switch {
+	case code != start.CodeOK:
+		return "", errors.New(message)
+	case loaded == nil:
+		return "", nil
+	default:
+		return loaded.Name, nil
+	}
+}
+
 // currentProfile is the profile in force for a verb that does not ask anything:
 // the human's file when there is one, otherwise what `odachi start` would have
 // inferred from what the tool can see.

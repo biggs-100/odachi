@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
@@ -123,73 +125,122 @@ func TestDoctorCheckNineSaysBothSkillFacts(t *testing.T) {
 	}
 }
 
-// Las personas generadas se leen desde el selector del cliente. Si una no está
-// donde ese cliente la busca, el selector aparece vacío y el humano se entera ahí:
-// el chequeo tiene que decirlo antes, con el comando que las vuelve a escribir.
-func TestDoctorReportsAMissingPersonaFile(t *testing.T) {
+// La voz es la última sección del bloque y la escribe el binario. Si el bloque
+// dice una cosa y el perfil que el binario lee dice otra, el agente habla en un
+// registro que la herramienta no prometió, y el chequeo lo tiene que decir antes
+// de que el humano lo note leyendo al agente: nombra los dos y el comando que los
+// pone de acuerdo.
+func TestDoctorReportsAVoiceThatDoesNotMatchTheProfile(t *testing.T) {
 	dir := configuredProject(t)
 
-	missing := filepath.Join(dir, ".opencode", "agents", "odachi-senior.md")
-	if err := os.Remove(missing); err != nil {
-		t.Fatalf("borrar %s: %v", missing, err)
+	// El proyecto quedó inicializado con la voz de novato y el perfil que `start`
+	// escribió. Volver el bloque a novato es el estado de un proyecto al que le
+	// cambiaron el perfil sin refrescar la voz.
+	block, err := rules.Block(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Block(novato): %v", err)
 	}
+	writeFile(t, dir, "AGENTS.md", block)
+	profile := readProfileName(t, dir)
 
 	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
 	if code != 1 {
-		t.Fatalf("una persona que falta deja el selector vacío: exit %d, want 1:\n%s%s", code, stdout, stderr)
+		t.Fatalf("una voz que no coincide con el perfil: exit %d, want 1: %s %s", code, stdout, stderr)
 	}
 	line := checkLine(t, stdout+stderr, 11)
-	for _, want := range []string{
-		"mal 11",
-		".opencode/agents/odachi-senior.md",
-		"el selector de opencode queda vacío",
-		"corré odachi init",
-	} {
+	for _, want := range []string{"mal 11", "novato", profile, "odachi level --to " + profile} {
+		if !strings.Contains(line, want) {
+			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
+		}
+	}
+
+	// El comando que la línea nombra arregla el problema, y el chequeo vuelve a ok.
+	if code, _, stderr := runDir(t, dir, []string{"level", "--to", profile}, ""); code != 0 {
+		t.Fatalf("level --to %s: exit %d: %s", profile, code, stderr)
+	}
+	out, _ := output(t, dir, []string{"doctor"})
+	if line := checkLine(t, out, 11); !strings.HasPrefix(line, "ok 11") {
+		t.Fatalf("después de level --to el chequeo 11 sigue mal: %s", line)
+	}
+}
+
+// Un bloque sin sección de voz y un perfil que existe: la voz no está en el
+// proyecto, y el comando que la escribe es init.
+func TestDoctorReportsABlockWithoutTheVoiceSection(t *testing.T) {
+	dir := configuredProject(t)
+	writeFile(t, dir, "AGENTS.md", "<!-- odachi:begin -->\n# Reglas del proyecto (odachi)\n\nreglas\n<!-- odachi:end -->\n")
+
+	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
+	if code != 1 {
+		t.Fatalf("un bloque sin voz y con perfil: exit %d, want 1: %s %s", code, stdout, stderr)
+	}
+	line := checkLine(t, stdout+stderr, 11)
+	for _, want := range []string{"mal 11", rules.Section, "odachi init"} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
 		}
 	}
 }
 
-// Un proyecto que no usa ningún cliente con selector no está roto: no hay
-// personas que leer y no hay nada que arreglar. Se dice con la misma forma con la
-// que doctor dice "no hay nada que revisar todavía" en el resto de los chequeos,
-// y no se falla por eso.
-func TestDoctorSaysThereAreNoPersonasYet(t *testing.T) {
+// Las personas por cliente de v0.10.0 ya no se leen. Son archivos del humano, no
+// un defecto: el chequeo lo dice en la misma línea verde, nombra las carpetas, y
+// no falla por eso.
+func TestDoctorSaysTheV0100PersonaFilesAreLeftovers(t *testing.T) {
 	dir := configuredProject(t)
+	writeFile(t, dir, ".opencode/agents/odachi-senior.md", "viejo")
 
-	for _, rel := range []string{".opencode", ".claude"} {
-		if err := os.RemoveAll(filepath.Join(dir, rel)); err != nil {
-			t.Fatalf("borrar %s: %v", rel, err)
+	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
+	if code != 0 {
+		t.Fatalf("los leftovers no son un problema: exit %d: %s %s", code, stdout, stderr)
+	}
+	line := checkLine(t, stdout, 11)
+	if !strings.HasPrefix(line, "ok 11") {
+		t.Fatalf("el chequeo 11 tiene que ser ok con leftovers: %s", line)
+	}
+	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlos"} {
+		if !strings.Contains(line, want) {
+			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
 		}
+	}
+}
+
+// Un proyecto sin .odachi/profile.toml no tiene contra qué comparar la voz: el
+// bloque lleva la que init escribió y no hay nada roto. Fallar acá le diría a
+// alguien que acaba de correr init que su proyecto está mal.
+func TestDoctorSaysNoProfileIsNothingToCompare(t *testing.T) {
+	dir := configuredProject(t)
+	if err := os.Remove(filepath.Join(dir, ".odachi", "profile.toml")); err != nil {
+		t.Fatalf("borrar .odachi/profile.toml: %v", err)
 	}
 
 	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
 	if code != 0 {
-		t.Fatalf("sin clientes no hay nada que arreglar: exit %d:\n%s%s", code, stdout, stderr)
+		t.Fatalf("sin perfil no hay voz que comparar: exit %d: %s%s", code, stdout, stderr)
 	}
 	line := checkLine(t, stdout, 11)
 	if !strings.HasPrefix(line, "ok 11") {
-		t.Fatalf("sin personas y sin clientes el chequeo no es un problema: %s", line)
+		t.Fatalf("el chequeo 11 tiene que ser ok sin perfil: %s", line)
 	}
-	if !strings.Contains(line, "todavía no hay personas") {
-		t.Fatalf("el chequeo 11 tiene que decir que todavía no hay personas: %s", line)
+	if !strings.Contains(line, "no hay perfil que comparar") {
+		t.Fatalf("el chequeo 11 no dice que no hay con qué comparar: %s", line)
 	}
 }
 
-// Un proyecto configurado dice dónde están las personas: la mitad útil de la
-// línea verde es el directorio que el cliente lee.
-func TestDoctorNamesTheDirectoriesWhereThePersonasAre(t *testing.T) {
-	dir := configuredProject(t)
-
-	out, _ := output(t, dir, []string{"doctor"})
-	line := checkLine(t, out, 11)
-
-	for _, want := range []string{".opencode/agents", ".claude/output-styles"} {
-		if !strings.Contains(line, want) {
-			t.Fatalf("el chequeo 11 no nombra %q: %s", want, line)
+// readProfileName is the profile the binary reads, for the lines that name it.
+func readProfileName(t *testing.T, dir string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(dir, ".odachi", "profile.toml"))
+	if err != nil {
+		t.Fatalf("leer .odachi/profile.toml: %v", err)
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		key, value, ok := strings.Cut(line, "=")
+		if ok && strings.TrimSpace(key) == "name" {
+			return strings.Trim(strings.TrimSpace(value), `"`)
 		}
 	}
+	t.Fatalf("el perfil no dice su nombre: %s", data)
+	return ""
 }
 
 // La línea de cierre dice cuántos chequeos corrieron: con uno nuevo son once, y

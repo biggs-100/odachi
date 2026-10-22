@@ -11,10 +11,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/rules"
 )
 
 // The checks Contract XV asks for, in the order a human reads them, plus the one
-// that checks the personas `init` installs. The number is the line's number, and
+// that checks the block's voice against the profile the binary reads. The number is the line's number, and
 // it is how a report and a test name the same check: adding one in the middle
 // would silently rename all the others, so the order is fixed here and nowhere
 // else, and a new check is appended.
@@ -46,11 +48,13 @@ const (
 	// CheckIgnored asks whether the review store and proof/ are ignored: without
 	// that, every review would invalidate the proof and the other way round.
 	CheckIgnored
-	// CheckPersonas asks whether the two generated personas are where each client
-	// reads them. It is appended after the ten Contract XV named, so no existing
-	// check changes its number. A project that uses no client with a selector is
-	// not broken: there is nothing to read and nothing to repair.
-	CheckPersonas
+	// CheckVoice asks the question that replaced the per-client persona files:
+	// does the last section of the AGENTS.md block talk the way the profile in
+	// .odachi/profile.toml says it should? The binary writes that section, so the
+	// two halves disagreeing is a project that prints one register and talks in
+	// another. It is appended after the ten Contract XV named, so no existing
+	// check changes its number.
+	CheckVoice
 )
 
 // CheckCount is how many checks a complete report has. A test asserts it, so a
@@ -203,8 +207,8 @@ func title(number int) string {
 		return "skills y SKILLS.md"
 	case CheckIgnored:
 		return "el store de review y proof/ están ignorados"
-	case CheckPersonas:
-		return "las personas están donde el cliente las lee"
+	case CheckVoice:
+		return "la voz del bloque coincide con el perfil"
 	default:
 		return ""
 	}
@@ -219,9 +223,12 @@ const HookMarker = "# odachi:"
 // The two comments that delimit the rules block in AGENTS.md. The agent reads
 // the rules only when both are there: one marker alone is a truncated block,
 // and a truncated block is not a block.
+//
+// The renderer owns the strings: `odachi init` writes them and doctor reads them
+// back, so a copy here would be a second owner of the one text an agent obeys.
 const (
-	AgentsBegin = "<!-- odachi:begin -->"
-	AgentsEnd   = "<!-- odachi:end -->"
+	AgentsBegin = rules.Begin
+	AgentsEnd   = rules.End
 )
 
 // IsOurHook reports whether this hook is the one `odachi init` installs.
@@ -247,10 +254,11 @@ func HookExe(hook string) string {
 	return ""
 }
 
-// HasBlock reports whether AGENTS.md carries the rules block.
-func HasBlock(agents string) bool {
-	return strings.Contains(agents, AgentsBegin) && strings.Contains(agents, AgentsEnd)
-}
+// HasBlock reports whether AGENTS.md carries the rules block, by the renderer's
+// own rule: a marker that does not own its own line is not a block this tool
+// wrote, and asking that question twice with two answers is how one check says
+// yes and the next one says no about the same file.
+func HasBlock(agents string) bool { return rules.HasBlock(agents) }
 
 // PathFix is the exact line a human pastes to make `odachi` reachable from a
 // shell. It names the folder of the binary they already have: "ponelo en el
