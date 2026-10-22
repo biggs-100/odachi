@@ -75,8 +75,8 @@ precio de mover el árbol una vez.
 
 ## Las skills, en tu agente
 
-Son nueve skills, y `odachi init` ya deja ocho en el proyecto y una en tu home.
-`odachi pack` copia las nueve al lugar donde tu agente las busca, para todo lo
+Son diez skills, y `odachi init` ya deja nueve en el proyecto y una en tu home.
+`odachi pack` copia las diez al lugar donde tu agente las busca, para todo lo
 que `init` no hace: otro cliente, otra carpeta, otro scope. Cada una se dispara
 con una situación, no con un comando:
 
@@ -86,6 +86,7 @@ con una situación, no con un comando:
 | `bootstrap` | arrancar un proyecto desde cero, o explicar qué es odachi |
 | `commits` | qué entra en un commit, cómo se parte, qué dice el mensaje |
 | `data` | guardar, migrar, leer o borrar datos: dueño, vida y respaldo |
+| `drive` | trabajás dentro de un proyecto odachi: qué verbo va en cada momento y cómo cerrar una feature |
 | `ship` | algo está listo para que otra persona lo use |
 | `skill-craft` | escribir una skill nueva o arreglar una que no se usa |
 | `slices` | partir un pedido grande, o cuando el código ya no entra en una lectura |
@@ -94,7 +95,7 @@ con una situación, no con un comando:
 
 `bootstrap` es la de entrada, y es la única que vive en `~/.agents/skills` y no
 en el proyecto: enseña a arrancar en una carpeta vacía, y en una carpeta vacía
-todavía no hay proyecto donde ponerla. Las otras ocho son el oficio que un
+todavía no hay proyecto donde ponerla. Las otras nueve son el oficio que un
 proyecto lleva, y `init` las copia a `./.agents/skills`. Esa carpeta es la
 convención que pide el estándar de Agent Skills, así que la encuentran los
 clientes que odachi no conoce; también viaja con el repositorio, y por eso el
@@ -147,11 +148,11 @@ odachi check   # te dice si falta algo y cómo destrabarlo
 `odachi init` deja el proyecto listo en un paso: la historia de git si faltaba,
 el bloque de reglas que el agente lee, el agente del proyecto y la puerta del home
 (los dos se eligen con Tab), el bloque de `.gitignore`, el hook de pre-commit, las
-ocho skills en `./.agents/skills`, la skill de arranque en `~/.agents/skills` y la
+nueve skills en `./.agents/skills`, la skill de arranque en `~/.agents/skills` y la
 voz del perfil en el bloque de `AGENTS.md`.
 
 Abrí el proyecto con OpenCode y ya está: lee `.agents/skills` como directorio
-externo además del propio, así que ve las ocho sin `pack`. `pack` queda para
+externo además del propio, así que ve las nueve sin `pack`. `pack` queda para
 llevar las skills a la carpeta nativa de otro cliente, o a donde vos digas.
 
 ## La ceremonia y la voz

@@ -34,6 +34,11 @@ La voz vive en el bloque, el agente nativo la espeja, y el doctor ve lo que `ini
   haya `.git`; `init` es justamente quien crea ese repo. Sin perfil escrito y sin
   brief, el default es `novato`. `senior` se gana con `odachi level --to`, o se
   infiere de un brief que la persona ya trajo.
+- **La delegación tiene una política y un dueño**: `slices` gana sobre otras
+  skills globales; `drive` manda a cargarla cuando el pedido no entra en una
+  lectura; un escritor se delega solo por paralelismo real (unidades disjuntas) o
+  por el context backstop, nunca por tamaño o cantidad de archivos. Se tomaron
+  los triggers y el handoff acotado de gentle-ai, no su orquestador.
 - **El instalador no depende de `Get-FileHash`**: si el cmdlet no existe —pasa en
   Windows PowerShell 5.1—, verifica el sha256 con `certutil`. Probado con las dos
   herramientas sobre la release real.
