@@ -33,6 +33,39 @@ function Fail([string] $message) {
     exit 1
 }
 
+# El sha256 de un archivo, con dos caminos y el mismo resultado. Get-FileHash
+# viene con PowerShell 4, pero un Windows PowerShell 5.1 puede llegar sin el
+# módulo: se midió una máquina donde el cmdlet no resuelve y el instalador moría
+# antes de verificar el checksum, que es justo el paso que no se puede saltear.
+# certutil -hashfile trae SHA256 desde Windows 7 y es el respaldo. El camino se
+# elige mirando si el cmdlet existe, no atrapando el error: así un checksum que no
+# coincide sigue siendo un checksum que no coincide. Sin banderas ni variables
+# nuevas.
+function Get-Sha256([string] $path) {
+    if (Get-Command -Name Get-FileHash -ErrorAction SilentlyContinue) {
+        return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+    }
+
+    if (-not (Get-Command -Name certutil.exe -ErrorAction SilentlyContinue)) {
+        Fail "no pude calcular el sha256 de ${path}: esta máquina no tiene Get-FileHash ni certutil; sin hash no verifico el archivo y no instalé nada"
+    }
+
+    $lines = & certutil.exe -hashfile $path SHA256
+    if ($LASTEXITCODE -ne 0) {
+        Fail "no pude calcular el sha256 de $path con certutil (exit $LASTEXITCODE); sin hash no verifico el archivo y no instalé nada"
+    }
+    # La salida de certutil está traducida —un encabezado, el hash, un pie— así que
+    # no se busca una palabra: la única línea que son 64 caracteres hexadecimales
+    # es el hash, en cualquier idioma.
+    foreach ($line in $lines) {
+        $candidate = $line -replace '\s', ''
+        if ($candidate -match '^[0-9a-fA-F]{64}$') {
+            return $candidate.ToLowerInvariant()
+        }
+    }
+    Fail "certutil no devolvió un sha256 legible para $path; sin hash no verifico el archivo y no instalé nada"
+}
+
 # 1 · plataforma. Lo que no está acá se dice, no se adivina.
 $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     'AMD64' { 'amd64' }
@@ -103,7 +136,7 @@ try {
         Fail "checksums.txt no trae el hash de $asset; no instalo algo que la release no certifica"
     }
 
-    $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+    $actual = Get-Sha256 $archive
     if ($expected.ToLowerInvariant() -ne $actual.ToLowerInvariant()) {
         Fail "el checksum de $asset no coincide (esperaba $expected, obtuve $actual): el archivo está corrupto o no es el que dice ser, y no instalé nada"
     }
