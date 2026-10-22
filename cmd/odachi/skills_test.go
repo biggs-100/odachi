@@ -4,13 +4,28 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
 
-// bundled is the five skills this repository ships. The registry is dogfooded:
+// bundled is every skill this repository ships, read from disk so adding one does
+// not require editing this list. The registry is dogfooded:
 // the tests run the real command over the real skills/ directory.
-var bundled = []string{"acceptance", "data", "ship", "slices", "tests"}
+var bundled = func() []string {
+	entries, err := os.ReadDir(filepath.Join("..", "..", "skills"))
+	if err != nil {
+		panic("read the skills directory: " + err.Error())
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			names = append(names, entry.Name())
+		}
+	}
+	slices.Sort(names)
+	return names
+}()
 
 // repoRoot is the module root, one level above cmd/odachi.
 func repoRoot(t *testing.T) string {

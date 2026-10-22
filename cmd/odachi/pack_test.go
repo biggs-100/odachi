@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -69,9 +70,9 @@ func walkNames(t *testing.T, dir string) map[string]string {
 	return found
 }
 
-// TestPackWritesTheFiveBundledSkills: the binary carries this repository's
+// TestPackWritesTheBundledSkills: the binary carries this repository's
 // skills, and one run puts their exact bytes where the agent looks.
-func TestPackWritesTheFiveBundledSkills(t *testing.T) {
+func TestPackWritesTheBundledSkills(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 
@@ -90,7 +91,7 @@ func TestPackWritesTheFiveBundledSkills(t *testing.T) {
 			t.Errorf("%s differs from skills/%s/SKILL.md", name, name)
 		}
 	}
-	if !strings.Contains(out, "claude · 5 instaladas · ~/.claude/skills") {
+	if !strings.Contains(out, fmt.Sprintf("claude · %d instaladas · ~/.claude/skills", len(bundled))) {
 		t.Errorf("stdout lacks the summary line:\n%s", out)
 	}
 }
@@ -111,7 +112,7 @@ func TestPackSecondRunIsIdentical(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second run code = %d (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, "claude · 5 sin cambios · ~/.claude/skills") {
+	if !strings.Contains(out, fmt.Sprintf("claude · %d sin cambios · ~/.claude/skills", len(bundled))) {
 		t.Errorf("the second run does not report sin cambios:\n%s", out)
 	}
 
@@ -188,7 +189,7 @@ func TestPackDryRunWritesNothing(t *testing.T) {
 	if files := walkNames(t, home); len(files) != 0 {
 		t.Errorf("dry-run wrote %d files: %v", len(files), files)
 	}
-	if !strings.Contains(out, "5 por instalar") {
+	if !strings.Contains(out, fmt.Sprintf("%d por instalar", len(bundled))) {
 		t.Errorf("stdout does not list the planned installs:\n%s", out)
 	}
 	if !strings.Contains(out, "dry-run") {
@@ -247,7 +248,7 @@ func TestPackTwoAgents(t *testing.T) {
 				t.Errorf("%s: %s was not installed: %v", agentName, name, err)
 			}
 		}
-		if !strings.Contains(out, agentName+" · 5 instaladas · ~/."+agentName+"/skills") {
+		if !strings.Contains(out, fmt.Sprintf("%s · %d instaladas · ~/.%s/skills", agentName, len(bundled), agentName)) {
 			t.Errorf("stdout lacks the summary of %s:\n%s", agentName, out)
 		}
 	}
@@ -293,7 +294,7 @@ func TestPackOpenCodeWritesIntoTheProject(t *testing.T) {
 	if files := walkNames(t, home); len(files) != 0 {
 		t.Errorf("the home was touched: %v", files)
 	}
-	if !strings.Contains(out, "opencode · 5 instaladas · ./.opencode/skills") {
+	if !strings.Contains(out, fmt.Sprintf("opencode · %d instaladas · ./.opencode/skills", len(bundled))) {
 		t.Errorf("stdout lacks the project-relative summary line:\n%s", out)
 	}
 	if strings.Contains(out, project) || strings.Contains(out, home) {
@@ -317,7 +318,7 @@ func TestPackOpenCodeSecondRunIsIdentical(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second run code = %d (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, "opencode · 5 sin cambios · ./.opencode/skills") {
+	if !strings.Contains(out, fmt.Sprintf("opencode · %d sin cambios · ./.opencode/skills", len(bundled))) {
 		t.Errorf("the second run does not report sin cambios:\n%s", out)
 	}
 	after := walkNames(t, project)
@@ -373,7 +374,7 @@ func TestPackDetectsOpenCodeInTheProject(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
-	if !strings.Contains(out, "opencode · 5 instaladas · ./.opencode/skills") {
+	if !strings.Contains(out, fmt.Sprintf("opencode · %d instaladas · ./.opencode/skills", len(bundled))) {
 		t.Errorf("the detected agent was not served:\n%s", out)
 	}
 	if _, err := os.Stat(agentProjectFile(t, project, "opencode", "acceptance")); err != nil {
@@ -485,7 +486,7 @@ func TestPackDetectsAnAgentOrSaysHowToName(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("detected run code = %d (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, "codex · 5 instaladas · ~/.codex/skills") {
+	if !strings.Contains(out, fmt.Sprintf("codex · %d instaladas · ~/.codex/skills", len(bundled))) {
 		t.Errorf("the detected agent was not served:\n%s", out)
 	}
 	if _, err := os.Stat(agentFile(t, home, "claude", "acceptance")); err == nil {

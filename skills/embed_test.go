@@ -8,12 +8,26 @@ import (
 	"github.com/biggs-100/odachi/skills"
 )
 
-// bundled is the five starter skills the binary carries.
-var bundled = []string{"acceptance", "data", "ship", "slices", "tests"}
+// bundled is every skill directory in this package's directory, read from disk
+// instead of listed here: adding a skill must not require editing this file.
+var bundled = func() []string {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		panic("read skills directory: " + err.Error())
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			names = append(names, entry.Name())
+		}
+	}
+	slices.Sort(names)
+	return names
+}()
 
-// TestAllCarriesTheFiveStarterSkills: the binary knows them by name, sorted, so
+// TestAllCarriesEveryStarterSkill: the binary knows them by name, sorted, so
 // `pack` writes the same set on every machine and in the same order.
-func TestAllCarriesTheFiveStarterSkills(t *testing.T) {
+func TestAllCarriesEveryStarterSkill(t *testing.T) {
 	all, err := skills.All()
 	if err != nil {
 		t.Fatalf("All(): %v", err)
