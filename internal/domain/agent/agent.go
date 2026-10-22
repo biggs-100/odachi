@@ -11,10 +11,14 @@
 // a `home` agent reads its skills from inside the human's home directory, and a
 // `project` agent reads them from inside the project being worked on. OpenCode
 // is the project one — `.opencode/skills/<name>/SKILL.md` — and its documented
-// pattern (`{skill,skills}/**/SKILL.md`) is relative to the project, so the
-// platform-dependent global (`~/.config/opencode/skills`) never enters the
-// picture. An earlier unit refused OpenCode because its *global* path varies by
-// platform; that path is not the one we install.
+// pattern (`{skill,skills}/**/SKILL.md`) is relative to the project.
+//
+// A scope is a default, not a cage. `odachi pack --scope` is the human's
+// override: the same agent installed under the other root, which is how one copy
+// of the skills serves every project instead of one run per project. A few
+// agents keep the same relative path in both roots (`~/.claude/skills` is
+// `./.claude/skills`); the ones whose documentation puts the other root's config
+// somewhere else say so in overrideDests.
 //
 // It is pure: no filesystem, no os. The app layer resolves the home and the
 // project, and this package only says where and whether.
@@ -47,6 +51,18 @@ type Agent struct {
 	Scope Scope
 }
 
+// Standard is the cross-client location the Agent Skills standard describes: a
+// client that odachi has never heard of can still find these skills, because the
+// convention belongs to the standard and not to one program. It is a pseudo
+// agent — it names a destination, not an installed client — so it is offered by
+// name, refused by nobody, and never detected.
+const Standard = "standard"
+
+// portable is the row behind Standard: the project copy lives in `.agents/skills`
+// and the home copy in `~/.agents/skills`, the two roots the standard's clients
+// scan besides their own directory.
+var portable = Agent{Name: Standard, Dest: ".agents/skills", Scope: ScopeProject}
+
 // supported is the verified table, in the order `odachi pack` lists and
 // summarizes it.
 var supported = []Agent{
@@ -73,11 +89,25 @@ var refusals = map[string]string{
 	"pi": "Pi no usa un directorio de skills",
 }
 
+// overrideDests holds the one thing a scope override can change besides the
+// root: the relative path. OpenCode documents its global config dir as
+// `~/.config/opencode` (XDG_CONFIG_HOME), so forcing it into the home installs
+// into `.config/opencode/skills` and not into a `~/.opencode/skills` its docs
+// never mention. Every other agent keeps its own relative path in both roots,
+// which is why the table stores one Dest and only this map stores an exception.
+// XDG_CONFIG_HOME itself is not read here: this package has no environment, and
+// the human who moved their config dir has --dest for exactly that.
+var overrideDests = map[string]map[Scope]string{
+	"opencode": {ScopeHome: ".config/opencode/skills"},
+}
+
 // Supported returns the verified table, safe to keep: a caller that reorders or
 // trims the result cannot change what this package resolves.
 func Supported() []Agent { return append([]Agent(nil), supported...) }
 
-// Names returns the supported names, in table order.
+// Names returns the supported names, in table order: the agents that can be
+// detected. The portable location is not one of them — it is not a program, and
+// detecting it would serve an agent nobody asked for.
 func Names() []string {
 	names := make([]string, 0, len(supported))
 	for _, a := range supported {
@@ -86,9 +116,10 @@ func Names() []string {
 	return names
 }
 
-// List renders the supported names for the one-line message every refusal
-// carries. Two spellings of the same list would drift apart.
-func List() string { return strings.Join(Names(), ", ") }
+// List renders every name a human can type, the portable one included, for the
+// one-line message every refusal carries and for `-h`. Two spellings of the same
+// list would drift apart.
+func List() string { return strings.Join(append(Names(), Standard), ", ") }
 
 // Resolve returns the agent for name. The lookup trims spaces and ignores
 // capitals, because a human types both; it never guesses a name that is not in
@@ -97,15 +128,68 @@ func List() string { return strings.Join(Names(), ", ") }
 func Resolve(name string) (Agent, error) {
 	key := strings.ToLower(strings.TrimSpace(name))
 	if key == "" {
-		return Agent{}, fmt.Errorf("falta el nombre del agente; los soportados son: %s (por ejemplo odachi pack --agents claude,codex)", List())
+		return Agent{}, fmt.Errorf("falta el nombre del agente; los soportados son: %s (por ejemplo odachi pack --agents claude,codex, o odachi pack --agents standard para la carpeta que leen todos los clientes)", List())
 	}
 	if a, ok := find(key); ok {
 		return a, nil
 	}
 	if reason, ok := refusals[key]; ok {
-		return Agent{}, fmt.Errorf("%s: %s; los soportados son: %s (probá odachi pack --agents claude)", key, reason, List())
+		return Agent{}, fmt.Errorf("%s: %s; los soportados son: %s: %s", key, reason, List(), escape)
 	}
-	return Agent{}, fmt.Errorf("agente desconocido: %s; los soportados son: %s (por ejemplo odachi pack --agents claude,codex)", key, List())
+	return Agent{}, fmt.Errorf("agente desconocido: %s; los soportados son: %s: %s", key, List(), escape)
+}
+
+// escape is the tail every refusal carries: the two ways to install for a client
+// this table does not know, today or later. A refusal that only says "no" is a
+// dead end, and a command whose reason to exist is serving any client cannot
+// afford one.
+const escape = "si tu cliente no está en la tabla, usá --agents standard (la carpeta que leen todos los clientes: .agents/skills en el proyecto, ~/.agents/skills en el home) o --dest <carpeta> (la ruta que lee tu cliente)"
+
+// Labels parses --agents when --dest supplies the directory. The names stop being
+// table lookups and become the label a human reads in the summary, so a client
+// this package has never heard of is served as long as the human knows its path.
+// Repeats collapse and order is kept, the same way ResolveAll does it.
+func Labels(list string) []string {
+	labels := make([]string, 0, strings.Count(list, ",")+1)
+	for _, raw := range strings.Split(list, ",") {
+		name := strings.ToLower(strings.TrimSpace(raw))
+		if name == "" || slices.Contains(labels, name) {
+			continue
+		}
+		labels = append(labels, name)
+	}
+	return labels
+}
+
+// ParseScope reads the --scope flag. Empty is the table's own scope, which is the
+// default and not an error; anything else must be one of the two roots, and the
+// refusal names the flag and its two values.
+func ParseScope(value string) (Scope, error) {
+	switch scope := Scope(strings.ToLower(strings.TrimSpace(value))); scope {
+	case "":
+		return "", nil
+	case ScopeHome, ScopeProject:
+		return scope, nil
+	default:
+		return "", fmt.Errorf("scope inválido: %s; usá --scope project o --scope home (por ejemplo odachi pack --agents opencode --scope home)", strings.TrimSpace(value))
+	}
+}
+
+// In returns the same agent installed under scope instead of its own default
+// root. The name still decides the path and the scope only decides which root
+// that path is joined to — except for the rows overrideDests knows about, whose
+// other root keeps the config dir their own docs document. An empty scope is the
+// table's answer, so the row comes back untouched.
+func (a Agent) In(scope Scope) Agent {
+	if scope == "" || scope == a.Scope {
+		return a
+	}
+	out := a
+	out.Scope = scope
+	if dest, ok := overrideDests[a.Name][scope]; ok {
+		out.Dest = dest
+	}
+	return out
 }
 
 // ResolveAll parses the comma-separated --agents flag. An empty flag returns no
@@ -157,8 +241,13 @@ func (a Agent) Display() string {
 	return "~/" + a.Dest
 }
 
-// find returns the table row for an already-normalized name.
+// find returns the table row for an already-normalized name. The portable row is
+// looked up first because it lives beside the table and not in it: the table is
+// what detection scans, and the portable location is never detected.
 func find(name string) (Agent, bool) {
+	if name == portable.Name {
+		return portable, true
+	}
 	for _, a := range supported {
 		if a.Name == name {
 			return a, true

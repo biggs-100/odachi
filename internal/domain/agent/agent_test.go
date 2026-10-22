@@ -281,3 +281,196 @@ func TestEmptyNameIsRefusedWithTheWayOut(t *testing.T) {
 		}
 	}
 }
+
+// TestScopeOverridesTheRootAndKeepsTheAgent: `--scope` is the same agent under
+// the other root. The name still decides the path; the scope only decides which
+// root that path is joined to, and no override leaves the row as the table has
+// it.
+func TestScopeOverridesTheRootAndKeepsTheAgent(t *testing.T) {
+	claude, err := agent.Resolve("claude")
+	if err != nil {
+		t.Fatalf("Resolve(claude): %v", err)
+	}
+
+	inProject := claude.In(agent.ScopeProject)
+	if inProject.Name != "claude" || inProject.Scope != agent.ScopeProject {
+		t.Errorf("In(project) = %+v, want the same claude under the project", inProject)
+	}
+	if inProject.Dest != ".claude/skills" {
+		t.Errorf("In(project).Dest = %q, want .claude/skills", inProject.Dest)
+	}
+	if got, want := inProject.Display(), "./.claude/skills"; got != want {
+		t.Errorf("In(project).Display() = %q, want %q", got, want)
+	}
+
+	// No scope is the table's own answer, not an empty one.
+	if inDefault := claude.In(""); inDefault != claude {
+		t.Errorf("In(\"\") = %+v, want the table row %+v", inDefault, claude)
+	}
+	if inHome := claude.In(agent.ScopeHome); inHome != claude {
+		t.Errorf("In(home) = %+v, want the table row %+v", inHome, claude)
+	}
+}
+
+// TestOpenCodeHomeLandsInItsGlobalConfigDir: OpenCode documents its global
+// config dir as `~/.config/opencode` (XDG_CONFIG_HOME), so forcing it into the
+// home installs into `.config/opencode/skills` and not into a `~/.opencode`
+// its documentation never mentions. The project path is untouched.
+func TestOpenCodeHomeLandsInItsGlobalConfigDir(t *testing.T) {
+	opencode, err := agent.Resolve("opencode")
+	if err != nil {
+		t.Fatalf("Resolve(opencode): %v", err)
+	}
+
+	inHome := opencode.In(agent.ScopeHome)
+	if got, want := inHome.Dest, ".config/opencode/skills"; got != want {
+		t.Errorf("In(home).Dest = %q, want %q", got, want)
+	}
+	if got, want := inHome.Display(), "~/.config/opencode/skills"; got != want {
+		t.Errorf("In(home).Display() = %q, want %q", got, want)
+	}
+	if got, want := inHome.Marker(), ".config/opencode"; got != want {
+		t.Errorf("In(home).Marker() = %q, want %q", got, want)
+	}
+	if opencode.Dest != ".opencode/skills" || opencode.Scope != agent.ScopeProject {
+		t.Errorf("the table row changed: %+v", opencode)
+	}
+}
+
+// TestEveryAgentHasADestinationInBothRoots: both scopes are installable for
+// every real agent, the path never escapes its root, and the two display forms
+// are the only ones printed.
+func TestEveryAgentHasADestinationInBothRoots(t *testing.T) {
+	for _, a := range agent.Supported() {
+		for _, scope := range []agent.Scope{agent.ScopeHome, agent.ScopeProject} {
+			got := a.In(scope)
+			if got.Scope != scope {
+				t.Errorf("%s.In(%q).Scope = %q", a.Name, scope, got.Scope)
+			}
+			if got.Dest == "" || strings.HasPrefix(got.Dest, "/") || strings.ContainsAny(got.Dest, `\:`) {
+				t.Errorf("%s.In(%q).Dest = %q, want a relative slash path", a.Name, scope, got.Dest)
+			}
+			if strings.HasPrefix(got.Marker(), "..") {
+				t.Errorf("%s.In(%q).Marker() = %q, want the config dir inside the root", a.Name, scope, got.Marker())
+			}
+			want := "./" + got.Dest
+			if scope == agent.ScopeHome {
+				want = "~/" + got.Dest
+			}
+			if got.Display() != want {
+				t.Errorf("%s.In(%q).Display() = %q, want %q", a.Name, scope, got.Display(), want)
+			}
+		}
+	}
+}
+
+// TestStandardIsTheCrossClientLocation: the portable default is a location, not
+// a program — `.agents/skills` in the project, `~/.agents/skills` in the home —
+// so a client odachi has never heard of still finds the skills.
+func TestStandardIsTheCrossClientLocation(t *testing.T) {
+	a, err := agent.Resolve(" standard ")
+	if err != nil {
+		t.Fatalf("Resolve(standard): %v", err)
+	}
+	if a.Name != "standard" {
+		t.Errorf("Name = %q, want standard", a.Name)
+	}
+	if want := ".agents/skills"; a.Dest != want || a.Scope != agent.ScopeProject {
+		t.Errorf("standard = %+v, want Dest %q in the project", a, want)
+	}
+	if got, want := a.Display(), "./.agents/skills"; got != want {
+		t.Errorf("Display() = %q, want %q", got, want)
+	}
+	if got, want := a.In(agent.ScopeHome).Display(), "~/.agents/skills"; got != want {
+		t.Errorf("In(home).Display() = %q, want %q", got, want)
+	}
+
+	// It names a location, not an installed program: it is offered by name and
+	// never detected, so detection keeps serving exactly the eight agents.
+	if !strings.Contains(agent.List(), "standard") {
+		t.Errorf("List() = %q, does not offer standard", agent.List())
+	}
+	if slices.Contains(agent.Names(), "standard") {
+		t.Errorf("Names() = %v, packs standard into the detection table", agent.Names())
+	}
+}
+
+// TestStandardTravelsWithRealAgents: one flag can carry the cross-client copy
+// and a named client, each to its own destination.
+func TestStandardTravelsWithRealAgents(t *testing.T) {
+	got, err := agent.ResolveAll("standard,claude")
+	if err != nil {
+		t.Fatalf("ResolveAll(standard,claude): %v", err)
+	}
+	if len(got) != 2 || got[0].Name != "standard" || got[1].Name != "claude" {
+		t.Fatalf("ResolveAll(standard,claude) = %+v, want [standard claude]", got)
+	}
+	if got[0].Dest == got[1].Dest {
+		t.Errorf("both landed in %q; the standard copy is its own destination", got[0].Dest)
+	}
+}
+
+// TestLabelsServeAClientTheTableDoesNotKnow: with --dest the human typed the
+// path, so a name stops being a lookup and becomes the label of that folder.
+func TestLabelsServeAClientTheTableDoesNotKnow(t *testing.T) {
+	got := agent.Labels(" Inventado, claude ,,inventado")
+	if len(got) != 2 || got[0] != "inventado" || got[1] != "claude" {
+		t.Errorf("Labels() = %v, want [inventado claude]", got)
+	}
+	if none := agent.Labels("  "); len(none) != 0 {
+		t.Errorf("Labels(\"  \") = %v, want no names", none)
+	}
+}
+
+// TestParseScopeReadsTheFlagAndRefusesTheRest: an empty --scope is the table's
+// own scope, both roots are accepted in any shape, and anything else names the
+// flag and its two values.
+func TestParseScopeReadsTheFlagAndRefusesTheRest(t *testing.T) {
+	for _, tc := range []struct {
+		typed string
+		want  agent.Scope
+	}{
+		{"", ""},
+		{"project", agent.ScopeProject},
+		{" Project ", agent.ScopeProject},
+		{"home", agent.ScopeHome},
+		{"HOME", agent.ScopeHome},
+	} {
+		got, err := agent.ParseScope(tc.typed)
+		if err != nil {
+			t.Errorf("ParseScope(%q): %v", tc.typed, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("ParseScope(%q) = %q, want %q", tc.typed, got, tc.want)
+		}
+	}
+
+	_, err := agent.ParseScope("cualquier-cosa")
+	if err == nil {
+		t.Fatal("ParseScope accepted an invented scope")
+	}
+	for _, want := range []string{"--scope", "project", "home"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the message does not name %q: %q", want, err)
+		}
+	}
+}
+
+// TestRefusalsNameTheWayOut: an unknown name is still refused — odachi never
+// guesses a directory — but the refusal now names the two escape hatches, so a
+// client that does not exist yet is not a dead end.
+func TestRefusalsNameTheWayOut(t *testing.T) {
+	for _, name := range []string{"inventado", "pi"} {
+		_, err := agent.Resolve(name)
+		if err == nil {
+			t.Fatalf("Resolve(%q) succeeded", name)
+		}
+		message := err.Error()
+		for _, want := range []string{"--agents standard", "--dest"} {
+			if !strings.Contains(message, want) {
+				t.Errorf("the refusal of %q does not name %q: %q", name, want, message)
+			}
+		}
+	}
+}
