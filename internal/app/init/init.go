@@ -1,8 +1,11 @@
-// Package init implements `odachi init`: the rules block in AGENTS.md and the
-// pre-commit hook that refuses a commit without a proof for the current tree.
+// Package init implements `odachi init`: the rules block in AGENTS.md, the
+// marked block in .gitignore that keeps the generated evidence out of the tree,
+// and the pre-commit hook that refuses a commit without a proof for the current
+// tree.
 //
-// Both halves are idempotent. A file that is already right is not rewritten, a
-// file that exists is backed up before the rewrite, and a hook someone else
+// Every artifact is idempotent. A file that is already right is not rewritten, a
+// file that exists is backed up before the rewrite (except .gitignore, whose
+// block is additive and preserves every other byte), and a hook someone else
 // wrote is never clobbered: the human gets the three lines to paste instead.
 package init
 
@@ -19,7 +22,7 @@ const (
 	CodeBlocked = 1
 )
 
-// The two artifacts this command owns.
+// The artifacts this command owns.
 const (
 	gitDir   = ".git"
 	hookPath = ".git/hooks/pre-commit"
@@ -95,6 +98,12 @@ func Run(opts Options, files Files) Result {
 	}
 
 	if problem := r.writeAgents(); problem != nil {
+		return *problem
+	}
+	if problem := r.writeIgnore(); problem != nil {
+		// The rules block may already be written: report it, so the human knows
+		// exactly how much of the job is done.
+		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
 	if problem := r.installHook(opts.Exe); problem != nil {
@@ -244,7 +253,7 @@ func foreignHook(exe string) Result {
 // claiming work it did not do.
 func (r *runner) result() Result {
 	if len(r.changed) == 0 {
-		message := "sin cambios: " + agentsFile + " y el hook " + hookPath + " ya estaban al día"
+		message := "sin cambios: " + agentsFile + ", " + ignoreFile + " y el hook " + hookPath + " ya estaban al día"
 		return Result{Code: CodeOK, Message: message, Lines: r.lines}
 	}
 
