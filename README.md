@@ -145,15 +145,16 @@ odachi check   # te dice si falta algo y cómo destrabarlo
 ```
 
 `odachi init` deja el proyecto listo en un paso: la historia de git si faltaba,
-el bloque de reglas que el agente lee, el bloque de `.gitignore`, el hook de
-pre-commit, las ocho skills en `./.agents/skills`, la skill de arranque en
-`~/.agents/skills` y la voz del perfil en el bloque de `AGENTS.md`.
+el bloque de reglas que el agente lee, el agente nativo que se elige con Tab, el
+bloque de `.gitignore`, el hook de pre-commit, las ocho skills en
+`./.agents/skills`, la skill de arranque en `~/.agents/skills` y la voz del perfil
+en el bloque de `AGENTS.md`.
 
 Abrí el proyecto con OpenCode y ya está: lee `.agents/skills` como directorio
 externo además del propio, así que ve las ocho sin `pack`. `pack` queda para
 llevar las skills a la carpeta nativa de otro cliente, o a donde vos digas.
 
-## Dos ejes: la ceremonia y la voz
+## La ceremonia y la voz
 
 Dos cosas distintas, con dueños distintos.
 
@@ -164,15 +165,18 @@ lee: no puede aflojar una compuerta ni cambiarla.
 
 La **voz** es cómo habla el agente: si te explica el porqué de cada decisión o si
 va al hueso. Vive en la última sección del bloque de `AGENTS.md`, `## Cómo
-hablás`, y la escribe el binario: es el único canal que leen todos los clientes,
-sin una carpeta por cliente ni una tecla que aprender. `odachi init` escribe la
-voz de `novato` si todavía no hay perfil, y `odachi level --to <perfil>` cambia
-el perfil y esa sección juntas —y nada más del bloque—.
+hablás`, y en el agente nativo que espeja ese bloque. `odachi init` escribe la voz
+de `novato` si todavía no hay perfil, y `odachi level --to <perfil>` cambia el
+perfil, esa sección y el espejo juntas —y nada más del bloque—.
 
-Así lo elegimos después de medirlo: la v0.10.0 escribía un archivo por cliente
-(`.opencode/agents/`, `.claude/output-styles/`) para elegir la persona con el
-interruptor del cliente, y OpenCode 2.1.2 no los lista. Si te quedaron esos
-archivos, `odachi init` te avisa que ya no se usan; no los borra, son tuyos.
+El agente nativo es el mismo bloque en la carpeta donde tu cliente ya elige
+agentes: `.opencode/agents/odachi.md` (Tab en OpenCode) y
+`.claude/output-styles/odachi.md` (`/config` en Claude Code). Es generado: si lo
+editás a mano, `odachi init` lo respalda antes de reescribirlo y `doctor` te avisa
+que dejó de coincidir. Medido en OpenCode 2.1.3: un proyecto con `.git` lista el
+archivo como agente primario; una carpeta sin `.git` no lista ninguno. Las dos
+personas por perfil de la v0.10.0 quedaron como restos: `init` las nombra y no las
+borra, son tuyas.
 
 ## El review: cuatro lentes, sin ceremonia
 

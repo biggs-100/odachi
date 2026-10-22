@@ -170,7 +170,7 @@ inside, so the human block and the machine payload cannot tell different stories
   names in `internal/domain/agent` and a test fails if it names a client the
   skills table does not have. Destination and frontmatter are per client because
   the mechanism is.
-- `AGENTS.md` keeps its novice section, and `persona.Body(novato)` reuses those
+- `AGENTS.md` keeps its novice section, and `persona.Voice(novato)` reuses those
   sentences: the tool may not say one thing in the block and another in the
   persona, and `internal/app/init/agents_block_internal_test.go` pins the match.
 - The profile still carries `explain = why|none`: the schema is frozen at eight
@@ -187,46 +187,66 @@ inside, so the human block and the machine payload cannot tell different stories
   `pack` left somewhere else. `init` names the other copy and leaves both in
   place; it never deletes a directory it did not write.
 
-## Amendment · the voice lives in the block (v0.11.0)
+## Amendment · the voice lives in the block, and the native agent mirrors it (v0.11.0)
 
 The decision above shipped in v0.10.0 with generated per-client files:
 `novato` and `senior` as OpenCode primary agents and as Claude Code output
-styles, so the human could pick one with the client's own switch.
+styles, so the human could pick one with the client's own switch. The first
+v0.11.0 attempt removed those files after measuring that OpenCode did not list
+them. That measurement was wrong, and this amendment records the correction.
 
-Measured, it does not work, and the reference implementation never did it
-that way:
+Measured again, with the version named and the state controlled:
 
-- OpenCode 2.1.2 listed the files from `.opencode/agents/` in one run and
-  not in the next, with the same files and a fresh service; `opencode debug
-  agents` is not a reliable witness either.
-- gentle-ai does not install agent files for OpenCode at all. Its capability
-  manifest for that client declares `SlashCommands`, `Skills`, `SystemPrompt`
-  and `MCP` — no `FileSubAgents` — its `SubAgentsDir()` and
-  `EmbeddedSubAgentsDir()` return `""`, and its persona is delivered by
-  replacing the instructions file (`~/.config/opencode/AGENTS.md`,
-  `SystemPromptStrategy = StrategyFileReplace`).
+- OpenCode 2.1.3 lists `.opencode/agents/<name>.md` and
+  `.opencode/mode/<name>.md` as `mode: primary` in 5 consecutive runs on a
+  throwaway git repository, and 3 consecutive runs on the demo project. The body
+  of the file is the agent's system prompt.
+- In a folder **without `.git`**, `opencode debug agents` returns `[]`: not even
+  the built-in agents. The earlier "one run saw it, the next did not" was most
+  likely that state, or a background service pointed at another directory, not
+  a property of the directory name.
+- gentle-ai still does not install agent files for OpenCode; its capability
+  manifest has no `FileSubAgents` and it replaces the instructions file. That is
+  a valid alternative, not evidence that the native channel is broken.
 
-So the channel changed, not the two axes. The profile still owns the
-ceremony and the voice still owns how the agent talks. What changed:
+What survives from the first amendment:
 
 - **One owner for the block.** `internal/domain/rules` renders the whole
-  `AGENTS.md` block, with `## Cómo hablás` as its last section. `init` writes
-  it, `start` and `level --to` rewrite only that section. A test pins the
-  `novato` block byte for byte and asserts the two voices differ **only**
-  inside the section.
-- **No per-client files.** The client table, the wrappers and the generated
-  headers are gone. A project that still has `.opencode/agents/odachi-*.md` or
-  `.claude/output-styles/odachi-*.md` from v0.10.0 is told they are leftovers
-  and nothing is deleted: they are the human's files.
+  `AGENTS.md` block, with `## Cómo hablás` as its last section. `init` writes it,
+  `start` and `level --to` rewrite only that section. A test pins the `novato`
+  block byte for byte and asserts the two voices differ **only** inside the
+  section.
 - **The binary decides, the human does not guess.** `init` uses
   `.odachi/profile.toml` when it exists and `novato` otherwise — never
   inferred, because inference turned every new repository into `senior`.
   `level --to <perfil>` writes the profile and the section together.
 - **Doctor compares instead of guessing.** Check 11 asks whether the block's
   voice matches the profile, and names `level --to` or `init` as the fix.
-  Leftover persona files are reported as `ok`, not as a problem.
 
-What this costs: the switch is no longer a keystroke. The voice is a decision
-of the project, written by the binary, and it changes with `odachi level --to`.
-That is the price of one channel every client reads instead of one file per
-client that half of them ignore.
+What the correction adds:
+
+- **The native agent is a mirror, not a second voice.** `persona.Files(body)`
+  wraps `rules.Body(voice)` — the block without its markers — in the frontmatter
+  each client needs. `init` installs one file per client:
+  `.opencode/agents/odachi.md` (`mode: primary`, picked with Tab) and
+  `.claude/output-styles/odachi.md` (`keep-coding-instructions: true`, picked in
+  `/config`). The file is generated, an identical one is not rewritten, and a
+  differing one is backed up first.
+- **The mirror follows the profile.** `level --to` and `start` refresh the
+  mirror when it exists; `init` is the only command that installs it. Check 11
+  appends the mirror's state: it names a missing file or a hand edit and points
+  at `odachi init`. The block still works without a selector, so this is a note,
+  not a failed check.
+- **The v0.10.0 per-profile files are leftovers.** `.opencode/agents/odachi-novato.md`,
+  `odachi-senior.md` and their Claude counterparts still work as a voice, but
+  they do not mirror the block. `init` and `doctor` name them once and never
+  delete them: they are the human's files.
+- **No two axes.** The profile owns the ceremony and the voice; the block
+  publishes both; the native agent repeats the block. Selecting `odachi` with a
+  keystroke does not change what the binary does, and it cannot drift because
+  both files come from one renderer.
+
+What this costs: the generated mirror is a second copy of the block on disk
+(roughly 3 KB per client), and it is versioned with the project. The copy is
+generated and compared on every `doctor`, so the cost of a hand edit is a
+warning, not a silent divergence.

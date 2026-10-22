@@ -7,20 +7,23 @@ de quien llega mañana.
 
 ## v0.11.0 · sin publicar (la fecha la fija el tag)
 
-La voz deja de depender del selector del cliente, y el doctor ve lo que `init` dejó.
+La voz vive en el bloque, el agente nativo la espeja, y el doctor ve lo que `init` dejó.
 
 - **La voz vive en el bloque**: `AGENTS.md` termina con `## Cómo hablás`, y esa
   sección la escribe el binario. `odachi init` pone la voz de `novato` si todavía
   no hay perfil; `level --to <perfil>` cambia el perfil y la voz juntas, y `start`
-  también, porque es el otro comando que decide el perfil. Todos los clientes leen
-  `AGENTS.md`: no hay una carpeta por cliente ni una tecla que aprender.
-- **Se retiran las personas por cliente**: `.opencode/agents/*` y
-  `.claude/output-styles/*` de la v0.10.0 ya no se escriben, porque OpenCode 2.1.2
-  no los lista. Si un proyecto los tiene, `init` avisa que son restos y no los
-  borra.
+  también, porque es el otro comando que decide el perfil.
+- **El agente nativo es un espejo del bloque**: `init` escribe
+  `.opencode/agents/odachi.md` y `.claude/output-styles/odachi.md` con las mismas
+  reglas y la misma voz, para elegir odachi con Tab (OpenCode) o `/config` (Claude
+  Code). Medido en OpenCode 2.1.3: la carpeta se lista como agente primario cuando
+  el proyecto tiene `.git`; `mode/` también funciona, pero la documentada es
+  `agents/`. `level --to` y `start` refrescan el espejo si ya existe; `doctor`
+  avisa si dejó de coincidir. Las dos personas por perfil de la v0.10.0 quedan
+  como restos: `init` las nombra y no las borra.
 - **`doctor` pasa a once chequeos**: el 9 dice las dos verdades de las skills (el
   registro del proyecto y lo instalado en `.agents/skills`), y el 11 compara la voz
-  del bloque con el perfil y nombra el arreglo.
+  del bloque con el perfil, y el agente nativo con el bloque.
 - **El instalador no depende de `Get-FileHash`**: si el cmdlet no existe —pasa en
   Windows PowerShell 5.1—, verifica el sha256 con `certutil`. Probado con las dos
   herramientas sobre la release real.
