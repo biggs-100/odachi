@@ -771,20 +771,36 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 				Files:     destFiles,
 			})
 		}
+		personas := make([]initPersonaDest, 0, len(result.PersonaDests))
+		for _, dest := range result.PersonaDests {
+			destFiles := dest.Files
+			if destFiles == nil {
+				destFiles = []string{}
+			}
+			personas = append(personas, initPersonaDest{
+				Client:    dest.Client,
+				Dir:       dest.Dir,
+				Written:   dest.Written,
+				Unchanged: dest.Kept,
+				Files:     destFiles,
+			})
+		}
 		payload := struct {
-			Code    int             `json:"code"`
-			Message string          `json:"message"`
-			Next    string          `json:"next,omitempty"`
-			Lines   []string        `json:"lines,omitempty"`
-			Files   []string        `json:"files"`
-			Skills  []initSkillDest `json:"skills"`
+			Code     int               `json:"code"`
+			Message  string            `json:"message"`
+			Next     string            `json:"next,omitempty"`
+			Lines    []string          `json:"lines,omitempty"`
+			Files    []string          `json:"files"`
+			Skills   []initSkillDest   `json:"skills"`
+			Personas []initPersonaDest `json:"personas"`
 		}{
-			Code:    result.Code,
-			Message: result.Message,
-			Next:    result.Next,
-			Lines:   result.Lines,
-			Files:   files,
-			Skills:  skills,
+			Code:     result.Code,
+			Message:  result.Message,
+			Next:     result.Next,
+			Lines:    result.Lines,
+			Files:    files,
+			Skills:   skills,
+			Personas: personas,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
@@ -818,6 +834,17 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 type initSkillDest struct {
 	Dest      string   `json:"dest"`
 	Installed int      `json:"installed"`
+	Unchanged int      `json:"unchanged"`
+	Files     []string `json:"files"`
+}
+
+// initPersonaDest is one client's persona directory in the same report: which
+// client, where it reads personas from, what this run did there, and the files it
+// owns.
+type initPersonaDest struct {
+	Client    string   `json:"client"`
+	Dir       string   `json:"dir"`
+	Written   int      `json:"written"`
 	Unchanged int      `json:"unchanged"`
 	Files     []string `json:"files"`
 }
@@ -1025,7 +1052,7 @@ flags de bench:
   --json          salida para máquinas
 
 flags de init:
-  --json          salida para máquinas, con los destinos de las skills
+  --json          salida para máquinas, con los destinos de las skills y las personas
 
 qué deja escrito init, en un solo comando:
   AGENTS.md              el bloque de reglas que el agente lee
@@ -1033,6 +1060,13 @@ qué deja escrito init, en un solo comando:
   .git/hooks/pre-commit  no se commitea sin odachi check --quiet en verde
   .agents/skills         las 8 skills del proyecto: la carpeta que leen todos los clientes
   ~/.agents/skills       la skill de arranque: cómo empezar un proyecto desde cero
+  .opencode/agents       las dos personas, novato y senior: se eligen con Tab
+  .claude/output-styles  las mismas dos personas: se eligen con /config
+
+las personas se escriben siempre, para cada cliente que sepa elegirlas: init no
+sabe quién sos, y la persona la elegís vos con la tecla de tu cliente. El
+ceremonial lo sigue decidiendo .odachi/profile.toml, y el perfil no cambia la
+persona: son dos ejes.
 
 flags:
   --outcome s     respuesta 1: qué tiene que existir cuando terminemos
@@ -1073,6 +1107,7 @@ después de start:
   odachi bench                                  mide cómo se traba una persona (in-band / dead-end)
   odachi init                                   AGENTS.md + hook + las skills del proyecto en
                                                  .agents/skills (y la de arranque en ~/.agents/skills)
+                                                 + las dos personas en cada cliente que las elige
   odachi skills                                 las skills del proyecto y su trigger
   odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
   odachi skills --write                         regenera SKILLS.md desde los frontmatter
