@@ -251,7 +251,7 @@ deps  = ["stripe"]
 			code:    int(gate.NeedsDecision),
 			reason:  gate.ReasonOutOfScope,
 			message: "fuera de alcance: pagos: internal/payments/stripe.go",
-			next:    "odachi ask",
+			next:    "odachi ask \"<tu decisión>\"",
 		},
 		{
 			name:    "pregunta abierta",
@@ -260,7 +260,7 @@ deps  = ["stripe"]
 			code:    int(gate.NeedsDecision),
 			reason:  gate.ReasonOpenQuestion,
 			message: "hay 1 pregunta sin contestar",
-			next:    "odachi ask",
+			next:    "odachi ask \"<tu decisión>\"",
 		},
 		{
 			name:    "falta prueba",
