@@ -28,18 +28,17 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 odachi --version
 ```
 
-Honestidad sobre el estado de esto: **el pipeline de release todavía no corrió**.
-Este repo no tiene remoto, así que no hay releases publicadas y esas tres líneas
-todavía no pueden funcionar. Lo que sí está probado es el instalador: un test
-construye un binario real con `-ldflags -X main.version=1.2.3`, arma el `tar.gz`
-y el `checksums.txt` como los publicaría goreleaser, corre `scripts/install.sh`
-sin red vía `file://` y verifica que el binario instalado diga `odachi 1.2.3`. El
-mismo test prueba el caso feo: con un checksum alterado el instalador sale con
-error y no deja nada instalado.
+Esas tres líneas funcionan. La última release es `v0.9.1`: seis binarios (Linux,
+macOS y Windows, en amd64 y arm64) y un `checksums.txt`. El instalador resuelve la
+última versión por la API, verifica el sha256 y recién entonces escribe; un
+checksum que no coincide sale con error y no deja **nada** en el destino. La
+cadena completa está probada contra la release real, no contra un fixture: un
+test arma el `tar.gz` y los checksums como los publica goreleaser, corre
+`install.sh` sin red vía `file://`, y el binario instalado responde su versión.
 
-Si preferís compilar: `go build ./cmd/odachi` (necesitás Go 1.25 o más nuevo), y
-el binario va a decir `odachi dev`, porque la versión la inyecta la release, no
-el código.
+Si preferís compilar: `go build ./cmd/odachi` (necesitás Go 1.25 o más
+nuevo), y el binario va a decir `odachi dev`, porque la versión la inyecta la
+release, no el código.
 
 ## Qué NO es
 
@@ -60,10 +59,34 @@ el código.
 
 Ejemplos completos en `testdata/examples/`.
 
+`proof/` y `.odachi/reviews/` son **evidencia generada**, no se versiona: la
+prueba lleva el hash del árbol que la produjo y el veredicto se llama igual que
+el árbol que juzga. Cada uno escribe su propio `.gitignore` la primera vez que lo
+necesita, y eso tiene un precio que conviene saber: el primer `check --run` de un
+proyecto invalida un review anterior y el primer `review` invalida una prueba
+anterior, una sola vez cada uno.
+
+`init` agrega dos cosas que no son artefactos: un bloque de reglas en `AGENTS.md`
+—lo que el agente lee antes de tocar nada— y un hook de pre-commit que corre
+`odachi check --quiet` sobre la prueba de este árbol.
+
 ## Las skills, en tu agente
 
-`odachi pack` copia las cinco skills incluidas en el binario al lugar donde tu
-agente las busca. Los soportados:
+`odachi pack` copia las ocho skills incluidas en el binario al lugar donde tu
+agente las busca. Cada una se dispara con una situación, no con un comando:
+
+| Skill | Cuándo se dispara |
+| --- | --- |
+| `acceptance` | hay que decidir si algo está terminado |
+| `commits` | qué entra en un commit, cómo se parte, qué dice el mensaje |
+| `data` | guardar, migrar, leer o borrar datos: dueño, vida y respaldo |
+| `ship` | algo está listo para que otra persona lo use |
+| `skill-craft` | escribir una skill nueva o arreglar una que no se usa |
+| `slices` | partir un pedido grande, o cuando el código ya no entra en una lectura |
+| `tests` | qué prueba un cambio: primero la que falla, después el código |
+| `writing` | un mensaje, un PR, un comentario o documentación que alguien va a leer |
+
+Los agentes soportados:
 
 | Agente | `--agents` | Destino |
 | --- | --- | --- |
@@ -85,7 +108,7 @@ borra nada, respalda lo que difiere y no repite lo que ya está igual.
 ```sh
 mkdir mi-proyecto && cd mi-proyecto
 odachi init                   # reglas del proyecto en AGENTS.md + hook pre-commit
-odachi pack --agents opencode # las cinco skills en ./.opencode/skills/
+odachi pack --agents opencode # las ocho skills en ./.opencode/skills/
 odachi start                  # la entrevista: brief.md, cerco y primer task doc
 odachi check                  # te dice si falta algo y cómo destrabarlo
 ```
@@ -95,18 +118,41 @@ Después de `pack`, abrí el proyecto con OpenCode: las skills están en
 opencode` funciona igual en un proyecto que todavía no tiene `.opencode/`;
 esa carpeta la crea el comando.
 
+## El review: cuatro lentes, sin ceremonia
+
+`odachi review` imprime el prompt de revisión del candidato —brief, rutas
+cambiadas y diff— y elige las lentes por la evidencia del cambio: ninguna si
+sólo se tocaron documentos, `reliability` si hay lógica, las cuatro si el diff
+roza seguridad, identidad, dinero, la forma de los datos o la maquinaria que
+los publica. No elegís la ceremonia; el cambio la pide.
+
+```sh
+odachi review                            # el prompt, para pegarlo en tu agente
+odachi review --exec "agente {prompt}"   # o que lo corra: prompt por stdin y en {prompt}
+odachi review --attach veredicto.json    # o guardá lo que contestó
+odachi review --show                     # qué veredicto hay para este árbol
+```
+
+El veredicto vive en `.odachi/reviews/<hash-del-árbol>.json`, así que la
+aprobación no puede flotar: el nombre del archivo *es* el estado del código que
+se aprobó. Un `BLOCKER` causal bloquea, y para destrabarlo está
+`odachi review --refute`: el refutador tiene que citar la línea del diff que
+desmiente el finding, porque lo que no se puede citar no se refuta y lo que no se
+refuta queda en pie. Para que el review sea obligatorio antes de commitear,
+`odachi check --require-review`.
+
 ## Estado
 
 Dominio puro en `internal/domain/...` con guardia de importaciones, adaptadores en
-`internal/adapters/...`, y diez superficies funcionando: `start`, `ask`, `plan`,
-`level`, `summary`, `check`, `init`, `skills`, `skill new`, `pack`, más
-`--version`. 25 paquetes de tests en verde en Linux, macOS y Windows.
+`internal/adapters/...`, y quince superficies: `start`, `ask`, `plan`, `level`,
+`summary`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `skills`,
+`skill new`, `pack` y `--version`. 35 paquetes, en verde en Linux, macOS y
+Windows —ubuntu repite la suite interna con el detector de carreras—.
 
-Publicado: `v0.2.0`, con seis binarios y `checksums.txt`. La instalación de una
-línea está probada contra la release real, no contra un fixture: el script
-resuelve la última versión por API, verifica el sha256, extrae e instala; un
-checksum que no coincide no deja nada en el destino. `install.ps1` se verificó a
-mano en Windows con la release publicada.
+Publicado: `v0.9.1`. La instalación de una línea está probada contra la release
+real, no contra un fixture. `install.ps1` se verificó a mano en Windows con la
+release publicada: no hay test automatizado porque haría falta un listener HTTP
+en CI.
 
 La config de release **no tiene `brews`, firma ni provenance**: no hay tap ni
 llaves, y fingir que están sería peor que no tenerlos.
