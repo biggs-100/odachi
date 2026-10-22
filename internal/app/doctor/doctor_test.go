@@ -371,7 +371,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 				f.put(".odachi/reviews/abc123.json", "{}")
 			},
 			check:  domaindoctor.CheckIgnored,
-			fix:    "odachi review",
+			fix:    "odachi init",
 			detail: "cada review invalidaría la prueba",
 		},
 		{
@@ -380,7 +380,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 				f.put("proof/0001-turnos.txt", "# tree abc\n# command true\n")
 			},
 			check:  domaindoctor.CheckIgnored,
-			fix:    `odachi check --run "<comando>"`,
+			fix:    "odachi init",
 			detail: "cada prueba invalidaría la siguiente",
 		},
 	}

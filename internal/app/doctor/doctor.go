@@ -382,15 +382,21 @@ func (r *runner) loadSkills() ([]skill.Skill, error) {
 }
 
 // ignored: the review store and proof/ live inside the tree they certify, so
-// without their ignore files every write invalidates the evidence that was
-// already there. An existing but empty directory is a warning: nothing is broken
-// yet, and the next write is the one that would be.
+// without an ignore rule every write invalidates the evidence that was already
+// there. Two mechanisms count, and either one is enough: the project's own
+// .gitignore (the block `odachi init` writes) and the legacy per-directory
+// .gitignore this tool used to write lazily. Only when neither is there is the
+// evidence moving the tree, and then the fix is the command that writes the rule:
+// init owns it now, and `check`/`review` are what produce evidence, not what
+// protects it.
+//
+// An existing but empty directory is still a warning: nothing is broken yet, and
+// the next write is the one that would be.
 func (r *runner) ignored() domaindoctor.Check {
 	type part struct {
 		rel    string
 		ignore string
 		detail string
-		fix    string
 	}
 
 	parts := []part{
@@ -398,19 +404,21 @@ func (r *runner) ignored() domaindoctor.Check {
 			rel:    reviewStore,
 			ignore: reviewStore + "/" + ignoreFile,
 			detail: reviewStore + " no está ignorado: cada review invalidaría la prueba",
-			fix:    "corré odachi review",
 		},
 		{
 			rel:    proofDir,
 			ignore: proofDir + "/" + ignoreFile,
 			detail: proofDir + "/ no está ignorado: cada prueba invalidaría la siguiente",
-			fix:    `corré odachi check --run "<comando>"`,
 		},
+	}
+
+	gitignore, hasGitignore, err := r.read(ignoreFile)
+	if err != nil {
+		return r.unreadable(domaindoctor.CheckIgnored, ignoreFile, err)
 	}
 
 	protected := []string{}
 	problems := []string{}
-	fixes := []string{}
 	warnings := []string{}
 
 	for _, p := range parts {
@@ -422,12 +430,20 @@ func (r *runner) ignored() domaindoctor.Check {
 			continue
 		}
 
+		// The repository's rules first: that is what init writes, and it survives
+		// a clone. The lazy file is the second mechanism, kept for the projects
+		// that never ran init.
+		if hasGitignore && domaindoctor.IgnoredBy(gitignore, p.rel) {
+			protected = append(protected, p.rel+" por "+ignoreFile)
+			continue
+		}
+
 		has, err := r.exists(p.ignore)
 		if err != nil {
 			return r.unreadable(domaindoctor.CheckIgnored, p.ignore, err)
 		}
 		if has {
-			protected = append(protected, p.rel)
+			protected = append(protected, p.rel+" con su propio "+ignoreFile)
 			continue
 		}
 
@@ -436,23 +452,22 @@ func (r *runner) ignored() domaindoctor.Check {
 			return r.unreadable(domaindoctor.CheckIgnored, p.rel, err)
 		}
 		if len(files) == 0 {
-			warnings = append(warnings, p.rel+"/ existe y está vacío, sin "+ignoreFile+": todavía no hay nada que ignorar")
+			warnings = append(warnings, p.rel+"/ existe y está vacío: todavía no hay nada que ignorar")
 			continue
 		}
 
 		problems = append(problems, p.detail)
-		fixes = append(fixes, p.fix)
 	}
 
 	switch {
 	case len(problems) > 0:
-		return domaindoctor.Broken(domaindoctor.CheckIgnored, strings.Join(problems, "; "), fixes[0])
+		return domaindoctor.Broken(domaindoctor.CheckIgnored, strings.Join(problems, "; "), "corré odachi init")
 	case len(warnings) > 0:
 		return domaindoctor.Warning(domaindoctor.CheckIgnored, strings.Join(warnings, "; "))
 	case len(protected) == 0:
 		return domaindoctor.OK(domaindoctor.CheckIgnored, "no hay review ni pruebas todavía: nada que ignorar")
 	default:
-		return domaindoctor.OK(domaindoctor.CheckIgnored, "sí: "+strings.Join(protected, " y ")+" con su "+ignoreFile)
+		return domaindoctor.OK(domaindoctor.CheckIgnored, "sí: "+strings.Join(protected, " y ")+": no mueven el árbol que certifican")
 	}
 }
 
