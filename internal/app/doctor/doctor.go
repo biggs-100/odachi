@@ -1,17 +1,17 @@
-// Package doctor implements `odachi doctor`: ten read-only health checks, each
-// with one Spanish line and, when something is wrong, the phrase that repairs
-// it.
+// Package doctor implements `odachi doctor`: eleven read-only health checks,
+// each with one Spanish line and, when something is wrong, the phrase that
+// repairs it.
 //
 // It answers the question a person has after installing the tool — "¿está todo
 // bien instalado?" — without them reading the repository. The most valuable of
-// the ten is whether `odachi` resolves from a shell: in a real OpenCode session
-// where it did not, the agent could not execute a single rule and spent its
-// budget searching for the binary instead.
+// the eleven is whether `odachi` resolves from a shell: in a real OpenCode
+// session where it did not, the agent could not execute a single rule and spent
+// its budget searching for the binary instead.
 //
 // A folder that is not a project yet gets one situation and one step instead of
-// the ten checks: `odachi init` leaves the rules the agent reads, and `odachi
-// start` is the interview. Ten checks name three different commands, and none of
-// them is the sentence a beginner needs.
+// the eleven checks: `odachi init` leaves the rules the agent reads, and `odachi
+// start` is the interview. Eleven checks name three different commands, and none
+// of them is the sentence a beginner needs.
 //
 // The package is pure orchestration over three ports: Files (the disk), Lookup
 // (whether a shell can resolve a name) and Profiles (the human's profile). The
@@ -26,6 +26,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/skill"
 )
 
@@ -50,9 +51,14 @@ const (
 	skillsDir   = "skills"
 	skillFile   = "SKILL.md"
 	registry    = skill.RegistryFile
-	reviewStore = odachiDir + "/reviews"
-	proofDir    = "proof"
-	ignoreFile  = ".gitignore"
+	// installedSkillsDir is where `odachi init` puts the skills every client
+	// reads. The row that installs there belongs to the agent table — it is the
+	// `standard` row — and a test pins that this string still matches it, so the
+	// count doctor reports is the count init wrote.
+	installedSkillsDir = ".agents/skills"
+	reviewStore        = odachiDir + "/reviews"
+	proofDir           = "proof"
+	ignoreFile         = ".gitignore"
 )
 
 // Options is one `odachi doctor` invocation.
@@ -90,8 +96,8 @@ type Profiles interface {
 	Resolve(dir string) (name string, inferred bool, err error)
 }
 
-// Result is what the CLI prints and exits with. Checks carries the ten lines in
-// order so --json prints the same content as the human block, without printing
+// Result is what the CLI prints and exits with. Checks carries the eleven lines
+// in order so --json prints the same content as the human block, without printing
 // twice. A folder that is not a project yet has no checks: Lines and Message are
 // the situation and the one step, and they are what --json carries.
 type Result struct {
@@ -106,7 +112,7 @@ type Result struct {
 // Run performs one `odachi doctor`. Every check is independent: it reads what it
 // needs and cannot change what the next one sees.
 //
-// The pre-flight comes first. In a folder where odachi was never started, the ten
+// The pre-flight comes first. In a folder where odachi was never started, the
 // checks name three different commands in five problem lines, and none of them
 // says the only thing that person needs: this folder is not a project yet, start
 // here. One situation and one step is what a beginner can act on.
@@ -138,6 +144,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.brief(),
 		r.skills(),
 		r.ignored(),
+		r.personas(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)
@@ -166,10 +173,10 @@ type runner struct {
 	profiles Profiles
 }
 
-// isProject answers the question the ten checks take for granted: is there
-// anything here at all? Git, the rules, a brief or the odachi folder each mean
-// somebody already started, and a project with only one of them still gets the
-// ten checks with their per-check fixes.
+// isProject answers the question the checks take for granted: is there anything
+// here at all? Git, the rules, a brief or the odachi folder each mean somebody
+// already started, and a project with only one of them still gets every check
+// with its per-check fix.
 //
 // A read error is not a verdict. Saying "esta carpeta no es un proyecto" about a
 // folder odachi could not read would be a lie, so it falls through to the checks
@@ -366,36 +373,190 @@ func (r *runner) brief() domaindoctor.Check {
 	return domaindoctor.OK(domaindoctor.CheckBrief, "completo")
 }
 
-// skills: how many there are, and whether the generated catalogue matches them.
-// A project without skills/ has nothing to drift and nothing to say.
+// skills answers two questions `init` made easy to confuse, with one answer each
+// and neither of them hidden: how many skills the project registers in skills/
+// with an up-to-date SKILLS.md, and how many are installed where the clients read
+// them. A project that just ran `odachi init` read "ninguna: no hay skills/"
+// while the skills init had installed sat in .agents/skills, and the two facts
+// are not the same fact: the registry is the project's own craft and the
+// installed copy is what a client loads.
 func (r *runner) skills() domaindoctor.Check {
-	found, err := r.isDir(skillsDir)
+	registered, fix, err := r.skillRegistry()
 	if err != nil {
 		return r.unreadable(domaindoctor.CheckSkills, skillsDir, err)
 	}
+
+	installed, err := r.installedSkills()
+	if err != nil {
+		return r.unreadable(domaindoctor.CheckSkills, installedSkillsDir, err)
+	}
+
+	detail := registered + "; " + installedSkillsDir + ": " + installed
+	if fix != "" {
+		return domaindoctor.Broken(domaindoctor.CheckSkills, detail, fix)
+	}
+	return domaindoctor.OK(domaindoctor.CheckSkills, detail)
+}
+
+// skillRegistry is the half that existed before: the project's own skills/ and
+// the catalogue generated from them. fix is empty unless the catalogue drifted,
+// and a project without skills/ has nothing to drift.
+func (r *runner) skillRegistry() (detail, fix string, err error) {
+	found, err := r.isDir(skillsDir)
+	if err != nil {
+		return "", "", err
+	}
 	if !found {
-		return domaindoctor.OK(domaindoctor.CheckSkills, "ninguna: no hay "+skillsDir+"/")
+		return skillsDir + "/: no existe", "", nil
 	}
 
 	loaded, err := r.loadSkills()
 	if err != nil {
-		return r.unreadable(domaindoctor.CheckSkills, skillsDir, err)
+		return "", "", err
 	}
 	if len(loaded) == 0 {
-		return domaindoctor.OK(domaindoctor.CheckSkills, "ninguna")
+		return skillsDir + "/: ninguna", "", nil
 	}
 
 	want := skill.Registry(loaded)
 	content, exists, err := r.read(registry)
 	if err != nil {
-		return r.unreadable(domaindoctor.CheckSkills, registry, err)
+		return "", "", err
 	}
 	if !exists || content != want {
-		return domaindoctor.Broken(domaindoctor.CheckSkills,
-			registry+" no está al día: el catálogo se desvió",
-			"corré odachi skills --write")
+		return skillsDir + "/: " + registry + " no está al día: el catálogo se desvió", "corré odachi skills --write", nil
 	}
-	return domaindoctor.OK(domaindoctor.CheckSkills, fmt.Sprintf("%s, %s al día", count(len(loaded), "skill", "skills"), registry))
+	return skillsDir + "/: " + count(len(loaded), "skill", "skills") + ", " + registry + " al día", "", nil
+}
+
+// installedSkills counts the directories that hold a SKILL.md under the folder
+// init installs into. A directory without a SKILL.md is not a skill, which is the
+// same rule `odachi skills` applies, and a stray file is not counted either.
+func (r *runner) installedSkills() (string, error) {
+	found, err := r.isDir(installedSkillsDir)
+	if err != nil {
+		return "", err
+	}
+	if !found {
+		return "ninguna", nil
+	}
+
+	dirPath := filepath.Join(r.opts.Dir, filepath.FromSlash(installedSkillsDir))
+	names, err := r.files.List(dirPath)
+	if err != nil {
+		return "", err
+	}
+
+	installed := 0
+	for _, name := range names {
+		entry := filepath.Join(dirPath, name)
+		isDir, err := r.files.IsDir(entry)
+		if err != nil {
+			return "", err
+		}
+		if !isDir {
+			continue
+		}
+		has, err := r.files.Exists(filepath.Join(entry, skillFile))
+		if err != nil {
+			return "", err
+		}
+		if has {
+			installed++
+		}
+	}
+	if installed == 0 {
+		return "ninguna", nil
+	}
+	return count(installed, "instalada", "instaladas"), nil
+}
+
+// noPersonasYet is the line for a project whose humans use no client with a
+// selector. It is ok and not a warning for the same reason "no hay review ni
+// pruebas todavía" is ok: a warning is for something that exists and is not
+// protected, and here nothing exists. A warning would teach a human to scroll
+// past the word.
+const noPersonasYet = "todavía no hay personas: ningún cliente de este proyecto las lee"
+
+// personas asks the question nobody could answer before: are the two files
+// `odachi init` generates still where the client reads them? A client that moved
+// its directory or a deleted file leaves an empty selector, and the human finds
+// out by trying to pick a voice.
+//
+// A client that is not here has no selector to be empty: init writes both
+// personas for every client it knows, and a project that uses none of them is not
+// broken. A client whose directory exists and whose personas do not is exactly
+// the case this check exists for.
+func (r *runner) personas() domaindoctor.Check {
+	present := make([]string, 0, len(persona.Clients()))
+	problems := []string{}
+
+	for _, client := range persona.Clients() {
+		files, ok := persona.Files(client.Agent)
+		if !ok {
+			// Unreachable: the row came from the same table. Skipping beats
+			// guessing a directory for a client odachi does not know.
+			continue
+		}
+
+		missing := make([]string, 0, len(files))
+		for _, file := range files {
+			found, err := r.exists(file.Path)
+			if err != nil {
+				return r.unreadable(domaindoctor.CheckPersonas, file.Path, err)
+			}
+			if !found {
+				missing = append(missing, file.Path)
+			}
+		}
+
+		if len(missing) == 0 {
+			present = append(present, client.Dir)
+			continue
+		}
+
+		if len(missing) == len(files) {
+			root := clientRoot(client.Dir)
+			used, err := r.exists(root)
+			if err != nil {
+				return r.unreadable(domaindoctor.CheckPersonas, root, err)
+			}
+			if !used {
+				continue
+			}
+		}
+
+		problems = append(problems, strings.Join(missing, ", ")+" "+absent(len(missing))+
+			": el selector de "+client.Agent+" queda vacío")
+	}
+
+	switch {
+	case len(problems) > 0:
+		return domaindoctor.Broken(domaindoctor.CheckPersonas, strings.Join(problems, "; "), "corré odachi init")
+	case len(present) > 0:
+		return domaindoctor.OK(domaindoctor.CheckPersonas, "sí: "+strings.Join(present, " y "))
+	default:
+		return domaindoctor.OK(domaindoctor.CheckPersonas, noPersonasYet)
+	}
+}
+
+// clientRoot is the client's own config directory: the parent of the directory it
+// reads personas from, and the marker that says this project uses that client.
+// The path is always relative and forward-slashed, which is why this does not go
+// through the filesystem's separator.
+func clientRoot(dir string) string {
+	if i := strings.LastIndex(dir, "/"); i > 0 {
+		return dir[:i]
+	}
+	return dir
+}
+
+// absent is how a Spanish sentence says a file is not there, for one or many.
+func absent(n int) string {
+	if n == 1 {
+		return "no existe"
+	}
+	return "no existen"
 }
 
 // loadSkills reads every skills/<name>/SKILL.md. A directory without a SKILL.md

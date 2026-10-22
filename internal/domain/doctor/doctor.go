@@ -1,4 +1,4 @@
-// Package doctor owns the rules of `odachi doctor`: the ten health checks in
+// Package doctor owns the rules of `odachi doctor`: the eleven health checks in
 // order, how the pre-commit hook and the AGENTS.md block written by
 // `odachi init` are read back, and the exact phrase that repairs each problem.
 //
@@ -13,16 +13,17 @@ import (
 	"strings"
 )
 
-// The ten checks Contract XV asks for, in the order a human reads them. The
-// number is the line's number, and it is how a report and a test name the same
-// check: adding one in the middle would silently rename all the others, so the
-// order is fixed here and nowhere else.
+// The checks Contract XV asks for, in the order a human reads them, plus the one
+// that checks the personas `init` installs. The number is the line's number, and
+// it is how a report and a test name the same check: adding one in the middle
+// would silently rename all the others, so the order is fixed here and nowhere
+// else, and a new check is appended.
 const (
 	// CheckVersion is the version this binary reports.
 	CheckVersion = iota + 1
 	// CheckOnPath asks whether a shell can run `odachi` by name. It is the most
-	// valuable of the ten: when it fails, the agent cannot execute a single rule
-	// and spends its budget looking for the binary.
+	// valuable of the eleven: when it fails, the agent cannot execute a single
+	// rule and spends its budget looking for the binary.
 	CheckOnPath
 	// CheckGit asks whether there is a repository: without one there is no hook.
 	CheckGit
@@ -37,16 +38,24 @@ const (
 	// CheckBrief asks whether brief.md exists and nothing is missing from it.
 	CheckBrief
 	// CheckSkills asks how many skills there are and whether SKILLS.md is up to
-	// date.
+	// date, and how many are installed where the clients read them: two facts and
+	// two answers on one line, because a project that just ran `odachi init` has
+	// no skills/ registry and nine installed skills, and merging them into one
+	// number is what made the line unreadable.
 	CheckSkills
 	// CheckIgnored asks whether the review store and proof/ are ignored: without
 	// that, every review would invalidate the proof and the other way round.
 	CheckIgnored
+	// CheckPersonas asks whether the two generated personas are where each client
+	// reads them. It is appended after the ten Contract XV named, so no existing
+	// check changes its number. A project that uses no client with a selector is
+	// not broken: there is nothing to read and nothing to repair.
+	CheckPersonas
 )
 
 // CheckCount is how many checks a complete report has. A test asserts it, so a
 // report can never quietly grow or shrink.
-const CheckCount = 10
+const CheckCount = 11
 
 // Status is what one check found.
 type Status int
@@ -82,8 +91,8 @@ type Check struct {
 	Status Status
 	Detail string
 	// Fix is the phrase a human acts on. It is a phrase and not only a command
-	// because one of the ten problems (a name a shell cannot resolve) is a
-	// shell setting, and the honest repair is the exact line to paste.
+	// because one of the problems (a name a shell cannot resolve) is a shell
+	// setting, and the honest repair is the exact line to paste.
 	Fix string
 }
 
@@ -152,15 +161,15 @@ func Summary(checks []Check) string {
 }
 
 // The one situation a folder that is not a project yet gets. It is not one of the
-// ten checks — those all assume a project — and it has no number, because the
+// checks — those all assume a project — and it has no number, because the
 // number is the line's number and numbering it would rename every check after it.
 const (
 	// NotAProjectMessage says the folder was never started. It is a fact and not
 	// a verdict: nothing is broken here yet.
 	NotAProjectMessage = "esta carpeta todavía no es un proyecto de odachi"
 	// NotAProjectFix is the one step: the two commands in the order a person runs
-	// them, each saying what it leaves behind. In an empty folder the ten checks
-	// named three different commands, and that is what a beginner cannot use.
+	// them, each saying what it leaves behind. In an empty folder the checks named
+	// three different commands, and that is what a beginner cannot use.
 	NotAProjectFix = "corré odachi init (deja las reglas que el agente lee) y después odachi start (la entrevista)"
 )
 
@@ -194,6 +203,8 @@ func title(number int) string {
 		return "skills y SKILLS.md"
 	case CheckIgnored:
 		return "el store de review y proof/ están ignorados"
+	case CheckPersonas:
+		return "las personas están donde el cliente las lee"
 	default:
 		return ""
 	}

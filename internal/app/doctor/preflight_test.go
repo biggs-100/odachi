@@ -19,7 +19,7 @@ func TestEmptyFolderGetsOneSituationInsteadOfTenChecks(t *testing.T) {
 		t.Fatalf("una carpeta sin proyecto todavía no está lista: Code = %d, want %d", result.Code, CodeProblems)
 	}
 	if len(result.Checks) != 0 {
-		t.Fatalf("the ten checks are not what a beginner needs, got %d:\n%s", len(result.Checks), strings.Join(result.Lines, "\n"))
+		t.Fatalf("the checks are not what a beginner needs, got %d:\n%s", len(result.Checks), strings.Join(result.Lines, "\n"))
 	}
 
 	want := []string{
@@ -44,7 +44,7 @@ func TestEmptyFolderGetsOneSituationInsteadOfTenChecks(t *testing.T) {
 
 // The pre-flight decides whether there is a project at all, and nothing else: a
 // git repository without odachi artifacts, or a half-configured project, keeps
-// today's ten checks with their per-check fixes.
+// every check with its per-check fix.
 func TestThePreflightOnlyFiresWhenThereIsNothing(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -62,7 +62,7 @@ func TestThePreflightOnlyFiresWhenThereIsNothing(t *testing.T) {
 			result := run(c.files, &fakeLookup{err: errors.New("not found")}, cleanProfiles(), "")
 
 			if len(result.Checks) != domaindoctor.CheckCount {
-				t.Fatalf("a folder with something in it gets the ten checks, got %d:\n%s", len(result.Checks), strings.Join(result.Lines, "\n"))
+				t.Fatalf("a folder with something in it gets every check, got %d:\n%s", len(result.Checks), strings.Join(result.Lines, "\n"))
 			}
 			if result.Lines[0] == domaindoctor.NotAProjectMessage {
 				t.Fatalf("the pre-flight fired on a project that exists:\n%s", strings.Join(result.Lines, "\n"))

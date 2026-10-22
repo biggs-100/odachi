@@ -5,19 +5,21 @@ import (
 	"testing"
 )
 
-// TestEveryCheckHasATitle pins the numbering Contract XV fixes at ten. The
-// number is how a report and a test name the same check, so it cannot drift.
+// TestEveryCheckHasATitle pins the numbering Contract XV fixes. The number is
+// how a report and a test name the same check, so it cannot drift; the persona
+// check is appended after the ten the contract named, because inserting one in
+// the middle would silently rename every check after it.
 func TestEveryCheckHasATitle(t *testing.T) {
-	for number := CheckVersion; number <= CheckIgnored; number++ {
+	for number := CheckVersion; number <= CheckPersonas; number++ {
 		if title(number) == "" {
 			t.Errorf("check %d has no title", number)
 		}
 	}
-	if CheckIgnored != CheckVersion+CheckCount-1 {
-		t.Fatalf("the ten checks are numbered %d..%d, got %d", CheckVersion, CheckIgnored, CheckVersion+CheckCount-1)
+	if CheckPersonas != CheckVersion+CheckCount-1 {
+		t.Fatalf("the eleven checks are numbered %d..%d, got %d", CheckVersion, CheckPersonas, CheckVersion+CheckCount-1)
 	}
-	if CheckCount != 10 {
-		t.Fatalf("Contract XV fixes ten checks, got %d", CheckCount)
+	if CheckCount != 11 {
+		t.Fatalf("ten checks from Contract XV plus the persona one, got %d", CheckCount)
 	}
 }
 
@@ -29,8 +31,8 @@ func TestTitleOutOfRange(t *testing.T) {
 	}
 }
 
-// TestLineIsOneSpanishLine: the whole report is ten of these, so the shape is
-// the contract a human reads.
+// TestLineIsOneSpanishLine: the whole report is these lines, one per check, so
+// the shape is the contract a human reads.
 func TestLineIsOneSpanishLine(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -71,7 +73,7 @@ func TestLineIsOneSpanishLine(t *testing.T) {
 }
 
 // TestNotAProjectNamesBothCommandsInOrder pins the one situation a folder that is
-// not a project yet gets. It is not one of the ten checks and has no number:
+// not a project yet gets. It is not one of the checks and has no number:
 // numbering it would rename every check after it. The two commands appear in the
 // order a person runs them, and each says what it leaves behind.
 func TestNotAProjectNamesBothCommandsInOrder(t *testing.T) {

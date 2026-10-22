@@ -47,7 +47,7 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 	return reportDoctor(result, asJSON, stdout, stderr)
 }
 
-// reportDoctor prints the ten lines and the summary. The report is the whole
+// reportDoctor prints the eleven lines and the summary. The report is the whole
 // deliverable, so a broken install prints it on stderr and a clean one on
 // stdout, the same way the other verbs separate "listo" from "bloqueado".
 func reportDoctor(result doctorapp.Result, asJSON bool, stdout, stderr io.Writer) int {

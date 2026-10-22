@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/biggs-100/odachi/internal/domain/agent"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/skill"
 )
 
@@ -170,7 +172,29 @@ func configured() *fakeFiles {
 	files.put(skill.RegistryFile, skill.Registry([]skill.Skill{
 		skill.Parse("acceptance", "skills/acceptance/SKILL.md", skill.Template("acceptance")),
 	}))
+	// `odachi init` also writes the two personas into every client that has a
+	// selector, so a configured project carries them and no other command does.
+	for _, file := range persona.All() {
+		files.put(file.Path, file.Content)
+	}
 	return files
+}
+
+// withoutPersonas removes every persona file and every client directory: a
+// project whose humans use no client with a selector.
+func (f *fakeFiles) withoutPersonas() *fakeFiles {
+	for _, file := range persona.All() {
+		delete(f.files, at(file.Path))
+	}
+	for _, client := range persona.Clients() {
+		root := at(filepath.Dir(filepath.FromSlash(client.Dir)))
+		for dir := range f.dirs {
+			if dir == root || strings.HasPrefix(dir, root+string(filepath.Separator)) {
+				delete(f.dirs, dir)
+			}
+		}
+	}
+	return f
 }
 
 func cleanLookup() *fakeLookup { return &fakeLookup{resolved: "/home/ana/bin/odachi"} }
@@ -206,7 +230,7 @@ func TestFreshProjectIsClean(t *testing.T) {
 		t.Fatalf("a configured project must exit 0, got %d:\n%s", result.Code, strings.Join(result.Lines, "\n"))
 	}
 	if len(result.Checks) != domaindoctor.CheckCount {
-		t.Fatalf("ten checks, got %d", len(result.Checks))
+		t.Fatalf("eleven checks, got %d", len(result.Checks))
 	}
 	for i, c := range result.Checks {
 		if c.Number != i+1 {
@@ -220,7 +244,7 @@ func TestFreshProjectIsClean(t *testing.T) {
 		}
 	}
 	if len(result.Lines) != domaindoctor.CheckCount+1 {
-		t.Fatalf("the report is ten lines and a summary, got %d", len(result.Lines))
+		t.Fatalf("the report is one line per check and a summary, got %d", len(result.Lines))
 	}
 	if result.Problems != 0 || result.Warnings != 0 {
 		t.Fatalf("problems=%d warnings=%d", result.Problems, result.Warnings)
@@ -238,7 +262,7 @@ func TestVersionIsTheFirstLine(t *testing.T) {
 
 // TestEmptyProjectReportsTheMissingSetup: nothing configured is exactly what
 // doctor is for, and each problem names its repair. A git repository without the
-// odachi artifacts is still somebody's project, so it gets the ten checks: the
+// odachi artifacts is still somebody's project, so it gets every check: the
 // one-situation pre-flight is only for a folder where odachi was never started.
 func TestEmptyProjectReportsTheMissingSetup(t *testing.T) {
 	files := newFakeFiles().mkdir(".git")
@@ -248,7 +272,7 @@ func TestEmptyProjectReportsTheMissingSetup(t *testing.T) {
 		t.Fatalf("an empty project must exit 1, got %d", result.Code)
 	}
 	if len(result.Checks) != domaindoctor.CheckCount {
-		t.Fatalf("ten checks even when everything is missing, got %d", len(result.Checks))
+		t.Fatalf("eleven checks even when everything is missing, got %d", len(result.Checks))
 	}
 	for _, number := range []int{domaindoctor.CheckOnPath, domaindoctor.CheckAgents, domaindoctor.CheckHook, domaindoctor.CheckBrief} {
 		if got := checkOf(t, result, number); got.Status != domaindoctor.StatusProblem {
@@ -460,8 +484,138 @@ func TestNoSkillsIsClean(t *testing.T) {
 		t.Fatalf("a project without skills must be clean:\n%s", strings.Join(result.Lines, "\n"))
 	}
 	got := checkOf(t, result, domaindoctor.CheckSkills)
-	if !strings.Contains(got.Detail, "ninguna") {
-		t.Fatalf("check 9 must say there are no skills: %s", domaindoctor.Line(got))
+	if !strings.Contains(got.Detail, "skills/: ninguna") {
+		t.Fatalf("check 9 must say the project has no skills of its own: %s", domaindoctor.Line(got))
+	}
+}
+
+// TestCheckNineAnswersBothSkillFacts is the debt this check closes: a project
+// that just ran `odachi init` has no skills/ registry and nine skills installed
+// in .agents/skills. Answering only the first read "ninguna: no hay skills/" to a
+// person who had just installed them, and the two facts are two answers.
+func TestCheckNineAnswersBothSkillFacts(t *testing.T) {
+	files := configured().
+		put(".agents/skills/drive/SKILL.md", "x").
+		put(".agents/skills/acceptance/SKILL.md", "x").
+		// A file is not a skill: only a directory with a SKILL.md in it counts.
+		put(".agents/skills/README.md", "no es una skill\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := checkOf(t, result, domaindoctor.CheckSkills)
+
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("installed skills are not a problem: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{
+		"skills/: 1 skill, " + skill.RegistryFile + " al día",
+		".agents/skills: 2 instaladas",
+	} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("check 9 must say %q, got %q", want, got.Detail)
+		}
+	}
+	if strings.Contains(got.Detail, "README") {
+		t.Fatalf("a file is not a skill and must not count: %q", got.Detail)
+	}
+}
+
+// TestCheckNineSaysWhenNothingIsInstalled: the installed half of the line has an
+// honest zero too, and it never turns into a problem: nothing is broken yet.
+func TestCheckNineSaysWhenNothingIsInstalled(t *testing.T) {
+	files := configured()
+	delete(files.files, at(skill.RegistryFile))
+	delete(files.files, at("skills/acceptance/SKILL.md"))
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := checkOf(t, result, domaindoctor.CheckSkills)
+
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("nothing installed is not a problem: %s", domaindoctor.Line(got))
+	}
+	if !strings.Contains(got.Detail, ".agents/skills: ninguna") {
+		t.Fatalf("check 9 must answer the installed half too: %q", got.Detail)
+	}
+}
+
+// TestMissingPersonaIsAProblemThatNamesInit: the client reads the persona from
+// its own directory, so a file that is not there is an empty selector the human
+// discovers while trying to pick a voice. The repair is the command that writes
+// it.
+func TestMissingPersonaIsAProblemThatNamesInit(t *testing.T) {
+	files := configured()
+	delete(files.files, at(".opencode/agents/odachi-senior.md"))
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeProblems {
+		t.Fatalf("a missing persona must exit 1:\n%s", strings.Join(result.Lines, "\n"))
+	}
+	got := checkOf(t, result, domaindoctor.CheckPersonas)
+	if got.Status != domaindoctor.StatusProblem {
+		t.Fatalf("check 11 must be a problem: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{".opencode/agents/odachi-senior.md", "el selector de opencode queda vacío"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
+		}
+	}
+	if !strings.Contains(got.Fix, "odachi init") {
+		t.Fatalf("the fix must name odachi init, got %q", got.Fix)
+	}
+}
+
+// TestAPersonaDirectoryInUseWithoutPersonasIsAProblem: the client is here — its
+// directory exists — and the personas it would show are not. Skipping that is
+// exactly the empty selector this check exists to catch.
+func TestAPersonaDirectoryInUseWithoutPersonasIsAProblem(t *testing.T) {
+	files := configured().withoutPersonas().mkdir(".claude")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := checkOf(t, result, domaindoctor.CheckPersonas)
+
+	if got.Status != domaindoctor.StatusProblem {
+		t.Fatalf("a client in use with no personas is a problem: %s", domaindoctor.Line(got))
+	}
+	if !strings.Contains(got.Detail, ".claude/output-styles") {
+		t.Fatalf("the detail must name what is missing: %q", got.Detail)
+	}
+	if strings.Contains(got.Detail, ".opencode") {
+		t.Fatalf("a client that is not here is not a problem: %q", got.Detail)
+	}
+}
+
+// TestNoPersonasYetIsClean: a project that uses no client with a selector has no
+// personas to read and nothing broken. Doctor says so with the same shape it uses
+// for "no hay nada que revisar todavía" in the other checks, and does not fail.
+func TestNoPersonasYetIsClean(t *testing.T) {
+	files := configured().withoutPersonas()
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	if result.Code != CodeOK {
+		t.Fatalf("no clients, no personas, nothing broken:\n%s", strings.Join(result.Lines, "\n"))
+	}
+	got := checkOf(t, result, domaindoctor.CheckPersonas)
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("check 11 must be ok when there is nothing to check: %s", domaindoctor.Line(got))
+	}
+	if !strings.Contains(got.Detail, "todavía no hay personas") {
+		t.Fatalf("the line must say there are no personas yet: %q", got.Detail)
+	}
+}
+
+// TestPersonasAreNamedWhereTheyAre: the useful half of a green line is the
+// directory the client reads, so a human knows where the selector looks.
+func TestPersonasAreNamedWhereTheyAre(t *testing.T) {
+	result := run(configured(), cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := checkOf(t, result, domaindoctor.CheckPersonas)
+
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("check 11 must be ok in a configured project: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{".opencode/agents", ".claude/output-styles"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("the line must name %q, got %q", want, got.Detail)
+		}
 	}
 }
 
@@ -515,5 +669,18 @@ func TestDoctorNeverWrites(t *testing.T) {
 	}
 	if len(files.reads) == 0 {
 		t.Fatalf("doctor must actually read the project")
+	}
+}
+
+// TestInstalledSkillsDirIsTheStandardRow: the count doctor reports is the count
+// `odachi init` wrote, so the directory has to be the one the agent table owns.
+// Two spellings of the same folder is how a report starts lying.
+func TestInstalledSkillsDirIsTheStandardRow(t *testing.T) {
+	row, err := agent.Resolve(agent.Standard)
+	if err != nil {
+		t.Fatalf("agent.Resolve(%q): %v", agent.Standard, err)
+	}
+	if installedSkillsDir != row.Dest {
+		t.Fatalf("doctor cuenta %s y init instala en %s", installedSkillsDir, row.Dest)
 	}
 }

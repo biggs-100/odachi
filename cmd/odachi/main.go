@@ -1103,7 +1103,7 @@ después de start:
   odachi review --lens --show                   qué lentes pide este árbol y cuáles faltan
   odachi review --refute <veredicto>            el prompt del refutador para ese veredicto
   odachi check --require-review                 exige review para este árbol y sus lentes
-  odachi doctor                                 diez chequeos de salud, de solo lectura
+  odachi doctor                                 once chequeos de salud, de solo lectura
   odachi bench                                  mide cómo se traba una persona (in-band / dead-end)
   odachi init                                   AGENTS.md + hook + las skills del proyecto en
                                                  .agents/skills (y la de arranque en ~/.agents/skills)

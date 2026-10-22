@@ -46,7 +46,7 @@ func configuredProject(t *testing.T) string {
 }
 
 // TestDoctorSaysAConfiguredProjectIsFine is the promise of the verb: a project
-// that went through init and start reports ten lines, no problem, exit 0.
+// that went through init and start reports eleven lines, no problem, exit 0.
 func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	dir := configuredProject(t)
 
@@ -56,16 +56,19 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
-	if len(lines) != 11 {
-		t.Fatalf("ten checks and a summary, got %d lines:\n%s", len(lines), out)
+	if len(lines) != 12 {
+		t.Fatalf("once chequeos y un resumen, got %d lines:\n%s", len(lines), out)
 	}
-	for i, line := range lines[:10] {
+	for i, line := range lines[:11] {
 		if !strings.HasPrefix(line, "ok ") {
 			t.Fatalf("line %d is not ok in a configured project: %s", i+1, line)
 		}
 	}
-	if !strings.HasPrefix(lines[10], "todo en orden") {
-		t.Fatalf("the last line is the summary, got %q", lines[10])
+	if !strings.HasPrefix(lines[11], "todo en orden") {
+		t.Fatalf("the last line is the summary, got %q", lines[11])
+	}
+	if !strings.Contains(lines[11], "11 chequeos") {
+		t.Fatalf("the summary counts the eleven checks, got %q", lines[11])
 	}
 	// This is also the guard that init and doctor agree on the hook marker: if
 	// init renamed it, check 5 would stop recognising its own hook.
@@ -228,8 +231,8 @@ func TestDoctorJSONSaysTheSameThing(t *testing.T) {
 		t.Fatalf("--json must be valid JSON: %v\n%s", err, machine)
 	}
 
-	if len(payload.Checks) != 10 {
-		t.Fatalf("--json carries ten checks, got %d", len(payload.Checks))
+	if len(payload.Checks) != 11 {
+		t.Fatalf("--json carries eleven checks, got %d", len(payload.Checks))
 	}
 	lines := strings.Split(strings.TrimRight(human, "\n"), "\n")
 	if payload.Message != lines[len(lines)-1] {
@@ -259,7 +262,7 @@ func TestDoctorRejectsArguments(t *testing.T) {
 }
 
 // TestDoctorOnAFolderThatIsNotAProject is the beginner case, and the reason the
-// pre-flight exists: in an empty folder the ten checks named three different
+// pre-flight exists: in an empty folder the checks named three different
 // commands (git init, odachi init twice, odachi start) and never said the only
 // thing that person needs — this folder is not a project yet, start here.
 func TestDoctorOnAFolderThatIsNotAProject(t *testing.T) {
