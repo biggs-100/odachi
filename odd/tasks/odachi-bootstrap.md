@@ -1,7 +1,17 @@
 # odachi · bootstrap
 
 Feature: a CLI that makes the agent do the dirty work with senior discipline while the human decides vision, and that teaches the human until they no longer need the teaching.
-Status: complete · Branch: main · Owner: human (vision) / agent (execution) · Closed in a9b9057
+Status: cerrada · Branch: main · Owner: human (vision) / agent (execution) · Cerrada en a9b9057, publicada en v0.10.0
+
+Este documento es la **historia y la especificación** de la feature de arranque:
+los diez requisitos (S1-S10), las treinta y cuatro tareas (T1-T34) y la bitácora
+completa (L1-L84). Se lee para entender por qué odachi es como es; no se le
+agregan tareas nuevas.
+
+El próximo trabajo abre su propio documento con la convención del producto:
+`odd/tasks/NNNN-<slug>.md`, un archivo por feature, con Specs, Tasks y Log —el
+mismo formato que escribe `odachi start`—. Este archivo se queda donde está
+porque cinco comentarios del código y el mapa de impacto lo citan por su ruta.
 
 ## Specs
 
