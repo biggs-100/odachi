@@ -151,6 +151,25 @@ func Summary(checks []Check) string {
 	}
 }
 
+// The one situation a folder that is not a project yet gets. It is not one of the
+// ten checks — those all assume a project — and it has no number, because the
+// number is the line's number and numbering it would rename every check after it.
+const (
+	// NotAProjectMessage says the folder was never started. It is a fact and not
+	// a verdict: nothing is broken here yet.
+	NotAProjectMessage = "esta carpeta todavía no es un proyecto de odachi"
+	// NotAProjectFix is the one step: the two commands in the order a person runs
+	// them, each saying what it leaves behind. In an empty folder the ten checks
+	// named three different commands, and that is what a beginner cannot use.
+	NotAProjectFix = "corré odachi init (deja las reglas que el agente lee) y después odachi start (la entrevista)"
+)
+
+// NotAProject is that report: the situation, and the one step that follows it.
+// Two lines, because the whole point is that a beginner reads one step.
+func NotAProject() (message string, lines []string) {
+	return NotAProjectMessage, []string{NotAProjectMessage, NotAProjectFix}
+}
+
 // title is the Spanish name of one check. Unknown numbers have no name: a
 // report may not invent a check that does not exist.
 func title(number int) string {

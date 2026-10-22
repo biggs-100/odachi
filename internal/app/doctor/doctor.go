@@ -8,6 +8,11 @@
 // where it did not, the agent could not execute a single rule and spent its
 // budget searching for the binary instead.
 //
+// A folder that is not a project yet gets one situation and one step instead of
+// the ten checks: `odachi init` leaves the rules the agent reads, and `odachi
+// start` is the interview. Ten checks name three different commands, and none of
+// them is the sentence a beginner needs.
+//
 // The package is pure orchestration over three ports: Files (the disk), Lookup
 // (whether a shell can resolve a name) and Profiles (the human's profile). The
 // Files port has no write method, so "doctor never writes" is a property of the
@@ -39,12 +44,13 @@ const (
 	gitDir      = ".git"
 	hookRel     = ".git/hooks/pre-commit"
 	agentsFile  = "AGENTS.md"
-	profileFile = ".odachi/profile.toml"
+	odachiDir   = ".odachi"
+	profileFile = odachiDir + "/profile.toml"
 	briefFile   = "brief.md"
 	skillsDir   = "skills"
 	skillFile   = "SKILL.md"
 	registry    = skill.RegistryFile
-	reviewStore = ".odachi/reviews"
+	reviewStore = odachiDir + "/reviews"
 	proofDir    = "proof"
 	ignoreFile  = ".gitignore"
 )
@@ -86,7 +92,8 @@ type Profiles interface {
 
 // Result is what the CLI prints and exits with. Checks carries the ten lines in
 // order so --json prints the same content as the human block, without printing
-// twice.
+// twice. A folder that is not a project yet has no checks: Lines and Message are
+// the situation and the one step, and they are what --json carries.
 type Result struct {
 	Code     int
 	Message  string
@@ -98,12 +105,27 @@ type Result struct {
 
 // Run performs one `odachi doctor`. Every check is independent: it reads what it
 // needs and cannot change what the next one sees.
+//
+// The pre-flight comes first. In a folder where odachi was never started, the ten
+// checks name three different commands in five problem lines, and none of them
+// says the only thing that person needs: this folder is not a project yet, start
+// here. One situation and one step is what a beginner can act on.
 func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 	if opts.Dir == "" {
 		opts.Dir = "."
 	}
 
 	r := &runner{opts: opts, files: files, lookup: lookup, profiles: profiles}
+
+	if !r.isProject() {
+		message, lines := domaindoctor.NotAProject()
+		return Result{
+			Code:     CodeProblems,
+			Message:  message,
+			Lines:    lines,
+			Problems: 1,
+		}
+	}
 
 	checks := []domaindoctor.Check{
 		r.version(),
@@ -142,6 +164,34 @@ type runner struct {
 	files    Files
 	lookup   Lookup
 	profiles Profiles
+}
+
+// isProject answers the question the ten checks take for granted: is there
+// anything here at all? Git, the rules, a brief or the odachi folder each mean
+// somebody already started, and a project with only one of them still gets the
+// ten checks with their per-check fixes.
+//
+// A read error is not a verdict. Saying "esta carpeta no es un proyecto" about a
+// folder odachi could not read would be a lie, so it falls through to the checks
+// and the unreadable path becomes its own line.
+func (r *runner) isProject() bool {
+	// .git is a directory in a normal clone and a file in a linked worktree; both
+	// mean git is already in charge here.
+	for _, rel := range []string{gitDir, briefFile, agentsFile} {
+		found, err := r.exists(rel)
+		if err != nil {
+			return true
+		}
+		if found {
+			return true
+		}
+	}
+
+	found, err := r.isDir(odachiDir)
+	if err != nil {
+		return true
+	}
+	return found
 }
 
 // version says what was installed. It is the one check with no problem: a

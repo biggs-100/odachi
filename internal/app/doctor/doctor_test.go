@@ -237,9 +237,11 @@ func TestVersionIsTheFirstLine(t *testing.T) {
 }
 
 // TestEmptyProjectReportsTheMissingSetup: nothing configured is exactly what
-// doctor is for, and each problem names its repair.
+// doctor is for, and each problem names its repair. A git repository without the
+// odachi artifacts is still somebody's project, so it gets the ten checks: the
+// one-situation pre-flight is only for a folder where odachi was never started.
 func TestEmptyProjectReportsTheMissingSetup(t *testing.T) {
-	files := newFakeFiles()
+	files := newFakeFiles().mkdir(".git")
 	result := run(files, &fakeLookup{err: errors.New("not found")}, &fakeProfiles{name: "senior", inferred: true}, "")
 
 	if result.Code != CodeProblems {
@@ -248,7 +250,7 @@ func TestEmptyProjectReportsTheMissingSetup(t *testing.T) {
 	if len(result.Checks) != domaindoctor.CheckCount {
 		t.Fatalf("ten checks even when everything is missing, got %d", len(result.Checks))
 	}
-	for _, number := range []int{domaindoctor.CheckGit, domaindoctor.CheckAgents, domaindoctor.CheckHook, domaindoctor.CheckBrief} {
+	for _, number := range []int{domaindoctor.CheckOnPath, domaindoctor.CheckAgents, domaindoctor.CheckHook, domaindoctor.CheckBrief} {
 		if got := checkOf(t, result, number); got.Status != domaindoctor.StatusProblem {
 			t.Fatalf("check %d must be a problem in an empty project: %s", number, domaindoctor.Line(got))
 		}

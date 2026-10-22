@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -254,6 +255,77 @@ func TestDoctorRejectsArguments(t *testing.T) {
 	code, _, stderr := runDir(t, dir, []string{"doctor", "extra"}, "")
 	if code != 1 || !strings.Contains(stderr, "sobra un argumento") {
 		t.Fatalf("exit %d, stderr %q", code, stderr)
+	}
+}
+
+// TestDoctorOnAFolderThatIsNotAProject is the beginner case, and the reason the
+// pre-flight exists: in an empty folder the ten checks named three different
+// commands (git init, odachi init twice, odachi start) and never said the only
+// thing that person needs — this folder is not a project yet, start here.
+func TestDoctorOnAFolderThatIsNotAProject(t *testing.T) {
+	dir := t.TempDir()
+
+	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
+	if code != 1 {
+		t.Fatalf("una carpeta sin proyecto todavía no está lista: exit %d, want 1", code)
+	}
+	if stdout != "" {
+		t.Fatalf("a blocked report goes to stderr, stdout = %q", stdout)
+	}
+
+	lines := strings.Split(strings.TrimRight(stderr, "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("un principiante lee una situación y un paso, got %d lines:\n%s", len(lines), stderr)
+	}
+	if lines[0] != "esta carpeta todavía no es un proyecto de odachi" {
+		t.Fatalf("first line = %q", lines[0])
+	}
+	if !strings.Contains(lines[1], "odachi init") || !strings.Contains(lines[1], "odachi start") {
+		t.Fatalf("the step must name both commands in order: %q", lines[1])
+	}
+	if strings.Index(lines[1], "odachi init") > strings.Index(lines[1], "odachi start") {
+		t.Fatalf("the rule comes before the interview: %q", lines[1])
+	}
+	if strings.Contains(stderr, "chequeos") {
+		t.Fatalf("the tally is what a beginner cannot act on:\n%s", stderr)
+	}
+
+	// --json stays valid and carries the same lines, so a machine never learns
+	// less than the human reading the block.
+	jsonCode, machine, jsonErr := runDir(t, dir, []string{"doctor", "--json"}, "")
+	if jsonErr != "" {
+		t.Fatalf("--json writes nothing to stderr: %q", jsonErr)
+	}
+	if jsonCode != 1 {
+		t.Fatalf("--json exits with the same code as the block, got %d", jsonCode)
+	}
+
+	var payload struct {
+		Code     int               `json:"code"`
+		Message  string            `json:"message"`
+		Problems int               `json:"problems"`
+		Lines    []string          `json:"lines"`
+		Checks   []json.RawMessage `json:"checks"`
+	}
+	if err := json.Unmarshal([]byte(machine), &payload); err != nil {
+		t.Fatalf("--json must be valid JSON: %v\n%s", err, machine)
+	}
+	if payload.Code != 1 {
+		t.Fatalf("payload code = %d, want 1", payload.Code)
+	}
+	if payload.Message != lines[0] {
+		t.Fatalf("payload message = %q, want the situation", payload.Message)
+	}
+	if !slices.Equal(payload.Lines, lines) {
+		t.Fatalf("--json lines = %q, want the block's lines %q", payload.Lines, lines)
+	}
+	if len(payload.Checks) != 0 {
+		t.Fatalf("--json must not invent checks for a folder that is not a project: %s", machine)
+	}
+
+	// Read-only: the pre-flight runs before anything exists, and it creates nothing.
+	if after := tree(t, dir); len(after) != 0 {
+		t.Fatalf("doctor wrote %v", after)
 	}
 }
 

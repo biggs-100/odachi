@@ -52,17 +52,22 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 // stdout, the same way the other verbs separate "listo" from "bloqueado".
 func reportDoctor(result doctorapp.Result, asJSON bool, stdout, stderr io.Writer) int {
 	if asJSON {
+		// Lines is the block verbatim, so --json never says less than the human
+		// report: a folder that is not a project yet has one situation and one
+		// step and no checks, and a machine reads exactly that.
 		payload := struct {
 			Code     int         `json:"code"`
 			Message  string      `json:"message"`
 			Problems int         `json:"problems"`
 			Warnings int         `json:"warnings"`
+			Lines    []string    `json:"lines"`
 			Checks   []jsonCheck `json:"checks"`
 		}{
 			Code:     result.Code,
 			Message:  result.Message,
 			Problems: result.Problems,
 			Warnings: result.Warnings,
+			Lines:    result.Lines,
 			Checks:   jsonChecks(result.Checks),
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")

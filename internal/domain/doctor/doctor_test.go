@@ -70,6 +70,37 @@ func TestLineIsOneSpanishLine(t *testing.T) {
 	}
 }
 
+// TestNotAProjectNamesBothCommandsInOrder pins the one situation a folder that is
+// not a project yet gets. It is not one of the ten checks and has no number:
+// numbering it would rename every check after it. The two commands appear in the
+// order a person runs them, and each says what it leaves behind.
+func TestNotAProjectNamesBothCommandsInOrder(t *testing.T) {
+	message, lines := NotAProject()
+
+	if message != NotAProjectMessage {
+		t.Fatalf("message = %q, want %q", message, NotAProjectMessage)
+	}
+	if len(lines) != 2 || lines[0] != message || lines[1] != NotAProjectFix {
+		t.Fatalf("lines = %q, want the situation and the one step", lines)
+	}
+	for _, line := range lines {
+		if strings.Count(line, "\n") != 0 {
+			t.Fatalf("a line is one line: %q", line)
+		}
+	}
+
+	init := strings.Index(NotAProjectFix, "odachi init")
+	start := strings.Index(NotAProjectFix, "odachi start")
+	if init < 0 || start < 0 || init > start {
+		t.Fatalf("the fix must name odachi init before odachi start: %q", NotAProjectFix)
+	}
+	for _, want := range []string{"reglas", "entrevista"} {
+		if !strings.Contains(NotAProjectFix, want) {
+			t.Errorf("the fix must say what each command leaves behind, missing %q: %q", want, NotAProjectFix)
+		}
+	}
+}
+
 // TestTallyAndCode: only a problem fails the run. A warning is said and does
 // not change the exit code.
 func TestTallyAndCode(t *testing.T) {
