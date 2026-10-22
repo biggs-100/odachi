@@ -1,4 +1,4 @@
-# 0007 · Profile and persona: two axes, two owners
+# 0006 · Profile and voice: two axes, two owners
 
 Status: accepted · Date: 2026-10 · Session: T32 (T29–T31 built the ground it
 stands on)
@@ -186,3 +186,47 @@ inside, so the human block and the machine payload cannot tell different stories
   is the one its clients actually load, or a second copy an earlier explicit
   `pack` left somewhere else. `init` names the other copy and leaves both in
   place; it never deletes a directory it did not write.
+
+## Amendment · the voice lives in the block (v0.11.0)
+
+The decision above shipped in v0.10.0 with generated per-client files:
+`novato` and `senior` as OpenCode primary agents and as Claude Code output
+styles, so the human could pick one with the client's own switch.
+
+Measured, it does not work, and the reference implementation never did it
+that way:
+
+- OpenCode 2.1.2 listed the files from `.opencode/agents/` in one run and
+  not in the next, with the same files and a fresh service; `opencode debug
+  agents` is not a reliable witness either.
+- gentle-ai does not install agent files for OpenCode at all. Its capability
+  manifest for that client declares `SlashCommands`, `Skills`, `SystemPrompt`
+  and `MCP` — no `FileSubAgents` — its `SubAgentsDir()` and
+  `EmbeddedSubAgentsDir()` return `""`, and its persona is delivered by
+  replacing the instructions file (`~/.config/opencode/AGENTS.md`,
+  `SystemPromptStrategy = StrategyFileReplace`).
+
+So the channel changed, not the two axes. The profile still owns the
+ceremony and the voice still owns how the agent talks. What changed:
+
+- **One owner for the block.** `internal/domain/rules` renders the whole
+  `AGENTS.md` block, with `## Cómo hablás` as its last section. `init` writes
+  it, `start` and `level --to` rewrite only that section. A test pins the
+  `novato` block byte for byte and asserts the two voices differ **only**
+  inside the section.
+- **No per-client files.** The client table, the wrappers and the generated
+  headers are gone. A project that still has `.opencode/agents/odachi-*.md` or
+  `.claude/output-styles/odachi-*.md` from v0.10.0 is told they are leftovers
+  and nothing is deleted: they are the human's files.
+- **The binary decides, the human does not guess.** `init` uses
+  `.odachi/profile.toml` when it exists and `novato` otherwise — never
+  inferred, because inference turned every new repository into `senior`.
+  `level --to <perfil>` writes the profile and the section together.
+- **Doctor compares instead of guessing.** Check 11 asks whether the block's
+  voice matches the profile, and names `level --to` or `init` as the fix.
+  Leftover persona files are reported as `ok`, not as a problem.
+
+What this costs: the switch is no longer a keystroke. The voice is a decision
+of the project, written by the binary, and it changes with `odachi level --to`.
+That is the price of one channel every client reads instead of one file per
+client that half of them ignore.

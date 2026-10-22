@@ -147,7 +147,7 @@ odachi check   # te dice si falta algo y cómo destrabarlo
 `odachi init` deja el proyecto listo en un paso: la historia de git si faltaba,
 el bloque de reglas que el agente lee, el bloque de `.gitignore`, el hook de
 pre-commit, las ocho skills en `./.agents/skills`, la skill de arranque en
-`~/.agents/skills` y las dos personas donde cada cliente las elige.
+`~/.agents/skills` y la voz del perfil en el bloque de `AGENTS.md`.
 
 Abrí el proyecto con OpenCode y ya está: lee `.agents/skills` como directorio
 externo además del propio, así que ve las ocho sin `pack`. `pack` queda para
@@ -162,18 +162,17 @@ cuánto imprime, qué cuenta como prueba. Vive en `.odachi/profile.toml`, lo
 escribe `odachi start` con tus respuestas y lo lee el binario. El agente no lo
 lee: no puede aflojar una compuerta ni cambiarla.
 
-La **persona** es cómo habla el agente: si te explica el porqué de cada decisión
-o si va al hueso. La elige el cliente con el interruptor que ya tenés —en
-OpenCode con Tab (`switch_agent`; si lo remapeaste, el que hayas puesto), en
-Claude Code desde `/config`, como estilo de salida—. `odachi init` escribe las
-dos, `odachi-novato` y `odachi-senior`, en `.opencode/agents/` y en
-`.claude/output-styles/`, y no elige por vos: no sabe quién sos, y elegirla desde
-el perfil sería devolver al TOML la decisión que estos archivos sacan de ahí.
+La **voz** es cómo habla el agente: si te explica el porqué de cada decisión o si
+va al hueso. Vive en la última sección del bloque de `AGENTS.md`, `## Cómo
+hablás`, y la escribe el binario: es el único canal que leen todos los clientes,
+sin una carpeta por cliente ni una tecla que aprender. `odachi init` escribe la
+voz de `novato` si todavía no hay perfil, y `odachi level --to <perfil>` cambia
+el perfil y esa sección juntas —y nada más del bloque—.
 
-Las dos personas lo dicen en la segunda línea del cuerpo, la que sigue a la que
-avisa que el archivo se genera: la ceremonia la decide `.odachi/profile.toml`, el
-archivo decide solo cómo habla, y si los dos no coinciden el agente lo dice y
-pide `odachi level --to <perfil>`.
+Así lo elegimos después de medirlo: la v0.10.0 escribía un archivo por cliente
+(`.opencode/agents/`, `.claude/output-styles/`) para elegir la persona con el
+interruptor del cliente, y OpenCode 2.1.2 no los lista. Si te quedaron esos
+archivos, `odachi init` te avisa que ya no se usan; no los borra, son tuyos.
 
 ## El review: cuatro lentes, sin ceremonia
 

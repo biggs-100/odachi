@@ -5,6 +5,26 @@ Las versiones anteriores a la 0.10.0 se reconstruyeron desde sus tags: el repo
 todavía no tenía este archivo, y un changelog que empieza hoy borra la historia
 de quien llega mañana.
 
+## v0.11.0 · sin publicar (la fecha la fija el tag)
+
+La voz deja de depender del selector del cliente, y el doctor ve lo que `init` dejó.
+
+- **La voz vive en el bloque**: `AGENTS.md` termina con `## Cómo hablás`, y esa
+  sección la escribe el binario. `odachi init` pone la voz de `novato` si todavía
+  no hay perfil; `level --to <perfil>` cambia el perfil y la voz juntas, y `start`
+  también, porque es el otro comando que decide el perfil. Todos los clientes leen
+  `AGENTS.md`: no hay una carpeta por cliente ni una tecla que aprender.
+- **Se retiran las personas por cliente**: `.opencode/agents/*` y
+  `.claude/output-styles/*` de la v0.10.0 ya no se escriben, porque OpenCode 2.1.2
+  no los lista. Si un proyecto los tiene, `init` avisa que son restos y no los
+  borra.
+- **`doctor` pasa a once chequeos**: el 9 dice las dos verdades de las skills (el
+  registro del proyecto y lo instalado en `.agents/skills`), y el 11 compara la voz
+  del bloque con el perfil y nombra el arreglo.
+- **El instalador no depende de `Get-FileHash`**: si el cmdlet no existe —pasa en
+  Windows PowerShell 5.1—, verifica el sha256 con `certutil`. Probado con las dos
+  herramientas sobre la release real.
+
 ## v0.10.0 · 2026-10-22
 
 Listo en un comando, y el agente sabe manejarlo.
