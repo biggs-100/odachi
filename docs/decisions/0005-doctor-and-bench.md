@@ -29,7 +29,7 @@ path.
 
 ### `doctor` is ten fixed checks and cannot write
 
-The ten checks, their order and their numbering live in `internal/domain/doctor`
+The checks, their order and their numbering live in `internal/domain/doctor` (ten when this decision was written; the eleventh, the personas, was appended later and is never inserted in the middle, because the number is the check's identity)
 and are pinned by a test. The ordering is not cosmetic: the number is the line's
 number, and inserting a check in the middle would silently rename every check
 after it. There is exactly one folder where these ten lines are the wrong
@@ -88,7 +88,7 @@ rules the agent reads, and `odachi start` after, because it is the interview—
 with exit `1` and no check lines at all. The two commands appear in the order a
 person runs them, and each says what it leaves behind.
 
-Everything else keeps the ten checks. A git repository that never ran `init`, a
+Everything else keeps the checks. A git repository that never ran `init`, a
 project with an `AGENTS.md` and nothing else, an empty folder with a `.odachi/`
 from a half-finished `start`: all of them get their ten lines with their
 per-check fixes, because they are projects and their problems are per check. The
