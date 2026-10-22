@@ -10,11 +10,18 @@ const (
 	agentsEnd   = "<!-- odachi:end -->"
 )
 
-// agentsBlock is the fixed block `odachi init` writes: the four hard rules and
-// the six verbs, each with its use in one line. It is pinned by test because it
-// is the contract the agent reads on every session.
+// agentsBlock is the fixed block `odachi init` writes: what odachi is, the four
+// hard rules and the six verbs, each with its use in one line. It is pinned byte
+// for byte by test because it is the contract the agent reads on every session,
+// and it has to make sense to an agent that knows nothing about this project.
 const agentsBlock = agentsBegin + `
 # Reglas del proyecto (odachi)
+
+odachi es un binario y cuatro artefactos de texto plano —brief, task doc, prueba y
+perfil—. El binario hace cumplir el gate; los artefactos son la memoria. La persona
+decide la visión y lo que no se negocia; el agente ejecuta con oficio de senior y
+explica lo que la persona necesita aprender. Si dudás dónde está el contexto:
+` + "`brief.md`" + ` para la visión, ` + "`odd/tasks/`" + ` para el plan, ` + "`SKILLS.md`" + ` para el oficio.
 
 Cuatro reglas duras. No son consejos: ` + "`odachi check`" + ` las hace cumplir.
 
@@ -28,7 +35,11 @@ Cuatro reglas duras. No son consejos: ` + "`odachi check`" + ` las hace cumplir.
 
 Skills: ver SKILLS.md; cargá la que matchee el trigger antes de escribir código.
 
-## Si el perfil es novato
+## Si la persona es novata
+
+No lo adivines: si no sabés el nivel, preguntá una vez
+"¿preferís que te explique el porqué o que vaya al hueso?" y aplicá lo de abajo
+solo si la respuesta es novato.
 
 El objetivo no es solo que funcione: es que la persona aprenda el oficio. Estas
 reglas son la diferencia entre un agente que ejecuta y un agente que enseña.
