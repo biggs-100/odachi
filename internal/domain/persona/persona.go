@@ -31,6 +31,7 @@ package persona
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -42,6 +43,9 @@ const (
 	Novato = "novato"
 	// Senior is the persona that goes to the point.
 	Senior = "senior"
+	// CI is the profile of a machine: it gets the senior voice, because nobody
+	// is reading the answers.
+	CI = "ci"
 )
 
 // generated is the first line of every persona file. Like SKILLS.md, the file
@@ -230,4 +234,63 @@ func find(client string) (Client, bool) {
 		}
 	}
 	return Client{}, false
+}
+
+func VoiceName(profileName string) (string, error) {
+	key := strings.ToLower(strings.TrimSpace(profileName))
+	if key == CI {
+		return Senior, nil
+	}
+	if _, ok := voices[key]; ok {
+		return key, nil
+	}
+	return "", fmt.Errorf("voz desconocida: %q; odachi escribe la de %s (%s usa la de %s)",
+		profileName, strings.Join(Names(), " o "), CI, Senior)
+}
+
+// Voice returns the text of the voice one profile gets, ending in exactly one
+// newline. It is the body of the block's last section, without the heading: the
+// renderer owns the heading, so there is one copy of it.
+
+func Voice(profileName string) (string, error) {
+	name, err := VoiceName(profileName)
+	if err != nil {
+		return "", err
+	}
+	return voices[name], nil
+}
+
+// Deprecated is what v0.10.0 wrote: one persona file per client, in each client's
+// own selector. The voice lives in AGENTS.md now, so those files are leftovers of
+// an earlier install.
+//
+// odachi reports them and never deletes them: a binary that removes files it no
+// longer writes is a binary nobody trusts with a project, and the human may want
+// to read one last time what they are deleting.
+
+func Deprecated() []string {
+	return []string{
+		".opencode/agents/odachi-novato.md",
+		".opencode/agents/odachi-senior.md",
+		".claude/output-styles/odachi-novato.md",
+		".claude/output-styles/odachi-senior.md",
+	}
+}
+
+// DeprecatedDirs is the same leftovers as the directories a human reads in one
+// line. It is derived from Deprecated, not written twice: a second list is a
+// second thing to drift.
+
+func DeprecatedDirs() []string {
+	out := []string{}
+	for _, file := range Deprecated() {
+		dir := file
+		if i := strings.LastIndexByte(file, '/'); i > 0 {
+			dir = file[:i]
+		}
+		if !slices.Contains(out, dir) {
+			out = append(out, dir)
+		}
+	}
+	return out
 }
