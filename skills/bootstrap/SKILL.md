@@ -28,6 +28,7 @@ Tres comandos, en este orden. Cada uno hace una cosa y la deja hecha:
 - Un proyecto ya es de odachi si hay `brief.md`, un bloque de odachi en `AGENTS.md`, o
   `odd/tasks/`. Si lo hay, no arranques de nuevo: leé ese bloque y seguí sus reglas.
 - Si no sabés en qué estado está, `odachi doctor` lo dice sin escribir nada.
+- Ya con el proyecto armado, el manual del día a día es la skill `drive`.
 - La visión la decide la persona. Vos ejecutás y explicás el porqué en una línea.
 
 ## Nunca
