@@ -11,7 +11,7 @@ R1 · "review proporcional al riesgo y con modo de proyecto: pasivo no pide juic
 - odachi check queda listo
 
 ## Pasos
-- [ ] T1 · saltar el review en candidatos pasivos   R1
+- [x] T1 · saltar el review en candidatos pasivos   R1 · 9b76b93
 - [ ] T2 · review mode on/off/status y check   R1
 - [ ] T3 · ampliar las senales de riesgo   R1
 
