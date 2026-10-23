@@ -9,6 +9,11 @@ de quien llega mañana.
 
 La versión que protege el contexto del agente principal y termina de limpiar el arranque.
 
+- **`init --agents`**: `odachi init --agents opencode|claude|both` elige qué
+  clientes reciben el agente nativo y la puerta del home. La elección queda en
+  `.odachi/agents.toml`; `start`, `level` y `doctor` la respetan, y un `init`
+  posterior sin flag la conserva. El default sigue siendo `both`, y los archivos
+  del cliente que no elegís no se borran: sólo dejan de escribirse.
 - **Subagentes nativos**: `init` escribe `.opencode/agents/odachi-worker.md` y
   `.opencode/agents/odachi-verify.md`, y sus equivalentes en `.claude/agents/`.
   El worker implementa un paso acotado; el verifier es read-only. `slices` manda

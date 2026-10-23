@@ -1,0 +1,2 @@
+# odachi: qué clientes reciben el agente nativo; cambiar la elección no lo borra, solo deja de escribirlo
+agents = "opencode"

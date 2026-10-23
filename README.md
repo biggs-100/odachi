@@ -170,6 +170,12 @@ el bloque de reglas que el agente lee, el agente del proyecto y la puerta del ho
 nueve skills en `./.agents/skills`, la skill de arranque en `~/.agents/skills` y la
 voz del perfil en el bloque de `AGENTS.md`.
 
+Si no usás Claude Code, `odachi init --agents opencode` escribe sólo el agente de
+OpenCode y guarda la elección en `.odachi/agents.toml`; `init`, `start`, `level` y
+`doctor` la respetan, y `--agents claude` hace lo mismo al revés. Los archivos del
+cliente que no elegís no se borran: sólo dejan de escribirse. Sin archivo, el
+default sigue siendo los dos.
+
 Abrí el proyecto con OpenCode y ya está: lee `.agents/skills` como directorio
 externo además del propio, así que ve las nueve sin `pack`. `pack` queda para
 llevar las skills a la carpeta nativa de otro cliente, o a donde vos digas.
@@ -193,21 +199,21 @@ hablás`, y en el agente nativo que espeja ese bloque. `odachi init` escribe la 
 de `novato` si todavía no hay perfil, y `odachi level --to <perfil>` cambia el
 perfil, esa sección y el espejo juntas —y nada más del bloque—.
 
-El agente nativo tiene dos copias. La del **proyecto** es el mismo bloque en la
-carpeta donde tu cliente ya elige agentes: `.opencode/agents/odachi.md` (Tab en
-OpenCode) y `.claude/output-styles/odachi.md` (`/config` en Claude Code). Es
-generado: si lo editás a mano, `odachi init` lo respalda antes de reescribirlo y
-`doctor` te avisa que dejó de coincidir. Medido en OpenCode 2.1.3: un proyecto con
-`.git` lista el archivo como agente primario; una carpeta sin `.git` no lista
-ninguno.
+El agente nativo tiene una copia por cliente elegido (`both` es el default). La
+del **proyecto** es el mismo bloque en la carpeta donde tu cliente ya elige
+agentes: `.opencode/agents/odachi.md` (Tab en OpenCode) y
+`.claude/output-styles/odachi.md` (`/config` en Claude Code). Es generado: si lo
+editás a mano, `odachi init` lo respalda antes de reescribirlo y `doctor` te
+avisa que dejó de coincidir. Medido en OpenCode 2.1.3: un proyecto con `.git`
+lista el archivo como agente primario; una carpeta sin `.git` no lista ninguno.
 
 La copia del **home** es la puerta: `~/.config/opencode/agents/odachi.md` y
-`~/.claude/output-styles/odachi.md`. Aparece en cualquier carpeta, no solo en la
-que corrió `init`. Si la carpeta tiene el bloque de `odachi`, lo lee y adopta su
-voz; si no, carga la skill de arranque y guía para empezar un proyecto. Es corta a
-propósito: no repite las reglas, solo dice dónde están. Las dos personas por
-perfil de la v0.10.0 quedaron como restos: `init` las nombra y no las borra, son
-tuyas.
+`~/.claude/output-styles/odachi.md`, una por cliente elegido. Aparece en
+cualquier carpeta, no solo en la que corrió `init`. Si la carpeta tiene el bloque
+de `odachi`, lo lee y adopta su voz; si no, carga la skill de arranque y guía para
+empezar un proyecto. Es corta a propósito: no repite las reglas, solo dice dónde
+están. Las dos personas por perfil de la v0.10.0 quedaron como restos: `init` las
+nombra y no las borra, son tuyas.
 
 ## El review: cuatro lentes, sin ceremonia
 
@@ -246,7 +252,7 @@ que responder, así que no hay review que fabricar.
 Dominio puro en `internal/domain/...` con guardia de importaciones, adaptadores en
 `internal/adapters/...`, y quince superficies: `start`, `ask`, `plan`, `level`,
 `summary`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `skills`,
-`skill new`, `pack` y `--version`. 38 paquetes, en verde en Linux, macOS y
+`skill new`, `pack` y `--version`. 39 paquetes, en verde en Linux, macOS y
 Windows —ubuntu repite la suite interna con el detector de carreras—.
 
 Publicado: `v0.11.0`. Lo que cambió en cada versión está en [CHANGELOG.md](CHANGELOG.md).
