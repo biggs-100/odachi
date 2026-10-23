@@ -5,6 +5,19 @@ Las versiones anteriores a la 0.10.0 se reconstruyeron desde sus tags: el repo
 todavía no tenía este archivo, y un changelog que empieza hoy borra la historia
 de quien llega mañana.
 
+## v0.11.2 · sin publicar
+
+La versión que agrega el método para atacar un backlog y para cortar la entrega en PRs revisables.
+
+- **`triage`**: clasifica cada reporte por raíz, junta los que comparten causa en
+  un solo paso, reproduce antes de arreglar y cierra con la prueba que falla. No
+  copia etiquetas de GitHub ni la gramática de ODD: usa `odachi ask`, `odachi plan`,
+  `tests` y `check --run`.
+- **`pull-request`**: un work unit por PR, presupuesto de 400 líneas, una sola
+  estrategia de cadena (stacked o feature branch chain), issue aprobado o `Refs`,
+  y `odachi check --run` antes del review. El slug es `pull-request` porque el
+  formato de skills exige nombres de tres caracteres o más.
+
 ## v0.11.1 · 2026-10-23
 
 La versión que protege el contexto del agente principal y termina de limpiar el arranque.

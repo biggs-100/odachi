@@ -1,9 +1,9 @@
 [[rule]]
-not   = "no borrar la puerta que ya está instalada en el home: solo dejar de instalarla por defecto"
-paths = ["no-borrar-la-puerta-que-ya-esta-instalada-en-el-home-solo-dejar-de-instalarla-por-defecto*"]
+not   = "no copiar la gramatica de ODD ni las etiquetas de GitHub de gentle-ai"
+paths = ["no-copiar-la-gramatica-de-odd-ni-las-etiquetas-de-github-de-gentle-ai*"]
 deps  = []
 
 [[rule]]
-not   = "no tocar --agents ni el store .odachi/agents.toml"
-paths = ["no-tocar-agents-ni-el-store-odachi-agents-toml*"]
+not   = "no agregar un flag ni un verbo nuevo: son skills, no binario"
+paths = ["no-agregar-un-flag-ni-un-verbo-nuevo-son-skills-no-binario*"]
 deps  = []

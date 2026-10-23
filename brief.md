@@ -1,20 +1,20 @@
-# la-instalacion-de
+# odachi-tiene-las
 
 ## Qué tiene que existir
-- la instalacion de odachi en opencode me esta dañando el agente, cuando le hablo no me responde o esta demorando demaciado
+- odachi tiene las skills triage y pr, adaptadas a su gramatica, para clasificar bugs por raiz y entregar PRs chicos
 
 ## Listo cuando
-- odachi init sin --global no escribe nada en el home y odachi init --global sí instala la puerta
-- doctor nombra --global cuando la puerta no está, sin dar por error que falta
+- odachi skills --check queda en verde con triage y pr, cada una con Trigger, Cuando, Reglas y Nunca en 60 lineas o menos
+- odachi init instala las dos skills en .agents/skills y doctor las cuenta
 - go test ./... queda en verde
 - odachi check queda listo
 
 ## NO incluye (primera versión)
-- no borrar la puerta que ya está instalada en el home: solo dejar de instalarla por defecto
-- no tocar --agents ni el store .odachi/agents.toml
+- no copiar la gramatica de ODD ni las etiquetas de GitHub de gentle-ai
+- no agregar un flag ni un verbo nuevo: son skills, no binario
 
 ## Decisiones tomadas
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: cambiar un default de instalación sin romper a quien ya lo tenía instalado.
+- Quiere aprender: como se escribe una skill que el binario valida y que el agente puede cargar.
