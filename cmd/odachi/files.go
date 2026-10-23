@@ -13,6 +13,7 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/fsx"
 	"github.com/biggs-100/odachi/internal/adapters/gitx"
 	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
+	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/profile"
@@ -161,6 +162,13 @@ func (osFiles) Write(path string, data []byte) error {
 	}
 	return fsx.WriteAtomic(path, data, 0o644)
 }
+
+// reviewModeCodec is the format adapter for `odachi review mode`: the app owns
+// the actions and the disk port, this type owns TOML.
+type reviewModeCodec struct{}
+
+func (reviewModeCodec) Decode(data []byte) (string, error) { return reviewtoml.Decode(data) }
+func (reviewModeCodec) Render(mode string) ([]byte, error) { return reviewtoml.Render(mode) }
 
 // loadProfile reads .odachi/profile.toml when it exists. The human owns that
 // file: it wins over inference, and a malformed one blocks with a sentence

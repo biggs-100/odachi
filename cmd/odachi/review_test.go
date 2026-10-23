@@ -268,6 +268,66 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 	}
 }
 
+// TestReviewModeOnMakesCheckRequireTheVerdict: the switch is a project file, so
+// a plain `check` reads it; the flags override it for one run.
+func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
+	dir := changedProject(t)
+
+	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "status"}, ""); code != 0 {
+		t.Fatalf("mode status: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	} else if !strings.Contains(out, "review: off") {
+		t.Errorf("status = %q, want the default off", out)
+	}
+
+	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "on"}, ""); code != 0 {
+		t.Fatalf("mode on: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, ".odachi", "review.toml"))
+	if err != nil {
+		t.Fatalf("the switch was not written: %v", err)
+	}
+	if !strings.Contains(string(data), `mode = "on"`) {
+		t.Errorf("switch = %q, want mode = \"on\"", data)
+	}
+
+	// The switch is part of the tree, so the proof taken before it is stale; the
+	// run that retakes it also asks for the verdict the switch now requires.
+	if code, _, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 2 {
+		t.Fatalf("check under mode on: code = %d, want 2 (stderr: %q)", code, errOut)
+	}
+	if code, out, errOut := runDir(t, dir, []string{"check", "--no-review"}, ""); code != 0 {
+		t.Fatalf("check --no-review: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	if code, _, errOut := runDir(t, dir, []string{"check", "--require-review"}, ""); code != 2 {
+		t.Fatalf("check --require-review: code = %d, want 2 (stderr: %q)", code, errOut)
+	}
+
+	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "off"}, ""); code != 0 {
+		t.Fatalf("mode off: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "status"}, ""); code != 0 {
+		t.Fatalf("mode status after off: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	} else if !strings.Contains(out, "review: off") {
+		t.Errorf("status = %q, want off", out)
+	}
+}
+
+// TestReviewModeRejectsAMangledSwitch: a typo in a human file blocks instead of
+// silently meaning off.
+func TestReviewModeRejectsAMangledSwitch(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, ".odachi/review.toml", `mode = "maybe"`+"\n")
+
+	code, _, errOut := runDir(t, dir, []string{"check"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
+	}
+	if !strings.Contains(errOut, "review.toml") || !strings.Contains(errOut, "on u off") {
+		t.Errorf("stderr %q does not name the file and the valid values", errOut)
+	}
+}
+
 // TestCheckRequireReviewReportsChangesRequested: a verdict that blocks is a human
 // decision, and the sentence names the first finding that causes it.
 func TestCheckRequireReviewReportsChangesRequested(t *testing.T) {

@@ -334,8 +334,9 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 
 	var (
-		opts   check.Options
-		asJSON bool
+		opts     check.Options
+		asJSON   bool
+		noReview bool
 	)
 
 	flags.StringVar(&opts.Run, "run", "", "corre el comando, captura la salida y escribe proof/<NNNN>-<slug>.txt")
@@ -343,7 +344,8 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.Base, "base", "HEAD", "contra qué comparar el cerco (vacío: contra nada, todo cuenta como nuevo)")
 	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "segundos que puede tardar --run")
 	flags.BoolVar(&opts.Quiet, "quiet", false, "no imprime nada si está listo (para el hook)")
-	flags.BoolVar(&opts.RequireReview, "require-review", false, "exige un veredicto de review para este árbol (apagado por defecto)")
+	flags.BoolVar(&opts.RequireReview, "require-review", false, "exige un veredicto de review para este árbol (default: el modo del proyecto)")
+	flags.BoolVar(&noReview, "no-review", false, "no exige review aunque el proyecto lo tenga prendido")
 	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
 
 	if err := flags.Parse(args); err != nil {
@@ -366,6 +368,22 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "odachi: --run y --proof no van juntos: usá uno de los dos (odachi check --run \"<comando>\" o odachi check --proof <archivo>)")
 		return start.CodeBlocked
 	}
+	if opts.RequireReview && noReview {
+		fmt.Fprintln(stderr, "odachi: --require-review y --no-review no van juntos: elegí uno; sin flags manda el modo del proyecto")
+		return start.CodeBlocked
+	}
+
+	// The project owns the default; the flags are the exception for one run.
+	// A malformed switch blocks instead of quietly reading as off: a human who
+	// wrote `mode = "on"` must not get a gate that never opened.
+	if !opts.RequireReview && !noReview {
+		enabled, err := reviewapp.Enabled(dir, osFiles{}, reviewModeCodec{})
+		if err != nil {
+			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		opts.RequireReview = enabled
+	}
 
 	opts.Dir = dir
 	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
@@ -373,6 +391,10 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 
 // runReview parses the flags, wires the four adapters and reports the verdict.
 func runReview(dir string, args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "mode" {
+		return runReviewMode(dir, args[1:], stdout, stderr)
+	}
+
 	flags := flag.NewFlagSet("odachi review", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
@@ -417,6 +439,39 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	return reportReview(reviewapp.Run(opts, osFiles{}, gitRepo{}, osShell{}, reviewLenses{}), asJSON, stdout, stderr)
+}
+
+// runReviewMode parses the small mode grammar by hand: the action is a word,
+// not a flag value, and `--json` should work before or after it.
+func runReviewMode(dir string, args []string, stdout, stderr io.Writer) int {
+	const usageLine = "uso: odachi review mode [status|on|off] [--json]"
+
+	action := reviewapp.ModeStatus
+	actionSeen := false
+	asJSON := false
+
+	for _, arg := range args {
+		switch arg {
+		case "-h", "--help":
+			fmt.Fprintln(stdout, usageLine)
+			return start.CodeOK
+		case "--json", "-json":
+			asJSON = true
+		case reviewapp.ModeStatus, reviewapp.ModeOn, reviewapp.ModeOff:
+			if actionSeen {
+				fmt.Fprintln(stderr, "odachi: el modo de review se elige una vez; "+usageLine)
+				return start.CodeBlocked
+			}
+			action = arg
+			actionSeen = true
+		default:
+			fmt.Fprintf(stderr, "odachi: no entiendo %q; %s\n", arg, usageLine)
+			return start.CodeBlocked
+		}
+	}
+
+	result := reviewapp.Mode(reviewapp.ModeOptions{Dir: dir, Action: action}, osFiles{}, reviewModeCodec{})
+	return reportReview(result, asJSON, stdout, stderr)
 }
 
 // withoutEmptyLens is what makes `odachi review --lens --show` work: the flag
@@ -1033,6 +1088,7 @@ uso:
   odachi check [flags]
   odachi review [--exec "<comando>" | --attach <archivo> | --show | --refute <veredicto>]
   odachi review [--lens <lente>]
+  odachi review mode [status|on|off]
   odachi doctor [--json]
   odachi bench [--journeys <nombres>] [--binary <ruta>] [--json]
   odachi init [--json]
@@ -1051,7 +1107,8 @@ flags de check:
   --base ref      contra qué comparar el cerco (default HEAD; vacío: contra nada)
   --timeout n     segundos que puede tardar --run (default 120)
   --quiet         no imprime nada si está listo (para el hook)
-  --require-review  exige un veredicto de review para este árbol (apagado por defecto)
+  --require-review  exige un veredicto de review para este árbol (default: el modo del proyecto)
+  --no-review     no exige review aunque el proyecto lo tenga prendido
   --json          salida para máquinas
 
 flags de review:
@@ -1063,6 +1120,12 @@ flags de review:
   --refute path   imprime el prompt del refutador para ese veredicto
   --base ref      contra qué comparar el candidato (default HEAD; vacío: contra nada)
   --json          salida para máquinas
+
+modo de review:
+  odachi review mode status   si el proyecto exige review (default: off)
+  odachi review mode on       check exige el veredicto de este árbol
+  odachi review mode off      check no lo exige, aunque el hook corra check
+  el modo vive en .odachi/review.toml; --require-review y --no-review lo override por una corrida
 
 flags de plan:
   --req R<n>      requisito al que se ata el paso nuevo

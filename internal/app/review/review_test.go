@@ -44,9 +44,10 @@ const diff = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -1 +1 @@\n-vi
 // outside .odachi/reviews/ is written" is the property a test has to be able to
 // see.
 type fakeFiles struct {
-	files  map[string][]byte
-	writes []string
-	err    error
+	files   map[string][]byte
+	writes  []string
+	backups []string
+	err     error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -88,6 +89,14 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 	f.writes = append(f.writes, path)
 	f.files[path] = data
 	return nil
+}
+
+func (f *fakeFiles) Backup(path string) (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	f.backups = append(f.backups, path)
+	return path + ".bak-prueba", nil
 }
 
 // written is every write as a project-relative path with forward slashes, in the
