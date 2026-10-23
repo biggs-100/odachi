@@ -838,9 +838,9 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 
 	switch {
 	case len(missing) > 0:
-		return "la puerta global no está en " + strings.Join(missing, ", ") + "; corré odachi init (así odachi aparece en cualquier carpeta)"
+		return "la puerta global no está en " + strings.Join(missing, ", ") + "; es opt-in: corré odachi init --global si querés odachi en cualquier carpeta"
 	case len(stale) > 0:
-		return "la puerta global no coincide con este binario en " + strings.Join(stale, ", ") + "; corré odachi init"
+		return "la puerta global no coincide con este binario en " + strings.Join(stale, ", ") + "; corré odachi init --global"
 	default:
 		return "la puerta global está al día en el home"
 	}

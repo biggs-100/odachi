@@ -810,7 +810,7 @@ func TestAGlobalDoorThatIsMissingIsSaid(t *testing.T) {
 		t.Fatalf("la puerta ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"puerta global", "no está", ".config/opencode/agents/odachi.md", "odachi init"} {
+	for _, want := range []string{"puerta global", "no está", ".config/opencode/agents/odachi.md", "odachi init --global"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
 		}
