@@ -99,6 +99,39 @@ func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 	}
 }
 
+// TestDriveTeachesTheWorkflowDiscipline: ODD-lite is content, and content
+// drifts. `drive` names the spec rule, the RED before GREEN rule, the delegation
+// record and the risk line; `commits` owns the risk vocabulary.
+func TestDriveTeachesTheWorkflowDiscipline(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	for _, want := range []string{
+		"Requisitos citados **verbatim**",
+		"observá RED",
+		"paso delegado",
+		"Risk:",
+	} {
+		if !strings.Contains(byName["drive"], want) {
+			t.Errorf("drive no dice %q: ODD-lite se perdió", want)
+		}
+	}
+	for _, want := range []string{
+		"Risk: none",
+		"datos|seguridad|contrato|concurrencia|entrega|sin-test",
+	} {
+		if !strings.Contains(byName["commits"], want) {
+			t.Errorf("commits no dice %q: la línea de riesgo se perdió", want)
+		}
+	}
+}
+
 // TestBootstrapIsTheEntryPoint: the payload has exactly one skill that teaches
 // how to start a project, and it is the one `odachi init` installs in the
 // human's home. Splitting it out of the curriculum is the whole reason the

@@ -20,6 +20,8 @@ de una sentada, o cuando el historial ya no se lee en orden.
   no sabés cuál de los dos fue.
 - Antes de commitear, la prueba de este árbol: `odachi check --run "<comando>"`. El
   hook lo va a exigir igual, y es mejor enterarse antes.
+- Cerrá el cuerpo con `Risk: none` o `Risk: datos|seguridad|contrato|concurrencia|entrega|sin-test`.
+  Un ítem pide `odachi review` antes del commit.
 - Un PR es un conjunto de commits que se leen **en orden**. Si no se lee en veinte
   minutos, se parte; si los commits se pisan entre sí, el orden está mal elegido.
 

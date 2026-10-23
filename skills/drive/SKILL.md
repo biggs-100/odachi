@@ -32,6 +32,13 @@ Si el pedido no entra en una lectura, cargá `slices` antes de partir. Su polít
 delegación gana sobre otras skills globales: un escritor solo por paralelismo real o
 sesión larga, nunca por tamaño ni cantidad de archivos.
 
+## Specs, test-first y riesgo
+
+- Requisitos citados **verbatim** y "Listo cuando" observable; si falta, `ask`.
+- Antes de un paso, cargá `tests` y observá RED; `check --run` recién con GREEN.
+- Si delegás un paso, anotalo con `ask --craft "paso delegado: ..." --because "..."`.
+- Cerrá el commit con la línea `Risk:` de `commits`; un riesgo pide `review`.
+
 Los verbos: `start` entrevista · `ask` pregunta o decisión de oficio (`--craft`) · `plan`
 abre y cierra pasos · `check` compuertas y prueba · `review` veredicto por árbol · `doctor`
 salud sin escribir · `level` perfil · `summary` estado · `undo` deshace lo último · `init`,
