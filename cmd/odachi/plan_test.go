@@ -90,7 +90,7 @@ func TestPlanAppendsAndClosesStepsEndToEnd(t *testing.T) {
 		t.Fatalf("plan --done T1 again: exit %d, stderr=%s", code, stderr)
 	}
 	if !strings.Contains(stdout, "was already done") {
-		t.Errorf("stdout %q does not say ya estaba hecho", stdout)
+		t.Errorf("stdout %q does not say it was already done", stdout)
 	}
 	after, err := os.ReadFile(filepath.Join(dir, taskPath))
 	if err != nil {
@@ -113,7 +113,7 @@ func TestPlanRejectsBadTextBeforeWriting(t *testing.T) {
 
 	cases := [][]string{
 		{"plan", ""},
-		{"plan", "una linea\notra linea"},
+		{"plan", "one line\ntwo lines"},
 		{"plan", "-x"},
 		{"plan", strings.Repeat("a", 121)},
 	}

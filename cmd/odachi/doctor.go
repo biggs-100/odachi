@@ -23,18 +23,18 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 
 	var asJSON bool
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi doctor -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi doctor -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi doctor no toma argumentos (corré odachi doctor -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi doctor takes no arguments (run odachi doctor -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -52,7 +52,7 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 
 // reportDoctor prints the eleven lines and the summary. The report is the whole
 // deliverable, so a broken install prints it on stderr and a clean one on
-// stdout, the same way the other verbs separate "listo" from "bloqueado".
+// stdout, the same way the other verbs separate "ready" from "blocked".
 func reportDoctor(result doctorapp.Result, asJSON bool, stdout, stderr io.Writer) int {
 	if asJSON {
 		// Lines is the block verbatim, so --json never says less than the human
@@ -75,7 +75,7 @@ func reportDoctor(result doctorapp.Result, asJSON bool, stdout, stderr io.Writer
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		fmt.Fprintln(stdout, string(data))
@@ -155,7 +155,7 @@ func inferProfile(dir string) (string, error) {
 
 	hasBrief, err := files.Exists(filepath.Join(dir, "brief.md"))
 	if err != nil {
-		return "", fmt.Errorf("no pude revisar brief.md: %w", err)
+		return "", fmt.Errorf("could not check brief.md: %w", err)
 	}
 	return profile.Infer(profile.Facts{HasBrief: hasBrief}), nil
 }

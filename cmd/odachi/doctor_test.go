@@ -31,7 +31,7 @@ func withOdachiOnPath(t *testing.T) string {
 // the rules block with the voice matching the profile, the hook, and the four
 // artifacts `start` writes.
 //
-// The last step is `level --to <perfil>` and not `start`. `start` writes the
+// The last step is `level --to <profile>` and not `start`. `start` writes the
 // profile the binary inferred from what it could see — with --json that is `ci` —
 // and the block still carries the voice `init` wrote before that profile existed.
 // The two have to agree for doctor to call the project clean, and `level --to` is
@@ -67,7 +67,7 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
 	if len(lines) != 12 {
-		t.Fatalf("once chequeos y un resumen, got %d lines:\n%s", len(lines), out)
+		t.Fatalf("eleven checks and a summary, got %d lines:\n%s", len(lines), out)
 	}
 	for i, line := range lines[:11] {
 		if !strings.HasPrefix(line, "ok ") {
@@ -88,7 +88,7 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 }
 
 // TestDoctorWritesNothing: the verb is read-only. The whole project is compared
-// byte for byte, because "no escribe" is a claim about every file and not about
+// byte for byte, because "writes nothing" is a claim about every file and not about
 // the ones a test remembered to look at.
 func TestDoctorWritesNothing(t *testing.T) {
 	dir := configuredProject(t)
@@ -154,7 +154,7 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 			break_: func(t *testing.T, dir string) {
 				writeFile(t, dir, ".odachi/profile.toml", "name = \"\"\n")
 			},
-			want: []string{"does not resolve", "no dice name", "odachi doctor"},
+			want: []string{"does not resolve", "does not say name", "odachi doctor"},
 		},
 		{
 			name: "the profile has a value the tool would never obey",
@@ -166,7 +166,7 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 		{
 			name: "the profile is not TOML",
 			break_: func(t *testing.T, dir string) {
-				writeFile(t, dir, ".odachi/profile.toml", "esto no es toml\n")
+				writeFile(t, dir, ".odachi/profile.toml", "this is not toml\n")
 			},
 			want: []string{"does not resolve", "odachi doctor"},
 		},
@@ -204,7 +204,7 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 				}
 			}
 			if !strings.Contains(report, "bad ") {
-				t.Fatalf("a problem line starts with «mal»:\n%s", report)
+				t.Fatalf("a problem line starts with \"bad\":\n%s", report)
 			}
 		})
 	}
@@ -266,7 +266,7 @@ func TestDoctorJSONSaysTheSameThing(t *testing.T) {
 func TestDoctorRejectsArguments(t *testing.T) {
 	dir := t.TempDir()
 	code, _, stderr := runDir(t, dir, []string{"doctor", "extra"}, "")
-	if code != 1 || !strings.Contains(stderr, "sobra un argumento") {
+	if code != 1 || !strings.Contains(stderr, "extra argument") {
 		t.Fatalf("exit %d, stderr %q", code, stderr)
 	}
 }
@@ -280,7 +280,7 @@ func TestDoctorOnAFolderThatIsNotAProject(t *testing.T) {
 
 	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
 	if code != 1 {
-		t.Fatalf("una carpeta sin proyecto todavía no está lista: exit %d, want 1", code)
+		t.Fatalf("a folder without a project is not ready yet: exit %d, want 1", code)
 	}
 	if stdout != "" {
 		t.Fatalf("a blocked report goes to stderr, stdout = %q", stdout)
@@ -288,7 +288,7 @@ func TestDoctorOnAFolderThatIsNotAProject(t *testing.T) {
 
 	lines := strings.Split(strings.TrimRight(stderr, "\n"), "\n")
 	if len(lines) != 2 {
-		t.Fatalf("un principiante lee una situación y un paso, got %d lines:\n%s", len(lines), stderr)
+		t.Fatalf("a beginner reads one situation and one step, got %d lines:\n%s", len(lines), stderr)
 	}
 	if lines[0] != "this folder is not an odachi project yet" {
 		t.Fatalf("first line = %q", lines[0])

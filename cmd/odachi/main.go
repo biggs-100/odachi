@@ -51,7 +51,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: no pude leer el directorio actual: "+oneLine(err.Error()))
+		fmt.Fprintln(stderr, "odachi: could not read the current directory: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 	return runIn(dir, args, stdin, stdout, stderr)
@@ -102,10 +102,10 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runBench(dir, args[1:], stdout, stderr)
 	case "version":
 		// Reached only with arguments: `odachi version` alone was answered above.
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi version no toma argumentos\n", args[1])
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: comando desconocido: %s; comandos disponibles: start (odachi start), ask (odachi ask \"<pregunta>\"), plan (odachi plan \"<texto>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), undo (odachi undo), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), undo (odachi undo), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -123,7 +123,7 @@ func isVersionAsk(args []string) bool {
 // runStart parses the flags, wires the two adapters and reports the result.
 func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("odachi start", flag.ContinueOnError)
-	// Flag errors are translated into one Spanish line below, so the standard
+	// Flag errors are translated into one English line below, so the standard
 	// library's own usage dump is discarded.
 	flags.SetOutput(io.Discard)
 
@@ -137,27 +137,27 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		asJSON  bool
 	)
 
-	flags.StringVar(&opts.Outcome, "outcome", "", "respuesta 1: qué tiene que existir cuando terminemos")
-	flags.StringVar(&opts.Audience, "audience", "", "respuesta 2: phone | cpu | both")
-	flags.Var(&done, "done", "respuesta 3: cómo vas a saber que funcionó (repetible)")
-	flags.Var(&exclude, "exclude", "respuesta 4: no-goal por clave del catálogo o texto libre (repetible)")
-	flags.StringVar(&opts.Sensitive, "sensitive", "", "respuesta 5: none | names | health | money")
-	flags.StringVar(&opts.Deadline, "deadline", "", "respuesta 6: today | week | relaxed")
-	flags.Var(&learn, "learn", "respuesta 7: qué querés aprender (repetible)")
-	flags.StringVar(&brief, "brief", "", "leer un brief existente en vez de preguntar")
-	flags.BoolVar(&force, "force", false, "reescribir un brief.md existente")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&opts.Outcome, "outcome", "", "answer 1: what has to exist when we finish")
+	flags.StringVar(&opts.Audience, "audience", "", "answer 2: phone | cpu | both")
+	flags.Var(&done, "done", "answer 3: how you will know it worked (repeatable)")
+	flags.Var(&exclude, "exclude", "answer 4: no-goal by catalog key or free text (repeatable)")
+	flags.StringVar(&opts.Sensitive, "sensitive", "", "answer 5: none | names | health | money")
+	flags.StringVar(&opts.Deadline, "deadline", "", "answer 6: today | week | relaxed")
+	flags.Var(&learn, "learn", "answer 7: what you want to learn (repeatable)")
+	flags.StringVar(&brief, "brief", "", "read an existing brief instead of asking")
+	flags.BoolVar(&force, "force", false, "rewrite an existing brief.md")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi start -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi start -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi start solo toma flags (corré odachi start -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi start only takes flags (run odachi start -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -201,11 +201,11 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
-	flags.StringVar(&opts.Answer, "answer", "", "respuesta del humano a una pregunta abierta")
-	flags.StringVar(&opts.For, "for", "", "P<n> de la pregunta que se contesta (obligatorio si hay dos o más abiertas)")
-	flags.StringVar(&opts.Craft, "craft", "", "decisión que el agente tomó sin preguntar")
-	flags.StringVar(&opts.Because, "because", "", "por qué el agente tomó esa decisión (obligatorio con --craft)")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&opts.Answer, "answer", "", "the human's answer to an open question")
+	flags.StringVar(&opts.For, "for", "", "P<n> of the question being answered (required when two or more are open)")
+	flags.StringVar(&opts.Craft, "craft", "", "decision the agent took without asking")
+	flags.StringVar(&opts.Because, "because", "", "why the agent took that decision (required with --craft)")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	// The documented shape starts with the question, so a leading argument is
 	// the question and the flags may come after it.
@@ -219,11 +219,11 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi ask -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi ask -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi ask toma una sola pregunta entre comillas\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi ask takes a single question in quotes\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -241,10 +241,10 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
-	flags.StringVar(&opts.Requirement, "req", "", "R<n> del requisito al que se ata el paso nuevo")
-	flags.StringVar(&opts.Done, "done", "", "T<n> del paso que se marca hecho")
-	flags.StringVar(&opts.Commit, "commit", "", "commit que cerró el paso (acompaña a --done)")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&opts.Requirement, "req", "", "R<n> of the requirement the new step is tied to")
+	flags.StringVar(&opts.Done, "done", "", "T<n> of the step that is marked done")
+	flags.StringVar(&opts.Commit, "commit", "", "commit that closed the step (goes with --done)")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	// The documented shape starts with the step text, so a leading argument is
 	// the text and the flags may come after it.
@@ -258,7 +258,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi plan -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi plan -h to see the flags")
 		return start.CodeBlocked
 	}
 
@@ -269,7 +269,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 		rest = nil
 	}
 	if len(rest) > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi plan toma un solo texto entre comillas\n", rest[0])
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi plan takes a single text in quotes\n", rest[0])
 		return start.CodeBlocked
 	}
 
@@ -287,19 +287,19 @@ func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		asJSON bool
 	)
 
-	flags.StringVar(&to, "to", "", "perfil a aplicar: se respalda .odachi/profile.toml y se reescribe")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&to, "to", "", "profile to apply: .odachi/profile.toml is backed up and rewritten")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi level -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi level -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi level solo toma flags (corré odachi level -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi level only takes flags (run odachi level -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -322,18 +322,18 @@ func runSummary(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 
 	var asJSON bool
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi summary -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi summary -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi summary no toma argumentos (corré odachi summary -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi summary takes no arguments (run odachi summary -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -351,37 +351,37 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 		noReview bool
 	)
 
-	flags.StringVar(&opts.Run, "run", "", "corre el comando, captura la salida y escribe proof/<NNNN>-<slug>.txt")
-	flags.StringVar(&opts.Proof, "proof", "", "usa una prueba ya escrita (agentes y CI)")
-	flags.StringVar(&opts.Base, "base", "HEAD", "contra qué comparar el cerco (vacío: contra nada, todo cuenta como nuevo)")
-	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "segundos que puede tardar --run")
-	flags.BoolVar(&opts.Quiet, "quiet", false, "no imprime nada si está listo (para el hook)")
-	flags.BoolVar(&opts.RequireReview, "require-review", false, "exige un veredicto de review para este árbol (default: el modo del proyecto)")
-	flags.BoolVar(&noReview, "no-review", false, "no exige review aunque el proyecto lo tenga prendido")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&opts.Run, "run", "", "run the command, capture the output and write proof/<NNNN>-<slug>.txt")
+	flags.StringVar(&opts.Proof, "proof", "", "use a proof that is already written (agents and CI)")
+	flags.StringVar(&opts.Base, "base", "HEAD", "what to compare the fence against (empty: against nothing, everything counts as new)")
+	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "seconds --run may take")
+	flags.BoolVar(&opts.Quiet, "quiet", false, "prints nothing when ready (for the hook)")
+	flags.BoolVar(&opts.RequireReview, "require-review", false, "requires a review verdict for this tree (default: the project mode)")
+	flags.BoolVar(&noReview, "no-review", false, "does not require review even when the project has it on")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi check -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi check -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi check solo toma flags (corré odachi check -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi check only takes flags (run odachi check -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 	if opts.TimeoutSeconds <= 0 {
-		fmt.Fprintln(stderr, "odachi: --timeout tiene que ser mayor que cero segundos; corré odachi check -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: --timeout has to be greater than zero seconds; run odachi check -h to see the flags")
 		return start.CodeBlocked
 	}
 	if opts.Run != "" && opts.Proof != "" {
-		fmt.Fprintln(stderr, "odachi: --run y --proof no van juntos: usá uno de los dos (odachi check --run \"<comando>\" o odachi check --proof <archivo>)")
+		fmt.Fprintln(stderr, "odachi: --run and --proof do not go together: use one of the two (odachi check --run \"<command>\" or odachi check --proof <file>)")
 		return start.CodeBlocked
 	}
 	if opts.RequireReview && noReview {
-		fmt.Fprintln(stderr, "odachi: --require-review y --no-review no van juntos: elegí uno; sin flags manda el modo del proyecto")
+		fmt.Fprintln(stderr, "odachi: --require-review and --no-review do not go together: choose one; without flags the project mode decides")
 		return start.CodeBlocked
 	}
 
@@ -415,24 +415,24 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
-	flags.StringVar(&opts.Exec, "exec", "", "corre este comando con el prompt por stdin y guarda el veredicto que contesta")
-	flags.StringVar(&opts.Attach, "attach", "", "guarda un veredicto o una refutación ya escrita en este archivo")
-	flags.BoolVar(&opts.Show, "show", false, "qué veredicto hay para este árbol, o que no hay")
-	flags.StringVar(&opts.Lens, "lens", "", "lente explícita: risk | readability | reliability | resilience | all (repetible o separada por comas)")
-	flags.StringVar(&opts.Refute, "refute", "", "imprime el prompt del refutador para este veredicto")
-	flags.StringVar(&opts.Base, "base", reviewapp.DefaultBase, "contra qué comparar el candidato (vacío: contra nada, todo cuenta como nuevo)")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&opts.Exec, "exec", "", "run this command with the prompt on stdin and save the verdict it answers")
+	flags.StringVar(&opts.Attach, "attach", "", "save a verdict or a refutation already written in this file")
+	flags.BoolVar(&opts.Show, "show", false, "which verdict exists for this tree, or that there is none")
+	flags.StringVar(&opts.Lens, "lens", "", "explicit lens: risk | readability | reliability | resilience | all (repeatable or comma-separated)")
+	flags.StringVar(&opts.Refute, "refute", "", "print the refuter's prompt for this verdict")
+	flags.StringVar(&opts.Base, "base", reviewapp.DefaultBase, "what to compare the candidate against (empty: against nothing, everything counts as new)")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(withoutEmptyLens(args)); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi review -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi review -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi review solo toma flags (corré odachi review -h)\\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi review only takes flags (run odachi review -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -445,7 +445,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	if forms > 1 {
-		fmt.Fprintln(stderr, `odachi: --exec, --attach, --show y --refute no van juntos: elegí una sola forma (odachi review | odachi review --exec "<comando>" | odachi review --attach <archivo> | odachi review --show | odachi review --refute <veredicto>)`)
+		fmt.Fprintln(stderr, `odachi: --exec, --attach, --show and --refute do not go together: choose a single form (odachi review | odachi review --exec "<command>" | odachi review --attach <file> | odachi review --show | odachi review --refute <verdict>)`)
 		return start.CodeBlocked
 	}
 
@@ -456,7 +456,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 // runReviewMode parses the small mode grammar by hand: the action is a word,
 // not a flag value, and `--json` should work before or after it.
 func runReviewMode(dir string, args []string, stdout, stderr io.Writer) int {
-	const usageLine = "uso: odachi review mode [status|on|off] [--json]"
+	const usageLine = "usage: odachi review mode [status|on|off] [--json]"
 
 	action := reviewapp.ModeStatus
 	actionSeen := false
@@ -471,13 +471,13 @@ func runReviewMode(dir string, args []string, stdout, stderr io.Writer) int {
 			asJSON = true
 		case reviewapp.ModeStatus, reviewapp.ModeOn, reviewapp.ModeOff:
 			if actionSeen {
-				fmt.Fprintln(stderr, "odachi: el modo de review se elige una vez; "+usageLine)
+				fmt.Fprintln(stderr, "odachi: the review mode is chosen once; "+usageLine)
 				return start.CodeBlocked
 			}
 			action = arg
 			actionSeen = true
 		default:
-			fmt.Fprintf(stderr, "odachi: no entiendo %q; %s\n", arg, usageLine)
+			fmt.Fprintf(stderr, "odachi: I do not understand %q; %s\n", arg, usageLine)
 			return start.CodeBlocked
 		}
 	}
@@ -514,21 +514,21 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
-	flags.BoolVar(&opts.List, "list", false, "qué se puede deshacer, con fecha")
-	flags.BoolVar(&opts.Collect, "collect", false, "mueve los backups viejos a .odachi/backups")
-	flags.StringVar(&opts.File, "file", "", "solo ese artefacto: brief | profile | fence | task")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.BoolVar(&opts.List, "list", false, "what can be undone, with its date")
+	flags.BoolVar(&opts.Collect, "collect", false, "move old backups to .odachi/backups")
+	flags.StringVar(&opts.File, "file", "", "only that artifact: brief | profile | fence | task")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi undo -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi undo -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi undo solo toma flags (corré odachi undo -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi undo only takes flags (run odachi undo -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -564,7 +564,7 @@ func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writ
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		fmt.Fprintln(stdout, string(data))
@@ -625,7 +625,7 @@ func reportReview(result reviewapp.Result, asJSON bool, stdout, stderr io.Writer
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		fmt.Fprintln(stdout, string(data))
@@ -676,32 +676,32 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		agents      string
 		global      bool
 	)
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
-	flags.StringVar(&skillsScope, "skills", "project", "dónde instalar las skills: project | home")
-	flags.StringVar(&agents, "agents", "", "qué clientes reciben el agente nativo: opencode | claude | both")
-	flags.BoolVar(&global, "global", false, "instalar la puerta del home, la que aparece en cualquier carpeta")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
+	flags.StringVar(&skillsScope, "skills", "project", "where to install the skills: project | home")
+	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
+	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi init -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi init -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi init solo toma flags (corré odachi init -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi init only takes flags (run odachi init -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 	switch skillsScope {
 	case "project", "home":
 	default:
-		fmt.Fprintf(stderr, "odachi: --skills tiene que ser \"project\" o \"home\", no %q; project deja las skills en el proyecto, home las deja en ~/.agents/skills\n", skillsScope)
+		fmt.Fprintf(stderr, "odachi: --skills has to be \"project\" or \"home\", not %q; project leaves the skills in the project, home leaves them in ~/.agents/skills\n", skillsScope)
 		return start.CodeBlocked
 	}
 	if strings.TrimSpace(agents) != "" {
 		if _, err := persona.NormalizeSelection(agents); err != nil {
-			fmt.Fprintf(stderr, "odachi: %s; usá opencode, claude o both\n", oneLine(err.Error()))
+			fmt.Fprintf(stderr, "odachi: %s; use opencode, claude or both\n", oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 	}
@@ -723,7 +723,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		Global:         global,
 	}, osFiles{}, &initSkills{dir: dir, scope: skillsScope})
 	if created {
-		line := "historial del proyecto: lo creé en esta carpeta (git init); es lo que me deja probar que una prueba corresponde a este estado del código"
+		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
 		result.Lines = append([]string{line}, result.Lines...)
 	}
 	if len(result.Files) > 0 || created {
@@ -755,7 +755,7 @@ type initSkills struct {
 func (s initSkills) Install() initapp.SkillReport {
 	if _, ok := bundledskills.Bootstrap(); !ok {
 		return initapp.SkillReport{
-			Blocked: "este binario no trae la skill " + bundledskills.BootstrapName + ": es una instalación incompleta; volvé a bajar odachi",
+			Blocked: "this binary does not carry the " + bundledskills.BootstrapName + " skill: it is an incomplete installation; download odachi again",
 			Next:    "odachi init",
 		}
 	}
@@ -763,14 +763,14 @@ func (s initSkills) Install() initapp.SkillReport {
 	if s.scope == "home" {
 		all, err := bundledskills.All()
 		if err != nil {
-			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; volvé a bajar odachi", Next: "odachi init"}
+			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: "odachi init"}
 		}
 		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all)}, osFiles{}, osHome{})
 		report := s.report([]pack.Result{home})
 		if standard, err := agent.Resolve(agent.Standard); err == nil {
 			exists, err := (osFiles{}).Exists(filepath.Join(s.dir, filepath.FromSlash(standard.Dest)))
 			if err == nil && exists {
-				report.Notice = append(report.Notice, standard.Display()+": ya tenía una copia del init anterior; no la toqué: ahora las skills viven en "+standard.In(agent.ScopeHome).Display())
+				report.Notice = append(report.Notice, standard.Display()+": it already had a copy from an earlier init; I did not touch it: now the skills live in "+standard.In(agent.ScopeHome).Display())
 			}
 		}
 		return report
@@ -778,7 +778,7 @@ func (s initSkills) Install() initapp.SkillReport {
 
 	curriculum, err := bundledskills.Curriculum()
 	if err != nil {
-		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; volvé a bajar odachi", Next: "odachi init"}
+		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: "odachi init"}
 	}
 	bootstrap, _ := bundledskills.Bootstrap()
 
@@ -844,7 +844,7 @@ func (s initSkills) otherProjectCopy() []string {
 		if err != nil || !exists {
 			continue
 		}
-		lines = append(lines, a.Display()+": ya tiene una copia de las skills (la puso odachi pack --agents "+a.Name+"); no la toco: la del proyecto es "+standard.Display())
+		lines = append(lines, a.Display()+": it already has a copy of the skills (odachi pack --agents "+a.Name+" put it there); I do not touch it: the project one is "+standard.Display())
 	}
 	return lines
 }
@@ -856,7 +856,7 @@ func blockedSkills(result pack.Result) string {
 		if dest.Failure == nil {
 			continue
 		}
-		return "no pude escribir " + dest.Failure.Path + ": " + dest.Failure.Reason + "; revisá los permisos y volvé a correr odachi init"
+		return "could not write " + dest.Failure.Path + ": " + dest.Failure.Reason + "; check the permissions and run odachi init again"
 	}
 	return oneLine(result.Message)
 }
@@ -926,7 +926,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		fmt.Fprintln(stdout, string(data))
@@ -1076,7 +1076,7 @@ func reportOutcome(o outcome, asJSON bool, stdout, stderr io.Writer) int {
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		fmt.Fprintln(stdout, string(data))
@@ -1102,191 +1102,191 @@ func humanLines(o outcome) []string {
 	return []string{o.Message}
 }
 
-// usage is the Spanish help a human reads with `odachi start -h`.
+// usage is the help a human reads with `odachi start -h`.
 func usage(out io.Writer) {
-	fmt.Fprint(out, `odachi · dos manos: vos decidís, el agente construye
+	fmt.Fprint(out, `odachi · two hands: you decide, the agent builds
 
-uso:
-  odachi                      lo mismo que odachi start
+usage:
+  odachi                      the same as odachi start
   odachi start [flags]
-  odachi ask "<pregunta>"
-  odachi ask --answer "<respuesta>" [--for P1]
-  odachi ask --craft "<decisión>" --because "<razón>"
-  odachi plan "<texto>" [--req R1]
+  odachi ask "<question>"
+  odachi ask --answer "<answer>" [--for P1]
+  odachi ask --craft "<decision>" --because "<reason>"
+  odachi plan "<text>" [--req R1]
   odachi plan --done T2 [--commit abc1234]
-  odachi level [--to <perfil>]
+  odachi level [--to <profile>]
   odachi summary
   odachi undo [--list | --collect] [--file brief]
   odachi check [flags]
-  odachi review [--exec "<comando>" | --attach <archivo> | --show | --refute <veredicto>]
-  odachi review [--lens <lente>]
+  odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
+  odachi review [--lens <lens>]
   odachi review mode [status|on|off]
   odachi doctor [--json]
-  odachi bench [--journeys <nombres>] [--binary <ruta>] [--json]
+  odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
-  odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <carpeta>] [--dry-run]
+  odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <folder>] [--dry-run]
   odachi --version
   odachi version
 
-la versión:
-  --version       imprime "odachi <versión>" y sale con 0 (un build sin ldflags dice dev)
+the version:
+  --version       prints "odachi <version>" and exits 0 (a build without ldflags says dev)
 
-flags de check:
-  --run s         corre el comando y escribe la prueba de este árbol
-  --proof path    usa una prueba ya escrita (agentes y CI)
-  --base ref      contra qué comparar el cerco (default HEAD; vacío: contra nada)
-  --timeout n     segundos que puede tardar --run (default 120)
-  --quiet         no imprime nada si está listo (para el hook)
-  --require-review  exige un veredicto de review para este árbol (default: el modo del proyecto)
-  --no-review     no exige review aunque el proyecto lo tenga prendido
-  --json          salida para máquinas
+check flags:
+  --run s         run the command and write this tree's proof
+  --proof path    use a proof that is already written (agents and CI)
+  --base ref      what to compare the fence against (default HEAD; empty: against nothing)
+  --timeout n     seconds --run may take (default 120)
+  --quiet         prints nothing when ready (for the hook)
+  --require-review  requires a review verdict for this tree (default: the project mode)
+  --no-review     does not require review even when the project has it on
+  --json          machine output
 
-flags de review:
-  --exec s        corre este comando con el prompt por stdin (y {prompt} como ruta a ese
-                  mismo archivo) y guarda el veredicto que contesta
-  --attach path   guarda un veredicto o una refutación ya escrita (agente o humano)
-  --show          qué veredicto hay para este árbol, o que no hay
-  --lens s        lente explícita: risk | readability | reliability | resilience | all
-  --refute path   imprime el prompt del refutador para ese veredicto
-  --base ref      contra qué comparar el candidato (default HEAD; vacío: contra nada)
-  --json          salida para máquinas
+review flags:
+  --exec s        run this command with the prompt on stdin (and {prompt} as the path to that
+                  same file) and save the verdict it answers
+  --attach path   save a verdict or a refutation that is already written (agent or human)
+  --show          which verdict exists for this tree, or that there is none
+  --lens s        explicit lens: risk | readability | reliability | resilience | all
+  --refute path   print the refuter's prompt for that verdict
+  --base ref      what to compare the candidate against (default HEAD; empty: against nothing)
+  --json          machine output
 
-modo de review:
-  odachi review mode status   si el proyecto exige review (default: off)
-  odachi review mode on       check exige el veredicto de este árbol
-  odachi review mode off      check no lo exige, aunque el hook corra check
-  el modo vive en .odachi/review.toml; --require-review y --no-review lo override por una corrida
+review mode:
+  odachi review mode status   whether the project requires review (default: off)
+  odachi review mode on       check requires the verdict for this tree
+  odachi review mode off      check does not require it, even when the hook runs check
+  the mode lives in .odachi/review.toml; --require-review and --no-review override it for one run
 
-flags de plan:
-  --req R<n>      requisito al que se ata el paso nuevo
-  --done T<n>     paso que se marca hecho
-  --commit sha    commit que cerró el paso (acompaña a --done)
-  --json          salida para máquinas
+plan flags:
+  --req R<n>      requirement the new step is tied to
+  --done T<n>     step that is marked done
+  --commit sha    commit that closed the step (goes with --done)
+  --json          machine output
 
-flags de undo:
-  --list          qué se puede deshacer, con fecha
-  --collect       mueve los backups viejos a .odachi/backups; no borra versiones
-  --file s        solo ese artefacto: brief | profile | fence | task
-  --json          salida para máquinas
+undo flags:
+  --list          what can be undone, with its date
+  --collect       move old backups to .odachi/backups; it deletes no version
+  --file s        only that artifact: brief | profile | fence | task
+  --json          machine output
 
-flags de skills:
-  --check         valida cada skill y SKILLS.md; sale con 1 si algo no cumple
-  --write         regenera SKILLS.md desde los frontmatter
-  --json          salida para máquinas
+skills flags:
+  --check         validate each skill and SKILLS.md; exits 1 when something does not comply
+  --write         regenerate SKILLS.md from the frontmatter
+  --json          machine output
 
-flags de pack:
-  --agents s      solo estos agentes, separados por coma (default: los detectados);
-                  standard es la carpeta que leen todos los clientes (.agents/skills)
-  --scope s       project | home: el mismo agente, en la otra raíz (default: el de la tabla)
-  --dest path     instala todo en esta carpeta: absoluta, o relativa al proyecto
-  --dry-run       qué haría, sin escribir nada
-  --json          salida para máquinas
+pack flags:
+  --agents s      only these agents, comma-separated (default: the detected ones);
+                  standard is the folder every client reads (.agents/skills)
+  --scope s       project | home: the same agent, in the other root (default: the one in the table)
+  --dest path     install everything in this folder: absolute, or relative to the project
+  --dry-run       what it would do, without writing anything
+  --json          machine output
 
-flags de bench:
-  --journeys s    solo estos recorridos, separados por coma
-  --binary path   el binario que corre cada recorrido (default: el que está corriendo)
-  --json          salida para máquinas
+bench flags:
+  --journeys s    only these journeys, comma-separated
+  --binary path   the binary each journey runs (default: the one that is running)
+  --json          machine output
 
-flags de init:
-  --skills s      project | home (default project): el proyecto lleva las skills del oficio;
-                  home las deja todas en ~/.agents/skills y no escribe copia en el proyecto
-  --agents s      opencode | claude | both (default both): qué clientes reciben el agente
-                  nativo y la puerta del home; la elección queda en .odachi/agents.toml
-                  y no borra los archivos que ya existen del otro cliente
-  --global        instala la puerta del home: el agente que aparece en cualquier carpeta,
-                  no solo en este proyecto. Es opt-in: sin el flag no se escribe nada en
-                  tu home, porque el selector de cualquier carpeta es tuyo
-  --json          salida para máquinas, con los destinos de las skills y del agente
+init flags:
+  --skills s      project | home (default project): the project carries the craft skills;
+                  home leaves all of them in ~/.agents/skills and writes no copy in the project
+  --agents s      opencode | claude | both (default both): which clients receive the native
+                  agent and the home door; the choice stays in .odachi/agents.toml
+                  and does not delete the files another client already has
+  --global        install the home door: the agent that shows up in any folder,
+                  not only in this project. It is opt-in: without the flag nothing is written
+                  to your home, because the selector of any folder is yours
+  --json          machine output, with the destinations of the skills and of the agent
 
-qué deja escrito init, en un solo comando (--skills project y --agents both, los defaults):
-  AGENTS.md              el bloque de reglas que el agente lee, con la voz al final
-  .opencode/agents       odachi.md (se elige con Tab) + odachi-worker.md y odachi-verify.md (subagentes)
-  .claude/output-styles  odachi.md: el mismo bloque, para elegirlo con /config en este proyecto
-  .claude/agents         odachi-worker.md y odachi-verify.md: los subagentes de Claude Code
-  .gitignore             /proof/, /.odachi/reviews/ y *.bak-* no ensucian el árbol
-  .git/hooks/pre-commit  no se commitea sin odachi check --quiet en verde
-  .agents/skills         las skills del proyecto: la carpeta que leen todos los clientes
-  ~/.agents/skills       la skill de arranque: cómo empezar un proyecto desde cero
+what init leaves written, in one command (--skills project and --agents both, the defaults):
+  AGENTS.md              the rules block the agent reads, with the voice at the end
+  .opencode/agents       odachi.md (chosen with Tab) + odachi-worker.md and odachi-verify.md (subagents)
+  .claude/output-styles  odachi.md: the same block, to choose it with /config in this project
+  .claude/agents         odachi-worker.md and odachi-verify.md: the Claude Code subagents
+  .gitignore             /proof/, /.odachi/reviews/ and *.bak-* do not dirty the tree
+  .git/hooks/pre-commit  no commit without odachi check --quiet green
+  .agents/skills         the project's skills: the folder every client reads
+  ~/.agents/skills       the bootstrap skill: how to start a project from scratch
 
-la puerta del home —el agente que aparece en cualquier carpeta— es opt-in: un init sin
---global no la escribe. Con --global va a ~/.config/opencode/agents y
-~/.claude/output-styles, una por cliente elegido.
+the home door —the agent that shows up in any folder— is opt-in: an init without
+--global does not write it. With --global it goes to ~/.config/opencode/agents and
+~/.claude/output-styles, one per chosen client.
 
-con --agents opencode no se escribe nada en .claude y con --agents claude no se escribe
-nada en .opencode; los archivos de un cliente ya instalado no se borran. La elección se
-guarda en .odachi/agents.toml y un init posterior la conserva; sin archivo, el default
-sigue siendo los dos.
+with --agents opencode nothing is written to .claude, and with --agents claude nothing is
+written to .opencode; the files of a client that is already installed are not deleted. The choice
+is kept in .odachi/agents.toml and a later init preserves it; without the file, the default
+is still both.
 
-con --skills home, todas las skills van a ~/.agents/skills y el proyecto no recibe copia;
-si ya tenía .agents/skills de un init anterior, no se borra: se avisa.
+with --skills home, all the skills go to ~/.agents/skills and the project gets no copy;
+if it already had .agents/skills from an earlier init, it is not deleted: it is reported.
 
-los subagentes odachi-worker y odachi-verify los invoca el agente, no se eligen con
-una tecla. El padre les pasa el task doc, el paso, las superficies, los comandos y
-los paths de las skills; vuelven con evidencia y ≤2k tokens, y no commitean.
+the odachi-worker and odachi-verify subagents are invoked by the agent, they are not chosen with
+a key. The parent hands them the task doc, the step, the surfaces, the commands and
+the skill paths; they come back with evidence and ≤2k tokens, and they do not commit.
 
-la voz —cómo te habla el agente— es la última sección del bloque, y la escribe el
-binario: novato si todavía no hay .odachi/profile.toml, si no la del perfil que
-diga. El agente nativo tiene dos copias por cliente elegido: el espejo del
-proyecto, con las mismas reglas y la misma voz, y la puerta del home, que aparece
-en cualquier carpeta y lee el bloque del proyecto cuando existe; si no existe, guía para arrancar con
-odachi init y odachi start. odachi level --to <perfil> cambia el perfil, esa
-sección y el espejo del proyecto, y no toca nada más del bloque.
+the voice —how the agent talks to you— is the last section of the block, and the binary
+writes it: novato when there is no .odachi/profile.toml yet, otherwise the one of the profile
+it names. The native agent has two copies per chosen client: the project
+mirror, with the same rules and the same voice, and the home door, which shows up
+in any folder and reads the project block when it exists; when it does not exist, it guides you to start with
+odachi init and odachi start. odachi level --to <profile> changes the profile, that
+section and the project mirror, and touches nothing else in the block.
 
 flags:
-  --outcome s     respuesta 1: qué tiene que existir cuando terminemos
-  --audience s    respuesta 2: phone | cpu | both
-  --done s        respuesta 3 (repetible): cómo vas a saber que funcionó
-  --exclude s     respuesta 4 (repetible): no-goal por clave o texto libre
-  --sensitive s   respuesta 5: none | names | health | money
-  --deadline s    respuesta 6: today | week | relaxed
-  --learn s       respuesta 7 (repetible): qué querés aprender
-  --brief path    leer un brief existente en vez de preguntar
-  --force         reescribir un brief.md existente (se respalda primero)
-  --json          salida para máquinas
+  --outcome s     answer 1: what has to exist when we finish
+  --audience s    answer 2: phone | cpu | both
+  --done s        answer 3 (repeatable): how you will know it worked
+  --exclude s     answer 4 (repeatable): no-goal by key or free text
+  --sensitive s   answer 5: none | names | health | money
+  --deadline s    answer 6: today | week | relaxed
+  --learn s       answer 7 (repeatable): what you want to learn
+  --brief path    read an existing brief instead of asking
+  --force         rewrite an existing brief.md (it is backed up first)
+  --json          machine output
 
-después de start:
-  odachi ask "<pregunta>"                       anotar una pregunta abierta
-  odachi ask --answer "<respuesta>" [--for P1]  anotar tu respuesta
-  odachi ask --craft "<decisión>" --because "<razón>"  anotar una decisión del agente
-  odachi plan "<texto>" [--req R1]              agrega el próximo paso al task doc
-  odachi plan --done T2 [--commit abc1234]      marca un paso hecho y registra el commit
-  odachi level                                  ver tus hechos; propone senior cuando se gana
-  odachi level --to <perfil>                    aplicar un perfil y su voz (se respaldan los dos)
-  odachi summary                                qué hay hecho en cada feature
-  odachi undo                                   restaura lo último que escribió odachi (lo actual queda respaldado)
-  odachi undo --list                            qué se puede deshacer, con fecha
-  odachi undo --file brief                      solo ese: brief | profile | fence | task
-  odachi check                                  ¿está listo? brief, cerco, preguntas y prueba
-  odachi check --run "<comando>"                corre la prueba y la guarda con su árbol
-  odachi review                                 el prompt de review de este candidato
-  odachi review --exec "<comando>"              corre el revisor con el prompt por stdin y guarda su veredicto
-  odachi review --exec "agente {prompt}"        igual, pero el revisor recibe la ruta del prompt
-  odachi review --attach <archivo>              guarda un veredicto o una refutación ya escrita
-  odachi review --show                          qué veredicto hay para este árbol
-  odachi review --lens risk                     agrega una lente a las que pide la evidencia
-  odachi review --lens --show                   qué lentes pide este árbol y cuáles faltan
-  odachi review --refute <veredicto>            el prompt del refutador para ese veredicto
-  odachi check --require-review                 exige review para este árbol y sus lentes
-  odachi doctor                                 once chequeos de salud, de solo lectura
-  odachi bench                                  mide cómo se traba una persona (in-band / dead-end)
-  odachi init                                   AGENTS.md (con la voz del perfil) + el agente del
-                                                 proyecto y la puerta del home (se eligen con Tab)
-                                                 + hook + las skills del proyecto en .agents/skills,
-                                                 y la de arranque en ~/.agents/skills
-  odachi skills                                 las skills del proyecto y su trigger
-  odachi skills --check                         valida (lo corre CI); exit 1 si algo no cumple
-  odachi skills --write                         regenera SKILLS.md desde los frontmatter
-  odachi skill new <slug>                       crea skills/<slug>/SKILL.md y actualiza el registro
-  odachi pack --agents claude,codex             instala las skills incluidas en cada agente
-  odachi pack --agents standard                 en ./.agents/skills, la carpeta que leen todos los clientes
-  odachi pack --agents standard --scope home    en ~/.agents/skills: una copia para todos los proyectos
-  odachi pack --agents opencode --scope home    el agente que es de proyecto, instalado en tu home
-  odachi pack --agents mi-cliente --dest ./skills-x  un cliente con su propia ruta
-  odachi pack --dry-run                         qué copiaría, sin escribir nada
+after start:
+  odachi ask "<question>"                       record an open question
+  odachi ask --answer "<answer>" [--for P1]     record your answer
+  odachi ask --craft "<decision>" --because "<reason>"  record a decision the agent took
+  odachi plan "<text>" [--req R1]               add the next step to the task doc
+  odachi plan --done T2 [--commit abc1234]      mark a step done and record the commit
+  odachi level                                  see your facts; it proposes senior when earned
+  odachi level --to <profile>                   apply a profile and its voice (both are backed up)
+  odachi summary                                what is done in each feature
+  odachi undo                                   restore the last thing odachi wrote (the current one is backed up)
+  odachi undo --list                            what can be undone, with its date
+  odachi undo --file brief                      only that one: brief | profile | fence | task
+  odachi check                                  is it ready? brief, fence, questions and proof
+  odachi check --run "<command>"                run the proof and save it with its tree
+  odachi review                                 the review prompt for this candidate
+  odachi review --exec "<command>"              run the reviewer with the prompt on stdin and save its verdict
+  odachi review --exec "agent {prompt}"         the same, but the reviewer receives the prompt path
+  odachi review --attach <file>                 save a verdict or a refutation that is already written
+  odachi review --show                          which verdict exists for this tree
+  odachi review --lens risk                     add a lens to the ones the evidence asks for
+  odachi review --lens --show                   which lenses this tree asks for and which are missing
+  odachi review --refute <verdict>              the refuter's prompt for that verdict
+  odachi check --require-review                 requires review for this tree and its lenses
+  odachi doctor                                 eleven health checks, read-only
+  odachi bench                                  measures how a person gets stuck (in-band / dead-end)
+  odachi init                                   AGENTS.md (with the profile voice) + the project
+                                                 agent and the home door (chosen with Tab)
+                                                 + hook + the project skills in .agents/skills,
+                                                 and the bootstrap one in ~/.agents/skills
+  odachi skills                                 the project's skills and their trigger
+  odachi skills --check                         validate (CI runs it); exit 1 when something does not comply
+  odachi skills --write                         regenerate SKILLS.md from the frontmatter
+  odachi skill new <slug>                       create skills/<slug>/SKILL.md and update the registry
+  odachi pack --agents claude,codex             install the bundled skills into each agent
+  odachi pack --agents standard                 in ./.agents/skills, the folder every client reads
+  odachi pack --agents standard --scope home    in ~/.agents/skills: one copy for every project
+  odachi pack --agents opencode --scope home    the project agent, installed in your home
+  odachi pack --agents my-client --dest ./skills-x  a client with its own path
+  odachi pack --dry-run                         what it would copy, without writing anything
 
-códigos de salida: 0 artefactos escritos · 1 bloqueado · 2 falta una respuesta humana
+exit codes: 0 artifacts written · 1 blocked · 2 a human answer is missing
 `)
 }
 

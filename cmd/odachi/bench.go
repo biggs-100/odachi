@@ -30,20 +30,20 @@ func runBench(_ string, args []string, stdout, stderr io.Writer) int {
 		asJSON   bool
 	)
 
-	flags.StringVar(&binary, "binary", "", "el binario que corre cada recorrido (default: el que está corriendo)")
-	flags.StringVar(&journeys, "journeys", "", "solo estos recorridos, separados por coma")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&binary, "binary", "", "the binary each journey runs (default: the one that is running)")
+	flags.StringVar(&journeys, "journeys", "", "only these journeys, comma-separated")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi bench -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi bench -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi bench solo toma flags (corré odachi bench -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi bench only takes flags (run odachi bench -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -75,7 +75,7 @@ func list(value string) []string {
 
 // reportBench prints the report. The counts and the dead ends are the deliverable,
 // so a bench that found a dead end prints on stderr and a clean one on stdout,
-// the same way the other verbs separate "listo" from "bloqueado".
+// the same way the other verbs separate "ready" from "blocked".
 func reportBench(result benchapp.Result, asJSON bool, stdout, stderr io.Writer) int {
 	if asJSON {
 		journeys := make([]jsonJourney, 0, len(result.Journeys))
@@ -124,7 +124,7 @@ func reportBench(result benchapp.Result, asJSON bool, stdout, stderr io.Writer) 
 
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		fmt.Fprintln(stdout, string(data))

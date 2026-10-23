@@ -216,7 +216,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 		}
 	}
 
-	proof("antes del veredicto")
+	proof("before the verdict")
 	// The verdict is written OUTSIDE the project on purpose: a file left inside it
 	// would become part of the tree the verdict is named after.
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
@@ -229,7 +229,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	proof("después del veredicto")
+	proof("after the verdict")
 
 	// The gate blocks, naming the finding and the lens it needs.
 	code, _, errOut := runDir(t, dir, []string{"check", "--require-review"}, "")
@@ -252,7 +252,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	refutation := filepath.Join(t.TempDir(), "refutacion.json")
 	writeAt(t, refutation, `{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"el diff solo cambia el literal devuelto; el turno nunca se guardaba tampoco antes"}]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", refutation}, ""); code != 0 {
-		t.Fatalf("attach refutación: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+		t.Fatalf("attach refutation: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 
 	// The store's ignore file already existed, so the tree did not move: the
@@ -291,13 +291,13 @@ func TestCheckRequireReviewNamesTheMissingLens(t *testing.T) {
 		}
 	}
 
-	proof("antes del veredicto")
+	proof("before the verdict")
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
 	writeAt(t, verdict, `{"reviewer":"humano","findings":[]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	proof("después del veredicto")
+	proof("after the verdict")
 
 	// A verdict stored before lenses existed does not cover the lens this change
 	// requires. It is the same artefact a human can write by hand, so the gate

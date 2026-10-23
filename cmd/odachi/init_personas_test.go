@@ -27,7 +27,7 @@ func readAgents(t *testing.T, dir string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
 	if err != nil {
-		t.Fatalf("AGENTS.md no se escribió: %v", err)
+		t.Fatalf("AGENTS.md was not written: %v", err)
 	}
 	return string(data)
 }
@@ -48,10 +48,10 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 		t.Fatalf("rules.Block(novato): %v", err)
 	}
 	if got := readAgents(t, dir); got != want {
-		t.Fatalf("el bloque no lleva la voz de novato:\n%q\nvs\n%q", got, want)
+		t.Fatalf("the block does not carry the novato voice:\n%q\nvs\n%q", got, want)
 	}
 	if !strings.Contains(out, persona.Novato) {
-		t.Errorf("la salida no dice con qué voz se escribió el bloque:\n%s", out)
+		t.Errorf("the output does not say which voice the block was written with:\n%s", out)
 	}
 
 	// The native agent mirrors the same block, so the human can pick odachi with
@@ -64,15 +64,15 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 	for _, client := range persona.Clients() {
 		file, ok := persona.FilesFor(client.Agent, block)
 		if !ok {
-			t.Fatalf("persona.FilesFor(%q) no existe", client.Agent)
+			t.Fatalf("persona.FilesFor(%q) does not exist", client.Agent)
 		}
 		got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(file.Path)))
 		if err != nil {
-			t.Errorf("%s no se escribió: %v", file.Path, err)
+			t.Errorf("%s was not written: %v", file.Path, err)
 			continue
 		}
 		if string(got) != file.Content {
-			t.Errorf("%s no es el espejo del bloque:\n%q\nvs\n%q", file.Path, got, file.Content)
+			t.Errorf("%s is not the block mirror:\n%q\nvs\n%q", file.Path, got, file.Content)
 		}
 	}
 
@@ -82,22 +82,22 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 		for _, file := range persona.SubagentFilesFor(client.Agent) {
 			got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(file.Path)))
 			if err != nil {
-				t.Errorf("%s no se escribió: %v", file.Path, err)
+				t.Errorf("%s was not written: %v", file.Path, err)
 				continue
 			}
 			if string(got) != file.Content {
-				t.Errorf("%s no coincide con el subagente generado:\n%q\nvs\n%q", file.Path, got, file.Content)
+				t.Errorf("%s does not match the generated subagent:\n%q\nvs\n%q", file.Path, got, file.Content)
 			}
 		}
 	}
 	for _, want := range []string{"odachi-worker", "odachi-verify"} {
 		if !strings.Contains(out, want) {
-			t.Errorf("la salida no nombra %s:\n%s", want, out)
+			t.Errorf("the output does not name %s:\n%s", want, out)
 		}
 	}
 	for _, legacy := range personaLegacyFiles {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(legacy))); err == nil {
-			t.Errorf("init escribió %s: el agente de esta versión es %s", legacy, persona.FileName)
+			t.Errorf("init wrote %s: this version's agent is %s", legacy, persona.FileName)
 		}
 	}
 
@@ -110,11 +110,11 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 	for _, file := range persona.GlobalFiles() {
 		got, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(file.Path)))
 		if err != nil {
-			t.Errorf("%s no se instaló en el home: %v", file.Path, err)
+			t.Errorf("%s was not installed in the home: %v", file.Path, err)
 			continue
 		}
 		if string(got) != file.Content {
-			t.Errorf("%s no es la puerta del home:\n%q\nvs\n%q", file.Path, got, file.Content)
+			t.Errorf("%s is not the home door:\n%q\nvs\n%q", file.Path, got, file.Content)
 		}
 	}
 }
@@ -135,11 +135,11 @@ func TestInitWithoutGlobalDoesNotWriteTheDoor(t *testing.T) {
 
 	for _, file := range persona.GlobalFiles() {
 		if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(file.Path))); err == nil {
-			t.Errorf("%s se instaló sin --global", file.Path)
+			t.Errorf("%s was installed without --global", file.Path)
 		}
 	}
 	if !strings.Contains(out, "--global") {
-		t.Errorf("la salida no nombra el flag que instala la puerta:\n%s", out)
+		t.Errorf("the output does not name the flag that installs the door:\n%s", out)
 	}
 }
 
@@ -159,7 +159,7 @@ func TestInitUsesTheProfileTheHumanWroteDown(t *testing.T) {
 		t.Fatalf("rules.Block(senior): %v", err)
 	}
 	if got := readAgents(t, dir); got != want {
-		t.Fatalf("el bloque no lleva la voz del perfil:\n%q\nvs\n%q", got, want)
+		t.Fatalf("the block does not carry the profile voice:\n%q\nvs\n%q", got, want)
 	}
 }
 
@@ -184,13 +184,13 @@ func TestInitRerunWritesNothing(t *testing.T) {
 		t.Fatalf("second run code = %d (stdout %q, stderr %q)", code, out, errOut)
 	}
 	if after := tree(t, dir); strings.Join(keys(before), ",") != strings.Join(keys(after), ",") {
-		t.Errorf("el segundo init tocó el proyecto: before %v after %v", keys(before), keys(after))
+		t.Errorf("the second init touched the project: before %v after %v", keys(before), keys(after))
 	}
 	if afterHome := homeTree(t, home); strings.Join(beforeHome, ",") != strings.Join(afterHome, ",") {
-		t.Errorf("el segundo init tocó el home: before %v after %v", beforeHome, afterHome)
+		t.Errorf("the second init touched the home: before %v after %v", beforeHome, afterHome)
 	}
 	if !strings.Contains(out, "unchanged") {
-		t.Errorf("la salida no dice que no cambió nada:\n%s", out)
+		t.Errorf("the output does not say nothing changed:\n%s", out)
 	}
 }
 
@@ -210,21 +210,21 @@ func TestInitReportsAndKeepsTheLegacyPersonaFiles(t *testing.T) {
 
 	for _, want := range []string{"v0.10.0", ".opencode/agents", "AGENTS.md", "delete them"} {
 		if !strings.Contains(out, want) {
-			t.Errorf("la salida no dice %q:\n%s", want, out)
+			t.Errorf("the output does not say %q:\n%s", want, out)
 		}
 	}
 	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(legacy)))
 	if err != nil {
-		t.Fatalf("%s se borró: odachi no borra archivos que no escribió esta versión", legacy)
+		t.Fatalf("%s was deleted: odachi does not delete files this version did not write", legacy)
 	}
 	if string(data) != "la versión vieja\n" {
-		t.Errorf("%s cambió: %q", legacy, data)
+		t.Errorf("%s changed: %q", legacy, data)
 	}
 	// One line, not a list: a human reads a report, not an inventory.
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "v0.10.0") && strings.Contains(line, persona.Deprecated()[0]) {
-			t.Errorf("la línea de leftovers enumera archivos en vez de carpetas: %q", line)
+			t.Errorf("the leftovers line lists files instead of folders: %q", line)
 		}
 	}
 }
@@ -276,29 +276,29 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 		key := row.Scope + "|" + row.Dir
 		count, ok := want[key]
 		if !ok {
-			t.Errorf("fila inesperada %s = %+v", key, row)
+			t.Errorf("unexpected row %s = %+v", key, row)
 			continue
 		}
 		if row.Written+row.Unchanged != count || len(row.Files) != count {
-			t.Errorf("fila %s = %+v, want %d files owned", key, row, count)
+			t.Errorf("row %s = %+v, want %d files owned", key, row, count)
 			continue
 		}
 		for _, file := range row.Files {
 			if !strings.HasPrefix(file, row.Dir+"/") {
-				t.Errorf("fila %s owns %s, outside its directory", key, file)
+				t.Errorf("row %s owns %s, outside its directory", key, file)
 			}
 		}
 	}
 	for _, scope := range []string{"project", "home"} {
 		if !scopes[scope] {
-			t.Errorf("el reporte no trae la fila de scope %q: %+v", scope, payload.Personas)
+			t.Errorf("the report does not carry the %q scope row: %+v", scope, payload.Personas)
 		}
 	}
 	if !slicesContains(payload.Files, "AGENTS.md") {
 		t.Errorf("files = %v, want it to name AGENTS.md", payload.Files)
 	}
 	if len(payload.Skills) == 0 {
-		t.Errorf("el reporte perdió las skills: %s", out)
+		t.Errorf("the report lost the skills: %s", out)
 	}
 }
 

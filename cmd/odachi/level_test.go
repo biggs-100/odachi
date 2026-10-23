@@ -178,7 +178,7 @@ func TestSummaryListsBothFeatures(t *testing.T) {
 	}
 }
 
-// TestSummaryOnAnEmptyProjectSaysSo: one Spanish line, exit 0, no error.
+// TestSummaryOnAnEmptyProjectSaysSo: one English line, exit 0, no error.
 func TestSummaryOnAnEmptyProjectSaysSo(t *testing.T) {
 	dir := t.TempDir()
 

@@ -20,15 +20,15 @@ func sandboxes(t *testing.T) []string {
 }
 
 // TestBenchRejectsAnUnknownJourney: a filter that matches nothing would report
-// "todo bien" about a corpus that never ran, so it names the corpus instead.
+// "all good" about a corpus that never ran, so it names the corpus instead.
 func TestBenchRejectsAnUnknownJourney(t *testing.T) {
 	before := sandboxes(t)
 
-	code, _, stderr := runDir(t, t.TempDir(), []string{"bench", "--journeys", "inventado"}, "")
+	code, _, stderr := runDir(t, t.TempDir(), []string{"bench", "--journeys", "invented"}, "")
 	if code != 1 {
 		t.Fatalf("an unknown journey must exit 1, got %d", code)
 	}
-	if !strings.Contains(stderr, "inventado") {
+	if !strings.Contains(stderr, "invented") {
 		t.Fatalf("the message must name the typo: %q", stderr)
 	}
 	if !strings.Contains(stderr, "repo-nuevo-start") {
@@ -44,7 +44,7 @@ func TestBenchRejectsAnUnknownJourney(t *testing.T) {
 func TestBenchRemovesItsSandboxes(t *testing.T) {
 	before := sandboxes(t)
 
-	missing := filepath.Join(t.TempDir(), "no-existe")
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
 	code, _, stderr := runDir(t, t.TempDir(), []string{"bench", "--binary", missing, "--journeys", "repo-nuevo-start"}, "")
 	if code != 1 {
 		t.Fatalf("a binary that cannot run must fail the bench, got %d: %s", code, stderr)
@@ -62,7 +62,7 @@ func TestBenchRemovesItsSandboxes(t *testing.T) {
 // TestBenchJSONSaysTheSameThing: --json carries the counts and the dead ends, so
 // a machine reads the same report a human does.
 func TestBenchJSONSaysTheSameThing(t *testing.T) {
-	missing := filepath.Join(t.TempDir(), "no-existe")
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
 	code, stdout, stderr := runDir(t, t.TempDir(), []string{"bench", "--binary", missing, "--journeys", "repo-nuevo-start", "--json"}, "")
 	if stderr != "" {
 		t.Fatalf("--json writes nothing to stderr: %q", stderr)
@@ -113,8 +113,8 @@ func TestBenchJSONSaysTheSameThing(t *testing.T) {
 
 // TestBenchUnknownFlag: the flag surface is small and a typo says so.
 func TestBenchUnknownFlag(t *testing.T) {
-	code, _, stderr := runDir(t, t.TempDir(), []string{"bench", "--inventado"}, "")
-	if code != 1 || !strings.Contains(stderr, "flag inválido") {
+	code, _, stderr := runDir(t, t.TempDir(), []string{"bench", "--invented"}, "")
+	if code != 1 || !strings.Contains(stderr, "invalid flag") {
 		t.Fatalf("exit %d, stderr %q", code, stderr)
 	}
 }
@@ -122,8 +122,8 @@ func TestBenchUnknownFlag(t *testing.T) {
 // TestBenchIsDispatched: the verb exists and does not fall through to the unknown
 // command path.
 func TestBenchIsDispatched(t *testing.T) {
-	code, _, stderr := runDir(t, t.TempDir(), []string{"bench", "--journeys", "inventado"}, "")
-	if strings.Contains(stderr, "comando desconocido") {
+	code, _, stderr := runDir(t, t.TempDir(), []string{"bench", "--journeys", "invented"}, "")
+	if strings.Contains(stderr, "unknown command") {
 		t.Fatalf("bench must be dispatched: %q", stderr)
 	}
 	if code != 1 {

@@ -111,7 +111,7 @@ func TestSkillsJSON(t *testing.T) {
 }
 
 // TestSkillsCheckReportsOneLinePerViolation: each broken file gets its own
-// Spanish line naming the file and what is wrong.
+// English line naming the file and what is wrong.
 func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -119,27 +119,27 @@ func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
 		reason string
 	}{
 		{
-			name:   "sin frontmatter",
+			name:   "without frontmatter",
 			seed:   map[string]string{"skills/suelta/SKILL.md": "## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"},
 			reason: "frontmatter",
 		},
 		{
-			name:   "description sin Trigger",
+			name:   "description without Trigger",
 			seed:   map[string]string{"skills/aceptar/SKILL.md": strings.Replace(skillFile("aceptar", "x"), "description: Trigger: x", "description: aceptar cosas", 1)},
 			reason: `does not start with "Trigger:"`,
 		},
 		{
-			name:   "name que no coincide con el directorio",
+			name:   "name that does not match the directory",
 			seed:   map[string]string{"skills/aceptar/SKILL.md": skillFile("otro", "x")},
 			reason: "does not match the directory",
 		},
 		{
-			name:   "name fuera de la forma",
+			name:   "name outside the shape",
 			seed:   map[string]string{"skills/Aceptar/SKILL.md": strings.Replace(skillFile("Aceptar", "x"), "description: Trigger: x", "description: Trigger: x", 1)},
 			reason: "does not match the shape",
 		},
 		{
-			name:   "cuerpo de 61 líneas",
+			name:   "body of 61 lines",
 			seed:   map[string]string{"skills/larga/SKILL.md": longSkill("larga", 61)},
 			reason: "the maximum is 60",
 		},
@@ -149,17 +149,17 @@ func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
 			reason: "TODO",
 		},
 		{
-			name:   "sección vacía",
+			name:   "empty section",
 			seed:   map[string]string{"skills/vacia/SKILL.md": "---\nname: vacia\ndescription: Trigger: un hueco\n---\n\n## When\n\ncuando\n\n## Rules\n\n## Never\n\nnunca\n"},
 			reason: `"Rules" section is empty`,
 		},
 		{
-			name:   "name repetido",
+			name:   "repeated name",
 			seed:   map[string]string{"skills/uno/SKILL.md": skillFile("uno", "primero"), "skills/dos/SKILL.md": skillFile("uno", "segundo")},
 			reason: "is repeated",
 		},
 		{
-			name:   "registro editado a mano",
+			name:   "hand-edited registry",
 			seed:   map[string]string{"skills/aceptar/SKILL.md": skillFile("aceptar", "x"), "SKILLS.md": "| a mano |\n"},
 			reason: "--write",
 		},

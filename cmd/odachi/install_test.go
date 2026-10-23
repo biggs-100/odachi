@@ -36,7 +36,7 @@ func installerTarget(t *testing.T) (osName, unameS, unameM string) {
 		"arm64": "aarch64",
 	}[runtime.GOARCH]
 	if arch == "" {
-		t.Skipf("la release no publica %s: este test cubre amd64 y arm64", runtime.GOARCH)
+		t.Skipf("the release does not publish %s: this test covers amd64 and arm64", runtime.GOARCH)
 	}
 
 	switch runtime.GOOS {
@@ -56,7 +56,7 @@ func requireBash(t *testing.T) string {
 
 	path, err := exec.LookPath("bash")
 	if err != nil {
-		t.Skipf("bash no está disponible en esta máquina (%v): el instalador es un script de shell y no se puede probar sin shell", err)
+		t.Skipf("bash is not available on this machine (%v): the installer is a shell script and cannot be tested without a shell", err)
 	}
 
 	// Git Bash reads C:/paths; WSL bash lives in another filesystem namespace
@@ -64,7 +64,7 @@ func requireBash(t *testing.T) string {
 	// pretending the failure is the installer's.
 	if runtime.GOOS == "windows" {
 		if out, err := exec.Command(path, "-c", "uname -s").Output(); err == nil && strings.Contains(string(out), "Linux") {
-			t.Skip("bash es WSL y no comparte las rutas de Windows; el instalador se prueba con Git Bash o en CI")
+			t.Skip("bash is WSL and does not share the Windows paths; the installer is tested with Git Bash or in CI")
 		}
 	}
 	return path

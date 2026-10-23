@@ -23,13 +23,13 @@ func TestUndoWithoutFilterRefusesWhenSeveralArtifactsHaveBackups(t *testing.T) {
 	code, stdout, stderr := runDir(t, dir, []string{"undo"}, "")
 
 	if code == 0 {
-		t.Fatalf("undo adivinó y restauró algo: stdout=%q", stdout)
+		t.Fatalf("undo guessed and restored something: stdout=%q", stdout)
 	}
 	if !strings.Contains(stderr, "--file") {
-		t.Fatalf("el mensaje no dice cómo elegir: %q", stderr)
+		t.Fatalf("the message does not say how to choose: %q", stderr)
 	}
 	if !strings.Contains(stderr, "fence") || !strings.Contains(stderr, "brief") {
-		t.Fatalf("el mensaje no lista los candidatos: %q", stderr)
+		t.Fatalf("the message does not list the candidates: %q", stderr)
 	}
 }
 

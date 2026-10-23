@@ -30,28 +30,28 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
-	flags.StringVar(&agents, "agents", "", "solo estos agentes, separados por coma (default: los detectados; standard = la carpeta que leen todos los clientes)")
-	flags.StringVar(&scope, "scope", "", "project | home: el mismo agente, en la otra raíz (default: el de la tabla)")
-	flags.StringVar(&dest, "dest", "", "instala todo en esta carpeta: absoluta, o relativa al proyecto")
-	flags.BoolVar(&dryRun, "dry-run", false, "qué haría, sin escribir nada")
-	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&agents, "agents", "", "only these agents, comma-separated (default: the detected ones; standard = the folder every client reads)")
+	flags.StringVar(&scope, "scope", "", "project | home: the same agent, in the other root (default: the one in the table)")
+	flags.StringVar(&dest, "dest", "", "install everything in this folder: absolute, or relative to the project")
+	flags.BoolVar(&dryRun, "dry-run", false, "what it would do, without writing anything")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: flag inválido: "+oneLine(err.Error())+"; corré odachi pack -h para ver los flags")
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi pack -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi pack solo toma flags (corré odachi pack -h)\n", flags.Arg(0))
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi pack only takes flags (run odachi pack -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
 	embedded, err := bundledskills.All()
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error())+"; volvé a bajar odachi")
+		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error())+"; download odachi again")
 		return start.CodeBlocked
 	}
 
@@ -127,7 +127,7 @@ func reportPack(result pack.Result, asJSON bool, stdout, stderr io.Writer) int {
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: no pude armar la salida JSON: "+oneLine(err.Error()))
+			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		fmt.Fprintln(stdout, string(data))

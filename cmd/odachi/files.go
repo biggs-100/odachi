@@ -106,7 +106,7 @@ func (osFiles) Remove(path string) error {
 // bytes and its mtime, so `undo` still knows which version is the newest.
 func (osFiles) Rename(from, to string) error {
 	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
-		return fmt.Errorf("no pude crear el directorio de %s: %w", to, err)
+		return fmt.Errorf("could not create the directory of %s: %w", to, err)
 	}
 	return os.Rename(from, to)
 }
@@ -137,17 +137,17 @@ func (osHome) Home() (string, error) {
 		return "", err
 	}
 	if strings.TrimSpace(home) == "" {
-		return "", fmt.Errorf("el sistema no reportó ningún home")
+		return "", fmt.Errorf("the system reported no home")
 	}
 	return home, nil
 }
 
 // ensureHistory creates the version history odachi needs, because owning a project
-// does not require knowing what git is. Refusing with "corré git init" in front of
+// does not require knowing what git is. Refusing with "run git init" in front of
 // somebody who has never heard of git is the opposite of this tool: creating the
 // history is dirty work, and dirty work is the agent's job.
 //
-// It returns whether it created one, so the caller can say so in plain Spanish and
+// It returns whether it created one, so the caller can say so in plain English and
 // name git only in parentheses, next to what it is for.
 func ensureHistory(dir string) (bool, error) {
 	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
@@ -155,12 +155,12 @@ func ensureHistory(dir string) (bool, error) {
 	}
 	git, err := exec.LookPath("git")
 	if err != nil {
-		return false, errors.New("necesito un programa que guarde el historial del proyecto y no lo encontré: instalá git (git-scm.com) y volvé a correr odachi init")
+		return false, errors.New("I need a program that keeps the project history and I could not find it: install git (git-scm.com) and run odachi init again")
 	}
 	cmd := exec.Command(git, "init", dir)
 	cmd.Stdout, cmd.Stderr = io.Discard, io.Discard
 	if err := cmd.Run(); err != nil {
-		return false, fmt.Errorf("no pude crear el historial del proyecto: %s", oneLine(err.Error()))
+		return false, fmt.Errorf("could not create the project history: %s", oneLine(err.Error()))
 	}
 	return true, nil
 }
@@ -197,7 +197,7 @@ func (osFiles) MakeExecutable(path string) error {
 
 func (osFiles) Write(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("no pude crear el directorio de %s: %w", path, err)
+		return fmt.Errorf("could not create the directory of %s: %w", path, err)
 	}
 	return fsx.WriteAtomic(path, data, 0o644)
 }
@@ -227,8 +227,8 @@ func (agentSelection) Render(selection string) ([]byte, error) { return agentsto
 func storedAgents(dir, verb string) (string, int, string) {
 	selection, err := agentSelection{}.Written(dir)
 	if err != nil {
-		return "", start.CodeBlocked, "no pude leer " + persona.SelectionPath + ": " + oneLine(err.Error()) +
-			"; corregí el archivo o corré odachi init --agents both, y volvé a correr " + verb
+		return "", start.CodeBlocked, "could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; fix the file or run odachi init --agents both, and run " + verb + " again"
 	}
 	return selection, start.CodeOK, ""
 }
@@ -252,16 +252,16 @@ func loadProfile(dir, verb string) (*profile.Profile, int, string) {
 		if os.IsNotExist(err) {
 			return nil, start.CodeOK, ""
 		}
-		return nil, start.CodeBlocked, "no pude revisar " + rel + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr " + verb
+		return nil, start.CodeBlocked, "could not check " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run " + verb + " again"
 	}
 
 	loaded, err := profiletoml.Load(path)
 	if err != nil {
-		return nil, start.CodeBlocked, "no pude leer " + rel + ": " + oneLine(err.Error()) + "; corregí el archivo y volvé a correr " + verb
+		return nil, start.CodeBlocked, "could not read " + rel + ": " + oneLine(err.Error()) + "; fix the file and run " + verb + " again"
 	}
 	if strings.TrimSpace(loaded.Name) == "" {
 		return nil, start.CodeBlocked, fmt.Sprintf(
-			`el perfil %s no dice name; agregá name = "novato" (o "senior", "ci") y volvé a correr %s`, rel, verb)
+			`the profile %s does not say name; add name = "novato" (or "senior", "ci") and run %s again`, rel, verb)
 	}
 	// A name nobody shipped and that inherits from nothing resolves to a profile
 	// with every field empty: it validates field by field and configures nothing.
@@ -269,7 +269,7 @@ func loadProfile(dir, verb string) (*profile.Profile, int, string) {
 	// one place that knows which profiles exist.
 	if _, shipped := profile.Builtin()[loaded.Name]; !shipped && strings.TrimSpace(loaded.Extends) == "" {
 		return nil, start.CodeBlocked, fmt.Sprintf(
-			`el perfil %s dice name = %q, que no existe y no hereda de nadie: usá "novato", "senior" o "ci", o poné extends apuntando a uno de ellos, y volvé a correr %s`,
+			`the profile %s says name = %q, which does not exist and inherits from nobody: use "novato", "senior" or "ci", or set extends to point at one of them, and run %s again`,
 			rel, loaded.Name, verb)
 	}
 
@@ -281,7 +281,7 @@ func loadProfile(dir, verb string) (*profile.Profile, int, string) {
 
 	resolved, err := profile.Resolve(known, loaded.Name)
 	if err != nil {
-		return nil, start.CodeBlocked, "no pude resolver el perfil de " + rel + ": " + oneLine(err.Error()) + "; corregí el archivo y volvé a correr " + verb
+		return nil, start.CodeBlocked, "could not resolve the profile of " + rel + ": " + oneLine(err.Error()) + "; fix the file and run " + verb + " again"
 	}
 	return &resolved, start.CodeOK, ""
 }
@@ -316,13 +316,13 @@ func currentProfile(dir, verb string, machine bool) (*profile.Profile, int, stri
 	files := osFiles{}
 	hasBrief, err := files.Exists(filepath.Join(dir, "brief.md"))
 	if err != nil {
-		return nil, start.CodeBlocked, "no pude revisar brief.md: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr " + verb
+		return nil, start.CodeBlocked, "could not check brief.md: " + oneLine(err.Error()) + "; check the permissions and run " + verb + " again"
 	}
 
 	name := profile.Infer(profile.Facts{HasBrief: hasBrief, Machine: machine})
 	resolved, err := profile.Resolve(profile.Builtin(), name)
 	if err != nil {
-		return nil, start.CodeBlocked, "no pude resolver el perfil " + name + ": " + oneLine(err.Error()) + "; volvé a correr " + verb
+		return nil, start.CodeBlocked, "could not resolve the " + name + " profile: " + oneLine(err.Error()) + "; run " + verb + " again"
 	}
 	return &resolved, start.CodeOK, ""
 }

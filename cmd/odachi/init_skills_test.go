@@ -16,18 +16,18 @@ import (
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
-// El currículum crece (drive) y el uso no puede quedarse con un número
-// escrito a mano: la ayuda nombra la carpeta, no cuántas van. Un número acá se
-// queda viejo en la versión siguiente y nadie lo nota hasta que un humano lo lee.
+// The curriculum grows (drive) and the usage cannot pin a number by hand: the
+// help names the folder, not how many go there. A number here goes stale in the
+// next version and nobody notices until a human reads it.
 func TestInitUsageDoesNotHardCodeTheSkillCount(t *testing.T) {
 	dir := configuredProject(t)
 
 	out, _ := output(t, dir, []string{"init", "-h"})
 	if !strings.Contains(out, ".agents/skills") {
-		t.Fatalf("el uso no nombra .agents/skills:\n%s", out)
+		t.Fatalf("the usage does not name .agents/skills:\n%s", out)
 	}
 	if hardCoded := regexp.MustCompile(`\b\d+ skills\b`); hardCoded.MatchString(out) {
-		t.Fatalf("el uso escribe a mano cuántas skills van: %q", hardCoded.FindString(out))
+		t.Fatalf("the usage hard-codes how many skills go: %q", hardCoded.FindString(out))
 	}
 }
 
@@ -38,7 +38,7 @@ func TestInitUsageDoesNotHardCodeTheSkillCount(t *testing.T) {
 func TestMain(m *testing.M) {
 	home, err := os.MkdirTemp("", "odachi-home-")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "no pude crear un home de prueba: "+err.Error())
+		fmt.Fprintln(os.Stderr, "could not create a test home: "+err.Error())
 		os.Exit(1)
 	}
 	previous := homeDir
@@ -104,12 +104,12 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 		t.Fatalf("Curriculum(): %v", err)
 	}
 	if len(curriculum) == 0 {
-		t.Fatalf("el currículum vino vacío: el proyecto no recibiría ninguna skill")
+		t.Fatalf("the curriculum came back empty: the project would receive no skill")
 	}
 	for _, skill := range curriculum {
 		got, err := os.ReadFile(skillPath(dir, skill.Name))
 		if err != nil {
-			t.Errorf("%s no se instaló en .agents/skills: %v", skill.Name, err)
+			t.Errorf("%s was not installed in .agents/skills: %v", skill.Name, err)
 			continue
 		}
 		if !bytes.Equal(got, skill.Content) {
@@ -120,30 +120,30 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 	// The project has one skills location, and the bootstrap skill is not part
 	// of the craft a project carries.
 	if _, err := os.Stat(skillPath(dir, bundledskills.BootstrapName)); err == nil {
-		t.Errorf("el proyecto recibió la skill de arranque: esa vive en el home")
+		t.Errorf("the project received the bootstrap skill: that one lives in the home")
 	}
 	// The client directories hold the native agent, never a second copy of the
 	// skills: the project's one location is the cross-client folder.
 	for _, rel := range []string{".opencode/skills", ".opencode/skill", ".claude/skills"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err == nil {
-			t.Errorf("init instaló skills en %s: el proyecto usa una sola carpeta", rel)
+			t.Errorf("init installed skills in %s: the project uses a single folder", rel)
 		}
 	}
 
 	bootstrap, ok := bundledskills.Bootstrap()
 	if !ok {
-		t.Fatalf("el binario no trae la skill %q", bundledskills.BootstrapName)
+		t.Fatalf("the binary does not carry the %q skill", bundledskills.BootstrapName)
 	}
 	got, err := os.ReadFile(skillPath(home, bootstrap.Name))
 	if err != nil {
-		t.Fatalf("la skill de arranque no llegó al home: %v", err)
+		t.Fatalf("the bootstrap skill did not reach the home: %v", err)
 	}
 	if !bytes.Equal(got, bootstrap.Content) {
-		t.Errorf("la skill del home no es la del binario")
+		t.Errorf("the home skill is not the binary's one")
 	}
 
 	if !strings.Contains(out, "./.agents/skills") || !strings.Contains(out, "~/.agents/skills") {
-		t.Errorf("la salida no nombra los dos destinos:\n%s", out)
+		t.Errorf("the output does not name both destinations:\n%s", out)
 	}
 }
 
@@ -168,18 +168,18 @@ func TestInitInstallsAllSkillsInTheHomeWhenAsked(t *testing.T) {
 	for _, skill := range all {
 		got, err := os.ReadFile(skillPath(home, skill.Name))
 		if err != nil {
-			t.Errorf("%s no llegó al home: %v", skill.Name, err)
+			t.Errorf("%s did not reach the home: %v", skill.Name, err)
 			continue
 		}
 		if !bytes.Equal(got, skill.Content) {
-			t.Errorf("%s difiere del payload", skill.Name)
+			t.Errorf("%s differs from the payload", skill.Name)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".agents")); err == nil {
-		t.Errorf("--skills home escribió .agents/ en el proyecto")
+		t.Errorf("--skills home wrote .agents/ in the project")
 	}
 	if !strings.Contains(out, "~/.agents/skills") {
-		t.Errorf("la salida no nombra el destino del home:\n%s", out)
+		t.Errorf("the output does not name the home destination:\n%s", out)
 	}
 
 	before := homeTree(t, home)
@@ -188,10 +188,10 @@ func TestInitInstallsAllSkillsInTheHomeWhenAsked(t *testing.T) {
 		t.Fatalf("second run code = %d (stdout %q, stderr %q)", code, out, errOut)
 	}
 	if !slices.Equal(homeTree(t, home), before) {
-		t.Errorf("la segunda corrida tocó el home: %v vs %v", homeTree(t, home), before)
+		t.Errorf("the second run touched the home: %v vs %v", homeTree(t, home), before)
 	}
 	if !strings.Contains(out, "unchanged") {
-		t.Errorf("la segunda corrida no dice que no cambió nada:\n%s", out)
+		t.Errorf("the second run does not say nothing changed:\n%s", out)
 	}
 }
 
@@ -208,17 +208,17 @@ func TestInitHomeScopeKeepsTheProjectCopy(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
-	for _, want := range []string{"ya tenía una copia", "~/.agents/skills"} {
+	for _, want := range []string{"it already had a copy", "~/.agents/skills"} {
 		if !strings.Contains(out, want) {
-			t.Errorf("la salida no dice %q:\n%s", want, out)
+			t.Errorf("the output does not say %q:\n%s", want, out)
 		}
 	}
 	got, err := os.ReadFile(filepath.Join(dir, ".agents", "skills", "acceptance", "SKILL.md"))
 	if err != nil {
-		t.Fatalf("la copia del proyecto se borró: %v", err)
+		t.Fatalf("the project copy was deleted: %v", err)
 	}
 	if string(got) != "viejo\n" {
-		t.Errorf("la copia del proyecto cambió: %q", got)
+		t.Errorf("the project copy changed: %q", got)
 	}
 }
 
@@ -234,11 +234,11 @@ func TestInitRefusesAnUnknownSkillsScope(t *testing.T) {
 	}
 	for _, want := range []string{"project", "home", "fuera"} {
 		if !strings.Contains(out+errOut, want) {
-			t.Errorf("la salida no dice %q: %s%s", want, out, errOut)
+			t.Errorf("the output does not say %q: %s%s", want, out, errOut)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); err == nil {
-		t.Errorf("un scope inválido escribió AGENTS.md")
+		t.Errorf("an invalid scope wrote AGENTS.md")
 	}
 }
 
@@ -260,7 +260,7 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 		".agents/skills/bootstrap/SKILL.md",
 	}
 	if got := homeTree(t, home); !slices.Equal(got, want) {
-		t.Fatalf("el home tiene %v, want exactamente %v", got, want)
+		t.Fatalf("the home has %v, want exactly %v", got, want)
 	}
 
 	// The same fence with the flag: --global is what adds the two doors, one per
@@ -276,7 +276,7 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 		".config/opencode/agents/odachi.md",
 	}
 	if got := homeTree(t, withGlobal); !slices.Equal(got, wantGlobal) {
-		t.Fatalf("el home con --global tiene %v, want exactamente %v", got, wantGlobal)
+		t.Fatalf("the home with --global has %v, want exactly %v", got, wantGlobal)
 	}
 }
 
@@ -303,19 +303,19 @@ func TestInitSecondRunWritesNothing(t *testing.T) {
 		t.Fatalf("second run code = %d (stdout %q, stderr %q)", code, out, errOut)
 	}
 	if !strings.Contains(out, "unchanged") {
-		t.Errorf("la segunda corrida no dice que no cambió nada:\n%s", out)
+		t.Errorf("the second run does not say nothing changed:\n%s", out)
 	}
 	agentsAfter, _ := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
 	if !bytes.Equal(agentsAfter, agentsBefore) {
-		t.Errorf("AGENTS.md cambió en una segunda corrida")
+		t.Errorf("AGENTS.md changed on a second run")
 	}
 	if got := homeTree(t, home); !slices.Equal(got, homeBefore) {
-		t.Errorf("el home cambió en una segunda corrida: %v, antes %v", got, homeBefore)
+		t.Errorf("the home changed on a second run: %v, before %v", got, homeBefore)
 	}
 	// No backup of a skill either: identical bytes are never rewritten.
 	backups, err := filepath.Glob(filepath.Join(home, ".agents", "skills", bundledskills.BootstrapName, "SKILL.md.bak-*"))
 	if err != nil || len(backups) != 0 {
-		t.Errorf("backups del home = %v (err %v), want ninguno", backups, err)
+		t.Errorf("home backups = %v (err %v), want none", backups, err)
 	}
 }
 
@@ -371,7 +371,7 @@ func TestInitJSONCarriesTheSkillDestinations(t *testing.T) {
 	joined := strings.Join(payload.Files, " ")
 	for _, path := range []string{".agents/skills/acceptance/SKILL.md", "~/.agents/skills/bootstrap/SKILL.md"} {
 		if !strings.Contains(joined, path) {
-			t.Errorf("JSON files no listan %s: %v", path, payload.Files)
+			t.Errorf("JSON files do not list %s: %v", path, payload.Files)
 		}
 	}
 }
@@ -395,15 +395,15 @@ func TestInitAcknowledgesTheOpenCodeCopy(t *testing.T) {
 		t.Fatalf("init code = %d (stdout %q, stderr %q)", code, out, errOut)
 	}
 	if !strings.Contains(out, ".opencode/skills") {
-		t.Errorf("la salida no menciona la copia de .opencode/skills:\n%s", out)
+		t.Errorf("the output does not mention the .opencode/skills copy:\n%s", out)
 	}
 	if !strings.Contains(out, "odachi pack --agents opencode") {
-		t.Errorf("la salida no dice de dónde salió esa copia:\n%s", out)
+		t.Errorf("the output does not say where that copy came from:\n%s", out)
 	}
 	// The copy that was already there is not touched and not duplicated: init
 	// still installs the project under .agents/skills only.
 	if _, err := os.Stat(skillPath(dir, "acceptance")); err != nil {
-		t.Errorf("init no instaló el currículum en .agents/skills: %v", err)
+		t.Errorf("init did not install the curriculum in .agents/skills: %v", err)
 	}
 }
 
@@ -423,17 +423,17 @@ func TestInitKeepsTheProjectWhenTheHomeIsNotWritable(t *testing.T) {
 	code, out, errOut := runDir(t, dir, []string{"init"}, "")
 
 	if code != 0 {
-		t.Fatalf("code = %d, want 0: la parte del proyecto quedó hecha (stdout %q, stderr %q)", code, out, errOut)
+		t.Fatalf("code = %d, want 0: the project half was done (stdout %q, stderr %q)", code, out, errOut)
 	}
 	for _, rel := range []string{"AGENTS.md", ".gitignore", ".agents/skills/acceptance/SKILL.md"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
-			t.Errorf("%s no se escribió: %v", rel, err)
+			t.Errorf("%s was not written: %v", rel, err)
 		}
 	}
 	if !strings.Contains(out, "~/.agents/skills") {
-		t.Errorf("la salida no dice qué quedó pendiente:\n%s", out)
+		t.Errorf("the output does not say what is still pending:\n%s", out)
 	}
 	if !strings.Contains(out, "odachi init") {
-		t.Errorf("la salida no nombra el comando que lo destraba:\n%s", out)
+		t.Errorf("the output does not name the command that unblocks it:\n%s", out)
 	}
 }

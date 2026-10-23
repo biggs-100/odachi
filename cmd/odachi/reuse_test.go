@@ -12,22 +12,22 @@ func TestStartTwiceReusesTheSameTaskDocument(t *testing.T) {
 	dir := t.TempDir()
 
 	if code, _, stderr := runDir(t, dir, allFlags(), ""); code != 0 {
-		t.Fatalf("primera corrida: exit %d, stderr=%s", code, stderr)
+		t.Fatalf("first run: exit %d, stderr=%s", code, stderr)
 	}
 	before := tree(t, dir)
 	taskBefore := onlyTask(t, before)
 
 	if code, _, stderr := runDir(t, dir, append(allFlags(), "--force"), ""); code != 0 {
-		t.Fatalf("segunda corrida: exit %d, stderr=%s", code, stderr)
+		t.Fatalf("second run: exit %d, stderr=%s", code, stderr)
 	}
 	after := tree(t, dir)
 	taskAfter := onlyTask(t, after)
 
 	if taskAfter != taskBefore {
-		t.Fatalf("correr start dos veces cambió el task doc:\nantes: %s\ndespués: %s", taskBefore, taskAfter)
+		t.Fatalf("running start twice changed the task doc:\nbefore: %s\nafter: %s", taskBefore, taskAfter)
 	}
 	if before[taskBefore] != after[taskAfter] {
-		t.Fatalf("correr start dos veces reescribió el task doc; sus pasos y su historial son la memoria del trabajo y no se tocan")
+		t.Fatalf("running start twice rewrote the task doc; its steps and its history are the memory of the work and are not touched")
 	}
 }
 
@@ -37,7 +37,7 @@ func TestADifferentOutcomeGetsItsOwnNumber(t *testing.T) {
 	dir := t.TempDir()
 
 	if code, _, stderr := runDir(t, dir, allFlags(), ""); code != 0 {
-		t.Fatalf("primera feature: exit %d, stderr=%s", code, stderr)
+		t.Fatalf("first feature: exit %d, stderr=%s", code, stderr)
 	}
 
 	other := allFlags()
@@ -47,7 +47,7 @@ func TestADifferentOutcomeGetsItsOwnNumber(t *testing.T) {
 		}
 	}
 	if code, _, stderr := runDir(t, dir, append(other, "--force"), ""); code != 0 {
-		t.Fatalf("segunda feature: exit %d, stderr=%s", code, stderr)
+		t.Fatalf("second feature: exit %d, stderr=%s", code, stderr)
 	}
 
 	var tasks []string
@@ -58,7 +58,7 @@ func TestADifferentOutcomeGetsItsOwnNumber(t *testing.T) {
 	}
 
 	if len(tasks) != 2 {
-		t.Fatalf("dos features distintas dejaron %d task docs (%v); cada una necesita el suyo", len(tasks), tasks)
+		t.Fatalf("two different features left %d task docs (%v); each one needs its own", len(tasks), tasks)
 	}
 }
 
@@ -73,7 +73,7 @@ func onlyTask(t *testing.T, files map[string]string) string {
 		}
 	}
 	if len(tasks) != 1 {
-		t.Fatalf("esperaba un task doc, encontré %d (%v)", len(tasks), tasks)
+		t.Fatalf("expected one task doc, found %d (%v)", len(tasks), tasks)
 	}
 	return tasks[0]
 }

@@ -167,11 +167,11 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	}
 
 	// A name outside the allow-list is refused, and the message says the four.
-	code, _, stderr = runDir(t, dir, []string{"undo", "--file", "inventado"}, "")
+	code, _, stderr = runDir(t, dir, []string{"undo", "--file", "invented"}, "")
 	if code != 1 {
-		t.Fatalf("undo --file inventado: exit %d, want 1", code)
+		t.Fatalf("undo --file invented: exit %d, want 1", code)
 	}
-	for _, want := range []string{"inventado", "brief", "profile", "fence", "task"} {
+	for _, want := range []string{"invented", "brief", "profile", "fence", "task"} {
 		if !strings.Contains(stderr, want) {
 			t.Errorf("stderr %q does not name %q", stderr, want)
 		}

@@ -97,7 +97,7 @@ func TestReviewWithoutChangesHasNothingToReview(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
-	commitAll(t, dir, "todo commiteado")
+	commitAll(t, dir, "everything committed")
 
 	code, out, errOut := runDir(t, dir, []string{"review"}, "")
 
@@ -218,7 +218,7 @@ func TestReviewFlagsAreExclusive(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1", code)
 	}
-	if !strings.Contains(errOut, "no van juntos") {
+	if !strings.Contains(errOut, "do not go together") {
 		t.Errorf("stderr %q does not say the flags are exclusive", errOut)
 	}
 }

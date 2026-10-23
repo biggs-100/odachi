@@ -110,7 +110,7 @@ func TestUnknownCommandListsWhatExists(t *testing.T) {
 	if code != start.CodeBlocked {
 		t.Fatalf("code = %d, want %d", code, start.CodeBlocked)
 	}
-	if !strings.Contains(errOut, "start") || !strings.Contains(errOut, "comandos disponibles") {
+	if !strings.Contains(errOut, "start") || !strings.Contains(errOut, "available commands") {
 		t.Errorf("stderr %q does not list the available commands", errOut)
 	}
 	if out != "" {
@@ -336,8 +336,8 @@ func TestInterviewPrintsTheWhyInTheSameBlock(t *testing.T) {
 	}
 
 	answer, err := interview.Ask(start.Question{
-		Text:    "¿Quién lo usa y desde dónde? (1 celular · 2 compu · 3 los dos)",
-		Why:     "cambia todo lo que viene después, y es la decisión más cara de cambiar tarde",
+		Text:    "Who uses it, and from where? (1 phone · 2 computer · 3 both)",
+		Why:     "it changes everything that comes after, and it is the most expensive decision to change late",
 		Options: []string{"phone", "cpu", "both"},
 	})
 	if err != nil {
@@ -351,23 +351,23 @@ func TestInterviewPrintsTheWhyInTheSameBlock(t *testing.T) {
 	if len(lines) != 4 {
 		t.Fatalf("the question block has %d lines, want 4:\n%s", len(lines), out.String())
 	}
-	if !strings.HasPrefix(lines[0], "? ") || !strings.Contains(lines[0], "¿Quién lo usa") {
+	if !strings.HasPrefix(lines[0], "? ") || !strings.Contains(lines[0], "Who uses it") {
 		t.Errorf("line 1 = %q, want the question", lines[0])
 	}
-	if !strings.HasPrefix(lines[1], "  por qué: ") || !strings.Contains(lines[1], "decisión más cara") {
+	if !strings.HasPrefix(lines[1], "  why: ") || !strings.Contains(lines[1], "most expensive decision") {
 		t.Errorf("line 2 = %q, want the why on one line", lines[1])
 	}
-	if !strings.HasPrefix(lines[2], "  opciones: ") {
+	if !strings.HasPrefix(lines[2], "  options: ") {
 		t.Errorf("line 3 = %q, want the options", lines[2])
 	}
 	if lines[3] != "> " {
 		t.Errorf("line 4 = %q, want the prompt", lines[3])
 	}
 
-	if err := interview.Say("una línea"); err != nil {
+	if err := interview.Say("one line"); err != nil {
 		t.Fatalf("Say: %v", err)
 	}
-	if !strings.HasSuffix(out.String(), "una línea\n") {
+	if !strings.HasSuffix(out.String(), "one line\n") {
 		t.Errorf("Say did not print one line: %q", out.String())
 	}
 }

@@ -81,7 +81,7 @@ func TestInitRerunChangesNothing(t *testing.T) {
 func TestInitRefusesAForeignHook(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
-	foreign := "#!/bin/sh\necho hola\n"
+	foreign := "#!/bin/sh\necho hello\n"
 	writeFile(t, dir, ".git/hooks/pre-commit", foreign)
 
 	code, _, errOut := runDir(t, dir, []string{"init"}, "")
@@ -108,7 +108,7 @@ func TestInitRefusesAForeignHook(t *testing.T) {
 }
 
 // Without a repository the command creates the history itself. Owning a project
-// does not require knowing what git is, and refusing with "corré git init" in front
+// does not require knowing what git is, and refusing with "run git init" in front
 // of a beginner is the opposite of what this tool promises: creating the history is
 // dirty work, and dirty work is the agent's job.
 func TestInitCreatesTheHistoryWhenThereIsNone(t *testing.T) {
@@ -122,7 +122,7 @@ func TestInitCreatesTheHistoryWhenThereIsNone(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
 		t.Fatalf("init did not create the history: %v", err)
 	}
-	if !strings.Contains(out, "historial del proyecto") {
+	if !strings.Contains(out, "project history") {
 		t.Errorf("stdout %q does not say what it created", out)
 	}
 	if !strings.Contains(out, "git init") {
@@ -190,7 +190,7 @@ func TestInitJSONListsTheFiles(t *testing.T) {
 }
 
 // The human does not commit: the agent does. The closing line used to say
-// "commiteá", which assumed the one thing this tool exists to take off their plate.
+// "you commit", which assumed the one thing this tool exists to take off their plate.
 func TestInitDoesNotAskTheHumanToCommit(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)

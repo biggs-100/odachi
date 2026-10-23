@@ -113,7 +113,7 @@ func TestPackSecondRunIsIdentical(t *testing.T) {
 		t.Fatalf("second run code = %d (stderr %q)", code, errOut)
 	}
 	if !strings.Contains(out, fmt.Sprintf("claude · %d unchanged · ~/.claude/skills", len(bundled))) {
-		t.Errorf("the second run does not report sin cambios:\n%s", out)
+		t.Errorf("the second run does not report unchanged:\n%s", out)
 	}
 
 	after := walkNames(t, home)
@@ -303,7 +303,7 @@ func TestPackOpenCodeWritesIntoTheProject(t *testing.T) {
 }
 
 // TestPackOpenCodeSecondRunIsIdentical: the write rule does not change with the
-// scope — a repeated run says `sin cambios` and leaves no backup behind.
+// scope — a repeated run says `unchanged` and leaves no backup behind.
 func TestPackOpenCodeSecondRunIsIdentical(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -319,7 +319,7 @@ func TestPackOpenCodeSecondRunIsIdentical(t *testing.T) {
 		t.Fatalf("second run code = %d (stderr %q)", code, errOut)
 	}
 	if !strings.Contains(out, fmt.Sprintf("opencode · %d unchanged · ./.opencode/skills", len(bundled))) {
-		t.Errorf("the second run does not report sin cambios:\n%s", out)
+		t.Errorf("the second run does not report unchanged:\n%s", out)
 	}
 	after := walkNames(t, project)
 	if len(after) != len(before) {
@@ -653,7 +653,7 @@ func TestPackDestServesAClientTheTableDoesNotKnow(t *testing.T) {
 		t.Fatalf("second run code = %d, want 0 (stderr %q)", code, errOut)
 	}
 	if !strings.Contains(out, fmt.Sprintf("inventado · %d unchanged · ./skills-x", len(bundled))) {
-		t.Errorf("the second run does not report sin cambios:\n%s", out)
+		t.Errorf("the second run does not report unchanged:\n%s", out)
 	}
 	after := walkNames(t, project)
 	if len(after) != len(before) {

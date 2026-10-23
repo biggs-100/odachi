@@ -204,7 +204,7 @@ func TestCheckProofUsesAGivenProof(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read proof: %v", err)
 	}
-	elsewhere := filepath.Join(t.TempDir(), "prueba.txt")
+	elsewhere := filepath.Join(t.TempDir(), "proof-copy.txt")
 	if err := os.WriteFile(elsewhere, data, 0o644); err != nil {
 		t.Fatalf("write proof copy: %v", err)
 	}

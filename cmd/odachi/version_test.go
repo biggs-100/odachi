@@ -64,7 +64,7 @@ func TestUnknownCommandStillBlocks(t *testing.T) {
 	if code != start.CodeBlocked {
 		t.Fatalf("code = %d, want %d (stdout: %s)", code, start.CodeBlocked, out)
 	}
-	if !strings.Contains(errOut, "comando desconocido") {
+	if !strings.Contains(errOut, "unknown command") {
 		t.Errorf("stderr = %q, want the unknown-command message", errOut)
 	}
 	if strings.Contains(out, "odachi dev") {

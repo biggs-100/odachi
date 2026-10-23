@@ -21,16 +21,16 @@ type terminalInterview struct {
 func (t *terminalInterview) Ask(q start.Question) (string, error) {
 	fmt.Fprintf(t.out, "\n? %s\n", q.Text)
 	if q.Why != "" {
-		fmt.Fprintf(t.out, "  por qué: %s\n", q.Why)
+		fmt.Fprintf(t.out, "  why: %s\n", q.Why)
 	}
 	if len(q.Options) > 0 {
-		fmt.Fprintf(t.out, "  opciones: %s\n", strings.Join(q.Options, ", "))
+		fmt.Fprintf(t.out, "  options: %s\n", strings.Join(q.Options, ", "))
 	}
 	fmt.Fprint(t.out, "> ")
 
 	line, err := t.in.ReadString('\n')
 	if err != nil && strings.TrimSpace(line) == "" {
-		return "", fmt.Errorf("se terminó la entrada antes de la respuesta")
+		return "", fmt.Errorf("the input ended before the answer")
 	}
 	return strings.TrimRight(line, "\r\n"), nil
 }

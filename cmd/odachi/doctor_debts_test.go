@@ -14,7 +14,7 @@ import (
 )
 
 // A linked worktree has .git as a file pointing at the main repository. Telling
-// that project "no hay .git, corré git init" is a lie and a dead end: git init is
+// that project "there is no .git, run git init" is a lie and a dead end: git init is
 // already done, in the main repository.
 func TestDoctorUnderstandsAWorktree(t *testing.T) {
 	dir := t.TempDir()
@@ -27,10 +27,10 @@ func TestDoctorUnderstandsAWorktree(t *testing.T) {
 	out := stdout + stderr
 
 	if !strings.Contains(out, "worktree") {
-		t.Fatalf("el reporte no reconoce el worktree: %q", out)
+		t.Fatalf("the report does not recognise the worktree: %q", out)
 	}
 	if strings.Contains(out, "run git init") {
-		t.Fatalf("el reporte manda a git init en un worktree: %q", out)
+		t.Fatalf("the report sends a worktree to git init: %q", out)
 	}
 }
 
@@ -50,13 +50,13 @@ func TestDoctorRefusesAProfileThatInheritsFromNobody(t *testing.T) {
 	out := stdout + stderr
 
 	if code != 1 {
-		t.Fatalf("code = %d, want 1: un perfil que no hereda de nadie es un problema", code)
+		t.Fatalf("code = %d, want 1: a profile that inherits from nobody is a problem", code)
 	}
-	if !strings.Contains(out, "no hereda de nadie") {
-		t.Fatalf("el reporte no dice por qué: %q", out)
+	if !strings.Contains(out, "inherits from nobody") {
+		t.Fatalf("the report does not say why: %q", out)
 	}
 	if !strings.Contains(out, "extends") {
-		t.Fatalf("el reporte no dice cómo arreglarlo: %q", out)
+		t.Fatalf("the report does not say how to fix it: %q", out)
 	}
 }
 
@@ -76,10 +76,10 @@ func TestDoctorAcceptsAProfileThatInherits(t *testing.T) {
 	out := stdout + stderr
 
 	if !strings.Contains(out, "profile mio") {
-		t.Fatalf("el reporte no resuelve el perfil heredado: %q", out)
+		t.Fatalf("the report does not resolve the inherited profile: %q", out)
 	}
 	if strings.Contains(out, "there is no file") {
-		t.Fatalf("el reporte dice que no hay archivo cuando sí lo hay: %q", out)
+		t.Fatalf("the report says there is no file when there is one: %q", out)
 	}
 }
 
@@ -96,15 +96,15 @@ func checkLine(t *testing.T, report string, number int) string {
 			return line
 		}
 	}
-	t.Fatalf("el reporte no trae el chequeo %d:\n%s", number, report)
+	t.Fatalf("the report does not carry check %d:\n%s", number, report)
 	return ""
 }
 
-// Un proyecto que acaba de correr `odachi init` tiene las skills en
-// .agents/skills y ningún registro propio, y el chequeo 9 decía solo "ninguna: no
-// hay skills/": el humano leía que no había nada cuando init sí había instalado
-// las suyas. Son dos preguntas distintas —el registro del proyecto y lo instalado
-// donde el cliente lo lee— y la línea las responde sin mezclarlas.
+// A project that just ran `odachi init` has the skills in .agents/skills and no
+// registry of its own, and check 9 used to say only "none: there is no skills/":
+// the human read that there was nothing when init had installed its own. They are
+// two different questions —the project registry and what is installed where the
+// client reads it— and the line answers both without mixing them.
 func TestDoctorCheckNineSaysBothSkillFacts(t *testing.T) {
 	dir := configuredProject(t)
 
@@ -113,29 +113,29 @@ func TestDoctorCheckNineSaysBothSkillFacts(t *testing.T) {
 
 	curriculum, err := bundledskills.Curriculum()
 	if err != nil {
-		t.Fatalf("las skills incluidas: %v", err)
+		t.Fatalf("the bundled skills: %v", err)
 	}
 	for _, want := range []string{
 		"skills/: does not exist",
 		fmt.Sprintf(".agents/skills: %d installed", len(curriculum)),
 	} {
 		if !strings.Contains(line, want) {
-			t.Fatalf("el chequeo 9 no dice %q: %s", want, line)
+			t.Fatalf("check 9 does not say %q: %s", want, line)
 		}
 	}
 }
 
-// La voz es la última sección del bloque y la escribe el binario. Si el bloque
-// dice una cosa y el perfil que el binario lee dice otra, el agente habla en un
-// registro que la herramienta no prometió, y el chequeo lo tiene que decir antes
-// de que el humano lo note leyendo al agente: nombra los dos y el comando que los
-// pone de acuerdo.
+// The voice is the last section of the block and the binary writes it. If the
+// block says one thing and the profile the binary reads says another, the agent
+// speaks in a register the tool never promised, and the check has to say it before
+// the human notices by reading the agent: it names both and the command that makes
+// them agree.
 func TestDoctorReportsAVoiceThatDoesNotMatchTheProfile(t *testing.T) {
 	dir := configuredProject(t)
 
-	// El proyecto quedó inicializado con la voz de novato y el perfil que `start`
-	// escribió. Volver el bloque a novato es el estado de un proyecto al que le
-	// cambiaron el perfil sin refrescar la voz.
+	// The project was initialized with the novato voice and the profile `start`
+	// wrote. Putting the block back to novato is the state of a project whose
+	// profile was changed without refreshing the voice.
 	block, err := rules.Block(persona.Novato)
 	if err != nil {
 		t.Fatalf("rules.Block(novato): %v", err)
@@ -145,84 +145,84 @@ func TestDoctorReportsAVoiceThatDoesNotMatchTheProfile(t *testing.T) {
 
 	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
 	if code != 1 {
-		t.Fatalf("una voz que no coincide con el perfil: exit %d, want 1: %s %s", code, stdout, stderr)
+		t.Fatalf("a voice that does not match the profile: exit %d, want 1: %s %s", code, stdout, stderr)
 	}
 	line := checkLine(t, stdout+stderr, 11)
 	for _, want := range []string{"bad 11", "novato", profile, "odachi level --to " + profile} {
 		if !strings.Contains(line, want) {
-			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
+			t.Fatalf("check 11 does not say %q: %s", want, line)
 		}
 	}
 
-	// El comando que la línea nombra arregla el problema, y el chequeo vuelve a ok.
+	// The command the line names fixes the problem, and the check goes back to ok.
 	if code, _, stderr := runDir(t, dir, []string{"level", "--to", profile}, ""); code != 0 {
 		t.Fatalf("level --to %s: exit %d: %s", profile, code, stderr)
 	}
 	out, _ := output(t, dir, []string{"doctor"})
 	if line := checkLine(t, out, 11); !strings.HasPrefix(line, "ok 11") {
-		t.Fatalf("después de level --to el chequeo 11 sigue mal: %s", line)
+		t.Fatalf("after level --to check 11 is still bad: %s", line)
 	}
 }
 
-// Un bloque sin sección de voz y un perfil que existe: la voz no está en el
-// proyecto, y el comando que la escribe es init.
+// A block without the voice section and a profile that exists: the voice is not in
+// the project, and the command that writes it is init.
 func TestDoctorReportsABlockWithoutTheVoiceSection(t *testing.T) {
 	dir := configuredProject(t)
 	writeFile(t, dir, "AGENTS.md", "<!-- odachi:begin -->\n# Reglas del proyecto (odachi)\n\nreglas\n<!-- odachi:end -->\n")
 
 	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
 	if code != 1 {
-		t.Fatalf("un bloque sin voz y con perfil: exit %d, want 1: %s %s", code, stdout, stderr)
+		t.Fatalf("a block without the voice and with a profile: exit %d, want 1: %s %s", code, stdout, stderr)
 	}
 	line := checkLine(t, stdout+stderr, 11)
 	for _, want := range []string{"bad 11", rules.Section, "odachi init"} {
 		if !strings.Contains(line, want) {
-			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
+			t.Fatalf("check 11 does not say %q: %s", want, line)
 		}
 	}
 }
 
-// Las personas por perfil de v0.10.0 ya no son el agente de esta versión. Son archivos del humano, no
-// un defecto: el chequeo lo dice en la misma línea verde, nombra las carpetas, y
-// no falla por eso.
+// The per-profile personas from v0.10.0 are no longer this version's agent. They are the human's files, not
+// a defect: the check says so on the same green line, names the folders, and
+// does not fail because of it.
 func TestDoctorSaysTheV0100PersonaFilesAreLeftovers(t *testing.T) {
 	dir := configuredProject(t)
 	writeFile(t, dir, ".opencode/agents/odachi-senior.md", "viejo")
 
 	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
 	if code != 0 {
-		t.Fatalf("los leftovers no son un problema: exit %d: %s %s", code, stdout, stderr)
+		t.Fatalf("the leftovers are not a problem: exit %d: %s %s", code, stdout, stderr)
 	}
 	line := checkLine(t, stdout, 11)
 	if !strings.HasPrefix(line, "ok 11") {
-		t.Fatalf("el chequeo 11 tiene que ser ok con leftovers: %s", line)
+		t.Fatalf("check 11 has to be ok with leftovers: %s", line)
 	}
 	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "you can delete them"} {
 		if !strings.Contains(line, want) {
-			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
+			t.Fatalf("check 11 does not say %q: %s", want, line)
 		}
 	}
 }
 
-// Un proyecto sin .odachi/profile.toml no tiene contra qué comparar la voz: el
-// bloque lleva la que init escribió y no hay nada roto. Fallar acá le diría a
-// alguien que acaba de correr init que su proyecto está mal.
+// A project without .odachi/profile.toml has nothing to compare the voice against:
+// the block carries the one init wrote and nothing is broken. Failing here would
+// tell someone who just ran init that their project is wrong.
 func TestDoctorSaysNoProfileIsNothingToCompare(t *testing.T) {
 	dir := configuredProject(t)
 	if err := os.Remove(filepath.Join(dir, ".odachi", "profile.toml")); err != nil {
-		t.Fatalf("borrar .odachi/profile.toml: %v", err)
+		t.Fatalf("delete .odachi/profile.toml: %v", err)
 	}
 
 	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
 	if code != 0 {
-		t.Fatalf("sin perfil no hay voz que comparar: exit %d: %s%s", code, stdout, stderr)
+		t.Fatalf("without a profile there is no voice to compare: exit %d: %s%s", code, stdout, stderr)
 	}
 	line := checkLine(t, stdout, 11)
 	if !strings.HasPrefix(line, "ok 11") {
-		t.Fatalf("el chequeo 11 tiene que ser ok sin perfil: %s", line)
+		t.Fatalf("check 11 has to be ok without a profile: %s", line)
 	}
 	if !strings.Contains(line, "there is no profile to compare") {
-		t.Fatalf("el chequeo 11 no dice que no hay con qué comparar: %s", line)
+		t.Fatalf("check 11 does not say there is nothing to compare against: %s", line)
 	}
 }
 
@@ -231,7 +231,7 @@ func readProfileName(t *testing.T, dir string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(dir, ".odachi", "profile.toml"))
 	if err != nil {
-		t.Fatalf("leer .odachi/profile.toml: %v", err)
+		t.Fatalf("read .odachi/profile.toml: %v", err)
 	}
 	for _, line := range strings.Split(string(data), "\n") {
 		key, value, ok := strings.Cut(line, "=")
@@ -239,22 +239,22 @@ func readProfileName(t *testing.T, dir string) string {
 			return strings.Trim(strings.TrimSpace(value), `"`)
 		}
 	}
-	t.Fatalf("el perfil no dice su nombre: %s", data)
+	t.Fatalf("the profile does not say its name: %s", data)
 	return ""
 }
 
-// La línea de cierre dice cuántos chequeos corrieron: con uno nuevo son once, y
-// el uso del verbo no puede seguir diciendo diez.
+// The closing line says how many checks ran: with a new one there are eleven, and
+// the verb's usage cannot keep saying ten.
 func TestDoctorUsageAndSummaryCountElevenChecks(t *testing.T) {
 	dir := configuredProject(t)
 
 	out, _ := output(t, dir, []string{"doctor"})
 	if !strings.Contains(out, "all clear: 11 checks") {
-		t.Fatalf("el resumen cuenta once chequeos:\n%s", out)
+		t.Fatalf("the summary counts eleven checks:\n%s", out)
 	}
 
 	usageOut, _ := output(t, dir, []string{"doctor", "-h"})
-	if !strings.Contains(usageOut, "once chequeos de salud") {
-		t.Fatalf("el uso no puede seguir diciendo diez:\n%s", usageOut)
+	if !strings.Contains(usageOut, "eleven health checks") {
+		t.Fatalf("the usage cannot keep saying ten:\n%s", usageOut)
 	}
 }
