@@ -5,7 +5,7 @@ Las versiones anteriores a la 0.10.0 se reconstruyeron desde sus tags: el repo
 todavía no tenía este archivo, y un changelog que empieza hoy borra la historia
 de quien llega mañana.
 
-## v0.11.1 · sin publicar
+## v0.11.1 · 2026-10-23
 
 La versión que protege el contexto del agente principal y termina de limpiar el arranque.
 
