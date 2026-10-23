@@ -13,7 +13,7 @@ R1 · "la instalacion de odachi en opencode me esta dañando el agente, cuando l
 - [x] T1 · el flag --global de init decide si se escribe la puerta del home, y sin el no se toca el home   R1 · 7d18bef
 - [x] T2 · doctor nombra --global cuando la puerta no esta y no la da por faltante   R1 · 805a0c5
 - [x] T3 · la ayuda, el README y el CHANGELOG dicen que la puerta es opt-in   R1 · 2e98f86
-- [ ] T4 · go test ./... y odachi check en verde, y el repo se re-init sin --global   R1
+- [x] T4 · go test ./... y odachi check en verde, y el repo se re-init sin --global   R1 · 746e94c
 
 ## Historial
 L1 · "la instalacion de odachi en opencode me esta dañando el agente, cuando le hablo no me responde o esta demorando demaciado"
