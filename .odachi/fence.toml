@@ -1,0 +1,10 @@
+# Vacío a propósito: no elegiste ningún "NO incluye".
+# El cerco es lo que frena el crecimiento del alcance: sin reglas, nada
+# te avisa cuando el trabajo se va de lo que pediste.
+#
+# Cuando decidas algo que no va en esta primera versión, agregalo acá:
+#
+# [[rule]]
+# not   = "pagos"
+# paths = ["payment*", "**/payments/**"]
+# deps  = ["stripe", "mercadopago"]

@@ -7,3 +7,8 @@ dist/
 
 # a killed run leaves the write lock behind on purpose; it is not content
 .odachi/lock
+
+# odachi:begin
+/proof/
+/.odachi/reviews/
+# odachi:end

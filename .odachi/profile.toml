@@ -1,0 +1,8 @@
+name         = "novato"
+extends      = ""
+brief_source = "interview"
+questions    = "one-by-one"
+assumptions  = "never"
+output       = "line"
+proof        = "command"
+explain      = "why"
