@@ -40,9 +40,16 @@ var order = []string{Risk, Readability, Reliability, Resilience}
 // START of a path segment, case-insensitively, so `migrat` catches `migrations/`
 // and `ci` catches `ci.yml` without catching `decision.md`.
 var signals = []string{
+	// Identity and money: a defect here can hurt a person.
 	"auth", "login", "session", "token", "password", "secret",
 	"permission", "role", "payment", "billing", "migrat", "schema",
-	".env", "docker", "ci", "deploy", "makefile", "go.mod",
+	// Public contracts: other programs and other people depend on the shape.
+	"api", "contract", "openapi", "proto", "graphql", "sdk",
+	// Concurrency: the defect is a race, and a race is not visible in one path.
+	"concurrency", "race", "mutex", "lock", "async", "worker", "queue",
+	// Delivery: the change decides what reaches a machine.
+	".env", "docker", "ci", ".github", "deploy", "release", "goreleaser", ".goreleaser",
+	"makefile", "go.mod", "terraform", "helm", "k8s", "pipeline",
 }
 
 // Classify decides the tier from the changed paths alone. It is pure,
