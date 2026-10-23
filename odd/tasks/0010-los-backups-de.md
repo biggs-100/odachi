@@ -11,7 +11,7 @@ R1 · "los backups de odachi viven en .odachi/backups y undo los lee junto con l
 - odachi check queda listo
 
 ## Pasos
-- [ ] T1 · mover los backups nuevos al store y que undo los lea   R1
+- [x] T1 · mover los backups nuevos al store y que undo los lea   R1 · c42e065
 - [ ] T2 · undo --collect para migrar los viejos   R1
 - [ ] T3 · recoger este repo y documentar el store   R1
 

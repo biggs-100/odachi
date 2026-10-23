@@ -31,6 +31,11 @@ La versión que protege el contexto del agente principal y termina de limpiar el
 - **Modo de review del proyecto**: `odachi review mode status|on|off` escribe
   `.odachi/review.toml`; `check` lo lee, y `--require-review`/`--no-review` lo
   override por una corrida. Sin archivo, el default sigue siendo `off`.
+- **Backups fuera de la vista**: las versiones que `undo` guarda antes de
+  reescribir un artefacto viven en `.odachi/backups/`, con la ruta relativa del
+  archivo. `undo` sigue leyendo los backups viejos al lado, y `undo --collect`
+  los mueve con un rename que conserva bytes y fecha; la segunda corrida no hace
+  nada. Los archivos fuera del proyecto conservan el backup al lado.
 - **Timeout accionable**: un `check --run` que no termina sugiere duplicar
   `--timeout` en vez de repetir el mismo comando.
 - **`doctor` ve la puerta global**: el chequeo 11 también compara

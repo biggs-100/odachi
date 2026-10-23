@@ -73,6 +73,12 @@ que el agente lee antes de tocar nada— además del hook de pre-commit que corr
 `check --run` y `review` se protegen solos con su propio `.gitignore` interno, al
 precio de mover el árbol una vez.
 
+Antes de reescribir un archivo tuyo, `odachi` guarda la versión anterior para que
+`undo` pueda volver. Esos backups viven en `.odachi/backups/`, conservando la ruta
+del artefacto, no al lado de `brief.md` ni de los task docs. Los que quedaron
+viejos al lado se siguen leyendo, y `odachi undo --collect` los mueve al store sin
+reescribirlos: conservan bytes y fecha, y una segunda corrida no hace nada.
+
 ## Las skills, en tu agente
 
 Son diez skills, y `odachi init` ya deja nueve en el proyecto y una en tu home.
