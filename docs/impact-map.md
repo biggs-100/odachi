@@ -59,6 +59,7 @@ same work unit as the code change.
 | `skill new` | validates the slug before any write, refuses an existing one, writes the template, then regenerates the registry | `internal/app/skills/skills_test.go` and `cmd/odachi/skills_test.go` |
 | Bundled ten | `skills/{acceptance,bootstrap,commits,data,drive,ship,skill-craft,slices,tests,writing}/SKILL.md`, each with the three sections and at most 60 lines | `cmd/odachi/skills_test.go` runs `skills --check` over this repository |
 | Delegation policy | `slices` owns it: precedence over global skills, writer only by parallelism or the context backstop, handoff by task-doc path, bounded return, verify against the brief and the diff. `drive` forces loading it when the request does not fit. The decision and what was not copied from gentle-ai live in `docs/decisions/0007-delegation-policy.md` | `skills/embed_test.go` `TestDelegationPolicyLivesInSlicesAndDrive`, `skills --check` |
+| ODD-lite | `drive` owns the workflow discipline (requirements verbatim, observable `Listo cuando`, RED before GREEN, delegated step recorded with `ask --craft`, risk line); `commits` owns the risk vocabulary (`none` or the six items). The task-doc grammar is untouched; the decision is `docs/decisions/0008-odd-lite.md` | `skills/embed_test.go` `TestDriveTeachesTheWorkflowDiscipline`, `skills --check` |
 
 `odachi init` copies the skills now: the eight that are craft go to the project's
 `.agents/skills` and `bootstrap` goes to `~/.agents/skills`. Its block still only

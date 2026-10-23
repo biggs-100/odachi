@@ -39,6 +39,11 @@ La voz vive en el bloque, el agente nativo la espeja, y el doctor ve lo que `ini
   lectura; un escritor se delega solo por paralelismo real (unidades disjuntas) o
   por el context backstop, nunca por tamaño o cantidad de archivos. Se tomaron
   los triggers y el handoff acotado de gentle-ai, no su orquestador.
+- **ODD-lite, sin cambiar el formato del task doc**: `drive` exige requisitos
+  citados verbatim y un "Listo cuando" observable, `tests` con RED antes del
+  código, el registro del paso delegado con `ask --craft` y la línea de riesgo de
+  `commits`. No se adopta la gramática `Specs`/`Tasks`/`Log` de gentle-ai; la
+  decisión está en el ADR 0008.
 - **El instalador no depende de `Get-FileHash`**: si el cmdlet no existe —pasa en
   Windows PowerShell 5.1—, verifica el sha256 con `certutil`. Probado con las dos
   herramientas sobre la release real.
