@@ -12,7 +12,7 @@ R1 · "odachi init --skills home deja todas las skills en ~/.agents/skills y el 
 - odachi check queda listo
 
 ## Pasos
-- [ ] T1 · agregar --skills home al init   R1
+- [x] T1 · agregar --skills home al init   R1 · dc49caf
 
 ## Historial
 L1 · "odachi init --skills home deja todas las skills en ~/.agents/skills y el proyecto no recibe copia"
