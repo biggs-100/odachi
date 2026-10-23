@@ -10,7 +10,7 @@ R1 · "cuando check --run se queda sin tiempo, el siguiente comando sube --timeo
 - odachi check queda listo
 
 ## Pasos
-- [ ] T1 · subir --timeout en el next del timeout   R1
+- [x] T1 · subir --timeout en el next del timeout   R1 · d71deea
 
 ## Historial
 L1 · "cuando check --run se queda sin tiempo, el siguiente comando sube --timeout en vez de repetir el mismo"
