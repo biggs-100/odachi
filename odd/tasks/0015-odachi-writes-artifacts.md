@@ -22,3 +22,4 @@ R1 · "odachi writes artifacts, docs, skills and CLI messages in English; the ag
 ## History
 L1 · "odachi writes artifacts, docs, skills and CLI messages in English; the agent chat stays in the human's language"
 L2 · OFICIO · "T2 is split into two commits: brief and task doc first, AGENTS.md and persona after" (porque the artifact parser and the rules block are two surfaces with different tests; one commit per surface reviews better)
+L3 · OFICIO · "Review redesign direction chosen from research: content-bearing verdicts (git blob id per finding) instead of tree-all-or-nothing" (porque Nix/Bazel solve exactly the revalidate-what-changed problem with content addressing; three LLM review tools (Bito, prism-reviewer, inline) independently converge on incremental review with finding fingerprints, cutting re-review cost dramatically while keeping evidence exact)
