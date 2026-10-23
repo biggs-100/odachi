@@ -7,8 +7,14 @@ de quien llega mañana.
 
 ## v0.11.2 · sin publicar
 
-La versión que agrega método para atacar un backlog, cortar la entrega en PRs revisables, escribir tests de Go y auditar skills.
+La versión que agrega método para atacar un backlog, cortar la entrega en PRs revisables, escribir tests de Go, auditar skills y hablar inglés en todo lo que no es chat.
 
+- **English artifacts, docs and CLI**: the brief, task doc, `AGENTS.md` block,
+  skills and CLI messages are English; the agent chat stays in the human's
+  language. The old Spanish headers remain readable as aliases, so closed task
+  docs and old briefs still parse. This is a breaking change for custom skills
+  and scripts that pinned the old `Cuándo / Reglas / Nunca` sections or the
+  Spanish CLI messages.
 - **`triage`**: clasifica cada reporte por raíz, junta los que comparten causa en
   un solo paso, reproduce antes de arreglar y cierra con la prueba que falla. No
   copia etiquetas de GitHub ni la gramática de ODD: usa `odachi ask`, `odachi plan`,

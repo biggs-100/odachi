@@ -1,124 +1,125 @@
 # Odachi
 
-**Dos manos: vos decidís, el agente construye. Y aprendés el oficio.**
+**Two hands: you decide, the agent builds. And you learn the craft.**
 
-## Qué es
+## What it is
 
-- Una CLI que hace que el agente haga el trabajo sucio con disciplina de senior,
-  mientras vos tomás las decisiones que importan: la visión, el alcance, lo que
-  no se negocia.
-- Un tutor: cada pregunta explica por qué existe, para que la persona deje de ser
-  novata y no dependa del agente para siempre.
-- Cuatro artefactos en texto plano que sirven de memoria: `brief.md`,
-  `odd/tasks/NNNN-<slug>.md`, `proof/NNNN-<slug>.txt` y `.odachi/profile.toml`.
+- A CLI that makes the agent do the dirty work with senior discipline, while you
+  make the decisions that matter: the vision, the scope, what is non-negotiable.
+- A tutor: every question explains why it exists, so the person stops being a
+  beginner and does not depend on the agent forever.
+- Four plain-text artifacts that act as memory: `brief.md`,
+  `odd/tasks/NNNN-<slug>.md`, `proof/NNNN-<slug>.txt` and `.odachi/profile.toml`.
 
-## Instalación
+## Installation
 
-Si no tenés Go, el instalador baja el binario de una release, verifica su
-sha256 y lo deja listo. Los tres comandos:
+If you do not have Go, the installer downloads the binary from a release, verifies
+its sha256 and leaves it ready. The three commands:
 
 ```sh
-# linux y macOS
+# linux and macOS
 curl -fsSL https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.sh | bash
 
 # windows (PowerShell)
 irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 | iex
 
-# y para confirmar qué versión quedó
+# and to confirm which version you got
 odachi --version
 ```
 
-Esas tres líneas funcionan. La última release es `v0.11.1`: seis binarios (Linux,
-macOS y Windows, en amd64 y arm64) y un `checksums.txt`. El instalador resuelve la
-última versión por la API, verifica el sha256 y recién entonces escribe; un
-checksum que no coincide sale con error y no deja **nada** en el destino. La
-cadena completa está probada contra la release real, no contra un fixture: un
-test arma el `tar.gz` y los checksums como los publica goreleaser, corre
-`install.sh` sin red vía `file://`, y el binario instalado responde su versión.
+Those three lines work. The latest release is `v0.11.1`: six binaries (Linux,
+macOS and Windows, amd64 and arm64) and a `checksums.txt`. The installer resolves
+the latest version through the API, verifies the sha256 and only then writes; a
+checksum that does not match exits with an error and leaves **nothing** at the
+destination. The whole chain is tested against the real release, not a fixture: a
+test builds the `tar.gz` and the checksums the way goreleaser publishes them,
+runs `install.sh` offline through `file://`, and the installed binary answers its
+version.
 
-Si preferís compilar: `go build ./cmd/odachi` (necesitás Go 1.25 o más
-nuevo), y el binario va a decir `odachi dev`, porque la versión la inyecta la
-release, no el código.
+If you prefer to build: `go build ./cmd/odachi` (you need Go 1.25 or newer), and
+the binary says `odachi dev`, because the release injects the version, not the
+code.
 
-## Qué NO es
+## What it is NOT
 
-- No es un instalador de agentes ni un adaptador por cada harness.
-- No es una TUI ni una aplicación con pantallas.
-- No es una memoria ni una base de conocimiento propietaria: los artefactos son
-  archivos que podés leer, editar y versionar.
-- No manda telemetría, no abre la red, no corre en la nube.
+- It is not an agent installer or a per-harness adapter.
+- It is not a TUI or an application with screens.
+- It is not a proprietary memory or knowledge base: the artifacts are files you
+  can read, edit and version.
+- It sends no telemetry, opens no network, runs in no cloud.
 
-## Los cuatro artefactos
+## The four artifacts
 
-| Archivo | Dueño | Para qué |
+| File | Owner | For |
 | --- | --- | --- |
-| `brief.md` | humano | visión, no-objetivos, decisiones durables |
-| `odd/tasks/NNNN-<slug>.md` | agente | requisitos R#, pasos e historial |
-| `proof/NNNN-<slug>.txt` | agente | salida real del comando de prueba |
-| `.odachi/profile.toml` | humano | 8 líneas de ceremonia, nunca de rigor |
+| `brief.md` | human | vision, non-goals, durable decisions |
+| `odd/tasks/NNNN-<slug>.md` | agent | requirements R#, steps and history |
+| `proof/NNNN-<slug>.txt` | agent | real output of the proof command |
+| `.odachi/profile.toml` | human | 8 lines of ceremony, never of rigor |
 
-Ejemplos completos en `testdata/examples/`.
+Complete examples in `testdata/examples/`.
 
-`proof/` y `.odachi/reviews/` son **evidencia generada**, no se versiona: la
-prueba lleva el hash del árbol que la produjo y el veredicto se llama igual que
-el árbol que juzga. Por eso los dos tienen que quedar fuera de git: si no, la
-primera prueba invalidaría el review anterior y el primer review invalidaría la
-prueba anterior.
+`proof/` and `.odachi/reviews/` are **generated evidence**, not versioned: the
+proof carries the hash of the tree that produced it, and the verdict is named
+after the tree it judges. That is why both must stay out of git: otherwise the
+first proof would invalidate the previous review and the first review would
+invalidate the previous proof.
 
-`init` se ocupa de eso por vos, y de dos cosas más que no son artefactos: deja un
-bloque marcado en el `.gitignore` del proyecto (`/proof/` y `/.odachi/reviews/`,
-versionado, así que sobrevive a un clon) y un bloque de reglas en `AGENTS.md` —lo
-que el agente lee antes de tocar nada— además del hook de pre-commit que corre
-`odachi check --quiet` sobre la prueba de este árbol. En un proyecto sin `init`,
-`check --run` y `review` se protegen solos con su propio `.gitignore` interno, al
-precio de mover el árbol una vez.
+`init` takes care of that for you, and of two things that are not artifacts: it
+leaves a marked block in the project's `.gitignore` (`/proof/` and
+`/.odachi/reviews/`, versioned, so it survives a clone) and a rules block in
+`AGENTS.md` —what the agent reads before touching anything— plus the pre-commit
+hook that runs `odachi check --quiet` on this tree's proof. In a project without
+`init`, `check --run` and `review` protect themselves with their own internal
+`.gitignore`, at the price of moving the tree once.
 
-Antes de reescribir un archivo tuyo, `odachi` guarda la versión anterior para que
-`undo` pueda volver. Esos backups viven en `.odachi/backups/`, conservando la ruta
-del artefacto, no al lado de `brief.md` ni de los task docs. Los que quedaron
-viejos al lado se siguen leyendo, y `odachi undo --collect` los mueve al store sin
-reescribirlos: conservan bytes y fecha, y una segunda corrida no hace nada.
+Before rewriting one of your files, `odachi` keeps the previous version so `undo`
+can go back. Those backups live in `.odachi/backups/`, preserving the artifact's
+path, not beside `brief.md` or the task docs. The old ones left beside the
+artifact are still read, and `odachi undo --collect` moves them into the store
+without rewriting them: they keep their bytes and date, and a second run does
+nothing.
 
-## Las skills, en tu agente
+## The skills, in your agent
 
-Son catorce skills, y `odachi init` ya deja trece en el proyecto y una en tu home.
-`odachi pack` copia las catorce al lugar donde tu agente las busca, para todo lo
-que `init` no hace: otro cliente, otra carpeta, otro scope. Cada una se dispara
-con una situación, no con un comando:
+There are fourteen skills, and `odachi init` already leaves thirteen in the
+project and one in your home. `odachi pack` copies the fourteen to where your
+agent looks for them, for everything `init` does not do: another client, another
+folder, another scope. Each one is triggered by a situation, not by a command:
 
-| Skill | Cuándo se dispara |
+| Skill | When it triggers |
 | --- | --- |
-| `acceptance` | hay que decidir si algo está terminado |
-| `bootstrap` | arrancar un proyecto desde cero, o explicar qué es odachi |
-| `commits` | qué entra en un commit, cómo se parte, qué dice el mensaje |
-| `data` | guardar, migrar, leer o borrar datos: dueño, vida y respaldo |
-| `drive` | trabajás dentro de un proyecto odachi: qué verbo va en cada momento y cómo cerrar una feature |
-| `go-tests` | tests de Go, golden files o flujos de Bubbletea |
-| `pull-request` | un cambio va a PR o el diff pasa las 400 líneas |
-| `ship` | algo está listo para que otra persona lo use |
-| `skill-craft` | escribir una skill nueva o arreglar una que no se usa |
-| `skill-improve` | una skill no se usa, creció o el agente no la carga |
-| `slices` | partir un pedido grande, o cuando el código ya no entra en una lectura |
-| `tests` | qué prueba un cambio: primero la que falla, después el código |
-| `triage` | varios bugs, un backlog o un reporte que se repite |
-| `writing` | un mensaje, un PR, un comentario o documentación que alguien va a leer |
+| `acceptance` | deciding whether something is done |
+| `bootstrap` | starting a project from scratch, or explaining what odachi is |
+| `commits` | what goes into a commit, how to split it, what the message says |
+| `data` | saving, migrating, reading or deleting data: owner, lifetime and backup |
+| `drive` | working inside an odachi project: which verb at each moment and how to close a feature |
+| `go-tests` | Go tests, golden files or Bubbletea flows |
+| `pull-request` | a change goes to a PR or the diff passes 400 lines |
+| `ship` | something is ready for another person to use |
+| `skill-craft` | writing a new skill or fixing one that is not used |
+| `skill-improve` | a skill is not used, grew too long or the agent does not load it |
+| `slices` | splitting a large request, or when the code no longer fits in one read |
+| `tests` | what a change tests: the failing test first, the code after |
+| `triage` | several bugs, a backlog or a report that repeats |
+| `writing` | a message, a PR, a comment or documentation someone will read |
 
-`bootstrap` es la de entrada, y es la única que vive en `~/.agents/skills` y no
-en el proyecto: enseña a arrancar en una carpeta vacía, y en una carpeta vacía
-todavía no hay proyecto donde ponerla. Las otras trece son el oficio que un
-proyecto lleva, y `init` las copia a `./.agents/skills`. Esa carpeta es la
-convención que pide el estándar de Agent Skills, así que la encuentran los
-clientes que odachi no conoce; también viaja con el repositorio, y por eso el
-contenido de un repo ajeno es input no confiable. `bootstrap` solo explica el
-flujo: no ejecuta nada.
+`bootstrap` is the entry point, and it is the only one that lives in
+`~/.agents/skills` and not in the project: it teaches how to start in an empty
+folder, and in an empty folder there is no project to put it in yet. The other
+thirteen are the craft a project carries, and `init` copies them to
+`./.agents/skills`. That folder is the convention the Agent Skills standard asks
+for, so clients odachi does not know can find it; it also travels with the
+repository, and that is why the content of somebody else's repo is untrusted
+input. `bootstrap` only explains the flow: it runs nothing.
 
-`odachi init --skills home` deja las catorce en `~/.agents/skills` y no escribe copia
-en el proyecto; es para una sola copia por máquina. El default sigue siendo
-`project`, porque el proyecto versiona el oficio y el catálogo queda más chico.
+`odachi init --skills home` leaves the fourteen in `~/.agents/skills` and writes
+no copy in the project; it is for one copy per machine. The default is still
+`project`, because the project versions the craft and the catalog stays smaller.
 
-Los agentes soportados:
+Supported agents:
 
-| Agente | `--agents` | Destino |
+| Agent | `--agents` | Destination |
 | --- | --- | --- |
 | Claude Code | `claude` | `~/.claude/skills` |
 | Codex | `codex` | `~/.codex/skills` |
@@ -127,153 +128,157 @@ Los agentes soportados:
 | Copilot | `copilot` | `~/.copilot/skills` |
 | Qwen | `qwen` | `~/.qwen/skills` |
 | Kiro | `kiro` | `~/.kiro/skills` |
-| **OpenCode** | `opencode` | `./.opencode/skills` (en el proyecto) |
+| **OpenCode** | `opencode` | `./.opencode/skills` (in the project) |
 
-Sin `--agents` instala en los agentes que detecta: los que tienen su carpeta de
-configuración en tu home, y OpenCode si el proyecto tiene `.opencode/`. Nunca
-borra nada, respalda lo que difiere y no repite lo que ya está igual.
+Without `--agents` it installs into the agents it detects: those with a config
+folder in your home, and OpenCode if the project has `.opencode/`. It never
+deletes anything, backs up what differs and does not repeat what is already
+identical.
 
-### Subagentes: el worker y el verificador
+### Subagents: the worker and the verifier
 
-`init` también escribe dos subagentes nativos por cliente: `odachi-worker`
-(implementa un paso acotado) y `odachi-verify` (verifica sin editar). No se eligen
-con una tecla: los invoca el agente principal cuando `slices` se dispara. El padre
-les pasa el task doc, el paso, las superficies de edición, los comandos y los
-paths exactos de las skills; vuelven con evidencia y ≤2k tokens. El padre conserva
-git, el gate y la visión; no hay un orquestador separado.
+`init` also writes two native subagents per client: `odachi-worker` (implements
+one bounded step) and `odachi-verify` (verifies without editing). They are not
+picked with a key: the main agent invokes them when `slices` triggers. The parent
+passes them the task doc, the step, the edit surfaces, the commands and the exact
+skill paths; they return evidence and ≤2k tokens. The parent keeps git, the gate
+and the vision; there is no separate orchestrator.
 
-### Tres formas más de decir dónde
+### Three more ways to say where
 
-- `odachi pack --agents standard`: no un cliente, la carpeta que leen todos;
-  `./.agents/skills` en el proyecto, `~/.agents/skills` en el home. Es la que
-  `init` ya deja puesta.
-- `odachi pack --agents opencode --scope home`: el mismo cliente, en la otra
-  raíz (`~/.config/opencode/skills`), para tener una copia para todos tus
-  proyectos en vez de una por proyecto.
-- `odachi pack --agents claude --dest ./skills-x`: la carpeta que le digas, para
-  un cliente que no está en la tabla. `--dest` y `--scope` no van juntos: los
-  dos contestan "dónde", y dos respuestas no son ninguna.
+- `odachi pack --agents standard`: not a client, the folder every client reads;
+  `./.agents/skills` in the project, `~/.agents/skills` in the home. It is the
+  one `init` already leaves in place.
+- `odachi pack --agents opencode --scope home`: the same client, in the other
+  root (`~/.config/opencode/skills`), to have one copy for all your projects
+  instead of one per project.
+- `odachi pack --agents claude --dest ./skills-x`: the folder you name, for a
+  client that is not in the table. `--dest` and `--scope` do not go together:
+  both answer "where", and two answers are no answer.
 
-`odachi pack --agents opencode` sigue existiendo y escribe en `./.opencode/skills`,
-la carpeta nativa de OpenCode, para cuando la querés ahí y no en `.agents/skills`.
-`init` no la borra ni la mueve: si la encuentra, la nombra y deja la del proyecto
-como la de `.agents/skills`.
+`odachi pack --agents opencode` still exists and writes to `./.opencode/skills`,
+OpenCode's native folder, for when you want it there and not in `.agents/skills`.
+`init` does not delete or move it: if it finds it, it names it and leaves the
+project one as the `.agents/skills` one.
 
-### Probar odachi con OpenCode
-
-```sh
-mkdir mi-proyecto && cd mi-proyecto
-odachi init    # deja el proyecto listo de una sola vez
-odachi start   # la entrevista: brief.md, cerco y primer task doc
-odachi check   # te dice si falta algo y cómo destrabarlo
-```
-
-`odachi init` deja el proyecto listo en un paso: la historia de git si faltaba,
-el bloque de reglas que el agente lee, el agente del proyecto (se elige con Tab),
-el bloque de `.gitignore`, el hook de pre-commit, las trece skills en
-`./.agents/skills`, la skill de arranque en `~/.agents/skills` y la voz del perfil
-en el bloque de `AGENTS.md`. La puerta del home —el agente que aparece en
-cualquier carpeta— es opt-in: la instala `odachi init --global`, y un init sin el
-flag no escribe nada en tu home.
-
-Si no usás Claude Code, `odachi init --agents opencode` escribe sólo el agente de
-OpenCode y guarda la elección en `.odachi/agents.toml`; `init`, `start`, `level` y
-`doctor` la respetan, y `--agents claude` hace lo mismo al revés. Los archivos del
-cliente que no elegís no se borran: sólo dejan de escribirse. Sin archivo, el
-default sigue siendo los dos.
-
-Abrí el proyecto con OpenCode y ya está: lee `.agents/skills` como directorio
-externo además del propio, así que ve las trece sin `pack`. `pack` queda para
-llevar las skills a la carpeta nativa de otro cliente, o a donde vos digas.
-
-## La ceremonia y la voz
-
-Dos cosas distintas, con dueños distintos.
-
-El **perfil** es la ceremonia que el binario hace cumplir: cuánto pregunta,
-cuánto imprime, qué cuenta como prueba. Vive en `.odachi/profile.toml`, lo
-escribe `odachi start` con tus respuestas y lo lee el binario. El agente no lo
-lee: no puede aflojar una compuerta ni cambiarla.
-
-Sin archivo, el perfil por defecto es `novato`. `start` no lo sube a `senior`
-solo porque haya `.git`: `init` es quien crea ese repo. `senior` se gana con
-`odachi level --to`, o se infiere de un brief que la persona ya trajo.
-
-La **voz** es cómo habla el agente: si te explica el porqué de cada decisión o si
-va al hueso. Vive en la última sección del bloque de `AGENTS.md`, `## Cómo
-hablás`, y en el agente nativo que espeja ese bloque. `odachi init` escribe la voz
-de `novato` si todavía no hay perfil, y `odachi level --to <perfil>` cambia el
-perfil, esa sección y el espejo juntas —y nada más del bloque—.
-
-El agente nativo tiene una copia por cliente elegido (`both` es el default). La
-del **proyecto** es el mismo bloque en la carpeta donde tu cliente ya elige
-agentes: `.opencode/agents/odachi.md` (Tab en OpenCode) y
-`.claude/output-styles/odachi.md` (`/config` en Claude Code). Es generado: si lo
-editás a mano, `odachi init` lo respalda antes de reescribirlo y `doctor` te
-avisa que dejó de coincidir. Medido en OpenCode 2.1.3: un proyecto con `.git`
-lista el archivo como agente primario; una carpeta sin `.git` no lista ninguno.
-
-La copia del **home** es la puerta: `~/.config/opencode/agents/odachi.md` y
-`~/.claude/output-styles/odachi.md`, una por cliente elegido. Es opt-in: la
-instala `odachi init --global`, porque un agente primario que aparece en
-**cualquier** carpeta y puede reemplazar al que elegiste es una decisión tuya, no
-un efecto de inicializar un proyecto. Una vez instalada aparece en cualquier
-carpeta, no solo en la que corrió `init`. Si la carpeta tiene el bloque de
-`odachi`, lo lee y adopta su voz; si no, carga la skill de arranque y guía para
-empezar un proyecto. Es corta a propósito: no repite las reglas, solo dice dónde
-están. `doctor` te dice si falta o si dejó de coincidir, y para las dos cosas el
-comando es `odachi init --global`. Las dos personas por perfil de la v0.10.0
-quedaron como restos: `init` las nombra y no las borra, son tuyas.
-
-## El review: cuatro lentes, sin ceremonia
-
-`odachi review` imprime el prompt de revisión del candidato —brief, rutas
-cambiadas y diff— y elige las lentes por la evidencia del cambio: ninguna si
-sólo se tocaron documentos, `reliability` si hay lógica, las cuatro si el diff
-roza seguridad, identidad, dinero, la forma de los datos, un contrato público,
-concurrencia o la maquinaria que lo publica. No elegís la ceremonia; el cambio
-la pide.
+### Testing odachi with OpenCode
 
 ```sh
-odachi review                            # el prompt, para pegarlo en tu agente
-odachi review --exec "agente {prompt}"   # o que lo corra: prompt por stdin y en {prompt}
-odachi review --attach veredicto.json    # o guardá lo que contestó
-odachi review --show                     # qué veredicto hay para este árbol
+mkdir my-project && cd my-project
+odachi init    # leaves the project ready in one step
+odachi start   # the interview: brief.md, fence and first task doc
+odachi check   # tells you what is missing and how to unblock it
 ```
 
-El veredicto vive en `.odachi/reviews/<hash-del-árbol>.json`, así que la
-aprobación no puede flotar: el nombre del archivo *es* el estado del código que
-se aprobó. Un `BLOCKER` causal bloquea, y para destrabarlo está
-`odachi review --refute`: el refutador tiene que citar la línea del diff que
-desmiente el finding, porque lo que no se puede citar no se refuta y lo que no se
-refuta queda en pie.
+`odachi init` leaves the project ready in one step: the git history if it was
+missing, the rules block the agent reads, the project agent (picked with Tab),
+the `.gitignore` block, the pre-commit hook, the thirteen skills in
+`./.agents/skills`, the entry skill in `~/.agents/skills` and the profile voice
+in the `AGENTS.md` block. The home door —the agent that appears in any folder— is
+opt-in: `odachi init --global` installs it, and an init without the flag writes
+nothing in your home.
 
-El review es una decisión del humano, no del agente. Por defecto está apagado; el
-switch del proyecto vive en `.odachi/review.toml` y se escribe con
-`odachi review mode status|on|off`. Con `on`, `odachi check` pide el veredicto de
-este árbol; con `off`, lo deja opcional. `--require-review` y `--no-review` fuerzan
-una corrida sin cambiar el archivo. El archivo se versiona; cambiarlo mueve el
-árbol, así que la prueba se retoma con `odachi check --run "<comando>"`. Un cambio
-pasivo —sólo documentos— no pide veredicto ni con el modo prendido: no hay lente
-que responder, así que no hay review que fabricar.
+If you do not use Claude Code, `odachi init --agents opencode` writes only the
+OpenCode agent and stores the choice in `.odachi/agents.toml`; `init`, `start`,
+`level` and `doctor` respect it, and `--agents claude` does the same the other
+way. The files of the client you do not choose are not deleted: they simply stop
+being written. Without a file, the default is still both.
 
-## Estado
+Open the project with OpenCode and that is it: it reads `.agents/skills` as an
+external directory in addition to its own, so it sees the thirteen without
+`pack`. `pack` is for taking the skills to another client's native folder, or to
+wherever you say.
 
-Dominio puro en `internal/domain/...` con guardia de importaciones, adaptadores en
-`internal/adapters/...`, y quince superficies: `start`, `ask`, `plan`, `level`,
+## Ceremony and voice
+
+Two different things, with different owners.
+
+The **profile** is the ceremony the binary enforces: how much it asks, how much
+it prints, what counts as proof. It lives in `.odachi/profile.toml`, `odachi
+start` writes it with your answers and the binary reads it. The agent does not
+read it: it cannot loosen or change a gate.
+
+Without a file, the default profile is `novato`. `start` does not raise it to
+`senior` just because there is a `.git`: `init` is the one that creates that
+repo. `senior` is earned with `odachi level --to`, or inferred from a brief the
+person already brought.
+
+The **voice** is how the agent talks: whether it explains the why of every
+decision or goes to the point. It lives in the last section of the `AGENTS.md`
+block, `## How you speak`, and in the native agent that mirrors that block.
+`odachi init` writes the `novato` voice if there is no profile yet, and
+`odachi level --to <profile>` changes the profile, that section and the mirror
+together —and nothing else in the block—.
+
+The native agent has one copy per chosen client (`both` is the default). The
+**project** one is the same block in the folder where your client already picks
+agents: `.opencode/agents/odachi.md` (Tab in OpenCode) and
+`.claude/output-styles/odachi.md` (`/config` in Claude Code). It is generated: if
+you edit it by hand, `odachi init` backs it up before rewriting it and `doctor`
+tells you it stopped matching. Measured on OpenCode 2.1.3: a project with `.git`
+lists the file as a primary agent; a folder without `.git` lists none.
+
+The **home** copy is the door: `~/.config/opencode/agents/odachi.md` and
+`~/.claude/output-styles/odachi.md`, one per chosen client. It is opt-in:
+`odachi init --global` installs it, because a primary agent that appears in
+**any** folder and can replace the one you chose is your decision, not an effect
+of initializing a project. Once installed it appears in any folder, not only the
+one that ran `init`. If the folder has the `odachi` block, it reads it and adopts
+its voice; if not, it loads the entry skill and guides you to start a project. It
+is short on purpose: it does not repeat the rules, it only says where they are.
+`doctor` tells you if it is missing or stopped matching, and for both the command
+is `odachi init --global`. The two per-profile personas from v0.10.0 remain as
+leftovers: `init` names them and does not delete them, they are yours.
+
+## Review: four lenses, no ceremony
+
+`odachi review` prints the review prompt for the candidate —brief, changed paths
+and diff— and chooses the lenses from the evidence of the change: none if only
+documents were touched, `reliability` if there is logic, all four if the diff
+touches security, identity, money, data shape, a public contract, concurrency or
+the machinery that publishes it. You do not choose the ceremony; the change asks
+for it.
+
+```sh
+odachi review                            # the prompt, to paste into your agent
+odachi review --exec "agent {prompt}"    # or have it run it: prompt on stdin and in {prompt}
+odachi review --attach verdict.json      # or save what it answered
+odachi review --show                     # which verdict exists for this tree
+```
+
+The verdict lives in `.odachi/reviews/<tree-hash>.json`, so approval cannot
+float: the file name *is* the state of the code that was approved. A causal
+`BLOCKER` blocks, and to unblock it there is `odachi review --refute`: the
+refuter has to cite the diff line that disproves the finding, because what cannot
+be cited cannot be refuted and what is not refuted stands.
+
+Review is a human decision, not the agent's. By default it is off; the project
+switch lives in `.odachi/review.toml` and is written with
+`odachi review mode status|on|off`. With `on`, `odachi check` asks for this
+tree's verdict; with `off`, it leaves it optional. `--require-review` and
+`--no-review` force one run without changing the file. The file is versioned;
+changing it moves the tree, so the proof is retaken with
+`odachi check --run "<command>"`. A passive change —documents only— asks for no
+verdict even with the mode on: there is no lens to answer, so there is no review
+to fabricate.
+
+## Status
+
+Pure domain in `internal/domain/...` with an import guard, adapters in
+`internal/adapters/...`, and fifteen surfaces: `start`, `ask`, `plan`, `level`,
 `summary`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `skills`,
-`skill new`, `pack` y `--version`. 39 paquetes, en verde en Linux, macOS y
-Windows —ubuntu repite la suite interna con el detector de carreras—.
+`skill new`, `pack` and `--version`. 39 packages, green on Linux, macOS and
+Windows —ubuntu repeats the internal suite with the race detector—.
 
-Publicado: `v0.11.1`. Lo que cambió en cada versión está en [CHANGELOG.md](CHANGELOG.md).
-La instalación de una línea está probada contra la release
-real, no contra un fixture. `install.ps1` se verificó a mano en Windows con la
-release publicada: no hay test automatizado porque haría falta un listener HTTP
-en CI.
+Published: `v0.11.1`. What changed in each version is in
+[CHANGELOG.md](CHANGELOG.md). The one-line installation is tested against the
+real release, not a fixture. `install.ps1` was verified by hand on Windows with
+the published release: there is no automated test because it would need an HTTP
+listener in CI.
 
-La config de release **no tiene `brews`, firma ni provenance**: no hay tap ni
-llaves, y fingir que están sería peor que no tenerlos.
+The release config **has no `brews`, signing or provenance**: there is no tap and
+no keys, and pretending they exist would be worse than not having them.
 
-## Licencia
+## License
 
-MIT. Ver [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

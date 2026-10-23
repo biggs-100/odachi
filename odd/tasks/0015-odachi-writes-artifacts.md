@@ -17,6 +17,7 @@ R1 · "odachi writes artifacts, docs, skills and CLI messages in English; the ag
 - [ ] T4 · domain and app messages speak English   R1
 - [ ] T5 · cmd messages, help and tests speak English   R1
 - [ ] T6 · dogfood: init installs the English skills, docs counts and check green   R1
+- [ ] T7 · the review lens prompts speak English   R1
 
 ## History
 L1 · "odachi writes artifacts, docs, skills and CLI messages in English; the agent chat stays in the human's language"
