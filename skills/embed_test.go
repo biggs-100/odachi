@@ -200,6 +200,38 @@ func TestPullRequestSkillTeachesReviewSlices(t *testing.T) {
 	}
 }
 
+// TestGoTestsSkillTeachesGoPatterns: the Go skill chooses the concrete pattern
+// without repeating the language-agnostic discipline owned by tests.
+func TestGoTestsSkillTeachesGoPatterns(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["go-tests"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill go-tests: Go sigue sin patrón")
+	}
+	for _, want := range []string{
+		"Cargá `tests` primero",
+		"Tabla para varios casos",
+		"t.Run",
+		"t.TempDir",
+		"testing.Short",
+		"teatest",
+		"golden",
+		"paquete focal",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("go-tests no dice %q: el patrón de Go se perdió", want)
+		}
+	}
+}
+
 // TestBootstrapIsTheEntryPoint: the payload has exactly one skill that teaches
 // how to start a project, and it is the one `odachi init` installs in the
 // human's home. Splitting it out of the curriculum is the whole reason the
