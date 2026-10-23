@@ -217,7 +217,7 @@ header, next to the code that selects them, and a test counts their rules.
 
 | What | Where | How it is verified |
 | --- | --- | --- |
-| Four prompts | `internal/assets/review/{risk,readability,reliability,resilience}.md`, each with frontmatter (`name`, `description: Trigger: …`), `## Qué mirar` with 12–20 concrete rules and `## Qué NO reportar`; all four inherit the five rules and state that `WARNING` and `SUGGESTION` never block | `internal/assets/review/lens_test.go` (frontmatter, rule count, rule length, both sections, severity floor, style ban) |
+| Four prompts | `internal/assets/review/{risk,readability,reliability,resilience}.md`, each with frontmatter (`name`, `description: Trigger: …`), `## What to look at` with 12–20 concrete rules and `## What NOT to report`; all four inherit the five rules and state that `WARNING` and `SUGGESTION` never block | `internal/assets/review/lens_test.go` (frontmatter, rule count, rule length, both sections, severity floor, style ban) |
 | Selection | `internal/domain/review/tier.go`: `Classify(changedPaths)` is pure and volume-blind; `Lenses(tier)` returns none, `[reliability]`, or the four in fixed order; `Add` never removes; `ParseLenses` reads `--lens` | `internal/domain/review/tier_test.go` (one test per signal, docs-only, 1000 docs, signal beats docs, `Add`, `ParseLenses`) |
 | Stamping | The verdict records `lenses`: the tool stamps what the candidate required, never the reviewer | `internal/app/review/lenses_test.go`, `internal/domain/review/lens_test.go` (`Missing`) |
 | Refuter prompt | `--refute <veredicto>` prints three questions per causal `BLOCKER`/`CRITICAL`, with ids and the diff; warnings are never refutable | `internal/domain/review/refute_test.go`, `cmd/odachi/reviewlens_test.go` |

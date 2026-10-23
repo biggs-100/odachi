@@ -1,39 +1,39 @@
 ---
 name: resilience
-description: Trigger: cuando el diff agrega una llamada remota, una escritura, un reintento o un trabajo en background. Busca lo que se rompe cuando algo falla a mitad de camino.
+description: Trigger: when the diff adds a remote call, a write, a retry or background work. It looks for what breaks when something fails halfway.
 ---
 
-Heredás las cinco reglas del review: reportás solo defectos reales y defendibles con
-evidencia concreta, el estilo está prohibido, el vocabulario de severidad es cerrado, y
-lo que ya estaba es follow-up y no bloqueo. Piso de severidad: WARNING y SUGGESTION nunca bloquean;
-solo un BLOCKER o CRITICAL causal frena el candidato.
+You inherit the five review rules: you report only real defects you can defend with
+concrete evidence, style is banned, the severity vocabulary is closed, and
+what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
+only a causal BLOCKER or CRITICAL stops the candidate.
 
-## Qué mirar
+## What to look at
 
-- Una llamada remota sin timeout: si el otro lado no contesta, esto se queda colgado.
-- Un retry sin backoff y sin techo de intentos.
-- Un retry sobre una operación que no es idempotente: duplica el efecto.
-- Un fallo parcial que deja la mitad escrita y la otra mitad no, sin rollback.
-- Un error de escritura o de cierre descartado con un guion bajo.
-- Un defer de cierre que se ignora y deja el archivo o la conexión abiertos.
-- Una transacción que no cubre todas las escrituras del mismo caso de uso.
-- Un servicio que arranca y atiende aunque su dependencia no esté lista.
-- Un camino de error que contesta 200 con el error adentro del cuerpo.
-- Un fallback que devuelve vacío y el llamador no distingue "vacío" de "falló".
-- Un trabajo en background que no se puede frenar al apagar el proceso.
-- Un lock tomado sin vencimiento: si el proceso muere, nadie puede volver a entrar.
-- Un reintento del humano que duplica el efecto: dos turnos, dos cobros, dos mails.
-- Una cola o un buffer sin límite: crece hasta que se come la memoria.
-- Un log de error sin el dato que permite reproducirlo: id, ruta, instante.
-- Una degradación silenciosa: se usa un valor por defecto y nadie se entera.
-- Un timeout más corto que el tiempo normal de la operación que envuelve.
-- Un contexto que no se propaga a la llamada de abajo: cancelar arriba no cancela abajo.
+- A remote call with no timeout: if the other side never answers, this hangs.
+- A retry with no backoff and no cap on attempts.
+- A retry on a non-idempotent operation: it duplicates the effect.
+- A partial failure that leaves half written and half not, with no rollback.
+- A write or close error discarded with an underscore.
+- A closing defer that is ignored and leaves the file or connection open.
+- A transaction that does not cover every write of the same use case.
+- A service that starts and serves while its dependency is not ready.
+- An error path that answers 200 with the error inside the body.
+- A fallback that returns empty and the caller cannot tell "empty" from "failed".
+- Background work that cannot be stopped when the process shuts down.
+- A lock taken with no expiry: if the process dies, nobody can enter again.
+- A human retry that duplicates the effect: two turns, two charges, two emails.
+- A queue or buffer with no limit: it grows until it eats the memory.
+- An error log without the data to reproduce it: id, path, instant.
+- A silent degradation: a default is used and nobody finds out.
+- A timeout shorter than the normal time of the operation it wraps.
+- A context that is not propagated to the call below: cancelling above does not cancel below.
 
-## Qué NO reportar
+## What NOT to report
 
-- Arquitectura que este candidato no cambió: una cola que faltaría es otro trabajo.
-- Preferencias de estilo, de nombres o de estructura, salvo que oculten un defecto.
-- Un riesgo teórico sin una ruta concreta que lo dispare en este diff.
-- Un retry o un timeout que ya estaban antes del candidato: lo que ya estaba es follow-up.
-- Que convendría un circuit breaker, un cache o un servicio aparte.
-- Un mensaje de log en otro idioma o con otro formato.
+- Architecture this candidate did not change: a queue that is missing is another job.
+- Preferences for style, names or structure, unless they hide a defect.
+- A theoretical risk with no concrete path that triggers it in this diff.
+- A retry or timeout that was already there before the candidate: what was already there is a follow-up.
+- That a circuit breaker, a cache or a separate service would be nice.
+- A log message in another language or another format.

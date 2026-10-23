@@ -30,7 +30,7 @@ func TestReviewUsesTheLensTheEvidenceAsksFor(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	for _, want := range []string{"lentes reliability", "### reliability", "## Qué mirar", "## Qué NO reportar", "WARNING y SUGGESTION nunca bloquean"} {
+	for _, want := range []string{"lentes reliability", "### reliability", "## What to look at", "## What NOT to report", "WARNING and SUGGESTION never block"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the prompt does not contain %q", want)
 		}

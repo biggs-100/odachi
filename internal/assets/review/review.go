@@ -2,8 +2,8 @@
 // generic design review into a specialist's.
 //
 // Each file is a prompt, not code: frontmatter with its `name` and a
-// `description` that starts with `Trigger:`, then `## Qué mirar` with concrete
-// rules and `## Qué NO reportar` with what to stay quiet about. The files are
+// `description` that starts with `Trigger:`, then `## What to look at` with
+// concrete rules and `## What NOT to report` with what to stay quiet about. The files are
 // compiled into the binary with //go:embed, so a review needs no network and no
 // repository — the same reason the skills are embedded.
 //
@@ -43,9 +43,9 @@ func Lens(name string) (string, error) {
 		}
 		data, err := bundled.ReadFile(lens + ".md")
 		if err != nil {
-			return "", fmt.Errorf("no pude leer la lente %s: %w", lens, err)
+			return "", fmt.Errorf("could not read the %s lens: %w", lens, err)
 		}
 		return string(data), nil
 	}
-	return "", fmt.Errorf("la lente %q no existe: las lentes son %s", name, strings.Join(order, ", "))
+	return "", fmt.Errorf("the %q lens does not exist: the lenses are %s", name, strings.Join(order, ", "))
 }

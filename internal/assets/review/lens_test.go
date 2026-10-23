@@ -70,7 +70,7 @@ func TestEachLensHasBetweenTwelveAndTwentyRules(t *testing.T) {
 
 			rules := lookRules(t, body)
 			if len(rules) < 12 || len(rules) > 20 {
-				t.Fatalf("%s has %d rules under ## Qué mirar, want between 12 and 20:\n%s", name, len(rules), strings.Join(rules, "\n"))
+				t.Fatalf("%s has %d rules under ## What to look at, want between 12 and 20:\n%s", name, len(rules), strings.Join(rules, "\n"))
 			}
 			for _, rule := range rules {
 				if len(rule) < 30 {
@@ -94,15 +94,15 @@ func TestEachLensHasTheTwoSectionsAndTheSeverityFloor(t *testing.T) {
 				t.Fatalf("Lens(%q) = %v", name, err)
 			}
 
-			for _, heading := range []string{"\n## Qué mirar\n", "\n## Qué NO reportar\n"} {
+			for _, heading := range []string{"\n## What to look at\n", "\n## What NOT to report\n"} {
 				if !strings.Contains(body, heading) {
 					t.Errorf("%s is missing the section %q", name, strings.TrimSpace(heading))
 				}
 			}
-			if !strings.Contains(body, "WARNING y SUGGESTION nunca bloquean") {
+			if !strings.Contains(body, "WARNING and SUGGESTION never block") {
 				t.Errorf("%s does not state the severity floor", name)
 			}
-			notReported := section(t, body, "## Qué NO reportar")
+			notReported := section(t, body, "## What NOT to report")
 			if len(lookRulesIn(notReported)) < 3 {
 				t.Errorf("%s says too little about what not to report:\n%s", name, notReported)
 			}
@@ -119,11 +119,11 @@ func TestEachLensInheritsTheFiveRules(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Lens(%q) = %v", name, err)
 			}
-			notReported := section(t, body, "## Qué NO reportar")
-			if !strings.Contains(notReported, "estilo") && !strings.Contains(notReported, "preferencia") {
-				t.Errorf("%s does not ban style and preference in ## Qué NO reportar", name)
+			notReported := section(t, body, "## What NOT to report")
+			if !strings.Contains(notReported, "style") && !strings.Contains(notReported, "preference") {
+				t.Errorf("%s does not ban style and preference in ## What NOT to report", name)
 			}
-			if !strings.Contains(strings.ToLower(body), "lo que ya estaba") {
+			if !strings.Contains(strings.ToLower(body), "what was already there") {
 				t.Errorf("%s does not inherit the causality rule", name)
 			}
 		})
@@ -172,10 +172,10 @@ func section(t *testing.T, body, heading string) string {
 	return rest
 }
 
-// lookRules is the rules under ## Qué mirar.
+// lookRules is the rules under ## What to look at.
 func lookRules(t *testing.T, body string) []string {
 	t.Helper()
-	return lookRulesIn(section(t, body, "## Qué mirar"))
+	return lookRulesIn(section(t, body, "## What to look at"))
 }
 
 // lookRulesIn counts the bullets of a section: the rules are the bullets, and

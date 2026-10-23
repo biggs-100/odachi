@@ -1,39 +1,39 @@
 ---
 name: readability
-description: Trigger: cuando el diff es difícil de leer, tiene nombres que no dicen nada o creció de más. Busca lo que hace que el próximo cambio salga mal.
+description: Trigger: when the diff is hard to read, has names that say nothing or grew too much. It looks for what makes the next change go wrong.
 ---
 
-Heredás las cinco reglas del review: reportás solo defectos reales y defendibles con
-evidencia concreta, el estilo está prohibido, el vocabulario de severidad es cerrado, y
-lo que ya estaba es follow-up y no bloqueo. Piso de severidad: WARNING y SUGGESTION nunca bloquean;
-solo un BLOCKER o CRITICAL causal frena el candidato.
+You inherit the five review rules: you report only real defects you can defend with
+concrete evidence, style is banned, the severity vocabulary is closed, and
+what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
+only a causal BLOCKER or CRITICAL stops the candidate.
 
-## Qué mirar
+## What to look at
 
-- Un número mágico que debería ser una constante con nombre.
-- Código muerto: un bloque comentado, una rama que nunca se alcanza.
-- Una función que hace dos cosas y el nombre dice una.
-- Un nombre que miente: `data`, `temp`, `aux`, `handle2`.
-- Un parámetro booleano que cambia el comportamiento: `guardar(x, true)`.
-- Un comentario que repite lo que el código ya dice.
-- Un comentario que quedó viejo respecto del código que acompaña.
-- Un bloque duplicado que ya existe en el mismo paquete.
-- Una función de más de cincuenta líneas o anidada más de tres niveles.
-- Un error que se devuelve sin decir qué falló.
-- Una variable declarada lejos de donde se usa.
-- Un `else` después de un `return`: una rama que se puede aplanar.
-- Un archivo que mezcla capas: HTTP, SQL y regla de negocio en el mismo lugar.
-- Un test cuyo nombre no dice qué comportamiento fija.
-- Un cambio tan grande que no se puede leer por partes.
-- Un pendiente anotado sin dueño y sin condición de cierre.
-- Una abreviatura local en un nombre que se usa desde otros paquetes.
-- Una constante exportada que nadie usa fuera del paquete.
+- A magic number that should be a named constant.
+- Dead code: a commented-out block, a branch that is never reached.
+- A function that does two things and the name says one.
+- A name that lies: `data`, `temp`, `aux`, `handle2`.
+- A boolean parameter that changes behavior: `save(x, true)`.
+- A comment that repeats what the code already says.
+- A comment that went stale against the code it sits next to.
+- A duplicated block that already exists in the same package.
+- A function over fifty lines, or nested more than three levels deep.
+- An error returned without saying what failed.
+- A variable declared far from where it is used.
+- An `else` after a `return`: a branch that can be flattened.
+- A file that mixes layers: HTTP, SQL and business rules in the same place.
+- A test whose name does not say which behavior it pins.
+- A change so large it cannot be read in parts.
+- A TODO noted with no owner and no closing condition.
+- A local abbreviation in a name used from other packages.
+- An exported constant nobody uses outside the package.
 
-## Qué NO reportar
+## What NOT to report
 
-- Lo que un formateador resuelve solo: espacios, comillas, orden de imports.
-- Preferencias de nombres, de idioma de los comentarios o de estilo personal.
-- "Esto es feo" sin un defecto concreto que el desorden esconda.
-- Tamaño de una línea o de un archivo por sí mismo.
-- Prosa sobre la arquitectura de todo el proyecto.
-- Un problema de legibilidad que ya estaba antes del diff: es follow-up, no bloqueo.
+- What a formatter solves alone: spacing, quotes, import order.
+- Preferences for names, comment language or personal style.
+- "This is ugly" without a concrete defect the mess is hiding.
+- The size of a single line or file, on its own.
+- Prose about the architecture of the whole project.
+- A readability problem that was already there before the diff: it is a follow-up, not a blocker.
