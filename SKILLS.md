@@ -10,6 +10,7 @@
 | pull-request | cuando un cambio va a PR o el diff pasa las 400 líneas. Parte la entrega en work units revisables y elige una sola estrategia de cadena. | skills/pull-request/SKILL.md |
 | ship | cuando algo está listo para que otra persona lo use. Verifica el camino del que instala, no el del que desarrolla. | skills/ship/SKILL.md |
 | skill-craft | cuando hay que escribir una skill nueva, corregir una que no se está usando, o decidir si algo merece ser skill. | skills/skill-craft/SKILL.md |
+| skill-improve | cuando una skill no se usa, creció o el agente no la carga. Audita el trigger, recorta el cuerpo y vuelve a validar el formato. | skills/skill-improve/SKILL.md |
 | slices | cuando hay que partir un pedido grande en pasos chicos, cuando el código ya no entra en una lectura, o hay que decidir si delegar a un subagente. | skills/slices/SKILL.md |
 | tests | cuando hay que escribir, arreglar o decidir qué prueba un cambio. Primero la prueba que falla, después el código. | skills/tests/SKILL.md |
 | triage | cuando hay varios bugs, un backlog o un reporte que se repite. Clasifica por raíz y arregla una vez, no una por issue. | skills/triage/SKILL.md |

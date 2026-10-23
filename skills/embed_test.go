@@ -232,6 +232,38 @@ func TestGoTestsSkillTeachesGoPatterns(t *testing.T) {
 	}
 }
 
+// TestSkillImproveTeachesTheAudit: the skill that keeps the catalog healthy must
+// start at the trigger, cut at 60 lines, keep one owner per rule, and revalidate
+// the generated registry.
+func TestSkillImproveTeachesTheAudit(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["skill-improve"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill skill-improve: el catálogo no se audita")
+	}
+	for _, want := range []string{
+		"Empezá por el trigger",
+		"60 líneas",
+		"observable",
+		"odachi skills --check",
+		"SKILLS.md",
+		"un dueño",
+		"antes y el después",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("skill-improve no dice %q: la auditoría se perdió", want)
+		}
+	}
+}
+
 // TestBootstrapIsTheEntryPoint: the payload has exactly one skill that teaches
 // how to start a project, and it is the one `odachi init` installs in the
 // human's home. Splitting it out of the curriculum is the whole reason the
