@@ -10,7 +10,7 @@ R1 · "publicar v0.11.0 con el agente nativo, la puerta del home, la política d
 
 ## Pasos
 - [x] T1 · correr la suite completa con Git Bash y el doctor del repo   R1 · a1c5e09
-- [ ] T2 · publicar v0.11.0: push, CI en verde y tag   R1
+- [x] T2 · publicar v0.11.0: push, CI en verde y tag   R1 · 10f05bd
 
 ## Historial
 L1 · "publicar v0.11.0 con el agente nativo, la puerta del home, la política de delegación y el perfil novato, usando odachi en su propio repo"
