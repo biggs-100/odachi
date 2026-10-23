@@ -305,8 +305,24 @@ func TestProofTimedOutSaysHowLongItWaited(t *testing.T) {
 	if got.Message != "la prueba no terminó en 7s" {
 		t.Errorf("Message = %q, want %q", got.Message, "la prueba no terminó en 7s")
 	}
-	if got.Next != `odachi check --run "go test ./..."` {
-		t.Errorf("Next = %q, want the same command", got.Next)
+	if got.Next != `odachi check --run "go test ./..." --timeout 14` {
+		t.Errorf("Next = %q, want the same command with twice the wait", got.Next)
+	}
+}
+
+// TestProofTimedOutRaisesTheTimeout: the next command cannot be the same one
+// that just timed out; a 120s wait suggests 240s, not another 120s.
+func TestProofTimedOutRaisesTheTimeout(t *testing.T) {
+	state := ready()
+	state.ProofTimedOut = true
+	state.ProofTimeoutSeconds = 120
+	state.ProofCommand = "go test ./..."
+
+	got := gate.Evaluate(state)
+
+	want := `odachi check --run "go test ./..." --timeout 240`
+	if got.Next != want {
+		t.Errorf("Next = %q, want %q", got.Next, want)
 	}
 }
 

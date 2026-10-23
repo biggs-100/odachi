@@ -101,7 +101,7 @@ func Evaluate(s State) Result {
 	case s.ProofTreeHash != s.TreeHash:
 		return Result{NeedsWork, ReasonProofStale, "la prueba es de otro estado del código", nextCheckProof}
 	case s.ProofTimedOut:
-		return Result{NeedsWork, ReasonProofFailed, "la prueba no terminó en " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRun(s.ProofCommand)}
+		return Result{NeedsWork, ReasonProofFailed, "la prueba no terminó en " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
 	case s.ProofFailed:
 		return Result{NeedsWork, ReasonProofFailed, "la prueba falló: " + proofLastLine(s.ProofLastLine), nextRun(s.ProofCommand)}
 	default:
@@ -129,6 +129,18 @@ func nextRun(command string) string {
 		return `odachi check --run "<comando>"`
 	}
 	return `odachi check --run "` + strings.ReplaceAll(command, `"`, `\"`) + `"`
+}
+
+// nextRunWithTimeout is nextRun for the one case where repeating the command
+// would repeat the failure: the command did not finish in time. The suggestion
+// doubles the wait, so a human who pastes it gets a real chance to finish
+// instead of the same timeout again.
+func nextRunWithTimeout(command string, seconds int) string {
+	next := nextRun(command)
+	if seconds <= 0 {
+		return next + " --timeout 300"
+	}
+	return next + " --timeout " + strconv.Itoa(seconds*2)
 }
 
 // openQuestions keeps the sentence readable in Spanish for one and for many.

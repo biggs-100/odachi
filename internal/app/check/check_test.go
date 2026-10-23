@@ -488,8 +488,8 @@ func TestTimedOutRunSaysHowLongItWaited(t *testing.T) {
 	if got.Message != "la prueba no terminó en 7s" {
 		t.Errorf("Message = %q, want %q", got.Message, "la prueba no terminó en 7s")
 	}
-	if got.Next != `odachi check --run "sleep 60"` {
-		t.Errorf("Next = %q, want the same command", got.Next)
+	if got.Next != `odachi check --run "sleep 60" --timeout 14` {
+		t.Errorf("Next = %q, want the same command with twice the wait", got.Next)
 	}
 	for _, write := range files.writes {
 		if strings.HasSuffix(write, "0007-turnos.txt") {

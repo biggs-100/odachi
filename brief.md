@@ -1,11 +1,11 @@
-# doctor-revisa-tambien
+# cuando-check-run
 
 ## Qué tiene que existir
-- doctor revisa tambien la puerta global: si falta o no coincide con este binario, lo dice y manda a odachi init
+- cuando check --run se queda sin tiempo, el siguiente comando sube --timeout en vez de repetir el mismo
 
 ## Listo cuando
-- doctor en un home sin la puerta la nombra sin fallar
-- doctor con la puerta editada la nombra
+- un timeout de 7s sugiere --timeout 14
+- un timeout de 120s sugiere --timeout 240
 - go test ./... queda en verde
 - odachi check queda listo
 
@@ -15,4 +15,4 @@
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: doctor y home.
+- Quiere aprender: mensajes de error.
