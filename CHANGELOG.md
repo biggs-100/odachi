@@ -5,7 +5,7 @@ Las versiones anteriores a la 0.10.0 se reconstruyeron desde sus tags: el repo
 todavía no tenía este archivo, y un changelog que empieza hoy borra la historia
 de quien llega mañana.
 
-## v0.11.0 · sin publicar (la fecha la fija el tag)
+## v0.11.0 · 2026-10-22
 
 La voz vive en el bloque, el agente nativo la espeja, y el doctor ve lo que `init` dejó.
 
