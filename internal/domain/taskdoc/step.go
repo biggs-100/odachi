@@ -42,7 +42,7 @@ func (d TaskDoc) AddStep(text, requirement string) (TaskDoc, error) {
 
 	link := strings.ToUpper(strings.TrimSpace(requirement))
 	if link != "" && !d.hasRequirement(link) {
-		return d, fmt.Errorf("el requisito %s no está en este task doc; los requisitos son %s", link, requirementIDs(d.Requirements))
+		return d, fmt.Errorf("requirement %s is not in this task doc; the requirements are %s", link, requirementIDs(d.Requirements))
 	}
 
 	step := Step{ID: "T" + strconv.Itoa(d.NextStep()), Text: normalized, Requirement: link}
@@ -68,17 +68,17 @@ func (d TaskDoc) hasRequirement(id string) bool {
 // leading dash (the render adds the checkbox), at most MaxStepText characters.
 func canonicalStepText(text string) (string, error) {
 	if strings.ContainsAny(text, "\r\n") {
-		return "", fmt.Errorf("el paso tiene que ser una sola línea, sin saltos de línea")
+		return "", fmt.Errorf("a step must be one line, without line breaks")
 	}
 
 	normalized := strings.Join(strings.Fields(text), " ")
 	switch {
 	case normalized == "":
-		return "", fmt.Errorf(`falta el texto del paso: escribí odachi plan "<texto>"`)
+		return "", fmt.Errorf(`the step has no text: write odachi plan "<text>"`)
 	case strings.HasPrefix(normalized, "-"):
-		return "", fmt.Errorf(`el paso no lleva guión adelante: odachi plan escribe "- [ ] T<n>" solo; escribí el texto sin el guión`)
+		return "", fmt.Errorf(`a step does not start with a dash: odachi plan writes "- [ ] T<n>" itself; write the text without the dash`)
 	case utf8.RuneCountInString(normalized) > MaxStepText:
-		return "", fmt.Errorf("el paso tiene %d caracteres y el máximo es %d; resumilo en una línea",
+		return "", fmt.Errorf("the step has %d characters and the maximum is %d; summarize it in one line",
 			utf8.RuneCountInString(normalized), MaxStepText)
 	}
 
@@ -102,7 +102,7 @@ func stepNumber(id string) (int, bool) {
 // the agent what it can link to without opening the file.
 func requirementIDs(requirements []Requirement) string {
 	if len(requirements) == 0 {
-		return "no hay requisitos en este task doc"
+		return "there are no requirements in this task doc"
 	}
 	ids := make([]string, 0, len(requirements))
 	for _, r := range requirements {

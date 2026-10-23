@@ -43,7 +43,7 @@ const (
 
 // hookMarker names the hook as odachi's. A hook without it is somebody else's
 // work and is never replaced.
-const hookMarker = "# odachi: no se commitea sin prueba de este árbol"
+const hookMarker = "# odachi: no commit without a proof for this tree"
 
 // hookFor is the hook itself. It calls this binary by absolute path when the
 // binary is not on PATH, because a downloaded binary is the normal case for a
@@ -85,9 +85,9 @@ type Options struct {
 	// this run does not install the global half (tests that only care about the
 	// project); the binary always passes an adapter.
 	Home Home
-	// Global says this run installs the door of the home. Es opt-in: un init sin
-	// el flag no escribe el home, porque un agente primary en toda carpeta es una
-	// decisión del humano y no un efecto de inicializar un proyecto.
+	// Global says this run installs the door of the home. It is opt-in: an init
+	// without the flag does not write the home, because a primary agent in every
+	// folder is the human's decision and not an effect of initializing a project.
 	Global bool
 }
 
@@ -152,12 +152,12 @@ func Run(opts Options, files Files, skills Skills) Result {
 
 	hasGit, err := r.files.Exists(filepath.Join(r.dir, gitDir))
 	if err != nil {
-		return blocked("no pude revisar " + gitDir + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		return blocked("could not check " + gitDir + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 	}
 	if !hasGit {
 		// No repository means nowhere to install the hook. Writing only the
 		// AGENTS.md half would report success for a job that is half done.
-		return blocked("no hay " + gitDir + " en este directorio: no puedo instalar el hook " + hookPath + "; corré git init y volvé a correr odachi init")
+		return blocked("there is no " + gitDir + " in this directory: cannot install the hook " + hookPath + "; run git init and run odachi init again")
 	}
 
 	selection, clients, problem := r.resolveAgents(opts.Agents)
@@ -204,7 +204,7 @@ func Run(opts Options, files Files, skills Skills) Result {
 	if opts.Global {
 		r.installGlobalPersonas()
 	} else {
-		r.lines = append(r.lines, "puerta global: no la instalé (es opt-in); odachi init --global la pone en el home y odachi aparece en cualquier carpeta")
+		r.lines = append(r.lines, "global door: I did not install it (it is opt-in); odachi init --global puts it in the home and odachi shows up in any folder")
 	}
 
 	r.installSkills()
@@ -228,8 +228,8 @@ func (r *runner) resolveAgents(requested string) (string, []persona.Client, *Res
 	if r.agentSelection != nil {
 		stored, err := r.agentSelection.Written(r.dir)
 		if err != nil {
-			problem := blocked("no pude leer " + persona.SelectionPath + ": " + oneLine(err.Error()) +
-				"; corregí el archivo o volvé a correr odachi init --agents both")
+			problem := blocked("could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+				"; fix the file or run odachi init --agents both")
 			return "", nil, &problem
 		}
 		r.storedSelection = stored
@@ -241,8 +241,8 @@ func (r *runner) resolveAgents(requested string) (string, []persona.Client, *Res
 	}
 	selection, clients, err := persona.ResolveSelection(value)
 	if err != nil {
-		problem := blocked("la elección de clientes no es válida: " + oneLine(err.Error()) +
-			"; volvé a correr odachi init --agents both")
+		problem := blocked("the client selection is not valid: " + oneLine(err.Error()) +
+			"; run odachi init --agents both")
 		return "", nil, &problem
 	}
 	return selection, clients, nil
@@ -256,57 +256,57 @@ func (r *runner) writeAgentStore(explicit bool) *Result {
 		return nil
 	}
 	if r.storedSelection == r.selection {
-		r.lines = append(r.lines, persona.SelectionPath+": "+r.selection+", sin cambios")
+		r.lines = append(r.lines, persona.SelectionPath+": "+r.selection+", unchanged")
 		return nil
 	}
 	if r.agentSelection == nil {
-		problem := blocked("no puedo guardar la elección de clientes: falta el adaptador del store; volvé a correr odachi init --agents both")
+		problem := blocked("cannot save the client selection: the store adapter is missing; run odachi init --agents both")
 		return &problem
 	}
 
 	data, err := r.agentSelection.Render(r.selection)
 	if err != nil {
-		problem := blocked("no pude armar " + persona.SelectionPath + ": " + oneLine(err.Error()) +
-			"; volvé a correr odachi init --agents " + r.selection)
+		problem := blocked("could not build " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; run odachi init --agents " + r.selection + " again")
 		return &problem
 	}
 
 	path := filepath.Join(r.dir, filepath.FromSlash(persona.SelectionPath))
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked("no pude revisar " + persona.SelectionPath + ": " + oneLine(err.Error()) +
-			"; revisá los permisos y volvé a correr odachi init --agents " + r.selection)
+		problem := blocked("could not check " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; check the permissions and run odachi init --agents " + r.selection + " again")
 		return &problem
 	}
 	if exists {
 		if _, err := r.files.Backup(path); err != nil {
-			problem := blocked("no pude respaldar " + persona.SelectionPath + " antes de reescribirlo: " + oneLine(err.Error()) +
-				"; revisá los permisos y volvé a correr odachi init --agents " + r.selection)
+			problem := blocked("could not back up " + persona.SelectionPath + " before rewriting it: " + oneLine(err.Error()) +
+				"; check the permissions and run odachi init --agents " + r.selection + " again")
 			return &problem
 		}
 	}
 	if err := r.files.Write(path, data); err != nil {
-		problem := blocked("no pude escribir " + persona.SelectionPath + ": " + oneLine(err.Error()) +
-			"; revisá los permisos y volvé a correr odachi init --agents " + r.selection)
+		problem := blocked("could not write " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; check the permissions and run odachi init --agents " + r.selection + " again")
 		return &problem
 	}
 
 	r.changed = append(r.changed, persona.SelectionPath)
-	r.lines = append(r.lines, persona.SelectionPath+": guardé la elección "+r.selection+"; los archivos de los otros clientes no se tocan")
+	r.lines = append(r.lines, persona.SelectionPath+": saved the choice "+r.selection+"; the other clients files are not touched")
 	return nil
 }
 
 // pathWarning is the half-broken install: the hook works from the absolute path,
-// the rules do not work at all. It names the folder to add, because "ponelo en el
-// PATH" is the kind of advice that leaves a beginner exactly where they were.
+// the rules do not work at all. It names the folder to add, because "put it on
+// the PATH" is the kind of advice that leaves a beginner exactly where they were.
 func pathWarning(exe string) []string {
 	lines := []string{
-		"odachi no está en tu PATH: el bloque de AGENTS.md le pide al agente que corra `odachi`, y así no va a poder",
+		"odachi is not on your PATH: the AGENTS.md block asks the agent to run `odachi`, and it will not be able to",
 	}
 	if dir := filepath.Dir(exe); exe != "" && dir != "." && dir != string(filepath.Separator) {
-		return append(lines, "el hook sí funciona porque usa la ruta absoluta; agregá esa carpeta al PATH (en sh: export PATH=\""+dir+":$PATH\")")
+		return append(lines, "the hook still works because it uses the absolute path; add that folder to the PATH (in sh: export PATH=\""+dir+":$PATH\")")
 	}
-	return append(lines, "el hook sí funciona porque usa la ruta absoluta; agregá la carpeta donde instalaste odachi al PATH y volvé a correr odachi init")
+	return append(lines, "the hook still works because it uses the absolute path; add the folder where you installed odachi to the PATH and run odachi init again")
 }
 
 // runner holds what one run touched and what it reports.
@@ -360,14 +360,14 @@ func (r *runner) installHook(exe string) *Result {
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked("no pude revisar " + hookPath + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		problem := blocked("could not check " + hookPath + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 		return &problem
 	}
 
 	if exists {
 		data, err := r.files.Read(path)
 		if err != nil {
-			problem := blocked("no pude leer " + hookPath + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			problem := blocked("could not read " + hookPath + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 			return &problem
 		}
 
@@ -376,36 +376,36 @@ func (r *runner) installHook(exe string) *Result {
 			return &problem
 		}
 		if string(data) == hook {
-			r.lines = append(r.lines, hookPath+": sin cambios")
+			r.lines = append(r.lines, hookPath+": unchanged")
 			return nil
 		}
 
 		if _, err := r.files.Backup(path); err != nil {
-			problem := blocked("no pude respaldar " + hookPath + " antes de reescribirlo: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			problem := blocked("could not back up " + hookPath + " before rewriting it: " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 			return &problem
 		}
 	}
 
 	if err := r.files.Write(path, []byte(hook)); err != nil {
-		problem := blocked("no pude escribir " + hookPath + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		problem := blocked("could not write " + hookPath + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 		return &problem
 	}
 	if err := r.files.MakeExecutable(path); err != nil {
-		problem := blocked("no pude hacer ejecutable " + hookPath + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		problem := blocked("could not make executable " + hookPath + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 		return &problem
 	}
 
 	r.changed = append(r.changed, hookPath)
-	r.lines = append(r.lines, hookPath+": instalado")
+	r.lines = append(r.lines, hookPath+": installed")
 	return nil
 }
 
 // foreignHook is the refusal: the three lines to paste, and nothing touched.
 func foreignHook(exe string) Result {
-	message := "ya existe " + hookPath + " y no es de odachi: no lo pisé; pegá estas líneas dentro de tu hook y volvé a correr odachi init"
+	message := "there is already " + hookPath + " and it is not odachi's: I did not overwrite it; paste these lines inside your hook and run odachi init again"
 	lines := []string{message, ""}
 	lines = append(lines, strings.Split(strings.TrimRight(hookFor(exe), "\n"), "\n")...)
-	lines = append(lines, "", "siguiente: odachi init")
+	lines = append(lines, "", "next: odachi init")
 	return Result{
 		Code:    CodeBlocked,
 		Message: message,
@@ -420,9 +420,9 @@ func (r *runner) result() Result {
 	files := append(append(append([]string{}, r.changed...), r.skillFiles...), r.personaFiles...)
 
 	if len(r.changed) == 0 && len(r.skillFiles) == 0 && len(r.personaFiles) == 0 {
-		message := "sin cambios: " + agentsFile + ", " + ignoreFile + ", el hook " + hookPath + " y el agente nativo ya estaban al día"
+		message := "unchanged: " + agentsFile + ", " + ignoreFile + ", the hook " + hookPath + " and the native agent were already up to date"
 		if len(r.skillLabels) > 0 {
-			message += "; las skills de " + humanList(r.skillLabels) + " también"
+			message += "; the skills of " + humanList(r.skillLabels) + " as well"
 		}
 		return Result{
 			Code:         r.code(),
@@ -442,17 +442,17 @@ func (r *runner) result() Result {
 		written = append(written, humanList(r.changed))
 	}
 	if len(r.skillFiles) > 0 {
-		written = append(written, "las skills ("+humanList(r.skillLabels)+")")
+		written = append(written, "the skills ("+humanList(r.skillLabels)+")")
 	}
 	if len(r.personaFiles) > 0 {
-		written = append(written, "el agente nativo ("+humanList(r.personaLabels)+")")
+		written = append(written, "the native agent ("+humanList(r.personaLabels)+")")
 	}
-	message := "listo: " + humanList(written) + " quedaron al día"
+	message := "done: " + humanList(written) + " are up to date"
 
 	lines := append([]string{}, r.lines...)
-	// The human does not commit: the agent does. Saying "commiteá" here assumed the
+	// The human does not commit: the agent does. Saying "commit" here assumed the
 	// one thing this tool exists to remove from their plate.
-	lines = append(lines, "siguiente: revisá "+agentsFile+"; cuando odachi check --quiet esté en verde, el agente guarda el avance")
+	lines = append(lines, "next: check "+agentsFile+"; when odachi check --quiet is green, the agent saves the progress")
 
 	return Result{
 		Code:         r.code(),
@@ -493,19 +493,19 @@ func blocked(message string) Result {
 		Code:    CodeBlocked,
 		Message: message,
 		Next:    "odachi init",
-		Lines:   []string{message, "siguiente: odachi init"},
+		Lines:   []string{message, "next: odachi init"},
 	}
 }
 
-// humanList joins two or three paths the way a Spanish sentence does.
+// humanList joins two or three paths the way an English sentence does.
 func humanList(items []string) string {
 	switch len(items) {
 	case 0:
-		return "nada"
+		return "nothing"
 	case 1:
 		return items[0]
 	default:
-		return strings.Join(items[:len(items)-1], ", ") + " y " + items[len(items)-1]
+		return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
 	}
 }
 

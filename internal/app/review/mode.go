@@ -62,7 +62,7 @@ func Mode(opts ModeOptions, files ModeFiles, codec ModeCodec) Result {
 		return modeResult(fmt.Sprintf("review: %s", current), exists, nil)
 	case ModeOn, ModeOff:
 		if exists && current == action {
-			return modeResult(fmt.Sprintf("review: %s (sin cambios)", action), true, nil)
+			return modeResult(fmt.Sprintf("review: %s (unchanged)", action), true, nil)
 		}
 
 		data, err := codec.Render(action)
@@ -71,15 +71,15 @@ func Mode(opts ModeOptions, files ModeFiles, codec ModeCodec) Result {
 		}
 		if exists {
 			if _, err := files.Backup(path); err != nil {
-				return modeBlocked(fmt.Errorf("no pude respaldar %s antes de cambiarlo: %w", domain.ModePath, err))
+				return modeBlocked(fmt.Errorf("could not back up %s before changing it: %w", domain.ModePath, err))
 			}
 		}
 		if err := files.Write(path, data); err != nil {
-			return modeBlocked(fmt.Errorf("no pude escribir %s: %w", domain.ModePath, err))
+			return modeBlocked(fmt.Errorf("could not write %s: %w", domain.ModePath, err))
 		}
 		return modeResult(fmt.Sprintf("review: %s", action), true, []string{domain.ModePath})
 	default:
-		return modeBlocked(fmt.Errorf("modo de review desconocido: %q; usá status, on u off", opts.Action))
+		return modeBlocked(fmt.Errorf("unknown review mode: %q; use status, on or off", opts.Action))
 	}
 }
 
@@ -104,7 +104,7 @@ func Enabled(dir string, files ModeFiles, codec ModeCodec) (bool, error) {
 func readMode(path string, files ModeFiles, codec ModeCodec) (string, bool, error) {
 	exists, err := files.Exists(path)
 	if err != nil {
-		return "", false, fmt.Errorf("no pude revisar %s: %w", domain.ModePath, err)
+		return "", false, fmt.Errorf("could not check %s: %w", domain.ModePath, err)
 	}
 	if !exists {
 		return domain.ModeOff, false, nil
@@ -112,12 +112,12 @@ func readMode(path string, files ModeFiles, codec ModeCodec) (string, bool, erro
 
 	data, err := files.Read(path)
 	if err != nil {
-		return "", true, fmt.Errorf("no pude leer %s: %w", domain.ModePath, err)
+		return "", true, fmt.Errorf("could not read %s: %w", domain.ModePath, err)
 	}
 
 	mode, err := codec.Decode(data)
 	if err != nil {
-		return "", true, fmt.Errorf("%s: %w; corregí el archivo o volvé a escribir el modo con odachi review mode on|off", domain.ModePath, err)
+		return "", true, fmt.Errorf("%s: %w; fix the file or write the mode again with odachi review mode on|off", domain.ModePath, err)
 	}
 	return mode, true, nil
 }
@@ -127,7 +127,7 @@ func readMode(path string, files ModeFiles, codec ModeCodec) (string, bool, erro
 func modeResult(message string, exists bool, files []string) Result {
 	lines := []string{message}
 	if !exists {
-		lines[0] = message + " (sin " + domain.ModePath + ": el default es off)"
+		lines[0] = message + " (without " + domain.ModePath + ": the default is off)"
 	}
 	return Result{Code: CodeOK, Message: lines[0], Lines: lines, Files: files}
 }

@@ -65,7 +65,7 @@ func TestRenderWritesACanonicalSwitch(t *testing.T) {
 		t.Fatalf("Render(ON) = %v", err)
 	}
 	rendered := string(data)
-	for _, want := range []string{"decisión del humano", `mode = "on"`} {
+	for _, want := range []string{"the human's decision", `mode = "on"`} {
 		if !strings.Contains(rendered, want) {
 			t.Errorf("Render = %q, want %q", rendered, want)
 		}

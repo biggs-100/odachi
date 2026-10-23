@@ -22,10 +22,10 @@ func (l *fakeLenses) Lens(name string) (string, error) {
 	if l.err != nil {
 		return "", l.err
 	}
-	return "---\nname: " + name + "\ndescription: Trigger: prueba.\n---\n\n" +
-		"Piso de severidad: WARNING y SUGGESTION nunca bloquean.\n\n" +
-		"## Qué mirar\n\n- regla de " + name + " que se puede accionar\n\n" +
-		"## Qué NO reportar\n\n- el estilo\n", nil
+	return "---\nname: " + name + "\ndescription: Trigger: test.\n---\n\n" +
+		"Severity floor: WARNING and SUGGESTION never block.\n\n" +
+		"## What to look at\n\n- actionable " + name + " rule\n\n" +
+		"## What NOT to report\n\n- style\n", nil
 }
 
 // newLensProject is a project whose change is only code: focused, one lens.
@@ -49,7 +49,7 @@ func TestNoFlagsUsesTheLensesTheEvidenceAsksFor(t *testing.T) {
 	if strings.Join(p.lenses.asked, ",") != domainreview.Reliability {
 		t.Fatalf("lenses loaded = %v, want only reliability", p.lenses.asked)
 	}
-	if !strings.Contains(result.Prompt, "regla de reliability") {
+	if !strings.Contains(result.Prompt, "actionable reliability rule") {
 		t.Errorf("the prompt does not carry the reliability rules:\n%s", result.Prompt)
 	}
 	if strings.Join(result.Lenses, ",") != domainreview.Reliability {
@@ -71,7 +71,7 @@ func TestDocumentationOnlyAsksForNoLens(t *testing.T) {
 	if len(p.lenses.asked) != 0 {
 		t.Fatalf("lenses loaded = %v, want none: documentation asks for no lens", p.lenses.asked)
 	}
-	if strings.Contains(result.Prompt, "## Las lentes") {
+	if strings.Contains(result.Prompt, "## The lenses") {
 		t.Errorf("a passive candidate got a lens section:\n%s", result.Prompt)
 	}
 	if len(result.Lenses) != 0 {
@@ -92,7 +92,7 @@ func TestAnAuthChangeAsksForTheFour(t *testing.T) {
 		t.Fatalf("result lenses = %v, want %v", result.Lenses, want)
 	}
 	for _, lens := range want {
-		if !strings.Contains(result.Prompt, "regla de "+lens) {
+		if !strings.Contains(result.Prompt, "actionable "+lens+" rule") {
 			t.Errorf("the prompt does not carry the %s lens", lens)
 		}
 	}
@@ -109,7 +109,7 @@ func TestLensFlagAddsAndNeverRemoves(t *testing.T) {
 	if strings.Join(result.Lenses, ",") != want {
 		t.Fatalf("result lenses = %v, want %s", result.Lenses, want)
 	}
-	if !strings.Contains(result.Prompt, "regla de risk") {
+	if !strings.Contains(result.Prompt, "actionable risk rule") {
 		t.Error("the prompt does not carry the risk rules")
 	}
 }
@@ -151,7 +151,7 @@ func TestAnInventedLensIsRefusedBeforeAnyWrite(t *testing.T) {
 // prompt.
 func TestAnUnloadableLensIsABlock(t *testing.T) {
 	p := newLensProject()
-	p.lenses.err = errors.New("no pude leer la lente risk")
+	p.lenses.err = errors.New("could not read the risk lens")
 
 	result := p.run(review.Options{Lens: "risk"})
 
@@ -176,7 +176,7 @@ func TestShowSaysWhichLensesAreMissing(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
 	lines := strings.Join(result.Lines, "\n")
-	for _, want := range []string{"risk", "readability", "reliability", "resilience", "faltan"} {
+	for _, want := range []string{"risk", "readability", "reliability", "resilience", "missing lenses"} {
 		if !strings.Contains(lines, want) {
 			t.Errorf("--show does not say %q:\n%s", want, lines)
 		}
@@ -199,7 +199,7 @@ func TestShowWithLensAsksAboutThatLens(t *testing.T) {
 	if !strings.Contains(lines, "risk") {
 		t.Errorf("--show with --lens risk does not mention risk:\n%s", lines)
 	}
-	if !strings.Contains(lines, "faltan") {
+	if !strings.Contains(lines, "missing lenses") {
 		t.Errorf("--show does not list the missing lenses:\n%s", lines)
 	}
 }
@@ -254,11 +254,11 @@ func TestRefutePrintsTheRefuterPrompt(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
 	for _, want := range []string{
-		"¿Es causal del diff, o ya estaba?",
+		"Is it causal of the diff, or was it already there?",
 		"F1",
 		"internal/auth/session.go:12",
 		"+nuevo",
-		"Ante la duda",
+		"When in doubt",
 	} {
 		if !strings.Contains(result.Prompt, want) {
 			t.Errorf("the refuter prompt does not contain %q\n%s", want, result.Prompt)
@@ -280,7 +280,7 @@ func TestRefuteWithoutBlockersSaysThereIsNothingToRefute(t *testing.T) {
 	if result.Code != review.CodeBlocked {
 		t.Fatalf("code = %d, want 1", result.Code)
 	}
-	if !strings.Contains(result.Message, "nada que refutar") {
+	if !strings.Contains(result.Message, "nothing to refute") {
 		t.Errorf("message %q does not say there is nothing to refute", result.Message)
 	}
 	if len(p.files.writes) != 0 {
@@ -339,7 +339,7 @@ func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
 	if second.Code != review.CodeBlocked {
 		t.Fatalf("second attach code = %d, want 1: the refutation is written once", second.Code)
 	}
-	if !strings.Contains(second.Message, "ya hay una refutación") {
+	if !strings.Contains(second.Message, "already has a refutation") {
 		t.Errorf("second attach message = %q", second.Message)
 	}
 }

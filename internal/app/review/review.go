@@ -9,7 +9,7 @@
 //
 // The package is pure orchestration over three ports: Files (the store), Git (the
 // candidate) and Shell (the reviewer command). Every rule lives in
-// internal/domain/review; every Spanish line lives here.
+// internal/domain/review; every English line lives here.
 package review
 
 import (
@@ -50,7 +50,7 @@ const briefFile = "brief.md"
 // noBrief is what the prompt says when there is no brief yet. A review without
 // one is still possible — the design defects are still there — and pretending
 // otherwise would turn a missing brief into a second gate this verb does not own.
-const noBrief = "(todavía no hay brief.md: corré odachi start)"
+const noBrief = "(there is no brief.md yet: run odachi start)"
 
 // Options is one `odachi review` invocation.
 type Options struct {
@@ -290,7 +290,7 @@ func (r *runner) refute() Result {
 
 	return Result{
 		Code:    CodeOK,
-		Message: "prompt del refutador del árbol " + tree,
+		Message: "refuter prompt for tree " + tree,
 		Prompt:  text,
 		Lenses:  verdict.Lenses,
 	}
@@ -306,7 +306,7 @@ func (r *runner) refute() Result {
 func (r *runner) attach() Result {
 	data, err := r.files.Read(explicitPath(r.opts.Dir, r.opts.Attach))
 	if err != nil {
-		return blocked(fmt.Sprintf("no pude leer el veredicto %s: %s; revisá la ruta", r.opts.Attach, oneLine(err.Error())))
+		return blocked(fmt.Sprintf("could not read the verdict %s: %s; check the path", r.opts.Attach, oneLine(err.Error())))
 	}
 
 	if domain.Sniff(data) == domain.KindRefutation {
@@ -349,11 +349,11 @@ func (r *runner) exec() Result {
 	output, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, r.opts.Exec, text, ExecTimeoutSeconds)
 	switch {
 	case err != nil:
-		return execFailed(r.opts.Exec, "no pude correr el revisor: "+oneLine(err.Error()), output)
+		return execFailed(r.opts.Exec, "could not run the reviewer: "+oneLine(err.Error()), output)
 	case timedOut:
-		return execFailed(r.opts.Exec, fmt.Sprintf("la revisión no terminó en %ds", ExecTimeoutSeconds), output)
+		return execFailed(r.opts.Exec, fmt.Sprintf("the review did not finish in %ds", ExecTimeoutSeconds), output)
 	case exitCode != 0:
-		return execFailed(r.opts.Exec, fmt.Sprintf("el revisor salió con código %d", exitCode), output)
+		return execFailed(r.opts.Exec, fmt.Sprintf("the reviewer exited with code %d", exitCode), output)
 	}
 
 	// A refutation is an answer too, and it is stored beside the verdict it judges.
@@ -397,7 +397,7 @@ func (r *runner) show() Result {
 
 	rel, err := domain.Path(tree)
 	if err != nil {
-		return blocked(oneLine(err.Error()) + "; revisá el árbol de git y volvé a correr odachi review --show")
+		return blocked(oneLine(err.Error()) + "; check the git tree and run odachi review --show again")
 	}
 
 	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
@@ -407,7 +407,7 @@ func (r *runner) show() Result {
 
 	parsed, err := domain.Parse(data)
 	if err != nil {
-		return blocked(fmt.Sprintf("el review de este árbol no se puede leer (%s): %s; volvé a escribirlo con odachi review --attach <archivo>",
+		return blocked(fmt.Sprintf("the review of this tree cannot be read (%s): %s; write it again with odachi review --attach <file>",
 			rel, oneLine(err.Error())))
 	}
 
@@ -416,7 +416,7 @@ func (r *runner) show() Result {
 
 	result := Result{
 		Code:    CodeOK,
-		Message: "review de " + tree + ": " + parsed.Verdict,
+		Message: "review of " + tree + ": " + parsed.Verdict,
 		Lines:   lines,
 		Verdict: &parsed,
 		Lenses:  parsed.Lenses,
@@ -441,7 +441,7 @@ func (r *runner) lensCoverage(tree string, verdict domain.Verdict) []string {
 	if len(missing) == 0 {
 		return lines
 	}
-	return append(lines, "faltan lentes: "+strings.Join(missing, ", ")+" (odachi review --lens "+missing[0]+")")
+	return append(lines, "missing lenses: "+strings.Join(missing, ", ")+" (odachi review --lens "+missing[0]+")")
 }
 
 // store seals a verdict for the current tree and writes it, unless this tree
@@ -465,29 +465,29 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 
 	sealed, err := domain.Seal(stamped, tree, base, r.opts.Now)
 	if err != nil {
-		return blocked(oneLine(err.Error()) + "; no escribí nada")
+		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
 	rel, err := domain.Path(tree)
 	if err != nil {
-		return blocked(oneLine(err.Error()) + "; no escribí nada")
+		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 	target := fullPath(r.opts.Dir, rel)
 
 	exists, err := r.files.Exists(target)
 	if err != nil {
-		return blocked(fmt.Sprintf("no pude revisar si %s ya existe: %s; revisá los permisos", rel, oneLine(err.Error())))
+		return blocked(fmt.Sprintf("could not check whether %s already exists: %s; check the permissions", rel, oneLine(err.Error())))
 	}
 	if exists {
 		return alreadyStored(rel)
 	}
 
 	if err := r.files.Write(target, domain.Render(sealed)); err != nil {
-		return blocked(fmt.Sprintf("no pude escribir el veredicto %s: %s; revisá los permisos y volvé a correr odachi review --attach <archivo>",
+		return blocked(fmt.Sprintf("could not write the verdict %s: %s; check the permissions and run odachi review --attach <file> again",
 			rel, oneLine(err.Error())))
 	}
 
-	message := "veredicto guardado en " + rel + ": " + sealed.Verdict
+	message := "verdict saved in " + rel + ": " + sealed.Verdict
 	return Result{
 		Code:    CodeOK,
 		Message: message,
@@ -520,7 +520,7 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 
 	sealed, err := domain.SealRefutation(answer, verdict.Findings, tree, r.opts.Now)
 	if err != nil {
-		return blocked(oneLine(err.Error()) + "; no escribí nada")
+		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
 	prepared, problem := r.prepareStore()
@@ -528,32 +528,32 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		return *problem
 	}
 	if prepared != tree {
-		return blocked("el árbol cambió mientras preparaba el store de reviews: volvé a correr odachi review")
+		return blocked("the tree changed while preparing the review store: run odachi review again")
 	}
 
 	rel, err := domain.RefutationPath(tree)
 	if err != nil {
-		return blocked(oneLine(err.Error()) + "; no escribí nada")
+		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 	target := fullPath(r.opts.Dir, rel)
 
 	exists, err := r.files.Exists(target)
 	if err != nil {
-		return blocked(fmt.Sprintf("no pude revisar si %s ya existe: %s; revisá los permisos", rel, oneLine(err.Error())))
+		return blocked(fmt.Sprintf("could not check whether %s already exists: %s; check the permissions", rel, oneLine(err.Error())))
 	}
 	if exists {
 		return alreadyRefuted(rel)
 	}
 
 	if err := r.files.Write(target, domain.RenderRefutation(sealed)); err != nil {
-		return blocked(fmt.Sprintf("no pude escribir la refutación %s: %s; revisá los permisos", rel, oneLine(err.Error())))
+		return blocked(fmt.Sprintf("could not write the refutation %s: %s; check the permissions", rel, oneLine(err.Error())))
 	}
 
 	stands, refuted := counts(sealed)
-	message := "refutación guardada en " + rel + " · " + domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
+	message := "refutation saved in " + rel + " · " + domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
 	return Result{
 		Code:       CodeOK,
-		Message:    "refutación guardada en " + rel,
+		Message:    "refutation saved in " + rel,
 		Lines:      []string{message},
 		Refutation: &sealed,
 		Lenses:     verdict.Lenses,
@@ -566,7 +566,7 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 func (r *runner) stampLenses(verdict domain.Verdict) (domain.Verdict, *Result) {
 	extra, err := domain.ParseLenses(r.opts.Lens)
 	if err != nil {
-		problem := blocked(oneLine(err.Error()) + "; no escribí nada")
+		problem := blocked(oneLine(err.Error()) + "; I wrote nothing")
 		return domain.Verdict{}, &problem
 	}
 
@@ -587,7 +587,7 @@ func (r *runner) stampLenses(verdict domain.Verdict) (domain.Verdict, *Result) {
 func (r *runner) selectLenses(paths []string) ([]string, *Result) {
 	extra, err := domain.ParseLenses(r.opts.Lens)
 	if err != nil {
-		problem := blocked(oneLine(err.Error()) + "; corré odachi review -h para ver los flags")
+		problem := blocked(oneLine(err.Error()) + "; run odachi review -h to see the flags")
 		return nil, &problem
 	}
 	return domain.Add(domain.Lenses(domain.Classify(paths)), extra), nil
@@ -614,13 +614,13 @@ func (r *runner) lensBodies(names []string) ([]domain.Lens, *Result) {
 	bodies := make([]domain.Lens, 0, len(names))
 	for _, name := range names {
 		if r.lenses == nil {
-			problem := blocked("este binario no tiene lentes: volvé a instalarlo desde una release y corré odachi review")
+			problem := blocked("this binary has no lenses: install it again from a release and run odachi review")
 			return nil, &problem
 		}
 
 		body, err := r.lenses.Lens(name)
 		if err != nil {
-			problem := blocked("no pude cargar la lente " + name + ": " + oneLine(err.Error()) + "; corré odachi review sin --lens para usar las que pide la evidencia")
+			problem := blocked("could not load the lens " + name + ": " + oneLine(err.Error()) + "; run odachi review without --lens to use the ones the evidence asks for")
 			return nil, &problem
 		}
 		bodies = append(bodies, domain.Lens{Name: name, Body: body})
@@ -633,7 +633,7 @@ func (r *runner) lensBodies(names []string) ([]domain.Lens, *Result) {
 func (r *runner) storedVerdictFor(tree string) (domain.Verdict, *Result) {
 	rel, err := domain.Path(tree)
 	if err != nil {
-		problem := blocked(oneLine(err.Error()) + "; revisá el árbol de git y volvé a correr odachi review")
+		problem := blocked(oneLine(err.Error()) + "; check the git tree and run odachi review again")
 		return domain.Verdict{}, &problem
 	}
 
@@ -645,7 +645,7 @@ func (r *runner) storedVerdictFor(tree string) (domain.Verdict, *Result) {
 
 	parsed, err := domain.Parse(data)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("el review de este árbol no se puede leer (%s): %s; volvé a escribirlo con odachi review --attach <archivo>",
+		problem := blocked(fmt.Sprintf("the review of this tree cannot be read (%s): %s; write it again with odachi review --attach <file>",
 			rel, oneLine(err.Error())))
 		return domain.Verdict{}, &problem
 	}
@@ -656,11 +656,11 @@ func (r *runner) storedVerdictFor(tree string) (domain.Verdict, *Result) {
 // command that produces one. Without it, the refuter would be arguing with
 // findings nobody filed.
 func noVerdictToRefute(tree string) Result {
-	message := "no hay review para este árbol: una refutación juzga los findings de un veredicto; corré odachi review"
+	message := "there is no review for this tree: a refutation judges the findings of a verdict; run odachi review"
 	return Result{
 		Code:    CodeBlocked,
 		Message: message,
-		Lines:   []string{"no hay review para este árbol (" + tree + ")", "siguiente: odachi review"},
+		Lines:   []string{"there is no review for this tree (" + tree + ")", "next: odachi review"},
 	}
 }
 
@@ -669,7 +669,7 @@ func noVerdictToRefute(tree string) Result {
 func (r *runner) namedVerdict(path, tree string) (domain.Verdict, *Result) {
 	data, err := r.files.Read(explicitPath(r.opts.Dir, path))
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude leer el veredicto %s: %s; revisá la ruta", path, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not read the verdict %s: %s; check the path", path, oneLine(err.Error())))
 		return domain.Verdict{}, &problem
 	}
 
@@ -684,7 +684,7 @@ func (r *runner) namedVerdict(path, tree string) (domain.Verdict, *Result) {
 	}
 
 	if parsed.Tree != "" && parsed.Tree != tree {
-		problem := blocked(fmt.Sprintf("el veredicto %s es del árbol %s y este árbol es %s: un veredicto se refuta con el diff que lo vio nacer",
+		problem := blocked(fmt.Sprintf("the verdict %s is from tree %s and this tree is %s: a verdict is refuted with the diff that saw it born",
 			path, parsed.Tree, tree))
 		return domain.Verdict{}, &problem
 	}
@@ -721,7 +721,7 @@ func (r *runner) candidate() (candidate, *Result) {
 
 	paths, base, err := r.changedPaths()
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude leer qué cambió contra %q: %s; corregí --base %q o sacá el flag para comparar contra HEAD",
+		problem := blocked(fmt.Sprintf("could not read what changed against %q: %s; fix --base %q or drop the flag to compare against HEAD",
 			r.base(), oneLine(err.Error()), r.base()))
 		return candidate{}, &problem
 	}
@@ -732,7 +732,7 @@ func (r *runner) candidate() (candidate, *Result) {
 
 	diff, err := r.git.Diff(r.opts.Dir, base)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude leer el diff contra %q: %s; corregí --base %q o sacá el flag para comparar contra HEAD",
+		problem := blocked(fmt.Sprintf("could not read the diff against %q: %s; fix --base %q or drop the flag to compare against HEAD",
 			base, oneLine(err.Error()), r.base()))
 		return candidate{}, &problem
 	}
@@ -751,7 +751,7 @@ func (r *runner) brief() (string, *Result) {
 	path := fullPath(r.opts.Dir, briefFile)
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi review", briefFile, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi review again", briefFile, oneLine(err.Error())))
 		return "", &problem
 	}
 	if !exists {
@@ -760,7 +760,7 @@ func (r *runner) brief() (string, *Result) {
 
 	data, err := r.files.Read(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi review", briefFile, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi review again", briefFile, oneLine(err.Error())))
 		return "", &problem
 	}
 	if trimmed := strings.TrimSpace(string(data)); trimmed != "" {
@@ -821,12 +821,12 @@ func (r *runner) prepareStore() (string, *Result) {
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos", rel, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not check %s: %s; check the permissions", rel, oneLine(err.Error())))
 		return "", &problem
 	}
 	if !exists {
 		if err := r.files.Write(path, []byte(domain.IgnoreContent)); err != nil {
-			problem := blocked(fmt.Sprintf("no pude preparar %s: %s; revisá los permisos", rel, oneLine(err.Error())))
+			problem := blocked(fmt.Sprintf("could not prepare %s: %s; check the permissions", rel, oneLine(err.Error())))
 			return "", &problem
 		}
 		r.storeIgnoreWritten = true
@@ -839,7 +839,7 @@ func (r *runner) prepareStore() (string, *Result) {
 func (r *runner) treeHash() (string, *Result) {
 	tree, err := r.git.TreeHash(r.opts.Dir)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude leer el árbol de git: %s; corré odachi review dentro de un repositorio git y revisá que git esté instalado",
+		problem := blocked(fmt.Sprintf("could not read the git tree: %s; run odachi review inside a git repository and check that git is installed",
 			oneLine(err.Error())))
 		return "", &problem
 	}
@@ -850,13 +850,13 @@ func (r *runner) treeHash() (string, *Result) {
 // findings in the order they were filed.
 func shown(tree, rel string, verdict domain.Verdict) []string {
 	lines := []string{
-		"review de " + tree + ": " + verdict.Verdict,
+		"review of " + tree + ": " + verdict.Verdict,
 		"reviewer: " + verdict.Reviewer + " · " + verdict.At + " · base " + verdict.Base,
-		"archivo: " + rel,
+		"file: " + rel,
 	}
 
 	if len(verdict.Findings) == 0 {
-		return append(lines, "sin findings: "+domain.NoFindings)
+		return append(lines, "no findings: "+domain.NoFindings)
 	}
 
 	for _, finding := range verdict.Findings {
@@ -873,7 +873,7 @@ func findingLine(finding domain.Finding) string {
 		where = fmt.Sprintf("%s:%d", finding.Path, finding.Line)
 	}
 
-	causal := "previo"
+	causal := "prior"
 	if finding.Causal {
 		causal = "causal"
 	}
@@ -907,19 +907,19 @@ func explicitPath(dir, path string) string {
 func nothingToReview() Result {
 	return Result{
 		Code:    CodeBlocked,
-		Message: "no hay nada que revisar en este árbol",
-		Lines:   []string{"no hay nada que revisar en este árbol"},
+		Message: "there is nothing to review in this tree",
+		Lines:   []string{"there is nothing to review in this tree"},
 	}
 }
 
 // nothingToRefute is the answer for a verdict with nothing blocking: an approval
 // has no blocker to argue with, and inventing work is worse than saying so.
 func nothingToRefute(tree string) Result {
-	message := "el veredicto de " + tree + " no tiene BLOCKER ni CRITICAL causal: no hay nada que refutar"
+	message := "the verdict of " + tree + " has no causal BLOCKER or CRITICAL: there is nothing to refute"
 	return Result{
 		Code:    CodeBlocked,
 		Message: message,
-		Lines:   []string{message, "siguiente: odachi review --show"},
+		Lines:   []string{message, "next: odachi review --show"},
 	}
 }
 
@@ -928,19 +928,19 @@ func nothingToRefute(tree string) Result {
 func alreadyRefuted(rel string) Result {
 	return Result{
 		Code:    CodeBlocked,
-		Message: "ya hay una refutación para este árbol",
+		Message: "this tree already has a refutation",
 		Lines: []string{
-			"ya hay una refutación para este árbol: " + rel,
-			"siguiente: odachi review --show",
+			"this tree already has a refutation: " + rel,
+			"next: odachi review --show",
 		},
 	}
 }
 
 // promptMessage names the tree, and the lenses when the evidence asked for any.
 func promptMessage(tree string, lenses []string) string {
-	message := "prompt de review del árbol " + tree
+	message := "review prompt for tree " + tree
 	if len(lenses) > 0 {
-		message += " · lentes " + strings.Join(lenses, ", ")
+		message += " · lenses " + strings.Join(lenses, ", ")
 	}
 	return message
 }
@@ -948,24 +948,24 @@ func promptMessage(tree string, lenses []string) string {
 // lenses is the one line a stored verdict adds about its coverage.
 func lenses(covered []string) string {
 	if len(covered) == 0 {
-		return "lentes: ninguna (la evidencia no pidió ninguna)"
+		return "lenses: none (the evidence asked for none)"
 	}
-	return "lentes: " + strings.Join(covered, ", ")
+	return "lenses: " + strings.Join(covered, ", ")
 }
 
 // lensLine is the coverage `--show` prints: what the verdict covers and what this
 // tree requires.
 func lensLine(required []string, verdict domain.Verdict) string {
-	covered := "ninguna"
+	covered := "none"
 	if len(verdict.Lenses) > 0 {
 		covered = strings.Join(verdict.Lenses, ", ")
 	}
 
-	needed := "ninguna"
+	needed := "none"
 	if len(required) > 0 {
 		needed = strings.Join(required, ", ")
 	}
-	return "lentes: " + covered + " · requeridas: " + needed
+	return "lenses: " + covered + " · required: " + needed
 }
 
 // refutationLine is the refutation as `--show` reports it: which file, and how
@@ -981,11 +981,11 @@ func refutationLine(refutation *domain.Refutation, rel string, findings []domain
 		stands++
 	}
 
-	line := fmt.Sprintf("refutación: %s · se quedan: %d · refutados: %d", rel, stands, refuted)
+	line := fmt.Sprintf("refutation: %s · stands: %d · refuted: %d", rel, stands, refuted)
 	if _, blocking := domain.BlockingAfter(findings, *refutation); !blocking {
-		return line + " · ya no bloquea nada"
+		return line + " · no longer blocks anything"
 	}
-	return line + " · todavía bloquea"
+	return line + " · still blocking"
 }
 
 // counts is the same arithmetic for the message a refutation prints when stored.
@@ -1004,10 +1004,10 @@ func counts(refutation domain.Refutation) (stands, refuted int) {
 func missing(tree string) Result {
 	return Result{
 		Code:    CodeBlocked,
-		Message: "no hay review para este árbol",
+		Message: "there is no review for this tree",
 		Lines: []string{
-			"no hay review para este árbol (" + tree + ")",
-			"siguiente: odachi review",
+			"there is no review for this tree (" + tree + ")",
+			"next: odachi review",
 		},
 	}
 }
@@ -1017,10 +1017,10 @@ func missing(tree string) Result {
 func alreadyStored(rel string) Result {
 	return Result{
 		Code:    CodeBlocked,
-		Message: "ya hay un veredicto para este árbol",
+		Message: "this tree already has a verdict",
 		Lines: []string{
-			"ya hay un veredicto para este árbol: " + rel,
-			"siguiente: odachi review --show",
+			"this tree already has a verdict: " + rel,
+			"next: odachi review --show",
 		},
 	}
 }
@@ -1028,7 +1028,7 @@ func alreadyStored(rel string) Result {
 // refused is an attached verdict the tool will not store: one line, and nothing
 // written.
 func refused(path, reason string) Result {
-	message := fmt.Sprintf("el veredicto %s no sirve: %s; no escribí nada", path, oneLine(reason))
+	message := fmt.Sprintf("the verdict %s is no good: %s; I wrote nothing", path, oneLine(reason))
 	return Result{
 		Code:    CodeBlocked,
 		Message: message,
@@ -1039,7 +1039,7 @@ func refused(path, reason string) Result {
 // execFailed is a reviewer that did not answer a verdict. Its own output is part
 // of the result: it is the only thing that says why.
 func execFailed(command, reason, output string) Result {
-	message := fmt.Sprintf("%s no dio un veredicto: %s; no escribí nada", command, oneLine(reason))
+	message := fmt.Sprintf("%s did not give a verdict: %s; I wrote nothing", command, oneLine(reason))
 	return Result{
 		Code:    CodeBlocked,
 		Message: message,

@@ -37,7 +37,7 @@ func (f *fakeFiles) List(dir string) ([]string, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	return data, nil
 }
@@ -112,10 +112,10 @@ func TestSummaryReportsEveryFeature(t *testing.T) {
 		"0002-facturar-obras",
 		`R1 · "` + first + `"`,
 		`R1 · "` + second + `"`,
-		"pasos: 1 de 3",
-		"pasos: 2 de 2",
-		"1 pregunta abierta",
-		"0 preguntas abiertas",
+		"steps: 1 of 3",
+		"steps: 2 of 2",
+		"1 open question",
+		"0 open questions",
 		`L5 · OFICIO · "usé SQLite" (porque no hay dos escritores)`,
 		`L4 · PREGUNTA P2 · "¿Hace falta WhatsApp?"`,
 		`L3 · VOS P1 · "No en la primera versión"`,
@@ -132,7 +132,7 @@ func TestSummaryReportsEveryFeature(t *testing.T) {
 	}
 
 	last := res.Lines[len(res.Lines)-1]
-	if !strings.Contains(last, "2 features") || !strings.Contains(last, "3 pasos hechos de 5") || !strings.Contains(last, "1 pregunta abierta") {
+	if !strings.Contains(last, "2 features") || !strings.Contains(last, "3 steps done of 5") || !strings.Contains(last, "1 open question") {
 		t.Errorf("the totals line is %q", last)
 	}
 }
@@ -147,7 +147,7 @@ func TestSummaryNeverInventsNarration(t *testing.T) {
 	res := summary.Run(summary.Options{Dir: "raiz"}, files)
 
 	for _, line := range res.Lines {
-		for _, forbidden := range []string{"aprendiste", "aprendizaje", "lección", "resumen de la semana"} {
+		for _, forbidden := range []string{"you learned", "learning", "lesson", "week summary"} {
 			if strings.Contains(strings.ToLower(line), forbidden) {
 				t.Errorf("the binary narrated: %q", line)
 			}
@@ -168,7 +168,7 @@ func TestSummaryShowsADocumentWithoutHistory(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, summary.CodeOK, res.Message)
 	}
 	block := strings.Join(res.Lines, "\n")
-	if !strings.Contains(block, "0001-reservar-turnos") || !strings.Contains(block, "pasos: 0 de 1") {
+	if !strings.Contains(block, "0001-reservar-turnos") || !strings.Contains(block, "steps: 0 of 1") {
 		t.Errorf("report:\n%s", block)
 	}
 }

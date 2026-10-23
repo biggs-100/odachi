@@ -29,37 +29,37 @@ func TestDeriveIsTheWholeRule(t *testing.T) {
 		want     string
 	}{
 		{
-			name:     "sin findings aprueba",
+			name:     "no findings approves",
 			findings: nil,
 			want:     review.Approved,
 		},
 		{
-			name:     "BLOCKER causal pide cambios",
+			name:     "causal BLOCKER requests changes",
 			findings: []review.Finding{{Path: "a.go", Severity: review.Blocker, Causal: true, Why: "pierde datos"}},
 			want:     review.ChangesRequested,
 		},
 		{
-			name:     "CRITICAL causal pide cambios",
+			name:     "causal CRITICAL requests changes",
 			findings: []review.Finding{{Path: "a.go", Severity: review.Critical, Causal: true, Why: "rompe el login"}},
 			want:     review.ChangesRequested,
 		},
 		{
-			name:     "CRITICAL no causal aprueba",
+			name:     "non-causal CRITICAL approves",
 			findings: []review.Finding{{Path: "a.go", Severity: review.Critical, Causal: false, Why: "ya estaba roto"}},
 			want:     review.Approved,
 		},
 		{
-			name:     "WARNING causal aprueba",
+			name:     "causal WARNING approves",
 			findings: []review.Finding{{Path: "a.go", Severity: review.Warning, Causal: true, Why: "queda lento"}},
 			want:     review.Approved,
 		},
 		{
-			name:     "SUGGESTION causal aprueba",
+			name:     "causal SUGGESTION approves",
 			findings: []review.Finding{{Path: "a.go", Severity: review.Suggestion, Causal: true, Why: "se puede simplificar"}},
 			want:     review.Approved,
 		},
 		{
-			name: "un no causal no tapa al causal que sí bloquea",
+			name: "a non-causal finding does not hide the causal one that blocks",
 			findings: []review.Finding{
 				{Path: "a.go", Severity: review.Warning, Causal: false, Why: "estilo"},
 				{Path: "b.go", Severity: review.Blocker, Causal: true, Why: "cobra dos veces"},
@@ -143,11 +143,11 @@ func TestParseAcceptsTheCanonicalEmptyAnswer(t *testing.T) {
 // can back.
 func TestParseAndValidateRefuseABrokenVerdict(t *testing.T) {
 	cases := map[string]string{
-		"vacío":                  "",
-		"no es JSON":             "listo, aprobado",
-		"campo desconocido":      `{"reviewer":"x","findings":[],"extra":1}`,
-		"severidad en minúscula": `{"reviewer":"x","findings":[{"path":"a.go","severity":"blocker","why":"x"}]}`,
-		"dos objetos":            `{"reviewer":"x","findings":[]}{"reviewer":"y","findings":[]}`,
+		"empty":              "",
+		"not JSON":           "listo, aprobado",
+		"unknown field":      `{"reviewer":"x","findings":[],"extra":1}`,
+		"lowercase severity": `{"reviewer":"x","findings":[{"path":"a.go","severity":"blocker","why":"x"}]}`,
+		"two objects":        `{"reviewer":"x","findings":[]}{"reviewer":"y","findings":[]}`,
 	}
 
 	for name, text := range cases {
@@ -249,31 +249,31 @@ func TestValidateRefusesIncompleteFindings(t *testing.T) {
 		verdict review.Verdict
 		mention string
 	}{
-		"sin reviewer": {
+		"no reviewer": {
 			verdict: review.Verdict{Findings: []review.Finding{}},
 			mention: "reviewer",
 		},
-		"finding sin path": {
+		"finding without path": {
 			verdict: review.Verdict{Reviewer: "x", Findings: []review.Finding{{Severity: review.Warning, Why: "algo"}}},
 			mention: "path",
 		},
-		"finding sin why": {
+		"finding without why": {
 			verdict: review.Verdict{Reviewer: "x", Findings: []review.Finding{{Path: "a.go", Severity: review.Warning}}},
 			mention: "why",
 		},
-		"finding con severidad inventada": {
+		"finding with an invented severity": {
 			verdict: review.Verdict{Reviewer: "x", Findings: []review.Finding{{Path: "a.go", Severity: "MAJOR", Why: "algo"}}},
 			mention: "severity",
 		},
-		"finding con línea negativa": {
+		"finding with a negative line": {
 			verdict: review.Verdict{Reviewer: "x", Findings: []review.Finding{{Path: "a.go", Line: -1, Severity: review.Warning, Why: "algo"}}},
 			mention: "line",
 		},
-		"at que no es RFC3339": {
+		"at that is not RFC3339": {
 			verdict: review.Verdict{Reviewer: "x", At: "21/10/2026"},
 			mention: "RFC3339",
 		},
-		"verdict inventado": {
+		"invented verdict": {
 			verdict: review.Verdict{Reviewer: "x", Verdict: "approved_by_me"},
 			mention: "verdict",
 		},

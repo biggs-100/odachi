@@ -79,9 +79,9 @@ const (
 func (s Status) String() string {
 	switch s {
 	case StatusProblem:
-		return "mal"
+		return "bad"
 	case StatusWarning:
-		return "aviso"
+		return "warning"
 	default:
 		return "ok"
 	}
@@ -156,11 +156,11 @@ func Summary(checks []Check) string {
 	problems, warnings := Tally(checks)
 	switch {
 	case problems == 0 && warnings == 0:
-		return fmt.Sprintf("todo en orden: %d chequeos, ningún problema", len(checks))
+		return fmt.Sprintf("all clear: %d checks, no problems", len(checks))
 	case problems == 0:
-		return fmt.Sprintf("todo en orden: %d chequeos, %s, ningún problema", len(checks), plural(warnings, "aviso", "avisos"))
+		return fmt.Sprintf("all clear: %d checks, %s, no problems", len(checks), plural(warnings, "warning", "warnings"))
 	default:
-		return fmt.Sprintf("%s de %d chequeos: corré el comando que nombra cada línea", plural(problems, "problema", "problemas"), len(checks))
+		return fmt.Sprintf("%s of %d checks: run the command each line names", plural(problems, "problem", "problems"), len(checks))
 	}
 }
 
@@ -170,11 +170,11 @@ func Summary(checks []Check) string {
 const (
 	// NotAProjectMessage says the folder was never started. It is a fact and not
 	// a verdict: nothing is broken here yet.
-	NotAProjectMessage = "esta carpeta todavía no es un proyecto de odachi"
+	NotAProjectMessage = "this folder is not an odachi project yet"
 	// NotAProjectFix is the one step: the two commands in the order a person runs
 	// them, each saying what it leaves behind. In an empty folder the checks named
 	// three different commands, and that is what a beginner cannot use.
-	NotAProjectFix = "corré odachi init (deja las reglas que el agente lee) y después odachi start (la entrevista)"
+	NotAProjectFix = "run odachi init (it leaves the rules the agent reads) and then odachi start (the interview)"
 )
 
 // NotAProject is that report: the situation, and the one step that follows it.
@@ -183,32 +183,32 @@ func NotAProject() (message string, lines []string) {
 	return NotAProjectMessage, []string{NotAProjectMessage, NotAProjectFix}
 }
 
-// title is the Spanish name of one check. Unknown numbers have no name: a
+// title is the English name of one check. Unknown numbers have no name: a
 // report may not invent a check that does not exist.
 func title(number int) string {
 	switch number {
 	case CheckVersion:
-		return "la versión del binario"
+		return "the binary version"
 	case CheckOnPath:
-		return "odachi resuelve desde un shell"
+		return "odachi resolves from a shell"
 	case CheckGit:
-		return "hay .git"
+		return "there is .git"
 	case CheckAgents:
-		return "el bloque de odachi está en AGENTS.md"
+		return "the odachi block is in AGENTS.md"
 	case CheckHook:
-		return "el hook de pre-commit es de odachi"
+		return "the pre-commit hook is odachi's"
 	case CheckHookExe:
-		return "el binario que nombra el hook existe"
+		return "the binary the hook names exists"
 	case CheckProfile:
-		return ".odachi/profile.toml resuelve a un perfil válido"
+		return ".odachi/profile.toml resolves to a valid profile"
 	case CheckBrief:
-		return "brief.md existe y no le falta nada"
+		return "brief.md exists and nothing is missing from it"
 	case CheckSkills:
-		return "skills y SKILLS.md"
+		return "skills and SKILLS.md"
 	case CheckIgnored:
-		return "el store de review y proof/ están ignorados"
+		return "the review store and proof/ are ignored"
 	case CheckVoice:
-		return "la voz del bloque coincide con el perfil"
+		return "the block's voice matches the profile"
 	default:
 		return ""
 	}
@@ -261,7 +261,7 @@ func HookExe(hook string) string {
 func HasBlock(agents string) bool { return rules.HasBlock(agents) }
 
 // PathFix is the exact line a human pastes to make `odachi` reachable from a
-// shell. It names the folder of the binary they already have: "ponelo en el
+// shell. It names the folder of the binary they already have: "put it in the
 // PATH" is the advice that leaves a beginner exactly where they were, and a real
 // session spent seven shell calls looking for the binary instead of doing any
 // work.
@@ -269,12 +269,12 @@ func PathFix(exe string) string {
 	exe = strings.TrimSpace(exe)
 	dir := strings.TrimSpace(filepath.Dir(exe))
 	if exe == "" || dir == "." || dir == string(filepath.Separator) || dir == "" {
-		return `agregá al PATH la carpeta donde instalaste odachi (en sh: export PATH="<carpeta>:$PATH")`
+		return `add the folder where you installed odachi to the PATH (in sh: export PATH="<folder>:$PATH")`
 	}
-	return `agregá esa carpeta al PATH (en sh: export PATH="` + filepath.ToSlash(dir) + `:$PATH")`
+	return `add that folder to the PATH (in sh: export PATH="` + filepath.ToSlash(dir) + `:$PATH")`
 }
 
-// plural is how a Spanish sentence counts things.
+// plural is how an English sentence counts things.
 func plural(n int, one, many string) string {
 	if n == 1 {
 		return "1 " + one

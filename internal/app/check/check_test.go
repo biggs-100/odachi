@@ -196,9 +196,9 @@ func run(t *testing.T, files *fakeFiles, git *fakeGit, opts check.Options) check
 	return check.Run(opts, files, git, &fakeShell{})
 }
 
-// TestTheEightResults is the whole gate table through the app: listo, sin brief,
-// brief incompleto, fuera de alcance, pregunta abierta, falta prueba, prueba
-// vieja y prueba fallida.
+// TestTheEightResults is the whole gate table through the app: ready, no brief,
+// brief incomplete, out of scope, open question, missing proof, stale proof and
+// failed proof.
 func TestTheEightResults(t *testing.T) {
 	outOfScope := readyFiles()
 	outOfScope[".odachi/fence.toml"] = `[[rule]]
@@ -234,76 +234,76 @@ deps  = ["stripe"]
 		next    string
 	}{
 		{
-			name:    "listo",
+			name:    "ready",
 			files:   readyFiles(),
 			git:     &fakeGit{tree: currentTree},
 			code:    int(gate.Ready),
 			reason:  gate.ReasonReady,
-			message: "listo: hay prueba para este árbol",
+			message: "ready: there is proof for this tree",
 		},
 		{
-			name:    "sin brief",
+			name:    "no brief",
 			files:   noBrief,
 			git:     &fakeGit{tree: currentTree},
 			code:    int(gate.NeedsDecision),
 			reason:  gate.ReasonNoBrief,
-			message: "no hay brief: todavía no sabemos qué tiene que existir",
+			message: "there is no brief: we do not know yet what must exist",
 			next:    "odachi start",
 		},
 		{
-			name:    "brief incompleto",
+			name:    "brief incomplete",
 			files:   incompleteBrief,
 			git:     &fakeGit{tree: currentTree},
 			code:    int(gate.NeedsDecision),
 			reason:  gate.ReasonBriefIncomplete,
-			message: "el brief está incompleto: falta listo cuando",
+			message: "the brief is incomplete: missing done when",
 			next:    "odachi start",
 		},
 		{
-			name:    "fuera de alcance",
+			name:    "out of scope",
 			files:   outOfScope,
 			git:     &fakeGit{tree: currentTree, changed: []string{"internal/payments/stripe.go"}},
 			code:    int(gate.NeedsDecision),
 			reason:  gate.ReasonOutOfScope,
-			message: "fuera de alcance: pagos: internal/payments/stripe.go",
-			next:    "odachi ask \"<tu decisión>\"",
+			message: "out of scope: pagos: internal/payments/stripe.go",
+			next:    "odachi ask \"<your decision>\"",
 		},
 		{
-			name:    "pregunta abierta",
+			name:    "open question",
 			files:   openQuestion,
 			git:     &fakeGit{tree: currentTree},
 			code:    int(gate.NeedsDecision),
 			reason:  gate.ReasonOpenQuestion,
-			message: "hay 1 pregunta sin contestar",
-			next:    "odachi ask \"<tu decisión>\"",
+			message: "1 unanswered question",
+			next:    "odachi ask \"<your decision>\"",
 		},
 		{
-			name:    "falta prueba",
+			name:    "missing proof",
 			files:   missingProof,
 			git:     &fakeGit{tree: currentTree},
 			code:    int(gate.NeedsWork),
 			reason:  gate.ReasonProofMissing,
-			message: "falta la prueba de este cambio",
-			next:    "odachi check --proof <archivo>",
+			message: "the proof for this change is missing",
+			next:    "odachi check --proof <file>",
 		},
 		{
-			name:    "prueba vieja",
+			name:    "stale proof",
 			files:   staleProof,
 			git:     &fakeGit{tree: currentTree},
 			code:    int(gate.NeedsWork),
 			reason:  gate.ReasonProofStale,
-			message: "la prueba es de otro estado del código",
-			next:    "odachi check --proof <archivo>",
+			message: "the proof is from another state of the code",
+			next:    "odachi check --proof <file>",
 		},
 		{
-			name:    "prueba fallida",
+			name:    "failed proof",
 			files:   readyFiles(),
 			git:     &fakeGit{tree: currentTree},
 			opts:    check.Options{Run: "go test ./..."},
 			shell:   &fakeShell{output: "ok\nFAIL github.com/biggs-100/odachi 0.02s\n", exitCode: 1},
 			code:    int(gate.NeedsWork),
 			reason:  gate.ReasonProofFailed,
-			message: "la prueba falló: FAIL github.com/biggs-100/odachi 0.02s",
+			message: "the proof failed: FAIL github.com/biggs-100/odachi 0.02s",
 			next:    `odachi check --run "go test ./..."`,
 		},
 	}
@@ -400,7 +400,7 @@ func TestRunWritesTheProofOfTheCurrentFeature(t *testing.T) {
 	if string(files.files[wantPath]) != want {
 		t.Errorf("proof =\n%q\nwant\n%q", files.files[wantPath], want)
 	}
-	if !strings.Contains(got.Message, "listo") {
+	if !strings.Contains(got.Message, "ready") {
 		t.Errorf("Message = %q, want the ready sentence", got.Message)
 	}
 }
@@ -463,7 +463,7 @@ func TestFailingRunDoesNotWriteAProof(t *testing.T) {
 	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofFailed {
 		t.Fatalf("Code/Reason = %d/%q, want 1/%q", got.Code, got.Reason, gate.ReasonProofFailed)
 	}
-	if got.Message != "la prueba falló: la que importa" {
+	if got.Message != "the proof failed: la que importa" {
 		t.Errorf("Message = %q, want the last non-empty output line", got.Message)
 	}
 	if got.Next != `odachi check --run "exit 1"` {
@@ -485,8 +485,8 @@ func TestTimedOutRunSaysHowLongItWaited(t *testing.T) {
 	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofFailed {
 		t.Fatalf("Code/Reason = %d/%q, want 1/%q", got.Code, got.Reason, gate.ReasonProofFailed)
 	}
-	if got.Message != "la prueba no terminó en 7s" {
-		t.Errorf("Message = %q, want %q", got.Message, "la prueba no terminó en 7s")
+	if got.Message != "the proof did not finish in 7s" {
+		t.Errorf("Message = %q, want %q", got.Message, "the proof did not finish in 7s")
 	}
 	if got.Next != `odachi check --run "sleep 60" --timeout 14` {
 		t.Errorf("Next = %q, want the same command with twice the wait", got.Next)

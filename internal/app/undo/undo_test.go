@@ -112,7 +112,7 @@ func (f *fakeFiles) Read(path string) ([]byte, error) {
 	f.touched = append(f.touched, path)
 	data, ok := f.files[path]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	return data, nil
 }
@@ -130,7 +130,7 @@ func (f *fakeFiles) Remove(path string) error {
 	f.order = append(f.order, "remove "+path)
 	f.touched = append(f.touched, path)
 	if _, ok := f.files[path]; !ok {
-		return fmt.Errorf("archivo inexistente: %s", path)
+		return fmt.Errorf("missing file: %s", path)
 	}
 	delete(f.files, path)
 	delete(f.mod, path)
@@ -142,10 +142,10 @@ func (f *fakeFiles) Rename(from, to string) error {
 	f.touched = append(f.touched, from, to)
 	data, ok := f.files[from]
 	if !ok {
-		return fmt.Errorf("archivo inexistente: %s", from)
+		return fmt.Errorf("missing file: %s", from)
 	}
 	if _, exists := f.files[to]; exists {
-		return fmt.Errorf("ya existe: %s", to)
+		return fmt.Errorf("already exists: %s", to)
 	}
 	f.files[to] = append([]byte(nil), data...)
 	f.mod[to] = f.mod[from]
@@ -157,7 +157,7 @@ func (f *fakeFiles) Rename(from, to string) error {
 func (f *fakeFiles) Backup(path string) (string, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return "", fmt.Errorf("no se pudo leer %s para respaldarlo", path)
+		return "", fmt.Errorf("could not read %s to back it up", path)
 	}
 	backup := backupName(path, string(data))
 	f.backups = append(f.backups, path)
@@ -172,7 +172,7 @@ func (f *fakeFiles) ModTime(path string) (time.Time, error) {
 	f.touched = append(f.touched, path)
 	when, ok := f.mod[path]
 	if !ok {
-		return time.Time{}, fmt.Errorf("archivo inexistente: %s", path)
+		return time.Time{}, fmt.Errorf("missing file: %s", path)
 	}
 	return when, nil
 }
@@ -183,7 +183,7 @@ func (f *fakeFiles) content(t *testing.T, rel string) string {
 	path := filepath.Join(dir, filepath.FromSlash(rel))
 	data, ok := f.files[path]
 	if !ok {
-		t.Fatalf("%s no existe; archivos: %v", rel, f.paths())
+		t.Fatalf("%s does not exist; files: %v", rel, f.paths())
 	}
 	return string(data)
 }
@@ -261,8 +261,8 @@ func TestRestoreBacksUpTheCurrentStateFirst(t *testing.T) {
 		t.Errorf("the hand edit was not saved in %s: %q", saved, got)
 	}
 
-	want := "restauré " + briefRel + " desde " + briefRel + ".bak-" + digest(written) +
-		"; lo que había quedado en " + saved
+	want := "restored " + briefRel + " from " + briefRel + ".bak-" + digest(written) +
+		"; what was there was left in " + saved
 	if res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
@@ -299,7 +299,7 @@ func TestUndoingTheUndoPutsTheHandEditBack(t *testing.T) {
 	if got := files.content(t, briefRel); got != hand {
 		t.Errorf("%s = %q, want the hand edit back (%q)", briefRel, got, hand)
 	}
-	if want := "restauré " + briefRel + " desde " + briefRel + ".bak-" + digest(hand) + "; lo que había quedado en " +
+	if want := "restored " + briefRel + " from " + briefRel + ".bak-" + digest(hand) + "; what was there was left in " +
 		briefRel + ".bak-" + digest(written); second.Message != want {
 		t.Errorf("Message = %q, want %q", second.Message, want)
 	}
@@ -319,7 +319,7 @@ func TestUndoRefusesToGuessBetweenArtifacts(t *testing.T) {
 	res := undo.Run(undo.Options{Dir: dir}, files, nil)
 
 	if res.Code == undo.CodeOK {
-		t.Fatalf("Code = %d: adivinó cuál artefacto restaurar", res.Code)
+		t.Fatalf("Code = %d: guessed which artifact to restore", res.Code)
 	}
 	if got := files.content(t, taskRel); got != "documento nuevo" {
 		t.Errorf("%s = %q, want it untouched", taskRel, got)
@@ -370,8 +370,8 @@ func TestListShowsOneLinePerArtifactNewestFirst(t *testing.T) {
 	}
 
 	want := []string{
-		profileRel + " · 1 backup · último 2026-10-22 08:15",
-		briefRel + " · 2 backups · último 2026-10-21 20:31",
+		profileRel + " · 1 backup · last 2026-10-22 08:15",
+		briefRel + " · 2 backups · last 2026-10-21 20:31",
 	}
 	if !slices.Equal(res.Lines, want) {
 		t.Errorf("Lines = %v, want %v", res.Lines, want)
@@ -393,7 +393,7 @@ func TestListFileFiltersToOneArtifact(t *testing.T) {
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
 	}
-	if want := []string{profileRel + " · 1 backup · último 2026-10-22 08:15"}; !slices.Equal(res.Lines, want) {
+	if want := []string{profileRel + " · 1 backup · last 2026-10-22 08:15"}; !slices.Equal(res.Lines, want) {
 		t.Errorf("Lines = %v, want %v", res.Lines, want)
 	}
 }
@@ -432,8 +432,8 @@ func TestListReadsLegacyAndStoreBackups(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
 	}
 	want := []string{
-		profileRel + " · 1 backup · último 2026-10-22 08:15",
-		briefRel + " · 1 backup · último 2026-10-20 10:00",
+		profileRel + " · 1 backup · last 2026-10-22 08:15",
+		briefRel + " · 1 backup · last 2026-10-20 10:00",
 	}
 	if !slices.Equal(res.Lines, want) {
 		t.Errorf("Lines = %v, want %v", res.Lines, want)
@@ -458,7 +458,7 @@ func TestCollectMovesLegacyBackupsIntoTheStore(t *testing.T) {
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
 	}
-	if !strings.Contains(res.Message, "moví 2 backups") {
+	if !strings.Contains(res.Message, "moved 2 backups") {
 		t.Errorf("message = %q, want the count", res.Message)
 	}
 
@@ -481,7 +481,7 @@ func TestCollectMovesLegacyBackupsIntoTheStore(t *testing.T) {
 	if second.Code != undo.CodeOK {
 		t.Fatalf("second collect: Code = %d (message: %s)", second.Code, second.Message)
 	}
-	if !strings.Contains(second.Message, "no hay backups viejos") {
+	if !strings.Contains(second.Message, "no old backups") {
 		t.Errorf("second collect message = %q, want a no-op", second.Message)
 	}
 	if len(files.wrote) != 0 || len(files.backups) != 0 {
@@ -506,7 +506,7 @@ func TestCollectNeverOverwritesADifferentBackup(t *testing.T) {
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
 	}
-	if !strings.Contains(res.Message, "no piso un backup") {
+	if !strings.Contains(res.Message, "I do not overwrite a backup") {
 		t.Errorf("message = %q, want the refusal", res.Message)
 	}
 	for _, rel := range []string{legacy, target} {
@@ -618,7 +618,7 @@ func TestRestoringADeletedArtifactNeedsNoBackup(t *testing.T) {
 	if want := []string{"write " + fencePath}; !slices.Equal(files.order, want) {
 		t.Errorf("order = %v, want only the write: there was nothing to back up", files.order)
 	}
-	if !strings.Contains(res.Message, "no existía") {
+	if !strings.Contains(res.Message, "did not exist") {
 		t.Errorf("Message = %q, want it to say the artifact was not there", res.Message)
 	}
 }

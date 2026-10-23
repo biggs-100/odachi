@@ -9,7 +9,7 @@ import (
 // TestASilentSuccessIsAValidProof covers the most common real case: `go vet`,
 // `tsc --noEmit` and `gofmt -l` all succeed while printing nothing. Once the
 // proof file names the tree it came from, an empty body is still evidence.
-// Reporting "falta la prueba" right after running one is a dead end, and a
+// Reporting "the proof is missing" right after running one is a dead end, and a
 // message may only name a command that resolves the block.
 func TestASilentSuccessIsAValidProof(t *testing.T) {
 	got := gate.Evaluate(gate.State{
@@ -20,7 +20,7 @@ func TestASilentSuccessIsAValidProof(t *testing.T) {
 	})
 
 	if got.Code != gate.Ready || got.Reason != gate.ReasonReady {
-		t.Fatalf("prueba con header y salida vacía: code=%d reason=%s message=%q; es una prueba válida, no una prueba faltante",
+		t.Fatalf("proof with a header and empty output: code=%d reason=%s message=%q; it is a valid proof, not a missing one",
 			got.Code, got.Reason, got.Message)
 	}
 }
@@ -37,6 +37,6 @@ func TestAFailedSilentRunIsAFailureNotAMissingProof(t *testing.T) {
 	})
 
 	if got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofFailed {
-		t.Fatalf("prueba fallida y silenciosa: code=%d reason=%s; tiene que decir que falló", got.Code, got.Reason)
+		t.Fatalf("failed and silent proof: code=%d reason=%s; it has to say that it failed", got.Code, got.Reason)
 	}
 }

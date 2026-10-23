@@ -3,7 +3,7 @@
 // section.
 //
 // One owner for one text. `odachi init` writes the whole block and `odachi level
-// --to <perfil>` rewrites the voice section in place, and both go through this
+// --to <profile>` rewrites the voice section in place, and both go through this
 // package: a second copy of the rules is a second set of rules, and an agent
 // that reads one while the binary enforces the other is being lied to.
 //

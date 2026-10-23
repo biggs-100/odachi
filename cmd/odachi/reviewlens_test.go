@@ -30,7 +30,7 @@ func TestReviewUsesTheLensTheEvidenceAsksFor(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	for _, want := range []string{"lentes reliability", "### reliability", "## What to look at", "## What NOT to report", "WARNING and SUGGESTION never block"} {
+	for _, want := range []string{"lenses reliability", "### reliability", "## What to look at", "## What NOT to report", "WARNING and SUGGESTION never block"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the prompt does not contain %q", want)
 		}
@@ -53,10 +53,10 @@ func TestReviewOfDocumentationAsksForNoLens(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if strings.Contains(out, "## Las lentes") {
+	if strings.Contains(out, "## The lenses") {
 		t.Errorf("a documentation-only change got a lens section:\n%s", out)
 	}
-	if !strings.Contains(out, "## Las cinco reglas") {
+	if !strings.Contains(out, "## The five rules") {
 		t.Errorf("the prompt lost the five rules")
 	}
 }
@@ -77,7 +77,7 @@ func TestReviewOfAnAuthChangeAsksForTheFour(t *testing.T) {
 			t.Errorf("the prompt does not carry the %s lens", lens)
 		}
 	}
-	if !strings.Contains(out, "lentes risk, readability, reliability, resilience") {
+	if !strings.Contains(out, "lenses risk, readability, reliability, resilience") {
 		t.Errorf("the header does not name the four lenses in order")
 	}
 }
@@ -127,7 +127,7 @@ func TestLensFlagWithoutAValueIsAccepted(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1: this tree has no verdict yet (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(errOut, "no hay review para este árbol") {
+	if !strings.Contains(errOut, "there is no review for this tree") {
 		t.Errorf("stderr %q does not report the missing verdict: --lens ate --show", errOut)
 	}
 }
@@ -148,7 +148,7 @@ func TestShowListsRequiredAndMissingLenses(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	for _, want := range []string{"lentes: reliability", "requeridas: reliability"} {
+	for _, want := range []string{"lenses: reliability", "required: reliability"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("--show does not print %q:\n%s", want, out)
 		}
@@ -191,11 +191,11 @@ func TestRefutePrintsThePromptForTheStoredVerdict(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 	for _, want := range []string{
-		"# odachi refutador",
+		"# odachi refuter",
 		"F1",
 		"internal/app/turnos.go:3",
-		"¿Es causal del diff, o ya estaba?",
-		"Ante la duda",
+		"Is it causal of the diff, or was it already there?",
+		"When in doubt",
 		`"refutations"`,
 	} {
 		if !strings.Contains(out, want) {
@@ -267,14 +267,14 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("--show: code = %d", code)
 	}
-	if !strings.Contains(out, ".refuted.json") || !strings.Contains(out, "ya no bloquea nada") {
+	if !strings.Contains(out, ".refuted.json") || !strings.Contains(out, "no longer blocks anything") {
 		t.Errorf("--show does not report the refutation:\n%s", out)
 	}
 
 	// The refutation is written once.
 	if code, _, errOut := runDir(t, dir, []string{"review", "--attach", refutation}, ""); code != 1 {
 		t.Fatalf("second attach: code = %d, want 1", code)
-	} else if !strings.Contains(errOut, "ya hay una refutación") {
+	} else if !strings.Contains(errOut, "already has a refutation") {
 		t.Errorf("second attach stderr %q does not say the refutation exists", errOut)
 	}
 }
@@ -312,7 +312,7 @@ func TestCheckRequireReviewNamesTheMissingLens(t *testing.T) {
 	if !strings.Contains(errOut, "reliability") {
 		t.Errorf("stderr %q does not name the missing lens", errOut)
 	}
-	if !strings.Contains(errOut, "borrá") || !strings.Contains(errOut, ".json") {
+	if !strings.Contains(errOut, "delete") || !strings.Contains(errOut, ".json") {
 		t.Errorf("stderr %q does not say how to redo the verdict", errOut)
 	}
 }

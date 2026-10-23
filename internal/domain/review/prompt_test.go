@@ -60,13 +60,13 @@ func TestPromptCarriesTheFiveRules(t *testing.T) {
 		name string
 		mark string
 	}{
-		{"1 · precisión: ante la duda, callarse", "Ante la duda, callate"},
-		{"1 · estilo prohibido", "Estilo y preferencia están prohibidos"},
-		{"2 · vocabulario de severidad", "BLOCKER, CRITICAL, WARNING, SUGGESTION"},
-		{"3 · resultado vacío canónico", "No findings."},
-		{"4 · causalidad", "introdujo, lo activó o lo empeoró"},
-		{"4 · lo previo es follow-up", `"causal": false`},
-		{"5 · un solo barrido", "Un solo barrido"},
+		{"1 · precision: when in doubt, stay quiet", "When in doubt, say nothing"},
+		{"1 · style banned", "Style and preference are banned"},
+		{"2 · severity vocabulary", "BLOCKER, CRITICAL, WARNING, SUGGESTION"},
+		{"3 · canonical empty result", "No findings."},
+		{"4 · causality", "introduced it, activated it or worsened it"},
+		{"4 · what was already there is follow-up", `"causal": false`},
+		{"5 · one pass only", "One pass per lens"},
 	}
 
 	for _, rule := range rules {
@@ -97,7 +97,7 @@ func TestPromptCarriesTheSchema(t *testing.T) {
 // is a parse error waiting to happen.
 func TestPromptAsksForOnlyTheJSON(t *testing.T) {
 	prompt := review.Prompt(promptInput())
-	if !strings.Contains(prompt, "solo con el JSON") {
+	if !strings.Contains(prompt, "without text around it") {
 		t.Error("the prompt does not ask for the JSON alone")
 	}
 }
@@ -106,7 +106,7 @@ func TestPromptAsksForOnlyTheJSON(t *testing.T) {
 // verdict. Storing an administered verdict is exactly what this unit removed.
 func TestPromptSaysTheVerdictIsDerived(t *testing.T) {
 	prompt := review.Prompt(promptInput())
-	if !strings.Contains(prompt, "se deriva") {
+	if !strings.Contains(prompt, "is derived") {
 		t.Error("the prompt does not say the verdict is derived from the findings")
 	}
 }

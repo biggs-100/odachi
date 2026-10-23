@@ -64,7 +64,7 @@ func TestOneOfTheTwoDirectoriesProtected(t *testing.T) {
 	if got.Status != domaindoctor.StatusProblem {
 		t.Fatalf("proof/ is not ignored: want a problem, got %s", domaindoctor.Line(got))
 	}
-	if strings.Contains(got.Detail, ".odachi/reviews no está ignorado") {
+	if strings.Contains(got.Detail, ".odachi/reviews is not ignored") {
 		t.Errorf("the store IS ignored, and the line says it is not: %s", domaindoctor.Line(got))
 	}
 	if !strings.Contains(got.Detail, "proof/") {

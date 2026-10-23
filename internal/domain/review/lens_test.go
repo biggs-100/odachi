@@ -30,13 +30,13 @@ Heredás las cinco reglas y el piso de severidad: WARNING y SUGGESTION nunca blo
 func TestPromptWithoutLensesIsTheSamePromptAsBefore(t *testing.T) {
 	prompt := review.Prompt(promptInput())
 
-	if strings.Contains(prompt, "## Las lentes") {
+	if strings.Contains(prompt, "## The lenses") {
 		t.Error("the prompt of a candidate with no lens announces lenses")
 	}
-	if !strings.Contains(prompt, "## Las cinco reglas") {
+	if !strings.Contains(prompt, "## The five rules") {
 		t.Error("the prompt lost the five rules")
 	}
-	if !strings.Contains(prompt, "## Qué devolver") {
+	if !strings.Contains(prompt, "## What to return") {
 		t.Error("the prompt lost the answer shape")
 	}
 }
@@ -50,7 +50,7 @@ func TestPromptCarriesTheLensAndItsRules(t *testing.T) {
 	prompt := review.Prompt(in)
 
 	for _, want := range []string{
-		"## Las lentes de este árbol",
+		"## The lenses of this tree",
 		review.Risk,
 		"## Qué mirar",
 		"una consulta armada concatenando entrada del request",
@@ -94,7 +94,7 @@ func TestPromptKeepsTheFiveRulesOnce(t *testing.T) {
 	}
 
 	prompt := review.Prompt(in)
-	if count := strings.Count(prompt, "## Las cinco reglas"); count != 1 {
+	if count := strings.Count(prompt, "## The five rules"); count != 1 {
 		t.Errorf("the five rules appear %d times, want once", count)
 	}
 }
@@ -106,7 +106,7 @@ func TestPromptTellsTheReviewerToAnswerPerLens(t *testing.T) {
 	in.Lenses = []review.Lens{{Name: review.Risk, Body: lensBody}, {Name: review.Resilience, Body: lensBody}}
 
 	prompt := review.Prompt(in)
-	if !strings.Contains(prompt, "un barrido por lente") {
+	if !strings.Contains(prompt, "one pass per lens") {
 		t.Errorf("the prompt does not ask for one pass per lens:\n%s", prompt)
 	}
 }

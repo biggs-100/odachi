@@ -30,7 +30,7 @@ func TestPlanAppendsAndClosesStepsEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("plan add: exit %d, stderr=%s", code, stderr)
 	}
-	if want := "paso T1 agregado a " + taskPath; !strings.Contains(stdout, want) {
+	if want := "step T1 added to " + taskPath; !strings.Contains(stdout, want) {
 		t.Errorf("stdout %q does not say %q", stdout, want)
 	}
 
@@ -38,7 +38,7 @@ func TestPlanAppendsAndClosesStepsEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("plan add 2: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "paso T2 agregado") {
+	if !strings.Contains(stdout, "step T2 added") {
 		t.Errorf("stdout %q does not report T2", stdout)
 	}
 
@@ -62,7 +62,7 @@ func TestPlanAppendsAndClosesStepsEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("plan done: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "paso T1 hecho · deadbee") {
+	if !strings.Contains(stdout, "step T1 done · deadbee") {
 		t.Errorf("stdout %q does not report the closed step and its commit", stdout)
 	}
 
@@ -89,7 +89,7 @@ func TestPlanAppendsAndClosesStepsEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("plan --done T1 again: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "ya estaba hecho") {
+	if !strings.Contains(stdout, "was already done") {
 		t.Errorf("stdout %q does not say ya estaba hecho", stdout)
 	}
 	after, err := os.ReadFile(filepath.Join(dir, taskPath))
@@ -155,7 +155,7 @@ func TestPlanRefusesAStraySectionAndWritesNothing(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("exit = %d, want 1 (stderr=%s)", code, stderr)
 	}
-	if !strings.Contains(stderr, "## Historial") {
+	if !strings.Contains(stderr, "## History") {
 		t.Errorf("stderr %q does not say where the notes belong", stderr)
 	}
 	after, err := os.ReadFile(path)
@@ -210,7 +210,7 @@ func TestPlanJSONReportsTheSameContent(t *testing.T) {
 	if payload.Code != 0 {
 		t.Errorf("code = %d, want 0", payload.Code)
 	}
-	if want := "paso T1 agregado a " + taskPath; payload.Message != want {
+	if want := "step T1 added to " + taskPath; payload.Message != want {
 		t.Errorf("message = %q, want %q", payload.Message, want)
 	}
 	if payload.Task != taskPath {
@@ -265,7 +265,7 @@ func TestPlanFlagRulesAtTheCLI(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"plan"}, `odachi plan "<texto>"`},
+		{[]string{"plan"}, `odachi plan "<text>"`},
 		{[]string{"plan", "--commit", "deadbee"}, "--done"},
 		{[]string{"plan", "un paso", "--req", "R9"}, "R9"},
 	}

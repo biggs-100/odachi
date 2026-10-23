@@ -38,7 +38,7 @@ func (f *fakeFiles) Exists(path string) (bool, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	return data, nil
 }
@@ -57,7 +57,7 @@ func (f *fakeFiles) List(dir string) ([]string, error) {
 func (f *fakeFiles) Backup(path string) (string, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return "", fmt.Errorf("no se puede respaldar %s: no existe", path)
+		return "", fmt.Errorf("cannot back up %s: it does not exist", path)
 	}
 	f.events = append(f.events, "backup "+path)
 	backup := path + ".bak-1a2b3c4d"
@@ -75,7 +75,7 @@ func (f *fakeFiles) content(t *testing.T, path string) string {
 	t.Helper()
 	data, ok := f.files[path]
 	if !ok {
-		t.Fatalf("%q no existe; archivos: %v", path, keys(f.files))
+		t.Fatalf("%q does not exist; files: %v", path, keys(f.files))
 	}
 	return string(data)
 }
@@ -107,7 +107,7 @@ func feature(outcome string, doneSteps, totalSteps int, history ...string) strin
 	for i := 1; i <= totalSteps; i++ {
 		doc.Steps = append(doc.Steps, taskdoc.Step{
 			ID:     "T" + strconv.Itoa(i),
-			Text:   "paso " + strconv.Itoa(i),
+			Text:   "step " + strconv.Itoa(i),
 			Done:   i <= doneSteps,
 			Commit: "4a1c9f",
 		})
@@ -147,7 +147,7 @@ func TestLevelWithoutEvidenceShowsTheFactsAndProposesNothing(t *testing.T) {
 	}
 
 	block := strings.Join(res.Lines, "\n")
-	for _, want := range []string{"perfil: novato", "features con pasos: 1", "preguntas contestadas: 1", "decisiones de oficio: 1", "preguntas abiertas: 0"} {
+	for _, want := range []string{"profile: novato", "features with steps: 1", "answered questions: 1", "craft decisions: 1", "open questions: 0"} {
 		if !strings.Contains(block, want) {
 			t.Errorf("block does not report %q:\n%s", want, block)
 		}
@@ -186,10 +186,10 @@ func TestLevelProposesSeniorWhenEarned(t *testing.T) {
 	}
 
 	block := strings.Join(res.Lines, "\n")
-	if !strings.Contains(block, "features con pasos: 3") {
+	if !strings.Contains(block, "features with steps: 3") {
 		t.Errorf("block does not count three features with a done step:\n%s", block)
 	}
-	if !strings.Contains(block, "preguntas contestadas: 5") {
+	if !strings.Contains(block, "answered questions: 5") {
 		t.Errorf("block does not count five answered questions:\n%s", block)
 	}
 	if !strings.Contains(block, "odachi level --to senior") {
@@ -216,7 +216,7 @@ func TestLevelForASeniorProposesNothing(t *testing.T) {
 	if strings.Contains(block, "--to") {
 		t.Errorf("level proposed a profile to someone who is not a novato:\n%s", block)
 	}
-	if strings.Contains(block, "todavía no está ganado") {
+	if strings.Contains(block, "not earned yet") {
 		t.Errorf("level told a senior that senior is not earned yet:\n%s", block)
 	}
 }
@@ -372,13 +372,13 @@ func TestLevelToRewritesTheVoiceSectionAndNothingElse(t *testing.T) {
 	}
 	want := "mío arriba\n\n" + blockOf(t, persona.Senior) + "\nmío abajo\n"
 	if got := files.content(t, agentsPath); got != want {
-		t.Fatalf("la voz no se reemplazó en su lugar:\n%q\nvs\n%q", got, want)
+		t.Fatalf("the voice was not replaced in place:\n%q\nvs\n%q", got, want)
 	}
 	if !slices.Contains(res.Files, "AGENTS.md") {
 		t.Errorf("Files = %v, want it to name AGENTS.md", res.Files)
 	}
-	if !strings.Contains(strings.Join(res.Lines, "\n"), "voz senior") {
-		t.Errorf("las líneas no reportan la voz:\n%s", strings.Join(res.Lines, "\n"))
+	if !strings.Contains(strings.Join(res.Lines, "\n"), "voice senior") {
+		t.Errorf("the lines do not report the voice:\n%s", strings.Join(res.Lines, "\n"))
 	}
 	backup := slices.Index(files.events, "backup "+agentsPath)
 	rewrite := slices.Index(files.events, "write "+agentsPath)
@@ -416,7 +416,7 @@ func TestLevelToRefreshesTheNativeAgentWhenItExists(t *testing.T) {
 	for _, file := range persona.Files(newBody) {
 		path := filepath.Join("raiz", filepath.FromSlash(file.Path))
 		if got := files.content(t, path); got != file.Content {
-			t.Errorf("%s no quedó espejado:\n%q\nvs\n%q", file.Path, got, file.Content)
+			t.Errorf("%s was not mirrored:\n%q\nvs\n%q", file.Path, got, file.Content)
 		}
 		if !slices.Contains(res.Files, file.Path) {
 			t.Errorf("Files = %v, want it to name %s", res.Files, file.Path)
@@ -427,8 +427,8 @@ func TestLevelToRefreshesTheNativeAgentWhenItExists(t *testing.T) {
 			t.Errorf("events = %v, want %s backed up before the rewrite", files.events, file.Path)
 		}
 	}
-	if !strings.Contains(strings.Join(res.Lines, "\n"), "agente nativo") {
-		t.Errorf("las líneas no reportan el agente nativo:\n%s", strings.Join(res.Lines, "\n"))
+	if !strings.Contains(strings.Join(res.Lines, "\n"), "native agent") {
+		t.Errorf("the lines do not report the native agent:\n%s", strings.Join(res.Lines, "\n"))
 	}
 }
 
@@ -464,12 +464,12 @@ func TestLevelToRefreshesOnlyTheChosenClient(t *testing.T) {
 	}
 	chosen, _ := persona.FilesFor(persona.SelectionOpenCode, newBody)
 	if got := files.content(t, filepath.Join("raiz", filepath.FromSlash(chosen.Path))); got != chosen.Content {
-		t.Errorf("%s no quedó espejado:\n%q\nvs\n%q", chosen.Path, got, chosen.Content)
+		t.Errorf("%s was not mirrored:\n%q\nvs\n%q", chosen.Path, got, chosen.Content)
 	}
 	other, _ := persona.FilesFor(persona.SelectionClaude, oldBody)
 	otherPath := filepath.Join("raiz", filepath.FromSlash(other.Path))
 	if got := files.content(t, otherPath); got != other.Content {
-		t.Errorf("%s se refrescó aunque no estaba elegido:\n%q\nvs\n%q", other.Path, got, other.Content)
+		t.Errorf("%s was refreshed although it was not the chosen client:\n%q\nvs\n%q", other.Path, got, other.Content)
 	}
 	if slices.Contains(res.Files, other.Path) {
 		t.Errorf("Files = %v, want it not to name %s", res.Files, other.Path)
@@ -492,7 +492,7 @@ func TestLevelToDoesNotInstallAMissingNativeAgent(t *testing.T) {
 	for _, file := range persona.Files("") {
 		path := filepath.Join("raiz", filepath.FromSlash(file.Path))
 		if slices.Contains(files.events, "write "+path) {
-			t.Errorf("level escribió %s: instalar es init", file.Path)
+			t.Errorf("level wrote %s: installing is init's job", file.Path)
 		}
 	}
 }
@@ -516,9 +516,9 @@ func TestLevelToTheSameVoiceTwiceWritesNothing(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
 	}
 	if len(files.events) != 0 {
-		t.Errorf("el segundo level escribió: %v", files.events)
+		t.Errorf("the second level wrote: %v", files.events)
 	}
-	if !strings.Contains(res.Message, "no escribí nada") {
+	if !strings.Contains(res.Message, "I wrote nothing") {
 		t.Errorf("Message = %q, want it to say nothing was written", res.Message)
 	}
 }
@@ -542,7 +542,7 @@ func TestLevelToGivesAnOldBlockAVoiceSection(t *testing.T) {
 	want := "<!-- odachi:begin -->\n# Reglas del proyecto (odachi)\n\nreglas de la versión vieja\n\n" +
 		rules.Section + "\n\n" + voiceOf(t, persona.Senior) + "<!-- odachi:end -->\n"
 	if got := files.content(t, agentsPath); got != want {
-		t.Fatalf("la sección no se agregó al final del bloque:\n%q\nvs\n%q", got, want)
+		t.Fatalf("the section was not appended at the end of the block:\n%q\nvs\n%q", got, want)
 	}
 }
 
@@ -558,10 +558,10 @@ func TestLevelToWithoutABlockNamesInit(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
 	}
 	if got := files.content(t, agentsPath); got != "solo mío\n" {
-		t.Errorf("level escribió en un archivo sin bloque: %q", got)
+		t.Errorf("level wrote into a file with no block: %q", got)
 	}
 	if !strings.Contains(strings.Join(res.Lines, "\n"), "odachi init") {
-		t.Errorf("las líneas no nombran el comando que escribe el bloque:\n%s", strings.Join(res.Lines, "\n"))
+		t.Errorf("the lines do not name the command that writes the block:\n%s", strings.Join(res.Lines, "\n"))
 	}
 }
 
@@ -576,7 +576,7 @@ func TestLevelToCIWritesTheSeniorVoice(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
 	}
 	if got := files.content(t, agentsPath); got != blockOf(t, persona.Senior) {
-		t.Fatalf("el bloque de ci no es el de senior:\n%q", got)
+		t.Fatalf("the ci block is not the senior one:\n%q", got)
 	}
 	if !strings.Contains(res.Message, "senior") {
 		t.Errorf("Message = %q, want it to name the voice that was written", res.Message)
@@ -612,12 +612,12 @@ func TestLevelToAProfileWithoutAVoiceSaysWhichNamesHaveOne(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
 	}
 	if got := files.content(t, agentsPath); got != blockOf(t, persona.Novato) {
-		t.Errorf("la voz se tocó para un perfil sin voz:\n%q", got)
+		t.Errorf("the voice was touched for a profile without a voice:\n%q", got)
 	}
 	block := strings.Join(res.Lines, "\n") + res.Message
 	for _, want := range []string{"mio", "novato", "senior", "ci"} {
 		if !strings.Contains(block, want) {
-			t.Errorf("las líneas no nombran %q:\n%s", want, block)
+			t.Errorf("the lines do not name %q:\n%s", want, block)
 		}
 	}
 }

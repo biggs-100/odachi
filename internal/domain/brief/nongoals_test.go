@@ -21,7 +21,7 @@ func TestNonGoalsAreOptional(t *testing.T) {
 	}
 
 	if missing := b.Missing(); len(missing) != 0 {
-		t.Fatalf("Missing() = %q; \"no incluye\" es la única parte que puede quedar vacía en una primera versión", missing)
+		t.Fatalf("Missing() = %q; \"not included\" is the only part that may stay empty in a first version", missing)
 	}
 }
 
@@ -30,6 +30,6 @@ func TestNonGoalsAreOptional(t *testing.T) {
 func TestTheTwoSubstantivePartsAreStillRequired(t *testing.T) {
 	missing := brief.Brief{}.Missing()
 	if len(missing) != 2 {
-		t.Fatalf("Missing() = %q; quiero exactamente \"qué tiene que existir\" y \"listo cuando\"", missing)
+		t.Fatalf("Missing() = %q; I want exactly \"what must exist\" and \"done when\"", missing)
 	}
 }

@@ -26,13 +26,13 @@ func TestInitWritesTheBlockFromTheRenderer(t *testing.T) {
 	}
 	got, ok := files.get("AGENTS.md")
 	if !ok {
-		t.Fatalf("AGENTS.md no se escribió; events: %v", files.events)
+		t.Fatalf("AGENTS.md was not written; events: %v", files.events)
 	}
 	if got != want {
-		t.Fatalf("el bloque escrito no es el del renderer:\n%q\nvs\n%q", got, want)
+		t.Fatalf("the written block is not the renderer's:\n%q\nvs\n%q", got, want)
 	}
 	if strings.Count(got, rules.Begin) != 1 || strings.Count(got, rules.End) != 1 {
-		t.Errorf("el bloque aparece más de una vez:\n%s", got)
+		t.Errorf("the block appears more than once:\n%s", got)
 	}
 }
 
@@ -58,7 +58,7 @@ func TestTheWrittenBlockKeepsTheFourRulesAndTheSixVerbs(t *testing.T) {
 		verbs = append(verbs, name)
 	}
 	if strings.Join(verbs, ",") != strings.Join(wantVerbs, ",") {
-		t.Fatalf("los verbos son %v, se esperaban %v", verbs, wantVerbs)
+		t.Fatalf("the verbs are %v, want %v", verbs, wantVerbs)
 	}
 
 	for _, want := range []string{
@@ -69,7 +69,7 @@ func TestTheWrittenBlockKeepsTheFourRulesAndTheSixVerbs(t *testing.T) {
 		rules.Section,
 	} {
 		if !strings.Contains(content, want) {
-			t.Errorf("falta %q en el bloque:\n%s", want, content)
+			t.Errorf("missing %q from the block:\n%s", want, content)
 		}
 	}
 }

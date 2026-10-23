@@ -67,7 +67,7 @@ const (
 
 // usage is the one-line reminder of the two shapes, repeated in errors because
 // a blocked message must name the command that unblocks it.
-const usage = `odachi plan "<texto>" [--req R1] · odachi plan --done T2 [--commit abc1234]`
+const usage = `odachi plan "<text>" [--req R1] · odachi plan --done T2 [--commit abc1234]`
 
 // Run performs one `odachi plan`.
 func Run(opts Options, files Files) Result {
@@ -101,15 +101,15 @@ func validate(opts Options) (string, string) {
 
 	switch {
 	case done == "" && commit != "":
-		return "", `--commit solo acompaña a un paso que estás marcando: corré odachi plan --done T2 --commit <sha>`
+		return "", `--commit only goes with a step you are marking: run odachi plan --done T2 --commit <sha>`
 	case text != "" && done != "":
-		return "", "usá una sola forma de odachi plan por vez: " + usage
+		return "", "use one form of odachi plan at a time: " + usage
 	case done != "" && requirement != "":
-		return "", `--req solo acompaña al texto de un paso nuevo: corré odachi plan "<texto>" --req ` + requirement
+		return "", `--req only goes with the text of a new step: run odachi plan "<text>" --req ` + requirement
 	case done != "":
 		return formDone, ""
 	case text == "":
-		return "", `falta el paso: escribí odachi plan "<texto>" para agregar uno o odachi plan --done T2 para marcar uno hecho`
+		return "", `missing the step: write odachi plan "<text>" to add one or odachi plan --done T2 to mark one done`
 	}
 	return formAdd, ""
 }
@@ -129,7 +129,7 @@ func add(current tasks.Document, files Files, opts Options) Result {
 	step := grown.Steps[len(grown.Steps)-1]
 	return Result{
 		Code:    CodeOK,
-		Message: fmt.Sprintf("paso %s agregado a %s", step.ID, current.Rel),
+		Message: fmt.Sprintf("step %s added to %s", step.ID, current.Rel),
 		Task:    current.Rel,
 		Files:   []string{current.Rel},
 	}
@@ -151,7 +151,7 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 	if step.Done {
 		return Result{
 			Code:    CodeOK,
-			Message: fmt.Sprintf("paso %s ya estaba hecho", id),
+			Message: fmt.Sprintf("step %s was already done", id),
 			Task:    current.Rel,
 		}
 	}
@@ -171,7 +171,7 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 		return blocked(err.Error())
 	}
 
-	message := fmt.Sprintf("paso %s hecho", id)
+	message := fmt.Sprintf("step %s done", id)
 	if commit != "" {
 		message += " · " + commit
 	}
@@ -204,10 +204,10 @@ func unknownStep(current tasks.Document, id string) string {
 	}
 
 	if len(open) == 0 {
-		return fmt.Sprintf("paso desconocido: %s; este task doc no tiene pasos abiertos (en %s); agregá uno con odachi plan \"<texto>\"",
+		return fmt.Sprintf("unknown step: %s; this task doc has no open steps (in %s); add one with odachi plan \"<text>\"",
 			id, current.Rel)
 	}
-	return fmt.Sprintf("paso desconocido: %s; los pasos abiertos son %s (en %s)", id, strings.Join(open, ", "), current.Rel)
+	return fmt.Sprintf("unknown step: %s; the open steps are %s (in %s)", id, strings.Join(open, ", "), current.Rel)
 }
 
 // blocked is a Result with exit code 1.

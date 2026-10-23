@@ -41,7 +41,7 @@ func TestRunWritesNothingWhenTheRepositoryIgnoresProof(t *testing.T) {
 // so the fallback is to write the ignore file exactly as before.
 func TestRunFallsBackToItsOwnIgnoreFileWhenTheProbeFails(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	git := &fakeGit{tree: currentTree, ignoredErr: errors.New("git no está instalado")}
+	git := &fakeGit{tree: currentTree, ignoredErr: errors.New("git is not installed")}
 
 	got := check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
 		files, git, &fakeShell{output: "ok\n"})

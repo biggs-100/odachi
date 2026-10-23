@@ -86,7 +86,7 @@ var supported = []Agent{
 var refusals = map[string]string{
 	// Pi's adapter reports an empty skills directory because Pi does not have
 	// one, so there is no destination to verify and none to write.
-	"pi": "Pi no usa un directorio de skills",
+	"pi": "Pi does not use a skills directory",
 }
 
 // overrideDests holds the one thing a scope override can change besides the
@@ -128,22 +128,22 @@ func List() string { return strings.Join(append(Names(), Standard), ", ") }
 func Resolve(name string) (Agent, error) {
 	key := strings.ToLower(strings.TrimSpace(name))
 	if key == "" {
-		return Agent{}, fmt.Errorf("falta el nombre del agente; los soportados son: %s (por ejemplo odachi pack --agents claude,codex, o odachi pack --agents standard para la carpeta que leen todos los clientes)", List())
+		return Agent{}, fmt.Errorf("the agent name is missing; the supported ones are: %s (for example odachi pack --agents claude,codex, or odachi pack --agents standard for the folder every client reads)", List())
 	}
 	if a, ok := find(key); ok {
 		return a, nil
 	}
 	if reason, ok := refusals[key]; ok {
-		return Agent{}, fmt.Errorf("%s: %s; los soportados son: %s: %s", key, reason, List(), escape)
+		return Agent{}, fmt.Errorf("%s: %s; the supported ones are: %s: %s", key, reason, List(), escape)
 	}
-	return Agent{}, fmt.Errorf("agente desconocido: %s; los soportados son: %s: %s", key, List(), escape)
+	return Agent{}, fmt.Errorf("unknown agent: %s; the supported ones are: %s: %s", key, List(), escape)
 }
 
 // escape is the tail every refusal carries: the two ways to install for a client
 // this table does not know, today or later. A refusal that only says "no" is a
 // dead end, and a command whose reason to exist is serving any client cannot
 // afford one.
-const escape = "si tu cliente no está en la tabla, usá --agents standard (la carpeta que leen todos los clientes: .agents/skills en el proyecto, ~/.agents/skills en el home) o --dest <carpeta> (la ruta que lee tu cliente)"
+const escape = "if your client is not in the table, use --agents standard (the folder every client reads: .agents/skills in the project, ~/.agents/skills in the home) or --dest <folder> (the path your client reads)"
 
 // Labels parses --agents when --dest supplies the directory. The names stop being
 // table lookups and become the label a human reads in the summary, so a client
@@ -171,7 +171,7 @@ func ParseScope(value string) (Scope, error) {
 	case ScopeHome, ScopeProject:
 		return scope, nil
 	default:
-		return "", fmt.Errorf("scope inválido: %s; usá --scope project o --scope home (por ejemplo odachi pack --agents opencode --scope home)", strings.TrimSpace(value))
+		return "", fmt.Errorf("invalid scope: %s; use --scope project or --scope home (for example odachi pack --agents opencode --scope home)", strings.TrimSpace(value))
 	}
 }
 
@@ -221,7 +221,7 @@ func ResolveAll(list string) ([]Agent, error) {
 
 // Marker is the agent's own config directory: the parent of its skills
 // directory, relative to the same root. `pack` looks for it to decide whether an
-// agent is installed here, which is what "cada agente detectado" means: a home
+// agent is installed here, which is what "each detected agent" means: a home
 // agent is here when its config directory exists in the home, a project agent
 // when its config directory exists in the project.
 func (a Agent) Marker() string {

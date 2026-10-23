@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestJourneysAreTheCorpusContractXVAsksFor: eight recorridos, each one a name,
+// TestJourneysAreTheCorpusContractXVAsksFor: eight journeys, each one a name,
 // a reason and at least one measured invocation. A journey with no step would
 // measure nothing and pass for the wrong reason.
 func TestJourneysAreTheCorpusContractXVAsksFor(t *testing.T) {
@@ -61,8 +61,8 @@ func TestNamedFilters(t *testing.T) {
 		t.Fatalf("the selection must follow the corpus order, got %v", names(selected))
 	}
 
-	selected, unknown = Named(all, []string{"inventado"})
-	if len(selected) != 0 || len(unknown) != 1 || unknown[0] != "inventado" {
+	selected, unknown = Named(all, []string{"invented"})
+	if len(selected) != 0 || len(unknown) != 1 || unknown[0] != "invented" {
 		t.Fatalf("a typo must be reported: selected %v, unknown %v", names(selected), unknown)
 	}
 
@@ -92,52 +92,52 @@ func TestCommandFindsTheContinuation(t *testing.T) {
 	}{
 		{
 			name:    "the gate prints its next line",
-			message: "odachi: falta la prueba de este cambio\nsiguiente: odachi check --proof <archivo>\n",
-			want:    []string{"odachi", "check", "--proof", "<archivo>"},
+			message: "odachi: this change has no proof\nnext: odachi check --proof <file>\n",
+			want:    []string{"odachi", "check", "--proof", "<file>"},
 		},
 		{
 			name:    "a sentence, not a line",
-			message: "odachi: ya existe brief.md y no quiero pisarlo sin permiso; volvé a correr odachi start --force (o borrá brief.md)\n",
+			message: "odachi: brief.md already exists and I will not overwrite it without permission; run odachi start --force again (or delete brief.md)\n",
 			want:    []string{"odachi", "start", "--force"},
 		},
 		{
 			name:    "the answer is on the previous line",
-			message: "odachi: fuera de alcance: pagos: internal/payments/pay.go\nsiguiente: odachi ask\n",
+			message: "odachi: out of scope: pagos: internal/payments/pay.go\nnext: odachi ask\n",
 			want:    []string{"odachi", "ask"},
 		},
 		{
 			name:    "a quoted command stays one argument",
-			message: "siguiente: odachi check --run \"go test ./...\"\n",
+			message: "next: odachi check --run \"go test ./...\"\n",
 			want:    []string{"odachi", "check", "--run", "go test ./..."},
 		},
 		{
 			name:    "a flag's value is part of the command",
-			message: "no pude leer el perfil; volvé a correr odachi level --to senior con uno de esos nombres\n",
+			message: "could not read the profile; run odachi level --to senior again with one of those names\n",
 			want:    []string{"odachi", "level", "--to", "senior"},
 		},
 		{
 			name:    "an explicit lens is a value",
-			message: "borrá el archivo y corré odachi review --lens reliability\n",
+			message: "delete the file and run odachi review --lens reliability\n",
 			want:    []string{"odachi", "review", "--lens", "reliability"},
 		},
 		{
 			name:    "prose after the command is not part of it",
-			message: "corré odachi init y pegá su bloque en el hook\n",
+			message: "run odachi init and paste its block into the hook\n",
 			want:    []string{"odachi", "init"},
 		},
 		{
 			name:    "no odachi command at all",
-			message: "odachi: no pude leer el árbol de git: corré odachi check dentro de un repositorio git\n",
+			message: "odachi: could not read the git tree: run odachi check inside a git repository\n",
 			want:    []string{"odachi", "check"},
 		},
 		{
 			name:    "a command that is not odachi is not this instrument's",
-			message: "no hay .git: no hay hook posible; corré git init\n",
+			message: "there is no .git: there is no hook to install; run git init\n",
 			want:    nil,
 		},
 		{
 			name:    "nothing named",
-			message: "odachi: la prueba falló: sin salida\nsiguiente: odachi check\n",
+			message: "odachi: the proof failed: no output\nnext: odachi check\n",
 			want:    []string{"odachi", "check"},
 		},
 		{
@@ -147,7 +147,7 @@ func TestCommandFindsTheContinuation(t *testing.T) {
 		},
 		{
 			name:    "the bare name is not a command",
-			message: "instalá odachi y volvé\n",
+			message: "I installed odachi and came back\n",
 			want:    nil,
 		},
 	}
@@ -174,8 +174,8 @@ func TestIsTemplated(t *testing.T) {
 		command []string
 		want    bool
 	}{
-		{[]string{"odachi", "check", "--proof", "<archivo>"}, true},
-		{[]string{"odachi", "level", "--to", "<perfil>"}, true},
+		{[]string{"odachi", "check", "--proof", "<file>"}, true},
+		{[]string{"odachi", "level", "--to", "<profile>"}, true},
 		{[]string{"odachi", "start", "--force"}, false},
 		{[]string{"odachi", "check", "--run", "go test ./..."}, false},
 		{nil, false},
@@ -196,10 +196,10 @@ func TestKindOf(t *testing.T) {
 		want    Kind
 	}{
 		{"names a command that works", []string{"odachi", "review"}, 0, InBand},
-		{"names a command that does not work", []string{"odachi", "borrar"}, 1, DeadEnd},
+		{"names a command that does not work", []string{"odachi", "delete"}, 1, DeadEnd},
 		{"names a command that needs a human", []string{"odachi", "start"}, 2, Interactive},
 		{"names no command", nil, 0, OutOfBand},
-		{"names a placeholder", []string{"odachi", "check", "--proof", "<archivo>"}, -1, Templated},
+		{"names a placeholder", []string{"odachi", "check", "--proof", "<file>"}, -1, Templated},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

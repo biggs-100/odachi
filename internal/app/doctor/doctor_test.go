@@ -70,7 +70,7 @@ func (f *fakeFiles) mkdir(rel string) *fakeFiles {
 
 func (f *fakeFiles) Exists(path string) (bool, error) {
 	if path == f.errOn {
-		return false, errors.New("permiso denegado")
+		return false, errors.New("permission denied")
 	}
 	if _, ok := f.files[path]; ok {
 		return true, nil
@@ -80,26 +80,26 @@ func (f *fakeFiles) Exists(path string) (bool, error) {
 
 func (f *fakeFiles) IsDir(path string) (bool, error) {
 	if path == f.errOn {
-		return false, errors.New("permiso denegado")
+		return false, errors.New("permission denied")
 	}
 	return f.dirs[path], nil
 }
 
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	if path == f.errOn {
-		return nil, errors.New("permiso denegado")
+		return nil, errors.New("permission denied")
 	}
 	f.reads = append(f.reads, path)
 	content, ok := f.files[path]
 	if !ok {
-		return nil, errors.New("no existe")
+		return nil, errors.New("does not exist")
 	}
 	return []byte(content), nil
 }
 
 func (f *fakeFiles) List(dir string) ([]string, error) {
 	if dir == f.errOn {
-		return nil, errors.New("permiso denegado")
+		return nil, errors.New("permission denied")
 	}
 	names := []string{}
 	for path := range f.files {
@@ -124,7 +124,7 @@ func (f *fakeFiles) snapshot() map[string]string {
 	return out
 }
 
-// fakeLookup is the PATH port: the answer to "¿un shell puede correr odachi?".
+// fakeLookup is the PATH port: the answer to "can a shell run odachi?".
 type fakeLookup struct {
 	resolved string
 	err      error
@@ -173,12 +173,12 @@ const briefIncomplete = `# turnos
 
 // hookOf builds the hook `odachi init` would write for exe.
 func hookOf(exe string) string {
-	return "#!/bin/sh\n" + domaindoctor.HookMarker + " no se commitea sin prueba de este árbol\n" +
+	return "#!/bin/sh\n" + domaindoctor.HookMarker + " no commit without a proof for this tree\n" +
 		"ODACHI='" + exe + "'\n[ -x \"$ODACHI\" ] || ODACHI=odachi\n\"$ODACHI\" check --quiet || exit 1\n"
 }
 
 // configured is a project that went through `git init`, `odachi init`,
-// `odachi level --to <perfil>` and `odachi skills --write`: the state doctor must
+// `odachi level --to <profile>` and `odachi skills --write`: the state doctor must
 // call clean.
 func configured() *fakeFiles {
 	files := newFakeFiles()
@@ -289,7 +289,7 @@ func TestFreshProjectIsClean(t *testing.T) {
 	}
 }
 
-// TestVersionIsTheFirstLine: the human asks "¿qué instalé?" first, so the
+// TestVersionIsTheFirstLine: the human asks "what did I install?" first, so the
 // answer comes first.
 func TestVersionIsTheFirstLine(t *testing.T) {
 	result := run(configured(), cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
@@ -337,7 +337,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			mutate: func(*fakeFiles, *fakeLookup, *fakeProfiles) {},
 			check:  domaindoctor.CheckOnPath,
 			fix:    "/home/ana/bin",
-			detail: "el agente no puede ejecutar las reglas",
+			detail: "the agent cannot run the rules",
 		},
 		{
 			name: "there is no .git",
@@ -346,7 +346,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckGit,
 			fix:    "git init",
-			detail: "no hay hook posible",
+			detail: "no hook is possible",
 		},
 		{
 			name: "AGENTS.md is gone",
@@ -355,16 +355,16 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckAgents,
 			fix:    "odachi init",
-			detail: "el agente no lee las reglas",
+			detail: "the agent does not read the rules",
 		},
 		{
 			name: "AGENTS.md has no block",
 			mutate: func(f *fakeFiles, _ *fakeLookup, _ *fakeProfiles) {
-				f.put("AGENTS.md", "# mi proyecto\n")
+				f.put("AGENTS.md", "# my project\n")
 			},
 			check:  domaindoctor.CheckAgents,
 			fix:    "odachi init",
-			detail: "no tiene el bloque",
+			detail: "does not have the odachi block",
 		},
 		{
 			name: "the hook is gone",
@@ -373,7 +373,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckHook,
 			fix:    "odachi init",
-			detail: "no hay gate local",
+			detail: "there is no local gate",
 		},
 		{
 			name: "the hook belongs to somebody else",
@@ -382,7 +382,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckHook,
 			fix:    "odachi init",
-			detail: "no es de odachi",
+			detail: "is not odachi's",
 		},
 		{
 			name: "the hook names a binary that is gone",
@@ -391,7 +391,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckHookExe,
 			fix:    "odachi init",
-			detail: "ya no existe",
+			detail: "no longer exists",
 		},
 		{
 			name: "the profile does not resolve",
@@ -400,7 +400,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckProfile,
 			fix:    "odachi doctor",
-			detail: "no resuelve",
+			detail: "does not resolve",
 		},
 		{
 			name: "there is no brief",
@@ -409,7 +409,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckBrief,
 			fix:    "odachi start",
-			detail: "sin visión no hay nada que construir",
+			detail: "without a vision there is nothing to build",
 		},
 		{
 			name: "the brief is incomplete",
@@ -418,7 +418,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckBrief,
 			fix:    "odachi start --force",
-			detail: "listo cuando",
+			detail: "done when",
 		},
 		{
 			name: "SKILLS.md drifted",
@@ -427,7 +427,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckSkills,
 			fix:    "odachi skills --write",
-			detail: "el catálogo se desvió",
+			detail: "the catalogue drifted",
 		},
 		{
 			name: "the review store is not ignored",
@@ -436,7 +436,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckIgnored,
 			fix:    "odachi init",
-			detail: "cada review invalidaría la prueba",
+			detail: "every review would invalidate the proof",
 		},
 		{
 			name: "proof/ is not ignored",
@@ -445,7 +445,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			},
 			check:  domaindoctor.CheckIgnored,
 			fix:    "odachi init",
-			detail: "cada prueba invalidaría la siguiente",
+			detail: "every proof would invalidate the next one",
 		},
 	}
 
@@ -522,14 +522,14 @@ func TestNoSkillsIsClean(t *testing.T) {
 		t.Fatalf("a project without skills must be clean:\n%s", strings.Join(result.Lines, "\n"))
 	}
 	got := checkOf(t, result, domaindoctor.CheckSkills)
-	if !strings.Contains(got.Detail, "skills/: ninguna") {
+	if !strings.Contains(got.Detail, "skills/: none") {
 		t.Fatalf("check 9 must say the project has no skills of its own: %s", domaindoctor.Line(got))
 	}
 }
 
 // TestCheckNineAnswersBothSkillFacts is the debt this check closes: a project
 // that just ran `odachi init` has no skills/ registry and nine skills installed
-// in .agents/skills. Answering only the first read "ninguna: no hay skills/" to a
+// in .agents/skills. Answering only the first read "none: there is no skills/" to a
 // person who had just installed them, and the two facts are two answers.
 func TestCheckNineAnswersBothSkillFacts(t *testing.T) {
 	files := configured().
@@ -545,9 +545,9 @@ func TestCheckNineAnswersBothSkillFacts(t *testing.T) {
 		t.Fatalf("installed skills are not a problem: %s", domaindoctor.Line(got))
 	}
 	for _, want := range []string{
-		"skills/: 1 skill, " + skill.RegistryFile + " al día",
-		".agents/skills: 2 instaladas",
-		"1 coincide con skills/",
+		"skills/: 1 skill, " + skill.RegistryFile + " up to date",
+		".agents/skills: 2 installed",
+		"compared: 1 match in skills/",
 	} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("check 9 must say %q, got %q", want, got.Detail)
@@ -570,7 +570,7 @@ func TestInstalledSkillThatDoesNotMatchTheSourceIsAWarning(t *testing.T) {
 	if got.Status != domaindoctor.StatusWarning {
 		t.Fatalf("a drifted installed skill must be a warning: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"no coinciden con skills/", "acceptance", "odachi init"} {
+	for _, want := range []string{"do not match skills/", "acceptance", "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("check 9 must say %q: %q", want, got.Detail)
 		}
@@ -589,7 +589,7 @@ func TestInstalledHomeSkillThatDoesNotMatchTheSourceIsAWarning(t *testing.T) {
 	if got.Status != domaindoctor.StatusWarning {
 		t.Fatalf("a drifted home skill must be a warning: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"~/.agents/skills", "no coinciden con skills/", "acceptance", "odachi init --skills home"} {
+	for _, want := range []string{"~/.agents/skills", "do not match skills/", "acceptance", "odachi init --skills home"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("check 9 must say %q: %q", want, got.Detail)
 		}
@@ -609,7 +609,7 @@ func TestCheckNineSaysWhenNothingIsInstalled(t *testing.T) {
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("nothing installed is not a problem: %s", domaindoctor.Line(got))
 	}
-	if !strings.Contains(got.Detail, ".agents/skills: ninguna") {
+	if !strings.Contains(got.Detail, ".agents/skills: none") {
 		t.Fatalf("check 9 must answer the installed half too: %q", got.Detail)
 	}
 }
@@ -629,7 +629,7 @@ func TestAVoiceThatDoesNotMatchTheProfileIsAProblem(t *testing.T) {
 	if got.Status != domaindoctor.StatusProblem {
 		t.Fatalf("check 11 must be a problem: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"senior", ".odachi/profile.toml dice novato", "el agente habla distinto"} {
+	for _, want := range []string{"senior", ".odachi/profile.toml says novato", "the agent talks differently"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
 		}
@@ -652,7 +652,7 @@ func TestABlockWithoutTheVoiceSectionAndAProfileIsAProblem(t *testing.T) {
 	if got.Status != domaindoctor.StatusProblem {
 		t.Fatalf("a block with no voice and a profile is a problem: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{rules.Section, ".odachi/profile.toml dice novato"} {
+	for _, want := range []string{rules.Section, ".odachi/profile.toml says novato"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
 		}
@@ -676,7 +676,7 @@ func TestNoProfileFileIsNotAProblem(t *testing.T) {
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("check 11 must be ok with no profile file: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"no hay perfil que comparar", "novato"} {
+	for _, want := range []string{"there is no profile to compare", "novato"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the line must say %q, got %q", want, got.Detail)
 		}
@@ -714,7 +714,7 @@ func TestLeftoverPersonaFilesAreNotAProblem(t *testing.T) {
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("check 11 must be ok with leftovers: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlas"} {
+	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "you can delete them"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the line must say %q, got %q", want, got.Detail)
 		}
@@ -731,12 +731,12 @@ func TestAMissingSubagentIsSaid(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	if result.Code != CodeOK {
-		t.Fatalf("un subagente ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("a missing subagent does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"no están", "odachi-worker", "odachi init"} {
+	for _, want := range []string{"are missing in", "odachi-worker", "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Fatalf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 }
@@ -749,12 +749,12 @@ func TestAStaleSubagentIsSaid(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	if result.Code != CodeOK {
-		t.Fatalf("un subagente editado no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("an edited subagent does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"no coinciden con lo generado", "odachi-verify", "odachi init"} {
+	for _, want := range []string{"do not match what was generated", "odachi-verify", "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Fatalf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 }
@@ -768,12 +768,12 @@ func TestAStaleNativeAgentIsSaidAndNotAFailure(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	if result.Code != CodeOK {
-		t.Fatalf("un espejo editado no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("an edited mirror does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"no coincide", ".opencode/agents/odachi.md", "odachi init"} {
+	for _, want := range []string{"do not match what was generated", ".opencode/agents/odachi.md", "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Fatalf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 }
@@ -787,12 +787,12 @@ func TestAMissingNativeAgentIsSaidAndNotAFailure(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	if result.Code != CodeOK {
-		t.Fatalf("un agente ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("a missing agent does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"no está", ".opencode/agents/odachi.md", "odachi init"} {
+	for _, want := range []string{"are missing in", ".opencode/agents/odachi.md", "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Fatalf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 }
@@ -807,12 +807,12 @@ func TestAGlobalDoorThatIsMissingIsSaid(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	if result.Code != CodeOK {
-		t.Fatalf("la puerta ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("a missing door does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"puerta global", "no está", ".config/opencode/agents/odachi.md", "odachi init --global"} {
+	for _, want := range []string{"global door", "is not in", ".config/opencode/agents/odachi.md", "odachi init --global"} {
 		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Fatalf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 }
@@ -825,12 +825,12 @@ func TestAGlobalDoorThatIsStaleIsSaid(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	if result.Code != CodeOK {
-		t.Fatalf("una puerta editada no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("an edited door does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"puerta global", "no coincide", ".config/opencode/agents/odachi.md", "odachi init"} {
+	for _, want := range []string{"global door", "does not match this binary", ".config/opencode/agents/odachi.md", "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Fatalf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 }
@@ -855,19 +855,19 @@ func TestDoctorOnlyChecksTheChosenClient(t *testing.T) {
 		fakeAgentSelection{stored: persona.SelectionOpenCode})
 
 	if result.Code != CodeOK {
-		t.Fatalf("la elección no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("the selection does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("check 11 must be ok with the chosen client complete: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"solo reviso opencode", persona.SelectionPath} {
+	for _, want := range []string{"I only check opencode", persona.SelectionPath} {
 		if !strings.Contains(got.Detail, want) {
-			t.Errorf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 	if strings.Contains(got.Detail, ".claude") {
-		t.Errorf("la línea nombra .claude aunque no estaba elegido: %q", got.Detail)
+		t.Errorf("the line names .claude although it was not the chosen client: %q", got.Detail)
 	}
 }
 
@@ -881,16 +881,16 @@ func TestDoctorNamesTheChosenClientWhenMissing(t *testing.T) {
 		fakeAgentSelection{stored: persona.SelectionOpenCode})
 
 	if result.Code != CodeOK {
-		t.Fatalf("un agente ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("a missing agent does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"no está", ".opencode/agents/odachi.md", "odachi init"} {
+	for _, want := range []string{"are missing in", ".opencode/agents/odachi.md", "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
-			t.Errorf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 	if strings.Contains(got.Detail, ".claude") {
-		t.Errorf("la línea nombra .claude aunque no estaba elegido: %q", got.Detail)
+		t.Errorf("the line names .claude although it was not the chosen client: %q", got.Detail)
 	}
 }
 
@@ -898,10 +898,10 @@ func TestDoctorNamesTheChosenClientWhenMissing(t *testing.T) {
 // persona checks are skipped instead of guessing a client.
 func TestDoctorNamesABrokenSelection(t *testing.T) {
 	result := runSelected(configured(), cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
-		fakeAgentSelection{err: errors.New("agents: TOML inválido")})
+		fakeAgentSelection{err: errors.New("agents: invalid TOML")})
 
 	if result.Code != CodeOK {
-		t.Fatalf("una elección rota no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("a broken selection does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
 	if got.Status != domaindoctor.StatusOK {
@@ -909,11 +909,11 @@ func TestDoctorNamesABrokenSelection(t *testing.T) {
 	}
 	for _, want := range []string{persona.SelectionPath, "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
-			t.Errorf("la línea tiene que decir %q: %q", want, got.Detail)
+			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}
 	}
-	if strings.Contains(got.Detail, "coincide con el bloque") {
-		t.Errorf("la línea revisó los agentes adivinando un cliente: %q", got.Detail)
+	if strings.Contains(got.Detail, "matches the block") {
+		t.Errorf("the line checked the agents by guessing a client: %q", got.Detail)
 	}
 }
 
@@ -926,8 +926,8 @@ func TestAGlobalDoorThatMatchesIsClean(t *testing.T) {
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("check 11 must be ok with a clean home: %s", domaindoctor.Line(got))
 	}
-	if !strings.Contains(got.Detail, "puerta global está al día") {
-		t.Fatalf("la línea no dice que la puerta está al día: %q", got.Detail)
+	if !strings.Contains(got.Detail, "global door is up to date") {
+		t.Fatalf("the line does not say the door is up to date: %q", got.Detail)
 	}
 }
 
@@ -957,7 +957,7 @@ func TestUnreadableFileIsAProblemNotACrash(t *testing.T) {
 		t.Fatalf("must exit 1:\n%s", strings.Join(result.Lines, "\n"))
 	}
 	got := checkOf(t, result, domaindoctor.CheckBrief)
-	if got.Status != domaindoctor.StatusProblem || !strings.Contains(got.Detail, "permiso denegado") {
+	if got.Status != domaindoctor.StatusProblem || !strings.Contains(got.Detail, "permission denied") {
 		t.Fatalf("the permission error must be the line: %s", domaindoctor.Line(got))
 	}
 }
@@ -993,6 +993,6 @@ func TestInstalledSkillsDirIsTheStandardRow(t *testing.T) {
 		t.Fatalf("agent.Resolve(%q): %v", agent.Standard, err)
 	}
 	if installedSkillsDir != row.Dest {
-		t.Fatalf("doctor cuenta %s y init instala en %s", installedSkillsDir, row.Dest)
+		t.Fatalf("doctor counts %s and init installs into %s", installedSkillsDir, row.Dest)
 	}
 }

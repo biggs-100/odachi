@@ -20,7 +20,7 @@ func TestAFileInsideTheSkillsDirectoryIsNotASkill(t *testing.T) {
 	got := skillsapp.Run(skillsapp.Options{Dir: dir, Check: true}, files)
 
 	if got.Code != 0 {
-		t.Fatalf("Code = %d, want 0: un archivo dentro de skills/ no es una skill (líneas %q)", got.Code, got.Lines)
+		t.Fatalf("Code = %d, want 0: a file inside skills/ is not a skill (lines %q)", got.Code, got.Lines)
 	}
 }
 
@@ -32,11 +32,11 @@ func TestAFileInsideTheSkillsDirectoryIsNotListed(t *testing.T) {
 	got := skillsapp.Run(skillsapp.Options{Dir: dir}, files)
 
 	if got.Code != 0 {
-		t.Fatalf("Code = %d, want 0 (líneas %q)", got.Code, got.Lines)
+		t.Fatalf("Code = %d, want 0 (lines %q)", got.Code, got.Lines)
 	}
 	for _, line := range got.Lines {
 		if len(line) > 0 && line[0] == 'e' {
-			t.Fatalf("la lista incluyó un archivo como skill: %q", line)
+			t.Fatalf("the listing included a file as a skill: %q", line)
 		}
 	}
 }

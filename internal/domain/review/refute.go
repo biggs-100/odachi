@@ -74,7 +74,7 @@ func findingID(i int) string {
 func ParseRefutation(data []byte) (Refutation, error) {
 	text := strings.TrimSpace(string(data))
 	if text == "" {
-		return Refutation{}, errors.New("la refutación está vacía: no hay nada que guardar")
+		return Refutation{}, errors.New("the refutation is empty: there is nothing to save")
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(text))
@@ -82,22 +82,22 @@ func ParseRefutation(data []byte) (Refutation, error) {
 
 	var parsed Refutation
 	if err := decoder.Decode(&parsed); err != nil {
-		return Refutation{}, fmt.Errorf("la refutación no es JSON válido: %s", oneLine(err.Error()))
+		return Refutation{}, fmt.Errorf("the refutation is not valid JSON: %s", oneLine(err.Error()))
 	}
 
 	var extra any
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return Refutation{}, errors.New("la refutación no es un solo objeto JSON: contestá solo con la refutación")
+		return Refutation{}, errors.New("the refutation is not a single JSON object: answer with the refutation only")
 	}
 
 	for i, judgment := range parsed.Refutations {
 		if strings.TrimSpace(judgment.ID) == "" {
-			return Refutation{}, fmt.Errorf("la refutación %d no dice id: cada respuesta nombra el finding que juzga", i+1)
+			return Refutation{}, fmt.Errorf("refutation %d does not say id: each answer names the finding it judges", i+1)
 		}
 		switch judgment.Verdict {
 		case Stands, Refuted:
 		default:
-			return Refutation{}, fmt.Errorf("la refutación de %s dice verdict %q; los únicos valores son %q y %q",
+			return Refutation{}, fmt.Errorf("the refutation of %s says verdict %q; the only values are %q and %q",
 				judgment.ID, judgment.Verdict, Stands, Refuted)
 		}
 	}
@@ -133,7 +133,7 @@ func RenderRefutation(r Refutation) []byte {
 // evidence is not a refutation. Doubt always votes for keeping the finding.
 func SealRefutation(r Refutation, findings []Finding, tree string, now time.Time) (Refutation, error) {
 	if strings.TrimSpace(tree) == "" {
-		return Refutation{}, errors.New("no hay árbol: no puedo guardar una refutación que no dice qué refutó")
+		return Refutation{}, errors.New("there is no tree: I cannot save a refutation that does not say what it refuted")
 	}
 
 	blocking := blockingIDs(findings)
@@ -143,15 +143,15 @@ func SealRefutation(r Refutation, findings []Finding, tree string, now time.Time
 		id := strings.TrimSpace(judgment.ID)
 		if _, ok := blocking[id]; !ok {
 			return Refutation{}, fmt.Errorf(
-				"la refutación habla de %s, que no es un BLOCKER ni un CRITICAL causal de este veredicto: el refutador solo puede juzgar los que bloquean", id)
+				"the refutation talks about %s, which is not a causal BLOCKER or CRITICAL of this verdict: the refuter can only judge the ones that block", id)
 		}
 		if _, twice := answered[id]; twice {
-			return Refutation{}, fmt.Errorf("la refutación repite %s: una respuesta por finding", id)
+			return Refutation{}, fmt.Errorf("the refutation repeats %s: one answer per finding", id)
 		}
 		switch judgment.Verdict {
 		case Stands, Refuted:
 		default:
-			return Refutation{}, fmt.Errorf("la refutación de %s dice verdict %q; los únicos valores son %q y %q",
+			return Refutation{}, fmt.Errorf("the refutation of %s says verdict %q; the only values are %q and %q",
 				id, judgment.Verdict, Stands, Refuted)
 		}
 		answered[id] = normalized(judgment, id)
@@ -173,7 +173,7 @@ func SealRefutation(r Refutation, findings []Finding, tree string, now time.Time
 		}
 		judgment, ok := answered[id]
 		if !ok {
-			judgment = Judgment{ID: id, Verdict: Stands, Why: "sin respuesta del refutador: el finding se queda"}
+			judgment = Judgment{ID: id, Verdict: Stands, Why: "no answer from the refuter: the finding stands"}
 		}
 		sealed.Refutations = append(sealed.Refutations, judgment)
 	}
@@ -243,7 +243,7 @@ func DeriveAfter(findings []Finding, r Refutation) string {
 // RefutationName is the file a refutation for one tree lives in.
 func RefutationName(tree string) (string, error) {
 	if !hashLike(tree) {
-		return "", fmt.Errorf("el árbol %q no puede ser el nombre de una refutación: tiene que ser un hash", tree)
+		return "", fmt.Errorf("the tree %q cannot be the name of a refutation: it must be a hash", tree)
 	}
 	return tree + ".refuted.json", nil
 }
@@ -294,49 +294,49 @@ type RefuteInput struct {
 func RefutePrompt(in RefuteInput) string {
 	var out strings.Builder
 
-	out.WriteString("# odachi refutador · árbol " + in.Tree + " · base " + in.Base + "\n\n")
-	out.WriteString("Sos el refutador de este veredicto. Tu trabajo no es aprobar ni rechazar el cambio:\n")
-	out.WriteString("es tirar abajo los findings que no se sostienen, y nada más.\n\n")
+	out.WriteString("# odachi refuter · tree " + in.Tree + " · base " + in.Base + "\n\n")
+	out.WriteString("You are the refuter of this verdict. Your job is not to approve or reject the change:\n")
+	out.WriteString("it is to tear down the findings that do not hold, and nothing else.\n\n")
 
-	out.WriteString("## El veredicto que estás juzgando\n")
-	out.WriteString("- árbol: " + in.Tree + "\n")
+	out.WriteString("## The verdict you are judging\n")
+	out.WriteString("- tree: " + in.Tree + "\n")
 	out.WriteString("- base: " + in.Base + "\n")
 	if strings.TrimSpace(in.Reviewer) != "" {
 		out.WriteString("- reviewer: " + in.Reviewer + "\n")
 	}
 	out.WriteString("\n")
 
-	out.WriteString("## Lo único que podés refutar\n")
+	out.WriteString("## The only thing you can refute\n")
 	blocking := blockingFindings(in.Findings)
 	if len(blocking) == 0 {
-		out.WriteString("(ninguno: este veredicto no tiene BLOCKER ni CRITICAL causal, no hay nada que refutar)\n")
+		out.WriteString("(none: this verdict has no causal BLOCKER or CRITICAL, there is nothing to refute)\n")
 	}
 	for _, entry := range blocking {
 		out.WriteString("### " + entry.id + " · " + where(entry.finding) + " · " + string(entry.finding.Severity) + "\n")
 		out.WriteString(entry.finding.Why + "\n\n")
 	}
 
-	out.WriteString("## El diff (la única evidencia que vale)\n")
+	out.WriteString("## The diff (the only evidence that counts)\n")
 	out.WriteString(section(in.Diff))
 	out.WriteString("\n")
 
-	out.WriteString("## Las tres preguntas, una respuesta por finding\n")
-	out.WriteString("1. ¿Es causal del diff, o ya estaba? Citá la línea del diff que lo muestra.\n")
-	out.WriteString("2. ¿Es un defecto real que afecta al usuario, o una preferencia?\n")
-	out.WriteString("3. ¿La evidencia alcanza para defenderlo ante el autor?\n\n")
+	out.WriteString("## The three questions, one answer per finding\n")
+	out.WriteString("1. Is it causal of the diff, or was it already there? Cite the diff line that shows it.\n")
+	out.WriteString("2. Is it a real defect that affects the user, or a preference?\n")
+	out.WriteString("3. Is the evidence enough to defend it before the author?\n\n")
 
-	out.WriteString("## Cómo se decide\n")
-	out.WriteString("- Sin cita del diff, el finding no se refuta: queda en `" + Stands + "`. La duda no refuta.\n")
-	out.WriteString("- `" + Refuted + "` solo cuando las tres respuestas se sostienen con la cita.\n")
-	out.WriteString("- Ante la duda: `" + Stands + "`. Refutar de más es peor que refutar de menos.\n")
-	out.WriteString("- WARNING y SUGGESTION no se juzgan: no bloquean, y no agregues findings nuevos.\n")
-	out.WriteString("- Las cinco reglas del review siguen valiendo: un defecto real, defendible con evidencia,\n")
-	out.WriteString("  y causal de este candidato. Lo que ya estaba es follow-up.\n\n")
+	out.WriteString("## How it is decided\n")
+	out.WriteString("- Without a citation from the diff, the finding is not refuted: it stays in `" + Stands + "`. Doubt does not refute.\n")
+	out.WriteString("- `" + Refuted + "` only when the three answers hold with the citation.\n")
+	out.WriteString("- When in doubt: `" + Stands + "`. Over-refuting is worse than under-refuting.\n")
+	out.WriteString("- WARNING and SUGGESTION are not judged: they do not block, and do not add new findings.\n")
+	out.WriteString("- The five review rules still hold: a real defect, defensible with evidence,\n")
+	out.WriteString("  and causal of this candidate. What was already there is a follow-up.\n\n")
 
-	out.WriteString("## Qué devolver\n")
-	out.WriteString(`{"refutations":[{"id":"` + firstID(blocking) + `","verdict":"` + Stands + `|` + Refuted + `","why":"<las tres respuestas y la cita del diff>"}]}` + "\n\n")
-	out.WriteString("Un objeto por finding de la lista de arriba, con su id, en el mismo orden.\n")
-	out.WriteString("Contestá solo con el JSON, sin texto alrededor.\n")
+	out.WriteString("## What to return\n")
+	out.WriteString(`{"refutations":[{"id":"` + firstID(blocking) + `","verdict":"` + Stands + `|` + Refuted + `","why":"<the three answers and the citation from the diff>"}]}` + "\n\n")
+	out.WriteString("One object per finding in the list above, with its id, in the same order.\n")
+	out.WriteString("Answer with the JSON only, without text around it.\n")
 
 	return out.String()
 }

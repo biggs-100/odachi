@@ -35,42 +35,42 @@ type questionSpec struct {
 var specs = []questionSpec{
 	{
 		field: fieldOutcome,
-		text:  "¿Qué querés que exista cuando terminemos? (una frase, en tus palabras)",
-		why:   "sin esto no hay nada que construir; y en tus palabras es lo que leés después para saber si vamos bien",
+		text:  "What do you want to exist when we finish? (one sentence, in your own words)",
+		why:   "without this there is nothing to build; and in your own words it is what you read later to know we are on track",
 	},
 	{
 		field:   fieldAudience,
-		text:    "¿Quién lo usa y desde dónde? (1 celular · 2 compu · 3 los dos)",
-		why:     "cambia todo lo que viene después, y es la decisión más cara de cambiar tarde",
+		text:    "Who uses it, and from where? (1 phone · 2 computer · 3 both)",
+		why:     "it changes everything that comes after, and it is the most expensive decision to change late",
 		options: []string{"phone", "cpu", "both"},
 	},
 	{
 		field: fieldDone,
-		text:  "¿Cómo vas a saber que funcionó? (te propongo tres; podés escribir la tuya)",
-		why:   `esto se llama criterio de aceptación: es lo que separa "anda" de "creo que anda"`,
+		text:  "How will you know it worked? (I propose three; you can write your own)",
+		why:   `this is called an acceptance criterion: it separates "it works" from "I think it works"`,
 	},
 	{
 		field:   fieldExclude,
-		text:    "¿Qué NO querés en esta primera versión? (elegí las que quieras)",
-		why:     "es lo que evita 40 cosas a medio hacer; un senior dice no, y acá el cerco lo hace cumplir",
+		text:    "What do you NOT want in this first version? (choose as many as you like)",
+		why:     "it is what prevents 40 half-done things; a senior says no, and here the fence enforces it",
 		options: presetKeys(),
 	},
 	{
 		field:   fieldSensitive,
-		text:    "¿Hay datos sensibles? (1 ninguno · 2 nombres · 3 salud · 4 plata)",
-		why:     "define qué no puede salir del proyecto desde el día uno",
+		text:    "Is there sensitive data? (1 none · 2 names · 3 health · 4 money)",
+		why:     "it defines what cannot leave the project from day one",
 		options: []string{"none", "names", "health", "money"},
 	},
 	{
 		field:   fieldDeadline,
-		text:    "¿Cuánto tiempo tenés para la primera versión usable? (1 hoy · 2 esta semana · 3 sin apuro)",
-		why:     "define cuánto recortamos; un proyecto que no se termina no enseña nada",
+		text:    "How much time do you have for the first usable version? (1 today · 2 this week · 3 no rush)",
+		why:     "it defines how much we cut; a project that never finishes teaches nothing",
 		options: []string{"today", "week", "relaxed"},
 	},
 	{
 		field: fieldLearn,
-		text:  "¿Qué te gustaría aprender en el camino? (elegí una o dos)",
-		why:   "el tutor necesita saber qué explicarte más; esto es lo que te saca de novato",
+		text:  "What would you like to learn along the way? (choose one or two)",
+		why:   "the tutor needs to know what to explain more; this is what takes you past novice",
 	},
 }
 
@@ -81,7 +81,7 @@ func questionSpecs() []questionSpec {
 
 // retryOutcome rejects an empty question 1: the whole project lives in that
 // sentence, so it is never silently accepted.
-const retryOutcome = "la respuesta 1 no puede quedar vacía: es la frase que vas a leer después; escribila de nuevo"
+const retryOutcome = "answer 1 cannot be empty: it is the sentence you will read later; write it again"
 
 // answers is every answer gathered so far. An empty value means "not answered
 // yet"; only the five brief-shaping answers are required.
@@ -152,7 +152,7 @@ func (a answers) decisions() []string {
 		deadlineDecision(a.deadline),
 	}
 	for _, item := range a.learn {
-		out = append(out, "Quiere aprender: "+strings.TrimSuffix(item, ".")+".")
+		out = append(out, "Wants to learn: "+strings.TrimSuffix(item, ".")+".")
 	}
 	return out
 }
@@ -160,57 +160,57 @@ func (a answers) decisions() []string {
 func audienceDecision(audience string) string {
 	switch audience {
 	case "phone":
-		return "Se usa desde el celular."
+		return "It is used from the phone."
 	case "cpu":
-		return "Se usa desde la compu."
+		return "It is used from the computer."
 	default:
-		return "Se usa desde el celular y la compu."
+		return "It is used from the phone and the computer."
 	}
 }
 
 func sensitiveDecision(sensitive string) string {
 	if sensitive == "none" {
-		return "No hay datos sensibles en la primera versión."
+		return "There is no sensitive data in the first version."
 	}
-	return "Datos sensibles: " + sensitiveLabel(sensitive) + "; no salen del proyecto desde el día uno."
+	return "Sensitive data: " + sensitiveLabel(sensitive) + "; it does not leave the project from day one."
 }
 
 func deadlineDecision(deadline string) string {
-	return "Primera versión usable: " + deadlineLabel(deadline) + "."
+	return "First usable version: " + deadlineLabel(deadline) + "."
 }
 
 func audienceLabel(audience string) string {
 	switch audience {
 	case "phone":
-		return "el celular"
+		return "the phone"
 	case "cpu":
-		return "la compu"
+		return "the computer"
 	default:
-		return "el celular y la compu"
+		return "the phone and the computer"
 	}
 }
 
 func sensitiveLabel(sensitive string) string {
 	switch sensitive {
 	case "names":
-		return "nombres"
+		return "names"
 	case "health":
-		return "salud"
+		return "health"
 	case "money":
-		return "plata"
+		return "money"
 	default:
-		return "ninguno"
+		return "none"
 	}
 }
 
 func deadlineLabel(deadline string) string {
 	switch deadline {
 	case "week":
-		return "esta semana"
+		return "this week"
 	case "relaxed":
-		return "sin apuro"
+		return "no rush"
 	default:
-		return "hoy"
+		return "today"
 	}
 }
 
@@ -223,7 +223,7 @@ func answersFromFlags(opts Options) (answers, error) {
 		outcome := strings.TrimSpace(opts.Outcome)
 		if len(slugWords(outcome)) == 0 {
 			return answers{}, fmt.Errorf(
-				`valor inválido para --outcome: %s; escribí una frase con al menos una palabra (por ejemplo odachi start --outcome "lista de turnos")`,
+				`invalid value for --outcome: %s; write a sentence with at least one word (for example odachi start --outcome "appointment list")`,
 				quote(opts.Outcome))
 		}
 		a.outcome = outcome
@@ -233,7 +233,7 @@ func answersFromFlags(opts Options) (answers, error) {
 		normalized, ok := normalizeAudience(opts.Audience)
 		if !ok {
 			return answers{}, fmt.Errorf(
-				"valor inválido para --audience: %s; usá phone, cpu o both (por ejemplo odachi start --audience phone)",
+				"invalid value for --audience: %s; use phone, cpu or both (for example odachi start --audience phone)",
 				quote(opts.Audience))
 		}
 		a.audience = normalized
@@ -252,7 +252,7 @@ func answersFromFlags(opts Options) (answers, error) {
 	for _, item := range exclude {
 		if len(slugWords(item)) == 0 {
 			return answers{}, fmt.Errorf(
-				"valor inválido para --exclude: %s; usá una palabra o una frase con letras (por ejemplo --exclude pagos)",
+				"invalid value for --exclude: %s; use a word or a sentence with letters (for example --exclude payments)",
 				quote(item))
 		}
 	}
@@ -262,7 +262,7 @@ func answersFromFlags(opts Options) (answers, error) {
 		normalized, ok := normalizeSensitive(opts.Sensitive)
 		if !ok {
 			return answers{}, fmt.Errorf(
-				"valor inválido para --sensitive: %s; usá none, names, health o money (por ejemplo odachi start --sensitive none)",
+				"invalid value for --sensitive: %s; use none, names, health or money (for example odachi start --sensitive none)",
 				quote(opts.Sensitive))
 		}
 		a.sensitive = normalized
@@ -272,7 +272,7 @@ func answersFromFlags(opts Options) (answers, error) {
 		normalized, ok := normalizeDeadline(opts.Deadline)
 		if !ok {
 			return answers{}, fmt.Errorf(
-				"valor inválido para --deadline: %s; usá today, week o relaxed (por ejemplo odachi start --deadline today)",
+				"invalid value for --deadline: %s; use today, week or relaxed (for example odachi start --deadline today)",
 				quote(opts.Deadline))
 		}
 		a.deadline = normalized
@@ -308,7 +308,7 @@ func uniqueValues(flagName string, values []string) ([]string, error) {
 		value := strings.TrimSpace(raw)
 		if value == "" {
 			return nil, fmt.Errorf(
-				"valor inválido para %s: está vacío; escribí un valor y volvé a correr odachi start", flagName)
+				"invalid value for %s: it is empty; write a value and run odachi start again", flagName)
 		}
 		key := strings.ToLower(value)
 		if seen[key] {
@@ -400,10 +400,10 @@ func quote(value string) string {
 	return strconv.Quote(value)
 }
 
-// orNone renders an empty optional list as the Spanish "ninguno".
+// orNone renders an empty optional list as "none".
 func orNone(items []string) string {
 	if len(items) == 0 {
-		return "ninguno"
+		return "none"
 	}
 	return strings.Join(items, ", ")
 }

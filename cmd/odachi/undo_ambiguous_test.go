@@ -53,7 +53,7 @@ func TestUndoIsANoOpWhenTheCurrentBytesAreAlreadyTheBackup(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("undo --file brief: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "no hubo cambios") {
+	if !strings.Contains(stdout, "no changes") {
 		t.Fatalf("stdout = %q, want it to say nothing changed", stdout)
 	}
 }

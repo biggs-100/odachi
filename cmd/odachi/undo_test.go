@@ -110,7 +110,7 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("undo --list: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, briefRel+" · 1 backup · último ") {
+	if !strings.Contains(stdout, briefRel+" · 1 backup · last ") {
 		t.Errorf("--list = %q, want a line for %s with its count and date", stdout, briefRel)
 	}
 	for _, path := range backupsOf(t, dir, briefRel) {
@@ -123,7 +123,7 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("undo --file brief: exit %d, stderr=%s", code, stderr)
 	}
-	if want := "restauré " + briefRel + " desde " + before[0] + "; lo que había quedado en "; !strings.Contains(stdout, want) {
+	if want := "restored " + briefRel + " from " + before[0] + "; what was there was left in "; !strings.Contains(stdout, want) {
 		t.Errorf("stdout = %q, want it to say %q", stdout, want)
 	}
 	if !strings.Contains(stdout, "git revert <sha>") {
@@ -159,7 +159,7 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second undo: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "restauré "+briefRel+" desde "+handBackup) {
+	if !strings.Contains(stdout, "restored "+briefRel+" from "+handBackup) {
 		t.Errorf("stdout = %q, want the undo of the undo to start from %s", stdout, handBackup)
 	}
 	if got := readRel(t, dir, briefRel); got != hand {
@@ -191,7 +191,7 @@ func TestUndoCollectMovesLegacyBackups(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("undo --collect: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "moví 1 backups") {
+	if !strings.Contains(stdout, "moved 1 backups") {
 		t.Errorf("stdout = %q, want the count", stdout)
 	}
 	if got := readRel(t, dir, storeRel); got != legacy {
@@ -205,7 +205,7 @@ func TestUndoCollectMovesLegacyBackups(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second undo --collect: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "no hay backups viejos") {
+	if !strings.Contains(stdout, "there are no old backups to move") {
 		t.Errorf("second collect = %q, want a no-op", stdout)
 	}
 }

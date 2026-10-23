@@ -63,7 +63,7 @@ func Run(opts Options, files Files) Result {
 	}
 	if len(docs) == 0 {
 		// A project with nothing built yet is a fact, not a failure.
-		return Result{Code: CodeOK, Message: "todavía no hay features: corré odachi start para crear la primera"}
+		return Result{Code: CodeOK, Message: "no features yet: run odachi start to create the first one"}
 	}
 
 	lines := make([]string, 0, len(docs)*4+2)
@@ -80,23 +80,23 @@ func Run(opts Options, files Files) Result {
 		totalSteps += steps
 		totalOpen += open
 
-		lines = append(lines, fmt.Sprintf("%04d-%s · pasos: %d de %d · %s",
-			doc.Number, doc.Slug, done, steps, plural(open, "pregunta abierta", "preguntas abiertas")))
+		lines = append(lines, fmt.Sprintf("%04d-%s · steps: %d of %d · %s",
+			doc.Number, doc.Slug, done, steps, plural(open, "open question", "open questions")))
 		lines = append(lines, "  "+requirementLine(doc.Doc))
-		lines = append(lines, "  historial:")
+		lines = append(lines, "  history:")
 
 		history := tail(doc.Doc.History, historyWindow)
 		if len(history) == 0 {
-			lines = append(lines, "    (todavía no hay líneas)")
+			lines = append(lines, "    (no lines yet)")
 		}
 		for _, line := range history {
 			lines = append(lines, "    "+line)
 		}
 	}
 
-	totals := fmt.Sprintf("total: %s · %d pasos hechos de %d · %s",
+	totals := fmt.Sprintf("total: %s · %d steps done of %d · %s",
 		plural(len(docs), "feature", "features"), totalDone, totalSteps,
-		plural(totalOpen, "pregunta abierta", "preguntas abiertas"))
+		plural(totalOpen, "open question", "open questions"))
 	lines = append(lines, "", totals)
 
 	return Result{Code: CodeOK, Message: totals, Lines: lines}
@@ -114,7 +114,7 @@ func requirementLine(doc taskdoc.TaskDoc) string {
 		first := doc.Requirements[0]
 		return first.ID + ` · "` + first.Text + `"`
 	}
-	return firstRequirement + " · (todavía no hay requisito)"
+	return firstRequirement + " · (no requirement yet)"
 }
 
 // tail returns the last n lines of the history.
@@ -125,7 +125,7 @@ func tail(lines []string, n int) []string {
 	return lines[len(lines)-n:]
 }
 
-// plural renders "1 pregunta abierta" and "2 preguntas abiertas".
+// plural renders "1 open question" and "2 open questions".
 func plural(n int, singular, many string) string {
 	if n == 1 {
 		return "1 " + singular

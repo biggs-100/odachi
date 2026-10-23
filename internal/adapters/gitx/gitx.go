@@ -174,7 +174,7 @@ func worktreeFile(root, name string) ([]byte, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("gitx: no se pudo leer %s: %w", name, err)
+		return nil, fmt.Errorf("gitx: could not read %s: %w", name, err)
 	}
 	return data, nil
 }

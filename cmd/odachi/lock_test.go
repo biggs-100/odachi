@@ -131,9 +131,9 @@ func TestALiveLockRefusesAndIsNeverDeleted(t *testing.T) {
 		t.Fatal("second Acquire held a lock another run is holding")
 	}
 	for _, want := range []string{
-		"otra corrida de odachi está escribiendo en este proyecto",
+		"another odachi run is writing to this project",
 		"start, pid " + strconv.Itoa(os.Getpid()),
-		"hace ",
+		" ago",
 		lockRel,
 	} {
 		if !strings.Contains(line, want) {
@@ -179,7 +179,7 @@ func TestAStaleLockIsTakenOver(t *testing.T) {
 	if !held {
 		t.Fatalf("Acquire held = false on an abandoned lock (line: %q)", line)
 	}
-	for _, want := range []string{"había un lock viejo de start", "lo tomé"} {
+	for _, want := range []string{"there was an old lock from start", "I took it"} {
 		if !strings.Contains(line, want) {
 			t.Errorf("announcement = %q, want it to contain %q", line, want)
 		}
@@ -215,7 +215,7 @@ func TestAnUnreadableLockIsJudgedByItsAge(t *testing.T) {
 	if held {
 		t.Fatal("Acquire took a fresh lock it could not read")
 	}
-	for _, want := range []string{"otra corrida de odachi está escribiendo en este proyecto", "no pude leer " + lockRel, "hace "} {
+	for _, want := range []string{"another odachi run is writing to this project", "could not read " + lockRel, " ago"} {
 		if !strings.Contains(line, want) {
 			t.Errorf("refusal = %q, want it to contain %q", line, want)
 		}
@@ -234,7 +234,7 @@ func TestAnUnreadableLockIsJudgedByItsAge(t *testing.T) {
 	if !held {
 		t.Fatalf("Acquire held = false on an old lock with unexpected content (line: %q)", line)
 	}
-	for _, want := range []string{"había un lock viejo", lockRel, "lo tomé"} {
+	for _, want := range []string{"there was an old lock", lockRel, "I took it"} {
 		if !strings.Contains(line, want) {
 			t.Errorf("announcement = %q, want it to contain %q", line, want)
 		}
@@ -313,9 +313,9 @@ func TestStartIsRefusedByALiveLockAndTouchesNothing(t *testing.T) {
 		t.Fatalf("second start: exit %d, want 1 (stdout=%s stderr=%s)", code, stdout, stderr)
 	}
 	for _, want := range []string{
-		"otra corrida de odachi está escribiendo en este proyecto",
+		"another odachi run is writing to this project",
 		"start, pid 4242",
-		"hace ",
+		" ago",
 		lockRel,
 	} {
 		if !strings.Contains(stderr, want) {
@@ -341,7 +341,7 @@ func TestStartIsRefusedByALiveLockAndTouchesNothing(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("start --json: exit %d, want 1 (stdout=%s)", code, stdout)
 	}
-	if !strings.Contains(stdout, "otra corrida de odachi está escribiendo en este proyecto") {
+	if !strings.Contains(stdout, "another odachi run is writing to this project") {
 		t.Errorf("--json = %q, want the same refusal", stdout)
 	}
 }
@@ -366,7 +366,7 @@ func TestAnOldLockIsTakenOverEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("start with an old lock: exit %d, stderr=%s", code, stderr)
 	}
-	for _, want := range []string{"había un lock viejo de start", "lo tomé"} {
+	for _, want := range []string{"there was an old lock from start", "I took it"} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("stdout = %q, want it to contain %q", stdout, want)
 		}

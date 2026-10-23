@@ -189,7 +189,7 @@ func TestInitRerunWritesNothing(t *testing.T) {
 	if afterHome := homeTree(t, home); strings.Join(beforeHome, ",") != strings.Join(afterHome, ",") {
 		t.Errorf("el segundo init tocó el home: before %v after %v", beforeHome, afterHome)
 	}
-	if !strings.Contains(out, "sin cambios") {
+	if !strings.Contains(out, "unchanged") {
 		t.Errorf("la salida no dice que no cambió nada:\n%s", out)
 	}
 }
@@ -208,7 +208,7 @@ func TestInitReportsAndKeepsTheLegacyPersonaFiles(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
 
-	for _, want := range []string{"v0.10.0", ".opencode/agents", "AGENTS.md", "borralas"} {
+	for _, want := range []string{"v0.10.0", ".opencode/agents", "AGENTS.md", "delete them"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("la salida no dice %q:\n%s", want, out)
 		}

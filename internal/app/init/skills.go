@@ -71,20 +71,20 @@ func (r *runner) installSkills() {
 		r.skillBlocked = report.Blocked
 		r.skillNext = report.Next
 		r.skillFatal = report.Fatal
-		r.lines = append(r.lines, "pendiente: "+report.Blocked)
+		r.lines = append(r.lines, "pending: "+report.Blocked)
 	}
 }
 
 // skillLine is one destination in one line: what arrived and what was already
-// there. A rerun says `sin cambios` instead of claiming work it did not do. A
+// there. A rerun says `unchanged` instead of claiming work it did not do. A
 // destination that got nothing and had nothing is not worth a line.
 func skillLine(dest SkillDest) string {
 	parts := make([]string, 0, 2)
 	if dest.Installed > 0 {
-		parts = append(parts, count(dest.Installed, "skill instalada", "skills instaladas"))
+		parts = append(parts, count(dest.Installed, "installed skill", "installed skills"))
 	}
 	if dest.Unchanged > 0 {
-		parts = append(parts, count(dest.Unchanged, "sin cambios", "sin cambios"))
+		parts = append(parts, count(dest.Unchanged, "unchanged", "unchanged"))
 	}
 	if len(parts) == 0 {
 		return ""
@@ -92,7 +92,7 @@ func skillLine(dest SkillDest) string {
 	return dest.Label + ": " + strings.Join(parts, ", ")
 }
 
-// count renders "1 skill instalada" and "8 skills instaladas".
+// count renders "1 installed skill" and "8 installed skills".
 func count(n int, one, many string) string {
 	if n == 1 {
 		return "1 " + one

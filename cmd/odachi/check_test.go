@@ -79,7 +79,7 @@ func TestCheckWithoutProofIsBlocked(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(errOut, "falta la prueba") {
+	if !strings.Contains(errOut, "the proof for this change is missing") {
 		t.Errorf("stderr %q does not say the proof is missing", errOut)
 	}
 	if !strings.Contains(errOut, "odachi check --proof") {
@@ -99,10 +99,10 @@ func TestCheckRunWritesTheProof(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(out, "listo: hay prueba para este árbol") {
+	if !strings.Contains(out, "ready: there is proof for this tree") {
 		t.Errorf("stdout %q does not report the gate as ready", out)
 	}
-	if !strings.Contains(out, "prueba: proof/0001-turnos.txt") {
+	if !strings.Contains(out, "proof: proof/0001-turnos.txt") {
 		t.Errorf("stdout %q does not name the proof file", out)
 	}
 
@@ -162,7 +162,7 @@ func TestFailingRunExitsOneAndQuotesTheLastLine(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1: check returns the gate's code, not the command's (stderr: %q)", code, errOut)
 	}
-	if !strings.Contains(errOut, "la prueba falló: boom") {
+	if !strings.Contains(errOut, "the proof failed: boom") {
 		t.Errorf("stderr %q does not quote the last line", errOut)
 	}
 	if !strings.Contains(errOut, `odachi check --run "echo boom && exit 3"`) {
@@ -246,7 +246,7 @@ func TestQuietStillPrintsTheBlock(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
 	}
-	if !strings.Contains(errOut, "falta la prueba") {
+	if !strings.Contains(errOut, "the proof for this change is missing") {
 		t.Errorf("stderr %q is silent about the block", errOut)
 	}
 }
@@ -268,7 +268,7 @@ func TestForbiddenPathNeedsADecision(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("code = %d, want 2 (stderr: %q)", code, errOut)
 	}
-	if !strings.Contains(errOut, "fuera de alcance") || !strings.Contains(errOut, "pagos") {
+	if !strings.Contains(errOut, "out of scope") || !strings.Contains(errOut, "pagos") {
 		t.Errorf("stderr %q does not report the fence violation", errOut)
 	}
 }
@@ -284,10 +284,10 @@ func TestNoCommitAndEmptyBaseDoNotFail(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("no commit: code = %d, want 1 (stderr: %q)", code, errOut)
 	}
-	if strings.Contains(errOut, "no pude leer el árbol") || strings.Contains(errOut, "no pude comparar el cerco") {
+	if strings.Contains(errOut, "could not read the git tree") || strings.Contains(errOut, "could not compare the fence") {
 		t.Errorf("no commit: stderr %q reports a git failure", errOut)
 	}
-	if !strings.Contains(errOut, "falta la prueba") {
+	if !strings.Contains(errOut, "the proof for this change is missing") {
 		t.Errorf("no commit: stderr %q does not reach the proof gate", errOut)
 	}
 
@@ -295,7 +295,7 @@ func TestNoCommitAndEmptyBaseDoNotFail(t *testing.T) {
 	if code != 1 {
 		t.Fatalf(`--base "": code = %d, want 1 (stderr: %q)`, code, errOut)
 	}
-	if strings.Contains(errOut, "no pude comparar el cerco") {
+	if strings.Contains(errOut, "could not compare the fence") {
 		t.Errorf(`--base "": stderr %q reports a git failure`, errOut)
 	}
 }

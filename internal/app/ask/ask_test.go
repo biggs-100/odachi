@@ -40,7 +40,7 @@ func (f *fakeFiles) List(dir string) ([]string, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	return data, nil
 }
@@ -55,7 +55,7 @@ func (f *fakeFiles) content(t *testing.T, path string) string {
 	t.Helper()
 	data, ok := f.files[path]
 	if !ok {
-		t.Fatalf("%q no existe; archivos: %v", path, f.paths())
+		t.Fatalf("%q does not exist; files: %v", path, f.paths())
 	}
 	return string(data)
 }
@@ -359,7 +359,7 @@ func TestBareAskNeedsAHuman(t *testing.T) {
 	if res.Code != ask.CodeNeedsAnswer {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, ask.CodeNeedsAnswer, res.Message)
 	}
-	if !strings.Contains(res.Message, `odachi ask "<pregunta>"`) {
+	if !strings.Contains(res.Message, `odachi ask "<question>"`) {
 		t.Errorf("message %q does not show the shape of the command", res.Message)
 	}
 }
@@ -370,7 +370,7 @@ func TestMixedFormsAreBlocked(t *testing.T) {
 
 	res := ask.Run(ask.Options{Dir: "raiz", Question: "¿Y esto?", Answer: "Sí", Craft: "x", Because: "y"}, files)
 
-	if message := assertBlocked(t, res); !strings.Contains(message, "una sola forma") {
+	if message := assertBlocked(t, res); !strings.Contains(message, "one form") {
 		t.Errorf("message %q does not explain that one call records one thing", message)
 	}
 	if len(files.wrote) != 0 {
@@ -388,7 +388,7 @@ func TestADocumentOutsideTheCanonicalShapeIsNotRewritten(t *testing.T) {
 	res := ask.Run(ask.Options{Dir: "raiz", Question: "¿Se pueden cancelar?"}, files)
 
 	message := assertBlocked(t, res)
-	if !strings.Contains(message, "## Historial") {
+	if !strings.Contains(message, "## History") {
 		t.Errorf("message %q does not say where the notes belong", message)
 	}
 	if got := files.content(t, taskPath); got != handwritten {

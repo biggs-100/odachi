@@ -73,11 +73,11 @@ func TestBlockForNovatoIsPinnedByteForByte(t *testing.T) {
 
 	got := linesOf(block)
 	if len(got) != len(want) {
-		t.Fatalf("el bloque tiene %d líneas, se esperaban %d:\n%s", len(got), len(want), block)
+		t.Fatalf("the block has %d lines, want %d:\n%s", len(got), len(want), block)
 	}
 	for i := range want {
 		if got[i] != want[i] {
-			t.Fatalf("línea %d del bloque:\n got: %q\nwant: %q", i+1, got[i], want[i])
+			t.Fatalf("line %d of the block:\n got: %q\nwant: %q", i+1, got[i], want[i])
 		}
 	}
 }
@@ -97,37 +97,37 @@ func TestTheTwoVoicesDifferOnlyInTheVoiceSection(t *testing.T) {
 	}
 
 	if novato == senior {
-		t.Fatalf("las dos voces producen el mismo bloque")
+		t.Fatalf("both voices produce the same block")
 	}
 
 	// Everything up to and including the heading is the template, and it is the
 	// same bytes for both.
 	head := strings.Index(novato, rules.Section) + len(rules.Section)
 	if head < len(rules.Section) {
-		t.Fatalf("el bloque no tiene la sección %q", rules.Section)
+		t.Fatalf("the block has no %q section", rules.Section)
 	}
 	if novato[:head] != senior[:head] {
-		t.Fatalf("el bloque cambia antes de la sección de voz:\nnovato: %q\nsenior: %q", novato[:head], senior[:head])
+		t.Fatalf("the block changes before the voice section:\nnovato: %q\nsenior: %q", novato[:head], senior[:head])
 	}
 
 	novatoBody, ok := rules.VoiceIn(novato)
 	if !ok {
-		t.Fatalf("la sección de voz no se deja leer:\n%s", novato)
+		t.Fatalf("the voice section cannot be read:\n%s", novato)
 	}
 	seniorBody, ok := rules.VoiceIn(senior)
 	if !ok {
-		t.Fatalf("la sección de voz no se deja leer:\n%s", senior)
+		t.Fatalf("the voice section cannot be read:\n%s", senior)
 	}
 	wantNovato, _ := persona.Voice(persona.Novato)
 	wantSenior, _ := persona.Voice(persona.Senior)
 	if novatoBody != strings.TrimSpace(wantNovato) {
-		t.Errorf("la voz del bloque novato no es la de la persona:\n%q\nvs\n%q", novatoBody, wantNovato)
+		t.Errorf("the novato voice of the block is not the persona's:\n%q\nvs\n%q", novatoBody, wantNovato)
 	}
 	if seniorBody != strings.TrimSpace(wantSenior) {
-		t.Errorf("la voz del bloque senior no es la de la persona:\n%q\nvs\n%q", seniorBody, wantSenior)
+		t.Errorf("the senior voice of the block is not the persona's:\n%q\nvs\n%q", seniorBody, wantSenior)
 	}
 	if strings.Contains(seniorBody, "You are the tutor") {
-		t.Errorf("la voz senior repite la del tutor:\n%s", seniorBody)
+		t.Errorf("the senior voice repeats the tutor's:\n%s", seniorBody)
 	}
 }
 
@@ -143,18 +143,18 @@ func TestCIUsesTheSeniorVoice(t *testing.T) {
 		t.Fatalf("Block(senior): %v", err)
 	}
 	if ci != senior {
-		t.Errorf("el bloque de ci no es el de senior:\n%s", ci)
+		t.Errorf("the ci block is not the senior one:\n%s", ci)
 	}
 }
 
 // TestUnknownVoiceIsRefused: nothing is guessed for a name that is not a voice.
 func TestUnknownVoiceIsRefused(t *testing.T) {
 	if _, err := rules.Block("principiante"); err == nil {
-		t.Fatalf("Block(principiante) devolvió un bloque")
+		t.Fatalf("Block(principiante) returned a block")
 	} else {
 		for _, want := range []string{"principiante", persona.Novato, persona.Senior} {
 			if !strings.Contains(err.Error(), want) {
-				t.Errorf("el error no nombra %q: %v", want, err)
+				t.Errorf("the error does not name %q: %v", want, err)
 			}
 		}
 	}
@@ -180,14 +180,14 @@ func TestBlockSaysWhatOdachiIsAndWhereTheVoiceComesFrom(t *testing.T) {
 		"`.agents/skills/` for the craft",
 	} {
 		if !strings.Contains(flat, want) {
-			t.Errorf("el bloque no dice %q:\n%s", want, block)
+			t.Errorf("the block does not say %q:\n%s", want, block)
 		}
 	}
 
 	// The profile file is read by the binary only; that contract is not the
 	// block's to publish.
 	if strings.Contains(block, ".odachi/profile.toml") {
-		t.Errorf("el bloque manda al agente al archivo de perfil:\n%s", block)
+		t.Errorf("the block sends the agent to the profile file:\n%s", block)
 	}
 }
 
@@ -205,7 +205,7 @@ func TestBlockDoesNotAskTheAgentToGuessTheVoice(t *testing.T) {
 		"¿preferís que te explique el porqué o que vaya al hueso?",
 	} {
 		if strings.Contains(block, unwanted) {
-			t.Errorf("el bloque todavía le pide al agente que adivine el nivel (%q):\n%s", unwanted, block)
+			t.Errorf("the block still asks the agent to guess the level (%q):\n%s", unwanted, block)
 		}
 	}
 
@@ -217,7 +217,7 @@ func TestBlockDoesNotAskTheAgentToGuessTheVoice(t *testing.T) {
 		}
 	}
 	if len(headings) == 0 || headings[len(headings)-1] != rules.Section {
-		t.Errorf("la voz tiene que ser la última sección del bloque, encabezados: %v", headings)
+		t.Errorf("the voice must be the block's last section, headings: %v", headings)
 	}
 }
 
@@ -238,7 +238,7 @@ func TestWithBlockReplacesInPlaceAndKeepsTheRest(t *testing.T) {
 		t.Fatalf("Block(senior): %v", err)
 	}
 	if got != "# mío\n\n"+senior+"\nmás mío\n" {
-		t.Errorf("el bloque no se reemplazó en su lugar:\n%q", got)
+		t.Errorf("the block was not replaced in place:\n%q", got)
 	}
 
 	// A file with no block gains one at the end, after one blank line.
@@ -247,7 +247,7 @@ func TestWithBlockReplacesInPlaceAndKeepsTheRest(t *testing.T) {
 		t.Fatalf("WithBlock: %v", err)
 	}
 	if appended != "# mío\n\n"+block {
-		t.Errorf("el bloque no se agregó al final:\n%q", appended)
+		t.Errorf("the block was not appended at the end:\n%q", appended)
 	}
 
 	// A truncated block is repaired instead of duplicated.
@@ -256,7 +256,7 @@ func TestWithBlockReplacesInPlaceAndKeepsTheRest(t *testing.T) {
 		t.Fatalf("WithBlock: %v", err)
 	}
 	if truncated != "antes\n"+block {
-		t.Errorf("el bloque truncado no se reparó:\n%q", truncated)
+		t.Errorf("the truncated block was not repaired:\n%q", truncated)
 	}
 }
 
@@ -274,14 +274,14 @@ func TestWithVoiceRewritesOnlyTheSection(t *testing.T) {
 		t.Fatalf("WithVoice: %v", err)
 	}
 	if !changed {
-		t.Fatalf("WithVoice dijo que no cambió nada")
+		t.Fatalf("WithVoice said nothing changed")
 	}
 	senior, err := rules.Block(persona.Senior)
 	if err != nil {
 		t.Fatalf("Block(senior): %v", err)
 	}
 	if got != "mío arriba\n\n"+senior+"\nmío abajo\n" {
-		t.Errorf("una sola sección cambiaba y cambió más:\n%q", got)
+		t.Errorf("only one section changed and more changed:\n%q", got)
 	}
 
 	// Identical bytes are never a change, so a rerun writes nothing.
@@ -290,7 +290,7 @@ func TestWithVoiceRewritesOnlyTheSection(t *testing.T) {
 		t.Fatalf("WithVoice: %v", err)
 	}
 	if changed || again != got {
-		t.Errorf("WithVoice reescribió una voz idéntica")
+		t.Errorf("WithVoice rewrote an identical voice")
 	}
 }
 
@@ -304,13 +304,13 @@ func TestWithVoiceAddsTheSectionToAnOldBlock(t *testing.T) {
 		t.Fatalf("WithVoice: %v", err)
 	}
 	if !changed {
-		t.Fatalf("WithVoice no agregó la sección")
+		t.Fatalf("WithVoice did not add the section")
 	}
 
 	want := "mío\n\n<!-- odachi:begin -->\n# Reglas del proyecto (odachi)\n\nreglas viejas\n\n" +
 		rules.Section + "\n\n" + mustVoice(t, persona.Senior) + "<!-- odachi:end -->\n"
 	if got != want {
-		t.Errorf("la sección no se agregó al final del bloque:\n got %q\nwant %q", got, want)
+		t.Errorf("the section was not added at the end of the block:\n got %q\nwant %q", got, want)
 	}
 
 	// A file with no block is not level's to invent.
@@ -319,16 +319,16 @@ func TestWithVoiceAddsTheSectionToAnOldBlock(t *testing.T) {
 		t.Fatalf("WithVoice: %v", err)
 	}
 	if changed || untouched != "solo mío\n" {
-		t.Errorf("WithVoice escribió en un archivo sin bloque: %q", untouched)
+		t.Errorf("WithVoice wrote to a file without a block: %q", untouched)
 	}
 	if !rules.HasBlock(old) {
-		t.Errorf("HasBlock no reconoció un bloque completo")
+		t.Errorf("HasBlock did not recognize a complete block")
 	}
 	if rules.HasBlock("solo mío\n") {
-		t.Errorf("HasBlock dijo que sí a un archivo sin bloque")
+		t.Errorf("HasBlock said yes to a file without a block")
 	}
 	if _, ok := rules.VoiceIn(old); ok {
-		t.Errorf("VoiceIn inventó una voz para un bloque sin sección")
+		t.Errorf("VoiceIn invented a voice for a block without a section")
 	}
 }
 
@@ -345,29 +345,29 @@ func TestBodyIsTheBlockWithoutItsMarkers(t *testing.T) {
 	}
 
 	if strings.Contains(body, rules.Begin) || strings.Contains(body, rules.End) {
-		t.Errorf("el cuerpo del bloque lleva los marcadores:\n%s", body)
+		t.Errorf("the block body carries the markers:\n%s", body)
 	}
 	if strings.HasPrefix(body, "\n") {
-		t.Errorf("el cuerpo arranca con un salto de línea: %q", body[:10])
+		t.Errorf("the body starts with a newline: %q", body[:10])
 	}
 	if !strings.HasSuffix(body, "\n") || strings.HasSuffix(body, "\n\n") {
-		t.Errorf("el cuerpo no termina en exactamente un salto de línea: %q", body[len(body)-10:])
+		t.Errorf("the body does not end in exactly one newline: %q", body[len(body)-10:])
 	}
 	want := rules.Begin + "\n" + body + rules.End + "\n"
 	if block != want {
-		t.Errorf("Block no es Begin + Body + End:\n%q\nvs\n%q", block, want)
+		t.Errorf("Block is not Begin + Body + End:\n%q\nvs\n%q", block, want)
 	}
 
 	got, ok := rules.BodyIn(block)
 	if !ok {
-		t.Fatalf("BodyIn no reconoció el bloque")
+		t.Fatalf("BodyIn did not recognize the block")
 	}
 	if got != body {
-		t.Errorf("BodyIn no devuelve el cuerpo:\n%q\nvs\n%q", got, body)
+		t.Errorf("BodyIn does not return the body:\n%q\nvs\n%q", got, body)
 	}
 	for _, content := range []string{"", "sin bloque\n", rules.Begin + "\ntruncado\n"} {
 		if _, ok := rules.BodyIn(content); ok {
-			t.Errorf("BodyIn inventó un cuerpo para %q", content)
+			t.Errorf("BodyIn invented a body for %q", content)
 		}
 	}
 }

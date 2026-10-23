@@ -38,7 +38,7 @@ func TestPromptWritesNothingWhenTheRepositoryIgnoresTheStore(t *testing.T) {
 // fallback is the per-directory ignore file, written before the hash, as before.
 func TestStoreFallsBackToItsOwnIgnoreFileWhenTheProbeFails(t *testing.T) {
 	p := newProject()
-	p.git.ignoredErr = errors.New("git no está instalado")
+	p.git.ignoredErr = errors.New("git is not installed")
 	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","findings":[]}`)
 
 	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})

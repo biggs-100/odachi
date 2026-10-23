@@ -37,7 +37,7 @@ const (
 	// IgnoreContent ignores everything in Dir except the ignore file itself,
 	// which is versioned: the rule that keeps verdicts out of the tree travels
 	// with the project instead of living inside the tool.
-	IgnoreContent = "# odachi: un veredicto por árbol y se generan; no se versionan\n*\n!.gitignore\n"
+	IgnoreContent = "# odachi: one verdict per tree and they are generated; they are not versioned\n*\n!.gitignore\n"
 )
 
 // NoFindings is the canonical empty answer. A reviewer with nothing to report
@@ -147,7 +147,7 @@ func Blocking(findings []Finding) (Finding, bool) {
 func Parse(data []byte) (Verdict, error) {
 	text := strings.TrimSpace(string(data))
 	if text == "" {
-		return Verdict{}, errors.New("el veredicto está vacío: no hay nada que guardar")
+		return Verdict{}, errors.New("the verdict is empty: there is nothing to save")
 	}
 	if text == NoFindings {
 		return Verdict{Findings: []Finding{}}, nil
@@ -158,14 +158,14 @@ func Parse(data []byte) (Verdict, error) {
 
 	var parsed Verdict
 	if err := decoder.Decode(&parsed); err != nil {
-		return Verdict{}, fmt.Errorf("el veredicto no es JSON válido: %s", oneLine(err.Error()))
+		return Verdict{}, fmt.Errorf("the verdict is not valid JSON: %s", oneLine(err.Error()))
 	}
 
 	// Anything after the first object — a second verdict, a commentary
 	// paragraph — means the answer was not only the JSON it was asked for.
 	var extra any
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return Verdict{}, errors.New("el veredicto no es un solo objeto JSON: contestá solo con el veredicto")
+		return Verdict{}, errors.New("the verdict is not a single JSON object: answer with the verdict only")
 	}
 
 	if parsed.Findings == nil {
@@ -200,25 +200,25 @@ func Render(v Verdict) []byte {
 // verdict leaves no file behind.
 func (v Verdict) Validate() error {
 	if strings.TrimSpace(v.Reviewer) == "" {
-		return errors.New(`el veredicto no dice reviewer: agregá quién revisó ("reviewer": "<el comando o tu nombre>")`)
+		return errors.New(`the verdict does not say reviewer: add who reviewed it ("reviewer": "<the command or your name>")`)
 	}
 
 	if trimmed := strings.TrimSpace(v.At); trimmed != "" {
 		if _, err := time.Parse(time.RFC3339, trimmed); err != nil {
-			return fmt.Errorf("el veredicto dice at %q, que no es RFC3339: usá por ejemplo 2026-10-21T20:31:00Z", trimmed)
+			return fmt.Errorf("the verdict says at %q, which is not RFC3339: use for example 2026-10-21T20:31:00Z", trimmed)
 		}
 	}
 
 	switch strings.TrimSpace(v.Verdict) {
 	case "", Approved, ChangesRequested:
 	default:
-		return fmt.Errorf(`el veredicto dice verdict %q; los únicos valores son %q y %q (y el veredicto se deriva de los findings)`,
+		return fmt.Errorf(`the verdict says verdict %q; the only values are %q and %q (and the verdict is derived from the findings)`,
 			v.Verdict, Approved, ChangesRequested)
 	}
 
 	for _, lens := range v.Lenses {
 		if !IsLens(lens) {
-			return fmt.Errorf("el veredicto dice que cubrió la lente %q; las lentes son %s",
+			return fmt.Errorf("the verdict says it covered the lens %q; the lenses are %s",
 				lens, strings.Join(order, ", "))
 		}
 	}
@@ -229,25 +229,25 @@ func (v Verdict) Validate() error {
 	if declared := strings.TrimSpace(v.Verdict); declared != "" {
 		if derived := Derive(v.Findings); declared != derived {
 			return fmt.Errorf(
-				"el veredicto dice %q pero la regla deriva %q: un finding causal BLOCKER o CRITICAL pide cambios, y sin ellos no hay bloqueo",
+				"the verdict says %q but the rule derives %q: a causal BLOCKER or CRITICAL finding requests changes, and without them there is no block",
 				declared, derived)
 		}
 	}
 
 	for i, finding := range v.Findings {
 		if strings.TrimSpace(finding.Path) == "" {
-			return fmt.Errorf("el finding %d no dice path: sin el archivo no se puede arreglar", i+1)
+			return fmt.Errorf("finding %d does not say path: without the file it cannot be fixed", i+1)
 		}
 		if !finding.Severity.Valid() {
-			return fmt.Errorf("el finding %d (%s) dice severity %q; el vocabulario es BLOCKER, CRITICAL, WARNING, SUGGESTION",
+			return fmt.Errorf("finding %d (%s) says severity %q; the vocabulary is BLOCKER, CRITICAL, WARNING, SUGGESTION",
 				i+1, finding.Path, string(finding.Severity))
 		}
 		if finding.Line < 0 {
-			return fmt.Errorf("el finding %d (%s) dice line %d; usá 0 para todo el archivo o el número de línea",
+			return fmt.Errorf("finding %d (%s) says line %d; use 0 for the whole file or the line number",
 				i+1, finding.Path, finding.Line)
 		}
 		if strings.TrimSpace(finding.Why) == "" {
-			return fmt.Errorf("el finding %d (%s) no dice why: un finding sin evidencia es una opinión", i+1, finding.Path)
+			return fmt.Errorf("finding %d (%s) does not say why: a finding without evidence is an opinion", i+1, finding.Path)
 		}
 	}
 
@@ -262,7 +262,7 @@ func (v Verdict) Validate() error {
 // be wrong is already refused by Validate, before anything is written.
 func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 	if strings.TrimSpace(tree) == "" {
-		return Verdict{}, errors.New("no hay árbol: no puedo guardar un veredicto que no dice qué revisó")
+		return Verdict{}, errors.New("there is no tree: I cannot save a verdict that does not say what it reviewed")
 	}
 	if err := v.Validate(); err != nil {
 		return Verdict{}, err
@@ -270,7 +270,7 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 
 	if declared := strings.TrimSpace(v.Tree); declared != "" && declared != tree {
 		return Verdict{}, fmt.Errorf(
-			"el veredicto es de otro árbol (%s) y este árbol es %s: un veredicto no se mueve de árbol", declared, tree)
+			"the verdict is for another tree (%s) and this tree is %s: a verdict does not move between trees", declared, tree)
 	}
 
 	sealed := v
@@ -289,7 +289,7 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 // Name is the file a verdict for one tree lives in. The tree is the name.
 func Name(tree string) (string, error) {
 	if !hashLike(tree) {
-		return "", fmt.Errorf("el árbol %q no puede ser el nombre de un veredicto: tiene que ser un hash", tree)
+		return "", fmt.Errorf("the tree %q cannot be the name of a verdict: it must be a hash", tree)
 	}
 	return tree + ".json", nil
 }

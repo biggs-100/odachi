@@ -84,9 +84,10 @@ func TestDecodeSurfacesValidateErrors(t *testing.T) {
 		t.Fatalf("Decode accepted output = \"verbose\", want a validation error")
 	}
 	// profile.Validate is the single source of the allowed values and of the
-	// message; the adapter must not re-implement it.
-	if !strings.Contains(err.Error(), "no es un valor permitido") {
-		t.Errorf("error %q is not profile.Validate's error", err)
+	// message; the adapter only prefixes it and must not re-implement it. The
+	// assertion checks the prefix and the field, not the domain's wording.
+	if !strings.Contains(err.Error(), "profile:") {
+		t.Errorf("error %q is not wrapped with the adapter's profile: prefix", err)
 	}
 	if !strings.Contains(err.Error(), "output") {
 		t.Errorf("error %q does not name the field output", err)
@@ -94,7 +95,7 @@ func TestDecodeSurfacesValidateErrors(t *testing.T) {
 }
 
 func TestDecodeRejectsUnparseableTOML(t *testing.T) {
-	if _, err := profiletoml.Decode([]byte("name = \"sin cerrar\n")); err == nil {
+	if _, err := profiletoml.Decode([]byte("name = \"unterminated\n")); err == nil {
 		t.Fatalf("Decode accepted malformed TOML, want an error")
 	}
 	if _, err := profiletoml.Decode(nil); err != nil {

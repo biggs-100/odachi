@@ -30,7 +30,7 @@ func WriteAtomic(path string, data []byte, perm fs.FileMode) error {
 
 	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
-		return fmt.Errorf("fsx: no se pudo crear el temporal junto a %s: %w", path, err)
+		return fmt.Errorf("fsx: could not create the temporary file next to %s: %w", path, err)
 	}
 	tmpName := tmp.Name()
 
@@ -46,20 +46,20 @@ func WriteAtomic(path string, data []byte, perm fs.FileMode) error {
 
 	if _, err := tmp.Write(data); err != nil {
 		tmp.Close()
-		return fmt.Errorf("fsx: no se pudo escribir %s: %w", tmpName, err)
+		return fmt.Errorf("fsx: could not write %s: %w", tmpName, err)
 	}
 	if err := tmp.Sync(); err != nil {
 		tmp.Close()
-		return fmt.Errorf("fsx: no se pudo sincronizar %s: %w", tmpName, err)
+		return fmt.Errorf("fsx: could not sync %s: %w", tmpName, err)
 	}
 	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("fsx: no se pudo cerrar %s: %w", tmpName, err)
+		return fmt.Errorf("fsx: could not close %s: %w", tmpName, err)
 	}
 	if err := os.Chmod(tmpName, perm); err != nil {
-		return fmt.Errorf("fsx: no se pudieron aplicar los permisos a %s: %w", tmpName, err)
+		return fmt.Errorf("fsx: could not apply the permissions to %s: %w", tmpName, err)
 	}
 	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("fsx: no se pudo reemplazar %s: %w", path, err)
+		return fmt.Errorf("fsx: could not replace %s: %w", path, err)
 	}
 	committed = true
 
@@ -84,11 +84,11 @@ func Backup(path string) (string, error) {
 func BackupIn(root, path string) (string, error) {
 	rootAbs, err := filepath.Abs(root)
 	if err != nil {
-		return "", fmt.Errorf("fsx: no se pudo resolver el proyecto %s: %w", root, err)
+		return "", fmt.Errorf("fsx: could not resolve the project %s: %w", root, err)
 	}
 	pathAbs, err := filepath.Abs(path)
 	if err != nil {
-		return "", fmt.Errorf("fsx: no se pudo resolver %s: %w", path, err)
+		return "", fmt.Errorf("fsx: could not resolve %s: %w", path, err)
 	}
 
 	rel, err := filepath.Rel(rootAbs, pathAbs)
@@ -106,17 +106,17 @@ func BackupIn(root, path string) (string, error) {
 func backupTo(path, base string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("fsx: no se pudo leer %s para respaldarlo: %w", path, err)
+		return "", fmt.Errorf("fsx: could not read %s to back it up: %w", path, err)
 	}
 
 	info, err := os.Stat(path)
 	if err != nil {
-		return "", fmt.Errorf("fsx: no se pudo leer los permisos de %s: %w", path, err)
+		return "", fmt.Errorf("fsx: could not read the permissions of %s: %w", path, err)
 	}
 
 	backup := base + ".bak-" + Digest(data)[:8]
 	if err := os.MkdirAll(filepath.Dir(backup), 0o755); err != nil {
-		return "", fmt.Errorf("fsx: no se pudo crear el directorio de %s: %w", backup, err)
+		return "", fmt.Errorf("fsx: could not create the directory for %s: %w", backup, err)
 	}
 	if err := WriteAtomic(backup, data, info.Mode().Perm()); err != nil {
 		return "", err

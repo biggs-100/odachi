@@ -120,10 +120,10 @@ func count(docs []tasks.Document) evidence {
 func facts(current profile.Profile, e evidence) Result {
 	name := current.Name
 	if name == "" {
-		name = "(sin perfil)"
+		name = "(no profile)"
 	}
 
-	line := fmt.Sprintf("perfil: %s · features con pasos: %d · preguntas contestadas: %d · decisiones de oficio: %d · preguntas abiertas: %d",
+	line := fmt.Sprintf("profile: %s · features with steps: %d · answered questions: %d · craft decisions: %d · open questions: %d",
 		name, e.features, e.answers, e.craft, e.open)
 	lines := []string{line}
 
@@ -131,14 +131,14 @@ func facts(current profile.Profile, e evidence) Result {
 	switch next, ok := profile.Next(name, earned); {
 	case ok:
 		lines = append(lines, fmt.Sprintf(
-			"ganaste el perfil %s: %d features con pasos hechos y %d preguntas contestadas; para aceptarlo corré odachi level --to %s",
+			"you earned the %s profile: %d features with done steps and %d answered questions; to accept it run odachi level --to %s",
 			next, e.features, e.answers, next))
 	case name != "novato":
 		// Only a novato graduates: there is nothing to propose to someone who
 		// is already past the first step of the ladder.
-		lines = append(lines, fmt.Sprintf("ya estás en %s: no hay nada que proponerte", name))
+		lines = append(lines, fmt.Sprintf("you are already at %s: there is nothing to propose", name))
 	default:
-		lines = append(lines, "todavía no está ganado el perfil senior: seguí sumando features con pasos hechos y preguntas contestadas")
+		lines = append(lines, "the senior profile is not earned yet: keep adding features with done steps and answered questions")
 	}
 
 	return Result{Code: CodeOK, Message: line, Lines: lines, Profile: name}
@@ -164,7 +164,7 @@ func apply(opts Options, target string, files Files) Result {
 
 	to, err := profile.Resolve(known, target)
 	if err != nil {
-		return blocked(oneLine(err.Error()) + "; volvé a correr odachi level --to <perfil> con uno de esos nombres")
+		return blocked(oneLine(err.Error()) + "; run odachi level --to <profile> again with one of those names")
 	}
 
 	lines := make([]string, 0, 4)
@@ -176,7 +176,7 @@ func apply(opts Options, target string, files Files) Result {
 		path := filepath.Join(opts.Dir, profileFile)
 		exists, err := files.Exists(path)
 		if err != nil {
-			return blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi level --to %s",
+			return blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi level --to %s again",
 				profileFile, oneLine(err.Error()), to.Name))
 		}
 
@@ -185,18 +185,18 @@ func apply(opts Options, target string, files Files) Result {
 			// The human's file is copied aside before it is replaced, always.
 			backup, err = files.Backup(path)
 			if err != nil {
-				return blocked(fmt.Sprintf("no pude respaldar %s antes de reescribirlo: %s; revisá los permisos y volvé a correr odachi level --to %s",
+				return blocked(fmt.Sprintf("could not back up %s before rewriting it: %s; check the permissions and run odachi level --to %s again",
 					profileFile, oneLine(err.Error()), to.Name))
 			}
 		}
 
 		if err := files.Write(path, []byte(start.RenderProfile(to))); err != nil {
-			return blocked(fmt.Sprintf("no pude escribir %s: %s; revisá los permisos y volvé a correr odachi level --to %s",
+			return blocked(fmt.Sprintf("could not write %s: %s; check the permissions and run odachi level --to %s again",
 				profileFile, oneLine(err.Error()), to.Name))
 		}
 		written = append(written, profileFile)
 		if backup != "" {
-			lines = append(lines, "el perfil anterior quedó en "+relative(opts.Dir, backup))
+			lines = append(lines, "the previous profile is at "+relative(opts.Dir, backup))
 		}
 		for _, change := range changes {
 			lines = append(lines, fmt.Sprintf("%s: %s -> %s", change.Field, shown(change.From), shown(change.To)))
@@ -213,13 +213,13 @@ func apply(opts Options, target string, files Files) Result {
 		// A profile name odachi has no voice for. The ceremony is still the
 		// human's decision, so the block is left alone and the line says which
 		// names have a voice.
-		lines = append(lines, "la voz del bloque quedó como estaba: "+oneLine(voiceErr.Error())+"; usá novato, senior o ci en "+profileFile)
+		lines = append(lines, "the block voice is unchanged: "+oneLine(voiceErr.Error())+"; use novato, senior or ci in "+profileFile)
 	default:
 		line, wrote, problem := rewriteVoice(opts.Dir, voiceName, files)
 		if problem != nil {
 			// The profile may already be written: say how much of the job is
 			// done instead of pretending nothing happened.
-			problem.Message = "apliqué el perfil " + to.Name + " en " + profileFile + "; " + problem.Message
+			problem.Message = "applied the " + to.Name + " profile in " + profileFile + "; " + problem.Message
 			problem.Lines = lines
 			problem.Files = written
 			return *problem
@@ -238,7 +238,7 @@ func apply(opts Options, target string, files Files) Result {
 		// what is there.
 		refreshed, personaLine, problem := refreshPersonas(opts.Dir, files, opts.Agents)
 		if problem != nil {
-			problem.Message = "apliqué el perfil " + to.Name + " en " + profileFile + "; " + problem.Message
+			problem.Message = "applied the " + to.Name + " profile in " + profileFile + "; " + problem.Message
 			problem.Lines = lines
 			problem.Files = append(append([]string{}, written...), refreshed...)
 			return *problem
@@ -253,28 +253,28 @@ func apply(opts Options, target string, files Files) Result {
 	// One line, and it says what happened to every surface of the same choice.
 	// A run that changed nothing says so instead of claiming work it did not do,
 	// which is also what keeps the second run of the same command silent.
-	message := fmt.Sprintf("el perfil ya era %s", to.Name)
+	message := fmt.Sprintf("the profile was already %s", to.Name)
 	switch {
 	case voiceErr != nil:
-		message += "; no escribí nada"
+		message += "; I wrote nothing"
 	case applied && voiced:
-		message = fmt.Sprintf("listo: apliqué el perfil %s en %s y la voz del bloque es %s", to.Name, profileFile, voiceName)
+		message = fmt.Sprintf("done: applied the %s profile in %s and the block voice is %s", to.Name, profileFile, voiceName)
 	case applied:
-		message = fmt.Sprintf("listo: apliqué el perfil %s en %s; la voz del bloque ya era %s", to.Name, profileFile, voiceName)
+		message = fmt.Sprintf("done: applied the %s profile in %s; the block voice was already %s", to.Name, profileFile, voiceName)
 	case voiced:
-		message = fmt.Sprintf("listo: el perfil ya era %s; actualicé la voz del bloque a %s", to.Name, voiceName)
+		message = fmt.Sprintf("done: the profile was already %s; I updated the block voice to %s", to.Name, voiceName)
 	case len(personaFiles) > 0:
-		message = fmt.Sprintf("listo: el perfil ya era %s y la voz del bloque también es %s; actualicé el agente nativo", to.Name, voiceName)
+		message = fmt.Sprintf("done: the profile was already %s and the block voice is also %s; I updated the native agent", to.Name, voiceName)
 	default:
-		message = fmt.Sprintf("el perfil ya era %s y la voz del bloque también es %s; no escribí nada", to.Name, voiceName)
+		message = fmt.Sprintf("the profile was already %s and the block voice is also %s; I wrote nothing", to.Name, voiceName)
 	}
 	if len(personaFiles) > 0 && (applied || voiced) {
-		message += "; actualicé el agente nativo (" + strings.Join(personaFiles, ", ") + ")"
+		message += "; I updated the native agent (" + strings.Join(personaFiles, ", ") + ")"
 	}
 
 	// The message goes first, because the printer prints Lines and not the
 	// message when there are any: a detail without the sentence that explains it
-	// is how a human reads "AGENTS.md: sin cambios" and concludes nothing ran.
+	// is how a human reads "AGENTS.md: unchanged" and concludes nothing ran.
 	if len(lines) > 0 {
 		lines = append([]string{message}, lines...)
 	}
@@ -292,12 +292,12 @@ func apply(opts Options, target string, files Files) Result {
 // could not read or write, where nothing was changed.
 func rewriteVoice(dir, voiceName string, files Files) (line string, wrote bool, problem *Result) {
 	path := filepath.Join(dir, agentsFile)
-	missing := "AGENTS.md: no hay bloque de odachi: la voz no está en el proyecto; corré odachi init"
-	noFile := "AGENTS.md: no hay AGENTS.md: la voz no está en el proyecto; corré odachi init"
+	missing := "AGENTS.md: there is no odachi block: the voice is not in the project; run odachi init"
+	noFile := "AGENTS.md: there is no AGENTS.md: the voice is not in the project; run odachi init"
 
 	exists, err := files.Exists(path)
 	if err != nil {
-		failure := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi level --to %s",
+		failure := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi level --to %s again",
 			agentsFile, oneLine(err.Error()), voiceName))
 		return "", false, &failure
 	}
@@ -307,7 +307,7 @@ func rewriteVoice(dir, voiceName string, files Files) (line string, wrote bool, 
 
 	data, err := files.Read(path)
 	if err != nil {
-		failure := blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi level --to %s",
+		failure := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi level --to %s again",
 			agentsFile, oneLine(err.Error()), voiceName))
 		return "", false, &failure
 	}
@@ -319,7 +319,7 @@ func rewriteVoice(dir, voiceName string, files Files) (line string, wrote bool, 
 
 	updated, changed, err := rules.WithVoice(current, voiceName)
 	if err != nil {
-		failure := blocked(fmt.Sprintf("no pude armar la voz de %s: %s; volvé a correr odachi level --to %s",
+		failure := blocked(fmt.Sprintf("could not build the %s voice: %s; run odachi level --to %s again",
 			agentsFile, oneLine(err.Error()), voiceName))
 		return "", false, &failure
 	}
@@ -331,17 +331,17 @@ func rewriteVoice(dir, voiceName string, files Files) (line string, wrote bool, 
 
 	backup, err := files.Backup(path)
 	if err != nil {
-		failure := blocked(fmt.Sprintf("no pude respaldar %s antes de reescribirlo: %s; revisá los permisos y volvé a correr odachi level --to %s",
+		failure := blocked(fmt.Sprintf("could not back up %s before rewriting it: %s; check the permissions and run odachi level --to %s again",
 			agentsFile, oneLine(err.Error()), voiceName))
 		return "", false, &failure
 	}
 	if err := files.Write(path, []byte(updated)); err != nil {
-		failure := blocked(fmt.Sprintf("no pude escribir %s: %s; revisá los permisos y volvé a correr odachi level --to %s",
+		failure := blocked(fmt.Sprintf("could not write %s: %s; check the permissions and run odachi level --to %s again",
 			agentsFile, oneLine(err.Error()), voiceName))
 		return "", false, &failure
 	}
 
-	return "AGENTS.md: voz " + voiceName + " en el bloque (el anterior quedó en " + relative(dir, backup) + ")", true, nil
+	return "AGENTS.md: voice " + voiceName + " in the block (the previous one is at " + relative(dir, backup) + ")", true, nil
 }
 
 // refreshPersonas keeps the native agent in step with the block the human
@@ -355,7 +355,7 @@ func refreshPersonas(dir string, files Files, selection string) (changed []strin
 	agentsPath := filepath.Join(dir, agentsFile)
 	exists, err := files.Exists(agentsPath)
 	if err != nil {
-		failure := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+		failure := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi level --to <profile> again",
 			agentsFile, oneLine(err.Error())))
 		return nil, "", &failure
 	}
@@ -365,7 +365,7 @@ func refreshPersonas(dir string, files Files, selection string) (changed []strin
 
 	data, err := files.Read(agentsPath)
 	if err != nil {
-		failure := blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+		failure := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi level --to <profile> again",
 			agentsFile, oneLine(err.Error())))
 		return nil, "", &failure
 	}
@@ -376,7 +376,7 @@ func refreshPersonas(dir string, files Files, selection string) (changed []strin
 
 	selected, err := persona.FilesForSelection(body, selection)
 	if err != nil {
-		failure := blocked(fmt.Sprintf("no pude resolver la elección de clientes: %s; corré odachi init --agents both y volvé a correr odachi level --to <perfil>",
+		failure := blocked(fmt.Sprintf("could not resolve the client selection: %s; run odachi init --agents both and run odachi level --to <profile> again",
 			oneLine(err.Error())))
 		return changed, "", &failure
 	}
@@ -385,7 +385,7 @@ func refreshPersonas(dir string, files Files, selection string) (changed []strin
 
 		exists, err := files.Exists(path)
 		if err != nil {
-			failure := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+			failure := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi level --to <profile> again",
 				file.Path, oneLine(err.Error())))
 			return changed, "", &failure
 		}
@@ -395,7 +395,7 @@ func refreshPersonas(dir string, files Files, selection string) (changed []strin
 
 		current, err := files.Read(path)
 		if err != nil {
-			failure := blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+			failure := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi level --to <profile> again",
 				file.Path, oneLine(err.Error())))
 			return changed, "", &failure
 		}
@@ -404,12 +404,12 @@ func refreshPersonas(dir string, files Files, selection string) (changed []strin
 		}
 
 		if _, err := files.Backup(path); err != nil {
-			failure := blocked(fmt.Sprintf("no pude respaldar %s antes de reescribirlo: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+			failure := blocked(fmt.Sprintf("could not back up %s before rewriting it: %s; check the permissions and run odachi level --to <profile> again",
 				file.Path, oneLine(err.Error())))
 			return changed, "", &failure
 		}
 		if err := files.Write(path, []byte(file.Content)); err != nil {
-			failure := blocked(fmt.Sprintf("no pude escribir %s: %s; revisá los permisos y volvé a correr odachi level --to <perfil>",
+			failure := blocked(fmt.Sprintf("could not write %s: %s; check the permissions and run odachi level --to <profile> again",
 				file.Path, oneLine(err.Error())))
 			return changed, "", &failure
 		}
@@ -419,13 +419,13 @@ func refreshPersonas(dir string, files Files, selection string) (changed []strin
 	if len(changed) == 0 {
 		return nil, "", nil
 	}
-	return changed, "el agente nativo quedó al día: " + strings.Join(changed, ", "), nil
+	return changed, "the native agent is up to date: " + strings.Join(changed, ", "), nil
 }
 
 // shown renders an empty field value the way the human sees it in the file.
 func shown(value string) string {
 	if value == "" {
-		return "(vacío)"
+		return "(empty)"
 	}
 	return value
 }

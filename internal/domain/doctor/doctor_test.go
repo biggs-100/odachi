@@ -31,9 +31,9 @@ func TestTitleOutOfRange(t *testing.T) {
 	}
 }
 
-// TestLineIsOneSpanishLine: the whole report is these lines, one per check, so
+// TestLineIsOneEnglishLine: the whole report is these lines, one per check, so
 // the shape is the contract a human reads.
-func TestLineIsOneSpanishLine(t *testing.T) {
+func TestLineIsOneEnglishLine(t *testing.T) {
 	cases := []struct {
 		name  string
 		check Check
@@ -42,22 +42,22 @@ func TestLineIsOneSpanishLine(t *testing.T) {
 		{
 			name:  "ok",
 			check: OK(CheckVersion, "odachi 0.5.0"),
-			want:  "ok 1 · la versión del binario: odachi 0.5.0",
+			want:  "ok 1 · the binary version: odachi 0.5.0",
 		},
 		{
 			name:  "problem names the command that fixes it",
-			check: Broken(CheckHook, "no hay hook de pre-commit: no hay gate local", "corré odachi init"),
-			want:  "mal 5 · el hook de pre-commit es de odachi: no hay hook de pre-commit: no hay gate local; corré odachi init",
+			check: Broken(CheckHook, "there is no pre-commit hook: there is no local gate", "run odachi init"),
+			want:  "bad 5 · the pre-commit hook is odachi's: there is no pre-commit hook: there is no local gate; run odachi init",
 		},
 		{
 			name:  "warning is said and never carries a fix",
-			check: Warning(CheckIgnored, "proof/ está vacío"),
-			want:  "aviso 10 · el store de review y proof/ están ignorados: proof/ está vacío",
+			check: Warning(CheckIgnored, "proof/ is empty"),
+			want:  "warning 10 · the review store and proof/ are ignored: proof/ is empty",
 		},
 		{
 			name:  "ok without detail",
 			check: OK(CheckGit, ""),
-			want:  "ok 3 · hay .git",
+			want:  "ok 3 · there is .git",
 		},
 	}
 	for _, c := range cases {
@@ -96,7 +96,7 @@ func TestNotAProjectNamesBothCommandsInOrder(t *testing.T) {
 	if init < 0 || start < 0 || init > start {
 		t.Fatalf("the fix must name odachi init before odachi start: %q", NotAProjectFix)
 	}
-	for _, want := range []string{"reglas", "entrevista"} {
+	for _, want := range []string{"rules", "interview"} {
 		if !strings.Contains(NotAProjectFix, want) {
 			t.Errorf("the fix must say what each command leaves behind, missing %q: %q", want, NotAProjectFix)
 		}
@@ -113,10 +113,10 @@ func TestTallyAndCode(t *testing.T) {
 		warnings int
 		code     int
 	}{
-		{"all ok", []Check{OK(CheckVersion, "x"), OK(CheckGit, "sí")}, 0, 0, 0},
-		{"warning only", []Check{OK(CheckVersion, "x"), Warning(CheckIgnored, "nada todavía")}, 0, 1, 0},
-		{"one problem", []Check{OK(CheckVersion, "x"), Broken(CheckGit, "no hay .git", "corré git init")}, 1, 0, 1},
-		{"problem and warning", []Check{Broken(CheckGit, "no hay .git", "corré git init"), Warning(CheckIgnored, "nada")}, 1, 1, 1},
+		{"all ok", []Check{OK(CheckVersion, "x"), OK(CheckGit, "yes")}, 0, 0, 0},
+		{"warning only", []Check{OK(CheckVersion, "x"), Warning(CheckIgnored, "nothing yet")}, 0, 1, 0},
+		{"one problem", []Check{OK(CheckVersion, "x"), Broken(CheckGit, "there is no .git", "run git init")}, 1, 0, 1},
+		{"problem and warning", []Check{Broken(CheckGit, "there is no .git", "run git init"), Warning(CheckIgnored, "nothing")}, 1, 1, 1},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -139,9 +139,9 @@ func TestSummary(t *testing.T) {
 		checks []Check
 		want   string
 	}{
-		{"clean", []Check{OK(CheckVersion, "x"), OK(CheckGit, "sí")}, "todo en orden: 2 chequeos, ningún problema"},
-		{"warning", []Check{OK(CheckVersion, "x"), Warning(CheckGit, "nada")}, "todo en orden: 2 chequeos, 1 aviso, ningún problema"},
-		{"problem", []Check{OK(CheckVersion, "x"), Broken(CheckGit, "no hay .git", "corré git init")}, "1 problema de 2 chequeos: corré el comando que nombra cada línea"},
+		{"clean", []Check{OK(CheckVersion, "x"), OK(CheckGit, "yes")}, "all clear: 2 checks, no problems"},
+		{"warning", []Check{OK(CheckVersion, "x"), Warning(CheckGit, "nothing")}, "all clear: 2 checks, 1 warning, no problems"},
+		{"problem", []Check{OK(CheckVersion, "x"), Broken(CheckGit, "there is no .git", "run git init")}, "1 problem of 2 checks: run the command each line names"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

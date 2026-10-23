@@ -22,7 +22,7 @@ func TestEvaluationOrder(t *testing.T) {
 	noBrief := gate.State{Violations: []string{"pagos"}, OpenQuestions: 3, TreeHash: "4a1c9f"}
 
 	incompleteBrief := ready()
-	incompleteBrief.BriefMissing = []string{"visión", "no-objetivos"}
+	incompleteBrief.BriefMissing = []string{"vision", "non-goals"}
 	incompleteBrief.Violations = []string{"pagos"}
 	incompleteBrief.OpenQuestions = 1
 
@@ -58,7 +58,7 @@ func TestEvaluationOrder(t *testing.T) {
 			state:   noBrief,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonNoBrief,
-			message: "no hay brief: todavía no sabemos qué tiene que existir",
+			message: "there is no brief: we do not know yet what must exist",
 			next:    "odachi start",
 		},
 		{
@@ -66,7 +66,7 @@ func TestEvaluationOrder(t *testing.T) {
 			state:   incompleteBrief,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonBriefIncomplete,
-			message: "el brief está incompleto: falta visión, no-objetivos",
+			message: "the brief is incomplete: missing vision, non-goals",
 			next:    "odachi start",
 		},
 		{
@@ -74,39 +74,39 @@ func TestEvaluationOrder(t *testing.T) {
 			state:   outOfScope,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonOutOfScope,
-			message: "fuera de alcance: pagos: internal/payments/stripe.go; pagos: github.com/stripe/stripe-go/v76",
-			next:    "odachi ask \"<tu decisión>\"",
+			message: "out of scope: pagos: internal/payments/stripe.go; pagos: github.com/stripe/stripe-go/v76",
+			next:    "odachi ask \"<your decision>\"",
 		},
 		{
 			name:    "open question",
 			state:   openQuestion,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonOpenQuestion,
-			message: "hay 1 pregunta sin contestar",
-			next:    "odachi ask \"<tu decisión>\"",
+			message: "1 unanswered question",
+			next:    "odachi ask \"<your decision>\"",
 		},
 		{
 			name:    "proof missing",
 			state:   missingProof,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofMissing,
-			message: "falta la prueba de este cambio",
-			next:    "odachi check --proof <archivo>",
+			message: "the proof for this change is missing",
+			next:    "odachi check --proof <file>",
 		},
 		{
 			name:    "proof stale",
 			state:   staleProof,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofStale,
-			message: "la prueba es de otro estado del código",
-			next:    "odachi check --proof <archivo>",
+			message: "the proof is from another state of the code",
+			next:    "odachi check --proof <file>",
 		},
 		{
 			name:    "proof failed",
 			state:   failedProof,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofFailed,
-			message: "la prueba falló: FAIL github.com/biggs-100/odachi/internal/domain/gate 0.02s",
+			message: "the proof failed: FAIL github.com/biggs-100/odachi/internal/domain/gate 0.02s",
 			next:    `odachi check --run "go test ./..."`,
 		},
 		{
@@ -114,7 +114,7 @@ func TestEvaluationOrder(t *testing.T) {
 			state:   ready(),
 			code:    gate.Ready,
 			reason:  gate.ReasonReady,
-			message: "listo: hay prueba para este árbol",
+			message: "ready: there is proof for this tree",
 			next:    "",
 		},
 	}
@@ -145,7 +145,7 @@ func TestEvaluationOrderIsFirstBlockWins(t *testing.T) {
 	// Everything is broken at once: the first reason in the documented order
 	// must win, so the human is never sent to fix two things at the same time.
 	state := gate.State{
-		BriefMissing:  []string{"visión"},
+		BriefMissing:  []string{"vision"},
 		Violations:    []string{"pagos"},
 		OpenQuestions: 2,
 		TreeHash:      "4a1c9f",
@@ -202,7 +202,7 @@ func TestEveryBlockedResultNamesAContinuation(t *testing.T) {
 		state gate.State
 	}{
 		{"no brief", gate.State{}},
-		{"brief incomplete", gate.State{HasBrief: true, BriefMissing: []string{"visión"}}},
+		{"brief incomplete", gate.State{HasBrief: true, BriefMissing: []string{"vision"}}},
 		{"out of scope", gate.State{HasBrief: true, Violations: []string{"pagos"}}},
 		{"open question", gate.State{HasBrief: true, OpenQuestions: 2}},
 		{"proof missing", gate.State{HasBrief: true, TreeHash: "4a1c9f"}},
@@ -243,11 +243,11 @@ func TestOpenQuestionPluralisation(t *testing.T) {
 	two := ready()
 	two.OpenQuestions = 2
 
-	if got := gate.Evaluate(one).Message; got != "hay 1 pregunta sin contestar" {
-		t.Fatalf("1 question: Message = %q, want %q", got, "hay 1 pregunta sin contestar")
+	if got := gate.Evaluate(one).Message; got != "1 unanswered question" {
+		t.Fatalf("1 question: Message = %q, want %q", got, "1 unanswered question")
 	}
-	if got := gate.Evaluate(two).Message; got != "hay 2 preguntas sin contestar" {
-		t.Fatalf("2 questions: Message = %q, want %q", got, "hay 2 preguntas sin contestar")
+	if got := gate.Evaluate(two).Message; got != "2 unanswered questions" {
+		t.Fatalf("2 questions: Message = %q, want %q", got, "2 unanswered questions")
 	}
 }
 
@@ -281,10 +281,10 @@ func TestProofFailedWithoutOutputOrCommandStillReadsAsASentence(t *testing.T) {
 
 	got := gate.Evaluate(state)
 
-	if got.Message != "la prueba falló: sin salida" {
-		t.Errorf("Message = %q, want %q", got.Message, "la prueba falló: sin salida")
+	if got.Message != "the proof failed: no output" {
+		t.Errorf("Message = %q, want %q", got.Message, "the proof failed: no output")
 	}
-	if got.Next != `odachi check --run "<comando>"` {
+	if got.Next != `odachi check --run "<command>"` {
 		t.Errorf("Next = %q, want the generic --run continuation", got.Next)
 	}
 }
@@ -302,8 +302,8 @@ func TestProofTimedOutSaysHowLongItWaited(t *testing.T) {
 	if got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofFailed {
 		t.Fatalf("Code/Reason = %d/%q, want %d/%q", got.Code, got.Reason, gate.NeedsWork, gate.ReasonProofFailed)
 	}
-	if got.Message != "la prueba no terminó en 7s" {
-		t.Errorf("Message = %q, want %q", got.Message, "la prueba no terminó en 7s")
+	if got.Message != "the proof did not finish in 7s" {
+		t.Errorf("Message = %q, want %q", got.Message, "the proof did not finish in 7s")
 	}
 	if got.Next != `odachi check --run "go test ./..." --timeout 14` {
 		t.Errorf("Next = %q, want the same command with twice the wait", got.Next)

@@ -109,7 +109,7 @@ func corpus(steps ...step) []benchcore.Journey {
 	for i, s := range steps {
 		journeys = append(journeys, benchcore.Journey{
 			Name:  string(rune('a'+i)) + "-journey",
-			Why:   "inyectado",
+			Why:   "injected",
 			Steps: []benchcore.Step{{Args: s.args, Want: s.exit}},
 		})
 	}
@@ -216,7 +216,7 @@ func TestNoDeadEndIsGreen(t *testing.T) {
 	if result.InBand != 1 {
 		t.Fatalf("in_band = %d, want 1", result.InBand)
 	}
-	if !strings.Contains(result.Message, "ningún dead end") {
+	if !strings.Contains(result.Message, "no dead ends") {
 		t.Fatalf("the verdict must say there is no dead end, got %q", result.Message)
 	}
 }
@@ -276,8 +276,8 @@ func TestAPartialJourneyStillReportsItsBlocks(t *testing.T) {
 		},
 	}
 	journeys := []benchcore.Journey{{
-		Name:  "a-medias",
-		Why:   "inyectado",
+		Name:  "half-way",
+		Why:   "injected",
 		Steps: []benchcore.Step{{Args: []string{"check"}, Want: 1}, {Args: []string{"level"}, Want: 0}},
 	}}
 
@@ -324,8 +324,8 @@ func TestSetupRunsBeforeTheSteps(t *testing.T) {
 	files := &fakeFiles{}
 	exec := &fakeExec{}
 	journeys := []benchcore.Journey{{
-		Name:  "con-repo",
-		Why:   "inyectado",
+		Name:  "with-repo",
+		Why:   "injected",
 		Setup: []benchcore.Action{{Command: []string{"git", "init", "-q"}}, {Path: "notas.md", Content: "# notas\n"}},
 		Steps: []benchcore.Step{{Args: []string{"check"}}},
 	}}
@@ -343,8 +343,8 @@ func TestSetupRunsBeforeTheSteps(t *testing.T) {
 	}
 }
 
-// TestUnknownJourneyIsBlocked: a filter that matches nothing would report "todo
-// bien" about a corpus that never ran.
+// TestUnknownJourneyIsBlocked: a filter that matches nothing would report "all
+// good" about a corpus that never ran.
 func TestUnknownJourneyIsBlocked(t *testing.T) {
 	files := &fakeFiles{}
 	result := Run(Options{Binary: "/bin/odachi", Only: []string{"inventado"}}, files, &fakeExec{})
@@ -386,8 +386,8 @@ func TestMissingBinaryIsBlocked(t *testing.T) {
 // fail the run: only a dead end does that.
 func TestSurpriseIsReportedNotSwallowed(t *testing.T) {
 	journeys := []benchcore.Journey{{
-		Name:  "cambio",
-		Why:   "inyectado",
+		Name:  "change",
+		Why:   "injected",
 		Steps: []benchcore.Step{{Args: []string{"check"}, Want: 0}},
 	}}
 	exec := &fakeExec{answer: answers([]step{{args: []string{"check"}, exit: 2}}, nil)}
@@ -396,7 +396,7 @@ func TestSurpriseIsReportedNotSwallowed(t *testing.T) {
 	if len(result.Journeys) != 1 || len(result.Journeys[0].Surprises) != 1 {
 		t.Fatalf("the surprise must be reported: %+v", result.Journeys)
 	}
-	if !strings.Contains(result.Journeys[0].Surprises[0], "esperaba 0") {
+	if !strings.Contains(result.Journeys[0].Surprises[0], "expected 0") {
 		t.Fatalf("the surprise must say what was expected, got %q", result.Journeys[0].Surprises[0])
 	}
 }
@@ -435,9 +435,9 @@ func TestHumanLinesCarryTheCounts(t *testing.T) {
 
 	report := strings.Join(result.Lines, "\n")
 	for _, want := range []string{
-		"1 recorridos",
-		"1 pasos",
-		"1 bloqueos",
+		"1 journey",
+		"1 step",
+		"1 block",
 		"in_band 0",
 		"out_of_band 0",
 		"templated 0",

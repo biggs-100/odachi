@@ -30,7 +30,7 @@ const waitDelay = 2 * time.Second
 const promptToken = "{prompt}"
 
 // ErrUnsupported is returned on a platform with no known shell.
-var ErrUnsupported = errors.New("no sé correr comandos en esta plataforma: no hay shell conocido; corré la prueba a mano y pasala con odachi check --proof <archivo>")
+var ErrUnsupported = errors.New("cannot run commands on this platform: there is no known shell; run the proof by hand and pass it with odachi check --proof <file>")
 
 // Run executes command through the platform shell in dir and reports its
 // combined output, its exit code and whether the timeout expired.
@@ -52,10 +52,10 @@ func Run(dir, command string, timeoutSeconds int) (output string, exitCode int, 
 // ignores its input then cannot block the caller by leaving the buffer full.
 func RunInput(dir, command, input string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error) {
 	if strings.TrimSpace(command) == "" {
-		return "", 0, false, errors.New("no hay comando para correr: pasá uno con odachi check --run \"<comando>\"")
+		return "", 0, false, errors.New("there is no command to run: pass one with odachi check --run \"<command>\"")
 	}
 	if timeoutSeconds <= 0 {
-		return "", 0, false, errors.New("el tiempo límite tiene que ser mayor que cero segundos")
+		return "", 0, false, errors.New("the timeout must be greater than zero seconds")
 	}
 
 	stdin, prepared, cleanup, err := prepareInput(command, input)
@@ -94,7 +94,7 @@ func RunInput(dir, command, input string, timeoutSeconds int) (output string, ex
 		if errors.As(runErr, &exitErr) {
 			return output, exitErr.ExitCode(), false, nil
 		}
-		return output, -1, false, fmt.Errorf("no pude correr el comando: %w", runErr)
+		return output, -1, false, fmt.Errorf("could not run the command: %w", runErr)
 	}
 
 	return output, 0, false, nil
@@ -114,18 +114,18 @@ func prepareInput(command, input string) (stdin *os.File, prepared string, clean
 
 	dir, err := os.MkdirTemp("", "odachi-prompt-")
 	if err != nil {
-		return nil, "", func() {}, fmt.Errorf("no pude preparar el prompt en un archivo temporal: %w", err)
+		return nil, "", func() {}, fmt.Errorf("could not prepare the prompt in a temporary file: %w", err)
 	}
 	cleanup = func() { os.RemoveAll(dir) }
 
 	path := filepath.Join(dir, "prompt.md")
 	if err := os.WriteFile(path, []byte(input), 0o600); err != nil {
-		return nil, "", cleanup, fmt.Errorf("no pude escribir el prompt en un archivo temporal: %w", err)
+		return nil, "", cleanup, fmt.Errorf("could not write the prompt to a temporary file: %w", err)
 	}
 
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, "", cleanup, fmt.Errorf("no pude abrir el prompt temporal: %w", err)
+		return nil, "", cleanup, fmt.Errorf("could not open the temporary prompt: %w", err)
 	}
 	cleanup = func() {
 		file.Close()

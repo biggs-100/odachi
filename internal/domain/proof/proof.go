@@ -2,9 +2,9 @@
 // writes and never a human, followed by the verbatim output of the command that
 // produced them.
 //
-// # tree <hash del worktree>
-// # command <el comando que se corrió>
-// <salida real, stdout+stderr, verbatim>
+// # tree <worktree hash>
+// # command <the command that was run>
+// <real output, stdout+stderr, verbatim>
 //
 // A proof is only evidence if it says what it was produced from, so a file
 // without the header is refused instead of guessed at. The format is pure
@@ -24,7 +24,7 @@ const (
 )
 
 // ErrNoHeader means the file does not say which tree produced it.
-var ErrNoHeader = errors.New(`no tiene el header "# tree <hash>": no puedo saber de qué árbol salió`)
+var ErrNoHeader = errors.New(`it has no "# tree <hash>" header: I cannot know which tree it came from`)
 
 // Proof is one recorded run: the tree it was produced from, the command that
 // produced it, and the combined stdout+stderr exactly as it came out.
@@ -57,7 +57,7 @@ func Parse(text string) (Proof, error) {
 
 	second, output, ok := cutLine(rest)
 	if !ok || !strings.HasPrefix(second, CommandHeader) {
-		return Proof{}, fmt.Errorf(`proof: el archivo tiene "# tree" pero no el header "# command <el comando>": no puedo decir qué comando produjo la prueba`)
+		return Proof{}, fmt.Errorf(`proof: the file has "# tree" but not the "# command <the command>" header: I cannot tell which command produced the proof`)
 	}
 
 	return Proof{

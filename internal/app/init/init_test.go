@@ -58,7 +58,7 @@ func (f *fakeFiles) Exists(path string) (bool, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	return data, nil
 }
@@ -74,7 +74,7 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 
 func (f *fakeFiles) Backup(path string) (string, error) {
 	f.events = append(f.events, "backup "+slashed(dir, path))
-	return path + ".bak-prueba", nil
+	return path + ".bak-test", nil
 }
 
 func (f *fakeFiles) MakeExecutable(path string) error {
@@ -196,7 +196,7 @@ func TestRerunIsIdempotent(t *testing.T) {
 	if second, _ := files.get(".git/hooks/pre-commit"); second != hookFirst {
 		t.Errorf("the hook changed on a rerun:\n%q\nvs\n%q", second, hookFirst)
 	}
-	if !strings.Contains(got.Message, "sin cambios") {
+	if !strings.Contains(got.Message, "unchanged") {
 		t.Errorf("Message = %q, want it to say nothing changed", got.Message)
 	}
 }
@@ -291,7 +291,7 @@ func TestInstallsTheHook(t *testing.T) {
 // A hook someone else wrote is never clobbered: the human gets the three lines
 // to paste and a non-zero exit naming the file.
 func TestForeignHookIsNotClobbered(t *testing.T) {
-	foreign := "#!/bin/sh\necho hola\n"
+	foreign := "#!/bin/sh\necho hello\n"
 	files := newFakeFiles(map[string]string{
 		".git/HEAD":             "ref: refs/heads/main\n",
 		".git/hooks/pre-commit": foreign,
@@ -340,7 +340,7 @@ func TestOurHookIsNotRefused(t *testing.T) {
 // Without a repository there is nowhere to put the hook, and the tool says so
 // instead of writing half of the job.
 func TestNoGitDirectoryBlocksWithoutWriting(t *testing.T) {
-	files := newFakeFiles(map[string]string{"README.md": "hola\n"})
+	files := newFakeFiles(map[string]string{"README.md": "hello\n"})
 
 	got := run(files)
 
@@ -386,24 +386,24 @@ func TestInitInstallsTheSkillsAfterTheProjectArtifacts(t *testing.T) {
 		t.Fatalf("Code = %d, want 0 (lines %q)", got.Code, got.Lines)
 	}
 	if skills.calls != 1 {
-		t.Fatalf("Install() se llamó %d veces, want 1", skills.calls)
+		t.Fatalf("Install() was called %d times, want 1", skills.calls)
 	}
 
-	project := indexOfLine(got.Lines, "./.agents/skills: 8 skills instaladas")
-	home := indexOfLine(got.Lines, "~/.agents/skills: 1 skill instalada")
+	project := indexOfLine(got.Lines, "./.agents/skills: 8 installed skills")
+	home := indexOfLine(got.Lines, "~/.agents/skills: 1 installed skill")
 	if project < 0 || home < 0 {
-		t.Fatalf("las líneas no nombran los dos destinos: %q", got.Lines)
+		t.Fatalf("the lines do not name both destinations: %q", got.Lines)
 	}
 	// The skills complete the project the three artifacts started, so they are
 	// reported after them and before the closing line.
-	if project < indexOfLine(got.Lines, "AGENTS.md: creado con el bloque de odachi") {
-		t.Errorf("las skills se reportan antes de los artefactos del proyecto: %q", got.Lines)
+	if project < indexOfLine(got.Lines, "AGENTS.md: created with the odachi block") {
+		t.Errorf("the skills are reported before the project artifacts: %q", got.Lines)
 	}
 	if home < project {
-		t.Errorf("el home se reporta antes que el proyecto: %q", got.Lines)
+		t.Errorf("the home is reported before the project: %q", got.Lines)
 	}
-	if last := got.Lines[len(got.Lines)-1]; !strings.HasPrefix(last, "siguiente: ") {
-		t.Errorf("la última línea no nombra el paso siguiente: %q", last)
+	if last := got.Lines[len(got.Lines)-1]; !strings.HasPrefix(last, "next: ") {
+		t.Errorf("the last line does not name the next step: %q", last)
 	}
 	for _, want := range []string{".agents/skills/acceptance/SKILL.md", "~/.agents/skills/bootstrap/SKILL.md"} {
 		if !slices.Contains(got.Files, want) {
@@ -413,7 +413,7 @@ func TestInitInstallsTheSkillsAfterTheProjectArtifacts(t *testing.T) {
 }
 
 // A second run writes nothing and says so: the skills half reports the same
-// `sin cambios` the three artifacts report, in the one message a human reads.
+// `unchanged` the three artifacts report, in the one message a human reads.
 func TestInitRerunSaysTheSkillsWereAlreadyThere(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	full := &fakeSkills{report: initapp.SkillReport{
@@ -441,13 +441,13 @@ func TestInitRerunSaysTheSkillsWereAlreadyThere(t *testing.T) {
 	if len(files.events) != 0 {
 		t.Errorf("second run touched %v, want no writes", files.events)
 	}
-	if !strings.Contains(got.Message, "sin cambios") || !strings.Contains(got.Message, "./.agents/skills") {
+	if !strings.Contains(got.Message, "unchanged") || !strings.Contains(got.Message, "./.agents/skills") {
 		t.Errorf("Message = %q, want it to say nothing changed and where", got.Message)
 	}
 	if len(got.Files) != 0 {
 		t.Errorf("Files = %v, want none on a rerun that wrote nothing", got.Files)
 	}
-	if !slices.Contains(got.Lines, "./.agents/skills: 8 sin cambios") {
+	if !slices.Contains(got.Lines, "./.agents/skills: 8 unchanged") {
 		t.Errorf("Lines = %q, want the destination reported as unchanged", got.Lines)
 	}
 }
@@ -459,7 +459,7 @@ func TestInitReportsABlockedHomeAndKeepsTheProject(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	skills := &fakeSkills{report: initapp.SkillReport{
 		Dests:   []initapp.SkillDest{{Label: "./.agents/skills", Installed: 8, Files: []string{".agents/skills/acceptance/SKILL.md"}}},
-		Blocked: "~/.agents/skills: no pude escribir la skill de arranque: permiso denegado",
+		Blocked: "~/.agents/skills: could not write the bootstrap skill: permission denied",
 		Next:    "odachi init",
 	}}
 
@@ -472,8 +472,8 @@ func TestInitReportsABlockedHomeAndKeepsTheProject(t *testing.T) {
 		t.Errorf("AGENTS.md was not written; events: %v", files.events)
 	}
 	joined := strings.Join(got.Lines, "\n")
-	if !strings.Contains(joined, "~/.agents/skills: no pude escribir la skill de arranque") {
-		t.Errorf("las líneas no dicen qué quedó pendiente: %q", got.Lines)
+	if !strings.Contains(joined, "~/.agents/skills: could not write the bootstrap skill") {
+		t.Errorf("the lines do not say what is pending: %q", got.Lines)
 	}
 	if got.Next != "odachi init" {
 		t.Errorf("Next = %q, want the command that fixes the block", got.Next)
@@ -490,7 +490,7 @@ func indexOfLine(lines []string, want string) int {
 func TestInitFailsWhenTheProjectSkillsCannotBeWritten(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	skills := &fakeSkills{report: initapp.SkillReport{
-		Blocked: "./.agents/skills: no pude escribir ./.agents/skills/acceptance/SKILL.md: permiso denegado",
+		Blocked: "./.agents/skills: could not write ./.agents/skills/acceptance/SKILL.md: permission denied",
 		Next:    "odachi init",
 		Fatal:   true,
 	}}
@@ -498,7 +498,7 @@ func TestInitFailsWhenTheProjectSkillsCannotBeWritten(t *testing.T) {
 	got := runWith(files, skills)
 
 	if got.Code != 1 {
-		t.Fatalf("Code = %d, want 1: el proyecto quedó sin las skills que lee el agente (lines %q)", got.Code, got.Lines)
+		t.Fatalf("Code = %d, want 1: the project was left without the skills the agent reads (lines %q)", got.Code, got.Lines)
 	}
 	if got.Next != "odachi init" {
 		t.Errorf("Next = %q, want the command that retries it", got.Next)

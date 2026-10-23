@@ -149,12 +149,12 @@ func ParseLenses(spec string) ([]string, error) {
 		case IsLens(name):
 			names = append(names, name)
 		default:
-			return nil, fmt.Errorf("la lente %q no existe: las lentes son %s (o all)", name, strings.Join(order, ", "))
+			return nil, fmt.Errorf("the lens %q does not exist: the lenses are %s (or all)", name, strings.Join(order, ", "))
 		}
 	}
 
 	if len(parts) > 1 && strings.Contains(trimmed, "all") {
-		return nil, fmt.Errorf("all ya son %s: no lo mezcles con otras lentes", strings.Join(order, ", "))
+		return nil, fmt.Errorf("all already is %s: do not mix it with other lenses", strings.Join(order, ", "))
 	}
 	return inOrder(names), nil
 }

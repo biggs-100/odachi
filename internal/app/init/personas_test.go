@@ -44,23 +44,23 @@ func TestInitWritesTheNativeAgent(t *testing.T) {
 	for _, client := range persona.Clients() {
 		file, ok := persona.FilesFor(client.Agent, block)
 		if !ok {
-			t.Fatalf("persona.FilesFor(%q) no existe", client.Agent)
+			t.Fatalf("persona.FilesFor(%q) does not exist", client.Agent)
 		}
 		content, ok := files.get(file.Path)
 		if !ok {
-			t.Errorf("%s no se escribió", file.Path)
+			t.Errorf("%s was not written", file.Path)
 			continue
 		}
 		if content != file.Content {
-			t.Errorf("%s no es el espejo del bloque:\n%q\nvs\n%q", file.Path, content, file.Content)
+			t.Errorf("%s is not the mirror of the block:\n%q\nvs\n%q", file.Path, content, file.Content)
 		}
 		if !strings.Contains(strings.Join(got.Lines, "\n"), client.Dir) {
-			t.Errorf("las líneas no nombran %s:\n%s", client.Dir, strings.Join(got.Lines, "\n"))
+			t.Errorf("the lines do not name %s:\n%s", client.Dir, strings.Join(got.Lines, "\n"))
 		}
 	}
 	for _, file := range persona.Deprecated() {
 		if _, ok := files.get(file); ok {
-			t.Errorf("%s se escribió otra vez: el agente de esta versión es %s", file, persona.FileName)
+			t.Errorf("%s was written again: the agent of this version is %s", file, persona.FileName)
 		}
 	}
 }
@@ -89,13 +89,13 @@ func TestInitBacksUpAHandEditedAgent(t *testing.T) {
 		}
 	}
 	if backup < 0 || wrote < 0 || backup > wrote {
-		t.Fatalf("el respaldo tiene que ir antes de la escritura: %v", files.events)
+		t.Fatalf("the backup must come before the write: %v", files.events)
 	}
 	if content, _ := files.get(path); content == "editado a mano\n" {
-		t.Errorf("el agente quedó con la edición a mano en vez del espejo")
+		t.Errorf("the agent kept the hand edit instead of the mirror")
 	}
 	if !strings.Contains(strings.Join(got.Lines, "\n"), persona.FileName) {
-		t.Errorf("las líneas no dicen qué agente se escribió:\n%s", strings.Join(got.Lines, "\n"))
+		t.Errorf("the lines do not say which agent was written:\n%s", strings.Join(got.Lines, "\n"))
 	}
 }
 
@@ -123,16 +123,16 @@ func TestInitWithoutGlobalLeavesTheHomeAlone(t *testing.T) {
 	}
 	for _, event := range files.events {
 		if strings.Contains(event, home) {
-			t.Errorf("init sin --global tocó el home: %s", event)
+			t.Errorf("init without --global touched the home: %s", event)
 		}
 	}
 	for path := range files.files {
 		if strings.Contains(path, home) {
-			t.Errorf("init sin --global dejó un archivo en el home: %s", path)
+			t.Errorf("init without --global left a file in the home: %s", path)
 		}
 	}
 	if joined := strings.Join(got.Lines, "\n"); !strings.Contains(joined, "--global") {
-		t.Errorf("las líneas no nombran el flag que instala la puerta:\n%s", joined)
+		t.Errorf("the lines do not name the flag that installs the door:\n%s", joined)
 	}
 }
 
@@ -155,24 +155,24 @@ func TestInitGlobalInstallsTheGlobalDoor(t *testing.T) {
 		abs := filepath.Join(home, filepath.FromSlash(file.Path))
 		content, ok := files.files[abs]
 		if !ok {
-			t.Errorf("%s no se instaló en el home", file.Path)
+			t.Errorf("%s was not installed in the home", file.Path)
 			continue
 		}
 		if string(content) != file.Content {
-			t.Errorf("%s no es la puerta:\n%q\nvs\n%q", file.Path, content, file.Content)
+			t.Errorf("%s is not the door:\n%q\nvs\n%q", file.Path, content, file.Content)
 		}
 	}
 	if !strings.Contains(strings.Join(got.Lines, "\n"), "~/"+persona.Clients()[0].HomeDir) {
-		t.Errorf("las líneas no nombran el destino del home:\n%s", strings.Join(got.Lines, "\n"))
+		t.Errorf("the lines do not name the home destination:\n%s", strings.Join(got.Lines, "\n"))
 	}
 
 	files.events = nil
 	again := runHome()
 	if len(files.events) != 0 {
-		t.Errorf("la segunda corrida tocó el home: %v", files.events)
+		t.Errorf("the second run touched the home: %v", files.events)
 	}
-	if !strings.Contains(strings.Join(again.Lines, "\n"), "sin cambios") {
-		t.Errorf("la segunda corrida no dice que la puerta ya estaba:\n%s", strings.Join(again.Lines, "\n"))
+	if !strings.Contains(strings.Join(again.Lines, "\n"), "unchanged") {
+		t.Errorf("the second run does not say the door was already there:\n%s", strings.Join(again.Lines, "\n"))
 	}
 }
 
@@ -182,20 +182,20 @@ func TestInitGlobalInstallsTheGlobalDoor(t *testing.T) {
 func TestInitKeepsTheProjectWhenTheHomeIsNotWritable(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
-	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{err: errors.New("sin home")}, Global: true}, files, &fakeSkills{})
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{err: errors.New("no home")}, Global: true}, files, &fakeSkills{})
 
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
 	for _, path := range []string{"AGENTS.md", ".opencode/agents/odachi.md", ".claude/output-styles/odachi.md"} {
 		if _, ok := files.get(path); !ok {
-			t.Errorf("%s no se escribió: el proyecto quedó a medias", path)
+			t.Errorf("%s was not written: the project was left half done", path)
 		}
 	}
 	joined := strings.Join(got.Lines, "\n")
-	for _, want := range []string{"pendiente:", "home", "odachi init"} {
+	for _, want := range []string{"pending:", "home", "odachi init"} {
 		if !strings.Contains(joined, want) {
-			t.Errorf("las líneas no dicen %q:\n%s", want, joined)
+			t.Errorf("the lines do not say %q:\n%s", want, joined)
 		}
 	}
 }
@@ -209,10 +209,10 @@ func TestInitWritesTheVoiceOfTheProfileAtHand(t *testing.T) {
 		profiles fakeProfiles
 		want     string
 	}{
-		{"sin perfil es novato", fakeProfiles{}, persona.Novato},
-		{"novato escrito", fakeProfiles{name: "novato"}, persona.Novato},
-		{"senior escrito", fakeProfiles{name: "senior"}, persona.Senior},
-		{"ci usa la voz de senior", fakeProfiles{name: "ci"}, persona.Senior},
+		{"no profile is novato", fakeProfiles{}, persona.Novato},
+		{"novato written", fakeProfiles{name: "novato"}, persona.Novato},
+		{"senior written", fakeProfiles{name: "senior"}, persona.Senior},
+		{"ci uses the senior voice", fakeProfiles{name: "ci"}, persona.Senior},
 	}
 
 	for _, c := range cases {
@@ -230,10 +230,10 @@ func TestInitWritesTheVoiceOfTheProfileAtHand(t *testing.T) {
 			}
 			content, _ := files.get("AGENTS.md")
 			if content != want {
-				t.Fatalf("el bloque no lleva la voz %s:\n%q\nvs\n%q", c.want, content, want)
+				t.Fatalf("the block does not carry the %s voice:\n%q\nvs\n%q", c.want, content, want)
 			}
 			if !strings.Contains(strings.Join(got.Lines, "\n"), c.want) {
-				t.Errorf("las líneas no dicen con qué voz se escribió el bloque:\n%s", strings.Join(got.Lines, "\n"))
+				t.Errorf("the lines do not say which voice the block was written with:\n%s", strings.Join(got.Lines, "\n"))
 			}
 		})
 	}
@@ -245,7 +245,7 @@ func TestInitWritesTheVoiceOfTheProfileAtHand(t *testing.T) {
 func TestInitNamesABrokenProfileAndKeepsGoing(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
-	got := runProfiled(files, fakeProfiles{err: errors.New("perfil: TOML inválido")})
+	got := runProfiled(files, fakeProfiles{err: errors.New("profile: invalid TOML")})
 
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
@@ -255,12 +255,12 @@ func TestInitNamesABrokenProfileAndKeepsGoing(t *testing.T) {
 		t.Fatalf("rules.Block(novato): %v", err)
 	}
 	if content, _ := files.get("AGENTS.md"); content != want {
-		t.Errorf("el bloque no salió con la voz de novato:\n%q", content)
+		t.Errorf("the block did not come out with the novato voice:\n%q", content)
 	}
 	joined := strings.Join(got.Lines, "\n")
 	for _, want := range []string{".odachi/profile.toml", "odachi init"} {
 		if !strings.Contains(joined, want) {
-			t.Errorf("las líneas no nombran %q:\n%s", want, joined)
+			t.Errorf("the lines do not name %q:\n%s", want, joined)
 		}
 	}
 }
@@ -278,7 +278,7 @@ func TestInitNamesAProfileWithoutAVoice(t *testing.T) {
 	joined := strings.Join(got.Lines, "\n")
 	for _, want := range []string{"mio", "novato", "senior", "ci"} {
 		if !strings.Contains(joined, want) {
-			t.Errorf("las líneas no nombran %q:\n%s", want, joined)
+			t.Errorf("the lines do not name %q:\n%s", want, joined)
 		}
 	}
 }
@@ -298,17 +298,17 @@ func TestInitReportsTheV0100PersonaFilesAndTouchesNothing(t *testing.T) {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
 	joined := strings.Join(got.Lines, "\n")
-	for _, want := range []string{"v0.10.0", ".opencode/agents", rules.File, "borralas"} {
+	for _, want := range []string{"v0.10.0", ".opencode/agents", rules.File, "delete them"} {
 		if !strings.Contains(joined, want) {
-			t.Errorf("las líneas no dicen %q:\n%s", want, joined)
+			t.Errorf("the lines do not say %q:\n%s", want, joined)
 		}
 	}
 	if content, _ := files.get(leftover); content != "la versión vieja\n" {
-		t.Errorf("init tocó el archivo viejo: %q", content)
+		t.Errorf("init touched the old file: %q", content)
 	}
 	for _, event := range files.events {
 		if strings.Contains(event, leftover) {
-			t.Errorf("init escribió o respaldó el archivo viejo: %s", event)
+			t.Errorf("init wrote or backed up the old file: %s", event)
 		}
 	}
 }
@@ -333,7 +333,7 @@ func TestInitRerunStillWritesNothing(t *testing.T) {
 	if len(got.Files) != 0 {
 		t.Errorf("Files = %v, want none on a rerun that wrote nothing", got.Files)
 	}
-	if !strings.Contains(got.Message, "sin cambios") {
+	if !strings.Contains(got.Message, "unchanged") {
 		t.Errorf("Message = %q, want it to say nothing changed", got.Message)
 	}
 }

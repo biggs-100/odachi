@@ -42,7 +42,7 @@ func (f *writeFake) List(dir string) ([]string, error) {
 func (f *writeFake) Read(path string) ([]byte, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	return data, nil
 }
@@ -112,7 +112,7 @@ func TestSaveRefusesToDropALine(t *testing.T) {
 	if err == nil {
 		t.Fatal("Save on a document with an extra section = nil error, want one")
 	}
-	if !strings.Contains(err.Error(), "## Historial") {
+	if !strings.Contains(err.Error(), "## History") {
 		t.Errorf("error %q does not say where the notes belong", err)
 	}
 	if !strings.Contains(err.Error(), "## Notas") {
@@ -179,7 +179,7 @@ func TestSaveNamesTheFileWhenTheWriteFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("Save with a failing writer = nil error, want one")
 	}
-	if !strings.Contains(err.Error(), "no pude escribir") || !strings.Contains(err.Error(), current.Rel) {
+	if !strings.Contains(err.Error(), "could not write") || !strings.Contains(err.Error(), current.Rel) {
 		t.Errorf("error %q does not name the file it could not write", err)
 	}
 }
@@ -188,7 +188,7 @@ func TestSaveNamesTheFileWhenTheWriteFails(t *testing.T) {
 type failingWrite struct{ *writeFake }
 
 func (f *failingWrite) Write(string, []byte) error {
-	return fmt.Errorf("disco lleno")
+	return fmt.Errorf("disk full")
 }
 
 // TestSaveRefusesADuplicateTitle: Parse keeps the last title, so a second one
@@ -207,7 +207,7 @@ func TestSaveRefusesADuplicateTitle(t *testing.T) {
 	if !strings.Contains(err.Error(), "# reserva-de-turno") {
 		t.Errorf("error %q does not name the title that would be lost", err)
 	}
-	if !strings.Contains(err.Error(), "## Historial") {
+	if !strings.Contains(err.Error(), "## History") {
 		t.Errorf("error %q does not say where the notes belong", err)
 	}
 	if len(files.wrote) != 0 {

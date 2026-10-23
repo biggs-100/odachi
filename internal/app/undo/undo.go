@@ -42,7 +42,7 @@ const dateFormat = "2006-01-02 15:04"
 
 // codeHint is the one thing undo does not do. Naming it costs a line; executing
 // git would cost the tool its reason to exist.
-const codeHint = "no toqué git: deshacer código es tuyo, con git revert <sha>"
+const codeHint = "I did not touch git: undoing code is yours, with git revert <sha>"
 
 // Options is one `odachi undo` invocation.
 type Options struct {
@@ -108,7 +108,7 @@ func Run(opts Options, files Files, guard lock.Lock) Result {
 func run(opts Options, files Files) Result {
 	if opts.Collect {
 		if opts.List || opts.File != "" {
-			return blocked("--collect mueve todos los backups viejos de una: no va con --list ni con --file")
+			return blocked("--collect moves every old backup at once: it does not go with --list or --file")
 		}
 		return collect(opts.Dir, files)
 	}
@@ -149,7 +149,7 @@ func parseFile(value string) (undodomain.Kind, string) {
 		return kind, ""
 	}
 	return "", fmt.Sprintf(
-		"--file %s no es un artefacto que odachi escriba; los que puedo deshacer son %s",
+		"--file %s is not an artifact odachi writes; the ones I can undo are %s",
 		strings.TrimSpace(value), allowedFlags())
 }
 
@@ -199,7 +199,7 @@ func discover(dir string, kinds []undodomain.Kind, files Files) ([]undodomain.Ba
 func scan(dir, dirRel string, kind undodomain.Kind, files Files) ([]undodomain.Backup, error) {
 	names, err := files.List(filepath.Join(dir, filepath.FromSlash(dirRel)))
 	if err != nil {
-		return nil, fmt.Errorf("no pude leer %s: %s; revisá los permisos y volvé a intentar",
+		return nil, fmt.Errorf("could not read %s: %s; check the permissions and try again",
 			dirRel, oneLine(err.Error()))
 	}
 
@@ -217,7 +217,7 @@ func scan(dir, dirRel string, kind undodomain.Kind, files Files) ([]undodomain.B
 		backupRel := path.Join(dirRel, name)
 		when, err := files.ModTime(filepath.Join(dir, filepath.FromSlash(backupRel)))
 		if err != nil {
-			return nil, fmt.Errorf("no pude leer la fecha de %s: %s; revisá los permisos y volvé a intentar",
+			return nil, fmt.Errorf("could not read the date of %s: %s; check the permissions and try again",
 				backupRel, oneLine(err.Error()))
 		}
 
@@ -242,7 +242,7 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 		for _, group := range groups {
 			names = append(names, group.Artifact)
 		}
-		return blocked(fmt.Sprintf("hay %d artefactos con backups (%s): decime cuál querés con --file brief|profile|fence|task",
+		return blocked(fmt.Sprintf("there are %d artifacts with backups (%s): tell me which one you want with --file brief|profile|fence|task",
 			len(groups), joined(names)))
 	}
 
@@ -258,7 +258,7 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 	// file it is about to replace.
 	data, err := files.Read(backupPath)
 	if err != nil {
-		return blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a intentar",
+		return blocked(fmt.Sprintf("could not read %s: %s; check the permissions and try again",
 			chosen.Path, oneLine(err.Error())))
 	}
 
@@ -266,7 +266,7 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 	// saved before it is replaced.
 	exists, err := files.Exists(artifactPath)
 	if err != nil {
-		return blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a intentar",
+		return blocked(fmt.Sprintf("could not check %s: %s; check the permissions and try again",
 			chosen.Artifact, oneLine(err.Error())))
 	}
 
@@ -274,34 +274,34 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 	if exists {
 		current, err := files.Read(artifactPath)
 		if err != nil {
-			return blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a intentar",
+			return blocked(fmt.Sprintf("could not read %s: %s; check the permissions and try again",
 				chosen.Artifact, oneLine(err.Error())))
 		}
 		// Restoring what is already there is not a change, and saying it was
 		// would print the same backup name as both the source and the result.
 		if bytes.Equal(current, data) {
-			message := fmt.Sprintf("no hubo cambios: %s ya era igual a %s", chosen.Artifact, chosen.Path)
+			message := fmt.Sprintf("no changes: %s was already the same as %s", chosen.Artifact, chosen.Path)
 			return Result{Code: CodeOK, Message: message, Lines: []string{message, codeHint}}
 		}
 
 		made, err := files.Backup(artifactPath)
 		if err != nil {
-			return blocked(fmt.Sprintf("no pude respaldar %s antes de restaurarlo: %s; revisá los permisos y volvé a intentar",
+			return blocked(fmt.Sprintf("could not back up %s before restoring it: %s; check the permissions and try again",
 				chosen.Artifact, oneLine(err.Error())))
 		}
 		previous = relativeBackup(dir, made)
 	}
 
 	if err := files.Write(artifactPath, data); err != nil {
-		return blocked(fmt.Sprintf("no pude escribir %s: %s; revisá los permisos y volvé a intentar",
+		return blocked(fmt.Sprintf("could not write %s: %s; check the permissions and try again",
 			chosen.Artifact, oneLine(err.Error())))
 	}
 
-	message := fmt.Sprintf("restauré %s desde %s; no existía %s, así que no había nada que respaldar",
+	message := fmt.Sprintf("restored %s from %s; %s did not exist, so there was nothing to back up",
 		chosen.Artifact, chosen.Path, chosen.Artifact)
 	affected := []string{chosen.Artifact}
 	if previous != "" {
-		message = fmt.Sprintf("restauré %s desde %s; lo que había quedado en %s",
+		message = fmt.Sprintf("restored %s from %s; what was there was left in %s",
 			chosen.Artifact, chosen.Path, previous)
 		affected = append(affected, previous)
 	}
@@ -337,32 +337,32 @@ func collect(dir string, files Files) Result {
 
 		data, err := files.Read(source)
 		if err != nil {
-			return blocked(fmt.Sprintf("no pude leer %s para moverlo: %s; revisá los permisos y volvé a intentar",
+			return blocked(fmt.Sprintf("could not read %s to move it: %s; check the permissions and try again",
 				backup.Path, oneLine(err.Error())))
 		}
 
 		exists, err := files.Exists(target)
 		if err != nil {
-			return blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a intentar",
+			return blocked(fmt.Sprintf("could not check %s: %s; check the permissions and try again",
 				targetRel, oneLine(err.Error())))
 		}
 
 		if exists {
 			current, err := files.Read(target)
 			if err != nil {
-				return blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a intentar",
+				return blocked(fmt.Sprintf("could not read %s: %s; check the permissions and try again",
 					targetRel, oneLine(err.Error())))
 			}
 			if !bytes.Equal(current, data) {
-				return blocked(fmt.Sprintf("no moví %s: %s ya existe con otro contenido; no piso un backup",
+				return blocked(fmt.Sprintf("did not move %s: %s already exists with other contents; I do not overwrite a backup",
 					backup.Path, targetRel))
 			}
 			if err := files.Remove(source); err != nil {
-				return blocked(fmt.Sprintf("no pude borrar el backup viejo %s: %s", backup.Path, oneLine(err.Error())))
+				return blocked(fmt.Sprintf("could not delete the old backup %s: %s", backup.Path, oneLine(err.Error())))
 			}
 		} else {
 			if err := files.Rename(source, target); err != nil {
-				return blocked(fmt.Sprintf("no pude mover %s a %s: %s; revisá los permisos y volvé a intentar",
+				return blocked(fmt.Sprintf("could not move %s to %s: %s; check the permissions and try again",
 					backup.Path, targetRel, oneLine(err.Error())))
 			}
 		}
@@ -372,11 +372,11 @@ func collect(dir string, files Files) Result {
 	}
 
 	if moved == 0 {
-		message := "no hay backups viejos que mover: ya están todos en " + undodomain.BackupDir
+		message := "there are no old backups to move: they are all in " + undodomain.BackupDir
 		return Result{Code: CodeOK, Message: message, Lines: []string{message}}
 	}
 
-	message := fmt.Sprintf("moví %d backups a %s", moved, undodomain.BackupDir)
+	message := fmt.Sprintf("moved %d backups to %s", moved, undodomain.BackupDir)
 	return Result{Code: CodeOK, Message: message, Lines: []string{message}, Files: targets}
 }
 
@@ -392,7 +392,7 @@ func listing(found []undodomain.Backup) Result {
 
 	lines := make([]string, 0, len(groups))
 	for _, group := range groups {
-		lines = append(lines, fmt.Sprintf("%s · %s · último %s",
+		lines = append(lines, fmt.Sprintf("%s · %s · last %s",
 			group.Artifact, count(len(group.Backups)), group.Last().Format(dateFormat)))
 	}
 
@@ -404,11 +404,11 @@ func listing(found []undodomain.Backup) Result {
 // nothingToUndo says what odachi writes and which command writes it: with no
 // backup there is nothing to restore, and the human needs to know why.
 func nothingToUndo(kind undodomain.Kind) string {
-	scope := "no hay nada que deshacer"
+	scope := "there is nothing to undo"
 	if kind != "" {
-		scope = "no hay ningún backup de " + kind.Target()
+		scope = "there is no backup of " + kind.Target()
 	}
-	return fmt.Sprintf("%s: odachi escribe %s, y todavía no hay backups; corré odachi start para escribir el primero",
+	return fmt.Sprintf("%s: odachi writes %s, and there are no backups yet; run odachi start to write the first one",
 		scope, allowedTargets())
 }
 
@@ -450,12 +450,12 @@ func count(n int) string {
 	return fmt.Sprintf("%d backups", n)
 }
 
-// joined lists names the way Spanish does: "a, b, c y d".
+// joined lists names the way English does: "a, b, c and d".
 func joined(names []string) string {
 	if len(names) <= 1 {
 		return strings.Join(names, "")
 	}
-	return strings.Join(names[:len(names)-1], ", ") + " y " + names[len(names)-1]
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 }
 
 // blocked is a Result with exit code 1.

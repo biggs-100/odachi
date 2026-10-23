@@ -30,13 +30,13 @@ func TestAddStepNumbersMonotonically(t *testing.T) {
 		steps []taskdoc.Step
 		want  string
 	}{
-		{"sin pasos", nil, "T1"},
-		{"uno abierto", []taskdoc.Step{{ID: "T1", Text: "primero"}}, "T2"},
-		{"uno hecho y otro abierto", []taskdoc.Step{
+		{"no steps", nil, "T1"},
+		{"one open", []taskdoc.Step{{ID: "T1", Text: "primero"}}, "T2"},
+		{"one done and one open", []taskdoc.Step{
 			{ID: "T1", Text: "primero", Done: true, Commit: "4a1c9f"},
 			{ID: "T2", Text: "segundo"},
 		}, "T3"},
-		{"un hueco no se reutiliza", []taskdoc.Step{
+		{"a gap is never reused", []taskdoc.Step{
 			{ID: "T1", Text: "primero"},
 			{ID: "T3", Text: "tercero"},
 		}, "T4"},
@@ -143,7 +143,7 @@ func TestAddStepWithoutRequirementsSaysSo(t *testing.T) {
 	if err == nil {
 		t.Fatal("AddStep with no requirements = nil error, want one")
 	}
-	if !strings.Contains(err.Error(), "no hay requisitos") {
+	if !strings.Contains(err.Error(), "there are no requirements") {
 		t.Errorf("error %q does not say the document has no requirements", err)
 	}
 }
@@ -157,13 +157,13 @@ func TestAddStepRejectsBadText(t *testing.T) {
 		name string
 		text string
 	}{
-		{"vacío", ""},
-		{"solo espacios", "   "},
-		{"multilínea", "primera linea\nsegunda linea"},
-		{"con retorno", "primera linea\rsegunda linea"},
-		{"guión inicial", "- primer paso"},
-		{"guión pegado", "-primer paso"},
-		{"121 caracteres", strings.Repeat("a", 121)},
+		{"empty", ""},
+		{"spaces only", "   "},
+		{"multiline", "primera linea\nsegunda linea"},
+		{"with return", "primera linea\rsegunda linea"},
+		{"leading dash", "- primer paso"},
+		{"attached dash", "-primer paso"},
+		{"121 characters", strings.Repeat("a", 121)},
 	}
 
 	for _, c := range cases {
@@ -183,7 +183,7 @@ func TestAddStepRejectsBadText(t *testing.T) {
 }
 
 // TestAddStepAcceptsOneHundredTwentyCharacters: the limit is inclusive and
-// counts characters, not bytes, because the text is Spanish and human.
+// counts characters, not bytes, because the text is the human's words.
 func TestAddStepAcceptsOneHundredTwentyCharacters(t *testing.T) {
 	doc := canonical(t)
 

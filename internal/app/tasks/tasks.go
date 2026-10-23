@@ -43,7 +43,7 @@ type Files interface {
 func All(files Files, dir string) ([]Document, error) {
 	names, err := files.List(filepath.Join(dir, Dir))
 	if err != nil {
-		return nil, fmt.Errorf("no pude leer %s: %w", Dir, err)
+		return nil, fmt.Errorf("could not read %s: %w", Dir, err)
 	}
 
 	docs := make([]Document, 0, len(names))
@@ -57,7 +57,7 @@ func All(files Files, dir string) ([]Document, error) {
 		path := filepath.Join(dir, Dir, name)
 		data, err := files.Read(path)
 		if err != nil {
-			return nil, fmt.Errorf("no pude leer %s: %w", rel, err)
+			return nil, fmt.Errorf("could not read %s: %w", rel, err)
 		}
 
 		raw := string(data)
@@ -89,7 +89,7 @@ func Current(files Files, dir string) (Document, error) {
 		return Document{}, err
 	}
 	if len(docs) == 0 {
-		return Document{}, fmt.Errorf("todavía no hay ningún task doc en %s; corré odachi start para crear el primero", Dir)
+		return Document{}, fmt.Errorf("there is no task doc in %s yet; run odachi start to create the first one", Dir)
 	}
 	return docs[len(docs)-1], nil
 }

@@ -39,61 +39,61 @@ type Lens struct {
 // when in doubt say nothing; style and preference are banned unless they hide a
 // defect; the severity vocabulary is closed; an empty review is exactly one
 // sentence; a finding counts only if the candidate caused it; and one exhaustive
-// pass per lens, with no loop until it dries.
+// pass per lens, with no loop.
 func Prompt(in PromptInput) string {
 	var out strings.Builder
 
-	out.WriteString("# odachi review · árbol " + in.Tree + " · base " + in.Base)
+	out.WriteString("# odachi review · tree " + in.Tree + " · base " + in.Base)
 	if names := lensNames(in.Lenses); len(names) > 0 {
-		out.WriteString(" · lentes " + strings.Join(names, ", "))
+		out.WriteString(" · lenses " + strings.Join(names, ", "))
 	}
 	out.WriteString("\n\n")
-	out.WriteString("Sos el reviewer de diseño de este candidato. Revisás diseño, no estilo:\n")
-	out.WriteString("un review con ruido se ignora, y un review ignorado no protege a nadie.\n\n")
+	out.WriteString("You are the design reviewer of this candidate. You review design, not style:\n")
+	out.WriteString("a review with noise is ignored, and an ignored review protects nobody.\n\n")
 
-	out.WriteString("## El brief (lo que el humano pidió)\n")
+	out.WriteString("## The brief (what the human asked for)\n")
 	// The diff is written raw, without a fence: a diff of a Markdown file
 	// contains fences, and a fence inside a fence is a prompt that leaks.
 	out.WriteString(section(in.Brief))
 	out.WriteString("\n")
 
-	out.WriteString("## Las rutas cambiadas\n")
+	out.WriteString("## The changed paths\n")
 	for _, path := range in.Paths {
 		out.WriteString("- " + path + "\n")
 	}
 	out.WriteString("\n")
 
-	out.WriteString("## El diff (el candidato completo, contra la base)\n")
+	out.WriteString("## The diff (the whole candidate, against the base)\n")
 	out.WriteString(section(in.Diff))
 	out.WriteString("\n")
 
-	out.WriteString("## Las cinco reglas\n")
-	out.WriteString("1. Reportá un finding solo si es un defecto real que afecta al usuario y que podés\n")
-	out.WriteString("   defender con evidencia concreta. Ante la duda, callate.\n")
-	out.WriteString("   Estilo y preferencia están prohibidos salvo que oculten un defecto.\n")
-	out.WriteString("2. La severidad es exactamente una de BLOCKER, CRITICAL, WARNING, SUGGESTION.\n")
-	out.WriteString("3. Si no hay nada que reportar, no inventes nada para tener algo que decir: el JSON\n")
-	out.WriteString("   lleva \"findings\": [] y, si contestás en prosa, la respuesta es exactamente:\n")
+	out.WriteString("## The five rules\n")
+	out.WriteString("1. Report a finding only if it is a real defect that affects the user and you can\n")
+	out.WriteString("   defend it with concrete evidence. When in doubt, say nothing.\n")
+	out.WriteString("   Style and preference are banned unless they hide a defect.\n")
+	out.WriteString("2. The severity is exactly one of BLOCKER, CRITICAL, WARNING, SUGGESTION.\n")
+	out.WriteString("3. If there is nothing to report, do not invent anything so you have something to say: the JSON\n")
+	out.WriteString("   carries \"findings\": [] and, if you answer in prose, the answer is exactly:\n")
 	out.WriteString("   " + NoFindings + "\n")
-	out.WriteString("4. Un finding cuenta solo si el candidato lo introdujo, lo activó o lo empeoró. Lo que\n")
-	out.WriteString("   ya estaba es un follow-up, no un bloqueo: marcalo \"causal\": false.\n")
-	out.WriteString("5. Un solo barrido por lente. No vuelvas a escanear hasta que no quede nada.\n")
+	out.WriteString("4. A finding counts only if the candidate introduced it, activated it or worsened it. What\n")
+	out.WriteString("   was already there is a follow-up, not a block: mark it \"causal\": false.\n")
+	out.WriteString("5. One pass per lens, exhaustive: do not loop.\n")
 	out.WriteString("\n")
 
 	out.WriteString(lensSection(in.Lenses))
 
-	out.WriteString("## Qué devolver\n")
+	out.WriteString("## What to return\n")
 	out.WriteString(schema(in))
 	out.WriteString("\n")
-	out.WriteString("El veredicto se deriva de los findings: si hay un finding con \"causal\": true y\n")
-	out.WriteString("severidad BLOCKER o CRITICAL, el veredicto es " + ChangesRequested + "; si no, es " + Approved + ".\n")
-	out.WriteString("No lo decidas vos: lo decide la regla.\n")
+	out.WriteString("The verdict is derived from the findings: if there is a finding with \"causal\": true and\n")
+	out.WriteString("severity BLOCKER or CRITICAL, the verdict is " + ChangesRequested + "; if not, it is " + Approved + ".\n")
+	out.WriteString("Do not decide it yourself: the rule decides it.\n")
 	if len(in.Lenses) > 0 {
-		out.WriteString("Las lentes que cubriste las anota la herramienta: no las escribas en el JSON.\n")
+		out.WriteString("The tool records the lenses you covered: do not write them in the JSON.\n")
 	}
 	out.WriteString("\n")
 
-	out.WriteString("Contestá solo con el JSON, sin texto alrededor.\n")
+	out.WriteString("Answer with the JSON only, without text around it.\n")
 
 	return out.String()
 }
@@ -107,9 +107,9 @@ func lensSection(lenses []Lens) string {
 	}
 
 	var out strings.Builder
-	out.WriteString("## Las lentes de este árbol\n")
-	out.WriteString("Las lentes las eligió la evidencia del diff, no el gusto de nadie. Hacé un barrido por lente,\n")
-	out.WriteString("en el orden de esta lista, y reportá cada finding una sola vez.\n\n")
+	out.WriteString("## The lenses of this tree\n")
+	out.WriteString("The lenses were chosen by the diff's evidence, not by anyone's taste. Make one pass per lens,\n")
+	out.WriteString("in the order of this list, and report each finding only once.\n\n")
 
 	for _, lens := range lenses {
 		out.WriteString("### " + lens.Name + "\n")
@@ -153,15 +153,15 @@ func schema(in PromptInput) string {
 	out.WriteString("{\n")
 	out.WriteString(`  "tree": "` + in.Tree + `"` + ",\n")
 	out.WriteString(`  "base": "` + in.Base + `"` + ",\n")
-	out.WriteString("  \"reviewer\": \"<el comando o tu nombre>\",\n")
-	out.WriteString("  \"at\": \"<RFC3339, por ejemplo 2026-10-21T20:31:00Z>\",\n")
+	out.WriteString("  \"reviewer\": \"<the command or your name>\",\n")
+	out.WriteString("  \"at\": \"<RFC3339, for example 2026-10-21T20:31:00Z>\",\n")
 	out.WriteString("  \"findings\": [\n")
 	out.WriteString("    {\n")
-	out.WriteString("      \"path\": \"<archivo>\",\n")
+	out.WriteString("      \"path\": \"<file>\",\n")
 	out.WriteString("      \"line\": 0,\n")
 	out.WriteString("      \"severity\": \"BLOCKER | CRITICAL | WARNING | SUGGESTION\",\n")
 	out.WriteString("      \"causal\": true,\n")
-	out.WriteString("      \"why\": \"<el defecto y la evidencia concreta>\"\n")
+	out.WriteString("      \"why\": \"<the defect and the concrete evidence>\"\n")
 	out.WriteString("    }\n")
 	out.WriteString("  ],\n")
 	out.WriteString("  \"verdict\": \"" + Approved + " | " + ChangesRequested + "\"\n")
@@ -175,7 +175,7 @@ func schema(in PromptInput) string {
 func section(text string) string {
 	trimmed := strings.TrimRight(text, "\n")
 	if trimmed == "" {
-		return "(vacío)\n"
+		return "(empty)\n"
 	}
 	return trimmed + "\n"
 }

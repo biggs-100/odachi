@@ -91,7 +91,7 @@ func TestPackWritesTheBundledSkills(t *testing.T) {
 			t.Errorf("%s differs from skills/%s/SKILL.md", name, name)
 		}
 	}
-	if !strings.Contains(out, fmt.Sprintf("claude · %d instaladas · ~/.claude/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("claude · %d installed · ~/.claude/skills", len(bundled))) {
 		t.Errorf("stdout lacks the summary line:\n%s", out)
 	}
 }
@@ -112,7 +112,7 @@ func TestPackSecondRunIsIdentical(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second run code = %d (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, fmt.Sprintf("claude · %d sin cambios · ~/.claude/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("claude · %d unchanged · ~/.claude/skills", len(bundled))) {
 		t.Errorf("the second run does not report sin cambios:\n%s", out)
 	}
 
@@ -148,7 +148,7 @@ func TestPackBacksUpAModifiedFile(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, "1 respaldada") {
+	if !strings.Contains(out, "1 backed up") {
 		t.Errorf("stdout does not report the backup:\n%s", out)
 	}
 
@@ -189,7 +189,7 @@ func TestPackDryRunWritesNothing(t *testing.T) {
 	if files := walkNames(t, home); len(files) != 0 {
 		t.Errorf("dry-run wrote %d files: %v", len(files), files)
 	}
-	if !strings.Contains(out, fmt.Sprintf("%d por instalar", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("%d to install", len(bundled))) {
 		t.Errorf("stdout does not list the planned installs:\n%s", out)
 	}
 	if !strings.Contains(out, "dry-run") {
@@ -204,8 +204,8 @@ func TestPackRefusesPiAndUnknownAgents(t *testing.T) {
 		agents string
 		want   string
 	}{
-		{"pi", "Pi no usa un directorio de skills"},
-		{"inventado", "agente desconocido: inventado"},
+		{"pi", "Pi does not use a skills directory"},
+		{"inventado", "unknown agent: inventado"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.agents, func(t *testing.T) {
@@ -248,7 +248,7 @@ func TestPackTwoAgents(t *testing.T) {
 				t.Errorf("%s: %s was not installed: %v", agentName, name, err)
 			}
 		}
-		if !strings.Contains(out, fmt.Sprintf("%s · %d instaladas · ~/.%s/skills", agentName, len(bundled), agentName)) {
+		if !strings.Contains(out, fmt.Sprintf("%s · %d installed · ~/.%s/skills", agentName, len(bundled), agentName)) {
 			t.Errorf("stdout lacks the summary of %s:\n%s", agentName, out)
 		}
 	}
@@ -294,7 +294,7 @@ func TestPackOpenCodeWritesIntoTheProject(t *testing.T) {
 	if files := walkNames(t, home); len(files) != 0 {
 		t.Errorf("the home was touched: %v", files)
 	}
-	if !strings.Contains(out, fmt.Sprintf("opencode · %d instaladas · ./.opencode/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("opencode · %d installed · ./.opencode/skills", len(bundled))) {
 		t.Errorf("stdout lacks the project-relative summary line:\n%s", out)
 	}
 	if strings.Contains(out, project) || strings.Contains(out, home) {
@@ -318,7 +318,7 @@ func TestPackOpenCodeSecondRunIsIdentical(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second run code = %d (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, fmt.Sprintf("opencode · %d sin cambios · ./.opencode/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("opencode · %d unchanged · ./.opencode/skills", len(bundled))) {
 		t.Errorf("the second run does not report sin cambios:\n%s", out)
 	}
 	after := walkNames(t, project)
@@ -374,7 +374,7 @@ func TestPackDetectsOpenCodeInTheProject(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
-	if !strings.Contains(out, fmt.Sprintf("opencode · %d instaladas · ./.opencode/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("opencode · %d installed · ./.opencode/skills", len(bundled))) {
 		t.Errorf("the detected agent was not served:\n%s", out)
 	}
 	if _, err := os.Stat(agentProjectFile(t, project, "opencode", "acceptance")); err != nil {
@@ -490,7 +490,7 @@ func TestPackDetectsAnAgentOrSaysHowToName(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("detected run code = %d (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, fmt.Sprintf("codex · %d instaladas · ~/.codex/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("codex · %d installed · ~/.codex/skills", len(bundled))) {
 		t.Errorf("the detected agent was not served:\n%s", out)
 	}
 	if _, err := os.Stat(agentFile(t, home, "claude", "acceptance")); err == nil {
@@ -561,7 +561,7 @@ func TestPackScopeHomeServesOpenCodeFromTheHome(t *testing.T) {
 	if files := walkNames(t, project); len(files) != 0 {
 		t.Errorf("--scope home wrote into the project: %v", files)
 	}
-	if !strings.Contains(out, fmt.Sprintf("opencode · %d instaladas · ~/.config/opencode/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("opencode · %d installed · ~/.config/opencode/skills", len(bundled))) {
 		t.Errorf("stdout lacks the home summary line:\n%s", out)
 	}
 }
@@ -585,7 +585,7 @@ func TestPackStandardInstallsTheCrossClientLocation(t *testing.T) {
 	if files := walkNames(t, home); len(files) != 0 {
 		t.Errorf("the project copy touched the home: %v", files)
 	}
-	if !strings.Contains(out, fmt.Sprintf("standard · %d instaladas · ./.agents/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("standard · %d installed · ./.agents/skills", len(bundled))) {
 		t.Errorf("stdout lacks the cross-client summary:\n%s", out)
 	}
 
@@ -603,7 +603,7 @@ func TestPackStandardInstallsTheCrossClientLocation(t *testing.T) {
 	if files := walkNames(t, project2); len(files) != 0 {
 		t.Errorf("the home copy touched the project: %v", files)
 	}
-	if !strings.Contains(out, fmt.Sprintf("standard · %d instaladas · ~/.agents/skills", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("standard · %d installed · ~/.agents/skills", len(bundled))) {
 		t.Errorf("stdout lacks the home cross-client summary:\n%s", out)
 	}
 }
@@ -620,7 +620,7 @@ func TestPackDestServesAClientTheTableDoesNotKnow(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1 (stdout %q)", code, out)
 	}
-	for _, want := range []string{"agente desconocido: inventado", "--agents standard", "--dest"} {
+	for _, want := range []string{"unknown agent: inventado", "--agents standard", "--dest"} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("the refusal does not say %q:\n%s", want, errOut)
 		}
@@ -643,7 +643,7 @@ func TestPackDestServesAClientTheTableDoesNotKnow(t *testing.T) {
 			t.Errorf("%s differs from skills/%s/SKILL.md", name, name)
 		}
 	}
-	if !strings.Contains(out, fmt.Sprintf("inventado · %d instaladas · ./skills-x", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("inventado · %d installed · ./skills-x", len(bundled))) {
 		t.Errorf("stdout lacks the --dest summary:\n%s", out)
 	}
 
@@ -652,7 +652,7 @@ func TestPackDestServesAClientTheTableDoesNotKnow(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second run code = %d, want 0 (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, fmt.Sprintf("inventado · %d sin cambios · ./skills-x", len(bundled))) {
+	if !strings.Contains(out, fmt.Sprintf("inventado · %d unchanged · ./skills-x", len(bundled))) {
 		t.Errorf("the second run does not report sin cambios:\n%s", out)
 	}
 	after := walkNames(t, project)
@@ -678,7 +678,7 @@ func TestPackRefusesDestAndScopeTogether(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1 (stdout %q)", code, out)
 	}
-	for _, want := range []string{"--dest", "--scope", "elegí uno"} {
+	for _, want := range []string{"--dest", "--scope", "choose one"} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("stderr does not say %q:\n%s", want, errOut)
 		}

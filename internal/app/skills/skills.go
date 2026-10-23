@@ -91,7 +91,7 @@ func New(opts Options, files Files) Result {
 
 	if !skill.ValidSlug(slug) {
 		return failed(fmt.Sprintf(
-			"el slug %q no sirve: tiene que cumplir %s (minúsculas, números y guiones, empieza con una letra); elegí uno y volvé a correr odachi skill new <slug>",
+			"the slug %q does not work: it must match %s (lowercase letters, numbers and dashes, starting with a letter); choose one and run odachi skill new <slug> again",
 			slug, skill.NamePattern))
 	}
 
@@ -100,14 +100,14 @@ func New(opts Options, files Files) Result {
 
 	exists, err := files.Exists(path)
 	if err != nil {
-		return failed("no pude revisar " + rel + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi skill new <slug>")
+		return failed("could not check " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run odachi skill new <slug> again")
 	}
 	if exists {
-		return failed("ya existe " + rel + ": no lo toco; elegí otro slug, o editá el que ya está y corré odachi skills --check")
+		return failed("already exists " + rel + ": not touching it; choose another slug, or edit the one that is there and run odachi skills --check")
 	}
 
 	if err := files.Write(path, []byte(skill.Template(slug))); err != nil {
-		return failed("no pude escribir " + rel + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi skill new <slug>")
+		return failed("could not write " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run odachi skill new <slug> again")
 	}
 
 	loaded, err := load(root, files)
@@ -120,13 +120,13 @@ func New(opts Options, files Files) Result {
 	}
 
 	lines := []string{
-		rel + ": creado",
+		rel + ": created",
 		registryLine,
-		"siguiente: completá el Trigger y las tres secciones, y corré odachi skills --check",
+		"next: complete the Trigger and the three sections, and run odachi skills --check",
 	}
 	return Result{
 		Code:    CodeOK,
-		Message: "listo: " + rel + " creado y SKILLS.md al día",
+		Message: "ready: " + rel + " created and SKILLS.md up to date",
 		Lines:   lines,
 		Files:   []string{rel, Registry},
 		Skills:  loaded,
@@ -144,14 +144,14 @@ func list(loaded []skill.Skill) Result {
 		}
 		trigger := s.Trigger
 		if trigger == "" {
-			trigger = "(sin Trigger:)"
+			trigger = "(no Trigger:)"
 		}
 		lines = append(lines, name+" · "+trigger+" · "+s.Path)
 	}
 	return Result{Code: CodeOK, Message: fmt.Sprintf("%s en %s/", count(len(ordered), "skill", "skills"), Dir), Lines: lines, Skills: ordered}
 }
 
-// check reports every violation, one Spanish line each, and the one command that
+// check reports every violation, one English line each, and the one command that
 // resolves them.
 func check(root string, files Files, loaded []skill.Skill) Result {
 	current, hasRegistry, err := readRegistry(root, files)
@@ -163,7 +163,7 @@ func check(root string, files Files, loaded []skill.Skill) Result {
 	if len(problems) == 0 {
 		return Result{
 			Code:    CodeOK,
-			Message: fmt.Sprintf("todo en orden: %s y SKILLS.md al día", count(len(loaded), "skill", "skills")),
+			Message: fmt.Sprintf("all good: %s and SKILLS.md up to date", count(len(loaded), "skill", "skills")),
 			Skills:  loaded,
 		}
 	}
@@ -174,7 +174,7 @@ func check(root string, files Files, loaded []skill.Skill) Result {
 	}
 	return Result{
 		Code:    CodeBlocked,
-		Message: fmt.Sprintf("%s en las skills: corregí lo que dice cada línea", count(len(problems), "problema", "problemas")),
+		Message: fmt.Sprintf("%s in the skills: fix what each line says", count(len(problems), "problem", "problems")),
 		Lines:   lines,
 		Skills:  loaded,
 	}
@@ -207,12 +207,12 @@ func syncRegistry(root string, files Files, loaded []skill.Skill) (line string, 
 		return "", false, err
 	}
 	if exists && current == want {
-		return Registry + ": sin cambios", false, nil
+		return Registry + ": unchanged", false, nil
 	}
 	if err := files.Write(path, []byte(want)); err != nil {
-		return "", false, fmt.Errorf("no pude escribir %s: %s; revisá los permisos y volvé a correr odachi skills --write", Registry, oneLine(err.Error()))
+		return "", false, fmt.Errorf("could not write %s: %s; check the permissions and run odachi skills --write again", Registry, oneLine(err.Error()))
 	}
-	return fmt.Sprintf("%s: actualizado con %s", Registry, count(len(loaded), "skill", "skills")), true, nil
+	return fmt.Sprintf("%s: updated with %s", Registry, count(len(loaded), "skill", "skills")), true, nil
 }
 
 // readRegistry reads SKILLS.md when it exists. exists is false when the file is
@@ -221,14 +221,14 @@ func readRegistry(root string, files Files) (content string, exists bool, err er
 	path := filepath.Join(root, Registry)
 	exists, err = files.Exists(path)
 	if err != nil {
-		return "", false, fmt.Errorf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi skills --check", Registry, oneLine(err.Error()))
+		return "", false, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills --check again", Registry, oneLine(err.Error()))
 	}
 	if !exists {
 		return "", false, nil
 	}
 	data, err := files.Read(path)
 	if err != nil {
-		return "", true, fmt.Errorf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi skills --check", Registry, oneLine(err.Error()))
+		return "", true, fmt.Errorf("could not read %s: %s; check the permissions and run odachi skills --check again", Registry, oneLine(err.Error()))
 	}
 	return string(data), true, nil
 }
@@ -238,7 +238,7 @@ func readRegistry(root string, files Files) (content string, exists bool, err er
 func load(root string, files Files) ([]skill.Skill, error) {
 	names, err := files.List(filepath.Join(root, Dir))
 	if err != nil {
-		return nil, fmt.Errorf("no pude leer %s/: %s; revisá los permisos y volvé a correr odachi skills", Dir, oneLine(err.Error()))
+		return nil, fmt.Errorf("could not read %s/: %s; check the permissions and run odachi skills again", Dir, oneLine(err.Error()))
 	}
 
 	loaded := make([]skill.Skill, 0, len(names))
@@ -248,7 +248,7 @@ func load(root string, files Files) ([]skill.Skill, error) {
 
 		isDir, err := files.IsDir(dirPath)
 		if err != nil {
-			return nil, fmt.Errorf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi skills", rel, oneLine(err.Error()))
+			return nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", rel, oneLine(err.Error()))
 		}
 		if !isDir {
 			// A file here is not a skill and not an error: skills/embed.go lives
@@ -259,7 +259,7 @@ func load(root string, files Files) ([]skill.Skill, error) {
 		path := filepath.Join(root, Dir, name, SkillFile)
 		exists, err := files.Exists(path)
 		if err != nil {
-			return nil, fmt.Errorf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi skills", rel, oneLine(err.Error()))
+			return nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", rel, oneLine(err.Error()))
 		}
 		if !exists {
 			continue
@@ -267,7 +267,7 @@ func load(root string, files Files) ([]skill.Skill, error) {
 
 		data, err := files.Read(path)
 		if err != nil {
-			return nil, fmt.Errorf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi skills", rel, oneLine(err.Error()))
+			return nil, fmt.Errorf("could not read %s: %s; check the permissions and run odachi skills again", rel, oneLine(err.Error()))
 		}
 		loaded = append(loaded, skill.Parse(name, rel, string(data)))
 	}
@@ -277,7 +277,7 @@ func load(root string, files Files) ([]skill.Skill, error) {
 // noSkills is the starting point, not a failure: it says how to create the first
 // skill.
 func noSkills() Result {
-	message := "todavía no hay skills en " + Dir + "/: creá la primera con odachi skill new <slug>"
+	message := "there are no skills in " + Dir + "/ yet: create the first one with odachi skill new <slug>"
 	return Result{Code: CodeOK, Message: message, Lines: []string{message}}
 }
 

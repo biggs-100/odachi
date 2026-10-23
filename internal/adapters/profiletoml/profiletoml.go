@@ -37,7 +37,7 @@ func Decode(data []byte) (profile.Profile, error) {
 	var f file
 	md, err := toml.Decode(string(data), &f)
 	if err != nil {
-		return profile.Profile{}, fmt.Errorf("perfil: TOML inválido: %w", err)
+		return profile.Profile{}, fmt.Errorf("profile: invalid TOML: %w", err)
 	}
 
 	if unknown := md.Undecoded(); len(unknown) > 0 {
@@ -46,7 +46,7 @@ func Decode(data []byte) (profile.Profile, error) {
 			keys = append(keys, key.String())
 		}
 		return profile.Profile{}, fmt.Errorf(
-			"perfil: claves desconocidas: %s; un perfil solo puede configurar %s",
+			"profile: unknown keys: %s; a profile can only configure %s",
 			strings.Join(keys, ", "), strings.Join(knownKeys(), ", "))
 	}
 
@@ -61,7 +61,7 @@ func Decode(data []byte) (profile.Profile, error) {
 		Explain:     f.Explain,
 	}
 	if err := profile.Validate(p); err != nil {
-		return profile.Profile{}, fmt.Errorf("perfil: %w", err)
+		return profile.Profile{}, fmt.Errorf("profile: %w", err)
 	}
 	return p, nil
 }
@@ -70,7 +70,7 @@ func Decode(data []byte) (profile.Profile, error) {
 func Load(path string) (profile.Profile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return profile.Profile{}, fmt.Errorf("perfil: no se pudo leer %s: %w", path, err)
+		return profile.Profile{}, fmt.Errorf("profile: could not read %s: %w", path, err)
 	}
 	return Decode(data)
 }

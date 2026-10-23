@@ -136,16 +136,16 @@ func Render(b Brief) string {
 	return out.String()
 }
 
-// Missing returns the Spanish labels of the required parts that are empty, in
+// Missing returns the English labels of the required parts that are empty, in
 // the order the canonical brief declares them. An empty result means the brief
 // is complete enough to work from.
 func (b Brief) Missing() []string {
 	var missing []string
 	if len(b.Outcome) == 0 {
-		missing = append(missing, "qué tiene que existir")
+		missing = append(missing, "what must exist")
 	}
 	if len(b.DoneWhen) == 0 {
-		missing = append(missing, "listo cuando")
+		missing = append(missing, "done when")
 	}
 	// Non-goals are deliberately not required. The interview lets the human pick
 	// none, and forcing one invents a rule they never meant; a false fence

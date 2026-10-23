@@ -43,8 +43,8 @@ type Lock interface {
 	//
 	// stale carries the one line the human has to see about the lock that was
 	// already there: the announcement when an abandoned lock was taken over
-	// ("había un lock viejo de …, hace …; lo tomé"), or the refusal when a live
-	// one blocks the run. It is empty only when the file was free.
+	// ("there was an old lock from …, … ago; I took it"), or the refusal when a
+	// live one blocks the run. It is empty only when the file was free.
 	Acquire(path, owner string) (held bool, stale string, err error)
 
 	// Release frees the lock, and only the lock this port took: a lock another
@@ -88,11 +88,11 @@ func ParseOwner(data []byte) (Owner, bool) {
 }
 
 // Age is how an age reads in a message: seconds below a minute, minutes above
-// it, and "un rato" when the date could not be measured. A human reading "hace
-// 42s" knows to wait; one reading "hace 900s" has to do arithmetic.
+// it, and "a while" when the date could not be measured. A human reading "42s
+// ago" knows to wait; one reading "900s ago" has to do arithmetic.
 func Age(age time.Duration) string {
 	if age < 0 {
-		return "un rato"
+		return "a while"
 	}
 	if age < time.Second {
 		return "0s"
@@ -105,9 +105,9 @@ func Age(age time.Duration) string {
 // has to know.
 func StaleLine(owner Owner, age time.Duration) string {
 	if owner.Verb == "" {
-		return fmt.Sprintf("había un lock viejo en %s, hace %s; lo tomé", File, Age(age))
+		return fmt.Sprintf("there was an old lock at %s, %s ago; I took it", File, Age(age))
 	}
-	return fmt.Sprintf("había un lock viejo de %s, hace %s; lo tomé", owner.Verb, Age(age))
+	return fmt.Sprintf("there was an old lock from %s, %s ago; I took it", owner.Verb, Age(age))
 }
 
 // Refusal is the message when a live lock blocks a run. It names who is writing,
@@ -116,11 +116,11 @@ func StaleLine(owner Owner, age time.Duration) string {
 func Refusal(owner Owner, age time.Duration) string {
 	if owner.Verb == "" || owner.PID == "" {
 		return fmt.Sprintf(
-			"otra corrida de odachi está escribiendo en este proyecto (no pude leer %s, hace %s); esperá y volvé a intentarlo; si sabés que no hay ninguna corriendo, borrá %s a mano",
+			"another odachi run is writing to this project (could not read %s, %s ago); wait and try again; if you know nothing is running, delete %s by hand",
 			File, Age(age), File)
 	}
 	return fmt.Sprintf(
-		"otra corrida de odachi está escribiendo en este proyecto (%s, pid %s, hace %s); esperá y volvé a intentarlo; si sabés que no hay ninguna corriendo, borrá %s a mano",
+		"another odachi run is writing to this project (%s, pid %s, %s ago); wait and try again; if you know nothing is running, delete %s by hand",
 		owner.Verb, owner.PID, Age(age), File)
 }
 
@@ -157,7 +157,7 @@ func Take(port Lock, dir, verb string) Held {
 		// No lock means no exclusive write, and a verb that writes anyway is the
 		// incoherent project this whole file exists to prevent.
 		return Held{Refusal: oneLine(fmt.Sprintf(
-			"no pude tomar %s: %s; revisá los permisos del proyecto y volvé a intentarlo",
+			"could not take %s: %s; check the project permissions and try again",
 			File, err.Error()))}
 	case !held:
 		if strings.TrimSpace(line) == "" {

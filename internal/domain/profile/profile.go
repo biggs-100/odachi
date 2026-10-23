@@ -56,7 +56,7 @@ func Validate(p Profile) error {
 			continue
 		}
 		if !slices.Contains(field.allowed, value) {
-			return fmt.Errorf("%s: %q no es un valor permitido; valores permitidos: %s", field.name, value, strings.Join(field.allowed, ", "))
+			return fmt.Errorf("%s: %q is not an allowed value; allowed values: %s", field.name, value, strings.Join(field.allowed, ", "))
 		}
 	}
 	return nil
@@ -67,7 +67,7 @@ func Validate(p Profile) error {
 // are errors.
 func Resolve(known map[string]Profile, name string) (Profile, error) {
 	if _, ok := known[name]; !ok {
-		return Profile{}, fmt.Errorf("perfil desconocido: %q; perfiles disponibles: %s", name, strings.Join(names(known), ", "))
+		return Profile{}, fmt.Errorf("unknown profile: %q; available profiles: %s", name, strings.Join(names(known), ", "))
 	}
 
 	var chain []Profile
@@ -77,14 +77,14 @@ func Resolve(known map[string]Profile, name string) (Profile, error) {
 
 	for {
 		if seen[current] {
-			return Profile{}, fmt.Errorf("ciclo entre perfiles: %s", strings.Join(append(path, current), " -> "))
+			return Profile{}, fmt.Errorf("cycle between profiles: %s", strings.Join(append(path, current), " -> "))
 		}
 		seen[current] = true
 		path = append(path, current)
 
 		p, ok := known[current]
 		if !ok {
-			return Profile{}, fmt.Errorf("el perfil %q extiende %q, que no existe", path[len(path)-2], current)
+			return Profile{}, fmt.Errorf("profile %q extends %q, which does not exist", path[len(path)-2], current)
 		}
 		chain = append(chain, p)
 

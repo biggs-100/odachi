@@ -21,7 +21,7 @@ func Decode(data []byte) (string, error) {
 	var f file
 	md, err := toml.Decode(string(data), &f)
 	if err != nil {
-		return "", fmt.Errorf("agents: TOML inválido: %w", err)
+		return "", fmt.Errorf("agents: invalid TOML: %w", err)
 	}
 
 	if unknown := md.Undecoded(); len(unknown) > 0 {
@@ -29,7 +29,7 @@ func Decode(data []byte) (string, error) {
 		for _, key := range unknown {
 			keys = append(keys, key.String())
 		}
-		return "", fmt.Errorf("agents: claves desconocidas: %s; el archivo solo configura agents", strings.Join(keys, ", "))
+		return "", fmt.Errorf("agents: unknown keys: %s; this file only configures agents", strings.Join(keys, ", "))
 	}
 
 	selection, err := persona.NormalizeSelection(f.Agents)
@@ -46,5 +46,5 @@ func Render(selection string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("agents: %w", err)
 	}
-	return []byte("# odachi: qué clientes reciben el agente nativo; cambiar la elección no lo borra, solo deja de escribirlo\nagents = \"" + normalized + "\"\n"), nil
+	return []byte("# odachi: which clients receive the native agent; changing the choice does not delete it, it only stops writing it\nagents = \"" + normalized + "\"\n"), nil
 }

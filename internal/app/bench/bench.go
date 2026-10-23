@@ -127,7 +127,7 @@ type DeadEnd struct {
 func Run(opts Options, files Files, exec Exec) Result {
 	binary := strings.TrimSpace(opts.Binary)
 	if binary == "" {
-		return failed("no sé qué binario correr: pasá --binary <ruta> (sin eso el bench no puede medir nada)")
+		return failed("I do not know which binary to run: pass --binary <path> (without it the bench cannot measure anything)")
 	}
 
 	corpus := opts.Corpus
@@ -137,10 +137,10 @@ func Run(opts Options, files Files, exec Exec) Result {
 
 	selected, unknown := benchcore.Named(corpus, opts.Only)
 	if len(unknown) > 0 {
-		return failed("no conozco " + quoted(unknown) + "; los recorridos son: " + names(corpus))
+		return failed("unknown " + quoted(unknown) + "; the journeys are: " + names(corpus))
 	}
 	if len(selected) == 0 {
-		return failed("no hay recorridos para correr; los recorridos son: " + names(corpus))
+		return failed("there are no journeys to run; the journeys are: " + names(corpus))
 	}
 
 	r := &runner{opts: opts, binary: binary, files: files, exec: exec}
@@ -202,19 +202,19 @@ type outcome struct {
 func (r *runner) execute(journey benchcore.Journey) (result outcome) {
 	dir, err := r.files.MkdirTemp(sandboxPattern)
 	if err != nil {
-		return outcome{surprises: []string{"no pude crear el directorio temporal: " + oneLine(err.Error())}}
+		return outcome{surprises: []string{"could not create the temporary directory: " + oneLine(err.Error())}}
 	}
 	defer func() {
 		// The bench leaves the machine as it found it. A sandbox that cannot be
 		// removed is a surprise, not a silent leak.
 		if err := r.files.RemoveAll(dir); err != nil {
-			result.surprises = append(result.surprises, "no pude borrar el directorio temporal "+filepath.ToSlash(dir)+": "+oneLine(err.Error()))
+			result.surprises = append(result.surprises, "could not delete the temporary directory "+filepath.ToSlash(dir)+": "+oneLine(err.Error()))
 		}
 	}()
 
 	home := filepath.Join(dir, homeDir)
 	if err := r.files.MkdirAll(home); err != nil {
-		return outcome{surprises: []string{"no pude preparar el home del sandbox: " + oneLine(err.Error())}}
+		return outcome{surprises: []string{"could not prepare the sandbox home: " + oneLine(err.Error())}}
 	}
 	env := benchcore.SandboxEnv(r.opts.Env, home)
 
@@ -226,7 +226,7 @@ func (r *runner) execute(journey benchcore.Journey) (result outcome) {
 
 	for _, action := range journey.Setup {
 		if problem := r.act(dir, env, action); problem != "" {
-			return outcome{surprises: []string{"la preparación falló: " + problem}}
+			return outcome{surprises: []string{"the setup failed: " + problem}}
 		}
 	}
 
@@ -236,12 +236,12 @@ func (r *runner) execute(journey benchcore.Journey) (result outcome) {
 			// The binary could not be run at all: nothing was measured.
 			return outcome{
 				blocks:    result.blocks,
-				surprises: append(result.surprises, fmt.Sprintf("no pude correr el paso %d: %s", i+1, oneLine(err.Error()))),
+				surprises: append(result.surprises, fmt.Sprintf("could not run step %d: %s", i+1, oneLine(err.Error()))),
 			}
 		}
 
 		if code != step.Want {
-			result.surprises = append(result.surprises, fmt.Sprintf("el paso %d salió %d y esperaba %d", i+1, code, step.Want))
+			result.surprises = append(result.surprises, fmt.Sprintf("step %d exited %d and expected %d", i+1, code, step.Want))
 		}
 		if code != 0 {
 			result.blocks = append(result.blocks, block{journey: journey.Name, output: output})
@@ -249,7 +249,7 @@ func (r *runner) execute(journey benchcore.Journey) (result outcome) {
 
 		for _, action := range step.Then {
 			if problem := r.act(dir, env, action); problem != "" {
-				result.surprises = append(result.surprises, fmt.Sprintf("lo que sigue al paso %d falló: %s", i+1, problem))
+				result.surprises = append(result.surprises, fmt.Sprintf("what follows step %d failed: %s", i+1, problem))
 				return result
 			}
 		}
@@ -265,19 +265,19 @@ func (r *runner) act(dir string, env []string, action benchcore.Action) string {
 	case len(action.Command) > 0:
 		output, code, err := r.exec.Run(dir, env, action.Command[0], action.Command[1:]...)
 		if err != nil {
-			return "no pude correr " + strings.Join(action.Command, " ") + ": " + oneLine(err.Error())
+			return "could not run " + strings.Join(action.Command, " ") + ": " + oneLine(err.Error())
 		}
 		if code != 0 {
-			return strings.Join(action.Command, " ") + " salió " + fmt.Sprint(code) + ": " + oneLine(output)
+			return strings.Join(action.Command, " ") + " exited " + fmt.Sprint(code) + ": " + oneLine(output)
 		}
 		return ""
 	case action.Path != "":
 		path := filepath.Join(dir, filepath.FromSlash(action.Path))
 		if err := r.files.MkdirAll(filepath.Dir(path)); err != nil {
-			return "no pude crear el directorio de " + action.Path + ": " + oneLine(err.Error())
+			return "could not create the directory of " + action.Path + ": " + oneLine(err.Error())
 		}
 		if err := r.files.Write(path, []byte(action.Content)); err != nil {
-			return "no pude escribir " + action.Path + ": " + oneLine(err.Error())
+			return "could not write " + action.Path + ": " + oneLine(err.Error())
 		}
 		return ""
 	default:
@@ -379,14 +379,14 @@ func (r *runner) report() Result {
 		result.Code = CodeFailed
 	}
 
-	lines = append(lines, fmt.Sprintf("bench: %d recorridos, %d pasos, %d bloqueos",
-		len(r.results), result.Steps, result.Blocks))
+	lines = append(lines, fmt.Sprintf("bench: %s, %s, %s",
+		plural(len(r.results), "journey", "journeys"), plural(result.Steps, "step", "steps"), plural(result.Blocks, "block", "blocks")))
 	lines = append(lines, fmt.Sprintf("in_band %d · out_of_band %d · templated %d · interactive %d · dead_end %d",
 		result.InBand, result.OutOfBand, result.Templated, result.Interactive, result.DeadEnd))
 
 	for _, journey := range r.results {
 		line := fmt.Sprintf("%s · %s · %s",
-			journey.Name, plural(journey.Steps, "paso", "pasos"), blocksLine(journey.Blocks))
+			journey.Name, plural(journey.Steps, "step", "steps"), blocksLine(journey.Blocks))
 		if len(journey.Surprises) > 0 {
 			line += " · " + strings.Join(journey.Surprises, "; ")
 		}
@@ -396,12 +396,12 @@ func (r *runner) report() Result {
 	if len(deadEnds) > 0 {
 		lines = append(lines, "dead ends:")
 		for _, dead := range deadEnds {
-			lines = append(lines, fmt.Sprintf("- %s · %s salió %d: %s", dead.Journey, dead.Command, dead.Exit, dead.Message))
+			lines = append(lines, fmt.Sprintf("- %s · %s exited %d: %s", dead.Journey, dead.Command, dead.Exit, dead.Message))
 		}
 	}
 
 	if len(surprises) > 0 {
-		lines = append(lines, fmt.Sprintf("sorpresas: %d pasos no salieron como el recorrido esperaba", len(surprises)))
+		lines = append(lines, fmt.Sprintf("surprises: %d steps did not exit the way the journey expected", len(surprises)))
 	}
 
 	result.Message = verdict(result.DeadEnd, unmeasured)
@@ -416,20 +416,20 @@ func (r *runner) report() Result {
 func verdict(deadEnds, unmeasured int) string {
 	switch {
 	case unmeasured > 0:
-		return fmt.Sprintf("no pude medir %s: revisá la salida de cada recorrido", plural(unmeasured, "recorrido", "recorridos"))
+		return fmt.Sprintf("could not measure %s: check the output of each journey", plural(unmeasured, "journey", "journeys"))
 	case deadEnds > 0:
-		return plural(deadEnds, "dead end", "dead ends") + ": cada uno manda a un lugar sin salida"
+		return plural(deadEnds, "dead end", "dead ends") + ": each one sends you to a place with no way out"
 	default:
-		return "ningún dead end: cada bloqueo nombra un comando que resuelve"
+		return "no dead ends: every block names a command that resolves it"
 	}
 }
 
 // blocksLine is how a journey's block count reads.
 func blocksLine(blocks int) string {
 	if blocks == 0 {
-		return "sin bloqueos"
+		return "no blocks"
 	}
-	return plural(blocks, "bloqueo", "bloqueos")
+	return plural(blocks, "block", "blocks")
 }
 
 // failed is a bench that could not run at all.
@@ -455,7 +455,7 @@ func quoted(items []string) string {
 	return strings.Join(out, ", ")
 }
 
-// plural is how a Spanish sentence counts things.
+// plural is how an English sentence counts things.
 func plural(n int, one, many string) string {
 	if n == 1 {
 		return "1 " + one
@@ -471,7 +471,7 @@ func firstLine(text string) string {
 			return line
 		}
 	}
-	return "sin salida"
+	return "no output"
 }
 
 // oneLine keeps every message on one line, whatever an adapter said.

@@ -136,7 +136,7 @@ func TestDiffLeavesTheRepositoryUntouched(t *testing.T) {
 func TestDiffErrorCarriesGitsStderr(t *testing.T) {
 	root, _ := newRepo(t)
 
-	_, err := gitx.Diff(root, "no-existe-esta-revision")
+	_, err := gitx.Diff(root, "no-such-revision")
 	if err == nil {
 		t.Fatal("Diff accepted a base that does not exist")
 	}
@@ -144,7 +144,7 @@ func TestDiffErrorCarriesGitsStderr(t *testing.T) {
 	if !strings.Contains(msg, "fatal:") {
 		t.Errorf("the error does not carry git's stderr: %q", msg)
 	}
-	if !strings.Contains(msg, "no-existe-esta-revision") {
+	if !strings.Contains(msg, "no-such-revision") {
 		t.Errorf("the error does not name the base that failed: %q", msg)
 	}
 	if strings.Contains(msg, os.ErrNotExist.Error()) && !strings.Contains(msg, "git") {

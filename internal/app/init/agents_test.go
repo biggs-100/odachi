@@ -54,27 +54,27 @@ func TestInitAgentsOpenCodeOnlyWritesOpenCode(t *testing.T) {
 	}
 	for _, file := range persona.SubagentFilesFor(persona.SelectionOpenCode) {
 		if _, ok := files.get(file.Path); !ok {
-			t.Errorf("%s no se escribió", file.Path)
+			t.Errorf("%s was not written", file.Path)
 		}
 	}
 	if _, ok := files.get(".opencode/agents/odachi.md"); !ok {
-		t.Error(".opencode/agents/odachi.md no se escribió")
+		t.Error(".opencode/agents/odachi.md was not written")
 	}
 	if content, _ := files.get(".claude/output-styles/odachi.md"); content != "editado a mano\n" {
-		t.Errorf("init tocó el agente de Claude: %q", content)
+		t.Errorf("init touched the Claude agent: %q", content)
 	}
 	if content, _ := files.get(".claude/agents/odachi-worker.md"); content != "editado a mano\n" {
-		t.Errorf("init tocó el subagente de Claude: %q", content)
+		t.Errorf("init touched the Claude subagent: %q", content)
 	}
 	for _, event := range files.events {
 		if strings.Contains(event, ".claude/") {
-			t.Errorf("init escribió o respaldó un archivo de Claude: %s", event)
+			t.Errorf("init wrote or backed up a Claude file: %s", event)
 		}
 	}
 
 	storeContent, ok := files.get(persona.SelectionPath)
 	if !ok {
-		t.Fatalf("%s no se escribió", persona.SelectionPath)
+		t.Fatalf("%s was not written", persona.SelectionPath)
 	}
 	if !strings.Contains(storeContent, `agents = "opencode"`) {
 		t.Errorf("%s = %q, want agents = \"opencode\"", persona.SelectionPath, storeContent)
@@ -82,14 +82,14 @@ func TestInitAgentsOpenCodeOnlyWritesOpenCode(t *testing.T) {
 
 	door := filepath.Join(home, filepath.FromSlash(".config/opencode/agents/odachi.md"))
 	if _, ok := files.files[door]; !ok {
-		t.Errorf("la puerta de OpenCode no se instaló en el home")
+		t.Errorf("the OpenCode door was not installed in the home")
 	}
 	claudeDoor := filepath.Join(home, filepath.FromSlash(".claude/output-styles/odachi.md"))
 	if _, ok := files.files[claudeDoor]; ok {
-		t.Errorf("la puerta de Claude se instaló aunque la elección era opencode")
+		t.Errorf("the Claude door was installed although the choice was opencode")
 	}
 	if joined := strings.Join(got.Lines, "\n"); strings.Contains(joined, ".claude") {
-		t.Errorf("las líneas nombran .claude aunque no se escribió:\n%s", joined)
+		t.Errorf("the lines name .claude although it was not written:\n%s", joined)
 	}
 }
 
@@ -109,19 +109,19 @@ func TestInitAgentsClaudeOnlyWritesClaude(t *testing.T) {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
 	if _, ok := files.get(".claude/output-styles/odachi.md"); !ok {
-		t.Error(".claude/output-styles/odachi.md no se escribió")
+		t.Error(".claude/output-styles/odachi.md was not written")
 	}
 	for _, file := range persona.SubagentFilesFor(persona.SelectionClaude) {
 		if _, ok := files.get(file.Path); !ok {
-			t.Errorf("%s no se escribió", file.Path)
+			t.Errorf("%s was not written", file.Path)
 		}
 	}
 	if content, _ := files.get(".opencode/agents/odachi.md"); content != "editado a mano\n" {
-		t.Errorf("init tocó el agente de OpenCode: %q", content)
+		t.Errorf("init touched the OpenCode agent: %q", content)
 	}
 	for _, event := range files.events {
 		if strings.Contains(event, ".opencode/") {
-			t.Errorf("init escribió o respaldó un archivo de OpenCode: %s", event)
+			t.Errorf("init wrote or backed up an OpenCode file: %s", event)
 		}
 	}
 	if storeContent, _ := files.get(persona.SelectionPath); !strings.Contains(storeContent, `agents = "claude"`) {
@@ -147,16 +147,16 @@ func TestInitAgentsRerunKeepsTheStoredChoice(t *testing.T) {
 		t.Fatalf("second run code = %d (message %q)", got.Code, got.Message)
 	}
 	if len(files.events) != 0 {
-		t.Errorf("la segunda corrida tocó %v, want ninguna escritura", files.events)
+		t.Errorf("the second run touched %v, want no writes", files.events)
 	}
 	if len(got.Files) != 0 {
 		t.Errorf("Files = %v, want none on a rerun that wrote nothing", got.Files)
 	}
 	if _, ok := files.get(".claude/output-styles/odachi.md"); ok {
-		t.Error("la segunda corrida volvió a escribir el agente de Claude")
+		t.Error("the second run wrote the Claude agent again")
 	}
-	if joined := strings.Join(got.Lines, "\n"); !strings.Contains(joined, "sin cambios") {
-		t.Errorf("la segunda corrida no dice que la elección ya estaba:\n%s", joined)
+	if joined := strings.Join(got.Lines, "\n"); !strings.Contains(joined, "unchanged") {
+		t.Errorf("the second run does not say the choice was already stored:\n%s", joined)
 	}
 }
 
@@ -165,7 +165,7 @@ func TestInitAgentsRerunKeepsTheStoredChoice(t *testing.T) {
 // exists to prevent.
 func TestInitAgentsRefusesABrokenStore(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
-	store := &fakeAgentSelection{err: errors.New("agents: TOML inválido")}
+	store := &fakeAgentSelection{err: errors.New("agents: invalid TOML")}
 
 	got := runAgents(files, "", store, "")
 
@@ -175,11 +175,11 @@ func TestInitAgentsRefusesABrokenStore(t *testing.T) {
 	joined := strings.Join(got.Lines, "\n")
 	for _, want := range []string{persona.SelectionPath, "--agents", "odachi init"} {
 		if !strings.Contains(joined, want) {
-			t.Errorf("las líneas no nombran %q:\n%s", want, joined)
+			t.Errorf("the lines do not name %q:\n%s", want, joined)
 		}
 	}
 	if _, ok := files.get("AGENTS.md"); ok {
-		t.Error("init escribió AGENTS.md antes de resolver la elección")
+		t.Error("init wrote AGENTS.md before resolving the selection")
 	}
 }
 
@@ -188,7 +188,7 @@ func TestInitAgentsRefusesABrokenStore(t *testing.T) {
 func TestInitAgentsRefusesAnInvalidFlag(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
-	got := runAgents(files, "inventado", &fakeAgentSelection{}, "")
+	got := runAgents(files, "invented", &fakeAgentSelection{}, "")
 
 	if got.Code != 1 {
 		t.Fatalf("Code = %d, want 1 (message %q)", got.Code, got.Message)
@@ -196,11 +196,11 @@ func TestInitAgentsRefusesAnInvalidFlag(t *testing.T) {
 	joined := strings.Join(got.Lines, "\n")
 	for _, want := range []string{"both", "opencode", "claude"} {
 		if !strings.Contains(joined, want) {
-			t.Errorf("las líneas no nombran %q:\n%s", want, joined)
+			t.Errorf("the lines do not name %q:\n%s", want, joined)
 		}
 	}
 	if _, ok := files.get("AGENTS.md"); ok {
-		t.Error("init escribió AGENTS.md con una elección inválida")
+		t.Error("init wrote AGENTS.md with an invalid selection")
 	}
 }
 
@@ -216,14 +216,14 @@ func TestInitAgentsExplicitBothIsStored(t *testing.T) {
 	}
 	content, ok := files.get(persona.SelectionPath)
 	if !ok {
-		t.Fatalf("%s no se escribió", persona.SelectionPath)
+		t.Fatalf("%s was not written", persona.SelectionPath)
 	}
 	if !strings.Contains(content, `agents = "both"`) {
 		t.Errorf("%s = %q, want agents = \"both\"", persona.SelectionPath, content)
 	}
 	for _, client := range persona.Clients() {
 		if _, ok := files.get(filepath.ToSlash(filepath.Join(client.Dir, persona.FileName))); !ok {
-			t.Errorf("%s no se escribió", client.Dir)
+			t.Errorf("%s was not written", client.Dir)
 		}
 	}
 }
@@ -240,11 +240,11 @@ func TestInitAgentsNoChoiceWritesNoStore(t *testing.T) {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
 	if _, ok := files.get(persona.SelectionPath); ok {
-		t.Errorf("init escribió %s sin que nadie eligiera", persona.SelectionPath)
+		t.Errorf("init wrote %s without anyone choosing", persona.SelectionPath)
 	}
 	for _, client := range persona.Clients() {
 		if _, ok := files.get(filepath.ToSlash(filepath.Join(client.Dir, persona.FileName))); !ok {
-			t.Errorf("%s no se escribió: el default sigue siendo los dos", client.Dir)
+			t.Errorf("%s was not written: the default is still both", client.Dir)
 		}
 	}
 }

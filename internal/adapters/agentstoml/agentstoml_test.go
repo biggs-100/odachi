@@ -65,7 +65,7 @@ func TestRenderWritesACanonicalStore(t *testing.T) {
 		t.Fatalf("Render(OPENCODE) = %v", err)
 	}
 	rendered := string(data)
-	for _, want := range []string{"no lo borra", `agents = "opencode"`} {
+	for _, want := range []string{"does not delete it", `agents = "opencode"`} {
 		if !strings.Contains(rendered, want) {
 			t.Errorf("Render = %q, want %q", rendered, want)
 		}

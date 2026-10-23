@@ -27,7 +27,7 @@ func bundled() []pack.Skill {
 }
 
 // fakeFiles is the Files port in memory. It records writes and backups apart
-// from reads, because "no escribió nada" is the assertion dry-run exists for.
+// from reads, because "wrote nothing" is the assertion dry-run exists for.
 type fakeFiles struct {
 	files   map[string][]byte
 	writes  []string
@@ -91,7 +91,7 @@ func (f *fakeFiles) Read(path string) ([]byte, error) {
 
 func (f *fakeFiles) Backup(path string) (string, error) {
 	if _, ok := f.files[path]; !ok {
-		return "", fmt.Errorf("no se puede respaldar %s: no existe", path)
+		return "", fmt.Errorf("cannot back up %s: it does not exist", path)
 	}
 	f.backups = append(f.backups, path)
 	f.events = append(f.events, "backup "+path)
@@ -186,7 +186,7 @@ func TestInstallsEverySkillOfThePayloadForOneAgent(t *testing.T) {
 	if len(files.writes) != len(bundled()) {
 		t.Errorf("writes = %d, want %d: %v", len(files.writes), len(bundled()), files.writes)
 	}
-	if !slices.Contains(result.Lines, "claude · 5 instaladas · ~/.claude/skills") {
+	if !slices.Contains(result.Lines, "claude · 5 installed · ~/.claude/skills") {
 		t.Errorf("the summary line is missing, lines: %v", result.Lines)
 	}
 	if result.Message == "" || strings.Contains(result.Message, "\n") {
@@ -235,7 +235,7 @@ func TestSecondIdenticalRunWritesNothingAndBacksUpNothing(t *testing.T) {
 	if len(files.backups) != 0 {
 		t.Errorf("second run made %d backups, want 0: %v", len(files.backups), files.backups)
 	}
-	if !slices.Contains(second.Lines, "claude · 5 sin cambios · ~/.claude/skills") {
+	if !slices.Contains(second.Lines, "claude · 5 unchanged · ~/.claude/skills") {
 		t.Errorf("the summary line is missing or wrong, lines: %v", second.Lines)
 	}
 }
@@ -264,7 +264,7 @@ func TestDifferentLocalFileIsBackedUpBeforeTheOverwrite(t *testing.T) {
 	if would := string(bundled()[0].Content); got != would {
 		t.Errorf("the file was not replaced with the bundled bytes: %q", got)
 	}
-	if !slices.Contains(result.Lines, "claude · 4 instaladas · 1 respaldada · ~/.claude/skills") {
+	if !slices.Contains(result.Lines, "claude · 4 installed · 1 backed up · ~/.claude/skills") {
 		t.Errorf("the summary line is missing or wrong, lines: %v", result.Lines)
 	}
 }
@@ -290,7 +290,7 @@ func TestDryRunTouchesNothing(t *testing.T) {
 	if got, _ := files.content(edited); got != "editado a mano\n" {
 		t.Errorf("dry-run changed the local file: %q", got)
 	}
-	if !slices.Contains(result.Lines, "claude · 4 por instalar · 1 por respaldar · ~/.claude/skills") {
+	if !slices.Contains(result.Lines, "claude · 4 to install · 1 to back up · ~/.claude/skills") {
 		t.Errorf("the dry-run summary is missing or wrong, lines: %v", result.Lines)
 	}
 	if !strings.Contains(result.Message, "dry-run") {
@@ -330,7 +330,7 @@ func TestOneFailureDoesNotAbortTheOthers(t *testing.T) {
 	if !wrote {
 		t.Errorf("no line names the agent and the path, lines: %v", result.Lines)
 	}
-	if !slices.Contains(result.Lines, "claude · 5 instaladas · ~/.claude/skills") {
+	if !slices.Contains(result.Lines, "claude · 5 installed · ~/.claude/skills") {
 		t.Errorf("the healthy agent has no summary, lines: %v", result.Lines)
 	}
 }
@@ -369,7 +369,7 @@ func TestOpenCodeInstallsIntoTheProject(t *testing.T) {
 			t.Errorf("touched a path outside the project: %s", path)
 		}
 	}
-	if !slices.Contains(result.Lines, "opencode · 5 instaladas · ./.opencode/skills") {
+	if !slices.Contains(result.Lines, "opencode · 5 installed · ./.opencode/skills") {
 		t.Errorf("the summary does not show the project-relative path, lines: %v", result.Lines)
 	}
 	for _, line := range append(append([]string{}, result.Lines...), result.Message) {
@@ -380,7 +380,7 @@ func TestOpenCodeInstallsIntoTheProject(t *testing.T) {
 }
 
 // TestOpenCodeSecondRunIsIdenticalInTheProject: the write rule does not change
-// with the scope — identical bytes are reported as `sin cambios` and the file is
+// with the scope - identical bytes are reported as `unchanged` and the file is
 // not rewritten.
 func TestOpenCodeSecondRunIsIdenticalInTheProject(t *testing.T) {
 	files := newFakeFiles(nil)
@@ -395,8 +395,8 @@ func TestOpenCodeSecondRunIsIdenticalInTheProject(t *testing.T) {
 	if len(files.writes) != 0 || len(files.backups) != 0 {
 		t.Errorf("the second run wrote %v and backed up %v, want nothing", files.writes, files.backups)
 	}
-	if !slices.Contains(second.Lines, "opencode · 5 sin cambios · ./.opencode/skills") {
-		t.Errorf("the second run does not report sin cambios, lines: %v", second.Lines)
+	if !slices.Contains(second.Lines, "opencode · 5 unchanged · ./.opencode/skills") {
+		t.Errorf("the second run does not report unchanged, lines: %v", second.Lines)
 	}
 }
 
@@ -429,7 +429,7 @@ func TestProjectAgentDoesNotNeedAHome(t *testing.T) {
 	project := projectDir()
 	files := newFakeFiles(nil)
 
-	result := pack.Run(pack.Options{Agents: "opencode", Skills: bundled(), Dir: project}, files, fakeHome{err: errors.New("no hay home")})
+	result := pack.Run(pack.Options{Agents: "opencode", Skills: bundled(), Dir: project}, files, fakeHome{err: errors.New("no home")})
 
 	if result.Code != pack.CodeOK {
 		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
@@ -458,7 +458,7 @@ func TestDetectsOpenCodeInTheProject(t *testing.T) {
 	if len(result.Dests) != 1 || !slices.Equal(result.Dests[0].Names, []string{"opencode"}) {
 		t.Fatalf("dests = %+v, want only opencode", result.Dests)
 	}
-	if !slices.Contains(result.Lines, "opencode · 5 instaladas · ./.opencode/skills") {
+	if !slices.Contains(result.Lines, "opencode · 5 installed · ./.opencode/skills") {
 		t.Errorf("the detected agent has no summary, lines: %v", result.Lines)
 	}
 	for _, path := range files.writes {
@@ -491,7 +491,7 @@ func TestOpenCodeBacksUpAModifiedFile(t *testing.T) {
 	if got, _ := files.content(edited); got != string(bundled()[0].Content) {
 		t.Errorf("the file was not replaced with the bundled bytes: %q", got)
 	}
-	if !slices.Contains(result.Lines, "opencode · 4 instaladas · 1 respaldada · ./.opencode/skills") {
+	if !slices.Contains(result.Lines, "opencode · 4 installed · 1 backed up · ./.opencode/skills") {
 		t.Errorf("the summary line is missing or wrong, lines: %v", result.Lines)
 	}
 }
@@ -523,7 +523,7 @@ func TestPiIsRefusedWithItsReason(t *testing.T) {
 	if result.Code != pack.CodeBlocked {
 		t.Fatalf("code = %d, want %d", result.Code, pack.CodeBlocked)
 	}
-	if !strings.Contains(result.Message, "Pi no usa un directorio de skills") {
+	if !strings.Contains(result.Message, "Pi does not use a skills directory") {
 		t.Errorf("the message does not say why: %q", result.Message)
 	}
 	if len(files.writes) != 0 {
@@ -551,7 +551,7 @@ func TestForeignFileIsReportedAndNotTouched(t *testing.T) {
 	}
 	found := false
 	for _, line := range result.Lines {
-		if strings.Contains(line, "~/.claude/skills/mia/SKILL.md") && strings.Contains(line, "no lo toco") {
+		if strings.Contains(line, "~/.claude/skills/mia/SKILL.md") && strings.Contains(line, "not touching it") {
 			found = true
 		}
 	}
@@ -639,7 +639,7 @@ func TestEverySupportedAgentResolvesItsOwnDestination(t *testing.T) {
 		t.Fatalf("served %d destinations, want %d: %+v", len(result.Dests), len(agent.Supported()), result.Dests)
 	}
 	for _, a := range agent.Supported() {
-		if !slices.Contains(result.Lines, a.Name+" · 5 instaladas · "+a.Display()) {
+		if !slices.Contains(result.Lines, a.Name+" · 5 installed · "+a.Display()) {
 			t.Errorf("no summary for %s, lines: %v", a.Name, result.Lines)
 		}
 		for _, skill := range bundled() {
@@ -674,7 +674,7 @@ func TestOnlyTheProjectAgentWritesIntoTheProject(t *testing.T) {
 // do about it.
 func TestUnresolvableHomeIsBlocked(t *testing.T) {
 	files := newFakeFiles(nil)
-	result := pack.Run(pack.Options{Agents: "claude", Skills: bundled()}, files, fakeHome{err: errors.New("no hay home")})
+	result := pack.Run(pack.Options{Agents: "claude", Skills: bundled()}, files, fakeHome{err: errors.New("no home")})
 
 	if result.Code != pack.CodeBlocked {
 		t.Fatalf("code = %d, want %d", result.Code, pack.CodeBlocked)
@@ -723,8 +723,8 @@ func TestScopePutsTheSameAgentInTheOtherRoot(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		"claude · 5 instaladas · ./.claude/skills",
-		"opencode · 5 instaladas · ./.opencode/skills",
+		"claude · 5 installed · ./.claude/skills",
+		"opencode · 5 installed · ./.opencode/skills",
 	} {
 		if !slices.Contains(result.Lines, want) {
 			t.Errorf("missing summary %q, lines: %v", want, result.Lines)
@@ -742,7 +742,7 @@ func TestScopePutsTheSameAgentInTheOtherRoot(t *testing.T) {
 			t.Errorf("opencode: %s was not installed in the home", skill.Name)
 		}
 	}
-	if !slices.Contains(homeResult.Lines, "opencode · 5 instaladas · ~/.config/opencode/skills") {
+	if !slices.Contains(homeResult.Lines, "opencode · 5 installed · ~/.config/opencode/skills") {
 		t.Errorf("the home summary does not show the global config dir, lines: %v", homeResult.Lines)
 	}
 	for _, path := range append(append([]string{}, homeFiles.writes...), homeFiles.backups...) {
@@ -759,7 +759,7 @@ func TestDestServesAClientTheTableDoesNotKnow(t *testing.T) {
 	project := projectDir()
 	files := newFakeFiles(nil)
 
-	result := run(files, fakeHome{err: errors.New("no hay home")}, pack.Options{Agents: "inventado,claude", Dest: "./skills-x"})
+	result := run(files, fakeHome{err: errors.New("no home")}, pack.Options{Agents: "inventado,claude", Dest: "./skills-x"})
 
 	if result.Code != pack.CodeOK {
 		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
@@ -779,21 +779,21 @@ func TestDestServesAClientTheTableDoesNotKnow(t *testing.T) {
 		t.Errorf("writes = %d, want %d: %v", len(files.writes), len(bundled()), files.writes)
 	}
 	// One summary per destination, naming every agent that landed there.
-	if !slices.Contains(result.Lines, "inventado, claude · 5 instaladas · ./skills-x") {
+	if !slices.Contains(result.Lines, "inventado, claude · 5 installed · ./skills-x") {
 		t.Errorf("the shared destination has no summary, lines: %v", result.Lines)
 	}
 
 	// The write rule does not change: an identical second run writes nothing.
 	files.writes, files.backups, files.events = nil, nil, nil
-	second := run(files, fakeHome{err: errors.New("no hay home")}, pack.Options{Agents: "inventado,claude", Dest: "./skills-x"})
+	second := run(files, fakeHome{err: errors.New("no home")}, pack.Options{Agents: "inventado,claude", Dest: "./skills-x"})
 	if second.Code != pack.CodeOK {
 		t.Fatalf("second run code = %d, want 0 (message %q)", second.Code, second.Message)
 	}
 	if len(files.writes) != 0 || len(files.backups) != 0 {
 		t.Errorf("the second run wrote %v and backed up %v, want nothing", files.writes, files.backups)
 	}
-	if !slices.Contains(second.Lines, "inventado, claude · 5 sin cambios · ./skills-x") {
-		t.Errorf("the second run does not report sin cambios, lines: %v", second.Lines)
+	if !slices.Contains(second.Lines, "inventado, claude · 5 unchanged · ./skills-x") {
+		t.Errorf("the second run does not report unchanged, lines: %v", second.Lines)
 	}
 }
 
@@ -816,7 +816,7 @@ func TestDestAbsoluteIsUsedAsGiven(t *testing.T) {
 		}
 	}
 	label := filepath.ToSlash(filepath.Clean(outside))
-	if !slices.Contains(result.Lines, "claude · 5 instaladas · "+label) {
+	if !slices.Contains(result.Lines, "claude · 5 installed · "+label) {
 		t.Errorf("the summary does not show %q, lines: %v", label, result.Lines)
 	}
 }
@@ -831,7 +831,7 @@ func TestDestAndScopeAreRefusedTogether(t *testing.T) {
 	if result.Code != pack.CodeBlocked {
 		t.Fatalf("code = %d, want %d", result.Code, pack.CodeBlocked)
 	}
-	for _, want := range []string{"--dest", "--scope", "elegí uno"} {
+	for _, want := range []string{"--dest", "--scope", "choose one"} {
 		if !strings.Contains(result.Message, want) {
 			t.Errorf("the refusal does not name %q: %q", want, result.Message)
 		}
@@ -906,7 +906,7 @@ func TestStandardInstallsTheCrossClientLocation(t *testing.T) {
 			t.Errorf("the project copy touched the home: %s", path)
 		}
 	}
-	if !slices.Contains(result.Lines, "standard · 5 instaladas · ./.agents/skills") {
+	if !slices.Contains(result.Lines, "standard · 5 installed · ./.agents/skills") {
 		t.Errorf("the summary does not show the cross-client path, lines: %v", result.Lines)
 	}
 
@@ -920,7 +920,7 @@ func TestStandardInstallsTheCrossClientLocation(t *testing.T) {
 			t.Errorf("%s was not installed in ~/.agents/skills", skill.Name)
 		}
 	}
-	if !slices.Contains(homeResult.Lines, "standard · 5 instaladas · ~/.agents/skills") {
+	if !slices.Contains(homeResult.Lines, "standard · 5 installed · ~/.agents/skills") {
 		t.Errorf("the home summary is wrong, lines: %v", homeResult.Lines)
 	}
 	for _, path := range append(append([]string{}, homeFiles.writes...), homeFiles.backups...) {
@@ -944,8 +944,8 @@ func TestStandardTravelsWithARealAgent(t *testing.T) {
 		t.Errorf("writes = %d, want %d", len(files.writes), 2*len(bundled()))
 	}
 	for _, want := range []string{
-		"standard · 5 instaladas · ./.agents/skills",
-		"opencode · 5 instaladas · ./.opencode/skills",
+		"standard · 5 installed · ./.agents/skills",
+		"opencode · 5 installed · ./.opencode/skills",
 	} {
 		if !slices.Contains(result.Lines, want) {
 			t.Errorf("missing summary %q, lines: %v", want, result.Lines)
@@ -986,7 +986,7 @@ func TestUnknownAgentRefusalNamesTheWayOut(t *testing.T) {
 	if result.Code != pack.CodeBlocked {
 		t.Fatalf("code = %d, want %d", result.Code, pack.CodeBlocked)
 	}
-	for _, want := range []string{"agente desconocido: inventado", "--agents standard", "--dest"} {
+	for _, want := range []string{"unknown agent: inventado", "--agents standard", "--dest"} {
 		if !strings.Contains(result.Message, want) {
 			t.Errorf("the refusal does not say %q: %q", want, result.Message)
 		}
@@ -1015,7 +1015,7 @@ func TestTheFirstFailedFileKeepsItsPathAndReason(t *testing.T) {
 	}
 	failure := result.Dests[0].Failure
 	if failure == nil {
-		t.Fatalf("el destino no guardó la falla: %+v", result.Dests[0])
+		t.Fatalf("the destination did not record the failure: %+v", result.Dests[0])
 	}
 	if want := "~/.claude/skills/acceptance/SKILL.md"; failure.Path != want {
 		t.Errorf("Path = %q, want %q", failure.Path, want)

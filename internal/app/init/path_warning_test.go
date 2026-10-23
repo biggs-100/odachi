@@ -32,13 +32,13 @@ func TestInitWarnsWhenTheBinaryIsNotOnPath(t *testing.T) {
 
 	joined := strings.Join(got.Lines, "\n")
 	if !strings.Contains(joined, "PATH") {
-		t.Fatalf("las líneas no mencionan el PATH: %q", got.Lines)
+		t.Fatalf("the lines do not mention the PATH: %q", got.Lines)
 	}
 	if !strings.Contains(joined, filepath.Dir(exe)) {
-		t.Fatalf("las líneas no dicen qué carpeta agregar: %q", got.Lines)
+		t.Fatalf("the lines do not say which folder to add: %q", got.Lines)
 	}
 	if !strings.Contains(joined, "hook") {
-		t.Fatalf("las líneas no aclaran que el hook sí funciona: %q", got.Lines)
+		t.Fatalf("the lines do not make clear that the hook still works: %q", got.Lines)
 	}
 }
 
@@ -50,7 +50,7 @@ func TestInitSaysNothingAboutThePathWhenTheBinaryResolves(t *testing.T) {
 
 	for _, line := range got.Lines {
 		if strings.Contains(line, "PATH") {
-			t.Fatalf("una línea habla del PATH sin necesidad: %q", line)
+			t.Fatalf("a line talks about the PATH for no reason: %q", line)
 		}
 	}
 }

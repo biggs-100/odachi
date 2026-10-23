@@ -190,7 +190,7 @@ func TestInitInstallsAllSkillsInTheHomeWhenAsked(t *testing.T) {
 	if !slices.Equal(homeTree(t, home), before) {
 		t.Errorf("la segunda corrida tocó el home: %v vs %v", homeTree(t, home), before)
 	}
-	if !strings.Contains(out, "sin cambios") {
+	if !strings.Contains(out, "unchanged") {
 		t.Errorf("la segunda corrida no dice que no cambió nada:\n%s", out)
 	}
 }
@@ -302,7 +302,7 @@ func TestInitSecondRunWritesNothing(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second run code = %d (stdout %q, stderr %q)", code, out, errOut)
 	}
-	if !strings.Contains(out, "sin cambios") {
+	if !strings.Contains(out, "unchanged") {
 		t.Errorf("la segunda corrida no dice que no cambió nada:\n%s", out)
 	}
 	agentsAfter, _ := os.ReadFile(filepath.Join(dir, "AGENTS.md"))

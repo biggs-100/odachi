@@ -46,7 +46,7 @@ func (f *fakeFiles) Exists(path string) (bool, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	data, ok := f.files[f.key(path)]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	f.record("read " + path)
 	return data, nil
@@ -66,10 +66,10 @@ func (f *fakeFiles) List(dir string) ([]string, error) {
 
 func (f *fakeFiles) Backup(path string) (string, error) {
 	if _, ok := f.files[f.key(path)]; !ok {
-		return "", fmt.Errorf("no se puede respaldar %s: no existe", path)
+		return "", fmt.Errorf("cannot back up %s: it does not exist", path)
 	}
 	f.record("backup " + path)
-	return path + ".bak-prueba", nil
+	return path + ".bak-test", nil
 }
 
 func (f *fakeFiles) Write(path string, data []byte) error {
@@ -82,7 +82,7 @@ func (f *fakeFiles) content(t *testing.T, path string) string {
 	t.Helper()
 	data, ok := f.files[f.key(path)]
 	if !ok {
-		t.Fatalf("el archivo %q no fue escrito; archivos: %v", path, f.paths())
+		t.Fatalf("the file %q was not written; files: %v", path, f.paths())
 	}
 	return string(data)
 }
@@ -115,7 +115,7 @@ func (s *scriptedInterview) Ask(q start.Question) (string, error) {
 		*s.events = append(*s.events, "ask")
 	}
 	if len(s.answers) == 0 {
-		return "", fmt.Errorf("entrevista guionada sin respuestas: pregunta %q", q.Text)
+		return "", fmt.Errorf("scripted interview with no answers: question %q", q.Text)
 	}
 	answer := s.answers[0]
 	s.answers = s.answers[1:]
@@ -142,9 +142,9 @@ func firstIndex(events []string, prefix string) int {
 func assertOneLine(t *testing.T, message string) {
 	t.Helper()
 	if strings.TrimSpace(message) == "" {
-		t.Error("mensaje vacío: todo mensaje tiene que decir algo")
+		t.Error("empty message: every message must say something")
 	}
 	if strings.Contains(message, "\n") {
-		t.Errorf("el mensaje debe ser una sola línea, got %q", message)
+		t.Errorf("the message must be one line, got %q", message)
 	}
 }

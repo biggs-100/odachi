@@ -87,7 +87,7 @@ func TestParseOwnerReadsWhatNewLineWrites(t *testing.T) {
 }
 
 // TestAgeIsWhatTheHumanReads: seconds below a minute and minutes above it, so a
-// refusal reads "hace 42s" and an abandoned lock reads "hace 31m12s".
+// refusal reads "42s ago" and an abandoned lock reads "31m12s ago".
 func TestAgeIsWhatTheHumanReads(t *testing.T) {
 	cases := []struct {
 		age  time.Duration
@@ -100,7 +100,7 @@ func TestAgeIsWhatTheHumanReads(t *testing.T) {
 		{0, "0s"},
 		// A lock whose date could not be measured says so instead of inventing
 		// an age: the run is still blocked, so the number is never used to decide.
-		{lock.UnknownAge, "un rato"},
+		{lock.UnknownAge, "a while"},
 	}
 	for _, c := range cases {
 		if got := lock.Age(c.age); got != c.want {
@@ -113,7 +113,7 @@ func TestAgeIsWhatTheHumanReads(t *testing.T) {
 // says so in one line instead of doing it silently.
 func TestStaleLineIsTheAnnouncement(t *testing.T) {
 	known := lock.Owner{Verb: "start", PID: "4242", Instant: "2026-10-21T15:47:03Z"}
-	if got, want := lock.StaleLine(known, 31*time.Minute+12*time.Second), "había un lock viejo de start, hace 31m12s; lo tomé"; got != want {
+	if got, want := lock.StaleLine(known, 31*time.Minute+12*time.Second), "there was an old lock from start, 31m12s ago; I took it"; got != want {
 		t.Errorf("StaleLine = %q, want %q", got, want)
 	}
 
@@ -123,7 +123,7 @@ func TestStaleLineIsTheAnnouncement(t *testing.T) {
 	if !strings.Contains(unreadable, lock.File) {
 		t.Errorf("StaleLine for an unreadable lock = %q, want it to name %s", unreadable, lock.File)
 	}
-	if !strings.Contains(unreadable, "lo tomé") {
+	if !strings.Contains(unreadable, "I took it") {
 		t.Errorf("StaleLine for an unreadable lock = %q, want it to say it was taken", unreadable)
 	}
 }
@@ -135,7 +135,7 @@ func TestRefusalIsTheExactSentence(t *testing.T) {
 	owner := lock.Owner{Verb: "start", PID: "4242", Instant: "2026-10-21T15:47:03Z"}
 	got := lock.Refusal(owner, 42*time.Second)
 
-	want := "otra corrida de odachi está escribiendo en este proyecto (start, pid 4242, hace 42s); esperá y volvé a intentarlo; si sabés que no hay ninguna corriendo, borrá .odachi/lock a mano"
+	want := "another odachi run is writing to this project (start, pid 4242, 42s ago); wait and try again; if you know nothing is running, delete .odachi/lock by hand"
 	if got != want {
 		t.Errorf("Refusal = %q, want %q", got, want)
 	}
@@ -143,7 +143,7 @@ func TestRefusalIsTheExactSentence(t *testing.T) {
 	// A lock with unexpected content blocks just the same; it names the file
 	// instead of inventing a verb and a pid.
 	junk := lock.Refusal(lock.Owner{}, 42*time.Second)
-	for _, want := range []string{"otra corrida de odachi está escribiendo en este proyecto", lock.File, "hace 42s"} {
+	for _, want := range []string{"another odachi run is writing to this project", lock.File, "42s ago"} {
 		if !strings.Contains(junk, want) {
 			t.Errorf("Refusal for an unreadable lock = %q, want it to contain %q", junk, want)
 		}
@@ -186,7 +186,7 @@ func TestReleaseIsIdempotentAndOnlyAfterHolding(t *testing.T) {
 		t.Errorf("port released %d times, want exactly 1", port.releases)
 	}
 
-	busy := &fakeLock{held: false, line: "otra corrida de odachi está escribiendo en este proyecto"}
+	busy := &fakeLock{held: false, line: "another odachi run is writing to this project"}
 	refused := lock.Take(busy, "proyecto", "start")
 	_ = refused.Release()
 	if busy.releases != 0 {
@@ -197,7 +197,7 @@ func TestReleaseIsIdempotentAndOnlyAfterHolding(t *testing.T) {
 // TestTakeReportsARefusal: when another run holds the lock, the verb gets the
 // line to print and no lock to release.
 func TestTakeReportsARefusal(t *testing.T) {
-	const line = "otra corrida de odachi está escribiendo en este proyecto (start, pid 4242, hace 42s)"
+	const line = "another odachi run is writing to this project (start, pid 4242, 42s ago)"
 	held := lock.Take(&fakeLock{held: false, line: line}, "proyecto", "undo")
 
 	if held.Refusal != line {
@@ -211,7 +211,7 @@ func TestTakeReportsARefusal(t *testing.T) {
 // TestTakeAnnouncesAStaleLock: an abandoned lock is taken, and the line that
 // says so is carried to the verb's output.
 func TestTakeAnnouncesAStaleLock(t *testing.T) {
-	const line = "había un lock viejo de start, hace 31m12s; lo tomé"
+	const line = "there was an old lock from start, 31m12s ago; I took it"
 	port := &fakeLock{held: true, line: line}
 	held := lock.Take(port, "proyecto", "start")
 
@@ -232,13 +232,13 @@ func TestTakeAnnouncesAStaleLock(t *testing.T) {
 // TestTakeBlocksWhenTheLockCannotBeTaken: a lock file that cannot be created is
 // a refusal that names the file, never a run that writes anyway.
 func TestTakeBlocksWhenTheLockCannotBeTaken(t *testing.T) {
-	port := &fakeLock{err: errors.New("permiso denegado")}
+	port := &fakeLock{err: errors.New("permission denied")}
 	held := lock.Take(port, "proyecto", "start")
 
 	if held.Refusal == "" {
 		t.Fatal("Refusal empty: a lock that cannot be taken must stop the run")
 	}
-	for _, want := range []string{lock.File, "permiso denegado"} {
+	for _, want := range []string{lock.File, "permission denied"} {
 		if !strings.Contains(held.Refusal, want) {
 			t.Errorf("Refusal = %q, want it to contain %q", held.Refusal, want)
 		}

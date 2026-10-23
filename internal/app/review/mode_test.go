@@ -26,7 +26,7 @@ func TestModeStatusWithoutAFileIsOff(t *testing.T) {
 	if result.Code != 0 {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	if !strings.Contains(result.Message, "review: off") || !strings.Contains(result.Message, "default es off") {
+	if !strings.Contains(result.Message, "review: off") || !strings.Contains(result.Message, "the default is off") {
 		t.Errorf("message = %q, want the default named", result.Message)
 	}
 	if len(files.writes) != 0 {
@@ -91,10 +91,10 @@ func TestModeOnWhenAlreadyOnDoesNotRewrite(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
 	if len(files.writes) != 0 || len(files.backups) != 0 {
-		t.Fatalf("writes = %v, backups = %v; want none (sin cambios)", files.written(), files.backups)
+		t.Fatalf("writes = %v, backups = %v; want none (unchanged)", files.written(), files.backups)
 	}
-	if !strings.Contains(result.Message, "sin cambios") {
-		t.Errorf("message = %q, want sin cambios", result.Message)
+	if !strings.Contains(result.Message, "unchanged") {
+		t.Errorf("message = %q, want unchanged", result.Message)
 	}
 }
 
@@ -109,7 +109,7 @@ func TestModeRejectsAMangledSwitch(t *testing.T) {
 	if result.Code != 1 {
 		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
 	}
-	for _, want := range []string{domainreview.ModePath, "on u off"} {
+	for _, want := range []string{domainreview.ModePath, "on or off"} {
 		if !strings.Contains(result.Message, want) {
 			t.Errorf("message = %q, want %q", result.Message, want)
 		}

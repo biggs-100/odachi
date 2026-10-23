@@ -60,9 +60,9 @@ func TestStartIsRefusedWhileAnotherRunHoldsTheLock(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
 	}
 	for _, want := range []string{
-		"otra corrida de odachi está escribiendo en este proyecto",
+		"another odachi run is writing to this project",
 		"start, pid 4242",
-		"hace 42s",
+		"42s ago",
 		".odachi/lock",
 	} {
 		if !strings.Contains(got.Message, want) {
@@ -76,10 +76,10 @@ func TestStartIsRefusedWhileAnotherRunHoldsTheLock(t *testing.T) {
 	// Nothing touched: no artifact is read, backed up or written before the
 	// refusal. The fake records every call the verb makes through the port.
 	if len(events) != 0 {
-		t.Errorf("la corrida bloqueada tocó el proyecto: %v", events)
+		t.Errorf("the blocked run touched the project: %v", events)
 	}
 	if written := files.paths(); len(written) != 0 {
-		t.Errorf("archivos escritos durante el bloqueo: %v", written)
+		t.Errorf("files written during the block: %v", written)
 	}
 	if port.releases != 0 {
 		t.Errorf("a refusal released the lock %d times; it was never ours", port.releases)
@@ -98,7 +98,7 @@ func TestStartIsRefusedWhileAnotherRunHoldsTheLock(t *testing.T) {
 // to a run that died. It is taken over, the human is told in one line, and the
 // run completes.
 func TestStartTakesOverAStaleLockAndSaysSo(t *testing.T) {
-	const notice = "había un lock viejo de start, hace 31m12s; lo tomé"
+	const notice = "there was an old lock from start, 31m12s ago; I took it"
 	files := newFakeFiles(nil, nil)
 	port := &fakeLock{held: true, line: notice}
 
@@ -130,7 +130,7 @@ func TestStartTakesOverAStaleLockAndSaysSo(t *testing.T) {
 // a run that stops on "brief.md already exists" does not block the project for
 // ten minutes.
 func TestStartReleasesTheLockWhenTheVerbFails(t *testing.T) {
-	files := newFakeFiles(map[string]string{"brief.md": "# ya existe\n"}, nil)
+	files := newFakeFiles(map[string]string{"brief.md": "# already exists\n"}, nil)
 	port := &fakeLock{held: true}
 
 	opts := flagsCarryTheSameAnswers()
@@ -154,7 +154,7 @@ func TestStartReleasesTheLockWhenTheVerbFails(t *testing.T) {
 func TestStartStopsWhenTheLockCannotBeTaken(t *testing.T) {
 	var events []string
 	files := newFakeFiles(nil, &events)
-	port := &fakeLock{err: errors.New("permiso denegado")}
+	port := &fakeLock{err: errors.New("permission denied")}
 
 	opts := flagsCarryTheSameAnswers()
 	opts.Machine = true
@@ -164,13 +164,13 @@ func TestStartStopsWhenTheLockCannotBeTaken(t *testing.T) {
 	if got.Code != start.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
 	}
-	for _, want := range []string{".odachi/lock", "permiso denegado"} {
+	for _, want := range []string{".odachi/lock", "permission denied"} {
 		if !strings.Contains(got.Message, want) {
 			t.Errorf("Message = %q, want it to contain %q", got.Message, want)
 		}
 	}
 	if len(events) != 0 {
-		t.Errorf("la corrida sin lock tocó el proyecto: %v", events)
+		t.Errorf("the run without a lock touched the project: %v", events)
 	}
 	if port.releases != 0 {
 		t.Errorf("port released %d times, want 0", port.releases)

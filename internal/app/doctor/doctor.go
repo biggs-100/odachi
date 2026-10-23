@@ -1,9 +1,9 @@
 // Package doctor implements `odachi doctor`: eleven read-only health checks,
-// each with one Spanish line and, when something is wrong, the phrase that
+// each with one English line and, when something is wrong, the phrase that
 // repairs it.
 //
-// It answers the question a person has after installing the tool — "¿está todo
-// bien instalado?" — without them reading the repository. The most valuable of
+// It answers the question a person has after installing the tool — "is
+// everything installed right?" — without them reading the repository. The most valuable of
 // the eleven is whether `odachi` resolves from a shell: in a real OpenCode
 // session where it did not, the agent could not execute a single rule and spent
 // its budget searching for the binary instead.
@@ -65,8 +65,8 @@ const (
 // Options is one `odachi doctor` invocation.
 type Options struct {
 	Dir string
-	// Version is what this binary reports, so the first line answers "¿qué
-	// instalé?" before anything else.
+	// Version is what this binary reports, so the first line answers "what did
+	// I install?" before anything else.
 	Version string
 	// Exe is the running binary. It is only used to name the folder a human has
 	// to add to the PATH, and the message stays honest when it is empty.
@@ -86,7 +86,7 @@ type Agents interface {
 }
 
 // Files is the disk port. It can only read: doctor has no way to write, which is
-// what "estrictamente de solo lectura" means structurally.
+// what "strictly read-only" means structurally.
 type Files interface {
 	Exists(path string) (bool, error)
 	IsDir(path string) (bool, error)
@@ -191,7 +191,7 @@ type runner struct {
 // already started, and a project with only one of them still gets every check
 // with its per-check fix.
 //
-// A read error is not a verdict. Saying "esta carpeta no es un proyecto" about a
+// A read error is not a verdict. Saying "this folder is not a project" about a
 // folder odachi could not read would be a lie, so it falls through to the checks
 // and the unreadable path becomes its own line.
 func (r *runner) isProject() bool {
@@ -231,10 +231,10 @@ func (r *runner) onPath() domaindoctor.Check {
 	path, err := r.lookup.LookPath("odachi")
 	if err != nil {
 		return domaindoctor.Broken(domaindoctor.CheckOnPath,
-			"no está en el PATH: el agente no puede ejecutar las reglas",
+			"it is not on the PATH: the agent cannot run the rules",
 			domaindoctor.PathFix(r.opts.Exe))
 	}
-	return domaindoctor.OK(domaindoctor.CheckOnPath, "sí: "+filepath.ToSlash(path))
+	return domaindoctor.OK(domaindoctor.CheckOnPath, "yes: "+filepath.ToSlash(path))
 }
 
 // repository: without .git there is nowhere to install the hook.
@@ -248,11 +248,11 @@ func (r *runner) repository() domaindoctor.Check {
 		// Saying "there is no .git, run git init" there is a lie and a dead end:
 		// git init is already done, in the main repository.
 		if exists, err := r.files.Exists(filepath.Join(r.opts.Dir, filepath.FromSlash(gitDir))); err == nil && exists {
-			return domaindoctor.OK(domaindoctor.CheckGit, "sí: worktree (el .git real está en el repo principal)")
+			return domaindoctor.OK(domaindoctor.CheckGit, "yes: worktree (the real .git is in the main repository)")
 		}
-		return domaindoctor.Broken(domaindoctor.CheckGit, "no hay "+gitDir+": no hay hook posible", "corré git init")
+		return domaindoctor.Broken(domaindoctor.CheckGit, "there is no "+gitDir+": no hook is possible", "run git init")
 	}
-	return domaindoctor.OK(domaindoctor.CheckGit, "sí")
+	return domaindoctor.OK(domaindoctor.CheckGit, "yes")
 }
 
 // inWorktree reports whether this project is a linked worktree, where the hook
@@ -274,15 +274,15 @@ func (r *runner) agents() domaindoctor.Check {
 	}
 	if !exists {
 		return domaindoctor.Broken(domaindoctor.CheckAgents,
-			"no hay "+agentsFile+": el agente no lee las reglas",
-			"corré odachi init")
+			"there is no "+agentsFile+": the agent does not read the rules",
+			"run odachi init")
 	}
 	if !domaindoctor.HasBlock(content) {
 		return domaindoctor.Broken(domaindoctor.CheckAgents,
-			agentsFile+" no tiene el bloque de odachi (faltan "+domaindoctor.AgentsBegin+" y "+domaindoctor.AgentsEnd+"): el agente no lee las reglas",
-			"corré odachi init")
+			agentsFile+" does not have the odachi block (missing "+domaindoctor.AgentsBegin+" and "+domaindoctor.AgentsEnd+"): the agent does not read the rules",
+			"run odachi init")
 	}
-	return domaindoctor.OK(domaindoctor.CheckAgents, "sí: "+agentsFile+" con el bloque")
+	return domaindoctor.OK(domaindoctor.CheckAgents, "yes: "+agentsFile+" with the block")
 }
 
 // hook: the local gate. A hook odachi did not write is somebody else's work and
@@ -295,18 +295,18 @@ func (r *runner) hook() domaindoctor.Check {
 	switch {
 	case !exists && r.inWorktree():
 		return domaindoctor.Broken(domaindoctor.CheckHook,
-			"estás en un worktree: los hooks viven en el repo principal, así que acá no hay gate local",
-			"corré odachi init desde el repo principal (donde "+gitDir+" es un directorio)")
+			"you are in a worktree: hooks live in the main repository, so there is no local gate here",
+			"run odachi init from the main repository (where "+gitDir+" is a directory)")
 	case !exists:
 		return domaindoctor.Broken(domaindoctor.CheckHook,
-			"no hay "+hookRel+": no hay gate local",
-			"corré odachi init")
+			"there is no "+hookRel+": there is no local gate",
+			"run odachi init")
 	case !domaindoctor.IsOurHook(content):
 		return domaindoctor.Broken(domaindoctor.CheckHook,
-			hookRel+" no es de odachi: no hay gate local",
-			"corré odachi init y pegá su bloque en el hook")
+			hookRel+" is not odachi's: there is no local gate",
+			"run odachi init and paste its block into the hook")
 	default:
-		return domaindoctor.OK(domaindoctor.CheckHook, "sí: "+hookRel)
+		return domaindoctor.OK(domaindoctor.CheckHook, "yes: "+hookRel)
 	}
 }
 
@@ -319,7 +319,7 @@ func (r *runner) hookExe() domaindoctor.Check {
 		return r.unreadable(domaindoctor.CheckHookExe, hookRel, err)
 	}
 	if !exists || !domaindoctor.IsOurHook(content) {
-		return domaindoctor.OK(domaindoctor.CheckHookExe, "no hay hook de odachi que revisar")
+		return domaindoctor.OK(domaindoctor.CheckHookExe, "there is no odachi hook to check")
 	}
 
 	exe := domaindoctor.HookExe(content)
@@ -331,10 +331,10 @@ func (r *runner) hookExe() domaindoctor.Check {
 	if isBareName(exe) {
 		if _, err := r.lookup.LookPath(exe); err != nil {
 			return domaindoctor.Broken(domaindoctor.CheckHookExe,
-				"el hook corre «"+exe+"» y un shell no lo encuentra: el hook falla en cada commit",
+				"the hook runs «"+exe+"» and a shell cannot find it: the hook fails on every commit",
 				domaindoctor.PathFix(r.opts.Exe))
 		}
-		return domaindoctor.OK(domaindoctor.CheckHookExe, "sí: "+exe+" (desde el PATH)")
+		return domaindoctor.OK(domaindoctor.CheckHookExe, "yes: "+exe+" (from the PATH)")
 	}
 
 	found, err := r.regular(exe)
@@ -343,10 +343,10 @@ func (r *runner) hookExe() domaindoctor.Check {
 	}
 	if !found {
 		return domaindoctor.Broken(domaindoctor.CheckHookExe,
-			"el hook corre «"+filepath.ToSlash(exe)+"», que ya no existe: el hook falla en cada commit",
-			"corré odachi init para que apunte al binario actual")
+			"the hook runs «"+filepath.ToSlash(exe)+"», which no longer exists: the hook fails on every commit",
+			"run odachi init so it points at the current binary")
 	}
-	return domaindoctor.OK(domaindoctor.CheckHookExe, "sí: "+filepath.ToSlash(exe))
+	return domaindoctor.OK(domaindoctor.CheckHookExe, "yes: "+filepath.ToSlash(exe))
 }
 
 // profile: a profile that does not resolve breaks the ceremony for every verb
@@ -356,13 +356,13 @@ func (r *runner) profile() domaindoctor.Check {
 	name, inferred, err := r.profiles.Resolve(r.opts.Dir)
 	if err != nil {
 		return domaindoctor.Broken(domaindoctor.CheckProfile,
-			profileFile+" no resuelve: "+oneLine(err.Error()),
-			"corregí el archivo (o borralo) y volvé a correr odachi doctor")
+			profileFile+" does not resolve: "+oneLine(err.Error()),
+			"fix the file (or delete it) and run odachi doctor again")
 	}
 	if inferred {
-		return domaindoctor.OK(domaindoctor.CheckProfile, "no hay archivo: se infiere el perfil "+name)
+		return domaindoctor.OK(domaindoctor.CheckProfile, "there is no file: the "+name+" profile is inferred")
 	}
-	return domaindoctor.OK(domaindoctor.CheckProfile, "perfil "+name)
+	return domaindoctor.OK(domaindoctor.CheckProfile, "profile "+name)
 }
 
 // brief: without a vision there is nothing to build, and an incomplete brief
@@ -374,22 +374,22 @@ func (r *runner) brief() domaindoctor.Check {
 	}
 	if !exists {
 		return domaindoctor.Broken(domaindoctor.CheckBrief,
-			"no hay "+briefFile+": sin visión no hay nada que construir",
-			"corré odachi start")
+			"there is no "+briefFile+": without a vision there is nothing to build",
+			"run odachi start")
 	}
 
 	if missing := brief.Parse(content).Missing(); len(missing) > 0 {
 		return domaindoctor.Broken(domaindoctor.CheckBrief,
-			"a "+briefFile+" le falta "+strings.Join(missing, ", "),
-			"corré odachi start --force (o completá el archivo)")
+			"missing from "+briefFile+": "+strings.Join(missing, ", "),
+			"run odachi start --force (or complete the file)")
 	}
-	return domaindoctor.OK(domaindoctor.CheckBrief, "completo")
+	return domaindoctor.OK(domaindoctor.CheckBrief, "complete")
 }
 
 // skills answers two questions `init` made easy to confuse, with one answer each
 // and neither of them hidden: how many skills the project registers in skills/
 // with an up-to-date SKILLS.md, and how many are installed where the clients read
-// them. A project that just ran `odachi init` read "ninguna: no hay skills/"
+// them. A project that just ran `odachi init` read "none: there is no skills/"
 // while the skills init had installed sat in .agents/skills, and the two facts
 // are not the same fact: the registry is the project's own craft and the
 // installed copy is what a client loads.
@@ -410,12 +410,12 @@ func (r *runner) skills() domaindoctor.Check {
 
 	detail := registered + "; " + installedSkillsDir + ": " + installed
 	if compared > 0 && len(drift) == 0 {
-		detail += "; " + count(compared, "coincide", "coinciden") + " con " + skillsDir + "/"
+		detail += "; " + "compared: " + count(compared, "match", "matches") + " in " + skillsDir + "/"
 	}
 	if home != "" {
 		detail += "; " + home
 		if homeCompared > 0 && len(homeDrift) == 0 {
-			detail += "; " + count(homeCompared, "coincide", "coinciden") + " con " + skillsDir + "/"
+			detail += "; " + "compared: " + count(homeCompared, "match", "matches") + " in " + skillsDir + "/"
 		}
 	}
 	drift = append(drift, homeDrift...)
@@ -424,7 +424,7 @@ func (r *runner) skills() domaindoctor.Check {
 		return domaindoctor.Broken(domaindoctor.CheckSkills, detail, fix)
 	case len(drift) > 0:
 		return domaindoctor.Warning(domaindoctor.CheckSkills, detail+
-			"; no coinciden con "+skillsDir+"/: "+strings.Join(drift, ", ")+"; corré odachi init (o odachi init --skills home)")
+			"; do not match "+skillsDir+"/: "+strings.Join(drift, ", ")+"; run odachi init (or odachi init --skills home)")
 	}
 	return domaindoctor.OK(domaindoctor.CheckSkills, detail)
 }
@@ -438,7 +438,7 @@ func (r *runner) skillRegistry() (detail, fix string, err error) {
 		return "", "", err
 	}
 	if !found {
-		return skillsDir + "/: no existe", "", nil
+		return skillsDir + "/: does not exist", "", nil
 	}
 
 	loaded, err := r.loadSkills()
@@ -446,7 +446,7 @@ func (r *runner) skillRegistry() (detail, fix string, err error) {
 		return "", "", err
 	}
 	if len(loaded) == 0 {
-		return skillsDir + "/: ninguna", "", nil
+		return skillsDir + "/: none", "", nil
 	}
 
 	want := skill.Registry(loaded)
@@ -455,9 +455,9 @@ func (r *runner) skillRegistry() (detail, fix string, err error) {
 		return "", "", err
 	}
 	if !exists || content != want {
-		return skillsDir + "/: " + registry + " no está al día: el catálogo se desvió", "corré odachi skills --write", nil
+		return skillsDir + "/: " + registry + " is not up to date: the catalogue drifted", "run odachi skills --write", nil
 	}
-	return skillsDir + "/: " + count(len(loaded), "skill", "skills") + ", " + registry + " al día", "", nil
+	return skillsDir + "/: " + count(len(loaded), "skill", "skills") + ", " + registry + " up to date", "", nil
 }
 
 // installedSkills counts the directories that hold a SKILL.md under the folder
@@ -475,7 +475,7 @@ func (r *runner) installedSkills() (detail string, compared int, drift []string,
 		return "", 0, nil, err
 	}
 	if !found {
-		return "ninguna", 0, nil, nil
+		return "none", 0, nil, nil
 	}
 
 	dirPath := filepath.Join(r.opts.Dir, filepath.FromSlash(installedSkillsDir))
@@ -529,9 +529,9 @@ func (r *runner) installedSkills() (detail string, compared int, drift []string,
 	}
 
 	if installed == 0 {
-		return "ninguna", 0, nil, nil
+		return "none", 0, nil, nil
 	}
-	return count(installed, "instalada", "instaladas"), compared, drift, nil
+	return count(installed, "installed", "installed"), compared, drift, nil
 }
 
 // homeSkills is the other scope of the same question: `init --skills home`
@@ -549,7 +549,7 @@ func (r *runner) homeSkills() (detail string, compared int, drift []string, err 
 		return "", 0, nil, err
 	}
 	if !found {
-		return "~/.agents/skills: ninguna", 0, nil, nil
+		return "~/.agents/skills: none", 0, nil, nil
 	}
 
 	names, err := r.files.List(dirPath)
@@ -602,15 +602,15 @@ func (r *runner) homeSkills() (detail string, compared int, drift []string, err 
 	}
 
 	if installed == 0 {
-		return "~/.agents/skills: ninguna", 0, nil, nil
+		return "~/.agents/skills: none", 0, nil, nil
 	}
-	return "~/.agents/skills: " + count(installed, "instalada", "instaladas"), compared, drift, nil
+	return "~/.agents/skills: " + count(installed, "installed", "installed"), compared, drift, nil
 }
 
 // noProfileFile is the second half of check 11 when there is nothing to compare:
 // the voice comes from the block, and the profile file is the only thing that can
 // contradict it. Saying which voice is in force is still information.
-const noProfileFile = "sin " + profileFile + " no hay perfil que comparar"
+const noProfileFile = "without " + profileFile + " there is no profile to compare"
 
 // voice answers the question a directory listing cannot: does the block talk the
 // way the profile says it should, and does the native agent still mirror it? The
@@ -628,13 +628,13 @@ func (r *runner) voice() domaindoctor.Check {
 	}
 	if !exists {
 		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
-			"no hay "+agentsFile+": la voz no está en el proyecto",
-			"corré odachi init"), "")
+			"there is no "+agentsFile+": the voice is not in the project",
+			"run odachi init"), "")
 	}
 	if !rules.HasBlock(content) {
 		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
-			agentsFile+" no tiene el bloque de odachi: no hay voz que comparar",
-			"corré odachi init"), content)
+			agentsFile+" does not have the odachi block: there is no voice to compare",
+			"run odachi init"), content)
 	}
 
 	published, hasVoice := rules.VoiceIn(content)
@@ -644,14 +644,14 @@ func (r *runner) voice() domaindoctor.Check {
 		// The profile is check 7's to report. Here it only means there is
 		// nothing to compare the voice against.
 		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
-			"no comparé la voz: el perfil no resuelve (ver el chequeo 7)"), content)
+			"I did not compare the voice: the profile does not resolve (see check 7)"), content)
 	}
 	if inferred {
 		detail := noProfileFile
 		if hasVoice {
-			detail += "; la voz del bloque es la de " + named(published)
+			detail += "; the block voice is " + named(published)
 		} else {
-			detail += " y el bloque no tiene sección de voz"
+			detail += " and the block has no voice section"
 		}
 		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice, detail), content)
 	}
@@ -659,24 +659,24 @@ func (r *runner) voice() domaindoctor.Check {
 	want, err := persona.Voice(name)
 	if err != nil {
 		return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
-			"no comparé la voz: "+profileFile+" nombra un perfil sin voz ("+oneLine(err.Error())+")"), content)
+			"I did not compare the voice: "+profileFile+" names a profile without a voice ("+oneLine(err.Error())+")"), content)
 	}
 
 	if !hasVoice {
 		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
-			"el bloque no tiene la sección «"+rules.Section+"» y "+profileFile+" dice "+name+": la voz no está en el bloque",
-			"corré odachi init"), content)
+			"the block has no «"+rules.Section+"» section and "+profileFile+" says "+name+": the voice is not in the block",
+			"run odachi init"), content)
 	}
 
 	if published != strings.TrimSpace(want) {
 		return r.voiceCheck(domaindoctor.Broken(domaindoctor.CheckVoice,
-			"la voz del bloque es la de "+named(published)+" y "+profileFile+" dice "+name+
-				": el agente habla distinto de lo que el perfil promete",
-			"corré odachi level --to "+name), content)
+			"the block voice is "+named(published)+" and "+profileFile+" says "+name+
+				": the agent talks differently from what the profile promises",
+			"run odachi level --to "+name), content)
 	}
 
 	return r.voiceCheck(domaindoctor.OK(domaindoctor.CheckVoice,
-		"la voz del bloque es la de "+name+", la misma que dice "+profileFile), content)
+		"the block voice is "+name+", the same one "+profileFile+" says"), content)
 }
 
 // voiceCheck appends the native agent mirror, the global door and the leftovers
@@ -728,17 +728,17 @@ func (r *runner) clientSelection() (string, []persona.Client, string, bool) {
 	}
 	stored, err := r.opts.Agents.Written(r.opts.Dir)
 	if err != nil {
-		return "", nil, "no pude leer " + persona.SelectionPath + ": " + oneLine(err.Error()) +
-			"; corregí el archivo o corré odachi init --agents both", false
+		return "", nil, "could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; fix the file or run odachi init --agents both", false
 	}
 	name, clients, err := persona.ResolveSelection(stored)
 	if err != nil {
-		return "", nil, "no pude leer " + persona.SelectionPath + ": " + oneLine(err.Error()) +
-			"; corregí el archivo o corré odachi init --agents both", false
+		return "", nil, "could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; fix the file or run odachi init --agents both", false
 	}
 	note := ""
 	if name != persona.SelectionBoth {
-		note = "solo reviso " + name + ", como dice " + persona.SelectionPath
+		note = "I only check " + name + ", as " + persona.SelectionPath + " says"
 	}
 	return name, clients, note, true
 }
@@ -763,7 +763,7 @@ func (r *runner) personaNote(content string, clients []persona.Client) string {
 		current, exists, err := r.read(file.Path)
 		switch {
 		case err != nil:
-			return "no pude leer " + file.Path + ": " + oneLine(err.Error()) + "; corré odachi init"
+			return "could not read " + file.Path + ": " + oneLine(err.Error()) + "; run odachi init"
 		case !exists:
 			missing = append(missing, file.Path)
 		case current != file.Content:
@@ -773,7 +773,7 @@ func (r *runner) personaNote(content string, clients []persona.Client) string {
 			current, exists, err := r.read(sub.Path)
 			switch {
 			case err != nil:
-				return "no pude leer " + sub.Path + ": " + oneLine(err.Error()) + "; corré odachi init"
+				return "could not read " + sub.Path + ": " + oneLine(err.Error()) + "; run odachi init"
 			case !exists:
 				missing = append(missing, sub.Path)
 			case current != sub.Content:
@@ -791,12 +791,12 @@ func (r *runner) personaNote(content string, clients []persona.Client) string {
 
 	switch {
 	case len(missing) > 0:
-		return "el agente nativo o sus subagentes no están en " + strings.Join(missing, ", ") + "; corré odachi init"
+		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") + "; run odachi init"
 	case len(stale) > 0:
-		return "el agente nativo o sus subagentes no coinciden con lo generado en " + strings.Join(stale, ", ") + "; corré odachi init"
+		return "the native agent or its subagents do not match what was generated in " + strings.Join(stale, ", ") + "; run odachi init"
 	default:
-		return "el agente nativo coincide con el bloque en " + strings.Join(dirs, " y ") +
-			"; los subagentes coinciden en " + strings.Join(subDirs, " y ")
+		return "the native agent matches the block in " + strings.Join(dirs, " and ") +
+			"; the subagents match in " + strings.Join(subDirs, " and ")
 	}
 }
 
@@ -820,7 +820,7 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 
 		exists, err := r.files.Exists(path)
 		if err != nil {
-			return "no pude revisar la puerta global " + display + ": " + oneLine(err.Error()) + "; corré odachi init"
+			return "could not check the global door " + display + ": " + oneLine(err.Error()) + "; run odachi init"
 		}
 		if !exists {
 			missing = append(missing, display)
@@ -829,7 +829,7 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 
 		data, err := r.files.Read(path)
 		if err != nil {
-			return "no pude leer la puerta global " + display + ": " + oneLine(err.Error()) + "; corré odachi init"
+			return "could not read the global door " + display + ": " + oneLine(err.Error()) + "; run odachi init"
 		}
 		if string(data) != file.Content {
 			stale = append(stale, display)
@@ -838,11 +838,11 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 
 	switch {
 	case len(missing) > 0:
-		return "la puerta global no está en " + strings.Join(missing, ", ") + "; es opt-in: corré odachi init --global si querés odachi en cualquier carpeta"
+		return "the global door is not in " + strings.Join(missing, ", ") + "; it is opt-in: run odachi init --global if you want odachi in any folder"
 	case len(stale) > 0:
-		return "la puerta global no coincide con este binario en " + strings.Join(stale, ", ") + "; corré odachi init --global"
+		return "the global door does not match this binary in " + strings.Join(stale, ", ") + "; run odachi init --global"
 	default:
-		return "la puerta global está al día en el home"
+		return "the global door is up to date in the home"
 	}
 }
 
@@ -864,8 +864,8 @@ func (r *runner) leftovers() (string, error) {
 	if len(found) == 0 {
 		return "", nil
 	}
-	return "quedaron de v0.10.0 " + strings.Join(persona.DeprecatedDirs(), " y ") +
-		" (las personas viejas): el agente de esta versión es " + persona.FileName + "; podés borrarlas", nil
+	return "left over from v0.10.0: " + strings.Join(persona.DeprecatedDirs(), " and ") +
+		" (the old personas): the agent of this version is " + persona.FileName + "; you can delete them", nil
 }
 
 // named is the voice a body belongs to, by name. Text that is neither is text
@@ -881,7 +881,7 @@ func named(body string) string {
 			return name
 		}
 	}
-	return "ninguna de las dos: la editaron a mano"
+	return "neither one: they edited it by hand"
 }
 
 // loadSkills reads every skills/<name>/SKILL.md. A directory without a SKILL.md
@@ -939,12 +939,12 @@ func (r *runner) ignored() domaindoctor.Check {
 		{
 			rel:    reviewStore,
 			ignore: reviewStore + "/" + ignoreFile,
-			detail: reviewStore + " no está ignorado: cada review invalidaría la prueba",
+			detail: reviewStore + " is not ignored: every review would invalidate the proof",
 		},
 		{
 			rel:    proofDir,
 			ignore: proofDir + "/" + ignoreFile,
-			detail: proofDir + "/ no está ignorado: cada prueba invalidaría la siguiente",
+			detail: proofDir + "/ is not ignored: every proof would invalidate the next one",
 		},
 	}
 
@@ -970,7 +970,7 @@ func (r *runner) ignored() domaindoctor.Check {
 		// a clone. The lazy file is the second mechanism, kept for the projects
 		// that never ran init.
 		if hasGitignore && domaindoctor.IgnoredBy(gitignore, p.rel) {
-			protected = append(protected, p.rel+" por "+ignoreFile)
+			protected = append(protected, p.rel+" via "+ignoreFile)
 			continue
 		}
 
@@ -979,7 +979,7 @@ func (r *runner) ignored() domaindoctor.Check {
 			return r.unreadable(domaindoctor.CheckIgnored, p.ignore, err)
 		}
 		if has {
-			protected = append(protected, p.rel+" con su propio "+ignoreFile)
+			protected = append(protected, p.rel+" with its own "+ignoreFile)
 			continue
 		}
 
@@ -988,7 +988,7 @@ func (r *runner) ignored() domaindoctor.Check {
 			return r.unreadable(domaindoctor.CheckIgnored, p.rel, err)
 		}
 		if len(files) == 0 {
-			warnings = append(warnings, p.rel+"/ existe y está vacío: todavía no hay nada que ignorar")
+			warnings = append(warnings, p.rel+"/ exists and is empty: there is nothing to ignore yet")
 			continue
 		}
 
@@ -997,13 +997,13 @@ func (r *runner) ignored() domaindoctor.Check {
 
 	switch {
 	case len(problems) > 0:
-		return domaindoctor.Broken(domaindoctor.CheckIgnored, strings.Join(problems, "; "), "corré odachi init")
+		return domaindoctor.Broken(domaindoctor.CheckIgnored, strings.Join(problems, "; "), "run odachi init")
 	case len(warnings) > 0:
 		return domaindoctor.Warning(domaindoctor.CheckIgnored, strings.Join(warnings, "; "))
 	case len(protected) == 0:
-		return domaindoctor.OK(domaindoctor.CheckIgnored, "no hay review ni pruebas todavía: nada que ignorar")
+		return domaindoctor.OK(domaindoctor.CheckIgnored, "there are no reviews or proofs yet: nothing to ignore")
 	default:
-		return domaindoctor.OK(domaindoctor.CheckIgnored, "sí: "+strings.Join(protected, " y ")+": no mueven el árbol que certifican")
+		return domaindoctor.OK(domaindoctor.CheckIgnored, "yes: "+strings.Join(protected, " and ")+": they do not move the tree they certify")
 	}
 }
 
@@ -1011,8 +1011,8 @@ func (r *runner) ignored() domaindoctor.Check {
 // a project it did not write, so a permission error is a line and never a panic.
 func (r *runner) unreadable(number int, rel string, err error) domaindoctor.Check {
 	return domaindoctor.Broken(number,
-		"no pude leer "+rel+": "+oneLine(err.Error()),
-		"revisá los permisos y volvé a correr odachi doctor")
+		"could not read "+rel+": "+oneLine(err.Error()),
+		"check the permissions and run odachi doctor again")
 }
 
 // read is one project-relative read. exists is false when the file is not there,
@@ -1065,7 +1065,7 @@ func isBareName(name string) bool {
 	return !strings.ContainsAny(name, `/\`)
 }
 
-// count is how a Spanish sentence counts things.
+// count is how an English sentence counts things.
 func count(n int, one, many string) string {
 	if n == 1 {
 		return "1 " + one

@@ -316,9 +316,9 @@ func TestRefutePromptAsksTheThreeQuestions(t *testing.T) {
 	prompt := review.RefutePrompt(refuteInput())
 
 	for _, want := range []string{
-		"¿Es causal del diff, o ya estaba?",
-		"¿Es un defecto real que afecta al usuario, o una preferencia?",
-		"¿La evidencia alcanza para defenderlo ante el autor?",
+		"Is it causal of the diff, or was it already there?",
+		"Is it a real defect that affects the user, or a preference?",
+		"Is the evidence enough to defend it before the author?",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("the refuter prompt does not ask %q", want)
@@ -357,10 +357,10 @@ func TestRefutePromptDefaultsToStands(t *testing.T) {
 	for _, want := range []string{
 		"stands",
 		"refuted",
-		"Citá la línea del diff",
+		"Cite the diff line",
 		`"refutations"`,
-		"Ante la duda",
-		"solo con el JSON",
+		"When in doubt",
+		"without text around it",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("the refuter prompt does not contain %q", want)
@@ -373,7 +373,7 @@ func TestRefutePromptDefaultsToStands(t *testing.T) {
 func TestRefutePromptSaysWhatIsNotRefutable(t *testing.T) {
 	prompt := review.RefutePrompt(refuteInput())
 
-	for _, want := range []string{"WARNING", "SUGGESTION", "no agregues findings"} {
+	for _, want := range []string{"WARNING", "SUGGESTION", "do not add new findings"} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("the refuter prompt does not say %q", want)
 		}

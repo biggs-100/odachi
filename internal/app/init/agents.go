@@ -26,7 +26,7 @@ func (r *runner) writeAgents() *Result {
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked("no pude revisar " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		problem := blocked("could not check " + agentsFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 		return &problem
 	}
 
@@ -34,7 +34,7 @@ func (r *runner) writeAgents() *Result {
 	if exists {
 		data, err := r.files.Read(path)
 		if err != nil {
-			problem := blocked("no pude leer " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			problem := blocked("could not read " + agentsFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 			return &problem
 		}
 		current = string(data)
@@ -42,28 +42,28 @@ func (r *runner) writeAgents() *Result {
 
 	updated, err := rules.WithBlock(current, voice)
 	if err != nil {
-		problem := blocked("no pude armar el bloque de " + agentsFile + ": " + oneLine(err.Error()) + "; volvé a correr odachi init")
+		problem := blocked("could not build the block of " + agentsFile + ": " + oneLine(err.Error()) + "; run odachi init again")
 		return &problem
 	}
 
 	if exists && updated == current {
-		r.lines = append(r.lines, agentsFile+": sin cambios")
+		r.lines = append(r.lines, agentsFile+": unchanged")
 		return nil
 	}
 
 	if exists {
 		backup, err := r.files.Backup(path)
 		if err != nil {
-			problem := blocked("no pude respaldar " + agentsFile + " antes de reescribirlo: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			problem := blocked("could not back up " + agentsFile + " before rewriting it: " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 			return &problem
 		}
-		r.lines = append(r.lines, agentsFile+": bloque actualizado con la voz "+voice+" (el anterior quedó en "+relative(r.dir, backup)+")")
+		r.lines = append(r.lines, agentsFile+": block updated with the "+voice+" voice (the previous one is at "+relative(r.dir, backup)+")")
 	} else {
-		r.lines = append(r.lines, agentsFile+": creado con el bloque de odachi y la voz "+voice)
+		r.lines = append(r.lines, agentsFile+": created with the odachi block and the "+voice+" voice")
 	}
 
 	if err := r.files.Write(path, []byte(updated)); err != nil {
-		problem := blocked("no pude escribir " + agentsFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		problem := blocked("could not write " + agentsFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 		return &problem
 	}
 	r.changed = append(r.changed, agentsFile)
@@ -90,7 +90,7 @@ func (r *runner) voice() string {
 
 	written, err := r.profiles.Written(r.dir)
 	if err != nil {
-		r.voiceNote = "la voz es la de novato porque " + profileFile + " no resuelve (" + oneLine(err.Error()) + "); corregí el archivo o borralo y volvé a correr odachi init"
+		r.voiceNote = "the voice is novato's because " + profileFile + " does not resolve (" + oneLine(err.Error()) + "); fix the file or delete it and run odachi init again"
 		return persona.Novato
 	}
 	if written == "" {
@@ -99,7 +99,7 @@ func (r *runner) voice() string {
 
 	resolved, err := persona.VoiceName(written)
 	if err != nil {
-		r.voiceNote = "la voz es la de novato porque el perfil no es uno de los que tienen voz (" + oneLine(err.Error()) + "); usá novato, senior o ci en " + profileFile + " y volvé a correr odachi init"
+		r.voiceNote = "the voice is novato's because the profile is not one of those with a voice (" + oneLine(err.Error()) + "); use novato, senior or ci in " + profileFile + " and run odachi init again"
 		return persona.Novato
 	}
 	return resolved
@@ -114,7 +114,7 @@ func (r *runner) reportLeftovers() {
 	for _, file := range persona.Deprecated() {
 		exists, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(file)))
 		if err != nil {
-			r.lines = append(r.lines, "no pude revisar "+file+": "+oneLine(err.Error())+"; revisá los permisos y volvé a correr odachi init")
+			r.lines = append(r.lines, "could not check "+file+": "+oneLine(err.Error())+"; check the permissions and run odachi init again")
 			continue
 		}
 		if exists {
@@ -125,6 +125,6 @@ func (r *runner) reportLeftovers() {
 		return
 	}
 
-	r.lines = append(r.lines, "quedaron de v0.10.0 "+humanList(persona.DeprecatedDirs())+" (las personas viejas): el agente de esta versión es "+
-		persona.FileName+" y su fuente es "+agentsFile+"; no las toqué: borralas si querés")
+	r.lines = append(r.lines, "left over from v0.10.0: "+humanList(persona.DeprecatedDirs())+" (the old personas): the agent of this version is "+
+		persona.FileName+" and its source is "+agentsFile+"; I did not touch them: delete them if you want")
 }

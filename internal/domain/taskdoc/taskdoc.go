@@ -174,7 +174,7 @@ func (d TaskDoc) Record(id, commit string) (TaskDoc, error) {
 		d.Steps = steps
 		return d, nil
 	}
-	return d, fmt.Errorf("paso desconocido: %q; pasos disponibles: %s", id, stepIDs(d.Steps))
+	return d, fmt.Errorf("unknown step: %q; steps available: %s", id, stepIDs(d.Steps))
 }
 
 // Render returns the canonical form. Parse(Render(d)) equals d for every
@@ -316,7 +316,7 @@ func bullet(line string) (string, bool) {
 // without opening the file. Empty means the document declares no steps.
 func stepIDs(steps []Step) string {
 	if len(steps) == 0 {
-		return "ninguno"
+		return "none"
 	}
 	ids := make([]string, 0, len(steps))
 	for _, s := range steps {

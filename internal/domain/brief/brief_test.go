@@ -65,7 +65,7 @@ func TestMissingReportsEveryRequiredPartOfAHeaderOnlyBrief(t *testing.T) {
 	if got.Name != "turnos-consultorio" {
 		t.Errorf("Name = %q, want %q", got.Name, "turnos-consultorio")
 	}
-	want := []string{"qué tiene que existir", "listo cuando"}
+	want := []string{"what must exist", "done when"}
 	if missing := got.Missing(); !reflect.DeepEqual(missing, want) {
 		t.Errorf("Missing() = %q, want %q", missing, want)
 	}
@@ -81,7 +81,7 @@ func TestMissingReportsOnlyTheEmptyPart(t *testing.T) {
 - nada
 `
 	got := brief.Parse(md)
-	want := []string{"listo cuando"}
+	want := []string{"done when"}
 	if missing := got.Missing(); !reflect.DeepEqual(missing, want) {
 		t.Errorf("Missing() = %q, want %q", missing, want)
 	}

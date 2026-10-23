@@ -128,7 +128,7 @@ var clients = []Client{
 		Dir:         ".opencode/agents",
 		HomeDir:     ".config/opencode/agents",
 		SubagentDir: ".opencode/agents",
-		Switch:      "se elige con Tab",
+		Switch:      "selected with Tab",
 	},
 	// Claude Code: `.claude/output-styles/<name>.md`, frontmatter `name`,
 	// `description` and `keep-coding-instructions: true`, and the body becomes
@@ -142,7 +142,7 @@ var clients = []Client{
 		Dir:         ".claude/output-styles",
 		HomeDir:     ".claude/output-styles",
 		SubagentDir: ".claude/agents",
-		Switch:      "se elige con /config (estilo de salida)",
+		Switch:      "selected with /config (output style)",
 	},
 }
 
@@ -384,8 +384,8 @@ func VoiceName(profileName string) (string, error) {
 	if _, ok := voices[key]; ok {
 		return key, nil
 	}
-	return "", fmt.Errorf("voz desconocida: %q; odachi escribe la de %s (%s usa la de %s)",
-		profileName, strings.Join(Names(), " o "), CI, Senior)
+	return "", fmt.Errorf("unknown voice: %q; odachi writes %s (%s uses %s)",
+		profileName, strings.Join(Names(), " or "), CI, Senior)
 }
 
 // Voice returns the text of the voice one profile gets, ending in exactly one

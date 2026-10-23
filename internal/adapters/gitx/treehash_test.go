@@ -18,7 +18,7 @@ func TestTreeHashIncludesUntrackedFiles(t *testing.T) {
 
 	before, err := gitx.TreeHash(root)
 	if err != nil {
-		t.Fatalf("TreeHash antes: %v", err)
+		t.Fatalf("TreeHash before: %v", err)
 	}
 
 	if err := os.WriteFile(filepath.Join(root, "nuevo.txt"), []byte("archivo sin trackear\n"), 0o644); err != nil {
@@ -27,19 +27,19 @@ func TestTreeHashIncludesUntrackedFiles(t *testing.T) {
 
 	after, err := gitx.TreeHash(root)
 	if err != nil {
-		t.Fatalf("TreeHash después: %v", err)
+		t.Fatalf("TreeHash after: %v", err)
 	}
 
 	if after == before {
-		t.Fatalf("TreeHash ignoró un archivo sin trackear: %q == %q. El árbol tiene que incluir todo archivo del worktree.", after, before)
+		t.Fatalf("TreeHash ignored an untracked file: %q == %q. The tree must include every file in the worktree.", after, before)
 	}
 
 	// Reading the tree must not stage, add, or otherwise mutate the worktree.
 	if staged := git(t, root, "diff", "--cached", "--name-only"); staged != "" {
-		t.Fatalf("TreeHash dejó archivos en stage: %q", staged)
+		t.Fatalf("TreeHash left files staged: %q", staged)
 	}
 	if status := git(t, root, "status", "--porcelain"); !strings.Contains(status, "?? nuevo.txt") {
-		t.Fatalf("TreeHash cambió el estado del worktree: %q", status)
+		t.Fatalf("TreeHash changed the worktree state: %q", status)
 	}
 }
 
@@ -57,7 +57,7 @@ func TestTreeHashRespectsGitIgnore(t *testing.T) {
 
 	before, err := gitx.TreeHash(root)
 	if err != nil {
-		t.Fatalf("TreeHash antes: %v", err)
+		t.Fatalf("TreeHash before: %v", err)
 	}
 
 	if err := os.WriteFile(filepath.Join(root, "debug.log"), []byte("ruido de build\n"), 0o644); err != nil {
@@ -66,11 +66,11 @@ func TestTreeHashRespectsGitIgnore(t *testing.T) {
 
 	after, err := gitx.TreeHash(root)
 	if err != nil {
-		t.Fatalf("TreeHash después: %v", err)
+		t.Fatalf("TreeHash after: %v", err)
 	}
 
 	if after != before {
-		t.Fatalf("TreeHash incluyó un archivo ignorado por git: %q != %q", after, before)
+		t.Fatalf("TreeHash included a file git ignores: %q != %q", after, before)
 	}
 }
 
@@ -88,9 +88,9 @@ func TestTreeHashWorksBeforeTheFirstCommit(t *testing.T) {
 
 	tree, err := gitx.TreeHash(root)
 	if err != nil {
-		t.Fatalf("TreeHash sin commits: %v", err)
+		t.Fatalf("TreeHash without commits: %v", err)
 	}
 	if strings.TrimSpace(tree) == "" {
-		t.Fatal("TreeHash devolvió un árbol vacío en un repo sin commits")
+		t.Fatal("TreeHash returned an empty tree in a repository with no commits")
 	}
 }

@@ -36,7 +36,7 @@ func (f *fakeFiles) List(dir string) ([]string, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	return data, nil
 }

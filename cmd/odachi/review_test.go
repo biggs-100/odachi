@@ -73,14 +73,14 @@ func TestReviewPrintsThePromptForTheCandidate(t *testing.T) {
 	}
 	for _, want := range []string{
 		"# odachi review",
-		"reservar turnos",                        // the brief
-		"internal/app/turnos.go",                 // the changed path
-		"Ante la duda, callate",                  // rule 1
-		"BLOCKER, CRITICAL, WARNING, SUGGESTION", // rule 2
-		"No findings.",                           // rule 3
-		"introdujo, lo activó o lo empeoró",      // rule 4
-		"Un solo barrido",                        // rule 5
-		"solo con el JSON",                       // the answer shape
+		"reservar turnos",                            // the brief
+		"internal/app/turnos.go",                     // the changed path
+		"When in doubt, say nothing.",                // rule 1
+		"BLOCKER, CRITICAL, WARNING, SUGGESTION",     // rule 2
+		"No findings.",                               // rule 3
+		"introduced it, activated it or worsened it", // rule 4
+		"One pass per lens",                          // rule 5
+		"Answer with the JSON only",                  // the answer shape
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the prompt does not contain %q\n%s", want, out)
@@ -104,7 +104,7 @@ func TestReviewWithoutChangesHasNothingToReview(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(errOut, "no hay nada que revisar en este árbol") {
+	if !strings.Contains(errOut, "there is nothing to review in this tree") {
 		t.Errorf("stderr %q does not say there is nothing to review", errOut)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".odachi", "reviews")); !os.IsNotExist(err) {
@@ -135,7 +135,7 @@ func TestReviewAttachStoresAndShowReads(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("show: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	for _, want := range []string{"approved", "humano", "sin findings"} {
+	for _, want := range []string{"approved", "humano", "no findings"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("shown review does not contain %q:\n%s", want, out)
 		}
@@ -145,7 +145,7 @@ func TestReviewAttachStoresAndShowReads(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("second attach: code = %d, want 1", code)
 	}
-	if !strings.Contains(errOut, "ya hay un veredicto para este árbol") {
+	if !strings.Contains(errOut, "this tree already has a verdict") {
 		t.Errorf("stderr %q does not say the tree already has a verdict", errOut)
 	}
 }
@@ -167,7 +167,7 @@ func TestReviewShowAnotherTreeSaysThereIsNone(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1", code)
 	}
-	if !strings.Contains(errOut, "no hay review para este árbol") {
+	if !strings.Contains(errOut, "there is no review for this tree") {
 		t.Errorf("stderr %q does not say there is no review", errOut)
 	}
 }
@@ -182,7 +182,7 @@ func TestReviewAttachRefusesGarbage(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1", code)
 	}
-	if !strings.Contains(errOut, "no sirve") || !strings.Contains(errOut, "severity") {
+	if !strings.Contains(errOut, "is no good") || !strings.Contains(errOut, "severity") {
 		t.Errorf("stderr %q does not name what is wrong with the verdict", errOut)
 	}
 	if verdicts := reviewsIn(t, dir); len(verdicts) != 0 {
@@ -244,7 +244,7 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("check --require-review without a verdict: code = %d, want 2 (stderr: %q)", code, errOut)
 	}
-	if !strings.Contains(errOut, "no hay review para este árbol") || !strings.Contains(errOut, "odachi review") {
+	if !strings.Contains(errOut, "no review for this tree") || !strings.Contains(errOut, "odachi review") {
 		t.Errorf("stderr %q does not name the missing review and the command", errOut)
 	}
 
@@ -263,7 +263,7 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("check --require-review with an approved verdict: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(out, "listo") {
+	if !strings.Contains(out, "ready") {
 		t.Errorf("stdout %q does not report the gate as ready", out)
 	}
 }
@@ -323,7 +323,7 @@ func TestReviewModeRejectsAMangledSwitch(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
 	}
-	if !strings.Contains(errOut, "review.toml") || !strings.Contains(errOut, "on u off") {
+	if !strings.Contains(errOut, "review.toml") || !strings.Contains(errOut, "on or off") {
 		t.Errorf("stderr %q does not name the file and the valid values", errOut)
 	}
 }
@@ -357,7 +357,7 @@ func TestCheckRequireReviewReportsChangesRequested(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("code = %d, want 2 (stderr: %q)", code, errOut)
 	}
-	for _, want := range []string{"el review pide cambios", "internal/app/turnos.go:3", "CRITICAL", "devuelve nuevo sin guardar el turno"} {
+	for _, want := range []string{"the review asks for changes", "internal/app/turnos.go:3", "CRITICAL", "devuelve nuevo sin guardar el turno"} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("stderr %q does not name %q", errOut, want)
 		}

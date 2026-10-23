@@ -118,7 +118,7 @@ func (r *runner) writeIgnore() *Result {
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked("no pude revisar " + ignoreFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		problem := blocked("could not check " + ignoreFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 		return &problem
 	}
 
@@ -126,7 +126,7 @@ func (r *runner) writeIgnore() *Result {
 	if exists {
 		data, err := r.files.Read(path)
 		if err != nil {
-			problem := blocked("no pude leer " + ignoreFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			problem := blocked("could not read " + ignoreFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 			return &problem
 		}
 		current = data
@@ -134,20 +134,20 @@ func (r *runner) writeIgnore() *Result {
 
 	updated, changed := withIgnoreBlock(current)
 	if !changed {
-		r.lines = append(r.lines, ignoreFile+": sin cambios, ya ignora /"+proofRule+"/, /"+reviewRule+"/ y los backups "+backupRule)
+		r.lines = append(r.lines, ignoreFile+": unchanged, it already ignores /"+proofRule+"/, /"+reviewRule+"/ and the "+backupRule+" backups")
 		return nil
 	}
 
 	if err := r.files.Write(path, updated); err != nil {
-		problem := blocked("no pude escribir " + ignoreFile + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+		problem := blocked("could not write " + ignoreFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 		return &problem
 	}
 
-	action := "bloque actualizado"
+	action := "block updated"
 	if !exists {
-		action = "creado con el bloque de odachi"
+		action = "created with the odachi block"
 	}
 	r.changed = append(r.changed, ignoreFile)
-	r.lines = append(r.lines, ignoreFile+": "+action+": /"+proofRule+"/ y /"+reviewRule+"/ no ensucian el árbol que certifican, y los backups "+backupRule+" quedan fuera de git")
+	r.lines = append(r.lines, ignoreFile+": "+action+": /"+proofRule+"/ and /"+reviewRule+"/ do not dirty the tree they certify, and the "+backupRule+" backups stay out of git")
 	return nil
 }

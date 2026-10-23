@@ -46,7 +46,7 @@ const (
 func (r *runner) writePersonas() *Result {
 	block, err := rules.Body(r.voiceName)
 	if err != nil {
-		return personaBlocked("no pude armar el agente nativo", err)
+		return personaBlocked("could not build the native agent", err)
 	}
 
 	for _, client := range r.clients {
@@ -71,7 +71,7 @@ func (r *runner) writePersonas() *Result {
 			}
 		}
 		if len(subs) > 0 {
-			if problem := r.writePersonaGroup(client, client.SubagentDir, subs, "los subagentes los invoca el agente", false); problem != nil {
+			if problem := r.writePersonaGroup(client, client.SubagentDir, subs, "the subagents are invoked by the agent", false); problem != nil {
 				return problem
 			}
 		}
@@ -91,12 +91,12 @@ func (r *runner) writePersonaGroup(client persona.Client, dir string, files []pe
 
 		exists, err := r.files.Exists(path)
 		if err != nil {
-			return personaBlocked("no pude revisar "+file.Path, err)
+			return personaBlocked("could not check "+file.Path, err)
 		}
 		if exists {
 			current, err := r.files.Read(path)
 			if err != nil {
-				return personaBlocked("no pude leer "+file.Path, err)
+				return personaBlocked("could not read "+file.Path, err)
 			}
 			if string(current) == file.Content {
 				dest.Kept++
@@ -105,12 +105,12 @@ func (r *runner) writePersonaGroup(client persona.Client, dir string, files []pe
 				continue
 			}
 			if _, err := r.files.Backup(path); err != nil {
-				return personaBlocked("no pude respaldar "+file.Path+" antes de reescribirlo", err)
+				return personaBlocked("could not back up "+file.Path+" before rewriting it", err)
 			}
 		}
 
 		if err := r.files.Write(path, []byte(file.Content)); err != nil {
-			return personaBlocked("no pude escribir "+file.Path, err)
+			return personaBlocked("could not write "+file.Path, err)
 		}
 		dest.Written++
 		dest.Files = append(dest.Files, file.Path)
@@ -126,7 +126,7 @@ func (r *runner) writePersonaGroup(client persona.Client, dir string, files []pe
 
 // installGlobalPersonas writes the door in the human's home: the agent that
 // appears in every folder, not only in the project that ran init. A home that
-// cannot be written is `pendiente:` and exit 0, because the project half is done;
+// cannot be written is `pending:` and exit 0, because the project half is done;
 // a failure inside the project is the caller's blocked result.
 func (r *runner) installGlobalPersonas() {
 	if r.home == nil {
@@ -134,11 +134,11 @@ func (r *runner) installGlobalPersonas() {
 	}
 	home, err := r.home.Home()
 	if err != nil || strings.TrimSpace(home) == "" {
-		reason := "el sistema no reportó ningún home"
+		reason := "the system reported no home"
 		if err != nil {
 			reason = oneLine(err.Error())
 		}
-		r.pendGlobal("no pude resolver el home para instalar el agente global: " + reason + "; volvé a correr odachi init")
+		r.pendGlobal("could not resolve the home to install the global agent: " + reason + "; run odachi init again")
 		return
 	}
 
@@ -154,13 +154,13 @@ func (r *runner) installGlobalPersonas() {
 
 		exists, err := r.files.Exists(path)
 		if err != nil {
-			r.pendGlobal("no pude revisar " + display + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			r.pendGlobal("could not check " + display + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 			continue
 		}
 		if exists {
 			current, err := r.files.Read(path)
 			if err != nil {
-				r.pendGlobal("no pude leer " + display + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+				r.pendGlobal("could not read " + display + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 				continue
 			}
 			if string(current) == file.Content {
@@ -172,13 +172,13 @@ func (r *runner) installGlobalPersonas() {
 				continue
 			}
 			if _, err := r.files.Backup(path); err != nil {
-				r.pendGlobal("no pude respaldar " + display + " antes de reescribirlo: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+				r.pendGlobal("could not back up " + display + " before rewriting it: " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 				continue
 			}
 		}
 
 		if err := r.files.Write(path, []byte(file.Content)); err != nil {
-			r.pendGlobal("no pude escribir " + display + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+			r.pendGlobal("could not write " + display + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 			continue
 		}
 		dest.Written = 1
@@ -194,15 +194,15 @@ func (r *runner) installGlobalPersonas() {
 // code: the project is ready, and the human can retry the home half alone.
 func (r *runner) pendGlobal(message string) {
 	if r.homePending == "" {
-		r.homePending = "pendiente: " + message
+		r.homePending = "pending: " + message
 	}
-	r.lines = append(r.lines, "pendiente: "+message)
+	r.lines = append(r.lines, "pending: "+message)
 }
 
 // personaBlocked is the persona half's refusal: the file, the reason the adapter
 // gave, and the command that retries the run.
 func personaBlocked(what string, err error) *Result {
-	result := blocked(what + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi init")
+	result := blocked(what + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
 	return &result
 }
 
@@ -212,17 +212,17 @@ func personaBlocked(what string, err error) *Result {
 func personaLine(dir, switchText string, written, kept []string, subagents bool) string {
 	parts := make([]string, 0, 2)
 	if len(written) > 0 {
-		parts = append(parts, "escribí "+humanList(written))
+		parts = append(parts, "wrote "+humanList(written))
 	}
 	if len(kept) > 0 {
-		parts = append(parts, humanList(kept)+" sin cambios")
+		parts = append(parts, humanList(kept)+" unchanged")
 	}
 	line := dir + ": " + strings.Join(parts, ", ")
 	if len(written) > 0 {
 		line += "; " + switchText
 	}
 	if subagents {
-		line += "; odachi-worker y odachi-verify los invoca el agente"
+		line += "; odachi-worker and odachi-verify are invoked by the agent"
 	}
 	return line
 }

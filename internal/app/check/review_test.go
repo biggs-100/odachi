@@ -68,7 +68,7 @@ func TestRequireReviewWithoutAVerdictBlocks(t *testing.T) {
 	if result.Code != 2 {
 		t.Fatalf("code = %d, want 2 (%s)", result.Code, result.Message)
 	}
-	if result.Message != "no hay review para este árbol" {
+	if result.Message != "no review for this tree" {
 		t.Errorf("message = %q, want the documented sentence", result.Message)
 	}
 	if result.Next != "odachi review" {
@@ -132,7 +132,7 @@ func TestRequireReviewIsPerTree(t *testing.T) {
 	if result.Code != 2 {
 		t.Fatalf("code = %d, want 2: another tree's approval must not count", result.Code)
 	}
-	if result.Message != "no hay review para este árbol" {
+	if result.Message != "no review for this tree" {
 		t.Errorf("message = %q, want the documented sentence", result.Message)
 	}
 }

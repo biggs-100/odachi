@@ -145,7 +145,7 @@ func TestDoctorRespectsTheStoredChoice(t *testing.T) {
 	_, out, errOut := runDir(t, dir, []string{"doctor"}, "")
 	combined := out + errOut
 
-	if !strings.Contains(combined, "solo reviso opencode") {
+	if !strings.Contains(combined, "I only check opencode") {
 		t.Errorf("doctor does not say which client it checked:\n%s", combined)
 	}
 	if strings.Contains(combined, ".claude") {

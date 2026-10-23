@@ -94,11 +94,11 @@ func renderFence(rules []fence.Rule) string {
 		// An empty file teaches nothing. The fence is the mechanism that keeps
 		// scope small, so when the human chose no exclusion the file explains
 		// what it is for and what a rule looks like.
-		return "# Vacío a propósito: no elegiste ningún \"NO incluye\".\n" +
-			"# El cerco es lo que frena el crecimiento del alcance: sin reglas, nada\n" +
-			"# te avisa cuando el trabajo se va de lo que pediste.\n" +
+		return "# Empty on purpose: you chose no \"NOT included\".\n" +
+			"# The fence is what stops scope from growing: without rules, nothing\n" +
+			"# warns you when the work goes past what you asked for.\n" +
 			"#\n" +
-			"# Cuando decidas algo que no va en esta primera versión, agregalo acá:\n" +
+			"# When you decide something that does not belong in this first version, add it here:\n" +
 			"#\n" +
 			"# [[rule]]\n" +
 			"# not   = \"pagos\"\n" +
@@ -169,7 +169,7 @@ type artifactInput struct {
 func (r *runner) writeArtifacts(in artifactInput) Result {
 	slug := slugify(in.title)
 	if slug == "" {
-		return blocked("no pude armar el nombre del proyecto: el outcome no tiene letras ni números; volvé a correr odachi start con una frase distinta")
+		return blocked("could not build the project name: the outcome has no letters or digits; run odachi start again with a different sentence")
 	}
 
 	if in.writeBrief {
@@ -220,7 +220,7 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 
 	return Result{
 		Code:    CodeOK,
-		Message: "listo: escribí " + humanList(r.written) + "; revisá brief.md y el task doc antes de seguir",
+		Message: "done: wrote " + humanList(r.written) + "; check brief.md and the task doc before moving on",
 		Profile: r.profile.Name,
 		Task:    filepath.ToSlash(taskPath),
 		Files:   r.written,
@@ -242,7 +242,7 @@ func (r *runner) refreshVoice() *Result {
 	path := filepath.Join(r.opts.Dir, rules.File)
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		return failure(blocked("no pude revisar " + rules.File + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		return failure(blocked("could not check " + rules.File + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 	}
 	if !exists {
 		return nil
@@ -250,12 +250,12 @@ func (r *runner) refreshVoice() *Result {
 
 	data, err := r.files.Read(path)
 	if err != nil {
-		return failure(blocked("no pude leer " + rules.File + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		return failure(blocked("could not read " + rules.File + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 	}
 
 	updated, changed, err := rules.WithVoice(string(data), voice)
 	if err != nil {
-		return failure(blocked("no pude leer la voz del perfil " + r.profile.Name + ": " + oneLine(err.Error()) + "; volvé a correr odachi init"))
+		return failure(blocked("could not read the voice of profile " + r.profile.Name + ": " + oneLine(err.Error()) + "; run odachi init again"))
 	}
 	if changed {
 		if problem := r.put(rules.File, []byte(updated)); problem != nil {
@@ -277,21 +277,21 @@ func (r *runner) refreshPersonas(agents string) *Result {
 	}
 	selected, err := persona.FilesForSelection(body, r.opts.Agents)
 	if err != nil {
-		return failure(blocked("no pude resolver la elección de clientes: " + oneLine(err.Error()) + "; corré odachi init --agents both y volvé a correr odachi start"))
+		return failure(blocked("could not resolve the client selection: " + oneLine(err.Error()) + "; run odachi init --agents both and run odachi start again"))
 	}
 	for _, file := range selected {
 		path := filepath.Join(r.opts.Dir, filepath.FromSlash(file.Path))
 
 		exists, err := r.files.Exists(path)
 		if err != nil {
-			return failure(blocked("no pude revisar " + file.Path + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+			return failure(blocked("could not check " + file.Path + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 		}
 		if !exists {
 			continue
 		}
 		current, err := r.files.Read(path)
 		if err != nil {
-			return failure(blocked("no pude leer " + file.Path + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+			return failure(blocked("could not read " + file.Path + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 		}
 		if string(current) == file.Content {
 			continue
@@ -310,15 +310,15 @@ func (r *runner) put(rel string, data []byte) *Result {
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		return failure(blocked("no pude revisar " + rel + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		return failure(blocked("could not check " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 	}
 	if exists {
 		if _, err := r.files.Backup(path); err != nil {
-			return failure(blocked("no pude respaldar " + rel + " antes de reescribirlo: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+			return failure(blocked("could not back up " + rel + " before rewriting it: " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 		}
 	}
 	if err := r.files.Write(path, data); err != nil {
-		return failure(blocked("no pude escribir " + rel + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		return failure(blocked("could not write " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 	}
 
 	// Reported paths are slash-separated on every OS: the message and the JSON
@@ -335,7 +335,7 @@ func (r *runner) put(rel string, data []byte) *Result {
 func (r *runner) taskPathFor(slug string) (path string, existing bool, problem *Result) {
 	names, err := r.files.List(filepath.Join(r.opts.Dir, taskDir))
 	if err != nil {
-		return "", false, failure(blocked("no pude leer " + taskDir + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		return "", false, failure(blocked("could not read " + taskDir + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 	}
 
 	suffix := "-" + slug + ".md"
@@ -358,7 +358,7 @@ func (r *runner) taskPathFor(slug string) (path string, existing bool, problem *
 func (r *runner) nextNumber() (int, *Result) {
 	names, err := r.files.List(filepath.Join(r.opts.Dir, taskDir))
 	if err != nil {
-		return 0, failure(blocked("no pude leer " + taskDir + ": " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		return 0, failure(blocked("could not read " + taskDir + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 	}
 
 	highest := 0
@@ -381,15 +381,15 @@ func (r *runner) nextNumber() (int, *Result) {
 	return highest + 1, nil
 }
 
-// humanList joins paths the way a Spanish sentence does: "a, b y c".
+// humanList joins paths the way an English sentence does: "a, b and c".
 func humanList(items []string) string {
 	switch len(items) {
 	case 0:
-		return "nada"
+		return "nothing"
 	case 1:
 		return items[0]
 	default:
-		return strings.Join(items[:len(items)-1], ", ") + " y " + items[len(items)-1]
+		return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
 	}
 }
 
@@ -439,8 +439,8 @@ func slugWords(text string) []string {
 	return words
 }
 
-// foldAccents maps one accented rune to its ASCII base. Spanish is the only
-// language the messages guarantee, and the slug has to survive Windows and
+// foldAccents maps one accented rune to its ASCII base. A human may type
+// accented words in their own language, and the slug has to survive Windows and
 // Linux alike.
 func foldAccents(value string) string {
 	var out strings.Builder

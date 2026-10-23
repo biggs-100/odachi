@@ -26,7 +26,7 @@ import (
 const DefaultTimeout = 120
 
 // EmptyTree is git's well-known hash of the empty tree. Comparing against it is
-// what "sin commits: todo lo no commiteado" means: every file is new because
+// what "no commits: everything uncommitted" means: every file is new because
 // nothing was ever committed, and the fence still runs instead of failing.
 const EmptyTree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
@@ -150,7 +150,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	treeHash, err := git.TreeHash(opts.Dir)
 	if err != nil {
 		return blocked(fmt.Sprintf(
-			"no pude leer el árbol de git: %s; corré odachi check dentro de un repositorio git y revisá que git esté instalado",
+			"could not read the git tree: %s; run odachi check inside a git repository and check that git is installed",
 			oneLine(err.Error())))
 	}
 	r.tree = treeHash
@@ -225,7 +225,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 // different tree hash and every proof invalidates the one before it. The ignore
 // file itself is versioned, so the rule that keeps proofs out of git lives with
 // the project instead of inside the tool.
-const proofIgnore = "# odachi: las pruebas se generan, no se versionan\n*\n!.gitignore\n"
+const proofIgnore = "# odachi: proofs are generated, not versioned\n*\n!.gitignore\n"
 
 // ensureProofDir keeps the evidence out of the tree the evidence describes:
 // without an ignore rule, writing the proof changes the worktree, the next run
@@ -246,7 +246,7 @@ func (r *runner) ensureProofDir() *Result {
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude revisar %s/.gitignore: %s; revisá los permisos y volvé a correr odachi check --run %q",
+		problem := blocked(fmt.Sprintf("could not check %s/.gitignore: %s; check the permissions and run odachi check --run %q again",
 			proofDir, oneLine(err.Error()), r.opts.Run))
 		return &problem
 	}
@@ -255,7 +255,7 @@ func (r *runner) ensureProofDir() *Result {
 	}
 
 	if err := r.files.Write(path, []byte(proofIgnore)); err != nil {
-		problem := blocked(fmt.Sprintf("no pude preparar %s/: %s; revisá los permisos y volvé a correr odachi check --run %q",
+		problem := blocked(fmt.Sprintf("could not prepare %s/: %s; check the permissions and run odachi check --run %q again",
 			proofDir, oneLine(err.Error()), r.opts.Run))
 		return &problem
 	}
@@ -279,7 +279,7 @@ func (r *runner) brief() (bool, []string, *Result) {
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi check", briefFile, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi check again", briefFile, oneLine(err.Error())))
 		return false, nil, &problem
 	}
 	if !exists {
@@ -288,7 +288,7 @@ func (r *runner) brief() (bool, []string, *Result) {
 
 	data, err := r.files.Read(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi check", briefFile, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi check again", briefFile, oneLine(err.Error())))
 		return false, nil, &problem
 	}
 
@@ -344,7 +344,7 @@ func (r *runner) fenceViolations() ([]string, *Result) {
 func (r *runner) currentFeature() (*tasks.Document, *Result) {
 	docs, err := tasks.All(r.files, r.opts.Dir)
 	if err != nil {
-		problem := blocked(oneLine(err.Error()) + "; revisá los permisos de " + tasks.Dir + " y volvé a correr odachi check")
+		problem := blocked(oneLine(err.Error()) + "; check the permissions of " + tasks.Dir + " and run odachi check again")
 		return nil, &problem
 	}
 	if len(docs) == 0 {
@@ -367,7 +367,7 @@ func (r *runner) recordedProof(proofPath string) (proof.Proof, bool, *Result) {
 
 	exists, err := r.files.Exists(proofPath)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude revisar la prueba %s: %s; revisá los permisos y volvé a correr odachi check", r.proofRel, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not check the proof %s: %s; check the permissions and run odachi check again", r.proofRel, oneLine(err.Error())))
 		return proof.Proof{}, false, &problem
 	}
 	if !exists {
@@ -387,7 +387,7 @@ func (r *runner) recordedProof(proofPath string) (proof.Proof, bool, *Result) {
 func (r *runner) readProof(path, shown string) (proof.Proof, *Result) {
 	data, err := r.files.Read(path)
 	if err != nil {
-		problem := refused(shown, "no pude leerla: "+oneLine(err.Error()))
+		problem := refused(shown, "could not read it: "+oneLine(err.Error()))
 		return proof.Proof{}, &problem
 	}
 
@@ -415,9 +415,9 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 		problem := Result{
 			Code:    int(gate.NeedsWork),
 			Reason:  gate.ReasonProofFailed,
-			Message: "no pude correr la prueba: " + oneLine(err.Error()),
+			Message: "could not run the proof: " + oneLine(err.Error()),
 			Next:    runCommand(r.opts.Run),
-			Lines:   []string{"no pude correr la prueba: " + oneLine(err.Error()), "siguiente: " + runCommand(r.opts.Run)},
+			Lines:   []string{"could not run the proof: " + oneLine(err.Error()), "next: " + runCommand(r.opts.Run)},
 		}
 		return ranProof{}, &problem
 	}
@@ -431,7 +431,7 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 
 	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Output: output}
 	if err := r.files.Write(proofPath, []byte(proof.Render(recorded))); err != nil {
-		problem := blocked(fmt.Sprintf("no pude escribir la prueba %s: %s; revisá los permisos y volvé a correr odachi check --run %q",
+		problem := blocked(fmt.Sprintf("could not write the proof %s: %s; check the permissions and run odachi check --run %q again",
 			r.proofRel, oneLine(err.Error()), r.opts.Run))
 		return ranProof{}, &problem
 	}
@@ -459,7 +459,7 @@ func (r *runner) requireReview() *Result {
 
 	rel, err := reviewdomain.Path(r.tree)
 	if err != nil {
-		problem := blocked(oneLine(err.Error()) + "; revisá el árbol de git y volvé a correr odachi check --require-review")
+		problem := blocked(oneLine(err.Error()) + "; check the git tree and run odachi check --require-review again")
 		return &problem
 	}
 
@@ -468,9 +468,9 @@ func (r *runner) requireReview() *Result {
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewMissing,
-			Message: "no hay review para este árbol",
+			Message: "no review for this tree",
 			Next:    nextReview,
-			Lines:   []string{"no hay review para este árbol", "siguiente: " + nextReview},
+			Lines:   []string{"no review for this tree", "next: " + nextReview},
 		}
 		return &problem
 	}
@@ -480,11 +480,11 @@ func (r *runner) requireReview() *Result {
 		problem := Result{
 			Code:   int(gate.NeedsDecision),
 			Reason: ReasonReviewMissing,
-			Message: fmt.Sprintf("el review de este árbol no se puede leer (%s): %s; volvé a escribirlo con odachi review --attach <archivo>",
+			Message: fmt.Sprintf("this tree's review cannot be read (%s): %s; write it again with odachi review --attach <file>",
 				rel, oneLine(err.Error())),
 			Next: nextReview,
 		}
-		problem.Lines = []string{problem.Message, "siguiente: odachi review --attach <archivo>"}
+		problem.Lines = []string{problem.Message, "next: odachi review --attach <file>"}
 		return &problem
 	}
 
@@ -499,7 +499,7 @@ func (r *runner) requireReview() *Result {
 	}
 
 	if finding, blocking := reviewdomain.BlockingAfter(verdict.Findings, refutation); blocking {
-		message := "el review pide cambios: " + oneLine(reviewFinding(finding))
+		message := "the review asks for changes: " + oneLine(reviewFinding(finding))
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewChanges,
@@ -507,7 +507,7 @@ func (r *runner) requireReview() *Result {
 			Next:    "odachi review --show",
 			Lines: []string{
 				message,
-				"siguiente: odachi review --show",
+				"next: odachi review --show",
 			},
 		}
 		return &problem
@@ -552,16 +552,16 @@ func (r *runner) refutation(verdict reviewdomain.Verdict) (reviewdomain.Refutati
 	if err != nil {
 		detail := ""
 		if finding, blocking := reviewdomain.Blocking(verdict.Findings); blocking {
-			detail = "; el finding " + reviewFinding(finding) + " sigue bloqueando"
+			detail = "; the finding " + reviewFinding(finding) + " is still blocking"
 		}
 
-		message := fmt.Sprintf("la refutación de este árbol no se puede leer (%s): %s%s", rel, oneLine(err.Error()), detail)
+		message := fmt.Sprintf("this tree's refutation cannot be read (%s): %s%s", rel, oneLine(err.Error()), detail)
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewRefutedUnreadable,
 			Message: message,
 			Next:    "odachi review --show",
-			Lines:   []string{message, "siguiente: odachi review --show"},
+			Lines:   []string{message, "next: odachi review --show"},
 		}
 		return reviewdomain.Refutation{}, &problem
 	}
@@ -573,7 +573,7 @@ func (r *runner) refutation(verdict reviewdomain.Verdict) (reviewdomain.Refutati
 // The store cannot be rewritten, so the message says which file to remove and
 // which command produces a new verdict; the gate never deletes anything itself.
 func lensMissing(missing []string, rel string) Result {
-	message := fmt.Sprintf("falta la lente %s en el review de este árbol (%s)", missing[0], rel)
+	message := fmt.Sprintf("missing the %s lens in this tree's review (%s)", missing[0], rel)
 	return Result{
 		Code:    int(gate.NeedsDecision),
 		Reason:  ReasonReviewLensMissing,
@@ -581,8 +581,8 @@ func lensMissing(missing []string, rel string) Result {
 		Next:    nextReview,
 		Lines: []string{
 			message,
-			"un veredicto no se reescribe: borrá " + rel + " y corré " + nextReview + " --lens " + missing[0],
-			"siguiente: " + nextReview,
+			"a verdict is not rewritten: delete " + rel + " and run " + nextReview + " --lens " + missing[0],
+			"next: " + nextReview,
 		},
 	}
 }
@@ -607,14 +607,14 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	}
 
 	if verdict.Code != gate.Ready {
-		result.Lines = []string{verdict.Message, "siguiente: " + verdict.Next}
+		result.Lines = []string{verdict.Message, "next: " + verdict.Next}
 		return result
 	}
 
 	result.Lines = []string{verdict.Message}
 	if haveProof && r.proofRel != "" {
 		result.Proof = r.proofRel
-		result.Lines = append(result.Lines, "prueba: "+r.proofRel)
+		result.Lines = append(result.Lines, "proof: "+r.proofRel)
 	}
 	return result
 }
@@ -644,7 +644,7 @@ func baseRef(base string) string {
 
 // baseProblem says which base failed and how to fix it, in one line.
 func baseProblem(base string, err error) string {
-	return fmt.Sprintf("no pude comparar el cerco contra %q: %s; corregí --base %q o sacá el flag para comparar contra HEAD",
+	return fmt.Sprintf("could not compare the fence against %q: %s; fix --base %q or drop the flag to compare against HEAD",
 		base, oneLine(err.Error()), base)
 }
 
@@ -657,13 +657,13 @@ func runCommand(command string) string {
 // message names --run because that is the command that writes a proof the tool
 // can trust.
 func refused(shown, reason string) Result {
-	message := fmt.Sprintf(`la prueba %s no sirve: %s; corré odachi check --run "<comando>" para que la escriba la herramienta`, shown, reason)
+	message := fmt.Sprintf(`the proof %s is not valid: %s; run odachi check --run "<command>" so the tool writes it`, shown, reason)
 	return Result{
 		Code:    int(gate.NeedsWork),
 		Reason:  gate.ReasonProofMissing,
 		Message: message,
-		Next:    `odachi check --run "<comando>"`,
-		Lines:   []string{message, `siguiente: odachi check --run "<comando>"`},
+		Next:    `odachi check --run "<command>"`,
+		Lines:   []string{message, `next: odachi check --run "<command>"`},
 	}
 }
 
@@ -675,7 +675,7 @@ func blocked(message string) Result {
 		Code:    int(gate.NeedsWork),
 		Message: message,
 		Next:    "odachi check",
-		Lines:   []string{message, "siguiente: odachi check"},
+		Lines:   []string{message, "next: odachi check"},
 	}
 }
 

@@ -29,7 +29,7 @@ func TestDoctorUnderstandsAWorktree(t *testing.T) {
 	if !strings.Contains(out, "worktree") {
 		t.Fatalf("el reporte no reconoce el worktree: %q", out)
 	}
-	if strings.Contains(out, "corré git init") {
+	if strings.Contains(out, "run git init") {
 		t.Fatalf("el reporte manda a git init en un worktree: %q", out)
 	}
 }
@@ -75,10 +75,10 @@ func TestDoctorAcceptsAProfileThatInherits(t *testing.T) {
 	_, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
 	out := stdout + stderr
 
-	if !strings.Contains(out, "perfil mio") {
+	if !strings.Contains(out, "profile mio") {
 		t.Fatalf("el reporte no resuelve el perfil heredado: %q", out)
 	}
-	if strings.Contains(out, "no hay archivo") {
+	if strings.Contains(out, "there is no file") {
 		t.Fatalf("el reporte dice que no hay archivo cuando sí lo hay: %q", out)
 	}
 }
@@ -116,8 +116,8 @@ func TestDoctorCheckNineSaysBothSkillFacts(t *testing.T) {
 		t.Fatalf("las skills incluidas: %v", err)
 	}
 	for _, want := range []string{
-		"skills/: no existe",
-		fmt.Sprintf(".agents/skills: %d instaladas", len(curriculum)),
+		"skills/: does not exist",
+		fmt.Sprintf(".agents/skills: %d installed", len(curriculum)),
 	} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("el chequeo 9 no dice %q: %s", want, line)
@@ -148,7 +148,7 @@ func TestDoctorReportsAVoiceThatDoesNotMatchTheProfile(t *testing.T) {
 		t.Fatalf("una voz que no coincide con el perfil: exit %d, want 1: %s %s", code, stdout, stderr)
 	}
 	line := checkLine(t, stdout+stderr, 11)
-	for _, want := range []string{"mal 11", "novato", profile, "odachi level --to " + profile} {
+	for _, want := range []string{"bad 11", "novato", profile, "odachi level --to " + profile} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
 		}
@@ -175,7 +175,7 @@ func TestDoctorReportsABlockWithoutTheVoiceSection(t *testing.T) {
 		t.Fatalf("un bloque sin voz y con perfil: exit %d, want 1: %s %s", code, stdout, stderr)
 	}
 	line := checkLine(t, stdout+stderr, 11)
-	for _, want := range []string{"mal 11", rules.Section, "odachi init"} {
+	for _, want := range []string{"bad 11", rules.Section, "odachi init"} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
 		}
@@ -197,7 +197,7 @@ func TestDoctorSaysTheV0100PersonaFilesAreLeftovers(t *testing.T) {
 	if !strings.HasPrefix(line, "ok 11") {
 		t.Fatalf("el chequeo 11 tiene que ser ok con leftovers: %s", line)
 	}
-	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlas"} {
+	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "you can delete them"} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("el chequeo 11 no dice %q: %s", want, line)
 		}
@@ -221,7 +221,7 @@ func TestDoctorSaysNoProfileIsNothingToCompare(t *testing.T) {
 	if !strings.HasPrefix(line, "ok 11") {
 		t.Fatalf("el chequeo 11 tiene que ser ok sin perfil: %s", line)
 	}
-	if !strings.Contains(line, "no hay perfil que comparar") {
+	if !strings.Contains(line, "there is no profile to compare") {
 		t.Fatalf("el chequeo 11 no dice que no hay con qué comparar: %s", line)
 	}
 }
@@ -249,7 +249,7 @@ func TestDoctorUsageAndSummaryCountElevenChecks(t *testing.T) {
 	dir := configuredProject(t)
 
 	out, _ := output(t, dir, []string{"doctor"})
-	if !strings.Contains(out, "todo en orden: 11 chequeos") {
+	if !strings.Contains(out, "all clear: 11 checks") {
 		t.Fatalf("el resumen cuenta once chequeos:\n%s", out)
 	}
 

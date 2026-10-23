@@ -28,6 +28,6 @@ func NormalizeMode(value string) (string, error) {
 	case ModeOff:
 		return ModeOff, nil
 	default:
-		return "", fmt.Errorf("modo de review %q inválido: usá on u off", strings.TrimSpace(value))
+		return "", fmt.Errorf("invalid review mode %q: use on or off", strings.TrimSpace(value))
 	}
 }

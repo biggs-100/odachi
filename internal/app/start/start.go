@@ -6,7 +6,7 @@
 // I/O and the domain packages own the artifact formats.
 //
 // Exit codes are the CLI contract: 0 artifacts written, 1 blocked, 2 a human
-// answer is missing. Every message is Spanish, one line, and names the next
+// answer is missing. Every message is English, one line, and names the next
 // action when the run is blocked.
 package start
 
@@ -175,7 +175,7 @@ type runner struct {
 func (r *runner) runFromInterview() Result {
 	if r.briefExists() && !r.opts.Force {
 		return blocked(fmt.Sprintf(
-			"ya existe %s y no quiero pisarlo sin permiso; volvé a correr odachi start --force (o borrá %s)",
+			"there is already %s and I do not want to overwrite it without permission; run odachi start --force again (or delete %s)",
 			briefFile, briefFile))
 	}
 
@@ -199,7 +199,7 @@ func (r *runner) runFromInterview() Result {
 // the human already wrote that file.
 func (r *runner) runFromBrief() Result {
 	if r.hasAnswerFlags() {
-		return blocked("no mezcles --brief con --outcome, --audience, --done, --exclude, --sensitive, --deadline ni --learn; usá uno de los dos (odachi start --brief <archivo>)")
+		return blocked("do not mix --brief with --outcome, --audience, --done, --exclude, --sensitive, --deadline or --learn; use one of the two (odachi start --brief <file>)")
 	}
 
 	loaded, problem := r.loadBrief()
@@ -232,20 +232,20 @@ func (r *runner) runFromBrief() Result {
 func (r *runner) resolveProfile() (profile.Profile, *Result) {
 	if r.opts.Profile != nil {
 		if err := profile.Validate(*r.opts.Profile); err != nil {
-			return profile.Profile{}, failure(blocked("el perfil no es válido: " + oneLine(err.Error()) + "; corregí .odachi/profile.toml y volvé a correr odachi start"))
+			return profile.Profile{}, failure(blocked("the profile is not valid: " + oneLine(err.Error()) + "; fix .odachi/profile.toml and run odachi start again"))
 		}
 		return *r.opts.Profile, nil
 	}
 
 	hasBrief, err := r.files.Exists(filepath.Join(r.opts.Dir, briefFile))
 	if err != nil {
-		return profile.Profile{}, failure(blocked("no pude leer el directorio del proyecto: " + oneLine(err.Error()) + "; revisá los permisos y volvé a correr odachi start"))
+		return profile.Profile{}, failure(blocked("could not read the project directory: " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 	}
 
 	name := profile.Infer(profile.Facts{HasBrief: hasBrief, Machine: r.opts.Machine})
 	resolved, err := profile.Resolve(profile.Builtin(), name)
 	if err != nil {
-		return profile.Profile{}, failure(blocked("no pude resolver el perfil " + name + ": " + oneLine(err.Error())))
+		return profile.Profile{}, failure(blocked("could not resolve the profile " + name + ": " + oneLine(err.Error())))
 	}
 	return resolved, nil
 }
@@ -311,12 +311,12 @@ func (r *runner) ask(spec questionSpec) (string, *Result) {
 			if normalized, ok := normalizeAudience(value); ok {
 				return normalized, nil
 			}
-			if problem := r.say("no entendí " + quote(value) + ": escribí 1 (celular), 2 (compu) o 3 (los dos)"); problem != nil {
+			if problem := r.say("did not understand " + quote(value) + ": write 1 (phone), 2 (computer) or 3 (both)"); problem != nil {
 				return "", problem
 			}
 		case fieldDone:
 			if value == "" {
-				if problem := r.say("necesito al menos una forma de saber que funcionó; escribila en una línea"); problem != nil {
+				if problem := r.say("I need at least one way to know it worked; write it on one line"); problem != nil {
 					return "", problem
 				}
 				continue
@@ -326,14 +326,14 @@ func (r *runner) ask(spec questionSpec) (string, *Result) {
 			if normalized, ok := normalizeSensitive(value); ok {
 				return normalized, nil
 			}
-			if problem := r.say("no entendí " + quote(value) + ": escribí 1 (ninguno), 2 (nombres), 3 (salud) o 4 (plata)"); problem != nil {
+			if problem := r.say("did not understand " + quote(value) + ": write 1 (none), 2 (names), 3 (health) or 4 (money)"); problem != nil {
 				return "", problem
 			}
 		case fieldDeadline:
 			if normalized, ok := normalizeDeadline(value); ok {
 				return normalized, nil
 			}
-			if problem := r.say("no entendí " + quote(value) + ": escribí 1 (hoy), 2 (esta semana) o 3 (sin apuro)"); problem != nil {
+			if problem := r.say("did not understand " + quote(value) + ": write 1 (today), 2 (this week) or 3 (no rush)"); problem != nil {
 				return "", problem
 			}
 		default: // fieldExclude, fieldLearn: free text, empty is allowed
@@ -347,7 +347,7 @@ func (r *runner) ask(spec questionSpec) (string, *Result) {
 func (r *runner) say(line string) *Result {
 	if err := r.interview.Say(line); err != nil {
 		return failure(Result{Code: CodeNeedsAnswer, Message: oneLine(
-			"no pude mostrar la pregunta: " + err.Error() + "; volvé a correr odachi start en una terminal")})
+			"could not show the question: " + err.Error() + "; run odachi start again in a terminal")})
 	}
 	return nil
 }
@@ -381,14 +381,14 @@ func (r *runner) set(f field, value string) {
 // showAnswers prints the seven answers together, before anything is written.
 func (r *runner) showAnswers() {
 	lines := []string{
-		"así quedaron tus respuestas; si está bien, escribo los archivos",
-		"1 · qué querés que exista: " + r.answers.outcome,
-		"2 · quién lo usa: " + audienceLabel(r.answers.audience),
-		"3 · cómo sabés que funcionó: " + strings.Join(r.answers.done, "; "),
-		"4 · qué no incluye: " + orNone(r.answers.exclude),
-		"5 · datos sensibles: " + sensitiveLabel(r.answers.sensitive),
-		"6 · tiempo: " + deadlineLabel(r.answers.deadline),
-		"7 · qué querés aprender: " + orNone(r.answers.learn),
+		"this is how your answers look; if they are right, I write the files",
+		"1 · what you want to exist: " + r.answers.outcome,
+		"2 · who uses it: " + audienceLabel(r.answers.audience),
+		"3 · how you know it worked: " + strings.Join(r.answers.done, "; "),
+		"4 · what it does not include: " + orNone(r.answers.exclude),
+		"5 · sensitive data: " + sensitiveLabel(r.answers.sensitive),
+		"6 · time: " + deadlineLabel(r.answers.deadline),
+		"7 · what you want to learn: " + orNone(r.answers.learn),
 	}
 	for _, line := range lines {
 		if problem := r.say(line); problem != nil {
@@ -401,9 +401,9 @@ func (r *runner) showAnswers() {
 func (r *runner) needsAnswer() Result {
 	flags := readableFlags(r.answers.missing())
 	return Result{Code: CodeNeedsAnswer, Message: oneLine(
-		"faltan respuestas y esta corrida no puede preguntar: " +
+		"answers are missing and this run cannot ask: " +
 			strings.Join(flags, ", ") +
-			"; volvé a correr odachi start con esos flags (o pasá --brief <archivo>)")}
+			"; run odachi start again with those flags (or pass --brief <file>)")}
 }
 
 // briefExists reports whether brief.md is already there.
@@ -434,14 +434,14 @@ func (r *runner) loadBrief() (brief.Brief, *Result) {
 	data, err := r.files.Read(path)
 	if err != nil {
 		return brief.Brief{}, failure(blocked(fmt.Sprintf(
-			"no pude leer el brief %s: %s; revisá --brief y volvé a correr odachi start",
+			"could not read the brief %s: %s; check --brief and run odachi start again",
 			r.opts.BriefPath, oneLine(err.Error()))))
 	}
 
 	loaded := brief.Parse(string(data))
 	if len(loaded.Outcome) == 0 {
 		return brief.Brief{}, failure(blocked(fmt.Sprintf(
-			`el brief %s no tiene "## Qué tiene que existir"; agregalo y volvé a correr odachi start --brief %s`,
+			`the brief %s has no "## What must exist"; add it and run odachi start --brief %s again`,
 			r.opts.BriefPath, r.opts.BriefPath)))
 	}
 	return loaded, nil

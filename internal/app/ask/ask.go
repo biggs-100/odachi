@@ -6,7 +6,7 @@
 //   - a decision the agent took alone       -> OFICIO ... (porque ...)
 //
 // The history is append-only, so a run either adds one line or writes nothing.
-// Every message is Spanish, one line, and names the flag that unblocks it.
+// Every message is English, one line, and names the flag that unblocks it.
 package ask
 
 import (
@@ -71,7 +71,7 @@ const (
 
 // usage is the one-line reminder of the three shapes, repeated in errors
 // because a blocked message must name the command that unblocks it.
-const usage = `odachi ask "<pregunta>" · odachi ask --answer "<respuesta>" [--for P1] · odachi ask --craft "<decisión>" --because "<razón>"`
+const usage = `odachi ask "<question>" · odachi ask --answer "<answer>" [--for P1] · odachi ask --craft "<decision>" --because "<reason>"`
 
 // Run performs one `odachi ask`.
 func Run(opts Options, files Files) Result {
@@ -92,13 +92,13 @@ func Run(opts Options, files Files) Result {
 	switch form {
 	case formQuestion:
 		return record(current, files, current.Doc.AppendHistory(questionLine(current.Doc, opts.Question)),
-			fmt.Sprintf("abrí la pregunta %s en %s; contestala con odachi ask --answer \"<respuesta>\" --for %s",
+			fmt.Sprintf("opened question %s in %s; answer it with odachi ask --answer \"<answer>\" --for %s",
 				nextQuestionID(current.Doc), current.Rel, nextQuestionID(current.Doc)))
 	case formCraft:
 		line := fmt.Sprintf("L%d · OFICIO · %s (porque %s)",
 			current.Doc.NextLine(), quoted(opts.Craft), oneLine(opts.Because))
 		return record(current, files, current.Doc.AppendHistory(line),
-			"anoté la decisión de oficio en "+current.Rel)
+			"recorded the craft decision in "+current.Rel)
 	default:
 		return answer(current, files, opts)
 	}
@@ -123,18 +123,18 @@ func validate(opts Options) (string, *Result) {
 
 	switch {
 	case given > 1:
-		return "", failure(blocked("usá una sola forma de odachi ask por vez: " + usage))
+		return "", failure(blocked("use one form of odachi ask at a time: " + usage))
 	case craft != "" && because == "":
-		return "", failure(blocked(`falta --because: una decisión sin razón no enseña nada; corré odachi ask --craft "<decisión>" --because "<razón>"`))
+		return "", failure(blocked(`missing --because: a decision without a reason teaches nothing; run odachi ask --craft "<decision>" --because "<reason>"`))
 	case craft == "" && because != "":
-		return "", failure(blocked(`--because solo acompaña a --craft: corré odachi ask --craft "<decisión>" --because "<razón>"`))
+		return "", failure(blocked(`--because only goes with --craft: run odachi ask --craft "<decision>" --because "<reason>"`))
 	case which != "" && answer == "":
-		return "", failure(blocked(`--for solo acompaña a --answer: corré odachi ask --answer "<respuesta>" --for ` + which))
+		return "", failure(blocked(`--for only goes with --answer: run odachi ask --answer "<answer>" --for ` + which))
 	case given == 0 && opts.Question == "":
 		return "", failure(Result{Code: CodeNeedsAnswer, Message: oneLine(
-			"falta lo que querés anotar: " + usage)})
+			"missing what to record: " + usage)})
 	case given == 0:
-		return "", failure(blocked(`la pregunta no puede quedar vacía: es lo que el humano decide; escribila en tus palabras (odachi ask "<pregunta>")`))
+		return "", failure(blocked(`the question cannot be empty: it is what the human decides; write it in your words (odachi ask "<question>")`))
 	case craft != "":
 		return formCraft, nil
 	case answer != "":
@@ -149,13 +149,13 @@ func validate(opts Options) (string, *Result) {
 func answer(current tasks.Document, files Files, opts Options) Result {
 	open := current.Doc.OpenQuestions()
 	if len(open) == 0 {
-		return blocked(fmt.Sprintf("%s no tiene preguntas abiertas; abrí una con odachi ask \"<pregunta>\"", current.Rel))
+		return blocked(fmt.Sprintf("%s has no open questions; open one with odachi ask \"<question>\"", current.Rel))
 	}
 
 	id := strings.ToUpper(strings.TrimSpace(opts.For))
 	if id == "" {
 		if len(open) > 1 {
-			return blocked(fmt.Sprintf("%s tiene %d preguntas abiertas; decime cuál contestaste con %s",
+			return blocked(fmt.Sprintf("%s has %d open questions; tell me which one you answered with %s",
 				current.Rel, len(open), forChoices(open)))
 		}
 		id = open[0].ID
@@ -165,7 +165,7 @@ func answer(current tasks.Document, files Files, opts Options) Result {
 	if err != nil {
 		return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
 	}
-	return record(current, files, closed, fmt.Sprintf("cerré la pregunta %s en %s", id, current.Rel))
+	return record(current, files, closed, fmt.Sprintf("closed question %s in %s", id, current.Rel))
 }
 
 // record rewrites the task document with the grown version and reports where it
@@ -196,7 +196,7 @@ func forChoices(open []taskdoc.Question) string {
 	for _, question := range open {
 		ids = append(ids, question.ID)
 	}
-	return "--for " + ids[0] + " (las abiertas son " + strings.Join(ids, ", ") + ")"
+	return "--for " + ids[0] + " (the open ones are " + strings.Join(ids, ", ") + ")"
 }
 
 // quoted renders text inside the canonical quotes, on one line.

@@ -27,7 +27,7 @@ type BackupWriter interface {
 // Save rewrites the task document with the grown version, through the canonical
 // renderer. It refuses when that render would drop a line the document has.
 //
-// Every error is one Spanish line naming the file, because the caller only has
+// Every error is one English line naming the file, because the caller only has
 // to print it.
 func Save(files Writer, current Document, grown taskdoc.TaskDoc) error {
 	rendered, err := guardedRender(current, grown)
@@ -46,7 +46,7 @@ func SaveWithBackup(files BackupWriter, current Document, grown taskdoc.TaskDoc)
 		return err
 	}
 	if _, err := files.Backup(current.Path); err != nil {
-		return fmt.Errorf("no pude respaldar %s antes de reescribirlo: %s; revisá los permisos y volvé a intentar",
+		return fmt.Errorf("could not back up %s before rewriting it: %s; check the permissions and try again",
 			current.Rel, oneLine(err.Error()))
 	}
 	return write(files, current, rendered)
@@ -58,7 +58,7 @@ func guardedRender(current Document, grown taskdoc.TaskDoc) ([]byte, error) {
 	rendered := grown.Render()
 	if dropped := firstDroppedLine(current.Raw, rendered); dropped != "" {
 		return nil, fmt.Errorf(
-			"no anoté nada en %s: reescribirlo perdería la línea %q, que no está en el formato canónico; pasá esas notas a ## Historial y volvé a intentar",
+			"recorded nothing in %s: rewriting it would lose the line %q, which is not in the canonical format; move those notes to ## History and try again",
 			current.Rel, dropped)
 	}
 	return []byte(rendered), nil
@@ -68,7 +68,7 @@ func guardedRender(current Document, grown taskdoc.TaskDoc) ([]byte, error) {
 // human can act on.
 func write(files Writer, current Document, rendered []byte) error {
 	if err := files.Write(current.Path, rendered); err != nil {
-		return fmt.Errorf("no pude escribir %s: %s; revisá los permisos y volvé a intentar",
+		return fmt.Errorf("could not write %s: %s; check the permissions and try again",
 			current.Rel, oneLine(err.Error()))
 	}
 	return nil

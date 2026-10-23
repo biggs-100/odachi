@@ -38,8 +38,8 @@ const (
 	// nextAsk carries the shape of the answer. A bare `odachi ask` prints usage:
 	// naming it would be a dead end for a human too, and the bench measures exactly
 	// that.
-	nextAsk        = "odachi ask \"<tu decisión>\""
-	nextCheckProof = "odachi check --proof <archivo>"
+	nextAsk        = "odachi ask \"<your decision>\""
+	nextCheckProof = "odachi check --proof <file>"
 )
 
 // State is everything Evaluate needs, gathered by the caller. The gate itself
@@ -85,27 +85,27 @@ type Result struct {
 func Evaluate(s State) Result {
 	switch {
 	case !s.HasBrief:
-		return Result{NeedsDecision, ReasonNoBrief, "no hay brief: todavía no sabemos qué tiene que existir", nextStart}
+		return Result{NeedsDecision, ReasonNoBrief, "there is no brief: we do not know yet what must exist", nextStart}
 	case len(s.BriefMissing) > 0:
-		return Result{NeedsDecision, ReasonBriefIncomplete, "el brief está incompleto: falta " + strings.Join(s.BriefMissing, ", "), nextStart}
+		return Result{NeedsDecision, ReasonBriefIncomplete, "the brief is incomplete: missing " + strings.Join(s.BriefMissing, ", "), nextStart}
 	case len(s.Violations) > 0:
-		return Result{NeedsDecision, ReasonOutOfScope, "fuera de alcance: " + strings.Join(s.Violations, "; "), nextAsk}
+		return Result{NeedsDecision, ReasonOutOfScope, "out of scope: " + strings.Join(s.Violations, "; "), nextAsk}
 	case s.OpenQuestions > 0:
 		return Result{NeedsDecision, ReasonOpenQuestion, openQuestions(s.OpenQuestions), nextAsk}
 	// A proof exists as soon as it names the tree it came from. An empty body is
 	// still a proof: `go vet`, `tsc --noEmit` and `gofmt -l` all succeed while
-	// printing nothing, and telling a human "falta la prueba" right after they
-	// ran one is a dead end that names a command which cannot resolve it.
+	// printing nothing, and telling a human "the proof is missing" right after
+	// they ran one is a dead end that names a command which cannot resolve it.
 	case s.ProofTreeHash == "":
-		return Result{NeedsWork, ReasonProofMissing, "falta la prueba de este cambio", nextCheckProof}
+		return Result{NeedsWork, ReasonProofMissing, "the proof for this change is missing", nextCheckProof}
 	case s.ProofTreeHash != s.TreeHash:
-		return Result{NeedsWork, ReasonProofStale, "la prueba es de otro estado del código", nextCheckProof}
+		return Result{NeedsWork, ReasonProofStale, "the proof is from another state of the code", nextCheckProof}
 	case s.ProofTimedOut:
-		return Result{NeedsWork, ReasonProofFailed, "la prueba no terminó en " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
+		return Result{NeedsWork, ReasonProofFailed, "the proof did not finish in " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
 	case s.ProofFailed:
-		return Result{NeedsWork, ReasonProofFailed, "la prueba falló: " + proofLastLine(s.ProofLastLine), nextRun(s.ProofCommand)}
+		return Result{NeedsWork, ReasonProofFailed, "the proof failed: " + proofLastLine(s.ProofLastLine), nextRun(s.ProofCommand)}
 	default:
-		return Result{Ready, ReasonReady, "listo: hay prueba para este árbol", ""}
+		return Result{Ready, ReasonReady, "ready: there is proof for this tree", ""}
 	}
 }
 
@@ -115,7 +115,7 @@ func Evaluate(s State) Result {
 func proofLastLine(line string) string {
 	line = strings.Join(strings.Fields(line), " ")
 	if line == "" {
-		return "sin salida"
+		return "no output"
 	}
 	return line
 }
@@ -126,7 +126,7 @@ func proofLastLine(line string) string {
 func nextRun(command string) string {
 	command = strings.TrimSpace(command)
 	if command == "" {
-		return `odachi check --run "<comando>"`
+		return `odachi check --run "<command>"`
 	}
 	return `odachi check --run "` + strings.ReplaceAll(command, `"`, `\"`) + `"`
 }
@@ -143,10 +143,10 @@ func nextRunWithTimeout(command string, seconds int) string {
 	return next + " --timeout " + strconv.Itoa(seconds*2)
 }
 
-// openQuestions keeps the sentence readable in Spanish for one and for many.
+// openQuestions keeps the sentence readable for one and for many.
 func openQuestions(n int) string {
 	if n == 1 {
-		return "hay 1 pregunta sin contestar"
+		return "1 unanswered question"
 	}
-	return fmt.Sprintf("hay %d preguntas sin contestar", n)
+	return fmt.Sprintf("%d unanswered questions", n)
 }

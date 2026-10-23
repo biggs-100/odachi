@@ -18,7 +18,7 @@
 //     agent under the other root, and `--dest` installs every named agent into
 //     one directory the human typed. The table is a default, not a cage.
 //   - A configured file that differs is backed up before it is replaced; an
-//     identical file is reported as `sin cambios` and not rewritten.
+//     identical file is reported as `unchanged` and not rewritten.
 //   - Nothing is ever deleted or moved. A skill this tool did not write is
 //     reported with its path and left exactly as it was.
 package pack
@@ -54,7 +54,7 @@ type Skill struct {
 // Options is one `odachi pack` invocation.
 type Options struct {
 	// Agents is the comma-separated --agents flag. Empty means "the agents
-	// whose config directory exists here", which is what "detectado" means —
+	// whose config directory exists here", which is what "detected" means —
 	// unless --dest is set, where it means "detect nothing" and is refused.
 	Agents string
 	// Scope is the --scope flag: project or home. Empty keeps each agent's own
@@ -136,7 +136,7 @@ func Run(opts Options, files Files, home Home) Result {
 		return blocked(err.Error())
 	}
 	if len(skills) == 0 {
-		return blocked("no hay skills incluidas en el binario: es una instalación incompleta; volvé a bajar odachi")
+		return blocked("there are no skills bundled in the binary: this is an incomplete install; download odachi again")
 	}
 
 	// The flags are checked before anything is read or written: --dest and --scope
@@ -181,11 +181,11 @@ func Run(opts Options, files Files, home Home) Result {
 	if dest == "" && (len(selected) == 0 || anyHomeScoped(selected)) {
 		root, err := home.Home()
 		if err != nil {
-			return blocked("no pude encontrar tu home: " + oneLine(err.Error()) + "; definí HOME (o USERPROFILE en Windows) y volvé a correr odachi pack")
+			return blocked("could not find your home: " + oneLine(err.Error()) + "; set HOME (or USERPROFILE on Windows) and run odachi pack again")
 		}
 		root = strings.TrimSpace(root)
 		if root == "" {
-			return blocked("tu home llegó vacío; definí HOME (o USERPROFILE en Windows) y volvé a correr odachi pack")
+			return blocked("your home came back empty; set HOME (or USERPROFILE on Windows) and run odachi pack again")
 		}
 		roots.home = root
 	}
@@ -196,7 +196,7 @@ func Run(opts Options, files Files, home Home) Result {
 			return blocked(err.Error())
 		}
 		if len(selected) == 0 {
-			message := "no detecté ningún agente: nombrá los que usás con odachi pack --agents claude,codex, o instalá en la carpeta que leen todos los clientes con odachi pack --agents standard (los soportados son: " + agent.List() + ")"
+			message := "no agent detected: name the ones you use with odachi pack --agents claude,codex, or install into the folder every client reads with odachi pack --agents standard (supported: " + agent.List() + ")"
 			return Result{Code: CodeOK, Message: message, Lines: []string{message}, DryRun: opts.DryRun}
 		}
 	}
@@ -221,11 +221,11 @@ func Run(opts Options, files Files, home Home) Result {
 
 	switch {
 	case out.Code != CodeOK:
-		out.Message = "no pude instalar todo: " + firstFailure(out.Lines)
+		out.Message = "could not install everything: " + firstFailure(out.Lines)
 	case opts.DryRun:
-		out.Message = "--dry-run: no escribí nada; esto es lo que haría en " + strings.Join(dests, ", ")
+		out.Message = "--dry-run: wrote nothing; this is what it would do in " + strings.Join(dests, ", ")
 	default:
-		out.Message = fmt.Sprintf("listo: %d %s en %s", len(skills), plural(len(skills), "skill", "skills"), strings.Join(dests, ", "))
+		out.Message = fmt.Sprintf("ready: %d %s in %s", len(skills), plural(len(skills), "skill", "skills"), strings.Join(dests, ", "))
 	}
 
 	// A dry run says so on the first line, before anyone can mistake the plan
@@ -270,13 +270,13 @@ func checkFlags(opts Options) error {
 	named := strings.TrimSpace(opts.Agents) != ""
 
 	if dest != "" && scope != "" {
-		return errors.New("--dest y --scope no van juntos: elegí uno; --dest ya dice dónde instalar (odachi pack --agents claude --dest ./skills-x) y --scope solo sirve con la tabla (odachi pack --agents opencode --scope home)")
+		return errors.New("--dest and --scope do not go together: choose one; --dest already says where to install (odachi pack --agents claude --dest ./skills-x) and --scope only works with the table (odachi pack --agents opencode --scope home)")
 	}
 	if !named && dest != "" {
-		return errors.New("--dest necesita que nombres los agentes: odachi pack --agents claude --dest ./skills-x")
+		return errors.New("--dest needs you to name the agents: odachi pack --agents claude --dest ./skills-x")
 	}
 	if !named && scope != "" {
-		return errors.New("--scope necesita que nombres los agentes: odachi pack --agents opencode --scope home")
+		return errors.New("--scope needs you to name the agents: odachi pack --agents opencode --scope home")
 	}
 	return nil
 }
@@ -357,7 +357,7 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 		if !exists {
 			if dryRun {
 				result.Installed++
-				result.Lines = append(result.Lines, who+" · instalaría · "+label)
+				result.Lines = append(result.Lines, who+" · would install · "+label)
 				continue
 			}
 			if err := files.Write(path, skill.Content); err != nil {
@@ -366,7 +366,7 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 			}
 			result.Installed++
 			result.Files = append(result.Files, label)
-			result.Lines = append(result.Lines, who+" · instalada · "+label)
+			result.Lines = append(result.Lines, who+" · installed · "+label)
 			continue
 		}
 
@@ -377,13 +377,13 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 		}
 		if bytes.Equal(current, skill.Content) {
 			result.Unchanged++
-			result.Lines = append(result.Lines, who+" · sin cambios · "+label)
+			result.Lines = append(result.Lines, who+" · unchanged · "+label)
 			continue
 		}
 
 		if dryRun {
 			result.BackedUp++
-			result.Lines = append(result.Lines, who+" · respaldaría y escribiría · "+label)
+			result.Lines = append(result.Lines, who+" · would back up and write · "+label)
 			continue
 		}
 		// The human's bytes go aside before they go away: a backup that can be
@@ -398,7 +398,7 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 		}
 		result.BackedUp++
 		result.Files = append(result.Files, label)
-		result.Lines = append(result.Lines, who+" · respaldada y escrita · "+label)
+		result.Lines = append(result.Lines, who+" · backed up and written · "+label)
 	}
 
 	// A skill odachi did not write belongs to the human. It is reported, never
@@ -424,7 +424,7 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 			continue
 		}
 		result.Foreign++
-		result.Lines = append(result.Lines, who+" · no lo escribió odachi, no lo toco · "+label)
+		result.Lines = append(result.Lines, who+" · odachi did not write it, not touching it · "+label)
 	}
 	return result
 }
@@ -438,12 +438,12 @@ func (r *DestResult) fail(who, label string, err error) {
 	if r.Failure == nil {
 		r.Failure = &Failure{Path: label, Reason: reason}
 	}
-	r.Lines = append(r.Lines, who+" · falló · "+label+": "+reason)
+	r.Lines = append(r.Lines, who+" · failed · "+label+": "+reason)
 }
 
-// summary is the one line Contract VIII fixes: `claude · 5 instaladas ·
+// summary is the one line Contract VIII fixes: `claude · 5 installed ·
 // ~/.claude/skills`. Only the counts that happened show up, so a quiet second
-// run says `5 sin cambios` and nothing else. The destination is printed once: two
+// run says `5 unchanged` and nothing else. The destination is printed once: two
 // agents that share a folder share a line.
 func (r DestResult) summary(dryRun bool) string {
 	parts := []string{strings.Join(r.Names, ", ")}
@@ -455,20 +455,20 @@ func (r DestResult) summary(dryRun bool) string {
 
 	switch {
 	case dryRun && r.Installed > 0:
-		parts = append(parts, fmt.Sprintf("%d por instalar", r.Installed))
+		parts = append(parts, fmt.Sprintf("%d to install", r.Installed))
 	default:
-		add(r.Installed, "instalada", "instaladas")
+		add(r.Installed, "installed", "installed")
 	}
 
 	switch {
 	case dryRun && r.BackedUp > 0:
-		parts = append(parts, fmt.Sprintf("%d por respaldar", r.BackedUp))
+		parts = append(parts, fmt.Sprintf("%d to back up", r.BackedUp))
 	default:
-		add(r.BackedUp, "respaldada", "respaldadas")
+		add(r.BackedUp, "backed up", "backed up")
 	}
 
-	add(r.Unchanged, "sin cambios", "sin cambios")
-	add(r.Failed, "falló", "fallaron")
+	add(r.Unchanged, "unchanged", "unchanged")
+	add(r.Failed, "failed", "failed")
 
 	parts = append(parts, r.Dest)
 	return strings.Join(parts, " · ")
@@ -484,7 +484,7 @@ func detect(roots roots, files Files) ([]agent.Agent, error) {
 		marker := filepath.Join(roots.base(a), filepath.FromSlash(a.Marker()))
 		exists, err := files.Exists(marker)
 		if err != nil {
-			return nil, fmt.Errorf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi pack --agents %s", a.Display(), oneLine(err.Error()), a.Name)
+			return nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi pack --agents %s again", a.Display(), oneLine(err.Error()), a.Name)
 		}
 		if exists {
 			found = append(found, a)
@@ -517,7 +517,7 @@ func validate(skills []Skill) error {
 	for _, skill := range skills {
 		name := skill.Name
 		if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
-			return fmt.Errorf("skill incluida inválida: %q; el binario está mal armado, volvé a bajar odachi", name)
+			return fmt.Errorf("invalid bundled skill: %q; the binary is built wrong, download odachi again", name)
 		}
 	}
 	return nil
@@ -527,22 +527,22 @@ func validate(skills []Skill) error {
 // names an agent and a path even when it only prints one line.
 func firstFailure(lines []string) string {
 	for _, line := range lines {
-		if strings.Contains(line, " · falló · ") {
+		if strings.Contains(line, " · failed · ") {
 			return line
 		}
 	}
 	if len(lines) > 0 {
 		return lines[0]
 	}
-	return "no pude escribir las skills"
+	return "could not write the skills"
 }
 
-// blocked is a refused run: one Spanish line that says what to do next.
+// blocked is a refused run: one English line that says what to do next.
 func blocked(message string) Result {
 	return Result{Code: CodeBlocked, Message: oneLine(message), Lines: []string{oneLine(message)}}
 }
 
-// plural picks the form a human reads: "1 instalada", "5 instaladas".
+// plural picks the form a human reads: "1 installed", "5 installed".
 func plural(n int, one, many string) string {
 	if n == 1 {
 		return one

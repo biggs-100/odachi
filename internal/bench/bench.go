@@ -67,7 +67,7 @@ type Step struct {
 	Then []Action
 }
 
-// Journey is one recorrido: a name, why it exists, the state it starts from, and
+// Journey is one journey: a name, why it exists, the state it starts from, and
 // the invocations that are measured. A journey is data, never code, so the corpus
 // can grow without the instrument growing with it.
 type Journey struct {
@@ -100,21 +100,21 @@ func startArgs(extra ...string) []string {
 	return append(args, extra...)
 }
 
-// Journeys is the corpus Contract XV asks for: the eight recorridos a person
+// Journeys is the corpus Contract XV asks for: the eight journeys a person
 // actually makes in the first hour. Each one is here because it has blocked
 // someone, or because it is the state where a message has to be trusted.
 func Journeys() []Journey {
 	return []Journey{
 		{
 			Name: "repo-nuevo-start",
-			Why:  "el primer minuto: un directorio vacío y la entrevista respondida por flags",
+			Why:  "the first minute: an empty directory and the interview answered by flags",
 			Steps: []Step{
 				{Args: startArgs(), Want: 0},
 			},
 		},
 		{
 			Name: "start-dos-veces",
-			Why:  "la persona vuelve a correr la entrevista porque no se acuerda si la corrió",
+			Why:  "the person runs the interview again because they do not remember whether they ran it",
 			Steps: []Step{
 				{Args: startArgs(), Want: 0},
 				{Args: startArgs(), Want: 1},
@@ -122,7 +122,7 @@ func Journeys() []Journey {
 		},
 		{
 			Name:  "check-sin-prueba",
-			Why:   "el agente pregunta si está listo antes de tener ninguna prueba",
+			Why:   "the agent asks whether it is ready before having any proof",
 			Setup: []Action{gitInit()},
 			Steps: []Step{
 				{Args: startArgs(), Want: 0},
@@ -131,7 +131,7 @@ func Journeys() []Journey {
 		},
 		{
 			Name:  "check-run-verde",
-			Why:   "la prueba corre, se guarda con su árbol, y la corrida siguiente ya está lista",
+			Why:   "the proof runs, is saved with its tree, and the next run is ready",
 			Setup: []Action{gitInit()},
 			Steps: []Step{
 				{Args: startArgs(), Want: 0},
@@ -141,7 +141,7 @@ func Journeys() []Journey {
 		},
 		{
 			Name:  "archivo-prohibido",
-			Why:   "el cerco se cruza: aparece un archivo de algo que la persona dijo que no iba",
+			Why:   "the fence is crossed: a file appears from something the person said was out of scope",
 			Setup: []Action{gitInit()},
 			Steps: []Step{
 				{
@@ -157,17 +157,17 @@ func Journeys() []Journey {
 		},
 		{
 			Name: "plan-y-undo",
-			Why:  "el agente agrega un paso, lo cierra con su commit, y la persona se arrepiente",
+			Why:  "the agent adds a step, closes it with its commit, and the person changes their mind",
 			Steps: []Step{
 				{Args: startArgs(), Want: 0},
-				{Args: []string{"plan", "guardar los gastos en sqlite", "--req", "R1"}, Want: 0},
+				{Args: []string{"plan", "save the expenses in sqlite", "--req", "R1"}, Want: 0},
 				{Args: []string{"plan", "--done", "T1", "--commit", "abc1234"}, Want: 0},
 				{Args: []string{"undo"}, Want: 0},
 			},
 		},
 		{
 			Name:  "review-solo-docs",
-			Why:   "un cambio que es solo documentación: el review no debe pedir lentes que no aplican",
+			Why:   "a change that is only documentation: review must not ask for lenses that do not apply",
 			Setup: []Action{gitInit(), {Path: "notas.md", Content: "# notas\n\nlo que decidimos hoy\n"}},
 			Steps: []Step{
 				{Args: []string{"review"}, Want: 0},
@@ -176,7 +176,7 @@ func Journeys() []Journey {
 		},
 		{
 			Name:  "repo-sin-commits",
-			Why:   "git init y nada más: el proyecto todavía no tiene historia que comparar",
+			Why:   "git init and nothing else: the project does not have a history to compare yet",
 			Setup: []Action{gitInit(), {Path: "notas.md", Content: "# notas\n"}},
 			Steps: []Step{
 				{Args: []string{"check"}, Want: 2},
@@ -193,7 +193,7 @@ func gitInit() Action {
 
 // Named selects the journeys `--journeys` asked for, in corpus order. A name that
 // does not exist is returned instead of ignored: a filter that silently matches
-// nothing would report "todo bien" about a corpus that never ran.
+// nothing would report "all good" about a corpus that never ran.
 func Named(all []Journey, names []string) (selected []Journey, unknown []string) {
 	if len(names) == 0 {
 		return all, nil
@@ -253,11 +253,11 @@ func IsTemplated(command []string) bool {
 
 // Command finds the `odachi ...` invocation a blocked message names.
 //
-// The messages are Spanish sentences with the command inside, sometimes at the
-// start of a `siguiente:` line and sometimes after "volvé a correr". The search is
-// for the name of this tool followed by a verb, plus the flags and values that
-// belong to it, so `odachi start --force (o borrá brief.md)` yields the command
-// and not the aside.
+// The messages are sentences with the command inside, sometimes after a label
+// and sometimes in the middle of the sentence. The search is for the name of
+// this tool followed by a verb, plus the flags and values that belong to it, so
+// `odachi start --force (or delete brief.md)` yields the command and not the
+// aside.
 //
 // Only `odachi` commands are ever returned. That is the instrument's safety
 // property: a message could name anything, and the bench is not a shell.
@@ -277,8 +277,8 @@ func Command(message string) []string {
 }
 
 // commandFrom reads one command out of the words that start with `odachi`. A
-// command with no verb is not concrete — "instalá odachi" names a product, not a
-// command — so it is not one.
+// command with no verb is not concrete — "I installed odachi" names a product,
+// not a command — so it is not one.
 func commandFrom(words []string) []string {
 	command := []string{binaryName}
 	if len(words) < 2 {
@@ -288,7 +288,8 @@ func commandFrom(words []string) []string {
 	verb := unquote(words[1])
 	if !verbs[verb] {
 		// A word after the tool's name is only a command when it is one of the
-		// verbs: "instalá odachi y volvé" names a product, not a command.
+		// verbs: "I installed odachi and came back" names a product, not a
+		// command.
 		return command
 	}
 	command = append(command, verb)

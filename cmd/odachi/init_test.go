@@ -63,7 +63,7 @@ func TestInitRerunChangesNothing(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("second run code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(out, "sin cambios") {
+	if !strings.Contains(out, "unchanged") {
 		t.Errorf("stdout %q does not say nothing changed", out)
 	}
 	agentsAfter, _ := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
@@ -197,10 +197,10 @@ func TestInitDoesNotAskTheHumanToCommit(t *testing.T) {
 
 	_, out, _ := runDir(t, dir, []string{"init"}, "")
 
-	if strings.Contains(out, "commiteá") {
+	if strings.Contains(out, "commit ") {
 		t.Fatalf("init asks the human to commit: %q", out)
 	}
-	if !strings.Contains(out, "el agente guarda el avance") {
+	if !strings.Contains(out, "the agent saves the progress") {
 		t.Fatalf("init does not say who saves the progress: %q", out)
 	}
 }

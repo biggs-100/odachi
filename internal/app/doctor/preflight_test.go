@@ -16,15 +16,15 @@ func TestEmptyFolderGetsOneSituationInsteadOfTenChecks(t *testing.T) {
 	result := run(newFakeFiles(), &fakeLookup{err: errors.New("not found")}, cleanProfiles(), "")
 
 	if result.Code != CodeProblems {
-		t.Fatalf("una carpeta sin proyecto todavía no está lista: Code = %d, want %d", result.Code, CodeProblems)
+		t.Fatalf("a folder with no project is not ready yet: Code = %d, want %d", result.Code, CodeProblems)
 	}
 	if len(result.Checks) != 0 {
 		t.Fatalf("the checks are not what a beginner needs, got %d:\n%s", len(result.Checks), strings.Join(result.Lines, "\n"))
 	}
 
 	want := []string{
-		"esta carpeta todavía no es un proyecto de odachi",
-		"corré odachi init (deja las reglas que el agente lee) y después odachi start (la entrevista)",
+		"this folder is not an odachi project yet",
+		"run odachi init (it leaves the rules the agent reads) and then odachi start (the interview)",
 	}
 	if len(result.Lines) != len(want) {
 		t.Fatalf("the beginner reads one situation and one step, got %d lines:\n%s", len(result.Lines), strings.Join(result.Lines, "\n"))
@@ -51,9 +51,9 @@ func TestThePreflightOnlyFiresWhenThereIsNothing(t *testing.T) {
 		files *fakeFiles
 	}{
 		{name: "only .git as a directory", files: newFakeFiles().mkdir(".git")},
-		{name: "only .git as a file (a linked worktree)", files: newFakeFiles().put(".git", "gitdir: /otro/repo/.git/worktrees/rama\n")},
+		{name: "only .git as a file (a linked worktree)", files: newFakeFiles().put(".git", "gitdir: /other/repo/.git/worktrees/branch\n")},
 		{name: "only brief.md", files: newFakeFiles().put("brief.md", briefComplete)},
-		{name: "only AGENTS.md", files: newFakeFiles().put("AGENTS.md", "# mi proyecto\n")},
+		{name: "only AGENTS.md", files: newFakeFiles().put("AGENTS.md", "# my project\n")},
 		{name: "only .odachi/", files: newFakeFiles().mkdir(".odachi")},
 	}
 
@@ -71,7 +71,7 @@ func TestThePreflightOnlyFiresWhenThereIsNothing(t *testing.T) {
 	}
 }
 
-// A read error is not a verdict. Saying "esta carpeta todavía no es un proyecto"
+// A read error is not a verdict. Saying "this folder is not a project yet"
 // about a folder odachi could not read would be a lie, so it falls through to the
 // checks, which report the unreadable path as its own line.
 func TestAnUnreadableFolderFallsThroughToTheChecks(t *testing.T) {

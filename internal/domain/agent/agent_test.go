@@ -177,7 +177,7 @@ func TestPiIsRefusedWithItsReason(t *testing.T) {
 		t.Fatal("Resolve(pi) succeeded; Pi has no skills directory and must be refused")
 	}
 	message := err.Error()
-	if !strings.Contains(message, "Pi no usa un directorio de skills") {
+	if !strings.Contains(message, "Pi does not use a skills directory") {
 		t.Errorf("the message does not say why Pi is refused: %q", message)
 	}
 	// A refusal still names the way out: the agents that do work.

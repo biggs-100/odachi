@@ -49,7 +49,7 @@ func TestBenchRemovesItsSandboxes(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("a binary that cannot run must fail the bench, got %d: %s", code, stderr)
 	}
-	if !strings.Contains(stderr, "no pude correr el paso 1") {
+	if !strings.Contains(stderr, "could not run step 1") {
 		t.Fatalf("the report must say the step could not run: %q", stderr)
 	}
 

@@ -17,23 +17,23 @@ import (
 // The seven questions and their why, verbatim from Contract III. They live in
 // the test on purpose: a reworded question would silently stop teaching.
 var wantQuestions = []string{
-	"¿Qué querés que exista cuando terminemos? (una frase, en tus palabras)",
-	"¿Quién lo usa y desde dónde? (1 celular · 2 compu · 3 los dos)",
-	"¿Cómo vas a saber que funcionó? (te propongo tres; podés escribir la tuya)",
-	"¿Qué NO querés en esta primera versión? (elegí las que quieras)",
-	"¿Hay datos sensibles? (1 ninguno · 2 nombres · 3 salud · 4 plata)",
-	"¿Cuánto tiempo tenés para la primera versión usable? (1 hoy · 2 esta semana · 3 sin apuro)",
-	"¿Qué te gustaría aprender en el camino? (elegí una o dos)",
+	"What do you want to exist when we finish? (one sentence, in your own words)",
+	"Who uses it, and from where? (1 phone · 2 computer · 3 both)",
+	"How will you know it worked? (I propose three; you can write your own)",
+	"What do you NOT want in this first version? (choose as many as you like)",
+	"Is there sensitive data? (1 none · 2 names · 3 health · 4 money)",
+	"How much time do you have for the first usable version? (1 today · 2 this week · 3 no rush)",
+	"What would you like to learn along the way? (choose one or two)",
 }
 
 var wantWhys = []string{
-	"sin esto no hay nada que construir; y en tus palabras es lo que leés después para saber si vamos bien",
-	"cambia todo lo que viene después, y es la decisión más cara de cambiar tarde",
-	`esto se llama criterio de aceptación: es lo que separa "anda" de "creo que anda"`,
-	"es lo que evita 40 cosas a medio hacer; un senior dice no, y acá el cerco lo hace cumplir",
-	"define qué no puede salir del proyecto desde el día uno",
-	"define cuánto recortamos; un proyecto que no se termina no enseña nada",
-	"el tutor necesita saber qué explicarte más; esto es lo que te saca de novato",
+	"without this there is nothing to build; and in your own words it is what you read later to know we are on track",
+	"it changes everything that comes after, and it is the most expensive decision to change late",
+	`this is called an acceptance criterion: it separates "it works" from "I think it works"`,
+	"it is what prevents 40 half-done things; a senior says no, and here the fence enforces it",
+	"it defines what cannot leave the project from day one",
+	"it defines how much we cut; a project that never finishes teaches nothing",
+	"the tutor needs to know what to explain more; this is what takes you past novice",
 }
 
 const outcome = "Quiero reservar turnos desde el teléfono"
@@ -54,10 +54,10 @@ const expectedBrief = `# quiero-reservar-turnos
 - login
 
 ## Decisions taken
-- Se usa desde el celular.
-- Datos sensibles: plata; no salen del proyecto desde el día uno.
-- Primera versión usable: esta semana.
-- Quiere aprender: tests.
+- It is used from the phone.
+- Sensitive data: money; it does not leave the project from day one.
+- First usable version: this week.
+- Wants to learn: tests.
 `
 
 const expectedProfile = `name         = "novato"
@@ -247,7 +247,7 @@ func TestEmptyOutcomeIsRejectedAndAskedAgain(t *testing.T) {
 	}
 	for _, line := range interview.said {
 		assertOneLine(t, line)
-		if !strings.Contains(line, "escribila de nuevo") {
+		if !strings.Contains(line, "write it again") {
 			t.Errorf("rejection message %q does not ask again", line)
 		}
 	}
@@ -269,7 +269,7 @@ func TestInvalidAudienceAnswerIsExplainedAndAskedAgain(t *testing.T) {
 	if len(interview.said) != 1 {
 		t.Fatalf("said %q, want one explanation for the invalid answer", interview.said)
 	}
-	if !strings.Contains(interview.said[0], "no entendí") {
+	if !strings.Contains(interview.said[0], "did not understand") {
 		t.Errorf("explanation = %q, want it to name the invalid answer", interview.said[0])
 	}
 }
@@ -433,7 +433,7 @@ func TestAnInterviewThatCannotReadNamesTheFlags(t *testing.T) {
 			t.Errorf("message %q does not name the missing %s", got.Message, flag)
 		}
 	}
-	if strings.Contains(got.Message, "no pude leer la respuesta") {
+	if strings.Contains(got.Message, "could not read the answer") {
 		t.Errorf("message %q still reports the adapter error instead of the flags", got.Message)
 	}
 	if len(files.files) != 0 {
@@ -579,8 +579,8 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 	}
 
 	var events []string
-	files := newFakeFiles(map[string]string{"mi-brief.md": string(data)}, &events)
-	opts := start.Options{BriefPath: "mi-brief.md", Machine: true}
+	files := newFakeFiles(map[string]string{"my-brief.md": string(data)}, &events)
+	opts := start.Options{BriefPath: "my-brief.md", Machine: true}
 
 	got := start.Run(opts, nil, files, nil)
 
@@ -629,7 +629,7 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 // TestMissingBriefFileIsBlocked: a path that does not exist costs one line, not
 // a stack trace.
 func TestMissingBriefFileIsBlocked(t *testing.T) {
-	opts := start.Options{BriefPath: "no-existe.md", Machine: true}
+	opts := start.Options{BriefPath: "does-not-exist.md", Machine: true}
 
 	got := start.Run(opts, nil, newFakeFiles(nil, nil), nil)
 
@@ -637,7 +637,7 @@ func TestMissingBriefFileIsBlocked(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
 	}
 	assertOneLine(t, got.Message)
-	if !strings.Contains(got.Message, "--brief") || !strings.Contains(got.Message, "no-existe.md") {
+	if !strings.Contains(got.Message, "--brief") || !strings.Contains(got.Message, "does-not-exist.md") {
 		t.Errorf("message %q does not name --brief and the path", got.Message)
 	}
 }
@@ -658,7 +658,7 @@ func TestStartDoesNotInferSeniorFromRepository(t *testing.T) {
 	}
 	profile := files.content(t, ".odachi/profile.toml")
 	if !strings.Contains(profile, `name         = "novato"`) {
-		t.Errorf("un repo sin brief tiene que arrancar en novato:\n%s", profile)
+		t.Errorf("a repo without a brief must start on novato:\n%s", profile)
 	}
 }
 
@@ -714,7 +714,7 @@ func TestStartRefreshesTheNativeAgentItFinds(t *testing.T) {
 	}
 	for _, file := range persona.Files(newBody) {
 		if got := files.content(t, file.Path); got != file.Content {
-			t.Errorf("%s no quedó con la voz nueva:\n%q\nvs\n%q", file.Path, got, file.Content)
+			t.Errorf("%s did not get the new voice:\n%q\nvs\n%q", file.Path, got, file.Content)
 		}
 	}
 }
@@ -746,11 +746,11 @@ func TestStartRefreshesOnlyTheChosenClient(t *testing.T) {
 	}
 	chosen, _ := persona.FilesFor(persona.SelectionOpenCode, newBody)
 	if got := files.content(t, chosen.Path); got != chosen.Content {
-		t.Errorf("%s no quedó con la voz nueva:\n%q\nvs\n%q", chosen.Path, got, chosen.Content)
+		t.Errorf("%s did not get the new voice:\n%q\nvs\n%q", chosen.Path, got, chosen.Content)
 	}
 	other, _ := persona.FilesFor(persona.SelectionClaude, oldBody)
 	if got := files.content(t, other.Path); got != other.Content {
-		t.Errorf("%s se refrescó aunque no estaba elegido:\n%q\nvs\n%q", other.Path, got, other.Content)
+		t.Errorf("%s was refreshed although it was not the chosen client:\n%q\nvs\n%q", other.Path, got, other.Content)
 	}
 }
 

@@ -74,15 +74,15 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 			t.Fatalf("line %d is not ok in a configured project: %s", i+1, line)
 		}
 	}
-	if !strings.HasPrefix(lines[11], "todo en orden") {
+	if !strings.HasPrefix(lines[11], "all clear") {
 		t.Fatalf("the last line is the summary, got %q", lines[11])
 	}
-	if !strings.Contains(lines[11], "11 chequeos") {
+	if !strings.Contains(lines[11], "11 checks") {
 		t.Fatalf("the summary counts the eleven checks, got %q", lines[11])
 	}
 	// This is also the guard that init and doctor agree on the hook marker: if
 	// init renamed it, check 5 would stop recognising its own hook.
-	if !strings.Contains(out, "el hook de pre-commit es de odachi: sí") {
+	if !strings.Contains(out, "the pre-commit hook is odachi's: yes") {
 		t.Fatalf("doctor must recognise the hook init installs:\n%s", out)
 	}
 }
@@ -122,7 +122,7 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 			break_: func(t *testing.T, dir string) {
 				writeFile(t, dir, "AGENTS.md", "# mi proyecto\n")
 			},
-			want: []string{"el bloque de odachi está en AGENTS.md", "no tiene el bloque", "odachi init"},
+			want: []string{"the odachi block is in AGENTS.md", "does not have the odachi block", "odachi init"},
 		},
 		{
 			name: "no AGENTS.md",
@@ -131,7 +131,7 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 					t.Fatalf("remove AGENTS.md: %v", err)
 				}
 			},
-			want: []string{"no hay AGENTS.md", "odachi init"},
+			want: []string{"there is no AGENTS.md", "odachi init"},
 		},
 		{
 			name: "no hook",
@@ -140,35 +140,35 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 					t.Fatalf("remove the hook: %v", err)
 				}
 			},
-			want: []string{"no hay .git/hooks/pre-commit", "no hay gate local", "odachi init"},
+			want: []string{"there is no .git/hooks/pre-commit", "there is no local gate", "odachi init"},
 		},
 		{
 			name: "the hook belongs to somebody else",
 			break_: func(t *testing.T, dir string) {
 				writeFile(t, dir, ".git/hooks/pre-commit", "#!/bin/sh\nnpm test\n")
 			},
-			want: []string{"no es de odachi", "odachi init"},
+			want: []string{"is not odachi's", "odachi init"},
 		},
 		{
 			name: "the profile does not resolve",
 			break_: func(t *testing.T, dir string) {
 				writeFile(t, dir, ".odachi/profile.toml", "name = \"\"\n")
 			},
-			want: []string{"no resuelve", "no dice name", "odachi doctor"},
+			want: []string{"does not resolve", "no dice name", "odachi doctor"},
 		},
 		{
 			name: "the profile has a value the tool would never obey",
 			break_: func(t *testing.T, dir string) {
 				writeFile(t, dir, ".odachi/profile.toml", "name = \"novato\"\nquestions = \"cuando-pueda\"\n")
 			},
-			want: []string{"no resuelve", "questions", "odachi doctor"},
+			want: []string{"does not resolve", "questions", "odachi doctor"},
 		},
 		{
 			name: "the profile is not TOML",
 			break_: func(t *testing.T, dir string) {
 				writeFile(t, dir, ".odachi/profile.toml", "esto no es toml\n")
 			},
-			want: []string{"no resuelve", "odachi doctor"},
+			want: []string{"does not resolve", "odachi doctor"},
 		},
 		{
 			name: "there is no brief",
@@ -177,14 +177,14 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 					t.Fatalf("remove brief.md: %v", err)
 				}
 			},
-			want: []string{"no hay brief.md", "sin visión no hay nada que construir", "odachi start"},
+			want: []string{"there is no brief.md", "without a vision there is nothing to build", "odachi start"},
 		},
 		{
 			name: "the brief is incomplete",
 			break_: func(t *testing.T, dir string) {
 				writeFile(t, dir, "brief.md", "## Qué tiene que existir\n- algo\n")
 			},
-			want: []string{"le falta", "odachi start --force"},
+			want: []string{"missing from brief.md", "odachi start --force"},
 		},
 	}
 
@@ -203,7 +203,7 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 					t.Fatalf("the report must name %q:\n%s", want, report)
 				}
 			}
-			if !strings.Contains(report, "mal ") {
+			if !strings.Contains(report, "bad ") {
 				t.Fatalf("a problem line starts with «mal»:\n%s", report)
 			}
 		})
@@ -290,7 +290,7 @@ func TestDoctorOnAFolderThatIsNotAProject(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("un principiante lee una situación y un paso, got %d lines:\n%s", len(lines), stderr)
 	}
-	if lines[0] != "esta carpeta todavía no es un proyecto de odachi" {
+	if lines[0] != "this folder is not an odachi project yet" {
 		t.Fatalf("first line = %q", lines[0])
 	}
 	if !strings.Contains(lines[1], "odachi init") || !strings.Contains(lines[1], "odachi start") {
@@ -299,7 +299,7 @@ func TestDoctorOnAFolderThatIsNotAProject(t *testing.T) {
 	if strings.Index(lines[1], "odachi init") > strings.Index(lines[1], "odachi start") {
 		t.Fatalf("the rule comes before the interview: %q", lines[1])
 	}
-	if strings.Contains(stderr, "chequeos") {
+	if strings.Contains(stderr, "checks") {
 		t.Fatalf("the tally is what a beginner cannot act on:\n%s", stderr)
 	}
 

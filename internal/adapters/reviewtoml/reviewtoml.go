@@ -24,7 +24,7 @@ func Decode(data []byte) (string, error) {
 	var f file
 	md, err := toml.Decode(string(data), &f)
 	if err != nil {
-		return "", fmt.Errorf("review: TOML inválido: %w", err)
+		return "", fmt.Errorf("review: invalid TOML: %w", err)
 	}
 
 	if unknown := md.Undecoded(); len(unknown) > 0 {
@@ -32,7 +32,7 @@ func Decode(data []byte) (string, error) {
 		for _, key := range unknown {
 			keys = append(keys, key.String())
 		}
-		return "", fmt.Errorf("review: claves desconocidas: %s; el archivo solo configura mode", strings.Join(keys, ", "))
+		return "", fmt.Errorf("review: unknown keys: %s; this file only configures mode", strings.Join(keys, ", "))
 	}
 
 	mode, err := review.NormalizeMode(f.Mode)
@@ -49,5 +49,5 @@ func Render(mode string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("review: %w", err)
 	}
-	return []byte("# odachi: el review es una decisión del humano; on lo exige en check, off lo deja opcional\nmode = \"" + normalized + "\"\n"), nil
+	return []byte("# odachi: the review is the human's decision; on requires it in check, off leaves it optional\nmode = \"" + normalized + "\"\n"), nil
 }

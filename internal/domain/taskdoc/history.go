@@ -132,7 +132,7 @@ func (d TaskDoc) CloseQuestion(id, answer string) (TaskDoc, error) {
 	normalized := strings.ToUpper(strings.TrimSpace(id))
 
 	if _, ok := questionNumber(normalized); !ok {
-		return d, fmt.Errorf("no entendí %q como número de pregunta; usá --for P1 (o el que corresponda)", id)
+		return d, fmt.Errorf("could not read %q as a question number; use --for P1 (or the matching one)", id)
 	}
 
 	asked := false
@@ -141,12 +141,12 @@ func (d TaskDoc) CloseQuestion(id, answer string) (TaskDoc, error) {
 			continue
 		}
 		if event.Kind == KindAnswer {
-			return d, fmt.Errorf("la pregunta %s ya está contestada; para abrir otra corré odachi ask \"<pregunta>\"", normalized)
+			return d, fmt.Errorf("question %s is already answered; to open another one run odachi ask \"<question>\"", normalized)
 		}
 		asked = true
 	}
 	if !asked {
-		return d, fmt.Errorf("este task doc no tiene la pregunta %s; abrila con odachi ask \"<pregunta>\"", normalized)
+		return d, fmt.Errorf("this task doc has no question %s; open it with odachi ask \"<question>\"", normalized)
 	}
 
 	line := fmt.Sprintf("L%d · VOS %s · %s", d.NextLine(), normalized, quoted(answer))

@@ -19,7 +19,7 @@ func TestAskThenLevelCountsTheOpenQuestionAndTheAnswer(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("level: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "preguntas abiertas: 1") {
+	if !strings.Contains(stdout, "open questions: 1") {
 		t.Errorf("level does not see the open question:\n%s", stdout)
 	}
 
@@ -31,7 +31,7 @@ func TestAskThenLevelCountsTheOpenQuestionAndTheAnswer(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("level: exit %d, stderr=%s", code, stderr)
 	}
-	for _, want := range []string{"preguntas contestadas: 1", "preguntas abiertas: 0"} {
+	for _, want := range []string{"answered questions: 1", "open questions: 0"} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("level does not report %q:\n%s", want, stdout)
 		}
@@ -51,7 +51,7 @@ func TestLevelShowsTheProfileInForce(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit = %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "perfil: ci") {
+	if !strings.Contains(stdout, "profile: ci") {
 		t.Errorf("stdout %q does not show the profile start wrote", stdout)
 	}
 }

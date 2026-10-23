@@ -34,7 +34,7 @@ func (r *runner) fenceRules() ([]fence.Rule, *Result) {
 
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude revisar %s: %s; revisá los permisos y volvé a correr odachi check", fenceFile, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi check again", fenceFile, oneLine(err.Error())))
 		return nil, &problem
 	}
 	if !exists {
@@ -43,13 +43,13 @@ func (r *runner) fenceRules() ([]fence.Rule, *Result) {
 
 	data, err := r.files.Read(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("no pude leer %s: %s; revisá los permisos y volvé a correr odachi check", fenceFile, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi check again", fenceFile, oneLine(err.Error())))
 		return nil, &problem
 	}
 
 	var document fenceDocument
 	if _, err := toml.Decode(string(data), &document); err != nil {
-		problem := blocked(fmt.Sprintf("no pude leer %s: %s; corregí el archivo (lo escribe odachi start) y volvé a correr odachi check", fenceFile, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not read %s: %s; fix the file (odachi start writes it) and run odachi check again", fenceFile, oneLine(err.Error())))
 		return nil, &problem
 	}
 

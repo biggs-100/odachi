@@ -204,7 +204,7 @@ func TestCloseQuestionAppendsTheAnswer(t *testing.T) {
 }
 
 // TestCloseQuestionRejectsTheImpossible: an id that was never asked, or one
-// already answered, is an error the CLI turns into one Spanish line.
+// already answered, is an error the CLI turns into one line.
 func TestCloseQuestionRejectsTheImpossible(t *testing.T) {
 	doc := withHistory(
 		`L1 · PREGUNTA P1 · "¿Se puede cancelar?"`,

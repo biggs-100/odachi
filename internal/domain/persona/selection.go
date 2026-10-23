@@ -25,7 +25,7 @@ func NormalizeSelection(value string) (string, error) {
 	case SelectionBoth, SelectionOpenCode, SelectionClaude:
 		return normalized, nil
 	default:
-		return "", fmt.Errorf("selección de clientes %q inválida: usá both, opencode o claude", strings.TrimSpace(value))
+		return "", fmt.Errorf("invalid client selection %q: use both, opencode or claude", strings.TrimSpace(value))
 	}
 }
 

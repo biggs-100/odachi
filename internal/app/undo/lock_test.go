@@ -51,13 +51,13 @@ func TestUndoIsRefusedWhileAnotherRunHoldsTheLock(t *testing.T) {
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
 	}
-	for _, want := range []string{"otra corrida de odachi está escribiendo en este proyecto", "undo, pid 5150", "hace 12s", ".odachi/lock"} {
+	for _, want := range []string{"another odachi run is writing to this project", "undo, pid 5150", "12s ago", ".odachi/lock"} {
 		if !strings.Contains(res.Message, want) {
 			t.Errorf("Message = %q, want it to contain %q", res.Message, want)
 		}
 	}
 	if len(files.touched) != 0 {
-		t.Errorf("la corrida bloqueada tocó el proyecto: %v", files.touched)
+		t.Errorf("the blocked run touched the project: %v", files.touched)
 	}
 	if len(files.wrote) != 0 || len(files.backups) != 0 {
 		t.Errorf("escrituras: %v, backups: %v; want none", files.wrote, files.backups)
@@ -73,7 +73,7 @@ func TestUndoIsRefusedWhileAnotherRunHoldsTheLock(t *testing.T) {
 // TestUndoAnnouncesAStaleLock: an abandoned lock is taken over and the line is
 // what the human sees first.
 func TestUndoAnnouncesAStaleLock(t *testing.T) {
-	const notice = "había un lock viejo de start, hace 31m12s; lo tomé"
+	const notice = "there was an old lock from start, 31m12s ago; I took it"
 	files := newFakeFiles()
 	files.put(briefRel, "brief nuevo", at(21, 23, 0))
 	files.put(briefRel+".bak-"+digest("brief viejo"), "brief viejo", at(20, 9, 0))
@@ -116,19 +116,19 @@ func TestUndoStopsWhenTheLockCannotBeTaken(t *testing.T) {
 	files := newFakeFiles()
 	files.put(briefRel, "brief nuevo", at(21, 23, 0))
 	files.put(briefRel+".bak-"+digest("brief viejo"), "brief viejo", at(20, 9, 0))
-	port := &fakeLock{err: errors.New("permiso denegado")}
+	port := &fakeLock{err: errors.New("permission denied")}
 
 	res := undo.Run(undo.Options{Dir: dir}, files, port)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
 	}
-	for _, want := range []string{".odachi/lock", "permiso denegado"} {
+	for _, want := range []string{".odachi/lock", "permission denied"} {
 		if !strings.Contains(res.Message, want) {
 			t.Errorf("Message = %q, want it to contain %q", res.Message, want)
 		}
 	}
 	if len(files.touched) != 0 {
-		t.Errorf("la corrida sin lock tocó el proyecto: %v", files.touched)
+		t.Errorf("the run without a lock touched the project: %v", files.touched)
 	}
 }

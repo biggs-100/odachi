@@ -77,7 +77,7 @@ func (f *fakeFiles) Read(path string) ([]byte, error) {
 	}
 	data, ok := f.files[path]
 	if !ok {
-		return nil, errors.New("archivo inexistente: " + path)
+		return nil, errors.New("missing file: " + path)
 	}
 	return data, nil
 }
@@ -96,7 +96,7 @@ func (f *fakeFiles) Backup(path string) (string, error) {
 		return "", f.err
 	}
 	f.backups = append(f.backups, path)
-	return path + ".bak-prueba", nil
+	return path + ".bak-test", nil
 }
 
 // written is every write as a project-relative path with forward slashes, in the
@@ -249,7 +249,7 @@ func TestPromptCarriesTheCandidate(t *testing.T) {
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	for _, want := range []string{"reservar turnos", "-viejo", "+nuevo", "a.go", currentTree, "Ante la duda, callate"} {
+	for _, want := range []string{"reservar turnos", "-viejo", "+nuevo", "a.go", currentTree, "When in doubt, say nothing"} {
 		if !strings.Contains(result.Prompt, want) {
 			t.Errorf("the prompt does not contain %q", want)
 		}
@@ -294,7 +294,7 @@ func TestNothingChangedMeansNoReview(t *testing.T) {
 	if result.Code != review.CodeBlocked {
 		t.Fatalf("code = %d, want 1", result.Code)
 	}
-	if result.Message != "no hay nada que revisar en este árbol" {
+	if result.Message != "there is nothing to review in this tree" {
 		t.Errorf("message = %q, want the documented sentence", result.Message)
 	}
 	if result.Prompt != "" {
@@ -385,8 +385,8 @@ func TestASecondVerdictIsReportedNotApplied(t *testing.T) {
 	if second.Code != review.CodeBlocked {
 		t.Fatalf("code = %d, want 1 for a second verdict", second.Code)
 	}
-	if !strings.Contains(second.Message, "ya hay un veredicto para este árbol") {
-		t.Errorf("message = %q, want %q", second.Message, "ya hay un veredicto para este árbol")
+	if !strings.Contains(second.Message, "this tree already has a verdict") {
+		t.Errorf("message = %q, want %q", second.Message, "this tree already has a verdict")
 	}
 	if after := string(p.files.files[storePath(currentTree)]); after != before {
 		t.Fatalf("the stored verdict was overwritten:\nbefore: %s\nafter:  %s", before, after)
@@ -394,15 +394,15 @@ func TestASecondVerdictIsReportedNotApplied(t *testing.T) {
 }
 
 // TestAttachRefusesABrokenVerdictWithoutWriting: an invalid or incomplete JSON is
-// one Spanish line and zero writes. A half-read verdict stored under a tree's
+// one English line and zero writes. A half-read verdict stored under a tree's
 // name would lie about what was reviewed.
 func TestAttachRefusesABrokenVerdictWithoutWriting(t *testing.T) {
 	cases := map[string]string{
-		"no es JSON":            `listo, aprobado`,
-		"sin reviewer":          `{"findings":[]}`,
-		"finding sin why":       `{"reviewer":"x","findings":[{"path":"a.go","severity":"WARNING"}]}`,
-		"severidad inventada":   `{"reviewer":"x","findings":[{"path":"a.go","severity":"MAJOR","why":"algo"}]}`,
-		"veredicto que no toca": `{"reviewer":"x","findings":[{"path":"a.go","severity":"BLOCKER","causal":true,"why":"rompe"}],"verdict":"approved"}`,
+		"not JSON":                     `done, approved`,
+		"no reviewer":                  `{"findings":[]}`,
+		"finding without why":          `{"reviewer":"x","findings":[{"path":"a.go","severity":"WARNING"}]}`,
+		"invented severity":            `{"reviewer":"x","findings":[{"path":"a.go","severity":"MAJOR","why":"something"}]}`,
+		"verdict that does not follow": `{"reviewer":"x","findings":[{"path":"a.go","severity":"BLOCKER","causal":true,"why":"breaks"}],"verdict":"approved"}`,
 	}
 
 	for name, content := range cases {
@@ -518,7 +518,7 @@ func TestShowWithoutAVerdictSaysSo(t *testing.T) {
 	if result.Code != review.CodeBlocked {
 		t.Fatalf("code = %d, want 1", result.Code)
 	}
-	if result.Message != "no hay review para este árbol" {
+	if result.Message != "there is no review for this tree" {
 		t.Errorf("message = %q, want the documented sentence", result.Message)
 	}
 	if writes := p.files.written(); len(writes) != 0 {
@@ -624,10 +624,10 @@ func TestExecGivesTheReviewerThePrompt(t *testing.T) {
 // file, and the command's own output shown.
 func TestExecFailureWritesNothing(t *testing.T) {
 	cases := map[string]*fakeShell{
-		"exit code":  {output: "boom: no pude leer el brief", exitCode: 1},
-		"timeout":    {output: "arrancando…", timedOut: true},
-		"no corre":   {err: errors.New("no hay shell conocido")},
-		"no es JSON": {output: "Creo que está bastante bien."},
+		"exit code":    {output: "boom: could not read the brief", exitCode: 1},
+		"timeout":      {output: "starting…", timedOut: true},
+		"does not run": {err: errors.New("no known shell")},
+		"not JSON":     {output: "I think it is quite good."},
 	}
 
 	for name, shell := range cases {

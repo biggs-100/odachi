@@ -47,7 +47,7 @@ func (f *fakeFiles) List(dir string) ([]string, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	data, ok := f.files[path]
 	if !ok {
-		return nil, fmt.Errorf("archivo inexistente: %s", path)
+		return nil, fmt.Errorf("missing file: %s", path)
 	}
 	return data, nil
 }
@@ -69,7 +69,7 @@ func (f *fakeFiles) content(t *testing.T) string {
 	t.Helper()
 	data, ok := f.files[taskPath]
 	if !ok {
-		t.Fatalf("%s no existe; archivos: %v", taskPath, f.paths())
+		t.Fatalf("%s does not exist; files: %v", taskPath, f.paths())
 	}
 	return string(data)
 }
@@ -132,7 +132,7 @@ func TestPlanAddsTheNextStep(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "paso T3 agregado a " + taskRel; res.Message != want {
+	if want := "step T3 added to " + taskRel; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if res.Task != taskRel {
@@ -191,11 +191,11 @@ func TestPlanRejectsBadTextBeforeWriting(t *testing.T) {
 		name string
 		text string
 	}{
-		{"vacío", ""},
-		{"solo espacios", "   "},
-		{"multilínea", "una linea\notra linea"},
-		{"guión inicial", "- un paso"},
-		{"121 caracteres", strings.Repeat("a", 121)},
+		{"empty", ""},
+		{"only spaces", "   "},
+		{"multiline", "una linea\notra linea"},
+		{"leading dash", "- un paso"},
+		{"121 characters", strings.Repeat("a", 121)},
 	}
 
 	for _, c := range cases {
@@ -251,7 +251,7 @@ func TestPlanDoneMarksAndRecordsTheCommit(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "paso T2 hecho · deadbee"; res.Message != want {
+	if want := "step T2 done · deadbee"; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 
@@ -277,7 +277,7 @@ func TestPlanDoneWithoutCommitStillClosesTheStep(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "paso T2 hecho"; res.Message != want {
+	if want := "step T2 done"; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done || step.Commit != "" {
@@ -317,8 +317,8 @@ func TestPlanAlreadyDoneIsANoOp(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if !strings.Contains(res.Message, "ya estaba hecho") {
-		t.Errorf("Message = %q, want it to say ya estaba hecho", res.Message)
+	if !strings.Contains(res.Message, "was already done") {
+		t.Errorf("Message = %q, want it to say was already done", res.Message)
 	}
 	if len(files.wrote) != 0 || len(files.backups) != 0 {
 		t.Errorf("a no-op wrote %v / backed up %v", files.wrote, files.backups)
@@ -349,7 +349,7 @@ func TestPlanOneFormAtATime(t *testing.T) {
 
 	message := assertBlocked(t, plan.Run(plan.Options{Dir: "raiz", Text: "un paso", Done: "T2"}, files))
 
-	if !strings.Contains(message, "una sola forma") {
+	if !strings.Contains(message, "one form") {
 		t.Errorf("message %q does not explain that one call does one thing", message)
 	}
 	if len(files.wrote) != 0 {
@@ -364,7 +364,7 @@ func TestPlanRequirementWithoutTextIsBlocked(t *testing.T) {
 
 	message := assertBlocked(t, plan.Run(plan.Options{Dir: "raiz", Requirement: "R1"}, files))
 
-	if !strings.Contains(message, `odachi plan "<texto>"`) {
+	if !strings.Contains(message, `odachi plan "<text>"`) {
 		t.Errorf("message %q does not show the shape of the command", message)
 	}
 	if len(files.wrote) != 0 {
@@ -395,7 +395,7 @@ func TestPlanRefusesToDropAHandwrittenSection(t *testing.T) {
 
 	message := assertBlocked(t, plan.Run(plan.Options{Dir: "raiz", Text: "un paso más"}, files))
 
-	if !strings.Contains(message, "## Historial") {
+	if !strings.Contains(message, "## History") {
 		t.Errorf("message %q does not say where the notes belong", message)
 	}
 	if len(files.wrote) != 0 {
