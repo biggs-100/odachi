@@ -6,6 +6,7 @@
 | commits | cuando hay que decidir qué entra en un commit, cómo se parte el trabajo, o qué dice el mensaje y la descripción del PR. | skills/commits/SKILL.md |
 | data | cuando hay que guardar, migrar, leer o borrar datos. Decide dueño, vida y respaldo antes de escribir la primera fila. | skills/data/SKILL.md |
 | drive | cuando trabajás dentro de un proyecto odachi: qué verbo va en cada momento, qué significa cada bloqueo y cómo se cierra una feature. Para arrancar de cero es bootstrap. | skills/drive/SKILL.md |
+| pull-request | cuando un cambio va a PR o el diff pasa las 400 líneas. Parte la entrega en work units revisables y elige una sola estrategia de cadena. | skills/pull-request/SKILL.md |
 | ship | cuando algo está listo para que otra persona lo use. Verifica el camino del que instala, no el del que desarrolla. | skills/ship/SKILL.md |
 | skill-craft | cuando hay que escribir una skill nueva, corregir una que no se está usando, o decidir si algo merece ser skill. | skills/skill-craft/SKILL.md |
 | slices | cuando hay que partir un pedido grande en pasos chicos, cuando el código ya no entra en una lectura, o hay que decidir si delegar a un subagente. | skills/slices/SKILL.md |

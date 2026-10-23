@@ -168,6 +168,38 @@ func TestTriageSkillTeachesRootCause(t *testing.T) {
 	}
 }
 
+// TestPullRequestSkillTeachesReviewSlices: the delivery gap must keep one work
+// unit per PR, a 400-line budget, one chain strategy, and the tree's proof
+// before review.
+func TestPullRequestSkillTeachesReviewSlices(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["pull-request"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill pull-request: la entrega sigue sin corte")
+	}
+	for _, want := range []string{
+		"400 líneas",
+		"un work unit",
+		"stacked",
+		"feature branch chain",
+		"Closes/Fixes/Resolves",
+		"odachi check --run",
+		"qué quedó afuera",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("pr no dice %q: el corte de entrega se perdió", want)
+		}
+	}
+}
+
 // TestBootstrapIsTheEntryPoint: the payload has exactly one skill that teaches
 // how to start a project, and it is the one `odachi init` installs in the
 // human's home. Splitting it out of the curriculum is the whole reason the
