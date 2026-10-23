@@ -1,9 +1,9 @@
 [[rule]]
-not   = "no borrar archivos de clientes que ya existen: solo dejar de escribirlos"
-paths = ["no-borrar-archivos-de-clientes-que-ya-existen-solo-dejar-de-escribirlos*"]
+not   = "no borrar la puerta que ya está instalada en el home: solo dejar de instalarla por defecto"
+paths = ["no-borrar-la-puerta-que-ya-esta-instalada-en-el-home-solo-dejar-de-instalarla-por-defecto*"]
 deps  = []
 
 [[rule]]
-not   = "el default de un proyecto sin archivo de eleccion sigue siendo los dos clientes"
-paths = ["el-default-de-un-proyecto-sin-archivo-de-eleccion-sigue-siendo-los-dos-clientes*"]
+not   = "no tocar --agents ni el store .odachi/agents.toml"
+paths = ["no-tocar-agents-ni-el-store-odachi-agents-toml*"]
 deps  = []
