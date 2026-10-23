@@ -1,11 +1,13 @@
-# doctor-compara-el
+# odachi-init-skills
 
 ## Qué tiene que existir
-- doctor compara el contenido de .agents/skills con skills/ y avisa si una copia instalada no coincide
+- odachi init --skills home deja todas las skills en ~/.agents/skills y el proyecto no recibe copia
 
 ## Listo cuando
-- con una skill editada en .agents/skills, doctor la nombra y manda a odachi init
-- con las copias iguales, doctor dice que coinciden
+- el home tiene todas las skills y el proyecto no tiene .agents/skills
+- una segunda corrida no escribe nada
+- una copia previa del proyecto se avisa y no se borra
+- doctor cuenta las skills del home y avisa si driftan
 - go test ./... queda en verde
 - odachi check queda listo
 
@@ -15,4 +17,4 @@
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: doctor y skills.
+- Quiere aprender: skills globales.

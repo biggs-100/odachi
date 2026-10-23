@@ -197,6 +197,9 @@ func configured() *fakeFiles {
 	for _, file := range persona.GlobalFiles() {
 		files.putHome(file.Path, file.Content)
 	}
+	// The default init leaves bootstrap in the home; it is the one skill every
+	// project gets there without a project copy.
+	files.putHome(".agents/skills/bootstrap/SKILL.md", skill.Template("bootstrap"))
 	files.put("brief.md", briefComplete)
 	files.put(".odachi/profile.toml", "name = \"novato\"\n")
 	files.put("skills/acceptance/SKILL.md", skill.Template("acceptance"))
@@ -551,6 +554,25 @@ func TestInstalledSkillThatDoesNotMatchTheSourceIsAWarning(t *testing.T) {
 		t.Fatalf("a drifted installed skill must be a warning: %s", domaindoctor.Line(got))
 	}
 	for _, want := range []string{"no coinciden con skills/", "acceptance", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("check 9 must say %q: %q", want, got.Detail)
+		}
+	}
+}
+
+// TestInstalledHomeSkillThatDoesNotMatchTheSourceIsAWarning: --skills home puts
+// the payload in the home, so the same drift is possible there. Check 9 names
+// it and the command that refreshes it.
+func TestInstalledHomeSkillThatDoesNotMatchTheSourceIsAWarning(t *testing.T) {
+	files := configured().putHome(".agents/skills/acceptance/SKILL.md", "viejo\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckSkills)
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a drifted home skill must be a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{"~/.agents/skills", "no coinciden con skills/", "acceptance", "odachi init --skills home"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("check 9 must say %q: %q", want, got.Detail)
 		}

@@ -602,8 +602,12 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("odachi init", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
-	var asJSON bool
+	var (
+		asJSON      bool
+		skillsScope string
+	)
 	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
+	flags.StringVar(&skillsScope, "skills", "project", "dónde instalar las skills: project | home")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -617,6 +621,12 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "odachi: sobra un argumento: %s; odachi init solo toma flags (corré odachi init -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
+	switch skillsScope {
+	case "project", "home":
+	default:
+		fmt.Fprintf(stderr, "odachi: --skills tiene que ser \"project\" o \"home\", no %q; project deja las skills en el proyecto, home las deja en ~/.agents/skills\n", skillsScope)
+		return start.CodeBlocked
+	}
 
 	created, err := ensureHistory(dir)
 	if err != nil {
@@ -624,7 +634,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing(), Profiles: writtenProfile{}, Home: osHome{}}, osFiles{}, &initSkills{dir: dir})
+	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing(), Profiles: writtenProfile{}, Home: osHome{}}, osFiles{}, &initSkills{dir: dir, scope: skillsScope})
 	if created {
 		line := "historial del proyecto: lo creé en esta carpeta (git init); es lo que me deja probar que una prueba corresponde a este estado del código"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -637,42 +647,67 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 }
 
 // initSkills is the join between `odachi init` and `odachi pack`. init decides
-// that two destinations get skills — the project's cross-client directory and the
-// human's home, so an agent can learn how to start a project before one exists —
-// and pack owns how a skill is installed: the destination table, the backup
-// before a differing file, the identical bytes skipped.
+// where the skills go — the project's cross-client directory by default, or the
+// human's home when `--skills home` asks for one copy per machine — and pack owns
+// how a skill is installed: the destination table, the backup before a differing
+// file, the identical bytes skipped.
 //
 // The join lives here, in the CLI, and not in internal/app/init importing
 // internal/app/pack: the CLI is the only layer that already wires pack's payload
 // and its two adapters, and an app that imports another app would inherit its
 // error strings and its destination table for a job that is not its own.
 type initSkills struct {
-	dir string
+	dir   string
+	scope string
 }
 
-// Install writes the two halves of the skills job and turns what pack reports
-// into the two lines a human reads.
+// Install writes the skills job and turns what pack reports into the lines a
+// human reads. Project scope is the default and keeps the old two destinations:
+// the curriculum in the project and bootstrap in the home. Home scope puts all
+// ten in the home; it never deletes a project copy an earlier run left.
 func (s initSkills) Install() initapp.SkillReport {
-	curriculum, err := bundledskills.Curriculum()
-	if err != nil {
-		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; volvé a bajar odachi", Next: "odachi init"}
-	}
-	bootstrap, ok := bundledskills.Bootstrap()
-	if !ok {
+	if _, ok := bundledskills.Bootstrap(); !ok {
 		return initapp.SkillReport{
 			Blocked: "este binario no trae la skill " + bundledskills.BootstrapName + ": es una instalación incompleta; volvé a bajar odachi",
 			Next:    "odachi init",
 		}
 	}
 
+	if s.scope == "home" {
+		all, err := bundledskills.All()
+		if err != nil {
+			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; volvé a bajar odachi", Next: "odachi init"}
+		}
+		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all)}, osFiles{}, osHome{})
+		report := s.report([]pack.Result{home})
+		if standard, err := agent.Resolve(agent.Standard); err == nil {
+			exists, err := (osFiles{}).Exists(filepath.Join(s.dir, filepath.FromSlash(standard.Dest)))
+			if err == nil && exists {
+				report.Notice = append(report.Notice, standard.Display()+": ya tenía una copia del init anterior; no la toqué: ahora las skills viven en "+standard.In(agent.ScopeHome).Display())
+			}
+		}
+		return report
+	}
+
+	curriculum, err := bundledskills.Curriculum()
+	if err != nil {
+		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; volvé a bajar odachi", Next: "odachi init"}
+	}
+	bootstrap, _ := bundledskills.Bootstrap()
+
 	// The project gets the craft, in the cross-client location every client
 	// reads. The home gets the one skill that teaches how to arrive, because
 	// before a project exists the home is the only place a skill can live.
 	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum)}, osFiles{}, osHome{})
 	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap})}, osFiles{}, osHome{})
+	return s.report([]pack.Result{project, home})
+}
 
+// report turns the pack results into one SkillReport. It is shared by the two
+// scopes so the failure sentences and the fatal rule cannot drift.
+func (s initSkills) report(results []pack.Result) initapp.SkillReport {
 	report := initapp.SkillReport{}
-	for _, result := range []pack.Result{project, home} {
+	for _, result := range results {
 		for _, dest := range result.Dests {
 			report.Dests = append(report.Dests, initapp.SkillDest{
 				Label:     dest.Dest,
@@ -690,8 +725,7 @@ func (s initSkills) Install() initapp.SkillReport {
 		// is the only half whose failure does not fail the run.
 		report.Fatal = destScope(result) == string(agent.ScopeProject)
 	}
-
-	report.Notice = s.otherProjectCopy()
+	report.Notice = append(report.Notice, s.otherProjectCopy()...)
 	return report
 }
 
@@ -1055,18 +1089,23 @@ flags de bench:
   --json          salida para máquinas
 
 flags de init:
+  --skills s      project | home (default project): el proyecto lleva las skills del oficio;
+                  home las deja todas en ~/.agents/skills y no escribe copia en el proyecto
   --json          salida para máquinas, con los destinos de las skills y del agente
 
-qué deja escrito init, en un solo comando:
+qué deja escrito init, en un solo comando (--skills project, el default):
   AGENTS.md              el bloque de reglas que el agente lee, con la voz al final
   .opencode/agents       odachi.md: el mismo bloque, para elegirlo con Tab en este proyecto
   .claude/output-styles  odachi.md: el mismo bloque, para elegirlo con /config en este proyecto
   ~/.config/opencode/agents  odachi.md: la puerta que aparece en cualquier carpeta (Tab)
   ~/.claude/output-styles    odachi.md: la misma puerta en el home (/config)
-  .gitignore             /proof/ y /.odachi/reviews/ no ensucian el árbol que certifican
+  .gitignore             /proof/, /.odachi/reviews/ y *.bak-* no ensucian el árbol
   .git/hooks/pre-commit  no se commitea sin odachi check --quiet en verde
   .agents/skills         las skills del proyecto: la carpeta que leen todos los clientes
   ~/.agents/skills       la skill de arranque: cómo empezar un proyecto desde cero
+
+con --skills home, todas las skills van a ~/.agents/skills y el proyecto no recibe copia;
+si ya tenía .agents/skills de un init anterior, no se borra: se avisa.
 
 la voz —cómo te habla el agente— es la última sección del bloque, y la escribe el
 binario: novato si todavía no hay .odachi/profile.toml, si no la del perfil que

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/biggs-100/odachi/internal/app/start"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
@@ -143,6 +144,101 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 
 	if !strings.Contains(out, "./.agents/skills") || !strings.Contains(out, "~/.agents/skills") {
 		t.Errorf("la salida no nombra los dos destinos:\n%s", out)
+	}
+}
+
+// TestInitInstallsAllSkillsInTheHomeWhenAsked: --skills home is the one-copy
+// option. The project gets no .agents/skills, the home gets the whole payload,
+// and a second run writes nothing.
+func TestInitInstallsAllSkillsInTheHomeWhenAsked(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	code, out, errOut := runDir(t, dir, []string{"init", "--skills", "home"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+
+	all, err := bundledskills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	for _, skill := range all {
+		got, err := os.ReadFile(skillPath(home, skill.Name))
+		if err != nil {
+			t.Errorf("%s no llegó al home: %v", skill.Name, err)
+			continue
+		}
+		if !bytes.Equal(got, skill.Content) {
+			t.Errorf("%s difiere del payload", skill.Name)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".agents")); err == nil {
+		t.Errorf("--skills home escribió .agents/ en el proyecto")
+	}
+	if !strings.Contains(out, "~/.agents/skills") {
+		t.Errorf("la salida no nombra el destino del home:\n%s", out)
+	}
+
+	before := homeTree(t, home)
+	code, out, errOut = runDir(t, dir, []string{"init", "--skills", "home"}, "")
+	if code != 0 {
+		t.Fatalf("second run code = %d (stdout %q, stderr %q)", code, out, errOut)
+	}
+	if !slices.Equal(homeTree(t, home), before) {
+		t.Errorf("la segunda corrida tocó el home: %v vs %v", homeTree(t, home), before)
+	}
+	if !strings.Contains(out, "sin cambios") {
+		t.Errorf("la segunda corrida no dice que no cambió nada:\n%s", out)
+	}
+}
+
+// TestInitHomeScopeKeepsTheProjectCopy: the option changes where init writes,
+// not what it deletes. A .agents/skills from an earlier run is the human's now.
+func TestInitHomeScopeKeepsTheProjectCopy(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeFile(t, dir, ".agents/skills/acceptance/SKILL.md", "viejo\n")
+
+	code, out, errOut := runDir(t, dir, []string{"init", "--skills", "home"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+	for _, want := range []string{"ya tenía una copia", "~/.agents/skills"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("la salida no dice %q:\n%s", want, out)
+		}
+	}
+	got, err := os.ReadFile(filepath.Join(dir, ".agents", "skills", "acceptance", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("la copia del proyecto se borró: %v", err)
+	}
+	if string(got) != "viejo\n" {
+		t.Errorf("la copia del proyecto cambió: %q", got)
+	}
+}
+
+// TestInitRefusesAnUnknownSkillsScope: a typo is stopped before any write, and
+// the message names both values.
+func TestInitRefusesAnUnknownSkillsScope(t *testing.T) {
+	dir := t.TempDir()
+
+	code, out, errOut := runDir(t, dir, []string{"init", "--skills", "fuera"}, "")
+
+	if code != start.CodeBlocked {
+		t.Fatalf("code = %d, want %d (stdout %q, stderr %q)", code, start.CodeBlocked, out, errOut)
+	}
+	for _, want := range []string{"project", "home", "fuera"} {
+		if !strings.Contains(out+errOut, want) {
+			t.Errorf("la salida no dice %q: %s%s", want, out, errOut)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); err == nil {
+		t.Errorf("un scope inválido escribió AGENTS.md")
 	}
 }
 

@@ -394,15 +394,23 @@ func (r *runner) skills() domaindoctor.Check {
 	if err != nil {
 		return r.unreadable(domaindoctor.CheckSkills, installedSkillsDir, err)
 	}
+	home, homeCompared, homeDrift, err := r.homeSkills()
+	if err != nil {
+		return r.unreadable(domaindoctor.CheckSkills, "~/.agents/skills", err)
+	}
 
 	detail := registered + "; " + installedSkillsDir + ": " + installed
+	if home != "" {
+		detail += "; " + home
+	}
+	drift = append(drift, homeDrift...)
 	switch {
 	case fix != "":
 		return domaindoctor.Broken(domaindoctor.CheckSkills, detail, fix)
 	case len(drift) > 0:
 		return domaindoctor.Warning(domaindoctor.CheckSkills, detail+
-			"; no coinciden con "+skillsDir+"/: "+strings.Join(drift, ", ")+"; corré odachi init")
-	case compared > 0:
+			"; no coinciden con "+skillsDir+"/: "+strings.Join(drift, ", ")+"; corré odachi init (o odachi init --skills home)")
+	case compared > 0 || homeCompared > 0:
 		detail += "; coinciden con " + skillsDir + "/"
 	}
 	return domaindoctor.OK(domaindoctor.CheckSkills, detail)
@@ -511,6 +519,79 @@ func (r *runner) installedSkills() (detail string, compared int, drift []string,
 		return "ninguna", 0, nil, nil
 	}
 	return count(installed, "instalada", "instaladas"), compared, drift, nil
+}
+
+// homeSkills is the other scope of the same question: `init --skills home`
+// installs the whole payload in ~/.agents/skills, so a doctor that only counted
+// the project copy would call that project empty. It compares the same way, when
+// the project has a source `skills/` to compare against.
+func (r *runner) homeSkills() (detail string, compared int, drift []string, err error) {
+	if r.opts.Home == "" {
+		return "", 0, nil, nil
+	}
+
+	dirPath := filepath.Join(r.opts.Home, filepath.FromSlash(installedSkillsDir))
+	found, err := r.files.IsDir(dirPath)
+	if err != nil {
+		return "", 0, nil, err
+	}
+	if !found {
+		return "~/.agents/skills: ninguna", 0, nil, nil
+	}
+
+	names, err := r.files.List(dirPath)
+	if err != nil {
+		return "", 0, nil, err
+	}
+
+	installed := 0
+	for _, name := range names {
+		entry := filepath.Join(dirPath, name)
+		isDir, err := r.files.IsDir(entry)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		if !isDir {
+			continue
+		}
+
+		installedPath := filepath.Join(entry, skillFile)
+		has, err := r.files.Exists(installedPath)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		if !has {
+			continue
+		}
+		installed++
+
+		sourcePath := filepath.Join(r.opts.Dir, skillsDir, name, skillFile)
+		sourceExists, err := r.files.Exists(sourcePath)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		if !sourceExists {
+			continue
+		}
+		compared++
+
+		installedData, err := r.files.Read(installedPath)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		sourceData, err := r.files.Read(sourcePath)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		if string(installedData) != string(sourceData) {
+			drift = append(drift, name)
+		}
+	}
+
+	if installed == 0 {
+		return "~/.agents/skills: ninguna", 0, nil, nil
+	}
+	return "~/.agents/skills: " + count(installed, "instalada", "instaladas"), compared, drift, nil
 }
 
 // noProfileFile is the second half of check 11 when there is nothing to compare:
