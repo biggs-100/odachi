@@ -400,8 +400,14 @@ func (r *runner) skills() domaindoctor.Check {
 	}
 
 	detail := registered + "; " + installedSkillsDir + ": " + installed
+	if compared > 0 && len(drift) == 0 {
+		detail += "; " + count(compared, "coincide", "coinciden") + " con " + skillsDir + "/"
+	}
 	if home != "" {
 		detail += "; " + home
+		if homeCompared > 0 && len(homeDrift) == 0 {
+			detail += "; " + count(homeCompared, "coincide", "coinciden") + " con " + skillsDir + "/"
+		}
 	}
 	drift = append(drift, homeDrift...)
 	switch {
@@ -410,8 +416,6 @@ func (r *runner) skills() domaindoctor.Check {
 	case len(drift) > 0:
 		return domaindoctor.Warning(domaindoctor.CheckSkills, detail+
 			"; no coinciden con "+skillsDir+"/: "+strings.Join(drift, ", ")+"; corré odachi init (o odachi init --skills home)")
-	case compared > 0 || homeCompared > 0:
-		detail += "; coinciden con " + skillsDir + "/"
 	}
 	return domaindoctor.OK(domaindoctor.CheckSkills, detail)
 }
@@ -511,7 +515,7 @@ func (r *runner) installedSkills() (detail string, compared int, drift []string,
 			return "", 0, nil, err
 		}
 		if string(installedData) != string(sourceData) {
-			drift = append(drift, name)
+			drift = append(drift, installedSkillsDir+"/"+name)
 		}
 	}
 
@@ -584,7 +588,7 @@ func (r *runner) homeSkills() (detail string, compared int, drift []string, err 
 			return "", 0, nil, err
 		}
 		if string(installedData) != string(sourceData) {
-			drift = append(drift, name)
+			drift = append(drift, "~/.agents/skills/"+name)
 		}
 	}
 

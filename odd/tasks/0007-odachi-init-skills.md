@@ -16,3 +16,4 @@ R1 · "odachi init --skills home deja todas las skills en ~/.agents/skills y el 
 
 ## Historial
 L1 · "odachi init --skills home deja todas las skills en ~/.agents/skills y el proyecto no recibe copia"
+L2 · OFICIO · "El home comparte ~/.agents/skills con otras herramientas: doctor cuenta 41 y solo compara las 10 que tienen fuente en skills/" (porque afirmar que las 41 coinciden sería mentir; las ajenas no son de odachi)

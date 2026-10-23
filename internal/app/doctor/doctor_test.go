@@ -530,7 +530,7 @@ func TestCheckNineAnswersBothSkillFacts(t *testing.T) {
 	for _, want := range []string{
 		"skills/: 1 skill, " + skill.RegistryFile + " al día",
 		".agents/skills: 2 instaladas",
-		"coinciden con skills/",
+		"1 coincide con skills/",
 	} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("check 9 must say %q, got %q", want, got.Detail)
