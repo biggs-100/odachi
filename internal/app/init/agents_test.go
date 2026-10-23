@@ -24,9 +24,11 @@ func (s *fakeAgentSelection) Render(selection string) ([]byte, error) {
 }
 
 // runAgents performs one init with the selection and, when the test wants it, a
-// home. An empty home keeps the global half out of the test.
+// home. An empty home keeps the global half out of the test. The door in the
+// home is opt-in, so the tests that compare clients ask for it with Global: this
+// half is about which client receives the door, not about when it is installed.
 func runAgents(files *fakeFiles, requested string, store *fakeAgentSelection, home string) initapp.Result {
-	opts := initapp.Options{Dir: dir, Agents: requested, AgentSelection: store}
+	opts := initapp.Options{Dir: dir, Agents: requested, AgentSelection: store, Global: true}
 	if home != "" {
 		opts.Home = fakeHome{dir: home}
 	}

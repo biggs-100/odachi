@@ -1,7 +1,8 @@
 // Package init implements `odachi init`: the rules block in AGENTS.md —with the
 // voice of the profile at hand as its last section—, the native agent that
 // mirrors that block in the project, the door in the human's home that makes
-// odachi available in any folder, the marked block in .gitignore that keeps the
+// odachi available in any folder —opt-in, with --global—, the marked block in
+// .gitignore that keeps the
 // generated evidence out of the tree, the pre-commit hook that refuses a commit
 // without a proof for the current tree, and the skills the agent reads — the
 // curriculum in the project and the bootstrap skill in the human's home, so an
@@ -84,6 +85,10 @@ type Options struct {
 	// this run does not install the global half (tests that only care about the
 	// project); the binary always passes an adapter.
 	Home Home
+	// Global says this run installs the door of the home. Es opt-in: un init sin
+	// el flag no escribe el home, porque un agente primary en toda carpeta es una
+	// decisión del humano y no un efecto de inicializar un proyecto.
+	Global bool
 }
 
 // AgentSelection is the selection port: the choice a project recorded, when
@@ -194,9 +199,13 @@ func Run(opts Options, files Files, skills Skills) Result {
 		return *problem
 	}
 	// The project has its mirror; the home gets the door that appears in every
-	// other folder. A home that cannot be written is pending, never a failed
-	// project.
-	r.installGlobalPersonas()
+	// other folder, and only when the human asked for it with --global. A home
+	// that cannot be written is pending, never a failed project.
+	if opts.Global {
+		r.installGlobalPersonas()
+	} else {
+		r.lines = append(r.lines, "puerta global: no la instalé (es opt-in); odachi init --global la pone en el home y odachi aparece en cualquier carpeta")
+	}
 
 	r.installSkills()
 

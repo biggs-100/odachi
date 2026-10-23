@@ -674,10 +674,12 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON      bool
 		skillsScope string
 		agents      string
+		global      bool
 	)
 	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
 	flags.StringVar(&skillsScope, "skills", "project", "dónde instalar las skills: project | home")
 	flags.StringVar(&agents, "agents", "", "qué clientes reciben el agente nativo: opencode | claude | both")
+	flags.BoolVar(&global, "global", false, "instalar la puerta del home, la que aparece en cualquier carpeta")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -718,6 +720,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		Agents:         agents,
 		AgentSelection: agentSelection{},
 		Home:           osHome{},
+		Global:         global,
 	}, osFiles{}, &initSkills{dir: dir, scope: skillsScope})
 	if created {
 		line := "historial del proyecto: lo creé en esta carpeta (git init); es lo que me deja probar que una prueba corresponde a este estado del código"
@@ -1120,7 +1123,7 @@ uso:
   odachi review mode [status|on|off]
   odachi doctor [--json]
   odachi bench [--journeys <nombres>] [--binary <ruta>] [--json]
-  odachi init [--skills project|home] [--agents opencode|claude|both] [--json]
+  odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
   odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <carpeta>] [--dry-run]
@@ -1192,6 +1195,9 @@ flags de init:
   --agents s      opencode | claude | both (default both): qué clientes reciben el agente
                   nativo y la puerta del home; la elección queda en .odachi/agents.toml
                   y no borra los archivos que ya existen del otro cliente
+  --global        instala la puerta del home: el agente que aparece en cualquier carpeta,
+                  no solo en este proyecto. Es opt-in: sin el flag no se escribe nada en
+                  tu home, porque el selector de cualquier carpeta es tuyo
   --json          salida para máquinas, con los destinos de las skills y del agente
 
 qué deja escrito init, en un solo comando (--skills project y --agents both, los defaults):
@@ -1199,12 +1205,14 @@ qué deja escrito init, en un solo comando (--skills project y --agents both, lo
   .opencode/agents       odachi.md (se elige con Tab) + odachi-worker.md y odachi-verify.md (subagentes)
   .claude/output-styles  odachi.md: el mismo bloque, para elegirlo con /config en este proyecto
   .claude/agents         odachi-worker.md y odachi-verify.md: los subagentes de Claude Code
-  ~/.config/opencode/agents  odachi.md: la puerta que aparece en cualquier carpeta (Tab)
-  ~/.claude/output-styles    odachi.md: la misma puerta en el home (/config)
   .gitignore             /proof/, /.odachi/reviews/ y *.bak-* no ensucian el árbol
   .git/hooks/pre-commit  no se commitea sin odachi check --quiet en verde
   .agents/skills         las skills del proyecto: la carpeta que leen todos los clientes
   ~/.agents/skills       la skill de arranque: cómo empezar un proyecto desde cero
+
+la puerta del home —el agente que aparece en cualquier carpeta— es opt-in: un init sin
+--global no la escribe. Con --global va a ~/.config/opencode/agents y
+~/.claude/output-styles, una por cliente elegido.
 
 con --agents opencode no se escribe nada en .claude y con --agents claude no se escribe
 nada en .opencode; los archivos de un cliente ya instalado no se borran. La elección se

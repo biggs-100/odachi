@@ -244,7 +244,8 @@ func TestInitRefusesAnUnknownSkillsScope(t *testing.T) {
 
 // TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome is the fence in test
 // form: init writes outside the project now, so the home it touches has to be
-// exactly the bootstrap skill and the two global agents, and nothing else.
+// exactly the bootstrap skill, and nothing else. The door of the home is opt-in,
+// so a plain init never lands there.
 func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -257,11 +258,25 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 
 	want := []string{
 		".agents/skills/bootstrap/SKILL.md",
-		".claude/output-styles/odachi.md",
-		".config/opencode/agents/odachi.md",
 	}
 	if got := homeTree(t, home); !slices.Equal(got, want) {
 		t.Fatalf("el home tiene %v, want exactamente %v", got, want)
+	}
+
+	// The same fence with the flag: --global is what adds the two doors, one per
+	// chosen client.
+	withGlobal := t.TempDir()
+	withHome(t, withGlobal)
+	if code, out, errOut := runDir(t, dir, []string{"init", "--global"}, ""); code != 0 {
+		t.Fatalf("--global: code = %d (stdout %q, stderr %q)", code, out, errOut)
+	}
+	wantGlobal := []string{
+		".agents/skills/bootstrap/SKILL.md",
+		".claude/output-styles/odachi.md",
+		".config/opencode/agents/odachi.md",
+	}
+	if got := homeTree(t, withGlobal); !slices.Equal(got, wantGlobal) {
+		t.Fatalf("el home con --global tiene %v, want exactamente %v", got, wantGlobal)
 	}
 }
 

@@ -108,14 +108,42 @@ type fakeHome struct {
 
 func (h fakeHome) Home() (string, error) { return h.dir, h.err }
 
-// TestInitInstallsTheGlobalDoor: one command leaves odachi available in every
-// folder, not only in the project. The door is generated, so a second run keeps
-// it and says so.
-func TestInitInstallsTheGlobalDoor(t *testing.T) {
+// TestInitWithoutGlobalLeavesTheHomeAlone: the door in the home is opt-in. A
+// plain init does not write the home, not even a backup, and one line names the
+// flag that installs it: an agent primary in every folder is the human's
+// decision, not a side effect of initializing a project.
+func TestInitWithoutGlobalLeavesTheHomeAlone(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}}, files, &fakeSkills{})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	for _, event := range files.events {
+		if strings.Contains(event, home) {
+			t.Errorf("init sin --global tocó el home: %s", event)
+		}
+	}
+	for path := range files.files {
+		if strings.Contains(path, home) {
+			t.Errorf("init sin --global dejó un archivo en el home: %s", path)
+		}
+	}
+	if joined := strings.Join(got.Lines, "\n"); !strings.Contains(joined, "--global") {
+		t.Errorf("las líneas no nombran el flag que instala la puerta:\n%s", joined)
+	}
+}
+
+// TestInitGlobalInstallsTheGlobalDoor: with --global, one command leaves odachi
+// available in every folder, not only in the project. The door is generated, so
+// a second run keeps it and says so.
+func TestInitGlobalInstallsTheGlobalDoor(t *testing.T) {
 	home := "hogar"
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	runHome := func() initapp.Result {
-		return initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}}, files, &fakeSkills{})
+		return initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}, Global: true}, files, &fakeSkills{})
 	}
 
 	got := runHome()
@@ -154,7 +182,7 @@ func TestInitInstallsTheGlobalDoor(t *testing.T) {
 func TestInitKeepsTheProjectWhenTheHomeIsNotWritable(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
-	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{err: errors.New("sin home")}}, files, &fakeSkills{})
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{err: errors.New("sin home")}, Global: true}, files, &fakeSkills{})
 
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)

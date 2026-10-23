@@ -38,7 +38,7 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 
-	code, out, errOut := runDir(t, dir, []string{"init"}, "")
+	code, out, errOut := runDir(t, dir, []string{"init", "--global"}, "")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
@@ -101,8 +101,8 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 		}
 	}
 
-	// The door in the home: the same command leaves odachi available in every
-	// folder, not only in the project that ran init.
+	// The door in the home is opt-in: --global is what leaves odachi available
+	// in every folder, not only in the project that ran init.
 	home, err := homeDir()
 	if err != nil {
 		t.Fatalf("homeDir: %v", err)
@@ -116,6 +116,30 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 		if string(got) != file.Content {
 			t.Errorf("%s no es la puerta del home:\n%q\nvs\n%q", file.Path, got, file.Content)
 		}
+	}
+}
+
+// TestInitWithoutGlobalDoesNotWriteTheDoor: an init without the flag leaves the
+// home exactly as it found it. The door is an agent primary in every folder, so
+// installing it is a decision the human takes out loud.
+func TestInitWithoutGlobalDoesNotWriteTheDoor(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	code, out, errOut := runDir(t, dir, []string{"init"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
+	}
+
+	for _, file := range persona.GlobalFiles() {
+		if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(file.Path))); err == nil {
+			t.Errorf("%s se instaló sin --global", file.Path)
+		}
+	}
+	if !strings.Contains(out, "--global") {
+		t.Errorf("la salida no nombra el flag que instala la puerta:\n%s", out)
 	}
 }
 
@@ -211,7 +235,7 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 
-	code, out, errOut := runDir(t, dir, []string{"init", "--json"}, "")
+	code, out, errOut := runDir(t, dir, []string{"init", "--json", "--global"}, "")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stderr %q)", code, errOut)
 	}
