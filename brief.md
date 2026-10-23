@@ -1,12 +1,12 @@
-# los-backups-que
+# cuando-start-no
 
 ## Qué tiene que existir
-- los backups que generan plan y ask no ensucian el arbol: el bloque de .gitignore ignora *.bak-*
+- cuando start no puede leer una respuesta, el mensaje nombra los flags que faltan en vez de morir con 'no pude leer la respuesta'
 
 ## Listo cuando
-- despues de correr plan y ask --craft, git status queda limpio
-- un proyecto existente recibe el bloque actualizado al correr odachi init
+- un start con EOF en la primera pregunta sale 2 y nombra --outcome, --audience, --done, --sensitive y --deadline
 - go test ./... queda en verde
+- odachi check queda listo
 
 ## NO incluye (primera versión)
 
@@ -14,4 +14,4 @@
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: gitignore y backups.
+- Quiere aprender: mensajes de error.

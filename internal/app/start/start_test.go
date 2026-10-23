@@ -414,6 +414,33 @@ func TestNonInteractiveWithoutAnswersAsksTheHuman(t *testing.T) {
 	}
 }
 
+// TestAnInterviewThatCannotReadNamesTheFlags: a terminal that dies mid-question
+// and a run with no terminal are the same state. The message names the flags
+// that unblock the run instead of the adapter's read error.
+func TestAnInterviewThatCannotReadNamesTheFlags(t *testing.T) {
+	var events []string
+	interview := newScriptedInterview(&events) // no answers: Ask returns an error
+	files := newFakeFiles(nil, &events)
+
+	got := start.Run(start.Options{}, interview, files, nil)
+
+	if got.Code != start.CodeNeedsAnswer {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeNeedsAnswer, got.Message)
+	}
+	assertOneLine(t, got.Message)
+	for _, flag := range []string{"--outcome", "--audience", "--done", "--sensitive", "--deadline"} {
+		if !strings.Contains(got.Message, flag) {
+			t.Errorf("message %q does not name the missing %s", got.Message, flag)
+		}
+	}
+	if strings.Contains(got.Message, "no pude leer la respuesta") {
+		t.Errorf("message %q still reports the adapter error instead of the flags", got.Message)
+	}
+	if len(files.files) != 0 {
+		t.Errorf("files written without answers: %v", files.paths())
+	}
+}
+
 // TestAllPacingNeverAsks: the machine profile uses the flags or fails, it never
 // blocks waiting for a human who is not there.
 func TestAllPacingNeverAsks(t *testing.T) {

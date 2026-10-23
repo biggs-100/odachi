@@ -286,8 +286,10 @@ func (r *runner) ask(spec questionSpec) (string, *Result) {
 	for {
 		raw, err := r.interview.Ask(question)
 		if err != nil {
-			return "", failure(Result{Code: CodeNeedsAnswer, Message: oneLine(
-				"no pude leer la respuesta: " + err.Error() + "; volvé a correr odachi start y respondé las preguntas")})
+			// A terminal that died mid-question and a run with no terminal are
+			// the same state: the human is not there. The actionable answer is
+			// the flags that unblock the run, not the adapter's read error.
+			return "", failure(r.needsAnswer())
 		}
 		value := strings.TrimSpace(raw)
 
