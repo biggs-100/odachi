@@ -10,12 +10,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/biggs-100/odachi/internal/adapters/agentstoml"
 	"github.com/biggs-100/odachi/internal/adapters/fsx"
 	"github.com/biggs-100/odachi/internal/adapters/gitx"
 	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
@@ -199,6 +201,25 @@ func (osFiles) Write(path string, data []byte) error {
 	}
 	return fsx.WriteAtomic(path, data, 0o644)
 }
+
+// agentSelection is the store adapter for init's --agents and for the verbs that
+// read the choice: the app owns the names, this type owns the TOML and the disk.
+type agentSelection struct{}
+
+// Written returns the stored selection, or empty when the project never chose.
+func (agentSelection) Written(dir string) (string, error) {
+	path := filepath.Join(dir, filepath.FromSlash(persona.SelectionPath))
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return agentstoml.Decode(data)
+}
+
+func (agentSelection) Render(selection string) ([]byte, error) { return agentstoml.Render(selection) }
 
 // reviewModeCodec is the format adapter for `odachi review mode`: the app owns
 // the actions and the disk port, this type owns TOML.

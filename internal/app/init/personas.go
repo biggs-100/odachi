@@ -49,7 +49,7 @@ func (r *runner) writePersonas() *Result {
 		return personaBlocked("no pude armar el agente nativo", err)
 	}
 
-	for _, client := range persona.Clients() {
+	for _, client := range r.clients {
 		primary, hasPrimary := persona.FilesFor(client.Agent, block)
 		subs := persona.SubagentFilesFor(client.Agent)
 
@@ -142,7 +142,7 @@ func (r *runner) installGlobalPersonas() {
 		return
 	}
 
-	for _, client := range persona.Clients() {
+	for _, client := range r.clients {
 		file, ok := persona.GlobalFilesFor(client.Agent)
 		if !ok {
 			continue

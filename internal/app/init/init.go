@@ -22,6 +22,8 @@ package init
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
 // Exit codes: the same two every verb uses when nothing needs a human answer.
@@ -71,10 +73,28 @@ type Options struct {
 	// Profiles is the profile at hand, read and not inferred. nil means the
 	// tool's default audience: novato.
 	Profiles Profiles
+	// Agents is the client selection this run was asked for. Empty means "the
+	// stored one, or both": a plain init after `--agents opencode` must not
+	// bring the other client back.
+	Agents string
+	// AgentSelection is the store of that choice. nil behaves like a project
+	// without a file: both clients, and nothing written.
+	AgentSelection AgentSelection
 	// Home resolves the human's home, where the global agent lives. nil means
 	// this run does not install the global half (tests that only care about the
 	// project); the binary always passes an adapter.
 	Home Home
+}
+
+// AgentSelection is the selection port: the choice a project recorded, when
+// there is one, and the canonical bytes that write it. It is a port and not a
+// read of the TOML here because the domain owns the names and the adapter owns
+// the format.
+type AgentSelection interface {
+	// Written returns the stored selection, or empty when there is no file.
+	Written(dir string) (string, error)
+	// Render turns a selection into the bytes of the store.
+	Render(selection string) ([]byte, error)
 }
 
 // Home is the port that answers where the human lives. The global agent is the
@@ -120,7 +140,7 @@ type Result struct {
 
 // Run performs one `odachi init`.
 func Run(opts Options, files Files, skills Skills) Result {
-	r := &runner{dir: opts.Dir, files: files, skills: skills, profiles: opts.Profiles, home: opts.Home}
+	r := &runner{dir: opts.Dir, files: files, skills: skills, profiles: opts.Profiles, agentSelection: opts.AgentSelection, home: opts.Home}
 	if r.dir == "" {
 		r.dir = "."
 	}
@@ -134,6 +154,13 @@ func Run(opts Options, files Files, skills Skills) Result {
 		// AGENTS.md half would report success for a job that is half done.
 		return blocked("no hay " + gitDir + " en este directorio: no puedo instalar el hook " + hookPath + "; corré git init y volvé a correr odachi init")
 	}
+
+	selection, clients, problem := r.resolveAgents(opts.Agents)
+	if problem != nil {
+		return *problem
+	}
+	r.selection = selection
+	r.clients = clients
 
 	if problem := r.writeAgents(); problem != nil {
 		return *problem
@@ -150,6 +177,12 @@ func Run(opts Options, files Files, skills Skills) Result {
 	if problem := r.installHook(opts.Exe); problem != nil {
 		// The rules block may already be written: report it, so the human knows
 		// exactly how much of the job is done.
+		problem.Files = append([]string{}, r.changed...)
+		return *problem
+	}
+	if problem := r.writeAgentStore(opts.Agents != ""); problem != nil {
+		// The hook and the rules block are already in place: report how much of
+		// the job is done instead of pretending nothing happened.
 		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
@@ -179,6 +212,81 @@ func Run(opts Options, files Files, skills Skills) Result {
 	return r.result()
 }
 
+// resolveAgents knows which clients receive the native agent. The flag wins; a
+// run without it keeps the stored choice, and a project with no file keeps both,
+// the behavior every existing project already had.
+func (r *runner) resolveAgents(requested string) (string, []persona.Client, *Result) {
+	if r.agentSelection != nil {
+		stored, err := r.agentSelection.Written(r.dir)
+		if err != nil {
+			problem := blocked("no pude leer " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+				"; corregí el archivo o volvé a correr odachi init --agents both")
+			return "", nil, &problem
+		}
+		r.storedSelection = stored
+	}
+
+	value := strings.TrimSpace(requested)
+	if value == "" {
+		value = r.storedSelection
+	}
+	selection, clients, err := persona.ResolveSelection(value)
+	if err != nil {
+		problem := blocked("la elección de clientes no es válida: " + oneLine(err.Error()) +
+			"; volvé a correr odachi init --agents both")
+		return "", nil, &problem
+	}
+	return selection, clients, nil
+}
+
+// writeAgentStore persists the choice only when someone made it: an explicit
+// flag, or a store that already exists. A project that never chose keeps no file
+// and both clients, so the default install gains no new artifact.
+func (r *runner) writeAgentStore(explicit bool) *Result {
+	if !explicit && r.storedSelection == "" {
+		return nil
+	}
+	if r.storedSelection == r.selection {
+		r.lines = append(r.lines, persona.SelectionPath+": "+r.selection+", sin cambios")
+		return nil
+	}
+	if r.agentSelection == nil {
+		problem := blocked("no puedo guardar la elección de clientes: falta el adaptador del store; volvé a correr odachi init --agents both")
+		return &problem
+	}
+
+	data, err := r.agentSelection.Render(r.selection)
+	if err != nil {
+		problem := blocked("no pude armar " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; volvé a correr odachi init --agents " + r.selection)
+		return &problem
+	}
+
+	path := filepath.Join(r.dir, filepath.FromSlash(persona.SelectionPath))
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		problem := blocked("no pude revisar " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; revisá los permisos y volvé a correr odachi init --agents " + r.selection)
+		return &problem
+	}
+	if exists {
+		if _, err := r.files.Backup(path); err != nil {
+			problem := blocked("no pude respaldar " + persona.SelectionPath + " antes de reescribirlo: " + oneLine(err.Error()) +
+				"; revisá los permisos y volvé a correr odachi init --agents " + r.selection)
+			return &problem
+		}
+	}
+	if err := r.files.Write(path, data); err != nil {
+		problem := blocked("no pude escribir " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; revisá los permisos y volvé a correr odachi init --agents " + r.selection)
+		return &problem
+	}
+
+	r.changed = append(r.changed, persona.SelectionPath)
+	r.lines = append(r.lines, persona.SelectionPath+": guardé la elección "+r.selection+"; los archivos de los otros clientes no se tocan")
+	return nil
+}
+
 // pathWarning is the half-broken install: the hook works from the absolute path,
 // the rules do not work at all. It names the folder to add, because "ponelo en el
 // PATH" is the kind of advice that leaves a beginner exactly where they were.
@@ -194,13 +302,20 @@ func pathWarning(exe string) []string {
 
 // runner holds what one run touched and what it reports.
 type runner struct {
-	dir      string
-	files    Files
-	skills   Skills
-	profiles Profiles
-	home     Home
-	changed  []string
-	lines    []string
+	dir            string
+	files          Files
+	skills         Skills
+	profiles       Profiles
+	agentSelection AgentSelection
+	home           Home
+	changed        []string
+	lines          []string
+	// storedSelection is what the project had before this run: empty means no
+	// file and both clients. selection is what this run resolved, and clients is
+	// the filtered table every persona write uses.
+	storedSelection string
+	selection       string
+	clients         []persona.Client
 	// voiceNote is the sentence for a profile init could not read or name: the
 	// block still gets the default voice, and the human learns why.
 	voiceNote string

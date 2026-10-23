@@ -24,6 +24,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
 	"github.com/biggs-100/odachi/internal/domain/agent"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
@@ -661,9 +662,11 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	var (
 		asJSON      bool
 		skillsScope string
+		agents      string
 	)
 	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
 	flags.StringVar(&skillsScope, "skills", "project", "dónde instalar las skills: project | home")
+	flags.StringVar(&agents, "agents", "", "qué clientes reciben el agente nativo: opencode | claude | both")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -683,6 +686,12 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "odachi: --skills tiene que ser \"project\" o \"home\", no %q; project deja las skills en el proyecto, home las deja en ~/.agents/skills\n", skillsScope)
 		return start.CodeBlocked
 	}
+	if strings.TrimSpace(agents) != "" {
+		if _, err := persona.NormalizeSelection(agents); err != nil {
+			fmt.Fprintf(stderr, "odachi: %s; usá opencode, claude o both\n", oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+	}
 
 	created, err := ensureHistory(dir)
 	if err != nil {
@@ -690,7 +699,15 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	result := initapp.Run(initapp.Options{Dir: dir, Exe: hookExe(), PathMissing: pathMissing(), Profiles: writtenProfile{}, Home: osHome{}}, osFiles{}, &initSkills{dir: dir, scope: skillsScope})
+	result := initapp.Run(initapp.Options{
+		Dir:            dir,
+		Exe:            hookExe(),
+		PathMissing:    pathMissing(),
+		Profiles:       writtenProfile{},
+		Agents:         agents,
+		AgentSelection: agentSelection{},
+		Home:           osHome{},
+	}, osFiles{}, &initSkills{dir: dir, scope: skillsScope})
 	if created {
 		line := "historial del proyecto: lo creé en esta carpeta (git init); es lo que me deja probar que una prueba corresponde a este estado del código"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -1092,7 +1109,7 @@ uso:
   odachi review mode [status|on|off]
   odachi doctor [--json]
   odachi bench [--journeys <nombres>] [--binary <ruta>] [--json]
-  odachi init [--json]
+  odachi init [--skills project|home] [--agents opencode|claude|both] [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
   odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <carpeta>] [--dry-run]
@@ -1161,9 +1178,12 @@ flags de bench:
 flags de init:
   --skills s      project | home (default project): el proyecto lleva las skills del oficio;
                   home las deja todas en ~/.agents/skills y no escribe copia en el proyecto
+  --agents s      opencode | claude | both (default both): qué clientes reciben el agente
+                  nativo y la puerta del home; la elección queda en .odachi/agents.toml
+                  y no borra los archivos que ya existen del otro cliente
   --json          salida para máquinas, con los destinos de las skills y del agente
 
-qué deja escrito init, en un solo comando (--skills project, el default):
+qué deja escrito init, en un solo comando (--skills project y --agents both, los defaults):
   AGENTS.md              el bloque de reglas que el agente lee, con la voz al final
   .opencode/agents       odachi.md (se elige con Tab) + odachi-worker.md y odachi-verify.md (subagentes)
   .claude/output-styles  odachi.md: el mismo bloque, para elegirlo con /config en este proyecto
@@ -1175,6 +1195,11 @@ qué deja escrito init, en un solo comando (--skills project, el default):
   .agents/skills         las skills del proyecto: la carpeta que leen todos los clientes
   ~/.agents/skills       la skill de arranque: cómo empezar un proyecto desde cero
 
+con --agents opencode no se escribe nada en .claude y con --agents claude no se escribe
+nada en .opencode; los archivos de un cliente ya instalado no se borran. La elección se
+guarda en .odachi/agents.toml y un init posterior la conserva; sin archivo, el default
+sigue siendo los dos.
+
 con --skills home, todas las skills van a ~/.agents/skills y el proyecto no recibe copia;
 si ya tenía .agents/skills de un init anterior, no se borra: se avisa.
 
@@ -1184,9 +1209,9 @@ los paths de las skills; vuelven con evidencia y ≤2k tokens, y no commitean.
 
 la voz —cómo te habla el agente— es la última sección del bloque, y la escribe el
 binario: novato si todavía no hay .odachi/profile.toml, si no la del perfil que
-diga. El agente nativo tiene dos copias: el espejo del proyecto, con las mismas
-reglas y la misma voz, y la puerta del home, que aparece en cualquier carpeta y
-lee el bloque del proyecto cuando existe; si no existe, guía para arrancar con
+diga. El agente nativo tiene dos copias por cliente elegido: el espejo del
+proyecto, con las mismas reglas y la misma voz, y la puerta del home, que aparece
+en cualquier carpeta y lee el bloque del proyecto cuando existe; si no existe, guía para arrancar con
 odachi init y odachi start. odachi level --to <perfil> cambia el perfil, esa
 sección y el espejo del proyecto, y no toca nada más del bloque.
 
