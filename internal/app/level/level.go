@@ -46,6 +46,10 @@ type Options struct {
 	Current profile.Profile
 	// To is the profile the human accepted with --to. Empty means "show me".
 	To string
+	// Agents is the stored client selection, already resolved by the caller
+	// from .odachi/agents.toml. Empty means both, the default of a project
+	// that never chose.
+	Agents string
 }
 
 // Files is the disk port: enough to read every feature, back up the human's
@@ -232,7 +236,7 @@ func apply(opts Options, target string, files Files) Result {
 		// selector and AGENTS.md cannot disagree after a profile change. A
 		// missing file is init's to install, not level's: this command refreshes
 		// what is there.
-		refreshed, personaLine, problem := refreshPersonas(opts.Dir, files)
+		refreshed, personaLine, problem := refreshPersonas(opts.Dir, files, opts.Agents)
 		if problem != nil {
 			problem.Message = "apliqué el perfil " + to.Name + " en " + profileFile + "; " + problem.Message
 			problem.Lines = lines
@@ -347,7 +351,7 @@ func rewriteVoice(dir, voiceName string, files Files) (line string, wrote bool, 
 // Only files that already exist are refreshed: installing them is `odachi init`'s
 // job, and a level run on a project without them still applies the profile. A
 // project without a block has nothing to mirror and is left alone.
-func refreshPersonas(dir string, files Files) (changed []string, line string, problem *Result) {
+func refreshPersonas(dir string, files Files, selection string) (changed []string, line string, problem *Result) {
 	agentsPath := filepath.Join(dir, agentsFile)
 	exists, err := files.Exists(agentsPath)
 	if err != nil {
@@ -370,7 +374,13 @@ func refreshPersonas(dir string, files Files) (changed []string, line string, pr
 		return nil, "", nil
 	}
 
-	for _, file := range persona.Files(body) {
+	selected, err := persona.FilesForSelection(body, selection)
+	if err != nil {
+		failure := blocked(fmt.Sprintf("no pude resolver la elección de clientes: %s; corré odachi init --agents both y volvé a correr odachi level --to <perfil>",
+			oneLine(err.Error())))
+		return changed, "", &failure
+	}
+	for _, file := range selected {
 		path := filepath.Join(dir, filepath.FromSlash(file.Path))
 
 		exists, err := files.Exists(path)

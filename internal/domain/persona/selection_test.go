@@ -79,6 +79,29 @@ func TestResolveSelectionReturnsOnlyTheChosenClient(t *testing.T) {
 	}
 }
 
+// TestFilesForSelectionFiltersTheMirror: the refresh verbs read the same table
+// through the selection, so a client that was not chosen keeps its bytes.
+func TestFilesForSelectionFiltersTheMirror(t *testing.T) {
+	files, err := persona.FilesForSelection("bloque\n", persona.SelectionClaude)
+	if err != nil {
+		t.Fatalf("FilesForSelection(claude) = %v", err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("FilesForSelection(claude) = %d files, want 1", len(files))
+	}
+	if files[0].Path != ".claude/output-styles/odachi.md" {
+		t.Errorf("path = %q, want the Claude mirror", files[0].Path)
+	}
+
+	both, err := persona.FilesForSelection("bloque\n", "")
+	if err != nil {
+		t.Fatalf("FilesForSelection(\"\") = %v", err)
+	}
+	if len(both) != len(persona.Files("bloque\n")) {
+		t.Errorf("FilesForSelection(\"\") = %d files, want both", len(both))
+	}
+}
+
 // TestResolveSelectionNamesTheFile: the error a human reads must point at the
 // file they can fix, not at a flag they have to remember.
 func TestResolveSelectionNamesTheFile(t *testing.T) {

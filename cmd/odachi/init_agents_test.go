@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 )
 
 // TestInitAgentsOpenCodeLeavesClaudeAlone: the real command, on a real tree. The
@@ -94,6 +95,41 @@ func TestInitAgentsRefusesAnUnknownClient(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); !os.IsNotExist(err) {
 		t.Errorf("init wrote AGENTS.md with an invalid --agents: %v", err)
+	}
+}
+
+// TestLevelKeepsTheUnchosenClient: the stored choice also governs the refresh a
+// profile change does. A stale file from the other client keeps its bytes.
+func TestLevelKeepsTheUnchosenClient(t *testing.T) {
+	dir, _ := startedProject(t)
+	if code, _, errOut := runDir(t, dir, []string{"init", "--agents", "opencode"}, ""); code != 0 {
+		t.Fatalf("init: exit %d, stderr=%s", code, errOut)
+	}
+	writeFile(t, dir, ".claude/output-styles/odachi.md", "viejo\n")
+
+	code, _, errOut := runDir(t, dir, []string{"level", "--to", "senior"}, "")
+
+	if code != 0 {
+		t.Fatalf("level: exit %d, stderr=%s", code, errOut)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, ".claude", "output-styles", persona.FileName))
+	if err != nil {
+		t.Fatalf("read the Claude agent: %v", err)
+	}
+	if string(got) != "viejo\n" {
+		t.Errorf("level refreshed the unchosen client: %q", got)
+	}
+	body, err := rules.Body(persona.Senior)
+	if err != nil {
+		t.Fatalf("rules.Body(senior): %v", err)
+	}
+	chosen, _ := persona.FilesFor(persona.SelectionOpenCode, body)
+	opencode, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(chosen.Path)))
+	if err != nil {
+		t.Fatalf("read the OpenCode agent: %v", err)
+	}
+	if string(opencode) != chosen.Content {
+		t.Errorf("the OpenCode agent did not follow the new voice")
 	}
 }
 

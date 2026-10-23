@@ -29,6 +29,23 @@ func NormalizeSelection(value string) (string, error) {
 	}
 }
 
+// FilesForSelection returns the primary mirror of each client the selection
+// names, in the table's order. It is the filtered view the verbs that refresh an
+// existing agent read, so the same decision governs init and the refreshes.
+func FilesForSelection(block, selection string) ([]File, error) {
+	_, clients, err := ResolveSelection(selection)
+	if err != nil {
+		return nil, err
+	}
+	files := make([]File, 0, len(clients))
+	for _, client := range clients {
+		if file, ok := FilesFor(client.Agent, block); ok {
+			files = append(files, file)
+		}
+	}
+	return files, nil
+}
+
 // ResolveSelection turns a stored or typed value into the clients it names.
 // Empty is the zero value and means both, the same as no file.
 func ResolveSelection(value string) (string, []Client, error) {

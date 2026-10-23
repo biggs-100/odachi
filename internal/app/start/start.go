@@ -84,6 +84,11 @@ type Options struct {
 	// Profile is the already-resolved profile loaded by the caller from
 	// .odachi/profile.toml. Nil means "infer it from what we can see".
 	Profile *profile.Profile
+
+	// Agents is the stored client selection, already resolved by the caller
+	// from .odachi/agents.toml. Empty means both, the default of a project
+	// that never chose.
+	Agents string
 }
 
 // Result is what the CLI prints and exits with.

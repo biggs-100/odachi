@@ -432,6 +432,50 @@ func TestLevelToRefreshesTheNativeAgentWhenItExists(t *testing.T) {
 	}
 }
 
+// TestLevelToRefreshesOnlyTheChosenClient: the stored choice filters the mirror
+// a profile change refreshes, and the other client keeps its bytes.
+func TestLevelToRefreshesOnlyTheChosenClient(t *testing.T) {
+	oldBody, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	seed := map[string]string{
+		profilePath: "name = \"novato\"\n",
+		agentsPath:  blockOf(t, persona.Novato),
+	}
+	for _, file := range persona.Files(oldBody) {
+		seed[filepath.Join("raiz", filepath.FromSlash(file.Path))] = file.Content
+	}
+	files := newFakeFiles(seed)
+
+	res := level.Run(level.Options{
+		Dir:     "raiz",
+		Current: builtin(t, "novato"),
+		To:      "senior",
+		Agents:  persona.SelectionOpenCode,
+	}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	newBody, err := rules.Body(persona.Senior)
+	if err != nil {
+		t.Fatalf("rules.Body(senior): %v", err)
+	}
+	chosen, _ := persona.FilesFor(persona.SelectionOpenCode, newBody)
+	if got := files.content(t, filepath.Join("raiz", filepath.FromSlash(chosen.Path))); got != chosen.Content {
+		t.Errorf("%s no quedó espejado:\n%q\nvs\n%q", chosen.Path, got, chosen.Content)
+	}
+	other, _ := persona.FilesFor(persona.SelectionClaude, oldBody)
+	otherPath := filepath.Join("raiz", filepath.FromSlash(other.Path))
+	if got := files.content(t, otherPath); got != other.Content {
+		t.Errorf("%s se refrescó aunque no estaba elegido:\n%q\nvs\n%q", other.Path, got, other.Content)
+	}
+	if slices.Contains(res.Files, other.Path) {
+		t.Errorf("Files = %v, want it not to name %s", res.Files, other.Path)
+	}
+}
+
 // TestLevelToDoesNotInstallAMissingNativeAgent: level refreshes what init
 // installed; it does not turn a missing file into a second installer.
 func TestLevelToDoesNotInstallAMissingNativeAgent(t *testing.T) {

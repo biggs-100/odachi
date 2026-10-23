@@ -177,6 +177,12 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	}
 	opts.Profile = loaded
 
+	agents, agentsCode, agentsMessage := storedAgents(dir, "odachi start")
+	if agentsCode != start.CodeOK {
+		return report(start.Result{Code: agentsCode, Message: agentsMessage}, asJSON, stdout, stderr)
+	}
+	opts.Agents = agents
+
 	var interview start.Interview
 	if !opts.Machine {
 		interview = &terminalInterview{in: bufio.NewReader(stdin), out: stdout}
@@ -302,7 +308,12 @@ func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		return reportLevel(level.Result{Code: code, Message: message}, asJSON, stdout, stderr)
 	}
 
-	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to}, osFiles{}), asJSON, stdout, stderr)
+	agents, agentsCode, agentsMessage := storedAgents(dir, "odachi level")
+	if agentsCode != start.CodeOK {
+		return reportLevel(level.Result{Code: agentsCode, Message: agentsMessage}, asJSON, stdout, stderr)
+	}
+
+	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to, Agents: agents}, osFiles{}), asJSON, stdout, stderr)
 }
 
 // runSummary parses the flags and prints the derived report.

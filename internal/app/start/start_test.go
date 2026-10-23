@@ -719,6 +719,41 @@ func TestStartRefreshesTheNativeAgentItFinds(t *testing.T) {
 	}
 }
 
+// TestStartRefreshesOnlyTheChosenClient: the stored choice also governs what a
+// later start refreshes. A client that was not chosen keeps its old file.
+func TestStartRefreshesOnlyTheChosenClient(t *testing.T) {
+	var events []string
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+
+	oldBody, err := rules.Body(persona.Senior)
+	if err != nil {
+		t.Fatalf("rules.Body(senior): %v", err)
+	}
+	seed := map[string]string{"AGENTS.md": blockText(t, persona.Senior)}
+	for _, file := range persona.Files(oldBody) {
+		seed[file.Path] = file.Content
+	}
+	files := newFakeFiles(seed, &events)
+
+	got := start.Run(start.Options{Agents: persona.SelectionOpenCode}, interview, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
+	}
+	newBody, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	chosen, _ := persona.FilesFor(persona.SelectionOpenCode, newBody)
+	if got := files.content(t, chosen.Path); got != chosen.Content {
+		t.Errorf("%s no quedó con la voz nueva:\n%q\nvs\n%q", chosen.Path, got, chosen.Content)
+	}
+	other, _ := persona.FilesFor(persona.SelectionClaude, oldBody)
+	if got := files.content(t, other.Path); got != other.Content {
+		t.Errorf("%s se refrescó aunque no estaba elegido:\n%q\nvs\n%q", other.Path, got, other.Content)
+	}
+}
+
 // TestStartLeavesAProjectWithoutABlockAlone: the block belongs to init. Creating
 // it here would give the same artifact two owners.
 func TestStartLeavesAProjectWithoutABlockAlone(t *testing.T) {

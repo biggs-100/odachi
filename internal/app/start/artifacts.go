@@ -275,7 +275,11 @@ func (r *runner) refreshPersonas(agents string) *Result {
 	if !ok {
 		return nil
 	}
-	for _, file := range persona.Files(body) {
+	selected, err := persona.FilesForSelection(body, r.opts.Agents)
+	if err != nil {
+		return failure(blocked("no pude resolver la elección de clientes: " + oneLine(err.Error()) + "; corré odachi init --agents both y volvé a correr odachi start"))
+	}
+	for _, file := range selected {
 		path := filepath.Join(r.opts.Dir, filepath.FromSlash(file.Path))
 
 		exists, err := r.files.Exists(path)

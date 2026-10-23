@@ -221,6 +221,18 @@ func (agentSelection) Written(dir string) (string, error) {
 
 func (agentSelection) Render(selection string) ([]byte, error) { return agentstoml.Render(selection) }
 
+// storedAgents is the choice a verb that refreshes the mirror reads. No file
+// means both; a file the tool cannot read is named instead of guessed, because
+// guessing which client the human chose is what the switch exists to prevent.
+func storedAgents(dir, verb string) (string, int, string) {
+	selection, err := agentSelection{}.Written(dir)
+	if err != nil {
+		return "", start.CodeBlocked, "no pude leer " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; corregí el archivo o corré odachi init --agents both, y volvé a correr " + verb
+	}
+	return selection, start.CodeOK, ""
+}
+
 // reviewModeCodec is the format adapter for `odachi review mode`: the app owns
 // the actions and the disk port, this type owns TOML.
 type reviewModeCodec struct{}
