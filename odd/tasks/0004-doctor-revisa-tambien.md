@@ -10,7 +10,7 @@ R1 · "doctor revisa tambien la puerta global: si falta o no coincide con este b
 - odachi check queda listo
 
 ## Pasos
-- [ ] T1 · comparar la puerta global con persona.GlobalFiles   R1
+- [x] T1 · comparar la puerta global con persona.GlobalFiles   R1 · 7b4daa2
 
 ## Historial
 L1 · "doctor revisa tambien la puerta global: si falta o no coincide con este binario, lo dice y manda a odachi init"
