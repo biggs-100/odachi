@@ -9,7 +9,7 @@ R1 · "los backups que generan plan y ask no ensucian el arbol: el bloque de .gi
 - go test ./... queda en verde
 
 ## Pasos
-- [ ] T1 · agregar *.bak-* al bloque de .gitignore   R1
+- [x] T1 · agregar *.bak-* al bloque de .gitignore   R1 · ccaafe5
 
 ## Historial
 L1 · "los backups que generan plan y ask no ensucian el arbol: el bloque de .gitignore ignora *.bak-*"
