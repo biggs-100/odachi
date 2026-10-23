@@ -12,7 +12,7 @@ R1 · "go-tests y skill-improve: dos skills nuevas para tests de Go y auditoria 
 ## Pasos
 - [x] T1 · la skill go-tests elige el patron de Go sin repetir tests   R1 · 8c28cf7
 - [x] T2 · la skill skill-improve audita trigger, tamano y dueno de una skill   R1 · 864f87a
-- [ ] T3 · dogfood: init instala las dos, el registro y los docs las cuentan, y check queda verde   R1
+- [x] T3 · dogfood: init instala las dos, el registro y los docs las cuentan, y check queda verde   R1 · 3e3a47b
 
 ## Historial
 L1 · "go-tests y skill-improve: dos skills nuevas para tests de Go y auditoria de skills"
