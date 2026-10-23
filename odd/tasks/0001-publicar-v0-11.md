@@ -14,3 +14,4 @@ R1 · "publicar v0.11.0 con el agente nativo, la puerta del home, la política d
 
 ## Historial
 L1 · "publicar v0.11.0 con el agente nativo, la puerta del home, la política de delegación y el perfil novato, usando odachi en su propio repo"
+L2 · OFICIO · "El agente de OpenCode leyó brief, task doc, proof y perfil; reportó T1 hecho y T2 pendiente sin ejecutar nada" (porque valida que el proyecto es legible por el agente que lo construye, no solo por el binario)
