@@ -165,10 +165,12 @@ odachi check   # te dice si falta algo y cómo destrabarlo
 ```
 
 `odachi init` deja el proyecto listo en un paso: la historia de git si faltaba,
-el bloque de reglas que el agente lee, el agente del proyecto y la puerta del home
-(los dos se eligen con Tab), el bloque de `.gitignore`, el hook de pre-commit, las
-nueve skills en `./.agents/skills`, la skill de arranque en `~/.agents/skills` y la
-voz del perfil en el bloque de `AGENTS.md`.
+el bloque de reglas que el agente lee, el agente del proyecto (se elige con Tab),
+el bloque de `.gitignore`, el hook de pre-commit, las nueve skills en
+`./.agents/skills`, la skill de arranque en `~/.agents/skills` y la voz del perfil
+en el bloque de `AGENTS.md`. La puerta del home —el agente que aparece en
+cualquier carpeta— es opt-in: la instala `odachi init --global`, y un init sin el
+flag no escribe nada en tu home.
 
 Si no usás Claude Code, `odachi init --agents opencode` escribe sólo el agente de
 OpenCode y guarda la elección en `.odachi/agents.toml`; `init`, `start`, `level` y
@@ -208,12 +210,16 @@ avisa que dejó de coincidir. Medido en OpenCode 2.1.3: un proyecto con `.git`
 lista el archivo como agente primario; una carpeta sin `.git` no lista ninguno.
 
 La copia del **home** es la puerta: `~/.config/opencode/agents/odachi.md` y
-`~/.claude/output-styles/odachi.md`, una por cliente elegido. Aparece en
-cualquier carpeta, no solo en la que corrió `init`. Si la carpeta tiene el bloque
-de `odachi`, lo lee y adopta su voz; si no, carga la skill de arranque y guía para
+`~/.claude/output-styles/odachi.md`, una por cliente elegido. Es opt-in: la
+instala `odachi init --global`, porque un agente primario que aparece en
+**cualquier** carpeta y puede reemplazar al que elegiste es una decisión tuya, no
+un efecto de inicializar un proyecto. Una vez instalada aparece en cualquier
+carpeta, no solo en la que corrió `init`. Si la carpeta tiene el bloque de
+`odachi`, lo lee y adopta su voz; si no, carga la skill de arranque y guía para
 empezar un proyecto. Es corta a propósito: no repite las reglas, solo dice dónde
-están. Las dos personas por perfil de la v0.10.0 quedaron como restos: `init` las
-nombra y no las borra, son tuyas.
+están. `doctor` te dice si falta o si dejó de coincidir, y para las dos cosas el
+comando es `odachi init --global`. Las dos personas por perfil de la v0.10.0
+quedaron como restos: `init` las nombra y no las borra, son tuyas.
 
 ## El review: cuatro lentes, sin ceremonia
 

@@ -43,6 +43,13 @@ La versión que protege el contexto del agente principal y termina de limpiar el
   nada. Los archivos fuera del proyecto conservan el backup al lado.
 - **Timeout accionable**: un `check --run` que no termina sugiere duplicar
   `--timeout` en vez de repetir el mismo comando.
+- **`init --global`**: la puerta del home es opt-in. `odachi init` ya no escribe
+  `~/.config/opencode/agents/odachi.md` ni `~/.claude/output-styles/odachi.md`:
+  instalar un agente `primary` en el selector de cualquier carpeta es una decisión
+  del humano, y como efecto de `init` podía reemplazar el agente que la persona
+  ya había elegido sin que lo pidiera. `odachi init --global` la instala para los
+  clientes elegidos, y nada se borra: lo ya instalado sigue donde está. `doctor`
+  nombra `--global` cuando la puerta falta o no coincide.
 - **`doctor` ve la puerta global**: el chequeo 11 también compara
   `~/.config/opencode/agents/odachi.md` y `~/.claude/output-styles/odachi.md`.
 
