@@ -5,8 +5,8 @@ import (
 )
 
 // block is the canonical block, spelled once so every expectation below is the
-// same eight lines a human will read in their .gitignore.
-const block = "# odachi:begin\n/proof/\n/.odachi/reviews/\n# odachi:end\n"
+// same lines a human will read in their .gitignore.
+const block = "# odachi:begin\n/proof/\n/.odachi/reviews/\n*.bak-*\n# odachi:end\n"
 
 // TestIgnoreBlockAloneInAMissingFile: a project with no .gitignore gets the
 // block and nothing else.

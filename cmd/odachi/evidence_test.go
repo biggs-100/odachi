@@ -51,7 +51,7 @@ func TestInitKeepsTheProofValidAcrossAReview(t *testing.T) {
 	if err != nil {
 		t.Fatalf(".gitignore was not written: %v", err)
 	}
-	for _, want := range []string{"# odachi:begin", "/proof/", "/.odachi/reviews/", "# odachi:end"} {
+	for _, want := range []string{"# odachi:begin", "/proof/", "/.odachi/reviews/", "*.bak-*", "# odachi:end"} {
 		if !strings.Contains(string(ignore), want) {
 			t.Errorf(".gitignore does not carry %q:\n%s", want, ignore)
 		}

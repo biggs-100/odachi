@@ -8,7 +8,9 @@ import (
 // The block `odachi init` keeps in the project's .gitignore. It is the reason the
 // generated evidence never shifts the tree it certifies: proof/ and the review
 // store live inside the worktree, and their own ignore files used to arrive one
-// run late, invalidating the proof taken before them.
+// run late, invalidating the proof taken before them. The backups `plan` and
+// `ask --craft` write next to the task doc are generated too: they are undo
+// material, not project content, and a clean `git status` is part of the deal.
 //
 // The rules live in the project instead of inside the tool: they survive a clone,
 // a human can read them, and `odachi init` is the single owner of the block.
@@ -18,15 +20,17 @@ const (
 	ignoreEnd   = "# odachi:end"
 
 	// The two directories the block keeps out of the tree, without the slashes
-	// the rule spells them with.
+	// the rule spells them with, and the backup suffix every rewrite leaves.
 	proofRule  = "proof"
 	reviewRule = ".odachi/reviews"
+	backupRule = "*.bak-*"
 )
 
-// ignoreRules are the two generated directories. Both are written as directory
-// rules with a leading slash, so each one means "this folder at the root of THIS
-// project" and nothing else.
-var ignoreRules = []string{"/" + proofRule + "/", "/" + reviewRule + "/"}
+// ignoreRules are the two generated directories and the backup suffix. The
+// directories are written with a leading slash, so each one means "this folder
+// at the root of THIS project" and nothing else; the backup pattern matches the
+// `file.bak-<8 hex>` files `undo` reads.
+var ignoreRules = []string{"/" + proofRule + "/", "/" + reviewRule + "/", backupRule}
 
 // ignoreBlock is the canonical content of the block, trailing newline included.
 func ignoreBlock() string {
@@ -130,7 +134,7 @@ func (r *runner) writeIgnore() *Result {
 
 	updated, changed := withIgnoreBlock(current)
 	if !changed {
-		r.lines = append(r.lines, ignoreFile+": sin cambios, ya ignora /"+proofRule+"/ y /"+reviewRule+"/")
+		r.lines = append(r.lines, ignoreFile+": sin cambios, ya ignora /"+proofRule+"/, /"+reviewRule+"/ y los backups "+backupRule)
 		return nil
 	}
 
@@ -144,6 +148,6 @@ func (r *runner) writeIgnore() *Result {
 		action = "creado con el bloque de odachi"
 	}
 	r.changed = append(r.changed, ignoreFile)
-	r.lines = append(r.lines, ignoreFile+": "+action+": /"+proofRule+"/ y /"+reviewRule+"/ no ensucian el árbol que certifican")
+	r.lines = append(r.lines, ignoreFile+": "+action+": /"+proofRule+"/ y /"+reviewRule+"/ no ensucian el árbol que certifican, y los backups "+backupRule+" quedan fuera de git")
 	return nil
 }
