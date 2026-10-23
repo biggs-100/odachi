@@ -9,9 +9,12 @@ completa (L1-L84). Se lee para entender por qué odachi es como es; no se le
 agregan tareas nuevas.
 
 El próximo trabajo abre su propio documento con la convención del producto:
-`odd/tasks/NNNN-<slug>.md`, un archivo por feature, con Specs, Tasks y Log —el
-mismo formato que escribe `odachi start`—. Este archivo se queda donde está
-porque cinco comentarios del código y el mapa de impacto lo citan por su ruta.
+`odd/tasks/NNNN-<slug>.md`, un archivo por feature, con los headers que escribe
+`odachi start`: `## Requisitos (textual, del usuario)`, `## Listo cuando`,
+`## Pasos` y `## Historial`. Este archivo es la spec histórica y usa
+Specs/Tasks/Log, así que `odachi summary`, `plan` y `level` no lo leen; se queda
+donde está porque cinco comentarios del código y el mapa de impacto lo citan por
+su ruta.
 
 ## Specs
 
@@ -1005,3 +1008,4 @@ L85 · Corrección medida de la v0.11.0: la premisa de retirar las personas era 
 L86 · El humano abrió OpenCode en otra carpeta y no encontró la persona: el agente del proyecto solo se lista dentro de ese proyecto, y eso no es lo que significa «abrir mi agente y empezar a trabajar». Se agregó la **puerta del home**: `init` escribe también `~/.config/opencode/agents/odachi.md` y `~/.claude/output-styles/odachi.md` (las rutas globales documentadas por cada cliente), con el mismo nombre `odachi` que el del proyecto. La copia del proyecto gana dentro del proyecto; la del home es un despachador corto, no una copia del bloque: si hay bloque de `AGENTS.md` lo lee y adopta su voz, si no hay lo manda a la skill `bootstrap` para arrancar con `init` y `start`. Un home que no se puede escribir deja `pendiente:` y no falla el proyecto. Tests: la puerta, el nombre compartido, el home aislado con exactamente bootstrap + las dos puertas, y el proyecto intacto cuando el home falla.
 L87 · Defecto encontrado al probar el arranque en una carpeta vacía, no en un test: `init` crea `.git`, y `start` infería `senior` de `HasRepo`, así que el primer proyecto de un principiante terminaba con perfil y voz senior, exactamente al revés del público elegido. `profile.Facts` pierde `HasRepo`; `Infer` solo promueve a senior cuando ya hay un brief (o ci en una máquina), y el resto arranca en novato. `start`, `currentProfile` y el doctor dejan de leer `.git` para decidir el perfil. Test nuevo: un repo sin brief arranca en novato. La spec original (Contract, línea 145) queda como historia; esta entrada dice por qué cambió.
 L88 · Análisis de gentle-ai para la delegación, a pedido del humano. Lo que se copia: triggers obligatorios (inline ≤3 llamadas / ~10k tokens; >~5 búsquedas → un explorador read-only con handoff ≤2k y un solo spot check; escritor solo por paralelismo de unidades disjuntas o backstop de ~150k tokens; tests/builds pueden usar workers frescos sin cambiar la ruta; verificación por riesgo). Lo que NO se copia: el orquestador siempre encendido, ODD/RDD, feature document con espejo en Engram, envelopes de consentimiento, Judgment Day y la flota de agentes. Cambios en odachi: `slices` declara que su política gana sobre otras skills globales y corrige el writer trigger (nunca por tamaño ni cantidad de archivos); `drive` manda a cargar `slices` cuando el pedido no entra en una lectura; test `TestDelegationPolicyLivesInSlicesAndDrive`; ADR 0007. Motivo inmediato: una corrida real cargó `slices` y `hermes-ephemeral-delegation` y mezcló los umbrales.
+L89 · Corrección de una afirmación falsa en la cabecera de este documento: decía que el próximo feature usaría Specs/Tasks/Log, «el mismo formato que escribe odachi start». `start` escribe `## Requisitos (textual, del usuario)`, `## Listo cuando`, `## Pasos` y `## Historial`; `taskdoc.Parse` solo conoce esos headers. Este documento histórico usa Specs/Tasks/Log y por eso `odachi summary`/`plan`/`level` no lo ven (L19). No se migra: cinco comentarios y el mapa de impacto lo citan por su ruta. La comparación con ODD de gentle-ai queda como está: odachi tiene el mismo espinazo, no su gramática ni su protocolo.
