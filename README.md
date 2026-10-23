@@ -208,8 +208,9 @@ tuyas.
 `odachi review` imprime el prompt de revisión del candidato —brief, rutas
 cambiadas y diff— y elige las lentes por la evidencia del cambio: ninguna si
 sólo se tocaron documentos, `reliability` si hay lógica, las cuatro si el diff
-roza seguridad, identidad, dinero, la forma de los datos o la maquinaria que
-los publica. No elegís la ceremonia; el cambio la pide.
+roza seguridad, identidad, dinero, la forma de los datos, un contrato público,
+concurrencia o la maquinaria que lo publica. No elegís la ceremonia; el cambio
+la pide.
 
 ```sh
 odachi review                            # el prompt, para pegarlo en tu agente
@@ -223,15 +224,22 @@ aprobación no puede flotar: el nombre del archivo *es* el estado del código qu
 se aprobó. Un `BLOCKER` causal bloquea, y para destrabarlo está
 `odachi review --refute`: el refutador tiene que citar la línea del diff que
 desmiente el finding, porque lo que no se puede citar no se refuta y lo que no se
-refuta queda en pie. Para que el review sea obligatorio antes de commitear,
-`odachi check --require-review`.
+refuta queda en pie.
+
+El review es una decisión del humano, no del agente. Por defecto está apagado; el
+switch del proyecto vive en `.odachi/review.toml` y se escribe con
+`odachi review mode status|on|off`. Con `on`, `odachi check` pide el veredicto de
+este árbol; con `off`, lo deja opcional. `--require-review` y `--no-review` fuerzan
+una corrida sin cambiar el archivo. Un cambio pasivo —sólo documentos— no pide
+veredicto ni con el modo prendido: no hay lente que responder, así que no hay
+review que fabricar.
 
 ## Estado
 
 Dominio puro en `internal/domain/...` con guardia de importaciones, adaptadores en
 `internal/adapters/...`, y quince superficies: `start`, `ask`, `plan`, `level`,
 `summary`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `skills`,
-`skill new`, `pack` y `--version`. 37 paquetes, en verde en Linux, macOS y
+`skill new`, `pack` y `--version`. 38 paquetes, en verde en Linux, macOS y
 Windows —ubuntu repite la suite interna con el detector de carreras—.
 
 Publicado: `v0.11.0`. Lo que cambió en cada versión está en [CHANGELOG.md](CHANGELOG.md).

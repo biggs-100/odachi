@@ -22,6 +22,15 @@ La versión que protege el contexto del agente principal y termina de limpiar el
   para `undo`; el bloque de `.gitignore` los mantiene fuera de git.
 - **`start` sin TTY**: si el terminal muere en la primera pregunta, el mensaje
   nombra los flags que faltan en vez de "no pude leer la respuesta".
+- **Review proporcional**: `check --require-review` ya no pide veredicto cuando
+  el cambio es sólo documentación; el candidato pasivo no tiene lentes que
+  responder. El clasificador de riesgo suma contratos públicos (`api`,
+  `openapi`, `proto`, `graphql`, `sdk`), concurrencia (`lock`, `mutex`, `race`,
+  `async`, `worker`, `queue`) y entrega (`.github`, `release`, `goreleaser`,
+  `terraform`, `helm`, `k8s`, `pipeline`).
+- **Modo de review del proyecto**: `odachi review mode status|on|off` escribe
+  `.odachi/review.toml`; `check` lo lee, y `--require-review`/`--no-review` lo
+  override por una corrida. Sin archivo, el default sigue siendo `off`.
 - **Timeout accionable**: un `check --run` que no termina sugiere duplicar
   `--timeout` en vez de repetir el mismo comando.
 - **`doctor` ve la puerta global**: el chequeo 11 también compara
