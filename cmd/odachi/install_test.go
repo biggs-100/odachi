@@ -58,6 +58,15 @@ func requireBash(t *testing.T) string {
 	if err != nil {
 		t.Skipf("bash no está disponible en esta máquina (%v): el instalador es un script de shell y no se puede probar sin shell", err)
 	}
+
+	// Git Bash reads C:/paths; WSL bash lives in another filesystem namespace
+	// and sees the script only under /mnt/c. The suite skips here instead of
+	// pretending the failure is the installer's.
+	if runtime.GOOS == "windows" {
+		if out, err := exec.Command(path, "-c", "uname -s").Output(); err == nil && strings.Contains(string(out), "Linux") {
+			t.Skip("bash es WSL y no comparte las rutas de Windows; el instalador se prueba con Git Bash o en CI")
+		}
+	}
 	return path
 }
 
@@ -221,7 +230,9 @@ func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir stri
 	if err != nil {
 		t.Fatalf("repo root: %v", err)
 	}
-	script := filepath.Join(repoRoot, "scripts", "install.sh")
+	// bash is a Unix shell even on Windows: a native path with backslashes
+	// arrives as one long word with the separators eaten.
+	script := filepath.ToSlash(filepath.Join(repoRoot, "scripts", "install.sh"))
 
 	osName, unameS, unameM := installerTarget(t)
 	shim := unameShim(t, unameS, unameM)
