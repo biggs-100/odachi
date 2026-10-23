@@ -5,6 +5,28 @@ Las versiones anteriores a la 0.10.0 se reconstruyeron desde sus tags: el repo
 todavía no tenía este archivo, y un changelog que empieza hoy borra la historia
 de quien llega mañana.
 
+## v0.11.1 · sin publicar
+
+La versión que protege el contexto del agente principal y termina de limpiar el arranque.
+
+- **Subagentes nativos**: `init` escribe `.opencode/agents/odachi-worker.md` y
+  `.opencode/agents/odachi-verify.md`, y sus equivalentes en `.claude/agents/`.
+  El worker implementa un paso acotado; el verifier es read-only. `slices` manda
+  a pasarles el task doc, el paso, las superficies de edición, los comandos y los
+  paths exactos de las skills; vuelven con evidencia y ≤2k tokens. El padre
+  conserva git, el gate y la visión.
+- **`init --skills home`**: todas las skills en `~/.agents/skills`, sin copia en
+  el proyecto. El default sigue siendo `project`. `doctor` cuenta y compara las
+  dos ubicaciones, y no afirma que las skills ajenas del home coincidan.
+- **`*.bak-*` ignorados**: `plan`, `ask --craft`, `start` y `level` dejan backups
+  para `undo`; el bloque de `.gitignore` los mantiene fuera de git.
+- **`start` sin TTY**: si el terminal muere en la primera pregunta, el mensaje
+  nombra los flags que faltan en vez de "no pude leer la respuesta".
+- **Timeout accionable**: un `check --run` que no termina sugiere duplicar
+  `--timeout` en vez de repetir el mismo comando.
+- **`doctor` ve la puerta global**: el chequeo 11 también compara
+  `~/.config/opencode/agents/odachi.md` y `~/.claude/output-styles/odachi.md`.
+
 ## v0.11.0 · 2026-10-22
 
 La voz vive en el bloque, el agente nativo la espeja, y el doctor ve lo que `init` dejó.

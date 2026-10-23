@@ -87,6 +87,10 @@ func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 		"gana esta",
 		"Nunca por tamaño",
 		"path del task doc",
+		"superficies de edición",
+		"Skills to load before work",
+		"odachi-worker",
+		"odachi-verify",
 		"≤2k tokens",
 		"Nunca delegues la decisión de visión",
 	} {

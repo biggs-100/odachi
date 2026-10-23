@@ -253,6 +253,82 @@ func TestProjectAndGlobalShareTheName(t *testing.T) {
 	}
 }
 
+// TestSubagentFilesAreSubagentsForEveryClient: the worker and the verifier are
+// native subagents, not primary agents. OpenCode gets `mode: subagent` and a
+// permission block; Claude Code gets the name and, for the verifier, a tools
+// allowlist without Edit or Write.
+func TestSubagentFilesAreSubagentsForEveryClient(t *testing.T) {
+	files := persona.SubagentFiles()
+
+	wantPaths := []string{
+		".opencode/agents/odachi-worker.md",
+		".opencode/agents/odachi-verify.md",
+		".claude/agents/odachi-worker.md",
+		".claude/agents/odachi-verify.md",
+	}
+	if len(files) != len(wantPaths) {
+		t.Fatalf("SubagentFiles() = %d archivos, want %d", len(files), len(wantPaths))
+	}
+	for i, want := range wantPaths {
+		if files[i].Path != want {
+			t.Errorf("SubagentFiles()[%d].Path = %q, want %q", i, files[i].Path, want)
+		}
+		if !strings.Contains(files[i].Content, "generado por odachi init") {
+			t.Errorf("%s no dice que es generado", want)
+		}
+	}
+	for _, file := range files {
+		switch file.Path {
+		case ".opencode/agents/odachi-worker.md", ".opencode/agents/odachi-verify.md":
+			if !strings.Contains(file.Content, "mode: subagent") {
+				t.Errorf("%s no es un subagente de OpenCode:\n%s", file.Path, file.Content)
+			}
+		case ".claude/agents/odachi-worker.md", ".claude/agents/odachi-verify.md":
+			if !strings.Contains(file.Content, "name: odachi-") {
+				t.Errorf("%s no declara el nombre de Claude:\n%s", file.Path, file.Content)
+			}
+		}
+		if strings.Contains(file.Content, "mode: primary") {
+			t.Errorf("%s declara mode: primary: los subagentes no se eligen con Tab", file.Path)
+		}
+	}
+}
+
+// TestTheVerifierIsReadOnly: the verifier must not be able to edit. OpenCode
+// enforces it with `edit: deny`; Claude Code by leaving Edit and Write out of
+// the tools allowlist. The worker keeps edit access and cannot delegate.
+func TestTheVerifierIsReadOnly(t *testing.T) {
+	for _, file := range persona.SubagentFiles() {
+		switch file.Path {
+		case ".opencode/agents/odachi-verify.md":
+			for _, want := range []string{"edit: deny", "task: deny"} {
+				if !strings.Contains(file.Content, want) {
+					t.Errorf("%s no lleva %q:\n%s", file.Path, want, file.Content)
+				}
+			}
+		case ".opencode/agents/odachi-worker.md":
+			if !strings.Contains(file.Content, "task: deny") {
+				t.Errorf("%s no prohíbe delegar:\n%s", file.Path, file.Content)
+			}
+		case ".claude/agents/odachi-verify.md":
+			if !strings.Contains(file.Content, "tools: Read, Grep, Glob, Bash") {
+				t.Errorf("%s no declara tools de solo lectura:\n%s", file.Path, file.Content)
+			}
+			if strings.Contains(file.Content, "Edit") || strings.Contains(file.Content, "Write") {
+				t.Errorf("%s permite editar:\n%s", file.Path, file.Content)
+			}
+		}
+	}
+}
+
+// TestSubagentFilesForUnknownClient: nothing is guessed for a client this table
+// does not know.
+func TestSubagentFilesForUnknownClient(t *testing.T) {
+	if got := persona.SubagentFilesFor("inventado"); got != nil {
+		t.Errorf("SubagentFilesFor(inventado) = %v, want nil", got)
+	}
+}
+
 // TestTheRendererDoesNotReadTheProfile: the voices do not depend on
 // .odachi/profile.toml. If the two axes ever get wired together, this fails.
 func TestTheRendererDoesNotReadTheProfile(t *testing.T) {

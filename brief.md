@@ -1,13 +1,13 @@
-# odachi-init-skills
+# odachi-worker-y
 
 ## Qué tiene que existir
-- odachi init --skills home deja todas las skills en ~/.agents/skills y el proyecto no recibe copia
+- odachi-worker y odachi-verify como subagentes nativos, con handoff acotado, para que el agente principal no cargue el trabajo pesado
 
 ## Listo cuando
-- el home tiene todas las skills y el proyecto no tiene .agents/skills
-- una segunda corrida no escribe nada
-- una copia previa del proyecto se avisa y no se borra
-- doctor cuenta las skills del home y avisa si driftan
+- init escribe odachi-worker y odachi-verify para OpenCode y Claude, y una segunda corrida no escribe nada
+- doctor compara los subagentes con lo generado y avisa si faltan o driftan
+- slices manda a pasar task doc, paso, superficies, comandos y paths de skills; el retorno es <=2k
+- opencode debug agents lista los dos como subagent
 - go test ./... queda en verde
 - odachi check queda listo
 
@@ -17,4 +17,4 @@
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: skills globales.
+- Quiere aprender: contexto y subagentes.

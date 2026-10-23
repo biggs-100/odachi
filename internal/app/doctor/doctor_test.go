@@ -194,6 +194,9 @@ func configured() *fakeFiles {
 	for _, file := range persona.Files(body) {
 		files.put(file.Path, file.Content)
 	}
+	for _, file := range persona.SubagentFiles() {
+		files.put(file.Path, file.Content)
+	}
 	for _, file := range persona.GlobalFiles() {
 		files.putHome(file.Path, file.Content)
 	}
@@ -700,6 +703,44 @@ func TestLeftoverPersonaFilesAreNotAProblem(t *testing.T) {
 	for _, want := range []string{"v0.10.0", ".opencode/agents", ".claude/output-styles", "podés borrarlas"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the line must say %q, got %q", want, got.Detail)
+		}
+	}
+}
+
+// TestAMissingSubagentIsSaid: a project can have the primary agent and lose the
+// worker or the verifier. The parent cannot delegate to a file that is not
+// there; check 11 names it and the command that installs it.
+func TestAMissingSubagentIsSaid(t *testing.T) {
+	files := configured()
+	delete(files.files, at(".opencode/agents/odachi-worker.md"))
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeOK {
+		t.Fatalf("un subagente ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"no están", "odachi-worker", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+		}
+	}
+}
+
+// TestAStaleSubagentIsSaid: the worker and the verifier are generated too; a
+// hand edit is a drift, not a new contract.
+func TestAStaleSubagentIsSaid(t *testing.T) {
+	files := configured().put(".opencode/agents/odachi-verify.md", "viejo\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeOK {
+		t.Fatalf("un subagente editado no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"no coinciden con lo generado", "odachi-verify", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
 		}
 	}
 }

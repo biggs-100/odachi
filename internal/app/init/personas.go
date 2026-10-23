@@ -20,11 +20,12 @@ type PersonaDest struct {
 	// Dir is the directory the client reads agents from, as the human reads it
 	// (`./.opencode/agents` or `~/.config/opencode/agents`).
 	Dir string
-	// Written counts the file this run wrote; Kept is 1 when it was already
+	// Written counts the files this run wrote; Kept counts the ones already
 	// right.
 	Written int
 	Kept    int
-	// Files is every agent path this run owns in that directory.
+	// Files is every agent path this run owns in that directory: the primary
+	// mirror and the two subagents.
 	Files []string
 }
 
@@ -34,9 +35,10 @@ const (
 	ScopeHome    = "home"
 )
 
-// writePersonas writes the native agent every client that has a selector gets.
-// The file mirrors the block: same rules, same voice, so a human who picks it
-// with Tab reads exactly what the agent reads from AGENTS.md.
+// writePersonas writes the native agent every client that has a selector gets:
+// the primary mirror of the block, plus the bounded worker and the read-only
+// verifier the parent invokes as subagents. The primary mirrors the block; the
+// subagents carry the handoff contract.
 //
 // Generated, therefore idempotent: an identical file is not rewritten and a
 // differing one is backed up before the rewrite, because the human reads that the
@@ -48,14 +50,42 @@ func (r *runner) writePersonas() *Result {
 	}
 
 	for _, client := range persona.Clients() {
-		file, ok := persona.FilesFor(client.Agent, block)
-		if !ok {
-			// Unreachable: the client came from the same table. Skipping instead
-			// of writing a file to a directory nobody verified.
+		primary, hasPrimary := persona.FilesFor(client.Agent, block)
+		subs := persona.SubagentFilesFor(client.Agent)
+
+		// A client can read the primary and its subagents from the same folder
+		// (OpenCode) or from two (Claude Code). Grouping by folder keeps the
+		// report honest: one line per destination, never a file named under the
+		// wrong folder.
+		if hasPrimary && client.Dir == client.SubagentDir {
+			files := append([]persona.File{primary}, subs...)
+			if problem := r.writePersonaGroup(client, client.Dir, files, client.Switch, len(subs) > 0); problem != nil {
+				return problem
+			}
 			continue
 		}
 
-		dest := PersonaDest{Client: client.Agent, Scope: ScopeProject, Dir: client.Dir}
+		if hasPrimary {
+			if problem := r.writePersonaGroup(client, client.Dir, []persona.File{primary}, client.Switch, false); problem != nil {
+				return problem
+			}
+		}
+		if len(subs) > 0 {
+			if problem := r.writePersonaGroup(client, client.SubagentDir, subs, "los subagentes los invoca el agente", false); problem != nil {
+				return problem
+			}
+		}
+	}
+	return nil
+}
+
+// writePersonaGroup writes every generated file of one directory, reports one
+// row for that directory, and one line for the human.
+func (r *runner) writePersonaGroup(client persona.Client, dir string, files []persona.File, switchText string, subagents bool) *Result {
+	dest := PersonaDest{Client: client.Agent, Scope: ScopeProject, Dir: dir}
+	var written, kept []string
+
+	for _, file := range files {
 		path := filepath.Join(r.dir, filepath.FromSlash(file.Path))
 		name := filepath.Base(path)
 
@@ -69,11 +99,9 @@ func (r *runner) writePersonas() *Result {
 				return personaBlocked("no pude leer "+file.Path, err)
 			}
 			if string(current) == file.Content {
-				dest.Kept = 1
+				dest.Kept++
 				dest.Files = append(dest.Files, file.Path)
-				r.personaDests = append(r.personaDests, dest)
-				r.personaLabels = append(r.personaLabels, client.Dir)
-				r.lines = append(r.lines, personaLine(client.Dir, client.Switch, nil, []string{name}))
+				kept = append(kept, name)
 				continue
 			}
 			if _, err := r.files.Backup(path); err != nil {
@@ -84,13 +112,15 @@ func (r *runner) writePersonas() *Result {
 		if err := r.files.Write(path, []byte(file.Content)); err != nil {
 			return personaBlocked("no pude escribir "+file.Path, err)
 		}
-		dest.Written = 1
+		dest.Written++
 		dest.Files = append(dest.Files, file.Path)
-		r.personaDests = append(r.personaDests, dest)
-		r.personaLabels = append(r.personaLabels, client.Dir)
 		r.personaFiles = append(r.personaFiles, file.Path)
-		r.lines = append(r.lines, personaLine(client.Dir, client.Switch, []string{name}, nil))
+		written = append(written, name)
 	}
+
+	r.personaDests = append(r.personaDests, dest)
+	r.personaLabels = append(r.personaLabels, dir)
+	r.lines = append(r.lines, personaLine(dir, switchText, written, kept, subagents))
 	return nil
 }
 
@@ -138,7 +168,7 @@ func (r *runner) installGlobalPersonas() {
 				dest.Files = append(dest.Files, display)
 				r.personaDests = append(r.personaDests, dest)
 				r.personaLabels = append(r.personaLabels, dest.Dir)
-				r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, nil, []string{persona.FileName}))
+				r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, nil, []string{persona.FileName}, false))
 				continue
 			}
 			if _, err := r.files.Backup(path); err != nil {
@@ -156,7 +186,7 @@ func (r *runner) installGlobalPersonas() {
 		r.personaDests = append(r.personaDests, dest)
 		r.personaLabels = append(r.personaLabels, dest.Dir)
 		r.personaFiles = append(r.personaFiles, display)
-		r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, []string{persona.FileName}, nil))
+		r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, []string{persona.FileName}, nil, false))
 	}
 }
 
@@ -179,7 +209,7 @@ func personaBlocked(what string, err error) *Result {
 // personaLine is one destination in one line: what arrived, what was already
 // there, and how the human selects the agent in that client. The last part is the
 // point of the whole job — a file nobody knows how to pick is a file nobody uses.
-func personaLine(dir, switchText string, written, kept []string) string {
+func personaLine(dir, switchText string, written, kept []string, subagents bool) string {
 	parts := make([]string, 0, 2)
 	if len(written) > 0 {
 		parts = append(parts, "escribí "+humanList(written))
@@ -190,6 +220,9 @@ func personaLine(dir, switchText string, written, kept []string) string {
 	line := dir + ": " + strings.Join(parts, ", ")
 	if len(written) > 0 {
 		line += "; " + switchText
+	}
+	if subagents {
+		line += "; odachi-worker y odachi-verify los invoca el agente"
 	}
 	return line
 }

@@ -725,19 +725,33 @@ func (r *runner) personaNote(content string) string {
 			stale = append(stale, file.Path)
 		}
 	}
+	for _, file := range persona.SubagentFiles() {
+		current, exists, err := r.read(file.Path)
+		switch {
+		case err != nil:
+			return "no pude leer " + file.Path + ": " + oneLine(err.Error()) + "; corré odachi init"
+		case !exists:
+			missing = append(missing, file.Path)
+		case current != file.Content:
+			stale = append(stale, file.Path)
+		}
+	}
 
 	dirs := make([]string, 0, len(persona.Clients()))
+	subDirs := make([]string, 0, len(persona.Clients()))
 	for _, client := range persona.Clients() {
 		dirs = append(dirs, client.Dir)
+		subDirs = append(subDirs, client.SubagentDir)
 	}
 
 	switch {
 	case len(missing) > 0:
-		return "el agente nativo no está en " + strings.Join(missing, ", ") + "; corré odachi init (el bloque alcanza, pero no se elige con Tab)"
+		return "el agente nativo o sus subagentes no están en " + strings.Join(missing, ", ") + "; corré odachi init"
 	case len(stale) > 0:
-		return "el agente nativo no coincide con el bloque en " + strings.Join(stale, ", ") + "; corré odachi init"
+		return "el agente nativo o sus subagentes no coinciden con lo generado en " + strings.Join(stale, ", ") + "; corré odachi init"
 	default:
-		return "el agente nativo coincide con el bloque en " + strings.Join(dirs, " y ")
+		return "el agente nativo coincide con el bloque en " + strings.Join(dirs, " y ") +
+			"; los subagentes coinciden en " + strings.Join(subDirs, " y ")
 	}
 }
 

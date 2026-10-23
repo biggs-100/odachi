@@ -1095,8 +1095,9 @@ flags de init:
 
 qué deja escrito init, en un solo comando (--skills project, el default):
   AGENTS.md              el bloque de reglas que el agente lee, con la voz al final
-  .opencode/agents       odachi.md: el mismo bloque, para elegirlo con Tab en este proyecto
+  .opencode/agents       odachi.md (se elige con Tab) + odachi-worker.md y odachi-verify.md (subagentes)
   .claude/output-styles  odachi.md: el mismo bloque, para elegirlo con /config en este proyecto
+  .claude/agents         odachi-worker.md y odachi-verify.md: los subagentes de Claude Code
   ~/.config/opencode/agents  odachi.md: la puerta que aparece en cualquier carpeta (Tab)
   ~/.claude/output-styles    odachi.md: la misma puerta en el home (/config)
   .gitignore             /proof/, /.odachi/reviews/ y *.bak-* no ensucian el árbol
@@ -1106,6 +1107,10 @@ qué deja escrito init, en un solo comando (--skills project, el default):
 
 con --skills home, todas las skills van a ~/.agents/skills y el proyecto no recibe copia;
 si ya tenía .agents/skills de un init anterior, no se borra: se avisa.
+
+los subagentes odachi-worker y odachi-verify los invoca el agente, no se eligen con
+una tecla. El padre les pasa el task doc, el paso, las superficies, los comandos y
+los paths de las skills; vuelven con evidencia y ≤2k tokens, y no commitean.
 
 la voz —cómo te habla el agente— es la última sección del bloque, y la escribe el
 binario: novato si todavía no hay .odachi/profile.toml, si no la del perfil que

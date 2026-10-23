@@ -75,6 +75,26 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 			t.Errorf("%s no es el espejo del bloque:\n%q\nvs\n%q", file.Path, got, file.Content)
 		}
 	}
+
+	// The worker and the verifier are native subagents: generated with the same
+	// command, read only when the parent invokes them.
+	for _, client := range persona.Clients() {
+		for _, file := range persona.SubagentFilesFor(client.Agent) {
+			got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(file.Path)))
+			if err != nil {
+				t.Errorf("%s no se escribió: %v", file.Path, err)
+				continue
+			}
+			if string(got) != file.Content {
+				t.Errorf("%s no coincide con el subagente generado:\n%q\nvs\n%q", file.Path, got, file.Content)
+			}
+		}
+	}
+	for _, want := range []string{"odachi-worker", "odachi-verify"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("la salida no nombra %s:\n%s", want, out)
+		}
+	}
 	for _, legacy := range personaLegacyFiles {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(legacy))); err == nil {
 			t.Errorf("init escribió %s: el agente de esta versión es %s", legacy, persona.FileName)
@@ -213,18 +233,36 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
 		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
 	}
-	if len(payload.Personas) != 2*len(persona.Clients()) {
-		t.Fatalf("personas = %+v, want one project and one home row per client", payload.Personas)
+	// One row per destination: OpenCode shares the primary and subagent folder,
+	// Claude Code reads the primary from output-styles and the subagents from
+	// agents. The home has only the door, one file per client.
+	want := map[string]int{
+		"project|.opencode/agents":       3,
+		"project|.claude/output-styles":  1,
+		"project|.claude/agents":         2,
+		"home|~/.config/opencode/agents": 1,
+		"home|~/.claude/output-styles":   1,
+	}
+	if len(payload.Personas) != len(want) {
+		t.Fatalf("personas = %+v, want %d destination rows", payload.Personas, len(want))
 	}
 	scopes := map[string]bool{}
 	for _, row := range payload.Personas {
 		scopes[row.Scope] = true
-		if row.Written+row.Unchanged != 1 || len(row.Files) != 1 {
-			t.Errorf("fila de %s/%s = %+v, want one file owned", row.Client, row.Scope, row)
+		key := row.Scope + "|" + row.Dir
+		count, ok := want[key]
+		if !ok {
+			t.Errorf("fila inesperada %s = %+v", key, row)
 			continue
 		}
-		if want := row.Dir + "/" + persona.FileName; row.Files[0] != want {
-			t.Errorf("fila de %s/%s = %+v, want %s", row.Client, row.Scope, row, want)
+		if row.Written+row.Unchanged != count || len(row.Files) != count {
+			t.Errorf("fila %s = %+v, want %d files owned", key, row, count)
+			continue
+		}
+		for _, file := range row.Files {
+			if !strings.HasPrefix(file, row.Dir+"/") {
+				t.Errorf("fila %s owns %s, outside its directory", key, file)
+			}
 		}
 	}
 	for _, scope := range []string{"project", "home"} {

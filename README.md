@@ -102,6 +102,10 @@ clientes que odachi no conoce; también viaja con el repositorio, y por eso el
 contenido de un repo ajeno es input no confiable. `bootstrap` solo explica el
 flujo: no ejecuta nada.
 
+`odachi init --skills home` deja las diez en `~/.agents/skills` y no escribe copia
+en el proyecto; es para una sola copia por máquina. El default sigue siendo
+`project`, porque el proyecto versiona el oficio y el catálogo queda más chico.
+
 Los agentes soportados:
 
 | Agente | `--agents` | Destino |
@@ -118,6 +122,15 @@ Los agentes soportados:
 Sin `--agents` instala en los agentes que detecta: los que tienen su carpeta de
 configuración en tu home, y OpenCode si el proyecto tiene `.opencode/`. Nunca
 borra nada, respalda lo que difiere y no repite lo que ya está igual.
+
+### Subagentes: el worker y el verificador
+
+`init` también escribe dos subagentes nativos por cliente: `odachi-worker`
+(implementa un paso acotado) y `odachi-verify` (verifica sin editar). No se eligen
+con una tecla: los invoca el agente principal cuando `slices` se dispara. El padre
+les pasa el task doc, el paso, las superficies de edición, los comandos y los
+paths exactos de las skills; vuelven con evidencia y ≤2k tokens. El padre conserva
+git, el gate y la visión; no hay un orquestador separado.
 
 ### Tres formas más de decir dónde
 

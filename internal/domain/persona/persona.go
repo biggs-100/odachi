@@ -14,6 +14,10 @@
 // voice; outside one it hands over to the bootstrap skill. That is the difference
 // between "my project has an agent" and "I can open my agent and start working".
 //
+// The subagents are the other half of context protection: `SubagentFiles` writes
+// the bounded worker and the read-only verifier the parent invokes through the
+// client, so the heavy reading and writing happen in a separate context.
+//
 // The text is one template. Body is the same bytes for every client; a client
 // only supplies the wrapper it needs (frontmatter and directory). The client
 // table here is a sibling of the skills table in internal/domain/agent, not a
@@ -96,12 +100,14 @@ Sos el tutor, no el que hace.
 // Client is one client's native mechanism for an agent: the name the skills
 // table uses, the project directory that client reads agents from (relative to
 // the project root, forward slashes), the home directory it reads global agents
-// from (relative to the home), and how the human picks one there.
+// from (relative to the home), the project directory it reads subagents from,
+// and how the human picks the primary agent there.
 type Client struct {
-	Agent   string
-	Dir     string
-	HomeDir string
-	Switch  string
+	Agent       string
+	Dir         string
+	HomeDir     string
+	SubagentDir string
+	Switch      string
 }
 
 // clients is the verified table, in the order the skills table lists the same
@@ -116,10 +122,11 @@ var clients = []Client{
 	// OpenCode 2.1.3: both `.opencode/agents/` and `.opencode/mode/` are listed
 	// as primary, and a directory without `.git` lists nothing at all.
 	{
-		Agent:   "opencode",
-		Dir:     ".opencode/agents",
-		HomeDir: ".config/opencode/agents",
-		Switch:  "se elige con Tab",
+		Agent:       "opencode",
+		Dir:         ".opencode/agents",
+		HomeDir:     ".config/opencode/agents",
+		SubagentDir: ".opencode/agents",
+		Switch:      "se elige con Tab",
 	},
 	// Claude Code: `.claude/output-styles/<name>.md`, frontmatter `name`,
 	// `description` and `keep-coding-instructions: true`, and the body becomes
@@ -129,10 +136,11 @@ var clients = []Client{
 	// dropping its tools. The human picks it in /config (the /output-style
 	// command that used to do it only prints a deprecation notice now).
 	{
-		Agent:   "claude",
-		Dir:     ".claude/output-styles",
-		HomeDir: ".claude/output-styles",
-		Switch:  "se elige con /config (estilo de salida)",
+		Agent:       "claude",
+		Dir:         ".claude/output-styles",
+		HomeDir:     ".claude/output-styles",
+		SubagentDir: ".claude/agents",
+		Switch:      "se elige con /config (estilo de salida)",
 	},
 }
 
@@ -166,6 +174,74 @@ Antes de actuar, mirá la carpeta donde estás:
 var globalWrappers = map[string]string{
 	"opencode": "---\ndescription: \"odachi: abrí cualquier carpeta y trabajá con las reglas del proyecto; en una carpeta nueva, te guía para arrancar\"\nmode: primary\n---\n",
 	"claude":   "---\nname: " + AgentName + "\ndescription: \"odachi: abrí cualquier carpeta y trabajá con las reglas del proyecto; en una carpeta nueva, te guía para arrancar\"\nkeep-coding-instructions: true\n---\n",
+}
+
+// workerPrompt is the system prompt of the bounded writer. It is operational,
+// not a voice: it reads the task doc and the exact skill paths the parent hands
+// over, edits only the allowed surfaces, runs the exact verification commands,
+// and returns a small evidence report. It never commits, delegates or decides
+// vision — those stay with the parent.
+const workerPrompt = `Sos odachi-worker. Ejecutás un paso acotado del task doc; no sos el orquestador.
+
+Antes de editar:
+1. Leé el task doc en el path que te pasó el padre, desde el principio hasta ` + "`## Historial`" + `. El paso y sus requisitos mandan.
+2. Cargá las skills que el padre liste en ` + "`## Skills to load before work`" + ` (paths exactos) antes de tocar código.
+3. Respetá las superficies de edición exactas. No toques nada fuera de ellas.
+4. Si falta una decisión de visión, una superficie o un comando, pará y devolvé ` + "`status: blocked`" + `; no la inventes.
+
+Mientras trabajás:
+- Un cambio por paso; tests y documentación en el mismo paso.
+- Test-first: observá RED antes de implementar; corré los comandos de verificación exactos que te dio el padre.
+- No commitees, no hagas push, no delegues, no cambies ` + "`brief.md`" + ` ni el task doc.
+- No leas secretos ni archivos fuera de las superficies.
+
+Al volver, devolvé solo:
+status: completed | partial | blocked
+summary: una línea
+files_changed: path: cambio
+validation: <comando>: <resultado observado>
+risks: ...
+skills_loaded: paths
+`
+
+// verifierPrompt is the read-only verifier. It derives probes from the task doc,
+// not from the worker's tests, and never edits or invents a pass.
+const verifierPrompt = `Sos odachi-verify. Verificás de forma read-only un paso delegado. No editás, no commiteás, no delegás.
+
+Recibís el task doc, el paso, el commit base y los comandos de verificación.
+- Corré los comandos exactos; si mutan estado, usá una copia scratch fuera del workspace.
+- Derivá probes del task doc (` + "`## Requisitos`" + ` y ` + "`## Listo cuando`" + `), no de los tests del worker.
+- Compará el diff contra el brief y el paso, no contra el resumen del worker.
+- No inventes PASS: lo que no pudiste correr es ` + "`unverified`" + `.
+
+Devolvé: veredicto por requisito (met/unmet/unverified), evidencia ` + "`path:line`" + `, comandos observados, blockers y lo que quedó sin verificar. ≤2k tokens.
+`
+
+// Subagent is one native subagent: its name, the one-line description the client
+// shows, its prompt, and the two client-specific capability lines. The prompt is
+// shared; only the frontmatter is per client.
+type Subagent struct {
+	Name               string
+	Description        string
+	Prompt             string
+	OpenCodePermission string
+	ClaudeTools        string
+}
+
+var subagents = []Subagent{
+	{
+		Name:               "odachi-worker",
+		Description:        "odachi-worker: implementa un paso acotado del task doc y devuelve evidencia",
+		Prompt:             workerPrompt,
+		OpenCodePermission: "permission:\n  task: deny\n",
+	},
+	{
+		Name:               "odachi-verify",
+		Description:        "odachi-verify: verifica un paso delegado sin editar ni commitear",
+		Prompt:             verifierPrompt,
+		OpenCodePermission: "permission:\n  edit: deny\n  task: deny\n",
+		ClaudeTools:        "tools: Read, Grep, Glob, Bash\n",
+	},
 }
 
 // File is one native agent file: where it goes relative to the project root, and
@@ -245,6 +321,55 @@ func globalFileFor(row Client) File {
 		Path:    row.HomeDir + "/" + FileName,
 		Content: globalWrappers[row.Agent] + generated + "\n" + globalDoor,
 	}
+}
+
+// SubagentFiles returns the native subagents every client gets. Unlike the
+// primary agent, they are not selected by the human: the parent invokes them
+// through the client's subagent mechanism, with the handoff `slices` describes.
+func SubagentFiles() []File {
+	out := make([]File, 0, len(clients)*len(subagents))
+	for _, row := range clients {
+		for _, sub := range subagents {
+			out = append(out, subagentFile(row, sub))
+		}
+	}
+	return out
+}
+
+// SubagentFilesFor returns the subagent files one client gets, or none for a
+// client without a native subagent mechanism.
+func SubagentFilesFor(client string) []File {
+	key := strings.ToLower(strings.TrimSpace(client))
+	for _, row := range clients {
+		if row.Agent != key {
+			continue
+		}
+		out := make([]File, 0, len(subagents))
+		for _, sub := range subagents {
+			out = append(out, subagentFile(row, sub))
+		}
+		return out
+	}
+	return nil
+}
+
+// subagentFile composes one client's wrapper around the shared prompt. The
+// generated note comes after the frontmatter, where the client expects the body.
+func subagentFile(row Client, sub Subagent) File {
+	return File{
+		Path:    row.SubagentDir + "/" + sub.Name + ".md",
+		Content: subagentWrapper(row.Agent, sub) + generated + "\n\n" + sub.Prompt,
+	}
+}
+
+// subagentWrapper is the frontmatter each client needs. OpenCode uses `mode:
+// subagent` and a permission block; Claude Code uses `name`, `description` and,
+// for the verifier, a tools allowlist that leaves out Edit and Write.
+func subagentWrapper(client string, sub Subagent) string {
+	if client == "opencode" {
+		return "---\ndescription: \"" + sub.Description + "\"\nmode: subagent\n" + sub.OpenCodePermission + "---\n"
+	}
+	return "---\nname: " + sub.Name + "\ndescription: \"" + sub.Description + "\"\n" + sub.ClaudeTools + "---\n"
 }
 
 // VoiceName resolves the voice a profile gets: novato and senior are their own,
