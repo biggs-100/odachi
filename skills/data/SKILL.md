@@ -1,33 +1,33 @@
 ---
 name: data
-description: Trigger: cuando hay que guardar, migrar, leer o borrar datos. Decide dueño, vida y respaldo antes de escribir la primera fila.
+description: Trigger: when data has to be saved, migrated, read or deleted. Decide owner, lifetime and backup before writing the first row.
 ---
 
-## Cuándo
+## When
 
-Cuando aparece un archivo que hay que persistir, un esquema que cambia, una
-migración, un borrado o la pregunta "¿dónde guardamos esto?".
+When a file has to be persisted, a schema changes, a migration appears, a delete
+is requested, or the question "where do we store this?" comes up.
 
-## Reglas
+## Rules
 
-- Antes de escribir, contestá tres cosas: quién es dueño del dato, cuánto vive y
-  quién lo lee. Si no hay respuesta, todavía no es momento de guardarlo.
-- Escribí atómico: archivo temporal en el mismo directorio y rename al final. Un
-  corte a la mitad deja el archivo viejo entero, no uno truncado.
-- Toda migración es reversible o tiene un backup que ya probaste restaurar. Un
-  backup que nunca se restauró no es un backup.
-- Leé verificando: si el archivo lleva checksum o longitud, comprobalo al abrir.
-  Asumir que está entero es cómo se pierden los datos.
-- Lo sensible (nombres, salud, plata) no entra al modelo ni al log si no hace
-  falta. Lo que no se guarda no se filtra.
-- Los datos de prueba viven en fixtures chicos y legibles; los reales, nunca en
-  el repositorio.
+- Before writing, answer three things: who owns the data, how long it lives and
+  who reads it. If there is no answer, it is not time to store it yet.
+- Write atomically: a temporary file in the same directory and a rename at the
+  end. A crash halfway leaves the old file whole, not a truncated one.
+- Every migration is reversible or has a backup you have already restored. A
+  backup that was never restored is not a backup.
+- Read verifying: if the file carries a checksum or a length, check it when
+  opening. Assuming it is whole is how data gets lost.
+- Sensitive data (names, health, money) does not enter the model or the log if it
+  is not needed. What is not stored cannot leak.
+- Test data lives in small, readable fixtures; real data never lives in the
+  repository.
 
-## Nunca
+## Never
 
-- Correr una migración destructiva sin backup verificado ni forma de volver.
-- Guardar secretos, tokens o datos personales en el repo, en fixtures o en logs.
-- Cambiar el esquema y el código que lo lee en un deploy que no se puede
-  revertir.
-- Borrar en el momento: marcá, esperá, y borrá con fecha y responsable.
-- Inventar datos para que un test pase.
+- Run a destructive migration without a verified backup and a way back.
+- Store secrets, tokens or personal data in the repo, fixtures or logs.
+- Change the schema and the code that reads it in a deploy that cannot be
+  reverted.
+- Delete on the spot: mark it, wait, and delete with a date and an owner.
+- Invent data to make a test pass.

@@ -118,7 +118,7 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 // skillText is a complete skill in the canonical form.
 func skillText(name, trigger string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: " + trigger +
-		"\n---\n\n## Cuándo\n\ncuando\n\n## Reglas\n\nregla\n\n## Nunca\n\nnunca\n"
+		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"
 }
 
 // registryOf renders what --write must produce for the given skills.
@@ -206,7 +206,7 @@ func TestCheckReportsEveryViolation(t *testing.T) {
 	}{
 		{
 			name:   "sin frontmatter",
-			seed:   map[string]string{"skills/suelta/SKILL.md": "## Cuándo\n\ncuando\n\n## Reglas\n\nregla\n\n## Nunca\n\nnunca\n"},
+			seed:   map[string]string{"skills/suelta/SKILL.md": "## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"},
 			file:   "skills/suelta/SKILL.md",
 			reason: "frontmatter",
 		},

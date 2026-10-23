@@ -84,21 +84,21 @@ func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"gana esta",
-		"Nunca por tamaño",
-		"path del task doc",
-		"superficies de edición",
+		"this one wins",
+		"Never for size",
+		"task doc path",
+		"edit surfaces",
 		"Skills to load before work",
 		"odachi-worker",
 		"odachi-verify",
-		"≤2k tokens",
-		"Nunca delegues la decisión de visión",
+		"=2k tokens",
+		"Never delegate the vision decision",
 	} {
 		if !strings.Contains(byName["slices"], want) {
 			t.Errorf("slices no dice %q: la política de delegación se perdió", want)
 		}
 	}
-	if !strings.Contains(byName["drive"], "cargá `slices` antes de partir") {
+	if !strings.Contains(byName["drive"], "load `slices` before splitting") {
 		t.Errorf("drive no manda a cargar slices cuando el pedido no entra en una lectura")
 	}
 }
@@ -117,9 +117,9 @@ func TestDriveTeachesTheWorkflowDiscipline(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"Requisitos citados **verbatim**",
-		"observá RED",
-		"paso delegado",
+		"Requirements quoted **verbatim**",
+		"observe RED",
+		"delegated step",
 		"Risk:",
 	} {
 		if !strings.Contains(byName["drive"], want) {
@@ -128,7 +128,7 @@ func TestDriveTeachesTheWorkflowDiscipline(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Risk: none",
-		"datos|seguridad|contrato|concurrencia|entrega|sin-test",
+		"data|security|contract|concurrency|delivery|no-test",
 	} {
 		if !strings.Contains(byName["commits"], want) {
 			t.Errorf("commits no dice %q: la línea de riesgo se perdió", want)
@@ -154,13 +154,13 @@ func TestTriageSkillTeachesRootCause(t *testing.T) {
 		t.Fatal("el payload no tiene la skill triage: el backlog sigue sin método")
 	}
 	for _, want := range []string{
-		"por raíz",
-		"un solo fix",
-		"Reproducí el síntoma",
+		"by **root**",
+		"one fix",
+		"Reproduce the symptom",
 		"odachi ask",
 		"odachi plan",
-		"la prueba que falla",
-		"fuera del cerco",
+		"failing test",
+		"outside the fence",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("triage no dice %q: el método de raíz se perdió", want)
@@ -186,13 +186,13 @@ func TestPullRequestSkillTeachesReviewSlices(t *testing.T) {
 		t.Fatal("el payload no tiene la skill pull-request: la entrega sigue sin corte")
 	}
 	for _, want := range []string{
-		"400 líneas",
-		"un work unit",
+		"400 changed lines",
+		"one work unit",
 		"stacked",
 		"feature branch chain",
 		"Closes/Fixes/Resolves",
 		"odachi check --run",
-		"qué quedó afuera",
+		"left out",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("pr no dice %q: el corte de entrega se perdió", want)
@@ -217,14 +217,14 @@ func TestGoTestsSkillTeachesGoPatterns(t *testing.T) {
 		t.Fatal("el payload no tiene la skill go-tests: Go sigue sin patrón")
 	}
 	for _, want := range []string{
-		"Cargá `tests` primero",
-		"Tabla para varios casos",
+		"Load `tests` first",
+		"Table for several cases",
 		"t.Run",
 		"t.TempDir",
 		"testing.Short",
 		"teatest",
 		"golden",
-		"paquete focal",
+		"focal package",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("go-tests no dice %q: el patrón de Go se perdió", want)
@@ -250,13 +250,13 @@ func TestSkillImproveTeachesTheAudit(t *testing.T) {
 		t.Fatal("el payload no tiene la skill skill-improve: el catálogo no se audita")
 	}
 	for _, want := range []string{
-		"Empezá por el trigger",
-		"60 líneas",
+		"Start with the trigger",
+		"60 lines",
 		"observable",
 		"odachi skills --check",
 		"SKILLS.md",
-		"un dueño",
-		"antes y el después",
+		"one owner",
+		"before and after",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("skill-improve no dice %q: la auditoría se perdió", want)

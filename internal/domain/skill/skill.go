@@ -34,7 +34,7 @@ const (
 )
 
 // requiredSections are the three headings every skill body carries, in order.
-var requiredSections = []string{"Cuándo", "Reglas", "Nunca"}
+var requiredSections = []string{"When", "Rules", "Never"}
 
 var namePattern = regexp.MustCompile(NamePattern)
 
@@ -208,9 +208,9 @@ func ValidSlug(slug string) bool {
 // as it stands, so `skills --check` stays green while the human writes.
 func Template(name string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: (completá cuándo se usa esta skill)\n---\n\n" +
-		"## Cuándo\n\n(completá cuándo hay que cargar esta skill)\n\n" +
-		"## Reglas\n\n(completá las reglas que un senior haría cumplir)\n\n" +
-		"## Nunca\n\n(completá lo que esta skill no hace nunca)\n"
+		"## When\n\n(say when this skill must be loaded)\n\n" +
+		"## Rules\n\n(fill in the rules a senior would enforce)\n\n" +
+		"## Never\n\n(fill in what this skill never does)\n"
 }
 
 // splitFrontmatter cuts the --- block from the body. A file without both fences

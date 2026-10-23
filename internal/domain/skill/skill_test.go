@@ -14,16 +14,16 @@ name: acceptance
 description: Trigger: cuando hay que decidir si algo está terminado. Convierte un pedido en criterios observables.
 ---
 
-## Cuándo
+## When
 
 Cuando alguien dice "ya está" y no hay nada que lo pruebe.
 
-## Reglas
+## Rules
 
 - Cada criterio se puede observar.
 - Un pedido vago vuelve con una pregunta.
 
-## Nunca
+## Never
 
 - Aceptar "funciona en mi máquina" como criterio.
 `
@@ -31,7 +31,7 @@ Cuando alguien dice "ya está" y no hay nada que lo pruebe.
 // validSkill renders a minimal, valid skill under any name.
 func validSkill(name, trigger string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: " + trigger +
-		"\n---\n\n## Cuándo\n\ncuando\n\n## Reglas\n\nregla\n\n## Nunca\n\nnunca\n"
+		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"
 }
 
 func parse(dir, text string) skill.Skill {
@@ -64,7 +64,7 @@ func TestParseReadsTheFrontmatter(t *testing.T) {
 	if !strings.HasPrefix(got.Description, "Trigger: ") {
 		t.Errorf("Description = %q, want the full description including its prefix", got.Description)
 	}
-	for _, section := range []string{"## Cuándo", "## Reglas", "## Nunca"} {
+	for _, section := range []string{"## When", "## Rules", "## Never"} {
 		if !strings.Contains(got.Body, section) {
 			t.Errorf("Body lost %q:\n%s", section, got.Body)
 		}
@@ -80,7 +80,7 @@ func TestParseReadsTheFrontmatter(t *testing.T) {
 // TestParseWithoutFrontmatterIsOneReason: a file that never declares itself is
 // not guessed at, and the reason names the missing header.
 func TestParseWithoutFrontmatterIsOneReason(t *testing.T) {
-	got := parse("suelta", "## Cuándo\n\ncuando\n\n## Reglas\n\nregla\n\n## Nunca\n\nnunca\n")
+	got := parse("suelta", "## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n")
 
 	if got.HasFrontmatter {
 		t.Fatal("HasFrontmatter = true for a file without ---")
@@ -153,11 +153,11 @@ func TestNameMustMatchThePattern(t *testing.T) {
 
 // TestBodyOverSixtyLines: a skill that needs more than a screen is not a skill.
 func TestBodyOverSixtyLines(t *testing.T) {
-	lines := []string{"## Cuándo", "cuando", "## Reglas"}
+	lines := []string{"## When", "cuando", "## Rules"}
 	for len(lines) < 59 {
 		lines = append(lines, "- regla")
 	}
-	lines = append(lines, "## Nunca", "nunca")
+	lines = append(lines, "## Never", "nunca")
 	body := strings.Join(lines, "\n")
 	if got := len(strings.Split(body, "\n")); got != 61 {
 		t.Fatalf("the fixture has %d body lines, want 61", got)
@@ -186,24 +186,24 @@ func TestTodoIsRefused(t *testing.T) {
 // carries content.
 func TestEmptySectionIsRefused(t *testing.T) {
 	text := "---\nname: vacia\ndescription: Trigger: una skill con un hueco\n---\n\n" +
-		"## Cuándo\n\ncuando\n\n## Reglas\n\n## Nunca\n\nnunca\n"
+		"## When\n\ncuando\n\n## Rules\n\n## Never\n\nnunca\n"
 
 	problems := parse("vacia", text).Problems()
 
-	if !strings.Contains(joined(problems), "«Reglas»") {
-		t.Errorf("problems = %q, want the empty Reglas reason", joined(problems))
+	if !strings.Contains(joined(problems), "«Rules»") {
+		t.Errorf("problems = %q, want the empty Rules reason", joined(problems))
 	}
 }
 
 // TestMissingSectionIsRefused: absence is emptiness, and the reason names it.
 func TestMissingSectionIsRefused(t *testing.T) {
 	text := "---\nname: corta\ndescription: Trigger: una skill sin Nunca\n---\n\n" +
-		"## Cuándo\n\ncuando\n\n## Reglas\n\nregla\n"
+		"## When\n\ncuando\n\n## Rules\n\nregla\n"
 
 	problems := parse("corta", text).Problems()
 
-	if !strings.Contains(joined(problems), "«Nunca»") {
-		t.Errorf("problems = %q, want the missing Nunca reason", joined(problems))
+	if !strings.Contains(joined(problems), "«Never»") {
+		t.Errorf("problems = %q, want the missing Never reason", joined(problems))
 	}
 }
 
@@ -308,7 +308,7 @@ func TestTemplateIsAValidStartingPoint(t *testing.T) {
 	if got.Name != "ejemplo" {
 		t.Errorf("Name = %q, want ejemplo", got.Name)
 	}
-	for _, section := range []string{"## Cuándo", "## Reglas", "## Nunca"} {
+	for _, section := range []string{"## When", "## Rules", "## Never"} {
 		if !strings.Contains(text, section) {
 			t.Errorf("the template has no %q:\n%s", section, text)
 		}

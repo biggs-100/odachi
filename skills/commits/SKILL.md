@@ -1,34 +1,35 @@
 ---
 name: commits
-description: Trigger: cuando hay que decidir qué entra en un commit, cómo se parte el trabajo, o qué dice el mensaje y la descripción del PR.
+description: Trigger: when deciding what goes into a commit, how to split the work, or what the message and PR description say.
 ---
 
-## Cuándo
+## When
 
-Cuando el cambio ya está y hay que commitearlo, cuando un diff no se puede revisar
-de una sentada, o cuando el historial ya no se lee en orden.
+When the change is ready and has to be committed, when a diff cannot be reviewed
+in one sitting, or when the history no longer reads in order.
 
-## Reglas
+## Rules
 
-- Un commit es un paso del task doc y una cosa que se puede revertir sola. Si el
-  mensaje necesita un "y", son dos commits.
-- El mensaje dice qué cambió **para quien usa el proyecto**, en una línea, en
-  imperativo. El cómo y el por qué van en el cuerpo, no en el título.
-- Los tests y la documentación del cambio viajan en el mismo commit. No existe un
-  commit posterior llamado "tests" o "docs".
-- Un refactor y un cambio de comportamiento no comparten commit: si algo se rompe,
-  no sabés cuál de los dos fue.
-- Antes de commitear, la prueba de este árbol: `odachi check --run "<comando>"`. El
-  hook lo va a exigir igual, y es mejor enterarse antes.
-- Cerrá el cuerpo con `Risk: none` o `Risk: datos|seguridad|contrato|concurrencia|entrega|sin-test`.
-  Un ítem pide `odachi review` antes del commit.
-- Un PR es un conjunto de commits que se leen **en orden**. Si no se lee en veinte
-  minutos, se parte; si los commits se pisan entre sí, el orden está mal elegido.
+- A commit is one task-doc step and one thing that can be reverted alone. If the
+  message needs "and", they are two commits.
+- The message says what changed **for the person using the project**, in one
+  line, in the imperative. The how and why go in the body, not in the title.
+- The tests and documentation of the change travel in the same commit. There is
+  no later commit called "tests" or "docs".
+- A refactor and a behavior change do not share a commit: if something breaks,
+  you do not know which one it was.
+- Before committing, the proof of this tree: `odachi check --run "<command>"`.
+  The hook will demand it anyway, and it is better to find out first.
+- Close the body with `Risk: none` or
+  `Risk: data|security|contract|concurrency|delivery|no-test`. A named risk asks
+  for `odachi review` before the commit.
+- A PR is a set of commits that read **in order**. If it does not read in twenty
+  minutes, split it; if the commits step on each other, the order is wrong.
 
-## Nunca
+## Never
 
-- Commitear con tests rojos "para no perder el trabajo".
-- Mezclar formato, reordenamiento o renombres con lógica.
-- Un mensaje que no dice qué cambió: "fix", "wip", "cambios", "update".
-- Commitear el trabajo de otra persona que ya estaba en el árbol.
-- Un commit gigante "porque ya está todo junto".
+- Commit with red tests "so the work is not lost".
+- Mix formatting, reordering or renames with logic.
+- A message that does not say what changed: "fix", "wip", "changes", "update".
+- Commit somebody else's work that was already in the tree.
+- One giant commit "because it is all together".

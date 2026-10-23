@@ -1,40 +1,40 @@
 ---
 name: skill-improve
-description: Trigger: cuando una skill no se usa, creció o el agente no la carga. Audita el trigger, recorta el cuerpo y vuelve a validar el formato.
+description: Trigger: when a skill is not used, grew too long or the agent does not load it. Audit the trigger, cut the body and validate the format again.
 ---
 
-## Cuándo
+## When
 
-Cuando una skill existe pero el agente no la carga, cuando su cuerpo pasó de 60
-líneas, cuando se repite con otra, o cuando una regla dejó de ser observable.
+When a skill exists but the agent does not load it, when its body passed 60
+lines, when it repeats another skill, or when a rule stopped being observable.
 
-## Reglas
+## Rules
 
-- Empezá por el trigger: si no dice la situación del usuario, el agente no la va a
-  cargar. Reescribilo como “cuando…” y no como un tema.
-- Una regla por línea. Si una regla necesita dos, son dos reglas; si no se puede
-  violar de forma observable, no es una regla: es una intención.
-- Lo que el modelo ya sabe no va. Lo que el proyecto decidió, sí. Lo que se puede
-  verificar con un test o un glob del cerco va al test o al cerco antes que a la
-  skill.
-- Si el cuerpo pasó de 60 líneas, mové el detalle a un documento y dejá en la
-  skill el disparador y las reglas duras. No la partas en dos skills sin una razón
-  de carga distinta.
-- Si se repite con otra skill, elegí un dueño y borrá la copia. Una regla con dos
-  dueños se desincroniza.
-- Después de editar: `odachi skills --check` y `odachi skills --write` si cambió
-  el trigger o el nombre. El registro es generado, no se edita a mano.
-- Si la skill no se usa, probá el trigger antes de agregar más contenido: el
-  problema suele ser cuándo se carga, no qué dice.
-- Medí el antes y el después: líneas, reglas, y si el agente la cargó en una sesión
-  real.
-- Si la regla es de una sola vez, no es skill: va al `brief.md`, al cerco o a un
-  test.
+- Start with the trigger: if it does not say the human's situation, the agent
+  will not load it. Rewrite it as "when..." and not as a topic.
+- One rule per line. If a rule needs two, they are two rules; if it cannot be
+  violated observably, it is not a rule: it is an intention.
+- What the model already knows does not go in. What the project decided does.
+  What can be verified with a test or a fence glob goes to the test or the fence
+  before the skill.
+- If the body passed 60 lines, move the detail to a document and leave the
+  trigger and the hard rules in the skill. Do not split it into two skills
+  without a distinct loading reason.
+- If it repeats another skill, pick one owner and delete the copy. A rule with
+  two owners drifts.
+- After editing: `odachi skills --check` and `odachi skills --write` if the
+  trigger or the name changed. The registry is generated, not edited by hand.
+- If the skill is not used, test the trigger before adding more content: the
+  problem is usually when it loads, not what it says.
+- Measure before and after: lines, rules, and whether the agent loaded it in a
+  real session.
+- If the rule is one-off, it is not a skill: it goes to `brief.md`, the fence or
+  a test.
 
-## Nunca
+## Never
 
-- Agregar reglas para “por si acaso”.
-- Copiar una skill entera de otro proyecto sin adaptar el trigger.
-- Dejar una skill con dos dueños o con una sección vacía.
-- Pasar de 60 líneas y llamarlo “documentación”.
-- Tocar `SKILLS.md` a mano.
+- Add rules "just in case".
+- Copy a whole skill from another project without adapting the trigger.
+- Leave a skill with two owners or an empty section.
+- Pass 60 lines and call it "documentation".
+- Touch `SKILLS.md` by hand.

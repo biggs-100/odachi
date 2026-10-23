@@ -1,32 +1,32 @@
 ---
 name: tests
-description: Trigger: cuando hay que escribir, arreglar o decidir qué prueba un cambio. Primero la prueba que falla, después el código.
+description: Trigger: when writing, fixing or deciding what a change tests. The failing test first, the code after.
 ---
 
-## Cuándo
+## When
 
-Cuando vas a escribir código nuevo, cuando un test falla y no sabés por qué, o
-cuando alguien pregunta "¿esto está probado?".
+When you are about to write new code, when a test fails and you do not know why,
+or when someone asks "is this tested?".
 
-## Reglas
+## Rules
 
-- Primero el test, y miralo fallar por la razón correcta. Un test que nunca falló
-  no prueba nada: prueba que el código ya estaba escrito.
-- Un test por comportamiento. El nombre dice qué se rompe si falla, no qué
-  función llama.
-- Probá el borde que duele: vacío, uno, muchos, el error, el archivo a medias, el
-  CRLF, el permiso denegado. Ahí viven los defectos.
-- Cuando el mensaje que lee el humano es el contrato (un exit code, una línea en
-  español), el test fija ese mensaje.
-- Los tests de dominio no tocan disco, red ni reloj. Si los tocás, el test tarda
-  y empieza a fallar por razones ajenas al cambio.
-- Un test que falla se arregla en la causa. Si el test estaba mal escrito, se
-  dice en el reporte y se explica por qué.
+- The test first, and watch it fail for the right reason. A test that never failed
+  proves nothing: it proves the code was already written.
+- One test per behavior. The name says what breaks if it fails, not which function
+  it calls.
+- Test the edge that hurts: empty, one, many, the error, the half-written file,
+  CRLF, permission denied. That is where defects live.
+- When the message the human reads is the contract (an exit code, a line in
+  Spanish), the test pins that message.
+- Domain tests do not touch disk, network or clock. If they do, the test is slow
+  and starts failing for reasons unrelated to the change.
+- A failing test is fixed at the cause. If the test was badly written, say so in
+  the report and explain why.
 
-## Nunca
+## Never
 
-- Ajustar el test para que pase sin cambiar la causa de la falla.
-- Testear detalles privados que impiden refactorizar mañana.
-- Tests que dependen del orden de ejecución, de la hora o de la red.
-- Un `t.Skip` sin decir por qué y cuándo se destraba.
-- Decir "los tests pasan" cuando corriste solo el paquete que tocaste.
+- Adjust the test to make it pass without changing the cause of the failure.
+- Test private details that prevent refactoring tomorrow.
+- Tests that depend on execution order, time or the network.
+- A `t.Skip` without saying why and when it unblocks.
+- Say "the tests pass" when you only ran the package you touched.

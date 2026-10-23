@@ -1,40 +1,44 @@
 ---
 name: bootstrap
-description: Trigger: cuando alguien quiere arrancar un proyecto desde cero, pregunta qué es odachi, o no sabe por dónde empezar. No se carga dentro de un proyecto que ya es de odachi.
+description: Trigger: when someone wants to start a project from scratch, asks what odachi is, or does not know where to begin. Do not load it inside a project that is already odachi.
 ---
 
-odachi es un binario y cuatro artefactos de texto plano —brief, task doc, prueba y
-perfil—. El binario hace cumplir el gate; los artefactos son la memoria. La persona
-decide la visión y lo que no se negocia; el agente ejecuta.
+odachi is a binary and four plain-text artifacts -brief, task doc, proof and
+profile-. The binary enforces the gate; the artifacts are the memory. The human
+decides the vision and what is non-negotiable; the agent executes.
 
-## Cuándo
+## When
 
-Cuando alguien quiere arrancar un proyecto desde cero, pregunta qué es odachi, o no
-sabe por dónde empezar. También cuando la carpeta está vacía y hay que decidir el
-primer paso.
+When someone wants to start a project from scratch, asks what odachi is, or does
+not know where to begin. Also when the folder is empty and the first step has to
+be decided.
 
-## Reglas
+## Rules
 
-Tres comandos, en este orden. Cada uno hace una cosa y la deja hecha:
+Three commands, in this order. Each one does one thing and leaves it done:
 
-1. `odachi init` — deja el proyecto listo: el bloque de reglas que el agente lee, el
-   hook que frena un commit sin prueba, el `.gitignore` que no ensucia el árbol y las
-   skills en `.agents/skills`. Esta skill, la de arranque, ya está en `~/.agents/skills`.
-2. `odachi start` — la entrevista que escribe `brief.md` (la visión y lo que NO
-   entra), el cerco y el primer task doc. Es lo que le da rumbo al trabajo.
-3. `odachi check` — dice si está listo: brief, cerco, preguntas abiertas y prueba. Con
-   `--run "<comando>"` corre la prueba y la guarda.
+1. `odachi init` - leaves the project ready: the rules block the agent reads, the
+   hook that stops a commit without proof, the `.gitignore` that keeps the tree
+   clean and the skills in `.agents/skills`. This skill, the entry point, is
+   already in `~/.agents/skills`.
+2. `odachi start` - the interview that writes `brief.md` (the vision and what is
+   NOT included), the fence and the first task doc. It is what gives the work a
+   direction.
+3. `odachi check` - says whether it is ready: brief, fence, open questions and
+   proof. With `--run "<command>"` it runs the proof and saves it.
 
-- Un proyecto ya es de odachi si hay `brief.md`, un bloque de odachi en `AGENTS.md`, o
-  `odd/tasks/`. Si lo hay, no arranques de nuevo: leé ese bloque y seguí sus reglas.
-- Si no sabés en qué estado está, `odachi doctor` lo dice sin escribir nada.
-- Ya con el proyecto armado, el manual del día a día es la skill `drive`.
-- La visión la decide la persona. Vos ejecutás y explicás el porqué en una línea.
+- A project is already odachi if there is `brief.md`, an odachi block in
+  `AGENTS.md`, or `odd/tasks/`. If there is one, do not start over: read that
+  block and follow its rules.
+- If you do not know the state, `odachi doctor` says it without writing anything.
+- Once the project is set up, the day-to-day manual is the `drive` skill.
+- The human decides the vision. You execute and explain the why in one line.
 
-## Nunca
+## Never
 
-- Correr `odachi check`, `odachi review` o el hook en una carpeta que no es un
-  proyecto odachi: gates sobre algo ajeno no dicen nada.
-- Correr `odachi init` en un repositorio que no es de la persona: escribe en el
-  proyecto y en su home.
-- Arrancar de nuevo un proyecto que ya existe, ni reescribir un `brief.md` ajeno.
+- Run `odachi check`, `odachi review` or the hook in a folder that is not an
+  odachi project: gates on somebody else's work say nothing.
+- Run `odachi init` in a repository that is not the human's: it writes in the
+  project and in their home.
+- Start over a project that already exists, or rewrite somebody else's
+  `brief.md`.

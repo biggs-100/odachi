@@ -20,7 +20,7 @@ func bundled() []pack.Skill {
 	for _, name := range names {
 		skills = append(skills, pack.Skill{
 			Name:    name,
-			Content: []byte("---\nname: " + name + "\ndescription: Trigger: " + name + "\n---\n\n## Cuándo\n\ncuando\n"),
+			Content: []byte("---\nname: " + name + "\ndescription: Trigger: " + name + "\n---\n\n## When\n\ncuando\n"),
 		})
 	}
 	return skills

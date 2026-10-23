@@ -1,64 +1,65 @@
 ---
 name: slices
-description: Trigger: cuando hay que partir un pedido grande en pasos chicos, cuando el código ya no entra en una lectura, o hay que decidir si delegar a un subagente.
+description: Trigger: when a large request has to be split into small steps, when the code no longer fits in one read, or when deciding whether to delegate to a subagent.
 ---
 
-## Cuándo
+## When
 
-Cuando el pedido no entra en un commit, cuando hay que decir "por dónde empiezo",
-cuando el diff ya pasó las 400 líneas y nadie puede revisarlo en serio, o cuando
-entender lo que hay que tocar te llevó más de tres lecturas.
+When the request does not fit in one commit, when you have to say "where do I
+start", when the diff passed 400 lines and nobody can review it seriously, or
+when understanding what to touch took more than three reads.
 
-## Reglas
+## Rules
 
-- Cada paso deja el repositorio verde y se commitea solo. Si el paso necesita
-  "y", son dos pasos.
-- Ordená por riesgo, no por comodidad: primero lo que puede tirar abajo el
-  diseño (el contrato, los datos), después lo que se construye encima.
-- Cada paso cita el requisito que satisface (R1, R2). Un paso que no cita
-  ninguno sobra o revela un requisito que falta escribir.
-- El primer paso es el que produce evidencia más rápido: el que permite ver algo
-  funcionando antes de invertir en el resto.
-- El commit dice qué cambió para quien usa el proyecto, en una línea. Si hay que
-  explicar el "cómo", va en el cuerpo, no en el título.
-- Un paso incluye su prueba y su documentación. No hay un paso posterior llamado
-  "tests" o "docs".
+- Each step leaves the repository green and is committed alone. If the step needs
+  "and", they are two steps.
+- Order by risk, not by comfort: first what can bring the design down (the
+  contract, the data), then what is built on top.
+- Each step cites the requirement it satisfies (R1, R2). A step that cites none
+  is extra work or reveals a requirement that is missing.
+- The first step is the one that produces evidence fastest: the one that lets you
+  see something working before investing in the rest.
+- The commit says what changed for the person using the project, in one line. If
+  the "how" needs explaining, it goes in the body, not the title.
+- A step includes its test and its documentation. There is no later step called
+  "tests" or "docs".
 
-## Si delegás
+## If you delegate
 
-Dentro de un proyecto odachi, esta es la política de delegación: si otra skill
-global dice otra cosa, gana esta.
+Inside an odachi project, this is the delegation policy: if another global skill
+says otherwise, this one wins.
 
-Un subagente arranca sin caché: **no ahorra tokens totales, protege tu contexto.**
+A subagent starts without cache: **it does not save total tokens, it protects
+your context.**
 
-- Presupuesto: si entender pasó de ~3 lecturas o ~10k tokens, o la sesión viene
-  larga, la próxima unidad va a un subagente. Delegá por razón, nunca por tamaño.
-- Lo que **se lee mucho** se delega; lo que **se escribe poco** no.
-- Un **escritor** se delega solo por una razón: dos o más unidades independientes
-  con superficies disjuntas, cada una más pesada que arrancar un subagente; o
-  ~150k tokens de sesión. Nunca por tamaño, archivos ni precio; sin razón,
-  escribí vos.
-- Un escritor por unidad; en paralelo no comparten archivos y vos sos dueño de
-  git y del control final. Si delegás la escritura, delegá también la lectura que
-  la prepara.
-- El pedido lleva el **path del task doc y el paso**, no un resumen; además, las
-  **superficies de edición**, los **comandos de verificación** y los **paths
-  exactos de las skills** (`## Skills to load before work`).
-- Para escribir, usá **`odachi-worker`**; para verificar, **`odachi-verify`**
-  (read-only). El worker no commitea ni delega; el padre conserva git, el gate y
-  la visión.
-- El retorno está acotado: **≤2k tokens**, evidencia `path:line` y la lista de
-  archivos leídos; el resto se queda adentro.
-- Pedile que anote con `odachi plan` y que no diga "listo" sin `odachi check --run`.
-- Cuando vuelve, verificá su salida contra `brief.md` y el diff, **no contra su
-  resumen**: el subagente puede mentir igual que el principal.
-- **Nunca delegues la decisión de visión.** El subagente ejecuta; la persona decide.
+- Budget: if understanding took more than ~3 reads or ~10k tokens, or the session
+  is already long, the next unit goes to a subagent. Delegate for a reason, never
+  for size.
+- What is **read a lot** gets delegated; what is **written little** does not.
+- A **writer** is delegated for one reason only: two or more independent units
+  with disjoint surfaces, each heavier than starting a subagent; or ~150k tokens
+  of session. Never for size, files or price; without a reason, write it yourself.
+- One writer per unit; in parallel they do not share files and you own git and the
+  final check. If you delegate the writing, delegate the reading that prepares it.
+- The request carries the **task doc path and the step**, not a summary; also the
+  **edit surfaces**, the **verification commands** and the **exact skill paths**
+  (`## Skills to load before work`).
+- To write, use **`odachi-worker`**; to verify, **`odachi-verify`** (read-only).
+  The worker does not commit or delegate; the parent keeps git, the gate and the
+  vision.
+- The return is bounded: **=2k tokens**, `path:line` evidence and the list of files
+  read; the rest stays inside.
+- Ask it to record with `odachi plan` and not to say "done" without
+  `odachi check --run`.
+- When it returns, verify its output against `brief.md` and the diff, **not
+  against its summary**: the subagent can lie like the main agent.
+- **Never delegate the vision decision.** The subagent executes; the human decides.
 
-## Nunca
+## Never
 
-- Commitear con tests rojos "para no perder el trabajo".
-- Mezclar un refactor con un cambio de comportamiento en el mismo paso.
-- Partir por archivos o por capas en vez de por comportamiento entregable.
-- Dejar pasos de limpieza sin criterio de terminado: crecen y nunca se cierran.
-- Delegar por tamaño o cantidad de archivos, o para ahorrar tokens en algo que hacés
-  en un turno.
+- Commit with red tests "so the work is not lost".
+- Mix a refactor with a behavior change in the same step.
+- Split by files or layers instead of by deliverable behavior.
+- Leave cleanup steps without a done criterion: they grow and never close.
+- Delegate for size or file count, or to save tokens on something you do in one
+  turn.

@@ -39,7 +39,7 @@ func repoRoot(t *testing.T) string {
 
 func skillFile(name, trigger string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: " + trigger +
-		"\n---\n\n## Cuándo\n\ncuando\n\n## Reglas\n\nregla\n\n## Nunca\n\nnunca\n"
+		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"
 }
 
 // TestSkillsCheckIsGreenInThisRepo: the bundled skills and the committed
@@ -120,7 +120,7 @@ func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
 	}{
 		{
 			name:   "sin frontmatter",
-			seed:   map[string]string{"skills/suelta/SKILL.md": "## Cuándo\n\ncuando\n\n## Reglas\n\nregla\n\n## Nunca\n\nnunca\n"},
+			seed:   map[string]string{"skills/suelta/SKILL.md": "## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"},
 			reason: "frontmatter",
 		},
 		{
@@ -150,8 +150,8 @@ func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
 		},
 		{
 			name:   "sección vacía",
-			seed:   map[string]string{"skills/vacia/SKILL.md": "---\nname: vacia\ndescription: Trigger: un hueco\n---\n\n## Cuándo\n\ncuando\n\n## Reglas\n\n## Nunca\n\nnunca\n"},
-			reason: "«Reglas»",
+			seed:   map[string]string{"skills/vacia/SKILL.md": "---\nname: vacia\ndescription: Trigger: un hueco\n---\n\n## When\n\ncuando\n\n## Rules\n\n## Never\n\nnunca\n"},
+			reason: "«Rules»",
 		},
 		{
 			name:   "name repetido",
@@ -192,11 +192,11 @@ func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
 
 // longSkill builds a skill whose body has exactly bodyLines lines.
 func longSkill(name string, bodyLines int) string {
-	lines := []string{"## Cuándo", "cuando", "## Reglas"}
+	lines := []string{"## When", "cuando", "## Rules"}
 	for len(lines) < bodyLines-2 {
 		lines = append(lines, "- regla")
 	}
-	lines = append(lines, "## Nunca", "nunca")
+	lines = append(lines, "## Never", "nunca")
 	return "---\nname: " + name + "\ndescription: Trigger: una skill larga\n---\n\n" +
 		strings.Join(lines, "\n") + "\n"
 }
