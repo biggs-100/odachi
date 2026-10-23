@@ -18,28 +18,33 @@ type Brief struct {
 	Decisions []string
 }
 
-// The canonical Spanish headers, exactly as the human writes them (Contract A
-// in odd/tasks/odachi-bootstrap.md). The user reads this file, so the headers
-// are Spanish; the code that reads them is English.
+// The canonical English headers. The artifacts are English; the agent chat is
+// the human's language. The Spanish headers stay as read-only aliases so a
+// brief written before the language migration still parses.
 const (
 	headerName      = "# "
-	headerOutcome   = "## Qué tiene que existir"
-	headerDoneWhen  = "## Listo cuando"
-	headerNonGoals  = "## NO incluye (primera versión)"
-	headerDecisions = "## Decisiones tomadas"
+	headerOutcome   = "## What must exist"
+	headerDoneWhen  = "## Done when"
+	headerNonGoals  = "## Not included (first version)"
+	headerDecisions = "## Decisions taken"
+
+	headerOutcomeES   = "## Qué tiene que existir"
+	headerDoneWhenES  = "## Listo cuando"
+	headerNonGoalsES  = "## NO incluye (primera versión)"
+	headerDecisionsES = "## Decisiones tomadas"
 )
 
 // chapter names the brief part a section header feeds, if any. Unknown
 // sections return "" and their content is ignored.
 func chapter(header string) string {
 	switch header {
-	case headerOutcome:
+	case headerOutcome, headerOutcomeES:
 		return "outcome"
-	case headerDoneWhen:
+	case headerDoneWhen, headerDoneWhenES:
 		return "donewhen"
-	case headerNonGoals:
+	case headerNonGoals, headerNonGoalsES:
 		return "nongoals"
-	case headerDecisions:
+	case headerDecisions, headerDecisionsES:
 		return "decisions"
 	default:
 		return ""
@@ -94,7 +99,7 @@ func Parse(md string) Brief {
 }
 
 // Render returns the canonical brief.md: the title when the brief has a name,
-// then the four Canonical Spanish sections in the order a human reads them.
+// then the four canonical English sections in the order a human reads them.
 // Parse(Render(b)) round-trips, so Render is the only way the tool writes this
 // artifact. Empty items are skipped: an empty bullet carries nothing and Parse
 // would drop it anyway.

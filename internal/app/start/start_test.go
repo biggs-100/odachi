@@ -43,17 +43,17 @@ const outcome = "Quiero reservar turnos desde el teléfono"
 // decision per answered question.
 const expectedBrief = `# quiero-reservar-turnos
 
-## Qué tiene que existir
+## What must exist
 - ` + outcome + `
 
-## Listo cuando
+## Done when
 - Reservo un turno y aparece en la agenda
 
-## NO incluye (primera versión)
+## Not included (first version)
 - pagos
 - login
 
-## Decisiones tomadas
+## Decisions taken
 - Se usa desde el celular.
 - Datos sensibles: plata; no salen del proyecto desde el día uno.
 - Primera versión usable: esta semana.
@@ -83,15 +83,15 @@ deps  = []
 
 const expectedTask = `# quiero-reservar-turnos
 
-## Requisitos (textual, del usuario)
+## Requirements (verbatim, from the user)
 R1 · "` + outcome + `"
 
-## Listo cuando
+## Done when
 - Reservo un turno y aparece en la agenda
 
-## Pasos
+## Steps
 
-## Historial
+## History
 L1 · "` + outcome + `"
 `
 

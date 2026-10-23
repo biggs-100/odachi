@@ -1,20 +1,22 @@
-# go-tests-y
+# odachi-writes-artifacts
 
-## Qué tiene que existir
-- go-tests y skill-improve: dos skills nuevas para tests de Go y auditoria de skills
+## What must exist
+- odachi writes artifacts, docs, skills and CLI messages in English; the agent chat stays in the human's language
 
-## Listo cuando
-- odachi skills --check queda en verde con go-tests y skill-improve, cada una con Trigger, Cuando, Reglas y Nunca en 60 lineas o menos
-- odachi init instala las dos en .agents/skills y doctor cuenta 14 skills y 13 instaladas
-- go test ./... queda en verde
-- odachi check queda listo
+## Done when
+- the 14 skills and their format use When/Rules/Never and skills --check is green
+- brief, task doc, AGENTS.md and profile are generated in English; human quotes stay verbatim
+- README, CHANGELOG, ADRs and impact map are English
+- CLI messages and their tests are English
+- go test ./... and odachi check are green
 
-## NO incluye (primera versión)
-- no copiar la gramatica de ODD ni las etiquetas de GitHub de gentle-ai
-- no duplicar tests ni skill-craft: go-tests elige el patron de Go y skill-improve audita el formato y el trigger
+## Not included (first version)
+- do not translate closed task docs: they are history
+- do not change the agent chat language
+- do not change behavior, only language
 
-## Decisiones tomadas
-- Se usa desde la compu.
-- No hay datos sensibles en la primera versión.
-- Primera versión usable: esta semana.
-- Quiere aprender: como se escribe una skill que complementa otra sin repetirla.
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: how to migrate the language of a contract without breaking the tests.

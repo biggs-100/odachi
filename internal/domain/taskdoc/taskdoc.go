@@ -31,13 +31,20 @@ type TaskDoc struct {
 	History      []string
 }
 
-// The canonical Spanish headers (Contract A in odd/tasks/odachi-bootstrap.md).
+// The canonical English headers. The artifacts are English; the agent chat is
+// the human's language. The Spanish headers stay as read-only aliases so a
+// task document written before the language migration still parses.
 const (
 	headerTitle        = "# "
-	headerRequirements = "## Requisitos (textual, del usuario)"
-	headerDoneWhen     = "## Listo cuando"
-	headerSteps        = "## Pasos"
-	headerHistory      = "## Historial"
+	headerRequirements = "## Requirements (verbatim, from the user)"
+	headerDoneWhen     = "## Done when"
+	headerSteps        = "## Steps"
+	headerHistory      = "## History"
+
+	headerRequirementsES = "## Requisitos (textual, del usuario)"
+	headerDoneWhenES     = "## Listo cuando"
+	headerStepsES        = "## Pasos"
+	headerHistoryES      = "## Historial"
 )
 
 // checkboxPrefix opens a step line: "- [x] " or "- [ ] ".
@@ -68,13 +75,13 @@ var (
 // section names the task-doc part a header feeds, or "" for an unknown header.
 func section(header string) string {
 	switch header {
-	case headerRequirements:
+	case headerRequirements, headerRequirementsES:
 		return "requirements"
-	case headerDoneWhen:
+	case headerDoneWhen, headerDoneWhenES:
 		return "donewhen"
-	case headerSteps:
+	case headerSteps, headerStepsES:
 		return "steps"
-	case headerHistory:
+	case headerHistory, headerHistoryES:
 		return "history"
 	default:
 		return ""

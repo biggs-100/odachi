@@ -1,9 +1,14 @@
 [[rule]]
-not   = "no copiar la gramatica de ODD ni las etiquetas de GitHub de gentle-ai"
-paths = ["no-copiar-la-gramatica-de-odd-ni-las-etiquetas-de-github-de-gentle-ai*"]
+not   = "do not translate closed task docs: they are history"
+paths = ["do-not-translate-closed-task-docs-they-are-history*"]
 deps  = []
 
 [[rule]]
-not   = "no duplicar tests ni skill-craft: go-tests elige el patron de Go y skill-improve audita el formato y el trigger"
-paths = ["no-duplicar-tests-ni-skill-craft-go-tests-elige-el-patron-de-go-y-skill-improve-audita-el-formato-y-el-trigger*"]
+not   = "do not change the agent chat language"
+paths = ["do-not-change-the-agent-chat-language*"]
+deps  = []
+
+[[rule]]
+not   = "do not change behavior, only language"
+paths = ["do-not-change-behavior-only-language*"]
 deps  = []

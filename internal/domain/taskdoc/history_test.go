@@ -241,16 +241,16 @@ func TestCloseQuestionRejectsTheImpossible(t *testing.T) {
 func TestHistoryRoundTripsByteExactly(t *testing.T) {
 	source := `# reserva-de-turno
 
-## Requisitos (textual, del usuario)
+## Requirements (verbatim, from the user)
 R1 · "quiero reservar turnos"
 
-## Listo cuando
+## Done when
 - Reservo y aparece en la agenda (R1)
 
-## Pasos
+## Steps
 - [x] T1 · agenda del día   R1 · 4a1c9f
 
-## Historial
+## History
 L1 · "quiero reservar turnos"
 L2 · PREGUNTA P1 · "¿Los turnos se pueden cancelar?"
 L3 · VOS P1 · "No en la primera versión"

@@ -9,8 +9,8 @@ import (
 )
 
 // TestRenderUsesTheCanonicalHeaderOrder pins the exact bytes of a rendered
-// brief: the four Canonical Spanish headers from Contract A, in the order a
-// human reads them, one bullet per line, and nothing else.
+// brief: the four canonical English headers, in the order a human reads them,
+// one bullet per line, and nothing else.
 func TestRenderUsesTheCanonicalHeaderOrder(t *testing.T) {
 	b := brief.Brief{
 		Name:      "demo",
@@ -22,18 +22,18 @@ func TestRenderUsesTheCanonicalHeaderOrder(t *testing.T) {
 
 	want := `# demo
 
-## Qué tiene que existir
+## What must exist
 - algo que existe
 - otra cosa que existe
 
-## Listo cuando
+## Done when
 - lo puedo ver funcionando
 
-## NO incluye (primera versión)
+## Not included (first version)
 - pagos
 - login
 
-## Decisiones tomadas
+## Decisions taken
 - el celular primero
 `
 
@@ -79,7 +79,7 @@ func TestRenderOmitsAnEmptyTitle(t *testing.T) {
 	if strings.HasPrefix(got, "# ") {
 		t.Errorf("Render with an empty Name started with a title: %q", got)
 	}
-	if !strings.HasPrefix(got, "## Qué tiene que existir") {
+	if !strings.HasPrefix(got, "## What must exist") {
 		t.Errorf("Render with an empty Name should start with the first section, got %q", got)
 	}
 	if parsed := brief.Parse(got); parsed.Name != "" {
@@ -93,10 +93,10 @@ func TestRenderOfAnEmptyBriefRoundTrips(t *testing.T) {
 	got := brief.Render(brief.Brief{})
 
 	for _, header := range []string{
-		"## Qué tiene que existir",
-		"## Listo cuando",
-		"## NO incluye (primera versión)",
-		"## Decisiones tomadas",
+		"## What must exist",
+		"## Done when",
+		"## Not included (first version)",
+		"## Decisions taken",
 	} {
 		if !strings.Contains(got, header) {
 			t.Errorf("Render(Brief{}) is missing %q:\n%s", header, got)
@@ -105,5 +105,29 @@ func TestRenderOfAnEmptyBriefRoundTrips(t *testing.T) {
 
 	if parsed := brief.Parse(got); !reflect.DeepEqual(parsed, brief.Brief{}) {
 		t.Errorf("Parse(Render(Brief{})) = %+v, want the zero Brief", parsed)
+	}
+}
+
+// TestSpanishHeadersStillParse: the language migration changed what Render
+// writes, not what Parse accepts. A brief written before the migration stays
+// readable.
+func TestSpanishHeadersStillParse(t *testing.T) {
+	got := brief.Parse(`# viejo
+
+## Qué tiene que existir
+- algo
+
+## Listo cuando
+- listo
+
+## NO incluye (primera versión)
+- nada
+
+## Decisiones tomadas
+- decidido
+`)
+
+	if len(got.Outcome) != 1 || len(got.DoneWhen) != 1 || len(got.NonGoals) != 1 || len(got.Decisions) != 1 {
+		t.Errorf("Parse(old brief) = %+v, want all four sections", got)
 	}
 }
