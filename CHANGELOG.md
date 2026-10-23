@@ -5,16 +5,17 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## v0.11.2 · unreleased
+## v0.11.2 · 2026-10-23
 
 The version that adds a method for attacking a backlog, cutting delivery into reviewable PRs, writing Go tests, auditing skills, and speaking English in everything that is not chat.
 
 - **English artifacts, docs and CLI**: the brief, task doc, `AGENTS.md` block,
   skills and CLI messages are English; the agent chat stays in the human's
   language. The old Spanish headers remain readable as aliases, so closed task
-  docs and old briefs still parse. This is a breaking change for custom skills
-  and scripts that pinned the old `Cuándo / Reglas / Nunca` sections or the
-  Spanish CLI messages.
+  docs and old briefs still parse, and a pre-commit hook installed before the
+  migration is still odachi's: `init` backs it up and rewrites it in place.
+  This is a breaking change for custom skills and scripts that pinned the old
+  `Cuándo / Reglas / Nunca` sections or the Spanish CLI messages.
 - **`triage`**: classifies each report by root cause, groups the ones that share a
   cause into one step, reproduces before fixing, and closes with the test that
   fails. It does not copy GitHub labels or the ODD grammar: it uses `odachi ask`,
