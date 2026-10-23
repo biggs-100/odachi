@@ -4,6 +4,6 @@ paths = ["no-copiar-la-gramatica-de-odd-ni-las-etiquetas-de-github-de-gentle-ai*
 deps  = []
 
 [[rule]]
-not   = "no agregar un flag ni un verbo nuevo: son skills, no binario"
-paths = ["no-agregar-un-flag-ni-un-verbo-nuevo-son-skills-no-binario*"]
+not   = "no duplicar tests ni skill-craft: go-tests elige el patron de Go y skill-improve audita el formato y el trigger"
+paths = ["no-duplicar-tests-ni-skill-craft-go-tests-elige-el-patron-de-go-y-skill-improve-audita-el-formato-y-el-trigger*"]
 deps  = []

@@ -81,8 +81,8 @@ reescribirlos: conservan bytes y fecha, y una segunda corrida no hace nada.
 
 ## Las skills, en tu agente
 
-Son doce skills, y `odachi init` ya deja once en el proyecto y una en tu home.
-`odachi pack` copia las doce al lugar donde tu agente las busca, para todo lo
+Son catorce skills, y `odachi init` ya deja trece en el proyecto y una en tu home.
+`odachi pack` copia las catorce al lugar donde tu agente las busca, para todo lo
 que `init` no hace: otro cliente, otra carpeta, otro scope. Cada una se dispara
 con una situación, no con un comando:
 
@@ -93,9 +93,11 @@ con una situación, no con un comando:
 | `commits` | qué entra en un commit, cómo se parte, qué dice el mensaje |
 | `data` | guardar, migrar, leer o borrar datos: dueño, vida y respaldo |
 | `drive` | trabajás dentro de un proyecto odachi: qué verbo va en cada momento y cómo cerrar una feature |
+| `go-tests` | tests de Go, golden files o flujos de Bubbletea |
 | `pull-request` | un cambio va a PR o el diff pasa las 400 líneas |
 | `ship` | algo está listo para que otra persona lo use |
 | `skill-craft` | escribir una skill nueva o arreglar una que no se usa |
+| `skill-improve` | una skill no se usa, creció o el agente no la carga |
 | `slices` | partir un pedido grande, o cuando el código ya no entra en una lectura |
 | `tests` | qué prueba un cambio: primero la que falla, después el código |
 | `triage` | varios bugs, un backlog o un reporte que se repite |
@@ -103,14 +105,14 @@ con una situación, no con un comando:
 
 `bootstrap` es la de entrada, y es la única que vive en `~/.agents/skills` y no
 en el proyecto: enseña a arrancar en una carpeta vacía, y en una carpeta vacía
-todavía no hay proyecto donde ponerla. Las otras once son el oficio que un
+todavía no hay proyecto donde ponerla. Las otras trece son el oficio que un
 proyecto lleva, y `init` las copia a `./.agents/skills`. Esa carpeta es la
 convención que pide el estándar de Agent Skills, así que la encuentran los
 clientes que odachi no conoce; también viaja con el repositorio, y por eso el
 contenido de un repo ajeno es input no confiable. `bootstrap` solo explica el
 flujo: no ejecuta nada.
 
-`odachi init --skills home` deja las doce en `~/.agents/skills` y no escribe copia
+`odachi init --skills home` deja las catorce en `~/.agents/skills` y no escribe copia
 en el proyecto; es para una sola copia por máquina. El default sigue siendo
 `project`, porque el proyecto versiona el oficio y el catálogo queda más chico.
 
@@ -168,7 +170,7 @@ odachi check   # te dice si falta algo y cómo destrabarlo
 
 `odachi init` deja el proyecto listo en un paso: la historia de git si faltaba,
 el bloque de reglas que el agente lee, el agente del proyecto (se elige con Tab),
-el bloque de `.gitignore`, el hook de pre-commit, las once skills en
+el bloque de `.gitignore`, el hook de pre-commit, las trece skills en
 `./.agents/skills`, la skill de arranque en `~/.agents/skills` y la voz del perfil
 en el bloque de `AGENTS.md`. La puerta del home —el agente que aparece en
 cualquier carpeta— es opt-in: la instala `odachi init --global`, y un init sin el
@@ -181,7 +183,7 @@ cliente que no elegís no se borran: sólo dejan de escribirse. Sin archivo, el
 default sigue siendo los dos.
 
 Abrí el proyecto con OpenCode y ya está: lee `.agents/skills` como directorio
-externo además del propio, así que ve las once sin `pack`. `pack` queda para
+externo además del propio, así que ve las trece sin `pack`. `pack` queda para
 llevar las skills a la carpeta nativa de otro cliente, o a donde vos digas.
 
 ## La ceremonia y la voz

@@ -7,7 +7,7 @@ de quien llega mañana.
 
 ## v0.11.2 · sin publicar
 
-La versión que agrega el método para atacar un backlog y para cortar la entrega en PRs revisables.
+La versión que agrega método para atacar un backlog, cortar la entrega en PRs revisables, escribir tests de Go y auditar skills.
 
 - **`triage`**: clasifica cada reporte por raíz, junta los que comparten causa en
   un solo paso, reproduce antes de arreglar y cierra con la prueba que falla. No
@@ -17,6 +17,12 @@ La versión que agrega el método para atacar un backlog y para cortar la entreg
   estrategia de cadena (stacked o feature branch chain), issue aprobado o `Refs`,
   y `odachi check --run` antes del review. El slug es `pull-request` porque el
   formato de skills exige nombres de tres caracteres o más.
+- **`go-tests`**: complementa `tests` con el patrón de Go: tabla con `t.Run`,
+  `t.TempDir`, `testing.Short`, `teatest`, golden files, mocks en el borde y el
+  paquete focal antes de la suite. No repite la disciplina de `tests`.
+- **`skill-improve`**: audita una skill que no se usa o creció. Empieza por el
+  trigger, exige reglas observables, corta en 60 líneas, deja un dueño por regla
+  y manda a `skills --check`/`--write`. El formato lo sigue validando el binario.
 
 ## v0.11.1 · 2026-10-23
 
