@@ -514,7 +514,7 @@ func TestNoSkillsIsClean(t *testing.T) {
 func TestCheckNineAnswersBothSkillFacts(t *testing.T) {
 	files := configured().
 		put(".agents/skills/drive/SKILL.md", "x").
-		put(".agents/skills/acceptance/SKILL.md", "x").
+		put(".agents/skills/acceptance/SKILL.md", skill.Template("acceptance")).
 		// A file is not a skill: only a directory with a SKILL.md in it counts.
 		put(".agents/skills/README.md", "no es una skill\n")
 
@@ -527,6 +527,7 @@ func TestCheckNineAnswersBothSkillFacts(t *testing.T) {
 	for _, want := range []string{
 		"skills/: 1 skill, " + skill.RegistryFile + " al día",
 		".agents/skills: 2 instaladas",
+		"coinciden con skills/",
 	} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("check 9 must say %q, got %q", want, got.Detail)
@@ -534,6 +535,25 @@ func TestCheckNineAnswersBothSkillFacts(t *testing.T) {
 	}
 	if strings.Contains(got.Detail, "README") {
 		t.Fatalf("a file is not a skill and must not count: %q", got.Detail)
+	}
+}
+
+// TestInstalledSkillThatDoesNotMatchTheSourceIsAWarning: the agent reads the
+// installed copy, so a copy that differs from skills/ is the drift the two
+// directories create. It is a warning with the command that refreshes it.
+func TestInstalledSkillThatDoesNotMatchTheSourceIsAWarning(t *testing.T) {
+	files := configured().put(".agents/skills/acceptance/SKILL.md", "viejo\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckSkills)
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a drifted installed skill must be a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{"no coinciden con skills/", "acceptance", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("check 9 must say %q: %q", want, got.Detail)
+		}
 	}
 }
 

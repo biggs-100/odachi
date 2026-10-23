@@ -1,11 +1,11 @@
-# cuando-check-run
+# doctor-compara-el
 
 ## Qué tiene que existir
-- cuando check --run se queda sin tiempo, el siguiente comando sube --timeout en vez de repetir el mismo
+- doctor compara el contenido de .agents/skills con skills/ y avisa si una copia instalada no coincide
 
 ## Listo cuando
-- un timeout de 7s sugiere --timeout 14
-- un timeout de 120s sugiere --timeout 240
+- con una skill editada en .agents/skills, doctor la nombra y manda a odachi init
+- con las copias iguales, doctor dice que coinciden
 - go test ./... queda en verde
 - odachi check queda listo
 
@@ -15,4 +15,4 @@
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: mensajes de error.
+- Quiere aprender: doctor y skills.

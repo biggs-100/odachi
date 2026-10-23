@@ -390,14 +390,20 @@ func (r *runner) skills() domaindoctor.Check {
 		return r.unreadable(domaindoctor.CheckSkills, skillsDir, err)
 	}
 
-	installed, err := r.installedSkills()
+	installed, compared, drift, err := r.installedSkills()
 	if err != nil {
 		return r.unreadable(domaindoctor.CheckSkills, installedSkillsDir, err)
 	}
 
 	detail := registered + "; " + installedSkillsDir + ": " + installed
-	if fix != "" {
+	switch {
+	case fix != "":
 		return domaindoctor.Broken(domaindoctor.CheckSkills, detail, fix)
+	case len(drift) > 0:
+		return domaindoctor.Warning(domaindoctor.CheckSkills, detail+
+			"; no coinciden con "+skillsDir+"/: "+strings.Join(drift, ", ")+"; corré odachi init")
+	case compared > 0:
+		detail += "; coinciden con " + skillsDir + "/"
 	}
 	return domaindoctor.OK(domaindoctor.CheckSkills, detail)
 }
@@ -434,21 +440,27 @@ func (r *runner) skillRegistry() (detail, fix string, err error) {
 }
 
 // installedSkills counts the directories that hold a SKILL.md under the folder
-// init installs into. A directory without a SKILL.md is not a skill, which is the
+// init installs into, and compares every one that also exists in the project's
+// source `skills/`. A directory without a SKILL.md is not a skill, which is the
 // same rule `odachi skills` applies, and a stray file is not counted either.
-func (r *runner) installedSkills() (string, error) {
+//
+// compared is how many installed skills had a source to compare against; drift
+// names the ones whose bytes differ. A project without `skills/` has no source:
+// it gets the count and no comparison, because the installed copy is the only
+// copy it has.
+func (r *runner) installedSkills() (detail string, compared int, drift []string, err error) {
 	found, err := r.isDir(installedSkillsDir)
 	if err != nil {
-		return "", err
+		return "", 0, nil, err
 	}
 	if !found {
-		return "ninguna", nil
+		return "ninguna", 0, nil, nil
 	}
 
 	dirPath := filepath.Join(r.opts.Dir, filepath.FromSlash(installedSkillsDir))
 	names, err := r.files.List(dirPath)
 	if err != nil {
-		return "", err
+		return "", 0, nil, err
 	}
 
 	installed := 0
@@ -456,23 +468,49 @@ func (r *runner) installedSkills() (string, error) {
 		entry := filepath.Join(dirPath, name)
 		isDir, err := r.files.IsDir(entry)
 		if err != nil {
-			return "", err
+			return "", 0, nil, err
 		}
 		if !isDir {
 			continue
 		}
-		has, err := r.files.Exists(filepath.Join(entry, skillFile))
+
+		installedPath := filepath.Join(entry, skillFile)
+		has, err := r.files.Exists(installedPath)
 		if err != nil {
-			return "", err
+			return "", 0, nil, err
 		}
-		if has {
-			installed++
+		if !has {
+			continue
+		}
+		installed++
+
+		sourcePath := filepath.Join(r.opts.Dir, skillsDir, name, skillFile)
+		sourceExists, err := r.files.Exists(sourcePath)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		if !sourceExists {
+			continue
+		}
+		compared++
+
+		installedData, err := r.files.Read(installedPath)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		sourceData, err := r.files.Read(sourcePath)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		if string(installedData) != string(sourceData) {
+			drift = append(drift, name)
 		}
 	}
+
 	if installed == 0 {
-		return "ninguna", nil
+		return "ninguna", 0, nil, nil
 	}
-	return count(installed, "instalada", "instaladas"), nil
+	return count(installed, "instalada", "instaladas"), compared, drift, nil
 }
 
 // noProfileFile is the second half of check 11 when there is nothing to compare:
