@@ -238,7 +238,7 @@ func TestPlanLeavesTheOtherArtifactsAlone(t *testing.T) {
 			t.Errorf("%s changed:\nbefore %q\nafter  %q", name, before[name], after[name])
 		}
 	}
-	if backups := backupFiles(t, dir); len(backups) != 1 || !strings.HasPrefix(backups[0], taskPath) {
+	if backups := backupFiles(t, dir); len(backups) != 1 || !strings.Contains(backups[0], taskPath) {
 		t.Errorf("backups = %v, want only one for %s", backups, taskPath)
 	}
 }

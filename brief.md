@@ -1,12 +1,12 @@
-# review-proporcional-al
+# los-backups-de
 
 ## Qué tiene que existir
-- review proporcional al riesgo y con modo de proyecto: pasivo no pide juicio, el humano prende o apaga, y el riesgo mira contratos y concurrencia
+- los backups de odachi viven en .odachi/backups y undo los lee junto con los viejos, sin perder la posibilidad de deshacer
 
 ## Listo cuando
-- check --require-review no pide veredicto para un cambio solo de docs
-- review mode on|off|status persiste en .odachi/review.toml y check lo respeta; los flags lo override
-- Classify marca full para contratos, concurrencia y entrega, no solo auth y pagos
+- antes de reescribir un archivo del proyecto, el backup va a .odachi/backups con su ruta relativa
+- undo descubre y restaura backups del store y de los viejos al lado
+- odachi undo --collect mueve los backups viejos al store; una segunda corrida no hace nada
 - go test ./... queda en verde
 - odachi check queda listo
 
@@ -16,4 +16,4 @@
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: review y riesgo.
+- Quiere aprender: undo y diseno de stores.

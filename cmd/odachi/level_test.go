@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -84,7 +85,7 @@ func TestLevelToAppliesTheProfileAndKeepsTheOldFile(t *testing.T) {
 
 	var backups []string
 	for path := range files {
-		if strings.HasPrefix(path, ".odachi/profile.toml.bak-") {
+		if strings.HasPrefix(filepath.Base(path), "profile.toml.bak-") {
 			backups = append(backups, path)
 		}
 	}

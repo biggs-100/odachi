@@ -1,10 +1,11 @@
 // Package undo decides which backup of which artifact `odachi undo` restores.
 //
-// odachi writes four kinds of artifact and keeps a backup next to each one
-// before rewriting it. Undoing is putting one of those backups back — never a
-// commit, never a file of somebody else's: the code belongs to the human and to
-// git, and a tool that starts choosing commits to revert becomes exactly what
-// this one criticises.
+// odachi writes four kinds of artifact and keeps a backup before rewriting it.
+// New backups live in the project store, `.odachi/backups`; the old ones beside
+// the artifact are still read so a project can migrate at its own pace. Undoing
+// is putting one of those backups back — never a commit, never a file of
+// somebody else's: the code belongs to the human and to git, and a tool that
+// starts choosing commits to revert becomes exactly what this one criticises.
 //
 // The domain answers "which artifact" and "which backup, out of which set". The
 // app layer is the one that touches the disk. Stdlib only, like the rest of the
@@ -21,6 +22,11 @@ import (
 // backupMark separates an artifact from the digest of the bytes it held when
 // the backup was taken. fsx.Backup writes exactly this shape.
 const backupMark = ".bak-"
+
+// BackupDir is the project store for new backups, relative to the project root.
+// A backup keeps its artifact's path inside it, so one directory holds every
+// version without a second naming scheme.
+const BackupDir = ".odachi/backups"
 
 // digestLen is how many hex characters fsx.Backup keeps of the content digest.
 const digestLen = 8
@@ -66,6 +72,13 @@ func (k Kind) Dir() string {
 	default:
 		return "."
 	}
+}
+
+// BackupDir is where this kind's backups live in the project store. The
+// artifact's own directory is preserved underneath, so `.odachi/profile.toml`
+// keeps its path and a task keeps its place in `odd/tasks`.
+func (k Kind) BackupDir() string {
+	return path.Join(BackupDir, k.Dir())
 }
 
 // Target is the artifact as a human reads it in a project: the list a blocked

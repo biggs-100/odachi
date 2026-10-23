@@ -28,6 +28,23 @@ func TestTheAllowListIsExactlyFour(t *testing.T) {
 	}
 }
 
+// TestBackupDirPreservesTheArtifactPath: the store is one directory, but each
+// kind keeps its place inside it so a backup can never collide with a name from
+// another directory.
+func TestBackupDirPreservesTheArtifactPath(t *testing.T) {
+	cases := map[undo.Kind]string{
+		undo.Brief:   ".odachi/backups",
+		undo.Profile: ".odachi/backups/.odachi",
+		undo.Fence:   ".odachi/backups/.odachi",
+		undo.Task:    ".odachi/backups/odd/tasks",
+	}
+	for kind, want := range cases {
+		if got := kind.BackupDir(); got != want {
+			t.Errorf("%s.BackupDir() = %q, want %q", kind, got, want)
+		}
+	}
+}
+
 // TestParseKindReadsTheFlag: --file takes the short name, and a miss is a miss
 // so the caller can list the four.
 func TestParseKindReadsTheFlag(t *testing.T) {

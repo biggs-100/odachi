@@ -47,6 +47,11 @@ func backupName(path, content string) string {
 	return path + ".bak-" + digest(content)
 }
 
+// storeName is where a new backup of rel lives under the project store.
+func storeName(rel, content string) string {
+	return backupName(filepath.ToSlash(filepath.Join(".odachi", "backups", filepath.FromSlash(rel))), content)
+}
+
 // fakeFiles is the disk in memory with a ledger: a test asserts what was read,
 // backed up and written, and in which order.
 type fakeFiles struct {
@@ -121,6 +126,34 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 	return nil
 }
 
+func (f *fakeFiles) Remove(path string) error {
+	f.order = append(f.order, "remove "+path)
+	f.touched = append(f.touched, path)
+	if _, ok := f.files[path]; !ok {
+		return fmt.Errorf("archivo inexistente: %s", path)
+	}
+	delete(f.files, path)
+	delete(f.mod, path)
+	return nil
+}
+
+func (f *fakeFiles) Rename(from, to string) error {
+	f.order = append(f.order, "rename "+from+" -> "+to)
+	f.touched = append(f.touched, from, to)
+	data, ok := f.files[from]
+	if !ok {
+		return fmt.Errorf("archivo inexistente: %s", from)
+	}
+	if _, exists := f.files[to]; exists {
+		return fmt.Errorf("ya existe: %s", to)
+	}
+	f.files[to] = append([]byte(nil), data...)
+	f.mod[to] = f.mod[from]
+	delete(f.files, from)
+	delete(f.mod, from)
+	return nil
+}
+
 func (f *fakeFiles) Backup(path string) (string, error) {
 	data, ok := f.files[path]
 	if !ok {
@@ -180,7 +213,12 @@ func (f *fakeFiles) assertOnlyTheFourArtifacts(t *testing.T) {
 			}
 		}
 		// Listing the directories that hold the artifacts is how the backups
-		// are found; the directories themselves are not artifacts.
+		// are found; the directories themselves are not artifacts. The store
+		// is undo's own directory now, and its subdirectories mirror the
+		// artifact paths.
+		if rel == ".odachi/backups" || strings.HasPrefix(rel, ".odachi/backups/") {
+			return true
+		}
 		return rel == "." || rel == ".odachi" || rel == "odd/tasks"
 	}
 	for _, path := range f.touched {
@@ -357,6 +395,138 @@ func TestListFileFiltersToOneArtifact(t *testing.T) {
 	}
 	if want := []string{profileRel + " · 1 backup · último 2026-10-22 08:15"}; !slices.Equal(res.Lines, want) {
 		t.Errorf("Lines = %v, want %v", res.Lines, want)
+	}
+}
+
+// TestStoreBackupIsRestored: the store is the new home, but a backup is still a
+// backup. Undo reads it and names the path it used.
+func TestStoreBackupIsRestored(t *testing.T) {
+	files := newFakeFiles()
+	files.put(briefRel, "actual", at(21, 23, 0))
+	old := storeName(briefRel, "viejo")
+	files.put(old, "viejo", at(21, 20, 31))
+
+	res := undo.Run(undo.Options{Dir: dir}, files, nil)
+
+	if res.Code != undo.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
+	}
+	if got := files.content(t, briefRel); got != "viejo" {
+		t.Errorf("%s = %q, want the store backup", briefRel, got)
+	}
+	if !strings.Contains(res.Message, old) {
+		t.Errorf("message = %q, want the store path %s", res.Message, old)
+	}
+}
+
+// TestListReadsLegacyAndStoreBackups: a project halfway through the migration
+// sees both, and the newest wins regardless of where it lives.
+func TestListReadsLegacyAndStoreBackups(t *testing.T) {
+	files := newFakeFiles()
+	files.put(briefRel+".bak-"+digest("brief viejo"), "brief viejo", at(20, 10, 0))
+	files.put(storeName(profileRel, "perfil viejo"), "perfil viejo", at(22, 8, 15))
+
+	res := undo.Run(undo.Options{Dir: dir, List: true}, files, nil)
+
+	if res.Code != undo.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
+	}
+	want := []string{
+		profileRel + " · 1 backup · último 2026-10-22 08:15",
+		briefRel + " · 1 backup · último 2026-10-20 10:00",
+	}
+	if !slices.Equal(res.Lines, want) {
+		t.Errorf("Lines = %v, want %v", res.Lines, want)
+	}
+}
+
+// TestCollectMovesLegacyBackupsIntoTheStore: the migration is a move, not a
+// copy: the bytes and the date survive, and a second run has nothing to do.
+func TestCollectMovesLegacyBackupsIntoTheStore(t *testing.T) {
+	const (
+		oldBrief = "brief viejo"
+		oldTask  = "task viejo"
+	)
+	files := newFakeFiles()
+	files.put(briefRel, "brief actual", at(21, 23, 0))
+	files.put(briefRel+".bak-"+digest(oldBrief), oldBrief, at(20, 10, 0))
+	files.put(taskRel, "task actual", at(21, 23, 0))
+	files.put(taskRel+".bak-"+digest(oldTask), oldTask, at(20, 11, 0))
+
+	res := undo.Run(undo.Options{Dir: dir, Collect: true}, files, nil)
+
+	if res.Code != undo.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
+	}
+	if !strings.Contains(res.Message, "moví 2 backups") {
+		t.Errorf("message = %q, want the count", res.Message)
+	}
+
+	briefStore := storeName(briefRel, oldBrief)
+	taskStore := storeName(taskRel, oldTask)
+	if got := files.content(t, briefStore); got != oldBrief {
+		t.Errorf("%s = %q, want %q", briefStore, got, oldBrief)
+	}
+	if got := files.content(t, taskStore); got != oldTask {
+		t.Errorf("%s = %q, want %q", taskStore, got, oldTask)
+	}
+	if !files.mod[filepath.Join(dir, filepath.FromSlash(briefStore))].Equal(at(20, 10, 0)) {
+		t.Errorf("the migration lost the backup's date")
+	}
+	if _, ok := files.files[filepath.Join(dir, filepath.FromSlash(briefRel+".bak-"+digest(oldBrief)))]; ok {
+		t.Errorf("the legacy brief backup still exists after collect")
+	}
+
+	second := undo.Run(undo.Options{Dir: dir, Collect: true}, files, nil)
+	if second.Code != undo.CodeOK {
+		t.Fatalf("second collect: Code = %d (message: %s)", second.Code, second.Message)
+	}
+	if !strings.Contains(second.Message, "no hay backups viejos") {
+		t.Errorf("second collect message = %q, want a no-op", second.Message)
+	}
+	if len(files.wrote) != 0 || len(files.backups) != 0 {
+		t.Errorf("collect wrote an artifact or made a backup: wrote=%v backups=%v", files.wrote, files.backups)
+	}
+}
+
+// TestCollectNeverOverwritesADifferentBackup: the target name is content
+// addressed, so a different file there means the store is not ours to trust.
+func TestCollectNeverOverwritesADifferentBackup(t *testing.T) {
+	const old = "viejo"
+	legacy := briefRel + ".bak-" + digest(old)
+	target := storeName(briefRel, old)
+
+	files := newFakeFiles()
+	files.put(briefRel, "actual", at(21, 23, 0))
+	files.put(legacy, old, at(20, 10, 0))
+	files.put(target, "otro contenido", at(20, 9, 0))
+
+	res := undo.Run(undo.Options{Dir: dir, Collect: true}, files, nil)
+
+	if res.Code != undo.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
+	}
+	if !strings.Contains(res.Message, "no piso un backup") {
+		t.Errorf("message = %q, want the refusal", res.Message)
+	}
+	for _, rel := range []string{legacy, target} {
+		if _, ok := files.files[filepath.Join(dir, filepath.FromSlash(rel))]; !ok {
+			t.Errorf("%s disappeared after a refused collect", rel)
+		}
+	}
+}
+
+// TestCollectRefusesTheOtherForms: it moves everything; asking for one artifact
+// or for a listing at the same time is a different question.
+func TestCollectRefusesTheOtherForms(t *testing.T) {
+	for _, opts := range []undo.Options{
+		{Dir: dir, Collect: true, List: true},
+		{Dir: dir, Collect: true, File: "brief"},
+	} {
+		res := undo.Run(opts, newFakeFiles(), nil)
+		if res.Code != undo.CodeBlocked {
+			t.Errorf("Run(%+v).Code = %d, want %d", opts, res.Code, undo.CodeBlocked)
+		}
 	}
 }
 

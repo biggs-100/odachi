@@ -503,6 +503,7 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.BoolVar(&opts.List, "list", false, "qué se puede deshacer, con fecha")
+	flags.BoolVar(&opts.Collect, "collect", false, "mueve los backups viejos a .odachi/backups")
 	flags.StringVar(&opts.File, "file", "", "solo ese artefacto: brief | profile | fence | task")
 	flags.BoolVar(&asJSON, "json", false, "salida para máquinas")
 
@@ -1084,7 +1085,7 @@ uso:
   odachi plan --done T2 [--commit abc1234]
   odachi level [--to <perfil>]
   odachi summary
-  odachi undo [--list] [--file brief]
+  odachi undo [--list | --collect] [--file brief]
   odachi check [flags]
   odachi review [--exec "<comando>" | --attach <archivo> | --show | --refute <veredicto>]
   odachi review [--lens <lente>]
@@ -1131,6 +1132,12 @@ flags de plan:
   --req R<n>      requisito al que se ata el paso nuevo
   --done T<n>     paso que se marca hecho
   --commit sha    commit que cerró el paso (acompaña a --done)
+  --json          salida para máquinas
+
+flags de undo:
+  --list          qué se puede deshacer, con fecha
+  --collect       mueve los backups viejos a .odachi/backups; no borra versiones
+  --file s        solo ese artefacto: brief | profile | fence | task
   --json          salida para máquinas
 
 flags de skills:

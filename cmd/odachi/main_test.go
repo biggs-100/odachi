@@ -193,11 +193,17 @@ func TestForceBacksUpTheBriefAndKeepsItsBytes(t *testing.T) {
 	}
 	second := tree(t, dir)
 
-	backup := findOne(t, second, "brief.md.bak-", "")
+	backup := ""
+	for path := range second {
+		if strings.HasPrefix(filepath.Base(path), "brief.md.bak-") {
+			backup = path
+			break
+		}
+	}
 	if backup == "" {
 		t.Fatalf("brief.md was not backed up: %v", second)
 	}
-	if len(backup) != len("brief.md.bak-")+8 {
+	if len(filepath.Base(backup)) != len("brief.md.bak-")+8 {
 		t.Errorf("backup name %q is not brief.md.bak-<8 hex>", backup)
 	}
 	if second["brief.md"] != firstBrief {

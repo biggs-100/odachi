@@ -1,5 +1,7 @@
 // Package fsx is the filesystem edge: content digests, atomic replacement of a
-// file the human owns, and backups before the agent rewrites anything.
+// file the human owns, and backups before the agent rewrites anything. Project
+// backups go under `.odachi/backups`; a file outside a project keeps its backup
+// beside it.
 package fsx
 
 import (
@@ -9,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Digest returns the SHA-256 of data as lowercase hex. It identifies content,
@@ -67,7 +70,40 @@ func WriteAtomic(path string, data []byte, perm fs.FileMode) error {
 // the new path. The digest names the bytes that were saved, so two backups of
 // the same content share a name and a backup can never be mistaken for a
 // different version. The original file is only read, never modified.
+//
+// It is the low-level shape: the backup lands beside the file. Project backups
+// go through BackupIn instead, so they do not clutter the project.
 func Backup(path string) (string, error) {
+	return backupTo(path, path)
+}
+
+// BackupIn copies path to root/.odachi/backups, preserving its path relative to
+// root. The store is the project's; a file outside root has no project to
+// belong to, so it falls back to the backup beside it instead of refusing to
+// save a version.
+func BackupIn(root, path string) (string, error) {
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return "", fmt.Errorf("fsx: no se pudo resolver el proyecto %s: %w", root, err)
+	}
+	pathAbs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("fsx: no se pudo resolver %s: %w", path, err)
+	}
+
+	rel, err := filepath.Rel(rootAbs, pathAbs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return Backup(path)
+	}
+
+	target := filepath.Join(rootAbs, ".odachi", "backups", rel)
+	return backupTo(path, target)
+}
+
+// backupTo writes the bytes of path under base, with the content digest in the
+// name. It is the one place that reads, names and writes a backup; the two
+// public shapes only decide base.
+func backupTo(path, base string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("fsx: no se pudo leer %s para respaldarlo: %w", path, err)
@@ -78,7 +114,10 @@ func Backup(path string) (string, error) {
 		return "", fmt.Errorf("fsx: no se pudo leer los permisos de %s: %w", path, err)
 	}
 
-	backup := path + ".bak-" + Digest(data)[:8]
+	backup := base + ".bak-" + Digest(data)[:8]
+	if err := os.MkdirAll(filepath.Dir(backup), 0o755); err != nil {
+		return "", fmt.Errorf("fsx: no se pudo crear el directorio de %s: %w", backup, err)
+	}
 	if err := WriteAtomic(backup, data, info.Mode().Perm()); err != nil {
 		return "", err
 	}

@@ -41,7 +41,9 @@ func backupsOf(t *testing.T, dir, rel string) []string {
 	prefix := rel + ".bak-"
 	var found []string
 	for path := range tree(t, dir) {
-		if strings.HasPrefix(path, prefix) {
+		// New backups keep the artifact name inside .odachi/backups; old ones
+		// are still beside the artifact. Both are this artifact's backups.
+		if strings.HasPrefix(filepath.Base(path), prefix) {
 			found = append(found, path)
 		}
 	}
@@ -173,6 +175,38 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 		if !strings.Contains(stderr, want) {
 			t.Errorf("stderr %q does not name %q", stderr, want)
 		}
+	}
+}
+
+// TestUndoCollectMovesLegacyBackups: the migration command is the bridge for a
+// project that already has backups beside its artifacts.
+func TestUndoCollectMovesLegacyBackups(t *testing.T) {
+	dir, _ := backupProject(t)
+	const legacy = "brief legado\n"
+	legacyRel := briefRel + ".bak-00000000"
+	storeRel := ".odachi/backups/" + legacyRel
+	writeRel(t, dir, legacyRel, legacy)
+
+	code, stdout, stderr := runDir(t, dir, []string{"undo", "--collect"}, "")
+	if code != 0 {
+		t.Fatalf("undo --collect: exit %d, stderr=%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "moví 1 backups") {
+		t.Errorf("stdout = %q, want the count", stdout)
+	}
+	if got := readRel(t, dir, storeRel); got != legacy {
+		t.Errorf("%s = %q, want the legacy bytes", storeRel, got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(legacyRel))); !os.IsNotExist(err) {
+		t.Errorf("the legacy backup still exists after collect: %v", err)
+	}
+
+	code, stdout, stderr = runDir(t, dir, []string{"undo", "--collect"}, "")
+	if code != 0 {
+		t.Fatalf("second undo --collect: exit %d, stderr=%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "no hay backups viejos") {
+		t.Errorf("second collect = %q, want a no-op", stdout)
 	}
 }
 

@@ -68,8 +68,45 @@ func (osFiles) List(dir string) ([]string, error) {
 	return names, nil
 }
 
+// Backup keeps a version before a rewrite. When path belongs to a project, the
+// version goes to that project's .odachi/backups store; a file outside a
+// project keeps the backup beside it, because it has no store to join.
 func (osFiles) Backup(path string) (string, error) {
+	if root, ok := projectRoot(path); ok {
+		return fsx.BackupIn(root, path)
+	}
 	return fsx.Backup(path)
+}
+
+// projectRoot finds the nearest ancestor that owns a .odachi directory: the
+// same boundary the rest of the verbs use. It starts at the file's directory,
+// so a file inside .odachi walks up to the project root and not to itself.
+func projectRoot(path string) (string, bool) {
+	dir := filepath.Dir(path)
+	for {
+		info, err := os.Stat(filepath.Join(dir, ".odachi"))
+		if err == nil && info.IsDir() {
+			return dir, true
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", false
+		}
+		dir = parent
+	}
+}
+
+func (osFiles) Remove(path string) error {
+	return os.Remove(path)
+}
+
+// Rename moves a backup into the store without rewriting it: the file keeps its
+// bytes and its mtime, so `undo` still knows which version is the newest.
+func (osFiles) Rename(from, to string) error {
+	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+		return fmt.Errorf("no pude crear el directorio de %s: %w", to, err)
+	}
+	return os.Rename(from, to)
 }
 
 // ModTime is what `odachi undo` chooses by: the date the filesystem recorded
