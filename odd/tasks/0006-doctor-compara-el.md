@@ -10,7 +10,7 @@ R1 · "doctor compara el contenido de .agents/skills con skills/ y avisa si una 
 - odachi check queda listo
 
 ## Pasos
-- [ ] T1 · comparar la copia instalada con la fuente   R1
+- [x] T1 · comparar la copia instalada con la fuente   R1 · a814a25
 
 ## Historial
 L1 · "doctor compara el contenido de .agents/skills con skills/ y avisa si una copia instalada no coincide"
