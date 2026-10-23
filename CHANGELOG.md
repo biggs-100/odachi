@@ -1,13 +1,13 @@
 # Changelog
 
-Lo que cambió en cada versión publicada, en el orden en que lo lee una persona.
-Las versiones anteriores a la 0.10.0 se reconstruyeron desde sus tags: el repo
-todavía no tenía este archivo, y un changelog que empieza hoy borra la historia
-de quien llega mañana.
+What changed in each released version, in the order a person reads it.
+Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
+file yet, and a changelog that starts today erases the history of whoever arrives
+tomorrow.
 
-## v0.11.2 · sin publicar
+## v0.11.2 · unreleased
 
-La versión que agrega método para atacar un backlog, cortar la entrega en PRs revisables, escribir tests de Go, auditar skills y hablar inglés en todo lo que no es chat.
+The version that adds a method for attacking a backlog, cutting delivery into reviewable PRs, writing Go tests, auditing skills, and speaking English in everything that is not chat.
 
 - **English artifacts, docs and CLI**: the brief, task doc, `AGENTS.md` block,
   skills and CLI messages are English; the agent chat stays in the human's
@@ -15,20 +15,21 @@ La versión que agrega método para atacar un backlog, cortar la entrega en PRs 
   docs and old briefs still parse. This is a breaking change for custom skills
   and scripts that pinned the old `Cuándo / Reglas / Nunca` sections or the
   Spanish CLI messages.
-- **`triage`**: clasifica cada reporte por raíz, junta los que comparten causa en
-  un solo paso, reproduce antes de arreglar y cierra con la prueba que falla. No
-  copia etiquetas de GitHub ni la gramática de ODD: usa `odachi ask`, `odachi plan`,
-  `tests` y `check --run`.
-- **`pull-request`**: un work unit por PR, presupuesto de 400 líneas, una sola
-  estrategia de cadena (stacked o feature branch chain), issue aprobado o `Refs`,
-  y `odachi check --run` antes del review. El slug es `pull-request` porque el
-  formato de skills exige nombres de tres caracteres o más.
-- **`go-tests`**: complementa `tests` con el patrón de Go: tabla con `t.Run`,
-  `t.TempDir`, `testing.Short`, `teatest`, golden files, mocks en el borde y el
-  paquete focal antes de la suite. No repite la disciplina de `tests`.
-- **`skill-improve`**: audita una skill que no se usa o creció. Empieza por el
-  trigger, exige reglas observables, corta en 60 líneas, deja un dueño por regla
-  y manda a `skills --check`/`--write`. El formato lo sigue validando el binario.
+- **`triage`**: classifies each report by root cause, groups the ones that share a
+  cause into one step, reproduces before fixing, and closes with the test that
+  fails. It does not copy GitHub labels or the ODD grammar: it uses `odachi ask`,
+  `odachi plan`, `tests` and `check --run`.
+- **`pull-request`**: one work unit per PR, a 400-line budget, a single chain
+  strategy (stacked or feature branch chain), an approved issue or `Refs`, and
+  `odachi check --run` before review. The slug is `pull-request` because the skill
+  format requires names of three characters or more.
+- **`go-tests`**: complements `tests` with the Go pattern: a table with `t.Run`,
+  `t.TempDir`, `testing.Short`, `teatest`, golden files, mocks at the edge and the
+  focal package before the suite. It does not repeat the discipline of `tests`.
+- **`skill-improve`**: audits a skill that is not used or grew. It starts with the
+  trigger, requires observable rules, cuts at 60 lines, leaves one owner per rule,
+  and sends you to `skills --check`/`--write`. The format is still validated by the
+  binary.
 
 ## v0.11.1 · 2026-10-23
 

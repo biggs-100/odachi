@@ -45,6 +45,11 @@ const (
 // work and is never replaced.
 const hookMarker = "# odachi: no commit without a proof for this tree"
 
+// hookMarkerES is the marker written before the English migration. It stays a
+// read-only alias: the hook is still odachi's and gets rewritten in place, so an
+// existing project does not have to paste the lines by hand.
+const hookMarkerES = "# odachi: no se commitea sin prueba de este árbol"
+
 // hookFor is the hook itself. It calls this binary by absolute path when the
 // binary is not on PATH, because a downloaded binary is the normal case for a
 // beginner and a hook that says "command not found" blocks every commit without
@@ -371,7 +376,7 @@ func (r *runner) installHook(exe string) *Result {
 			return &problem
 		}
 
-		if !strings.Contains(string(data), hookMarker) {
+		if !strings.Contains(string(data), hookMarker) && !strings.Contains(string(data), hookMarkerES) {
 			problem := foreignHook(exe)
 			return &problem
 		}

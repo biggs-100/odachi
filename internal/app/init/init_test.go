@@ -337,6 +337,34 @@ func TestOurHookIsNotRefused(t *testing.T) {
 	}
 }
 
+// A hook written before the English migration carries the old marker. It is
+// still odachi's: init backs it up and rewrites it in place, instead of asking
+// the human to paste the lines again.
+func TestTheSpanishHookMarkerIsStillOurs(t *testing.T) {
+	old := "#!/bin/sh\n# odachi: no se commitea sin prueba de este árbol\n" +
+		"ODACHI='odachi'\n[ -x \"$ODACHI\" ] || ODACHI=odachi\n\"$ODACHI\" check --quiet || exit 1\n"
+	files := newFakeFiles(map[string]string{
+		".git/HEAD":             "ref: refs/heads/main\n",
+		".git/hooks/pre-commit": old,
+	})
+
+	got := run(files)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0: the old marker is still odachi's (message %q)", got.Code, got.Message)
+	}
+	after, _ := files.get(".git/hooks/pre-commit")
+	if strings.Contains(after, "no se commitea") {
+		t.Errorf("the hook kept the old marker:\n%q", after)
+	}
+	if !strings.Contains(after, "# odachi: no commit without a proof for this tree") {
+		t.Errorf("the hook was not rewritten in English:\n%q", after)
+	}
+	if !slices.Contains(files.events, "backup .git/hooks/pre-commit") {
+		t.Errorf("events = %v, want a backup before rewriting the hook", files.events)
+	}
+}
+
 // Without a repository there is nowhere to put the hook, and the tool says so
 // instead of writing half of the job.
 func TestNoGitDirectoryBlocksWithoutWriting(t *testing.T) {

@@ -30,7 +30,8 @@ strings.
 - **Old artifacts stay readable.** The brief and task-doc parsers accept the
   Spanish headers as read-only aliases; `## Cómo hablás` is an alias for
   `## How you speak`; a task doc written before the migration is still visible to
-  `summary`, `plan` and `level`.
+  `summary`, `plan` and `level`. The pre-commit hook's old Spanish marker is also
+  recognized, so `init` rewrites an existing hook in place instead of refusing it.
 - **History stays history.** Closed task docs, old CHANGELOG entries and ADRs
   0001–0012 keep their original language. Living docs —README, impact map, the
   current CHANGELOG section and new ADRs— are English.
