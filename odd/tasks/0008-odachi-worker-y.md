@@ -12,9 +12,9 @@ R1 · "odachi-worker y odachi-verify como subagentes nativos, con handoff acotad
 - odachi check queda listo
 
 ## Pasos
-- [ ] T1 · escribir los subagentes y que init los instale   R1
-- [ ] T2 · que doctor compare los subagentes   R1
-- [ ] T3 · handoff en slices y docs   R1
+- [x] T1 · escribir los subagentes y que init los instale   R1 · e36e275
+- [x] T2 · que doctor compare los subagentes   R1 · e36e275
+- [x] T3 · handoff en slices y docs   R1 · e36e275
 
 ## Historial
 L1 · "odachi-worker y odachi-verify como subagentes nativos, con handoff acotado, para que el agente principal no cargue el trabajo pesado"
