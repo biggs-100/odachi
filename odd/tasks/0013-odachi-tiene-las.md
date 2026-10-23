@@ -12,7 +12,7 @@ R1 · "odachi tiene las skills triage y pr, adaptadas a su gramatica, para clasi
 ## Pasos
 - [x] T1 · la skill triage clasifica reportes por raiz y arregla una vez   R1 · eb9a2bb
 - [x] T2 · la skill pr parte la entrega en work units y elige una estrategia de cadena   R1 · 2b6d9f5
-- [ ] T3 · dogfood: init instala las dos, el registro y los docs las cuentan, y check queda verde   R1
+- [x] T3 · dogfood: init instala las dos, el registro y los docs las cuentan, y check queda verde   R1 · abc9560
 
 ## Historial
 L1 · "odachi tiene las skills triage y pr, adaptadas a su gramatica, para clasificar bugs por raiz y entregar PRs chicos"
