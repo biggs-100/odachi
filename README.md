@@ -230,9 +230,10 @@ El review es una decisión del humano, no del agente. Por defecto está apagado;
 switch del proyecto vive en `.odachi/review.toml` y se escribe con
 `odachi review mode status|on|off`. Con `on`, `odachi check` pide el veredicto de
 este árbol; con `off`, lo deja opcional. `--require-review` y `--no-review` fuerzan
-una corrida sin cambiar el archivo. Un cambio pasivo —sólo documentos— no pide
-veredicto ni con el modo prendido: no hay lente que responder, así que no hay
-review que fabricar.
+una corrida sin cambiar el archivo. El archivo se versiona; cambiarlo mueve el
+árbol, así que la prueba se retoma con `odachi check --run "<comando>"`. Un cambio
+pasivo —sólo documentos— no pide veredicto ni con el modo prendido: no hay lente
+que responder, así que no hay review que fabricar.
 
 ## Estado
 
