@@ -12,7 +12,7 @@ R1 · "odachi writes artifacts, docs, skills and CLI messages in English; the ag
 
 ## Steps
 - [x] T1 · the 14 skills and the skill format speak English   R1 · 130082c
-- [ ] T2 · brief, task doc, AGENTS.md and profile generators write English   R1
+- [x] T2 · brief, task doc, AGENTS.md and profile generators write English   R1 · 002536b
 - [ ] T3 · README, CHANGELOG, ADRs and impact map are English   R1
 - [ ] T4 · domain and app messages speak English   R1
 - [ ] T5 · cmd messages, help and tests speak English   R1
