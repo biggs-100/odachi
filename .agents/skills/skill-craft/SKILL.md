@@ -1,32 +1,33 @@
 ---
 name: skill-craft
-description: Trigger: cuando hay que escribir una skill nueva, corregir una que no se está usando, o decidir si algo merece ser skill.
+description: Trigger: when writing a new skill, fixing one that is not being used, or deciding whether something deserves a skill.
 ---
 
-## Cuándo
+## When
 
-Cuando una regla se repite en cada sesión, cuando una skill existe pero el agente no
-la carga, o cuando dudás entre escribir una skill, un test o un glob del cerco.
+When a rule repeats in every session, when a skill exists but the agent does not
+load it, or when you are unsure whether to write a skill, a test or a fence glob.
 
-## Reglas
+## Rules
 
-- Una regla accionable se puede **violar de forma observable**: "un retry sin backoff
-  ni techo de intentos" se ve en el diff; "revisá la resiliencia" no.
-- El trigger es lo único que decide si se carga. Escribilo como la situación del
-  usuario —"cuando el diff toca permisos"—, no como el tema —"seguridad"—.
-- Una regla por línea. Si no entra en una línea, son dos reglas.
-- Lo que el modelo ya sabe (sintaxis, frameworks, patrones de moda) no va: ocupa
-  contexto y se saltea.
-- Lo que no se puede adivinar —tus convenciones, tus decisiones, lo prohibido— va al
-  `brief.md` o al cerco, no a una skill.
-- Si la regla se puede verificar, mejor un glob del cerco o un test **antes** que una
-  skill: el cerco lo hace cumplir el binario, la skill la puede ignorar el modelo.
-- Para crearla: `odachi skill new <slug>` deja la plantilla, y `odachi skills --check`
-  dice si quedó bien formada.
+- An actionable rule can be **violated observably**: "a retry without backoff or
+  an attempt cap" shows in the diff; "check resilience" does not.
+- The trigger is the only thing that decides whether it loads. Write it as the
+  human's situation -"when the diff touches permissions"- not as the topic
+  -"security".
+- One rule per line. If it does not fit in one line, it is two rules.
+- What the model already knows (syntax, frameworks, fashionable patterns) does
+  not go in: it takes context and gets skipped.
+- What cannot be guessed -your conventions, your decisions, what is forbidden-
+  goes in `brief.md` or the fence, not in a skill.
+- If the rule can be verified, prefer a fence glob or a test **before** a skill:
+  the fence is enforced by the binary, the skill can be ignored by the model.
+- To create one: `odachi skill new <slug>` leaves the template, and
+  `odachi skills --check` says whether it is well formed.
 
-## Nunca
+## Never
 
-- Glosarios, enciclopedias ni historia de la tecnología.
-- Reglas que solo entiende alguien que ya sabe.
-- Copiar una skill entera sin adaptarla a este proyecto.
-- Pasar de 60 líneas: si no entra, es un documento, no una skill.
+- Glossaries, encyclopedias or technology history.
+- Rules only someone who already knows can understand.
+- Copy a whole skill without adapting it to this project.
+- Pass 60 lines: if it does not fit, it is a document, not a skill.

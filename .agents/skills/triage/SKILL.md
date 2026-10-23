@@ -1,38 +1,38 @@
 ---
 name: triage
-description: Trigger: cuando hay varios bugs, un backlog o un reporte que se repite. Clasifica por raíz y arregla una vez, no una por issue.
+description: Trigger: when there are several bugs, a backlog or a report that repeats. Classify by root and fix once, not once per issue.
 ---
 
-## Cuándo
+## When
 
-Cuando llegan varios bugs, un reporte se repite, el backlog crece más rápido que
-los fixes, o no sabés si un issue es nuevo, duplicado o síntoma de otra cosa.
+When several bugs arrive, a report repeats, the backlog grows faster than the
+fixes, or you do not know whether an issue is new, a duplicate or a symptom of
+something else.
 
-## Reglas
+## Rules
 
-- Antes de tocar código, clasificá cada reporte por **raíz**, no por superficie:
-  (A) ya lo resuelve un cambio en curso, (B) duplicado de una clase conocida,
-  (C) bug nuevo con una raíz identificable, (D) feature, (E) no se entiende y va
-  a `odachi ask`.
-- Dos o más reportes con la misma raíz son **un solo fix**: un paso de
-  `odachi plan`, todos los reportes nombrados y una prueba que los cierre juntos.
-- Reproducí el síntoma antes de aceptar el diagnóstico. El mecanismo que cuenta
-  el reporte es una hipótesis; el síntoma es la evidencia. Cargá `tests` y escribí
-  la prueba que falla.
-- El fix va donde está la causa, no donde duele. Si el arreglo agrega un estado,
-  un flag o un verbo, preguntate qué podés borrar o relajar primero.
-- Un reporte que no se reproduce se convierte en un mensaje que se autodiagnostica
-  o en una pregunta con el input exacto; no en un parche a ciegas.
-- Cerrá con la prueba que reproduce el reporte y queda verde. Sin esa prueba, el
-  reporte sigue abierto, aunque el código "ya debería andar".
-- Si el reporte está fuera del cerco de `brief.md`, no lo arregles: `odachi ask`.
-- Si el fix toca varias raíces, un paso por raíz; no un paso por reporte.
+- Before touching code, classify each report by **root**, not by surface:
+  (A) an in-flight change already solves it, (B) duplicate of a known class,
+  (C) new bug with an identifiable root, (D) feature, (E) unclear and goes to
+  `odachi ask`.
+- Two or more reports with the same root are **one fix**: one `odachi plan` step,
+  every report named, and one test that closes them together.
+- Reproduce the symptom before accepting the diagnosis. The mechanism the report
+  names is a hypothesis; the symptom is the evidence. Load `tests` and write the
+  failing test.
+- The fix goes where the cause is, not where it hurts. If the fix adds a state, a
+  flag or a verb, ask what you can delete or relax first.
+- A report that cannot be reproduced becomes a message that diagnoses itself or a
+  question with the exact input; not a blind patch.
+- Close with the test that reproduces the report and turns green. Without that
+  test, the report stays open, even if the code "should work now".
+- If the report is outside the fence in `brief.md`, do not fix it: `odachi ask`.
+- If the fix touches several roots, one step per root; not one step per report.
 
-## Nunca
+## Never
 
-- Un parche por reporte cuando comparten raíz.
-- Cerrar por "debería estar arreglado" o por el resumen del agente.
-- Arreglar el síntoma sin reproducirlo.
-- Agregar una abstracción nueva para un caso que se resuelve con un mensaje o un
-  test.
-- Inventar datos o pasos para que el reporte cierre.
+- One patch per report when they share a root.
+- Close because "it should be fixed" or because of the agent's summary.
+- Fix the symptom without reproducing it.
+- Add a new abstraction for a case solved by a message or a test.
+- Invent data or steps to close the report.

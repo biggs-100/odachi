@@ -62,10 +62,10 @@ func TestTheWrittenBlockKeepsTheFourRulesAndTheSixVerbs(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"1. Brief antes de código",
-		"2. Nada fuera del cerco",
-		"3. No decir \"listo\" sin prueba",
-		"4. Pedazos chicos, un commit cada uno",
+		"1. Brief before code",
+		"2. Nothing outside the fence",
+		"3. Do not say \"done\" without proof",
+		"4. Small pieces, one commit each",
 		rules.Section,
 	} {
 		if !strings.Contains(content, want) {

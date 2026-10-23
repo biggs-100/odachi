@@ -152,7 +152,7 @@ func TestInitReplacesTheBlockAndKeepsTheRest(t *testing.T) {
 	if strings.Contains(content, "regla vieja") {
 		t.Errorf("the old block survived:\n%s", content)
 	}
-	for _, want := range []string{"# Mis reglas", "no toques production", "y esto va después", "Brief antes de código"} {
+	for _, want := range []string{"# Mis reglas", "no toques production", "y esto va después", "Brief before code"} {
 		if !strings.Contains(content, want) {
 			t.Errorf("AGENTS.md lost %q:\n%s", want, content)
 		}

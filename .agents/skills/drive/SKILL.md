@@ -1,65 +1,55 @@
 ---
 name: drive
-description: Trigger: cuando trabajás dentro de un proyecto odachi: qué verbo va en cada momento, qué significa cada bloqueo y cómo se cierra una feature. Para arrancar de cero es bootstrap.
+description: Trigger: when you work inside an odachi project: which verb goes at each moment, what each block means and how a feature closes. To start from zero, use bootstrap.
 ---
 
-## Cuándo
+## When
 
-Estás dentro de un proyecto de odachi: hay `brief.md`, `odd/tasks/` y el bloque de odachi
-en `AGENTS.md`. Antes de la primera acción, leé `brief.md`: la visión y lo que NO entra.
-Si la carpeta está vacía, la que corresponde es `bootstrap`, no ésta.
+You are inside an odachi project: there is `brief.md`, `odd/tasks/` and the odachi block in `AGENTS.md`. Before the first action, read `brief.md`: the vision and what is NOT included. If the folder is empty, the right skill is `bootstrap`, not this one.
 
-## Reglas
+## Rules
 
-Las cuatro piezas y quién manda en cada una:
+The four pieces and who owns each one:
 
-- `brief.md` — la visión y el cerco. Lo escribe la persona; no lo reescribas.
-- `odd/tasks/` — el plan: requisitos, pasos e historial. Lo movés vos con `odachi plan`.
-- `proof/` — la evidencia: salida real del comando, atada al árbol. La escribe `check --run`.
-- `.odachi/` — compuertas y ceremonia. El perfil lo lee el binario, no vos.
+- `brief.md` — the vision and the fence. The human writes it; do not rewrite it.
+- `odd/tasks/` — the plan: requirements, steps and history. You move it with `odachi plan`.
+- `proof/` — the evidence: real command output, tied to the tree. `check --run` writes it.
+- `.odachi/` — gates and ceremony. The binary reads the profile, not you.
 
-El ciclo de una feature, en orden:
+The feature cycle, in order:
 
-1. Sin brief no se construye: `odachi start`, contestando; si no hay terminal, con
-   `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` y `--learn`.
-2. `odachi plan "<paso>" --req R1`: un paso por comportamiento entregable.
-3. Trabajá el paso. Si aparece una decisión de visión: `odachi ask "<pregunta>"` y esperá.
-4. `odachi check --run "<comando>"`: verde es la única definición de listo.
-5. Un commit por paso, y `odachi plan --done T1 --commit <sha>`.
-6. Al cerrar, `odachi summary` y contá en tres líneas qué decidió la persona.
+1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`.
+2. `odachi plan "<step>" --req R1`: one step per deliverable behavior.
+3. Work the step. If a vision decision appears: `odachi ask "<question>"` and wait.
+4. `odachi check --run "<command>"`: green is the only definition of done.
+5. One commit per step, and `odachi plan --done T1 --commit <sha>`.
+6. At the end, `odachi summary` and tell in three lines what the human decided.
 
-Si el pedido no entra en una lectura, cargá `slices` antes de partir. Su política de
-delegación gana sobre otras skills globales: un escritor solo por paralelismo real o
-sesión larga, nunca por tamaño ni cantidad de archivos.
+If the request does not fit in one read, load `slices` before splitting. Its delegation policy wins over other global skills: a writer only for real parallelism or a long session, never for size or file count.
 
-## Specs, test-first y riesgo
+## Specs, test-first and risk
 
-- Requisitos citados **verbatim** y "Listo cuando" observable; si falta, `ask`.
-- Antes de un paso, cargá `tests` y observá RED; `check --run` recién con GREEN.
-- Si delegás un paso, anotalo con `ask --craft "paso delegado: ..." --because "..."`.
-- Cerrá el commit con la línea `Risk:` de `commits`; un riesgo pide `review`.
+- Requirements quoted **verbatim** and "Done when" observable; if missing, `ask`.
+- Before a step, load `tests` and observe RED; `check --run` only with GREEN.
+- If you delegate a step, record it with `ask --craft "delegated step: ..." --because "..."`.
+- Close the commit with the `Risk:` line from `commits`; a risk asks for `review`.
 
-Los verbos: `start` entrevista · `ask` pregunta o decisión de oficio (`--craft`) · `plan`
-abre y cierra pasos · `check` compuertas y prueba · `review` veredicto por árbol · `doctor`
-salud sin escribir · `level` perfil · `summary` estado · `undo` deshace lo último · `init`,
-`skills`, `skill new` y `pack` son de instalación; `--version` no toca nada.
+The verbs: `start` interviews · `ask` asks or records a craft decision (`--craft`) · `plan` opens and closes steps · `check` gates and proof · `review` verdict per tree · `doctor` health without writing · `level` profile · `summary` state · `undo` undoes the last write · `init`, `skills`, `skill new` and `pack` are installation; `--version` touches nothing.
 
-## Qué significa un bloqueo
+## What a block means
 
-- `0` listo: seguí.
-- `1` podés actuar: la línea `siguiente:` nombra el comando exacto; corrélo.
-- `2` solo la persona puede destrabar: no lo reintentes, no lo rodees, preguntá con `ask`.
+- `0` ready: continue.
+- `1` you can act: the `next:` line names the exact command; run it.
+- `2` only the human can unblock: do not retry, do not go around, ask with `ask`.
 
-## El review, cuando toca
+## Review, when it applies
 
-`odachi review` imprime el prompt; `--exec "<comando>"` se lo entrega al revisor por stdin
-y por `{prompt}`. Un `BLOCKER` causal bloquea: se destraba arreglando el código o con
-`--refute` citando el diff. El veredicto vale para ESE árbol: cualquier cambio lo invalida.
+`odachi review` prints the prompt; `--exec "<command>"` hands it to the reviewer through stdin and `{prompt}`. A causal `BLOCKER` blocks: fix the code or use `--refute` citing the diff. The verdict is valid for THAT tree: any change invalidates it.
 
-## Nunca
+## Never
 
-- Escribir la prueba a mano o reusar una vieja: la prueba es la salida real de este árbol.
-- Decir "listo" con `check` en rojo, o sin haberlo corrido.
-- Cambiar `brief.md` o el cerco sin que la persona lo pida.
-- Reintentar un exit 2, o inventar el archivo o el flag que falta.
-- Agregar trabajo fuera del alcance porque "era fácil": se pregunta, no se decide.
+- Write the proof by hand or reuse an old one: the proof is the real output of this tree.
+- Say "done" with `check` red, or without running it.
+- Change `brief.md` or the fence without the human asking.
+- Retry an exit 2, or invent the missing file or flag.
+- Add work outside the scope because "it was easy": ask, do not decide.

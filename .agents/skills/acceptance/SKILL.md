@@ -1,31 +1,31 @@
 ---
 name: acceptance
-description: Trigger: cuando hay que decidir si algo está terminado. Convierte un pedido en criterios observables antes de escribir código.
+description: Trigger: when deciding whether something is done. Turn a request into observable criteria before writing code.
 ---
 
-## Cuándo
+## When
 
-Cuando alguien dice "ya está", "falta poco" o "¿lo damos por hecho?" y no hay una
-lista de criterios que cualquiera pueda verificar sin preguntarte nada.
+When someone says "it's done", "almost there" or "can we call it done?" and
+there is no list of criteria anyone can verify without asking you.
 
-## Reglas
+## Rules
 
-- Antes de escribir código, convertí el pedido en criterios observables. Si no se
-  puede observar desde afuera, no es un criterio: es una intención.
-- Una línea por criterio, en las palabras del humano, en "Listo cuando". Si no
-  entra en una línea, el criterio está haciendo dos cosas.
-- Un criterio por comportamiento, no por archivo ni por capa. "Puedo reservar un
-  turno y aparece en la agenda" sirve; "el módulo de turnos funciona" no.
-- Cada criterio se verifica con un comando o una salida real, y esa salida queda
-  guardada. Probar a mano una vez no es verificar.
-- Si un criterio no se puede verificar todavía, decilo y proponé cómo. Un
-  criterio escondido es peor que uno pendiente.
-- Los criterios se escriben antes de implementar y no se tocan después para que
-  la implementación pase.
+- Before writing code, turn the request into observable criteria. If it cannot be
+  observed from outside, it is not a criterion: it is an intention.
+- One line per criterion, in the human's words, under "Done when". If it does not
+  fit in one line, the criterion is doing two things.
+- One criterion per behavior, not per file or layer. "I can book an appointment
+  and it shows in the agenda" works; "the appointment module works" does not.
+- Every criterion is verified with a command or real output, and that output is
+  saved. Testing by hand once is not verification.
+- If a criterion cannot be verified yet, say so and propose how. A hidden
+  criterion is worse than a pending one.
+- Criteria are written before implementation and are not changed afterwards to
+  make the implementation pass.
 
-## Nunca
+## Never
 
-- Aceptar "anda" o "creo que anda" como cierre.
-- Agregar criterios que el humano no pidió para justificar más trabajo.
-- Marcar un paso como hecho sin la salida que lo prueba.
-- Cambiar el criterio para que coincida con lo que ya se construyó.
+- Accept "it works" or "I think it works" as done.
+- Add criteria the human did not ask for to justify more work.
+- Mark a step done without the output that proves it.
+- Change the criterion to match what was already built.

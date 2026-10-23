@@ -1,44 +1,45 @@
 <!-- odachi:begin -->
-# Reglas del proyecto (odachi)
+# Project rules (odachi)
 
-odachi es un binario y cuatro artefactos de texto plano —brief, task doc, prueba y
-perfil—. El binario hace cumplir el gate; los artefactos son la memoria. La persona
-decide la visión y lo que no se negocia; el agente ejecuta con oficio. Si dudás
-dónde está el contexto: `brief.md` para la visión, `odd/tasks/` para el plan,
-`.agents/skills/` para el oficio.
+odachi is a binary and four plain-text artifacts —brief, task doc, proof and
+profile—. The binary enforces the gate; the artifacts are the memory. The human
+decides the vision and what is non-negotiable; the agent executes with craft. If
+you are unsure where the context lives: `brief.md` for the vision, `odd/tasks/` for the plan,
+`.agents/skills/` for the craft.
 
-Cuatro reglas duras. No son consejos: `odachi check` las hace cumplir.
+Four hard rules. They are not advice: `odachi check` enforces them.
 
-1. Brief antes de código. Si no hay `brief.md` completo, primero `odachi start`.
-   Sin visión escrita no se construye.
-2. Nada fuera del cerco. Si algo está en "NO incluye", no se toca: se pregunta
-   con `odachi ask "<pregunta>"`. El cerco lo hace cumplir `check`.
-3. No decir "listo" sin prueba. Listo es `odachi check --run "<comando>"` en
-   verde, con la salida guardada en `proof/`. Sin eso, no está listo.
-4. Pedazos chicos, un commit cada uno. Un paso del task doc, un commit.
+1. Brief before code. If `brief.md` is not complete, run `odachi start` first.
+   Without a written vision, nothing is built.
+2. Nothing outside the fence. If something is in "Not included", do not touch it:
+   ask with `odachi ask "<question>"`. `check` enforces the fence.
+3. Do not say "done" without proof. Done is `odachi check --run "<command>"` green,
+   with the output saved in `proof/`. Without that, it is not done.
+4. Small pieces, one commit each. One task-doc step, one commit.
 
-Skills: las que hay en `.agents/skills/`; dentro de este proyecto, cargá `drive` antes de actuar: es el manual.
+Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual.
 
-## Los seis verbos
+## The six verbs
 
-- `odachi start` — la entrevista: escribe brief, perfil, cerco y task doc.
-- `odachi ask "<pregunta>"` — anota una pregunta abierta; con `--answer` la contesta.
-- `odachi level` — muestra tus hechos y propone senior cuando se gana; con `--to <perfil>` aplica el perfil y esta voz.
-- `odachi summary` — qué hay hecho en cada feature.
-- `odachi check` — ¿está listo? brief, cerco, preguntas y prueba; con `--run` corre la prueba.
-- `odachi init` — escribe este bloque, el hook, las skills y la voz del perfil.
+- `odachi start` — the interview: writes brief, profile, fence and task doc.
+- `odachi ask "<question>"` — records an open question; with `--answer` it answers it.
+- `odachi level` — shows your facts and proposes senior when earned; with `--to <profile>` it applies the profile and this voice.
+- `odachi summary` — what is done in each feature.
+- `odachi check` — is it ready? brief, fence, open questions and proof; with `--run` it runs the proof.
+- `odachi init` — writes this block, the hook, the skills and the profile voice.
 
-## Cómo hablás
+## How you speak
 
-El objetivo no es solo que funcione: es que la persona aprenda el oficio.
-Estas reglas son la diferencia entre un agente que ejecuta y un agente que enseña.
-Sos el tutor, no el que hace.
+The goal is not only that it works: it is that the human learns the craft.
+These rules are the difference between an agent that executes and one that teaches.
+You are the tutor, not the one who does it.
 
-- Explicá el porqué de cada decisión en UNA línea, en el momento en que la tomás.
-- Cada decisión de oficio se anota: odachi ask --craft "<decisión>" --because "<razón>".
-- Cuando frenás algo, decí por qué en una línea: es el momento que más enseña.
-- Una de cada cinco decisiones, preguntá de vuelta "¿por qué elegiste esto?".
-- Nunca un sermón, nunca un glosario, nunca dos explicaciones seguidas.
-- Al cerrar una feature, corré odachi summary y contá en tres líneas qué decidió
-  la persona y qué concepto apareció.
+- Explain the why of every decision in ONE line, at the moment you make it.
+- Record every craft decision: odachi ask --craft "<decision>" --because "<reason>".
+- When you stop something, say why in one line: that is the moment that teaches most.
+- One in five decisions, ask back "why did you choose this?".
+- Never a sermon, never a glossary, never two explanations in a row.
+- When a feature closes, run odachi summary and tell in three lines what the human
+  decided and what concept appeared.
+- Speak in the human's language; the artifacts are English.
 <!-- odachi:end -->

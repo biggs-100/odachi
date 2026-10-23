@@ -34,7 +34,10 @@ const (
 	// Section is the heading of the block's last section: how the agent talks.
 	// It is the one part of the block that changes with the profile, and the
 	// only part `odachi level --to` rewrites.
-	Section = "## Cómo hablás"
+	Section = "## How you speak"
+	// SectionES is the read-only alias for blocks written before the language
+	// migration. New blocks use Section; old ones still rewrite their voice.
+	SectionES = "## Cómo hablás"
 )
 
 // head is the block up to and including the blank line that opens the voice
@@ -42,34 +45,34 @@ const (
 // voices from differing anywhere but in that section: everything here is the
 // same bytes whatever voice is in force.
 const head = `
-# Reglas del proyecto (odachi)
+# Project rules (odachi)
 
-odachi es un binario y cuatro artefactos de texto plano —brief, task doc, prueba y
-perfil—. El binario hace cumplir el gate; los artefactos son la memoria. La persona
-decide la visión y lo que no se negocia; el agente ejecuta con oficio. Si dudás
-dónde está el contexto: ` + "`brief.md`" + ` para la visión, ` + "`odd/tasks/`" + ` para el plan,
-` + "`.agents/skills/`" + ` para el oficio.
+odachi is a binary and four plain-text artifacts —brief, task doc, proof and
+profile—. The binary enforces the gate; the artifacts are the memory. The human
+decides the vision and what is non-negotiable; the agent executes with craft. If
+you are unsure where the context lives: ` + "`brief.md`" + ` for the vision, ` + "`odd/tasks/`" + ` for the plan,
+` + "`.agents/skills/`" + ` for the craft.
 
-Cuatro reglas duras. No son consejos: ` + "`odachi check`" + ` las hace cumplir.
+Four hard rules. They are not advice: ` + "`odachi check`" + ` enforces them.
 
-1. Brief antes de código. Si no hay ` + "`brief.md`" + ` completo, primero ` + "`odachi start`" + `.
-   Sin visión escrita no se construye.
-2. Nada fuera del cerco. Si algo está en "NO incluye", no se toca: se pregunta
-   con ` + "`odachi ask \"<pregunta>\"`" + `. El cerco lo hace cumplir ` + "`check`" + `.
-3. No decir "listo" sin prueba. Listo es ` + "`odachi check --run \"<comando>\"`" + ` en
-   verde, con la salida guardada en ` + "`proof/`" + `. Sin eso, no está listo.
-4. Pedazos chicos, un commit cada uno. Un paso del task doc, un commit.
+1. Brief before code. If ` + "`brief.md`" + ` is not complete, run ` + "`odachi start`" + ` first.
+   Without a written vision, nothing is built.
+2. Nothing outside the fence. If something is in "Not included", do not touch it:
+   ask with ` + "`odachi ask \"<question>\"`" + `. ` + "`check`" + ` enforces the fence.
+3. Do not say "done" without proof. Done is ` + "`odachi check --run \"<command>\"`" + ` green,
+   with the output saved in ` + "`proof/`" + `. Without that, it is not done.
+4. Small pieces, one commit each. One task-doc step, one commit.
 
-Skills: las que hay en ` + "`.agents/skills/`" + `; dentro de este proyecto, cargá ` + "`drive`" + ` antes de actuar: es el manual.
+Skills: the ones in ` + "`.agents/skills/`" + `; inside this project, load ` + "`drive`" + ` before acting: it is the manual.
 
-## Los seis verbos
+## The six verbs
 
-- ` + "`odachi start`" + ` — la entrevista: escribe brief, perfil, cerco y task doc.
-- ` + "`odachi ask \"<pregunta>\"`" + ` — anota una pregunta abierta; con ` + "`--answer`" + ` la contesta.
-- ` + "`odachi level`" + ` — muestra tus hechos y propone senior cuando se gana; con ` + "`--to <perfil>`" + ` aplica el perfil y esta voz.
-- ` + "`odachi summary`" + ` — qué hay hecho en cada feature.
-- ` + "`odachi check`" + ` — ¿está listo? brief, cerco, preguntas y prueba; con ` + "`--run`" + ` corre la prueba.
-- ` + "`odachi init`" + ` — escribe este bloque, el hook, las skills y la voz del perfil.
+- ` + "`odachi start`" + ` — the interview: writes brief, profile, fence and task doc.
+- ` + "`odachi ask \"<question>\"`" + ` — records an open question; with ` + "`--answer`" + ` it answers it.
+- ` + "`odachi level`" + ` — shows your facts and proposes senior when earned; with ` + "`--to <profile>`" + ` it applies the profile and this voice.
+- ` + "`odachi summary`" + ` — what is done in each feature.
+- ` + "`odachi check`" + ` — is it ready? brief, fence, open questions and proof; with ` + "`--run`" + ` it runs the proof.
+- ` + "`odachi init`" + ` — writes this block, the hook, the skills and the profile voice.
 
 ` + Section + `
 
@@ -224,12 +227,12 @@ func voiceSpan(text string) (start, end int, insert, ok bool) {
 	}
 	endMarker := begin + offset
 
-	heading := lineStart(text[begin:endMarker], Section)
+	heading, headingText := sectionHeading(text[begin:endMarker])
 	if heading < 0 {
 		return endMarker, endMarker, true, true
 	}
 
-	start = begin + heading + len(Section)
+	start = begin + heading + len(headingText)
 	if strings.HasPrefix(text[start:], "\n") {
 		start++
 	}
@@ -257,6 +260,19 @@ func voiceSpan(text string) (start, end int, insert, ok bool) {
 
 // lineStart is the index of the marker when it owns its own line, and -1 when it
 // does not: a marker inside another line is not a block this tool wrote.
+// sectionHeading finds the voice heading, preferring the English one. The
+// Spanish alias keeps a block written before the language migration readable
+// and rewritable.
+func sectionHeading(text string) (int, string) {
+	if heading := lineStart(text, Section); heading >= 0 {
+		return heading, Section
+	}
+	if heading := lineStart(text, SectionES); heading >= 0 {
+		return heading, SectionES
+	}
+	return -1, ""
+}
+
 func lineStart(text, marker string) int {
 	for from := 0; from < len(text); {
 		index := strings.Index(text[from:], marker)

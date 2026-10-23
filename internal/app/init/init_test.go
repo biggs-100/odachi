@@ -141,17 +141,17 @@ func TestCreatesAgentsMDWithTheBlock(t *testing.T) {
 	if strings.Count(content, "<!-- odachi:begin -->") != 1 || strings.Count(content, "<!-- odachi:end -->") != 1 {
 		t.Errorf("the block appears more than once:\n%s", content)
 	}
-	if line := "Skills: las que hay en `.agents/skills/`; dentro de este proyecto, cargá `drive` antes de actuar: es el manual."; strings.Count(content, line) != 1 {
+	if line := "Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual."; strings.Count(content, line) != 1 {
 		t.Errorf("the line %q appears %d times, want exactly one:\n%s", line, strings.Count(content, line), content)
 	}
 
 	for _, want := range []string{
-		"Brief antes de código",
-		"Nada fuera del cerco",
+		"Brief before code",
+		"Nothing outside the fence",
 		"odachi ask",
 		`odachi check --run`,
-		"un commit",
-		"Skills: las que hay en `.agents/skills/`; dentro de este proyecto, cargá `drive` antes de actuar: es el manual.",
+		"one commit",
+		"Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual.",
 		"odachi start",
 		"odachi level",
 		"odachi summary",
@@ -218,7 +218,7 @@ func TestReplacesTheBlockInPlaceAndPreservesTheRest(t *testing.T) {
 	if strings.Contains(content, "regla vieja") {
 		t.Errorf("the old block survived:\n%s", content)
 	}
-	for _, want := range []string{"# Mis reglas", "no toques production", "y esto va después", "Brief antes de código"} {
+	for _, want := range []string{"# Mis reglas", "no toques production", "y esto va después", "Brief before code"} {
 		if !strings.Contains(content, want) {
 			t.Errorf("AGENTS.md lost %q:\n%s", want, content)
 		}
@@ -252,7 +252,7 @@ func TestAppendsTheBlockWhenThereAreNoMarkers(t *testing.T) {
 	if strings.Count(content, "<!-- odachi:begin -->") != 1 {
 		t.Errorf("the block was appended more than once:\n%s", content)
 	}
-	if !strings.Contains(content, "Brief antes de código") {
+	if !strings.Contains(content, "Brief before code") {
 		t.Errorf("the block was not appended:\n%s", content)
 	}
 }

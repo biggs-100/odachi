@@ -1,32 +1,32 @@
 ---
 name: ship
-description: Trigger: cuando algo está listo para que otra persona lo use. Verifica el camino del que instala, no el del que desarrolla.
+description: Trigger: when something is ready for another person to use. Verify the installer's path, not the developer's.
 ---
 
-## Cuándo
+## When
 
-Cuando vas a decir "listo", publicar una versión, entregar a alguien que no tiene
-tu entorno, o cerrar una feature.
+When you are about to say "done", publish a version, hand something to someone
+who does not have your environment, or close a feature.
 
-## Reglas
+## Rules
 
-- "Listo" es `odachi check` en verde sobre el árbol actual, con la salida real
-  guardada en `proof/`. Todo lo demás es "creo que está listo".
-- Probá el camino del que instala, no el del que desarrolla: el binario
-  descargado, sin Go, sin tu PATH, en otra máquina si se puede.
-- Verificá contra el artefacto real, no contra fixtures. Un instalador que solo
-  anduvo con un archivo de mentira no está verificado.
-- Decí qué NO se verificó y por qué. Ese párrafo es parte de la entrega, no una
-  confesión.
-- El changelog habla de lo que cambió para el humano, no de los archivos que
-  tocaste.
-- Si cambia el comportamiento de algo que ya existía, decilo primero y con todas
-  las letras.
+- "Done" is `odachi check` green on the current tree, with the real output saved
+  in `proof/`. Everything else is "I think it is done".
+- Test the installer's path, not the developer's: the downloaded binary, without
+  Go, without your PATH, on another machine if possible.
+- Verify against the real artifact, not fixtures. An installer that only worked
+  with a fake file is not verified.
+- Say what was NOT verified and why. That paragraph is part of the delivery, not
+  a confession.
+- The changelog talks about what changed for the human, not about the files you
+  touched.
+- If the behavior of something that already existed changes, say it first and
+  plainly.
 
-## Nunca
+## Never
 
-- Publicar con tests rojos, sin versión o sin checksum.
-- Decir "listo" cuando solo compila.
-- Cambiar un verbo existente sin avisar en el mismo release.
-- Firmar como verificado algo que se probó a mano una sola vez.
-- Etiquetar una versión desde un árbol que no es el que verificaste.
+- Publish with red tests, without a version or without a checksum.
+- Say "done" when it only compiles.
+- Change an existing verb without announcing it in the same release.
+- Sign as verified something that was tested by hand once.
+- Tag a version from a tree that is not the one you verified.
