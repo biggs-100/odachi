@@ -71,6 +71,9 @@ type Options struct {
 	// Exe is the running binary. It is only used to name the folder a human has
 	// to add to the PATH, and the message stays honest when it is empty.
 	Exe string
+	// Home is the human's home, where the global door lives. Empty means the
+	// caller could not resolve it; the check skips the door instead of guessing.
+	Home string
 }
 
 // Files is the disk port. It can only read: doctor has no way to write, which is
@@ -544,13 +547,16 @@ func (r *runner) voice() domaindoctor.Check {
 		"la voz del bloque es la de "+name+", la misma que dice "+profileFile), content)
 }
 
-// voiceCheck appends the native agent mirror and the leftovers of v0.10.0 to a
-// line about the voice. Neither changes the status: the block is the invariant,
-// the mirror is a convenience, and odachi does not delete files it did not write
-// in this version.
+// voiceCheck appends the native agent mirror, the global door and the leftovers
+// of v0.10.0 to a line about the voice. None changes the status: the block is the
+// invariant, the agents are a convenience, and odachi does not delete files it
+// did not write in this version.
 func (r *runner) voiceCheck(check domaindoctor.Check, content string) domaindoctor.Check {
-	notes := make([]string, 0, 2)
+	notes := make([]string, 0, 3)
 	if note := r.personaNote(content); note != "" {
+		notes = append(notes, note)
+	}
+	if note := r.globalPersonaNote(); note != "" {
 		notes = append(notes, note)
 	}
 	note, err := r.leftovers()
@@ -609,6 +615,48 @@ func (r *runner) personaNote(content string) string {
 		return "el agente nativo no coincide con el bloque en " + strings.Join(stale, ", ") + "; corré odachi init"
 	default:
 		return "el agente nativo coincide con el bloque en " + strings.Join(dirs, " y ")
+	}
+}
+
+// globalPersonaNote compares the door in the human's home with the files this
+// binary would install. It is a note, not a Problem: a project with the block and
+// the project agent still works without the global door; what is lost is odachi
+// appearing in every other folder. The fix is the same `odachi init`.
+func (r *runner) globalPersonaNote() string {
+	if r.opts.Home == "" {
+		return ""
+	}
+
+	missing, stale := []string{}, []string{}
+	for _, file := range persona.GlobalFiles() {
+		path := filepath.Join(r.opts.Home, filepath.FromSlash(file.Path))
+		display := "~/" + file.Path
+
+		exists, err := r.files.Exists(path)
+		if err != nil {
+			return "no pude revisar la puerta global " + display + ": " + oneLine(err.Error()) + "; corré odachi init"
+		}
+		if !exists {
+			missing = append(missing, display)
+			continue
+		}
+
+		data, err := r.files.Read(path)
+		if err != nil {
+			return "no pude leer la puerta global " + display + ": " + oneLine(err.Error()) + "; corré odachi init"
+		}
+		if string(data) != file.Content {
+			stale = append(stale, display)
+		}
+	}
+
+	switch {
+	case len(missing) > 0:
+		return "la puerta global no está en " + strings.Join(missing, ", ") + "; corré odachi init (así odachi aparece en cualquier carpeta)"
+	case len(stale) > 0:
+		return "la puerta global no coincide con este binario en " + strings.Join(stale, ", ") + "; corré odachi init"
+	default:
+		return "la puerta global está al día en el home"
 	}
 }
 

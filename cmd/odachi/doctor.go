@@ -38,10 +38,12 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
+	home, _ := homeDir()
 	result := doctorapp.Run(doctorapp.Options{
 		Dir:     dir,
 		Version: version,
 		Exe:     selfExe(),
+		Home:    home,
 	}, osFiles{}, osLookup{}, osProfiles{})
 
 	return reportDoctor(result, asJSON, stdout, stderr)

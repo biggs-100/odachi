@@ -1,10 +1,11 @@
-# cuando-start-no
+# doctor-revisa-tambien
 
 ## Qué tiene que existir
-- cuando start no puede leer una respuesta, el mensaje nombra los flags que faltan en vez de morir con 'no pude leer la respuesta'
+- doctor revisa tambien la puerta global: si falta o no coincide con este binario, lo dice y manda a odachi init
 
 ## Listo cuando
-- un start con EOF en la primera pregunta sale 2 y nombra --outcome, --audience, --done, --sensitive y --deadline
+- doctor en un home sin la puerta la nombra sin fallar
+- doctor con la puerta editada la nombra
 - go test ./... queda en verde
 - odachi check queda listo
 
@@ -14,4 +15,4 @@
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: mensajes de error.
+- Quiere aprender: doctor y home.

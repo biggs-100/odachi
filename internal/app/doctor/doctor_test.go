@@ -17,6 +17,10 @@ import (
 // directory: doctor must not need one, and the port has no way to write.
 const root = "proyecto"
 
+// homeRoot is the fake home: the global door lives outside the project, and
+// doctor reads it through the same read-only port.
+const homeRoot = "hogar"
+
 // fakeFiles is the disk port as data. It has no write method on purpose: the
 // port doctor receives cannot write, so "doctor never writes" is a property of
 // the type and not a promise in a comment.
@@ -37,10 +41,23 @@ func at(rel string) string {
 	return filepath.Join(root, filepath.FromSlash(rel))
 }
 
+// atHome is the fake's spelling of a home-relative path.
+func atHome(rel string) string {
+	return filepath.Join(homeRoot, filepath.FromSlash(rel))
+}
+
 func (f *fakeFiles) put(rel, content string) *fakeFiles {
 	f.files[at(rel)] = content
 	// Every parent directory exists once a file is in it.
 	for dir := filepath.Dir(at(rel)); len(dir) > len(root); dir = filepath.Dir(dir) {
+		f.dirs[dir] = true
+	}
+	return f
+}
+
+func (f *fakeFiles) putHome(rel, content string) *fakeFiles {
+	f.files[atHome(rel)] = content
+	for dir := filepath.Dir(atHome(rel)); len(dir) > len(homeRoot); dir = filepath.Dir(dir) {
 		f.dirs[dir] = true
 	}
 	return f
@@ -177,6 +194,9 @@ func configured() *fakeFiles {
 	for _, file := range persona.Files(body) {
 		files.put(file.Path, file.Content)
 	}
+	for _, file := range persona.GlobalFiles() {
+		files.putHome(file.Path, file.Content)
+	}
 	files.put("brief.md", briefComplete)
 	files.put(".odachi/profile.toml", "name = \"novato\"\n")
 	files.put("skills/acceptance/SKILL.md", skill.Template("acceptance"))
@@ -203,7 +223,7 @@ func cleanProfiles() *fakeProfiles {
 
 // run is one doctor over the given world.
 func run(files *fakeFiles, lookup *fakeLookup, profiles *fakeProfiles, exe string) Result {
-	return Run(Options{Dir: root, Version: "0.5.0", Exe: exe}, files, lookup, profiles)
+	return Run(Options{Dir: root, Home: homeRoot, Version: "0.5.0", Exe: exe}, files, lookup, profiles)
 }
 
 // checkOf returns one check by number, failing when the report does not have it.
@@ -677,6 +697,58 @@ func TestAMissingNativeAgentIsSaidAndNotAFailure(t *testing.T) {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
 		}
+	}
+}
+
+// TestAGlobalDoorThatIsMissingIsSaid: the project can be perfect and the human
+// still not find odachi in another folder. Check 11 names the missing door and
+// the command that installs it, without failing the project.
+func TestAGlobalDoorThatIsMissingIsSaid(t *testing.T) {
+	files := configured()
+	delete(files.files, atHome(".config/opencode/agents/odachi.md"))
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeOK {
+		t.Fatalf("la puerta ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"puerta global", "no está", ".config/opencode/agents/odachi.md", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+		}
+	}
+}
+
+// TestAGlobalDoorThatIsStaleIsSaid: a hand-edited door is the same class as a
+// hand-edited mirror: generated content that no longer matches this binary.
+func TestAGlobalDoorThatIsStaleIsSaid(t *testing.T) {
+	files := configured().putHome(".config/opencode/agents/odachi.md", "viejo\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeOK {
+		t.Fatalf("una puerta editada no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"puerta global", "no coincide", ".config/opencode/agents/odachi.md", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
+		}
+	}
+}
+
+// TestAGlobalDoorThatMatchesIsClean: a configured home is information, not
+// noise: the line says the door is up to date.
+func TestAGlobalDoorThatMatchesIsClean(t *testing.T) {
+	result := run(configured(), cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("check 11 must be ok with a clean home: %s", domaindoctor.Line(got))
+	}
+	if !strings.Contains(got.Detail, "puerta global está al día") {
+		t.Fatalf("la línea no dice que la puerta está al día: %q", got.Detail)
 	}
 }
 
