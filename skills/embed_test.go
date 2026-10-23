@@ -136,6 +136,38 @@ func TestDriveTeachesTheWorkflowDiscipline(t *testing.T) {
 	}
 }
 
+// TestTriageSkillTeachesRootCause: the skill that closes the backlog gap must
+// classify by root, not by issue, reproduce before fixing, and send an
+// out-of-fence report to ask instead of patching it.
+func TestTriageSkillTeachesRootCause(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["triage"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill triage: el backlog sigue sin método")
+	}
+	for _, want := range []string{
+		"por raíz",
+		"un solo fix",
+		"Reproducí el síntoma",
+		"odachi ask",
+		"odachi plan",
+		"la prueba que falla",
+		"fuera del cerco",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("triage no dice %q: el método de raíz se perdió", want)
+		}
+	}
+}
+
 // TestBootstrapIsTheEntryPoint: the payload has exactly one skill that teaches
 // how to start a project, and it is the one `odachi init` installs in the
 // human's home. Splitting it out of the curriculum is the whole reason the
