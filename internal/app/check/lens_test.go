@@ -126,6 +126,23 @@ func TestRequireReviewDoesNotAskForLensesOnADocsChange(t *testing.T) {
 	}
 }
 
+// TestRequireReviewDoesNotRequireAVerdictOnADocsChange: passive is not a review
+// that passed; it is a candidate that asks for no review. Requiring a verdict
+// here would make the human pay for a question nobody asked.
+func TestRequireReviewDoesNotRequireAVerdictOnADocsChange(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+
+	git := &fakeGit{tree: currentTree, changed: []string{"README.md", "docs/guia.md"}}
+	result := run(t, files, git, check.Options{RequireReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if len(files.writes) != 0 {
+		t.Fatalf("writes = %v, want none: the gate writes nothing", files.writes)
+	}
+}
+
 // TestARefutedBlockerStopsBlocking is the whole reason the refuter exists: a
 // finding nobody can defend with the diff does not hold a candidate.
 func TestARefutedBlockerStopsBlocking(t *testing.T) {

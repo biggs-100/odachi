@@ -16,7 +16,11 @@ var reviewInstant = time.Date(2026, 10, 21, 20, 31, 0, 0, time.UTC)
 // verdictFile seals a verdict for tree and renders the bytes that live on disk.
 func verdictFile(t *testing.T, tree string, findings []domainreview.Finding) string {
 	t.Helper()
-	sealed, err := domainreview.Seal(domainreview.Verdict{Reviewer: "claude", Findings: findings}, tree, "HEAD", reviewInstant)
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "claude",
+		Lenses:   []string{domainreview.Reliability},
+		Findings: findings,
+	}, tree, "HEAD", reviewInstant)
 	if err != nil {
 		t.Fatalf("sealing the seeded verdict: %v", err)
 	}
@@ -59,7 +63,7 @@ func TestReviewDoesNotInfluenceTheGateWithoutTheFlag(t *testing.T) {
 func TestRequireReviewWithoutAVerdictBlocks(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 
-	result := run(t, files, &fakeGit{tree: currentTree}, check.Options{RequireReview: true})
+	result := run(t, files, &fakeGit{tree: currentTree, changed: []string{"internal/app/check/check.go"}}, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
 		t.Fatalf("code = %d, want 2 (%s)", result.Code, result.Message)
@@ -80,7 +84,7 @@ func TestRequireReviewWithoutAVerdictBlocks(t *testing.T) {
 func TestRequireReviewWithApprovedContinues(t *testing.T) {
 	files := filesWithVerdict(t, currentTree, nil)
 
-	result := run(t, files, &fakeGit{tree: currentTree}, check.Options{RequireReview: true})
+	result := run(t, files, &fakeGit{tree: currentTree, changed: []string{"internal/app/check/check.go"}}, check.Options{RequireReview: true})
 
 	if result.Code != 0 {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
@@ -99,7 +103,7 @@ func TestRequireReviewWithChangesRequestedNamesTheFirstFinding(t *testing.T) {
 		{Path: "otro.go", Severity: domainreview.Blocker, Causal: true, Why: "cobra dos veces"},
 	})
 
-	result := run(t, files, &fakeGit{tree: currentTree}, check.Options{RequireReview: true})
+	result := run(t, files, &fakeGit{tree: currentTree, changed: []string{"internal/app/check/check.go"}}, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
 		t.Fatalf("code = %d, want 2 (%s)", result.Code, result.Message)
@@ -123,7 +127,7 @@ func TestRequireReviewIsPerTree(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(otherTree)] = []byte(verdictFile(t, otherTree, nil))
 
-	result := run(t, files, &fakeGit{tree: currentTree}, check.Options{RequireReview: true})
+	result := run(t, files, &fakeGit{tree: currentTree, changed: []string{"internal/app/check/check.go"}}, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
 		t.Fatalf("code = %d, want 2: another tree's approval must not count", result.Code)
@@ -139,7 +143,7 @@ func TestRequireReviewReportsAMangledVerdict(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte("basura")
 
-	result := run(t, files, &fakeGit{tree: currentTree}, check.Options{RequireReview: true})
+	result := run(t, files, &fakeGit{tree: currentTree, changed: []string{"internal/app/check/check.go"}}, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
 		t.Fatalf("code = %d, want 2 (%s)", result.Code, result.Message)

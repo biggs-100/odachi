@@ -1,13 +1,12 @@
-# odachi-worker-y
+# review-proporcional-al
 
 ## Qué tiene que existir
-- odachi-worker y odachi-verify como subagentes nativos, con handoff acotado, para que el agente principal no cargue el trabajo pesado
+- review proporcional al riesgo y con modo de proyecto: pasivo no pide juicio, el humano prende o apaga, y el riesgo mira contratos y concurrencia
 
 ## Listo cuando
-- init escribe odachi-worker y odachi-verify para OpenCode y Claude, y una segunda corrida no escribe nada
-- doctor compara los subagentes con lo generado y avisa si faltan o driftan
-- slices manda a pasar task doc, paso, superficies, comandos y paths de skills; el retorno es <=2k
-- opencode debug agents lista los dos como subagent
+- check --require-review no pide veredicto para un cambio solo de docs
+- review mode on|off|status persiste en .odachi/review.toml y check lo respeta; los flags lo override
+- Classify marca full para contratos, concurrencia y entrega, no solo auth y pagos
 - go test ./... queda en verde
 - odachi check queda listo
 
@@ -17,4 +16,4 @@
 - Se usa desde la compu.
 - No hay datos sensibles en la primera versión.
 - Primera versión usable: esta semana.
-- Quiere aprender: contexto y subagentes.
+- Quiere aprender: review y riesgo.

@@ -442,9 +442,21 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 // that covers every lens the candidate requires, and no causal BLOCKER or
 // CRITICAL finding left standing after the refutation is taken into account.
 //
+// The lenses come first because they answer whether this candidate asks for a
+// review at all. A documentation-only candidate has nothing for a specialist lens
+// to look at, so requiring a verdict would be ceremony, not evidence.
+//
 // It writes nothing. The store's ignore file is created by the verbs that produce
 // a verdict, so a tree with no verdict has no store to prepare either.
 func (r *runner) requireReview() *Result {
+	required, problem := r.requiredLenses()
+	if problem != nil {
+		return problem
+	}
+	if len(required) == 0 {
+		return nil
+	}
+
 	rel, err := reviewdomain.Path(r.tree)
 	if err != nil {
 		problem := blocked(oneLine(err.Error()) + "; revisá el árbol de git y volvé a correr odachi check --require-review")
@@ -476,12 +488,6 @@ func (r *runner) requireReview() *Result {
 		return &problem
 	}
 
-	// The lenses come first: a verdict that does not cover what the candidate
-	// requires did not answer the question the gate is asking.
-	required, problem := r.requiredLenses()
-	if problem != nil {
-		return problem
-	}
 	if missing := verdict.Missing(required); len(missing) > 0 {
 		problem := lensMissing(missing, rel)
 		return &problem
