@@ -16,7 +16,7 @@ R1 · "odachi writes artifacts, docs, skills and CLI messages in English; the ag
 - [x] T3 · README, CHANGELOG, ADRs and impact map are English   R1 · 0eea8e6
 - [x] T4 · domain and app messages speak English   R1 · fb0341d
 - [x] T5 · cmd messages, help and tests speak English   R1 · cf636e0
-- [ ] T6 · dogfood: init installs the English skills, docs counts and check green   R1
+- [x] T6 · dogfood: init installs the English skills, docs counts and check green   R1 · 475db75
 - [x] T7 · the review lens prompts speak English   R1 · 10087ae
 
 ## History
