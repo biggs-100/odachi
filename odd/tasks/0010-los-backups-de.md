@@ -12,8 +12,8 @@ R1 · "los backups de odachi viven en .odachi/backups y undo los lee junto con l
 
 ## Pasos
 - [x] T1 · mover los backups nuevos al store y que undo los lea   R1 · c42e065
-- [ ] T2 · undo --collect para migrar los viejos   R1
-- [ ] T3 · recoger este repo y documentar el store   R1
+- [x] T2 · undo --collect para migrar los viejos   R1 · e6237b2
+- [x] T3 · recoger este repo y documentar el store   R1
 
 ## Historial
 L1 · "los backups de odachi viven en .odachi/backups y undo los lee junto con los viejos, sin perder la posibilidad de deshacer"
