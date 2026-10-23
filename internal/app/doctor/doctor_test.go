@@ -227,9 +227,23 @@ func cleanProfiles() *fakeProfiles {
 	return &fakeProfiles{name: "novato"}
 }
 
+// fakeAgentSelection is the selection port: the choice the project stored, or
+// the error a malformed file gives. It only reads.
+type fakeAgentSelection struct {
+	stored string
+	err    error
+}
+
+func (s fakeAgentSelection) Written(string) (string, error) { return s.stored, s.err }
+
 // run is one doctor over the given world.
 func run(files *fakeFiles, lookup *fakeLookup, profiles *fakeProfiles, exe string) Result {
-	return Run(Options{Dir: root, Home: homeRoot, Version: "0.5.0", Exe: exe}, files, lookup, profiles)
+	return runSelected(files, lookup, profiles, exe, fakeAgentSelection{})
+}
+
+// runSelected is the same run with a stored client selection.
+func runSelected(files *fakeFiles, lookup *fakeLookup, profiles *fakeProfiles, exe string, agents fakeAgentSelection) Result {
+	return Run(Options{Dir: root, Home: homeRoot, Version: "0.5.0", Exe: exe, Agents: agents}, files, lookup, profiles)
 }
 
 // checkOf returns one check by number, failing when the report does not have it.
@@ -818,6 +832,88 @@ func TestAGlobalDoorThatIsStaleIsSaid(t *testing.T) {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("la línea tiene que decir %q: %q", want, got.Detail)
 		}
+	}
+}
+
+// TestDoctorOnlyChecksTheChosenClient: the project chose OpenCode, so Claude is
+// neither missing nor stale. The line says which choice it obeyed.
+func TestDoctorOnlyChecksTheChosenClient(t *testing.T) {
+	files := configured()
+	body, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	claude, _ := persona.FilesFor(persona.SelectionClaude, body)
+	delete(files.files, at(claude.Path))
+	for _, file := range persona.SubagentFilesFor(persona.SelectionClaude) {
+		delete(files.files, at(file.Path))
+	}
+	door, _ := persona.GlobalFilesFor(persona.SelectionClaude)
+	delete(files.files, atHome(door.Path))
+
+	result := runSelected(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+		fakeAgentSelection{stored: persona.SelectionOpenCode})
+
+	if result.Code != CodeOK {
+		t.Fatalf("la elección no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("check 11 must be ok with the chosen client complete: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{"solo reviso opencode", persona.SelectionPath} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("la línea tiene que decir %q: %q", want, got.Detail)
+		}
+	}
+	if strings.Contains(got.Detail, ".claude") {
+		t.Errorf("la línea nombra .claude aunque no estaba elegido: %q", got.Detail)
+	}
+}
+
+// TestDoctorNamesTheChosenClientWhenMissing: the filter is not a way to hide a
+// missing file: the client that was chosen is still checked and named.
+func TestDoctorNamesTheChosenClientWhenMissing(t *testing.T) {
+	files := configured()
+	delete(files.files, at(".opencode/agents/odachi.md"))
+
+	result := runSelected(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+		fakeAgentSelection{stored: persona.SelectionOpenCode})
+
+	if result.Code != CodeOK {
+		t.Fatalf("un agente ausente no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"no está", ".opencode/agents/odachi.md", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("la línea tiene que decir %q: %q", want, got.Detail)
+		}
+	}
+	if strings.Contains(got.Detail, ".claude") {
+		t.Errorf("la línea nombra .claude aunque no estaba elegido: %q", got.Detail)
+	}
+}
+
+// TestDoctorNamesABrokenSelection: a store the tool cannot read is said, and the
+// persona checks are skipped instead of guessing a client.
+func TestDoctorNamesABrokenSelection(t *testing.T) {
+	result := runSelected(configured(), cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+		fakeAgentSelection{err: errors.New("agents: TOML inválido")})
+
+	if result.Code != CodeOK {
+		t.Fatalf("una elección rota no rompe el proyecto: %s", strings.Join(result.Lines, " / "))
+	}
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("check 11 must stay ok with a note: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{persona.SelectionPath, "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("la línea tiene que decir %q: %q", want, got.Detail)
+		}
+	}
+	if strings.Contains(got.Detail, "coincide con el bloque") {
+		t.Errorf("la línea revisó los agentes adivinando un cliente: %q", got.Detail)
 	}
 }
 

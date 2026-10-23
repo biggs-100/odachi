@@ -74,6 +74,15 @@ type Options struct {
 	// Home is the human's home, where the global door lives. Empty means the
 	// caller could not resolve it; the check skips the door instead of guessing.
 	Home string
+	// Agents is the client selection the project stored. nil means no store:
+	// both clients, the default of a project that never chose.
+	Agents Agents
+}
+
+// Agents is the selection port: which clients the project chose for the native
+// agent. It only reads: doctor has no way to change the choice.
+type Agents interface {
+	Written(dir string) (string, error)
 }
 
 // Files is the disk port. It can only read: doctor has no way to write, which is
@@ -675,12 +684,18 @@ func (r *runner) voice() domaindoctor.Check {
 // invariant, the agents are a convenience, and odachi does not delete files it
 // did not write in this version.
 func (r *runner) voiceCheck(check domaindoctor.Check, content string) domaindoctor.Check {
-	notes := make([]string, 0, 3)
-	if note := r.personaNote(content); note != "" {
-		notes = append(notes, note)
+	notes := make([]string, 0, 4)
+	_, clients, selectionNote, readable := r.clientSelection()
+	if readable {
+		if note := r.personaNote(content, clients); note != "" {
+			notes = append(notes, note)
+		}
+		if note := r.globalPersonaNote(clients); note != "" {
+			notes = append(notes, note)
+		}
 	}
-	if note := r.globalPersonaNote(); note != "" {
-		notes = append(notes, note)
+	if selectionNote != "" {
+		notes = append(notes, selectionNote)
 	}
 	note, err := r.leftovers()
 	if err != nil {
@@ -702,19 +717,49 @@ func (r *runner) voiceCheck(check domaindoctor.Check, content string) domaindoct
 	return check
 }
 
+// clientSelection reads the choice the project stored. A project that never
+// chose, or a doctor without the port, keeps both clients: the same default init
+// has. A file doctor cannot read is a note, not a failed check: the block still
+// works, and the line tells the human which file to fix instead of guessing a
+// client and reporting files that were never meant to exist.
+func (r *runner) clientSelection() (string, []persona.Client, string, bool) {
+	if r.opts.Agents == nil {
+		return persona.SelectionBoth, persona.Clients(), "", true
+	}
+	stored, err := r.opts.Agents.Written(r.opts.Dir)
+	if err != nil {
+		return "", nil, "no pude leer " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; corregí el archivo o corré odachi init --agents both", false
+	}
+	name, clients, err := persona.ResolveSelection(stored)
+	if err != nil {
+		return "", nil, "no pude leer " + persona.SelectionPath + ": " + oneLine(err.Error()) +
+			"; corregí el archivo o corré odachi init --agents both", false
+	}
+	note := ""
+	if name != persona.SelectionBoth {
+		note = "solo reviso " + name + ", como dice " + persona.SelectionPath
+	}
+	return name, clients, note, true
+}
+
 // personaNote compares the native agent files with the block the human has. A
 // file that is missing or different is the one thing a selector cannot explain:
 // the agent a human picks would read a voice the project no longer promises. It
 // is a note and not a Problem because the block still works without a selector;
 // the fix is the same command that installs the mirror.
-func (r *runner) personaNote(content string) string {
+func (r *runner) personaNote(content string, clients []persona.Client) string {
 	body, ok := rules.BodyIn(content)
 	if !ok {
 		return ""
 	}
 
 	missing, stale := []string{}, []string{}
-	for _, file := range persona.Files(body) {
+	for _, client := range clients {
+		file, ok := persona.FilesFor(client.Agent, body)
+		if !ok {
+			continue
+		}
 		current, exists, err := r.read(file.Path)
 		switch {
 		case err != nil:
@@ -724,22 +769,22 @@ func (r *runner) personaNote(content string) string {
 		case current != file.Content:
 			stale = append(stale, file.Path)
 		}
-	}
-	for _, file := range persona.SubagentFiles() {
-		current, exists, err := r.read(file.Path)
-		switch {
-		case err != nil:
-			return "no pude leer " + file.Path + ": " + oneLine(err.Error()) + "; corré odachi init"
-		case !exists:
-			missing = append(missing, file.Path)
-		case current != file.Content:
-			stale = append(stale, file.Path)
+		for _, sub := range persona.SubagentFilesFor(client.Agent) {
+			current, exists, err := r.read(sub.Path)
+			switch {
+			case err != nil:
+				return "no pude leer " + sub.Path + ": " + oneLine(err.Error()) + "; corré odachi init"
+			case !exists:
+				missing = append(missing, sub.Path)
+			case current != sub.Content:
+				stale = append(stale, sub.Path)
+			}
 		}
 	}
 
-	dirs := make([]string, 0, len(persona.Clients()))
-	subDirs := make([]string, 0, len(persona.Clients()))
-	for _, client := range persona.Clients() {
+	dirs := make([]string, 0, len(clients))
+	subDirs := make([]string, 0, len(clients))
+	for _, client := range clients {
 		dirs = append(dirs, client.Dir)
 		subDirs = append(subDirs, client.SubagentDir)
 	}
@@ -759,13 +804,17 @@ func (r *runner) personaNote(content string) string {
 // binary would install. It is a note, not a Problem: a project with the block and
 // the project agent still works without the global door; what is lost is odachi
 // appearing in every other folder. The fix is the same `odachi init`.
-func (r *runner) globalPersonaNote() string {
+func (r *runner) globalPersonaNote(clients []persona.Client) string {
 	if r.opts.Home == "" {
 		return ""
 	}
 
 	missing, stale := []string{}, []string{}
-	for _, file := range persona.GlobalFiles() {
+	for _, client := range clients {
+		file, ok := persona.GlobalFilesFor(client.Agent)
+		if !ok {
+			continue
+		}
 		path := filepath.Join(r.opts.Home, filepath.FromSlash(file.Path))
 		display := "~/" + file.Path
 

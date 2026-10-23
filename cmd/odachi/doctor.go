@@ -44,6 +44,7 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 		Version: version,
 		Exe:     selfExe(),
 		Home:    home,
+		Agents:  agentSelection{},
 	}, osFiles{}, osLookup{}, osProfiles{})
 
 	return reportDoctor(result, asJSON, stdout, stderr)

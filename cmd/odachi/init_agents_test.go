@@ -133,6 +133,26 @@ func TestLevelKeepsTheUnchosenClient(t *testing.T) {
 	}
 }
 
+// TestDoctorRespectsTheStoredChoice: after an install that skipped Claude,
+// doctor does not ask for Claude's files and says which choice it obeyed.
+func TestDoctorRespectsTheStoredChoice(t *testing.T) {
+	dir := t.TempDir()
+	initRepo(t, dir)
+	if code, _, errOut := runDir(t, dir, []string{"init", "--agents", "opencode"}, ""); code != 0 {
+		t.Fatalf("init: exit %d, stderr=%s", code, errOut)
+	}
+
+	_, out, errOut := runDir(t, dir, []string{"doctor"}, "")
+	combined := out + errOut
+
+	if !strings.Contains(combined, "solo reviso opencode") {
+		t.Errorf("doctor does not say which client it checked:\n%s", combined)
+	}
+	if strings.Contains(combined, ".claude") {
+		t.Errorf("doctor still asks for .claude after --agents opencode:\n%s", combined)
+	}
+}
+
 // TestInitAgentsJSONOnlyReportsTheChosenClient: the machine report has exactly
 // the destinations this run owns, so a consumer cannot think Claude was written.
 func TestInitAgentsJSONOnlyReportsTheChosenClient(t *testing.T) {
