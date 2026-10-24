@@ -109,14 +109,18 @@ func Lenses(t Tier) []string {
 }
 
 // Need is the per-file lens demand coverage asks about: for every changed path,
-// the lenses its own path class requires, omitting the paths whose class asks
-// for nothing. The tier of one candidate is one question, but assignment is per
+// the lenses its own path class requires, raised by the same content assessment
+// the review selection uses, and omitting the paths whose class asks for
+// nothing. The tier of one candidate is one question, but assignment is per
 // file: a candidate may need reliability in one file and all four lenses in
 // another, and coverage compares the verdict's rows against exactly this.
-func Need(changedPaths []string) map[string][]string {
+func Need(changedPaths []string, diff string) map[string][]string {
+	floor := FloorFor(changedPaths, diff)
+
 	need := make(map[string][]string, len(changedPaths))
 	for _, path := range changedPaths {
-		lenses := Lenses(Classify([]string{path}))
+		rows := floor.rowsFor(path)
+		lenses := Lenses(assessClass([]string{path}, rows))
 		if len(lenses) == 0 {
 			continue
 		}

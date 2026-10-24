@@ -18,7 +18,7 @@ func TestNeedAsksPerFile(t *testing.T) {
 		"internal/app/engine/turno.go",
 		"internal/auth/session.go",
 		"docs/notas.md",
-	})
+	}, "")
 
 	if got := need["internal/app/engine/turno.go"]; !slices.Equal(got, []string{review.Reliability}) {
 		t.Errorf("ordinary code asks %v, want reliability only", got)
@@ -28,6 +28,54 @@ func TestNeedAsksPerFile(t *testing.T) {
 	}
 	if _, asks := need["docs/notas.md"]; asks {
 		t.Errorf("a plain document never asks: %v", need["docs/notas.md"])
+	}
+}
+
+// TestAssessRaisesTheClassFromContent: the path class is the floor and the
+// added lines can raise it — never lower it. Concurrency and secrets are the
+// two categories a path cannot see; prose never turns a document into code.
+func TestAssessRaisesTheClassFromContent(t *testing.T) {
+	concurrent := "diff --git a/internal/engine/engine.go b/internal/engine/engine.go\n--- a/internal/engine/engine.go\n+++ b/internal/engine/engine.go\n@@ -1 +1,2 @@\n package engine\n+go func() { sync.Mutex{} }()\n"
+	if got := review.Assess([]string{"internal/engine/engine.go"}, concurrent); got != review.Full {
+		t.Errorf("content with a goroutine and a mutex asks %q, want full", got)
+	}
+
+	secret := "diff --git a/internal/engine/config.go b/internal/engine/config.go\n--- a/internal/engine/config.go\n+++ b/internal/engine/config.go\n@@ -1 +1,2 @@\n package config\n+token := os.Getenv(\"TOKEN\")\n"
+	if got := review.Assess([]string{"internal/engine/config.go"}, secret); got != review.Full {
+		t.Errorf("content that reads a token asks %q, want full", got)
+	}
+
+	plain := "diff --git a/internal/engine/engine.go b/internal/engine/engine.go\n--- a/internal/engine/engine.go\n+++ b/internal/engine/engine.go\n@@ -1 +1,2 @@\n package engine\n+func Nueva() string { return \"x\" }\n"
+	if got := review.Assess([]string{"internal/engine/engine.go"}, plain); got != review.Focused {
+		t.Errorf("plain code asks %q, want focused: content adds review, it does not invent it", got)
+	}
+
+	doc := "diff --git a/docs/notas.md b/docs/notas.md\n--- a/docs/notas.md\n+++ b/docs/notas.md\n@@ -1 +1,2 @@\n # notas\n+el token y el mutex se explican aqui\n"
+	if got := review.Assess([]string{"docs/notas.md"}, doc); got != review.Passive {
+		t.Errorf("prose asks %q, want passive: a document's words are not code", got)
+	}
+
+	auth := "diff --git a/internal/auth/session.go b/internal/auth/session.go\n--- a/internal/auth/session.go\n+++ b/internal/auth/session.go\n@@ -1 +1,2 @@\n package auth\n+func Nueva() {}\n"
+	if got := review.Assess([]string{"internal/auth/session.go"}, auth); got != review.Full {
+		t.Errorf("an auth path asks %q, want full: content never lowers the path class", got)
+	}
+}
+
+// TestNeedAsksPerFileWithContent: coverage follows the same assessment. A file
+// whose own added lines touch concurrency owes the four rows; its neighbour
+// keeps its path class; a document owes nothing.
+func TestNeedAsksPerFileWithContent(t *testing.T) {
+	diff := "diff --git a/internal/engine/engine.go b/internal/engine/engine.go\n--- a/internal/engine/engine.go\n+++ b/internal/engine/engine.go\n@@ -1 +1,2 @@\n package engine\n+go func() { sync.Mutex{} }()\n"
+	need := review.Need([]string{"internal/engine/engine.go", "internal/app/turno.go", "docs/notas.md"}, diff)
+
+	if got := need["internal/engine/engine.go"]; len(got) != 4 {
+		t.Errorf("the concurrent file asks %v, want the four lenses", got)
+	}
+	if got := need["internal/app/turno.go"]; !slices.Equal(got, []string{review.Reliability}) {
+		t.Errorf("the plain file asks %v, want reliability only", got)
+	}
+	if _, asks := need["docs/notas.md"]; asks {
+		t.Errorf("the document never asks: %v", need["docs/notas.md"])
 	}
 }
 

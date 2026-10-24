@@ -530,7 +530,7 @@ func (r *runner) requireReview() *Result {
 	if problem != nil {
 		return problem
 	}
-	need := reviewdomain.Need(changed)
+	need := reviewdomain.Need(changed, "")
 	for path, blob := range blobs {
 		if blob == "" {
 			delete(need, path)

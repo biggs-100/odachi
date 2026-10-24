@@ -70,18 +70,18 @@ func TestFloorNamesTheSignals(t *testing.T) {
 	}
 }
 
-// TestFloorClassStaysThePathClass: the fence keeps ADR 0010's selection rules.
-// The floor reports the same class the lenses were chosen from; it does not
-// invent a new one from the diff's vocabulary.
-func TestFloorClassStaysThePathClass(t *testing.T) {
+// TestFloorClassFollowsTheAssessment: the report says the class the lenses
+// were chosen from. A document stays passive; ordinary code whose added lines
+// carry a raised category reports full.
+func TestFloorClassFollowsTheAssessment(t *testing.T) {
 	docs := review.FloorFor([]string{"docs/notas.md"}, floorDiff)
-	if docs.Class != review.Classify([]string{"docs/notas.md"}) {
-		t.Errorf("floor class for a doc = %q, want the path class %q", docs.Class, review.Classify([]string{"docs/notas.md"}))
+	if docs.Class != review.Passive {
+		t.Errorf("floor class for a doc = %q, want passive", docs.Class)
 	}
 
-	code := review.FloorFor([]string{"internal/app/turno.go"}, floorDiff)
-	if code.Class != review.Focused {
-		t.Errorf("floor class for ordinary code = %q, want focused", code.Class)
+	code := review.FloorFor([]string{"a.go", "b.go"}, floorDiff)
+	if code.Class != review.Full {
+		t.Errorf("floor class for code with a goroutine = %q, want full: content raises the path class", code.Class)
 	}
 }
 

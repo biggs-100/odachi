@@ -17,3 +17,5 @@ R1 · "the deterministic floor may raise the lens class from the diff's content 
 
 ## History
 L1 · "the deterministic floor may raise the lens class from the diff's content — never lower it — and review and check ask the same lenses"
+L2 · OFICIO · "Assess raises only Focused to Full, from the added lines' concurrency or secrets; Passive prose never raises and nothing lowers" (porque Concurrency and secrets are the two classes a path cannot see; a document's words are not code, and over-reviewing code costs one prompt while under-reviewing auth costs a defect)
+L3 · OFICIO · "Need and Assess share one assessClass, so the review selection and the gate's demand can never disagree" (porque ADR 0010's lesson was one authority for per-candidate lens demand; two implementations would drift the day one changes)

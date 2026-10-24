@@ -64,8 +64,58 @@ var floorSignals = []struct {
 // finding about a removed file has to cite elsewhere or lose its blocking
 // claim. A diff with no readable hunk is a floor with no rows, and a floor with
 // no rows judges nothing.
+//
+// The class is the content-aware one: the path class is the floor and these
+// rows can raise it, never lower it (see Assess).
 func FloorFor(paths []string, diff string) Floor {
-	floor := Floor{Class: Classify(paths)}
+	floor := Floor{Rows: readRows(diff)}
+	floor.Class = assessClass(paths, floor.Rows)
+	return floor
+}
+
+// Assess is the class of the candidate with the diff's content taken into
+// account: the path class is the floor, and ordinary code whose added lines
+// spawn concurrency or touch secrets is raised to full. Content adds review; it
+// never removes it, and prose never turns a document into code.
+func Assess(paths []string, diff string) Tier {
+	return FloorFor(paths, diff).Class
+}
+
+// assessClass is the one rule both Assess and Need answer, so the review
+// selection and the gate's demand can never disagree.
+func assessClass(paths []string, rows []FloorRow) Tier {
+	pathClass := Classify(paths)
+	if pathClass != Focused {
+		// Passive has nothing for a lens to look at and Full already asks for
+		// everything: only ordinary code has room to be raised.
+		return pathClass
+	}
+
+	for _, row := range rows {
+		if slices.Contains(row.Signals, "concurrency") || slices.Contains(row.Signals, "secrets") {
+			return Full
+		}
+	}
+	return Focused
+}
+
+// rowsFor is the floor rows of one path, compared in the same spelling coverage
+// uses.
+func (f Floor) rowsFor(path string) []FloorRow {
+	normalized := normalizePath(path)
+	var rows []FloorRow
+	for _, row := range f.Rows {
+		if normalizePath(row.Path) == normalized {
+			rows = append(rows, row)
+		}
+	}
+	return rows
+}
+
+// readRows is the diff parser: the candidate's added lines, with the signals
+// their text carries.
+func readRows(diff string) []FloorRow {
+	var rows []FloorRow
 
 	var row *FloorRow
 	newLine := 0
@@ -81,8 +131,8 @@ func FloorFor(paths []string, diff string) Floor {
 			if path == "" || path == "/dev/null" {
 				continue
 			}
-			floor.Rows = append(floor.Rows, FloorRow{Path: path})
-			row = &floor.Rows[len(floor.Rows)-1]
+			rows = append(rows, FloorRow{Path: path})
+			row = &rows[len(rows)-1]
 
 		case strings.HasPrefix(line, "@@ "):
 			inHunk = true
@@ -112,7 +162,7 @@ func FloorFor(paths []string, diff string) Floor {
 		}
 	}
 
-	return floor
+	return rows
 }
 
 // hunkStart reads the new-file first line of a hunk header: `@@ -a,b +c,d @@`
