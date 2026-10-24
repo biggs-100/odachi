@@ -575,10 +575,10 @@ func TestTheStoreLendsItsPotentRows(t *testing.T) {
 	}
 }
 
-// TestARefutedFindingDiesWithItsVerdict: the inheritance is survival-biased. A
-// finding the refuter killed with evidence does not travel — the refutation is
-// index-based and belongs to its own verdict's findings.
-func TestARefutedFindingDiesWithItsVerdict(t *testing.T) {
+// refutedProject is a candidate whose previous verdict filed one blocking
+// finding, and a refuter killed it with evidence.
+func refutedProject(t *testing.T) *project {
+	t.Helper()
 	p := newProject()
 	p.git.blobs = map[string]string{"a.go": gitBlob}
 	blocking := domainreview.Verdict{
@@ -596,12 +596,9 @@ func TestARefutedFindingDiesWithItsVerdict(t *testing.T) {
 
 	answer := domainreview.Refutation{
 		Refuter:     "refuter",
-		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "el turno nunca se pierde, la cita lo prueba"}},
+		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "la transaccion guarda el turno, la cita lo prueba"}},
 	}
 	sealedRefutation, err := domainreview.SealRefutation(answer, blocking.Findings, otherTree, now)
-	if err != nil {
-		t.Fatalf("sealing the refutation: %v", err)
-	}
 	if err != nil {
 		t.Fatalf("sealing the refutation: %v", err)
 	}
@@ -610,6 +607,15 @@ func TestARefutedFindingDiesWithItsVerdict(t *testing.T) {
 		t.Fatalf("the refutation path: %v", err)
 	}
 	p.files.files[fullPath(refRel)] = domainreview.RenderRefutation(sealedRefutation)
+	return p
+}
+
+// TestARefutedFindingTravelsDismissed: a finding the refuter killed with
+// evidence does not die with its verdict. It travels as a dismissal — reason
+// and fingerprint included — so the next candidate can defend its silence
+// instead of re-litigating it.
+func TestARefutedFindingTravelsDismissed(t *testing.T) {
+	p := refutedProject(t)
 	p.shell.output = `{"findings":[]}`
 
 	result := p.run(review.Options{Exec: "claude -p"})
@@ -621,8 +627,94 @@ func TestARefutedFindingDiesWithItsVerdict(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the stored verdict does not parse: %v", err)
 	}
-	if len(parsed.Findings) != 0 {
-		t.Errorf("findings = %+v, want none: a refuted finding never travels", parsed.Findings)
+	if len(parsed.Findings) != 1 {
+		t.Fatalf("findings = %d, want 1: the dismissal travels", len(parsed.Findings))
+	}
+	dismissed := parsed.Findings[0]
+	if !domainreview.IsDismissed(dismissed) {
+		t.Errorf("status = %q, want dismissed", dismissed.Status)
+	}
+	if dismissed.Reason != "la transaccion guarda el turno, la cita lo prueba" {
+		t.Errorf("reason = %q, want the refuter's evidence", dismissed.Reason)
+	}
+	if dismissed.Fingerprint == "" {
+		t.Error("the dismissal travels without its fingerprint")
+	}
+	if parsed.Verdict != domainreview.Approved {
+		t.Errorf("verdict = %q, want approved: a dismissal never blocks", parsed.Verdict)
+	}
+}
+
+// TestAReRaisedDismissalStaysDismissed: the reviewer may re-report a defect the
+// store already dismissed. The tool keeps the dismissal — the reason and
+// fingerprint win over the fresh claim, deterministically.
+func TestAReRaisedDismissalStaysDismissed(t *testing.T) {
+	p := refutedProject(t)
+	p.shell.output = `{"findings":[{"path":"a.go","line":3,"severity":"CRITICAL","lens":"reliability","causal":true,"why":"pierde el turno"}]}`
+
+	result := p.run(review.Options{Exec: "claude -p"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if len(parsed.Findings) != 1 {
+		t.Fatalf("findings = %d, want one row: the re-raise is the same defect", len(parsed.Findings))
+	}
+	if !domainreview.IsDismissed(parsed.Findings[0]) {
+		t.Errorf("status = %q, want dismissed: a re-raise never undoes a judgment", parsed.Findings[0].Status)
+	}
+	if !strings.Contains(parsed.Findings[0].Reason, "transaccion") {
+		t.Errorf("reason = %q, want the original evidence kept", parsed.Findings[0].Reason)
+	}
+}
+
+// TestThePromptNamesTheDismissals: the reviewer is told what was judged and why
+// before it reports anything, or it will re-raise a defect nobody wants again.
+func TestThePromptNamesTheDismissals(t *testing.T) {
+	p := refutedProject(t)
+
+	result := p.run(review.Options{})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	for _, want := range []string{"dismissed", "la transaccion guarda el turno", "re-raise"} {
+		if !strings.Contains(result.Prompt, want) {
+			t.Errorf("the prompt does not name the dismissal: missing %q", want)
+		}
+	}
+}
+
+// TestShowNamesADismissal: the stored verdict says what it discarded and why,
+// and --show prints it without making the human open the JSON.
+func TestShowNamesADismissal(t *testing.T) {
+	p := newProject()
+	dismissed := domainreview.Finding{
+		Path: "a.go", Line: 3, Severity: domainreview.Warning, Causal: true,
+		Why: "pierde el turno", Lens: "reliability",
+		Status: domainreview.Dismissed, Reason: "la transaccion lo cubre",
+	}
+	dismissed.Fingerprint = domainreview.Fingerprint(dismissed)
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "claude",
+		Verdict:  domainreview.Approved,
+		Lenses:   []string{"reliability"},
+		Findings: []domainreview.Finding{dismissed},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the stored verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(sealed)
+
+	result := p.run(review.Options{Show: true})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "dismissed: la transaccion lo cubre") {
+		t.Errorf("lines %v do not print the dismissal's reason", result.Lines)
 	}
 }
 

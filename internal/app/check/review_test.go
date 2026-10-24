@@ -73,6 +73,31 @@ func TestReviewDoesNotInfluenceTheGateWithoutTheFlag(t *testing.T) {
 	}
 }
 
+// TestADismissedFindingDoesNotBlockTheGate: a dismissal was judged with
+// evidence in its verdict. The gate records it and lets the tree through — the
+// receipt still covers the row, the severity no longer blocks.
+func TestADismissedFindingDoesNotBlockTheGate(t *testing.T) {
+	dismissed := domainreview.Finding{
+		Path: "internal/app/check/check.go", Line: 12, Severity: domainreview.Critical, Causal: true,
+		Why: "pierde el turno", Lens: domainreview.Reliability, Blob: checkBlob,
+		Status: domainreview.Dismissed, Reason: "la transaccion lo cubre, la cita lo prueba",
+	}
+	dismissed.Fingerprint = domainreview.Fingerprint(dismissed)
+
+	files := newFakeFiles(readyFiles())
+	files.files[reviewPath(currentTree)] = []byte(verdictFileWithRows(t, currentTree, []domainreview.Finding{dismissed}, nil))
+
+	result := run(t, files, &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+	}, check.Options{RequireReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0: a dismissal never blocks (%s)", result.Code, result.Message)
+	}
+}
+
 // TestRequireReviewWithoutAVerdictBlocks: the flag is on, this tree has no
 // verdict, so a human decision is missing: exit 2, and the continuation is the
 // command that produces one.

@@ -100,6 +100,17 @@ type Finding struct {
 	// Lens is the specialist that produced this finding. The same closed
 	// vocabulary as the verdict's lens list.
 	Lens string `json:"lens,omitempty"`
+	// Status is open or dismissed. Empty means open, because every verdict
+	// written before dismissals existed carries open findings.
+	Status string `json:"status,omitempty"`
+	// Reason is the evidence that dismissed the row. It exists only on a
+	// dismissed finding: a dismissal without a reason is silence wearing a
+	// verdict's clothes.
+	Reason string `json:"reason,omitempty"`
+	// Fingerprint identifies the defect a dismissal judged, so a later
+	// candidate recognizes the same row instead of re-raising it. The tool
+	// computes it; it is stored so the verdict says what it discarded.
+	Fingerprint string `json:"fingerprint,omitempty"`
 }
 
 // Verdict is what a review concluded about one tree.
@@ -283,6 +294,26 @@ func (v Verdict) Validate() error {
 		if lens := strings.TrimSpace(finding.Lens); lens != "" && !IsLens(lens) {
 			return fmt.Errorf("finding %d (%s) says lens %q; the lenses are %s",
 				i+1, finding.Path, lens, strings.Join(order, ", "))
+		}
+
+		switch status := strings.ToLower(strings.TrimSpace(finding.Status)); status {
+		case "", Open:
+			if strings.TrimSpace(finding.Reason) != "" {
+				return fmt.Errorf("finding %d (%s) says a reason without being dismissed: a reason is what judged a dismissal, not a note",
+					i+1, finding.Path)
+			}
+		case Dismissed:
+			if strings.TrimSpace(finding.Reason) == "" {
+				return fmt.Errorf("finding %d (%s) is dismissed without a reason: a dismissal without evidence is silence, not a judgment",
+					i+1, finding.Path)
+			}
+			if fingerprint := strings.TrimSpace(finding.Fingerprint); fingerprint != "" && !hashLike(fingerprint) {
+				return fmt.Errorf("finding %d (%s) says fingerprint %q; a fingerprint is hex like a hash",
+					i+1, finding.Path, fingerprint)
+			}
+		default:
+			return fmt.Errorf("finding %d (%s) says status %q; the states are %s and %s",
+				i+1, finding.Path, finding.Status, Open, Dismissed)
 		}
 	}
 

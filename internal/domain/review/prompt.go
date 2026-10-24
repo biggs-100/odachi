@@ -176,6 +176,7 @@ func carriedSection(known []Finding, carried []Pass) string {
 
 	var out strings.Builder
 	out.WriteString("## What the store already carries for these exact bytes\n\n")
+	dismissed := false
 	for _, finding := range known {
 		where := finding.Path
 		if finding.Line > 0 {
@@ -184,6 +185,11 @@ func carriedSection(known []Finding, carried []Pass) string {
 		who := ""
 		if finding.Lens != "" {
 			who = finding.Lens + ", "
+		}
+		if IsDismissed(finding) {
+			dismissed = true
+			out.WriteString("- " + where + " (" + who + string(finding.Severity) + ") dismissed: " + finding.Reason + "\n")
+			continue
 		}
 		out.WriteString("- " + where + " (" + who + string(finding.Severity) + ") " + finding.Why + "\n")
 	}
@@ -197,7 +203,12 @@ func carriedSection(known []Finding, carried []Pass) string {
 	out.WriteString("\nDo not re-report the findings above in \"findings\": the verdict inherits\n")
 	out.WriteString("them as they are, with their receipts. Report a finding only when a defect\n")
 	out.WriteString("is new to this candidate, and leave \"passes\" without the clean rows above;\n")
-	out.WriteString("they are carried too.\n\n")
+	out.WriteString("they are carried too.\n")
+	if dismissed {
+		out.WriteString("A row marked dismissed was judged with evidence in an earlier verdict: do not\n")
+		out.WriteString("re-raise it. The same fingerprint stays dismissed, whatever this review says.\n")
+	}
+	out.WriteString("\n")
 
 	return out.String()
 }

@@ -216,9 +216,13 @@ func (r Refutation) Refutes(id string) bool {
 }
 
 // BlockingAfter returns the first finding that still blocks, in the verdict's
-// file order: causal, BLOCKER or CRITICAL, and not refuted with evidence.
+// file order: causal, BLOCKER or CRITICAL, not dismissed with evidence, and not
+// refuted with evidence.
 func BlockingAfter(findings []Finding, r Refutation) (Finding, bool) {
 	for i, finding := range findings {
+		if IsDismissed(finding) {
+			continue
+		}
 		if !finding.Causal || !finding.Severity.Blocks() {
 			continue
 		}

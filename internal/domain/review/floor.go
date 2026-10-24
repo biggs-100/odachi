@@ -169,7 +169,7 @@ func Earned(findings []Finding, floor Floor) ([]Finding, int) {
 
 	downgraded := 0
 	for i, finding := range earned {
-		if !finding.Causal || !finding.Severity.Blocks() {
+		if IsDismissed(finding) || !finding.Causal || !finding.Severity.Blocks() {
 			continue
 		}
 		row, known := floor.Row(finding.Path)

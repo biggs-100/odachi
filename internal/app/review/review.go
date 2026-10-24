@@ -538,6 +538,9 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 	if carried.findings+carried.passes > 0 {
 		lines = append(lines, fmt.Sprintf("carried from the store: %d potent finding(s) and %d potent pass(es) about unchanged bytes", carried.findings, carried.passes))
 	}
+	if carried.suppressed > 0 {
+		lines = append(lines, fmt.Sprintf("kept dismissed: %d re-raised finding(s) discarded by fingerprint", carried.suppressed))
+	}
 	lines = append(lines, notes...)
 	return Result{
 		Code:    CodeOK,
@@ -689,10 +692,12 @@ func (r *runner) stampBlob(what, path string) (string, *Result) {
 	return blob, nil
 }
 
-// carriedRows is how much the store lent to one verdict.
+// carriedRows is how much the store lent to one verdict, and how many fresh
+// claims it refused because a dismissal already judged them.
 type carriedRows struct {
-	findings int
-	passes   int
+	findings   int
+	passes     int
+	suppressed int
 }
 
 // inherit adds the rows the store already holds potent about these exact
@@ -711,9 +716,30 @@ func (r *runner) inherit(verdict domain.Verdict, tree string) (domain.Verdict, c
 	}
 
 	carried := carriedRows{}
-	merged := verdict
 
-	seen := make(map[string]bool, len(verdict.Findings)+len(knowFindings))
+	// A reused dismissal wins over a fresh claim, deterministically: the same
+	// fingerprint was judged with evidence, and a re-report does not undo a
+	// judgment. The row still travels, dismissed, so the next candidate keeps
+	// the reason.
+	dismissed := make(map[string]bool)
+	for _, finding := range knowFindings {
+		if domain.IsDismissed(finding) {
+			dismissed[domain.Fingerprint(finding)] = true
+		}
+	}
+
+	merged := verdict
+	kept := make([]domain.Finding, 0, len(verdict.Findings))
+	for _, finding := range verdict.Findings {
+		if !domain.IsDismissed(finding) && dismissed[domain.Fingerprint(finding)] {
+			carried.suppressed++
+			continue
+		}
+		kept = append(kept, finding)
+	}
+	merged.Findings = kept
+
+	seen := make(map[string]bool, len(merged.Findings)+len(knowFindings))
 	for _, finding := range merged.Findings {
 		seen[findingKey(finding)] = true
 	}
@@ -791,11 +817,19 @@ func (r *runner) potentRows(verdictTree string) (findings []domain.Finding, pass
 		}
 
 		for i, finding := range origin.Findings {
-			if killed[domain.FindingIDs(origin.Findings)[i]] {
-				continue
+			if reason, killed := killed[domain.FindingIDs(origin.Findings)[i]]; killed {
+				finding = domain.Dismiss(finding, reason)
 			}
 			if !domain.IsLens(finding.Lens) || strings.TrimSpace(finding.Blob) == "" {
 				continue
+			}
+			if domain.IsDismissed(finding) {
+				if strings.TrimSpace(finding.Reason) == "" {
+					continue
+				}
+				if strings.TrimSpace(finding.Fingerprint) == "" {
+					finding.Fingerprint = domain.Fingerprint(finding)
+				}
 			}
 			blob, err := measure(finding.Path)
 			if err != nil {
@@ -871,9 +905,11 @@ func (r *runner) storedNeighbor(tree string) (domain.Verdict, string) {
 	return parsed, ""
 }
 
-// refutedFindings is the ids the refuter killed with evidence. A verdict with
-// no refutation has nothing killed, which is the normal case, not an error.
-func (r *runner) refutedFindings(tree string) (map[string]bool, string) {
+// refutedFindings is the ids the refuter killed with evidence, and the reason it
+// cited. A verdict with no refutation has nothing killed, which is the normal
+// case, not an error. A refutation whose entry has no evidence refutes nothing:
+// the default is always that the finding stands.
+func (r *runner) refutedFindings(tree string) (map[string]string, string) {
 	rel, err := domain.RefutationPath(tree)
 	if err != nil {
 		return nil, fmt.Sprintf("the refutation path of %s cannot be built: %s", tree, oneLine(err.Error()))
@@ -887,10 +923,10 @@ func (r *runner) refutedFindings(tree string) (map[string]bool, string) {
 		return nil, fmt.Sprintf("the refutation of %s cannot be read; its verdict's rows are not carried", tree)
 	}
 
-	killed := make(map[string]bool, len(parsed.Refutations))
+	killed := make(map[string]string, len(parsed.Refutations))
 	for _, judgment := range parsed.Refutations {
-		if judgment.Verdict == domain.Refuted {
-			killed[judgment.ID] = true
+		if judgment.Verdict == domain.Refuted && strings.TrimSpace(judgment.Why) != "" {
+			killed[judgment.ID] = strings.TrimSpace(judgment.Why)
 		}
 	}
 	return killed, ""
@@ -1213,7 +1249,9 @@ func shown(tree, rel string, verdict domain.Verdict) []string {
 }
 
 // findingLine is one finding, in the same shape the prompt asked for it: the
-// file, the severity, whether the candidate caused it, and the evidence.
+// file, the severity, whether the candidate caused it, and the evidence. A
+// dismissal also prints the reason that judged it: a verdict says what it
+// discarded, not only what it kept.
 func findingLine(finding domain.Finding) string {
 	where := finding.Path
 	if finding.Line > 0 {
@@ -1224,7 +1262,11 @@ func findingLine(finding domain.Finding) string {
 	if finding.Causal {
 		causal = "causal"
 	}
-	return where + " · " + string(finding.Severity) + " · " + causal + " · " + finding.Why
+	line := where + " · " + string(finding.Severity) + " · " + causal + " · " + finding.Why
+	if domain.IsDismissed(finding) {
+		line += " · dismissed: " + finding.Reason
+	}
+	return line
 }
 
 // ignoreRel is the store's ignore file, relative to the project.
