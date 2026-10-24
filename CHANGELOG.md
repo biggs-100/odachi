@@ -5,7 +5,7 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.4 — 2026-10-23
 
 The lens class can be raised by the diff's content: a concurrent or
 credential-touching change to an ordinary file now asks for the four lenses.
