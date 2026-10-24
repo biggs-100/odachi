@@ -1,14 +1,14 @@
 [[rule]]
-not   = "required check and ruleset: the next feature, after main carries the merged workflow"
-paths = ["required-check-and-ruleset-the-next-feature-after-main-carries-the-merged-workflow*"]
+not   = "a risk tier like gentle-ai's assess: the lens class is the gate"
+paths = ["a-risk-tier-like-gentle-ai-s-assess-the-lens-class-is-the-gate*"]
 deps  = []
 
 [[rule]]
-not   = "Go module and build caching"
-paths = ["go-module-and-build-caching*"]
+not   = "check requiring review by default: the mode stays off"
+paths = ["check-requiring-review-by-default-the-mode-stays-off*"]
 deps  = []
 
 [[rule]]
-not   = "self-hosted runners or job time limits"
-paths = ["self-hosted-runners-or-job-time-limits*"]
+not   = "lineage, consent, acknowledgment or burn: no state machine"
+paths = ["lineage-consent-acknowledgment-or-burn-no-state-machine*"]
 deps  = []

@@ -1,20 +1,21 @@
-# one-workflow-tells
+# review-pays-for
 
 ## What must exist
-- one workflow tells the truth about a tree: the gate runs the suite on every OS
+- review pays for itself: it runs when the tree asks, and it stops after one correction
 
 ## Done when
-- the gate checks the candidate on ubuntu, macos and windows, each reading the fence from the base ref and keeping its proof
-- gofmt, vet, race and the goreleaser check run once in that workflow; no second workflow runs the suite
-- a PR that breaks the suite on one OS fails there, and a release tag still runs the suite before publishing
+- review --show names the lenses this tree asks for and why, without writing a verdict
+- a documents-only tree says none is due, and the verb still exits blocked when there is no verdict
+- the drive skill and the README state the gate and the one-correction cap
+- the prompt, the verdict format and the store are untouched, and the suite stays green
 
 ## Not included (first version)
-- required check and ruleset: the next feature, after main carries the merged workflow
-- Go module and build caching
-- self-hosted runners or job time limits
+- a risk tier like gentle-ai's assess: the lens class is the gate
+- check requiring review by default: the mode stays off
+- lineage, consent, acknowledgment or burn: no state machine
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: one definition of green.
+- Wants to learn: when a review pays.
