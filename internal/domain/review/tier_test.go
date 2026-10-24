@@ -389,6 +389,36 @@ func TestClassifyIgnoresTheStoresTheToolWrites(t *testing.T) {
 	}
 }
 
+// TestReasonNamesWhatMakesTheTreeAsk: the class is the gate, and the reason is
+// the line that lets a human decide whether the review pays before paying for
+// it. It names the signal and the path, never "high risk" in the abstract.
+func TestReasonNamesWhatMakesTheTreeAsk(t *testing.T) {
+	concurrent := "diff --git a/internal/gastos/x.go b/internal/gastos/x.go\n--- a/internal/gastos/x.go\n+++ b/internal/gastos/x.go\n@@ -1 +1,2 @@\n package gastos\n+go func() { sync.Mutex{} }()\n"
+	secret := "diff --git a/internal/gastos/x.go b/internal/gastos/x.go\n--- a/internal/gastos/x.go\n+++ b/internal/gastos/x.go\n@@ -1 +1,2 @@\n package gastos\n+const password = \"hunter2\"\n"
+
+	cases := map[string]struct {
+		paths []string
+		diff  string
+		want  string
+	}{
+		"nothing changed":          {nil, "", "nothing changed"},
+		"only the tool's stores":   {[]string{".odachi/reviews/.gitignore"}, "", "nothing changed"},
+		"documents only":           {[]string{"README.md", "docs/usage.md"}, "", "documents only"},
+		"ordinary code":            {[]string{"internal/gastos/x.go"}, "", "ordinary code"},
+		"a path the fence knows":   {[]string{"internal/auth/session.go"}, "", "touches auth (internal/auth/session.go)"},
+		"content adds concurrency": {[]string{"internal/gastos/x.go"}, concurrent, "added lines touch concurrency"},
+		"content adds secrets":     {[]string{"internal/gastos/x.go"}, secret, "added lines touch secrets"},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := review.Reason(tc.paths, tc.diff); got != tc.want {
+				t.Errorf("Reason(%v) = %q, want %q", tc.paths, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestClassifyStillSeesTheCandidatesOwnGeneratedFilesFiltered: filtering the
 // stores must not filter the code next to them.
 func TestClassifyStillSeesTheCandidatesOwnFiles(t *testing.T) {

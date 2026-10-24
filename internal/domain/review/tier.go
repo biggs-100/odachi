@@ -2,6 +2,7 @@ package review
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -129,6 +130,65 @@ func Need(changedPaths []string, diff string) map[string][]string {
 	return need
 }
 
+// Reason says in one line what makes this candidate ask for the review it asks
+// for: the signal and the path when a path decided, the added lines when the
+// content raised ordinary code, and the class otherwise. It never says "high
+// risk" in the abstract, because a reason a human cannot check is a label.
+func Reason(paths []string, diff string) string {
+	candidate := make([]string, 0, len(paths))
+	for _, path := range paths {
+		if !isGeneratedStore(path) {
+			candidate = append(candidate, path)
+		}
+	}
+	if len(candidate) == 0 {
+		return "nothing changed"
+	}
+
+	switch Assess(paths, diff) {
+	case Passive:
+		return "documents only"
+	case Full:
+		if path, signal, ok := firstSignal(candidate); ok {
+			return "touches " + signal + " (" + path + ")"
+		}
+		if signal, ok := firstContentSignal(FloorFor(paths, diff)); ok {
+			return "added lines touch " + signal
+		}
+		return "a path the fence knows"
+	default:
+		return "ordinary code"
+	}
+}
+
+// firstSignal names the first path that made the candidate full, with the
+// signal it matched. The order is the one git reported, so two runs agree.
+func firstSignal(paths []string) (path, signal string, ok bool) {
+	for _, path := range paths {
+		if signal, ok := matchedSignal(path); ok {
+			return path, signal, true
+		}
+	}
+	return "", "", false
+}
+
+// contentSignals are the two categories that raise ordinary code to full, in
+// the fixed order Reason names them.
+var contentSignals = []string{"concurrency", "secrets"}
+
+// firstContentSignal names what the added lines carried when the path class
+// alone would not have asked for the four lenses.
+func firstContentSignal(floor Floor) (string, bool) {
+	for _, row := range floor.Rows {
+		for _, signal := range contentSignals {
+			if slices.Contains(row.Signals, signal) {
+				return signal, true
+			}
+		}
+	}
+	return "", false
+}
+
 // IsLens reports whether name is one of the four.
 func IsLens(name string) bool {
 	for _, lens := range order {
@@ -216,15 +276,22 @@ func isGeneratedStore(path string) bool {
 
 // touchesSignal reports whether any segment of the path starts with a signal.
 func touchesSignal(path string) bool {
+	_, ok := matchedSignal(path)
+	return ok
+}
+
+// matchedSignal names the signal a path carries, or nothing. Case does not
+// decide, and the first match in the fixed order is the one Reason reports.
+func matchedSignal(path string) (string, bool) {
 	lower := normalizePath(path)
 	for _, segment := range strings.Split(lower, "/") {
 		for _, signal := range signals {
 			if strings.HasPrefix(segment, signal) {
-				return true
+				return signal, true
 			}
 		}
 	}
-	return false
+	return "", false
 }
 
 // isDocumentation reports whether the path is a document: Markdown, plain text, a

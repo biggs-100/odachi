@@ -183,6 +183,44 @@ func TestShowSaysWhichLensesAreMissing(t *testing.T) {
 	}
 }
 
+// TestShowWithNoVerdictSaysWhyTheTreeAsks: the gate is invisible until it runs,
+// and --show is where a human decides whether the review pays before paying.
+func TestShowWithNoVerdictSaysWhyTheTreeAsks(t *testing.T) {
+	p := newLensProject()
+	p.git.changed = []string{"internal/app/x.go"}
+	p.git.diff = ""
+
+	result := p.run(review.Options{Show: true})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want %d: without a verdict --show is blocked (%s)", result.Code, review.CodeBlocked, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"reliability", "ordinary code", "next: odachi review"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("--show does not say %q:\n%s", want, lines)
+		}
+	}
+}
+
+// TestShowWithNoVerdictAndDocumentsOnlySaysNoneIsDue: a passive tree pays for
+// no lens, and --show says that instead of sending the human to a review that
+// cannot find anything.
+func TestShowWithNoVerdictAndDocumentsOnlySaysNoneIsDue(t *testing.T) {
+	p := newLensProject()
+	p.git.changed = []string{"README.md"}
+	p.git.diff = ""
+
+	result := p.run(review.Options{Show: true})
+
+	lines := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"none is due", "documents only"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("--show does not say %q:\n%s", want, lines)
+		}
+	}
+}
+
 // TestShowWithLensAsksAboutThatLens: `--lens --show` is the documented spelling
 // for "what does this tree need and what is already answered".
 func TestShowWithLensAsksAboutThatLens(t *testing.T) {

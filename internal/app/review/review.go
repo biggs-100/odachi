@@ -506,6 +506,7 @@ func (r *runner) exec() Result {
 // filed beside it.
 func (r *runner) show() Result {
 	work, problem := r.worktree()
+	assessed := problem == nil
 	if problem != nil {
 		// --show answers even when the base cannot be compared: the verdict is
 		// named by the tree, and a tree the tool can still read is enough to
@@ -525,7 +526,13 @@ func (r *runner) show() Result {
 
 	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
 	if err != nil {
-		return missing(tree)
+		if !assessed {
+			// The candidate could not be read: the lenses it asks for are
+			// unknown, and guessing them would answer a question the tool did
+			// not measure.
+			return missing(tree, nil, "")
+		}
+		return missing(tree, r.requiredLenses(work), domain.Reason(work.paths, work.diff))
 	}
 
 	parsed, err := domain.Parse(data)
@@ -1529,15 +1536,24 @@ func counts(refutation domain.Refutation) (stands, refuted int) {
 	return stands, refuted
 }
 
-// missing is the answer for a tree without a verdict.
-func missing(tree string) Result {
+// missing is the answer for a tree without a verdict. When the candidate could
+// be read it also says which lenses this tree asks for and why: the gate is
+// invisible until it runs, and --show is where a human decides whether the
+// review pays before paying for it.
+func missing(tree string, required []string, reason string) Result {
+	lines := []string{"there is no review for this tree (" + tree + ")"}
+	switch {
+	case reason == "":
+		lines = append(lines, "next: odachi review")
+	case len(required) == 0:
+		lines = append(lines, "none is due: "+reason, "next: odachi review --lens all (ask anyway)")
+	default:
+		lines = append(lines, "this tree asks for "+strings.Join(required, ", ")+": "+reason, "next: odachi review")
+	}
 	return Result{
 		Code:    CodeBlocked,
 		Message: "there is no review for this tree",
-		Lines: []string{
-			"there is no review for this tree (" + tree + ")",
-			"next: odachi review",
-		},
+		Lines:   lines,
 	}
 }
 
