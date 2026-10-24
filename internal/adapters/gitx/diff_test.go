@@ -3,11 +3,55 @@ package gitx_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/adapters/gitx"
 )
+
+// TestDiffAndChangedPathsUseTheMergeBase is the promptfoo bug: comparing against
+// the base TIP reports the other branch's commits as deletions, so a candidate
+// appears to delete code it never touched. The candidate is everything since
+// the fork point — merge-base — and nothing else.
+func TestDiffAndChangedPathsUseTheMergeBase(t *testing.T) {
+	root, _ := newRepo(t)
+	git(t, root, "branch", "-M", "main")
+	git(t, root, "checkout", "-b", "feature")
+
+	write(t, filepath.Join(root, "feature.txt"), "lo que esta rama agrega\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "feature work")
+
+	git(t, root, "checkout", "main")
+	write(t, filepath.Join(root, "main.txt"), "lo que main gano despues\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "main moved on")
+
+	git(t, root, "checkout", "feature")
+
+	diff, err := gitx.Diff(root, "main")
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if strings.Contains(diff, "main.txt") {
+		t.Errorf("the diff reports main's own file as part of the candidate:\n%s", diff)
+	}
+	if !strings.Contains(diff, "feature.txt") {
+		t.Errorf("the diff lost the branch's own file:\n%s", diff)
+	}
+
+	paths, err := gitx.ChangedPaths(root, "main")
+	if err != nil {
+		t.Fatalf("ChangedPaths: %v", err)
+	}
+	if slices.Contains(paths, "main.txt") {
+		t.Errorf("ChangedPaths includes main's own file: %v", paths)
+	}
+	if !slices.Contains(paths, "feature.txt") {
+		t.Errorf("ChangedPaths lost feature.txt: %v", paths)
+	}
+}
 
 // TestDiffShowsChangedTrackedAndUntrackedFiles is the reason this adapter exists
 // at all: the reviewer has to see the candidate, and the candidate includes the

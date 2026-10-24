@@ -12,7 +12,7 @@ R1 · "review verdicts carry per-finding content receipts (path, blob, lens) so 
 - [x] T1 · verdict findings keyed by path, blob, lens, status; the tool derives the blob from git   R1 · 7400207
 - [x] T2 · potency and coverage in the gate: inherit from matching blobs; old verdicts grant no coverage   R1 · 9596b28
 - [x] T3 · deterministic floor picks the lens class and the cited lines before any LLM   R1 · ac4b744
-- [ ] T4 · dismissals: reason plus fingerprint, never re-raised in later candidates   R1
+- [x] T4 · dismissals: reason plus fingerprint, never re-raised in later candidates   R1 · c4011a3
 - [ ] T5 · full-candidate diffs use merge-base instead of the two-dot diff   R1
 - [ ] T6 · docs: CHANGELOG, impact map and dogfood of the new verdict flow   R1
 
@@ -30,3 +30,6 @@ L10 · OFICIO · "A refuted finding travels as a dismissed row with its reason a
 L11 · OFICIO · "The fingerprint covers path, line, lens and normalized evidence, not the blob" (porque The blob already gates potency: while the bytes are unchanged the line cannot drift, and once they change the judgment is over and a re-raise is legitimate)
 L12 · OFICIO · "A reason is only valid on a dismissed row and the status vocabulary is closed to open|dismissed" (porque A dismissal without evidence is silence, and a reason on an open finding is a note pretending to be a judgment)
 L13 · OFICIO · "A dismissed row still answers coverage and never blocks or downgrades" (porque The dismissal is the current answer for its (path, blob, lens) row; its severity is history, not a live claim)
+L14 · OFICIO · "Diff and ChangedPaths compare against merge-base(HEAD, base), not the base tip" (porque Two dots turn every commit the base gained after the fork into a deletion, so a branch appears to delete code it never touched (the promptfoo bug); the fork point is the candidate's parent)
+L15 · OFICIO · "An empty base or the empty tree stays the first day: no merge-base, everything is new" (porque There is no fork to find before the first commit, and the existing behavior must keep holding for a project with no history)
+L16 · OFICIO · "AddedDeps still reads go.mod at the base tip, not at the merge-base" (porque The fence asks which dependency this candidate would introduce into the base, and a module the base removed but the branch still uses does arrive in the merge; the diff is the authored change, the dependency is a merge consequence)

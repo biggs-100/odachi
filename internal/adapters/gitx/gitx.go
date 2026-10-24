@@ -86,12 +86,20 @@ func TreeHash(root string) (string, error) {
 	return strings.TrimSpace(tree), nil
 }
 
-// ChangedPaths returns every path that differs between base and the worktree:
-// tracked files changed or staged since base, plus untracked files that are not
-// ignored. The result is sorted and de-duplicated so callers and error messages
-// are deterministic.
+// ChangedPaths returns every path that differs between the base's fork point and
+// the worktree: tracked files changed or staged since that merge-base, plus
+// untracked files that are not ignored. The result is sorted and de-duplicated
+// so callers and error messages are deterministic.
 func ChangedPaths(root, base string) ([]string, error) {
-	diff, err := run(root, "diff", "--name-only", base)
+	target, err := compareBase(root, base)
+	if err != nil {
+		return nil, err
+	}
+	if target == "" {
+		target = EmptyTree
+	}
+
+	diff, err := run(root, "diff", "--name-only", target)
 	if err != nil {
 		return nil, err
 	}
