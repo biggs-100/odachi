@@ -429,6 +429,26 @@ func TestRunWritesTheProofOfTheCurrentFeature(t *testing.T) {
 	}
 }
 
+// TestTheProofKeepsBothStreams: a proof is what the command said. The test
+// verdict goes to stdout and build errors go to stderr; hiding either would
+// make the proof a partial quotation.
+func TestTheProofKeepsBothStreams(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	git := &fakeGit{tree: currentTree}
+	shell := &fakeShell{output: "ok  github.com/biggs-100/odachi 0.02s\n", stderr: "warning: one test was skipped\n"}
+
+	got := check.Run(check.Options{Dir: dir, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45}, files, git, shell)
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("Code = %d, want 0 (%s)", got.Code, got.Message)
+	}
+
+	wantPath := filepath.Join(dir, "proof", "0007-turnos.txt")
+	want := proofFile(currentTree, "go test ./...", "ok  github.com/biggs-100/odachi 0.02s\nwarning: one test was skipped\n")
+	if string(files.files[wantPath]) != want {
+		t.Errorf("proof =\n%q\nwant\n%q", files.files[wantPath], want)
+	}
+}
+
 // --run keeps the evidence out of the tree it describes, so two runs on the
 // same source tree hash the same worktree.
 func TestRunWritesTheProofIgnoreFile(t *testing.T) {

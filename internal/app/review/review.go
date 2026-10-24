@@ -369,31 +369,35 @@ func (r *runner) exec() Result {
 		return *problem
 	}
 
-	output, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, r.opts.Exec, text, ExecTimeoutSeconds)
+	stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, r.opts.Exec, text, ExecTimeoutSeconds)
+	// The answer is stdout. stderr is the command's own diagnosis — banners,
+	// warnings, ANSI — and it is shown when something fails, never parsed as
+	// part of the verdict.
+	diagnosis := stdout
 	if stderr != "" {
-		output += stderr
+		diagnosis += stderr
 	}
 	switch {
 	case err != nil:
-		return execFailed(r.opts.Exec, "could not run the reviewer: "+oneLine(err.Error()), output)
+		return execFailed(r.opts.Exec, "could not run the reviewer: "+oneLine(err.Error()), diagnosis)
 	case timedOut:
-		return execFailed(r.opts.Exec, fmt.Sprintf("the review did not finish in %ds", ExecTimeoutSeconds), output)
+		return execFailed(r.opts.Exec, fmt.Sprintf("the review did not finish in %ds", ExecTimeoutSeconds), diagnosis)
 	case exitCode != 0:
-		return execFailed(r.opts.Exec, fmt.Sprintf("the reviewer exited with code %d", exitCode), output)
+		return execFailed(r.opts.Exec, fmt.Sprintf("the reviewer exited with code %d", exitCode), diagnosis)
 	}
 
 	// A refutation is an answer too, and it is stored beside the verdict it judges.
-	if domain.Sniff([]byte(output)) == domain.KindRefutation {
-		refutation, err := domain.ParseRefutation([]byte(output))
+	if domain.Sniff([]byte(stdout)) == domain.KindRefutation {
+		refutation, err := domain.ParseRefutation([]byte(stdout))
 		if err != nil {
-			return execFailed(r.opts.Exec, err.Error(), output)
+			return execFailed(r.opts.Exec, err.Error(), diagnosis)
 		}
 		return r.storeRefutation(refutation, r.opts.Exec)
 	}
 
-	parsed, err := domain.Parse([]byte(output))
+	parsed, err := domain.Parse([]byte(stdout))
 	if err != nil {
-		return execFailed(r.opts.Exec, err.Error(), output)
+		return execFailed(r.opts.Exec, err.Error(), diagnosis)
 	}
 	// The command is the reviewer: it is the one fact the tool knows about an
 	// answer that came out of a shell.
@@ -401,7 +405,7 @@ func (r *runner) exec() Result {
 		parsed.Reviewer = r.opts.Exec
 	}
 	if err := parsed.Validate(); err != nil {
-		return execFailed(r.opts.Exec, err.Error(), output)
+		return execFailed(r.opts.Exec, err.Error(), diagnosis)
 	}
 
 	// The base is the one the diff was taken against, not the flag: a project

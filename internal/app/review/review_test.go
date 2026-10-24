@@ -1120,6 +1120,41 @@ func TestShowRefusesAVerdictThatCannotBeRead(t *testing.T) {
 	}
 }
 
+// TestTheVerdictComesFromStdout: a banner and ANSI on stderr are the CLI's
+// decoration, not the answer. The verdict must come from stdout alone.
+func TestTheVerdictComesFromStdout(t *testing.T) {
+	p := newProject()
+	p.shell.output = `{"findings":[]}`
+	p.shell.stderr = "\x1b[31m> reviewing...\x1b[0m\n"
+
+	result := p.run(review.Options{Exec: "revisor"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; !ok {
+		t.Fatal("no verdict was stored: stderr was read as part of the answer")
+	}
+}
+
+// TestAFailingReviewerShowsBothStreams: when the reviewer fails, the human needs
+// the whole picture — the answer it started and the error it wrote.
+func TestAFailingReviewerShowsBothStreams(t *testing.T) {
+	p := newProject()
+	p.shell.output = "the answer half"
+	p.shell.stderr = "the diagnosis half"
+	p.shell.exitCode = 2
+
+	result := p.run(review.Options{Exec: "revisor"})
+	if result.Code == review.CodeOK {
+		t.Fatal("a failed reviewer must not read as a stored verdict")
+	}
+	for _, want := range []string{"the answer half", "the diagnosis half"} {
+		if !strings.Contains(result.Output, want) {
+			t.Errorf("output %q does not show %q", result.Output, want)
+		}
+	}
+}
+
 // TestExecStoresWhatTheCommandAnswered: --exec runs the reviewer and stores its
 // answer, stamped with the command as the reviewer when the answer omits one.
 func TestExecStoresWhatTheCommandAnswered(t *testing.T) {
