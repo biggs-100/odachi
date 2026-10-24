@@ -44,7 +44,16 @@ The verbs: `start` interviews · `ask` asks or records a craft decision (`--craf
 
 ## Review, when it applies
 
-`odachi review` prints the prompt; `--exec "<command>"` hands it to the reviewer through stdin, `{prompt}` and `{model}` (the model the session is using). A causal `BLOCKER` blocks: fix the code or use `--refute` citing the diff. The verdict is valid for THAT tree: any change invalidates it.
+`odachi review --show` says whether this tree asks for a review and why: ask for
+one when the tree asks (it requires lenses) or the human asks, and not otherwise.
+`odachi review` prints the prompt; `--exec "<command>"` hands it to the reviewer
+through stdin, `{prompt}` and `{model}` (the model the session is using). A causal
+`BLOCKER` blocks: fix the code or `--refute` citing the diff. The verdict is valid
+for THAT tree: any change invalidates it.
+
+One correction, one re-review: fix what blocks, ask once more, stop. A `WARNING`
+or `SUGGESTION` goes to the task doc and earns no second round: reviewing every
+intermediate tree makes review the slowest part of the feature.
 
 ## Never
 
