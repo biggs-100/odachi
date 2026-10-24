@@ -1,0 +1,126 @@
+package init_test
+
+import (
+	"encoding/json"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	initapp "github.com/biggs-100/odachi/internal/app/init"
+	domainopencode "github.com/biggs-100/odachi/internal/domain/opencode"
+	"github.com/biggs-100/odachi/internal/domain/persona"
+)
+
+// homeFile is where a file in the fake home lives.
+func homeFile(home, rel string) string {
+	return filepath.Join(home, filepath.FromSlash(rel))
+}
+
+// TestSetupLeavesTheFolderAloneAndTheHomeReady: the installer runs setup from
+// anywhere. The global half arrives; the folder it ran in gains nothing.
+func TestSetupLeavesTheFolderAloneAndTheHomeReady(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(nil)
+	// OpenCode is on this machine: its config directory exists.
+	files.files[homeFile(home, ".config/opencode/opencode.json")] = []byte("{}")
+	skills := &fakeSkills{}
+
+	got := initapp.RunSetup(initapp.Options{Home: fakeHome{dir: home}}, files, skills)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	if !strings.Contains(got.Message, "ready") {
+		t.Errorf("message = %q, want the human told the machine is ready", got.Message)
+	}
+	if _, ok := files.files[homeFile(home, ".config/opencode/agents/odachi.md")]; !ok {
+		t.Error("the home door was not installed")
+	}
+	config := files.files[homeFile(home, ".config/opencode/opencode.json")]
+	var doc map[string]any
+	if err := json.Unmarshal(domainopencode.StripComments(config), &doc); err != nil {
+		t.Fatalf("the config is not valid: %v\n%s", err, config)
+	}
+	if doc["default_agent"] != persona.AgentName {
+		t.Errorf("default_agent = %v, want %q", doc["default_agent"], persona.AgentName)
+	}
+	if skills.calls != 1 {
+		t.Errorf("skills installed %d times, want 1", skills.calls)
+	}
+
+	for path := range files.files {
+		if !strings.HasPrefix(filepath.Clean(path), filepath.Clean(home)) {
+			t.Errorf("setup wrote outside the home: %s", path)
+		}
+	}
+}
+
+// TestSetupWithNoClientInstallsTheSkillAndSaysSo: a machine without OpenCode or
+// Claude gets the knowledge and an honest line, not a folder nobody uses.
+func TestSetupWithNoClientInstallsTheSkillAndSaysSo(t *testing.T) {
+	files := newFakeFiles(nil)
+	skills := &fakeSkills{}
+
+	got := initapp.RunSetup(initapp.Options{Home: fakeHome{dir: "hogar"}}, files, skills)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	if skills.calls != 1 {
+		t.Errorf("skills installed %d times, want 1", skills.calls)
+	}
+	if joined := strings.Join(got.Lines, "\n"); !strings.Contains(joined, "no agent client found") {
+		t.Errorf("the lines do not say no client was found:\n%s", joined)
+	}
+	for path := range files.files {
+		if strings.Contains(path, "agents") {
+			t.Errorf("a door was installed for a client that is not here: %s", path)
+		}
+	}
+}
+
+// TestSetupHonoursAnExplicitClient: --agents is how the human says "install this
+// one even if the folder is not there yet".
+func TestSetupHonoursAnExplicitClient(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(nil)
+
+	got := initapp.RunSetup(initapp.Options{Home: fakeHome{dir: home}, Agents: persona.SelectionOpenCode}, files, &fakeSkills{})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	if _, ok := files.files[homeFile(home, ".config/opencode/agents/odachi.md")]; !ok {
+		t.Error("the explicit client did not get its door")
+	}
+	if _, ok := files.files[homeFile(home, ".config/opencode/opencode.json")]; !ok {
+		t.Error("the explicit client did not get its default agent")
+	}
+}
+
+// TestSetupIsIdempotent: the installer may run it twice. The second run says
+// nothing changed and rewrites nothing.
+func TestSetupIsIdempotent(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(nil)
+	files.files[homeFile(home, ".config/opencode/opencode.json")] = []byte("{}")
+	opts := initapp.Options{Home: fakeHome{dir: home}}
+
+	if got := initapp.RunSetup(opts, files, &fakeSkills{}); got.Code != 0 {
+		t.Fatalf("first setup: Code = %d", got.Code)
+	}
+	door := string(files.files[homeFile(home, ".config/opencode/agents/odachi.md")])
+	config := string(files.files[homeFile(home, ".config/opencode/opencode.json")])
+
+	second := initapp.RunSetup(opts, files, &fakeSkills{})
+
+	if string(files.files[homeFile(home, ".config/opencode/agents/odachi.md")]) != door {
+		t.Error("the second setup rewrote the door")
+	}
+	if string(files.files[homeFile(home, ".config/opencode/opencode.json")]) != config {
+		t.Error("the second setup rewrote the config")
+	}
+	if joined := strings.Join(second.Lines, "\n"); !strings.Contains(joined, "already the default") {
+		t.Errorf("the second setup does not say the default stands:\n%s", joined)
+	}
+}

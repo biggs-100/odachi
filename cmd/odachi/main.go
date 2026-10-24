@@ -88,6 +88,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runCheck(dir, args[1:], stdout, stderr)
 	case "init":
 		return runInit(dir, args[1:], stdout, stderr)
+	case "setup":
+		return runSetup(args[1:], stdout, stderr)
 	case "skills":
 		return runSkills(dir, args[1:], stdout, stderr)
 	case "skill":
@@ -734,6 +736,42 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	return reportInit(result, asJSON, stdout, stderr)
 }
 
+// runSetup parses the flags and installs the global half. It takes no directory:
+// the point is that the folder the human is in is not touched. The installer
+// runs it after copying the binary, so the first conversation already has an
+// agent that knows the verbs.
+func runSetup(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi setup", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		agents string
+		asJSON bool
+	)
+	flags.StringVar(&agents, "agents", "", "opencode | claude | both (default: the clients installed in the home)")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi setup -h to see the flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi setup only takes flags (run odachi setup -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	result := initapp.RunSetup(initapp.Options{
+		Profiles: writtenProfile{},
+		Agents:   agents,
+		Home:     osHome{},
+	}, osFiles{}, &initSkills{dir: ".", scope: "home"})
+	return reportInit(result, asJSON, stdout, stderr)
+}
+
 // initSkills is the join between `odachi init` and `odachi pack`. init decides
 // where the skills go — the project's cross-client directory by default, or the
 // human's home when `--skills home` asks for one copy per machine — and pack owns
@@ -1125,6 +1163,7 @@ usage:
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]
+  odachi setup [--agents opencode|claude|both] [--json]
   odachi skills [--check | --write]
   odachi skill new <slug>
   odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <folder>] [--dry-run]
@@ -1203,6 +1242,14 @@ init flags:
                   It is opt-in: without the flag nothing is written
                   to your home, because the selector of any folder is yours
   --json          machine output, with the destinations of the skills and of the agent
+
+setup flags:
+  odachi setup    the global half only, from any folder: the bootstrap skill in
+                  ~/.agents/skills, the door for the clients found in the home,
+                  and OpenCode's default agent. It writes nothing here. The
+                  installer runs it, so the user only installs odachi and talks.
+  --agents s      opencode | claude | both (default: the clients installed in the home)
+  --json          machine output
 
 what init leaves written, in one command (--skills project and --agents both, the defaults):
   AGENTS.md              the rules block the agent reads, with the voice at the end
