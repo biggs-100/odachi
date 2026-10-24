@@ -11,9 +11,9 @@ R1 · "installing odachi is enough: the agent sets up the project without the hu
 - the full suite stays green and the proof runs once per tree
 
 ## Steps
-- [ ] T1 · odachi setup writes the global half and nothing in the current folder   R1
-- [ ] T2 · the installer runs setup, and the door tells the agent to run the commands   R1
-- [ ] T3 · docs: the install is the setup, and ADR 0021 records the reversal   R1
+- [x] T1 · odachi setup writes the global half and nothing in the current folder   R1 · f406eca
+- [x] T2 · the installer runs setup, and the door tells the agent to run the commands   R1 · 6adf484
+- [x] T3 · docs: the install is the setup, and ADR 0021 records the reversal   R1 · 063d7fb
 
 ## History
 L1 · "installing odachi is enough: the agent sets up the project without the human typing commands"
