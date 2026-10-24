@@ -1,19 +1,19 @@
 [[rule]]
-not   = "signing or trust ladders"
-paths = ["signing-or-trust-ladders*"]
+not   = "lowering a class below its path class: content adds review, it never removes it"
+paths = ["lowering-a-class-below-its-path-class-content-adds-review-it-never-removes-it*"]
 deps  = []
 
 [[rule]]
-not   = "multi-model consensus"
-paths = ["multi-model-consensus*"]
+not   = "an LLM deciding the class: the floor stays deterministic"
+paths = ["an-llm-deciding-the-class-the-floor-stays-deterministic*"]
 deps  = []
 
 [[rule]]
-not   = "review-at-merge phase"
-paths = ["review-at-merge-phase*"]
+not   = "changes to the human-owned review switch (ADR 0010)"
+paths = ["changes-to-the-human-owned-review-switch-adr-0010*"]
 deps  = []
 
 [[rule]]
-not   = "changes to lens selection rules or the human switch"
-paths = ["changes-to-lens-selection-rules-or-the-human-switch*"]
+not   = "a fifth tier or new lenses"
+paths = ["a-fifth-tier-or-new-lenses*"]
 deps  = []

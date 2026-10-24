@@ -1,21 +1,22 @@
-# review-verdicts-carry
+# lens-class-from-content
 
 ## What must exist
-- review verdicts carry per-finding content receipts (path, blob, lens) so correcting a candidate re-reviews only what changed, never weakening the gate
+- the deterministic floor may raise the lens class from the diff's content — never lower it — and review and check ask the same lenses
 
 ## Done when
-- a corrected candidate yields a verdict that inherits potent findings from unchanged blobs and re-runs only the changed files' path-class lenses
-- a deterministic floor selects the lens class and the cited lines before any LLM runs
-- verdicts written before blob keys grant no coverage and the gate says so instead of reusing them
+- a change to ordinary code whose added lines spawn concurrency (go, chan, sync., atomic.) or touch secrets asks for the four lenses, and review and check agree on the answer
+- a candidate whose path class is passive is never raised by prose, and a class is never lowered by content
+- the human-owned review switch and the four-lens vocabulary are untouched
+- go test ./... and odachi check are green
 
 ## Not included (first version)
-- signing or trust ladders
-- multi-model consensus
-- review-at-merge phase
-- changes to lens selection rules or the human switch
+- lowering a class below its path class: content adds review, it never removes it
+- an LLM deciding the class: the floor stays deterministic
+- changes to the human-owned review switch (ADR 0010)
+- a fifth tier or new lenses
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
-- Wants to learn: how to give an LLM verdict content identity while keeping the tree-hash receipt honest.
+- Wants to learn: how to earn more review without turning it into a tax.
