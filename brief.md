@@ -1,21 +1,22 @@
-# a-change-reaches
+# a-failed-run
 
 ## What must exist
-- a change reaches main only through a pull request whose gate passed
+- a failed run keeps its whole output, so a red gate says why
 
 ## Done when
-- the ruleset in .github/main-ruleset.json is applied by scripts/protect-main.ps1, idempotently, and prints what it enforced
-- a direct push to main is rejected by the remote
-- a pull request with a red suite cannot merge; a green one can
-- the ADR names what still does not hold: a pull request can edit the workflow it runs under, and CODEOWNERS only asks
+- a failing --run writes proof/<feature>.failed.txt with the tree, the command, the exit code and the whole output
+- the gate prints the last line and the path of that file, and its exit code does not change
+- a green run writes only <feature>.txt, byte-identical to today, and leaves no failed file
+- a red pull request uploads the failed output without touching the workflow
+- the README and an ADR say what a failed file is, and what it is not
 
 ## Not included (first version)
-- required approvals: a solo repo cannot approve its own pull request
-- signed commits, linear history, merge queue
-- org-wide policy, identity, tag protection
+- a diff of the output, or truncating it
+- renaming or parsing the green proof format
+- changing the gate's exit codes
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: what a required check really guarantees.
+- Wants to learn: why evidence for a failure is not a proof.
