@@ -11,7 +11,7 @@ R1 · "review verdicts carry per-finding content receipts (path, blob, lens) so 
 ## Steps
 - [x] T1 · verdict findings keyed by path, blob, lens, status; the tool derives the blob from git   R1 · 7400207
 - [x] T2 · potency and coverage in the gate: inherit from matching blobs; old verdicts grant no coverage   R1 · 9596b28
-- [x] T3 · deterministic floor picks the lens class and the cited lines before any LLM   R1 · 21687cd
+- [x] T3 · deterministic floor picks the lens class and the cited lines before any LLM   R1 · ac4b744
 - [ ] T4 · dismissals: reason plus fingerprint, never re-raised in later candidates   R1
 - [ ] T5 · full-candidate diffs use merge-base instead of the two-dot diff   R1
 - [ ] T6 · docs: CHANGELOG, impact map and dogfood of the new verdict flow   R1
