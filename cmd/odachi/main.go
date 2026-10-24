@@ -680,7 +680,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 	flags.StringVar(&skillsScope, "skills", "project", "where to install the skills: project | home")
 	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
-	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder")
+	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, and make it OpenCode's default agent")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -1199,7 +1199,8 @@ init flags:
                   agent and the home door; the choice stays in .odachi/agents.toml
                   and does not delete the files another client already has
   --global        install the home door: the agent that shows up in any folder,
-                  not only in this project. It is opt-in: without the flag nothing is written
+                  not only in this project, and make it OpenCode's default agent.
+                  It is opt-in: without the flag nothing is written
                   to your home, because the selector of any folder is yours
   --json          machine output, with the destinations of the skills and of the agent
 
@@ -1213,9 +1214,11 @@ what init leaves written, in one command (--skills project and --agents both, th
   .agents/skills         the project's skills: the folder every client reads
   ~/.agents/skills       the bootstrap skill: how to start a project from scratch
 
-the home door —the agent that shows up in any folder— is opt-in: an init without
+the home door -the agent that shows up in any folder- is opt-in: an init without
 --global does not write it. With --global it goes to ~/.config/opencode/agents and
-~/.claude/output-styles, one per chosen client.
+~/.claude/output-styles, one per chosen client, and OpenCode gets default_agent
+in ~/.config/opencode/opencode.json (or the .jsonc that already exists) unless a
+default you picked is already there.
 
 with --agents opencode nothing is written to .claude, and with --agents claude nothing is
 written to .opencode; the files of a client that is already installed are not deleted. The choice

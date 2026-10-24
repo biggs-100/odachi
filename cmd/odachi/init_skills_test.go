@@ -286,7 +286,7 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 	}
 
 	// The same fence with the flag: --global is what adds the two doors, one per
-	// chosen client.
+	// chosen client, and the OpenCode config that makes one of them the default.
 	withGlobal := t.TempDir()
 	withHome(t, withGlobal)
 	if code, out, errOut := runDir(t, dir, []string{"init", "--global"}, ""); code != 0 {
@@ -296,6 +296,7 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 		".agents/skills/bootstrap/SKILL.md",
 		".claude/output-styles/odachi.md",
 		".config/opencode/agents/odachi.md",
+		".config/opencode/opencode.json",
 	}
 	if got := homeTree(t, withGlobal); !slices.Equal(got, wantGlobal) {
 		t.Fatalf("the home with --global has %v, want exactly %v", got, wantGlobal)

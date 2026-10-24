@@ -208,6 +208,7 @@ func Run(opts Options, files Files, skills Skills) Result {
 	// that cannot be written is pending, never a failed project.
 	if opts.Global {
 		r.installGlobalPersonas()
+		r.installOpenCodeDefault()
 	} else {
 		r.lines = append(r.lines, "global door: I did not install it (it is opt-in); odachi init --global puts it in the home and odachi shows up in any folder")
 	}
