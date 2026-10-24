@@ -1,25 +1,24 @@
-# the-suite-stops
+# installing-the-door
 
 ## What must exist
-- the suite stops being the slowest part of a commit: each verb reads the candidate once
+- installing the door with init --global also makes odachi the default agent in OpenCode
 
 ## Done when
-- go test ./cmd/odachi finishes under 25s on this machine (28.7s before)
-- check and review read the worktree once: one merge-base and one throwaway index per run
-- the tree hash, the changed paths and the diff stay byte-identical to before, pinned by tests
-- the full suite stays green, race-clean on ./internal/..., and gofmt/vet clean
-- the proof still runs once per tree
+- odachi init --global sets default_agent in the global OpenCode config, creating the file when it is missing
+- an existing different default agent is preserved and named with its file and value
+- comments, key order and CRLF survive the edit, and the result stays valid OpenCode config
+- init without --global writes nothing in the home
+- a malformed or ambiguous config is refused with the file named, and nothing is written
 
 ## Not included (first version)
-- skipping tests or using -short in the proof
-- weakening doctor, fence or coverage checks, or deleting tests
-- a new dependency or a custom test runner
-- changing the proof or verdict formats
-- caching a proof across trees
-- tuning GOMAXPROCS or -parallel to win the benchmark
+- the project-level .opencode/opencode.json
+- any OpenCode key other than default_agent
+- overwriting an existing default: no force flag in the first version
+- re-encoding the file or dropping comments
+- a new dependency
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
-- Wants to learn: where the time of a test suite actually goes.
+- Wants to learn: how to edit a file you do not own without rewriting it.

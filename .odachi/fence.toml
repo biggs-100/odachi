@@ -1,29 +1,24 @@
 [[rule]]
-not   = "skipping tests or using -short in the proof"
-paths = ["skipping-tests-or-using-short-in-the-proof*"]
+not   = "the project-level .opencode/opencode.json"
+paths = ["the-project-level-opencode-opencode-json*"]
 deps  = []
 
 [[rule]]
-not   = "weakening doctor, fence or coverage checks, or deleting tests"
-paths = ["weakening-doctor-fence-or-coverage-checks-or-deleting-tests*"]
+not   = "any OpenCode key other than default_agent"
+paths = ["any-opencode-key-other-than-default-agent*"]
 deps  = []
 
 [[rule]]
-not   = "a new dependency or a custom test runner"
-paths = ["a-new-dependency-or-a-custom-test-runner*"]
+not   = "overwriting an existing default: no force flag in the first version"
+paths = ["overwriting-an-existing-default-no-force-flag-in-the-first-version*"]
 deps  = []
 
 [[rule]]
-not   = "changing the proof or verdict formats"
-paths = ["changing-the-proof-or-verdict-formats*"]
+not   = "re-encoding the file or dropping comments"
+paths = ["re-encoding-the-file-or-dropping-comments*"]
 deps  = []
 
 [[rule]]
-not   = "caching a proof across trees"
-paths = ["caching-a-proof-across-trees*"]
-deps  = []
-
-[[rule]]
-not   = "tuning GOMAXPROCS or -parallel to win the benchmark"
-paths = ["tuning-gomaxprocs-or-parallel-to-win-the-benchmark*"]
+not   = "a new dependency"
+paths = ["a-new-dependency*"]
 deps  = []
