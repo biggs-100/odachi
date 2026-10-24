@@ -53,6 +53,11 @@ const briefFile = "brief.md"
 // otherwise would turn a missing brief into a second gate this verb does not own.
 const noBrief = "(there is no brief.md yet: run odachi start)"
 
+// modelToken is what a reviewer command writes where the session's model goes.
+// It is a placeholder, not a flag: odachi has no business knowing how each CLI
+// spells its model, and the human keeps writing the command they know.
+const modelToken = "{model}"
+
 // Options is one `odachi review` invocation.
 type Options struct {
 	Dir string
@@ -61,8 +66,13 @@ type Options struct {
 	// tree: everything counts as new.
 	Base string
 	// Exec is the reviewer command: it is run with the review prompt as its
-	// input, and its answer is the verdict.
+	// input, and its answer is the verdict. {model} in it is replaced by the
+	// model the session is using, so the reviewer judges with the same one the
+	// human is talking to.
 	Exec string
+	// Model is the raw --model value: the identity that replaces {model}.
+	// Empty means the host's answer.
+	Model string
 	// Attach is a verdict someone already wrote.
 	Attach string
 	// Show reads this tree's verdict instead of producing one.
@@ -129,6 +139,14 @@ type Lenses interface {
 	Lens(name string) (string, error)
 }
 
+// Host is the agent odachi runs under. The one thing only it can answer is
+// which model the session is using: that identity lives in the host, not in the
+// project, and inventing one would put a name in the receipt that never ran.
+// "" means the host cannot say, and the verb decides what that costs.
+type Host interface {
+	Model(dir string) string
+}
+
 // Result is what the CLI prints and exits with. It has the same shape as the
 // other verbs, plus the two things only this one produces: the prompt, and the
 // verdict it read or stored.
@@ -154,12 +172,18 @@ type Result struct {
 }
 
 // Run performs one `odachi review`.
-func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result {
+func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses, host Host) Result {
 	if opts.Dir == "" {
 		opts.Dir = "."
 	}
 
-	r := &runner{opts: opts, files: files, git: git, shell: shell, lenses: lenses}
+	r := &runner{opts: opts, files: files, git: git, shell: shell, lenses: lenses, host: host}
+
+	// --model only exists for {model} in --exec. In any other form it would be
+	// accepted and silently ignored, which is the same lie as a missing answer.
+	if strings.TrimSpace(opts.Model) != "" && opts.Exec == "" {
+		return blocked("--model only means something with --exec: it replaces " + modelToken + " in the reviewer command")
+	}
 
 	switch {
 	case opts.Show:
@@ -182,6 +206,7 @@ type runner struct {
 	git    Git
 	shell  Shell
 	lenses Lenses
+	host   Host
 	// storeIgnoreWritten is whether this run had to write the store's own
 	// ignore file, so the result reports only files it really wrote.
 	storeIgnoreWritten bool
@@ -351,10 +376,42 @@ func (r *runner) attach() Result {
 	return r.store(parsed, r.base())
 }
 
+// reviewerCommand is the command that actually runs: --exec with {model}
+// replaced by the identity the human named or the host reported. A command that
+// asks for a model odachi cannot name is refused instead of started, because a
+// verdict from another model is a review nobody asked for.
+func (r *runner) reviewerCommand() (string, *Result) {
+	asks := strings.Contains(r.opts.Exec, modelToken)
+
+	model := strings.TrimSpace(r.opts.Model)
+	if model == "" && asks && r.host != nil {
+		model = strings.TrimSpace(r.host.Model(r.opts.Dir))
+	}
+
+	switch {
+	case asks && model == "":
+		res := blocked("--exec asks for " + modelToken + " and no model is known: pass --model <provider/model#variant> or set ODACHI_MODEL; the reviewer was not started")
+		return "", &res
+	case !asks && model != "":
+		res := blocked("--model was given but --exec has no " + modelToken + " placeholder, so it would change nothing: add it to the command or drop the flag; the reviewer was not started")
+		return "", &res
+	}
+
+	return strings.ReplaceAll(r.opts.Exec, modelToken, model), nil
+}
+
 // exec runs the reviewer command and stores its answer. A command that fails is
 // not a review: nothing is written, and its output is shown.
 func (r *runner) exec() Result {
-	// The candidate comes first: without a diff there is nothing to review, and
+	// The command comes first: a placeholder with no model behind it is a
+	// reviewer nobody can name, and no diff has to be read to discover that.
+	// It also runs before the store exists, so a refused run writes nothing.
+	command, problem := r.reviewerCommand()
+	if problem != nil {
+		return *problem
+	}
+
+	// The candidate comes next: without a diff there is nothing to review, and
 	// a reviewer must not be started to review nothing.
 	cand, problem := r.candidate()
 	if problem != nil {
@@ -369,7 +426,7 @@ func (r *runner) exec() Result {
 		return *problem
 	}
 
-	stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, r.opts.Exec, text, ExecTimeoutSeconds)
+	stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
 	// The answer is stdout. stderr is the command's own diagnosis — banners,
 	// warnings, ANSI — and it is shown when something fails, never parsed as
 	// part of the verdict.
@@ -379,30 +436,30 @@ func (r *runner) exec() Result {
 	}
 	switch {
 	case err != nil:
-		return execFailed(r.opts.Exec, "could not run the reviewer: "+oneLine(err.Error()), diagnosis)
+		return execFailed(command, "could not run the reviewer: "+oneLine(err.Error()), diagnosis)
 	case timedOut:
-		return execFailed(r.opts.Exec, fmt.Sprintf("the review did not finish in %ds", ExecTimeoutSeconds), diagnosis)
+		return execFailed(command, fmt.Sprintf("the review did not finish in %ds", ExecTimeoutSeconds), diagnosis)
 	case exitCode != 0:
-		return execFailed(r.opts.Exec, fmt.Sprintf("the reviewer exited with code %d", exitCode), diagnosis)
+		return execFailed(command, fmt.Sprintf("the reviewer exited with code %d", exitCode), diagnosis)
 	}
 
 	// A refutation is an answer too, and it is stored beside the verdict it judges.
 	if domain.Sniff([]byte(stdout)) == domain.KindRefutation {
 		refutation, err := domain.ParseRefutation([]byte(stdout))
 		if err != nil {
-			return execFailed(r.opts.Exec, err.Error(), diagnosis)
+			return execFailed(command, err.Error(), diagnosis)
 		}
-		return r.storeRefutation(refutation, r.opts.Exec)
+		return r.storeRefutation(refutation, command)
 	}
 
 	parsed, err := domain.Parse([]byte(stdout))
 	if err != nil {
-		return execFailed(r.opts.Exec, err.Error(), diagnosis)
+		return execFailed(command, err.Error(), diagnosis)
 	}
 	// The command is the reviewer: it is the one fact the tool knows about an
 	// answer that came out of a shell.
 	if strings.TrimSpace(parsed.Reviewer) == "" {
-		parsed.Reviewer = r.opts.Exec
+		parsed.Reviewer = command
 	}
 	if err := parsed.Validate(); err != nil {
 		return execFailed(r.opts.Exec, err.Error(), diagnosis)

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/biggs-100/odachi/internal/adapters/hostmodel"
 )
 
 // commitAll commits everything in dir, so the next change is a real diff against
@@ -211,6 +213,50 @@ func TestReviewExecFailureShowsTheOutputAndWritesNothing(t *testing.T) {
 	}
 	if verdicts := reviewsIn(t, dir); len(verdicts) != 0 {
 		t.Errorf("stored %v after a failed review, want nothing", verdicts)
+	}
+}
+
+// TestReviewRefusesAPlaceholderWithoutAModel: {model} with no model behind it
+// is a reviewer nobody can name, so the verb stops before it starts one.
+func TestReviewRefusesAPlaceholderWithoutAModel(t *testing.T) {
+	// The host is this process: cleared so the test does not depend on the
+	// agent that runs the suite. It also means this test cannot be parallel.
+	t.Setenv(hostmodel.EnvModel, "")
+	t.Setenv(hostmodel.SessionEnv, "")
+
+	dir := changedProject(t)
+	code, _, errOut := runDir(t, dir, []string{"review", "--exec", "echo {model}"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
+	}
+	for _, want := range []string{"{model}", "--model"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("stderr %q does not name %q", errOut, want)
+		}
+	}
+	if verdicts := reviewsIn(t, dir); len(verdicts) != 0 {
+		t.Errorf("stored %v without a model, want nothing", verdicts)
+	}
+}
+
+// TestReviewModelFlagReplacesThePlaceholder: --model is the override the human
+// asked for, and the command that runs is the one carrying the identity.
+func TestReviewModelFlagReplacesThePlaceholder(t *testing.T) {
+	t.Setenv(hostmodel.EnvModel, "")
+	t.Setenv(hostmodel.SessionEnv, "")
+
+	dir := changedProject(t)
+	code, out, errOut := runDir(t, dir, []string{"review", "--exec", "echo {model}", "--model", "human/model"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1: an echo is not a verdict (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	if !strings.Contains(out+errOut, "human/model") {
+		t.Errorf("the resolved command is not shown (stdout: %q, stderr: %q)", out, errOut)
+	}
+	if strings.Contains(out+errOut, "{model}") {
+		t.Errorf("the placeholder reached the reviewer (stdout: %q, stderr: %q)", out, errOut)
 	}
 }
 

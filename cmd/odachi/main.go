@@ -416,6 +416,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.StringVar(&opts.Exec, "exec", "", "run this command with the prompt on stdin and save the verdict it answers")
+	flags.StringVar(&opts.Model, "model", "", "model that replaces {model} in --exec (default: the session's, or ODACHI_MODEL)")
 	flags.StringVar(&opts.Attach, "attach", "", "save a verdict or a refutation already written in this file")
 	flags.BoolVar(&opts.Show, "show", false, "which verdict exists for this tree, or that there is none")
 	flags.StringVar(&opts.Lens, "lens", "", "explicit lens: risk | readability | reliability | resilience | all (repeatable or comma-separated)")
@@ -450,7 +451,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
-	return reportReview(reviewapp.Run(opts, osFiles{}, gitRepo{}, osShell{}, reviewLenses{}), asJSON, stdout, stderr)
+	return reportReview(reviewapp.Run(opts, osFiles{}, gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
 }
 
 // runReviewMode parses the small mode grammar by hand: the action is a word,
@@ -1146,6 +1147,8 @@ check flags:
 review flags:
   --exec s        run this command with the prompt on stdin (and {prompt} as the path to that
                   same file) and save the verdict it answers
+  --model s       model that replaces {model} in --exec (default: the session's, or
+                  ODACHI_MODEL)
   --attach path   save a verdict or a refutation that is already written (agent or human)
   --show          which verdict exists for this tree, or that there is none
   --lens s        explicit lens: risk | readability | reliability | resilience | all

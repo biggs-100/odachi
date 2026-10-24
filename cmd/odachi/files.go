@@ -13,6 +13,7 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/agentstoml"
 	"github.com/biggs-100/odachi/internal/adapters/fsx"
 	"github.com/biggs-100/odachi/internal/adapters/gitx"
+	"github.com/biggs-100/odachi/internal/adapters/hostmodel"
 	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
@@ -389,3 +390,9 @@ func (osShell) Run(dir, command string, timeoutSeconds int) (string, string, int
 func (osShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {
 	return shellcmd.RunInput(dir, command, input, timeoutSeconds)
 }
+
+// hostModel is the Host adapter: the model of the session odachi runs in, read
+// from the host's own contract and never from odachi's imagination.
+type hostModel struct{}
+
+func (hostModel) Model(dir string) string { return hostmodel.Model(dir) }

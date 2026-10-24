@@ -197,6 +197,19 @@ func (g *fakeGit) BlobHash(root, path string) (string, error) {
 	return g.blobs[path], nil
 }
 
+// fakeHost is the Host port: the model the session says it is using, or none.
+type fakeHost struct {
+	model string
+	asked bool
+	dir   string
+}
+
+func (h *fakeHost) Model(dir string) string {
+	h.asked = true
+	h.dir = dir
+	return h.model
+}
+
 // fakeShell is the Shell port for --exec.
 type fakeShell struct {
 	output   string
@@ -231,6 +244,7 @@ type project struct {
 	git    *fakeGit
 	shell  *fakeShell
 	lenses *fakeLenses
+	host   *fakeHost
 }
 
 // newProject seeds a project with a brief and one changed file.
@@ -239,6 +253,7 @@ func newProject() *project {
 		files: newFakeFiles(map[string]string{"brief.md": brief}),
 		git:   &fakeGit{tree: currentTree, changed: []string{"a.go"}, diff: diff},
 		shell: &fakeShell{},
+		host:  &fakeHost{},
 	}
 }
 
@@ -251,7 +266,10 @@ func (p *project) run(opts review.Options) review.Result {
 	if p.lenses == nil {
 		p.lenses = &fakeLenses{}
 	}
-	return review.Run(opts, p.files, p.git, p.shell, p.lenses)
+	if p.host == nil {
+		p.host = &fakeHost{}
+	}
+	return review.Run(opts, p.files, p.git, p.shell, p.lenses, p.host)
 }
 
 // verdictWrites is what a run wrote that claims something. The store's own
@@ -1136,6 +1154,130 @@ func TestTheVerdictComesFromStdout(t *testing.T) {
 	}
 }
 
+// TestTheSessionModelFillsThePlaceholder: the human writes {model} once; the
+// reviewer receives the model this session is using, and the receipt names the
+// command that really ran - not the template.
+func TestTheSessionModelFillsThePlaceholder(t *testing.T) {
+	p := newProject()
+	p.host.model = "opencode-go/deepseek-v4.1-flash#max"
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "revisor --model {model}"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	const want = "revisor --model opencode-go/deepseek-v4.1-flash#max"
+	if p.shell.command != want {
+		t.Errorf("command = %q, want %q", p.shell.command, want)
+	}
+	if !p.host.asked {
+		t.Error("the host was not asked for the session's model")
+	}
+	if p.host.dir != dir {
+		t.Errorf("host asked about %q, want the project %q", p.host.dir, dir)
+	}
+
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if parsed.Reviewer != want {
+		t.Errorf("reviewer = %q, want what ran: %q", parsed.Reviewer, want)
+	}
+}
+
+// TestTheExplicitModelWinsOverTheSession: --model is the override the human
+// asked for, so the host is not even consulted.
+func TestTheExplicitModelWinsOverTheSession(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Model: "human/model"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if want := "revisor --model human/model"; p.shell.command != want {
+		t.Errorf("command = %q, want %q", p.shell.command, want)
+	}
+	if p.host.asked {
+		t.Error("the host was asked even though --model named one")
+	}
+}
+
+// TestACommandWithoutThePlaceholderIsUntouched: the default stays
+// byte-identical to before this feature, even when the host knows its model.
+func TestACommandWithoutThePlaceholderIsUntouched(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "claude -p"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if p.shell.command != "claude -p" {
+		t.Errorf("command = %q, want it untouched", p.shell.command)
+	}
+}
+
+// TestAModelThatDoesNotResolveStopsBeforeTheReviewer: a placeholder with no
+// model is an unknown reviewer, not a reviewer with a default. Starting one
+// would file a verdict whose model nobody can name.
+func TestAModelThatDoesNotResolveStopsBeforeTheReviewer(t *testing.T) {
+	p := newProject()
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "revisor --model {model}"})
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	for _, want := range []string{"{model}", "--model"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("message %q does not name %q", result.Message, want)
+		}
+	}
+	if p.shell.asked {
+		t.Error("the reviewer was started without the model it asked for")
+	}
+	if writes := p.files.written(); len(writes) != 0 {
+		t.Errorf("writes = %v, want none", writes)
+	}
+}
+
+// TestAModelFlagWithoutThePlaceholderIsRefused: a flag that changes nothing is
+// a lie about what ran, so it is named instead of ignored.
+func TestAModelFlagWithoutThePlaceholderIsRefused(t *testing.T) {
+	p := newProject()
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "claude -p", Model: "human/model"})
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "{model}") {
+		t.Errorf("message %q does not name the placeholder", result.Message)
+	}
+	if p.shell.asked {
+		t.Error("the reviewer ran with a model that had nowhere to go")
+	}
+}
+
+// TestAModelWithoutExecIsRefused: --model outside --exec has nothing to
+// replace, so it is named instead of accepted and silently dropped.
+func TestAModelWithoutExecIsRefused(t *testing.T) {
+	p := newProject()
+
+	result := p.run(review.Options{Show: true, Model: "human/model"})
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "--exec") {
+		t.Errorf("message %q does not name the form that takes it", result.Message)
+	}
+}
+
 // TestAFailingReviewerShowsBothStreams: when the reviewer fails, the human needs
 // the whole picture — the answer it started and the error it wrote.
 func TestAFailingReviewerShowsBothStreams(t *testing.T) {
@@ -1265,7 +1407,7 @@ func TestBaseFallsBackToTheEmptyTreeWithoutCommits(t *testing.T) {
 	p := newProject()
 	git := &flakyGit{inner: p.git}
 
-	result := review.Run(review.Options{Dir: dir, Now: now}, p.files, git, p.shell, &fakeLenses{})
+	result := review.Run(review.Options{Dir: dir, Now: now}, p.files, git, p.shell, &fakeLenses{}, p.host)
 
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
