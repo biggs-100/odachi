@@ -1,6 +1,10 @@
 package main
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"go/types"
 	"strings"
 	"testing"
 
@@ -21,8 +25,8 @@ func TestVersionSurfacesPrintTheBuildVersion(t *testing.T) {
 			if code != start.CodeOK {
 				t.Fatalf("code = %d, want %d (stderr: %s)", code, start.CodeOK, errOut)
 			}
-			if out != "odachi dev\n" {
-				t.Errorf("stdout = %q, want %q: a build without ldflags says dev", out, "odachi dev\n")
+			if want := versionLine(version); out != want {
+				t.Errorf("stdout = %q, want %q: a build without ldflags says dev", out, want)
 			}
 			if errOut != "" {
 				t.Errorf("stderr = %q, want nothing", errOut)
@@ -34,25 +38,54 @@ func TestVersionSurfacesPrintTheBuildVersion(t *testing.T) {
 	}
 }
 
-// TestVersionIsThePackageVariableLDflagsSet guards the seam goreleaser uses:
-// `-X main.version=<tag>` must land on the variable the two surfaces print.
-func TestVersionIsThePackageVariableLDflagsSet(t *testing.T) {
+// TestVersionLineRendersTheLDflagsValue guards the seam goreleaser uses:
+// `-X main.version=<tag>` must land on the variable the two surfaces render.
+// The value is passed in instead of written into the global on purpose: a
+// parallel test that mutates package state makes every test that reads it
+// order-dependent, and the suite must not depend on who wins the race.
+func TestVersionLineRendersTheLDflagsValue(t *testing.T) {
 	t.Parallel()
 	if version != "dev" {
 		t.Fatalf("version = %q, want %q: the test binary is built without ldflags", version, "dev")
 	}
-
-	original := version
-	t.Cleanup(func() { version = original })
-	version = "1.2.3"
-
-	dir := t.TempDir()
-	code, out, errOut := runDir(t, dir, []string{"--version"}, "")
-	if code != start.CodeOK {
-		t.Fatalf("code = %d, want %d (stderr: %s)", code, start.CodeOK, errOut)
+	if got, want := versionLine("1.2.3"), "odachi 1.2.3\n"; got != want {
+		t.Errorf("versionLine(%q) = %q, want %q", "1.2.3", got, want)
 	}
-	if strings.TrimSpace(out) != "odachi 1.2.3" {
-		t.Errorf("stdout = %q, want %q", out, "odachi 1.2.3\n")
+}
+
+// TestVersionSurfacesRenderThePackageVariable closes the hole the pure test
+// leaves: `-X main.version=<tag>` is only real if both surfaces hand THAT
+// variable to versionLine. A build inside the suite is out (it is in the
+// fence), so this reads the source: a call site that hardcodes a string passes
+// the CLI test and fails here.
+func TestVersionSurfacesRenderThePackageVariable(t *testing.T) {
+	t.Parallel()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "main.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parse main.go: %v", err)
+	}
+
+	sites := 0
+	ast.Inspect(file, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		fn, ok := call.Fun.(*ast.Ident)
+		if !ok || fn.Name != "versionLine" {
+			return true
+		}
+		sites++
+		arg, ok := call.Args[0].(*ast.Ident)
+		if !ok || arg.Name != "version" {
+			t.Errorf("main.go:%d: versionLine is called with %s, want the package variable",
+				fset.Position(call.Pos()).Line, types.ExprString(call.Args[0]))
+		}
+		return true
+	})
+	if sites != 2 {
+		t.Errorf("versionLine call sites = %d, want 2: the ask before the cwd and the dispatch", sites)
 	}
 }
 

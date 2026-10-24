@@ -35,6 +35,11 @@ import (
 // edit of a source file.
 var version = "dev"
 
+// versionLine is the only shape the two surfaces print. It takes the identifier
+// as a parameter instead of reading the global, so a test can pin what ldflags
+// injects without writing state another parallel test reads.
+func versionLine(v string) string { return "odachi " + v + "\n" }
+
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
@@ -45,7 +50,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	// The version ask comes before anything that can fail: a deleted working
 	// directory must not stop a human from asking what they installed.
 	if isVersionAsk(args) {
-		fmt.Fprintln(stdout, "odachi "+version)
+		fmt.Fprint(stdout, versionLine(version))
 		return start.CodeOK
 	}
 
@@ -63,7 +68,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 	// The version ask comes before the dispatch: a leading dash is otherwise a
 	// `odachi start` flag, and `--version` is the one a human types first.
 	if isVersionAsk(args) {
-		fmt.Fprintln(stdout, "odachi "+version)
+		fmt.Fprint(stdout, versionLine(version))
 		return start.CodeOK
 	}
 
