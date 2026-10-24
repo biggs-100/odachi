@@ -3,6 +3,7 @@ package check
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 
@@ -30,21 +31,12 @@ type fenceRule struct {
 // named, because silently running with an empty fence would mean the gate
 // stopped protecting anything without saying so.
 func (r *runner) fenceRules() ([]fence.Rule, *Result) {
-	path := filepath.Join(r.opts.Dir, fenceFile)
-
-	exists, err := r.files.Exists(path)
-	if err != nil {
-		problem := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi check again", fenceFile, oneLine(err.Error())))
-		return nil, &problem
+	data, found, problem := r.fenceBytes()
+	if problem != nil {
+		return nil, problem
 	}
-	if !exists {
+	if !found {
 		return nil, nil
-	}
-
-	data, err := r.files.Read(path)
-	if err != nil {
-		problem := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi check again", fenceFile, oneLine(err.Error())))
-		return nil, &problem
 	}
 
 	var document fenceDocument
@@ -58,4 +50,36 @@ func (r *runner) fenceRules() ([]fence.Rule, *Result) {
 		rules = append(rules, fence.Rule{Not: rule.Not, Paths: rule.Paths, Deps: rule.Deps})
 	}
 	return rules, nil
+}
+
+// fenceBytes reads the fence the gate obeys. With --fence-from it comes from
+// that git ref, not the worktree: CI reads the base branch's policy, which the
+// candidate cannot loosen in the same change that asks to pass it. Without the
+// flag the worktree's own file is the policy, exactly as before.
+func (r *runner) fenceBytes() ([]byte, bool, *Result) {
+	if ref := strings.TrimSpace(r.opts.FenceFrom); ref != "" {
+		data, found, err := r.git.FileAt(r.opts.Dir, ref, fenceFile)
+		if err != nil {
+			problem := blocked(fmt.Sprintf("could not read %s from %q: %s; fix --fence-from or drop the flag to use the worktree's fence", fenceFile, ref, oneLine(err.Error())))
+			return nil, false, &problem
+		}
+		return data, found, nil
+	}
+
+	path := filepath.Join(r.opts.Dir, fenceFile)
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi check again", fenceFile, oneLine(err.Error())))
+		return nil, false, &problem
+	}
+	if !exists {
+		return nil, false, nil
+	}
+
+	data, err := r.files.Read(path)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi check again", fenceFile, oneLine(err.Error())))
+		return nil, false, &problem
+	}
+	return data, true, nil
 }

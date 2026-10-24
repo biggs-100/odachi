@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	domainopencode "github.com/biggs-100/odachi/internal/domain/opencode"
@@ -51,5 +52,49 @@ func TestSetupLeavesTheFolderAloneAndTheHomeReady(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
 			t.Errorf("setup wrote %s in the folder it ran in", name)
 		}
+	}
+}
+
+// TestSetupHonoursNoSetup: a CI job installs the binary and nothing else. The
+// switch is explicit; an interactive setup without it still writes the home.
+func TestSetupHonoursNoSetup(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	t.Setenv("ODACHI_NO_SETUP", "1")
+
+	code, _, errOut := runDir(t, t.TempDir(), []string{"setup"}, "")
+	if code == 0 {
+		t.Fatal("setup ran with ODACHI_NO_SETUP=1")
+	}
+	if !strings.Contains(errOut, "ODACHI_NO_SETUP") {
+		t.Errorf("stderr = %q, want the variable named", errOut)
+	}
+	entries, err := os.ReadDir(home)
+	if err != nil {
+		t.Fatalf("reading the home: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("setup wrote in the home with ODACHI_NO_SETUP=1: %v", entries)
+	}
+}
+
+// TestInitGlobalHonoursNoSetup: the same switch protects a script that calls
+// init --global by mistake.
+func TestInitGlobalHonoursNoSetup(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	t.Setenv("ODACHI_NO_SETUP", "1")
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	code, _, errOut := runDir(t, dir, []string{"init", "--global"}, "")
+	if code == 0 {
+		t.Fatal("init --global ran with ODACHI_NO_SETUP=1")
+	}
+	if !strings.Contains(errOut, "ODACHI_NO_SETUP") {
+		t.Errorf("stderr = %q, want the variable named", errOut)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config")); err == nil {
+		t.Error("init --global wrote in the home with ODACHI_NO_SETUP=1")
 	}
 }

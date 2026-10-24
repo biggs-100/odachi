@@ -182,9 +182,14 @@ try {
     }
 
     # 7 - la primera conversación tiene que encontrar un agente que sepa odachi.
-    & $target setup
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "odachi: el binario quedó instalado, pero el setup global no terminó (exit $LASTEXITCODE); corré odachi setup otra vez." -ForegroundColor Yellow
+    if ($env:ODACHI_NO_SETUP) {
+        Write-Host "odachi: ODACHI_NO_SETUP=1; instalé solo el binario."
+    }
+    else {
+        & $target setup
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "odachi: el binario quedó instalado, pero el setup global no terminó (exit $LASTEXITCODE); corré odachi setup otra vez." -ForegroundColor Yellow
+        }
     }
 }
 finally {

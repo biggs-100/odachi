@@ -115,6 +115,10 @@ type fakeGit struct {
 
 	// candidateCalls counts the one read of the worktree this run asked for.
 	candidateCalls int
+
+	// filesAt answers FileAt, keyed by "rev:path"; fileAtErr is the ref failing.
+	filesAt   map[string]string
+	fileAtErr error
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
@@ -141,6 +145,18 @@ func (g *fakeGit) BlobHash(root, path string) (string, error) {
 }
 
 func (g *fakeGit) AddedDeps(root, base string) ([]string, error) { return g.deps, nil }
+
+// FileAt answers the fence of a ref, or the reason the ref could not be read.
+func (g *fakeGit) FileAt(root, rev, path string) ([]byte, bool, error) {
+	if g.fileAtErr != nil {
+		return nil, false, g.fileAtErr
+	}
+	data, ok := g.filesAt[rev+":"+path]
+	if !ok {
+		return nil, false, nil
+	}
+	return []byte(data), true, nil
+}
 
 func (g *fakeGit) Ignored(root, path string) (bool, error) {
 	g.ignoredAs = append(g.ignoredAs, path)

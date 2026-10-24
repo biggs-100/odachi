@@ -356,6 +356,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.Run, "run", "", "run the command, capture the output and write proof/<NNNN>-<slug>.txt")
 	flags.StringVar(&opts.Proof, "proof", "", "use a proof that is already written (agents and CI)")
 	flags.StringVar(&opts.Base, "base", "HEAD", "what to compare the fence against (empty: against nothing, everything counts as new)")
+	flags.StringVar(&opts.FenceFrom, "fence-from", "", "read the fence from this git ref instead of the worktree (CI: the base branch)")
 	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "seconds --run may take")
 	flags.BoolVar(&opts.Quiet, "quiet", false, "prints nothing when ready (for the hook)")
 	flags.BoolVar(&opts.RequireReview, "require-review", false, "requires a review verdict for this tree (default: the project mode)")
@@ -715,6 +716,11 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
+	if global && os.Getenv("ODACHI_NO_SETUP") != "" {
+		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: the home is not touched; run init without --global or unset the variable")
+		return start.CodeBlocked
+	}
+
 	result := initapp.Run(initapp.Options{
 		Dir:            dir,
 		Exe:            hookExe(),
@@ -761,6 +767,11 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 	}
 	if flags.NArg() > 0 {
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi setup only takes flags (run odachi setup -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	if os.Getenv("ODACHI_NO_SETUP") != "" {
+		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: this machine's home is not touched; unset it to run setup")
 		return start.CodeBlocked
 	}
 
@@ -1177,6 +1188,7 @@ check flags:
   --run s         run the command and write this tree's proof
   --proof path    use a proof that is already written (agents and CI)
   --base ref      what to compare the fence against (default HEAD; empty: against nothing)
+  --fence-from ref  read the fence from this git ref instead of the worktree (CI: the base branch)
   --timeout n     seconds --run may take (default 120)
   --quiet         prints nothing when ready (for the hook)
   --require-review  requires a review verdict for this tree (default: the project mode)

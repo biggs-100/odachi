@@ -157,4 +157,8 @@ if [ "$dest" = "$bin_dir/odachi" ]; then
 fi
 
 # 7 · la primera conversación tiene que encontrar un agente que sepa odachi.
-"$dest" setup || printf 'odachi: el binario quedó instalado, pero el setup global no terminó; corré odachi setup otra vez.\n' >&2
+if [ -n "${ODACHI_NO_SETUP:-}" ]; then
+	printf 'odachi: ODACHI_NO_SETUP=1; instalé solo el binario.\n'
+else
+	"$dest" setup || printf 'odachi: el binario quedó instalado, pero el setup global no terminó; corré odachi setup otra vez.\n' >&2
+fi

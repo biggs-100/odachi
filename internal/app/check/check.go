@@ -93,6 +93,10 @@ type Options struct {
 	// exact tree, and not a changes_requested one. It is off by default because a
 	// beginner must not be blocked by a verb they have never heard of.
 	RequireReview bool
+	// FenceFrom is a git ref to read the fence from instead of the worktree. CI
+	// uses it to obey the policy of the base branch, which the candidate cannot
+	// loosen. Empty means the worktree's own fence.
+	FenceFrom string
 }
 
 // Files is the disk port: enough to read the project and write one proof.
@@ -112,6 +116,9 @@ type Git interface {
 	// reads the paths, the lens class reads the diff, and the proof is named
 	// after the tree; all three describe the same bytes.
 	Candidate(root, base string) (tree string, paths []string, diff string, err error)
+	// FileAt reads a file from a git ref, which is how the fence is read from a
+	// base branch the candidate cannot edit.
+	FileAt(root, rev, path string) ([]byte, bool, error)
 	AddedDeps(root, base string) ([]string, error)
 	// BlobHash is the receipt of one worktree file: the blob id git already
 	// owns, measured now. The coverage answer compares a verdict's rows against
@@ -481,7 +488,7 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 		return ranProof{output: output, failed: true}, nil
 	}
 
-	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Output: output}
+	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Fence: r.opts.FenceFrom, Output: output}
 	if err := r.files.Write(proofPath, []byte(proof.Render(recorded))); err != nil {
 		problem := blocked(fmt.Sprintf("could not write the proof %s: %s; check the permissions and run odachi check --run %q again",
 			r.proofRel, oneLine(err.Error()), r.opts.Run))

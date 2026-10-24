@@ -368,6 +368,12 @@ func (gitRepo) AddedDeps(root, base string) ([]string, error) {
 	return gitx.AddedDeps(root, base)
 }
 
+// FileAt reads a file from a git ref: the gate uses it to obey the fence of a
+// base branch the candidate cannot edit.
+func (gitRepo) FileAt(root, rev, path string) ([]byte, bool, error) {
+	return gitx.FileAt(root, rev, path)
+}
+
 // BlobHash gives the review its content receipts: the blob id of the bytes each
 // finding judged, computed by git from the worktree file.
 func (gitRepo) BlobHash(root, path string) (string, error) { return gitx.BlobHash(root, path) }

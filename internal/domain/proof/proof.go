@@ -17,10 +17,13 @@ import (
 	"strings"
 )
 
-// Headers are the exact prefixes of the two lines every proof starts with.
+// Headers are the exact prefixes of the lines every proof starts with. Fence is
+// optional: it names the ref the fence came from when the gate ran in CI against
+// a policy the candidate cannot edit.
 const (
 	TreeHeader    = "# tree "
 	CommandHeader = "# command "
+	FenceHeader   = "# fence "
 )
 
 // ErrNoHeader means the file does not say which tree produced it.
@@ -31,24 +34,30 @@ var ErrNoHeader = errors.New(`it has no "# tree <hash>" header: I cannot know wh
 type Proof struct {
 	Tree    string
 	Command string
-	Output  string
+	// Fence is the ref the fence was read from, empty when the proof used the
+	// worktree's own fence.
+	Fence  string
+	Output string
 }
 
-// Render writes the canonical proof: tree, command, then the output verbatim.
-// There is no timestamp and no absolute path, so two runs on the same tree with
-// the same command produce the same bytes.
+// Render writes the canonical proof: tree, command, an optional fence ref, then
+// the output verbatim. There is no timestamp and no absolute path, so two runs
+// on the same tree with the same command produce the same bytes.
 func Render(p Proof) string {
 	var out strings.Builder
 	out.WriteString(TreeHeader + p.Tree + "\n")
 	out.WriteString(CommandHeader + p.Command + "\n")
+	if p.Fence != "" {
+		out.WriteString(FenceHeader + p.Fence + "\n")
+	}
 	out.WriteString(p.Output)
 	return out.String()
 }
 
 // Parse reads a proof file. Both header lines are required and must come first,
-// in the canonical order: the tool writes them, and a file without them was
-// written by hand or by something else. Everything after the second line is the
-// output, byte for byte.
+// in the canonical order; an optional "# fence <ref>" line may follow them. An
+// old proof without the fence line keeps parsing: the candidate's own fence was
+// the one it used. Everything after the headers is the output, byte for byte.
 func Parse(text string) (Proof, error) {
 	first, rest, ok := cutLine(text)
 	if !ok || !strings.HasPrefix(first, TreeHeader) {
@@ -60,9 +69,16 @@ func Parse(text string) (Proof, error) {
 		return Proof{}, fmt.Errorf(`proof: the file has "# tree" but not the "# command <the command>" header: I cannot tell which command produced the proof`)
 	}
 
+	fence := ""
+	if line, rest, ok := cutLine(output); ok && strings.HasPrefix(line, FenceHeader) {
+		fence = strings.TrimSpace(strings.TrimPrefix(line, FenceHeader))
+		output = rest
+	}
+
 	return Proof{
 		Tree:    strings.TrimSpace(strings.TrimPrefix(first, TreeHeader)),
 		Command: strings.TrimSpace(strings.TrimPrefix(second, CommandHeader)),
+		Fence:   fence,
 		Output:  output,
 	}, nil
 }

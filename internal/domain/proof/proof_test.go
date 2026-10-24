@@ -126,3 +126,32 @@ func TestParseToleratesCRLFHeaders(t *testing.T) {
 		t.Errorf("Output = %q, want the bytes as printed", p.Output)
 	}
 }
+
+// TestTheFenceRefIsOptional: a proof written by CI names the ref its fence came
+// from; a proof written before this line existed still parses, with the
+// worktree's own fence.
+func TestTheFenceRefIsOptional(t *testing.T) {
+	with := proof.Render(proof.Proof{Tree: "t", Command: "go test ./...", Fence: "origin/main", Output: "ok\n"})
+	parsed, err := proof.Parse(with)
+	if err != nil {
+		t.Fatalf("Parse(with fence): %v", err)
+	}
+	if parsed.Fence != "origin/main" {
+		t.Errorf("Fence = %q, want origin/main", parsed.Fence)
+	}
+	if parsed.Output != "ok\n" {
+		t.Errorf("Output = %q, want the bytes after the fence line", parsed.Output)
+	}
+
+	old := proof.Render(proof.Proof{Tree: "t", Command: "go test ./...", Output: "ok\n"})
+	parsed, err = proof.Parse(old)
+	if err != nil {
+		t.Fatalf("Parse(without fence): %v", err)
+	}
+	if parsed.Fence != "" {
+		t.Errorf("Fence = %q, want empty", parsed.Fence)
+	}
+	if parsed.Output != "ok\n" {
+		t.Errorf("Output = %q, want the verbatim output", parsed.Output)
+	}
+}
