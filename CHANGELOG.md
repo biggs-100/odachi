@@ -7,8 +7,20 @@ tomorrow.
 
 ## Unreleased
 
-Review answers come from stdout, and the proof keeps both streams.
+The reviewer inherits the session's model; review answers come from stdout, and
+the proof keeps both streams.
 
+- **`{model}` in `review --exec` is the model the session is using**: the
+  reviewer judges with the same model you are talking to, so the verdict and the
+  change come from the same eyes. The order is `--model`, then `ODACHI_MODEL`
+  —the contract any host can set—, then the OpenCode session through
+  `opencode session export`. A command without the placeholder runs exactly as
+  before.
+- **No fallback, and a flag that changes nothing is refused**: when `{model}` is
+  asked for and no model resolves, the review stops before starting the reviewer
+  and names `--model`; `--model` without `{model}`, or without `--exec`, is
+  named instead of silently dropped. The receipt records the command that really
+  ran, never the template.
 - **`review --exec` reads the verdict from stdout**: a reviewer CLI's banner,
   warnings or ANSI on stderr no longer poisons the JSON answer. When the
   reviewer fails, the message shows stdout and stderr together.

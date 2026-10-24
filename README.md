@@ -242,9 +242,17 @@ for it.
 ```sh
 odachi review                            # the prompt, to paste into your agent
 odachi review --exec "agent {prompt}"    # or have it run it: prompt on stdin and in {prompt}
+odachi review --exec "cli --model {model} {prompt}"   # and with the session's model
 odachi review --attach verdict.json      # or save what it answered
 odachi review --show                     # which verdict exists for this tree
 ```
+
+`{model}` is the model this session is using, so `--exec` can judge with the
+same one you are talking to. The order is `--model`, then `ODACHI_MODEL` —any
+host can set it—, then the OpenCode session. When the placeholder is there and
+no model resolves, the review stops before starting the reviewer and names
+`--model`; it never picks a fallback. A command without `{model}` runs exactly as
+before, and the verdict records the command that really ran.
 
 The verdict lives in `.odachi/reviews/<tree-hash>.json`, so approval cannot
 float: the file name *is* the state of the code that was approved. A causal

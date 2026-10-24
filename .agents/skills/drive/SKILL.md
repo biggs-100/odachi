@@ -44,7 +44,7 @@ The verbs: `start` interviews · `ask` asks or records a craft decision (`--craf
 
 ## Review, when it applies
 
-`odachi review` prints the prompt; `--exec "<command>"` hands it to the reviewer through stdin and `{prompt}`. A causal `BLOCKER` blocks: fix the code or use `--refute` citing the diff. The verdict is valid for THAT tree: any change invalidates it.
+`odachi review` prints the prompt; `--exec "<command>"` hands it to the reviewer through stdin, `{prompt}` and `{model}` (the model the session is using). A causal `BLOCKER` blocks: fix the code or use `--refute` citing the diff. The verdict is valid for THAT tree: any change invalidates it.
 
 ## Never
 
