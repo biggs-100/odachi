@@ -1,6 +1,6 @@
 # 0016 · Review receipts by content: findings per blob with a deterministic floor
 
-Status: accepted (design; implementation pending) · Date: 2026-10 · Session: v0.11.2
+Status: accepted (implemented in T1–T6; step commits in `odd/tasks/0016-review-verdicts-carry.md`) · Date: 2026-10 · Session: v0.11.2
 
 ## Context
 
