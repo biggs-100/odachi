@@ -337,6 +337,21 @@ default agent — which is what a shared runner wants. A missing file at a valid
 ref is "no fence"; a ref that does not exist blocks, because a typo must not turn
 the gate off.
 
+## Contributing
+
+A stranger should get from zero to a merged pull request by reading three files:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): the loop, the gate, the commit shape and
+  the size.
+- [AI_POLICY.md](AI_POLICY.md): what to disclose, and why the human owns the
+  result.
+- [SECURITY.md](SECURITY.md): report privately, never in an issue.
+
+The issue forms ask for the version and `odachi doctor`; the pull request
+template asks for the proof, the risk and the rollback. `main` only takes a pull
+request whose four checks passed, and the gate keeps the failed output when it
+does not.
+
 ## Status
 
 Pure domain in `internal/domain/...` with an import guard, adapters in
