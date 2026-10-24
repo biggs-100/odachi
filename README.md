@@ -347,10 +347,10 @@ A stranger should get from zero to a merged pull request by reading three files:
   result.
 - [SECURITY.md](SECURITY.md): report privately, never in an issue.
 
-The issue forms ask for the version and `odachi doctor`; the pull request
-template asks for the proof, the risk and the rollback. `main` only takes a pull
-request whose four checks passed, and the gate keeps the failed output when it
-does not.
+The bug form asks for the version and `odachi doctor`; the feature form asks for
+the problem, the outcome and the non-goals. The pull request template asks for
+the proof, the risk and the rollback. `main` only takes a pull request whose
+four checks passed, and the gate keeps the failed output when it does not.
 
 ## Status
 

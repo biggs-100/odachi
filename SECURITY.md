@@ -22,10 +22,19 @@ maintainer will answer with one.
   `.github/main-ruleset.json`.
 
 The interesting class is a change that gets a green gate it did not earn: a
-proof that is not from this tree, a fence that is obeyed from the worktree, a
-check that reports without running, a rule that looks enforced and is not. That
-is the defect this project exists to make impossible; a report of it is always
-welcome.
+proof that names another tree, a fence that is obeyed from the worktree, a check
+that reports without running, a rule that looks enforced and is not. That is the
+defect this project exists to make impossible, with one known exception below.
+
+## The known limit
+
+The workflow file travels with the pull request, and the ruleset requires zero
+approvals, because a solo maintainer cannot approve their own pull request
+(ADR 0024). So a pull request that edits `.github/workflows/` can weaken the jobs
+that judge it. `.github/CODEOWNERS` asks for an owner review, and it is a
+request, not an enforcement. That is the known state of a one-person project,
+not a vulnerability; a report about it is welcome as a design discussion. What is
+in scope is a path that reports green *without* editing the workflow.
 
 ## What is not in scope
 

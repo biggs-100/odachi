@@ -8,7 +8,8 @@ body:
         The brief and the fence belong to the maintainer: a feature is discussed
         here first, and the brief is written before the code. A proposal that
         says what must exist, and what is *not* included, is the one that gets
-        built.
+        built. Do not paste secrets or private project content: this repository
+        and its issues are public.
   - type: textarea
     id: problem
     attributes:

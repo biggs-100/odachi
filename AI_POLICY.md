@@ -13,9 +13,10 @@ ownership, not about the tool you use.
   findings, and answers them. "The model wrote it" is not an answer to a finding,
   and an unreviewed agent output is not a contribution.
 - **Evidence is real.** Never write a proof, a verdict or a command log by hand.
-  The proof carries the hash of the tree that produced it, `--proof` refuses one
-  that does not, and CI runs the command again. A fabricated green is the one
-  thing this project exists to make impossible.
+  A proof names the tree it came from: `--proof` refuses one that names another
+  tree, and CI runs the command again, so the evidence a merge rests on is the
+  run, not the file. The tool cannot tell a hand-written output from a real one;
+  the honesty is yours, and the re-run is what catches it.
 - **A test must be able to fail.** A test generated together with the code it
   tests proves nothing until it has been seen red for the right reason. If you
   cannot show the red, say so in the pull request.
