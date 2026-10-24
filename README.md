@@ -36,6 +36,12 @@ test builds the `tar.gz` and the checksums the way goreleaser publishes them,
 runs `install.sh` offline through `file://`, and the installed binary answers its
 version.
 
+The installer also runs `odachi setup`: the bootstrap skill in
+`~/.agents/skills`, the home door for the agent clients it finds, and OpenCode's
+`default_agent`. You open your agent and describe the project; the agent runs
+`odachi init` and `odachi start` itself, and asks permission before writing in a
+repository that is not yours. You never type those verbs.
+
 If you prefer to build: `go build ./cmd/odachi` (you need Go 1.25 or newer), and
 the binary says `odachi dev`, because the release injects the version, not the
 code.
@@ -275,9 +281,9 @@ to fabricate.
 ## Status
 
 Pure domain in `internal/domain/...` with an import guard, adapters in
-`internal/adapters/...`, and fifteen surfaces: `start`, `ask`, `plan`, `level`,
-`summary`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `skills`,
-`skill new`, `pack` and `--version`. 41 packages, green on Linux, macOS and
+`internal/adapters/...`, and sixteen surfaces: `start`, `ask`, `plan`, `level`,
+`summary`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `setup`,
+`skills`, `skill new`, `pack` and `--version`. 41 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
 Published: `v0.11.7`. What changed in each version is in

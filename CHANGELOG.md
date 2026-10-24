@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+Installing odachi is enough.
+
+- **`odachi setup` leaves the machine ready**: the bootstrap skill in
+  `~/.agents/skills`, the home door for the agent clients found, and OpenCode's
+  default agent. It runs from any folder and writes nothing in it.
+- **The installer runs it**, so the user only installs and talks. The door and
+  the bootstrap skill now say the agent runs `odachi init` and `odachi start`
+  itself, asking permission before writing in a repository that is not the
+  human's, instead of asking the human to type them.
+
 ## v0.11.7 — 2026-10-24
 
 The global door is the default agent.
