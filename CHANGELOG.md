@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The lens class can be raised by the diff's content: a concurrent or
+credential-touching change to an ordinary file now asks for the four lenses.
+
+- **`Assess` raises, never lowers**: the path class is the floor, and added
+  lines that spawn concurrency (`go func`, `chan`, `sync.`, `atomic.`, `mutex`,
+  `<-`) or touch secrets (`password`, `secret`, `token`, `api_key`,
+  `private_key`) raise a focused candidate to full. A passive candidate (a
+  document) is immune to prose, and no content lowers a class.
+- **`review` and `check` share the assessment**: the prompt's lens list, the
+  stored verdict's lenses, and the gate's per-file coverage demand all come from
+  the same deterministic reading of the diff. The check port gained `Diff`.
+- **Still deterministic and opt-in**: no model decides the class, and the
+  human-owned review switch is untouched. See ADR 0017.
+
 ## v0.11.3 — 2026-10-23
 
 Review receipts: a verdict now answers per file and per byte, and a corrected candidate pays only for what it changed.

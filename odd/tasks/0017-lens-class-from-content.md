@@ -12,7 +12,7 @@ R1 · "the deterministic floor may raise the lens class from the diff's content 
 ## Steps
 - [x] T1 · Assess: the floor raises the class from added lines (concurrency, secrets), never lowers it   R1 · dc623c7
 - [x] T2 · review selects and stamps with Assess, and the prompt's class is the assessed one   R1 · c5fab7b
-- [ ] T3 · check demands the same lenses: Diff in the port and content-aware Need per file   R1
+- [x] T3 · check demands the same lenses: Diff in the port and content-aware Need per file   R1 · 44290f8
 - [ ] T4 · ADR 0017, CHANGELOG, impact map and dogfood of the raised class   R1
 
 ## History
@@ -21,3 +21,4 @@ L2 · OFICIO · "Assess raises only Focused to Full, from the added lines' concu
 L3 · OFICIO · "Need and Assess share one assessClass, so the review selection and the gate's demand can never disagree" (porque ADR 0010's lesson was one authority for per-candidate lens demand; two implementations would drift the day one changes)
 L4 · OFICIO · "The review selection and the stored verdict use the floor's assessed class, not Classify alone" (porque The prompt and the verdict must answer the same question; measuring the class twice from different evidence is how review and check drift)
 L5 · OFICIO · "check reads the same diff through its Git port and demands coverage per content-raised file" (porque A gate that asks fewer lenses than the review it accepts would let a concurrent change pass with one specialist answer)
+L6 · OFICIO · "ADR 0017 reopens the fence deliberately: content may raise the class, never lower it, and the human switch stays untouched" (porque The fence exists to make the human's line explicit; reopening it with a written condition is the difference between a decision and drift)
