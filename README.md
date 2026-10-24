@@ -278,6 +278,24 @@ changing it moves the tree, so the proof is retaken with
 verdict even with the mode on: there is no lens to answer, so there is no review
 to fabricate.
 
+## CI: the gate from the base ref
+
+A local hook can be skipped, and a change can edit the fence it must obey. In CI,
+`check --fence-from origin/main` reads the fence from that ref, not the worktree,
+and the proof names it. Build the gate from the base ref, not the candidate:
+
+```sh
+git worktree add ../gate origin/main
+(cd ../gate && go build -o /tmp/odachi ./cmd/odachi)
+/tmp/odachi check --fence-from origin/main --run "go test ./..."
+```
+
+`.github/workflows/gate.yml` is that recipe; it uploads `proof/` even when the
+gate fails. `ODACHI_NO_SETUP=1` makes the installers leave only the binary — no
+home door, no default agent — which is what a shared runner wants. A missing file
+at a valid ref is "no fence"; a ref that does not exist blocks, because a typo
+must not turn the gate off.
+
 ## Status
 
 Pure domain in `internal/domain/...` with an import guard, adapters in

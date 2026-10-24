@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The gate can run in CI without trusting the change.
+
+- **`check --fence-from <ref>`**: the fence is read from a git ref, not the
+  worktree, so a change cannot loosen the policy it must obey. A missing file at
+  a valid ref is no fence; a ref that does not exist blocks. The proof names the
+  ref it used.
+- **The CI recipe builds the gate from the base ref**
+  (`.github/workflows/gate.yml`) and uploads `proof/` even when the gate fails.
+- **`ODACHI_NO_SETUP=1` means binary only**: both installers skip `setup`, and
+  `setup` and `init --global` refuse with the variable named, so a shared runner
+  never gets a home door or a default agent.
+
 ## v0.11.8 — 2026-10-24
 
 Installing odachi is enough.

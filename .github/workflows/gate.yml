@@ -1,0 +1,51 @@
+name: gate
+
+# The gate must not be code the candidate can edit. This job builds odachi from
+# the base ref (the trusted source) and runs it against the candidate worktree,
+# reading the fence from the base ref too: a change cannot loosen the policy it
+# must obey. The proof is uploaded even when the gate fails.
+#
+# The pull_request trigger lands once main carries --fence-from: on the change
+# that adds it, the base ref would produce a binary without the flag and the job
+# would fail for the wrong reason. After the merge, add:
+#
+#   pull_request:
+#     types: [opened, synchronize, reopened]
+#
+# and make this job a required check in the repository ruleset.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: build the gate from the base ref
+        run: |
+          git worktree add ../gate origin/main
+          (cd ../gate && go build -o "$RUNNER_TEMP/odachi" ./cmd/odachi)
+
+      - name: run the gate
+        run: |
+          "$RUNNER_TEMP/odachi" check --fence-from origin/main --run "go test ./..."
+
+      - name: keep the proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof
+          path: proof/
+          if-no-files-found: warn
