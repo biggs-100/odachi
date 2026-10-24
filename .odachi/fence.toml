@@ -1,29 +1,9 @@
 [[rule]]
-not   = "identity, author vs reviewer: a later feature"
-paths = ["identity-author-vs-reviewer-a-later-feature*"]
+not   = "what odachi --version prints"
+paths = ["what-odachi-version-prints*"]
 deps  = []
 
 [[rule]]
-not   = "org policy beyond the fence"
-paths = ["org-policy-beyond-the-fence*"]
-deps  = []
-
-[[rule]]
-not   = "monorepo scopes"
-paths = ["monorepo-scopes*"]
-deps  = []
-
-[[rule]]
-not   = "signing, provenance or SBOM"
-paths = ["signing-provenance-or-sbom*"]
-deps  = []
-
-[[rule]]
-not   = "the PR trigger becoming a required check: it lands after main carries the flag"
-paths = ["the-pr-trigger-becoming-a-required-check-it-lands-after-main-carries-the-flag*"]
-deps  = []
-
-[[rule]]
-not   = "changing the proof format beyond one comment line"
-paths = ["changing-the-proof-format-beyond-one-comment-line*"]
+not   = "a go build inside the suite"
+paths = ["a-go-build-inside-the-suite*"]
 deps  = []
