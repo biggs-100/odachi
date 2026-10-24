@@ -71,6 +71,14 @@ after the tree it judges. That is why both must stay out of git: otherwise the
 first proof would invalidate the previous review and the first review would
 invalidate the previous proof.
 
+A proof is a green run: `check --run` writes `proof/NNNN-<slug>.txt` only when
+the command exits 0. A failed run leaves `proof/NNNN-<slug>.failed.txt` instead,
+with the tree, the command, the exit code or the timeout, and the whole output,
+because the one-line message the gate prints is not enough to diagnose a test.
+The suffix is the difference: the failed file is evidence, not proof, and the
+gate never reads it as one. In CI it rides along with `proof/`, which the
+workflow uploads even when the gate fails.
+
 `init` takes care of that for you, and of two things that are not artifacts: it
 leaves a marked block in the project's `.gitignore` (`/proof/` and
 `/.odachi/reviews/`, versioned, so it survives a clone) and a rules block in
