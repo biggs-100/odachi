@@ -281,21 +281,32 @@ to fabricate.
 ## CI: the gate from the base ref
 
 A local hook can be skipped, and a change can edit the fence it must obey. In CI,
-`check --fence-from origin/main` reads the fence from that ref, not the worktree,
-and the proof names it. Build the gate from the base ref, not the candidate:
+`check --fence-from <base>` reads the fence from that ref, not the worktree, and
+the proof names it. `--base <base>` is the other half: it compares the changed
+paths against the base, so the fence meets the change instead of the checkout's
+own HEAD. Build the gate from the base ref, not the candidate:
 
 ```sh
-git worktree add ../gate origin/main
+git worktree add ../gate "$base"
 (cd ../gate && go build -o /tmp/odachi ./cmd/odachi)
-/tmp/odachi check --fence-from origin/main --run "go test ./..."
+/tmp/odachi check --fence-from "$base" --base "$base" --run "go test ./..."
 ```
 
-`.github/workflows/gate.yml` is that recipe; it runs on pull requests and on
-`main`, builds the gate from the base ref, and uploads `proof/` even when the
-gate fails. The workflow file itself is not trusted: `.github/CODEOWNERS` asks
-for an owner review of `.github/` and `.odachi/`, and the repository ruleset can
-require that review. Mark the gate as a required check when the project is ready
-to stop pushing to `main` directly.
+`.github/workflows/gate.yml` is the only workflow that judges a tree. Its `gate`
+job runs on ubuntu, macos and windows; each builds odachi from the base ref,
+reads the fence from it, compares the changed paths against it, and keeps its own
+proof. The base is the PR base on a pull request and `github.event.before` on a
+push, because `origin/main` after checkout is the pushed commit itself. `gofmt`,
+`go vet`, the race detector and the `goreleaser check` are jobs of the same
+workflow, so one file defines green. No second workflow runs the suite; a tag
+still runs it in `release.yml` before publishing.
+
+A green run leaves its proof as an artifact; a red one is read from the log,
+because odachi writes the proof only when the command exits 0. The workflow file
+itself is not trusted: `.github/CODEOWNERS` asks for an owner review of
+`.github/` and `.odachi/`, and the repository ruleset can require that review.
+Mark the gate as a required check when the project is ready to stop pushing to
+`main` directly.
 
 `ODACHI_NO_SETUP=1` makes the installers leave only the binary — no home door, no
 default agent — which is what a shared runner wants. A missing file at a valid
