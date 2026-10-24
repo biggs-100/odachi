@@ -1,14 +1,22 @@
 name: gate
 
-# The gate must not be code the candidate can edit. This job builds odachi from
-# the base ref (the trusted source) and runs it against the candidate worktree,
-# reading the fence from the base ref too: a change cannot loosen the policy it
-# must obey. The proof is uploaded even when the gate fails.
+# One workflow, one truth about a tree. The gate must not be code the candidate
+# can edit: odachi is built from the base ref (the trusted source) and runs
+# against the candidate worktree, reading the fence from the base ref too, so a
+# change cannot loosen the policy it must obey.
+#
+# The base is the PR base on a pull request and github.event.before on a push:
+# origin/main after checkout is the pushed commit itself, which compares to
+# nothing. The fence is then applied to the paths that differ from that base.
+#
+# A green run leaves its proof as an artifact; a red one is read from the log,
+# because odachi writes the proof only when the command exits 0.
 #
 # The gate binary is trusted. The workflow file is not: it comes from the change.
 # That is why `.github/` has a CODEOWNERS entry and the repository ruleset must
-# require a code-owner review for it. Mark this job as a required check only when
+# require a code-owner review for it. Mark these jobs as required checks only when
 # the project is ready to stop pushing to main directly.
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -20,8 +28,19 @@ permissions:
   contents: read
 
 jobs:
+  # The suite runs on every OS odachi ships to, and each OS keeps its own proof:
+  # a green ubuntu says nothing about Windows, and a proof is evidence for the
+  # tree, not for the machine that happened to run it.
   gate:
-    runs-on: ubuntu-latest
+    name: gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
     steps:
       - uses: actions/checkout@v7
         with:
@@ -32,22 +51,78 @@ jobs:
           go-version-file: go.mod
 
       - name: build the gate from the base ref
+        shell: bash
         run: |
+          # The base is what the candidate cannot edit: on a pull request it is
+          # the PR base; on a push to main it is the previous tip (before), since
+          # origin/main is the pushed commit itself and would compare it to
+          # nothing. A zero SHA (new branch) falls back to origin/main.
           base="${{ github.event.pull_request.base.sha }}"
-          [ -n "$base" ] || base=origin/main
+          [ -n "$base" ] || base="${{ github.event.before }}"
+          case "$base" in
+            ""|0000000000000000000000000000000000000000) base=origin/main ;;
+          esac
+          echo "BASE=$base" >> "$GITHUB_ENV"
+
           git worktree add ../gate "$base"
-          (cd ../gate && go build -o "$RUNNER_TEMP/odachi" ./cmd/odachi)
+
+          bin="$RUNNER_TEMP/odachi"
+          if [ "$RUNNER_OS" = "Windows" ]; then bin="$bin.exe"; fi
+          (cd ../gate && go build -o "$bin" ./cmd/odachi)
+
+          echo "ODACHI_GATE=$bin" >> "$GITHUB_ENV"
 
       - name: run the gate
+        shell: bash
         run: |
-          base="${{ github.event.pull_request.base.sha }}"
-          [ -n "$base" ] || base=origin/main
-          "$RUNNER_TEMP/odachi" check --fence-from "$base" --run "go test ./..."
+          # --fence-from reads the policy from the base ref; --base compares the
+          # changed paths against it. Without --base the worktree is compared to
+          # its own HEAD, which on a clean checkout is nothing: the fence would be
+          # applied to an empty list and the change would never meet it.
+          "$ODACHI_GATE" check --fence-from "$BASE" --base "$BASE" --run "go test ./..." --timeout 900
 
       - name: keep the proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: proof
+          name: proof-${{ matrix.os }}
           path: proof/
           if-no-files-found: warn
+
+  # Beside the gate, not in a second workflow: formatting, vet, the race
+  # detector and the release config are static truths about the same tree. The
+  # race detector runs the same tests with a different instrument, so it is a
+  # second measurement, not a second opinion. A failure here fails the workflow
+  # without hiding the gate's proof.
+  checks:
+    name: checks (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt -l . (fails when it prints anything)
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "these files are not formatted; run gofmt -w . :"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet ./...
+        run: go vet ./...
+
+      - name: go test -race ./internal/...
+        run: go test -race ./internal/...
+
+      - name: goreleaser check
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check
