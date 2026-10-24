@@ -1,19 +1,14 @@
 [[rule]]
-not   = "lowering a class below its path class: content adds review, it never removes it"
-paths = ["lowering-a-class-below-its-path-class-content-adds-review-it-never-removes-it*"]
+not   = "changing the reviewer contract: the prompt still arrives on stdin and the answer still comes on stdout"
+paths = ["changing-the-reviewer-contract-the-prompt-still-arrives-on-stdin-and-the-answer-still-comes-on-stdout*"]
 deps  = []
 
 [[rule]]
-not   = "an LLM deciding the class: the floor stays deterministic"
-paths = ["an-llm-deciding-the-class-the-floor-stays-deterministic*"]
+not   = "stripping ANSI or prose from stdout: the answer must be JSON, and decoration is the reviewer's problem"
+paths = ["stripping-ansi-or-prose-from-stdout-the-answer-must-be-json-and-decoration-is-the-reviewer-s-problem*"]
 deps  = []
 
 [[rule]]
-not   = "changes to the human-owned review switch (ADR 0010)"
-paths = ["changes-to-the-human-owned-review-switch-adr-0010*"]
-deps  = []
-
-[[rule]]
-not   = "a fifth tier or new lenses"
-paths = ["a-fifth-tier-or-new-lenses*"]
+not   = "stamping the verdict's instant from the tool (recorded as its own decision, not this feature)"
+paths = ["stamping-the-verdict-s-instant-from-the-tool-recorded-as-its-own-decision-not-this-feature*"]
 deps  = []

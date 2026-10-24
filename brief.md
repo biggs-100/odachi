@@ -1,22 +1,21 @@
-# lens-class-from-content
+# review-answers-from-stdout
 
 ## What must exist
-- the deterministic floor may raise the lens class from the diff's content — never lower it — and review and check ask the same lenses
+- review --exec reads the reviewer's answer from stdout, and a failing reviewer shows both streams; the proof still keeps both
 
 ## Done when
-- a change to ordinary code whose added lines spawn concurrency (go, chan, sync., atomic.) or touch secrets asks for the four lenses, and review and check agree on the answer
-- a candidate whose path class is passive is never raised by prose, and a class is never lowered by content
-- the human-owned review switch and the four-lens vocabulary are untouched
+- a reviewer that writes a banner and ANSI to stderr still stores a valid verdict from its stdout
+- a reviewer that fails shows stdout and stderr in the failure message
+- check --run keeps both streams in the proof
 - go test ./... and odachi check are green
 
 ## Not included (first version)
-- lowering a class below its path class: content adds review, it never removes it
-- an LLM deciding the class: the floor stays deterministic
-- changes to the human-owned review switch (ADR 0010)
-- a fifth tier or new lenses
+- changing the reviewer contract: the prompt still arrives on stdin and the answer still comes on stdout
+- stripping ANSI or prose from stdout: the answer must be JSON, and decoration is the reviewer's problem
+- stamping the verdict's instant from the tool (recorded as its own decision, not this feature)
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
-- Wants to learn: how to earn more review without turning it into a tax.
+- Wants to learn: why a stream boundary is a contract, not a formatting detail.
