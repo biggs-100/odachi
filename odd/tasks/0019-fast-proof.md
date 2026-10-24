@@ -10,8 +10,8 @@ R1 · "the suite and the proof loop stop being the slowest part of a commit"
 - go test ./... and odachi check are green
 
 ## Steps
-- [ ] T1 · the cmd e2e tests run in parallel where their fixtures are isolated   R1
-- [ ] T2 · docs: how the proof runs the suite once per tree, and the measured result   R1
+- [x] T1 · the cmd e2e tests run in parallel where their fixtures are isolated   R1 · c1a0061
+- [x] T2 · docs: how the proof runs the suite once per tree, and the measured result   R1
 
 ## History
 L1 · "the suite and the proof loop stop being the slowest part of a commit"
