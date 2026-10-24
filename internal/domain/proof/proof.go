@@ -14,16 +14,20 @@ package proof
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
 // Headers are the exact prefixes of the lines every proof starts with. Fence is
 // optional: it names the ref the fence came from when the gate ran in CI against
-// a policy the candidate cannot edit.
+// a policy the candidate cannot edit. Exit and Timeout belong to the evidence of
+// a failed run, which is not a proof.
 const (
 	TreeHeader    = "# tree "
 	CommandHeader = "# command "
 	FenceHeader   = "# fence "
+	ExitHeader    = "# exit "
+	TimeoutHeader = "# timed out"
 )
 
 // ErrNoHeader means the file does not say which tree produced it.
@@ -49,6 +53,27 @@ func Render(p Proof) string {
 	out.WriteString(CommandHeader + p.Command + "\n")
 	if p.Fence != "" {
 		out.WriteString(FenceHeader + p.Fence + "\n")
+	}
+	out.WriteString(p.Output)
+	return out.String()
+}
+
+// RenderFailed writes the evidence of a run that did not pass: the same tree,
+// command and optional fence headers, then the exit code (or the timeout) and
+// the output verbatim. It is not a proof —a proof is a green run— and the third
+// line says which kind of file this is. It is written under a different name and
+// never parsed as a proof.
+func RenderFailed(p Proof, exitCode int, timedOut bool) string {
+	var out strings.Builder
+	out.WriteString(TreeHeader + p.Tree + "\n")
+	out.WriteString(CommandHeader + p.Command + "\n")
+	if p.Fence != "" {
+		out.WriteString(FenceHeader + p.Fence + "\n")
+	}
+	if timedOut {
+		out.WriteString(TimeoutHeader + "\n")
+	} else {
+		out.WriteString(ExitHeader + strconv.Itoa(exitCode) + "\n")
 	}
 	out.WriteString(p.Output)
 	return out.String()
