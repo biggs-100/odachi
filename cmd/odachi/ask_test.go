@@ -35,6 +35,7 @@ func historyOf(t *testing.T, dir, taskPath string) []string {
 // question, the human's answer and the agent's own decision all live in the
 // same append-only log, in that order.
 func TestAskRecordsTheThreeShapesEndToEnd(t *testing.T) {
+	t.Parallel()
 	dir, taskPath := startedProject(t)
 
 	steps := []struct {
@@ -69,6 +70,7 @@ func TestAskRecordsTheThreeShapesEndToEnd(t *testing.T) {
 // TestAskBlocksWithoutATaskDocument: a project with no feature cannot record
 // anything, and the message names `odachi start`.
 func TestAskBlocksWithoutATaskDocument(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, stdout, stderr := runDir(t, dir, []string{"ask", "¿Y esto?"}, "")
@@ -87,6 +89,7 @@ func TestAskBlocksWithoutATaskDocument(t *testing.T) {
 // TestAskCraftWithoutBecauseIsBlocked keeps the tutor rule at the CLI: every
 // blocked message names the flag that unblocks it.
 func TestAskCraftWithoutBecauseIsBlocked(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 
 	code, _, stderr := runDir(t, dir, []string{"ask", "--craft", "usé SQLite"}, "")
@@ -101,6 +104,7 @@ func TestAskCraftWithoutBecauseIsBlocked(t *testing.T) {
 
 // TestAskJSONReportsTheTaskDocument keeps the machine output shape.
 func TestAskJSONReportsTheTaskDocument(t *testing.T) {
+	t.Parallel()
 	dir, taskPath := startedProject(t)
 
 	code, stdout, stderr := runDir(t, dir, []string{"ask", "¿Y esto?", "--json"}, "")

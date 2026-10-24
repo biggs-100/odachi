@@ -59,6 +59,7 @@ func lockExists(t *testing.T, dir string) bool {
 // exclusive create, one line with verb/pid/instant, and a release that removes
 // it.
 func TestTheLockIsOneLineAndGoesAway(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	guard := &osLock{}
 
@@ -112,6 +113,7 @@ func TestTheLockIsOneLineAndGoesAway(t *testing.T) {
 // TestALiveLockRefusesAndIsNeverDeleted: a fresh lock is another run writing
 // right now. odachi names it, refuses, and leaves it exactly where it is.
 func TestALiveLockRefusesAndIsNeverDeleted(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	first := &osLock{}
 	if held, _, err := first.Acquire(lockPath(dir), "start"); err != nil || !held {
@@ -168,6 +170,7 @@ func TestALiveLockRefusesAndIsNeverDeleted(t *testing.T) {
 // TestAStaleLockIsTakenOver: older than ten minutes means the run that wrote it
 // died. It is taken over — one line says so — and the new run owns the file.
 func TestAStaleLockIsTakenOver(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	handLock(t, dir, "start 111 2026-10-21T10:00:00Z\n", lock.StaleAfter+time.Minute)
 
@@ -204,6 +207,7 @@ func TestAStaleLockIsTakenOver(t *testing.T) {
 // TestAnUnreadableLockIsJudgedByItsAge: a lock with unexpected content is never
 // ignored. Old, it is taken over with a line; fresh, it blocks naming the file.
 func TestAnUnreadableLockIsJudgedByItsAge(t *testing.T) {
+	t.Parallel()
 	fresh := t.TempDir()
 	handLock(t, fresh, "basura sin forma\n", 30*time.Second)
 
@@ -248,6 +252,7 @@ func TestAnUnreadableLockIsJudgedByItsAge(t *testing.T) {
 // window can have its lock taken over. Its Release must not remove the new
 // owner's lock.
 func TestReleaseNeverDeletesSomebodyElsesLock(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	guard := &osLock{}
 	if held, _, err := guard.Acquire(lockPath(dir), "start"); err != nil || !held {
@@ -288,6 +293,7 @@ func startArgs(extra ...string) []string {
 // TestStartLeavesNoLockBehind is the ordinary case end to end: the lock exists
 // while start writes and is gone when it returns.
 func TestStartLeavesNoLockBehind(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	if code, _, stderr := runDir(t, dir, startArgs(), ""); code != 0 {
@@ -301,6 +307,7 @@ func TestStartLeavesNoLockBehind(t *testing.T) {
 // TestStartIsRefusedByALiveLockAndTouchesNothing: the run stops before reading
 // an artifact, and every byte in the project is exactly as it was.
 func TestStartIsRefusedByALiveLockAndTouchesNothing(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if code, _, stderr := runDir(t, dir, startArgs(), ""); code != 0 {
 		t.Fatalf("first start: exit %d, stderr=%s", code, stderr)
@@ -359,6 +366,7 @@ func keys(files map[string]string) []string {
 // TestAnOldLockIsTakenOverEndToEnd: the line reaches the human and the run
 // completes with the lock released.
 func TestAnOldLockIsTakenOverEndToEnd(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	handLock(t, dir, "start 111 2026-10-21T10:00:00Z\n", 30*time.Minute)
 
@@ -379,6 +387,7 @@ func TestAnOldLockIsTakenOverEndToEnd(t *testing.T) {
 // TestTheSingleFileVerbsTakeNoLock: plan, ask and level write one file each,
 // atomically, so a lock would protect nothing and only add friction.
 func TestTheSingleFileVerbsTakeNoLock(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 	if lockExists(t, dir) {
 		t.Fatal("the project started with a lock on disk")
@@ -403,6 +412,7 @@ func TestTheSingleFileVerbsTakeNoLock(t *testing.T) {
 // a verb-level failure releases with defer. Neither leaves a lock that would
 // block the project for ten minutes.
 func TestAFailingStartLeavesNoLockBehind(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// A flag the command does not have: start never runs.

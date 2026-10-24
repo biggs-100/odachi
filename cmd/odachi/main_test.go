@@ -77,6 +77,7 @@ func findOne(t *testing.T, files map[string]string, prefix, suffix string) strin
 
 // TestNoArgsEqualsStart: the first thing a human types is the whole command.
 func TestNoArgsEqualsStart(t *testing.T) {
+	t.Parallel()
 	implicit, explicit := t.TempDir(), t.TempDir()
 
 	codeA, outA, errA := runDir(t, implicit, allFlags(), "")
@@ -103,6 +104,7 @@ func TestNoArgsEqualsStart(t *testing.T) {
 // TestUnknownCommandListsWhatExists: no silent fallback, and the message names
 // the command that does exist.
 func TestUnknownCommandListsWhatExists(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, out, errOut := runDir(t, dir, []string{"deploy"}, "")
@@ -123,6 +125,7 @@ func TestUnknownCommandListsWhatExists(t *testing.T) {
 
 // TestStartJSONWritesTheFourArtifacts is the machine path end to end.
 func TestStartJSONWritesTheFourArtifacts(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, out, errOut := runDir(t, dir, allFlags(), "")
@@ -176,6 +179,7 @@ func TestStartJSONWritesTheFourArtifacts(t *testing.T) {
 // TestForceBacksUpTheBriefAndKeepsItsBytes: the human's file is copied aside,
 // and the same answers produce the same bytes.
 func TestForceBacksUpTheBriefAndKeepsItsBytes(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	args := allFlags()[:len(allFlags())-1] // human output, no --json
 
@@ -226,6 +230,7 @@ func TestForceBacksUpTheBriefAndKeepsItsBytes(t *testing.T) {
 
 // TestExistingProfileWinsOverInference: the human owns .odachi/profile.toml.
 func TestExistingProfileWinsOverInference(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	profileDir := filepath.Join(dir, ".odachi")
 	if err := os.MkdirAll(profileDir, 0o755); err != nil {
@@ -257,6 +262,7 @@ extends = ""
 // TestProfileWithoutNameBlocksWithAHumanSentence covers the deferred T4 defect:
 // Decode accepts a nameless file, and start is where the human is told.
 func TestProfileWithoutNameBlocksWithAHumanSentence(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	profileDir := filepath.Join(dir, ".odachi")
 	if err := os.MkdirAll(profileDir, 0o755); err != nil {
@@ -286,6 +292,7 @@ func TestProfileWithoutNameBlocksWithAHumanSentence(t *testing.T) {
 
 // TestNoHumanAndNoFlagsExitsTwo: the message names the flags, not a stack trace.
 func TestNoHumanAndNoFlagsExitsTwo(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, _, errOut := runDir(t, dir, []string{"start"}, "")
@@ -303,6 +310,7 @@ func TestNoHumanAndNoFlagsExitsTwo(t *testing.T) {
 
 // TestInvalidFlagIsBlockedInJSON keeps the machine output shape for failures.
 func TestInvalidFlagIsBlockedInJSON(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, out, _ := runDir(t, dir, []string{"--audience", "tablet", "--json"}, "")
@@ -329,6 +337,7 @@ func TestInvalidFlagIsBlockedInJSON(t *testing.T) {
 // TestInterviewPrintsTheWhyInTheSameBlock pins the tutor rule at the adapter:
 // question, why and options are one block, and the why is one line.
 func TestInterviewPrintsTheWhyInTheSameBlock(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 	interview := &terminalInterview{
 		in:  bufio.NewReader(strings.NewReader("1\n")),

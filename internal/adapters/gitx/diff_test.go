@@ -15,6 +15,7 @@ import (
 // appears to delete code it never touched. The candidate is everything since
 // the fork point — merge-base — and nothing else.
 func TestDiffAndChangedPathsUseTheMergeBase(t *testing.T) {
+	t.Parallel()
 	root, _ := newRepo(t)
 	git(t, root, "branch", "-M", "main")
 	git(t, root, "checkout", "-b", "feature")
@@ -58,6 +59,7 @@ func TestDiffAndChangedPathsUseTheMergeBase(t *testing.T) {
 // file nobody has added to git yet. `git diff base` alone would hide it, so a
 // reviewer could approve a change it never read.
 func TestDiffShowsChangedTrackedAndUntrackedFiles(t *testing.T) {
+	t.Parallel()
 	root, base := newRepo(t)
 
 	write(t, filepath.Join(root, "notes.txt"), "primera línea\nsegunda línea sin commit\n")
@@ -79,6 +81,7 @@ func TestDiffShowsChangedTrackedAndUntrackedFiles(t *testing.T) {
 // build output must never become review noise, and an ignored file is not part
 // of the candidate.
 func TestDiffExcludesIgnoredFiles(t *testing.T) {
+	t.Parallel()
 	root, base := newRepo(t)
 
 	write(t, filepath.Join(root, ".gitignore"), "*.log\n")
@@ -100,6 +103,7 @@ func TestDiffExcludesIgnoredFiles(t *testing.T) {
 // project: there is no commit to compare against, so every file in the worktree
 // is new and every file has to be reviewable.
 func TestDiffAgainstNothingShowsEveryFileAsAnAddition(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	git(t, root, "init")
 	git(t, root, "config", "user.name", "odachi test")
@@ -127,6 +131,7 @@ func TestDiffAgainstNothingShowsEveryFileAsAnAddition(t *testing.T) {
 // the empty-tree hash when the project has no commit, and gitx decides that both
 // spellings mean the same thing.
 func TestDiffEmptyTreeBehavesLikeNoBase(t *testing.T) {
+	t.Parallel()
 	if want := "4b825dc642cb6eb9a060e54bf8d69288fbee4904"; gitx.EmptyTree != want {
 		t.Fatalf("gitx.EmptyTree = %q, want %q", gitx.EmptyTree, want)
 	}
@@ -155,6 +160,7 @@ func TestDiffEmptyTreeBehavesLikeNoBase(t *testing.T) {
 // builds a throwaway index, so the human's real index, their staged work and
 // their untracked files are exactly as they were after a review.
 func TestDiffLeavesTheRepositoryUntouched(t *testing.T) {
+	t.Parallel()
 	root, base := newRepo(t)
 
 	write(t, filepath.Join(root, "notes.txt"), "primera línea\nsegunda línea sin commit\n")
@@ -178,6 +184,7 @@ func TestDiffLeavesTheRepositoryUntouched(t *testing.T) {
 // TestDiffErrorCarriesGitsStderr: "exit status 128" tells a human nothing. A
 // base that does not resolve has to say so in git's own words.
 func TestDiffErrorCarriesGitsStderr(t *testing.T) {
+	t.Parallel()
 	root, _ := newRepo(t)
 
 	_, err := gitx.Diff(root, "no-such-revision")

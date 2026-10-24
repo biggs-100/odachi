@@ -13,6 +13,7 @@ import (
 // depends on: the rule is asked before the file is written, so git has to answer
 // for a name that is not there yet.
 func TestIgnoredAnswersForAPathThatDoesNotExist(t *testing.T) {
+	t.Parallel()
 	root, _ := newRepo(t)
 	write(t, filepath.Join(root, ".gitignore"), "/proof/\n")
 
@@ -38,6 +39,7 @@ func TestIgnoredAnswersForAPathThatDoesNotExist(t *testing.T) {
 // A path no rule covers is not ignored, and that is a false and not an error:
 // git's exit 1 is an answer.
 func TestIgnoredIsFalseWithoutARule(t *testing.T) {
+	t.Parallel()
 	root, _ := newRepo(t)
 	write(t, filepath.Join(root, ".gitignore"), "/proof/\n")
 
@@ -55,6 +57,7 @@ func TestIgnoredIsFalseWithoutARule(t *testing.T) {
 // A file inside an ignored directory is ignored, which is what keeps a written
 // verdict out of the tree it names.
 func TestIgnoredSeesANestedIgnoredFile(t *testing.T) {
+	t.Parallel()
 	root, _ := newRepo(t)
 	write(t, filepath.Join(root, ".gitignore"), "build/\n")
 	if err := os.MkdirAll(filepath.Join(root, "build"), 0o755); err != nil {
@@ -74,6 +77,7 @@ func TestIgnoredSeesANestedIgnoredFile(t *testing.T) {
 // Outside a repository git cannot answer, and a silent false there would be the
 // worst answer: the caller would write evidence into a tree nothing describes.
 func TestIgnoredOutsideARepositoryIsAnError(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 
 	ignored, err := gitx.Ignored(root, "proof/0000-check.txt")

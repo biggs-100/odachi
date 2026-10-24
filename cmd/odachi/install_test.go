@@ -273,6 +273,7 @@ func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir stri
 // without Go installs it, and the binary they end up with says which version it
 // is. No network: the release is a local tarball served over file://.
 func TestInstallScriptInstallsTheVerifiedBinary(t *testing.T) {
+	t.Parallel()
 	bash := requireBash(t)
 	fixture := buildRelease(t)
 	binDir := filepath.Join(t.TempDir(), "bin")
@@ -319,6 +320,7 @@ func shellQuote(path string) string {
 // script, real tampered checksums.txt, and the assertion is on the disk: nothing
 // installed, not even the last-resort ./odachi.
 func TestInstallScriptRefusesAModifiedChecksum(t *testing.T) {
+	t.Parallel()
 	bash := requireBash(t)
 	fixture := buildRelease(t)
 

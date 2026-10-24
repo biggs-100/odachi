@@ -24,6 +24,7 @@ func planDoc(t *testing.T, dir, taskPath string) taskdoc.TaskDoc {
 // adds steps and closes them without editing Markdown by hand, and the document
 // stays canonical by construction.
 func TestPlanAppendsAndClosesStepsEndToEnd(t *testing.T) {
+	t.Parallel()
 	dir, taskPath := startedProject(t)
 
 	code, stdout, stderr := runDir(t, dir, []string{"plan", "primer paso", "--req", "R1"}, "")
@@ -104,6 +105,7 @@ func TestPlanAppendsAndClosesStepsEndToEnd(t *testing.T) {
 // TestPlanRejectsBadTextBeforeWriting: the text is checked before anything is
 // written, asserted on the filesystem.
 func TestPlanRejectsBadTextBeforeWriting(t *testing.T) {
+	t.Parallel()
 	dir, taskPath := startedProject(t)
 	path := filepath.Join(dir, taskPath)
 	before, err := os.ReadFile(path)
@@ -138,6 +140,7 @@ func TestPlanRejectsBadTextBeforeWriting(t *testing.T) {
 // TestPlanRefusesAStraySectionAndWritesNothing: the shared guard at the CLI,
 // asserted on the file, not only on the output.
 func TestPlanRefusesAStraySectionAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	dir, taskPath := startedProject(t)
 	path := filepath.Join(dir, taskPath)
 
@@ -173,6 +176,7 @@ func TestPlanRefusesAStraySectionAndWritesNothing(t *testing.T) {
 // TestPlanWithoutATaskDocumentNamesStart: exit 1 and the command that creates
 // the first document.
 func TestPlanWithoutATaskDocumentNamesStart(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, _, stderr := runDir(t, dir, []string{"plan", "primer paso"}, "")
@@ -191,6 +195,7 @@ func TestPlanWithoutATaskDocumentNamesStart(t *testing.T) {
 // TestPlanJSONReportsTheSameContent: machine output carries the same message
 // the human reads, plus the task document and the file written.
 func TestPlanJSONReportsTheSameContent(t *testing.T) {
+	t.Parallel()
 	dir, taskPath := startedProject(t)
 
 	code, stdout, stderr := runDir(t, dir, []string{"plan", "un paso", "--json"}, "")
@@ -224,6 +229,7 @@ func TestPlanJSONReportsTheSameContent(t *testing.T) {
 // TestPlanLeavesTheOtherArtifactsAlone: brief, profile and fence are untouched,
 // and only the task document is backed up.
 func TestPlanLeavesTheOtherArtifactsAlone(t *testing.T) {
+	t.Parallel()
 	dir, taskPath := startedProject(t)
 
 	before := tree(t, dir)
@@ -258,6 +264,7 @@ func backupFiles(t *testing.T, dir string) []string {
 // TestPlanFlagRulesAtTheCLI: the three refusals that do not depend on the
 // document's content, each naming the command or flag that unblocks it.
 func TestPlanFlagRulesAtTheCLI(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 	before := tree(t, dir)
 

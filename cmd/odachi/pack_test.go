@@ -501,6 +501,7 @@ func TestPackDetectsAnAgentOrSaysHowToName(t *testing.T) {
 // TestUnknownCommandListsPack: the new verb is part of the list a human reads
 // when they type something that does not exist.
 func TestUnknownCommandListsPack(t *testing.T) {
+	t.Parallel()
 	code, _, errOut := runDir(t, t.TempDir(), []string{"inventado"}, "")
 	if code != 1 {
 		t.Fatalf("code = %d, want 1", code)
@@ -513,6 +514,7 @@ func TestUnknownCommandListsPack(t *testing.T) {
 // TestPackUsage: `pack -h` exists and names its flags, including the two escape
 // hatches and the portable pseudo-agent.
 func TestPackUsage(t *testing.T) {
+	t.Parallel()
 	code, out, errOut := runDir(t, t.TempDir(), []string{"pack", "-h"}, "")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stderr %q)", code, errOut)

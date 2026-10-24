@@ -10,6 +10,7 @@ import (
 // accident of internal write order, never what the human meant. With more than
 // one candidate the honest answer is to ask.
 func TestUndoWithoutFilterRefusesWhenSeveralArtifactsHaveBackups(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	args := allFlags()[:len(allFlags())-1] // human output, no --json
 
@@ -36,6 +37,7 @@ func TestUndoWithoutFilterRefusesWhenSeveralArtifactsHaveBackups(t *testing.T) {
 // Restoring a backup whose bytes are already the artifact's bytes changes nothing,
 // and saying otherwise prints the same backup name as both source and result.
 func TestUndoIsANoOpWhenTheCurrentBytesAreAlreadyTheBackup(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	args := allFlags()[:len(allFlags())-1]
 

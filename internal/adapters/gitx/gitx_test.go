@@ -57,6 +57,7 @@ func write(t *testing.T, path, content string) {
 // uncommitted edit must change the tree hash, otherwise a proof could be
 // accepted for a tree that was never tested.
 func TestTreeHashTracksTheWorktree(t *testing.T) {
+	t.Parallel()
 	root, _ := newRepo(t)
 
 	clean, err := gitx.TreeHash(root)
@@ -99,6 +100,7 @@ func TestTreeHashTracksTheWorktree(t *testing.T) {
 }
 
 func TestChangedPathsReportsEditsAndUntrackedFiles(t *testing.T) {
+	t.Parallel()
 	root, base := newRepo(t)
 
 	write(t, filepath.Join(root, "notes.txt"), "primera línea\neditada\n")
@@ -115,6 +117,7 @@ func TestChangedPathsReportsEditsAndUntrackedFiles(t *testing.T) {
 }
 
 func TestChangedPathsIsEmptyForACleanWorktree(t *testing.T) {
+	t.Parallel()
 	root, base := newRepo(t)
 
 	got, err := gitx.ChangedPaths(root, base)
@@ -127,6 +130,7 @@ func TestChangedPathsIsEmptyForACleanWorktree(t *testing.T) {
 }
 
 func TestChangedPathsReportsAFileChangedOnce(t *testing.T) {
+	t.Parallel()
 	root, base := newRepo(t)
 
 	// Untracked and then tracked and then edited: one path, not three.
@@ -144,6 +148,7 @@ func TestChangedPathsReportsAFileChangedOnce(t *testing.T) {
 }
 
 func TestAddedDepsReportsNewRequireLines(t *testing.T) {
+	t.Parallel()
 	root, base := newRepo(t)
 
 	// Unchanged go.mod: no deps added.
@@ -168,6 +173,7 @@ func TestAddedDepsReportsNewRequireLines(t *testing.T) {
 }
 
 func TestAddedDepsReadsRequireBlocks(t *testing.T) {
+	t.Parallel()
 	root, base := newRepo(t)
 
 	write(t, filepath.Join(root, "go.mod"),
@@ -184,6 +190,7 @@ func TestAddedDepsReadsRequireBlocks(t *testing.T) {
 }
 
 func TestAddedDepsWithoutGoModIsNotAnError(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	git(t, root, "init")
 	git(t, root, "config", "user.name", "odachi test")
@@ -203,6 +210,7 @@ func TestAddedDepsWithoutGoModIsNotAnError(t *testing.T) {
 }
 
 func TestErrorsIncludeGitStderr(t *testing.T) {
+	t.Parallel()
 	// A plain directory is not a repository: git must fail, and its stderr
 	// must reach the caller instead of a bare "exit status 128".
 	dir := t.TempDir()

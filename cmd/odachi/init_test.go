@@ -10,6 +10,7 @@ import (
 
 // TestInitWritesBothArtifacts: the rules block and the hook, and it says so.
 func TestInitWritesBothArtifacts(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -44,6 +45,7 @@ func TestInitWritesBothArtifacts(t *testing.T) {
 
 // A rerun is silent about work it did not do and changes no bytes.
 func TestInitRerunChangesNothing(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	if code, _, errOut := runDir(t, dir, []string{"init"}, ""); code != 0 {
@@ -79,6 +81,7 @@ func TestInitRerunChangesNothing(t *testing.T) {
 // A hook someone else wrote is reported, never replaced, and the three lines to
 // paste are printed.
 func TestInitRefusesAForeignHook(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	foreign := "#!/bin/sh\necho hello\n"
@@ -112,6 +115,7 @@ func TestInitRefusesAForeignHook(t *testing.T) {
 // of a beginner is the opposite of what this tool promises: creating the history is
 // dirty work, and dirty work is the agent's job.
 func TestInitCreatesTheHistoryWhenThereIsNone(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, out, errOut := runDir(t, dir, []string{"init"}, "")
@@ -136,6 +140,7 @@ func TestInitCreatesTheHistoryWhenThereIsNone(t *testing.T) {
 // The block is replaced in place through the real filesystem too: the human's
 // lines survive and the old block does not.
 func TestInitReplacesTheBlockAndKeepsTheRest(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	writeFile(t, dir, "AGENTS.md", "# Mis reglas\n\nno toques production\n\n<!-- odachi:begin -->\nregla vieja\n<!-- odachi:end -->\n\ny esto va después\n")
@@ -164,6 +169,7 @@ func TestInitReplacesTheBlockAndKeepsTheRest(t *testing.T) {
 
 // Machine output carries the code and the files it touched.
 func TestInitJSONListsTheFiles(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -192,6 +198,7 @@ func TestInitJSONListsTheFiles(t *testing.T) {
 // The human does not commit: the agent does. The closing line used to say
 // "you commit", which assumed the one thing this tool exists to take off their plate.
 func TestInitDoesNotAskTheHumanToCommit(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 

@@ -10,6 +10,7 @@ import (
 // TestFilesBackupUsesTheProjectStore: the adapter finds the project by its
 // .odachi boundary, so no caller has to know where the store is.
 func TestFilesBackupUsesTheProjectStore(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, ".odachi"), 0o755); err != nil {
 		t.Fatalf("mkdir .odachi: %v", err)
@@ -39,6 +40,7 @@ func TestFilesBackupUsesTheProjectStore(t *testing.T) {
 // TestFilesBackupLeavesOutsideFilesBesideThem: the home's skills are not part
 // of this project, so they keep the old shape.
 func TestFilesBackupLeavesOutsideFilesBesideThem(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	outside := t.TempDir()
 	path := filepath.Join(outside, "SKILL.md")

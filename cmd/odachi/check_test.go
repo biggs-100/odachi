@@ -44,9 +44,17 @@ func writeFile(t *testing.T, dir, name, content string) {
 }
 
 // initRepo makes dir a git repository with no commit yet, which is the state a
-// project is in right after `git init`.
+// project is in right after `git init`. It copies the template TestMain built:
+// same repository, without the process per test.
 func initRepo(t *testing.T, dir string) {
 	t.Helper()
+	if gitTemplate != "" {
+		if err := os.CopyFS(filepath.Join(dir, ".git"), os.DirFS(gitTemplate)); err != nil {
+			t.Fatalf("copy the git template: %v", err)
+		}
+		return
+	}
+
 	cmd := exec.Command("git", "-C", dir, "init", "-q")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v: %s", err, out)
@@ -70,6 +78,7 @@ func seedProject(t *testing.T, dir string) {
 // TestCheckWithoutProofIsBlocked: no proof yet is the agent's work, exit 1, and
 // the block names the command that produces it.
 func TestCheckWithoutProofIsBlocked(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -90,6 +99,7 @@ func TestCheckWithoutProofIsBlocked(t *testing.T) {
 // TestCheckRunWritesTheProof: --run captures the command and its output, with
 // the tree in the header, and the run is ready afterwards.
 func TestCheckRunWritesTheProof(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -124,6 +134,7 @@ func TestCheckRunWritesTheProof(t *testing.T) {
 
 // Two runs in a row on the same tree leave the same proof bytes.
 func TestTwoCheckRunsProduceTheSameProofBytes(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -153,6 +164,7 @@ func TestTwoCheckRunsProduceTheSameProofBytes(t *testing.T) {
 // A failing command is a failed proof, never the command's exit code: `check`
 // exits 1 whatever the command exited with.
 func TestFailingRunExitsOneAndQuotesTheLastLine(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -175,6 +187,7 @@ func TestFailingRunExitsOneAndQuotesTheLastLine(t *testing.T) {
 
 // A proof written by hand has no header and proves nothing.
 func TestProofWithoutHeaderIsRefused(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -191,6 +204,7 @@ func TestProofWithoutHeaderIsRefused(t *testing.T) {
 }
 
 func TestCheckProofUsesAGivenProof(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -218,6 +232,7 @@ func TestCheckProofUsesAGivenProof(t *testing.T) {
 
 // --quiet is what the pre-commit hook depends on: nothing when ready...
 func TestQuietPrintsNothingWhenReady(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -237,6 +252,7 @@ func TestQuietPrintsNothingWhenReady(t *testing.T) {
 
 // ...and the block when it is not.
 func TestQuietStillPrintsTheBlock(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -254,6 +270,7 @@ func TestQuietStillPrintsTheBlock(t *testing.T) {
 // The fence runs before the proof: a path the human excluded is a decision only
 // they can take, exit 2, even when the proof is now older than the tree.
 func TestForbiddenPathNeedsADecision(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -276,6 +293,7 @@ func TestForbiddenPathNeedsADecision(t *testing.T) {
 // A repository with no commit must not fail, and neither must --base "": both
 // mean "compare against nothing committed".
 func TestNoCommitAndEmptyBaseDoNotFail(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -302,6 +320,7 @@ func TestNoCommitAndEmptyBaseDoNotFail(t *testing.T) {
 
 // Machine output carries the gate's reason and the continuation.
 func TestCheckJSONCarriesTheReason(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)

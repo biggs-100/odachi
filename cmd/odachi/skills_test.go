@@ -45,6 +45,7 @@ func skillFile(name, trigger string) string {
 // TestSkillsCheckIsGreenInThisRepo: the bundled skills and the committed
 // registry agree, so the command CI runs is green on the real tree.
 func TestSkillsCheckIsGreenInThisRepo(t *testing.T) {
+	t.Parallel()
 	code, out, errOut := runDir(t, repoRoot(t), []string{"skills", "--check"}, "")
 
 	if code != 0 {
@@ -55,6 +56,7 @@ func TestSkillsCheckIsGreenInThisRepo(t *testing.T) {
 // TestSkillsListsTheBundledFive: the human surface is the five names, each with
 // its trigger and its path.
 func TestSkillsListsTheBundledFive(t *testing.T) {
+	t.Parallel()
 	code, out, errOut := runDir(t, repoRoot(t), []string{"skills"}, "")
 
 	if code != 0 {
@@ -73,6 +75,7 @@ func TestSkillsListsTheBundledFive(t *testing.T) {
 // TestSkillsJSON is the machine shape: one entry per skill with name, trigger
 // and path.
 func TestSkillsJSON(t *testing.T) {
+	t.Parallel()
 	code, out, errOut := runDir(t, repoRoot(t), []string{"skills", "--json"}, "")
 
 	if code != 0 {
@@ -113,6 +116,7 @@ func TestSkillsJSON(t *testing.T) {
 // TestSkillsCheckReportsOneLinePerViolation: each broken file gets its own
 // English line naming the file and what is wrong.
 func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name   string
 		seed   map[string]string
@@ -203,6 +207,7 @@ func longSkill(name string, bodyLines int) string {
 
 // TestSkillsWriteIsIdempotent: two runs, same bytes, and the second says so.
 func TestSkillsWriteIsIdempotent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "skills/ship/SKILL.md", skillFile("ship", "cuándo se publica"))
 	writeFile(t, dir, "skills/acceptance/SKILL.md", skillFile("acceptance", "cuándo se acepta"))
@@ -237,6 +242,7 @@ func TestSkillsWriteIsIdempotent(t *testing.T) {
 // TestSkillsHandEditedRegistryFailsAndWriteRestores: the registry is generated,
 // so a hand edit is an error that names --write, never a merge.
 func TestSkillsHandEditedRegistryFailsAndWriteRestores(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "skills/acceptance/SKILL.md", skillFile("acceptance", "cuándo se acepta"))
 	if code, _, errOut := runDir(t, dir, []string{"skills", "--write"}, ""); code != 0 {
@@ -275,6 +281,7 @@ func TestSkillsHandEditedRegistryFailsAndWriteRestores(t *testing.T) {
 // TestSkillNewCreatesThenRefuses: the creator writes once, updates the registry
 // and never clobbers what exists.
 func TestSkillNewCreatesThenRefuses(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, out, errOut := runDir(t, dir, []string{"skill", "new", "ejemplo"}, "")
@@ -319,6 +326,7 @@ func TestSkillNewCreatesThenRefuses(t *testing.T) {
 // TestSkillNewRejectsABadSlugBeforeWriting: the regex is checked first, so a bad
 // slug leaves no directory behind.
 func TestSkillNewRejectsABadSlugBeforeWriting(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, _, errOut := runDir(t, dir, []string{"skill", "new", "Slug Invalido"}, "")
@@ -337,6 +345,7 @@ func TestSkillNewRejectsABadSlugBeforeWriting(t *testing.T) {
 // TestSkillsWithoutDirectorySaysHowToStart: no skills is a starting point, not
 // a failure, and the line names the command that creates the first one.
 func TestSkillsWithoutDirectorySaysHowToStart(t *testing.T) {
+	t.Parallel()
 	for _, args := range [][]string{{"skills"}, {"skills", "--check"}} {
 		dir := t.TempDir()
 
@@ -354,6 +363,7 @@ func TestSkillsWithoutDirectorySaysHowToStart(t *testing.T) {
 // TestSkillsCheckAndWriteCannotBeCombined: two intents in one run is a typo, and
 // it is reported as one line.
 func TestSkillsCheckAndWriteCannotBeCombined(t *testing.T) {
+	t.Parallel()
 	code, _, errOut := runDir(t, t.TempDir(), []string{"skills", "--check", "--write"}, "")
 
 	if code != 1 {

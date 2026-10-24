@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -15,6 +16,10 @@ import (
 	"github.com/biggs-100/odachi/internal/app/start"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
+
+// gitTemplate is the `.git` directory TestMain prepares: a repository without a
+// process per test.
+var gitTemplate string
 
 // The curriculum grows (drive) and the usage cannot pin a number by hand: the
 // help names the folder, not how many go there. A number here goes stale in the
@@ -35,6 +40,10 @@ func TestInitUsageDoesNotHardCodeTheSkillCount(t *testing.T) {
 // test runs. `odachi init` writes the bootstrap skill into the human's home now,
 // and a suite that reaches the real home of whoever runs it has escaped the
 // repository. A test that needs its own home still overrides it with withHome.
+//
+// It also prepares one empty repository template: `git init` costs ~80ms per
+// process on Windows, and the e2e suite creates a repository per test. Copying
+// the template is the same repository without the process.
 func TestMain(m *testing.M) {
 	home, err := os.MkdirTemp("", "odachi-home-")
 	if err != nil {
@@ -44,10 +53,22 @@ func TestMain(m *testing.M) {
 	previous := homeDir
 	homeDir = func() (string, error) { return home, nil }
 
+	template, err := os.MkdirTemp("", "odachi-git-template-")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "could not create a git template: "+err.Error())
+		os.Exit(1)
+	}
+	if out, err := exec.Command("git", "-C", template, "init", "-q").CombinedOutput(); err != nil {
+		fmt.Fprintln(os.Stderr, "could not prepare the git template: "+err.Error()+": "+string(out))
+		os.Exit(1)
+	}
+	gitTemplate = filepath.Join(template, ".git")
+
 	code := m.Run()
 
 	homeDir = previous
 	os.RemoveAll(home)
+	os.RemoveAll(template)
 	os.Exit(code)
 }
 
@@ -225,6 +246,7 @@ func TestInitHomeScopeKeepsTheProjectCopy(t *testing.T) {
 // TestInitRefusesAnUnknownSkillsScope: a typo is stopped before any write, and
 // the message names both values.
 func TestInitRefusesAnUnknownSkillsScope(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, out, errOut := runDir(t, dir, []string{"init", "--skills", "fuera"}, "")

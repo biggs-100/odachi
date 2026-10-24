@@ -10,6 +10,7 @@ import (
 // A reviewer reads its prompt from stdin. findstr prints what it received, and the
 // failure path shows it, so the test can look at exactly what the reviewer saw.
 func TestReviewExecFeedsTheReviewerItsPrompt(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	code, out, errOut := runDir(t, dir, []string{"review", "--exec", "findstr /r .* & exit 1"}, "")
@@ -31,6 +32,7 @@ func TestReviewExecFeedsTheReviewerItsPrompt(t *testing.T) {
 // findstr is the reviewer's own check that the prompt was there; without it the
 // command would answer about a candidate it never read.
 func TestReviewExecStoresTheVerdictOfAReviewerThatReadsStdin(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	command := `findstr /c:"odachi review" >nul && echo {"findings":[]}`

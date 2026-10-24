@@ -69,6 +69,7 @@ func backupProject(t *testing.T) (dir, written string) {
 // restore the newest backup, keep the state that was replaced as a new backup,
 // and let a second undo undo the undo.
 func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// A project with the four artifacts but no backups has nothing to undo, and
@@ -181,6 +182,7 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 // TestUndoCollectMovesLegacyBackups: the migration command is the bridge for a
 // project that already has backups beside its artifacts.
 func TestUndoCollectMovesLegacyBackups(t *testing.T) {
+	t.Parallel()
 	dir, _ := backupProject(t)
 	const legacy = "brief legado\n"
 	legacyRel := briefRel + ".bak-00000000"
@@ -212,6 +214,7 @@ func TestUndoCollectMovesLegacyBackups(t *testing.T) {
 
 // TestUndoJSONHasTheSameContent: a machine gets what the human sees.
 func TestUndoJSONHasTheSameContent(t *testing.T) {
+	t.Parallel()
 	dir, _ := backupProject(t)
 	writeRel(t, dir, briefRel, "# a mano\n")
 

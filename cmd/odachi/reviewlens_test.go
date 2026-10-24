@@ -23,6 +23,7 @@ func docsProject(t *testing.T) string {
 // TestReviewUsesTheLensTheEvidenceAsksFor: a code change is reviewed with the
 // reliability lens, and only that one. The human does not have to know the word.
 func TestReviewUsesTheLensTheEvidenceAsksFor(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	code, out, errOut := runDir(t, dir, []string{"review"}, "")
@@ -46,6 +47,7 @@ func TestReviewUsesTheLensTheEvidenceAsksFor(t *testing.T) {
 // TestReviewOfDocumentationAsksForNoLens: a docs-only change is passive, and the
 // prompt it gets is the one this verb printed before lenses existed.
 func TestReviewOfDocumentationAsksForNoLens(t *testing.T) {
+	t.Parallel()
 	dir := docsProject(t)
 
 	code, out, errOut := runDir(t, dir, []string{"review"}, "")
@@ -64,6 +66,7 @@ func TestReviewOfDocumentationAsksForNoLens(t *testing.T) {
 // TestReviewOfAnAuthChangeAsksForTheFour: the signals are the difference between
 // one prompt and four.
 func TestReviewOfAnAuthChangeAsksForTheFour(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 	writeFile(t, dir, "internal/auth/session.go", "package auth\n\nfunc Validar() bool { return true }\n")
 
@@ -85,6 +88,7 @@ func TestReviewOfAnAuthChangeAsksForTheFour(t *testing.T) {
 // TestLensFlagAddsOne: an explicit lens adds to what the evidence asked for; it
 // never removes it.
 func TestLensFlagAddsOne(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	code, out, errOut := runDir(t, dir, []string{"review", "--lens", "risk"}, "")
@@ -102,6 +106,7 @@ func TestLensFlagAddsOne(t *testing.T) {
 // TestLensFlagAll: `--lens all` is the four, even where the evidence asked for
 // nothing.
 func TestLensFlagAll(t *testing.T) {
+	t.Parallel()
 	dir := docsProject(t)
 
 	code, out, errOut := runDir(t, dir, []string{"review", "--lens", "all"}, "")
@@ -120,6 +125,7 @@ func TestLensFlagAll(t *testing.T) {
 // `odachi review --lens --show`, so a `--lens` with no value means "the lenses
 // the evidence asks for" and must not eat the next flag.
 func TestLensFlagWithoutAValueIsAccepted(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	code, out, errOut := runDir(t, dir, []string{"review", "--lens", "--show"}, "")
@@ -135,6 +141,7 @@ func TestLensFlagWithoutAValueIsAccepted(t *testing.T) {
 // TestShowListsRequiredAndMissingLenses: `--show` answers the question the gate
 // will ask, before the gate asks it.
 func TestShowListsRequiredAndMissingLenses(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
 	writeAt(t, verdict, `{"reviewer":"humano","lenses":["reliability"],"findings":[]}`)
@@ -158,6 +165,7 @@ func TestShowListsRequiredAndMissingLenses(t *testing.T) {
 // TestAnInventedLensIsRefused: a typo must not print a prompt that reviewed
 // nothing.
 func TestAnInventedLensIsRefused(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	code, _, errOut := runDir(t, dir, []string{"review", "--lens", "seguridad"}, "")
@@ -173,6 +181,7 @@ func TestAnInventedLensIsRefused(t *testing.T) {
 // TestRefutePrintsThePromptForTheStoredVerdict: the refuter's prompt names the
 // blocking findings with their ids and carries the diff it has to cite.
 func TestRefutePrintsThePromptForTheStoredVerdict(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
 	writeAt(t, verdict, `{
@@ -208,6 +217,7 @@ func TestRefutePrintsThePromptForTheStoredVerdict(t *testing.T) {
 // would: a verdict blocks, the refuter is asked, its answer is attached, and the
 // gate opens.
 func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 	proof := func(step string) {
 		t.Helper()
@@ -283,6 +293,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 // the candidate requires does not answer the gate, and the message says which
 // lens is missing and which file to remove to redo it.
 func TestCheckRequireReviewNamesTheMissingLens(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 	proof := func(step string) {
 		t.Helper()

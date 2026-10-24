@@ -11,6 +11,7 @@ import (
 // the default of a plain `go build`: without ldflags the binary says "dev", so
 // whoever builds from source never gets a version that is not theirs.
 func TestVersionSurfacesPrintTheBuildVersion(t *testing.T) {
+	t.Parallel()
 	for _, arg := range []string{"--version", "version"} {
 		t.Run(arg, func(t *testing.T) {
 			dir := t.TempDir()
@@ -36,6 +37,7 @@ func TestVersionSurfacesPrintTheBuildVersion(t *testing.T) {
 // TestVersionIsThePackageVariableLDflagsSet guards the seam goreleaser uses:
 // `-X main.version=<tag>` must land on the variable the two surfaces print.
 func TestVersionIsThePackageVariableLDflagsSet(t *testing.T) {
+	t.Parallel()
 	if version != "dev" {
 		t.Fatalf("version = %q, want %q: the test binary is built without ldflags", version, "dev")
 	}
@@ -57,6 +59,7 @@ func TestVersionIsThePackageVariableLDflagsSet(t *testing.T) {
 // TestUnknownCommandStillBlocks keeps the new verb from swallowing the error
 // path: a word that is not a command is still blocked, not printed as version.
 func TestUnknownCommandStillBlocks(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, out, errOut := runDir(t, dir, []string{"versions"}, "")

@@ -41,6 +41,7 @@ func findIgnores(t *testing.T, dir string) []string {
 // The verdict is attached from OUTSIDE the worktree, so the only thing that can
 // move the tree is what the tool writes.
 func TestInitKeepsTheProofValidAcrossAReview(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	if code, out, errOut := runDir(t, dir, []string{"init"}, ""); code != 0 {
@@ -101,6 +102,7 @@ func TestInitKeepsTheProofValidAcrossAReview(t *testing.T) {
 // never ran init still has its evidence out of the tree, through the interior
 // ignore file the verb writes once.
 func TestWithoutInitTheFallbackKeepsTheProofValid(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 {

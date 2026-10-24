@@ -15,6 +15,7 @@ import (
 // client that was not chosen never reaches the disk, and a plain init after it
 // keeps the stored choice instead of bringing Claude back.
 func TestInitAgentsOpenCodeLeavesClaudeAlone(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -55,6 +56,7 @@ func TestInitAgentsOpenCodeLeavesClaudeAlone(t *testing.T) {
 // TestInitAgentsBothRestoresTheOtherClient: the flag always wins over the stored
 // choice, so choosing both again installs the files that were skipped.
 func TestInitAgentsBothRestoresTheOtherClient(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -81,6 +83,7 @@ func TestInitAgentsBothRestoresTheOtherClient(t *testing.T) {
 // TestInitAgentsRefusesAnUnknownClient: a typo exits before writing anything, so
 // it cannot leave half an install behind.
 func TestInitAgentsRefusesAnUnknownClient(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -101,6 +104,7 @@ func TestInitAgentsRefusesAnUnknownClient(t *testing.T) {
 // TestLevelKeepsTheUnchosenClient: the stored choice also governs the refresh a
 // profile change does. A stale file from the other client keeps its bytes.
 func TestLevelKeepsTheUnchosenClient(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 	if code, _, errOut := runDir(t, dir, []string{"init", "--agents", "opencode"}, ""); code != 0 {
 		t.Fatalf("init: exit %d, stderr=%s", code, errOut)
@@ -136,6 +140,7 @@ func TestLevelKeepsTheUnchosenClient(t *testing.T) {
 // TestDoctorRespectsTheStoredChoice: after an install that skipped Claude,
 // doctor does not ask for Claude's files and says which choice it obeyed.
 func TestDoctorRespectsTheStoredChoice(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	if code, _, errOut := runDir(t, dir, []string{"init", "--agents", "opencode"}, ""); code != 0 {
@@ -156,6 +161,7 @@ func TestDoctorRespectsTheStoredChoice(t *testing.T) {
 // TestInitAgentsJSONOnlyReportsTheChosenClient: the machine report has exactly
 // the destinations this run owns, so a consumer cannot think Claude was written.
 func TestInitAgentsJSONOnlyReportsTheChosenClient(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 

@@ -64,6 +64,7 @@ func changedProject(t *testing.T) string {
 // TestReviewPrintsThePromptForTheCandidate: no flags prints the review prompt,
 // built from the brief and the diff, with the five rules and the schema.
 func TestReviewPrintsThePromptForTheCandidate(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	code, out, errOut := runDir(t, dir, []string{"review"}, "")
@@ -94,6 +95,7 @@ func TestReviewPrintsThePromptForTheCandidate(t *testing.T) {
 // TestReviewWithoutChangesHasNothingToReview: no diff, no prompt, exit 1, and not
 // a single file written.
 func TestReviewWithoutChangesHasNothingToReview(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
@@ -115,6 +117,7 @@ func TestReviewWithoutChangesHasNothingToReview(t *testing.T) {
 // TestReviewAttachStoresAndShowReads: the file is named after the tree, a second
 // verdict for that tree is reported, and --show reads what was stored.
 func TestReviewAttachStoresAndShowReads(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","findings":[]}`)
 
@@ -153,6 +156,7 @@ func TestReviewAttachStoresAndShowReads(t *testing.T) {
 // TestReviewShowAnotherTreeSaysThereIsNone: approval does not travel between
 // trees, and the store's file name is the evidence.
 func TestReviewShowAnotherTreeSaysThereIsNone(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","findings":[]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", "veredicto.json"}, ""); code != 0 {
@@ -174,6 +178,7 @@ func TestReviewShowAnotherTreeSaysThereIsNone(t *testing.T) {
 
 // TestReviewAttachRefusesGarbage: one Spanish line, exit 1, and no verdict file.
 func TestReviewAttachRefusesGarbage(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","findings":[{"path":"a.go","severity":"MAJOR","why":"algo"}]}`)
 
@@ -193,6 +198,7 @@ func TestReviewAttachRefusesGarbage(t *testing.T) {
 // TestReviewExecFailureShowsTheOutputAndWritesNothing: a reviewer that fails is
 // not a review.
 func TestReviewExecFailureShowsTheOutputAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	code, out, errOut := runDir(t, dir, []string{"review", "--exec", "echo boom-chico && exit 1"}, "")
@@ -211,6 +217,7 @@ func TestReviewExecFailureShowsTheOutputAndWritesNothing(t *testing.T) {
 // TestReviewFlagsAreExclusive: the three forms answer different questions, and
 // asking for two at once is a mistake the CLI names.
 func TestReviewFlagsAreExclusive(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	code, _, errOut := runDir(t, dir, []string{"review", "--exec", "revisor", "--show"}, "")
@@ -227,6 +234,7 @@ func TestReviewFlagsAreExclusive(t *testing.T) {
 // without the flag the review never counts, with the flag a missing verdict is a
 // human decision, and an approved one lets the gate through.
 func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	// A proof for this tree first, so the other gates are satisfied.
@@ -273,6 +281,7 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 // TestReviewModeOnMakesCheckRequireTheVerdict: the switch is a project file, so
 // a plain `check` reads it; the flags override it for one run.
 func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "status"}, ""); code != 0 {
@@ -317,6 +326,7 @@ func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 // TestReviewModeRejectsAMangledSwitch: a typo in a human file blocks instead of
 // silently meaning off.
 func TestReviewModeRejectsAMangledSwitch(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, ".odachi/review.toml", `mode = "maybe"`+"\n")
 
@@ -333,6 +343,7 @@ func TestReviewModeRejectsAMangledSwitch(t *testing.T) {
 // TestCheckRequireReviewReportsChangesRequested: a verdict that blocks is a human
 // decision, and the sentence names the first finding that causes it.
 func TestCheckRequireReviewReportsChangesRequested(t *testing.T) {
+	t.Parallel()
 	dir := changedProject(t)
 
 	// A proof first, then the verdict, then the proof again: the store's ignore

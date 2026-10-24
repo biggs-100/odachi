@@ -9,6 +9,7 @@ import (
 // TestAskThenLevelCountsTheOpenQuestionAndTheAnswer is the CLI contract of
 // Contract IV: level reads the history the agent wrote and reports it.
 func TestAskThenLevelCountsTheOpenQuestionAndTheAnswer(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 
 	if code, _, stderr := runDir(t, dir, []string{"ask", "¿Los turnos se pueden cancelar?"}, ""); code != 0 {
@@ -44,6 +45,7 @@ func TestAskThenLevelCountsTheOpenQuestionAndTheAnswer(t *testing.T) {
 // TestLevelShowsTheProfileInForce: the profile is read from the human's file,
 // never re-inferred over it.
 func TestLevelShowsTheProfileInForce(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 
 	code, stdout, stderr := runDir(t, dir, []string{"level"}, "")
@@ -59,6 +61,7 @@ func TestLevelShowsTheProfileInForce(t *testing.T) {
 // TestLevelToAppliesTheProfileAndKeepsTheOldFile: the human accepts, the tool
 // backs up and writes the eight fields.
 func TestLevelToAppliesTheProfileAndKeepsTheOldFile(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 
 	code, stdout, stderr := runDir(t, dir, []string{"level", "--to", "novato"}, "")
@@ -100,6 +103,7 @@ func TestLevelToAppliesTheProfileAndKeepsTheOldFile(t *testing.T) {
 // TestLevelToUnknownProfileListsTheAvailableOnes: a typo is a blocked run with
 // a way out.
 func TestLevelToUnknownProfileListsTheAvailableOnes(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 	before := tree(t, dir)
 
@@ -121,6 +125,7 @@ func TestLevelToUnknownProfileListsTheAvailableOnes(t *testing.T) {
 
 // TestLevelNeverWritesOnItsOwn: showing the facts is read-only.
 func TestLevelNeverWritesOnItsOwn(t *testing.T) {
+	t.Parallel()
 	dir, _ := startedProject(t)
 	before := tree(t, dir)
 
@@ -142,6 +147,7 @@ func TestLevelNeverWritesOnItsOwn(t *testing.T) {
 // TestSummaryListsBothFeatures is the end of the T6 story: two features started
 // with two different outcomes, both reported, in order, with totals.
 func TestSummaryListsBothFeatures(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	if code, _, stderr := runDir(t, dir, allFlags(), ""); code != 0 {
@@ -180,6 +186,7 @@ func TestSummaryListsBothFeatures(t *testing.T) {
 
 // TestSummaryOnAnEmptyProjectSaysSo: one English line, exit 0, no error.
 func TestSummaryOnAnEmptyProjectSaysSo(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, stdout, stderr := runDir(t, dir, []string{"summary"}, "")
@@ -199,6 +206,7 @@ func TestSummaryOnAnEmptyProjectSaysSo(t *testing.T) {
 // TestUnknownCommandListsEveryVerb keeps the discovery path honest now that
 // there are four commands.
 func TestUnknownCommandListsEveryVerb(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	code, _, stderr := runDir(t, dir, []string{"deploy"}, "")

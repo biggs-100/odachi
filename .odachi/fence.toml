@@ -1,14 +1,14 @@
 [[rule]]
-not   = "changing the reviewer contract: the prompt still arrives on stdin and the answer still comes on stdout"
-paths = ["changing-the-reviewer-contract-the-prompt-still-arrives-on-stdin-and-the-answer-still-comes-on-stdout*"]
+not   = "skipping tests or using -short in the proof"
+paths = ["skipping-tests-or-using-short-in-the-proof*"]
 deps  = []
 
 [[rule]]
-not   = "stripping ANSI or prose from stdout: the answer must be JSON, and decoration is the reviewer's problem"
-paths = ["stripping-ansi-or-prose-from-stdout-the-answer-must-be-json-and-decoration-is-the-reviewer-s-problem*"]
+not   = "caching a proof across different trees or different commands"
+paths = ["caching-a-proof-across-different-trees-or-different-commands*"]
 deps  = []
 
 [[rule]]
-not   = "stamping the verdict's instant from the tool (recorded as its own decision, not this feature)"
-paths = ["stamping-the-verdict-s-instant-from-the-tool-recorded-as-its-own-decision-not-this-feature*"]
+not   = "changing the gates or the proof format"
+paths = ["changing-the-gates-or-the-proof-format*"]
 deps  = []

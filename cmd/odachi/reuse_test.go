@@ -9,6 +9,7 @@ import (
 // feature, one task document. A beginner fixes a typo in the brief by running
 // start again; that must not leave two documents for the agent to choose from.
 func TestStartTwiceReusesTheSameTaskDocument(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	if code, _, stderr := runDir(t, dir, allFlags(), ""); code != 0 {
@@ -34,6 +35,7 @@ func TestStartTwiceReusesTheSameTaskDocument(t *testing.T) {
 // TestADifferentOutcomeGetsItsOwnNumber keeps the fix honest: reuse must be by
 // slug, never by "whatever document exists".
 func TestADifferentOutcomeGetsItsOwnNumber(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	if code, _, stderr := runDir(t, dir, allFlags(), ""); code != 0 {

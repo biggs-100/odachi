@@ -14,6 +14,7 @@ import (
 // new file is part of that worktree. `git stash create` ignores untracked
 // files, so a hash built that way would accept a stale proof.
 func TestTreeHashIncludesUntrackedFiles(t *testing.T) {
+	t.Parallel()
 	root, _ := newRepo(t)
 
 	before, err := gitx.TreeHash(root)
@@ -47,6 +48,7 @@ func TestTreeHashIncludesUntrackedFiles(t *testing.T) {
 // git would commit, not the bytes on disk. Build output must not invalidate a
 // proof.
 func TestTreeHashRespectsGitIgnore(t *testing.T) {
+	t.Parallel()
 	root, _ := newRepo(t)
 
 	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("*.log\n"), 0o644); err != nil {
@@ -77,6 +79,7 @@ func TestTreeHashRespectsGitIgnore(t *testing.T) {
 // TestTreeHashWorksBeforeTheFirstCommit lets the tool work on day one of a
 // project, when there is still no HEAD to read.
 func TestTreeHashWorksBeforeTheFirstCommit(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	git(t, root, "init")
 	git(t, root, "config", "user.name", "odachi test")

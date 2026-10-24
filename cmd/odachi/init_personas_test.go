@@ -146,6 +146,7 @@ func TestInitWithoutGlobalDoesNotWriteTheDoor(t *testing.T) {
 // TestInitUsesTheProfileTheHumanWroteDown: init cannot know the person, so the
 // only thing that can say the voice is a profile already on disk.
 func TestInitUsesTheProfileTheHumanWroteDown(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	writeFile(t, dir, ".odachi/profile.toml", "name = \"senior\"\n")
@@ -198,6 +199,7 @@ func TestInitRerunWritesNothing(t *testing.T) {
 // init names them in one line, says they are leftovers, and writes nothing near
 // them.
 func TestInitReportsAndKeepsTheLegacyPersonaFiles(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	legacy := ".opencode/agents/odachi-senior.md"
