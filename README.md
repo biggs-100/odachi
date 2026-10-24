@@ -174,9 +174,11 @@ odachi check   # tells you what is missing and how to unblock it
 missing, the rules block the agent reads, the project agent (picked with Tab),
 the `.gitignore` block, the pre-commit hook, the thirteen skills in
 `./.agents/skills`, the entry skill in `~/.agents/skills` and the profile voice
-in the `AGENTS.md` block. The home door —the agent that appears in any folder— is
+in the `AGENTS.md` block. The home door -the agent that appears in any folder- is
 opt-in: `odachi init --global` installs it, and an init without the flag writes
-nothing in your home.
+nothing in your home. With the door, OpenCode also gets `default_agent` in
+`~/.config/opencode/opencode.json` (or the `.jsonc` you already have), so a new
+session starts as odachi; a default you picked before is named, never replaced.
 
 If you do not use Claude Code, `odachi init --agents opencode` writes only the
 OpenCode agent and stores the choice in `.odachi/agents.toml`; `init`, `start`,

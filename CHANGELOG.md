@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The global door is the default agent.
+
+- **`odachi init --global` makes odachi OpenCode's default agent**: it writes
+  `default_agent` in `~/.config/opencode/opencode.json` (or the `.jsonc` that
+  already exists), creating the file with the published schema when there is
+  none. A default the human picked before is named and left alone; a config that
+  cannot be read safely is refused with the exact member to add by hand.
+- **The edit never rewrites the file**: comments, key order and CRLF survive, and
+  `doctor` notes when the door is installed but the config does not choose it.
+
 ## v0.11.6 — 2026-10-24
 
 The gates read the worktree once.

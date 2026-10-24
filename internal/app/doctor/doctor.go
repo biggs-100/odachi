@@ -21,11 +21,13 @@ package doctor
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
+	domainopencode "github.com/biggs-100/odachi/internal/domain/opencode"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/skill"
@@ -836,14 +838,93 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 		}
 	}
 
+	var result string
 	switch {
 	case len(missing) > 0:
-		return "the global door is not in " + strings.Join(missing, ", ") + "; it is opt-in: run odachi init --global if you want odachi in any folder"
+		result = "the global door is not in " + strings.Join(missing, ", ") + "; it is opt-in: run odachi init --global if you want odachi in any folder"
 	case len(stale) > 0:
-		return "the global door does not match this binary in " + strings.Join(stale, ", ") + "; run odachi init --global"
+		result = "the global door does not match this binary in " + strings.Join(stale, ", ") + "; run odachi init --global"
 	default:
-		return "the global door is up to date in the home"
+		result = "the global door is up to date in the home"
 	}
+
+	if extra := r.opencodeDefaultNote(clients); extra != "" {
+		if result == "" {
+			return extra
+		}
+		return result + "; " + extra
+	}
+	return result
+}
+
+// opencodeDefaultNote says whether the global OpenCode config starts a session
+// with the door. It is a note: the door works without it, the human's own
+// default is respected, and the fix is the same `odachi init --global`.
+func (r *runner) opencodeDefaultNote(clients []persona.Client) string {
+	if r.opts.Home == "" {
+		return ""
+	}
+
+	hasOpenCode := false
+	for _, client := range clients {
+		if client.Agent == "opencode" {
+			hasOpenCode = true
+			break
+		}
+	}
+	if !hasOpenCode {
+		return ""
+	}
+
+	door, ok := persona.GlobalFilesFor("opencode")
+	if !ok {
+		return ""
+	}
+
+	// A missing door is already the previous note's sentence; this one only
+	// speaks when the door is installed and the config does not choose it.
+	doorPath := filepath.Join(r.opts.Home, filepath.FromSlash(door.Path))
+	exists, err := r.files.Exists(doorPath)
+	if err != nil || !exists {
+		return ""
+	}
+
+	rel := path.Join(path.Dir(path.Dir(door.Path)), "opencode.json")
+	jsoncRel := strings.TrimSuffix(rel, ".json") + ".jsonc"
+	target := filepath.Join(r.opts.Home, filepath.FromSlash(rel))
+	display := "~/" + rel
+
+	exists, err = r.files.Exists(target)
+	if err != nil {
+		return "could not check " + display + ": " + oneLine(err.Error()) + "; run odachi init --global"
+	}
+	if !exists {
+		if jsoncExists, err := r.files.Exists(filepath.Join(r.opts.Home, filepath.FromSlash(jsoncRel))); err == nil && jsoncExists {
+			target = filepath.Join(r.opts.Home, filepath.FromSlash(jsoncRel))
+			display = "~/" + jsoncRel
+			exists = true
+		}
+	}
+	if !exists {
+		return "the door is installed but " + display + " has no default_agent; run odachi init --global"
+	}
+
+	data, err := r.files.Read(target)
+	if err != nil {
+		return "could not read " + display + ": " + oneLine(err.Error()) + "; run odachi init --global"
+	}
+
+	agent, found, err := domainopencode.CurrentAgent([]byte(data))
+	if err != nil {
+		return "could not read the default agent in " + display + ": " + oneLine(err.Error()) + "; run odachi init --global"
+	}
+	if !found {
+		return "the door is installed but " + display + " does not choose it; run odachi init --global"
+	}
+	if agent != persona.AgentName {
+		return "your default agent is " + agent + " in " + display + ", not " + persona.AgentName + "; set default_agent if you want odachi in any folder"
+	}
+	return ""
 }
 
 // leftovers names the per-client persona files v0.10.0 wrote, when they are still
