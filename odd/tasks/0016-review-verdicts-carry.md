@@ -14,7 +14,7 @@ R1 · "review verdicts carry per-finding content receipts (path, blob, lens) so 
 - [x] T3 · deterministic floor picks the lens class and the cited lines before any LLM   R1 · ac4b744
 - [x] T4 · dismissals: reason plus fingerprint, never re-raised in later candidates   R1 · c4011a3
 - [x] T5 · full-candidate diffs use merge-base instead of the two-dot diff   R1 · 33f80c3
-- [ ] T6 · docs: CHANGELOG, impact map and dogfood of the new verdict flow   R1
+- [x] T6 · docs: CHANGELOG, impact map and dogfood of the new verdict flow   R1 · 6412a80
 
 ## History
 L1 · "review verdicts carry per-finding content receipts (path, blob, lens) so correcting a candidate re-reviews only what changed, never weakening the gate"
