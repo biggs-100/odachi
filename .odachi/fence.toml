@@ -1,14 +1,19 @@
 [[rule]]
-not   = "do not translate closed task docs: they are history"
-paths = ["do-not-translate-closed-task-docs-they-are-history*"]
+not   = "signing or trust ladders"
+paths = ["signing-or-trust-ladders*"]
 deps  = []
 
 [[rule]]
-not   = "do not change the agent chat language"
-paths = ["do-not-change-the-agent-chat-language*"]
+not   = "multi-model consensus"
+paths = ["multi-model-consensus*"]
 deps  = []
 
 [[rule]]
-not   = "do not change behavior, only language"
-paths = ["do-not-change-behavior-only-language*"]
+not   = "review-at-merge phase"
+paths = ["review-at-merge-phase*"]
+deps  = []
+
+[[rule]]
+not   = "changes to lens selection rules or the human switch"
+paths = ["changes-to-lens-selection-rules-or-the-human-switch*"]
 deps  = []

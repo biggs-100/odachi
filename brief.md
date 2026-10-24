@@ -1,22 +1,21 @@
-# odachi-writes-artifacts
+# review-verdicts-carry
 
 ## What must exist
-- odachi writes artifacts, docs, skills and CLI messages in English; the agent chat stays in the human's language
+- review verdicts carry per-finding content receipts (path, blob, lens) so correcting a candidate re-reviews only what changed, never weakening the gate
 
 ## Done when
-- the 14 skills and their format use When/Rules/Never and skills --check is green
-- brief, task doc, AGENTS.md and profile are generated in English; human quotes stay verbatim
-- README, CHANGELOG, ADRs and impact map are English
-- CLI messages and their tests are English
-- go test ./... and odachi check are green
+- a corrected candidate yields a verdict that inherits potent findings from unchanged blobs and re-runs only the changed files' path-class lenses
+- a deterministic floor selects the lens class and the cited lines before any LLM runs
+- verdicts written before blob keys grant no coverage and the gate says so instead of reusing them
 
 ## Not included (first version)
-- do not translate closed task docs: they are history
-- do not change the agent chat language
-- do not change behavior, only language
+- signing or trust ladders
+- multi-model consensus
+- review-at-merge phase
+- changes to lens selection rules or the human switch
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
-- First usable version: this week.
-- Wants to learn: how to migrate the language of a contract without breaking the tests.
+- First usable version: no rush.
+- Wants to learn: how to give an LLM verdict content identity while keeping the tree-hash receipt honest.
