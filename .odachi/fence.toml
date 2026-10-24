@@ -1,24 +1,29 @@
 [[rule]]
-not   = "reading OpenCode's database or log files: only its CLI"
-paths = ["reading-opencode-s-database-or-log-files-only-its-cli*"]
+not   = "skipping tests or using -short in the proof"
+paths = ["skipping-tests-or-using-short-in-the-proof*"]
 deps  = []
 
 [[rule]]
-not   = "a fallback model when detection fails"
-paths = ["a-fallback-model-when-detection-fails*"]
+not   = "weakening doctor, fence or coverage checks, or deleting tests"
+paths = ["weakening-doctor-fence-or-coverage-checks-or-deleting-tests*"]
 deps  = []
 
 [[rule]]
-not   = "changing the default where the agent itself reviews the printed prompt"
-paths = ["changing-the-default-where-the-agent-itself-reviews-the-printed-prompt*"]
+not   = "a new dependency or a custom test runner"
+paths = ["a-new-dependency-or-a-custom-test-runner*"]
 deps  = []
 
 [[rule]]
-not   = "persisting the model in a config file: the override is one run or an env var"
-paths = ["persisting-the-model-in-a-config-file-the-override-is-one-run-or-an-env-var*"]
+not   = "changing the proof or verdict formats"
+paths = ["changing-the-proof-or-verdict-formats*"]
 deps  = []
 
 [[rule]]
-not   = "new dependencies"
-paths = ["new-dependencies*"]
+not   = "caching a proof across trees"
+paths = ["caching-a-proof-across-trees*"]
+deps  = []
+
+[[rule]]
+not   = "tuning GOMAXPROCS or -parallel to win the benchmark"
+paths = ["tuning-gomaxprocs-or-parallel-to-win-the-benchmark*"]
 deps  = []

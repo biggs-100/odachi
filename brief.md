@@ -1,24 +1,25 @@
-# the-reviewer-runs
+# the-suite-stops
 
 ## What must exist
-- the reviewer runs with the model this session uses, by default, and the human can name another one
+- the suite stops being the slowest part of a commit: each verb reads the candidate once
 
 ## Done when
-- {model} in review --exec is replaced with the session's provider/model#variant without the human typing it
-- --model overrides the resolved model for one run and is used exactly as given
-- a command without {model} runs byte-identical to today
-- when {model} is asked for and nothing resolves, review stops naming --model; it never guesses
-- resolution order: --model, then ODACHI_MODEL, then the OpenCode session; no database or private file is read
+- go test ./cmd/odachi finishes under 25s on this machine (28.7s before)
+- check and review read the worktree once: one merge-base and one throwaway index per run
+- the tree hash, the changed paths and the diff stay byte-identical to before, pinned by tests
+- the full suite stays green, race-clean on ./internal/..., and gofmt/vet clean
+- the proof still runs once per tree
 
 ## Not included (first version)
-- reading OpenCode's database or log files: only its CLI
-- a fallback model when detection fails
-- changing the default where the agent itself reviews the printed prompt
-- persisting the model in a config file: the override is one run or an env var
-- new dependencies
+- skipping tests or using -short in the proof
+- weakening doctor, fence or coverage checks, or deleting tests
+- a new dependency or a custom test runner
+- changing the proof or verdict formats
+- caching a proof across trees
+- tuning GOMAXPROCS or -parallel to win the benchmark
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
-- Wants to learn: how a child tool learns its parent's context without owning the parent.
+- Wants to learn: where the time of a test suite actually goes.
