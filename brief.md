@@ -1,21 +1,21 @@
-# review-pays-for
+# a-change-reaches
 
 ## What must exist
-- review pays for itself: it runs when the tree asks, and it stops after one correction
+- a change reaches main only through a pull request whose gate passed
 
 ## Done when
-- review --show names the lenses this tree asks for and why, without writing a verdict
-- a documents-only tree says none is due, and the verb still exits blocked when there is no verdict
-- the drive skill and the README state the gate and the one-correction cap
-- the prompt, the verdict format and the store are untouched, and the suite stays green
+- the ruleset in .github/main-ruleset.json is applied by scripts/protect-main.ps1, idempotently, and prints what it enforced
+- a direct push to main is rejected by the remote
+- a pull request with a red suite cannot merge; a green one can
+- the ADR names what still does not hold: a pull request can edit the workflow it runs under, and CODEOWNERS only asks
 
 ## Not included (first version)
-- a risk tier like gentle-ai's assess: the lens class is the gate
-- check requiring review by default: the mode stays off
-- lineage, consent, acknowledgment or burn: no state machine
+- required approvals: a solo repo cannot approve its own pull request
+- signed commits, linear history, merge queue
+- org-wide policy, identity, tag protection
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: when a review pays.
+- Wants to learn: what a required check really guarantees.
