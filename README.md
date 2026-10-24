@@ -252,8 +252,14 @@ odachi review                            # the prompt, to paste into your agent
 odachi review --exec "agent {prompt}"    # or have it run it: prompt on stdin and in {prompt}
 odachi review --exec "cli --model {model} {prompt}"   # and with the session's model
 odachi review --attach verdict.json      # or save what it answered
-odachi review --show                     # which verdict exists for this tree
+odachi review --show                     # which verdict exists, and whether one is due
 ```
+
+`--show` also answers whether this tree asks for a review at all: it names the
+lenses and the reason -a path, or added lines that touch concurrency or secrets-
+or says none is due because only documents changed. Review once per tree: a
+causal `BLOCKER` earns one correction and one re-review; `WARNING` and
+`SUGGESTION` go to the task doc and do not earn another round.
 
 `{model}` is the model this session is using, so `--exec` can judge with the
 same one you are talking to. The order is `--model`, then `ODACHI_MODEL` —any
