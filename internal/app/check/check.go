@@ -105,6 +105,9 @@ type Files interface {
 	Read(path string) ([]byte, error)
 	List(dir string) ([]string, error)
 	Write(path string, data []byte) error
+	// Remove deletes one file. A missing file may be an error; the caller that
+	// only needs the state ignores it.
+	Remove(path string) error
 }
 
 // Git is the repository port: which tree is here, what changed since a base,
@@ -451,6 +454,12 @@ func (r *runner) readProof(path, shown string) (proof.Proof, *Result) {
 
 	parsed, err := proof.Parse(string(data))
 	if err != nil {
+		// The failed file is not a malformed proof: it is the evidence of a run
+		// that did not pass, and saying so is more useful than "no tree header".
+		if strings.HasPrefix(string(data), proof.FailedHeader) {
+			problem := refused(shown, "it is the failed output of a run, not a proof: fix what failed and run the gate green")
+			return proof.Proof{}, &problem
+		}
 		problem := refused(shown, oneLine(err.Error()))
 		return proof.Proof{}, &problem
 	}
@@ -492,6 +501,11 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 		r.keepFailed(proofPath, output, exitCode, false)
 		return ranProof{output: output, failed: true}, nil
 	}
+
+	// A green run removes the failed evidence of an earlier run of the same
+	// feature: proof/ must never show a failure beside the proof of the tree that
+	// just passed. Best effort: the green proof is the truth either way.
+	_ = r.files.Remove(failedFile(proofPath))
 
 	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Fence: r.opts.FenceFrom, Output: output}
 	if err := r.files.Write(proofPath, []byte(proof.Render(recorded))); err != nil {

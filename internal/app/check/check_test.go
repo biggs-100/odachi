@@ -29,6 +29,7 @@ const (
 type fakeFiles struct {
 	files   map[string][]byte
 	writes  []string
+	removes []string
 	backups []string
 	err     error
 }
@@ -72,6 +73,15 @@ func (f *fakeFiles) List(path string) ([]string, error) {
 	}
 	slices.Sort(names)
 	return names, nil
+}
+
+func (f *fakeFiles) Remove(path string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.removes = append(f.removes, path)
+	delete(f.files, path)
+	return nil
 }
 
 func (f *fakeFiles) Write(path string, data []byte) error {
@@ -578,7 +588,7 @@ func TestFailingRunKeepsTheWholeOutput(t *testing.T) {
 		t.Fatalf("the failed run kept no output; writes: %v", files.writes)
 	}
 	text := string(body)
-	for _, want := range []string{"# tree " + currentTree, "# command exit 1", "# exit 1", "--- FAIL: TestX", "boom", "la que importa", "detalle del build"} {
+	for _, want := range []string{"# failed " + currentTree, "# command exit 1", "# exit 1", "--- FAIL: TestX", "boom", "la que importa", "detalle del build"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the failed output does not carry %q:\n%s", want, text)
 		}
@@ -608,17 +618,45 @@ func TestTimedOutRunKeepsTheOutputToo(t *testing.T) {
 	}
 }
 
-func TestGreenRunLeavesNoFailedFile(t *testing.T) {
+func TestGreenRunRemovesTheStaleFailedFile(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	stale := filepath.Join(dir, "proof", "0007-turnos.failed.txt")
+	files.files[stale] = []byte("# failed una-otra\n")
 
 	check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
 
+	if _, still := files.files[stale]; still {
+		t.Errorf("a green run left the stale failed file %s: proof/ must not show a failure beside the proof of the tree that passed", stale)
+	}
 	for _, write := range files.writes {
 		if strings.HasSuffix(write, ".failed.txt") {
 			t.Errorf("a green run wrote a failed file: %s", write)
 		}
+	}
+}
+
+// TestProofFlagRefusesTheFailedEvidence: --proof takes evidence already written,
+// and the failed file is evidence of the opposite. The refusal names it instead
+// of saying "no tree header", because the difference is the whole point.
+func TestProofFlagRefusesTheFailedEvidence(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	failed := filepath.Join(dir, "manual.failed.txt")
+	files.files[failed] = []byte(proof.RenderFailed(proof.Proof{
+		Tree:    currentTree,
+		Command: "go test ./...",
+		Output:  "--- FAIL: TestX\nFAIL\n",
+	}, 1, false))
+
+	got := check.Run(check.Options{Dir: dir, Proof: "manual.failed.txt", Base: "HEAD", TimeoutSeconds: 120},
+		files, &fakeGit{tree: currentTree}, &fakeShell{})
+
+	if got.Code != int(gate.NeedsWork) {
+		t.Fatalf("Code = %d, want %d (a refusal the agent can act on)", got.Code, gate.NeedsWork)
+	}
+	if !strings.Contains(got.Message, "failed output") {
+		t.Errorf("Message = %q, want it to say the file is the failed output of a run", got.Message)
 	}
 }
 

@@ -105,7 +105,7 @@ func TestRenderFailedNamesTheExitOrTheTimeout(t *testing.T) {
 	p := proof.Proof{Tree: "4a1c9f", Command: "go test ./...", Output: "--- FAIL: TestX\nFAIL\n"}
 
 	exited := proof.RenderFailed(p, 1, false)
-	want := "# tree 4a1c9f\n" +
+	want := "# failed 4a1c9f\n" +
 		"# command go test ./...\n" +
 		"# exit 1\n" +
 		"--- FAIL: TestX\nFAIL\n"
@@ -124,6 +124,16 @@ func TestRenderFailedNamesTheExitOrTheTimeout(t *testing.T) {
 	withFence := proof.RenderFailed(proof.Proof{Tree: "4a1c9f", Command: "go test ./...", Fence: "origin/main", Output: ""}, 1, false)
 	if !strings.Contains(withFence, "# fence origin/main\n") {
 		t.Errorf("RenderFailed dropped the fence ref:\n%q", withFence)
+	}
+}
+
+// TestParseRefusesTheFailedEvidence: a failed run must never be read as a
+// proof. The first line is the whole guarantee: no proof starts with "# failed".
+func TestParseRefusesTheFailedEvidence(t *testing.T) {
+	failed := proof.RenderFailed(proof.Proof{Tree: "4a1c9f", Command: "go test ./...", Output: "FAIL\n"}, 1, false)
+
+	if _, err := proof.Parse(failed); err == nil {
+		t.Fatalf("Parse accepted the failed evidence as a proof:\n%s", failed)
 	}
 }
 

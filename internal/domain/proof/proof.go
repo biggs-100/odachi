@@ -28,6 +28,10 @@ const (
 	FenceHeader   = "# fence "
 	ExitHeader    = "# exit "
 	TimeoutHeader = "# timed out"
+	// FailedHeader starts the evidence of a failed run. It is not a variant of
+	// TreeHeader: a failed file never matches the first line of a proof, so Parse
+	// refuses it before it can read a tree out of it.
+	FailedHeader = "# failed "
 )
 
 // ErrNoHeader means the file does not say which tree produced it.
@@ -58,14 +62,14 @@ func Render(p Proof) string {
 	return out.String()
 }
 
-// RenderFailed writes the evidence of a run that did not pass: the same tree,
-// command and optional fence headers, then the exit code (or the timeout) and
-// the output verbatim. It is not a proof —a proof is a green run— and the third
-// line says which kind of file this is. It is written under a different name and
-// never parsed as a proof.
+// RenderFailed writes the evidence of a run that did not pass: the tree and the
+// command, an optional fence ref, then the exit code (or the timeout) and the
+// output verbatim. It is not a proof —a proof is a green run— and its first line
+// is `# failed <tree>`, which no proof starts with: Parse refuses it by
+// construction, so the gate cannot read a failure as evidence of a pass.
 func RenderFailed(p Proof, exitCode int, timedOut bool) string {
 	var out strings.Builder
-	out.WriteString(TreeHeader + p.Tree + "\n")
+	out.WriteString(FailedHeader + p.Tree + "\n")
 	out.WriteString(CommandHeader + p.Command + "\n")
 	if p.Fence != "" {
 		out.WriteString(FenceHeader + p.Fence + "\n")
