@@ -200,6 +200,7 @@ func (g *fakeGit) BlobHash(root, path string) (string, error) {
 // fakeShell is the Shell port for --exec.
 type fakeShell struct {
 	output   string
+	stderr   string
 	exitCode int
 	timedOut bool
 	err      error
@@ -212,14 +213,14 @@ type fakeShell struct {
 	input string
 }
 
-func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, int, bool, error) {
+func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string, int, bool, error) {
 	s.asked = true
 	s.command = command
 	s.timeout = timeoutSeconds
-	return s.output, s.exitCode, s.timedOut, s.err
+	return s.output, s.stderr, s.exitCode, s.timedOut, s.err
 }
 
-func (s *fakeShell) RunInput(dir, command, input string, timeoutSeconds int) (string, int, bool, error) {
+func (s *fakeShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {
 	s.input = input
 	return s.Run(dir, command, timeoutSeconds)
 }

@@ -125,9 +125,11 @@ type Git interface {
 }
 
 // Shell is the command port. A non-zero exit is the command's result, not an
-// error: err means the command could not be run at all.
+// error: err means the command could not be run at all. The two streams are
+// reported separately: the proof composes both, and the answer of a reviewer is
+// stdout only.
 type Shell interface {
-	Run(dir, command string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error)
+	Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
 }
 
 // Result is what the CLI prints and exits with. It has the same shape as the
@@ -423,7 +425,11 @@ type ranProof struct {
 // the command succeeded: a failed command is not evidence. The exit code of the
 // command never becomes the exit code of `check`.
 func (r *runner) runProof(proofPath string) (ranProof, *Result) {
-	output, exitCode, timedOut, err := r.shell.Run(r.opts.Dir, r.opts.Run, r.opts.TimeoutSeconds)
+	stdout, stderr, exitCode, timedOut, err := r.shell.Run(r.opts.Dir, r.opts.Run, r.opts.TimeoutSeconds)
+	// The proof is what the command said, both streams: a failing test writes
+	// its verdict to stdout and its build errors to stderr, and hiding either
+	// would make the proof a partial quotation.
+	output := stdout + stderr
 	if err != nil {
 		problem := Result{
 			Code:    int(gate.NeedsWork),

@@ -118,8 +118,8 @@ type Git interface {
 // business (stdin, and a file path for a command that takes one), not a decision
 // this layer should know how to make.
 type Shell interface {
-	Run(dir, command string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error)
-	RunInput(dir, command, input string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error)
+	Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
+	RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
 }
 
 // Lenses is the port for the four specialist prompts. It returns the file
@@ -369,7 +369,10 @@ func (r *runner) exec() Result {
 		return *problem
 	}
 
-	output, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, r.opts.Exec, text, ExecTimeoutSeconds)
+	output, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, r.opts.Exec, text, ExecTimeoutSeconds)
+	if stderr != "" {
+		output += stderr
+	}
 	switch {
 	case err != nil:
 		return execFailed(r.opts.Exec, "could not run the reviewer: "+oneLine(err.Error()), output)

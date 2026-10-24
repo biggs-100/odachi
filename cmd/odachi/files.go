@@ -381,11 +381,11 @@ func (gitRepo) Ignored(root, path string) (bool, error) { return gitx.Ignored(ro
 // refuses where there is no known shell.
 type osShell struct{}
 
-func (osShell) Run(dir, command string, timeoutSeconds int) (string, int, bool, error) {
+func (osShell) Run(dir, command string, timeoutSeconds int) (string, string, int, bool, error) {
 	return shellcmd.Run(dir, command, timeoutSeconds)
 }
 
 // RunInput is the review's form: the reviewer receives the prompt the verb built.
-func (osShell) RunInput(dir, command, input string, timeoutSeconds int) (string, int, bool, error) {
+func (osShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {
 	return shellcmd.RunInput(dir, command, input, timeoutSeconds)
 }

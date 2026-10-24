@@ -1,6 +1,8 @@
 // Package shellcmd is the shell edge: it runs the proof command through the
-// platform shell and returns stdout+stderr combined, because a proof is what the
-// command said, not what one stream happened to carry.
+// platform shell and reports stdout and stderr separately. A proof is what the
+// command said and both streams belong in it; a reviewer's answer, on the other
+// hand, is stdout only — mixing the streams is how a CLI banner poisons a JSON
+// answer.
 //
 // The platform split lives in one file per platform: sh -c on Unix, cmd /c on
 // Windows, and a refusal everywhere else (birth decision 11: refuse instead of
@@ -32,13 +34,13 @@ const promptToken = "{prompt}"
 // ErrUnsupported is returned on a platform with no known shell.
 var ErrUnsupported = errors.New("cannot run commands on this platform: there is no known shell; run the proof by hand and pass it with odachi check --proof <file>")
 
-// Run executes command through the platform shell in dir and reports its
-// combined output, its exit code and whether the timeout expired.
+// Run executes command through the platform shell in dir and reports its two
+// streams, its exit code and whether the timeout expired.
 //
 // A non-zero exit is NOT an adapter error: it is the command's result, and the
 // caller decides what a failing proof means. err is reserved for "this could
 // not be run at all". A timeout returns timedOut true and a negative exit code.
-func Run(dir, command string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error) {
+func Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error) {
 	return RunInput(dir, command, "", timeoutSeconds)
 }
 
@@ -50,17 +52,17 @@ func Run(dir, command string, timeoutSeconds int) (output string, exitCode int, 
 // natural pipe for a command that reads one, and the path is what an agent CLI
 // that takes a file needs. A file, not a pipe, feeds stdin: a command that
 // ignores its input then cannot block the caller by leaving the buffer full.
-func RunInput(dir, command, input string, timeoutSeconds int) (output string, exitCode int, timedOut bool, err error) {
+func RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error) {
 	if strings.TrimSpace(command) == "" {
-		return "", 0, false, errors.New("there is no command to run: pass one with odachi check --run \"<command>\"")
+		return "", "", 0, false, errors.New("there is no command to run: pass one with odachi check --run \"<command>\"")
 	}
 	if timeoutSeconds <= 0 {
-		return "", 0, false, errors.New("the timeout must be greater than zero seconds")
+		return "", "", 0, false, errors.New("the timeout must be greater than zero seconds")
 	}
 
 	stdin, prepared, cleanup, err := prepareInput(command, input)
 	if err != nil {
-		return "", 0, false, err
+		return "", "", 0, false, err
 	}
 	defer cleanup()
 
@@ -69,35 +71,36 @@ func RunInput(dir, command, input string, timeoutSeconds int) (output string, ex
 
 	cmd, err := newCommand(ctx, dir, prepared)
 	if err != nil {
-		return "", 0, false, err
+		return "", "", 0, false, err
 	}
 	cmd.Stdin = stdin
 
-	// Both streams into one buffer: the order is the order the command wrote,
-	// which is the order a human reads the failure in.
-	var combined bytes.Buffer
-	cmd.Stdout = &combined
-	cmd.Stderr = &combined
+	// Each stream in its own buffer: the proof composes both, the reviewer reads
+	// its answer from stdout, and neither has to guess what the other meant.
+	var outBuf, errBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
 	cmd.WaitDelay = waitDelay
 
 	runErr := cmd.Run()
-	output = combined.String()
+	stdout = outBuf.String()
+	stderr = errBuf.String()
 
 	if ctx.Err() != nil {
 		// The context expired: the process was killed, and the partial output
 		// is what the command had said so far.
-		return output, -1, true, nil
+		return stdout, stderr, -1, true, nil
 	}
 
 	if runErr != nil {
 		var exitErr *exec.ExitError
 		if errors.As(runErr, &exitErr) {
-			return output, exitErr.ExitCode(), false, nil
+			return stdout, stderr, exitErr.ExitCode(), false, nil
 		}
-		return output, -1, false, fmt.Errorf("could not run the command: %w", runErr)
+		return stdout, stderr, -1, false, fmt.Errorf("could not run the command: %w", runErr)
 	}
 
-	return output, 0, false, nil
+	return stdout, stderr, 0, false, nil
 }
 
 // prepareInput writes the input to a temporary file and returns it opened as the

@@ -151,6 +151,7 @@ func (g *fakeGit) Ignored(root, path string) (bool, error) {
 // fakeShell is the Shell port: it reports the run it was asked for.
 type fakeShell struct {
 	output   string
+	stderr   string
 	exitCode int
 	timedOut bool
 	err      error
@@ -160,11 +161,11 @@ type fakeShell struct {
 	wasAsked bool
 }
 
-func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, int, bool, error) {
+func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string, int, bool, error) {
 	s.wasAsked = true
 	s.command = command
 	s.timeout = timeoutSeconds
-	return s.output, s.exitCode, s.timedOut, s.err
+	return s.output, s.stderr, s.exitCode, s.timedOut, s.err
 }
 
 // completeBrief is the smallest brief that passes brief.Parse and Missing.

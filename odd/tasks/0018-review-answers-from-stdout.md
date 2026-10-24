@@ -16,3 +16,4 @@ R1 · "review --exec reads the reviewer's answer from stdout, and a failing revi
 
 ## History
 L1 · "review --exec reads the reviewer's answer from stdout, and a failing reviewer shows both streams; the proof still keeps both"
+L2 · OFICIO · "The Shell port returns stdout and stderr separately; the proof composes both and the reviewer's answer is stdout only" (porque A stream is a contract: decoration belongs to stderr and evidence to the proof, while a JSON answer cannot survive either being mixed in)
