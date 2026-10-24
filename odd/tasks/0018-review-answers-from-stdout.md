@@ -12,7 +12,7 @@ R1 · "review --exec reads the reviewer's answer from stdout, and a failing revi
 ## Steps
 - [x] T1 · Shell ports return stdout and stderr separately; the adapter stops merging them   R1 · d4e61d3
 - [x] T2 · review parses stdout and shows both on failure; check keeps both in the proof   R1 · 6746316
-- [ ] T3 · docs: CHANGELOG, impact map and the real-LLM dogfood rerun   R1
+- [x] T3 · docs: CHANGELOG, impact map and the real-LLM dogfood rerun   R1 · 8285ed7
 
 ## History
 L1 · "review --exec reads the reviewer's answer from stdout, and a failing reviewer shows both streams; the proof still keeps both"
