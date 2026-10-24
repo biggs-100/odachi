@@ -290,11 +290,17 @@ git worktree add ../gate origin/main
 /tmp/odachi check --fence-from origin/main --run "go test ./..."
 ```
 
-`.github/workflows/gate.yml` is that recipe; it uploads `proof/` even when the
-gate fails. `ODACHI_NO_SETUP=1` makes the installers leave only the binary — no
-home door, no default agent — which is what a shared runner wants. A missing file
-at a valid ref is "no fence"; a ref that does not exist blocks, because a typo
-must not turn the gate off.
+`.github/workflows/gate.yml` is that recipe; it runs on pull requests and on
+`main`, builds the gate from the base ref, and uploads `proof/` even when the
+gate fails. The workflow file itself is not trusted: `.github/CODEOWNERS` asks
+for an owner review of `.github/` and `.odachi/`, and the repository ruleset can
+require that review. Mark the gate as a required check when the project is ready
+to stop pushing to `main` directly.
+
+`ODACHI_NO_SETUP=1` makes the installers leave only the binary — no home door, no
+default agent — which is what a shared runner wants. A missing file at a valid
+ref is "no fence"; a ref that does not exist blocks, because a typo must not turn
+the gate off.
 
 ## Status
 

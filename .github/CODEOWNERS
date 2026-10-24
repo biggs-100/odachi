@@ -1,0 +1,8 @@
+# The gate judges the change; the change must not own the gate.
+#
+# The workflow builds odachi and reads the fence from the base ref, so the gate
+# logic is trusted. The workflow file itself still comes from the pull request:
+# a change that edits `.github/` or the fence must be reviewed by the owner.
+# Enforce this with a repository ruleset that requires code-owner review.
+/.github/ @biggs-100
+/.odachi/ @biggs-100

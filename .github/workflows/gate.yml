@@ -5,15 +5,13 @@ name: gate
 # reading the fence from the base ref too: a change cannot loosen the policy it
 # must obey. The proof is uploaded even when the gate fails.
 #
-# The pull_request trigger lands once main carries --fence-from: on the change
-# that adds it, the base ref would produce a binary without the flag and the job
-# would fail for the wrong reason. After the merge, add:
-#
-#   pull_request:
-#     types: [opened, synchronize, reopened]
-#
-# and make this job a required check in the repository ruleset.
+# The gate binary is trusted. The workflow file is not: it comes from the change.
+# That is why `.github/` has a CODEOWNERS entry and the repository ruleset must
+# require a code-owner review for it. Mark this job as a required check only when
+# the project is ready to stop pushing to main directly.
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
   push:
     branches: [main]
   workflow_dispatch:
@@ -35,12 +33,16 @@ jobs:
 
       - name: build the gate from the base ref
         run: |
-          git worktree add ../gate origin/main
+          base="${{ github.event.pull_request.base.sha }}"
+          [ -n "$base" ] || base=origin/main
+          git worktree add ../gate "$base"
           (cd ../gate && go build -o "$RUNNER_TEMP/odachi" ./cmd/odachi)
 
       - name: run the gate
         run: |
-          "$RUNNER_TEMP/odachi" check --fence-from origin/main --run "go test ./..."
+          base="${{ github.event.pull_request.base.sha }}"
+          [ -n "$base" ] || base=origin/main
+          "$RUNNER_TEMP/odachi" check --fence-from "$base" --run "go test ./..."
 
       - name: keep the proof
         if: always()
