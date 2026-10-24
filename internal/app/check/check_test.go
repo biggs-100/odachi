@@ -560,6 +560,68 @@ func TestTimedOutRunSaysHowLongItWaited(t *testing.T) {
 	}
 }
 
+// TestFailingRunKeepsTheWholeOutput: the message is one line because a terminal
+// is one line; the output goes to proof/<feature>.failed.txt so the failing
+// test, the assertion and the build error are still there when the line is not
+// enough.
+func TestFailingRunKeepsTheWholeOutput(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+
+	got := check.Run(check.Options{Dir: dir, Run: "exit 1", Base: "HEAD", TimeoutSeconds: 120},
+		files, &fakeGit{tree: currentTree},
+		&fakeShell{output: "--- FAIL: TestX\nboom\nla que importa\n", stderr: "detalle del build\n", exitCode: 1})
+
+	rel := "proof/0007-turnos.failed.txt"
+	body, ok := files.files[filepath.Join(dir, "proof", "0007-turnos.failed.txt")]
+	if !ok {
+		t.Fatalf("the failed run kept no output; writes: %v", files.writes)
+	}
+	text := string(body)
+	for _, want := range []string{"# tree " + currentTree, "# command exit 1", "# exit 1", "--- FAIL: TestX", "boom", "la que importa", "detalle del build"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the failed output does not carry %q:\n%s", want, text)
+		}
+	}
+	lines := strings.Join(got.Lines, "\n")
+	if !strings.Contains(lines, "output: "+rel) {
+		t.Errorf("the gate does not name the failed output:\n%s", lines)
+	}
+	if strings.Contains(lines, "proof/0007-turnos.txt") {
+		t.Errorf("the gate names a green proof that does not exist:\n%s", lines)
+	}
+}
+
+func TestTimedOutRunKeepsTheOutputToo(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+
+	got := check.Run(check.Options{Dir: dir, Run: "sleep 60", Base: "HEAD", TimeoutSeconds: 7},
+		files, &fakeGit{tree: currentTree}, &fakeShell{output: "starting\n", timedOut: true, exitCode: -1})
+
+	body := string(files.files[filepath.Join(dir, "proof", "0007-turnos.failed.txt")])
+	if !strings.Contains(body, "# timed out") || !strings.Contains(body, "starting") {
+		t.Errorf("the timed-out output does not say it timed out or lost the output:\n%s", body)
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "proof/0007-turnos.failed.txt") {
+		t.Errorf("the gate does not name the timed-out output:\n%s", strings.Join(got.Lines, "\n"))
+	}
+}
+
+func TestGreenRunLeavesNoFailedFile(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+
+	check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
+		files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
+
+	for _, write := range files.writes {
+		if strings.HasSuffix(write, ".failed.txt") {
+			t.Errorf("a green run wrote a failed file: %s", write)
+		}
+	}
+}
+
 // --proof takes a proof an agent or CI already wrote, and refuses one that does
 // not say which tree produced it.
 func TestProofFlagRefusesAFileWithoutTheHeader(t *testing.T) {

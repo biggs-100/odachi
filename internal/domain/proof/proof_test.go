@@ -99,6 +99,34 @@ func TestLastLineSkipsBlankLines(t *testing.T) {
 	}
 }
 
+// TestRenderFailedNamesTheExitOrTheTimeout: a failed run is evidence, not a
+// proof, and the file says which kind it is on its third line.
+func TestRenderFailedNamesTheExitOrTheTimeout(t *testing.T) {
+	p := proof.Proof{Tree: "4a1c9f", Command: "go test ./...", Output: "--- FAIL: TestX\nFAIL\n"}
+
+	exited := proof.RenderFailed(p, 1, false)
+	want := "# tree 4a1c9f\n" +
+		"# command go test ./...\n" +
+		"# exit 1\n" +
+		"--- FAIL: TestX\nFAIL\n"
+	if exited != want {
+		t.Errorf("RenderFailed(exit 1) =\n%q\nwant\n%q", exited, want)
+	}
+
+	timedOut := proof.RenderFailed(p, -1, true)
+	if !strings.Contains(timedOut, "# timed out\n") {
+		t.Errorf("RenderFailed(timeout) =\n%q\nwant a # timed out line", timedOut)
+	}
+	if strings.Contains(timedOut, "# exit ") {
+		t.Errorf("RenderFailed(timeout) claims an exit code:\n%q", timedOut)
+	}
+
+	withFence := proof.RenderFailed(proof.Proof{Tree: "4a1c9f", Command: "go test ./...", Fence: "origin/main", Output: ""}, 1, false)
+	if !strings.Contains(withFence, "# fence origin/main\n") {
+		t.Errorf("RenderFailed dropped the fence ref:\n%q", withFence)
+	}
+}
+
 // Two runs on the same tree produce the same bytes: the header carries the tree
 // and the command, never a timestamp.
 func TestRenderIsDeterministic(t *testing.T) {

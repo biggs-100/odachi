@@ -290,6 +290,9 @@ type runner struct {
 	shell    Shell
 	tree     string
 	proofRel string
+	// failedRel is the failed output written by this run, empty when the run
+	// passed or the output could not be kept.
+	failedRel string
 	// work is the one read of the candidate: tree, changed paths and diff. The
 	// fence, the lens class and the proof all describe these same bytes.
 	work *worktree
@@ -482,9 +485,11 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 	}
 
 	if timedOut {
+		r.keepFailed(proofPath, output, exitCode, true)
 		return ranProof{output: output, timedOut: true}, nil
 	}
 	if exitCode != 0 {
+		r.keepFailed(proofPath, output, exitCode, false)
 		return ranProof{output: output, failed: true}, nil
 	}
 
@@ -495,6 +500,34 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 		return ranProof{}, &problem
 	}
 	return ranProof{output: output}, nil
+}
+
+// keepFailed writes the whole output of a run that did not pass, next to where
+// the green proof would live, so a red gate can be diagnosed after its one-line
+// message. It is best effort: the run already failed, and a write problem must
+// not replace the failure the human has to fix. Nothing is claimed when the file
+// is not written.
+func (r *runner) keepFailed(proofPath, output string, exitCode int, timedOut bool) {
+	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Fence: r.opts.FenceFrom, Output: output}
+	path := failedFile(proofPath)
+	if err := r.files.Write(path, []byte(proof.RenderFailed(recorded, exitCode, timedOut))); err != nil {
+		return
+	}
+	rel, err := filepath.Rel(r.opts.Dir, path)
+	if err != nil {
+		return
+	}
+	r.failedRel = filepath.ToSlash(rel)
+}
+
+// failedFile names the evidence of a failed run next to the proof of a green
+// one: proof/NNNN-<slug>.failed.txt. The suffix is the whole difference: a
+// failed run is evidence, not a proof, and nothing looks for it as one.
+func failedFile(path string) string {
+	if strings.HasSuffix(path, ".txt") {
+		return strings.TrimSuffix(path, ".txt") + ".failed.txt"
+	}
+	return path + ".failed.txt"
 }
 
 // requireReview is the optional design gate: a stored verdict for THIS tree, one
@@ -737,7 +770,11 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	}
 
 	if verdict.Code != gate.Ready {
-		result.Lines = []string{verdict.Message, "next: " + verdict.Next}
+		result.Lines = []string{verdict.Message}
+		if r.failedRel != "" {
+			result.Lines = append(result.Lines, "output: "+r.failedRel)
+		}
+		result.Lines = append(result.Lines, "next: "+verdict.Next)
 		return result
 	}
 
