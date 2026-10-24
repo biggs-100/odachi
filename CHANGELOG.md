@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+Review answers come from stdout, and the proof keeps both streams.
+
+- **`review --exec` reads the verdict from stdout**: a reviewer CLI's banner,
+  warnings or ANSI on stderr no longer poisons the JSON answer. When the
+  reviewer fails, the message shows stdout and stderr together.
+- **The shell ports report the streams separately**: `check --run` still writes
+  both into the proof — a failing test's stdout and its build errors are both
+  evidence — while the review reads only the answer. This fixes a real failure
+  found by dogfooding `opencode run`: the verdict was correct and the ANSI
+  banner made it unparseable.
+
 ## v0.11.4 — 2026-10-23
 
 The lens class can be raised by the diff's content: a concurrent or
