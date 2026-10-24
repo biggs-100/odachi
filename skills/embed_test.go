@@ -306,3 +306,15 @@ func TestCurriculumIsEverySkillButTheEntryPoint(t *testing.T) {
 		t.Fatalf("Curriculum() = %v, want %v", got, want)
 	}
 }
+
+// TestBootstrapSaysTheAgentRunsTheCommands: the human installs odachi and talks.
+// The skill is what the agent reads, so it says who runs the three commands.
+func TestBootstrapSaysTheAgentRunsTheCommands(t *testing.T) {
+	bootstrap, ok := skills.Bootstrap()
+	if !ok {
+		t.Fatal("the payload has no bootstrap skill")
+	}
+	if !strings.Contains(string(bootstrap.Content), "You run them; the human never types them") {
+		t.Errorf("the bootstrap skill does not say the agent runs the commands:\n%s", bootstrap.Content)
+	}
+}

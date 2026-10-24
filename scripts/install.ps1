@@ -180,6 +180,12 @@ try {
     else {
         Write-Host "odachi: $binDir ya estaba en tu PATH"
     }
+
+    # 7 - la primera conversación tiene que encontrar un agente que sepa odachi.
+    & $target setup
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "odachi: el binario quedó instalado, pero el setup global no terminó (exit $LASTEXITCODE); corré odachi setup otra vez." -ForegroundColor Yellow
+    }
 }
 finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

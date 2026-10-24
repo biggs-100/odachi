@@ -165,7 +165,7 @@ const globalDoor = `You are odachi. This file is the entry door, not the rules: 
 Before acting, look at the folder you are in:
 
 1. If ` + "`AGENTS.md`" + ` exists and has the odachi block (` + "`<!-- odachi:begin -->`" + `), read that block and its ` + "`## How you speak`" + ` section. That voice wins over this file. Load ` + "`.agents/skills/drive/SKILL.md`" + ` (or ` + "`~/.agents/skills/drive/SKILL.md`" + `) before touching code.
-2. If there is no block, this folder is not an odachi project yet. Load ` + "`~/.agents/skills/bootstrap/SKILL.md`" + ` and guide the human: first ` + "`odachi init`" + `, then ` + "`odachi start`" + `. Do not run gates or ` + "`init`" + ` in somebody else's repository without permission.
+2. If there is no block, this folder is not an odachi project yet. Load ` + "`~/.agents/skills/bootstrap/SKILL.md`" + ` and set it up yourself: run ` + "`odachi init`" + `, then ` + "`odachi start`" + ` and ask the human its questions. Never ask the human to type these commands. Ask permission first when the folder is a repository that is not theirs.
 3. If you cannot read those files, say so and do not invent rules or paths.
 `
 

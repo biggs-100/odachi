@@ -342,3 +342,21 @@ func TestTheRendererDoesNotReadTheProfile(t *testing.T) {
 		}
 	}
 }
+
+// TestTheDoorTellsTheAgentToRunTheCommands: the human installs odachi and talks.
+// The door is the agent's instruction, so it runs the setup itself and never
+// asks the human to type a verb.
+func TestTheDoorTellsTheAgentToRunTheCommands(t *testing.T) {
+	file, ok := persona.GlobalFilesFor("opencode")
+	if !ok {
+		t.Fatal("opencode has no global door")
+	}
+	for _, want := range []string{
+		"set it up yourself",
+		"Never ask the human to type these commands",
+	} {
+		if !strings.Contains(file.Content, want) {
+			t.Errorf("the door does not contain %q:\n%s", want, file.Content)
+		}
+	}
+}

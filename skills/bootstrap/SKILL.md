@@ -15,7 +15,8 @@ be decided.
 
 ## Rules
 
-Three commands, in this order. Each one does one thing and leaves it done:
+Three commands, in this order. **You run them; the human never types them.**
+Each one does one thing and leaves it done:
 
 1. `odachi init` - leaves the project ready: the rules block the agent reads, the
    hook that stops a commit without proof, the `.gitignore` that keeps the tree
@@ -38,7 +39,8 @@ Three commands, in this order. Each one does one thing and leaves it done:
 
 - Run `odachi check`, `odachi review` or the hook in a folder that is not an
   odachi project: gates on somebody else's work say nothing.
-- Run `odachi init` in a repository that is not the human's: it writes in the
-  project and in their home.
+- Run `odachi init` in a repository that is not the human's without asking: it
+  writes in the project and in their home. Ask in one sentence and wait for a
+  yes; the human answers in words, never by typing the command.
 - Start over a project that already exists, or rewrite somebody else's
   `brief.md`.
