@@ -109,6 +109,10 @@ type Git interface {
 	TreeHash(root string) (string, error)
 	ChangedPaths(root, base string) ([]string, error)
 	AddedDeps(root, base string) ([]string, error)
+	// Diff is the candidate as one unified diff. The gate reads it to assess the
+	// lens class from the added lines, the same reading the review selection
+	// uses, so the two can never disagree about what this tree asks for.
+	Diff(root, base string) (string, error)
 	// BlobHash is the receipt of one worktree file: the blob id git already
 	// owns, measured now. The coverage answer compares a verdict's rows against
 	// exactly this, so a measurement is load-bearing; it answers "" for a file
@@ -458,7 +462,7 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 // It writes nothing. The store's ignore file is created by the verbs that produce
 // a verdict, so a tree with no verdict has no store to prepare either.
 func (r *runner) requireReview() *Result {
-	required, changed, problem := r.requiredLenses()
+	required, changed, diff, problem := r.requiredLenses()
 	if problem != nil {
 		return problem
 	}
@@ -501,7 +505,6 @@ func (r *runner) requireReview() *Result {
 		problem := lensMissing(missing, rel)
 		return &problem
 	}
-
 	refutation, problem := r.refutation(verdict)
 	if problem != nil {
 		return problem
@@ -530,7 +533,7 @@ func (r *runner) requireReview() *Result {
 	if problem != nil {
 		return problem
 	}
-	need := reviewdomain.Need(changed, "")
+	need := reviewdomain.Need(changed, diff)
 	for path, blob := range blobs {
 		if blob == "" {
 			delete(need, path)
@@ -546,22 +549,31 @@ func (r *runner) requireReview() *Result {
 
 // requiredLenses is the lens selection the candidate asks for. It is the same
 // question the review verb answers before printing a prompt, asked from the same
-// changed paths, so the two can never disagree about what this tree needs. The
-// changed paths are returned with it: coverage is per file, and the same
-// evidence that picks the lenses is the one whose rows must answer.
-func (r *runner) requiredLenses() ([]string, []string, *Result) {
+// changed paths and the same diff, so the two can never disagree about what this
+// tree needs. The changed paths and the diff are returned with it: coverage is
+// per file, and the same evidence that picks the lenses is the one whose rows
+// must answer.
+func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
 	base := baseRef(r.opts.Base)
 
 	changed, err := r.git.ChangedPaths(r.opts.Dir, base)
 	if err != nil && base == head {
 		changed, err = r.git.ChangedPaths(r.opts.Dir, EmptyTree)
+		base = EmptyTree
 	}
 	if err != nil {
 		problem := blocked(baseProblem(base, err))
-		return nil, nil, &problem
+		return nil, nil, "", &problem
 	}
 
-	return reviewdomain.Lenses(reviewdomain.Classify(changed)), changed, nil
+	diff, err := r.git.Diff(r.opts.Dir, base)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not read the diff against %q to assess the lens class: %s; fix --base %q or drop the flag to compare against HEAD",
+			base, oneLine(err.Error()), r.opts.Base))
+		return nil, nil, "", &problem
+	}
+
+	return reviewdomain.Lenses(reviewdomain.Assess(changed, diff)), changed, diff, nil
 }
 
 // currentBlobs measures the receipt each changed path earns now. A path the

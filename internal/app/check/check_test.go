@@ -107,9 +107,21 @@ type fakeGit struct {
 	// blobs answers BlobHash per path, and blobErr is git failing for real.
 	blobs   map[string]string
 	blobErr error
+
+	// diff is what the port answers for the candidate, and diffErr is the diff
+	// failing for real.
+	diff    string
+	diffErr error
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
+
+func (g *fakeGit) Diff(root, base string) (string, error) {
+	if g.diffErr != nil {
+		return "", g.diffErr
+	}
+	return g.diff, nil
+}
 
 func (g *fakeGit) BlobHash(root, path string) (string, error) {
 	if g.blobErr != nil {

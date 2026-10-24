@@ -73,6 +73,93 @@ func TestReviewDoesNotInfluenceTheGateWithoutTheFlag(t *testing.T) {
 	}
 }
 
+// concurrentCheckDiff is content the path class cannot see: a goroutine and a
+// mutex in an otherwise ordinary file.
+const concurrentCheckDiff = "diff --git a/internal/app/check/check.go b/internal/app/check/check.go\n--- a/internal/app/check/check.go\n+++ b/internal/app/check/check.go\n@@ -1 +1,2 @@\n package check\n+go func() { sync.Mutex{} }()\n"
+
+// TestRequireReviewAsksTheRaisedClass: a changed file whose added lines spawn
+// concurrency asks the four lenses. A verdict that covers only the path class is
+// missing the rest, and the gate names it.
+func TestRequireReviewAsksTheRaisedClass(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[reviewPath(currentTree)] = []byte(verdictFileWithRows(t, currentTree, nil, []domainreview.Pass{
+		{Path: "internal/app/check/check.go", Blob: checkBlob, Lens: domainreview.Reliability},
+	}))
+
+	result := run(t, files, &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		diff:    concurrentCheckDiff,
+		blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+	}, check.Options{RequireReview: true})
+
+	if result.Code != 2 {
+		t.Fatalf("code = %d, want 2 (%s)", result.Code, result.Message)
+	}
+	if result.Reason != "review_lens_missing" {
+		t.Errorf("reason = %q, want review_lens_missing", result.Reason)
+	}
+	if !strings.Contains(result.Message, "risk") {
+		t.Errorf("message = %q, want the first raised lens named", result.Message)
+	}
+}
+
+// TestRequireReviewNeedsTheContentRows: declaring the lens is not enough; the
+// rows are per file. A verdict that claims the four lenses but answers only the
+// path-class row of the concurrent file has not covered it.
+func TestRequireReviewNeedsTheContentRows(t *testing.T) {
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "claude",
+		Lenses:   []string{domainreview.Risk, domainreview.Readability, domainreview.Reliability, domainreview.Resilience},
+		Findings: []domainreview.Finding{},
+		Passes: []domainreview.Pass{
+			{Path: "internal/app/check/check.go", Blob: checkBlob, Lens: domainreview.Reliability},
+		},
+	}, currentTree, "HEAD", reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the seeded verdict: %v", err)
+	}
+
+	files := newFakeFiles(readyFiles())
+	files.files[reviewPath(currentTree)] = domainreview.Render(sealed)
+
+	result := run(t, files, &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		diff:    concurrentCheckDiff,
+		blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+	}, check.Options{RequireReview: true})
+
+	if result.Code != 2 {
+		t.Fatalf("code = %d, want 2 (%s)", result.Code, result.Message)
+	}
+	if result.Reason != "review_coverage" {
+		t.Errorf("reason = %q, want review_coverage", result.Reason)
+	}
+	if !strings.Contains(result.Message, "risk") {
+		t.Errorf("message = %q, want the missing raised lens named", result.Message)
+	}
+}
+
+// TestRequireReviewBlocksWhenTheDiffCannotBeRead: the class cannot be measured
+// without the diff, and a measurement nobody can make is not a pass.
+func TestRequireReviewBlocksWhenTheDiffCannotBeRead(t *testing.T) {
+	files := filesWithVerdict(t, currentTree, nil)
+
+	result := run(t, files, &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		diffErr: errors.New("fatal: bad revision"),
+	}, check.Options{RequireReview: true})
+
+	if result.Code == 0 {
+		t.Fatal("a diff failure must not read as an assessed class")
+	}
+	if !strings.Contains(result.Message, "could not read the diff") {
+		t.Errorf("message = %q, want the diff failure named", result.Message)
+	}
+}
+
 // TestADismissedFindingDoesNotBlockTheGate: a dismissal was judged with
 // evidence in its verdict. The gate records it and lets the tree through — the
 // receipt still covers the row, the severity no longer blocks.
