@@ -1,14 +1,14 @@
 [[rule]]
-not   = "required approvals: a solo repo cannot approve its own pull request"
-paths = ["required-approvals-a-solo-repo-cannot-approve-its-own-pull-request*"]
+not   = "a diff of the output, or truncating it"
+paths = ["a-diff-of-the-output-or-truncating-it*"]
 deps  = []
 
 [[rule]]
-not   = "signed commits, linear history, merge queue"
-paths = ["signed-commits-linear-history-merge-queue*"]
+not   = "renaming or parsing the green proof format"
+paths = ["renaming-or-parsing-the-green-proof-format*"]
 deps  = []
 
 [[rule]]
-not   = "org-wide policy, identity, tag protection"
-paths = ["org-wide-policy-identity-tag-protection*"]
+not   = "changing the gate's exit codes"
+paths = ["changing-the-gate-s-exit-codes*"]
 deps  = []
