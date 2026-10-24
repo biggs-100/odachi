@@ -5,6 +5,39 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+Review receipts: a verdict now answers per file and per byte, and a corrected candidate pays only for what it changed.
+
+- **Per-finding content receipts**: every finding and every clean pass carries
+  the git blob id of the file it judged (path, blob, lens). The tool derives the
+  blob from git; a reviewer-declared hash is overwritten. A finding whose file
+  git cannot hash (deleted, or invented by the reviewer) is stored without a
+  receipt, and the gate treats it as answering nothing.
+- **Coverage is the gate's arithmetic**: with `--require-review`, every changed
+  file whose bytes git can measure must answer each lens its path class
+  requires — a finding, a clean pass, or a dismissal. A stale receipt, a
+  missing row, or a verdict written before receipts existed blocks with exit 2
+  naming `odachi review`; an approval the tool cannot prove is not used.
+- **Potency is per blob**: storing a verdict inherits the standing rows of
+  earlier verdicts whose blob still matches, so the fix loop re-reviews the two
+  files you touched and inherits the rest. The prompt lists what is already
+  carried, and a repeated finding is filed once.
+- **Dismissals are first-class**: a finding refuted with evidence travels as a
+  dismissed row with its reason and a fingerprint (path, line, lens,
+  evidence). A re-raise of the same fingerprint stays dismissed; the verdict
+  says what it discarded, and `--show` prints the reason. Dismissed rows answer
+  coverage and never block.
+- **A deterministic floor runs before any lens**: the diff names the added
+  lines a finding may cite and the categories they touch (concurrency, secrets,
+  network, failure, time). A causal BLOCKER or CRITICAL that cannot cite them
+  is downgraded one tier before the verdict is stored — blocking is earned. The
+  floor reports the path class; it does not change ADR 0010's lens selection.
+- **Candidate diffs use the merge-base**: `Diff` and `ChangedPaths` compare
+  against the fork point instead of the base tip, so another branch's commits
+  no longer appear as deletions in the candidate. This is a behavior change for
+  scripts that pinned the old two-dot diff.
+
 ## v0.11.2 · 2026-10-23
 
 The version that adds a method for attacking a backlog, cutting delivery into reviewable PRs, writing Go tests, auditing skills, and speaking English in everything that is not chat.

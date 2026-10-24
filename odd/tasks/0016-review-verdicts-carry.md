@@ -13,7 +13,7 @@ R1 · "review verdicts carry per-finding content receipts (path, blob, lens) so 
 - [x] T2 · potency and coverage in the gate: inherit from matching blobs; old verdicts grant no coverage   R1 · 9596b28
 - [x] T3 · deterministic floor picks the lens class and the cited lines before any LLM   R1 · ac4b744
 - [x] T4 · dismissals: reason plus fingerprint, never re-raised in later candidates   R1 · c4011a3
-- [ ] T5 · full-candidate diffs use merge-base instead of the two-dot diff   R1
+- [x] T5 · full-candidate diffs use merge-base instead of the two-dot diff   R1 · 33f80c3
 - [ ] T6 · docs: CHANGELOG, impact map and dogfood of the new verdict flow   R1
 
 ## History
@@ -33,3 +33,4 @@ L13 · OFICIO · "A dismissed row still answers coverage and never blocks or dow
 L14 · OFICIO · "Diff and ChangedPaths compare against merge-base(HEAD, base), not the base tip" (porque Two dots turn every commit the base gained after the fork into a deletion, so a branch appears to delete code it never touched (the promptfoo bug); the fork point is the candidate's parent)
 L15 · OFICIO · "An empty base or the empty tree stays the first day: no merge-base, everything is new" (porque There is no fork to find before the first commit, and the existing behavior must keep holding for a project with no history)
 L16 · OFICIO · "AddedDeps still reads go.mod at the base tip, not at the merge-base" (porque The fence asks which dependency this candidate would introduce into the base, and a module the base removed but the branch still uses does arrive in the merge; the diff is the authored change, the dependency is a merge consequence)
+L17 · OFICIO · "T6 documents the whole feature in one Unreleased block and updates the impact map in the same commit, and dogfoods the coverage gate on the T5 commit with a real attached verdict" (porque Docs that land apart from the code they describe drift, and a docs-only worktree is a passive candidate: the real gate has to be exercised on a code candidate (--base 33f80c3^) or the dogfood proves nothing)
