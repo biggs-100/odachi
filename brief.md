@@ -1,19 +1,20 @@
-# the-suite-is
+# one-workflow-tells
 
 ## What must exist
-- the suite is deterministic: no test reads state another test writes
+- one workflow tells the truth about a tree: the gate runs the suite on every OS
 
 ## Done when
-- go test ./cmd/odachi -count=20 -shuffle=on is green three times in a row
-- the version surfaces and the ldflags seam are pinned without mutating the package variable
-- the full suite is green on Windows and Linux CI
+- the gate checks the candidate on ubuntu, macos and windows, each reading the fence from the base ref and keeping its proof
+- gofmt, vet, race and the goreleaser check run once in that workflow; no second workflow runs the suite
+- a PR that breaks the suite on one OS fails there, and a release tag still runs the suite before publishing
 
 ## Not included (first version)
-- what odachi --version prints
-- a go build inside the suite
+- required check and ruleset: the next feature, after main carries the merged workflow
+- Go module and build caching
+- self-hosted runners or job time limits
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: parallel tests and shared state.
+- Wants to learn: one definition of green.

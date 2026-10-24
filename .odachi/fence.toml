@@ -1,9 +1,14 @@
 [[rule]]
-not   = "what odachi --version prints"
-paths = ["what-odachi-version-prints*"]
+not   = "required check and ruleset: the next feature, after main carries the merged workflow"
+paths = ["required-check-and-ruleset-the-next-feature-after-main-carries-the-merged-workflow*"]
 deps  = []
 
 [[rule]]
-not   = "a go build inside the suite"
-paths = ["a-go-build-inside-the-suite*"]
+not   = "Go module and build caching"
+paths = ["go-module-and-build-caching*"]
+deps  = []
+
+[[rule]]
+not   = "self-hosted runners or job time limits"
+paths = ["self-hosted-runners-or-job-time-limits*"]
 deps  = []
