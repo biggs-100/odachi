@@ -25,6 +25,13 @@ func compareBase(root, base string) (string, error) {
 		return "", nil
 	}
 
+	// HEAD's fork point with itself is HEAD, and HEAD is the default base: one
+	// git process per verb that nobody needs to pay. A named base still asks
+	// merge-base, because another branch's commits must not read as deletions.
+	if target == "HEAD" {
+		return target, nil
+	}
+
 	out, err := run(root, "merge-base", "HEAD", target)
 	if err != nil {
 		return "", err

@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The gates read the worktree once.
+
+- **`check` and `review` measure the candidate once**: the tree, the changed
+  paths and the diff come from one git read instead of three, and the proof, the
+  floor, the lens class, the prompt and the receipt reuse that value. A review
+  drops from about 13 git processes to 6; `review --show` goes from 1029ms to
+  351ms warm, and `check` from about 1009ms to 340ms.
+- **No weaker gate and no new dependency**: the fence, the lenses and the
+  coverage gate read the same bytes as before; a reviewer that edits the tree is
+  still measured again before the verdict is filed. The suite wall is
+  machine-bound: 23.8-24.6s in a quiet window, 25.6-36s under background load.
+  The work removed is the honest signal; see ADR 0019.
+
 ## v0.11.5 — 2026-10-24
 
 The reviewer inherits the session's model; review answers come from stdout, and
