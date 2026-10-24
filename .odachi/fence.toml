@@ -1,14 +1,14 @@
 [[rule]]
-not   = "a risk tier like gentle-ai's assess: the lens class is the gate"
-paths = ["a-risk-tier-like-gentle-ai-s-assess-the-lens-class-is-the-gate*"]
+not   = "required approvals: a solo repo cannot approve its own pull request"
+paths = ["required-approvals-a-solo-repo-cannot-approve-its-own-pull-request*"]
 deps  = []
 
 [[rule]]
-not   = "check requiring review by default: the mode stays off"
-paths = ["check-requiring-review-by-default-the-mode-stays-off*"]
+not   = "signed commits, linear history, merge queue"
+paths = ["signed-commits-linear-history-merge-queue*"]
 deps  = []
 
 [[rule]]
-not   = "lineage, consent, acknowledgment or burn: no state machine"
-paths = ["lineage-consent-acknowledgment-or-burn-no-state-machine*"]
+not   = "org-wide policy, identity, tag protection"
+paths = ["org-wide-policy-identity-tag-protection*"]
 deps  = []
