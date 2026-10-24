@@ -27,7 +27,7 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 odachi --version
 ```
 
-Those three lines work. The latest release is `v0.11.6`: six binaries (Linux,
+Those three lines work. The latest release is `v0.11.7`: six binaries (Linux,
 macOS and Windows, amd64 and arm64) and a `checksums.txt`. The installer resolves
 the latest version through the API, verifies the sha256 and only then writes; a
 checksum that does not match exits with an error and leaves **nothing** at the
@@ -277,10 +277,10 @@ to fabricate.
 Pure domain in `internal/domain/...` with an import guard, adapters in
 `internal/adapters/...`, and fifteen surfaces: `start`, `ask`, `plan`, `level`,
 `summary`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `skills`,
-`skill new`, `pack` and `--version`. 40 packages, green on Linux, macOS and
+`skill new`, `pack` and `--version`. 41 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
-Published: `v0.11.6`. What changed in each version is in
+Published: `v0.11.7`. What changed in each version is in
 [CHANGELOG.md](CHANGELOG.md). The one-line installation is tested against the
 real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP
