@@ -62,6 +62,10 @@ const (
 	// ReasonReviewRefutedUnreadable means the refutation beside the verdict cannot
 	// be read, so nothing it might say can be taken into account.
 	ReasonReviewRefutedUnreadable = "review_refutation_unreadable"
+	// ReasonReviewCoverage means the verdict exists but its rows do not answer
+	// about the bytes git measures now: stale receipts, missing rows, or the
+	// old format that carries no receipts at all.
+	ReasonReviewCoverage = "review_coverage"
 )
 
 // nextReview is the continuation for a missing verdict, and the command that
@@ -105,6 +109,11 @@ type Git interface {
 	TreeHash(root string) (string, error)
 	ChangedPaths(root, base string) ([]string, error)
 	AddedDeps(root, base string) ([]string, error)
+	// BlobHash is the receipt of one worktree file: the blob id git already
+	// owns, measured now. The coverage answer compares a verdict's rows against
+	// exactly this, so a measurement is load-bearing; it answers "" for a file
+	// that is not in the worktree, and a real git failure is an err.
+	BlobHash(root, path string) (string, error)
 	// Ignored reports whether the repository's own rules already keep path out
 	// of the tree. It is what makes the lazy ignore file unnecessary in a project
 	// that ran `odachi init`.
@@ -449,7 +458,7 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 // It writes nothing. The store's ignore file is created by the verbs that produce
 // a verdict, so a tree with no verdict has no store to prepare either.
 func (r *runner) requireReview() *Result {
-	required, problem := r.requiredLenses()
+	required, changed, problem := r.requiredLenses()
 	if problem != nil {
 		return problem
 	}
@@ -513,13 +522,34 @@ func (r *runner) requireReview() *Result {
 		return &problem
 	}
 
+	// Coverage is per row: every changed file whose bytes git can measure owes
+	// one current answer per lens its path class requires. A receipt that
+	// describes other bytes is a file that changed since the verdict — its
+	// answer is dead, and the gate names the gap instead of reusing it.
+	blobs, problem := r.currentBlobs(changed)
+	if problem != nil {
+		return problem
+	}
+	need := reviewdomain.Need(changed)
+	for path, blob := range blobs {
+		if blob == "" {
+			delete(need, path)
+		}
+	}
+	if gaps := verdict.Uncovered(need, blobs); len(gaps) > 0 {
+		problem := coverageMissing(verdict, gaps, rel)
+		return &problem
+	}
+
 	return nil
 }
 
 // requiredLenses is the lens selection the candidate asks for. It is the same
 // question the review verb answers before printing a prompt, asked from the same
-// changed paths, so the two can never disagree about what this tree needs.
-func (r *runner) requiredLenses() ([]string, *Result) {
+// changed paths, so the two can never disagree about what this tree needs. The
+// changed paths are returned with it: coverage is per file, and the same
+// evidence that picks the lenses is the one whose rows must answer.
+func (r *runner) requiredLenses() ([]string, []string, *Result) {
 	base := baseRef(r.opts.Base)
 
 	changed, err := r.git.ChangedPaths(r.opts.Dir, base)
@@ -528,10 +558,66 @@ func (r *runner) requiredLenses() ([]string, *Result) {
 	}
 	if err != nil {
 		problem := blocked(baseProblem(base, err))
-		return nil, &problem
+		return nil, nil, &problem
 	}
 
-	return reviewdomain.Lenses(reviewdomain.Classify(changed)), nil
+	return reviewdomain.Lenses(reviewdomain.Classify(changed)), changed, nil
+}
+
+// currentBlobs measures the receipt each changed path earns now. A path the
+// port answers "" for is not in the worktree — the candidate deleted it, and
+// absence owes no coverage. A real git failure is reported, never swallowed:
+// the measurement is what makes a receipt a receipt.
+func (r *runner) currentBlobs(paths []string) (map[string]string, *Result) {
+	blobs := make(map[string]string, len(paths))
+	for _, path := range paths {
+		blob, err := r.git.BlobHash(r.opts.Dir, path)
+		if err != nil {
+			problem := blocked(fmt.Sprintf("could not measure the blob of %s: %s; fix git and run odachi check again", path, oneLine(err.Error())))
+			return nil, &problem
+		}
+		blobs[path] = blob
+	}
+	return blobs, nil
+}
+
+// coverageMissing is the block for a verdict whose rows do not answer coverage:
+// stale receipts, missing rows, or — for a verdict written before content
+// receipts — nothing computable at all. The store cannot be rewritten, so the
+// message names the file the human must delete and the command that replaces it;
+// the gate never deletes anything itself.
+func coverageMissing(verdict reviewdomain.Verdict, gaps []reviewdomain.Gap, rel string) Result {
+	next := nextReview
+
+	// A verdict written before content receipts owes the diagnosis of its
+	// format, not of its rows: an approval the tool cannot prove is an approval
+	// it must not use.
+	receipted := len(verdict.Passes) > 0
+	for _, finding := range verdict.Findings {
+		if strings.TrimSpace(finding.Blob) != "" {
+			receipted = true
+			break
+		}
+	}
+
+	var message string
+	if !receipted {
+		message = fmt.Sprintf("this tree's review was written before content receipts (%s): it cannot serve coverage", rel)
+	} else {
+		gap := gaps[0]
+		message = fmt.Sprintf("the review of this tree has no current answer for %s under the %s lens (%s)", gap.Path, gap.Lens, rel)
+	}
+	return Result{
+		Code:    int(gate.NeedsDecision),
+		Reason:  ReasonReviewCoverage,
+		Message: message,
+		Next:    next,
+		Lines: []string{
+			message,
+			"a verdict is not rewritten: delete " + rel + " and run " + next,
+			"next: " + next,
+		},
+	}
 }
 
 // refutation reads the refutation filed beside this tree's verdict. A tree with

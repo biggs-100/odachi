@@ -1,6 +1,7 @@
 package review_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -548,5 +549,210 @@ func TestFindingsWithoutBlobOrLensStillParse(t *testing.T) {
 	if len(parsed.Findings) != 1 || parsed.Findings[0].Blob != "" || parsed.Findings[0].Lens != "" {
 		t.Errorf("an old finding parses as an unkeyed finding, got %+v", parsed.Findings)
 	}
+}
+
+// TestAPassIsOneCleanLensAnswer: a pass is the coverage row for a blob a lens
+// audited and found clean. The round trip keeps it, and Validate refuses one
+// without path, blob or a lens the tool knows.
+func TestAPassIsOneCleanLensAnswer(t *testing.T) {
+	verdict := review.Verdict{
+		Tree:     tree,
+		Reviewer: "agent",
+		Verdict:  review.Approved,
+		Findings: []review.Finding{},
+		Passes: []review.Pass{
+			{Path: "internal/app/review/review.go", Blob: blobContent, Lens: "reliability"},
+		},
+	}
+
+	if err := verdict.Validate(); err != nil {
+		t.Fatalf("a complete pass must validate, got: %s", err)
+	}
+
+	parsed, err := review.Parse(review.Render(verdict))
+	if err != nil {
+		t.Fatalf("render then parse must round trip, got: %s", err)
+	}
+	if len(parsed.Passes) != 1 {
+		t.Fatalf("passes = %d, want 1", len(parsed.Passes))
+	}
+	got := parsed.Passes[0]
+	if got.Path != "internal/app/review/review.go" || got.Blob != blobContent || got.Lens != "reliability" {
+		t.Errorf("pass = %+v, want the audited (path, blob, lens)", got)
+	}
+}
+
+// TestAIncompletePassIsRefused: a pass that names a blob that is not a hash
+// names bytes nobody measured, and one with an invented lens answers a question
+// nobody asked. A pass WITHOUT a blob validates: it is a fresh answer waiting
+// for the tool's stamp, and it is inert until stamped.
+func TestAIncompletePassIsRefused(t *testing.T) {
+	cases := []struct {
+		name string
+		pass review.Pass
+		want string
+	}{
+		{name: "blob that is not a hash", pass: review.Pass{Path: "a.go", Blob: "not-a-blob", Lens: "reliability"}, want: "blob"},
+		{name: "no lens", pass: review.Pass{Path: "a.go", Blob: blobContent}, want: "lens"},
+		{name: "unknown lens", pass: review.Pass{Path: "a.go", Blob: blobContent, Lens: "elegancia"}, want: "lens"},
+		{name: "no path", pass: review.Pass{Blob: blobContent, Lens: "reliability"}, want: "path"},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			verdict := review.Verdict{
+				Tree:     tree,
+				Reviewer: "agent",
+				Verdict:  review.Approved,
+				Findings: []review.Finding{},
+				Passes:   []review.Pass{testCase.pass},
+			}
+
+			err := verdict.Validate()
+			if err == nil {
+				t.Fatal("an incomplete pass must be refused")
+			}
+			if !strings.Contains(err.Error(), testCase.want) {
+				t.Errorf("the error must name %q, got: %s", testCase.want, err)
+			}
+		})
+	}
+}
+
+// TestAUnstampedPassIsTheReviewerSAnswer: a pass without a blob is valid — it
+// is how a fresh answer looks before the tool stamps it — and the round trip
+// keeps it empty.
+func TestAUnstampedPassIsTheReviewerSAnswer(t *testing.T) {
+	verdict := review.Verdict{
+		Tree:     tree,
+		Reviewer: "agent",
+		Verdict:  review.Approved,
+		Findings: []review.Finding{},
+		Passes:   []review.Pass{{Path: "a.go", Lens: "reliability"}},
+	}
+
+	if err := verdict.Validate(); err != nil {
+		t.Fatalf("an unstamped pass is a fresh answer, not an invalid verdict: %s", err)
+	}
+
+	parsed, err := review.Parse(review.Render(verdict))
+	if err != nil {
+		t.Fatalf("render then parse must round trip, got: %s", err)
+	}
+	if len(parsed.Passes) != 1 || parsed.Passes[0].Blob != "" {
+		t.Errorf("pass = %+v, want the unstamped row kept empty", parsed.Passes)
+	}
+}
+
+// TestUncoveredIsTheCoverageArithmetic: for every file that must answer and
+// each lens its path class asks for, the verdict must carry a current answer — a
+// finding with a receipt or a pass. Stale blobs and missing lens attributions
+// are gaps; a verdict written before content receipts covers nothing.
+func TestUncoveredIsTheCoverageArithmetic(t *testing.T) {
+	blobs := map[string]string{
+		"init.go":     "aaaa00000a0b0c0d0e0f1e2d3c4b5a6978695a4b",
+		"review.go":   "bbbb11111a0b0c0d0e0f1e2d3c4b5a6978695a4b",
+		"contract.go": "cccc22222a0b0c0d0e0f1e2d3c4b5a6978695a4b",
+	}
+	need := map[string][]string{
+		"init.go":     {"reliability"},
+		"review.go":   {"reliability"},
+		"contract.go": {"risk", "readability", "reliability", "resilience"},
+	}
+
+	t.Run("full coverage has no gaps", func(t *testing.T) {
+		verdict := review.Verdict{
+			Findings: []review.Finding{},
+			Passes: []review.Pass{
+				{Path: "init.go", Blob: blobs["init.go"], Lens: "reliability"},
+				{Path: "review.go", Blob: blobs["review.go"], Lens: "reliability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "risk"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "readability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "reliability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "resilience"},
+			},
+		}
+
+		gaps := verdict.Uncovered(need, blobs)
+		if len(gaps) != 0 {
+			t.Errorf("gaps = %v, want none", gaps)
+		}
+	})
+
+	t.Run("a finding covers its own row", func(t *testing.T) {
+		verdict := review.Verdict{
+			Findings: []review.Finding{
+				{Path: "review.go", Line: 3, Severity: review.Warning, Causal: true,
+					Why: "defect", Blob: blobs["review.go"], Lens: "reliability"},
+			},
+			Passes: []review.Pass{
+				{Path: "init.go", Blob: blobs["init.go"], Lens: "reliability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "risk"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "readability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "reliability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "resilience"},
+			},
+		}
+
+		gaps := verdict.Uncovered(need, blobs)
+		if len(gaps) != 0 {
+			t.Errorf("gaps = %v, want none: the finding is the answer for its row", gaps)
+		}
+	})
+
+	t.Run("a stale blob is a gap", func(t *testing.T) {
+		verdict := review.Verdict{
+			Findings: []review.Finding{},
+			Passes: []review.Pass{
+				{Path: "init.go", Blob: "dddd33333a0b0c0d0e0f1e2d3c4b5a6978695a4b", Lens: "reliability"},
+				{Path: "review.go", Blob: blobs["review.go"], Lens: "reliability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "risk"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "readability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "reliability"},
+				{Path: "contract.go", Blob: blobs["contract.go"], Lens: "resilience"},
+			},
+		}
+
+		gaps := verdict.Uncovered(need, blobs)
+		if len(gaps) != 1 || gaps[0].Path != "init.go" || gaps[0].Lens != "reliability" {
+			t.Errorf("gaps = %v, want exactly init.go/reliability: the receipt does not describe these bytes", gaps)
+		}
+	})
+
+	t.Run("an old verdict covers nothing", func(t *testing.T) {
+		verdict := review.Verdict{Findings: []review.Finding{
+			{Path: "review.go", Line: 0, Severity: review.Warning, Causal: false, Why: "already there"},
+		}}
+
+		gaps := verdict.Uncovered(need, blobs)
+		if len(gaps) == 0 {
+			t.Fatal("a verdict without content receipts must leave every row uncovered")
+		}
+		for _, gap := range gaps {
+			if !slices.Contains(need[gap.Path], gap.Lens) {
+				t.Errorf("gap %s/%s is not one of %v", gap.Path, gap.Lens, need[gap.Path])
+			}
+		}
+	})
+
+	t.Run("a file with unneeded lenses never asks twice", func(t *testing.T) {
+		verdict := review.Verdict{
+			Findings: []review.Finding{},
+			Passes: []review.Pass{
+				{Path: "init.go", Blob: blobs["init.go"], Lens: "reliability"},
+				{Path: "review.go", Blob: blobs["review.go"], Lens: "reliability"},
+			},
+		}
+
+		gaps := verdict.Uncovered(need, blobs)
+		if len(gaps) != 4 {
+			t.Fatalf("gaps = %d, want the four contract.go rows", len(gaps))
+		}
+		for _, gap := range gaps {
+			if gap.Path != "contract.go" {
+				t.Errorf("unexpected gap %s/%s", gap.Path, gap.Lens)
+			}
+		}
+	})
 }
 

@@ -1,6 +1,9 @@
 package review
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // PromptInput is the candidate a review is asked about: the brief it is judged
 // against, the tree and base that name it, the paths that changed, and the diff.
@@ -22,6 +25,14 @@ type PromptInput struct {
 	// metadata is for the registry and not for the model. No lenses is exactly
 	// the prompt this verb printed before lenses existed.
 	Lenses []Lens
+	// Known are the findings the store already holds potent about these exact
+	// bytes; they travel into the verdict as they are, so the reviewer must not
+	// file them again. Empty means the store carries nothing, and the prompt is
+	// exactly the one this verb printed before inheritance existed.
+	Known []Finding
+	// KnownPasses are the clean rows the store carries: (path, blob, lens)
+	// answers that still describe the current bytes.
+	KnownPasses []Pass
 }
 
 // Lens is one specialist prompt: its name and its body.
@@ -81,6 +92,7 @@ func Prompt(in PromptInput) string {
 	out.WriteString("\n")
 
 	out.WriteString(lensSection(in.Lenses))
+	out.WriteString(carriedSection(in.Known, in.KnownPasses))
 
 	out.WriteString("## What to return\n")
 	out.WriteString(schema(in))
@@ -90,6 +102,8 @@ func Prompt(in PromptInput) string {
 	out.WriteString("Do not decide it yourself: the rule decides it.\n")
 	if len(in.Lenses) > 0 {
 		out.WriteString("Each finding names the lens that found it (\"lens\"): a finding without it has no author.\n")
+		out.WriteString("In \"passes\", list every (file, lens) audited with no findings, one row per pair: that row\n")
+		out.WriteString("is the proof that the silence was an audit, not an omission: the blob is stamped by the tool.\n")
 		out.WriteString("The tree's lens list itself is recorded by the tool: do not repeat it in the JSON.\n")
 	}
 	out.WriteString("\n")
@@ -145,6 +159,43 @@ func stripFrontmatter(body string) string {
 	return strings.TrimPrefix(rest[end+len("\n---\n"):], "\n")
 }
 
+// carriedSection names the potent rows the verdict will inherit. A reviewer
+// that does not know what the store holds files the same defect twice, and a
+// clean row re-reported as a finding is a defect nobody has. No carried rows
+// means no section: the prompt stays byte-identical to what it always was.
+func carriedSection(known []Finding, carried []Pass) string {
+	if len(known) == 0 && len(carried) == 0 {
+		return ""
+	}
+
+	var out strings.Builder
+	out.WriteString("## What the store already carries for these exact bytes\n\n")
+	for _, finding := range known {
+		where := finding.Path
+		if finding.Line > 0 {
+			where = fmt.Sprintf("%s:%d", finding.Path, finding.Line)
+		}
+		who := ""
+		if finding.Lens != "" {
+			who = finding.Lens + ", "
+		}
+		out.WriteString("- " + where + " (" + who + string(finding.Severity) + ") " + finding.Why + "\n")
+	}
+	for _, pass := range carried {
+		who := pass.Lens
+		if who == "" {
+			who = "?"
+		}
+		out.WriteString("- " + pass.Path + " (" + who + ") audited clean\n")
+	}
+	out.WriteString("\nDo not re-report the findings above in \"findings\": the verdict inherits\n")
+	out.WriteString("them as they are, with their receipts. Report a finding only when a defect\n")
+	out.WriteString("is new to this candidate, and leave \"passes\" without the clean rows above;\n")
+	out.WriteString("they are carried too.\n\n")
+
+	return out.String()
+}
+
 // schema is the expected answer, with the keys the domain parses. The tree is
 // stamped by the tool when it is empty, so a reviewer that cannot compute it
 // still produces a usable verdict.
@@ -168,6 +219,13 @@ func schema(in PromptInput) string {
 	out.WriteString("      \"why\": \"<the defect and the concrete evidence>\"\n")
 	out.WriteString("    }\n")
 	out.WriteString("  ],\n")
+
+	if len(in.Lenses) > 0 {
+		out.WriteString("  \"passes\": [\n")
+		out.WriteString("    {\"path\": \"<file>\", \"lens\": \"<the lens of this tree's list that audited it>\"}\n")
+		out.WriteString("  ],\n")
+	}
+
 	out.WriteString("  \"verdict\": \"" + Approved + " | " + ChangesRequested + "\"\n")
 	out.WriteString("}\n")
 

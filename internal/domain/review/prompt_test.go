@@ -124,9 +124,12 @@ func TestPromptWithLensesAsksTheLensPerFinding(t *testing.T) {
 	if !strings.Contains(asked, `"lens"`) {
 		t.Error("a prompt with lenses does not ask which lens found each finding")
 	}
+	if !strings.Contains(asked, `"passes"`) {
+		t.Error("a prompt with lenses does not ask for the clean (path, lens) passes")
+	}
 
 	plain := review.Prompt(promptInput())
-	if strings.Contains(plain, `"lens"`) {
-		t.Error("a prompt without lenses must not ask for a lens")
+	if strings.Contains(plain, `"lens"`) || strings.Contains(plain, `"passes"`) {
+		t.Error("a prompt without lenses must not ask for lens attribution or passes")
 	}
 }

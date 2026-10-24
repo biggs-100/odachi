@@ -2,11 +2,34 @@ package review_test
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/domain/review"
 )
+
+// TestNeedAsksPerFile: coverage is answered per file, so the demand is per file
+// too. Each path answers the lenses its own class requires, and a path whose
+// class asks for nothing never appears: asking a document for a specialist's
+// row is ceremony, not evidence.
+func TestNeedAsksPerFile(t *testing.T) {
+	need := review.Need([]string{
+		"internal/app/engine/turno.go",
+		"internal/auth/session.go",
+		"docs/notas.md",
+	})
+
+	if got := need["internal/app/engine/turno.go"]; !slices.Equal(got, []string{review.Reliability}) {
+		t.Errorf("ordinary code asks %v, want reliability only", got)
+	}
+	if got := need["internal/auth/session.go"]; len(got) != 4 {
+		t.Errorf("code that can hurt asks %v, want all four lenses", got)
+	}
+	if _, asks := need["docs/notas.md"]; asks {
+		t.Errorf("a plain document never asks: %v", need["docs/notas.md"])
+	}
+}
 
 // TestClassifyDocumentationOnlyIsPassive: a change that only touches documents
 // has nothing for a specialist lens to look at.

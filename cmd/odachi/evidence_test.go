@@ -58,7 +58,7 @@ func TestInitKeepsTheProofValidAcrossAReview(t *testing.T) {
 	}
 
 	outside := t.TempDir()
-	writeFile(t, outside, "veredicto.json", `{"reviewer":"humano","findings":[]}`)
+	writeFile(t, outside, "veredicto.json", `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"},{"path":".gitignore","lens":"reliability"}]}`)
 	attach := filepath.Join(outside, "veredicto.json")
 
 	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 {

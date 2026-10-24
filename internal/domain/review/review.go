@@ -113,8 +113,13 @@ type Verdict struct {
 	// stamps them, because the reviewer's opinion about which lenses it used is not
 	// evidence; the prompt it was given is. A verdict stored before lenses existed
 	// has none, and the optional gate treats that as "covers nothing".
-	Lenses  []string `json:"lenses,omitempty"`
-	Verdict string   `json:"verdict"`
+	Lenses []string `json:"lenses,omitempty"`
+	// Passes are the clean answers: (path, blob, lens) rows a lens audited and
+	// found empty. They are the other half of coverage — a finding answers its
+	// own row, a pass answers the row of a clean blob. A verdict stored before
+	// coverage existed has none, and the gate treats that as "covers nothing".
+	Passes  []Pass `json:"passes,omitempty"`
+	Verdict string `json:"verdict"`
 }
 
 // Missing reports which required lenses this verdict does not cover, in the order
@@ -183,6 +188,9 @@ func Parse(data []byte) (Verdict, error) {
 	if parsed.Findings == nil {
 		parsed.Findings = []Finding{}
 	}
+	if parsed.Passes == nil {
+		parsed.Passes = []Pass{}
+	}
 	return parsed, nil
 }
 
@@ -194,6 +202,9 @@ func Render(v Verdict) []byte {
 	canonical := v
 	if canonical.Findings == nil {
 		canonical.Findings = []Finding{}
+	}
+	if canonical.Passes == nil {
+		canonical.Passes = []Pass{}
 	}
 
 	data, err := json.MarshalIndent(canonical, "", "  ")
@@ -244,6 +255,10 @@ func (v Verdict) Validate() error {
 				"the verdict says %q but the rule derives %q: a causal BLOCKER or CRITICAL finding requests changes, and without them there is no block",
 				declared, derived)
 		}
+	}
+
+	if err := validatePasses(v); err != nil {
+		return err
 	}
 
 	for i, finding := range v.Findings {

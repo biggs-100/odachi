@@ -15,6 +15,7 @@ package review
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,11 +78,15 @@ type Options struct {
 }
 
 // Files is the disk port: enough to read the brief, read an attached verdict,
-// check whether this tree has one, and write it.
+// check whether this tree has one, write it, and list veredicto names the store
+// already holds.
 type Files interface {
 	Exists(path string) (bool, error)
 	Read(path string) ([]byte, error)
 	Write(path string, data []byte) error
+	// List answers the file names one directory holds. An absent directory is
+	// an empty answer, not an error: a project with no store carries nothing.
+	List(dir string) ([]string, error)
 }
 
 // Git is the repository port: which tree is here, what changed since the base,
@@ -247,13 +252,23 @@ func (r *runner) promptText(cand candidate) (text, tree string, selected []strin
 		return "", "", nil, problem
 	}
 
+	// The store's potent rows are part of the question: a reviewer that knows
+	// which findings are already carried files no duplicates, and a review
+	// fresh from scratch would re-litigate bytes nobody changed.
+	known, cleanRows, _, problem := r.potentRows(tree)
+	if problem != nil {
+		return "", "", nil, problem
+	}
+
 	text = domain.Prompt(domain.PromptInput{
-		Brief:  cand.brief,
-		Tree:   tree,
-		Base:   cand.base,
-		Paths:  cand.paths,
-		Diff:   cand.diff,
-		Lenses: bodies,
+		Brief:       cand.brief,
+		Tree:        tree,
+		Base:        cand.base,
+		Paths:       cand.paths,
+		Diff:        cand.diff,
+		Lenses:      bodies,
+		Known:       known,
+		KnownPasses: cleanRows,
 	})
 	return text, tree, selected, nil
 }
@@ -475,6 +490,11 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 		return *problem
 	}
 
+	stamped, carried, notes, problem := r.inherit(stamped, tree)
+	if problem != nil {
+		return *problem
+	}
+
 	sealed, err := domain.Seal(stamped, tree, base, r.opts.Now)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
@@ -500,10 +520,15 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 	}
 
 	message := "verdict saved in " + rel + ": " + sealed.Verdict
+	lines := []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At, lenses(sealed.Lenses)}
+	if carried.findings+carried.passes > 0 {
+		lines = append(lines, fmt.Sprintf("carried from the store: %d potent finding(s) and %d potent pass(es) about unchanged bytes", carried.findings, carried.passes))
+	}
+	lines = append(lines, notes...)
 	return Result{
 		Code:    CodeOK,
 		Message: message,
-		Lines:   []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At, lenses(sealed.Lenses)},
+		Lines:   lines,
 		Verdict: &sealed,
 		Lenses:  sealed.Lenses,
 		Files:   []string{rel},
@@ -574,7 +599,9 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 }
 
 // stampLenses records the lenses this candidate required plus the ones the human
-// asked for, and whatever an attached verdict declared on its own.
+// asked for, and whatever an attached verdict declared on its own. When exactly
+// one lens answers this tree, every finding without a lens is its answer: with
+// one specialist running, the attribution is not in doubt.
 func (r *runner) stampLenses(verdict domain.Verdict) (domain.Verdict, *Result) {
 	extra, err := domain.ParseLenses(r.opts.Lens)
 	if err != nil {
@@ -591,6 +618,14 @@ func (r *runner) stampLenses(verdict domain.Verdict) (domain.Verdict, *Result) {
 
 	stamped := verdict
 	stamped.Lenses = domain.Add(domain.Add(domain.Lenses(domain.Classify(paths)), extra), verdict.Lenses)
+
+	if len(stamped.Lenses) == 1 {
+		for i, finding := range stamped.Findings {
+			if strings.TrimSpace(finding.Lens) == "" {
+				stamped.Findings[i].Lens = stamped.Lenses[0]
+			}
+		}
+	}
 	return stamped, nil
 }
 
@@ -606,14 +641,257 @@ func (r *runner) stampLenses(verdict domain.Verdict) (domain.Verdict, *Result) {
 func (r *runner) stampBlobs(verdict domain.Verdict) (domain.Verdict, *Result) {
 	stamped := verdict
 	for i, finding := range stamped.Findings {
-		blob, err := r.git.BlobHash(r.opts.Dir, finding.Path)
-		if err != nil {
-			problem := blocked(fmt.Sprintf("could not hash %s to stamp the finding's content receipt: %s; I wrote nothing", finding.Path, oneLine(err.Error())))
-			return domain.Verdict{}, &problem
+		blob, problem := r.stampBlob("the finding's content receipt", finding.Path)
+		if problem != nil {
+			return domain.Verdict{}, problem
 		}
 		stamped.Findings[i].Blob = blob
 	}
+
+	// A pass is stamped with the same rule as a finding: a row that is clean
+	// must name the bytes that were measured clean. Only the reviewer's fresh
+	// rows reach this function, so a stamping here can only strengthen the
+	// answer, never make it older than it is.
+	for i, clean := range stamped.Passes {
+		blob, problem := r.stampBlob("the pass's content receipt", clean.Path)
+		if problem != nil {
+			return domain.Verdict{}, problem
+		}
+		stamped.Passes[i].Blob = blob
+	}
 	return stamped, nil
+}
+
+// stampBlob is one content receipt measured. A path the port cannot hash gets
+// no receipt and no error: a file that is not in the worktree (the candidate
+// deleted it, or the reviewer invented the path) has no bytes to stamp. A real
+// git failure blocks the storing — receipts of that kind are guesses.
+func (r *runner) stampBlob(what, path string) (string, *Result) {
+	blob, err := r.git.BlobHash(r.opts.Dir, path)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not hash %s to stamp %s: %s; I wrote nothing", path, what, oneLine(err.Error())))
+		return "", &problem
+	}
+	return blob, nil
+}
+
+// carriedRows is how much the store lent to one verdict.
+type carriedRows struct {
+	findings int
+	passes   int
+}
+
+// inherit adds the rows the store already holds potent about these exact
+// bytes: findings that stood in their verdict and still describe what git
+// measures now, and passes about unchanged bytes. The reviewer's own answer
+// goes first, so a re-report of the same defect is filed once.
+//
+// Potency is per blob: a receipt for other bytes is a file that changed since
+// that verdict, and the answer is dead. A finding refuted with evidence dies
+// with its verdict — a refutation is index-based and answers about one
+// verdict's findings, so it never travels.
+func (r *runner) inherit(verdict domain.Verdict, tree string) (domain.Verdict, carriedRows, []string, *Result) {
+	knowFindings, knowPasses, notes, problem := r.potentRows(tree)
+	if problem != nil {
+		return domain.Verdict{}, carriedRows{}, nil, problem
+	}
+
+	carried := carriedRows{}
+	merged := verdict
+
+	seen := make(map[string]bool, len(verdict.Findings)+len(knowFindings))
+	for _, finding := range merged.Findings {
+		seen[findingKey(finding)] = true
+	}
+	for _, finding := range knowFindings {
+		if seen[findingKey(finding)] {
+			continue
+		}
+		seen[findingKey(finding)] = true
+		merged.Findings = append(merged.Findings, finding)
+		carried.findings++
+	}
+
+	clean := make(map[string]bool, len(verdict.Passes)+len(knowPasses))
+	for _, pass := range merged.Passes {
+		clean[passKey(pass)] = true
+	}
+	for _, pass := range knowPasses {
+		if clean[passKey(pass)] {
+			continue
+		}
+		clean[passKey(pass)] = true
+		merged.Passes = append(merged.Passes, pass)
+		carried.passes++
+	}
+	return merged, carried, notes, nil
+}
+
+// potentRows is what the store holds potent right now: rows of previous
+// verdicts whose receipts still describe what git measures, minus the findings
+// the refuter killed with evidence. `notes` reports neighbor files that could
+// not be read so neither — a broken neighbor never blocks a verdict, but
+// nobody is told it said nothing.
+func (r *runner) potentRows(verdictTree string) (findings []domain.Finding, passes []domain.Pass, notes []string, problem *Result) {
+	names, err := r.files.List(fullPath(r.opts.Dir, domain.Dir))
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not read the review store to weigh the potent rows: %s; I wrote nothing", oneLine(err.Error())))
+		return nil, nil, nil, &problem
+	}
+
+	own, err := domain.Path(verdictTree)
+	if err != nil {
+		problem := blocked(oneLine(err.Error()) + "; I wrote nothing")
+		return nil, nil, nil, &problem
+	}
+
+	blobs := make(map[string]string)
+	measure := func(path string) (string, error) {
+		if blob, ok := blobs[path]; ok {
+			return blob, nil
+		}
+		blob, err := r.git.BlobHash(r.opts.Dir, path)
+		if err != nil {
+			return "", err
+		}
+		blobs[path] = blob
+		return blob, nil
+	}
+
+	for _, name := range names {
+		tree, isVerdict := verdictName(name)
+		if !isVerdict || name == filepath.Base(own) {
+			continue
+		}
+
+		origin, note := r.storedNeighbor(tree)
+		if note != "" {
+			notes = append(notes, note)
+			continue
+		}
+
+		killed, note := r.refutedFindings(tree)
+		if note != "" {
+			notes = append(notes, note)
+			continue
+		}
+
+		for i, finding := range origin.Findings {
+			if killed[domain.FindingIDs(origin.Findings)[i]] {
+				continue
+			}
+			if !domain.IsLens(finding.Lens) || strings.TrimSpace(finding.Blob) == "" {
+				continue
+			}
+			blob, err := measure(finding.Path)
+			if err != nil {
+				problem := blocked(fmt.Sprintf("could not hash %s to weigh the store's potent rows: %s; I wrote nothing", finding.Path, oneLine(err.Error())))
+				return nil, nil, nil, &problem
+			}
+			if blob != "" && blob == strings.TrimSpace(finding.Blob) {
+				findings = append(findings, finding)
+			}
+		}
+
+		for _, pass := range origin.Passes {
+			if !domain.IsLens(pass.Lens) || strings.TrimSpace(pass.Blob) == "" {
+				continue
+			}
+			blob, err := measure(pass.Path)
+			if err != nil {
+				problem := blocked(fmt.Sprintf("could not hash %s to weigh the store's potent rows: %s; I wrote nothing", pass.Path, oneLine(err.Error())))
+				return nil, nil, nil, &problem
+			}
+			if blob != "" && blob == strings.TrimSpace(pass.Blob) {
+				passes = append(passes, pass)
+			}
+		}
+	}
+	return findings, passes, notes, nil
+}
+
+// verdictName is the tree a store file names, when the name has the verdict's
+// shape: one hash and the .json suffix. Refutations end differently and are
+// read through their own path; anything else is not ours.
+func verdictName(name string) (string, bool) {
+	if !strings.HasSuffix(name, ".json") || strings.HasSuffix(name, ".refuted.json") {
+		return "", false
+	}
+	tree := strings.TrimSuffix(name, ".json")
+	if !hexName(tree) {
+		return "", false
+	}
+	return tree, true
+}
+
+// hexName reports whether every letter of the name is a hex digit, which is
+// what makes a store name a tree and keeps a path from hiding inside one.
+func hexName(s string) bool {
+	if s == "" || len(s) > 64 {
+		return false
+	}
+	for _, r := range s {
+		switch {
+		case r >= '0' && r <= '9':
+		case r >= 'a' && r <= 'f':
+		case r >= 'A' && r <= 'F':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// storedNeighbor reads one store verdict. A file this tool cannot read is
+// reported, not skipped in silence: silence would be a lie about what the
+// store said.
+func (r *runner) storedNeighbor(tree string) (domain.Verdict, string) {
+	data, err := r.files.Read(fullPath(r.opts.Dir, domain.Dir+"/"+tree+".json"))
+	if err != nil {
+		return domain.Verdict{}, fmt.Sprintf("the stored verdict %s could not be read; its potent rows are not carried", tree+".json")
+	}
+	parsed, err := domain.Parse(data)
+	if err != nil {
+		return domain.Verdict{}, fmt.Sprintf("the stored verdict %s cannot be parsed; its potent rows are not carried", tree+".json")
+	}
+	return parsed, ""
+}
+
+// refutedFindings is the ids the refuter killed with evidence. A verdict with
+// no refutation has nothing killed, which is the normal case, not an error.
+func (r *runner) refutedFindings(tree string) (map[string]bool, string) {
+	rel, err := domain.RefutationPath(tree)
+	if err != nil {
+		return nil, fmt.Sprintf("the refutation path of %s cannot be built: %s", tree, oneLine(err.Error()))
+	}
+	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	if err != nil {
+		return nil, "" // no refutation stored: nothing was killed
+	}
+	parsed, err := domain.ParseRefutation(data)
+	if err != nil {
+		return nil, fmt.Sprintf("the refutation of %s cannot be read; its verdict's rows are not carried", tree)
+	}
+
+	killed := make(map[string]bool, len(parsed.Refutations))
+	for _, judgment := range parsed.Refutations {
+		if judgment.Verdict == domain.Refuted {
+			killed[judgment.ID] = true
+		}
+	}
+	return killed, ""
+}
+
+// findingKey is the identity a finding is filed under: the same file, bytes,
+// lens, place and severity is one defect, however many verdicts saw it.
+func findingKey(finding domain.Finding) string {
+	return finding.Path + "|" + finding.Blob + "|" + finding.Lens + "|" +
+		strconv.Itoa(finding.Line) + "|" + string(finding.Severity)
+}
+
+// passKey is the identity of one clean row: the same file, bytes and lens.
+func passKey(pass domain.Pass) string {
+	return pass.Path + "|" + pass.Blob + "|" + pass.Lens
 }
 
 // selectLenses is the selection for one candidate: what the evidence asks for,

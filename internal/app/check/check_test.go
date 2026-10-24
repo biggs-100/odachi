@@ -103,9 +103,20 @@ type fakeGit struct {
 	ignored    bool
 	ignoredErr error
 	ignoredAs  []string
+
+	// blobs answers BlobHash per path, and blobErr is git failing for real.
+	blobs   map[string]string
+	blobErr error
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
+
+func (g *fakeGit) BlobHash(root, path string) (string, error) {
+	if g.blobErr != nil {
+		return "", g.blobErr
+	}
+	return g.blobs[path], nil
+}
 
 func (g *fakeGit) ChangedPaths(root, base string) ([]string, error) {
 	g.bases = append(g.bases, base)

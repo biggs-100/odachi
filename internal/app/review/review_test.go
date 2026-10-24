@@ -99,6 +99,27 @@ func (f *fakeFiles) Backup(path string) (string, error) {
 	return path + ".bak-test", nil
 }
 
+// List answers the verdict-file names the store directory holds, sorted so two
+// runs see the same order. Only basenames: the app filters what it reads.
+func (f *fakeFiles) List(dir string) ([]string, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+
+	prefix := filepath.ToSlash(dir)
+	prefix = strings.TrimSuffix(prefix, "/") + "/"
+	var names []string
+	for path := range f.files {
+		slashed := filepath.ToSlash(path)
+		if !strings.HasPrefix(slashed, prefix) {
+			continue
+		}
+		names = append(names, filepath.Base(slashed))
+	}
+	slices.Sort(names)
+	return names, nil
+}
+
 // written is every write as a project-relative path with forward slashes, in the
 // order the run made them.
 func (f *fakeFiles) written() []string {
@@ -436,6 +457,228 @@ func TestAPathGitCannotHashCarriesNoBlob(t *testing.T) {
 		t.Errorf("blob = %q, want none: a file that is not here is nobody's content receipt", got)
 	}
 }
+
+// potentStore is a project whose store already holds one verdict for a previous
+// tree, with a potent finding and a potent pass about a.go. The bytes a.go has
+// now are the blob the git port answers, so both rows describe content this
+// candidate does not change.
+func potentStore(t *testing.T) *project {
+	t.Helper()
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	prev := domainreview.Verdict{
+		Reviewer: "claude",
+		Verdict:  domainreview.Approved,
+		Findings: []domainreview.Finding{
+			{Path: "a.go", Line: 3, Severity: domainreview.Warning, Causal: true, Why: "pierde el turno", Blob: gitBlob, Lens: "reliability"},
+		},
+		Passes: []domainreview.Pass{
+			{Path: "a.go", Blob: gitBlob, Lens: "readability"},
+		},
+	}
+	sealed, err := domainreview.Seal(prev, otherTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the previous verdict: %v", err)
+	}
+	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
+	return p
+}
+
+// TestTheStoreLendsItsPotentRows: findings that stand on unchanged bytes and
+// passes about unchanged bytes travel into the new verdict. The next candidate
+// re-reviews only what changed; it never re-litigates rows whose receipts still
+// describe the exact bytes on disk.
+func TestTheStoreLendsItsPotentRows(t *testing.T) {
+	p := potentStore(t)
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "claude -p"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, ok := p.files.files[storePath(currentTree)]
+	if !ok {
+		t.Fatalf("no verdict stored at .odachi/reviews/%s.json", currentTree)
+	}
+	parsed, err := domainreview.Parse(stored)
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if len(parsed.Findings) != 1 || parsed.Findings[0].Line != 3 || parsed.Findings[0].Blob != gitBlob {
+		t.Errorf("findings = %+v, want the potent one carried with its receipt", parsed.Findings)
+	}
+	if len(parsed.Passes) != 1 || parsed.Passes[0].Lens != "readability" || parsed.Passes[0].Blob != gitBlob {
+		t.Errorf("passes = %+v, want the potent clean row carried", parsed.Passes)
+	}
+	if !slices.ContainsFunc(result.Lines, func(line string) bool {
+		return strings.Contains(line, "carried from the store")
+	}) {
+		t.Errorf("lines %v do not say what the verdict carried", result.Lines)
+	}
+}
+
+// TestARefutedFindingDiesWithItsVerdict: the inheritance is survival-biased. A
+// finding the refuter killed with evidence does not travel — the refutation is
+// index-based and belongs to its own verdict's findings.
+func TestARefutedFindingDiesWithItsVerdict(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	blocking := domainreview.Verdict{
+		Reviewer: "claude",
+		Verdict:  domainreview.ChangesRequested,
+		Findings: []domainreview.Finding{
+			{Path: "a.go", Line: 3, Severity: domainreview.Critical, Causal: true, Why: "pierde el turno", Blob: gitBlob, Lens: "reliability"},
+		},
+	}
+	sealed, err := domainreview.Seal(blocking, otherTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the previous verdict: %v", err)
+	}
+	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
+
+	answer := domainreview.Refutation{
+		Refuter:     "refuter",
+		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "el turno nunca se pierde, la cita lo prueba"}},
+	}
+	sealedRefutation, err := domainreview.SealRefutation(answer, blocking.Findings, otherTree, now)
+	if err != nil {
+		t.Fatalf("sealing the refutation: %v", err)
+	}
+	if err != nil {
+		t.Fatalf("sealing the refutation: %v", err)
+	}
+	refRel, err := domainreview.RefutationPath(otherTree)
+	if err != nil {
+		t.Fatalf("the refutation path: %v", err)
+	}
+	p.files.files[fullPath(refRel)] = domainreview.RenderRefutation(sealedRefutation)
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "claude -p"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if len(parsed.Findings) != 0 {
+		t.Errorf("findings = %+v, want none: a refuted finding never travels", parsed.Findings)
+	}
+}
+
+// TestStaleBytesDoNotTravel: a receipt that describes other bytes is dead by
+// definition, so the next verdict stays free of it.
+func TestStaleBytesDoNotTravel(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	stale := domainreview.Pass{
+		Path: "a.go", Blob: "7d3c2b1a9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b", Lens: "reliability",
+	}
+	prev := domainreview.Verdict{
+		Reviewer: "claude",
+		Verdict:  domainreview.Approved,
+		Findings: []domainreview.Finding{
+			{Path: "a.go", Line: 3, Severity: domainreview.Warning, Causal: true, Why: "pierde el turno", Blob: "7d3c2b1a9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b", Lens: "reliability"},
+		},
+		Passes: []domainreview.Pass{stale},
+	}
+	sealed, err := domainreview.Seal(prev, otherTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the previous verdict: %v", err)
+	}
+	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
+	p.shell.output = `{"findings":[]}`
+
+	if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if len(parsed.Findings) != 0 || len(parsed.Passes) != 0 {
+		t.Errorf("findings = %d, passes = %d, want none: stale receipts never travel", len(parsed.Findings), len(parsed.Passes))
+	}
+}
+
+// TestThePromptNamesWhatTheStoreCarries: a re-reviewer must know which rows are
+// already held, or it files the same defect twice. The printed prompt carries
+// them; a store with nothing potent prints the same prompt as always.
+func TestThePromptNamesWhatTheStoreCarries(t *testing.T) {
+	p := potentStore(t)
+
+	result := p.run(review.Options{})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	for _, want := range []string{"the store already carries", "a.go:3", "Do not re-report"} {
+		if !strings.Contains(result.Prompt, want) {
+			t.Errorf("the prompt does not name what is carried: missing %q", want)
+		}
+	}
+
+	fresh := newProject().run(review.Options{})
+	if strings.Contains(fresh.Prompt, "the store already carries") {
+		t.Errorf("an empty store must not name carried rows: %s", fresh.Prompt)
+	}
+}
+
+// TestARepeatedFindingIsFiledOnce: the reviewer may re-report a finding the
+// store already holds potent; the verdict keeps one copy — the fresh one, right
+// after the stamps.
+func TestARepeatedFindingIsFiledOnce(t *testing.T) {
+	p := potentStore(t)
+	p.shell.output = `{"findings":[{"path":"a.go","line":3,"severity":"WARNING","lens":"reliability","causal":true,"why":"pierde el turno"}]}`
+
+	if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if len(parsed.Findings) != 1 {
+		t.Errorf("findings = %d, want 1: the same (path, blob, lens, line, severity) is one defect", len(parsed.Findings))
+	}
+}
+
+// TestWhenOneLensRunsItOwnsEveryFinding: with exactly one lens answering, a
+// finding's author is not in doubt — the reviewer does not have to name what
+// only one specialist could have found.
+func TestWhenOneLensRunsItOwnsEveryFinding(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.files.files[fullPath("veredicto.json")] = []byte(`{
+  "reviewer": "agente",
+  "findings": [
+    {
+      "path": "a.go",
+      "line": 1,
+      "severity": "WARNING",
+      "causal": true,
+      "why": "defecto de ejemplo"
+    }
+  ]
+}`)
+
+	if result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if got := parsed.Findings[0].Lens; got != "reliability" {
+		t.Errorf("lens = %q, want reliability: one lens ran, and the finding is its answer", got)
+	}
+}
+
 
 // TestAHashFailureBlocksTheStoring: when git cannot tell why, the store keeps
 // quiet rather than filing a verdict whose receipts are guesses.

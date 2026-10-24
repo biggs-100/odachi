@@ -249,8 +249,10 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 	}
 
 	// Storing a verdict creates the store's ignore file, so the tree moves once
-	// and the proof has to be retaken. The message says exactly that.
-	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","findings":[]}`)
+	// and the proof has to be retaken. The message says exactly that. The verdict
+	// says what it looked at: one pass row for the changed file, whose content
+	// receipt the tool stamps.
+	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"},{"path":"veredicto.json","lens":"reliability"}]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", "veredicto.json"}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
@@ -258,7 +260,7 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 		t.Fatalf("check --run after the store appeared: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 
-	// 3. An approved verdict for this tree lets the gate continue.
+	// 3. An approved verdict with a current pass row lets the gate continue.
 	code, out, errOut := runDir(t, dir, []string{"check", "--require-review"}, "")
 	if code != 0 {
 		t.Fatalf("check --require-review with an approved verdict: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
