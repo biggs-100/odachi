@@ -237,7 +237,7 @@ func (r *runner) prompt() Result {
 // prepared first, exactly as for the printed form: the verdict lives inside the
 // candidate, so the directory has to be ignored before the tree is hashed.
 func (r *runner) promptText(cand candidate) (text, tree string, selected []string, problem *Result) {
-	selected, problem = r.selectLenses(cand.paths)
+	selected, problem = r.selectLenses(cand.paths, cand.diff)
 	if problem != nil {
 		return "", "", nil, problem
 	}
@@ -481,7 +481,16 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 		return *problem
 	}
 
-	stamped, problem := r.stampLenses(parsed)
+	// The floor is one reading of the candidate: it fixes the class this verdict
+	// is asked under, the audit set earned blocking judges, and the rows the
+	// reviewer's own findings may cite. Measuring it once keeps all three
+	// answers from drifting apart.
+	floor, problem := r.floor()
+	if problem != nil {
+		return *problem
+	}
+
+	stamped, problem := r.stampLenses(parsed, floor.Class)
 	if problem != nil {
 		return *problem
 	}
@@ -491,13 +500,6 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 		return *problem
 	}
 
-	// The floor is applied to the reviewer's own findings, before inheritance:
-	// an inherited finding was earned in its own verdict, against its own
-	// candidate, and this tree's audit set is not the one that judges it.
-	floor, problem := r.floor()
-	if problem != nil {
-		return *problem
-	}
 	var downgraded int
 	stamped.Findings, downgraded = domain.Earned(stamped.Findings, floor)
 
@@ -615,26 +617,20 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 	}
 }
 
-// stampLenses records the lenses this candidate required plus the ones the human
-// asked for, and whatever an attached verdict declared on its own. When exactly
-// one lens answers this tree, every finding without a lens is its answer: with
-// one specialist running, the attribution is not in doubt.
-func (r *runner) stampLenses(verdict domain.Verdict) (domain.Verdict, *Result) {
+// stampLenses records the lenses this candidate's class asks for, plus the ones
+// the human asked for, and whatever an attached verdict declared on its own. The
+// class comes from the floor, the same reading the prompt used. When exactly one
+// lens answers this tree, every finding without a lens is its answer: with one
+// specialist running, the attribution is not in doubt.
+func (r *runner) stampLenses(verdict domain.Verdict, class domain.Tier) (domain.Verdict, *Result) {
 	extra, err := domain.ParseLenses(r.opts.Lens)
 	if err != nil {
 		problem := blocked(oneLine(err.Error()) + "; I wrote nothing")
 		return domain.Verdict{}, &problem
 	}
 
-	// A tree that cannot be compared yet still has its declared lenses: the
-	// evidence list is empty, not fatal.
-	paths, _, pathErr := r.changedPaths()
-	if pathErr != nil {
-		paths = nil
-	}
-
 	stamped := verdict
-	stamped.Lenses = domain.Add(domain.Add(domain.Lenses(domain.Classify(paths)), extra), verdict.Lenses)
+	stamped.Lenses = domain.Add(domain.Add(domain.Lenses(class), extra), verdict.Lenses)
 
 	if len(stamped.Lenses) == 1 {
 		for i, finding := range stamped.Findings {
@@ -945,30 +941,38 @@ func passKey(pass domain.Pass) string {
 }
 
 // selectLenses is the selection for one candidate: what the evidence asks for,
-// plus what the flags asked for. Extra lenses add, never remove.
-func (r *runner) selectLenses(paths []string) ([]string, *Result) {
+// the path class raised by the diff's content, plus what the flags asked for.
+// Extra lenses add, never remove.
+func (r *runner) selectLenses(paths []string, diff string) ([]string, *Result) {
 	extra, err := domain.ParseLenses(r.opts.Lens)
 	if err != nil {
 		problem := blocked(oneLine(err.Error()) + "; run odachi review -h to see the flags")
 		return nil, &problem
 	}
-	return domain.Add(domain.Lenses(domain.Classify(paths)), extra), nil
+	return domain.Add(domain.Lenses(domain.Assess(paths, diff)), extra), nil
 }
 
 // requiredLenses is the selection for a tree read without a candidate: `--show`
 // must still answer when git cannot compare, so a failure to read the changed
-// paths is not a block here.
+// paths or the diff is not a block here — the path class answers alone.
 func (r *runner) requiredLenses() []string {
 	extra, err := domain.ParseLenses(r.opts.Lens)
 	if err != nil {
 		extra = nil
 	}
 
-	paths, _, pathErr := r.changedPaths()
+	paths, base, pathErr := r.changedPaths()
 	if pathErr != nil {
 		paths = nil
 	}
-	return domain.Add(domain.Lenses(domain.Classify(paths)), extra)
+
+	diff := ""
+	if len(paths) > 0 {
+		if text, err := r.git.Diff(r.opts.Dir, base); err == nil {
+			diff = text
+		}
+	}
+	return domain.Add(domain.Lenses(domain.Assess(paths, diff)), extra)
 }
 
 // lensBodies loads the prompts of the selected lenses through the port.

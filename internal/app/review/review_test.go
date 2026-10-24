@@ -481,6 +481,46 @@ func TestTheStoreDowngradesTheUncitedFinding(t *testing.T) {
 	}
 }
 
+// concurrentDiff is a real-shaped diff whose added line spawns concurrency:
+// the content the path cannot see, and the reason this feature exists.
+const concurrentDiff = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -1 +1,2 @@\n-viejo\n+nuevo\n+go func() { sync.Mutex{} }()\n"
+
+// TestTheSelectionReadsTheDiffContent: ordinary code whose added lines spawn a
+// goroutine asks for the four lenses, not just the path class's one.
+func TestTheSelectionReadsTheDiffContent(t *testing.T) {
+	p := newProject()
+	p.git.diff = concurrentDiff
+
+	result := p.run(review.Options{})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	want := []string{"risk", "readability", "reliability", "resilience"}
+	if !slices.Equal(result.Lenses, want) {
+		t.Errorf("lenses = %v, want the four: the added goroutine raises the class", result.Lenses)
+	}
+}
+
+// TestTheStoredVerdictKeepsTheRaisedClass: the verdict records the class it was
+// asked under, computed from the same assessment the prompt used.
+func TestTheStoredVerdictKeepsTheRaisedClass(t *testing.T) {
+	p := newProject()
+	p.git.diff = concurrentDiff
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","findings":[]}`)
+
+	if result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if len(parsed.Lenses) != 4 {
+		t.Errorf("lenses = %v, want the four: the stored verdict answers the raised class", parsed.Lenses)
+	}
+}
+
 // TestAPathGitCannotHashCarriesNoBlob: a file that is not in the worktree
 // (deleted by the candidate, or invented by the reviewer) gets no receipt. The
 // stamping is not a git failure, so the verdict is still stored — and the gate
