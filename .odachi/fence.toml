@@ -1,24 +1,29 @@
 [[rule]]
-not   = "the project-level .opencode/opencode.json"
-paths = ["the-project-level-opencode-opencode-json*"]
+not   = "the project half of init: AGENTS.md, hook, .gitignore and project skills"
+paths = ["the-project-half-of-init-agents-md-hook-gitignore-and-project-skills*"]
 deps  = []
 
 [[rule]]
-not   = "any OpenCode key other than default_agent"
-paths = ["any-opencode-key-other-than-default-agent*"]
+not   = "installing a door for a client that is not on the machine"
+paths = ["installing-a-door-for-a-client-that-is-not-on-the-machine*"]
 deps  = []
 
 [[rule]]
-not   = "overwriting an existing default: no force flag in the first version"
-paths = ["overwriting-an-existing-default-no-force-flag-in-the-first-version*"]
+not   = "an interactive installer"
+paths = ["an-interactive-installer*"]
 deps  = []
 
 [[rule]]
-not   = "re-encoding the file or dropping comments"
-paths = ["re-encoding-the-file-or-dropping-comments*"]
+not   = "changing the interview or the gates"
+paths = ["changing-the-interview-or-the-gates*"]
 deps  = []
 
 [[rule]]
 not   = "a new dependency"
 paths = ["a-new-dependency*"]
+deps  = []
+
+[[rule]]
+not   = "the release: a separate decision"
+paths = ["the-release-a-separate-decision*"]
 deps  = []
