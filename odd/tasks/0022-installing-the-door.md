@@ -11,9 +11,9 @@ R1 · "installing the door with init --global also makes odachi the default agen
 - a malformed or ambiguous config is refused with the file named, and nothing is written
 
 ## Steps
-- [ ] T1 · the config edit adds default_agent without rewriting comments, order or CRLF   R1
-- [ ] T2 · init --global writes the default through the editor and reports what it found   R1
-- [ ] T3 · doctor names a door that is not the default, and the docs tell the whole story   R1
+- [x] T1 · the config edit adds default_agent without rewriting comments, order or CRLF   R1 · a350ea1
+- [x] T2 · init --global writes the default through the editor and reports what it found   R1 · f285428
+- [x] T3 · doctor names a door that is not the default, and the docs tell the whole story   R1 · 0066e47
 
 ## History
 L1 · "installing the door with init --global also makes odachi the default agent in OpenCode"
