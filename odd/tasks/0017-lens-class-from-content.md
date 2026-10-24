@@ -13,7 +13,7 @@ R1 · "the deterministic floor may raise the lens class from the diff's content 
 - [x] T1 · Assess: the floor raises the class from added lines (concurrency, secrets), never lowers it   R1 · dc623c7
 - [x] T2 · review selects and stamps with Assess, and the prompt's class is the assessed one   R1 · c5fab7b
 - [x] T3 · check demands the same lenses: Diff in the port and content-aware Need per file   R1 · 44290f8
-- [ ] T4 · ADR 0017, CHANGELOG, impact map and dogfood of the raised class   R1
+- [x] T4 · ADR 0017, CHANGELOG, impact map and dogfood of the raised class   R1 · 5ed914c
 
 ## History
 L1 · "the deterministic floor may raise the lens class from the diff's content — never lower it — and review and check ask the same lenses"
