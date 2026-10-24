@@ -75,8 +75,10 @@ A proof is a green run: `check --run` writes `proof/NNNN-<slug>.txt` only when
 the command exits 0. A failed run leaves `proof/NNNN-<slug>.failed.txt` instead,
 with the tree, the command, the exit code or the timeout, and the whole output,
 because the one-line message the gate prints is not enough to diagnose a test.
-The suffix is the difference: the failed file is evidence, not proof, and the
-gate never reads it as one. In CI it rides along with `proof/`, which the
+Its first line is `# failed <tree>`, which no proof starts with, so the gate
+refuses it by construction and `--proof` names it instead of reading it. A green
+run removes a stale failed file: `proof/` never shows a failure beside the proof
+of the tree that passed. In CI the file rides along with `proof/`, which the
 workflow uploads even when the gate fails.
 
 `init` takes care of that for you, and of two things that are not artifacts: it

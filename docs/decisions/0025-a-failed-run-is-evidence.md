@@ -18,12 +18,17 @@ assertion and the build error, not the last line of them.
 
 ## Decision
 
-- **A failed run writes `proof/NNNN-<slug>.failed.txt`.** Same tree and command
-  headers, an optional fence ref, then `# exit <code>` or `# timed out`, then the
-  output verbatim, stdout and stderr together.
-- **The name and the third line say what it is.** The green proof keeps its name,
-  its format and its bytes; the parser still reads only `<slug>.txt`, so nothing
-  can mistake a failure for a proof.
+- **A failed run writes `proof/NNNN-<slug>.failed.txt`.** A first line
+  `# failed <tree>` that no proof starts with, then the command, an optional
+  fence ref, then `# exit <code>` or `# timed out`, then the output verbatim,
+  stdout and stderr together.
+- **The name and the first line say what it is.** The green proof keeps its name,
+  its format and its bytes; `Parse` refuses a file that does not start with
+  `# tree`, so nothing can read a failure as a proof — not the gate, not
+  `--proof`. `--proof` names the case instead of reporting a missing header.
+- **A green run removes the stale failed file.** `proof/` must never show a
+  failure beside the proof of the tree that just passed. Best effort: the green
+  proof is the truth either way.
 - **The gate prints the last line and the path.** The message stays one line (a
   terminal is one line), the path follows it, and `next:` stays last. The exit
   code is unchanged: the verdict is the gate's, not the command's.
@@ -40,8 +45,8 @@ assertion and the build error, not the last line of them.
 - **Truncate or diff the output.** A truncated failure hides the assertion; a
   diff is a second format to read and to keep.
 - **Write the failure under the proof name.** The proof would stop meaning "a
-  green run", and the gate would have to learn to tell two things apart that
-  today cannot be confused.
+  green run", and the gate would have to learn to tell two things apart that a
+  first line now tells apart by construction.
 - **Exit with the command's code.** The gate's exit codes are the contract with
   the hook and CI (0 ready, 1 act, 2 human); a test's code is not one of them.
 
@@ -49,9 +54,11 @@ assertion and the build error, not the last line of them.
 
 - A red CI job now has an artifact with the whole failure; the workflow already
   uploaded `proof/`, so the only change is that there is something to upload.
-- `proof/` holds at most one failed file per failed run: the next run of the same
-  feature overwrites the name, and the file carries the tree, so a stale one is
-  never mistaken for the current failure by the tool.
+- A stale failed file does not survive a green run of the same feature, and if it
+  is handed to `--proof` it is refused by name instead of being read.
+- `proof/` holds at most one failed file per feature: the next failed run of the
+  same feature overwrites the name, and the file carries the tree, so an older
+  one is never mistaken for the current failure by the tool.
 - The green proof bytes are untouched, and a green run writes no failed file.
 - The local terminal still shows one line plus the path; a human who wants the
   detail opens the file, and an agent can read it without rerunning the command.
