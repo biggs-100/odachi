@@ -1,0 +1,45 @@
+name: Feature request
+description: Propose a change odachi should make.
+title: "feature: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The brief and the fence belong to the maintainer: a feature is discussed
+        here first, and the brief is written before the code. A proposal that
+        says what must exist, and what is *not* included, is the one that gets
+        built.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What a person cannot do today, and what it costs them. Start here, not with the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What must exist when it is done
+      description: One outcome a person can see. "It works" is not one.
+    validations:
+      required: true
+  - type: textarea
+    id: excluded
+    attributes:
+      label: What is not included in the first version
+      description: The non-goals. A feature with no fence is a feature that never ships.
+    validations:
+      required: true
+  - type: textarea
+    id: who
+    attributes:
+      label: Who needs it
+      description: A solo project, a team, a public repository, CI. The same feature is sized differently for each.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried or rejected
+    validations:
+      required: false

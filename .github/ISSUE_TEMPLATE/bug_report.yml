@@ -1,0 +1,51 @@
+name: Bug report
+description: "Something odachi did wrong: a command, a gate, an artifact."
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Do not paste secrets, tokens or private project
+        content: this repository and its issues are public. A vulnerability goes
+        to [SECURITY.md](https://github.com/biggs-100/odachi/blob/main/SECURITY.md),
+        never to an issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The exact command, the output, and what you expected instead.
+      placeholder: |
+        $ odachi check --run "go test ./..."
+        odachi: ...
+        expected: ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: odachi --version
+      placeholder: odachi 0.11.9
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: odachi doctor
+      description: Paste the output. It is read-only and prints no secrets.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS, Go version and agent
+      placeholder: Windows 11, go1.26.1, OpenCode
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The smallest project and the fewest commands that show it.
+    validations:
+      required: false
