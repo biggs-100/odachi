@@ -1,21 +1,24 @@
-# fast-proof
+# the-reviewer-runs
 
 ## What must exist
-- the suite and the proof loop stop being the slowest part of a commit
+- the reviewer runs with the model this session uses, by default, and the human can name another one
 
 ## Done when
-- go test ./cmd/odachi finishes under 25 seconds on this machine (it was ~70)
-- the full suite stays green, race-clean on ./internal/..., and gofmt/vet clean
-- the workflow gets the proof by running the suite once per tree, not twice
-- go test ./... and odachi check are green
+- {model} in review --exec is replaced with the session's provider/model#variant without the human typing it
+- --model overrides the resolved model for one run and is used exactly as given
+- a command without {model} runs byte-identical to today
+- when {model} is asked for and nothing resolves, review stops naming --model; it never guesses
+- resolution order: --model, then ODACHI_MODEL, then the OpenCode session; no database or private file is read
 
 ## Not included (first version)
-- skipping tests or using -short in the proof
-- caching a proof across different trees or different commands
-- changing the gates or the proof format
+- reading OpenCode's database or log files: only its CLI
+- a fallback model when detection fails
+- changing the default where the agent itself reviews the printed prompt
+- persisting the model in a config file: the override is one run or an env var
+- new dependencies
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
-- Wants to learn: where the time in a test suite actually goes.
+- Wants to learn: how a child tool learns its parent's context without owning the parent.

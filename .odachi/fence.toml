@@ -1,14 +1,24 @@
 [[rule]]
-not   = "skipping tests or using -short in the proof"
-paths = ["skipping-tests-or-using-short-in-the-proof*"]
+not   = "reading OpenCode's database or log files: only its CLI"
+paths = ["reading-opencode-s-database-or-log-files-only-its-cli*"]
 deps  = []
 
 [[rule]]
-not   = "caching a proof across different trees or different commands"
-paths = ["caching-a-proof-across-different-trees-or-different-commands*"]
+not   = "a fallback model when detection fails"
+paths = ["a-fallback-model-when-detection-fails*"]
 deps  = []
 
 [[rule]]
-not   = "changing the gates or the proof format"
-paths = ["changing-the-gates-or-the-proof-format*"]
+not   = "changing the default where the agent itself reviews the printed prompt"
+paths = ["changing-the-default-where-the-agent-itself-reviews-the-printed-prompt*"]
+deps  = []
+
+[[rule]]
+not   = "persisting the model in a config file: the override is one run or an env var"
+paths = ["persisting-the-model-in-a-config-file-the-override-is-one-run-or-an-env-var*"]
+deps  = []
+
+[[rule]]
+not   = "new dependencies"
+paths = ["new-dependencies*"]
 deps  = []
