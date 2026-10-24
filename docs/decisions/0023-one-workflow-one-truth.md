@@ -32,9 +32,14 @@ itself, so the "base" was the candidate.
 - **`--base` goes with `--fence-from`.** `--fence-from` says where the policy is
   read; `--base` says what the policy is applied to. The gate passes both, so the
   fence meets the paths that differ from the base.
-- **The proof is kept for a green run.** odachi writes the proof only when the
-  command exits 0, so a red job has no artifact and is read from the log. The
-  workflow says that instead of claiming an upload that cannot happen.
+- **The proof follows the command, not the verdict.** odachi writes the proof when
+  the `--run` command exits 0. A failing command leaves no proof, and the gate
+  reports only its last line; when the gate blocks afterwards (the fence, an open
+  question), the proof of that green run is uploaded anyway, because it is real
+  output.
+- **On `workflow_dispatch` the base is `origin/main`.** A branch is compared to
+  `main`; a dispatch on `main` itself has nothing to compare, and the fence is
+  applied to an empty set, which is the honest answer for a tree that is main.
 - **The static checks are jobs of the same workflow.** `gofmt`, `go vet`,
   `go test -race ./internal/...` and `goreleaser check` run once on Linux. The
   race detector runs the same tests with a different instrument: it is a second
@@ -61,9 +66,11 @@ itself, so the "base" was the candidate.
   the duplicate ubuntu run pays for the two extra gate builds.
 - A direct push to `main` is now compared against the previous tip, so the push
   path meets the fence before the ruleset exists.
-- A red run leaves no proof artifact. If an artifact on red is wanted later,
-  odachi must write the proof before exiting nonzero; that is a product change,
-  not a workflow change.
+- A gate that fails because the command failed leaves no proof and only its last
+  line; a gate that blocks on the fence after a green run still uploads the proof,
+  and the two cases stay distinguishable because the artifact is output, not a
+  verdict. Showing the command's whole output on red is a product change, left
+  for a later feature: today a red Windows job says "FAIL" and not much else.
 - The gate is still advisory until the repository ruleset marks it required, and
   a pull request can edit the workflow file it runs under. `CODEOWNERS` asks for
   an owner review of `.github/` and `.odachi/`; the ruleset is the next feature.

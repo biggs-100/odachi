@@ -301,12 +301,13 @@ push, because `origin/main` after checkout is the pushed commit itself. `gofmt`,
 workflow, so one file defines green. No second workflow runs the suite; a tag
 still runs it in `release.yml` before publishing.
 
-A green run leaves its proof as an artifact; a red one is read from the log,
-because odachi writes the proof only when the command exits 0. The workflow file
-itself is not trusted: `.github/CODEOWNERS` asks for an owner review of
-`.github/` and `.odachi/`, and the repository ruleset can require that review.
-Mark the gate as a required check when the project is ready to stop pushing to
-`main` directly.
+A proof is written when the run exits 0; a failing command leaves none, and the
+gate reports only its last line, so a red command is diagnosed from that line.
+When the gate blocks for another reason -the fence, an open question- the proof
+of that green run is still uploaded. The workflow file itself
+is not trusted: `.github/CODEOWNERS` asks for an owner review of `.github/` and
+`.odachi/`, and the repository ruleset can require that review. Mark the gate as
+a required check when the project is ready to stop pushing to `main` directly.
 
 `ODACHI_NO_SETUP=1` makes the installers leave only the binary — no home door, no
 default agent — which is what a shared runner wants. A missing file at a valid

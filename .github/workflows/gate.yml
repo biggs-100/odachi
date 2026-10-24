@@ -9,8 +9,10 @@ name: gate
 # origin/main after checkout is the pushed commit itself, which compares to
 # nothing. The fence is then applied to the paths that differ from that base.
 #
-# A green run leaves its proof as an artifact; a red one is read from the log,
-# because odachi writes the proof only when the command exits 0.
+# A proof is written when the --run command exits 0. A failing command leaves
+# none and the gate reports only its last line, so a red command is diagnosed
+# from that line. When the gate blocks for another reason (the fence, an open
+# question) the proof of that green run is still uploaded.
 #
 # The gate binary is trusted. The workflow file is not: it comes from the change.
 # That is why `.github/` has a CODEOWNERS entry and the repository ruleset must
@@ -82,6 +84,9 @@ jobs:
           "$ODACHI_GATE" check --fence-from "$BASE" --base "$BASE" --run "go test ./..." --timeout 900
 
       - name: keep the proof
+        # always: a green run still has a proof to keep when the gate blocks on
+        # the fence; when the command itself failed there is no proof, only the
+        # last line the gate reports.
         if: always()
         uses: actions/upload-artifact@v4
         with:
