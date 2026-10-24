@@ -18,10 +18,14 @@ $name = ($body | ConvertFrom-Json).name
 
 $repo = (gh repo view --json nameWithOwner -q .nameWithOwner).Trim()
 $filter = ".[] | select(.name == `"$name`") | .id"
-$id = (gh api "repos/$repo/rulesets" --jq $filter).Trim()
+
+# gh prints nothing when the ruleset does not exist yet: that is the create path,
+# not an error.
+$found = gh api "repos/$repo/rulesets" --jq $filter
 if ($LASTEXITCODE -ne 0) {
     throw "could not list the rulesets of $repo; check gh auth status"
 }
+$id = if ($found) { $found.Trim() } else { '' }
 
 # gh reads --input as bytes; a BOM on Windows would make the API reject the
 # document, so the temp file is written without one.
@@ -31,14 +35,19 @@ try {
 
     if ($id) {
         gh api -X PUT "repos/$repo/rulesets/$id" --input $tmp | Out-Null
-        Write-Output "updated the ruleset `"$name`" on $repo"
+        $verb = 'updated'
     } else {
-        $id = (gh api -X POST "repos/$repo/rulesets" --input $tmp --jq .id).Trim()
-        Write-Output "created the ruleset `"$name`" on $repo"
+        $created = gh api -X POST "repos/$repo/rulesets" --input $tmp --jq .id
+        $verb = 'created'
+        if ($LASTEXITCODE -eq 0) { $id = $created.Trim() }
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "the API refused the ruleset; the message above says why"
     }
 } finally {
     Remove-Item $tmp -ErrorAction SilentlyContinue
 }
+Write-Output "$verb the ruleset `"$name`" on $repo"
 
 $state = gh api "repos/$repo/rulesets/$id" | ConvertFrom-Json
 $rules = ($state.rules | ForEach-Object { $_.type }) -join ', '
