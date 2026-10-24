@@ -269,6 +269,7 @@ func (r *runner) promptText(cand candidate) (text, tree string, selected []strin
 		Lenses:      bodies,
 		Known:       known,
 		KnownPasses: cleanRows,
+		Floor:       domain.FloorFor(cand.paths, cand.diff),
 	})
 	return text, tree, selected, nil
 }
@@ -490,6 +491,16 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 		return *problem
 	}
 
+	// The floor is applied to the reviewer's own findings, before inheritance:
+	// an inherited finding was earned in its own verdict, against its own
+	// candidate, and this tree's audit set is not the one that judges it.
+	floor, problem := r.floor()
+	if problem != nil {
+		return *problem
+	}
+	var downgraded int
+	stamped.Findings, downgraded = domain.Earned(stamped.Findings, floor)
+
 	stamped, carried, notes, problem := r.inherit(stamped, tree)
 	if problem != nil {
 		return *problem
@@ -521,6 +532,9 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 
 	message := "verdict saved in " + rel + ": " + sealed.Verdict
 	lines := []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At, lenses(sealed.Lenses)}
+	if downgraded > 0 {
+		lines = append(lines, fmt.Sprintf("earned blocking: %d finding(s) downgraded for citing outside the candidate", downgraded))
+	}
 	if carried.findings+carried.passes > 0 {
 		lines = append(lines, fmt.Sprintf("carried from the store: %d potent finding(s) and %d potent pass(es) about unchanged bytes", carried.findings, carried.passes))
 	}
@@ -1054,6 +1068,27 @@ func (r *runner) candidate() (candidate, *Result) {
 	}
 
 	return candidate{brief: briefText, base: base, paths: paths, diff: diff}, nil
+}
+
+// floor is the deterministic audit set of the candidate being stored: which
+// lines the reviewer's own findings may cite, and which categories they touch.
+// It fails closed — without the diff there is no citation rule, and a verdict
+// whose blocking claims nobody can check is worse than no verdict.
+func (r *runner) floor() (domain.Floor, *Result) {
+	paths, base, err := r.changedPaths()
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not read what changed against %q to measure the floor: %s; fix --base %q or drop the flag to compare against HEAD",
+			r.base(), oneLine(err.Error()), r.base()))
+		return domain.Floor{}, &problem
+	}
+
+	diff, err := r.git.Diff(r.opts.Dir, base)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not read the diff against %q to measure the floor: %s; fix --base %q or drop the flag to compare against HEAD",
+			base, oneLine(err.Error()), r.base()))
+		return domain.Floor{}, &problem
+	}
+	return domain.FloorFor(paths, diff), nil
 }
 
 // brief reads brief.md. A missing brief is a state, not an error: the review is

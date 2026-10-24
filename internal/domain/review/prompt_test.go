@@ -111,6 +111,29 @@ func TestPromptSaysTheVerdictIsDerived(t *testing.T) {
 	}
 }
 
+// TestPromptShowsTheFloor: the reviewer is told the candidate's own writing —
+// which lines it may cite and which categories they touch — before it reads any
+// lens. A prompt without a floor is exactly the prompt that existed before it.
+func TestPromptShowsTheFloor(t *testing.T) {
+	withFloor := promptInput()
+	withFloor.Floor = review.FloorFor(withFloor.Paths, withFloor.Diff)
+	if len(withFloor.Floor.Rows) == 0 {
+		t.Fatal("the fixture diff produced no floor rows, so the test proves nothing")
+	}
+
+	asked := review.Prompt(withFloor)
+	for _, want := range []string{"## The floor", "must cite", "downgraded one tier"} {
+		if !strings.Contains(asked, want) {
+			t.Errorf("the prompt does not carry the floor: missing %q", want)
+		}
+	}
+
+	plain := review.Prompt(promptInput())
+	if strings.Contains(plain, "## The floor") {
+		t.Error("a prompt without a floor must not claim one")
+	}
+}
+
 // TestPromptWithLensesAsksTheLensPerFinding: a candidate reviewed by specialists
 // gets findings that say which specialist found them — the content receipt the
 // next candidate reuses. Without lenses there is nothing to name, and the schema

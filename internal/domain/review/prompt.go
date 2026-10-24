@@ -33,6 +33,10 @@ type PromptInput struct {
 	// KnownPasses are the clean rows the store carries: (path, blob, lens)
 	// answers that still describe the current bytes.
 	KnownPasses []Pass
+	// Floor is the deterministic audit set of this candidate: what its own
+	// writing is, read before any lens. Empty means nothing was measured, and
+	// the prompt stays exactly the one printed before floors existed.
+	Floor Floor
 }
 
 // Lens is one specialist prompt: its name and its body.
@@ -73,6 +77,8 @@ func Prompt(in PromptInput) string {
 		out.WriteString("- " + path + "\n")
 	}
 	out.WriteString("\n")
+
+	out.WriteString(floorSection(in.Floor))
 
 	out.WriteString("## The diff (the whole candidate, against the base)\n")
 	out.WriteString(section(in.Diff))
@@ -192,6 +198,33 @@ func carriedSection(known []Finding, carried []Pass) string {
 	out.WriteString("them as they are, with their receipts. Report a finding only when a defect\n")
 	out.WriteString("is new to this candidate, and leave \"passes\" without the clean rows above;\n")
 	out.WriteString("they are carried too.\n\n")
+
+	return out.String()
+}
+
+// floorSection is the deterministic part of the prompt: the lines a finding may
+// cite, the categories they touch, and the class the lenses were chosen from.
+// It runs before any lens, so the reviewer reads the candidate's own writing
+// first. A floor with no rows prints nothing: no rows, nothing to claim.
+func floorSection(floor Floor) string {
+	if len(floor.Rows) == 0 {
+		return ""
+	}
+
+	var out strings.Builder
+	out.WriteString("## The floor (deterministic, before any lens)\n\n")
+	out.WriteString("Path class: " + string(floor.Class) + " — the same class that chose this tree's lenses.\n")
+	for _, row := range floor.Rows {
+		out.WriteString("- " + row.Path + ": added lines " + FloorLines(row.Lines))
+		if len(row.Signals) > 0 {
+			out.WriteString(" · signals: " + strings.Join(row.Signals, ", "))
+		}
+		out.WriteString("\n")
+	}
+	out.WriteString("\nThis is the candidate's own writing: a finding must cite one of those lines or a\n")
+	out.WriteString(fmt.Sprintf("line within %d of one. What the candidate did not touch is a follow-up\n", FloorContext))
+	out.WriteString("(\"causal\": false), and a causal BLOCKER or CRITICAL that cannot cite is\n")
+	out.WriteString("downgraded one tier by the tool before the verdict is stored.\n\n")
 
 	return out.String()
 }

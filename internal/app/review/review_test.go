@@ -424,6 +424,63 @@ func TestTheVerdictStampsTheBlobGitComputes(t *testing.T) {
 	}
 }
 
+// TestThePromptCarriesTheCandidateSFloor: the same deterministic reading the
+// store applies is handed to the reviewer before any lens runs.
+func TestThePromptCarriesTheCandidateSFloor(t *testing.T) {
+	p := newProject()
+
+	result := p.run(review.Options{})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	for _, want := range []string{"## The floor", "- a.go: added lines 1"} {
+		if !strings.Contains(result.Prompt, want) {
+			t.Errorf("the prompt does not carry the floor: missing %q", want)
+		}
+	}
+}
+
+// TestTheStoreDowngradesTheUncitedFinding: a CRITICAL finding that cannot cite
+// the candidate's own writing loses one tier before it is stored — blocking is
+// earned, and the tool applies the rule, not the reviewer's confidence.
+func TestTheStoreDowngradesTheUncitedFinding(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.files.files[fullPath("veredicto.json")] = []byte(`{
+  "reviewer": "agente",
+  "findings": [
+    {
+      "path": "a.go",
+      "line": 50,
+      "severity": "CRITICAL",
+      "causal": true,
+      "why": "no cita la escritura del candidato"
+    }
+  ]
+}`)
+
+	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if got := parsed.Findings[0].Severity; got != domainreview.Warning {
+		t.Errorf("severity = %q, want WARNING: the finding cannot cite the floor", got)
+	}
+	if parsed.Verdict != domainreview.Approved {
+		t.Errorf("verdict = %q, want approved: without the block nothing requests changes", parsed.Verdict)
+	}
+	if !slices.ContainsFunc(result.Lines, func(line string) bool {
+		return strings.Contains(line, "earned blocking")
+	}) {
+		t.Errorf("lines %v do not report the downgrade", result.Lines)
+	}
+}
+
 // TestAPathGitCannotHashCarriesNoBlob: a file that is not in the worktree
 // (deleted by the candidate, or invented by the reviewer) gets no receipt. The
 // stamping is not a git failure, so the verdict is still stored — and the gate
