@@ -828,7 +828,6 @@ func TestWhenOneLensRunsItOwnsEveryFinding(t *testing.T) {
 	}
 }
 
-
 // TestAHashFailureBlocksTheStoring: when git cannot tell why, the store keeps
 // quiet rather than filing a verdict whose receipts are guesses.
 func TestAHashFailureBlocksTheStoring(t *testing.T) {

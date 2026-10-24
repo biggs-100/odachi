@@ -755,4 +755,3 @@ func TestUncoveredIsTheCoverageArithmetic(t *testing.T) {
 		}
 	})
 }
-

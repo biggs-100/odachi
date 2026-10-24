@@ -227,10 +227,10 @@ func TestRequireReviewBlocksWhenTheBlobCannotBeMeasured(t *testing.T) {
 	files := filesWithVerdict(t, currentTree, nil)
 
 	result := run(t, files, &fakeGit{
-		tree:             currentTree,
-		changed:          []string{"internal/app/check/check.go"},
-		blobs:            map[string]string{"internal/app/check/check.go": checkBlob},
-		blobErr:          errors.New("fatal: bad object"),
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+		blobErr: errors.New("fatal: bad object"),
 	}, check.Options{RequireReview: true})
 
 	if result.Code == 0 {
