@@ -48,8 +48,11 @@ func TestTheContributorSurfaceExists(t *testing.T) {
 		return string(data)
 	}
 
-	if contributing := reading("CONTRIBUTING.md"); !strings.Contains(contributing, "odachi check --run") {
-		t.Error("CONTRIBUTING does not say how to run the gate locally")
+	contributing := reading("CONTRIBUTING.md")
+	for _, want := range []string{"odachi check --fence-from", "--base origin/main"} {
+		if !strings.Contains(contributing, want) {
+			t.Errorf("CONTRIBUTING does not say how to reproduce the gate locally (%q)", want)
+		}
 	}
 
 	if security := reading("SECURITY.md"); !strings.Contains(security, "security/advisories") {

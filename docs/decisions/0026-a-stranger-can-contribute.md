@@ -26,8 +26,10 @@ change they are asking to pass.
   link is tested.
 - **Features start as an issue; fixes can start as a pull request.** The
   maintainer writes `brief.md` and `.odachi/fence.toml` for a feature. A
-  contributor never edits those two, and the gate refuses a change that loosens
-  the fence.
+  contributor never edits those two. CI reads the fence from the base ref, so a
+  branch's copy does not change the policy it is judged by; the file itself is
+  protected by the CODEOWNERS request for an owner review and the maintainer's
+  merge decision, not by the gate. That limit is recorded in ADR 0024.
 - **The gate is the contract.** A pull request is a candidate: CI builds the gate
   from the base ref, reads the fence from it and runs the suite. The local proof
   is generated and ignored by git, so it does not travel; the CI run is the
@@ -70,9 +72,15 @@ change they are asking to pass.
 - The guard test is text matching, and text matching is brittle by design: it
   fails when a promise changes, and the fix is to update the test in the same
   pull request that changes the promise.
-- AI disclosure is on the honor system, but the evidence is not: a proof that
-  was not produced by this tree is refused by the tool and by CI, and that is
-  the part that can be enforced.
+- AI disclosure is on the honor system. The proof binds to a tree but not to a
+  provenance: the tool refuses a proof that names another tree, and CI runs the
+  command again, so the evidence a merge rests on is the run. The policy says
+  that instead of claiming the tool can tell a hand-written output from a real
+  one.
+- The fence file and the workflow are not enforced by the gate: they are
+  protected by a CODEOWNERS request and a zero-approval ruleset, which asks
+  rather than requires. A second reviewer or a review app is the next step, not
+  a promise of this change.
 - A code of conduct, a roadmap and funding stay out until someone asks for them.
 
 ## Sources

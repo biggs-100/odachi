@@ -11,8 +11,11 @@ done. A contribution follows the same loop, by hand or with your agent.
   discussed first.
 - **A feature:** open an issue first. The maintainer writes `brief.md` (the
   vision and what is *not* included) and `.odachi/fence.toml`; nobody else edits
-  them, and the gate refuses a change that loosens the fence. Once the brief
-  exists, the implementation is a normal pull request.
+  them. CI reads the fence from the base branch, so the copy in your branch does
+  not change the policy you are judged by — but the gate does not block an edit
+  to the file: `.github/CODEOWNERS` asks for an owner review of `.odachi/`, and
+  the maintainer reads that diff before merging. Once the brief exists, the
+  implementation is a normal pull request.
 - **No CLA.** Contributions are MIT, like the project.
 
 ## The loop
@@ -22,9 +25,13 @@ done. A contribution follows the same loop, by hand or with your agent.
 2. Branch from `main`: `git switch -c fix/the-thing`.
 3. Run what CI runs: `go test ./...`, `gofmt -l .` (it must print nothing),
    `go vet ./...`. On Linux, also `go test -race ./internal/...`.
-4. If you have odachi installed, the same gate locally is
-   `odachi check --run "go test ./..."`. The proof is generated in `proof/`,
-   which is ignored by git: never commit it and never write it by hand.
+4. If you have odachi installed, reproduce CI locally:
+   `odachi check --fence-from origin/main --base origin/main --run "go test ./..."`.
+   The two flags are the gate: the fence is read from `main` and the changed
+   paths are compared against it, exactly as the workflow does. In a fork,
+   `origin` is your copy: add the base repository as `upstream` and use
+   `upstream/main`. The proof is generated in `proof/`, which is ignored by git:
+   never commit it and never write it by hand.
 5. One step, one commit. The title says what changed for the person using
    odachi, in the imperative; the body says how and why; the last line is
    `Risk: none` or one of `data`, `security`, `contract`, `concurrency`,
@@ -39,8 +46,9 @@ macos and windows, and `checks` on Linux. The gate is built from the base
 branch, not from your change, and it reads the fence from the base branch too.
 
 - The brief is complete, the fence is respected, and there are no open questions.
-- The proof is the real output of the command on *this* tree. CI runs it again;
-  a proof that was edited or reused for another tree is refused.
+- The proof is the real output of the command on *this* tree. It names the tree
+  it came from, so a proof from another tree is refused, and CI runs the command
+  again: the evidence that counts for a merge is the run, not the file.
 - `checks` runs `gofmt`, `go vet`, the race detector on `./internal/...` and
   `goreleaser check`.
 
@@ -51,7 +59,7 @@ asking why in the pull request.
 ## Size
 
 - A pull request that does not read in twenty minutes is too big. Split it: the
-  `chained-pr` and `work-unit-commits` skills in `.agents/skills` explain how.
+  `pull-request` and `commits` skills in `.agents/skills` explain how.
 - Tests and documentation travel with the code they describe. There is no later
   pull request called "tests" or "docs".
 - A commit that could not be reverted alone is not a commit: it is two.
