@@ -312,8 +312,15 @@ gate reports only its last line, so a red command is diagnosed from that line.
 When the gate blocks for another reason -the fence, an open question- the proof
 of that green run is still uploaded. The workflow file itself
 is not trusted: `.github/CODEOWNERS` asks for an owner review of `.github/` and
-`.odachi/`, and the repository ruleset can require that review. Mark the gate as
-a required check when the project is ready to stop pushing to `main` directly.
+`.odachi/`, and a pull request can edit the workflow it runs under until a second
+reviewer exists.
+
+`main` takes a change only through a pull request whose four checks passed. The
+policy lives in `.github/main-ruleset.json` and is applied by
+`scripts/protect-main.ps1` (idempotent; needs `gh` with admin): it requires the
+pull request, the four job names in `gate.yml`, and no force push or deletion.
+No approval is required, because a solo maintainer cannot approve their own pull
+request; CODEOWNERS still asks for one on `.github/` and `.odachi/`.
 
 `ODACHI_NO_SETUP=1` makes the installers leave only the binary — no home door, no
 default agent — which is what a shared runner wants. A missing file at a valid
