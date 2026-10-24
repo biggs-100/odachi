@@ -429,3 +429,124 @@ func TestStoreKeepsVerdictsOutOfTheTree(t *testing.T) {
 		t.Errorf("Dir = %q, want .odachi/reviews", review.Dir)
 	}
 }
+
+// blobContent is a finding's content receipt: the blob id git owns for the
+// reviewed bytes. Hex, like the tree, because both name content.
+const blobContent = "9c1185a5c5e9fc54612808977ee8f548b2258d31"
+
+// TestAFindingCanCarryItsContentReceipt: a finding knows which bytes it judged
+// (blob) and which lens produced it. The round trip is the point: a verdict
+// stored with the receipt parses back with the same identity, and sealing keeps
+// what the tool did not compute — the receipt survives the write.
+func TestAFindingCanCarryItsContentReceipt(t *testing.T) {
+	verdict := review.Verdict{
+		Tree:     tree,
+		Reviewer: "agent",
+		Verdict:  review.Approved,
+		Findings: []review.Finding{{
+			Path:     "internal/app/review/review.go",
+			Line:     421,
+			Severity: review.Warning,
+			Causal:   true,
+			Why:      "el recibo se pierde al sellar",
+			Blob:     blobContent,
+			Lens:     "reliability",
+		}},
+	}
+
+	if err := verdict.Validate(); err != nil {
+		t.Fatalf("a complete content receipt must validate, got: %s", err)
+	}
+
+	parsed, err := review.Parse(review.Render(verdict))
+	if err != nil {
+		t.Fatalf("render then parse must round trip, got: %s", err)
+	}
+	got := parsed.Findings[0]
+	if got.Blob != blobContent {
+		t.Errorf("Blob = %q, want %q: a verdict that loses the blob loses its identity", got.Blob, blobContent)
+	}
+	if got.Lens != "reliability" {
+		t.Errorf("Lens = %q, want reliability", got.Lens)
+	}
+}
+
+// TestABlobThatIsNotAHashIsRefused: the blob is content identity, and a blob
+// that is not hex names nothing. An invented hash under an honest name would be
+// worse than no receipt at all.
+func TestABlobThatIsNotAHashIsRefused(t *testing.T) {
+	verdict := review.Verdict{
+		Tree:     tree,
+		Reviewer: "agent",
+		Verdict:  review.Approved,
+		Findings: []review.Finding{{
+			Path: "internal/app/review/review.go", Line: 1,
+			Severity: review.Warning, Causal: true, Why: "defect",
+			Blob: "not-a-blob", Lens: "reliability",
+		}},
+	}
+
+	err := verdict.Validate()
+	if err == nil {
+		t.Fatal("a finding with a blob that is not a hash must be refused")
+	}
+	if !strings.Contains(err.Error(), "blob") {
+		t.Errorf("the error must name the field it refuses, got: %s", err)
+	}
+}
+
+// TestALensTheToolDoesNotKnowIsRefused: a finding says which lens produced it,
+// and the lens vocabulary is closed (like the severity vocabulary). An unknown
+// lens would silently fail the coverage arithmetic later, so it is refused at
+// the door.
+func TestALensTheToolDoesNotKnowIsRefused(t *testing.T) {
+	verdict := review.Verdict{
+		Tree:     tree,
+		Reviewer: "agent",
+		Verdict:  review.Approved,
+		Findings: []review.Finding{{
+			Path: "internal/app/review/review.go", Line: 1,
+			Severity: review.Warning, Causal: true, Why: "defect",
+			Blob: blobContent, Lens: "elegancia",
+		}},
+	}
+
+	err := verdict.Validate()
+	if err == nil {
+		t.Fatal("a finding that names a lens the tool does not know must be refused")
+	}
+	if !strings.Contains(err.Error(), "lens") {
+		t.Errorf("the error must name the lens, got: %s", err)
+	}
+}
+
+// TestFindingsWithoutBlobOrLensStillParse: every verdict written before this
+// decision parses as it always did. The old rows carry no receipt and the new
+// reader must not demand one — one-time cost, not a migration.
+func TestFindingsWithoutBlobOrLensStillParse(t *testing.T) {
+	old := []byte(`{
+  "tree": "` + tree + `",
+  "base": "HEAD",
+  "reviewer": "agent",
+  "at": "2026-10-21T20:31:00Z",
+  "findings": [
+    {
+      "path": "internal/app/review/review.go",
+      "line": 0,
+      "severity": "WARNING",
+      "causal": false,
+      "why": "ya estaba"
+    }
+  ],
+  "verdict": "approved"
+}`)
+
+	parsed, err := review.Parse(old)
+	if err != nil {
+		t.Fatalf("a verdict written before blob keys must still parse, got: %s", err)
+	}
+	if len(parsed.Findings) != 1 || parsed.Findings[0].Blob != "" || parsed.Findings[0].Lens != "" {
+		t.Errorf("an old finding parses as an unkeyed finding, got %+v", parsed.Findings)
+	}
+}
+

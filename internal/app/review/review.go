@@ -92,6 +92,13 @@ type Git interface {
 	TreeHash(root string) (string, error)
 	ChangedPaths(root, base string) ([]string, error)
 	Diff(root, base string) (string, error)
+	// BlobHash is the content hash of one worktree file — the blob id git
+	// already owns. It is how a finding earns its content receipt without
+	// anybody declaring it: a hash is measured, not word of mouth.
+	// BlobHash(root, path) answers "" for a file that is not in the worktree
+	// (the candidate deleted it, or the reviewer invented the path); a real git
+	// failure is an err, not an empty receipt.
+	BlobHash(root, path string) (string, error)
 	// Ignored reports whether the repository's own rules already keep path out
 	// of the tree. It is what makes the lazy ignore file unnecessary in a project
 	// that ran `odachi init`.
@@ -463,6 +470,11 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 		return *problem
 	}
 
+	stamped, problem = r.stampBlobs(stamped)
+	if problem != nil {
+		return *problem
+	}
+
 	sealed, err := domain.Seal(stamped, tree, base, r.opts.Now)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
@@ -579,6 +591,28 @@ func (r *runner) stampLenses(verdict domain.Verdict) (domain.Verdict, *Result) {
 
 	stamped := verdict
 	stamped.Lenses = domain.Add(domain.Add(domain.Lenses(domain.Classify(paths)), extra), verdict.Lenses)
+	return stamped, nil
+}
+
+// stampBlobs gives every finding its content receipt: the blob id of the file as
+// it stands in this worktree, measured by the git port and never read from the
+// verdict. Whatever the reviewer declared is overwritten — a hash is a fact
+// about bytes, and facts of this kind are computed, not declared.
+//
+// A path the port cannot hash answers "" with no error: the candidate deleted
+// that file, or the reviewer invented the path. That finding is stored without a
+// receipt, and the gate later has no implicit coverage to pretend: it is the
+// blob-less finding the coverage arithmetic refuses to extend.
+func (r *runner) stampBlobs(verdict domain.Verdict) (domain.Verdict, *Result) {
+	stamped := verdict
+	for i, finding := range stamped.Findings {
+		blob, err := r.git.BlobHash(r.opts.Dir, finding.Path)
+		if err != nil {
+			problem := blocked(fmt.Sprintf("could not hash %s to stamp the finding's content receipt: %s; I wrote nothing", finding.Path, oneLine(err.Error())))
+			return domain.Verdict{}, &problem
+		}
+		stamped.Findings[i].Blob = blob
+	}
 	return stamped, nil
 }
 

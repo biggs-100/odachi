@@ -367,6 +367,10 @@ func (gitRepo) AddedDeps(root, base string) ([]string, error) {
 
 func (gitRepo) Diff(root, base string) (string, error) { return gitx.Diff(root, base) }
 
+// BlobHash gives the review its content receipts: the blob id of the bytes each
+// finding judged, computed by git from the worktree file.
+func (gitRepo) BlobHash(root, path string) (string, error) { return gitx.BlobHash(root, path) }
+
 // Ignored is how both verbs ask whether the project already keeps its own
 // evidence out of the tree: `odachi init` writes that rule into .gitignore, and
 // the lazy per-directory file is only the fallback for a project that never ran it.

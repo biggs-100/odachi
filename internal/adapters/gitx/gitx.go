@@ -119,6 +119,33 @@ func ChangedPaths(root, base string) ([]string, error) {
 	return result, nil
 }
 
+// BlobHash returns the content hash of one worktree file: the blob id git
+// already owns, computed from the bytes with `git hash-object`. It is the
+// receipt a finding carries — identity by content, not by environment.
+//
+// A path that is not an existing worktree file returns "" with no error: the
+// candidate deleted it, or the reviewer invented it. That answer is a fact too,
+// and the store must be able to tell "no file here" apart from "git broke", so a
+// real git failure is an err and blocks the caller instead.
+func BlobHash(root, path string) (string, error) {
+	info, err := os.Stat(filepath.Join(root, filepath.FromSlash(path)))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("gitx: could not stat %s: %w", path, err)
+	}
+	if info.IsDir() {
+		return "", nil
+	}
+
+	out, err := run(root, "hash-object", "--", path)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // AddedDeps returns the module paths that go.mod requires now but did not
 // require at base. A missing go.mod on either side means no dependencies, not
 // an error: the first module in a project is not a failure.

@@ -130,6 +130,10 @@ type fakeGit struct {
 	ignored    bool
 	ignoredErr error
 	ignoredAs  []string
+
+	// blobs answers BlobHash per path; blobErr is the port failing for real.
+	blobs   map[string]string
+	blobErr error
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) {
@@ -161,6 +165,15 @@ func (g *fakeGit) Ignored(root, path string) (bool, error) {
 		return false, g.ignoredErr
 	}
 	return g.ignored, nil
+}
+
+// blobs answers BlobHash per path. A path with no entry produces no error and an
+// empty receipt, which is the "file is not here" answer, not a git failure.
+func (g *fakeGit) BlobHash(root, path string) (string, error) {
+	if g.blobErr != nil {
+		return "", g.blobErr
+	}
+	return g.blobs[path], nil
 }
 
 // fakeShell is the Shell port for --exec.
@@ -339,6 +352,115 @@ func TestAttachStoresTheVerdictUnderTheTree(t *testing.T) {
 	}
 	if parsed.Verdict != domainreview.Approved {
 		t.Errorf("verdict = %q, want approved", parsed.Verdict)
+	}
+}
+
+// gitBlob is what the git port answers for a.go: the blob id of the bytes as
+// they stand in the worktree, computed from the content, not from anyone's word.
+const gitBlob = "c1a0f9e8d7b6a5c4d3e2f1a0b9c8d7e6f5a4b3c2"
+
+// TestTheVerdictStampsTheBlobGitComputes: a finding's content receipt is derived
+// from the repository. The reviewer may write a blob, and it is overwritten — a
+// hash is a fact about bytes, and facts are measured, not declared.
+func TestTheVerdictStampsTheBlobGitComputes(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.files.files[fullPath("veredicto.json")] = []byte(`{
+  "reviewer": "agente",
+  "findings": [
+    {
+      "path": "a.go",
+      "line": 1,
+      "severity": "WARNING",
+      "lens": "reliability",
+      "causal": true,
+      "why": "defecto de ejemplo",
+      "blob": "1111111111111111111111111111111111111111"
+    }
+  ]
+}`)
+
+	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, ok := p.files.files[storePath(currentTree)]
+	if !ok {
+		t.Fatalf("no verdict stored at .odachi/reviews/%s.json", currentTree)
+	}
+	parsed, err := domainreview.Parse(stored)
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+
+	got := parsed.Findings[0].Blob
+	if got != gitBlob {
+		t.Errorf("blob = %q, want the port's %q: a verdict must never keep the reviewer's hash", got, gitBlob)
+	}
+	if parsed.Findings[0].Lens != "reliability" {
+		t.Errorf("lens = %q, want the reviewer's attribution kept", parsed.Findings[0].Lens)
+	}
+}
+
+// TestAPathGitCannotHashCarriesNoBlob: a file that is not in the worktree
+// (deleted by the candidate, or invented by the reviewer) gets no receipt. The
+// stamping is not a git failure, so the verdict is still stored — and the gate
+// later has no implicit coverage to pretend.
+func TestAPathGitCannotHashCarriesNoBlob(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("veredicto.json")] = []byte(`{
+  "reviewer": "agente",
+  "findings": [
+    {
+      "path": "deleted.go",
+      "line": 0,
+      "severity": "WARNING",
+      "causal": true,
+      "why": "defecto de ejemplo"
+    }
+  ]
+}`)
+
+	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored := p.files.files[storePath(currentTree)]
+	parsed, err := domainreview.Parse(stored)
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if got := parsed.Findings[0].Blob; got != "" {
+		t.Errorf("blob = %q, want none: a file that is not here is nobody's content receipt", got)
+	}
+}
+
+// TestAHashFailureBlocksTheStoring: when git cannot tell why, the store keeps
+// quiet rather than filing a verdict whose receipts are guesses.
+func TestAHashFailureBlocksTheStoring(t *testing.T) {
+	p := newProject()
+	p.git.blobErr = errors.New("fatal: bad object")
+	p.files.files[fullPath("veredicto.json")] = []byte(`{
+  "reviewer": "agente",
+  "findings": [
+    {
+      "path": "a.go",
+      "line": 1,
+      "severity": "WARNING",
+      "causal": true,
+      "why": "defecto de ejemplo"
+    }
+  ]
+}`)
+
+	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if writes := p.verdictWrites(); len(writes) != 0 {
+		t.Fatalf("writes = %v, want none: a block leaves no file behind", writes)
 	}
 }
 
@@ -714,6 +836,8 @@ func (g *flakyGit) ChangedPaths(root, base string) ([]string, error) {
 func (g *flakyGit) Diff(root, base string) (string, error) { return g.inner.Diff(root, base) }
 
 func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ignored(root, path) }
+
+func (g *flakyGit) BlobHash(root, path string) (string, error) { return g.inner.BlobHash(root, path) }
 
 // TestNothingOutsideTheStoreIsWritten: the whole surface of this verb is
 // .odachi/reviews/. A review that touched the brief or the code would be a

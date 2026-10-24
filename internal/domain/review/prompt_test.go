@@ -110,3 +110,23 @@ func TestPromptSaysTheVerdictIsDerived(t *testing.T) {
 		t.Error("the prompt does not say the verdict is derived from the findings")
 	}
 }
+
+// TestPromptWithLensesAsksTheLensPerFinding: a candidate reviewed by specialists
+// gets findings that say which specialist found them — the content receipt the
+// next candidate reuses. Without lenses there is nothing to name, and the schema
+// stays exactly as it always was.
+func TestPromptWithLensesAsksTheLensPerFinding(t *testing.T) {
+	withLenses := promptInput()
+	withLenses.Lenses = []review.Lens{
+		{Name: "reliability", Body: "Audit concurrency and failure paths."},
+	}
+	asked := review.Prompt(withLenses)
+	if !strings.Contains(asked, `"lens"`) {
+		t.Error("a prompt with lenses does not ask which lens found each finding")
+	}
+
+	plain := review.Prompt(promptInput())
+	if strings.Contains(plain, `"lens"`) {
+		t.Error("a prompt without lenses must not ask for a lens")
+	}
+}

@@ -79,7 +79,12 @@ const (
 )
 
 // Finding is one reported defect: where, how bad, whether this candidate caused
-// it, and the evidence.
+// it, and the evidence. When the tool knows them, it also carries the content
+// receipt: the blob id of the bytes judged and the lens that produced it.
+//
+// Blob and Lens are optional because every verdict written before this decision
+// parses exactly as it always did: an old finding is a finding without a
+// receipt, and the gate asks for a fresh one instead of inventing coverage.
 type Finding struct {
 	Path     string   `json:"path"`
 	Line     int      `json:"line"`
@@ -88,6 +93,13 @@ type Finding struct {
 	// the defect. A pre-existing problem is a follow-up, not a blocker.
 	Causal bool   `json:"causal"`
 	Why    string `json:"why"`
+	// Blob is the content hash of the file this finding judged, derived from git
+	// by the tool and never taken from the reviewer's word. It is what lets a
+	// later candidate keep this finding potent while the bytes stay identical.
+	Blob string `json:"blob,omitempty"`
+	// Lens is the specialist that produced this finding. The same closed
+	// vocabulary as the verdict's lens list.
+	Lens string `json:"lens,omitempty"`
 }
 
 // Verdict is what a review concluded about one tree.
@@ -248,6 +260,14 @@ func (v Verdict) Validate() error {
 		}
 		if strings.TrimSpace(finding.Why) == "" {
 			return fmt.Errorf("finding %d (%s) does not say why: a finding without evidence is an opinion", i+1, finding.Path)
+		}
+		if blob := strings.TrimSpace(finding.Blob); blob != "" && !hashLike(blob) {
+			return fmt.Errorf("finding %d (%s) says blob %q; the blob is a hash like the tree, and a blob that is not hex names nothing",
+				i+1, finding.Path, blob)
+		}
+		if lens := strings.TrimSpace(finding.Lens); lens != "" && !IsLens(lens) {
+			return fmt.Errorf("finding %d (%s) says lens %q; the lenses are %s",
+				i+1, finding.Path, lens, strings.Join(order, ", "))
 		}
 	}
 

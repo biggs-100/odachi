@@ -89,7 +89,8 @@ func Prompt(in PromptInput) string {
 	out.WriteString("severity BLOCKER or CRITICAL, the verdict is " + ChangesRequested + "; if not, it is " + Approved + ".\n")
 	out.WriteString("Do not decide it yourself: the rule decides it.\n")
 	if len(in.Lenses) > 0 {
-		out.WriteString("The tool records the lenses you covered: do not write them in the JSON.\n")
+		out.WriteString("Each finding names the lens that found it (\"lens\"): a finding without it has no author.\n")
+		out.WriteString("The tree's lens list itself is recorded by the tool: do not repeat it in the JSON.\n")
 	}
 	out.WriteString("\n")
 
@@ -160,6 +161,9 @@ func schema(in PromptInput) string {
 	out.WriteString("      \"path\": \"<file>\",\n")
 	out.WriteString("      \"line\": 0,\n")
 	out.WriteString("      \"severity\": \"BLOCKER | CRITICAL | WARNING | SUGGESTION\",\n")
+	if len(in.Lenses) > 0 {
+		out.WriteString("      \"lens\": \"<the lens of this tree's list that found it>\",\n")
+	}
 	out.WriteString("      \"causal\": true,\n")
 	out.WriteString("      \"why\": \"<the defect and the concrete evidence>\"\n")
 	out.WriteString("    }\n")
