@@ -112,15 +112,25 @@ type fakeGit struct {
 	// failing for real.
 	diff    string
 	diffErr error
+
+	// candidateCalls counts the one read of the worktree this run asked for.
+	candidateCalls int
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
 
-func (g *fakeGit) Diff(root, base string) (string, error) {
-	if g.diffErr != nil {
-		return "", g.diffErr
+// Candidate is the one read: it records every call, because "the fence, the
+// lens class and the proof tree describe the same bytes" is the property.
+func (g *fakeGit) Candidate(root, base string) (string, []string, string, error) {
+	g.candidateCalls++
+	g.bases = append(g.bases, base)
+	if g.changedErr != nil && base != check.EmptyTree {
+		return "", nil, "", g.changedErr
 	}
-	return g.diff, nil
+	if g.diffErr != nil {
+		return "", nil, "", g.diffErr
+	}
+	return g.tree, g.changed, g.diff, nil
 }
 
 func (g *fakeGit) BlobHash(root, path string) (string, error) {
@@ -128,14 +138,6 @@ func (g *fakeGit) BlobHash(root, path string) (string, error) {
 		return "", g.blobErr
 	}
 	return g.blobs[path], nil
-}
-
-func (g *fakeGit) ChangedPaths(root, base string) ([]string, error) {
-	g.bases = append(g.bases, base)
-	if g.changedErr != nil && base != check.EmptyTree {
-		return nil, g.changedErr
-	}
-	return g.changed, nil
 }
 
 func (g *fakeGit) AddedDeps(root, base string) ([]string, error) { return g.deps, nil }

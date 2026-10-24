@@ -155,6 +155,9 @@ type fakeGit struct {
 	// blobs answers BlobHash per path; blobErr is the port failing for real.
 	blobs   map[string]string
 	blobErr error
+
+	// candidateCalls counts the one read of the worktree this run asked for.
+	candidateCalls int
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) {
@@ -164,20 +167,15 @@ func (g *fakeGit) TreeHash(root string) (string, error) {
 	return g.tree, nil
 }
 
-func (g *fakeGit) ChangedPaths(root, base string) ([]string, error) {
+// Candidate is the one read: it records every call, because "the verb reads the
+// worktree once" is the property this port exists for.
+func (g *fakeGit) Candidate(root, base string) (string, []string, string, error) {
+	g.candidateCalls++
 	g.bases = append(g.bases, base)
 	if g.err != nil {
-		return nil, g.err
+		return "", nil, "", g.err
 	}
-	return g.changed, nil
-}
-
-func (g *fakeGit) Diff(root, base string) (string, error) {
-	g.bases = append(g.bases, base)
-	if g.err != nil {
-		return "", g.err
-	}
-	return g.diff, nil
+	return g.tree, g.changed, g.diff, nil
 }
 
 func (g *fakeGit) Ignored(root, path string) (bool, error) {
@@ -1264,6 +1262,38 @@ func TestAModelFlagWithoutThePlaceholderIsRefused(t *testing.T) {
 	}
 }
 
+// TestThePromptReadsTheWorktreeOnce: the prompt, the lens selection and the
+// tree it names come from one read. A project that ran init is the normal case:
+// the store is already ignored, so nothing is written and nothing is re-read.
+func TestThePromptReadsTheWorktreeOnce(t *testing.T) {
+	p := newProject()
+	p.git.ignored = true
+
+	result := p.run(review.Options{})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if p.git.candidateCalls != 1 {
+		t.Errorf("candidate reads = %d, want 1: the prompt asks the worktree once", p.git.candidateCalls)
+	}
+}
+
+// TestTheExecReadsAgainAfterTheReviewer: the reviewer is arbitrary code. The
+// verdict must describe the tree it left, not the one the prompt named.
+func TestTheExecReadsAgainAfterTheReviewer(t *testing.T) {
+	p := newProject()
+	p.git.ignored = true
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "revisor"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if p.git.candidateCalls != 2 {
+		t.Errorf("candidate reads = %d, want 2: one for the prompt, one after the reviewer", p.git.candidateCalls)
+	}
+}
+
 // TestAModelWithoutExecIsRefused: --model outside --exec has nothing to
 // replace, so it is named instead of accepted and silently dropped.
 func TestAModelWithoutExecIsRefused(t *testing.T) {
@@ -1430,19 +1460,17 @@ type flakyGit struct {
 
 func (g *flakyGit) TreeHash(root string) (string, error) { return g.inner.TreeHash(root) }
 
-func (g *flakyGit) ChangedPaths(root, base string) ([]string, error) {
+func (g *flakyGit) Candidate(root, base string) (string, []string, string, error) {
 	g.bases = append(g.bases, base)
 	if base == review.DefaultBase && !g.failed {
 		g.failed = true
-		return nil, errors.New("fatal: ambiguous argument 'HEAD'")
+		return "", nil, "", errors.New("fatal: ambiguous argument 'HEAD'")
 	}
 	if base == review.EmptyTree {
 		g.sawEmptyTree = true
 	}
-	return g.inner.changed, nil
+	return g.inner.tree, g.inner.changed, g.inner.diff, nil
 }
-
-func (g *flakyGit) Diff(root, base string) (string, error) { return g.inner.Diff(root, base) }
 
 func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ignored(root, path) }
 

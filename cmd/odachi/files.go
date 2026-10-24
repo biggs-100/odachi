@@ -358,15 +358,15 @@ type gitRepo struct{}
 
 func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root) }
 
-func (gitRepo) ChangedPaths(root, base string) ([]string, error) {
-	return gitx.ChangedPaths(root, base)
+// Candidate is the one read both verbs share: the tree, the changed paths and
+// the diff of the same worktree, from one throwaway index.
+func (gitRepo) Candidate(root, base string) (string, []string, string, error) {
+	return gitx.Candidate(root, base)
 }
 
 func (gitRepo) AddedDeps(root, base string) ([]string, error) {
 	return gitx.AddedDeps(root, base)
 }
-
-func (gitRepo) Diff(root, base string) (string, error) { return gitx.Diff(root, base) }
 
 // BlobHash gives the review its content receipts: the blob id of the bytes each
 // finding judged, computed by git from the worktree file.

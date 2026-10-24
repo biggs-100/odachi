@@ -155,8 +155,25 @@ func TestRequireReviewBlocksWhenTheDiffCannotBeRead(t *testing.T) {
 	if result.Code == 0 {
 		t.Fatal("a diff failure must not read as an assessed class")
 	}
-	if !strings.Contains(result.Message, "could not read the diff") {
-		t.Errorf("message = %q, want the diff failure named", result.Message)
+	if !strings.Contains(result.Message, "could not read") {
+		t.Errorf("message = %q, want the read failure named", result.Message)
+	}
+}
+
+// TestCheckReadsTheWorktreeOnce: the fence, the lens class and the proof tree
+// describe the same bytes. One read answers all three, however the gate ends.
+func TestCheckReadsTheWorktreeOnce(t *testing.T) {
+	files := filesWithVerdict(t, currentTree, nil)
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		diff:    "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n",
+	}
+
+	run(t, files, git, check.Options{RequireReview: true})
+
+	if git.candidateCalls != 1 {
+		t.Errorf("candidate reads = %d, want 1: check asks the worktree once", git.candidateCalls)
 	}
 }
 

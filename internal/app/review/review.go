@@ -105,9 +105,11 @@ type Files interface {
 // describe a candidate.
 type Git interface {
 	TreeHash(root string) (string, error)
-	ChangedPaths(root, base string) ([]string, error)
-	Diff(root, base string) (string, error)
-	// BlobHash is the content hash of one worktree file — the blob id git
+	// Candidate is the one read of the worktree the verb shares: the content
+	// tree, the paths that differ from base, and the diff, from one throwaway
+	// index. The three answers describe the same bytes.
+	Candidate(root, base string) (tree string, paths []string, diff string, err error)
+	// BlobHash is the content hash of one worktree file - the blob id git
 	// already owns. It is how a finding earns its content receipt without
 	// anybody declaring it: a hash is measured, not word of mouth.
 	// BlobHash(root, path) answers "" for a file that is not in the worktree
@@ -207,9 +209,27 @@ type runner struct {
 	shell  Shell
 	lenses Lenses
 	host   Host
+	// work is the candidate read once: tree, changed paths and diff. The
+	// reviewer command may move the worktree, so afterReviewer drops it and the
+	// store reads again.
+	work *worktree
+	// storeReady is whether this run already asked the repository whether the
+	// store is ignored. The probe is a git process and the answer cannot change
+	// between reads, so it is asked once.
+	storeReady bool
 	// storeIgnoreWritten is whether this run had to write the store's own
 	// ignore file, so the result reports only files it really wrote.
 	storeIgnoreWritten bool
+}
+
+// worktree is one read of the candidate: its content tree, the paths that
+// differ from the base it was compared against, and the diff. The three answers
+// describe the same bytes and come from the same throwaway index.
+type worktree struct {
+	tree  string
+	base  string
+	paths []string
+	diff  string
 }
 
 // candidate is what is being reviewed: the brief it is judged against, the base
@@ -217,6 +237,7 @@ type runner struct {
 type candidate struct {
 	brief string
 	base  string
+	tree  string
 	paths []string
 	diff  string
 }
@@ -226,7 +247,7 @@ type candidate struct {
 // ignored before the tree is hashed or storing the verdict would change the tree
 // that names it.
 func (r *runner) prompt() Result {
-	cand, problem := r.candidate()
+	cand, problem := r.candidateForReview()
 	if problem != nil {
 		return *problem
 	}
@@ -272,10 +293,7 @@ func (r *runner) promptText(cand candidate) (text, tree string, selected []strin
 		return "", "", nil, problem
 	}
 
-	tree, problem = r.prepareStore()
-	if problem != nil {
-		return "", "", nil, problem
-	}
+	tree = cand.tree
 
 	// The store's potent rows are part of the question: a reviewer that knows
 	// which findings are already carried files no duplicates, and a review
@@ -310,10 +328,7 @@ func (r *runner) refute() Result {
 		return *problem
 	}
 
-	tree, problem := r.treeHash()
-	if problem != nil {
-		return *problem
-	}
+	tree := cand.tree
 
 	verdict, problem := r.namedVerdict(r.opts.Refute, tree)
 	if problem != nil {
@@ -373,6 +388,12 @@ func (r *runner) attach() Result {
 		return refused(r.opts.Attach, err.Error())
 	}
 
+	// The verdict is filed inside the candidate: the store must be ignorable
+	// before the tree it names is read. A malformed document was refused above,
+	// so a refusal still writes nothing.
+	if _, problem := r.ensureStore(); problem != nil {
+		return *problem
+	}
 	return r.store(parsed, r.base())
 }
 
@@ -413,7 +434,7 @@ func (r *runner) exec() Result {
 
 	// The candidate comes next: without a diff there is nothing to review, and
 	// a reviewer must not be started to review nothing.
-	cand, problem := r.candidate()
+	cand, problem := r.candidateForReview()
 	if problem != nil {
 		return *problem
 	}
@@ -449,6 +470,9 @@ func (r *runner) exec() Result {
 		if err != nil {
 			return execFailed(command, err.Error(), diagnosis)
 		}
+		// The refuter may have moved the worktree too; what it cites is the diff
+		// it was given, and the file is filed under the tree that exists now.
+		r.afterReviewer()
 		return r.storeRefutation(refutation, command)
 	}
 
@@ -465,6 +489,10 @@ func (r *runner) exec() Result {
 		return execFailed(r.opts.Exec, err.Error(), diagnosis)
 	}
 
+	// The reviewer may have moved the worktree; the verdict must be filed under
+	// the bytes that exist now, not the ones the prompt named.
+	r.afterReviewer()
+
 	// The base is the one the diff was taken against, not the flag: a project
 	// with no commit is compared against the empty tree, and the verdict says so.
 	return r.store(parsed, cand.base)
@@ -477,10 +505,18 @@ func (r *runner) exec() Result {
 // requires, which ones the verdict already covers, and whether a refutation was
 // filed beside it.
 func (r *runner) show() Result {
-	tree, problem := r.treeHash()
+	work, problem := r.worktree()
 	if problem != nil {
-		return *problem
+		// --show answers even when the base cannot be compared: the verdict is
+		// named by the tree, and a tree the tool can still read is enough to
+		// find it. Hiding a verdict because a flag is wrong would be worse.
+		tree, fallback := r.treeHash()
+		if fallback != nil {
+			return *fallback
+		}
+		work = &worktree{tree: tree}
 	}
+	tree := work.tree
 
 	rel, err := domain.Path(tree)
 	if err != nil {
@@ -499,7 +535,7 @@ func (r *runner) show() Result {
 	}
 
 	lines := shown(tree, rel, parsed)
-	lines = append(lines, r.lensCoverage(tree, parsed)...)
+	lines = append(lines, r.lensCoverage(work, parsed)...)
 
 	result := Result{
 		Code:    CodeOK,
@@ -520,8 +556,8 @@ func (r *runner) show() Result {
 
 // lensCoverage is the two lines that make the optional gate predictable: what
 // this tree requires and what the verdict covers.
-func (r *runner) lensCoverage(tree string, verdict domain.Verdict) []string {
-	required := r.requiredLenses()
+func (r *runner) lensCoverage(work *worktree, verdict domain.Verdict) []string {
+	required := r.requiredLenses(work)
 
 	lines := []string{lensLine(required, verdict)}
 	missing := verdict.Missing(required)
@@ -540,10 +576,11 @@ func (r *runner) lensCoverage(tree string, verdict domain.Verdict) []string {
 // required. A stored verdict that does not cover them would leave the optional
 // gate with no way out, because the store cannot be rewritten.
 func (r *runner) store(parsed domain.Verdict, base string) Result {
-	tree, problem := r.prepareStore()
+	work, problem := r.worktree()
 	if problem != nil {
 		return *problem
 	}
+	tree := work.tree
 
 	// The floor is one reading of the candidate: it fixes the class this verdict
 	// is asked under, the audit set earned blocking judges, and the rows the
@@ -624,10 +661,11 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Result {
 	// The order matters: the checks that decide whether this document may exist
 	// run before the store is prepared, so a refusal writes nothing at all.
-	tree, problem := r.treeHash()
+	work, problem := r.worktree()
 	if problem != nil {
 		return *problem
 	}
+	tree := work.tree
 
 	verdict, problem := r.storedVerdictFor(tree)
 	if problem != nil {
@@ -643,12 +681,19 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
-	prepared, problem := r.prepareStore()
+	wrote, problem := r.ensureStore()
 	if problem != nil {
 		return *problem
 	}
-	if prepared != tree {
-		return blocked("the tree changed while preparing the review store: run odachi review again")
+	if wrote {
+		r.work = nil
+		after, problem := r.worktree()
+		if problem != nil {
+			return *problem
+		}
+		if after.tree != tree {
+			return blocked("the tree changed while preparing the review store: run odachi review again")
+		}
 	}
 
 	rel, err := domain.RefutationPath(tree)
@@ -1008,35 +1053,33 @@ func passKey(pass domain.Pass) string {
 // the path class raised by the diff's content, plus what the flags asked for.
 // Extra lenses add, never remove.
 func (r *runner) selectLenses(paths []string, diff string) ([]string, *Result) {
+	extra, problem := r.lensFlag()
+	if problem != nil {
+		return nil, problem
+	}
+	return domain.Add(domain.Lenses(domain.Assess(paths, diff)), extra), nil
+}
+
+// lensFlag is the --lens vocabulary, parsed once. A flag that names no lens is
+// refused before anything is read or written.
+func (r *runner) lensFlag() ([]string, *Result) {
 	extra, err := domain.ParseLenses(r.opts.Lens)
 	if err != nil {
 		problem := blocked(oneLine(err.Error()) + "; run odachi review -h to see the flags")
 		return nil, &problem
 	}
-	return domain.Add(domain.Lenses(domain.Assess(paths, diff)), extra), nil
+	return extra, nil
 }
 
-// requiredLenses is the selection for a tree read without a candidate: `--show`
-// must still answer when git cannot compare, so a failure to read the changed
-// paths or the diff is not a block here — the path class answers alone.
-func (r *runner) requiredLenses() []string {
-	extra, err := domain.ParseLenses(r.opts.Lens)
-	if err != nil {
+// requiredLenses is the selection for a worktree read without a candidate:
+// `--show` must still answer when git cannot compare, so it uses whatever the
+// one read produced and the path class answers alone when the diff is missing.
+func (r *runner) requiredLenses(work *worktree) []string {
+	extra, problem := r.lensFlag()
+	if problem != nil {
 		extra = nil
 	}
-
-	paths, base, pathErr := r.changedPaths()
-	if pathErr != nil {
-		paths = nil
-	}
-
-	diff := ""
-	if len(paths) > 0 {
-		if text, err := r.git.Diff(r.opts.Dir, base); err == nil {
-			diff = text
-		}
-	}
-	return domain.Add(domain.Lenses(domain.Assess(paths, diff)), extra)
+	return domain.Add(domain.Lenses(domain.Assess(work.paths, work.diff)), extra)
 }
 
 // lensBodies loads the prompts of the selected lenses through the port.
@@ -1141,37 +1184,98 @@ func (r *runner) storedRefutation(tree string) (*domain.Refutation, string) {
 	return &parsed, rel
 }
 
-// candidate gathers the brief, the changed paths and the diff. Without a diff
-// there is nothing to review, and the run stops there — before any write.
+// base is the ref the candidate is compared against. An empty --base means the
+// empty tree, exactly as in `check`: compare against nothing.
+func (r *runner) base() string {
+	if trimmed := strings.TrimSpace(r.opts.Base); trimmed != "" {
+		return trimmed
+	}
+	return EmptyTree
+}
+
+// worktree reads the current candidate once. Every later question about the
+// candidate - the prompt, the floor, the blobs, the store - reads this value;
+// a second read of the same bytes was the cost this verb used to pay.
+func (r *runner) worktree() (*worktree, *Result) {
+	if r.work != nil {
+		return r.work, nil
+	}
+
+	base := r.base()
+	tree, paths, diff, err := r.git.Candidate(r.opts.Dir, base)
+	if err != nil && base == DefaultBase {
+		// A project with no commit yet has no HEAD: everything uncommitted is
+		// the candidate, and the empty tree says exactly that. A base the human
+		// named is never silently replaced.
+		if retryTree, retryPaths, retryDiff, retryErr := r.git.Candidate(r.opts.Dir, EmptyTree); retryErr == nil {
+			tree, paths, diff, err = retryTree, retryPaths, retryDiff, nil
+			base = EmptyTree
+		}
+	}
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not read what changed against %q: %s; fix --base %q or drop the flag to compare against HEAD",
+			r.base(), oneLine(err.Error()), r.base()))
+		return nil, &problem
+	}
+
+	r.work = &worktree{tree: tree, base: base, paths: paths, diff: diff}
+	return r.work, nil
+}
+
+// afterReviewer drops the candidate after the reviewer command ran: the command
+// is arbitrary, and a reviewer that edits the tree must not have its answer
+// filed under bytes it did not judge.
+func (r *runner) afterReviewer() {
+	r.work = nil
+	r.storeReady = false
+}
+
+// candidate gathers the brief and the worktree. Without a diff there is nothing
+// to review, and the run stops there - before any write.
 func (r *runner) candidate() (candidate, *Result) {
 	briefText, problem := r.brief()
 	if problem != nil {
 		return candidate{}, problem
 	}
 
-	paths, base, err := r.changedPaths()
-	if err != nil {
-		problem := blocked(fmt.Sprintf("could not read what changed against %q: %s; fix --base %q or drop the flag to compare against HEAD",
-			r.base(), oneLine(err.Error()), r.base()))
-		return candidate{}, &problem
+	work, problem := r.worktree()
+	if problem != nil {
+		return candidate{}, problem
 	}
-	if len(paths) == 0 {
+	if len(work.paths) == 0 || strings.TrimSpace(work.diff) == "" {
 		problem := nothingToReview()
 		return candidate{}, &problem
 	}
 
-	diff, err := r.git.Diff(r.opts.Dir, base)
-	if err != nil {
-		problem := blocked(fmt.Sprintf("could not read the diff against %q: %s; fix --base %q or drop the flag to compare against HEAD",
-			base, oneLine(err.Error()), r.base()))
-		return candidate{}, &problem
-	}
-	if strings.TrimSpace(diff) == "" {
-		problem := nothingToReview()
-		return candidate{}, &problem
+	return candidate{brief: briefText, base: work.base, tree: work.tree, paths: work.paths, diff: work.diff}, nil
+}
+
+// candidateForReview is candidate() plus the store preparation: a verdict is
+// filed inside the candidate, so its directory must be ignorable before the
+// tree it names is final. The write usually changes nothing; when it does, the
+// candidate is read again so the prompt names the tree the verdict will carry.
+func (r *runner) candidateForReview() (candidate, *Result) {
+	cand, problem := r.candidate()
+	if problem != nil {
+		return candidate{}, problem
 	}
 
-	return candidate{brief: briefText, base: base, paths: paths, diff: diff}, nil
+	// The flag is validated before the store write: an invented lens must not
+	// leave a file behind while refusing.
+	if _, problem := r.lensFlag(); problem != nil {
+		return candidate{}, problem
+	}
+
+	wrote, problem := r.ensureStore()
+	if problem != nil {
+		return candidate{}, problem
+	}
+	if !wrote {
+		return cand, nil
+	}
+
+	r.work = nil
+	return r.candidate()
 }
 
 // floor is the deterministic audit set of the candidate being stored: which
@@ -1179,20 +1283,11 @@ func (r *runner) candidate() (candidate, *Result) {
 // It fails closed — without the diff there is no citation rule, and a verdict
 // whose blocking claims nobody can check is worse than no verdict.
 func (r *runner) floor() (domain.Floor, *Result) {
-	paths, base, err := r.changedPaths()
-	if err != nil {
-		problem := blocked(fmt.Sprintf("could not read what changed against %q to measure the floor: %s; fix --base %q or drop the flag to compare against HEAD",
-			r.base(), oneLine(err.Error()), r.base()))
-		return domain.Floor{}, &problem
+	work, problem := r.worktree()
+	if problem != nil {
+		return domain.Floor{}, problem
 	}
-
-	diff, err := r.git.Diff(r.opts.Dir, base)
-	if err != nil {
-		problem := blocked(fmt.Sprintf("could not read the diff against %q to measure the floor: %s; fix --base %q or drop the flag to compare against HEAD",
-			base, oneLine(err.Error()), r.base()))
-		return domain.Floor{}, &problem
-	}
-	return domain.FloorFor(paths, diff), nil
+	return domain.FloorFor(work.paths, work.diff), nil
 }
 
 // brief reads brief.md. A missing brief is a state, not an error: the review is
@@ -1220,51 +1315,28 @@ func (r *runner) brief() (string, *Result) {
 	return noBrief, nil
 }
 
-// changedPaths is what changed and which base actually answered. A project with
-// no commit yet has no HEAD, so the comparison falls back to the empty tree:
-// everything uncommitted is the candidate. A base the human named is never
-// silently replaced.
-func (r *runner) changedPaths() ([]string, string, error) {
-	base := r.base()
-
-	paths, err := r.git.ChangedPaths(r.opts.Dir, base)
-	if err == nil {
-		return paths, base, nil
-	}
-	if base != DefaultBase {
-		return nil, base, err
-	}
-
-	paths, retryErr := r.git.ChangedPaths(r.opts.Dir, EmptyTree)
-	if retryErr != nil {
-		return nil, base, err
-	}
-	return paths, EmptyTree, nil
-}
-
-// base is the ref the candidate is compared against. An empty --base means the
-// empty tree, exactly as in `check`: compare against nothing.
-func (r *runner) base() string {
-	if trimmed := strings.TrimSpace(r.opts.Base); trimmed != "" {
-		return trimmed
-	}
-	return EmptyTree
-}
-
-// prepareStore makes the store's directory ignorable and then hashes the
-// worktree. The order is the whole trick: the verdict is written inside the
-// candidate, so without an ignore rule, writing it would change the tree that
-// names it and every verdict would invalidate itself.
+// ensureStore makes the store's directory ignorable before the tree that names
+// the verdict is read. The order is the whole trick: the verdict is written
+// inside the candidate, so without an ignore rule, writing it would change the
+// tree that names it and every verdict would invalidate itself.
 //
 // The rule is asked of the repository first. A project that ran `odachi init`
 // carries the block in its own .gitignore, and there the store's own file would
-// only be a new path in the worktree — the shift this function exists to avoid.
+// only be a new path in the worktree - the shift this function exists to avoid.
 // A probe that cannot answer is not permission to skip the file: a verdict must
 // never move the tree because git failed, so the fallback is the store's own
-// ignore file, written before the hash as it always was.
-func (r *runner) prepareStore() (string, *Result) {
+// ignore file, written before the tree is read.
+//
+// It reports whether it wrote the file: a write can remove earlier verdicts from
+// the candidate, and the caller decides whether the read has to happen again.
+func (r *runner) ensureStore() (bool, *Result) {
+	if r.storeReady {
+		return false, nil
+	}
+	r.storeReady = true
+
 	if ignored, err := r.git.Ignored(r.opts.Dir, domain.Dir); err == nil && ignored {
-		return r.treeHash()
+		return false, nil
 	}
 
 	rel := ignoreRel()
@@ -1273,17 +1345,17 @@ func (r *runner) prepareStore() (string, *Result) {
 	exists, err := r.files.Exists(path)
 	if err != nil {
 		problem := blocked(fmt.Sprintf("could not check %s: %s; check the permissions", rel, oneLine(err.Error())))
-		return "", &problem
+		return false, &problem
 	}
-	if !exists {
-		if err := r.files.Write(path, []byte(domain.IgnoreContent)); err != nil {
-			problem := blocked(fmt.Sprintf("could not prepare %s: %s; check the permissions", rel, oneLine(err.Error())))
-			return "", &problem
-		}
-		r.storeIgnoreWritten = true
+	if exists {
+		return false, nil
 	}
-
-	return r.treeHash()
+	if err := r.files.Write(path, []byte(domain.IgnoreContent)); err != nil {
+		problem := blocked(fmt.Sprintf("could not prepare %s: %s; check the permissions", rel, oneLine(err.Error())))
+		return false, &problem
+	}
+	r.storeIgnoreWritten = true
+	return true, nil
 }
 
 // treeHash is the current worktree, which is what the verdict is named after.

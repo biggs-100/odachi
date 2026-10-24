@@ -107,12 +107,12 @@ type Files interface {
 // which dependencies appeared, and whether the repository already ignores a path.
 type Git interface {
 	TreeHash(root string) (string, error)
-	ChangedPaths(root, base string) ([]string, error)
+	// Candidate is the one read of the worktree: its content tree, the paths
+	// that differ from base, and the diff, from one throwaway index. The fence
+	// reads the paths, the lens class reads the diff, and the proof is named
+	// after the tree; all three describe the same bytes.
+	Candidate(root, base string) (tree string, paths []string, diff string, err error)
 	AddedDeps(root, base string) ([]string, error)
-	// Diff is the candidate as one unified diff. The gate reads it to assess the
-	// lens class from the added lines, the same reading the review selection
-	// uses, so the two can never disagree about what this tree asks for.
-	Diff(root, base string) (string, error)
 	// BlobHash is the receipt of one worktree file: the blob id git already
 	// owns, measured now. The coverage answer compares a verdict's rows against
 	// exactly this, so a measurement is load-bearing; it answers "" for a file
@@ -162,15 +162,13 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		}
 	}
 
-	treeHash, err := git.TreeHash(opts.Dir)
-	if err != nil {
-		return blocked(fmt.Sprintf(
-			"could not read the git tree: %s; run odachi check inside a git repository and check that git is installed",
-			oneLine(err.Error())))
+	work, problem := r.worktree()
+	if problem != nil {
+		return *problem
 	}
-	r.tree = treeHash
+	r.tree = work.tree
 
-	state := gate.State{TreeHash: treeHash}
+	state := gate.State{TreeHash: work.tree}
 
 	hasBrief, missing, problem := r.brief()
 	if problem != nil {
@@ -212,7 +210,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		if problem != nil {
 			return *problem
 		}
-		state.ProofTreeHash = treeHash
+		state.ProofTreeHash = work.tree
 		state.ProofOutput = ran.output
 		state.ProofLastLine = proof.Proof{Output: ran.output}.LastLine()
 		state.ProofFailed = ran.failed
@@ -285,6 +283,47 @@ type runner struct {
 	shell    Shell
 	tree     string
 	proofRel string
+	// work is the one read of the candidate: tree, changed paths and diff. The
+	// fence, the lens class and the proof all describe these same bytes.
+	work *worktree
+}
+
+// worktree is one read of the candidate: the content tree that names the proof,
+// the paths that differ from base, and the diff the lens class reads.
+type worktree struct {
+	tree  string
+	base  string
+	paths []string
+	diff  string
+}
+
+// worktree reads the candidate once. A project with no commit yet has no HEAD,
+// so the comparison falls back to the empty tree: everything uncommitted is the
+// candidate. A base the human named is never silently replaced.
+func (r *runner) worktree() (*worktree, *Result) {
+	if r.work != nil {
+		return r.work, nil
+	}
+
+	base := baseRef(r.opts.Base)
+	tree, paths, diff, err := r.git.Candidate(r.opts.Dir, base)
+	if err != nil && base == head {
+		if retryTree, retryPaths, retryDiff, retryErr := r.git.Candidate(r.opts.Dir, EmptyTree); retryErr == nil {
+			tree, paths, diff, err = retryTree, retryPaths, retryDiff, nil
+			base = EmptyTree
+		}
+	}
+	if err != nil {
+		message := "could not read the git tree: " + oneLine(err.Error()) + "; run odachi check inside a git repository and check that git is installed"
+		if base != head {
+			message = baseProblem(base, err)
+		}
+		problem := blocked(message)
+		return nil, &problem
+	}
+
+	r.work = &worktree{tree: tree, base: base, paths: paths, diff: diff}
+	return r.work, nil
 }
 
 // brief reads brief.md when it exists. A missing brief is a state, not an
@@ -324,17 +363,11 @@ func (r *runner) fenceViolations() ([]string, *Result) {
 
 	base := baseRef(r.opts.Base)
 
-	changed, err := r.git.ChangedPaths(r.opts.Dir, base)
-	if err != nil && base == head {
-		// No commit yet: everything uncommitted is the comparison, and the
-		// empty tree says exactly that. A base the human named is never
-		// silently replaced.
-		changed, err = r.git.ChangedPaths(r.opts.Dir, EmptyTree)
+	work, problem := r.worktree()
+	if problem != nil {
+		return nil, problem
 	}
-	if err != nil {
-		problem := blocked(baseProblem(base, err))
-		return nil, &problem
-	}
+	changed := work.paths
 
 	deps, err := r.git.AddedDeps(r.opts.Dir, base)
 	if err != nil && base == head {
@@ -560,26 +593,12 @@ func (r *runner) requireReview() *Result {
 // per file, and the same evidence that picks the lenses is the one whose rows
 // must answer.
 func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
-	base := baseRef(r.opts.Base)
-
-	changed, err := r.git.ChangedPaths(r.opts.Dir, base)
-	if err != nil && base == head {
-		changed, err = r.git.ChangedPaths(r.opts.Dir, EmptyTree)
-		base = EmptyTree
-	}
-	if err != nil {
-		problem := blocked(baseProblem(base, err))
-		return nil, nil, "", &problem
+	work, problem := r.worktree()
+	if problem != nil {
+		return nil, nil, "", problem
 	}
 
-	diff, err := r.git.Diff(r.opts.Dir, base)
-	if err != nil {
-		problem := blocked(fmt.Sprintf("could not read the diff against %q to assess the lens class: %s; fix --base %q or drop the flag to compare against HEAD",
-			base, oneLine(err.Error()), r.opts.Base))
-		return nil, nil, "", &problem
-	}
-
-	return reviewdomain.Lenses(reviewdomain.Assess(changed, diff)), changed, diff, nil
+	return reviewdomain.Lenses(reviewdomain.Assess(work.paths, work.diff)), work.paths, work.diff, nil
 }
 
 // currentBlobs measures the receipt each changed path earns now. A path the
