@@ -131,9 +131,9 @@ func Need(changedPaths []string, diff string) map[string][]string {
 }
 
 // Reason says in one line what makes this candidate ask for the review it asks
-// for: the signal and the path when a path decided, the added lines when the
-// content raised ordinary code, and the class otherwise. It never says "high
-// risk" in the abstract, because a reason a human cannot check is a label.
+// for: the signal and the path when a path decided, or the added lines when the
+// content raised ordinary code. It never says "high risk" in the abstract,
+// because a reason a human cannot check is a label.
 func Reason(paths []string, diff string) string {
 	candidate := make([]string, 0, len(paths))
 	for _, path := range paths {
@@ -155,7 +155,10 @@ func Reason(paths []string, diff string) string {
 		if signal, ok := firstContentSignal(FloorFor(paths, diff)); ok {
 			return "added lines touch " + signal
 		}
-		return "a path the fence knows"
+		// Unreachable while Assess reaches Full only through a path signal or
+		// those two content signals; kept so a new route says something true
+		// instead of panicking or inventing a reason.
+		return "a signal the fence knows"
 	default:
 		return "ordinary code"
 	}

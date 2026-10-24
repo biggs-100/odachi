@@ -144,6 +144,9 @@ type fakeGit struct {
 	diff    string
 	bases   []string
 	err     error
+	// candidateErr fails only the candidate read, so a test can express "the
+	// tree is readable but the base is not".
+	candidateErr error
 
 	// ignored is what the repository's rules answer about the store, and
 	// ignoredErr is the probe failing. A failed probe must never be read as "the
@@ -174,6 +177,9 @@ func (g *fakeGit) Candidate(root, base string) (string, []string, string, error)
 	g.bases = append(g.bases, base)
 	if g.err != nil {
 		return "", nil, "", g.err
+	}
+	if g.candidateErr != nil {
+		return "", nil, "", g.candidateErr
 	}
 	return g.tree, g.changed, g.diff, nil
 }

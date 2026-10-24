@@ -1537,9 +1537,10 @@ func counts(refutation domain.Refutation) (stands, refuted int) {
 }
 
 // missing is the answer for a tree without a verdict. When the candidate could
-// be read it also says which lenses this tree asks for and why: the gate is
+// be read it also says which lenses this tree requires and why: the gate is
 // invisible until it runs, and --show is where a human decides whether the
-// review pays before paying for it.
+// review pays before paying for it. The line says "required", not "asks for":
+// --lens adds lenses the tree did not ask for, and the sentence must stay true.
 func missing(tree string, required []string, reason string) Result {
 	lines := []string{"there is no review for this tree (" + tree + ")"}
 	switch {
@@ -1548,7 +1549,7 @@ func missing(tree string, required []string, reason string) Result {
 	case len(required) == 0:
 		lines = append(lines, "none is due: "+reason, "next: odachi review --lens all (ask anyway)")
 	default:
-		lines = append(lines, "this tree asks for "+strings.Join(required, ", ")+": "+reason, "next: odachi review")
+		lines = append(lines, "required: "+strings.Join(required, ", ")+": "+reason, "next: odachi review")
 	}
 	return Result{
 		Code:    CodeBlocked,

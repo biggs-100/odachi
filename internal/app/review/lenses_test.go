@@ -196,7 +196,7 @@ func TestShowWithNoVerdictSaysWhyTheTreeAsks(t *testing.T) {
 		t.Fatalf("code = %d, want %d: without a verdict --show is blocked (%s)", result.Code, review.CodeBlocked, result.Message)
 	}
 	lines := strings.Join(result.Lines, "\n")
-	for _, want := range []string{"reliability", "ordinary code", "next: odachi review"} {
+	for _, want := range []string{"required:", "reliability", "ordinary code", "next: odachi review"} {
 		if !strings.Contains(lines, want) {
 			t.Errorf("--show does not say %q:\n%s", want, lines)
 		}
@@ -213,11 +213,32 @@ func TestShowWithNoVerdictAndDocumentsOnlySaysNoneIsDue(t *testing.T) {
 
 	result := p.run(review.Options{Show: true})
 
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want %d: none is due, and --show still answers the verdict question (%s)", result.Code, review.CodeBlocked, result.Message)
+	}
 	lines := strings.Join(result.Lines, "\n")
 	for _, want := range []string{"none is due", "documents only"} {
 		if !strings.Contains(lines, want) {
 			t.Errorf("--show does not say %q:\n%s", want, lines)
 		}
+	}
+}
+
+// TestShowWithAnUnreadCandidateDoesNotGuessLenses: when the base cannot be
+// compared, --show still finds a verdict by tree, but it does not invent lenses
+// it could not measure.
+func TestShowWithAnUnreadCandidateDoesNotGuessLenses(t *testing.T) {
+	p := newLensProject()
+	p.git.candidateErr = errors.New("unknown revision")
+
+	result := p.run(review.Options{Show: true, Base: "nosuchref"})
+
+	lines := strings.Join(result.Lines, "\n")
+	if strings.Contains(lines, "required:") || strings.Contains(lines, "none is due") {
+		t.Errorf("--show guessed the lenses of a candidate it could not read:\n%s", lines)
+	}
+	if !strings.Contains(lines, "there is no review for this tree") {
+		t.Errorf("--show did not answer the verdict question:\n%s", lines)
 	}
 }
 
