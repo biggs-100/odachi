@@ -5,7 +5,42 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## v0.11.9 — 2026-10-24
+## v0.11.10 - 2026-10-25
+
+The gate stops being ceremony: a red run says why, and a change cannot loosen the
+policy it must obey.
+
+- **A failed run keeps its whole output** in `proof/<feature>.failed.txt` —the
+  tree, the command, the exit code and every line, including a timeout—, so the
+  one-line verdict sends you to the evidence instead of replacing it. A green run
+  removes the stale file, and a file the tool could not write is never named.
+- **The fence only loosens with a new vision**: `check --fence-from` compares the
+  non-goals of the base brief and every rule, path and dependency the base fence
+  had. Dropping one blocks and the gate names it; adding is stricter and passes;
+  a fence the tool cannot read blocks either way.
+- **One workflow judges a tree**: `.github/workflows/gate.yml` runs on Linux,
+  macOS and Windows, builds odachi from the base ref and uploads `proof/` even
+  when it fails. `ci.yml` is gone, so no two files can disagree about the same
+  tree.
+- **Review pays for itself**: `review --show` answers whether this tree asks for a
+  verdict and why, a documentation-only tree is not asked for ceremony, and the
+  rule is one review, one correction, one re-review.
+- **main only takes a gate that passed**: `.github/main-ruleset.json` requires the
+  four checks, needs no approval from a second human and has no bypass list; the
+  policy is a file in the repo, so a settings change can be reviewed.
+- **A stranger can go from zero to a merged pull request**: CONTRIBUTING with the
+  loop and the exact local command, issue forms, a PR template that asks for the
+  proof, SECURITY and private vulnerability reporting, and a ruleset that does
+  not demand a second person to merge.
+- **The plan lands before the work**: `start` ends by telling the agent to commit
+  the plan —brief, fence, profile and task doc with its steps—, and the drive
+  skill makes that commit step two of the cycle. ADR 0028 records the three
+  resets that paid for the rule.
+- **The suite is deterministic**: no test reads state another test writes, the
+  version line is pure, and the ldflags seam is pinned by reading the source
+  instead of mutating the package.
+
+## v0.11.9 - 2026-10-24
 
 The gate can run in CI without trusting the change.
 

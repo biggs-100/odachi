@@ -15,7 +15,7 @@ body:
     attributes:
       label: odachi --version
       description: The version you use, or the one you are proposing against.
-      placeholder: odachi 0.11.9
+      placeholder: odachi 0.11.10
     validations:
       required: true
   - type: textarea
