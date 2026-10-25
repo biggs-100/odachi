@@ -12,7 +12,7 @@ R1 · "the answer belongs to the bytes it judged: every group is filed under the
 
 ## Steps
 - [x] T1 · a moved worktree stops the run and says where the answer lives and that the new bytes ask for their own review   R1 · 49fd531
-- [ ] T2 · a moved worktree stops the run, says where the answer lives, and the new bytes ask for their own review   R1
+- [x] T2 · a moved worktree stops the run, says where the answer lives, and the new bytes ask for their own review   R1 · 28f98f8
 
 ## History
 L1 · "the answer belongs to the bytes it judged: every group is filed under the tree the prompt named, and a reviewer that changes the worktree stops the run instead of refiling it"
