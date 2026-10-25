@@ -75,8 +75,9 @@ grep ' odachi_0.11.11_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
 
 ```powershell
 # windows: compare the hash of the zip with its line in the signed list
-$want = (Select-String checksums.txt ' odachi_0.11.11_windows_amd64.zip$').Line.Split()[0]
-(Get-FileHash .\odachi_0.11.11_windows_amd64.zip).Hash -eq $want.ToUpper()
+$want = (Select-String -Path checksums.txt -Pattern 'odachi_0\.11\.11_windows_amd64\.zip$').Line.Split()[0]
+(Get-FileHash .\odachi_0.11.11_windows_amd64.zip -Algorithm SHA256).Hash -eq $want.ToUpper()
+# True means the zip matches the signed list
 ```
 
 Each archive also ships with an `.sbom.json` (SPDX) that inventories what went
