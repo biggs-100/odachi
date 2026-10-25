@@ -10,9 +10,10 @@ R1 · "the release says which source built it: each archive carries an attestati
 - SECURITY and the README name the third link and what it adds over the signature
 
 ## Steps
-- [ ] T1 · the release job attests every archive with actions/attest, and the guard pins the step and its permission   R1
+- [x] T1 · the release job attests every archive with actions/attest, and the guard pins the step and its permission   R1 · 65aabba
 - [ ] T2 · SECURITY, the README and the release config name the third link and what it adds   R1
 
 ## History
 L1 · "the release says which source built it: each archive carries an attestation that binds it to this workflow, this commit and this tag"
 L2 · OFICIO · "The attestation runs after goreleaser and reads dist/checksums.txt, not a glob of archives" (porque the checksums are the signed list: an archive the list does not name has no business carrying an attestation from this workflow)
+L3 · OFICIO · "The docs name v0.11.12 as the first release with provenance" (porque a reader on v0.11.11 would run gh attestation verify against a file that has no attestation yet, and conclude the command is broken)
