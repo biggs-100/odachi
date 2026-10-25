@@ -11,7 +11,7 @@ R1 · "each lens can name its model: the review runs one reviewer per model grou
 - the README says how to set it and what it costs
 
 ## Steps
-- [ ] T1 · review.toml names a model per lens, and review --show prints the plan without running anything   R1
+- [x] T1 · review.toml names a model per lens, and review --show prints the plan without running anything   R1 · b0a9e7e
 - [ ] T2 · review runs one reviewer per distinct model and completes the verdict lens by lens, never rewriting an answered one   R1
 - [ ] T3 · the identity gate refuses only the lenses the builder judged, and the README says how to set it   R1
 
