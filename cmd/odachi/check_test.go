@@ -98,6 +98,30 @@ func TestCheckWithoutProofIsBlocked(t *testing.T) {
 
 // TestCheckRunWritesTheProof: --run captures the command and its output, with
 // the tree in the header, and the run is ready afterwards.
+// TestCheckRunRecordsTheModelOfThisSession is the wiring, not the app: the
+// host's answer only matters if the binary asks for it and puts it in the file.
+// A proof written without the session's name leaves the identity gate with
+// nothing to compare.
+func TestCheckRunRecordsTheModelOfThisSession(t *testing.T) {
+	dir := t.TempDir()
+	initRepo(t, dir)
+	seedProject(t, dir)
+	t.Setenv("ODACHI_MODEL", "provider/model#variant")
+
+	code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "proof", "0001-turnos.txt"))
+	if err != nil {
+		t.Fatalf("the proof was not written: %v", err)
+	}
+	if !strings.Contains(string(data), "\n# model provider/model#variant\n") {
+		t.Errorf("proof =\n%s\nwant the model header naming this session", data)
+	}
+}
+
 func TestCheckRunWritesTheProof(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

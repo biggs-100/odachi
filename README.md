@@ -325,6 +325,15 @@ no model resolves, the review stops before starting the reviewer and names
 `--model`; it never picks a fallback. A command without `{model}` runs exactly as
 before, and the verdict records the command that really ran.
 
+The verdict and the proof both name the model behind them. With the gate on, a
+verdict written by the model that produced the proof is refused — `review_self`,
+a model does not judge its own tree — and the fix is `odachi review --model
+<another>`. That is **disclosure, not identity**: a model name is a declaration,
+and a declaration can be lied about. It stops the accidental self-review, which
+is the common one, and it does not replace a second person or a review app; a
+verdict with no model (a human, or one written before the field existed) is still
+valid.
+
 The verdict lives in `.odachi/reviews/<tree-hash>.json`, so approval cannot
 float: the file name *is* the state of the code that was approved. A causal
 `BLOCKER` blocks, and to unblock it there is `odachi review --refute`: the
