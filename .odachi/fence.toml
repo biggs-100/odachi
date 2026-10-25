@@ -1,14 +1,14 @@
 [[rule]]
-not   = "a gate that checks whether the plan is committed: the tool cannot see the branch"
-paths = ["a-gate-that-checks-whether-the-plan-is-committed-the-tool-cannot-see-the-branch*"]
+not   = "changing keepFailed's behavior: it stays best effort"
+paths = ["changing-keepfailed-s-behavior-it-stays-best-effort*"]
 deps  = []
 
 [[rule]]
-not   = "changing what start writes"
-paths = ["changing-what-start-writes*"]
+not   = "a retry or fallback for a failed write"
+paths = ["a-retry-or-fallback-for-a-failed-write*"]
 deps  = []
 
 [[rule]]
-not   = "an automatic commit from start"
-paths = ["an-automatic-commit-from-start*"]
+not   = "changing the failed file format"
+paths = ["changing-the-failed-file-format*"]
 deps  = []

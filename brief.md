@@ -1,20 +1,20 @@
-# the-plan-lands
+# a-test-pins
 
 ## What must exist
-- the plan lands before the work: brief, fence and task doc in one commit
+- a test pins the branch where keepFailed cannot write the .failed.txt: the gate promises not to name a file that does not exist, and nobody verifies it
 
 ## Done when
-- odachi start ends by telling the agent to commit the plan before building
-- the drive skill's cycle starts with the plan commit and says why the pair must not split
-- a test pins the sentence and the suite stays green
+- a test makes only the .failed.txt write fail and the gate names no output path
+- the same run still fails with its one line and its next command
+- go test ./... stays green and check --run writes this tree's proof
 
 ## Not included (first version)
-- a gate that checks whether the plan is committed: the tool cannot see the branch
-- changing what start writes
-- an automatic commit from start
+- changing keepFailed's behavior: it stays best effort
+- a retry or fallback for a failed write
+- changing the failed file format
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why a plan that does not land is a plan that can be lost.
+- Wants to learn: why an error swallowed on purpose still needs a test.
