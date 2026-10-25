@@ -17,3 +17,4 @@ R1 · "the paid answer survives a later failure: each model group's verdict is s
 
 ## History
 L1 · "the paid answer survives a later failure: each model group's verdict is stored as it lands, and the gate still refuses a lens nobody judged"
+L2 · OFICIO · "Each group's answer is written before the next group starts, and the store reads the tree again before each write" (porque what a model answered is already paid for, and a reviewer may move the worktree: filing the answer under the bytes it left is the only attribution the gate can check)

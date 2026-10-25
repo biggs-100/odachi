@@ -645,9 +645,9 @@ func (r *runner) lensGroups(lenses []string) []lensGroup {
 	return groups
 }
 
-// exec runs the reviewer command and stores its answer. A command that fails is
-// exec runs one reviewer per model group and stores one verdict. A command that
-// fails is not a review: nothing is written, and its output is shown.
+// exec runs one reviewer per model group and stores each answer as it lands. A
+// group that fails does not throw away the ones that already answered: what a
+// model answered is already paid for, and the store grows by lens.
 func (r *runner) exec() Result {
 	// The candidate comes first: without a diff there is nothing to review, and a
 	// reviewer must not be started to review nothing. It is read once, so every
@@ -683,10 +683,6 @@ func (r *runner) exec() Result {
 		return alreadyStored(rel)
 	}
 
-	merged := domain.Verdict{Models: map[string]string{}}
-	reviewers := make([]string, 0, len(todo))
-	judges := make([]string, 0, len(todo))
-
 	// Every group is resolved before any of them runs: a group that cannot name
 	// its model must not be discovered after another one was paid for.
 	groups := r.lensGroups(todo)
@@ -700,6 +696,12 @@ func (r *runner) exec() Result {
 		commands[i] = command
 		resolved[i] = model
 	}
+
+	// landed is what this run answered; notes is what each store reported about
+	// the file it wrote. A failure counts both to say what the tree holds.
+	var landed []string
+	var notes []string
+	var last Result
 
 	for i, group := range groups {
 		command := commands[i]
@@ -723,18 +725,18 @@ func (r *runner) exec() Result {
 		}
 		switch {
 		case err != nil:
-			return execFailed(command, "could not run the reviewer: "+oneLine(err.Error()), diagnosis)
+			return r.stopped(command+" did not give a verdict: could not run the reviewer: "+oneLine(err.Error()), diagnosis, len(covered), selected, todo, landed)
 		case timedOut:
-			return execFailed(command, fmt.Sprintf("the review did not finish in %ds", ExecTimeoutSeconds), diagnosis)
+			return r.stopped(fmt.Sprintf("%s did not give a verdict: the review did not finish in %ds", command, ExecTimeoutSeconds), diagnosis, len(covered), selected, todo, landed)
 		case exitCode != 0:
-			return execFailed(command, fmt.Sprintf("the reviewer exited with code %d", exitCode), diagnosis)
+			return r.stopped(fmt.Sprintf("%s did not give a verdict: the reviewer exited with code %d", command, exitCode), diagnosis, len(covered), selected, todo, landed)
 		}
 
 		// A refutation is an answer too, and it is stored beside the verdict it judges.
 		if domain.Sniff([]byte(stdout)) == domain.KindRefutation {
 			refutation, err := domain.ParseRefutation([]byte(stdout))
 			if err != nil {
-				return execFailed(command, err.Error(), diagnosis)
+				return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, len(covered), selected, todo, landed)
 			}
 			// The refuter may have moved the worktree too; what it cites is the diff
 			// it was given, and the file is filed under the tree that exists now.
@@ -744,7 +746,7 @@ func (r *runner) exec() Result {
 
 		parsed, err := domain.Parse([]byte(stdout))
 		if err != nil {
-			return execFailed(command, err.Error(), diagnosis)
+			return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, len(covered), selected, todo, landed)
 		}
 		// The command is the reviewer: it is the one fact the tool knows about an
 		// answer that came out of a shell.
@@ -756,40 +758,101 @@ func (r *runner) exec() Result {
 		// the resolution of THIS group, not from a field the last one wrote.
 		parsed.Model = resolved[i]
 		if err := parsed.Validate(); err != nil {
-			return execFailed(r.opts.Exec, err.Error(), diagnosis)
+			return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, len(covered), selected, todo, landed)
 		}
-
-		merged.Findings = append(merged.Findings, parsed.Findings...)
-		merged.Passes = append(merged.Passes, parsed.Passes...)
-		// The lenses are the ones this reviewer was asked to answer, not the ones
-		// it claims: the tool stamps them, and the model that judged them is the
-		// one this group ran with.
-		for _, lens := range group.lenses {
-			merged.Lenses = appendUnique(merged.Lenses, lens)
-			if parsed.Model != "" {
-				merged.Models[lens] = parsed.Model
+		// The per-lens map is what lets the identity gate judge each lens on its
+		// own: this group's lenses were judged by this group's model.
+		if parsed.Model != "" {
+			if parsed.Models == nil {
+				parsed.Models = map[string]string{}
+			}
+			for _, lens := range group.lenses {
+				parsed.Models[lens] = parsed.Model
 			}
 		}
-		reviewers = appendUnique(reviewers, command)
-		judges = appendUnique(judges, parsed.Model)
-	}
-	if len(merged.Models) == 0 {
-		merged.Models = nil
-	}
-	merged.Reviewer = strings.Join(reviewers, " + ")
-	// One model for the whole verdict is the single-model case, and the older
-	// field keeps saying it. Several models are only in the per-lens map.
-	if len(judges) == 1 {
-		merged.Model = judges[0]
+
+		// The reviewer may have moved the worktree: the store reads again, so the
+		// answer is filed under the bytes this group left, never under the ones
+		// the prompt named.
+		r.afterReviewer()
+
+		// The lenses are the ones this reviewer was asked to answer, not the ones
+		// it claims: the tool stamps them. The answer is written before the next
+		// group starts, so a later failure cannot lose it.
+		last = r.store(parsed, cand.base, group.lenses)
+		if last.Code != CodeOK {
+			if len(landed) == 0 {
+				return last
+			}
+			return r.stopped(oneLine(last.Message), diagnosis, len(covered), selected, todo, landed)
+		}
+		landed = append(landed, group.lenses...)
+		if len(last.Lines) > 2 {
+			for _, note := range last.Lines[2:] {
+				notes = appendUnique(notes, note)
+			}
+		}
 	}
 
-	// The reviewer may have moved the worktree; the verdict must be filed under
-	// the bytes that exist now, not the ones the prompt named.
-	r.afterReviewer()
+	// The stored file is the answer: the message counts the lenses the tree
+	// holds, not the ones this run happened to run.
+	message := fmt.Sprintf("%s · %d of %d lenses", last.Message, len(covered)+len(landed), len(selected))
+	lines := []string{message}
+	if len(last.Lines) > 1 {
+		lines = append(lines, last.Lines[1])
+	}
+	return Result{
+		Code:    CodeOK,
+		Message: message,
+		Lines:   append(lines, notes...),
+		Verdict: last.Verdict,
+		Lenses:  last.Lenses,
+		Files:   last.Files,
+	}
+}
 
-	// The base is the one the diff was taken against, not the flag: a project
-	// with no commit is compared against the empty tree, and the verdict says so.
-	return r.store(merged, cand.base, todo)
+// stopped is a run that did not finish every group. The answers that landed stay
+// on disk, so the message counts them of the lenses the tree requires, names the
+// ones still owed, and gives the command that asks for exactly those.
+func (r *runner) stopped(reason, output string, savedBefore int, selected, todo, landed []string) Result {
+	saved := savedBefore + len(landed)
+	missing := unanswered(todo, landed)
+
+	message := oneLine(reason)
+	if saved > 0 {
+		message += fmt.Sprintf("; saved %d of %d lenses", saved, len(selected))
+		files := []string{}
+		if tree, problem := r.treeHash(); problem == nil {
+			if rel, err := domain.Path(tree); err == nil {
+				message += " in " + rel
+				files = append(files, rel)
+			}
+		}
+		if len(missing) > 0 {
+			message += " (missing " + strings.Join(missing, ", ") + ")"
+		}
+		lines := []string{message}
+		if len(missing) > 0 {
+			lines = append(lines, "next: odachi review --lens "+strings.Join(missing, ","))
+		}
+		return Result{
+			Code:    CodeBlocked,
+			Message: message,
+			Lines:   lines,
+			Output:  output,
+			Files:   files,
+		}
+	}
+
+	// Nothing landed: the run is the failure it always was, and saying so is the
+	// truthful answer.
+	message += "; I wrote nothing"
+	return Result{
+		Code:    CodeBlocked,
+		Message: message,
+		Lines:   []string{message},
+		Output:  output,
+	}
 }
 
 // show reads this tree's verdict, or says there is none. It writes nothing: a
@@ -1936,18 +1999,6 @@ func refused(path, reason string) Result {
 		Code:    CodeBlocked,
 		Message: message,
 		Lines:   []string{message},
-	}
-}
-
-// execFailed is a reviewer that did not answer a verdict. Its own output is part
-// of the result: it is the only thing that says why.
-func execFailed(command, reason, output string) Result {
-	message := fmt.Sprintf("%s did not give a verdict: %s; I wrote nothing", command, oneLine(reason))
-	return Result{
-		Code:    CodeBlocked,
-		Message: message,
-		Lines:   []string{message},
-		Output:  output,
 	}
 }
 
