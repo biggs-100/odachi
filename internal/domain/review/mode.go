@@ -34,6 +34,24 @@ func AllLenses() []string {
 	return out
 }
 
+// NormalizeModel checks a model identity. The value replaces {model} inside a
+// reviewer command, so it is an identifier and not shell code: a space, a quote or
+// a semicolon would change the command, and a repository's review.toml must not be
+// able to run anything. The accepted alphabet is what model ids use:
+// provider/name#variant, with dots, colons, plus and dashes.
+func NormalizeModel(value string) (string, error) {
+	model := strings.TrimSpace(value)
+	for _, r := range model {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+		case strings.ContainsRune("._/#@:+-", r):
+		default:
+			return "", fmt.Errorf("model %q contains %q: a model is an identifier (provider/name#variant), and it replaces {model} inside a command", value, r)
+		}
+	}
+	return model, nil
+}
+
 // NormalizeLensModels checks a lens table and lowercases its keys. An unknown
 // lens is refused naming the four: a model assigned to a lens that does not exist
 // would be a plan nobody follows. An empty model is a human who meant to remove
@@ -53,7 +71,11 @@ func NormalizeLensModels(raw map[string]string) (map[string]string, error) {
 		if model == "" {
 			return nil, fmt.Errorf("the lens %q names no model: write one or remove the line", lens)
 		}
-		out[name] = model
+		checked, err := NormalizeModel(model)
+		if err != nil {
+			return nil, fmt.Errorf("the lens %q: %w", lens, err)
+		}
+		out[name] = checked
 	}
 	return out, nil
 }

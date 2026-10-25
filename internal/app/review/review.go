@@ -511,6 +511,14 @@ func (r *runner) reviewerCommand(model string) (string, *Result) {
 	if model == "" && asks && r.host != nil {
 		model = strings.TrimSpace(r.host.Model(r.opts.Dir))
 	}
+	// The model replaces {model} inside a command line: an identifier that looks
+	// like shell code is refused instead of run.
+	checked, err := domain.NormalizeModel(model)
+	if err != nil {
+		res := blocked(oneLine(err.Error()) + "; the reviewer was not started")
+		return "", &res
+	}
+	model = checked
 	r.reviewedBy = model
 
 	switch {

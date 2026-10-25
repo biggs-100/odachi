@@ -7,6 +7,24 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/review"
 )
 
+// A model is an identifier that replaces {model} inside a command: the review
+// must never run a repository's string as shell code.
+func TestNormalizeModelRefusesShellCode(t *testing.T) {
+	accepted := []string{"opencode-go/kimi-k3.1-pro", "provider/name#variant", "a-b_c.d:e+f@g"}
+	for _, model := range accepted {
+		if got, err := review.NormalizeModel(model); err != nil || got != model {
+			t.Errorf("NormalizeModel(%q) = %q, %v; want it accepted", model, got, err)
+		}
+	}
+
+	refused := []string{"x; rm -rf ~", "a && b", "$(whoami)", "a b", "`id`", "a|b", "a>b"}
+	for _, model := range refused {
+		if _, err := review.NormalizeModel(model); err == nil {
+			t.Errorf("NormalizeModel(%q) accepted shell code", model)
+		}
+	}
+}
+
 // TestNormalizeModeAcceptsTheTwoAnswers: the switch is on or off, case and space
 // included, because a human writes the file.
 func TestNormalizeModeAcceptsTheTwoAnswers(t *testing.T) {
