@@ -75,9 +75,10 @@ func verdictFileByModel(t *testing.T, tree, model string) string {
 	return string(domainreview.Render(sealed))
 }
 
-// proofFileByModel seeds this tree's proof with the model that ran it.
+// proofFileByModel seeds this tree's proof with the model that ran it, in the
+// format that carries one: the model line exists only before the terminator.
 func proofFileByModel(tree, model string) string {
-	return "# tree " + tree + "\n# command go test ./...\n# model " + model + "\nok\n"
+	return "# tree " + tree + "\n# command go test ./...\n# model " + model + "\n# output\nok\n"
 }
 
 // TestRequireReviewRefusesASelfReview: the proof and the verdict name the same
