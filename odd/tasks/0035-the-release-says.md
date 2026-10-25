@@ -11,7 +11,7 @@ R1 · "the release says which source built it: each archive carries an attestati
 
 ## Steps
 - [x] T1 · the release job attests every archive with actions/attest, and the guard pins the step and its permission   R1 · 65aabba
-- [ ] T2 · SECURITY, the README and the release config name the third link and what it adds   R1
+- [x] T2 · SECURITY, the README and the release config name the third link and what it adds   R1 · 0ca24c9
 
 ## History
 L1 · "the release says which source built it: each archive carries an attestation that binds it to this workflow, this commit and this tag"
