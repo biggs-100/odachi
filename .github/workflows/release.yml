@@ -12,6 +12,9 @@ permissions:
   # Keyless signing: the OIDC token is the identity cosign signs with. No key
   # to store, rotate or leak, and the certificate names this workflow and tag.
   id-token: write
+  # Provenance: the attestation is written to the repository, not to the
+  # release, and gh fetches it by digest.
+  attestations: write
 
 jobs:
   goreleaser:
@@ -44,3 +47,10 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Provenance, after the release exists: every archive named in the signed
+      # checksums gets an attestation that says which workflow, commit and tag
+      # produced it. v4.2.2.
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-checksums: ./dist/checksums.txt
