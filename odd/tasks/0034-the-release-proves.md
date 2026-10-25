@@ -13,7 +13,7 @@ R1 · "the release proves where it came from: the checksums are signed without k
 ## Steps
 - [x] T1 · release.yml signs checksums.txt keyless and publishes the signature and certificate   R1 · a3a5ec8
 - [x] T2 · the release publishes one SBOM per archive   R1 · d191a02
-- [ ] T3 · README and SECURITY show how to verify, and the goreleaser comments tell the truth about keys and LICENSE   R1
+- [x] T3 · README and SECURITY show how to verify, and the goreleaser comments tell the truth about keys and LICENSE   R1 · 91848fd
 
 ## History
 L1 · "the release proves where it came from: the checksums are signed without keys, an SBOM shows what went into each archive, and the docs say how to verify"
