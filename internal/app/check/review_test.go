@@ -162,6 +162,90 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	}
 }
 
+// TestTheReleaseTailDoesNotOweTheFeatureVerdict: after the close, a documents-
+// only change -the release notes- is paperwork. The verdict it would ask for
+// already judged the same code, so the gate leaves it with its proof.
+func TestTheReleaseTailDoesNotOweTheFeatureVerdict(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	docs := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"CHANGELOG.md", "README.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+	}
+
+	got := run(t, newFakeFiles(files), docs, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the release tail asked for the feature's review: %s (%s)", got.Message, got.Next)
+	}
+}
+
+// TestTheClosingCommitOwesTheFeatureVerdict: the change that marked the last step
+// done is the close, even though it only carries the document. That is the tree
+// the one verdict is owed by.
+func TestTheClosingCommitOwesTheFeatureVerdict(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	closing := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"odd/tasks/0007-turnos.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
+	}
+
+	got := run(t, newFakeFiles(files), closing, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("the close = %d/%q, want the feature's review owed", got.Code, got.Reason)
+	}
+	if want := "odachi review --base " + base; got.Next != want {
+		t.Errorf("Next = %q, want %q", got.Next, want)
+	}
+}
+
+// TestCodeAfterTheCloseStillOwesAVerdict: a document written after the close is
+// paperwork; code written after it is a change nobody reviewed. The gate must not
+// go blind just because the feature is closed.
+func TestCodeAfterTheCloseStillOwesAVerdict(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	code := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+	}
+
+	got := run(t, newFakeFiles(files), code, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("code after the close = %d/%q, want a review owed", got.Code, got.Reason)
+	}
+}
+
+// TestAQuestionAnsweredAfterTheCloseDoesNotReopenTheGate: the close already
+// happened in this document's history; adding a line to it does not owe the
+// verdict again, or every note after a feature would cost a review.
+func TestAQuestionAnsweredAfterTheCloseDoesNotReopenTheGate(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	closed := reviewableDoc(base, true)
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = strings.Replace(closed, "L1 · \"reservar turnos\"", "L1 · \"reservar turnos\"\nL2 · OFICIO · \"una respuesta\"", 1)
+	tail := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"odd/tasks/0007-turnos.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": closed},
+	}
+
+	got := run(t, newFakeFiles(files), tail, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("an answered question reopened the gate: %s (%s)", got.Message, got.Next)
+	}
+}
+
 // TestTheModeAsksEveryTreeWithoutABase: a document that predates the base line
 // has no unit to review once, so the mode keeps the old per-tree rule.
 func TestTheModeAsksEveryTreeWithoutABase(t *testing.T) {
