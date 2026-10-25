@@ -71,12 +71,25 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
     steps:
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-        run: gh release download "$TAG" --dir dist
+      - run: gh release download "$TAG" --dir dist
+
+      # The checksums file is an input here, not an output: anyone who can edit
+      # the release could have rewritten it. Verify its signature before
+      # attesting, or this job would stamp provenance on bytes this workflow
+      # never built.
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - run: >
+          cosign verify-blob
+          --bundle dist/checksums.txt.sigstore.json
+          --certificate-identity "https://github.com/${GH_REPO}/.github/workflows/release.yml@refs/tags/${TAG}"
+          --certificate-oidc-issuer https://token.actions.githubusercontent.com
+          dist/checksums.txt
 
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:

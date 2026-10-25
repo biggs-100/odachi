@@ -81,6 +81,21 @@ func TestTheReleaseIsSignedKeyless(t *testing.T) {
 		t.Error("the recovery job is not dispatch-only: a tag would run it beside the release")
 	}
 
+	// The published checksums are an input in the recovery job, so they have to
+	// be verified before they are attested: attesting an unauthenticated file
+	// would stamp provenance on bytes this workflow never built.
+	verify := strings.Index(retry, "cosign verify-blob")
+	attest := strings.Index(retry, "actions/attest@")
+	if verify < 0 {
+		t.Fatal("the recovery job does not verify the checksums bundle: it would attest whatever the release holds")
+	}
+	if !strings.Contains(retry, "checksums.txt.sigstore.json") {
+		t.Error("the recovery job verifies nothing: the bundle it must check is not named")
+	}
+	if attest < 0 || verify > attest {
+		t.Error("the recovery job attests before it verifies: the signature has to come first")
+	}
+
 	assertActionsArePinned(t, workflow)
 }
 
