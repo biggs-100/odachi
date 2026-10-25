@@ -304,6 +304,34 @@ func TestEachModelRunsItsOwnReviewer(t *testing.T) {
 	}
 }
 
+// TestTheSameModelIsOneRun: a lens assigned to the model the session already uses
+// is not a second group. Two groups would be two calls paid for one answer.
+func TestTheSameModelIsOneRun(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{
+		Exec:       "revisor --model {model}",
+		Lens:       "reliability,risk",
+		LensModels: map[string]string{"risk": "host/default"},
+	})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if len(p.shell.commands) != 1 {
+		t.Fatalf("commands = %v, want one run: both lenses end on the same model", p.shell.commands)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if stored.Models["risk"] != "host/default" || stored.Models["reliability"] != "host/default" {
+		t.Errorf("models = %v, want both lenses on the model that judged them", stored.Models)
+	}
+}
+
 // TestASecondRunCompletesTheVerdict: the store grows by lens. A run that finds a
 // verdict covering reliability judges risk and adds it, keeping the rows it did
 // not pay for again.

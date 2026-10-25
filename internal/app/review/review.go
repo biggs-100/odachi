@@ -224,6 +224,11 @@ type runner struct {
 	// storeIgnoreWritten is whether this run had to write the store's own
 	// ignore file, so the result reports only files it really wrote.
 	storeIgnoreWritten bool
+	// hostModel is the session's model, asked once: grouping lenses by model must
+	// not pay a probe per lens, and two lenses that resolve to the same model must
+	// run as one group.
+	hostModel string
+	hostAsked bool
 	// reviewedBy is the model the reviewer command ran with, empty when the
 	// command asked for none. The verdict carries it so a later gate can tell
 	// this review from one the builder wrote about itself.
@@ -535,8 +540,8 @@ func (r *runner) reviewerCommand(model string) (string, *Result) {
 	asks := strings.Contains(r.opts.Exec, modelToken)
 
 	model = strings.TrimSpace(model)
-	if model == "" && asks && r.host != nil {
-		model = strings.TrimSpace(r.host.Model(r.opts.Dir))
+	if model == "" && asks {
+		model = r.hostModelFor()
 	}
 	// The model replaces {model} inside a command line: an identifier that looks
 	// like shell code is refused instead of run.
@@ -591,12 +596,32 @@ func (r *runner) validateCommand() *Result {
 }
 
 // modelFor is the model that judges one lens: --model wins for one run, then the
-// project's table, and otherwise the command decides.
+// project's table, and otherwise the host's answer when the command asks for it.
+// It resolves the host here, not later, because two lenses that end up on the same
+// model must be one group: two groups would be two calls paid for one answer.
 func (r *runner) modelFor(lens string) string {
 	if model := strings.TrimSpace(r.opts.Model); model != "" {
 		return model
 	}
-	return strings.TrimSpace(r.opts.LensModels[strings.ToLower(strings.TrimSpace(lens))])
+	if model := strings.TrimSpace(r.opts.LensModels[strings.ToLower(strings.TrimSpace(lens))]); model != "" {
+		return model
+	}
+	if strings.Contains(r.opts.Exec, modelToken) {
+		return r.hostModelFor()
+	}
+	return ""
+}
+
+// hostModelFor is the session's model, asked once.
+func (r *runner) hostModelFor() string {
+	if r.hostAsked {
+		return r.hostModel
+	}
+	r.hostAsked = true
+	if r.host != nil {
+		r.hostModel = strings.TrimSpace(r.host.Model(r.opts.Dir))
+	}
+	return r.hostModel
 }
 
 // lensGroup is the lenses one reviewer run covers: they share a model, so they

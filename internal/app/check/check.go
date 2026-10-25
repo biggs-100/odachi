@@ -822,6 +822,12 @@ func selfJudgedLenses(proofModel string, verdict reviewdomain.Verdict, required 
 	var lenses []string
 	for _, lens := range required {
 		name := strings.ToLower(strings.TrimSpace(lens))
+		// Only a lens this verdict answered can be self-judged: an uncovered one
+		// is the coverage gate's business, and naming it here would hide the gap
+		// behind an identity refusal.
+		if !answered(verdict.Lenses, name) {
+			continue
+		}
 		model := strings.TrimSpace(verdict.Models[name])
 		if model == "" {
 			model = strings.TrimSpace(verdict.Model)
@@ -831,6 +837,16 @@ func selfJudgedLenses(proofModel string, verdict reviewdomain.Verdict, required 
 		}
 	}
 	return lenses
+}
+
+// answered reports whether the verdict covers this lens.
+func answered(lenses []string, name string) bool {
+	for _, lens := range lenses {
+		if strings.EqualFold(strings.TrimSpace(lens), name) {
+			return true
+		}
+	}
+	return false
 }
 
 // reviewFinding is the one finding a human has to read first, in one line: where
