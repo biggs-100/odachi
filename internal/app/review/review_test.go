@@ -233,6 +233,10 @@ type fakeShell struct {
 	// gets the answer above.
 	script []fakeAnswer
 
+	// after runs once per call, after the answer: it is how a test makes the
+	// reviewer change the worktree it was asked to judge.
+	after func()
+
 	// input is the prompt the reviewer was given, once --exec delivers one.
 	input string
 }
@@ -258,6 +262,9 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string
 	s.command = command
 	s.timeout = timeoutSeconds
 	s.commands = append(s.commands, command)
+	if s.after != nil {
+		s.after()
+	}
 	return answer.output, answer.stderr, answer.exitCode, answer.timedOut, answer.err
 }
 
@@ -398,6 +405,42 @@ func TestAFailedGroupKeepsTheAnswerThatLanded(t *testing.T) {
 	}
 	if want := domainreview.Dir + "/" + currentTree + ".json"; !slices.Contains(result.Files, want) {
 		t.Errorf("files = %v, want the verdict that landed %q", result.Files, want)
+	}
+}
+
+// TestAReviewerThatMovesTheTreeCannotSplitTheAnswer: the prompt named one
+// candidate and every group's answer belongs to those bytes. A reviewer that
+// edits the worktree must not move where the answer is filed: one tree, one file,
+// every lens that answered.
+func TestAReviewerThatMovesTheTreeCannotSplitTheAnswer(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{{output: `{"findings":[]}`}, {output: `{"findings":[]}`}}
+	calls := 0
+	p.shell.after = func() {
+		// The second reviewer edits the worktree: from here on, the tree holds
+		// bytes the prompt never described.
+		calls++
+		if calls == 2 {
+			p.git.tree = otherTree
+		}
+	}
+
+	p.run(review.Options{
+		Exec:       "revisor --model {model}",
+		Lens:       "risk",
+		LensModels: map[string]string{"risk": "sharp/model"},
+	})
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the answer was not filed under the tree the prompt named: %v", err)
+	}
+	if !slices.Contains(stored.Lenses, "risk") || !slices.Contains(stored.Lenses, "reliability") {
+		t.Errorf("lenses = %v, want both groups under the named tree", stored.Lenses)
+	}
+	if _, ok := p.files.files[storePath(otherTree)]; ok {
+		t.Fatalf("the answer was refiled under the tree the reviewer left")
 	}
 }
 
@@ -1605,9 +1648,11 @@ func TestThePromptReadsTheWorktreeOnce(t *testing.T) {
 	}
 }
 
-// TestTheExecReadsAgainAfterTheReviewer: the reviewer is arbitrary code. The
-// verdict must describe the tree it left, not the one the prompt named.
-func TestTheExecReadsAgainAfterTheReviewer(t *testing.T) {
+// TestTheExecReadsTheCandidateOnce: the answer belongs to the candidate the
+// prompt named, so the run does not read the worktree again after the reviewer.
+// The tree is held, not re-measured; whether it moved is a cheaper question, and
+// T2's.
+func TestTheExecReadsTheCandidateOnce(t *testing.T) {
 	p := newProject()
 	p.git.ignored = true
 	p.shell.output = `{"findings":[]}`
@@ -1616,8 +1661,8 @@ func TestTheExecReadsAgainAfterTheReviewer(t *testing.T) {
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	if p.git.candidateCalls != 2 {
-		t.Errorf("candidate reads = %d, want 2: one for the prompt, one after the reviewer", p.git.candidateCalls)
+	if p.git.candidateCalls != 1 {
+		t.Errorf("candidate reads = %d, want 1: the prompt and the file are the same candidate", p.git.candidateCalls)
 	}
 }
 
