@@ -81,7 +81,12 @@ jobs:
           # changed paths against it. Without --base the worktree is compared to
           # its own HEAD, which on a clean checkout is nothing: the fence would be
           # applied to an empty list and the change would never meet it.
-          "$ODACHI_GATE" check --fence-from "$BASE" --base "$BASE" --run "go test ./..." --timeout 900
+          # --no-review: a verdict is evidence about one tree and lives in
+          # .odachi/reviews/, a store the tree ignores by design - writing it
+          # would move the tree it names. A clean checkout has no store, so the
+          # review gate runs in the pre-commit hook, where the store lives;
+          # CI enforces the fence and the proof.
+          "$ODACHI_GATE" check --fence-from "$BASE" --base "$BASE" --no-review --run "go test ./..." --timeout 900
 
       - name: keep the proof
         # always: a green run still has a proof to keep when the gate blocks on
