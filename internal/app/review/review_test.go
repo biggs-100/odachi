@@ -444,6 +444,48 @@ func TestAReviewerThatMovesTheTreeCannotSplitTheAnswer(t *testing.T) {
 	}
 }
 
+// TestAReviewerThatMovesTheTreeStopsTheRun: the answer stays under the tree it
+// judged, but the run cannot call the tree reviewed: the bytes in it now are not
+// the ones the verdict describes. It stops, names both trees, and says where the
+// answer lives.
+func TestAReviewerThatMovesTheTreeStopsTheRun(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{{output: `{"findings":[]}`}, {output: `{"findings":[]}`}}
+	calls := 0
+	p.shell.after = func() {
+		calls++
+		if calls == 2 {
+			p.git.tree = otherTree
+		}
+	}
+
+	result := p.run(review.Options{
+		Exec:       "revisor --model {model}",
+		Lens:       "risk",
+		LensModels: map[string]string{"risk": "sharp/model"},
+	})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 for a tree the verdict does not describe (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "changed the worktree") {
+		t.Errorf("message = %q, want it to say the reviewer moved the tree", result.Message)
+	}
+	if !strings.Contains(result.Message, otherTree) {
+		t.Errorf("message = %q, want the tree the worktree holds now", result.Message)
+	}
+	if !strings.Contains(result.Message, "2 of 2 lenses") {
+		t.Errorf("message = %q, want the answers that landed counted", result.Message)
+	}
+	if want := domainreview.Dir + "/" + currentTree + ".json"; !slices.Contains(result.Files, want) {
+		t.Errorf("files = %v, want the file the answer lives in %q", result.Files, want)
+	}
+	if _, ok := p.files.files[storePath(otherTree)]; ok {
+		t.Fatalf("the answer was refiled under the tree the reviewer left")
+	}
+}
+
 // TestASecondRunCompletesTheVerdict: the store grows by lens. A run that finds a
 // verdict covering reliability judges risk and adds it, keeping the rows it did
 // not pay for again.

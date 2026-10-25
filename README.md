@@ -367,6 +367,11 @@ float: the file name *is* the state of the code that was approved. A causal
 refuter has to cite the diff line that disproves the finding, because what cannot
 be cited cannot be refuted and what is not refuted stands.
 
+The run is bound to one candidate: the prompt and every group's verdict name the
+same tree. A reviewer that edits the worktree stops the run - the answer stays
+filed under the tree it judged, and the bytes now in the tree ask for their own
+review - because a verdict that describes two trees describes neither.
+
 Review is a human decision, not the agent's. By default it is off; the project
 switch lives in `.odachi/review.toml` and is written with
 `odachi review mode status|on|off`. With `on`, `odachi check` asks for this

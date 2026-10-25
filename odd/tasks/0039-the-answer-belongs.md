@@ -11,9 +11,10 @@ R1 · "the answer belongs to the bytes it judged: every group is filed under the
 - the README says the run is bound to one candidate.
 
 ## Steps
-- [ ] T1 · a moved worktree stops the run and says where the answer lives and that the new bytes ask for their own review   R1
+- [x] T1 · a moved worktree stops the run and says where the answer lives and that the new bytes ask for their own review   R1 · 49fd531
 - [ ] T2 · a moved worktree stops the run, says where the answer lives, and the new bytes ask for their own review   R1
 
 ## History
 L1 · "the answer belongs to the bytes it judged: every group is filed under the tree the prompt named, and a reviewer that changes the worktree stops the run instead of refiling it"
 L2 · OFICIO · "The run holds the candidate it named and files every group under it, instead of re-reading the worktree before each write" (porque a reviewer's edits must not move an answer out from under the tree that was judged; gentle-ai freezes the candidate, and odachi only needs one value, read once)
+L3 · OFICIO · "A reviewer that moves the worktree stops the run, and the answer keeps the tree it judged" (porque a verdict for bytes nobody was asked to judge is worse than no verdict; the paid answer stays as evidence of the old bytes and the new bytes ask for their own review)
