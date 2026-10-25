@@ -9,9 +9,9 @@ R1 · "the plan lands before the work: brief, fence and task doc in one commit"
 - a test pins the sentence and the suite stays green
 
 ## Steps
-- [ ] T1 · T1 - the start message says the plan lands first, pinned by a test   R1
-- [ ] T2 · T2 - the drive skill: the plan commit before the branch, and why   R1
-- [ ] T3 · T3 - ADR 0028: the split pair and the lost plan   R1
+- [x] T1 · T1 - the start message says the plan lands first, pinned by a test   R1 · bc3acb7
+- [x] T2 · T2 - the drive skill: the plan commit before the branch, and why   R1 · b86b978
+- [x] T3 · T3 - ADR 0028: the split pair and the lost plan   R1 · d0e31b0
 
 ## History
 L1 · "the plan lands before the work: brief, fence and task doc in one commit"
