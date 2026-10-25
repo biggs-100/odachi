@@ -9,7 +9,7 @@ R1 · "a test pins the branch where keepFailed cannot write the .failed.txt: the
 - go test ./... stays green and check --run writes this tree's proof
 
 ## Steps
-- [ ] T1 · a test fails only the .failed.txt write and pins that the gate claims no evidence it could not write   R1
+- [x] T1 · a test fails only the .failed.txt write and pins that the gate claims no evidence it could not write   R1 · d0ba48f
 
 ## History
 L1 · "a test pins the branch where keepFailed cannot write the .failed.txt: the gate promises not to name a file that does not exist, and nobody verifies it"
