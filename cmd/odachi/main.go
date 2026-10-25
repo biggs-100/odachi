@@ -402,13 +402,14 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	// The project owns the default; the flags are the exception for one run.
 	// A malformed switch blocks instead of quietly reading as off: a human who
 	// wrote `mode = "on"` must not get a gate that never opened.
+	opts.NoReview = noReview
 	if !opts.RequireReview && !noReview {
 		enabled, err := reviewapp.Enabled(dir, osFiles{}, reviewModeCodec{})
 		if err != nil {
 			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		opts.RequireReview = enabled
+		opts.ReviewMode = enabled
 	}
 
 	opts.Dir = dir

@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/biggs-100/odachi/internal/app/check"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // reviewInstant is the instant a seeded verdict records.
@@ -51,6 +53,37 @@ func reviewPath(tree string) string {
 // proofPath is this feature's proof, in the fake's spelling.
 func proofPath() string { return filepath.Join(dir, "proof", "0007-turnos.txt") }
 
+// reviewableDoc is a task document that records its base and one step, open or
+// done: the two states the review gate tells apart.
+func reviewableDoc(base string, done bool) string {
+	step := taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1"}
+	if done {
+		step.Done = true
+		step.Commit = "abc1234"
+	}
+	return taskdoc.TaskDoc{
+		Title:        "turnos",
+		Base:         base,
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:     []string{"reservo un turno"},
+		Steps:        []taskdoc.Step{step},
+		History:      []string{`L1 · "reservar turnos"`},
+	}.Render()
+}
+
+// verdictFileAtBase seals a verdict that says which diff it judged.
+func verdictFileAtBase(t *testing.T, tree, base string) string {
+	t.Helper()
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "claude",
+		Lenses:   []string{domainreview.Reliability},
+	}, tree, base, reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the seeded verdict: %v", err)
+	}
+	return string(domainreview.Render(sealed))
+}
+
 // codeChange is a candidate that touches ordinary code, so the evidence asks for
 // the reliability lens and the review gate is on.
 func codeChange() *fakeGit {
@@ -79,6 +112,79 @@ func verdictFileByModel(t *testing.T, tree, model string) string {
 // format that carries one: the model line exists only before the terminator.
 func proofFileByModel(tree, model string) string {
 	return "# tree " + tree + "\n# command go test ./...\n# model " + model + "\n# output\nok\n"
+}
+
+// TestTheModeAsksOnceWhenTheFeatureCloses: the project mode is a gate per
+// feature, not per tree. While a step is open, the code tree is ready with its
+// proof; the tree that closes the feature owes the one verdict that judged the
+// feature's diff, and the closing commit itself carries only the document.
+func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
+	const base = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+
+	open := readyFiles()
+	open["odd/tasks/0007-turnos.md"] = reviewableDoc(base, false)
+	got := run(t, newFakeFiles(open), codeChange(), check.Options{ReviewMode: true})
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("an open feature asked for a review: %s (%s)", got.Message, got.Next)
+	}
+
+	// The closing tree: the same document with its step done, and a docs-only
+	// change. Its own lenses are none, and it still owes the feature's verdict.
+	closing := readyFiles()
+	closing["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	docs := &fakeGit{tree: currentTree, changed: []string{"odd/tasks/0007-turnos.md"}}
+
+	blocked := run(t, newFakeFiles(closing), docs, check.Options{ReviewMode: true})
+	if blocked.Code != int(gate.NeedsDecision) || blocked.Reason != check.ReasonReviewMissing {
+		t.Fatalf("the closing tree without a verdict = %d/%q, want a missing review", blocked.Code, blocked.Reason)
+	}
+	if want := "odachi review --base " + base; blocked.Next != want {
+		t.Errorf("Next = %q, want the runnable review of the feature %q", blocked.Next, want)
+	}
+
+	// A verdict that judged the closing commit instead of the feature does not
+	// answer this tree.
+	wrong := readyFiles()
+	wrong["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	wrong[filepath.ToSlash(filepath.Join(domainreview.Dir, currentTree+".json"))] = verdictFileAtBase(t, currentTree, "HEAD")
+	got = run(t, newFakeFiles(wrong), docs, check.Options{ReviewMode: true})
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("a verdict for another diff passed: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+
+	// The verdict that names the feature's base is the one it owes.
+	right := readyFiles()
+	right["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	right[filepath.ToSlash(filepath.Join(domainreview.Dir, currentTree+".json"))] = verdictFileAtBase(t, currentTree, base)
+	got = run(t, newFakeFiles(right), docs, check.Options{ReviewMode: true})
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the feature's own verdict was refused: %s (%s)", got.Message, got.Next)
+	}
+}
+
+// TestTheModeAsksEveryTreeWithoutABase: a document that predates the base line
+// has no unit to review once, so the mode keeps the old per-tree rule.
+func TestTheModeAsksEveryTreeWithoutABase(t *testing.T) {
+	old := readyFiles()
+	old["odd/tasks/0007-turnos.md"] = reviewableDoc("", true)
+
+	got := run(t, newFakeFiles(old), codeChange(), check.Options{ReviewMode: true})
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("a document with no base = %d/%q, want the old per-tree rule", got.Code, got.Reason)
+	}
+}
+
+// TestNoReviewBeatsTheMode: --no-review turns the project mode off for one run,
+// including the closed feature's verdict.
+func TestNoReviewBeatsTheMode(t *testing.T) {
+	const base = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+	closing := readyFiles()
+	closing["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+
+	got := run(t, newFakeFiles(closing), &fakeGit{tree: currentTree, changed: []string{"a.go"}}, check.Options{ReviewMode: true, NoReview: true})
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("--no-review did not turn the mode off: %s (%s)", got.Message, got.Next)
+	}
 }
 
 // TestRequireReviewRefusesASelfReview: the proof and the verdict name the same
