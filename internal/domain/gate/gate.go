@@ -97,8 +97,8 @@ func Evaluate(s State) Result {
 		return Result{NeedsDecision, ReasonOutOfScope, "out of scope: " + strings.Join(s.Violations, "; "), nextAsk}
 	case len(s.FenceLoosened) > 0:
 		return Result{NeedsDecision, ReasonFenceLoosened,
-			"the fence was loosened without a new brief: " + strings.Join(s.FenceLoosened, "; ") +
-				"; the brief and the fence are the human's, and the fence may only change with a new brief. Restore it, or write the brief first",
+			"the fence was loosened without new non-goals in the brief: " + strings.Join(s.FenceLoosened, "; ") +
+				"; the fence may only change with the brief's non-goals. Restore it, or write the non-goals first",
 			nextAsk}
 	case s.OpenQuestions > 0:
 		return Result{NeedsDecision, ReasonOpenQuestion, openQuestions(s.OpenQuestions), nextAsk}
