@@ -689,6 +689,12 @@ func (r *runner) exec() Result {
 		if err != nil {
 			return blocked(oneLine(err.Error()) + "; I wrote nothing")
 		}
+		// Nothing to answer is not "already answered": a documents-only candidate
+		// has no lens at all, and claiming a verdict exists would send the human
+		// looking for a file nobody wrote.
+		if len(selected) == 0 {
+			return nothingDue(domain.Reason(cand.paths, cand.diff))
+		}
 		return alreadyStored(rel)
 	}
 
@@ -2010,6 +2016,21 @@ func missing(tree string, required []string, reason string) Result {
 		Code:    CodeBlocked,
 		Message: "there is no review for this tree",
 		Lines:   lines,
+	}
+}
+
+// nothingDue is a candidate with no lens to answer: documents only, or a change
+// the evidence asks nothing of. It is not a stored verdict, and the message must
+// not claim one: the human would go looking for a file that does not exist.
+func nothingDue(reason string) Result {
+	message := "this change asks for no lens: " + reason
+	return Result{
+		Code:    CodeBlocked,
+		Message: message,
+		Lines: []string{
+			message,
+			"next: odachi review --lens all (ask anyway)",
+		},
 	}
 }
 

@@ -12,9 +12,10 @@ R1 · "the review asks for an answer, not for work: the prompt tells the reviewe
 - the README explains the reviewer's side of the contract in one paragraph
 
 ## Steps
-- [ ] T1 · the review prompt says answer from the prompt, do not run commands, do not edit files   R1
+- [x] T1 · the review prompt says answer from the prompt, do not run commands, do not edit files   R1 · e9768bf
 - [ ] T2 · a candidate with no lens says so and names --lens all, and only an answered tree says it has a verdict   R1
 
 ## History
 L1 · "the review asks for an answer, not for work: the prompt tells the reviewer to read and not to run anything, and a candidate with no lens says so instead of claiming a verdict exists"
 L2 · OFICIO · "The rule goes first in the prompt: the reviewer reads and answers, it does not run commands or edit files" (porque a reviewer that runs tools puts its own transcript in stdout, and stdout is the verdict: the only lever over a command odachi does not own is the prompt)
+L3 · OFICIO · "Nothing due is not already done: a candidate with no lens says so instead of claiming a stored verdict" (porque the message is the only thing the human sees before trusting the store, and a file that was never written is a lie they would chase)
