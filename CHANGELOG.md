@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.18 - 2026-10-25
+
+Closing a feature is reviewed; publishing it is not.
+
+- **The close is the change that marked the last step**: the gate compares the
+  task doc at HEAD with the worktree, so the verdict is owed by the closing
+  commit - even though that commit only carries the document.
+- **Documents after the close do not reopen it**: a release note, or a note added
+  to a closed task doc, is ready with its proof; the verdict already judged the
+  same code, and asking again would charge it twice.
+- **Code after the close still owes a verdict**: the exemption is only for
+  paperwork, so the gate never goes blind.
+- `--require-review` still forces one tree; `--no-review` still turns the mode
+  off for one run.
+
 ## v0.11.17 - 2026-10-25
 
 The review asks for an answer, not for work.
