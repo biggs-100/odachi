@@ -31,6 +31,9 @@ jobs:
       # cosign v3: the signature lands as one bundle, not a .sig plus a .pem.
       - uses: sigstore/cosign-installer@v4
 
+      # goreleaser catalogues each archive with syft; the binary must be there.
+      - uses: anchore/sbom-action/download-syft@v0
+
       - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
