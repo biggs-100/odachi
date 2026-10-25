@@ -61,14 +61,15 @@ func TestALoosenedFenceNeedsANewBrief(t *testing.T) {
 }
 
 // TestANewBriefMayBringANewFence: a new feature rewrites both files, and the
-// fence of the previous feature is not supposed to survive it.
+// fence of the previous feature is not supposed to survive it. The non-goals are
+// what the fence is made of, so they are what has to change.
 func TestANewBriefMayBringANewFence(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           "# the previous feature\n\n## What must exist\n- something else\n",
+			"origin/main:brief.md":           "# the previous feature\n\n## Not included (first version)\n- something else\n",
 			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
@@ -77,6 +78,78 @@ func TestANewBriefMayBringANewFence(t *testing.T) {
 
 	if result.Code != 0 {
 		t.Fatalf("a new brief with a new fence was blocked: %s", result.Message)
+	}
+}
+
+// TestATrailingSpaceIsNotANewBrief: the probe the review found. A whitespace-only
+// edit to the header is not a new vision, so it cannot unlock the fence.
+func TestATrailingSpaceIsNotANewBrief(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "brief.md")] = []byte(strings.Replace(completeBrief, "## NO incluye (primera versión)", "## NO incluye (primera versión)   ", 1))
+	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
+	git := &fakeGit{
+		tree: currentTree,
+		filesAt: map[string]string{
+			"origin/main:brief.md":           completeBrief,
+			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+		},
+	}
+
+	result := run(t, files, git, check.Options{FenceFrom: "origin/main"})
+
+	if result.Code == 0 {
+		t.Fatal("a trailing space in the brief unlocked the fence")
+	}
+	if result.Reason != gate.ReasonFenceLoosened {
+		t.Errorf("Reason = %q, want %q (%s)", result.Reason, gate.ReasonFenceLoosened, result.Message)
+	}
+}
+
+// TestAChangedOutcomeIsNotANewPolicy: the fence is made of the non-goals. A fix
+// that rewords what must exist does not get to drop a rule.
+func TestAChangedOutcomeIsNotANewPolicy(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "brief.md")] = []byte(strings.Replace(completeBrief, "- reservar turnos", "- reservar turnos y cancelarlos", 1))
+	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
+	git := &fakeGit{
+		tree: currentTree,
+		filesAt: map[string]string{
+			"origin/main:brief.md":           completeBrief,
+			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+		},
+	}
+
+	result := run(t, files, git, check.Options{FenceFrom: "origin/main"})
+
+	if result.Code == 0 {
+		t.Fatal("a changed outcome unlocked the fence")
+	}
+	if result.Reason != gate.ReasonFenceLoosened {
+		t.Errorf("Reason = %q, want %q (%s)", result.Reason, gate.ReasonFenceLoosened, result.Message)
+	}
+}
+
+// TestAMalformedCandidateFenceBlocksEvenWithANewBrief: a new brief does not
+// excuse a fence the tool cannot read, because after the merge it is the policy
+// and every later run would read it as the base.
+func TestAMalformedCandidateFenceBlocksEvenWithANewBrief(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("not toml [[[")
+	git := &fakeGit{
+		tree: currentTree,
+		filesAt: map[string]string{
+			"origin/main:brief.md":           "# the previous feature\n\n## Not included (first version)\n- something else\n",
+			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+		},
+	}
+
+	result := run(t, files, git, check.Options{FenceFrom: "origin/main"})
+
+	if result.Code == 0 {
+		t.Fatal("a new brief let a malformed fence through")
+	}
+	if !strings.Contains(result.Message, "could not read") {
+		t.Errorf("message = %q, want it to name the unreadable file", result.Message)
 	}
 }
 

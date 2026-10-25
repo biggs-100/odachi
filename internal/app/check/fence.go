@@ -3,10 +3,12 @@ package check
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/fence"
 )
 
@@ -119,6 +121,14 @@ func (r *runner) fenceLoosenings() ([]string, *Result) {
 		return nil, nil
 	}
 
+	// The candidate's fence is read first, before any early return: it is not the
+	// policy today, but it is the policy after the merge, and a file the tool
+	// cannot read must not travel. A new brief does not excuse a broken fence.
+	candidate, problem := r.worktreeFenceRules()
+	if problem != nil {
+		return nil, problem
+	}
+
 	changed, problem := r.briefChanged(ref)
 	if problem != nil {
 		return nil, problem
@@ -135,11 +145,6 @@ func (r *runner) fenceLoosenings() ([]string, *Result) {
 		return nil, nil
 	}
 
-	candidate, problem := r.worktreeFenceRules()
-	if problem != nil {
-		return nil, problem
-	}
-
 	loosenings := fence.Loosened(base, candidate)
 	lines := make([]string, 0, len(loosenings))
 	for _, loosening := range loosenings {
@@ -148,8 +153,10 @@ func (r *runner) fenceLoosenings() ([]string, *Result) {
 	return lines, nil
 }
 
-// briefChanged compares the brief of the ref with the worktree's. The comparison
-// normalizes line endings and trailing whitespace: a Windows checkout is not a
+// briefChanged compares the part of the brief the fence is made of: the
+// non-goals. Whitespace, comments and a changed outcome are not a new policy; a
+// different list of non-goals is. Line endings and trailing spaces are
+// normalized before parsing, so a Windows checkout -or a stray space- is not a
 // new vision.
 func (r *runner) briefChanged(ref string) (bool, *Result) {
 	base, found, err := r.git.FileAt(r.opts.Dir, ref, briefFile)
@@ -168,14 +175,26 @@ func (r *runner) briefChanged(ref string) (bool, *Result) {
 		// nothing to compare a policy against when the vision is gone.
 		return true, nil
 	}
-	return normalizeText(string(base)) != normalizeText(string(candidate)), nil
+	return !slices.Equal(nonGoals(base), nonGoals(candidate)), nil
 }
 
-// normalizeText is the comparison the brief and the fence use: line endings and
-// trailing whitespace do not change what the human decided.
-func normalizeText(text string) string {
-	text = strings.ReplaceAll(text, "\r\n", "\n")
-	return strings.TrimRight(text, " \t\n")
+// nonGoals is the list the fence is made of, read the same way from both copies:
+// line endings and trailing spaces normalized, items trimmed and sorted, so
+// order and whitespace never decide a policy.
+func nonGoals(text []byte) []string {
+	normalized := strings.ReplaceAll(string(text), "\r\n", "\n")
+	lines := strings.Split(normalized, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight(line, " \t")
+	}
+
+	items := brief.Parse(strings.Join(lines, "\n")).NonGoals
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		out = append(out, strings.TrimSpace(item))
+	}
+	slices.Sort(out)
+	return out
 }
 
 // looseningText is one line per piece of policy the candidate dropped.

@@ -1,22 +1,23 @@
-# a-stranger-can
+# a-change-cannot
 
 ## What must exist
-- a stranger can go from zero to a merged pull request by reading the repository
+- a change cannot loosen the fence it must obey
 
 ## Done when
-- CONTRIBUTING names the path and the one command that reproduces the gate locally
-- AI_POLICY says what must be disclosed and who owns the change; SECURITY gives a private channel
-- the issue forms ask for version and doctor; the pull request template asks for the proof, the risk and the rollback
-- a test fails if a file disappears or the pull request template stops asking for the proof
-- the README links the surface in one place
+- with --fence-from the gate blocks a fence that drops a rule, path or dependency when the non-goals of the brief did not change
+- adding a rule or a path is stricter and stays green
+- without --fence-from the worktree fence is the policy, as before
+- a pull request that empties .odachi/fence.toml is blocked in CI
+- the README and ADR 0027 say what is compared and what is not
 
 ## Not included (first version)
-- a code of conduct or governance
-- label automation, a stale bot or discussions
-- funding, roadmap or a CLA
+- a rule language, glob algebra or subset matching
+- signing the fence
+- comparing against anything other than --fence-from
+- changing the fence file format
 
 ## Decisions taken
-- It is used from the phone and the computer.
+- It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: what a stranger needs that a maintainer forgets.
+- Wants to learn: how to make a gate enforce its own policy.
