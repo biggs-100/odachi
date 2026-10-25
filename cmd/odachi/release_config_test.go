@@ -95,6 +95,20 @@ func TestTheReleaseIsSignedKeyless(t *testing.T) {
 	if attest < 0 || verify > attest {
 		t.Error("the recovery job attests before it verifies: the signature has to come first")
 	}
+	// Verifying without binding the identity is verifying nothing: any Fulcio
+	// identity can produce a bundle, and the actor this path worries about can
+	// run a workflow of their own. The identity must name this repository's
+	// workflow at this tag, and the issuer must be GitHub's token service.
+	for _, want := range []string{
+		"--certificate-identity",
+		"/.github/workflows/release.yml@refs/tags/",
+		"--certificate-oidc-issuer",
+		"https://token.actions.githubusercontent.com",
+	} {
+		if !strings.Contains(retry, want) {
+			t.Errorf("the recovery job verifies with %q missing: it would accept a bundle from any identity", want)
+		}
+	}
 
 	assertActionsArePinned(t, workflow)
 }
