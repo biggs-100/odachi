@@ -1,20 +1,24 @@
-# a-test-pins
+# the-release-proves
 
 ## What must exist
-- a test pins the branch where keepFailed cannot write the .failed.txt: the gate promises not to name a file that does not exist, and nobody verifies it
+- the release proves where it came from: the checksums are signed without keys, an SBOM shows what went into each archive, and the docs say how to verify
 
 ## Done when
-- a test makes only the .failed.txt write fail and the gate names no output path
-- the same run still fails with its one line and its next command
-- go test ./... stays green and check --run writes this tree's proof
+- the release publishes checksums.txt.sigstore.json beside the archives, the cosign v3 bundle that holds the signature and its certificate
+- the release publishes one SBOM per archive
+- the documented cosign verify-blob --bundle command succeeds against the published checksums and identity
+- the installer still verifies sha256 only: cosign is not a requirement to install
+- the goreleaser comments no longer claim there are no keys or no LICENSE
 
 ## Not included (first version)
-- changing keepFailed's behavior: it stays best effort
-- a retry or fallback for a failed write
-- changing the failed file format
+- own keys or a KMS: keyless only, with the workflow as the identity
+- Apple notarization
+- a Homebrew tap
+- changing what the installer verifies
+- an SBOM of the source tree: only the archives
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why an error swallowed on purpose still needs a test.
+- Wants to learn: what a signature proves that a checksum does not.
