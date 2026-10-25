@@ -488,6 +488,28 @@ func TestTheProofKeepsBothStreams(t *testing.T) {
 	}
 }
 
+// The proof says which session produced it. It is the only way a later gate can
+// tell a verdict by another model from one the same model wrote about itself.
+func TestTheProofNamesTheSessionThatRanIt(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+
+	check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120,
+		Model: "provider/model#variant"}, files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
+
+	body := string(files.files[filepath.Join(dir, "proof", "0007-turnos.txt")])
+	parsed, err := proof.Parse(body)
+	if err != nil {
+		t.Fatalf("the written proof does not parse: %v", err)
+	}
+	if parsed.Model != "provider/model#variant" {
+		t.Errorf("Model = %q, want the session that ran it", parsed.Model)
+	}
+	if parsed.Output != "ok\n" {
+		t.Errorf("Output = %q, want the verbatim output", parsed.Output)
+	}
+}
+
 // --run keeps the evidence out of the tree it describes, so two runs on the
 // same source tree hash the same worktree.
 func TestRunWritesTheProofIgnoreFile(t *testing.T) {

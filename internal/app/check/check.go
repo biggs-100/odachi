@@ -89,6 +89,10 @@ type Options struct {
 	// Quiet changes nothing about the result: the printer decides whether a
 	// ready run says anything (the pre-commit hook depends on the silence).
 	Quiet bool
+	// Model is the model of the session that runs --run, as the host reports it.
+	// It travels into the proof so a verdict by the same model can be refused as
+	// a self-review. Empty means there is no agent to name.
+	Model string
 	// RequireReview turns the optional design gate on: a stored verdict for this
 	// exact tree, and not a changes_requested one. It is off by default because a
 	// beginner must not be blocked by a verb they have never heard of.
@@ -513,7 +517,7 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 	// just passed. Best effort: the green proof is the truth either way.
 	_ = r.files.Remove(failedFile(proofPath))
 
-	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Fence: r.opts.FenceFrom, Output: output}
+	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Fence: r.opts.FenceFrom, Model: r.opts.Model, Output: output}
 	if err := r.files.Write(proofPath, []byte(proof.Render(recorded))); err != nil {
 		problem := blocked(fmt.Sprintf("could not write the proof %s: %s; check the permissions and run odachi check --run %q again",
 			r.proofRel, oneLine(err.Error()), r.opts.Run))

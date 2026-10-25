@@ -406,6 +406,11 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
+	// Only a run records who ran it. Resolving the model costs a process, so a
+	// check that judges an existing proof (the hook, CI) pays nothing.
+	if opts.Run != "" {
+		opts.Model = hostModel{}.Model(dir)
+	}
 	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
 }
 

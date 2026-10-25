@@ -31,6 +31,8 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 		{Tree: "4a1c9f", Command: `go test ./... -run "TestGate"`, Output: ""},
 		{Tree: "4a1c9f", Command: "printf 'a\\nb'", Output: "a\nb"},
 		{Tree: "4a1c9f", Command: "cat", Output: "\n\nleading and trailing blank lines\n\n"},
+		{Tree: "4a1c9f", Command: "go test ./...", Model: "provider/model#variant", Output: "ok\n"},
+		{Tree: "4a1c9f", Command: "go test ./...", Fence: "origin/main", Model: "provider/model", Output: "ok\n"},
 	}
 
 	for _, want := range cases {
@@ -41,6 +43,21 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 		if got != want {
 			t.Errorf("Parse(Render(x)) = %+v, want %+v", got, want)
 		}
+	}
+}
+
+// A proof written before the model line existed is still a proof: the line is
+// optional, and an empty model means "no agent to name", not "unknown".
+func TestAnOlderProofWithoutTheModelLineStillParses(t *testing.T) {
+	got, err := proof.Parse("# tree 4a1c9f\n# command go test ./...\nok\n")
+	if err != nil {
+		t.Fatalf("Parse of an older proof: %v", err)
+	}
+	if got.Model != "" {
+		t.Errorf("Model = %q, want empty: the file does not claim a session", got.Model)
+	}
+	if got.Output != "ok\n" {
+		t.Errorf("Output = %q, want the verbatim output", got.Output)
 	}
 }
 
