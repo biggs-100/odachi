@@ -18,3 +18,4 @@ R1 · "closing a feature is reviewed and publishing it is not: the verdict is ow
 
 ## History
 L1 · "closing a feature is reviewed and publishing it is not: the verdict is owed by the commit that marks the last step done, and a later documents-only tree does not ask for it again"
+L2 · OFICIO · "The close is the change that marked the last step, read from HEAD; a documents-only tree after it does not reopen the gate" (porque a release note does not change the code the verdict judged, and asking again charges the same bytes twice; code after the close still owes, so the gate never goes blind)

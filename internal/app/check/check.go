@@ -19,6 +19,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	reviewdomain "github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // DefaultTimeout is how long the proof command may take when --timeout is not
@@ -590,11 +591,49 @@ func (r *runner) reviewGate(feature *tasks.Document) *Result {
 		if known && !closed {
 			return nil
 		}
+		// A feature stays closed after its close. The verdict is owed by the change
+		// that marked the last step, not by every document that follows it.
+		if known && closed {
+			owed, problem := r.theCloseOwes(feature)
+			if problem != nil {
+				return problem
+			}
+			if !owed {
+				return nil
+			}
+		}
 	}
 	if known && closed {
 		return r.requireReview(base)
 	}
 	return r.requireReview("")
+}
+
+// theCloseOwes reports whether this tree is the one that closes the feature. Two
+// things ask for the verdict: code, whenever it appears; and the documents that
+// marked the last step done. A release note written after the close is paperwork:
+// the verdict it would ask for already judged the same code.
+func (r *runner) theCloseOwes(feature *tasks.Document) (bool, *Result) {
+	required, _, _, problem := r.requiredLenses()
+	if problem != nil {
+		return false, problem
+	}
+	if len(required) > 0 {
+		// Code after the close is a change nobody reviewed: the gate stays on.
+		return true, nil
+	}
+
+	before, ok, err := r.git.FileAt(r.opts.Dir, "HEAD", feature.Rel)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not read %s at HEAD: %s; check git and run odachi check again", feature.Rel, oneLine(err.Error())))
+		return false, &problem
+	}
+	if !ok {
+		// The document is new in this change, so whatever closed it closed here.
+		return true, nil
+	}
+	done, total := taskdoc.Parse(string(before)).Progress()
+	return total == 0 || done < total, nil
 }
 
 // featureReview reads the feature's review state from its document: the base its
