@@ -1,19 +1,24 @@
 [[rule]]
-not   = "cryptographic identity or signing the verdict"
-paths = ["cryptographic-identity-or-signing-the-verdict*"]
+not   = "per-lens prompts: the four lens prompts already exist"
+paths = ["per-lens-prompts-the-four-lens-prompts-already-exist*"]
 deps  = []
 
 [[rule]]
-not   = "a review app or a GitHub App"
-paths = ["a-review-app-or-a-github-app*"]
+not   = "per-lens refuters or validators"
+paths = ["per-lens-refuters-or-validators*"]
 deps  = []
 
 [[rule]]
-not   = "refusing a verdict written by a human with no model"
-paths = ["refusing-a-verdict-written-by-a-human-with-no-model*"]
+not   = "model discovery, pricing or autodetection"
+paths = ["model-discovery-pricing-or-autodetection*"]
 deps  = []
 
 [[rule]]
-not   = "changing the review prompt or the lenses"
-paths = ["changing-the-review-prompt-or-the-lenses*"]
+not   = "changing the lens vocabulary"
+paths = ["changing-the-lens-vocabulary*"]
+deps  = []
+
+[[rule]]
+not   = "a UI or a TUI"
+paths = ["a-ui-or-a-tui*"]
 deps  = []
