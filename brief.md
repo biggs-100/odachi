@@ -1,22 +1,24 @@
-# the-verdict-cannot
+# each-lens-can
 
 ## What must exist
-- the verdict cannot be from the model that wrote the tree: the proof and the verdict record who produced them, and a self-review is refused with the command that fixes it
+- each lens can name its model: the review runs one reviewer per model group and the verdict records who judged each lens, so a cheap model can carry the cheap lenses
 
 ## Done when
-- a proof run by an agent session records the model it ran under, and an old proof without that line still parses
-- a verdict records the model that judged, and an old verdict without it still parses
-- check --require-review refuses a verdict whose model is the one in the proof, and names review --model
-- the README says this is disclosure, not identity: a model name can be lied about
+- review.toml accepts a model per lens and refuses a lens name that is not one of the four
+- review --show prints which model will judge each lens, without running anything
+- review runs one reviewer per distinct model and stores one verdict that maps each lens to its model; a second run adds the missing lenses and never replaces an answered one
+- check --require-review refuses only the lenses judged by the model in the proof
+- the README says how to set it and what it costs
 
 ## Not included (first version)
-- cryptographic identity or signing the verdict
-- a review app or a GitHub App
-- refusing a verdict written by a human with no model
-- changing the review prompt or the lenses
+- per-lens prompts: the four lens prompts already exist
+- per-lens refuters or validators
+- model discovery, pricing or autodetection
+- changing the lens vocabulary
+- a UI or a TUI
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: what a self-review can and cannot prove.
+- Wants to learn: how a review can be split by model without splitting the verdict.
