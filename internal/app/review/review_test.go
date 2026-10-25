@@ -374,6 +374,9 @@ func TestASecondRunCompletesTheVerdict(t *testing.T) {
 	if !strings.Contains(stored.Reviewer, "first") {
 		t.Errorf("reviewer = %q, want the earlier reviewer named", stored.Reviewer)
 	}
+	if stored.Verdict == "" {
+		t.Errorf("the completed verdict has no derived verdict field: %+v", stored)
+	}
 }
 
 // TestARunDoesNotAnswerTheSameLensTwice: a verdict that already covers what the

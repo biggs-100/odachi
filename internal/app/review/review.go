@@ -983,6 +983,13 @@ func (r *runner) store(parsed domain.Verdict, base string, judged []string) Resu
 			}
 		}
 		sealed = mergeVerdicts(existing, sealed)
+		// The union has to be sealed again: the merge derives nothing, and a verdict
+		// without its derived field is a file that says nothing about itself.
+		resealed, err := domain.Seal(sealed, tree, base, r.opts.Now)
+		if err != nil {
+			return blocked(oneLine(err.Error()) + "; I wrote nothing")
+		}
+		sealed = resealed
 	}
 
 	if err := r.files.Write(target, domain.Render(sealed)); err != nil {
