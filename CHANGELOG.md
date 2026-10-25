@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.15 - 2026-10-25
+
+The review's answer belongs to the tree it judged.
+
+- **Each group is filed under the tree the prompt named**: the run holds the
+  candidate it read once, so a reviewer that edits the worktree cannot move the
+  answer, split it across two trees or strand the lens that landed first.
+- **A moved worktree stops the run**: the message names the file that keeps the
+  answer, how many lenses landed, and the tree that exists now - those bytes ask
+  for their own review. The paid answer stays as evidence of what was judged.
+- **The project's own gate is on**: `.odachi/review.toml` says `on` locally, and
+  CI keeps enforcing the fence and the proof with `--no-review`, because a
+  verdict is evidence about one tree and lives in a store the tree ignores by
+  design.
+
 ## v0.11.14 - 2026-10-25
 
 A stopped review keeps what it already paid for.
