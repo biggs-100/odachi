@@ -1,0 +1,8 @@
+# odachi: the review is the human's decision; on requires it in check, off leaves it optional
+mode = "off"
+
+[lenses]
+risk = "opencode-go/mimo-v2.6-flash"
+readability = "opencode-go/mimo-v2.6-flash"
+reliability = "opencode-go/mimo-v2.6-flash"
+resilience = "opencode-go/mimo-v2.6-flash"
