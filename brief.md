@@ -1,24 +1,27 @@
-# the-answer-belongs
+# the-gate-asks
 
 ## What must exist
-- the answer belongs to the bytes it judged: every group is filed under the tree the prompt named, and a reviewer that changes the worktree stops the run instead of refiling it
+- the gate asks once per feature, not once per commit: a feature with open steps needs only its proof, and the tree that closes it needs the one verdict that judged the feature's diff
 
 ## Done when
-- every group's verdict is filed under the tree the prompt named, even when a reviewer left a different worktree
-- a reviewer that changed the worktree stops the run: it names the tree the answer belongs to, what landed, and that the new bytes ask for their own review
-- check and review --show keep naming the tree they compare, and the gate's rule does not change
-- a test drives a reviewer that changes the tree mid-run: one file for the named tree, every lens in it, and no file for the tree the reviewer left
-- the README says the run is bound to one candidate.
+- the task doc records the commit the feature started from, and start writes it
+- with the project mode on, a tree whose feature still has open steps is ready with its proof alone
+- the tree that closes a feature needs a verdict, and the verdict must name the feature's base
+- the blocked message names the runnable review with the recorded base
+- --require-review still forces the gate for one tree and --no-review still turns it off for one run
+- a feature with no steps, or a document with no base, keeps the old rule: the mode asks for a verdict on every tree
+- tests pin the five cases and the README says the review unit is the feature
 
 ## Not included (first version)
-- copying the worktree or a sandbox per reviewer
-- a transaction store with replay, CAS or locks
-- resuming a killed process
-- committing, restoring or reverting the reviewer's edits
-- changing the reviewer command, the lens prompts or the gate's rule
+- changing the lens selection, the verdict format or the review store
+- discovering the base from a remote or from the default branch
+- reviewing every step as its own unit
+- changing CI or the release workflow
+- a journal, CAS or resume machinery
+- rewriting the task docs of features already closed
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how to hold a candidate still while something else can edit it.
+- Wants to learn: how to make a gate cost once per unit of work without making it blind.
