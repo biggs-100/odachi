@@ -13,7 +13,7 @@ R1 · "the review asks for an answer, not for work: the prompt tells the reviewe
 
 ## Steps
 - [x] T1 · the review prompt says answer from the prompt, do not run commands, do not edit files   R1 · e9768bf
-- [ ] T2 · a candidate with no lens says so and names --lens all, and only an answered tree says it has a verdict   R1
+- [x] T2 · a candidate with no lens says so and names --lens all, and only an answered tree says it has a verdict   R1 · 4b8bdb5
 
 ## History
 L1 · "the review asks for an answer, not for work: the prompt tells the reviewer to read and not to run anything, and a candidate with no lens says so instead of claiming a verdict exists"
