@@ -17,3 +17,4 @@ R1 · "the verdict cannot be from the model that wrote the tree: the proof and t
 ## History
 L1 · "the verdict cannot be from the model that wrote the tree: the proof and the verdict record who produced them, and a self-review is refused with the command that fixes it"
 L2 · OFICIO · "The identity is a field on both files, not text parsed out of the reviewer command" (porque a command is a string a human edits; comparing two declared identities is something a gate can do without guessing)
+L3 · OFICIO · "The proof ends its headers with # output, so the quotation stays verbatim" (porque without a terminator a command whose first line is # model x lost that line to the parser, and the model line now carries meaning)

@@ -18,6 +18,7 @@ func TestRenderWritesTheTwoHeaderLinesThenTheVerbatimOutput(t *testing.T) {
 
 	want := "# tree 4a1c9f7d2e3b5a6c8d9e0f1a2b3c4d5e6f7a8b9c\n" +
 		"# command go test ./...\n" +
+		"# output\n" +
 		"ok  github.com/biggs-100/odachi/internal/domain/fence\t0.02s\n" +
 		"--- FAIL: TestX (0.00s)\n"
 	if got != want {
@@ -43,6 +44,23 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 		if got != want {
 			t.Errorf("Parse(Render(x)) = %+v, want %+v", got, want)
 		}
+	}
+}
+
+// A command whose first line looks like a header keeps that line: the output
+// terminator is what makes the quotation verbatim.
+func TestAnOutputStartingWithAHeaderStaysInTheQuotation(t *testing.T) {
+	p := proof.Proof{Tree: "4a1c9f", Command: "echo # model attacker", Model: "provider/model", Output: "# model attacker\nok\n"}
+
+	back, err := proof.Parse(proof.Render(p))
+	if err != nil {
+		t.Fatalf("Parse(Render(x)) = %v", err)
+	}
+	if back.Output != "# model attacker\nok\n" {
+		t.Errorf("Output = %q, want the command's first line kept", back.Output)
+	}
+	if back.Model != "provider/model" {
+		t.Errorf("Model = %q, want the writer's line, not the command's", back.Model)
 	}
 }
 
@@ -125,6 +143,7 @@ func TestRenderFailedNamesTheExitOrTheTimeout(t *testing.T) {
 	want := "# failed 4a1c9f\n" +
 		"# command go test ./...\n" +
 		"# exit 1\n" +
+		"# output\n" +
 		"--- FAIL: TestX\nFAIL\n"
 	if exited != want {
 		t.Errorf("RenderFailed(exit 1) =\n%q\nwant\n%q", exited, want)
