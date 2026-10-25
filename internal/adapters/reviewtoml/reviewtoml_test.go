@@ -92,8 +92,10 @@ func TestDecodeReadsALensTable(t *testing.T) {
 // a plan for a lens nobody asks would be a model the human pays for nothing.
 func TestDecodeRefusesABrokenLensTable(t *testing.T) {
 	cases := map[string]string{
-		"unknown lens": "mode = \"on\"\n[lenses]\nperformance = \"m\"\n",
-		"no model":     "mode = \"on\"\n[lenses]\nrisk = \"\"\n",
+		"unknown lens":  "mode = \"on\"\n[lenses]\nperformance = \"m\"\n",
+		"no model":      "mode = \"on\"\n[lenses]\nrisk = \"\"\n",
+		"shell code":    "mode = \"on\"\n[lenses]\nrisk = \"x; rm -rf ~\"\n",
+		"command break": "mode = \"on\"\n[lenses]\nrisk = \"a && b\"\n",
 	}
 
 	for name, data := range cases {
