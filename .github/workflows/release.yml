@@ -19,7 +19,10 @@ permissions:
   attestations: write
 
 jobs:
+  # Push only: a manual dispatch must never publish. Without this line the job
+  # would run on the recovery dispatch and publish a second time.
   goreleaser:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       # Every action in this job holds the OIDC identity, so every one pins a
