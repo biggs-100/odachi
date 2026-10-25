@@ -43,6 +43,9 @@ has the command to verify it.
 - Neither proves the source was good: a signed and attested build of a
   compromised tree is still signed and attested. What it rules out is a binary
   from somewhere else wearing this release's name.
+- The attestation is written after the release is public, so that step can fail
+  with the release already out. Running the release workflow by hand on the tag
+  attests the bytes that are published, without publishing anything again.
 - Each archive ships an SPDX SBOM beside it, so what is inside can be read
   without asking the maintainer.
 - The installer verifies `sha256` only. Requiring cosign to install would turn
