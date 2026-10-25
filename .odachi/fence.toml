@@ -1,24 +1,29 @@
 [[rule]]
-not   = "copying the worktree or a sandbox per reviewer"
-paths = ["copying-the-worktree-or-a-sandbox-per-reviewer*"]
+not   = "changing the lens selection, the verdict format or the review store"
+paths = ["changing-the-lens-selection-the-verdict-format-or-the-review-store*"]
 deps  = []
 
 [[rule]]
-not   = "a transaction store with replay, CAS or locks"
-paths = ["a-transaction-store-with-replay-cas-or-locks*"]
+not   = "discovering the base from a remote or from the default branch"
+paths = ["discovering-the-base-from-a-remote-or-from-the-default-branch*"]
 deps  = []
 
 [[rule]]
-not   = "resuming a killed process"
-paths = ["resuming-a-killed-process*"]
+not   = "reviewing every step as its own unit"
+paths = ["reviewing-every-step-as-its-own-unit*"]
 deps  = []
 
 [[rule]]
-not   = "committing, restoring or reverting the reviewer's edits"
-paths = ["committing-restoring-or-reverting-the-reviewer-s-edits*"]
+not   = "changing CI or the release workflow"
+paths = ["changing-ci-or-the-release-workflow*"]
 deps  = []
 
 [[rule]]
-not   = "changing the reviewer command, the lens prompts or the gate's rule"
-paths = ["changing-the-reviewer-command-the-lens-prompts-or-the-gate-s-rule*"]
+not   = "a journal, CAS or resume machinery"
+paths = ["a-journal-cas-or-resume-machinery*"]
+deps  = []
+
+[[rule]]
+not   = "rewriting the task docs of features already closed"
+paths = ["rewriting-the-task-docs-of-features-already-closed*"]
 deps  = []
