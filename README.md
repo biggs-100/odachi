@@ -318,6 +318,13 @@ or says none is due because only documents changed. Review once per tree: a
 causal `BLOCKER` earns one correction and one re-review; `WARNING` and
 `SUGGESTION` go to the task doc and do not earn another round.
 
+The reviewer is a reader: the prompt says everything it needs is inside, so it
+must not run commands, edit files or read others. A reviewer that does puts its
+transcript in stdout, and stdout is the verdict; the retry asks it again with no
+tools. And a change the evidence asks nothing of is named as such -`this change
+asks for no lens: documents only`, with `--lens all` to ask anyway- : `already
+has a verdict` is only said when it is true.
+
 `{model}` is the model this session is using, so `--exec` can judge with the
 same one you are talking to. The order is `--model`, then `ODACHI_MODEL` —any
 host can set it—, then the OpenCode session. When the placeholder is there and

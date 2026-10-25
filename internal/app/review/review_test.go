@@ -486,6 +486,36 @@ func TestAReviewerThatMovesTheTreeStopsTheRun(t *testing.T) {
 	}
 }
 
+// TestExecOnADocumentsOnlyChangeSaysNothingIsDue: a candidate with no lens asks
+// for no reviewer, and the message must not claim a verdict exists: the store has
+// none, and a lie sends the human looking for a file nobody wrote.
+func TestExecOnADocumentsOnlyChangeSaysNothingIsDue(t *testing.T) {
+	p := newProject()
+	p.git.changed = []string{"README.md"}
+	p.git.diff = "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
+
+	result := p.run(review.Options{Exec: "revisor"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 for a change with nothing to review (%s)", result.Code, result.Message)
+	}
+	if strings.Contains(result.Message, "already has a verdict") {
+		t.Errorf("message = %q, want no claim that a verdict exists", result.Message)
+	}
+	if !strings.Contains(result.Message, "asks for no lens") || !strings.Contains(result.Message, "documents only") {
+		t.Errorf("message = %q, want the reason and no lens due", result.Message)
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "--lens all") {
+		t.Errorf("lines = %v, want the command that asks anyway", result.Lines)
+	}
+	if p.shell.asked {
+		t.Error("a reviewer ran for a change with no lens")
+	}
+	if writes := p.verdictWrites(); len(writes) != 0 {
+		t.Fatalf("writes = %v, want none", writes)
+	}
+}
+
 // TestASecondRunCompletesTheVerdict: the store grows by lens. A run that finds a
 // verdict covering reliability judges risk and adds it, keeping the rows it did
 // not pay for again.
@@ -557,6 +587,9 @@ func TestARunDoesNotAnswerTheSameLensTwice(t *testing.T) {
 	result := p.run(review.Options{Exec: "revisor --model {model}"})
 	if result.Code == review.CodeOK {
 		t.Fatalf("the run rewrote a verdict that already answered its lens: %s", result.Message)
+	}
+	if !strings.Contains(result.Message, "already has a verdict") {
+		t.Errorf("message = %q, want the tree said answered, which is true here", result.Message)
 	}
 	if len(p.shell.commands) != 0 {
 		t.Errorf("the reviewer ran for a lens that was already answered: %v", p.shell.commands)
