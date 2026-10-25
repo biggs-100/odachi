@@ -6,7 +6,13 @@
 // # command <the command that was run>
 // # fence <ref>            (optional: CI, the policy the gate obeyed)
 // # model <provider/name>  (optional: the model of the session that ran it)
+// # output
 // <real output, stdout+stderr, verbatim>
+//
+// The output terminator is what makes the output verbatim: without it, a
+// command whose first line is "# model x" would lose that line to the header
+// parser. Older proofs without the line still parse; the ambiguity stays for
+// those files only, because what is already written is not rewritten.
 //
 // A proof is only evidence if it says what it was produced from, so a file
 // without the header is refused instead of guessed at. The format is pure
@@ -31,8 +37,11 @@ const (
 	// ModelHeader names the session that ran the command. It is what makes a
 	// self-review visible: the verdict carries the model that judged, and the
 	// same name on both sides is one agent approving itself.
-	ModelHeader   = "# model "
-	ExitHeader    = "# exit "
+	ModelHeader = "# model "
+	// OutputHeader ends the headers. Everything after it is the command's
+	// output, so a first line that looks like a header stays in the quotation.
+	OutputHeader = "# output"
+	ExitHeader   = "# exit "
 	TimeoutHeader = "# timed out"
 	// FailedHeader starts the evidence of a failed run. It is not a variant of
 	// TreeHeader: a failed file never matches the first line of a proof, so Parse
@@ -70,6 +79,7 @@ func Render(p Proof) string {
 	if p.Model != "" {
 		out.WriteString(ModelHeader + p.Model + "\n")
 	}
+	out.WriteString(OutputHeader + "\n")
 	out.WriteString(p.Output)
 	return out.String()
 }
@@ -91,6 +101,7 @@ func RenderFailed(p Proof, exitCode int, timedOut bool) string {
 	} else {
 		out.WriteString(ExitHeader + strconv.Itoa(exitCode) + "\n")
 	}
+	out.WriteString(OutputHeader + "\n")
 	out.WriteString(p.Output)
 	return out.String()
 }
@@ -119,6 +130,12 @@ func Parse(text string) (Proof, error) {
 	model := ""
 	if line, rest, ok := cutLine(output); ok && strings.HasPrefix(line, ModelHeader) {
 		model = strings.TrimSpace(strings.TrimPrefix(line, ModelHeader))
+		output = rest
+	}
+
+	// The terminator is optional: a proof written before it existed ends its
+	// headers wherever they stop, and that file keeps its old reading.
+	if line, rest, ok := cutLine(output); ok && line == OutputHeader {
 		output = rest
 	}
 
