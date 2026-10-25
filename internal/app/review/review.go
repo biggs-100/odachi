@@ -213,9 +213,9 @@ type runner struct {
 	shell  Shell
 	lenses Lenses
 	host   Host
-	// work is the candidate read once: tree, changed paths and diff. The
-	// reviewer command may move the worktree, so afterReviewer drops it and the
-	// store reads again.
+	// work is the candidate read once: tree, changed paths and diff. A refuter
+	// may move the worktree, so afterReviewer drops it and the file is read
+	// again; a review's own groups keep the value the prompt named.
 	work *worktree
 	// storeReady is whether this run already asked the repository whether the
 	// store is ignored. The probe is a git process and the answer cannot change
@@ -796,6 +796,18 @@ func (r *runner) exec() Result {
 			for _, note := range last.Lines[2:] {
 				notes = appendUnique(notes, note)
 			}
+		}
+
+		// The prompt named one candidate and every answer belongs to it. A reviewer
+		// that edited the worktree moved the bytes under the answer, so the run
+		// stops: what the tree holds now is not what the verdict describes, and
+		// reviewing those bytes is a different run.
+		live, problem := r.treeHash()
+		if problem != nil {
+			return r.stopped(oneLine(problem.Message), diagnosis, rel, len(covered), selected, todo, landed)
+		}
+		if live != cand.tree {
+			return r.moved(command, rel, live, diagnosis, len(covered)+len(landed), len(selected))
 		}
 	}
 
@@ -1671,9 +1683,10 @@ func (r *runner) worktree() (*worktree, *Result) {
 	return r.work, nil
 }
 
-// afterReviewer drops the candidate after the reviewer command ran: the command
-// is arbitrary, and a reviewer that edits the tree must not have its answer
-// filed under bytes it did not judge.
+// afterReviewer drops the candidate after a refuter ran: the command is
+// arbitrary, and a refutation is filed beside the verdict of the tree that exists
+// now. A review's groups do not use it: their answer belongs to the candidate the
+// prompt named, and the run stops if the worktree moved.
 func (r *runner) afterReviewer() {
 	r.work = nil
 	r.storeReady = false
@@ -2021,6 +2034,25 @@ func refused(path, reason string) Result {
 		Code:    CodeBlocked,
 		Message: message,
 		Lines:   []string{message},
+	}
+}
+
+// moved is a run whose reviewer edited the worktree. The answer stays under the
+// tree it judged - it is evidence about those bytes - and the run stops, because
+// what the tree holds now is not what the verdict describes: a verdict for those
+// bytes would have to judge something nobody was asked.
+func (r *runner) moved(command, rel, live, output string, saved, total int) Result {
+	message := fmt.Sprintf("%s changed the worktree: the answer is filed under %s (%d of %d lenses), and the tree now holds %s",
+		command, rel, saved, total, live)
+	return Result{
+		Code:    CodeBlocked,
+		Message: message,
+		Lines: []string{
+			message,
+			"next: odachi review (the tree now holds bytes no verdict describes)",
+		},
+		Output: output,
+		Files:  []string{rel},
 	}
 }
 
