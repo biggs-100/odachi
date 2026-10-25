@@ -308,6 +308,12 @@ git worktree add ../gate "$base"
 /tmp/odachi check --fence-from "$base" --base "$base" --run "go test ./..."
 ```
 
+The fence may also not be loosened behind the brief: with `--fence-from`, when the
+brief of the base and the worktree are the same, every base rule must survive with
+at least its paths and dependencies. A new brief may bring a new fence -`odachi
+start` writes both- but a fix cannot move the policy it must obey. An unreadable
+candidate fence blocks, because it is the policy after the merge.
+
 `.github/workflows/gate.yml` is the only workflow that judges a tree. Its `gate`
 job runs on ubuntu, macos and windows; each builds odachi from the base ref,
 reads the fence from it, compares the changed paths against it, and keeps its own
