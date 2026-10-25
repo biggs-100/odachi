@@ -72,6 +72,11 @@ signs:
       - "--yes"
     artifacts: checksum
 
+# One SBOM per archive: what a person downloads is the thing described, not
+# the source tree it came from.
+sboms:
+  - artifacts: archive
+
 # Un snapshot lleva "dev" en el nombre para que nunca se confunda con una release.
 snapshot:
   version_template: "{{ incpatch .Version }}-dev"
