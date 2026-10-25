@@ -16,6 +16,9 @@ The release says which source built it.
 - **The chain has three links and the docs say what each proves**: the signature
   says who published, the attestation says which source built it, and the SBOM
   says what is inside. None of them says the source was good.
+- **The attestation can be retried without republishing**: it runs after the
+  release is public, so a failure there is fixed by running the workflow by hand
+  on the tag; that run only attests.
 
 ## v0.11.11 - 2026-10-25
 

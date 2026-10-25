@@ -45,6 +45,10 @@ func TestTheReleaseIsSignedKeyless(t *testing.T) {
 		"goreleaser/goreleaser-action@",
 		"actions/attest@",
 		"subject-checksums: ./dist/checksums.txt",
+		// The recovery path: the attestation is written after the release is
+		// public, so a failure there needs a run that attests without publishing.
+		"workflow_dispatch:",
+		"gh release download",
 	} {
 		if !strings.Contains(workflow, want) {
 			t.Errorf("release.yml lost %q: the release would fail at the worst moment", want)

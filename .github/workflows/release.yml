@@ -1,11 +1,13 @@
 name: release
 
-# A release is a human decision: this workflow runs only when a tag is pushed.
-# Pushing `v0.1.0` is what publishes; nothing here runs on a branch.
+# A release is a human decision: pushing a tag publishes. A manual run never
+# publishes anything: it attests a release that is already out, which is the
+# recovery path for a failed attestation step.
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -51,6 +53,28 @@ jobs:
       # Provenance, after the release exists: every archive named in the signed
       # checksums gets an attestation that says which workflow, commit and tag
       # produced it. v4.2.2.
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-checksums: ./dist/checksums.txt
+
+  # The attestation runs after the release is public, so a failure there leaves
+  # a release with no provenance. This job is the fix: dispatch the workflow on
+  # the tag and it attests the bytes already published, without building,
+  # signing or uploading anything. It never creates a release.
+  attest-retry:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release download "$TAG" --dir dist
+
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-checksums: ./dist/checksums.txt
