@@ -40,8 +40,8 @@ const (
 	ModelHeader = "# model "
 	// OutputHeader ends the headers. Everything after it is the command's
 	// output, so a first line that looks like a header stays in the quotation.
-	OutputHeader = "# output"
-	ExitHeader   = "# exit "
+	OutputHeader  = "# output"
+	ExitHeader    = "# exit "
 	TimeoutHeader = "# timed out"
 	// FailedHeader starts the evidence of a failed run. It is not a variant of
 	// TreeHeader: a failed file never matches the first line of a proof, so Parse
