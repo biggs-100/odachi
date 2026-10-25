@@ -14,7 +14,7 @@ R1 · "the gate asks once per feature, not once per commit: a feature with open 
 
 ## Steps
 - [x] T1 · the task doc records the commit the feature started from, and start writes it from the repository's HEAD   R1 · e427880
-- [ ] T2 · the gate asks for one verdict when the feature closes, and the verdict has to name the feature's base   R1
+- [x] T2 · the gate asks for one verdict when the feature closes, and the verdict has to name the feature's base   R1 · 8d4cbae
 
 ## History
 L1 · "the gate asks once per feature, not once per commit: a feature with open steps needs only its proof, and the tree that closes it needs the one verdict that judged the feature's diff"
