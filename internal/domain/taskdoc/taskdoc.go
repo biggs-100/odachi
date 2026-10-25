@@ -24,7 +24,10 @@ type Step struct {
 
 // TaskDoc is the parsed task document.
 type TaskDoc struct {
-	Title        string
+	Title string
+	// Base is the commit this feature started from: the gate asks for the review
+	// of that diff, not of the commit that closes the feature.
+	Base         string
 	Requirements []Requirement
 	DoneWhen     []string
 	Steps        []Step
@@ -49,6 +52,10 @@ const (
 
 // checkboxPrefix opens a step line: "- [x] " or "- [ ] ".
 const checkboxPrefix = "- ["
+
+// basePrefix opens the one preamble line Parse reads besides the title: the
+// commit the feature started from.
+const basePrefix = "Base: "
 
 // Separator between an id and its text, and between a requirement and its
 // commit. The human reads these documents, so the glyph is the one the
@@ -112,6 +119,14 @@ func Parse(md string) TaskDoc {
 		}
 		if strings.HasPrefix(line, "#") {
 			current = ""
+			continue
+		}
+
+		// The base lives in the preamble, between the title and the first
+		// section. Only that position is read: a "Base: " inside the history is
+		// prose the human wrote, not a field.
+		if current == "" && strings.HasPrefix(line, basePrefix) {
+			d.Base = strings.TrimSpace(strings.TrimPrefix(line, basePrefix))
 			continue
 		}
 
@@ -184,6 +199,9 @@ func (d TaskDoc) Render() string {
 
 	if d.Title != "" {
 		b.WriteString(headerTitle + d.Title + "\n")
+	}
+	if d.Base != "" {
+		b.WriteString(basePrefix + d.Base + "\n")
 	}
 
 	b.WriteString("\n" + headerRequirements + "\n")

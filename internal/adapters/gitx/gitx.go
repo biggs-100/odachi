@@ -86,6 +86,17 @@ func TreeHash(root string) (string, error) {
 	return strings.TrimSpace(tree), nil
 }
 
+// Head is the commit the worktree is on: what a feature starts from when its
+// task doc is written. A repository with no commit has no HEAD, and that error is
+// the answer "nothing to record".
+func Head(root string) (string, error) {
+	out, err := run(root, "rev-parse", "--verify", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // ChangedPaths returns every path that differs between the base's fork point and
 // the worktree: tracked files changed or staged since that merge-base, plus
 // untracked files that are not ignored. The result is sorted and de-duplicated

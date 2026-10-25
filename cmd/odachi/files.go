@@ -363,6 +363,8 @@ type gitRepo struct{}
 
 func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root) }
 
+func (gitRepo) Head(root string) (string, error) { return gitx.Head(root) }
+
 // Candidate is the one read both verbs share: the tree, the changed paths and
 // the diff of the same worktree, from one throwaway index.
 func (gitRepo) Candidate(root, base string) (string, []string, string, error) {

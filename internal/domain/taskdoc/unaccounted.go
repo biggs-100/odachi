@@ -66,7 +66,11 @@ func Unaccounted(md string) []string {
 		case "history":
 			// The history is kept verbatim; nothing here is ever lost.
 		default:
-			// Outside the canonical sections, Parse accounts for nothing.
+			// The base line is the one preamble line Parse reads; anything else
+			// outside the canonical sections is lost by a rewrite.
+			if current == "" && strings.HasPrefix(line, basePrefix) {
+				continue
+			}
 			out = append(out, line)
 		}
 	}

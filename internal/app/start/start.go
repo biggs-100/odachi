@@ -81,6 +81,12 @@ type Options struct {
 	Force     bool
 	Machine   bool
 
+	// Base is the commit this feature starts from, as the caller read it from
+	// the repository. The task doc records it so the closing gate can name the
+	// review of the feature instead of the commit that closes it. Empty in a
+	// repository with no commit yet.
+	Base string
+
 	// Profile is the already-resolved profile loaded by the caller from
 	// .odachi/profile.toml. Nil means "infer it from what we can see".
 	Profile *profile.Profile
