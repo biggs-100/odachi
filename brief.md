@@ -1,24 +1,23 @@
-# the-release-proves
+# the-release-says
 
 ## What must exist
-- the release proves where it came from: the checksums are signed without keys, an SBOM shows what went into each archive, and the docs say how to verify
+- the release says which source built it: each archive carries an attestation that binds it to this workflow, this commit and this tag
 
 ## Done when
-- the release publishes checksums.txt.sigstore.json beside the archives, the cosign v3 bundle that holds the signature and its certificate
-- the release publishes one SBOM per archive
-- the documented cosign verify-blob --bundle command succeeds against the published checksums and identity
-- the installer still verifies sha256 only: cosign is not a requirement to install
-- the goreleaser comments no longer claim there are no keys or no LICENSE
+- gh attestation verify against a released archive succeeds for this repository
+- the release workflow attests every archive listed in checksums.txt, with the attestation permission and the action pinned by sha
+- the guard test fails when the attestation step or its permission disappears
+- SECURITY and the README name the third link and what it adds over the signature
 
 ## Not included (first version)
-- own keys or a KMS: keyless only, with the workflow as the identity
+- own keys or a KMS: the workflow's identity again
 - Apple notarization
 - a Homebrew tap
 - changing what the installer verifies
-- an SBOM of the source tree: only the archives
+- attesting anything outside dist/checksums.txt
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: what a signature proves that a checksum does not.
+- Wants to learn: what provenance adds to a signature.

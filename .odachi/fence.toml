@@ -1,6 +1,6 @@
 [[rule]]
-not   = "own keys or a KMS: keyless only, with the workflow as the identity"
-paths = ["own-keys-or-a-kms-keyless-only-with-the-workflow-as-the-identity*"]
+not   = "own keys or a KMS: the workflow's identity again"
+paths = ["own-keys-or-a-kms-the-workflow-s-identity-again*"]
 deps  = []
 
 [[rule]]
@@ -19,6 +19,6 @@ paths = ["changing-what-the-installer-verifies*"]
 deps  = []
 
 [[rule]]
-not   = "an SBOM of the source tree: only the archives"
-paths = ["an-sbom-of-the-source-tree-only-the-archives*"]
+not   = "attesting anything outside dist/checksums.txt"
+paths = ["attesting-anything-outside-dist-checksums-txt*"]
 deps  = []
