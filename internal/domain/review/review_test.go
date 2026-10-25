@@ -226,6 +226,35 @@ func TestRenderIsStableAndRoundTrips(t *testing.T) {
 	}
 }
 
+// The model that judged survives the file, and a verdict written before the
+// field existed still parses: an absent model means "nobody named one", which is
+// not the same as the builder's.
+func TestTheVerdictKeepsTheModelThatJudged(t *testing.T) {
+	sealed, err := review.Seal(review.Verdict{
+		Reviewer: "revisor --model provider/model",
+		Model:    "provider/model",
+	}, tree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("Seal = %v", err)
+	}
+
+	back, err := review.Parse(review.Render(sealed))
+	if err != nil {
+		t.Fatalf("Parse = %v", err)
+	}
+	if back.Model != "provider/model" {
+		t.Errorf("Model = %q, want the identity that judged", back.Model)
+	}
+
+	old, err := review.Parse([]byte(`{"tree":"` + tree + `","base":"HEAD","reviewer":"humano","at":"` + now.Format(time.RFC3339) + `","findings":[],"verdict":"approved"}`))
+	if err != nil {
+		t.Fatalf("Parse of a verdict without a model: %v", err)
+	}
+	if old.Model != "" {
+		t.Errorf("Model = %q, want empty for an older verdict", old.Model)
+	}
+}
+
 // TestRenderOfNoFindingsIsAnEmptyArray: the stored JSON never says null. An
 // empty review is an empty list, not a missing one.
 func TestRenderOfNoFindingsIsAnEmptyArray(t *testing.T) {

@@ -1189,6 +1189,12 @@ func TestTheSessionModelFillsThePlaceholder(t *testing.T) {
 	if parsed.Reviewer != want {
 		t.Errorf("reviewer = %q, want what ran: %q", parsed.Reviewer, want)
 	}
+	// The model is a field, not something a later gate has to dig out of a
+	// command string: the proof carries the builder's, and this is the one that
+	// judged.
+	if parsed.Model != "opencode-go/deepseek-v4.1-flash#max" {
+		t.Errorf("model = %q, want the identity that judged", parsed.Model)
+	}
 }
 
 // TestTheExplicitModelWinsOverTheSession: --model is the override the human

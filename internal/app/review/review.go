@@ -220,6 +220,10 @@ type runner struct {
 	// storeIgnoreWritten is whether this run had to write the store's own
 	// ignore file, so the result reports only files it really wrote.
 	storeIgnoreWritten bool
+	// reviewedBy is the model the reviewer command ran with, empty when the
+	// command asked for none. The verdict carries it so a later gate can tell
+	// this review from one the builder wrote about itself.
+	reviewedBy string
 }
 
 // worktree is one read of the candidate: its content tree, the paths that
@@ -408,6 +412,7 @@ func (r *runner) reviewerCommand() (string, *Result) {
 	if model == "" && asks && r.host != nil {
 		model = strings.TrimSpace(r.host.Model(r.opts.Dir))
 	}
+	r.reviewedBy = model
 
 	switch {
 	case asks && model == "":
@@ -485,6 +490,9 @@ func (r *runner) exec() Result {
 	if strings.TrimSpace(parsed.Reviewer) == "" {
 		parsed.Reviewer = command
 	}
+	// The identity that judged, when the command named one. It is the reviewer's
+	// own declaration, and the gate compares it with the proof's.
+	parsed.Model = r.reviewedBy
 	if err := parsed.Validate(); err != nil {
 		return execFailed(r.opts.Exec, err.Error(), diagnosis)
 	}

@@ -48,6 +48,108 @@ func reviewPath(tree string) string {
 	return filepath.Join(dir, filepath.FromSlash(domainreview.Dir), tree+".json")
 }
 
+// proofPath is this feature's proof, in the fake's spelling.
+func proofPath() string { return filepath.Join(dir, "proof", "0007-turnos.txt") }
+
+// codeChange is a candidate that touches ordinary code, so the evidence asks for
+// the reliability lens and the review gate is on.
+func codeChange() *fakeGit {
+	return &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+	}
+}
+
+// verdictFileByModel seals a verdict that declares which model judged it.
+func verdictFileByModel(t *testing.T, tree, model string) string {
+	t.Helper()
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "reviewer",
+		Model:    model,
+		Lenses:   []string{domainreview.Reliability},
+	}, tree, "HEAD", reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the seeded verdict: %v", err)
+	}
+	return string(domainreview.Render(sealed))
+}
+
+// proofFileByModel seeds this tree's proof with the model that ran it.
+func proofFileByModel(tree, model string) string {
+	return "# tree " + tree + "\n# command go test ./...\n# model " + model + "\nok\n"
+}
+
+// TestRequireReviewRefusesASelfReview: the proof and the verdict name the same
+// model, so the tree is approving itself. The gate names the identity and the
+// command that fixes it, because "find another reviewer" is not a next step.
+func TestRequireReviewRefusesASelfReview(t *testing.T) {
+	cases := []struct{ name, proof, verdict string }{
+		{
+			name:    "the same model",
+			proof:   proofFileByModel(currentTree, "provider/model#variant"),
+			verdict: verdictFileByModel(t, currentTree, "provider/model#variant"),
+		},
+		{
+			// A self-review must not slip through by spelling the name differently:
+			// model ids are lowercase in the wild, and case is not a second model.
+			name:    "the same model in another case",
+			proof:   proofFileByModel(currentTree, "Provider/Model"),
+			verdict: verdictFileByModel(t, currentTree, "provider/model"),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			files := newFakeFiles(readyFiles())
+			files.files[proofPath()] = []byte(tc.proof)
+			files.files[reviewPath(currentTree)] = []byte(tc.verdict)
+
+			got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
+				files, codeChange(), &fakeShell{})
+
+			if got.Reason != check.ReasonReviewSelf {
+				t.Fatalf("Reason = %q, want %q (message: %s)", got.Reason, check.ReasonReviewSelf, got.Message)
+			}
+			lines := strings.Join(got.Lines, "\n")
+			for _, want := range []string{"provider/model", "odachi review --model"} {
+				if !strings.Contains(strings.ToLower(lines), want) {
+					t.Errorf("the refusal does not carry %q:\n%s", want, lines)
+				}
+			}
+		})
+	}
+}
+
+// A review by another model, or one that cannot be attributed (a human wrote it,
+// or the proof predates the field, is not a self-review.
+func TestRequireReviewAcceptsAReviewByAnotherModelOrByNobody(t *testing.T) {
+	cases := []struct {
+		name    string
+		proof   string
+		verdict string
+	}{
+		{"another model", proofFileByModel(currentTree, "provider/builder"), verdictFileByModel(t, currentTree, "provider/reviewer")},
+		{"proof without a model", "# tree " + currentTree + "\n# command go test ./...\nok\n", verdictFileByModel(t, currentTree, "provider/reviewer")},
+		{"verdict without a model", proofFileByModel(currentTree, "provider/builder"), verdictFile(t, currentTree, nil)},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			files := newFakeFiles(readyFiles())
+			files.files[proofPath()] = []byte(tc.proof)
+			files.files[reviewPath(currentTree)] = []byte(tc.verdict)
+
+			got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
+				files, codeChange(), &fakeShell{})
+
+			if got.Reason == check.ReasonReviewSelf {
+				t.Fatalf("the gate refused a review it cannot attribute to the builder: %s", got.Message)
+			}
+		})
+	}
+}
+
 // filesWithVerdict is a ready project plus one stored verdict.
 func filesWithVerdict(t *testing.T, tree string, findings []domainreview.Finding) *fakeFiles {
 	t.Helper()

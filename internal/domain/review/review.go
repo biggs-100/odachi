@@ -118,6 +118,10 @@ type Verdict struct {
 	Tree     string    `json:"tree"`
 	Base     string    `json:"base"`
 	Reviewer string    `json:"reviewer"`
+	// Model is the model that judged, when the reviewer command named one. The
+	// proof carries the builder's; the same name on both sides is one agent
+	// approving the tree it wrote.
+	Model    string    `json:"model,omitempty"`
 	At       string    `json:"at"`
 	Findings []Finding `json:"findings"`
 	// Lenses are the specialists the prompt asked this verdict to answer. The tool
@@ -343,6 +347,7 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 	sealed.Tree = tree
 	sealed.Base = strings.TrimSpace(base)
 	sealed.Reviewer = strings.TrimSpace(v.Reviewer)
+	sealed.Model = strings.TrimSpace(v.Model)
 	sealed.At = instant(v.At, now)
 	sealed.Lenses = inOrder(v.Lenses)
 	sealed.Verdict = Derive(v.Findings)
