@@ -17,3 +17,4 @@ R1 · "the review asks for an answer, not for work: the prompt tells the reviewe
 
 ## History
 L1 · "the review asks for an answer, not for work: the prompt tells the reviewer to read and not to run anything, and a candidate with no lens says so instead of claiming a verdict exists"
+L2 · OFICIO · "The rule goes first in the prompt: the reviewer reads and answers, it does not run commands or edit files" (porque a reviewer that runs tools puts its own transcript in stdout, and stdout is the verdict: the only lever over a command odachi does not own is the prompt)

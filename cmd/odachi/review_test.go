@@ -75,7 +75,7 @@ func changedProject(t *testing.T) string {
 }
 
 // TestReviewPrintsThePromptForTheCandidate: no flags prints the review prompt,
-// built from the brief and the diff, with the five rules and the schema.
+// built from the brief and the diff, with the six rules and the schema.
 func TestReviewPrintsThePromptForTheCandidate(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
@@ -87,13 +87,15 @@ func TestReviewPrintsThePromptForTheCandidate(t *testing.T) {
 	}
 	for _, want := range []string{
 		"# odachi review",
+		"## The six rules",
 		"reservar turnos",                            // the brief
 		"internal/app/turnos.go",                     // the changed path
-		"When in doubt, say nothing.",                // rule 1
-		"BLOCKER, CRITICAL, WARNING, SUGGESTION",     // rule 2
-		"No findings.",                               // rule 3
-		"introduced it, activated it or worsened it", // rule 4
-		"One pass per lens",                          // rule 5
+		"not an operator",                            // rule 1: the reviewer reads, it does not run
+		"When in doubt, say nothing.",                // rule 2
+		"BLOCKER, CRITICAL, WARNING, SUGGESTION",     // rule 3
+		"No findings.",                               // rule 4
+		"introduced it, activated it or worsened it", // rule 5
+		"One pass per lens",                          // rule 6
 		"Answer with the JSON only",                  // the answer shape
 	} {
 		if !strings.Contains(out, want) {
