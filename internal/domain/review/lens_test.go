@@ -33,8 +33,8 @@ func TestPromptWithoutLensesIsTheSamePromptAsBefore(t *testing.T) {
 	if strings.Contains(prompt, "## The lenses") {
 		t.Error("the prompt of a candidate with no lens announces lenses")
 	}
-	if !strings.Contains(prompt, "## The five rules") {
-		t.Error("the prompt lost the five rules")
+	if !strings.Contains(prompt, "## The six rules") {
+		t.Error("the prompt lost the six rules")
 	}
 	if !strings.Contains(prompt, "## What to return") {
 		t.Error("the prompt lost the answer shape")
@@ -84,9 +84,9 @@ func TestPromptNamesTheLensesInTheHeader(t *testing.T) {
 	}
 }
 
-// TestPromptKeepsTheFiveRulesOnce: the lenses inherit the five rules from one
+// TestPromptKeepsTheSixRulesOnce: the lenses inherit the six rules from one
 // place. Printing them per lens would let them drift.
-func TestPromptKeepsTheFiveRulesOnce(t *testing.T) {
+func TestPromptKeepsTheSixRulesOnce(t *testing.T) {
 	in := promptInput()
 	in.Lenses = []review.Lens{
 		{Name: review.Risk, Body: lensBody},
@@ -94,8 +94,25 @@ func TestPromptKeepsTheFiveRulesOnce(t *testing.T) {
 	}
 
 	prompt := review.Prompt(in)
-	if count := strings.Count(prompt, "## The five rules"); count != 1 {
-		t.Errorf("the five rules appear %d times, want once", count)
+	if count := strings.Count(prompt, "## The six rules"); count != 1 {
+		t.Errorf("the six rules appear %d times, want once", count)
+	}
+}
+
+// TestPromptForbidsTheReviewerFromActing: the reviewer reads and answers. A
+// command that also runs commands, edits files or reads other files puts its
+// work in the output, and the output is the verdict.
+func TestPromptForbidsTheReviewerFromActing(t *testing.T) {
+	prompt := review.Prompt(promptInput())
+
+	for _, want := range []string{
+		"not an operator",
+		"Do not run commands",
+		"do not edit or read other files",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("the prompt does not carry %q:\n%s", want, prompt)
+		}
 	}
 }
 

@@ -58,7 +58,7 @@ func TestReviewOfDocumentationAsksForNoLens(t *testing.T) {
 	if strings.Contains(out, "## The lenses") {
 		t.Errorf("a documentation-only change got a lens section:\n%s", out)
 	}
-	if !strings.Contains(out, "## The five rules") {
+	if !strings.Contains(out, "## The six rules") {
 		t.Errorf("the prompt lost the five rules")
 	}
 }

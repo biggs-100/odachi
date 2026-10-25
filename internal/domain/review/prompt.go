@@ -46,7 +46,7 @@ type Lens struct {
 }
 
 // Prompt renders the review prompt. The content is fixed and pinned by tests: a
-// prompt that drifts produces reviews that drift, and the five rules are the
+// prompt that drifts produces reviews that drift, and the six rules are the
 // whole reason this verb exists.
 //
 // The rules are not invented here. They are what a review system learns the hard
@@ -84,17 +84,20 @@ func Prompt(in PromptInput) string {
 	out.WriteString(section(in.Diff))
 	out.WriteString("\n")
 
-	out.WriteString("## The five rules\n")
-	out.WriteString("1. Report a finding only if it is a real defect that affects the user and you can\n")
+	out.WriteString("## The six rules\n")
+	out.WriteString("1. You are a reviewer, not an operator: everything you need is in this prompt.\n")
+	out.WriteString("   Do not run commands and do not edit or read other files. Your answer is the\n")
+	out.WriteString("   only thing this command produces; anything else lands in its output.\n")
+	out.WriteString("2. Report a finding only if it is a real defect that affects the user and you can\n")
 	out.WriteString("   defend it with concrete evidence. When in doubt, say nothing.\n")
 	out.WriteString("   Style and preference are banned unless they hide a defect.\n")
-	out.WriteString("2. The severity is exactly one of BLOCKER, CRITICAL, WARNING, SUGGESTION.\n")
-	out.WriteString("3. If there is nothing to report, do not invent anything so you have something to say: the JSON\n")
+	out.WriteString("3. The severity is exactly one of BLOCKER, CRITICAL, WARNING, SUGGESTION.\n")
+	out.WriteString("4. If there is nothing to report, do not invent anything so you have something to say: the JSON\n")
 	out.WriteString("   carries \"findings\": [] and, if you answer in prose, the answer is exactly:\n")
 	out.WriteString("   " + NoFindings + "\n")
-	out.WriteString("4. A finding counts only if the candidate introduced it, activated it or worsened it. What\n")
+	out.WriteString("5. A finding counts only if the candidate introduced it, activated it or worsened it. What\n")
 	out.WriteString("   was already there is a follow-up, not a block: mark it \"causal\": false.\n")
-	out.WriteString("5. One pass per lens, exhaustive: do not loop.\n")
+	out.WriteString("6. One pass per lens, exhaustive: do not loop.\n")
 	out.WriteString("\n")
 
 	out.WriteString(lensSection(in.Lenses))
@@ -120,7 +123,7 @@ func Prompt(in PromptInput) string {
 }
 
 // lensSection is the block that turns one generic prompt into a specialist's,
-// without repeating the five rules: they are stated once, above, and every lens
+// without repeating the six rules: they are stated once, above, and every lens
 // inherits them.
 func lensSection(lenses []Lens) string {
 	if len(lenses) == 0 {
