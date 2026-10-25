@@ -1,14 +1,14 @@
 [[rule]]
-not   = "a diff of the output, or truncating it"
-paths = ["a-diff-of-the-output-or-truncating-it*"]
+not   = "a code of conduct or governance"
+paths = ["a-code-of-conduct-or-governance*"]
 deps  = []
 
 [[rule]]
-not   = "renaming or parsing the green proof format"
-paths = ["renaming-or-parsing-the-green-proof-format*"]
+not   = "label automation, a stale bot or discussions"
+paths = ["label-automation-a-stale-bot-or-discussions*"]
 deps  = []
 
 [[rule]]
-not   = "changing the gate's exit codes"
-paths = ["changing-the-gate-s-exit-codes*"]
+not   = "funding, roadmap or a CLA"
+paths = ["funding-roadmap-or-a-cla*"]
 deps  = []
