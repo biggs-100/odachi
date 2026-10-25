@@ -15,3 +15,4 @@ R1 · "the release says which source built it: each archive carries an attestati
 
 ## History
 L1 · "the release says which source built it: each archive carries an attestation that binds it to this workflow, this commit and this tag"
+L2 · OFICIO · "The attestation runs after goreleaser and reads dist/checksums.txt, not a glob of archives" (porque the checksums are the signed list: an archive the list does not name has no business carrying an attestation from this workflow)

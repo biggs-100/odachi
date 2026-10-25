@@ -39,9 +39,12 @@ func TestTheReleaseIsSignedKeyless(t *testing.T) {
 	workflow := liveLines(readAtRepoRoot(t, filepath.Join(".github", "workflows", "release.yml")))
 	for _, want := range []string{
 		"id-token: write",
+		"attestations: write",
 		"sigstore/cosign-installer@",
 		"anchore/sbom-action/download-syft@",
 		"goreleaser/goreleaser-action@",
+		"actions/attest@",
+		"subject-checksums: ./dist/checksums.txt",
 	} {
 		if !strings.Contains(workflow, want) {
 			t.Errorf("release.yml lost %q: the release would fail at the worst moment", want)
