@@ -5,7 +5,7 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.11 - 2026-10-25
 
 The release proves where it came from.
 
