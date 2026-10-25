@@ -26,12 +26,13 @@ done. A contribution follows the same loop, by hand or with your agent.
 3. Run what CI runs: `go test ./...`, `gofmt -l .` (it must print nothing),
    `go vet ./...`. On Linux, also `go test -race ./internal/...`.
 4. If you have odachi installed, reproduce CI locally:
-   `odachi check --fence-from origin/main --base origin/main --run "go test ./..."`.
+   `odachi check --fence-from origin/main --base origin/main --run "go test ./..." --timeout 900`.
    The two flags are the gate: the fence is read from `main` and the changed
    paths are compared against it, exactly as the workflow does. In a fork,
    `origin` is your copy: add the base repository as `upstream` and use
-   `upstream/main`. The proof is generated in `proof/`, which is ignored by git:
-   never commit it and never write it by hand.
+   `upstream/main`. CI builds the gate from that base; here you use the odachi
+   you installed, which runs the same check. The proof is generated in `proof/`,
+   which is ignored by git: never commit it and never write it by hand.
 5. One step, one commit. The title says what changed for the person using
    odachi, in the imperative; the body says how and why; the last line is
    `Risk: none` or one of `data`, `security`, `contract`, `concurrency`,

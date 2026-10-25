@@ -15,9 +15,11 @@ maintainer will answer with one.
 
 - **The binary and its artifacts:** `brief.md`, the task doc, `proof/`, the
   fence, `.odachi/reviews/`, and the ruleset script.
-- **The gate's trust model:** the fence is read from the base ref, the gate is
-  built from the base ref, `main` only takes a pull request whose four checks
-  passed, and a candidate cannot loosen the fence it must obey.
+- **The gate's trust model:** the workflow reads the fence from the base ref and
+  builds the gate from it, `main` only takes a pull request whose four checks
+  passed, and a change has to meet the policy of the base branch. The workflow
+  itself is the known limit below: a pull request can edit the file that asks
+  for all of that.
 - **The workflows** in `.github/workflows` and the ruleset in
   `.github/main-ruleset.json`.
 
@@ -30,9 +32,12 @@ defect this project exists to make impossible, with one known exception below.
 
 The workflow file travels with the pull request, and the ruleset requires zero
 approvals, because a solo maintainer cannot approve their own pull request
-(ADR 0024). So a pull request that edits `.github/workflows/` can weaken the jobs
-that judge it. `.github/CODEOWNERS` asks for an owner review, and it is a
-request, not an enforcement. That is the known state of a one-person project,
+(ADR 0024). GitHub's default extra approval for changes from people without
+write access is turned off for the same reason: without that, a stranger's pull
+request could not merge in a one-person repository. So a pull request that edits
+`.github/workflows/` can weaken the jobs that judge it. `.github/CODEOWNERS` asks
+for an owner review, and it is a request, not an enforcement. That is the known
+state of a one-person project,
 not a vulnerability; a report about it is welcome as a design discussion. What is
 in scope is a path that reports green *without* editing the workflow.
 

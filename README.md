@@ -317,10 +317,10 @@ push, because `origin/main` after checkout is the pushed commit itself. `gofmt`,
 workflow, so one file defines green. No second workflow runs the suite; a tag
 still runs it in `release.yml` before publishing.
 
-A proof is written when the run exits 0; a failing command leaves none, and the
-gate reports only its last line, so a red command is diagnosed from that line.
-When the gate blocks for another reason -the fence, an open question- the proof
-of that green run is still uploaded. The workflow file itself
+A proof is written when the run exits 0. A failing command leaves
+`proof/<feature>.failed.txt` with the whole output, and the gate prints the last
+line and the path. When the gate blocks for another reason -the fence, an open
+question- the proof of that green run is still uploaded. The workflow file itself
 is not trusted: `.github/CODEOWNERS` asks for an owner review of `.github/` and
 `.odachi/`, and a pull request can edit the workflow it runs under until a second
 reviewer exists.
@@ -347,10 +347,10 @@ A stranger should get from zero to a merged pull request by reading three files:
   result.
 - [SECURITY.md](SECURITY.md): report privately, never in an issue.
 
-The bug form asks for the version and `odachi doctor`; the feature form asks for
-the problem, the outcome and the non-goals. The pull request template asks for
-the proof, the risk and the rollback. `main` only takes a pull request whose
-four checks passed, and the gate keeps the failed output when it does not.
+The issue forms ask for the version and `odachi doctor`; the feature form also
+asks for the problem, the outcome and the non-goals. The pull request template
+asks for the proof, the risk and the rollback. `main` only takes a pull request
+whose four checks passed, and the gate keeps the failed output when it does not.
 
 ## Status
 

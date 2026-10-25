@@ -49,7 +49,7 @@ func TestTheContributorSurfaceExists(t *testing.T) {
 	}
 
 	contributing := reading("CONTRIBUTING.md")
-	for _, want := range []string{"odachi check --fence-from", "--base origin/main"} {
+	for _, want := range []string{"odachi check --fence-from", "--base origin/main", "--run", "--timeout 900"} {
 		if !strings.Contains(contributing, want) {
 			t.Errorf("CONTRIBUTING does not say how to reproduce the gate locally (%q)", want)
 		}
