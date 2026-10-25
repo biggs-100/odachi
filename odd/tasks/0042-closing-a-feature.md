@@ -14,7 +14,7 @@ R1 · "closing a feature is reviewed and publishing it is not: the verdict is ow
 
 ## Steps
 - [x] T1 · the gate asks only when the task doc closes the feature, or when the tree carries code after the close   R1 · 451712c
-- [ ] T2 · the README says the review is owed by the close, and the cases are pinned by tests   R1
+- [x] T2 · the README says the review is owed by the close, and the cases are pinned by tests   R1 · edd668f
 
 ## History
 L1 · "closing a feature is reviewed and publishing it is not: the verdict is owed by the commit that marks the last step done, and a later documents-only tree does not ask for it again"
