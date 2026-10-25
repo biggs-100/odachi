@@ -13,8 +13,12 @@ import (
 // CLI wires, not a different dialect.
 type modeCodec struct{}
 
-func (modeCodec) Decode(data []byte) (string, error) { return reviewtoml.Decode(data) }
-func (modeCodec) Render(mode string) ([]byte, error) { return reviewtoml.Render(mode) }
+func (modeCodec) Decode(data []byte) (domainreview.ProjectConfig, error) {
+	return reviewtoml.Decode(data)
+}
+func (modeCodec) Render(config domainreview.ProjectConfig) ([]byte, error) {
+	return reviewtoml.Render(config)
+}
 
 // TestModeStatusWithoutAFileIsOff: not writing the switch is a decision, not a
 // missing setting. Status says so without creating a file.
@@ -36,6 +40,26 @@ func TestModeStatusWithoutAFileIsOff(t *testing.T) {
 
 // TestModeOnWritesTheSwitch: on is a file the project carries, and the gate can
 // read it without a flag.
+// Flipping the switch is one field of the file: the human's lens table is the
+// other one, and `review mode off` must not silently delete it.
+func TestModeKeepsTheLensTable(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		domainreview.ModePath: "mode = \"on\"\n\n[lenses]\nrisk = \"sharp/model\"\nreliability = \"cheap/model\"\n",
+	})
+
+	result := review.Mode(review.ModeOptions{Dir: dir, Action: review.ModeOff}, files, modeCodec{})
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored := string(files.files[fullPath(domainreview.ModePath)])
+	for _, want := range []string{`mode = "off"`, `risk = "sharp/model"`, `reliability = "cheap/model"`} {
+		if !strings.Contains(stored, want) {
+			t.Errorf("the switch rewrite lost %q:\n%s", want, stored)
+		}
+	}
+}
+
 func TestModeOnWritesTheSwitch(t *testing.T) {
 	files := newFakeFiles(nil)
 

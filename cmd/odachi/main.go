@@ -464,6 +464,15 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
+	// The project's lens table is read here, not inside the verb: a malformed file
+	// blocks with the path and the fix, which is the CLI's job to say.
+	config, err := reviewapp.Config(dir, osFiles{}, reviewModeCodec{})
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+	opts.LensModels = config.Lenses
+
 	return reportReview(reviewapp.Run(opts, osFiles{}, gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
 }
 
