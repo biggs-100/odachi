@@ -115,9 +115,9 @@ type Finding struct {
 
 // Verdict is what a review concluded about one tree.
 type Verdict struct {
-	Tree     string    `json:"tree"`
-	Base     string    `json:"base"`
-	Reviewer string    `json:"reviewer"`
+	Tree     string `json:"tree"`
+	Base     string `json:"base"`
+	Reviewer string `json:"reviewer"`
 	// Model is the model that judged, when the reviewer command named one. The
 	// proof carries the builder's; the same name on both sides is one agent
 	// approving the tree it wrote.
