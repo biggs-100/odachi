@@ -309,10 +309,11 @@ git worktree add ../gate "$base"
 ```
 
 The fence may also not be loosened behind the brief: with `--fence-from`, when the
-brief of the base and the worktree are the same, every base rule must survive with
-at least its paths and dependencies. A new brief may bring a new fence -`odachi
-start` writes both- but a fix cannot move the policy it must obey. An unreadable
-candidate fence blocks, because it is the policy after the merge.
+non-goals of the brief are the same in the base and the worktree, every base rule
+must survive with at least its paths and dependencies. A new list of non-goals may
+bring a new fence -`odachi start` writes both- but a fix cannot move the policy it
+must obey. Whitespace, comments and a rewritten outcome are not a new policy. An
+unreadable candidate fence blocks, because it is the policy after the merge.
 
 `.github/workflows/gate.yml` is the only workflow that judges a tree. Its `gate`
 job runs on ubuntu, macos and windows; each builds odachi from the base ref,

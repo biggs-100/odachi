@@ -19,22 +19,24 @@ three rules; 0031's has four, and none of the three survived.
 
 ## Decision
 
-- **The fence may only be loosened by a change that also changes the brief.**
-  When `--fence-from` is set, the gate compares the brief of the ref with the
-  worktree's. If they are the same, every base rule must survive with at least
+- **The fence may only be loosened by a change that also changes the non-goals of
+  the brief.** When `--fence-from` is set, the gate compares the non-goals of both
+  briefs. If the lists are the same, every base rule must survive with at least
   its paths and dependencies (adding rules or paths is stricter and passes). If
-  the brief changed, the fence may change with it.
-- **The brief decides, not the fence.** A new vision is a new policy; the same
-  vision keeps the policy it had. `odachi start` writes both, which is why a
-  feature passes and a fix cannot move the fence it must obey.
+  the non-goals changed, the fence may change with them.
+- **The brief's non-goals decide, not the fence.** A new vision is a new policy;
+  the same non-goals keep the policy they had. `odachi start` writes both, which
+  is why a feature passes and a fix cannot move the fence it must obey.
 - **The comparison is exact.** A glob is a string here: a changed pattern is a
   changed policy, not a smarter one. Rule identity is the rule's own text, so a
   renamed rule is a removed rule.
 - **An unreadable candidate fence blocks.** With `--fence-from` the candidate's
   copy is not the policy today, but it is the policy after the merge. A file the
   tool cannot read must stop the change instead of travelling silently.
-- **Line endings do not change a vision.** The brief comparison normalizes CRLF
-  and trailing whitespace, so a Windows checkout is not a new brief.
+- **Whitespace, comments and a changed outcome are not a new policy.** The
+  comparison normalizes line endings and per-line trailing spaces before parsing,
+  ignores unknown sections, and compares the non-goals as a set: order and
+  formatting never decide a policy.
 - **Without `--fence-from` nothing is compared.** The worktree fence is the
   policy, exactly as before.
 
@@ -58,7 +60,7 @@ three rules; 0031's has four, and none of the three survived.
 - A bug-fix pull request cannot touch the fence: its brief is main's brief, and
   the gate refuses a dropped rule.
 - A feature pull request can rewrite both, which is the workflow. A hostile
-  change could rewrite the brief too; that diff is the vision, it is the
+  change could rewrite the non-goals too; that diff is the vision, it is the
   maintainer's to read, and no mechanical rule can replace that reading.
 - A maintainer who edits the fence by hand after `start` can still add rules
   (stricter) but not remove one without touching the brief.
