@@ -228,16 +228,37 @@ type fakeShell struct {
 	// commands is every command that ran, in order: one per model group.
 	commands []string
 
+	// script is one answer per call, in order: it is how a test makes the
+	// second group fail after the first one answered. Without it every call
+	// gets the answer above.
+	script []fakeAnswer
+
 	// input is the prompt the reviewer was given, once --exec delivers one.
 	input string
 }
 
+// fakeAnswer is one call's result in a scripted shell.
+type fakeAnswer struct {
+	output   string
+	stderr   string
+	exitCode int
+	timedOut bool
+	err      error
+}
+
 func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string, int, bool, error) {
+	answer := fakeAnswer{output: s.output, stderr: s.stderr, exitCode: s.exitCode, timedOut: s.timedOut, err: s.err}
+	if len(s.script) > 0 {
+		// The last answer repeats: a test says how the first groups behave and
+		// lets the rest keep the same shape.
+		answer = s.script[min(len(s.commands), len(s.script)-1)]
+	}
+
 	s.asked = true
 	s.command = command
 	s.timeout = timeoutSeconds
 	s.commands = append(s.commands, command)
-	return s.output, s.stderr, s.exitCode, s.timedOut, s.err
+	return answer.output, answer.stderr, answer.exitCode, answer.timedOut, answer.err
 }
 
 func (s *fakeShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {
@@ -332,6 +353,54 @@ func TestTheSameModelIsOneRun(t *testing.T) {
 	}
 }
 
+// TestAFailedGroupKeepsTheAnswerThatLanded: two models, two groups, the second
+// fails. The first answer was paid for, so it is on disk; the run says how many
+// lenses of how many landed and which one is still owed.
+func TestAFailedGroupKeepsTheAnswerThatLanded(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{
+		{output: `{"findings":[]}`},
+		{output: "boom: the model did not answer", exitCode: 1},
+	}
+
+	result := p.run(review.Options{
+		Exec:       "revisor --model {model}",
+		Lens:       "risk",
+		LensModels: map[string]string{"risk": "sharp/model"},
+	})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if len(p.shell.commands) != 2 {
+		t.Fatalf("commands = %v, want the two groups", p.shell.commands)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the answer that landed was not stored: %v", err)
+	}
+	if !slices.Contains(stored.Lenses, "risk") {
+		t.Errorf("lenses = %v, want the lens whose reviewer answered", stored.Lenses)
+	}
+	if slices.Contains(stored.Lenses, "reliability") {
+		t.Errorf("lenses = %v, want no lens the failed reviewer never answered", stored.Lenses)
+	}
+	if !strings.Contains(result.Message, "saved 1 of 2") {
+		t.Errorf("message = %q, want how many lenses of how many landed", result.Message)
+	}
+	if !strings.Contains(result.Message, "missing reliability") {
+		t.Errorf("message = %q, want the lens still owed named", result.Message)
+	}
+	if !strings.Contains(result.Output, "boom") {
+		t.Errorf("output = %q, want the reviewer's own words", result.Output)
+	}
+	if want := domainreview.Dir + "/" + currentTree + ".json"; !slices.Contains(result.Files, want) {
+		t.Errorf("files = %v, want the verdict that landed %q", result.Files, want)
+	}
+}
+
 // TestASecondRunCompletesTheVerdict: the store grows by lens. A run that finds a
 // verdict covering reliability judges risk and adds it, keeping the rows it did
 // not pay for again.
@@ -353,6 +422,12 @@ func TestASecondRunCompletesTheVerdict(t *testing.T) {
 	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk"})
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "2 of 2 lenses") {
+		t.Errorf("message = %q, want the completed count: the run says how many lenses the verdict holds", result.Message)
+	}
+	if len(p.shell.commands) != 1 {
+		t.Fatalf("commands = %v, want only the lens the verdict still owed", p.shell.commands)
 	}
 
 	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
