@@ -1,14 +1,19 @@
 [[rule]]
-not   = "a code of conduct or governance"
-paths = ["a-code-of-conduct-or-governance*"]
+not   = "a rule language, glob algebra or subset matching"
+paths = ["a-rule-language-glob-algebra-or-subset-matching*"]
 deps  = []
 
 [[rule]]
-not   = "label automation, a stale bot or discussions"
-paths = ["label-automation-a-stale-bot-or-discussions*"]
+not   = "signing the fence"
+paths = ["signing-the-fence*"]
 deps  = []
 
 [[rule]]
-not   = "funding, roadmap or a CLA"
-paths = ["funding-roadmap-or-a-cla*"]
+not   = "comparing against anything other than --fence-from"
+paths = ["comparing-against-anything-other-than-fence-from*"]
+deps  = []
+
+[[rule]]
+not   = "changing the fence file format"
+paths = ["changing-the-fence-file-format*"]
 deps  = []
