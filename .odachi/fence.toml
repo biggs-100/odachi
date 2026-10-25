@@ -1,24 +1,24 @@
 [[rule]]
-not   = "retrying a failed group inside the same run: the human runs the command again"
-paths = ["retrying-a-failed-group-inside-the-same-run-the-human-runs-the-command-again*"]
+not   = "copying the worktree or a sandbox per reviewer"
+paths = ["copying-the-worktree-or-a-sandbox-per-reviewer*"]
 deps  = []
 
 [[rule]]
-not   = "running model groups in parallel"
-paths = ["running-model-groups-in-parallel*"]
+not   = "a transaction store with replay, CAS or locks"
+paths = ["a-transaction-store-with-replay-cas-or-locks*"]
 deps  = []
 
 [[rule]]
-not   = "resuming a run that was killed: the store is the checkpoint, not a journal"
-paths = ["resuming-a-run-that-was-killed-the-store-is-the-checkpoint-not-a-journal*"]
+not   = "resuming a killed process"
+paths = ["resuming-a-killed-process*"]
+deps  = []
+
+[[rule]]
+not   = "committing, restoring or reverting the reviewer's edits"
+paths = ["committing-restoring-or-reverting-the-reviewer-s-edits*"]
 deps  = []
 
 [[rule]]
 not   = "changing the reviewer command, the lens prompts or the gate's rule"
 paths = ["changing-the-reviewer-command-the-lens-prompts-or-the-gate-s-rule*"]
-deps  = []
-
-[[rule]]
-not   = "prices, budgets or automatic model choice"
-paths = ["prices-budgets-or-automatic-model-choice*"]
 deps  = []
