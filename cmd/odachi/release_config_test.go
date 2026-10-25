@@ -39,12 +39,9 @@ func TestTheReleaseIsSignedKeyless(t *testing.T) {
 	workflow := liveLines(readAtRepoRoot(t, filepath.Join(".github", "workflows", "release.yml")))
 	for _, want := range []string{
 		"id-token: write",
-		"attestations: write",
 		"sigstore/cosign-installer@",
 		"anchore/sbom-action/download-syft@",
 		"goreleaser/goreleaser-action@",
-		"actions/attest@",
-		"subject-checksums: ./dist/checksums.txt",
 		// The recovery path: the attestation is written after the release is
 		// public, so a failure there needs a run that attests without publishing.
 		"workflow_dispatch:",
@@ -53,6 +50,35 @@ func TestTheReleaseIsSignedKeyless(t *testing.T) {
 		if !strings.Contains(workflow, want) {
 			t.Errorf("release.yml lost %q: the release would fail at the worst moment", want)
 		}
+	}
+
+	// The same strings live in both jobs, so a file-wide search lets the
+	// recovery job's copies stand in for the publishing ones: delete the
+	// attestation that gives a tag its provenance and the test would stay
+	// green. Each job is checked on its own.
+	publish, retry, ok := strings.Cut(workflow, "attest-retry:")
+	if !ok {
+		t.Fatalf("release.yml has no attest-retry job: a failed attestation would leave a release with no provenance")
+	}
+	for _, want := range []string{
+		"attestations: write",
+		"actions/attest@",
+		"subject-checksums: ./dist/checksums.txt",
+	} {
+		if !strings.Contains(publish, want) {
+			t.Errorf("the publishing job lost %q: a tag would publish without provenance", want)
+		}
+		if !strings.Contains(retry, want) {
+			t.Errorf("the recovery job lost %q: a failed attestation could not be repaired", want)
+		}
+	}
+	// A dispatch must not reach the job that publishes, and a tag push must not
+	// reach the one that only attests.
+	if !strings.Contains(publish, "if: github.event_name == 'push'") {
+		t.Error("the publishing job is not push-only: a manual dispatch would publish again")
+	}
+	if !strings.Contains(retry, "if: github.event_name == 'workflow_dispatch'") {
+		t.Error("the recovery job is not dispatch-only: a tag would run it beside the release")
 	}
 
 	assertActionsArePinned(t, workflow)
