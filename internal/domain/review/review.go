@@ -121,9 +121,13 @@ type Verdict struct {
 	// Model is the model that judged, when the reviewer command named one. The
 	// proof carries the builder's; the same name on both sides is one agent
 	// approving the tree it wrote.
-	Model    string    `json:"model,omitempty"`
-	At       string    `json:"at"`
-	Findings []Finding `json:"findings"`
+	Model string `json:"model,omitempty"`
+	// Models is the model per lens when the project assigned one: the review runs
+	// one reviewer per model group, and the verdict says who judged what. A lens
+	// with no entry was left to the reviewer command.
+	Models   map[string]string `json:"models,omitempty"`
+	At       string            `json:"at"`
+	Findings []Finding         `json:"findings"`
 	// Lenses are the specialists the prompt asked this verdict to answer. The tool
 	// stamps them, because the reviewer's opinion about which lenses it used is not
 	// evidence; the prompt it was given is. A verdict stored before lenses existed
@@ -348,6 +352,11 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 	sealed.Base = strings.TrimSpace(base)
 	sealed.Reviewer = strings.TrimSpace(v.Reviewer)
 	sealed.Model = strings.TrimSpace(v.Model)
+	models, err := NormalizeLensModels(v.Models)
+	if err != nil {
+		return Verdict{}, err
+	}
+	sealed.Models = models
 	sealed.At = instant(v.At, now)
 	sealed.Lenses = inOrder(v.Lenses)
 	sealed.Verdict = Derive(v.Findings)

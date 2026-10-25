@@ -122,6 +122,63 @@ func TestRequireReviewRefusesASelfReview(t *testing.T) {
 	}
 }
 
+// TestRequireReviewRefusesOnlyTheLensesTheBuilderJudged: with a model per lens,
+// the gate names the lenses that are self-reviewed and leaves the others alone.
+func TestRequireReviewRefusesOnlyTheLensesTheBuilderJudged(t *testing.T) {
+	cases := []struct {
+		name       string
+		models     map[string]string
+		wantSelf   []string
+		wantReason string
+	}{
+		{
+			name:     "the builder judged one lens",
+			models:   map[string]string{"reliability": "provider/builder", "risk": "provider/other"},
+			wantSelf: []string{"reliability"},
+		},
+		{
+			name:   "the builder judged none",
+			models: map[string]string{"reliability": "provider/other", "risk": "provider/builder"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			files := newFakeFiles(readyFiles())
+			files.files[proofPath()] = []byte(proofFileByModel(currentTree, "provider/builder"))
+
+			sealed, err := domainreview.Seal(domainreview.Verdict{
+				Reviewer: "reviewer",
+				Lenses:   []string{"reliability"},
+				Models:   tc.models,
+			}, currentTree, "HEAD", reviewInstant)
+			if err != nil {
+				t.Fatalf("sealing the seeded verdict: %v", err)
+			}
+			files.files[reviewPath(currentTree)] = []byte(domainreview.Render(sealed))
+
+			got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
+				files, codeChange(), &fakeShell{})
+
+			self := got.Reason == check.ReasonReviewSelf
+			if len(tc.wantSelf) > 0 {
+				if !self {
+					t.Fatalf("Reason = %q, want %q (message: %s)", got.Reason, check.ReasonReviewSelf, got.Message)
+				}
+				for _, lens := range tc.wantSelf {
+					if !strings.Contains(got.Message, lens) {
+						t.Errorf("the refusal does not name the lens %q: %s", lens, got.Message)
+					}
+				}
+				return
+			}
+			if self {
+				t.Fatalf("the gate refused a lens another model judged: %s", got.Message)
+			}
+		})
+	}
+}
+
 // A review by another model, or one that cannot be attributed (a human wrote it,
 // or the proof predates the field, is not a self-review.
 func TestRequireReviewAcceptsAReviewByAnotherModelOrByNobody(t *testing.T) {
