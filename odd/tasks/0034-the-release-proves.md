@@ -12,7 +12,7 @@ R1 · "the release proves where it came from: the checksums are signed without k
 
 ## Steps
 - [x] T1 · release.yml signs checksums.txt keyless and publishes the signature and certificate   R1 · a3a5ec8
-- [ ] T2 · the release publishes one SBOM per archive   R1
+- [x] T2 · the release publishes one SBOM per archive   R1 · d191a02
 - [ ] T3 · README and SECURITY show how to verify, and the goreleaser comments tell the truth about keys and LICENSE   R1
 
 ## History
@@ -24,3 +24,6 @@ L5 · OFICIO · "The signing contract is pinned by a test that reads the two con
 L6 · OFICIO · "The review runs once on the feature's final tree, not before each delivery commit" (porque a verdict binds to a tree and the next commit invalidates it (0027); every commit still names Risk: delivery so the review cannot be skipped)
 L7 · OFICIO · "The .goreleaser.yaml header comment lands whole in T3" (porque it is one surface and one commit: half-editing it in T1 and T2 would make the file contradict itself twice)
 L8 · OFICIO · "The SBOM catalogues the archive, not the binary inside it" (porque the archive is what a person downloads and what the signature covers; an SBOM of a file nobody downloads describes the wrong thing)
+L9 · OFICIO · "The release config's header is rewritten in English and lists what the file does not publish" (porque artifacts are English since 0015, and a header written before signing describes a file that no longer exists)
+L10 · OFICIO · "The verify command names the tag and the OIDC issuer, not just the bundle" (porque the bundle alone proves that somebody signed; the certificate identity proves this workflow, from this tag, signed)
+L11 · OFICIO · "The docs name the first signed release (v0.11.11)" (porque a verification command with a placeholder cannot be run, and an unrunnable command is a decoration)

@@ -36,6 +36,35 @@ test builds the `tar.gz` and the checksums the way goreleaser publishes them,
 runs `install.sh` offline through `file://`, and the installed binary answers its
 version.
 
+### Verifying a release
+
+`sha256` is enough to install: the installer fails on a mismatch and leaves
+nothing behind. It does not tell you **who** published the file, because the
+checksums travel in the same release as the archives they describe. If you need
+that, the release also carries `checksums.txt.sigstore.json`: cosign signed it
+without a key, with the identity of the workflow that pushed the tag. The first
+release with the bundle is `v0.11.11`; use the version you downloaded.
+
+```sh
+cosign verify-blob \
+  --bundle checksums.txt.sigstore.json \
+  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.11' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  checksums.txt
+```
+
+The certificate names the tag, so a signature copied from another release fails
+here. Then check the archive you downloaded against the signed list:
+
+```sh
+sha256sum --check --ignore-missing checksums.txt
+```
+
+Each archive also ships with an `.sbom.json` (SPDX) that inventories what went
+into it. There is no provenance attestation yet: the signature says who
+published and the SBOM says what is inside, and neither says which source
+produced it.
+
 The installer also runs `odachi setup`: the bootstrap skill in
 `~/.agents/skills`, the home door for the agent clients it finds, and OpenCode's
 `default_agent`. You open your agent and describe the project; the agent runs
