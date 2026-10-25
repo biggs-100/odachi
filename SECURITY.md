@@ -28,6 +28,23 @@ proof that names another tree, a fence that is obeyed from the worktree, a check
 that reports without running, a rule that looks enforced and is not. That is the
 defect this project exists to make impossible, with one known exception below.
 
+## What a release proves
+
+The tag workflow signs `checksums.txt` without a key: cosign asks Fulcio for a
+short-lived certificate that names this workflow and the tag, and the release
+publishes the bundle that holds the signature and that certificate. The README
+has the command to verify it.
+
+- The signature proves the artifact came from this repository's release
+  workflow and from that tag, not from someone who can edit a release.
+- It does not prove the source: a signed build of a compromised tree is still
+  signed. Provenance is not published yet.
+- Each archive ships an SPDX SBOM beside it, so what is inside can be read
+  without asking the maintainer.
+- The installer verifies `sha256` only. Requiring cosign to install would turn
+  verification into a barrier, and a barrier is skipped: the signature is there
+  for whoever needs it, not as a condition to use the tool.
+
 ## The known limit
 
 The workflow file travels with the pull request, and the ruleset requires zero

@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The release proves where it came from.
+
+- **The checksums are signed without keys**: the tag workflow signs
+  `checksums.txt` with cosign and the OIDC identity of the run, so there is no
+  key to store, rotate or leak, and the release publishes one bundle
+  (`checksums.txt.sigstore.json`) that holds the signature and its certificate.
+  The installer still verifies `sha256` only.
+- **Every archive ships an SBOM** (SPDX, by syft): what went into the file is
+  published beside it.
+- **The README and SECURITY say how to verify and what the chain does not
+  prove**: the signature says who published, the SBOM says what is inside, and
+  provenance is not published yet.
+
 ## v0.11.10 - 2026-10-25
 
 The gate stops being ceremony: a red run says why, and a change cannot loosen the

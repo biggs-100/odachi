@@ -1,21 +1,23 @@
 # odachi · release config (goreleaser v2)
 #
-# Lo que NO está en este archivo, a propósito:
+# What this file publishes, on purpose: six binaries (linux, macOS and windows,
+# amd64 and arm64) inside their archives, checksums.txt, one keyless signature
+# bundle for the checksums, and one SBOM per archive. The archives carry
+# README.md and the MIT LICENSE the repository has.
 #
-#   - `brews`: no hay un tap de Homebrew. Un tap vacío enseña a instalar algo
-#     que después no se actualiza, y eso es peor que no tener la receta.
-#   - firma y notarización (cosign, signing, notarize): no hay claves ni
-#     identidad de Apple.
-#   - `sboms` / provenance: nadie lo va a verificar todavía y declararlo sin
-#     llaves sería fingir que la cadena de suministro está resuelta.
+# What it does NOT carry, also on purpose:
 #
-# Cuando existan el tap y las llaves se agregan acá. Hasta entonces, este
-# archivo dice la verdad sobre lo que publica: binarios, un tar.gz (zip en
-# Windows) y checksums.txt.
+#   - `brews`: there is no Homebrew tap. An empty tap teaches people to install
+#     something that never updates, and that is worse than having no recipe.
+#   - Apple signing and notarization: there is no Apple identity. The signature
+#     below proves which workflow published, not that macOS will open the file
+#     without a warning, and pretending otherwise would be worse.
+#   - provenance (SLSA, attestations): the signature says who published, the
+#     SBOM says what is inside, and provenance would say which source produced
+#     it. That is the next link in the chain, not this one.
 #
-# Tampoco hay LICENSE en el repo: los archivos de release incluyen README.md y
-# una LICENSE sólo si existen (`LICENSE*` es un glob, así que hoy no incluye
-# nada). No se inventa una licencia.
+# When the tap and the provenance exist they are added here. Until then this
+# file tells the truth about what is published and what is not.
 
 version: 2
 
@@ -46,7 +48,7 @@ archives:
     name_template: "odachi_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
-    # En Windows el archivo va en zip: es lo que el explorador abre con doble clic.
+    # Windows gets a zip: the file explorer opens it with a double click.
     format_overrides:
       - goos: windows
         formats:
@@ -77,7 +79,7 @@ signs:
 sboms:
   - artifacts: archive
 
-# Un snapshot lleva "dev" en el nombre para que nunca se confunda con una release.
+# A snapshot carries "dev" in its name so it is never mistaken for a release.
 snapshot:
   version_template: "{{ incpatch .Version }}-dev"
 
