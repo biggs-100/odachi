@@ -13,7 +13,7 @@ R1 · "the paid answer survives a later failure: each model group's verdict is s
 
 ## Steps
 - [x] T1 · each group's answer is stored as it lands, so a later failure keeps what was paid for, and the run says saved X of Y   R1 · f9b6ca0
-- [ ] T2 · review --show names a partial verdict, the store's refusal is pinned by a test, and the README explains both   R1
+- [x] T2 · review --show names a partial verdict, the store's refusal is pinned by a test, and the README explains both   R1 · 745d0a4
 
 ## History
 L1 · "the paid answer survives a later failure: each model group's verdict is stored as it lands, and the gate still refuses a lens nobody judged"
