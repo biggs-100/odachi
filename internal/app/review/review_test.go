@@ -261,6 +261,28 @@ func newProject() *project {
 	}
 }
 
+// --show names the model that will judge each lens before anything runs: that is
+// the plan the human pays for. A lens with no assignment says so instead of
+// pretending the tool chooses.
+func TestShowNamesTheModelOfEachLens(t *testing.T) {
+	p := newProject()
+
+	got := p.run(review.Options{Show: true, LensModels: map[string]string{"reliability": "cheap/model"}})
+
+	lines := strings.Join(got.Lines, "\n")
+	if !strings.Contains(lines, "model reliability: cheap/model") {
+		t.Errorf("--show does not name the assigned model:\n%s", lines)
+	}
+	if strings.Contains(lines, "model reliability: the reviewer command decides") {
+		t.Errorf("--show ignores the assignment:\n%s", lines)
+	}
+	// Only the lenses that will run are in the plan: a line for a lens the
+	// evidence did not ask for would be a cost nobody approved.
+	if strings.Contains(lines, "model risk:") {
+		t.Errorf("--show plans a lens the candidate does not require:\n%s", lines)
+	}
+}
+
 // run performs one `odachi review` with the fixed clock.
 func (p *project) run(opts review.Options) review.Result {
 	opts.Dir = dir

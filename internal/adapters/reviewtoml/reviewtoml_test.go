@@ -21,8 +21,8 @@ func TestDecodeReadsTheSwitch(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Decode(%q) = %v", data, err)
 		}
-		if got != want {
-			t.Errorf("Decode(%q) = %q, want %q", data, got, want)
+		if got.Mode != want {
+			t.Errorf("Decode(%q) = %q, want %q", data, got.Mode, want)
 		}
 	}
 }
@@ -57,10 +57,58 @@ func TestDecodeNamesTheUnknownKey(t *testing.T) {
 	}
 }
 
+// The lens table says who judges each lens; it is read back in the vocabulary's
+// order, not in the order the human happened to write it.
+func TestDecodeReadsALensTable(t *testing.T) {
+	data := []byte("mode = \"on\"\n\n[lenses]\nreliability = \"cheap/model\"\nRisk = \"sharp/model\"\n")
+	got, err := reviewtoml.Decode(data)
+	if err != nil {
+		t.Fatalf("Decode = %v", err)
+	}
+	if got.Lenses["risk"] != "sharp/model" || got.Lenses["reliability"] != "cheap/model" {
+		t.Fatalf("Lenses = %v, want both entries with the lens lowercased", got.Lenses)
+	}
+
+	rendered, err := reviewtoml.Render(got)
+	if err != nil {
+		t.Fatalf("Render = %v", err)
+	}
+	risk := strings.Index(string(rendered), "risk = ")
+	reliability := strings.Index(string(rendered), "reliability = ")
+	if risk < 0 || reliability < 0 || risk > reliability {
+		t.Errorf("Render =\n%s\nwant the lens table in the fixed order", rendered)
+	}
+
+	back, err := reviewtoml.Decode(rendered)
+	if err != nil {
+		t.Fatalf("Decode(Render(x)) = %v", err)
+	}
+	if back.Lenses["risk"] != "sharp/model" || back.Lenses["reliability"] != "cheap/model" {
+		t.Errorf("the table did not survive the round trip: %v", back.Lenses)
+	}
+}
+
+// A lens the vocabulary does not know, or an entry with no model, is refused:
+// a plan for a lens nobody asks would be a model the human pays for nothing.
+func TestDecodeRefusesABrokenLensTable(t *testing.T) {
+	cases := map[string]string{
+		"unknown lens": "mode = \"on\"\n[lenses]\nperformance = \"m\"\n",
+		"no model":     "mode = \"on\"\n[lenses]\nrisk = \"\"\n",
+	}
+
+	for name, data := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, err := reviewtoml.Decode([]byte(data)); err == nil {
+				t.Fatal("Decode accepted a broken lens table")
+			}
+		})
+	}
+}
+
 // TestRenderWritesACanonicalSwitch: the comment tells the human whose switch it
 // is, and the value is the normalized one.
 func TestRenderWritesACanonicalSwitch(t *testing.T) {
-	data, err := reviewtoml.Render(" ON ")
+	data, err := reviewtoml.Render(review.ProjectConfig{Mode: " ON "})
 	if err != nil {
 		t.Fatalf("Render(ON) = %v", err)
 	}
@@ -75,7 +123,7 @@ func TestRenderWritesACanonicalSwitch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Decode(Render(on)) = %v", err)
 	}
-	if decoded != review.ModeOn {
-		t.Errorf("Decode(Render(on)) = %q, want %q", decoded, review.ModeOn)
+	if decoded.Mode != review.ModeOn {
+		t.Errorf("Decode(Render(on)) = %q, want %q", decoded.Mode, review.ModeOn)
 	}
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/review"
 )
 
 // osFiles is the Files adapter for `odachi start`: the only place that command
@@ -238,8 +239,12 @@ func storedAgents(dir, verb string) (string, int, string) {
 // the actions and the disk port, this type owns TOML.
 type reviewModeCodec struct{}
 
-func (reviewModeCodec) Decode(data []byte) (string, error) { return reviewtoml.Decode(data) }
-func (reviewModeCodec) Render(mode string) ([]byte, error) { return reviewtoml.Render(mode) }
+func (reviewModeCodec) Decode(data []byte) (review.ProjectConfig, error) {
+	return reviewtoml.Decode(data)
+}
+func (reviewModeCodec) Render(config review.ProjectConfig) ([]byte, error) {
+	return reviewtoml.Render(config)
+}
 
 // loadProfile reads .odachi/profile.toml when it exists. The human owns that
 // file: it wins over inference, and a malformed one blocks with a sentence

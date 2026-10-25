@@ -17,3 +17,5 @@ R1 · "each lens can name its model: the review runs one reviewer per model grou
 
 ## History
 L1 · "each lens can name its model: the review runs one reviewer per model group and the verdict records who judged each lens, so a cheap model can carry the cheap lenses"
+L2 · OFICIO · "The switch and the lens table share one file and one decoder" (porque review mode off rewrote the file from the mode alone, and two writers of one file would erase each other's half)
+L3 · OFICIO · "The plan lists only the lenses that will run, and says who decides when nothing is assigned" (porque a line for a lens the evidence did not ask is a cost nobody approved, and claiming the session's model would be a promise the tool does not keep)

@@ -35,8 +35,8 @@ type ModeFiles interface {
 // ModeCodec is the format port: the app knows the actions, the adapter knows
 // TOML. A malformed file must be an error, never a silent "off".
 type ModeCodec interface {
-	Decode(data []byte) (string, error)
-	Render(mode string) ([]byte, error)
+	Decode(data []byte) (domain.ProjectConfig, error)
+	Render(config domain.ProjectConfig) ([]byte, error)
 }
 
 // Mode answers or changes the project's review switch. A missing file is off:
@@ -47,7 +47,7 @@ func Mode(opts ModeOptions, files ModeFiles, codec ModeCodec) Result {
 	}
 
 	path := filepath.Join(opts.Dir, filepath.FromSlash(domain.ModePath))
-	current, exists, err := readMode(path, files, codec)
+	current, exists, err := readConfig(path, files, codec)
 	if err != nil {
 		return modeBlocked(err)
 	}
@@ -59,13 +59,16 @@ func Mode(opts ModeOptions, files ModeFiles, codec ModeCodec) Result {
 
 	switch action {
 	case ModeStatus:
-		return modeResult(fmt.Sprintf("review: %s", current), exists, nil)
+		return modeResult(fmt.Sprintf("review: %s", current.Mode), exists, nil)
 	case ModeOn, ModeOff:
-		if exists && current == action {
+		if exists && current.Mode == action {
 			return modeResult(fmt.Sprintf("review: %s (unchanged)", action), true, nil)
 		}
 
-		data, err := codec.Render(action)
+		// The switch is one field of the file: flipping it keeps the human's lens
+		// table, which is the other one.
+		current.Mode = action
+		data, err := codec.Render(current)
 		if err != nil {
 			return modeBlocked(err)
 		}
@@ -91,35 +94,46 @@ func Enabled(dir string, files ModeFiles, codec ModeCodec) (bool, error) {
 	}
 
 	path := filepath.Join(dir, filepath.FromSlash(domain.ModePath))
-	mode, _, err := readMode(path, files, codec)
+	config, _, err := readConfig(path, files, codec)
 	if err != nil {
 		return false, err
 	}
-	return mode == domain.ModeOn, nil
+	return config.Mode == domain.ModeOn, nil
 }
 
-// readMode reads and validates the switch. The boolean says whether the file
-// exists, so status can name the default instead of pretending the human wrote
-// it.
-func readMode(path string, files ModeFiles, codec ModeCodec) (string, bool, error) {
+// Config is the whole file: the switch and the model of each lens. A missing
+// file is off with no assignments, which is what the project meant before the
+// table existed.
+func Config(dir string, files ModeFiles, codec ModeCodec) (domain.ProjectConfig, error) {
+	if dir == "" {
+		dir = "."
+	}
+	path := filepath.Join(dir, filepath.FromSlash(domain.ModePath))
+	config, _, err := readConfig(path, files, codec)
+	return config, err
+}
+
+// readConfig reads and validates the file. The boolean says whether it exists,
+// so status can name the default instead of pretending the human wrote it.
+func readConfig(path string, files ModeFiles, codec ModeCodec) (domain.ProjectConfig, bool, error) {
 	exists, err := files.Exists(path)
 	if err != nil {
-		return "", false, fmt.Errorf("could not check %s: %w", domain.ModePath, err)
+		return domain.ProjectConfig{}, false, fmt.Errorf("could not check %s: %w", domain.ModePath, err)
 	}
 	if !exists {
-		return domain.ModeOff, false, nil
+		return domain.ProjectConfig{Mode: domain.ModeOff}, false, nil
 	}
 
 	data, err := files.Read(path)
 	if err != nil {
-		return "", true, fmt.Errorf("could not read %s: %w", domain.ModePath, err)
+		return domain.ProjectConfig{}, true, fmt.Errorf("could not read %s: %w", domain.ModePath, err)
 	}
 
-	mode, err := codec.Decode(data)
+	config, err := codec.Decode(data)
 	if err != nil {
-		return "", true, fmt.Errorf("%s: %w; fix the file or write the mode again with odachi review mode on|off", domain.ModePath, err)
+		return domain.ProjectConfig{}, true, fmt.Errorf("%s: %w; fix the file or write the mode again with odachi review mode on|off", domain.ModePath, err)
 	}
-	return mode, true, nil
+	return config, true, nil
 }
 
 // modeResult is the one-line answer the command prints. A switch change also

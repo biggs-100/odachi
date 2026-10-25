@@ -73,6 +73,10 @@ type Options struct {
 	// Model is the raw --model value: the identity that replaces {model}.
 	// Empty means the host's answer.
 	Model string
+	// LensModels is the project's model per lens, from `.odachi/review.toml`.
+	// A lens with no entry is left to the reviewer command, which is what the
+	// file meant before the table existed.
+	LensModels map[string]string
 	// Attach is a verdict someone already wrote.
 	Attach string
 	// Show reads this tree's verdict instead of producing one.
@@ -540,7 +544,10 @@ func (r *runner) show() Result {
 			// not measure.
 			return missing(tree, nil, "")
 		}
-		return missing(tree, r.requiredLenses(work), domain.Reason(work.paths, work.diff))
+		required := r.requiredLenses(work)
+		result := missing(tree, required, domain.Reason(work.paths, work.diff))
+		result.Lines = append(result.Lines, r.modelPlan(required)...)
+		return result
 	}
 
 	parsed, err := domain.Parse(data)
@@ -551,6 +558,9 @@ func (r *runner) show() Result {
 
 	lines := shown(tree, rel, parsed)
 	lines = append(lines, r.lensCoverage(work, parsed)...)
+	if assessed {
+		lines = append(lines, r.modelPlan(r.requiredLenses(work))...)
+	}
 
 	result := Result{
 		Code:    CodeOK,
@@ -567,6 +577,26 @@ func (r *runner) show() Result {
 		result.Lines = append(result.Lines, refutationLine(refutation, refRel, parsed.Findings))
 	}
 	return result
+}
+
+// modelPlan is one line per required lens: which model will judge it. It is the
+// plan the human pays for, so --show names it before any reviewer runs. Without
+// an assignment the command decides, and saying "the session's" would be a promise
+// the tool does not keep when the command has no placeholder.
+func (r *runner) modelPlan(required []string) []string {
+	if len(required) == 0 {
+		return nil
+	}
+	lines := make([]string, 0, len(required))
+	for _, lens := range required {
+		name := strings.ToLower(strings.TrimSpace(lens))
+		model := strings.TrimSpace(r.opts.LensModels[name])
+		if model == "" {
+			model = "the reviewer command decides"
+		}
+		lines = append(lines, "model "+name+": "+model)
+	}
+	return lines
 }
 
 // lensCoverage is the two lines that make the optional gate predictable: what
