@@ -30,6 +30,10 @@ func TestEvaluationOrder(t *testing.T) {
 	outOfScope.Violations = []string{"pagos: internal/payments/stripe.go", "pagos: github.com/stripe/stripe-go/v76"}
 	outOfScope.OpenQuestions = 1
 
+	loosened := ready()
+	loosened.FenceLoosened = []string{"monorepo scopes: the rule is gone"}
+	loosened.OpenQuestions = 1
+
 	openQuestion := ready()
 	openQuestion.OpenQuestions = 1
 
@@ -78,14 +82,21 @@ func TestEvaluationOrder(t *testing.T) {
 			next:    "odachi ask \"<your decision>\"",
 		},
 		{
+			name:    "fence loosened",
+			state:   loosened,
+			code:    gate.NeedsDecision,
+			reason:  gate.ReasonFenceLoosened,
+			message: "the fence was loosened without a new brief: monorepo scopes: the rule is gone; the brief and the fence are the human's, and the fence may only change with a new brief. Restore it, or write the brief first",
+			next:    "odachi ask \"<your decision>\"",
+		},
+		{
 			name:    "open question",
 			state:   openQuestion,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonOpenQuestion,
 			message: "1 unanswered question",
 			next:    "odachi ask \"<your decision>\"",
-		},
-		{
+		}, {
 			name:    "proof missing",
 			state:   missingProof,
 			code:    gate.NeedsWork,
@@ -147,6 +158,7 @@ func TestEvaluationOrderIsFirstBlockWins(t *testing.T) {
 	state := gate.State{
 		BriefMissing:  []string{"vision"},
 		Violations:    []string{"pagos"},
+		FenceLoosened: []string{"monorepo scopes: the rule is gone"},
 		OpenQuestions: 2,
 		TreeHash:      "4a1c9f",
 	}
@@ -167,8 +179,13 @@ func TestEvaluationOrderIsFirstBlockWins(t *testing.T) {
 	}
 
 	state.Violations = nil
+	if got := gate.Evaluate(state); got.Reason != gate.ReasonFenceLoosened {
+		t.Fatalf("Reason = %q, want %q (a loosened fence comes after out of scope)", got.Reason, gate.ReasonFenceLoosened)
+	}
+
+	state.FenceLoosened = nil
 	if got := gate.Evaluate(state); got.Reason != gate.ReasonOpenQuestion {
-		t.Fatalf("Reason = %q, want %q (open question comes fourth)", got.Reason, gate.ReasonOpenQuestion)
+		t.Fatalf("Reason = %q, want %q (open question comes after the fence)", got.Reason, gate.ReasonOpenQuestion)
 	}
 
 	state.OpenQuestions = 0

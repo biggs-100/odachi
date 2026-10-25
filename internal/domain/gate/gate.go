@@ -26,6 +26,7 @@ const (
 	ReasonNoBrief         = "no_brief"
 	ReasonBriefIncomplete = "brief_incomplete"
 	ReasonOutOfScope      = "out_of_scope"
+	ReasonFenceLoosened   = "fence_loosened"
 	ReasonOpenQuestion    = "open_question"
 	ReasonProofMissing    = "proof_missing"
 	ReasonProofStale      = "proof_stale"
@@ -68,6 +69,10 @@ type State struct {
 
 	OpenQuestions int
 	Violations    []string
+	// FenceLoosened names the rules, paths or dependencies the base fence had
+	// and the candidate no longer has. Only the caller with --fence-from can
+	// answer it: without a base ref, the worktree fence is the policy.
+	FenceLoosened []string
 }
 
 // Result is the verdict plus what to do next.
@@ -79,9 +84,9 @@ type Result struct {
 }
 
 // Evaluate applies the documented order: no brief -> brief incomplete -> out of
-// scope -> open question -> proof missing -> proof stale -> proof failed ->
-// ready. The order decides the Code too: a block only the human can clear is
-// NeedsDecision, a block the agent can clear is NeedsWork.
+// scope -> fence loosened -> open question -> proof missing -> proof stale ->
+// proof failed -> ready. The order decides the Code too: a block only the human
+// can clear is NeedsDecision, a block the agent can clear is NeedsWork.
 func Evaluate(s State) Result {
 	switch {
 	case !s.HasBrief:
@@ -90,6 +95,11 @@ func Evaluate(s State) Result {
 		return Result{NeedsDecision, ReasonBriefIncomplete, "the brief is incomplete: missing " + strings.Join(s.BriefMissing, ", "), nextStart}
 	case len(s.Violations) > 0:
 		return Result{NeedsDecision, ReasonOutOfScope, "out of scope: " + strings.Join(s.Violations, "; "), nextAsk}
+	case len(s.FenceLoosened) > 0:
+		return Result{NeedsDecision, ReasonFenceLoosened,
+			"the fence was loosened without a new brief: " + strings.Join(s.FenceLoosened, "; ") +
+				"; the brief and the fence are the human's, and the fence may only change with a new brief. Restore it, or write the brief first",
+			nextAsk}
 	case s.OpenQuestions > 0:
 		return Result{NeedsDecision, ReasonOpenQuestion, openQuestions(s.OpenQuestions), nextAsk}
 	// A proof exists as soon as it names the tree it came from. An empty body is

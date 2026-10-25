@@ -26,7 +26,63 @@ const (
 	KindPath = "path"
 	// KindDep marks a violation caused by an added dependency.
 	KindDep = "dep"
+	// KindRule marks a rule of the base fence the candidate does not have.
+	KindRule = "rule"
 )
+
+// Loosening is one piece of the base policy the candidate did not keep: a rule
+// that disappeared, or a path or a dependency that rule no longer forbids.
+type Loosening struct {
+	Rule string
+	// What is the path or the dependency that disappeared; empty when the rule
+	// itself is gone.
+	What string
+	Kind string
+}
+
+// Loosened compares the fence of the base ref with the candidate's. Every rule
+// the base had must survive under the same name with at least the paths and
+// dependencies it had; adding rules or entries is stricter and never reported.
+// The comparison is exact on purpose: a glob is a string here, and a changed
+// string is a changed policy, not a smarter one.
+func Loosened(base, candidate []Rule) []Loosening {
+	paths := make(map[string]map[string]bool, len(candidate))
+	deps := make(map[string]map[string]bool, len(candidate))
+	for _, rule := range candidate {
+		if paths[rule.Not] == nil {
+			paths[rule.Not] = make(map[string]bool, len(rule.Paths))
+		}
+		if deps[rule.Not] == nil {
+			deps[rule.Not] = make(map[string]bool, len(rule.Deps))
+		}
+		for _, path := range rule.Paths {
+			paths[rule.Not][path] = true
+		}
+		for _, dep := range rule.Deps {
+			deps[rule.Not][dep] = true
+		}
+	}
+
+	var loosened []Loosening
+	for _, rule := range base {
+		kept, ok := paths[rule.Not]
+		if !ok {
+			loosened = append(loosened, Loosening{Rule: rule.Not, Kind: KindRule})
+			continue
+		}
+		for _, path := range rule.Paths {
+			if !kept[path] {
+				loosened = append(loosened, Loosening{Rule: rule.Not, What: path, Kind: KindPath})
+			}
+		}
+		for _, dep := range rule.Deps {
+			if !deps[rule.Not][dep] {
+				loosened = append(loosened, Loosening{Rule: rule.Not, What: dep, Kind: KindDep})
+			}
+		}
+	}
+	return loosened
+}
 
 // Check reports one violation per rule per offending path, and one per rule per
 // offending dependency. Nil or empty input produces an empty slice: a fence with
