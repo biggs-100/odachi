@@ -1,14 +1,24 @@
 [[rule]]
-not   = "changing keepFailed's behavior: it stays best effort"
-paths = ["changing-keepfailed-s-behavior-it-stays-best-effort*"]
+not   = "own keys or a KMS: keyless only, with the workflow as the identity"
+paths = ["own-keys-or-a-kms-keyless-only-with-the-workflow-as-the-identity*"]
 deps  = []
 
 [[rule]]
-not   = "a retry or fallback for a failed write"
-paths = ["a-retry-or-fallback-for-a-failed-write*"]
+not   = "Apple notarization"
+paths = ["apple-notarization*"]
 deps  = []
 
 [[rule]]
-not   = "changing the failed file format"
-paths = ["changing-the-failed-file-format*"]
+not   = "a Homebrew tap"
+paths = ["a-homebrew-tap*"]
+deps  = []
+
+[[rule]]
+not   = "changing what the installer verifies"
+paths = ["changing-what-the-installer-verifies*"]
+deps  = []
+
+[[rule]]
+not   = "an SBOM of the source tree: only the archives"
+paths = ["an-sbom-of-the-source-tree-only-the-archives*"]
 deps  = []
