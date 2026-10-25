@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The review knows who judged it, and the human chooses who that is.
+
+- **The verdict cannot come from the model that wrote the tree**: the proof
+  records the model behind `--run`, the verdict records the one that judged, and
+  `check --require-review` refuses the lenses the builder judged (`review_self`),
+  naming the fix. It is disclosure, not identity: a model name can be lied about.
+- **Each lens can name its model** in `.odachi/review.toml`: the review runs one
+  reviewer per model group, so a cheap model carries the cheap lenses, and
+  `review --show` prints the plan before anything is paid for. The verdict grows
+  by lens — a second run adds what the tree still owes and never replaces an
+  answer already stored.
+
 ## v0.11.12 - 2026-10-25
 
 The release says which source built it.

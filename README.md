@@ -325,9 +325,29 @@ no model resolves, the review stops before starting the reviewer and names
 `--model`; it never picks a fallback. A command without `{model}` runs exactly as
 before, and the verdict records the command that really ran.
 
-The verdict and the proof both name the model behind them. With the gate on, a
-verdict written by the model that produced the proof is refused — `review_self`,
-a model does not judge its own tree — and the fix is `odachi review --model
+### Choosing the model of each lens
+
+`.odachi/review.toml` names a model per lens, so the cheap model carries the
+cheap lenses and the expensive one runs only where you put it:
+
+```toml
+mode = "on"
+
+[lenses]
+risk = "provider/expensive"
+reliability = "provider/cheap"
+```
+
+The review groups the required lenses by model and runs one reviewer per group —
+one group is one call you pay for. The verdict stores which model judged each
+lens, `review --show` prints that plan before anything runs, and a lens with no
+entry is left to the reviewer command. A second run judges only the lenses this
+tree still owes and adds them to the stored verdict: the store grows by lens and
+never replaces an answer that was already paid for.
+
+The verdict and the proof both name the model behind them. With the gate on, the
+lenses judged by the model that produced the proof are refused - `review_self`,
+a model does not judge its own tree - and the fix is `odachi review --model
 <another>`. That is **disclosure, not identity**: a model name is a declaration,
 and a declaration can be lied about. It stops the accidental self-review, which
 is the common one, and it does not replace a second person or a review app; a
