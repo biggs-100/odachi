@@ -67,6 +67,11 @@ func NormalizeLensModels(raw map[string]string) (map[string]string, error) {
 		if !IsLens(name) {
 			return nil, fmt.Errorf("%q is not a lens: the lenses are %s", lens, strings.Join(AllLenses(), ", "))
 		}
+		if _, twice := out[name]; twice {
+			// A map is iterated in no fixed order, so two spellings of one lens
+			// would make the winner random: refuse instead of choosing.
+			return nil, fmt.Errorf("the lens %q appears twice: write it once", name)
+		}
 		model = strings.TrimSpace(model)
 		if model == "" {
 			return nil, fmt.Errorf("the lens %q names no model: write one or remove the line", lens)

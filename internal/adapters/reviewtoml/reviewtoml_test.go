@@ -96,6 +96,7 @@ func TestDecodeRefusesABrokenLensTable(t *testing.T) {
 		"no model":      "mode = \"on\"\n[lenses]\nrisk = \"\"\n",
 		"shell code":    "mode = \"on\"\n[lenses]\nrisk = \"x; rm -rf ~\"\n",
 		"command break": "mode = \"on\"\n[lenses]\nrisk = \"a && b\"\n",
+		"two spellings": "mode = \"on\"\n[lenses]\nrisk = \"a\"\nRisk = \"b\"\n",
 	}
 
 	for name, data := range cases {

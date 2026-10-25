@@ -340,9 +340,24 @@ func (r *runner) coveredLenses(tree string) ([]string, *Result) {
 	if err != nil {
 		return nil, nil
 	}
-	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	path := fullPath(r.opts.Dir, rel)
+	exists, err := r.files.Exists(path)
 	if err != nil {
+		problem := blocked(fmt.Sprintf("could not check the review of this tree (%s): %s; fix the permissions and run odachi review again",
+			rel, oneLine(err.Error())))
+		return nil, &problem
+	}
+	if !exists {
 		return nil, nil
+	}
+
+	data, err := r.files.Read(path)
+	if err != nil {
+		// A verdict that exists but cannot be read is not "no verdict": starting
+		// paid reviewers and failing at the write would charge for nothing.
+		problem := blocked(fmt.Sprintf("could not read the review of this tree (%s): %s; fix the permissions and run odachi review again",
+			rel, oneLine(err.Error())))
+		return nil, &problem
 	}
 	verdict, err := domain.Parse(data)
 	if err != nil {
@@ -397,6 +412,18 @@ func mergeVerdicts(existing, incoming domain.Verdict) domain.Verdict {
 	}
 	for lens, model := range incoming.Models {
 		models[lens] = model
+	}
+
+	// A verdict written before the per-lens map carries one model for every lens
+	// it covers. When the halves disagree, that attribution has to survive for the
+	// old lenses or the identity gate loses what it is asked to check.
+	if existing.Model != "" {
+		for _, lens := range existing.Lenses {
+			name := strings.ToLower(strings.TrimSpace(lens))
+			if _, ok := models[name]; !ok {
+				models[name] = existing.Model
+			}
+		}
 	}
 	if len(models) == 0 {
 		models = nil
