@@ -10,6 +10,22 @@ body:
         says what must exist, and what is *not* included, is the one that gets
         built. Do not paste secrets or private project content: this repository
         and its issues are public.
+  - type: input
+    id: version
+    attributes:
+      label: odachi --version
+      description: The version you use, or the one you are proposing against.
+      placeholder: odachi 0.11.9
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: odachi doctor
+      description: Paste the output if the proposal depends on your environment. It is read-only and prints no secrets.
+      render: text
+    validations:
+      required: false
   - type: textarea
     id: problem
     attributes:

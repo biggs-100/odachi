@@ -59,6 +59,9 @@ owner or a hostile contributor with push access.
   is now a condition, not a report.
 - A direct push to `main` is rejected by the remote; the local `main` has to be
   synced after a merge instead of being pushed.
+- GitHub's default extra approval for changes from people without write access is
+  turned off. Without that, an outside contribution could never merge in a
+  one-person repository; the gate, not an approval, is the requirement.
 - Renaming a job in `gate.yml` breaks every pull request until
   `.github/main-ruleset.json` follows. The script prints the required checks
   after applying them, so the drift is one run away from being seen.

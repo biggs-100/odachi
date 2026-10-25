@@ -30,10 +30,11 @@ change they are asking to pass.
   branch's copy does not change the policy it is judged by; the file itself is
   protected by the CODEOWNERS request for an owner review and the maintainer's
   merge decision, not by the gate. That limit is recorded in ADR 0024.
-- **The gate is the contract.** A pull request is a candidate: CI builds the gate
-  from the base ref, reads the fence from it and runs the suite. The local proof
-  is generated and ignored by git, so it does not travel; the CI run is the
-  evidence a reviewer clicks.
+- **The gate is the contract.** A pull request is a candidate: the workflow
+  builds the gate from the base ref, reads the fence from it and runs the suite.
+  The local proof is generated and ignored by git, so it does not travel; the CI
+  run is the evidence a reviewer clicks. The workflow is the known limit: it
+  travels with the pull request, and ADR 0024 records why that is accepted.
 - **The template asks for the three things a reviewer cannot guess:** the proof,
   the risk and the rollback. It also asks for the AI disclosure, because the
   project is built that way and hiding it would be the only dishonest answer.
