@@ -27,3 +27,4 @@ L8 · OFICIO · "The SBOM catalogues the archive, not the binary inside it" (por
 L9 · OFICIO · "The release config's header is rewritten in English and lists what the file does not publish" (porque artifacts are English since 0015, and a header written before signing describes a file that no longer exists)
 L10 · OFICIO · "The verify command names the tag and the OIDC issuer, not just the bundle" (porque the bundle alone proves that somebody signed; the certificate identity proves this workflow, from this tag, signed)
 L11 · OFICIO · "The docs name the first signed release (v0.11.11)" (porque a verification command with a placeholder cannot be run, and an unrunnable command is a decoration)
+L12 · OFICIO · "The two WARNINGs are fixed, and so are the macOS and impact-map suggestions" (porque the first was the forgery the signature exists to prevent, and a verification command a mac cannot run is decoration)

@@ -57,7 +57,10 @@ The certificate names the tag, so a signature copied from another release fails
 here. Then check the archive you downloaded against the signed list:
 
 ```sh
-sha256sum --check --ignore-missing checksums.txt
+# linux
+grep ' odachi_0.11.11_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
+# macOS ships shasum, not sha256sum
+grep ' odachi_0.11.11_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
 ```
 
 Each archive also ships with an `.sbom.json` (SPDX) that inventories what went
