@@ -101,7 +101,9 @@ func TestTheReleaseIsSignedKeyless(t *testing.T) {
 	// workflow at this tag, and the issuer must be GitHub's token service.
 	for _, want := range []string{
 		"--certificate-identity",
-		"/.github/workflows/release.yml@refs/tags/",
+		// The whole binding in one string: this repository, this workflow, this
+		// tag. A literal repo or a literal tag would otherwise pass a suffix.
+		"https://github.com/${GH_REPO}/.github/workflows/release.yml@refs/tags/${TAG}",
 		"--certificate-oidc-issuer",
 		"https://token.actions.githubusercontent.com",
 	} {
