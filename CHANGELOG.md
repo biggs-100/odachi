@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.16 - 2026-10-25
+
+The review asks once per feature.
+
+- **The task doc records the commit the feature started from** (`Base:`): `start`
+  reads HEAD and writes it, `taskdoc` parses and renders it, and a canonical
+  rewrite does not report it lost.
+- **With the mode on, the gate asks once**: the trees inside an open feature owe
+  only their proof, and the tree that closes the feature owes the verdict. That
+  verdict has to judge the diff the feature merges, not the closing document - so
+  it must name the feature's base, and the message is the runnable
+  `odachi review --base <sha>`.
+- **Old documents keep the old rule**: a feature with no steps, or a document
+  written before the base line, still asks per tree. `--require-review` asks for
+  one tree; `--no-review` turns the mode off for one run.
+
 ## v0.11.15 - 2026-10-25
 
 The review's answer belongs to the tree it judged.
