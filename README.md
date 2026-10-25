@@ -27,7 +27,7 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 odachi --version
 ```
 
-Those three lines work. The latest release is `v0.11.10`: six binaries (Linux,
+Those three lines work. The latest release is `v0.11.11`: six binaries (Linux,
 macOS and Windows, amd64 and arm64) and a `checksums.txt`. The installer resolves
 the latest version through the API, verifies the sha256 and only then writes; a
 checksum that does not match exits with an error and leaves **nothing** at the
@@ -52,8 +52,8 @@ code.
 nothing behind. It does not tell you **who** published the file, because the
 checksums travel in the same release as the archives they describe. If you need
 that, the release also carries `checksums.txt.sigstore.json`: cosign signed it
-without a key, with the identity of the workflow that pushed the tag. The first
-release with the bundle is `v0.11.11`; use the version you downloaded.
+without a key, with the identity of the workflow that pushed the tag. `v0.11.11`
+and later carry the bundle; use the version you downloaded.
 
 ```sh
 cosign verify-blob \
@@ -405,7 +405,7 @@ Pure domain in `internal/domain/...` with an import guard, adapters in
 `skills`, `skill new`, `pack` and `--version`. 41 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
-Published: `v0.11.10`. What changed in each version is in
+Published: `v0.11.11`. What changed in each version is in
 [CHANGELOG.md](CHANGELOG.md). The one-line installation is tested against the
 real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP
