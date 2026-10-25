@@ -1,24 +1,24 @@
 [[rule]]
-not   = "changing the reviewer binary, its tools or its flags"
-paths = ["changing-the-reviewer-binary-its-tools-or-its-flags*"]
+not   = "searching the store for a verdict of another tree"
+paths = ["searching-the-store-for-a-verdict-of-another-tree*"]
 deps  = []
 
 [[rule]]
-not   = "parsing a JSON out of a transcript"
-paths = ["parsing-a-json-out-of-a-transcript*"]
+not   = "a shared or remote store"
+paths = ["a-shared-or-remote-store*"]
 deps  = []
 
 [[rule]]
-not   = "retrying the reviewer automatically"
-paths = ["retrying-the-reviewer-automatically*"]
+not   = "changing CI or the release workflow"
+paths = ["changing-ci-or-the-release-workflow*"]
 deps  = []
 
 [[rule]]
-not   = "changing the lens vocabulary or the four prompts"
-paths = ["changing-the-lens-vocabulary-or-the-four-prompts*"]
+not   = "rewriting closed task docs"
+paths = ["rewriting-closed-task-docs*"]
 deps  = []
 
 [[rule]]
-not   = "the refutation flow"
-paths = ["the-refutation-flow*"]
+not   = "changing the lens selection"
+paths = ["changing-the-lens-selection*"]
 deps  = []

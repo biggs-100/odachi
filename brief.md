@@ -1,24 +1,25 @@
-# the-review-asks
+# closing-a-feature
 
 ## What must exist
-- the review asks for an answer, not for work: the prompt tells the reviewer to read and not to run anything, and a candidate with no lens says so instead of claiming a verdict exists
+- closing a feature is reviewed and publishing it is not: the verdict is owed by the commit that marks the last step done, and a later documents-only tree does not ask for it again
 
 ## Done when
-- the review prompt carries the rule: answer from the prompt, do not run commands, do not edit files
-- review --exec on a documents-only candidate with no verdict says the change asks for no lens and names --lens all
-- a tree whose lenses are all answered still says this tree already has a verdict
-- a reviewer that answers with something that is not a verdict keeps its own output as the diagnosis
-- the README explains the reviewer's side of the contract in one paragraph
+- with the mode on, the commit that closes a feature owes the verdict of the feature's base
+- a documents-only tree after the close is ready with its proof, as long as the task doc did not change
+- a tree with code after the close still owes a verdict: the gate does not go blind
+- a feature with no steps or no base keeps the old per-tree rule
+- --require-review still forces one tree and --no-review still turns the mode off for one run
+- tests pin the four cases and the README says the review is owed by the close, not by the tail
 
 ## Not included (first version)
-- changing the reviewer binary, its tools or its flags
-- parsing a JSON out of a transcript
-- retrying the reviewer automatically
-- changing the lens vocabulary or the four prompts
-- the refutation flow
+- searching the store for a verdict of another tree
+- a shared or remote store
+- changing CI or the release workflow
+- rewriting closed task docs
+- changing the lens selection
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how to write a contract for something you do not control.
+- Wants to learn: how to tell a unit of work from the paperwork that follows it.
