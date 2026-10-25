@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.14 - 2026-10-25
+
+A stopped review keeps what it already paid for.
+
+- **Each model group's verdict is stored as it lands**: a reviewer that fails,
+  times out or answers something that is not a verdict no longer throws away the
+  lenses the earlier groups answered. The run says `saved 2 of 4 lenses` and names
+  the ones still owed, with the command that asks for them.
+- **`review --show` calls a half answer partial**: `review of <tree>: BLOCK
+  (partial: 1 of 2 lenses)`, and the gate still blocks on the lens nobody judged.
+  A partial verdict is not a review.
+- **The store never replaces an answered lens**: a test pins the refusal, even
+  when the second file also brings lenses the tree still owes.
+
 ## v0.11.13 - 2026-10-25
 
 The review knows who judged it, and the human chooses who that is.
