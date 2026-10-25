@@ -169,6 +169,12 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	}
 
 	opts.Dir = dir
+	// The feature starts from the commit that exists now: the task doc records
+	// it, and the closing gate asks for the review of that diff. A repository
+	// with no commit records nothing, and the gate keeps asking per tree.
+	if head, err := (gitRepo{}).Head(dir); err == nil {
+		opts.Base = head
+	}
 	opts.Done = done
 	opts.Exclude = exclude
 	opts.Learn = learn

@@ -804,6 +804,27 @@ func TestStartDoesNotRewriteABlockAlreadyInTheRightVoice(t *testing.T) {
 	}
 }
 
+// TestStartRecordsTheFeatureBase: the task doc carries the commit the feature
+// starts from, because the closing gate asks for the review of that diff, not of
+// the commit that closes the feature. Without a commit, nothing is recorded.
+func TestStartRecordsTheFeatureBase(t *testing.T) {
+	const sha = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+	var events []string
+	files := newFakeFiles(nil, &events)
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+
+	got := start.Run(start.Options{Base: sha}, interview, files, nil)
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+
+	taskPath := filepath.Join("odd", "tasks", "0001-quiero-reservar-turnos.md")
+	doc := taskdoc.Parse(files.content(t, taskPath))
+	if doc.Base != sha {
+		t.Errorf("Base = %q, want %q", doc.Base, sha)
+	}
+}
+
 // block renders the canonical block for one voice, so the tests compare against
 // the renderer instead of a copy of its text.
 func blockText(t *testing.T, voice string) string {

@@ -21,6 +21,31 @@ func example(t *testing.T, name string) string {
 	return string(data)
 }
 
+// TestParseRecordsTheBase: the commit a feature starts from is part of its
+// document, so the closing gate can name the review of the feature instead of
+// the commit that closes it. A document without the line keeps an empty base,
+// which is the old behavior.
+func TestParseRecordsTheBase(t *testing.T) {
+	const sha = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+	md := "# turnos\nBase: " + sha + "\n\n## Requirements (verbatim, from the user)\nR1 · \"reservar turnos\"\n\n## Done when\n- aparece en la agenda\n\n## Steps\n- [ ] T1 · reservar   R1\n\n## History\nL1 · \"reservar turnos\"\n"
+
+	got := taskdoc.Parse(md)
+	if got.Base != sha {
+		t.Fatalf("Base = %q, want %q", got.Base, sha)
+	}
+	if lost := taskdoc.Unaccounted(md); len(lost) != 0 {
+		t.Errorf("a canonical document with a base has unaccounted lines: %v", lost)
+	}
+	if again := taskdoc.Parse(got.Render()); again.Base != sha {
+		t.Errorf("the canonical form lost the base: %q", again.Base)
+	}
+
+	without := taskdoc.Parse(strings.Replace(md, "Base: "+sha+"\n", "", 1))
+	if without.Base != "" {
+		t.Errorf("Base = %q, want empty when the document names none", without.Base)
+	}
+}
+
 func TestParseCanonicalTaskDoc(t *testing.T) {
 	got := taskdoc.Parse(example(t, "task.md"))
 

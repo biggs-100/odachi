@@ -18,3 +18,4 @@ R1 · "the gate asks once per feature, not once per commit: a feature with open 
 
 ## History
 L1 · "the gate asks once per feature, not once per commit: a feature with open steps needs only its proof, and the tree that closes it needs the one verdict that judged the feature's diff"
+L2 · OFICIO · "The task doc records the commit the feature started from, and the CLI reads it from HEAD" (porque the gate cannot name the review of a feature it cannot identify: a sha in the document is visible, runnable, and survives the closing commit that only carries the doc)

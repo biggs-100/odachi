@@ -53,6 +53,27 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
+// TestHeadIsTheCommitAndAnEmptyRepositoryHasNone: the base a feature records is
+// the commit that exists when it starts; a repository with no commit has nothing
+// to record, and the error is the answer, not a crash.
+func TestHeadIsTheCommitAndAnEmptyRepositoryHasNone(t *testing.T) {
+	root, base := newRepo(t)
+
+	got, err := gitx.Head(root)
+	if err != nil {
+		t.Fatalf("Head: %v", err)
+	}
+	if got != base {
+		t.Errorf("Head = %q, want %q", got, base)
+	}
+
+	empty := t.TempDir()
+	git(t, empty, "init")
+	if _, err := gitx.Head(empty); err == nil {
+		t.Error("Head on a repository with no commit = nil error, want the failure to record nothing")
+	}
+}
+
 // TestTreeHashTracksTheWorktree is the property the whole product rests on: an
 // uncommitted edit must change the tree hash, otherwise a proof could be
 // accepted for a tree that was never tested.
