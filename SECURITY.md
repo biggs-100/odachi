@@ -45,7 +45,8 @@ has the command to verify it.
   from somewhere else wearing this release's name.
 - The attestation is written after the release is public, so that step can fail
   with the release already out. Running the release workflow by hand on the tag
-  attests the bytes that are published, without publishing anything again.
+  checks the signature of the published checksums and then attests those bytes,
+  without publishing anything again: an edited release cannot be attested.
 - Each archive ships an SPDX SBOM beside it, so what is inside can be read
   without asking the maintainer.
 - The installer verifies `sha256` only. Requiring cosign to install would turn
