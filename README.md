@@ -36,6 +36,16 @@ test builds the `tar.gz` and the checksums the way goreleaser publishes them,
 runs `install.sh` offline through `file://`, and the installed binary answers its
 version.
 
+The installer also runs `odachi setup`: the bootstrap skill in
+`~/.agents/skills`, the home door for the agent clients it finds, and OpenCode's
+`default_agent`. You open your agent and describe the project; the agent runs
+`odachi init` and `odachi start` itself, and asks permission before writing in a
+repository that is not yours. You never type those verbs.
+
+If you prefer to build: `go build ./cmd/odachi` (you need Go 1.25 or newer), and
+the binary says `odachi dev`, because the release injects the version, not the
+code.
+
 ### Verifying a release
 
 `sha256` is enough to install: the installer fails on a mismatch and leaves
@@ -63,20 +73,16 @@ grep ' odachi_0.11.11_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
 grep ' odachi_0.11.11_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
 ```
 
+```powershell
+# windows: compare the hash of the zip with its line in the signed list
+$want = (Select-String checksums.txt ' odachi_0.11.11_windows_amd64.zip$').Line.Split()[0]
+(Get-FileHash .\odachi_0.11.11_windows_amd64.zip).Hash -eq $want.ToUpper()
+```
+
 Each archive also ships with an `.sbom.json` (SPDX) that inventories what went
 into it. There is no provenance attestation yet: the signature says who
 published and the SBOM says what is inside, and neither says which source
 produced it.
-
-The installer also runs `odachi setup`: the bootstrap skill in
-`~/.agents/skills`, the home door for the agent clients it finds, and OpenCode's
-`default_agent`. You open your agent and describe the project; the agent runs
-`odachi init` and `odachi start` itself, and asks permission before writing in a
-repository that is not yours. You never type those verbs.
-
-If you prefer to build: `go build ./cmd/odachi` (you need Go 1.25 or newer), and
-the binary says `odachi dev`, because the release injects the version, not the
-code.
 
 ## What it is NOT
 
