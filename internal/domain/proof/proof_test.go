@@ -64,6 +64,21 @@ func TestAnOutputStartingWithAHeaderStaysInTheQuotation(t *testing.T) {
 	}
 }
 
+// An older proof has no terminator, so nothing in it can be a model line: a
+// first output line that looks like one stays where the command put it.
+func TestAnOlderProofKeepsAModelLookingOutputLine(t *testing.T) {
+	got, err := proof.Parse("# tree 4a1c9f\n# command echo\n# model attacker\nok\n")
+	if err != nil {
+		t.Fatalf("Parse of an older proof: %v", err)
+	}
+	if got.Model != "" {
+		t.Errorf("Model = %q, want empty: an older proof cannot declare one", got.Model)
+	}
+	if got.Output != "# model attacker\nok\n" {
+		t.Errorf("Output = %q, want the line kept", got.Output)
+	}
+}
+
 // A proof written before the model line existed is still a proof: the line is
 // optional, and an empty model means "no agent to name", not "unknown".
 func TestAnOlderProofWithoutTheModelLineStillParses(t *testing.T) {

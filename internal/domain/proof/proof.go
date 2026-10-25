@@ -127,16 +127,20 @@ func Parse(text string) (Proof, error) {
 		output = rest
 	}
 
-	model := ""
-	if line, rest, ok := cutLine(output); ok && strings.HasPrefix(line, ModelHeader) {
-		model = strings.TrimSpace(strings.TrimPrefix(line, ModelHeader))
-		output = rest
-	}
-
 	// The terminator is optional: a proof written before it existed ends its
 	// headers wherever they stop, and that file keeps its old reading.
+	//
+	// A model line only exists in the format with the terminator. In an older
+	// proof a line that looks like one is part of the output — the old writer
+	// never wrote that header — and dropping it would corrupt the quotation.
+	model := ""
 	if line, rest, ok := cutLine(output); ok && line == OutputHeader {
 		output = rest
+	} else if line, rest, ok := cutLine(output); ok && strings.HasPrefix(line, ModelHeader) {
+		if next, after, ok := cutLine(rest); ok && next == OutputHeader {
+			model = strings.TrimSpace(strings.TrimPrefix(line, ModelHeader))
+			output = after
+		}
 	}
 
 	return Proof{
