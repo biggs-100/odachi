@@ -16,3 +16,4 @@ R1 · "the answer belongs to the bytes it judged: every group is filed under the
 
 ## History
 L1 · "the answer belongs to the bytes it judged: every group is filed under the tree the prompt named, and a reviewer that changes the worktree stops the run instead of refiling it"
+L2 · OFICIO · "The run holds the candidate it named and files every group under it, instead of re-reading the worktree before each write" (porque a reviewer's edits must not move an answer out from under the tree that was judged; gentle-ai freezes the candidate, and odachi only needs one value, read once)

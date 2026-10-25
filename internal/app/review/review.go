@@ -663,6 +663,15 @@ func (r *runner) exec() Result {
 		return *problem
 	}
 
+	// The candidate the prompt names is the one every answer belongs to: the groups
+	// are filed under it whatever the reviewer leaves behind. rel is computed once,
+	// from the same tree, so a failure names the file that holds what landed.
+	rel, err := domain.Path(cand.tree)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; I wrote nothing")
+	}
+	frozen := &worktree{tree: cand.tree, base: cand.base, paths: cand.paths, diff: cand.diff}
+
 	selected, problem := r.selectLenses(cand.paths, cand.diff)
 	if problem != nil {
 		return *problem
@@ -725,18 +734,18 @@ func (r *runner) exec() Result {
 		}
 		switch {
 		case err != nil:
-			return r.stopped(command+" did not give a verdict: could not run the reviewer: "+oneLine(err.Error()), diagnosis, len(covered), selected, todo, landed)
+			return r.stopped(command+" did not give a verdict: could not run the reviewer: "+oneLine(err.Error()), diagnosis, rel, len(covered), selected, todo, landed)
 		case timedOut:
-			return r.stopped(fmt.Sprintf("%s did not give a verdict: the review did not finish in %ds", command, ExecTimeoutSeconds), diagnosis, len(covered), selected, todo, landed)
+			return r.stopped(fmt.Sprintf("%s did not give a verdict: the review did not finish in %ds", command, ExecTimeoutSeconds), diagnosis, rel, len(covered), selected, todo, landed)
 		case exitCode != 0:
-			return r.stopped(fmt.Sprintf("%s did not give a verdict: the reviewer exited with code %d", command, exitCode), diagnosis, len(covered), selected, todo, landed)
+			return r.stopped(fmt.Sprintf("%s did not give a verdict: the reviewer exited with code %d", command, exitCode), diagnosis, rel, len(covered), selected, todo, landed)
 		}
 
 		// A refutation is an answer too, and it is stored beside the verdict it judges.
 		if domain.Sniff([]byte(stdout)) == domain.KindRefutation {
 			refutation, err := domain.ParseRefutation([]byte(stdout))
 			if err != nil {
-				return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, len(covered), selected, todo, landed)
+				return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, rel, len(covered), selected, todo, landed)
 			}
 			// The refuter may have moved the worktree too; what it cites is the diff
 			// it was given, and the file is filed under the tree that exists now.
@@ -746,7 +755,7 @@ func (r *runner) exec() Result {
 
 		parsed, err := domain.Parse([]byte(stdout))
 		if err != nil {
-			return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, len(covered), selected, todo, landed)
+			return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, rel, len(covered), selected, todo, landed)
 		}
 		// The command is the reviewer: it is the one fact the tool knows about an
 		// answer that came out of a shell.
@@ -758,7 +767,7 @@ func (r *runner) exec() Result {
 		// the resolution of THIS group, not from a field the last one wrote.
 		parsed.Model = resolved[i]
 		if err := parsed.Validate(); err != nil {
-			return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, len(covered), selected, todo, landed)
+			return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, rel, len(covered), selected, todo, landed)
 		}
 		// The per-lens map is what lets the identity gate judge each lens on its
 		// own: this group's lenses were judged by this group's model.
@@ -771,20 +780,16 @@ func (r *runner) exec() Result {
 			}
 		}
 
-		// The reviewer may have moved the worktree: the store reads again, so the
-		// answer is filed under the bytes this group left, never under the ones
-		// the prompt named.
-		r.afterReviewer()
-
 		// The lenses are the ones this reviewer was asked to answer, not the ones
 		// it claims: the tool stamps them. The answer is written before the next
-		// group starts, so a later failure cannot lose it.
-		last = r.store(parsed, cand.base, group.lenses)
+		// group starts, under the candidate the prompt named, so a later failure
+		// cannot lose it and a reviewer's edits cannot move it.
+		last = r.storeIn(parsed, frozen, cand.base, group.lenses)
 		if last.Code != CodeOK {
 			if len(landed) == 0 {
 				return last
 			}
-			return r.stopped(oneLine(last.Message), diagnosis, len(covered), selected, todo, landed)
+			return r.stopped(oneLine(last.Message), diagnosis, rel, len(covered), selected, todo, landed)
 		}
 		landed = append(landed, group.lenses...)
 		if len(last.Lines) > 2 {
@@ -812,9 +817,10 @@ func (r *runner) exec() Result {
 }
 
 // stopped is a run that did not finish every group. The answers that landed stay
-// on disk, so the message counts them of the lenses the tree requires, names the
-// ones still owed, and gives the command that asks for exactly those.
-func (r *runner) stopped(reason, output string, savedBefore int, selected, todo, landed []string) Result {
+// on disk under the tree the prompt named, so the message counts them of the
+// lenses the tree requires, names the ones still owed, and gives the command that
+// asks for exactly those.
+func (r *runner) stopped(reason, output, rel string, savedBefore int, selected, todo, landed []string) Result {
 	saved := savedBefore + len(landed)
 	missing := unanswered(todo, landed)
 
@@ -822,11 +828,9 @@ func (r *runner) stopped(reason, output string, savedBefore int, selected, todo,
 	if saved > 0 {
 		message += fmt.Sprintf("; saved %d of %d lenses", saved, len(selected))
 		files := []string{}
-		if tree, problem := r.treeHash(); problem == nil {
-			if rel, err := domain.Path(tree); err == nil {
-				message += " in " + rel
-				files = append(files, rel)
-			}
+		if rel != "" {
+			message += " in " + rel
+			files = append(files, rel)
 		}
 		if len(missing) > 0 {
 			message += " (missing " + strings.Join(missing, ", ") + ")"
@@ -981,16 +985,25 @@ func (r *runner) store(parsed domain.Verdict, base string, judged []string) Resu
 	if problem != nil {
 		return *problem
 	}
+	return r.storeIn(parsed, work, base, judged)
+}
+
+// storeIn is store for one candidate the caller already holds. A run files every
+// answer under the tree its prompt named, even when the reviewer moved the
+// worktree: the floor is measured from that same value, so what a finding may
+// cite and what the file is named after describe the same bytes.
+func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged []string) Result {
 	tree := work.tree
 
 	// The floor is one reading of the candidate: it fixes the class this verdict
 	// is asked under, the audit set earned blocking judges, and the rows the
 	// reviewer's own findings may cite. Measuring it once keeps all three
 	// answers from drifting apart.
-	floor, problem := r.floor()
-	if problem != nil {
-		return *problem
-	}
+	floor := domain.FloorFor(work.paths, work.diff)
+
+	// problem carries the first refusal; a store either writes the whole file or
+	// nothing at all.
+	var problem *Result
 
 	// A run that judged a subset says exactly which lenses it answered: the class
 	// lenses the candidate requires may include ones another run already paid for,
@@ -1712,18 +1725,6 @@ func (r *runner) candidateForReview() (candidate, *Result) {
 
 	r.work = nil
 	return r.candidate()
-}
-
-// floor is the deterministic audit set of the candidate being stored: which
-// lines the reviewer's own findings may cite, and which categories they touch.
-// It fails closed — without the diff there is no citation rule, and a verdict
-// whose blocking claims nobody can check is worse than no verdict.
-func (r *runner) floor() (domain.Floor, *Result) {
-	work, problem := r.worktree()
-	if problem != nil {
-		return domain.Floor{}, problem
-	}
-	return domain.FloorFor(work.paths, work.diff), nil
 }
 
 // brief reads brief.md. A missing brief is a state, not an error: the review is
