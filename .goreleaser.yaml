@@ -59,6 +59,19 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
+# Keyless: cosign asks Fulcio for a short-lived certificate that names this
+# workflow and this tag, records the signature in Rekor, and writes both into
+# one bundle. There is no key in the repository and none in the runner.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - "sign-blob"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+
 # Un snapshot lleva "dev" en el nombre para que nunca se confunda con una release.
 snapshot:
   version_template: "{{ incpatch .Version }}-dev"
