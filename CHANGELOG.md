@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.17 - 2026-10-25
+
+The review asks for an answer, not for work.
+
+- **The reviewer reads; it does not act**: the first rule of the prompt says
+  everything it needs is inside, so it must not run commands, edit files or read
+  others. A reviewer that does puts its transcript in stdout, and stdout is the
+  verdict; the retry asks again with no tools.
+- **Nothing due is named as such**: `review` on a change with no lens says
+  `this change asks for no lens: documents only` and offers `--lens all`. It no
+  longer says `already has a verdict` when the store is empty: that sentence is
+  only said when it is true.
+- **The first close under the once-per-feature gate**: the feature's document
+  recorded its base, the plan and the steps needed only their proof, and the
+  closing commit demanded the one verdict for the diff the feature merges.
+
 ## v0.11.16 - 2026-10-25
 
 The review asks once per feature.
