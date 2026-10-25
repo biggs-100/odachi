@@ -345,6 +345,13 @@ entry is left to the reviewer command. A second run judges only the lenses this
 tree still owes and adds them to the stored verdict: the store grows by lens and
 never replaces an answer that was already paid for.
 
+A run that stops -a reviewer fails, times out or answers something that is not a
+verdict- keeps the groups that already answered. The file holds what they paid
+for, the message says `saved 2 of 4 lenses (missing reliability, resilience)`, and
+the next `odachi review` judges only those. `review --show` calls such a file
+**partial**, and with the gate on it still blocks: a partial verdict is not a
+review, and `check` asks for the lenses nobody judged.
+
 The verdict and the proof both name the model behind them. With the gate on, the
 lenses judged by the model that produced the proof are refused - `review_self`,
 a model does not judge its own tree - and the fix is `odachi review --model

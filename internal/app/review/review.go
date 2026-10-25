@@ -901,15 +901,24 @@ func (r *runner) show() Result {
 			rel, oneLine(err.Error())))
 	}
 
-	lines := shown(tree, rel, parsed)
+	// What this tree requires decides whether the stored file is a review or half
+	// of one: a verdict that answered some lenses is not a review, and saying it
+	// is would be the gate's silence bought with a word.
+	var required []string
+	if assessed {
+		required = r.requiredLenses(work)
+	}
+
+	summary := summaryLine(tree, parsed, required)
+	lines := shown(summary, rel, parsed)
 	lines = append(lines, r.lensCoverage(work, parsed)...)
 	if assessed {
-		lines = append(lines, r.modelPlan(r.requiredLenses(work))...)
+		lines = append(lines, r.modelPlan(required)...)
 	}
 
 	result := Result{
 		Code:    CodeOK,
-		Message: "review of " + tree + ": " + parsed.Verdict,
+		Message: summary,
 		Lines:   lines,
 		Verdict: &parsed,
 		Lenses:  parsed.Lenses,
@@ -1796,11 +1805,23 @@ func (r *runner) treeHash() (string, *Result) {
 	return tree, nil
 }
 
+// summaryLine names the verdict, and calls it partial when it covers only some
+// of the lenses this tree requires: a half answer is not a review, and with the
+// gate on it blocks exactly like no verdict at all.
+func summaryLine(tree string, verdict domain.Verdict, required []string) string {
+	line := "review of " + tree + ": " + verdict.Verdict
+	missing := verdict.Missing(required)
+	if len(required) == 0 || len(missing) == 0 {
+		return line
+	}
+	return fmt.Sprintf("%s (partial: %d of %d lenses)", line, len(required)-len(missing), len(required))
+}
+
 // shown is the block `--show` prints: what the verdict is, who wrote it, and the
 // findings in the order they were filed.
-func shown(tree, rel string, verdict domain.Verdict) []string {
+func shown(summary, rel string, verdict domain.Verdict) []string {
 	lines := []string{
-		"review of " + tree + ": " + verdict.Verdict,
+		summary,
 		"reviewer: " + verdict.Reviewer + " · " + verdict.At + " · base " + verdict.Base,
 		"file: " + rel,
 	}
