@@ -12,7 +12,7 @@ R1 · "the verdict cannot be from the model that wrote the tree: the proof and t
 ## Steps
 - [x] T1 · a proof records the model its run happened under, and an older proof still parses   R1 · 3531319
 - [x] T2 · a verdict records the model that judged, and check refuses a self-review naming the fix   R1 · d5462bf
-- [ ] T3 · the README says what this proves and what it does not, and a test pins it   R1
+- [x] T3 · the README says what this proves and what it does not, and a test pins it   R1 · 3444c07
 
 ## History
 L1 · "the verdict cannot be from the model that wrote the tree: the proof and the verdict record who produced them, and a self-review is refused with the command that fixes it"
