@@ -10,9 +10,10 @@ R1 · "the verdict cannot be from the model that wrote the tree: the proof and t
 - the README says this is disclosure, not identity: a model name can be lied about
 
 ## Steps
-- [ ] T1 · a proof records the model its run happened under, and an older proof still parses   R1
+- [x] T1 · a proof records the model its run happened under, and an older proof still parses   R1 · 3531319
 - [ ] T2 · a verdict records the model that judged, and check refuses a self-review naming the fix   R1
 - [ ] T3 · the README says what this proves and what it does not, and a test pins it   R1
 
 ## History
 L1 · "the verdict cannot be from the model that wrote the tree: the proof and the verdict record who produced them, and a self-review is refused with the command that fixes it"
+L2 · OFICIO · "The identity is a field on both files, not text parsed out of the reviewer command" (porque a command is a string a human edits; comparing two declared identities is something a gate can do without guessing)

@@ -66,6 +66,10 @@ const (
 	// about the bytes git measures now: stale receipts, missing rows, or the
 	// old format that carries no receipts at all.
 	ReasonReviewCoverage = "review_coverage"
+	// ReasonReviewSelf means the verdict names the same model the proof names:
+	// one agent approving the tree it wrote. Both identities are what each side
+	// declared, so this is disclosure, not proof of who signed.
+	ReasonReviewSelf = "review_self"
 )
 
 // nextReview is the continuation for a missing verdict, and the command that
@@ -224,6 +228,9 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	state.ProofTreeHash = recorded.Tree
 	state.ProofOutput = recorded.Output
 	state.ProofCommand = recorded.Command
+	// The model the evidence came from: the recorded proof's, or the one this
+	// run stamps when it writes a new one.
+	r.proofModel = recorded.Model
 
 	if opts.Run != "" {
 		ran, problem := r.runProof(proofPath)
@@ -237,6 +244,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		state.ProofTimedOut = ran.timedOut
 		state.ProofTimeoutSeconds = opts.TimeoutSeconds
 		state.ProofCommand = opts.Run
+		r.proofModel = opts.Model
 		haveProof = haveProof || (!ran.failed && !ran.timedOut)
 	}
 
@@ -306,6 +314,9 @@ type runner struct {
 	// failedRel is the failed output written by this run, empty when the run
 	// passed or the output could not be kept.
 	failedRel string
+	// proofModel is the model the evidence came from: the recorded proof's, or
+	// the one this run stamps. Empty when no session could be named.
+	proofModel string
 	// work is the one read of the candidate: tree, changed paths and diff. The
 	// fence, the lens class and the proof all describe these same bytes.
 	work *worktree
@@ -604,6 +615,25 @@ func (r *runner) requireReview() *Result {
 		return &problem
 	}
 
+	// Identity before coverage: a verdict by the model that produced the proof
+	// is the tree approving itself. Both names are declarations, so this refuses
+	// what can be seen, not what cannot be proven.
+	if selfReviewed(r.proofModel, verdict.Model) {
+		message := fmt.Sprintf("the review was written by the model that produced the proof (%s): a model does not judge its own tree", strings.TrimSpace(verdict.Model))
+		problem := Result{
+			Code:    int(gate.NeedsDecision),
+			Reason:  ReasonReviewSelf,
+			Message: message,
+			Next:    "odachi review --model <provider/model>",
+			Lines: []string{
+				message,
+				"next: odachi review --model <provider/model>",
+				"why: a verdict from another model is evidence; the builder's own is not",
+			},
+		}
+		return &problem
+	}
+
 	if missing := verdict.Missing(required); len(missing) > 0 {
 		problem := lensMissing(missing, rel)
 		return &problem
@@ -772,6 +802,20 @@ func lensMissing(missing []string, rel string) Result {
 			"next: " + nextReview,
 		},
 	}
+}
+
+// selfReviewed reports whether the evidence and the verdict name the same model.
+// Two unknowns are not a match: an old proof or a verdict written by a human has
+// no model, and calling that a self-review would block every project that ran
+// the gate before the field existed. The comparison ignores case because the same
+// identity is spelled both ways by different hosts.
+func selfReviewed(proofModel, verdictModel string) bool {
+	proofModel = strings.TrimSpace(proofModel)
+	verdictModel = strings.TrimSpace(verdictModel)
+	if proofModel == "" || verdictModel == "" {
+		return false
+	}
+	return strings.EqualFold(proofModel, verdictModel)
 }
 
 // reviewFinding is the one finding a human has to read first, in one line: where
