@@ -1,24 +1,19 @@
 [[rule]]
-not   = "own keys or a KMS: the workflow's identity again"
-paths = ["own-keys-or-a-kms-the-workflow-s-identity-again*"]
+not   = "cryptographic identity or signing the verdict"
+paths = ["cryptographic-identity-or-signing-the-verdict*"]
 deps  = []
 
 [[rule]]
-not   = "Apple notarization"
-paths = ["apple-notarization*"]
+not   = "a review app or a GitHub App"
+paths = ["a-review-app-or-a-github-app*"]
 deps  = []
 
 [[rule]]
-not   = "a Homebrew tap"
-paths = ["a-homebrew-tap*"]
+not   = "refusing a verdict written by a human with no model"
+paths = ["refusing-a-verdict-written-by-a-human-with-no-model*"]
 deps  = []
 
 [[rule]]
-not   = "changing what the installer verifies"
-paths = ["changing-what-the-installer-verifies*"]
-deps  = []
-
-[[rule]]
-not   = "attesting anything outside dist/checksums.txt"
-paths = ["attesting-anything-outside-dist-checksums-txt*"]
+not   = "changing the review prompt or the lenses"
+paths = ["changing-the-review-prompt-or-the-lenses*"]
 deps  = []
