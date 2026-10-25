@@ -1,24 +1,24 @@
 [[rule]]
-not   = "per-lens prompts: the four lens prompts already exist"
-paths = ["per-lens-prompts-the-four-lens-prompts-already-exist*"]
+not   = "retrying a failed group inside the same run: the human runs the command again"
+paths = ["retrying-a-failed-group-inside-the-same-run-the-human-runs-the-command-again*"]
 deps  = []
 
 [[rule]]
-not   = "per-lens refuters or validators"
-paths = ["per-lens-refuters-or-validators*"]
+not   = "running model groups in parallel"
+paths = ["running-model-groups-in-parallel*"]
 deps  = []
 
 [[rule]]
-not   = "model discovery, pricing or autodetection"
-paths = ["model-discovery-pricing-or-autodetection*"]
+not   = "resuming a run that was killed: the store is the checkpoint, not a journal"
+paths = ["resuming-a-run-that-was-killed-the-store-is-the-checkpoint-not-a-journal*"]
 deps  = []
 
 [[rule]]
-not   = "changing the lens vocabulary"
-paths = ["changing-the-lens-vocabulary*"]
+not   = "changing the reviewer command, the lens prompts or the gate's rule"
+paths = ["changing-the-reviewer-command-the-lens-prompts-or-the-gate-s-rule*"]
 deps  = []
 
 [[rule]]
-not   = "a UI or a TUI"
-paths = ["a-ui-or-a-tui*"]
+not   = "prices, budgets or automatic model choice"
+paths = ["prices-budgets-or-automatic-model-choice*"]
 deps  = []

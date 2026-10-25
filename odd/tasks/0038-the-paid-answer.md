@@ -1,0 +1,19 @@
+# the-paid-answer
+
+## Requirements (verbatim, from the user)
+R1 · "the paid answer survives a later failure: each model group's verdict is stored as it lands, and the gate still refuses a lens nobody judged"
+
+## Done when
+- a run stores each model group's answer as soon as it lands: a later group's failure leaves the earlier answers on disk
+- the run that fails says how many lenses of how many were saved and which ones are missing, and names the command that completes them
+- review --show calls the verdict partial when it covers only some of the lenses this tree requires
+- check --require-review still blocks on a lens that no stored verdict answered
+- a stored verdict still never replaces an answered lens, and a test pins that refusal
+- the README says what a partial verdict is and how to finish it
+
+## Steps
+- [ ] T1 · each group's answer is stored as it lands, so a later failure keeps what was paid for, and the run says saved X of Y   R1
+- [ ] T2 · review --show names a partial verdict, the store's refusal is pinned by a test, and the README explains both   R1
+
+## History
+L1 · "the paid answer survives a later failure: each model group's verdict is stored as it lands, and the gate still refuses a lens nobody judged"
