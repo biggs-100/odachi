@@ -4,6 +4,8 @@
 //
 // # tree <worktree hash>
 // # command <the command that was run>
+// # fence <ref>            (optional: CI, the policy the gate obeyed)
+// # model <provider/name>  (optional: the model of the session that ran it)
 // <real output, stdout+stderr, verbatim>
 //
 // A proof is only evidence if it says what it was produced from, so a file
@@ -26,6 +28,10 @@ const (
 	TreeHeader    = "# tree "
 	CommandHeader = "# command "
 	FenceHeader   = "# fence "
+	// ModelHeader names the session that ran the command. It is what makes a
+	// self-review visible: the verdict carries the model that judged, and the
+	// same name on both sides is one agent approving itself.
+	ModelHeader   = "# model "
 	ExitHeader    = "# exit "
 	TimeoutHeader = "# timed out"
 	// FailedHeader starts the evidence of a failed run. It is not a variant of
@@ -44,7 +50,10 @@ type Proof struct {
 	Command string
 	// Fence is the ref the fence was read from, empty when the proof used the
 	// worktree's own fence.
-	Fence  string
+	Fence string
+	// Model is the model of the session that ran the command, empty when there
+	// was no agent to name (a human at a terminal, or CI).
+	Model  string
 	Output string
 }
 
@@ -57,6 +66,9 @@ func Render(p Proof) string {
 	out.WriteString(CommandHeader + p.Command + "\n")
 	if p.Fence != "" {
 		out.WriteString(FenceHeader + p.Fence + "\n")
+	}
+	if p.Model != "" {
+		out.WriteString(ModelHeader + p.Model + "\n")
 	}
 	out.WriteString(p.Output)
 	return out.String()
@@ -104,10 +116,17 @@ func Parse(text string) (Proof, error) {
 		output = rest
 	}
 
+	model := ""
+	if line, rest, ok := cutLine(output); ok && strings.HasPrefix(line, ModelHeader) {
+		model = strings.TrimSpace(strings.TrimPrefix(line, ModelHeader))
+		output = rest
+	}
+
 	return Proof{
 		Tree:    strings.TrimSpace(strings.TrimPrefix(first, TreeHeader)),
 		Command: strings.TrimSpace(strings.TrimPrefix(second, CommandHeader)),
 		Fence:   fence,
+		Model:   model,
 		Output:  output,
 	}, nil
 }
