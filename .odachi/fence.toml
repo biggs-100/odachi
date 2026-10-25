@@ -1,19 +1,14 @@
 [[rule]]
-not   = "a rule language, glob algebra or subset matching"
-paths = ["a-rule-language-glob-algebra-or-subset-matching*"]
+not   = "a gate that checks whether the plan is committed: the tool cannot see the branch"
+paths = ["a-gate-that-checks-whether-the-plan-is-committed-the-tool-cannot-see-the-branch*"]
 deps  = []
 
 [[rule]]
-not   = "signing the fence"
-paths = ["signing-the-fence*"]
+not   = "changing what start writes"
+paths = ["changing-what-start-writes*"]
 deps  = []
 
 [[rule]]
-not   = "comparing against anything other than --fence-from"
-paths = ["comparing-against-anything-other-than-fence-from*"]
-deps  = []
-
-[[rule]]
-not   = "changing the fence file format"
-paths = ["changing-the-fence-file-format*"]
+not   = "an automatic commit from start"
+paths = ["an-automatic-commit-from-start*"]
 deps  = []
