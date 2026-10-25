@@ -12,12 +12,12 @@
 #   - Apple signing and notarization: there is no Apple identity. The signature
 #     below proves which workflow published, not that macOS will open the file
 #     without a warning, and pretending otherwise would be worse.
-#   - provenance (SLSA, attestations): the signature says who published, the
-#     SBOM says what is inside, and provenance would say which source produced
-#     it. That is the next link in the chain, not this one.
+#   - provenance: it is published, but not from here. Attesting an artifact is
+#     a job of the workflow (actions/attest, after this config has produced the
+#     checksums), not a build setting, so `release.yml` owns it.
 #
-# When the tap and the provenance exist they are added here. Until then this
-# file tells the truth about what is published and what is not.
+# When the tap exists it is added here. Until then this file tells the truth
+# about what it publishes and what it does not.
 
 version: 2
 

@@ -80,10 +80,18 @@ $want = (Select-String -Path checksums.txt -Pattern 'odachi_0\.11\.11_windows_am
 # True means the zip matches the signed list
 ```
 
-Each archive also ships with an `.sbom.json` (SPDX) that inventories what went
-into it. There is no provenance attestation yet: the signature says who
-published and the SBOM says what is inside, and neither says which source
-produced it.
+Each archive also carries an attestation of provenance (`v0.11.12` and later),
+which names the repository, the commit and the workflow that produced it. It
+lives in the repository, not in the release, and `gh` fetches it by digest:
+
+```sh
+gh attestation verify odachi_0.11.12_windows_amd64.zip --repo biggs-100/odachi
+```
+
+The three links answer three different questions: the signature says who
+published, the attestation says which source built it, and the `.sbom.json`
+(SPDX) says what is inside. None of them says the source was good: a signed and
+attested build of a compromised tree is still signed and attested.
 
 ## What it is NOT
 

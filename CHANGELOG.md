@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The release says which source built it.
+
+- **Every archive carries a provenance attestation**: after the release is
+  published, the workflow attests each archive named in the signed checksums
+  with the repository, the commit and the tag that produced it.
+  `gh attestation verify <file> --repo biggs-100/odachi` reads it without a key.
+- **The chain has three links and the docs say what each proves**: the signature
+  says who published, the attestation says which source built it, and the SBOM
+  says what is inside. None of them says the source was good.
+
 ## v0.11.11 - 2026-10-25
 
 The release proves where it came from.

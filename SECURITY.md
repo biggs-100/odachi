@@ -37,8 +37,12 @@ has the command to verify it.
 
 - The signature proves the artifact came from this repository's release
   workflow and from that tag, not from someone who can edit a release.
-- It does not prove the source: a signed build of a compromised tree is still
-  signed. Provenance is not published yet.
+- The provenance attestation names the repository, the commit and the workflow
+  that produced each archive, and `gh attestation verify` reads it. Together
+  with the signature it answers "which source built this file".
+- Neither proves the source was good: a signed and attested build of a
+  compromised tree is still signed and attested. What it rules out is a binary
+  from somewhere else wearing this release's name.
 - Each archive ships an SPDX SBOM beside it, so what is inside can be read
   without asking the maintainer.
 - The installer verifies `sha256` only. Requiring cosign to install would turn
