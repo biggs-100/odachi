@@ -1,6 +1,7 @@
 package check_test
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -32,6 +33,11 @@ type fakeFiles struct {
 	removes []string
 	backups []string
 	err     error
+
+	// denyWrite refuses the writes its predicate names, leaving the rest of the
+	// port healthy: a test can pin one write failing without a broken filesystem
+	// standing in for a permission problem.
+	denyWrite func(path string) error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -87,6 +93,11 @@ func (f *fakeFiles) Remove(path string) error {
 func (f *fakeFiles) Write(path string, data []byte) error {
 	if f.err != nil {
 		return f.err
+	}
+	if f.denyWrite != nil {
+		if err := f.denyWrite(path); err != nil {
+			return err
+		}
 	}
 	f.writes = append(f.writes, path)
 	f.files[path] = data
@@ -599,6 +610,45 @@ func TestFailingRunKeepsTheWholeOutput(t *testing.T) {
 	}
 	if strings.Contains(lines, "proof/0007-turnos.txt") {
 		t.Errorf("the gate names a green proof that does not exist:\n%s", lines)
+	}
+}
+
+// TestFailedRunWithoutItsEvidenceNamesNoPath: keeping the output is best effort.
+// When the file cannot be written the gate still fails with its one line and its
+// next command, and it names no path: an "output:" line would send the human to
+// a file that is not there.
+func TestFailedRunWithoutItsEvidenceNamesNoPath(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	files.denyWrite = func(path string) error {
+		if strings.HasSuffix(path, ".failed.txt") {
+			return errors.New("disco lleno")
+		}
+		return nil
+	}
+
+	got := check.Run(check.Options{Dir: dir, Run: "exit 1", Base: "HEAD", TimeoutSeconds: 120},
+		files, &fakeGit{tree: currentTree},
+		&fakeShell{output: "--- FAIL: TestX\nla que importa\n", exitCode: 1})
+
+	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofFailed {
+		t.Fatalf("Code/Reason = %d/%q, want %d/%q (the run failed either way)",
+			got.Code, got.Reason, int(gate.NeedsWork), gate.ReasonProofFailed)
+	}
+	if !strings.Contains(got.Message, "la que importa") {
+		t.Errorf("Message = %q, want the last line of the output: it is the only evidence left", got.Message)
+	}
+	lines := strings.Join(got.Lines, "\n")
+	if strings.Contains(lines, "output:") {
+		t.Errorf("the gate names evidence it could not write:\n%s", lines)
+	}
+	if !strings.Contains(lines, "next: ") {
+		t.Errorf("the gate lost the command that resolves it:\n%s", lines)
+	}
+	for _, write := range files.writes {
+		if strings.HasSuffix(write, ".failed.txt") {
+			t.Errorf("a refused write was recorded as written: %s", write)
+		}
 	}
 }
 
