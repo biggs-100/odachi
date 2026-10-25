@@ -19,8 +19,8 @@ The four pieces and who owns each one:
 The feature cycle, in order:
 
 1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`.
-2. Commit the plan -`brief.md`, `.odachi/fence.toml` and the task doc- before you branch. If the pair does not land together, the next change is judged by the last feature's fence, or a reset loses them.
-3. `odachi plan "<step>" --req R1`: one step per deliverable behavior.
+2. `odachi plan "<step>" --req R1`: one step per deliverable behavior.
+3. Commit what start wrote -brief, fence, profile and task doc, steps included- before you branch. If they do not land together, the next change is judged by the last feature's fence, or a reset loses them.
 4. Work the step. If a vision decision appears: `odachi ask "<question>"` and wait.
 5. `odachi check --run "<command>"`: green is the only definition of done.
 6. One commit per step, and `odachi plan --done T1 --commit <sha>`.

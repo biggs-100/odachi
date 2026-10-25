@@ -196,9 +196,9 @@ func TestScriptedInterviewWritesExactlyTheFourArtifacts(t *testing.T) {
 
 // TestWhyTravelsWithTheQuestionAndNeverAlone is the tutor rule: the explanation
 // is part of the question block, never a follow-up message the human can miss.
-// TestStartTellsTheAgentToCommitThePlan: the plan is brief, fence and task doc.
-// If they do not land together, the pair can split (0031) or a reset can lose
-// them, and the next feature inherits a policy that does not match its vision.
+// TestStartTellsTheAgentToCommitThePlan: start writes four artifacts (brief,
+// profile, fence and task doc) and the plan is all of them. If they do not land
+// together, the pair can split (0031) or a reset can lose them.
 func TestStartTellsTheAgentToCommitThePlan(t *testing.T) {
 	var events []string
 	files := newFakeFiles(nil, &events)
@@ -206,12 +206,9 @@ func TestStartTellsTheAgentToCommitThePlan(t *testing.T) {
 
 	got := start.Run(start.Options{}, interview, files, nil)
 
-	if !strings.Contains(got.Message, "commit the plan") {
-		t.Errorf("Message = %q, want it to tell the agent to commit the plan", got.Message)
-	}
-	for _, want := range []string{"brief", "fence", "task doc"} {
+	for _, want := range []string{"commit what start wrote", "the plan", "before you build"} {
 		if !strings.Contains(got.Message, want) {
-			t.Errorf("Message = %q, want the plan named (%q)", got.Message, want)
+			t.Errorf("Message = %q, want it to contain %q", got.Message, want)
 		}
 	}
 }

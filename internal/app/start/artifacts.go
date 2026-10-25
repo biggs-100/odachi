@@ -220,7 +220,7 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 
 	return Result{
 		Code:    CodeOK,
-		Message: "done: wrote " + humanList(r.written) + "; commit the plan (brief, fence and task doc) before you build",
+		Message: "done: wrote " + humanList(r.written) + "; commit what start wrote (the plan) before you build",
 		Profile: r.profile.Name,
 		Task:    filepath.ToSlash(taskPath),
 		Files:   r.written,
