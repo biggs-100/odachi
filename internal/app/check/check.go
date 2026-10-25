@@ -193,6 +193,12 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 	state.Violations = violations
 
+	loosened, problem := r.fenceLoosenings()
+	if problem != nil {
+		return *problem
+	}
+	state.FenceLoosened = loosened
+
 	feature, problem := r.currentFeature()
 	if problem != nil {
 		return *problem
