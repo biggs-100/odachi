@@ -229,10 +229,6 @@ type runner struct {
 	// run as one group.
 	hostModel string
 	hostAsked bool
-	// reviewedBy is the model the reviewer command ran with, empty when the
-	// command asked for none. The verdict carries it so a later gate can tell
-	// this review from one the builder wrote about itself.
-	reviewedBy string
 }
 
 // worktree is one read of the candidate: its content tree, the paths that
@@ -536,7 +532,7 @@ func (r *runner) attach() Result {
 // with {model} replaced by the identity this group is judged with. A command that
 // asks for a model odachi cannot name is refused instead of started, because a
 // verdict from another model is a review nobody asked for.
-func (r *runner) reviewerCommand(model string) (string, *Result) {
+func (r *runner) reviewerCommand(model string) (string, string, *Result) {
 	asks := strings.Contains(r.opts.Exec, modelToken)
 
 	model = strings.TrimSpace(model)
@@ -548,21 +544,20 @@ func (r *runner) reviewerCommand(model string) (string, *Result) {
 	checked, err := domain.NormalizeModel(model)
 	if err != nil {
 		res := blocked(oneLine(err.Error()) + "; the reviewer was not started")
-		return "", &res
+		return "", "", &res
 	}
 	model = checked
-	r.reviewedBy = model
 
 	switch {
 	case asks && model == "":
 		res := blocked("--exec asks for " + modelToken + " and no model is known: pass --model <provider/model#variant>, name one in " + domain.ModePath + " or set ODACHI_MODEL; the reviewer was not started")
-		return "", &res
+		return "", "", &res
 	case !asks && model != "":
 		res := blocked("a model was given (" + model + ") but --exec has no " + modelToken + " placeholder, so it would change nothing: add it to the command or drop the assignment; the reviewer was not started")
-		return "", &res
+		return "", "", &res
 	}
 
-	return strings.ReplaceAll(r.opts.Exec, modelToken, model), nil
+	return strings.ReplaceAll(r.opts.Exec, modelToken, model), model, nil
 }
 
 // validateCommand refuses a command that cannot run, before the store exists. The
@@ -692,11 +687,22 @@ func (r *runner) exec() Result {
 	reviewers := make([]string, 0, len(todo))
 	judges := make([]string, 0, len(todo))
 
-	for _, group := range r.lensGroups(todo) {
-		command, problem := r.reviewerCommand(group.model)
+	// Every group is resolved before any of them runs: a group that cannot name
+	// its model must not be discovered after another one was paid for.
+	groups := r.lensGroups(todo)
+	commands := make([]string, len(groups))
+	resolved := make([]string, len(groups))
+	for i, group := range groups {
+		command, model, problem := r.reviewerCommand(group.model)
 		if problem != nil {
 			return *problem
 		}
+		commands[i] = command
+		resolved[i] = model
+	}
+
+	for i, group := range groups {
+		command := commands[i]
 
 		// The command is a reviewer, so it gets the prompt the verb prints, for the
 		// lenses this group owns. A reviewer started without one reviews whatever it
@@ -746,8 +752,9 @@ func (r *runner) exec() Result {
 			parsed.Reviewer = command
 		}
 		// The identity that judged, when the command named one. It is the reviewer's
-		// own declaration, and the gate compares it with the proof's.
-		parsed.Model = r.reviewedBy
+		// own declaration, and the gate compares it with the proof's. It comes from
+		// the resolution of THIS group, not from a field the last one wrote.
+		parsed.Model = resolved[i]
 		if err := parsed.Validate(); err != nil {
 			return execFailed(r.opts.Exec, err.Error(), diagnosis)
 		}
@@ -865,7 +872,9 @@ func (r *runner) modelPlan(required []string) []string {
 	lines := make([]string, 0, len(required))
 	for _, lens := range required {
 		name := strings.ToLower(strings.TrimSpace(lens))
-		model := strings.TrimSpace(r.opts.LensModels[name])
+		// The same resolution the run uses, so --show never quotes a different
+		// judge than the one that will be paid for.
+		model := r.modelFor(name)
 		if model == "" {
 			model = "the reviewer command decides"
 		}
