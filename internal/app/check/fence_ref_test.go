@@ -129,6 +129,32 @@ func TestAChangedOutcomeIsNotANewPolicy(t *testing.T) {
 	}
 }
 
+// TestAReorderedNonGoalsIsTheSamePolicy: the list is a set. Reordering it is not
+// a new vision, so it cannot unlock the fence.
+func TestAReorderedNonGoalsIsTheSamePolicy(t *testing.T) {
+	briefWith := func(nongoals ...string) string {
+		return "# turnos\n\n## What must exist\n- reservar turnos\n\n## Done when\n- reservo y aparece\n\n## Not included (first version)\n- " +
+			strings.Join(nongoals, "\n- ") + "\n"
+	}
+
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "brief.md")] = []byte(briefWith("firmas", "pagos"))
+	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
+	git := &fakeGit{
+		tree: currentTree,
+		filesAt: map[string]string{
+			"origin/main:brief.md":           briefWith("pagos", "firmas"),
+			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+		},
+	}
+
+	result := run(t, files, git, check.Options{FenceFrom: "origin/main"})
+
+	if result.Code == 0 {
+		t.Fatal("reordering the non-goals unlocked the fence")
+	}
+}
+
 // TestAMalformedCandidateFenceBlocksEvenWithANewBrief: a new brief does not
 // excuse a fence the tool cannot read, because after the merge it is the policy
 // and every later run would read it as the base.

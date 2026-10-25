@@ -165,8 +165,11 @@ func (r *runner) briefChanged(ref string) (bool, *Result) {
 		return false, &problem
 	}
 	if !found {
-		// No brief at the ref means there was no policy to loosen.
-		return true, nil
+		// No brief at the ref: if that ref also has no fence, the comparison is
+		// moot; if it has rules, the fence is compared and cannot be loosened.
+		// Failing closed here is the point: a ref with a policy and no vision is
+		// not a licence to drop it.
+		return false, nil
 	}
 
 	candidate, err := r.files.Read(filepath.Join(r.opts.Dir, briefFile))
@@ -179,16 +182,10 @@ func (r *runner) briefChanged(ref string) (bool, *Result) {
 }
 
 // nonGoals is the list the fence is made of, read the same way from both copies:
-// line endings and trailing spaces normalized, items trimmed and sorted, so
-// order and whitespace never decide a policy.
+// the brief parser trims each line, ignores unknown sections and normalizes CRLF,
+// and the items are sorted so order never decides a policy.
 func nonGoals(text []byte) []string {
-	normalized := strings.ReplaceAll(string(text), "\r\n", "\n")
-	lines := strings.Split(normalized, "\n")
-	for i, line := range lines {
-		lines[i] = strings.TrimRight(line, " \t")
-	}
-
-	items := brief.Parse(strings.Join(lines, "\n")).NonGoals
+	items := brief.Parse(string(text)).NonGoals
 	out := make([]string, 0, len(items))
 	for _, item := range items {
 		out = append(out, strings.TrimSpace(item))

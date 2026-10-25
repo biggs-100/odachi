@@ -86,7 +86,7 @@ func TestEvaluationOrder(t *testing.T) {
 			state:   loosened,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonFenceLoosened,
-			message: "the fence was loosened without a new brief: monorepo scopes: the rule is gone; the brief and the fence are the human's, and the fence may only change with a new brief. Restore it, or write the brief first",
+			message: "the fence was loosened without new non-goals in the brief: monorepo scopes: the rule is gone; the fence may only change with the brief's non-goals. Restore it, or write the non-goals first",
 			next:    "odachi ask \"<your decision>\"",
 		},
 		{

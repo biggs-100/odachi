@@ -33,10 +33,13 @@ three rules; 0031's has four, and none of the three survived.
 - **An unreadable candidate fence blocks.** With `--fence-from` the candidate's
   copy is not the policy today, but it is the policy after the merge. A file the
   tool cannot read must stop the change instead of travelling silently.
-- **Whitespace, comments and a changed outcome are not a new policy.** The
-  comparison normalizes line endings and per-line trailing spaces before parsing,
-  ignores unknown sections, and compares the non-goals as a set: order and
-  formatting never decide a policy.
+- **Whitespace, comments and a changed outcome are not a new policy.** The brief
+  parser trims each line and ignores unknown sections; the comparison sorts the
+  non-goals as a set. Order, whitespace, comments and a changed outcome never
+  decide a policy.
+- **A ref with a fence and no brief is not a licence.** The comparison fails
+  closed: without a brief to compare, the fence is still compared and cannot be
+  loosened. Only a ref with no rules at all has nothing to protect.
 - **Without `--fence-from` nothing is compared.** The worktree fence is the
   policy, exactly as before.
 
