@@ -8,7 +8,18 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/adapters/hostmodel"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
+
+// headOf is the commit the repository is on: the base a feature starts from.
+func headOf(t *testing.T, dir string) string {
+	t.Helper()
+	out, err := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
+	if err != nil {
+		t.Fatalf("git rev-parse HEAD: %v", err)
+	}
+	return strings.TrimSpace(string(out))
+}
 
 // commitAll commits everything in dir, so the next change is a real diff against
 // a base. A review needs a base to compare against, and a review of nothing is
@@ -366,6 +377,52 @@ func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 		t.Fatalf("mode status after off: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	} else if !strings.Contains(out, "review: off") {
 		t.Errorf("status = %q, want off", out)
+	}
+}
+
+// TestReviewModeAsksOnceWhenTheFeatureCloses: the CLI reads the switch into the
+// mode, and the feature's document decides the unit. An open feature is ready
+// with its proof; the closed one owes the verdict of its base, and the message
+// names the runnable review.
+func TestReviewModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+
+	// The base the feature starts from is the commit the tree is on now.
+	base := headOf(t, dir)
+	doc := taskdoc.TaskDoc{
+		Title:        "turnos",
+		Base:         base,
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:     []string{"reservo un turno"},
+		Steps:        []taskdoc.Step{{ID: "T1", Text: "reservar un turno", Requirement: "R1"}},
+		History:      []string{`L1 · "reservar turnos"`},
+	}
+	writeFile(t, dir, "odd/tasks/0001-turnos.md", doc.Render())
+	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "on"}, ""); code != 0 {
+		t.Fatalf("mode on: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	// An open step: the mode asks nothing, the proof is the gate.
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 {
+		t.Fatalf("an open feature asked for a review: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	// The closed feature owes the verdict that judged its diff, not the commit
+	// that closes it: the proof is taken, and the review gate names the base.
+	doc.Steps[0].Done = true
+	doc.Steps[0].Commit = base
+	writeFile(t, dir, "odd/tasks/0001-turnos.md", doc.Render())
+
+	if code, _, _ := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 2 {
+		t.Fatalf("check --run on a closed feature = %d, want 2: the proof lands and the review is owed", code)
+	}
+	code, _, errOut := runDir(t, dir, []string{"check"}, "")
+	if code != 2 {
+		t.Fatalf("check on a closed feature = %d, want 2 (stderr: %q)", code, errOut)
+	}
+	if want := "odachi review --base " + base; !strings.Contains(errOut, want) {
+		t.Errorf("stderr %q does not name the runnable review %q", errOut, want)
 	}
 }
 

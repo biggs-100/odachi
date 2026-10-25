@@ -13,9 +13,10 @@ R1 · "the gate asks once per feature, not once per commit: a feature with open 
 - tests pin the five cases and the README says the review unit is the feature
 
 ## Steps
-- [ ] T1 · the task doc records the commit the feature started from, and start writes it from the repository's HEAD   R1
+- [x] T1 · the task doc records the commit the feature started from, and start writes it from the repository's HEAD   R1 · e427880
 - [ ] T2 · the gate asks for one verdict when the feature closes, and the verdict has to name the feature's base   R1
 
 ## History
 L1 · "the gate asks once per feature, not once per commit: a feature with open steps needs only its proof, and the tree that closes it needs the one verdict that judged the feature's diff"
 L2 · OFICIO · "The task doc records the commit the feature started from, and the CLI reads it from HEAD" (porque the gate cannot name the review of a feature it cannot identify: a sha in the document is visible, runnable, and survives the closing commit that only carries the doc)
+L3 · OFICIO · "The mode asks once per feature: an open step owes its proof, and the closing tree owes the verdict of the feature's base" (porque a review per commit re-judges the same diff and pays the same model again; the feature is the unit of work, and the base in the document is what makes the one verdict runnable and exact)

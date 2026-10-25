@@ -97,10 +97,17 @@ type Options struct {
 	// It travels into the proof so a verdict by the same model can be refused as
 	// a self-review. Empty means there is no agent to name.
 	Model string
-	// RequireReview turns the optional design gate on: a stored verdict for this
-	// exact tree, and not a changes_requested one. It is off by default because a
-	// beginner must not be blocked by a verb they have never heard of.
+	// RequireReview turns the optional design gate on for THIS tree: a stored
+	// verdict for this exact tree, and not a changes_requested one. It is the
+	// flag, and it is off by default because a beginner must not be blocked by a
+	// verb they have never heard of.
 	RequireReview bool
+	// ReviewMode is the project's switch. It asks once per feature: the tree that
+	// closes the feature owes the one verdict that judged its diff, and the trees
+	// inside an open feature owe only their proof.
+	ReviewMode bool
+	// NoReview turns the gate off for one run, whatever the mode or the flag say.
+	NoReview bool
 	// FenceFrom is a git ref to read the fence from instead of the worktree. CI
 	// uses it to obey the policy of the base branch, which the candidate cannot
 	// loosen. Empty means the worktree's own fence.
@@ -249,11 +256,11 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 
 	verdict := gate.Evaluate(state)
-	if opts.RequireReview && verdict.Code == gate.Ready {
+	if verdict.Code == gate.Ready {
 		// The review gate is last on purpose: everything before it is something
 		// the agent can act on, and sending an agent to `odachi review` while the
 		// proof gate is still failing would be a dead end that resolves nothing.
-		if problem := r.requireReview(); problem != nil {
+		if problem := r.reviewGate(feature); problem != nil {
 			return *problem
 		}
 	}
@@ -565,28 +572,76 @@ func failedFile(path string) string {
 	return path + ".failed.txt"
 }
 
+// reviewGate decides whether this tree owes a verdict and which one. The flag
+// asks for this tree; the project mode asks once per feature, and names the base
+// its verdict has to judge. A feature with no steps, or a document that records no
+// base, has no unit to review once: the mode keeps asking per tree there.
+func (r *runner) reviewGate(feature *tasks.Document) *Result {
+	if r.opts.NoReview {
+		return nil
+	}
+	base, closed, known := featureReview(feature)
+	if !r.opts.RequireReview {
+		if !r.opts.ReviewMode {
+			return nil
+		}
+		// Inside an open feature the proof is the gate: the review is asked once,
+		// for the tree that closes it, not for every step that builds it.
+		if known && !closed {
+			return nil
+		}
+	}
+	if known && closed {
+		return r.requireReview(base)
+	}
+	return r.requireReview("")
+}
+
+// featureReview reads the feature's review state from its document: the base its
+// diff starts from, whether every step is done, and whether the document is the
+// one that can be reviewed once at all.
+func featureReview(feature *tasks.Document) (base string, closed, known bool) {
+	if feature == nil {
+		return "", false, false
+	}
+	base = strings.TrimSpace(feature.Doc.Base)
+	done, total := feature.Doc.Progress()
+	if base == "" || total == 0 {
+		return "", false, false
+	}
+	return base, done == total, true
+}
+
 // requireReview is the optional design gate: a stored verdict for THIS tree, one
 // that covers every lens the candidate requires, and no causal BLOCKER or
 // CRITICAL finding left standing after the refutation is taken into account.
 //
 // The lenses come first because they answer whether this candidate asks for a
 // review at all. A documentation-only candidate has nothing for a specialist lens
-// to look at, so requiring a verdict would be ceremony, not evidence.
+// to look at, so requiring a verdict would be ceremony, not evidence. A closed
+// feature is the exception: its closing tree only carries the document, its own
+// lenses are none, and it still owes the verdict that judged the feature's diff -
+// base is that diff's base, and the verdict has to name it.
 //
 // It writes nothing. The store's ignore file is created by the verbs that produce
 // a verdict, so a tree with no verdict has no store to prepare either.
-func (r *runner) requireReview() *Result {
+func (r *runner) requireReview(base string) *Result {
 	required, changed, diff, problem := r.requiredLenses()
 	if problem != nil {
 		return problem
 	}
-	if len(required) == 0 {
+	if len(required) == 0 && base == "" {
 		return nil
+	}
+
+	next := nextReview
+	if base != "" {
+		next = "odachi review --base " + base
 	}
 
 	rel, err := reviewdomain.Path(r.tree)
 	if err != nil {
-		problem := blocked(oneLine(err.Error()) + "; check the git tree and run odachi check --require-review again")
+		problem := blocked(oneLine(err.Error()) + "; check the git tree and run odachi check again")
 		return &problem
 	}
 
@@ -596,8 +651,16 @@ func (r *runner) requireReview() *Result {
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewMissing,
 			Message: "no review for this tree",
-			Next:    nextReview,
-			Lines:   []string{"no review for this tree", "next: " + nextReview},
+			Next:    next,
+			Lines:   []string{"no review for this tree", "next: " + next},
+		}
+		if base != "" {
+			problem.Message = "the feature is closed and its tree has no verdict"
+			problem.Lines = []string{
+				problem.Message,
+				"next: " + next,
+				"why: the closing commit only carries the document; the verdict judges the diff the feature merges",
+			}
 		}
 		return &problem
 	}
@@ -612,6 +675,25 @@ func (r *runner) requireReview() *Result {
 			Next: nextReview,
 		}
 		problem.Lines = []string{problem.Message, "next: odachi review --attach <file>"}
+		return &problem
+	}
+
+	// A closed feature owes the verdict of its own diff. A verdict that judged
+	// something else - the closing commit, another base - does not answer the
+	// question this tree asks, and accepting it would make the base decoration.
+	if base != "" && strings.TrimSpace(verdict.Base) != base {
+		message := fmt.Sprintf("the review of this tree judged another diff (base %q): the feature starts at %s", strings.TrimSpace(verdict.Base), base)
+		problem := Result{
+			Code:    int(gate.NeedsDecision),
+			Reason:  ReasonReviewMissing,
+			Message: message,
+			Next:    next,
+			Lines: []string{
+				message,
+				"next: " + next,
+				"why: a verdict describes the bytes it judged; the closing commit is not the feature",
+			},
+		}
 		return &problem
 	}
 

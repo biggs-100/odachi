@@ -374,13 +374,18 @@ review - because a verdict that describes two trees describes neither.
 
 Review is a human decision, not the agent's. By default it is off; the project
 switch lives in `.odachi/review.toml` and is written with
-`odachi review mode status|on|off`. With `on`, `odachi check` asks for this
-tree's verdict; with `off`, it leaves it optional. `--require-review` and
-`--no-review` force one run without changing the file. The file is versioned;
-changing it moves the tree, so the proof is retaken with
-`odachi check --run "<command>"`. A passive change —documents only— asks for no
-verdict even with the mode on: there is no lens to answer, so there is no review
-to fabricate.
+`odachi review mode status|on|off`. With `on`, `odachi check` asks once per
+feature: while a step is still open the tree owes only its proof, and the commit
+that closes the feature owes the verdict. That verdict has to judge the diff the
+feature merges, not the closing document, so the task doc records the commit the
+feature started from (`Base:`) and the gate names the command:
+`odachi review --base <sha>`. A document with no steps, or one written before the
+base line existed, keeps the older rule: with the mode on, every tree asks. A
+passive change —documents only— asks for no verdict: there is no lens to answer,
+so there is no review to fabricate. `--require-review` asks for one tree now, and
+`--no-review` turns the mode off for one run; neither changes the file. The file
+is versioned, so changing it moves the tree and the proof is retaken with
+`odachi check --run "<command>"`.
 
 ## CI: the gate from the base ref
 
