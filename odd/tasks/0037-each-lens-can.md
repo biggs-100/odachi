@@ -19,3 +19,5 @@ R1 · "each lens can name its model: the review runs one reviewer per model grou
 L1 · "each lens can name its model: the review runs one reviewer per model group and the verdict records who judged each lens, so a cheap model can carry the cheap lenses"
 L2 · OFICIO · "The switch and the lens table share one file and one decoder" (porque review mode off rewrote the file from the mode alone, and two writers of one file would erase each other's half)
 L3 · OFICIO · "The plan lists only the lenses that will run, and says who decides when nothing is assigned" (porque a line for a lens the evidence did not ask is a cost nobody approved, and claiming the session's model would be a promise the tool does not keep)
+L4 · OFICIO · "A run stamps the lenses it judged, not the ones the candidate's class implies" (porque a completion run would otherwise claim lenses another run already paid for, and the store would refuse its own work)
+L5 · OFICIO · "The store grows by lens and refuses a shared one" (porque the invariant is not weakened: an answer that was paid for is never replaced, only joined)

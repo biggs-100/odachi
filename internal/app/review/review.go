@@ -296,24 +296,32 @@ func (r *runner) promptText(cand candidate) (text, tree string, selected []strin
 		return "", "", nil, problem
 	}
 
+	text, problem = r.promptFor(cand, selected)
+	if problem != nil {
+		return "", "", nil, problem
+	}
+	return text, cand.tree, selected, nil
+}
+
+// promptFor builds the prompt for one group of lenses: the same text the printed
+// form uses, for the lenses this reviewer owns.
+func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) {
 	bodies, problem := r.lensBodies(selected)
 	if problem != nil {
-		return "", "", nil, problem
+		return "", problem
 	}
-
-	tree = cand.tree
 
 	// The store's potent rows are part of the question: a reviewer that knows
-	// which findings are already carried files no duplicates, and a review
-	// fresh from scratch would re-litigate bytes nobody changed.
-	known, cleanRows, _, problem := r.potentRows(tree)
+	// which findings are already carried files no duplicates, and a review fresh
+	// from scratch would re-litigate bytes nobody changed.
+	known, cleanRows, _, problem := r.potentRows(cand.tree)
 	if problem != nil {
-		return "", "", nil, problem
+		return "", problem
 	}
 
-	text = domain.Prompt(domain.PromptInput{
+	return domain.Prompt(domain.PromptInput{
 		Brief:       cand.brief,
-		Tree:        tree,
+		Tree:        cand.tree,
 		Base:        cand.base,
 		Paths:       cand.paths,
 		Diff:        cand.diff,
@@ -321,8 +329,95 @@ func (r *runner) promptText(cand candidate) (text, tree string, selected []strin
 		Known:       known,
 		KnownPasses: cleanRows,
 		Floor:       domain.FloorFor(cand.paths, cand.diff),
-	})
-	return text, tree, selected, nil
+	}), nil
+}
+
+// coveredLenses is the lenses this tree's verdict already answered. A missing
+// verdict covers nothing; a verdict that cannot be read blocks, because guessing
+// would either pay twice or skip a lens nobody judged.
+func (r *runner) coveredLenses(tree string) ([]string, *Result) {
+	rel, err := domain.Path(tree)
+	if err != nil {
+		return nil, nil
+	}
+	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	if err != nil {
+		return nil, nil
+	}
+	verdict, err := domain.Parse(data)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("the review of this tree cannot be read (%s): %s; write it again with odachi review --attach <file>",
+			rel, oneLine(err.Error())))
+		return nil, &problem
+	}
+	return verdict.Lenses, nil
+}
+
+// unanswered is the lenses a run still has to judge: the ones the evidence asks
+// for minus the ones this tree's verdict already answered.
+func unanswered(required, covered []string) []string {
+	done := make(map[string]bool, len(covered))
+	for _, lens := range covered {
+		done[strings.ToLower(strings.TrimSpace(lens))] = true
+	}
+	var todo []string
+	for _, lens := range required {
+		if !done[strings.ToLower(strings.TrimSpace(lens))] {
+			todo = append(todo, lens)
+		}
+	}
+	return todo
+}
+
+// containsLens reports whether the lens is already answered.
+func containsLens(lenses []string, lens string) bool {
+	for _, seen := range lenses {
+		if strings.EqualFold(strings.TrimSpace(seen), strings.TrimSpace(lens)) {
+			return true
+		}
+	}
+	return false
+}
+
+// mergeVerdicts adds the lenses a run just judged to the verdict this tree
+// already had. The old rows are copied, never recomputed: the file grows by lens,
+// and an answer that was already paid for is not replaced by a second opinion.
+func mergeVerdicts(existing, incoming domain.Verdict) domain.Verdict {
+	merged := existing
+	merged.Findings = append(append([]domain.Finding{}, existing.Findings...), incoming.Findings...)
+	merged.Passes = append(append([]domain.Pass{}, existing.Passes...), incoming.Passes...)
+	merged.Lenses = append(append([]string{}, existing.Lenses...), incoming.Lenses...)
+	merged.Reviewer = existing.Reviewer + " + " + incoming.Reviewer
+	merged.At = incoming.At
+	merged.Verdict = ""
+
+	models := make(map[string]string, len(existing.Models)+len(incoming.Models))
+	for lens, model := range existing.Models {
+		models[lens] = model
+	}
+	for lens, model := range incoming.Models {
+		models[lens] = model
+	}
+	if len(models) == 0 {
+		models = nil
+	}
+	merged.Models = models
+
+	// The single-model field only survives when both halves agree on it.
+	if existing.Model == "" || incoming.Model == "" || existing.Model != incoming.Model {
+		merged.Model = ""
+	}
+	return merged
+}
+
+// appendUnique adds value when it is not there yet, keeping the first-seen order.
+func appendUnique(values []string, value string) []string {
+	for _, seen := range values {
+		if seen == value {
+			return values
+		}
+	}
+	return append(values, value)
 }
 
 // refute prints the refuter's prompt for a verdict someone already filed. It is
@@ -402,17 +497,17 @@ func (r *runner) attach() Result {
 	if _, problem := r.ensureStore(); problem != nil {
 		return *problem
 	}
-	return r.store(parsed, r.base())
+	return r.store(parsed, r.base(), nil)
 }
 
-// reviewerCommand is the command that actually runs: --exec with {model}
-// replaced by the identity the human named or the host reported. A command that
+// reviewerCommand is the command that actually runs for one model group: --exec
+// with {model} replaced by the identity this group is judged with. A command that
 // asks for a model odachi cannot name is refused instead of started, because a
 // verdict from another model is a review nobody asked for.
-func (r *runner) reviewerCommand() (string, *Result) {
+func (r *runner) reviewerCommand(model string) (string, *Result) {
 	asks := strings.Contains(r.opts.Exec, modelToken)
 
-	model := strings.TrimSpace(r.opts.Model)
+	model = strings.TrimSpace(model)
 	if model == "" && asks && r.host != nil {
 		model = strings.TrimSpace(r.host.Model(r.opts.Dir))
 	}
@@ -420,85 +515,205 @@ func (r *runner) reviewerCommand() (string, *Result) {
 
 	switch {
 	case asks && model == "":
-		res := blocked("--exec asks for " + modelToken + " and no model is known: pass --model <provider/model#variant> or set ODACHI_MODEL; the reviewer was not started")
+		res := blocked("--exec asks for " + modelToken + " and no model is known: pass --model <provider/model#variant>, name one in " + domain.ModePath + " or set ODACHI_MODEL; the reviewer was not started")
 		return "", &res
 	case !asks && model != "":
-		res := blocked("--model was given but --exec has no " + modelToken + " placeholder, so it would change nothing: add it to the command or drop the flag; the reviewer was not started")
+		res := blocked("a model was given (" + model + ") but --exec has no " + modelToken + " placeholder, so it would change nothing: add it to the command or drop the assignment; the reviewer was not started")
 		return "", &res
 	}
 
 	return strings.ReplaceAll(r.opts.Exec, modelToken, model), nil
 }
 
+// validateCommand refuses a command that cannot run, before the store exists. The
+// per-group command does it again with the model it resolved; this one exists so a
+// refusal writes nothing, which is the promise the store's preparation depends on.
+func (r *runner) validateCommand() *Result {
+	asks := strings.Contains(r.opts.Exec, modelToken)
+	assigned := strings.TrimSpace(r.opts.Model) != ""
+	for _, model := range r.opts.LensModels {
+		if strings.TrimSpace(model) != "" {
+			assigned = true
+			break
+		}
+	}
+
+	switch {
+	case asks && !assigned:
+		host := ""
+		if r.host != nil {
+			host = strings.TrimSpace(r.host.Model(r.opts.Dir))
+		}
+		if host == "" {
+			res := blocked("--exec asks for " + modelToken + " and no model is known: pass --model <provider/model#variant>, name one in " + domain.ModePath + " or set ODACHI_MODEL; the reviewer was not started")
+			return &res
+		}
+	case !asks && assigned:
+		res := blocked("a model is assigned (--model or " + domain.ModePath + ") but --exec has no " + modelToken + " placeholder, so it would change nothing: add it to the command or drop the assignment; the reviewer was not started")
+		return &res
+	}
+	return nil
+}
+
+// modelFor is the model that judges one lens: --model wins for one run, then the
+// project's table, and otherwise the command decides.
+func (r *runner) modelFor(lens string) string {
+	if model := strings.TrimSpace(r.opts.Model); model != "" {
+		return model
+	}
+	return strings.TrimSpace(r.opts.LensModels[strings.ToLower(strings.TrimSpace(lens))])
+}
+
+// lensGroup is the lenses one reviewer run covers: they share a model, so they
+// share a command. One group is one call to the model the human pays for.
+type lensGroup struct {
+	model  string
+	lenses []string
+}
+
+// lensGroups groups the lenses by the model that judges them, in the order their
+// first lens appears, so a run is deterministic.
+func (r *runner) lensGroups(lenses []string) []lensGroup {
+	var groups []lensGroup
+	index := make(map[string]int, len(lenses))
+	for _, lens := range lenses {
+		name := strings.ToLower(strings.TrimSpace(lens))
+		model := r.modelFor(name)
+		i, ok := index[model]
+		if !ok {
+			i = len(groups)
+			index[model] = i
+			groups = append(groups, lensGroup{model: model})
+		}
+		groups[i].lenses = append(groups[i].lenses, name)
+	}
+	return groups
+}
+
 // exec runs the reviewer command and stores its answer. A command that fails is
-// not a review: nothing is written, and its output is shown.
+// exec runs one reviewer per model group and stores one verdict. A command that
+// fails is not a review: nothing is written, and its output is shown.
 func (r *runner) exec() Result {
-	// The command comes first: a placeholder with no model behind it is a
-	// reviewer nobody can name, and no diff has to be read to discover that.
-	// It also runs before the store exists, so a refused run writes nothing.
-	command, problem := r.reviewerCommand()
-	if problem != nil {
+	// The candidate comes first: without a diff there is nothing to review, and a
+	// reviewer must not be started to review nothing. It is read once, so every
+	// group judges the same bytes.
+	// The command is judged before the store exists: a placeholder nobody can fill
+	// is a reviewer that must not be started, and a refused run writes nothing.
+	if problem := r.validateCommand(); problem != nil {
 		return *problem
 	}
 
-	// The candidate comes next: without a diff there is nothing to review, and
-	// a reviewer must not be started to review nothing.
 	cand, problem := r.candidateForReview()
 	if problem != nil {
 		return *problem
 	}
 
-	// The command is a reviewer, so it gets the prompt the verb prints. A
-	// reviewer started without one reviews whatever it decides to look at, and
-	// that is not the candidate this verdict is filed under.
-	text, _, _, problem := r.promptText(cand)
+	selected, problem := r.selectLenses(cand.paths, cand.diff)
 	if problem != nil {
 		return *problem
 	}
 
-	stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
-	// The answer is stdout. stderr is the command's own diagnosis — banners,
-	// warnings, ANSI — and it is shown when something fails, never parsed as
-	// part of the verdict.
-	diagnosis := stdout
-	if stderr != "" {
-		diagnosis += stderr
+	// A verdict for this tree may be incomplete, and a run never answers twice
+	// the lenses already answered: the store grows by lens, it is not rewritten.
+	covered, problem := r.coveredLenses(cand.tree)
+	if problem != nil {
+		return *problem
 	}
-	switch {
-	case err != nil:
-		return execFailed(command, "could not run the reviewer: "+oneLine(err.Error()), diagnosis)
-	case timedOut:
-		return execFailed(command, fmt.Sprintf("the review did not finish in %ds", ExecTimeoutSeconds), diagnosis)
-	case exitCode != 0:
-		return execFailed(command, fmt.Sprintf("the reviewer exited with code %d", exitCode), diagnosis)
+	todo := unanswered(selected, covered)
+	if len(todo) == 0 {
+		rel, err := domain.Path(cand.tree)
+		if err != nil {
+			return blocked(oneLine(err.Error()) + "; I wrote nothing")
+		}
+		return alreadyStored(rel)
 	}
 
-	// A refutation is an answer too, and it is stored beside the verdict it judges.
-	if domain.Sniff([]byte(stdout)) == domain.KindRefutation {
-		refutation, err := domain.ParseRefutation([]byte(stdout))
+	merged := domain.Verdict{Models: map[string]string{}}
+	reviewers := make([]string, 0, len(todo))
+	judges := make([]string, 0, len(todo))
+
+	for _, group := range r.lensGroups(todo) {
+		command, problem := r.reviewerCommand(group.model)
+		if problem != nil {
+			return *problem
+		}
+
+		// The command is a reviewer, so it gets the prompt the verb prints, for the
+		// lenses this group owns. A reviewer started without one reviews whatever it
+		// decides to look at, and that is not the candidate this verdict is filed
+		// under.
+		text, problem := r.promptFor(cand, group.lenses)
+		if problem != nil {
+			return *problem
+		}
+
+		stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
+		// The answer is stdout. stderr is the command's own diagnosis - banners,
+		// warnings, ANSI - and it is shown when something fails, never parsed as
+		// part of the verdict.
+		diagnosis := stdout
+		if stderr != "" {
+			diagnosis += stderr
+		}
+		switch {
+		case err != nil:
+			return execFailed(command, "could not run the reviewer: "+oneLine(err.Error()), diagnosis)
+		case timedOut:
+			return execFailed(command, fmt.Sprintf("the review did not finish in %ds", ExecTimeoutSeconds), diagnosis)
+		case exitCode != 0:
+			return execFailed(command, fmt.Sprintf("the reviewer exited with code %d", exitCode), diagnosis)
+		}
+
+		// A refutation is an answer too, and it is stored beside the verdict it judges.
+		if domain.Sniff([]byte(stdout)) == domain.KindRefutation {
+			refutation, err := domain.ParseRefutation([]byte(stdout))
+			if err != nil {
+				return execFailed(command, err.Error(), diagnosis)
+			}
+			// The refuter may have moved the worktree too; what it cites is the diff
+			// it was given, and the file is filed under the tree that exists now.
+			r.afterReviewer()
+			return r.storeRefutation(refutation, command)
+		}
+
+		parsed, err := domain.Parse([]byte(stdout))
 		if err != nil {
 			return execFailed(command, err.Error(), diagnosis)
 		}
-		// The refuter may have moved the worktree too; what it cites is the diff
-		// it was given, and the file is filed under the tree that exists now.
-		r.afterReviewer()
-		return r.storeRefutation(refutation, command)
-	}
+		// The command is the reviewer: it is the one fact the tool knows about an
+		// answer that came out of a shell.
+		if strings.TrimSpace(parsed.Reviewer) == "" {
+			parsed.Reviewer = command
+		}
+		// The identity that judged, when the command named one. It is the reviewer's
+		// own declaration, and the gate compares it with the proof's.
+		parsed.Model = r.reviewedBy
+		if err := parsed.Validate(); err != nil {
+			return execFailed(r.opts.Exec, err.Error(), diagnosis)
+		}
 
-	parsed, err := domain.Parse([]byte(stdout))
-	if err != nil {
-		return execFailed(command, err.Error(), diagnosis)
+		merged.Findings = append(merged.Findings, parsed.Findings...)
+		merged.Passes = append(merged.Passes, parsed.Passes...)
+		// The lenses are the ones this reviewer was asked to answer, not the ones
+		// it claims: the tool stamps them, and the model that judged them is the
+		// one this group ran with.
+		for _, lens := range group.lenses {
+			merged.Lenses = appendUnique(merged.Lenses, lens)
+			if parsed.Model != "" {
+				merged.Models[lens] = parsed.Model
+			}
+		}
+		reviewers = appendUnique(reviewers, command)
+		judges = appendUnique(judges, parsed.Model)
 	}
-	// The command is the reviewer: it is the one fact the tool knows about an
-	// answer that came out of a shell.
-	if strings.TrimSpace(parsed.Reviewer) == "" {
-		parsed.Reviewer = command
+	if len(merged.Models) == 0 {
+		merged.Models = nil
 	}
-	// The identity that judged, when the command named one. It is the reviewer's
-	// own declaration, and the gate compares it with the proof's.
-	parsed.Model = r.reviewedBy
-	if err := parsed.Validate(); err != nil {
-		return execFailed(r.opts.Exec, err.Error(), diagnosis)
+	merged.Reviewer = strings.Join(reviewers, " + ")
+	// One model for the whole verdict is the single-model case, and the older
+	// field keeps saying it. Several models are only in the per-lens map.
+	if len(judges) == 1 {
+		merged.Model = judges[0]
 	}
 
 	// The reviewer may have moved the worktree; the verdict must be filed under
@@ -507,7 +722,7 @@ func (r *runner) exec() Result {
 
 	// The base is the one the diff was taken against, not the flag: a project
 	// with no commit is compared against the empty tree, and the verdict says so.
-	return r.store(parsed, cand.base)
+	return r.store(merged, cand.base, todo)
 }
 
 // show reads this tree's verdict, or says there is none. It writes nothing: a
@@ -620,7 +835,7 @@ func (r *runner) lensCoverage(work *worktree, verdict domain.Verdict) []string {
 // declares which lenses it used, and the candidate is what says which ones were
 // required. A stored verdict that does not cover them would leave the optional
 // gate with no way out, because the store cannot be rewritten.
-func (r *runner) store(parsed domain.Verdict, base string) Result {
+func (r *runner) store(parsed domain.Verdict, base string, judged []string) Result {
 	work, problem := r.worktree()
 	if problem != nil {
 		return *problem
@@ -636,9 +851,25 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 		return *problem
 	}
 
-	stamped, problem := r.stampLenses(parsed, floor.Class)
-	if problem != nil {
-		return *problem
+	// A run that judged a subset says exactly which lenses it answered: the class
+	// lenses the candidate requires may include ones another run already paid for,
+	// and claiming them here would both lie and collide with the stored verdict.
+	var stamped domain.Verdict
+	if judged != nil {
+		stamped = parsed
+		stamped.Lenses = domain.Add(nil, judged)
+		if len(stamped.Lenses) == 1 {
+			for i, finding := range stamped.Findings {
+				if strings.TrimSpace(finding.Lens) == "" {
+					stamped.Findings[i].Lens = stamped.Lenses[0]
+				}
+			}
+		}
+	} else {
+		stamped, problem = r.stampLenses(parsed, floor.Class)
+		if problem != nil {
+			return *problem
+		}
 	}
 
 	stamped, problem = r.stampBlobs(stamped)
@@ -670,7 +901,19 @@ func (r *runner) store(parsed domain.Verdict, base string) Result {
 		return blocked(fmt.Sprintf("could not check whether %s already exists: %s; check the permissions", rel, oneLine(err.Error())))
 	}
 	if exists {
-		return alreadyStored(rel)
+		// A verdict that already answered these lenses is not rewritten: the run
+		// answers only what the tree still owes. A shared lens means this is not
+		// that run, and the store says so instead of replacing an answer.
+		existing, problem := r.storedVerdictFor(tree)
+		if problem != nil {
+			return *problem
+		}
+		for _, lens := range sealed.Lenses {
+			if containsLens(existing.Lenses, lens) {
+				return alreadyStored(rel)
+			}
+		}
+		sealed = mergeVerdicts(existing, sealed)
 	}
 
 	if err := r.files.Write(target, domain.Render(sealed)); err != nil {

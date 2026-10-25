@@ -225,6 +225,8 @@ type fakeShell struct {
 	asked   bool
 	command string
 	timeout int
+	// commands is every command that ran, in order: one per model group.
+	commands []string
 
 	// input is the prompt the reviewer was given, once --exec delivers one.
 	input string
@@ -234,6 +236,7 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string
 	s.asked = true
 	s.command = command
 	s.timeout = timeoutSeconds
+	s.commands = append(s.commands, command)
 	return s.output, s.stderr, s.exitCode, s.timedOut, s.err
 }
 
@@ -258,6 +261,114 @@ func newProject() *project {
 		git:   &fakeGit{tree: currentTree, changed: []string{"a.go"}, diff: diff},
 		shell: &fakeShell{},
 		host:  &fakeHost{},
+	}
+}
+
+// TestEachModelRunsItsOwnReviewer: two lenses, two models, two runs, and one
+// verdict that says who judged what. The cheap model carries the cheap lens and
+// the sharp one only runs where the human put it.
+func TestEachModelRunsItsOwnReviewer(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{
+		Exec:       "revisor --model {model}",
+		Lens:       "reliability,risk",
+		LensModels: map[string]string{"risk": "sharp/model"},
+	})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	if len(p.shell.commands) != 2 {
+		t.Fatalf("commands = %v, want one run per model", p.shell.commands)
+	}
+	ran := strings.Join(p.shell.commands, " | ")
+	if !strings.Contains(ran, "host/default") || !strings.Contains(ran, "sharp/model") {
+		t.Errorf("commands = %v, want one run on each model", p.shell.commands)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if stored.Models["risk"] != "sharp/model" || stored.Models["reliability"] != "host/default" {
+		t.Errorf("models = %v, want each lens with the model that judged it", stored.Models)
+	}
+	if stored.Model != "" {
+		t.Errorf("Model = %q, want empty when two models judged the tree", stored.Model)
+	}
+	if !slices.Contains(stored.Lenses, "risk") || !slices.Contains(stored.Lenses, "reliability") {
+		t.Errorf("lenses = %v, want both", stored.Lenses)
+	}
+}
+
+// TestASecondRunCompletesTheVerdict: the store grows by lens. A run that finds a
+// verdict covering reliability judges risk and adds it, keeping the rows it did
+// not pay for again.
+func TestASecondRunCompletesTheVerdict(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"risk"}]}`
+
+	first, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "first",
+		Lenses:   []string{"reliability"},
+		Passes:   []domainreview.Pass{{Path: "a.go", Blob: "b", Lens: "reliability"}},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(first)
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the completed verdict does not parse: %v", err)
+	}
+	if !slices.Contains(stored.Lenses, "reliability") || !slices.Contains(stored.Lenses, "risk") {
+		t.Fatalf("lenses = %v, want the old answer and the new one", stored.Lenses)
+	}
+	var kept bool
+	for _, pass := range stored.Passes {
+		if pass.Lens == "reliability" && pass.Path == "a.go" {
+			kept = true
+		}
+	}
+	if !kept {
+		t.Errorf("the second run dropped the rows the first one paid for: %v", stored.Passes)
+	}
+	if !strings.Contains(stored.Reviewer, "first") {
+		t.Errorf("reviewer = %q, want the earlier reviewer named", stored.Reviewer)
+	}
+}
+
+// TestARunDoesNotAnswerTheSameLensTwice: a verdict that already covers what the
+// evidence asks for is not rewritten, and no reviewer is started.
+func TestARunDoesNotAnswerTheSameLensTwice(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+
+	stored, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "first",
+		Lenses:   []string{"reliability"},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(stored)
+
+	result := p.run(review.Options{Exec: "revisor --model {model}"})
+	if result.Code == review.CodeOK {
+		t.Fatalf("the run rewrote a verdict that already answered its lens: %s", result.Message)
+	}
+	if len(p.shell.commands) != 0 {
+		t.Errorf("the reviewer ran for a lens that was already answered: %v", p.shell.commands)
 	}
 }
 

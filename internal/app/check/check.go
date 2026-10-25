@@ -615,11 +615,12 @@ func (r *runner) requireReview() *Result {
 		return &problem
 	}
 
-	// Identity before coverage: a verdict by the model that produced the proof
+	// Identity before coverage: a lens judged by the model that produced the proof
 	// is the tree approving itself. Both names are declarations, so this refuses
 	// what can be seen, not what cannot be proven.
-	if selfReviewed(r.proofModel, verdict.Model) {
-		message := fmt.Sprintf("the review was written by the model that produced the proof (%s): a model does not judge its own tree", strings.TrimSpace(verdict.Model))
+	if lenses := selfJudgedLenses(r.proofModel, verdict, required); len(lenses) > 0 {
+		message := fmt.Sprintf("the review of %s was written by the model that produced the proof (%s): a model does not judge its own tree",
+			strings.Join(lenses, ", "), strings.TrimSpace(r.proofModel))
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewSelf,
@@ -804,18 +805,32 @@ func lensMissing(missing []string, rel string) Result {
 	}
 }
 
-// selfReviewed reports whether the evidence and the verdict name the same model.
-// Two unknowns are not a match: an old proof or a verdict written by a human has
-// no model, and calling that a self-review would block every project that ran
-// the gate before the field existed. The comparison ignores case because the same
-// identity is spelled both ways by different hosts.
-func selfReviewed(proofModel, verdictModel string) bool {
+// selfJudgedLenses is the required lenses this verdict judged with the model that
+// produced the proof, in the gate's order. A lens answers with its own model when
+// the project assigned one, and with the verdict's single model otherwise.
+//
+// Two unknowns are not a match: an old proof, a verdict written by a human or a
+// lens the command did not name has no model, and calling that a self-review
+// would block every project that ran the gate before the field existed. The
+// comparison ignores case because the same identity is spelled both ways.
+func selfJudgedLenses(proofModel string, verdict reviewdomain.Verdict, required []string) []string {
 	proofModel = strings.TrimSpace(proofModel)
-	verdictModel = strings.TrimSpace(verdictModel)
-	if proofModel == "" || verdictModel == "" {
-		return false
+	if proofModel == "" {
+		return nil
 	}
-	return strings.EqualFold(proofModel, verdictModel)
+
+	var lenses []string
+	for _, lens := range required {
+		name := strings.ToLower(strings.TrimSpace(lens))
+		model := strings.TrimSpace(verdict.Models[name])
+		if model == "" {
+			model = strings.TrimSpace(verdict.Model)
+		}
+		if model != "" && strings.EqualFold(model, proofModel) {
+			lenses = append(lenses, name)
+		}
+	}
+	return lenses
 }
 
 // reviewFinding is the one finding a human has to read first, in one line: where
