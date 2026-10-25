@@ -500,6 +500,49 @@ func TestShowNamesTheModelOfEachLens(t *testing.T) {
 	}
 }
 
+// TestShowCallsAPartialVerdictPartial: a verdict that answered one of the two
+// lenses the tree requires is half an answer. --show says partial, counts what
+// the file holds, and names the lens nobody judged, so the gate cannot be read as
+// satisfied.
+func TestShowCallsAPartialVerdictPartial(t *testing.T) {
+	p := newProject()
+	partial, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "first",
+		Lenses:   []string{"risk"},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(partial)
+
+	got := p.run(review.Options{Show: true, Lens: "risk"})
+
+	if !strings.Contains(got.Message, "partial") {
+		t.Errorf("message = %q, want it to call the verdict partial", got.Message)
+	}
+	if !strings.Contains(got.Message, "1 of 2 lenses") {
+		t.Errorf("message = %q, want how much of the tree it covers", got.Message)
+	}
+	lines := strings.Join(got.Lines, "\n")
+	if !strings.Contains(lines, "missing lenses: reliability") {
+		t.Errorf("--show does not name the lens nobody judged:\n%s", lines)
+	}
+
+	complete, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "first",
+		Lenses:   []string{"risk", "reliability"},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the complete verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(complete)
+
+	done := p.run(review.Options{Show: true, Lens: "risk"})
+	if strings.Contains(done.Message, "partial") {
+		t.Errorf("message = %q, want no partial for a verdict that answered both", done.Message)
+	}
+}
+
 // run performs one `odachi review` with the fixed clock.
 func (p *project) run(opts review.Options) review.Result {
 	opts.Dir = dir
@@ -1202,6 +1245,39 @@ func TestASecondVerdictIsReportedNotApplied(t *testing.T) {
 	}
 	if !strings.Contains(second.Message, "this tree already has a verdict") {
 		t.Errorf("message = %q, want %q", second.Message, "this tree already has a verdict")
+	}
+	if after := string(p.files.files[storePath(currentTree)]); after != before {
+		t.Fatalf("the stored verdict was overwritten:\nbefore: %s\nafter:  %s", before, after)
+	}
+}
+
+// TestTheStoreRefusesToReplaceOneAnsweredLens: the file is the answer that was
+// paid for. A second verdict that claims an answered lens is refused even when it
+// also brings lenses the tree still owes: the store grows by lens through a run,
+// never by overwriting what a run already judged.
+func TestTheStoreRefusesToReplaceOneAnsweredLens(t *testing.T) {
+	p := newProject()
+	p.git.changed = []string{"auth/session.go"}
+	p.git.diff = "diff --git a/auth/session.go b/auth/session.go\n--- a/auth/session.go\n+++ b/auth/session.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
+	p.files.files[fullPath("segundo.json")] = []byte(`{"reviewer":"humano","findings":[]}`)
+
+	first, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "first",
+		Lenses:   []string{"risk"},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(first)
+	before := string(p.files.files[storePath(currentTree)])
+
+	got := p.run(review.Options{Attach: "segundo.json"})
+
+	if got.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 for a verdict that replaces an answered lens (%s)", got.Code, got.Message)
+	}
+	if !strings.Contains(got.Message, "already has a verdict") {
+		t.Errorf("message = %q, want it to say the answered lens is not replaced", got.Message)
 	}
 	if after := string(p.files.files[storePath(currentTree)]); after != before {
 		t.Fatalf("the stored verdict was overwritten:\nbefore: %s\nafter:  %s", before, after)
