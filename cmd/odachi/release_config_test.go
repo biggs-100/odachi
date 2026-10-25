@@ -41,22 +41,43 @@ func TestTheReleaseIsSignedKeyless(t *testing.T) {
 		"id-token: write",
 		"sigstore/cosign-installer@",
 		"anchore/sbom-action/download-syft@",
+		"goreleaser/goreleaser-action@",
 	} {
 		if !strings.Contains(workflow, want) {
 			t.Errorf("release.yml lost %q: the release would fail at the worst moment", want)
 		}
 	}
 
-	// Both actions hold the OIDC identity: a major tag can be moved to another
-	// commit, and that commit would sign its own checksums with our name.
-	for _, action := range []string{"sigstore/cosign-installer@", "anchore/sbom-action/download-syft@"} {
-		for _, line := range strings.Split(workflow, "\n") {
-			if !strings.Contains(line, action) {
-				continue
-			}
-			pin := strings.TrimSpace(strings.SplitN(line, action, 2)[1])
-			if len(strings.Fields(pin)) == 0 || len(strings.Fields(pin)[0]) != 40 {
-				t.Errorf("release.yml pins %q with %q, want a 40-character commit SHA: a tag can move", action, pin)
+	assertActionsArePinned(t, workflow)
+}
+
+// assertActionsArePinned refuses a moving tag on any action of the job. Every
+// step in a job with id-token: write can read the OIDC token, so a moved tag
+// could ask Fulcio for this workflow's identity, sign its own checksums and
+// rewrite the release: verify-blob would still pass. The whole file is checked,
+// not a list, because the next action somebody adds inherits the identity too.
+func assertActionsArePinned(t *testing.T, workflow string) {
+	t.Helper()
+	for _, line := range strings.Split(workflow, "\n") {
+		at := strings.Index(line, "uses:")
+		if at < 0 {
+			continue
+		}
+		fields := strings.Fields(line[at+len("uses:"):])
+		if len(fields) == 0 {
+			t.Errorf("release.yml has a uses: line with no action: %q", line)
+			continue
+		}
+		ref := fields[0]
+		name, pin, ok := strings.Cut(ref, "@")
+		if !ok || len(pin) != 40 {
+			t.Errorf("release.yml uses %q, want a 40-character commit SHA: a tag can move", ref)
+			continue
+		}
+		for _, r := range pin {
+			if !strings.ContainsRune("0123456789abcdef", r) {
+				t.Errorf("release.yml uses %q and %q is not a commit SHA", name, pin)
+				break
 			}
 		}
 	}

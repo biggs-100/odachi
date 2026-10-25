@@ -405,8 +405,10 @@ real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP
 listener in CI.
 
-The release config **has no `brews`, signing or provenance**: there is no tap and
-no keys, and pretending they exist would be worse than not having them.
+The release config **signs the checksums and ships an SBOM per archive**, and it
+**has no `brews` and no provenance**: there is no tap, and the chain stops at the
+signature that says who published (provenance would say which source produced
+it). Each of those is added when it exists, not before.
 
 ## License
 
