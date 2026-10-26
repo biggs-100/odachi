@@ -1,21 +1,21 @@
-# the-three-branches
+# the-proof-says
 
 ## What must exist
-- the three branches the review named are driven by a test
+- the proof says which old files it cannot read, and keeps the line it can
 
 ## Done when
-- a list longer than the limit prints the first three and names the rest
-- a task list that cannot be read is a broken check, not a clean project
-- a refusal names the kept file only when it was kept, and a store that fails writes nothing
+- a new proof whose output starts with the terminator keeps that line, pinned by a test
+- the parser says which old files are ambiguous and why, with the date the terminator arrived
+- the ledger row moves to accepted, with the gating effect named
 
 ## Not included (first version)
-- the proof header ambiguity
-- the review store and the ledger
-- the wording of the refusal
-- the verdict receipts
+- a change of the proof format
+- reading old proofs differently
+- the review store
+- the proofs on other machines
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a test kills a branch that looks harmless.
+- Wants to learn: how to tell an accepted ambiguity from an unfixed bug.
