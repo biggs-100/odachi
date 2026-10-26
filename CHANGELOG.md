@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.29 - 2026-10-26
+
+A feature can be chosen by its number.
+
+- **`--feature NNNN`** (#71): `plan`, `ask`, `check` and `progress` act on the
+  selected document instead of the highest, so a feature in flight can still be
+  planned and judged while a higher one exists. Without the flag nothing changes.
+- **An unknown number blocks and names the ones that exist**, negative numbers
+  included; the gate asks the same selector instead of repeating the lookup, so a
+  named number on a project with no task docs is refused like any other.
+- **The flag is not `--for`**: `odachi ask --for P1` already means the question
+  being answered, and one flag cannot mean two things.
+
 ## v0.11.28 - 2026-10-26
 
 An agent file is code.
