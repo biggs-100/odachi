@@ -13,7 +13,7 @@ R1 · "progress can be read by a machine: the same report as data, not only as l
 
 ## Steps
 - [x] T1 · the report is computed as data and the human lines are rendered from it   R1 · fd388a8
-- [ ] T2 · progress --json prints that state as one object   R1
+- [x] T2 · progress --json prints that state as one object   R1 · 72e678b
 
 ## History
 L1 · "progress can be read by a machine: the same report as data, not only as lines"
