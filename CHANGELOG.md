@@ -5,6 +5,17 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.26 - 2026-10-26
+
+A block teaches instead of pointing.
+
+- **A blocking question arrives with its text** (#54): `check` names each open
+  question with its id and its words, and its `next` line is the form that answers
+  the first one - `odachi ask --answer "<answer>" --for P1` - instead of a bare
+  `ask` that only prints usage. The gate still counts; the document knows the words.
+- **Reporting only**: nothing is answered or written. A feature with no open
+  questions prints exactly what it printed before.
+
 ## v0.11.25 - 2026-10-26
 
 The report can be read by a machine.
