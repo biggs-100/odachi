@@ -229,6 +229,12 @@ func render(state State) []string {
 	lines := []string{fmt.Sprintf("%04d-%s · %d of %d steps · %s",
 		state.Number, state.Slug, doneSteps(state.Steps), len(state.Steps), questionCount(len(state.OpenQuestions)))}
 
+	// The block sits between the headline and the plan: a question is what stops
+	// the work, and the human reads it before the steps they cannot finish.
+	for _, question := range state.OpenQuestions {
+		lines = append(lines, fmt.Sprintf("%s · %q", question.ID, question.Text))
+	}
+
 	for _, step := range state.Steps {
 		landed := "pending"
 		if step.Done {
