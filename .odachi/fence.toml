@@ -1,19 +1,14 @@
 [[rule]]
-not   = "the gate rule: progress reads it and does not change it"
-paths = ["the-gate-rule-progress-reads-it-and-does-not-change-it*"]
+not   = "check base semantics: an empty --base still means compare to nothing"
+paths = ["check-base-semantics-an-empty-base-still-means-compare-to-nothing*"]
 deps  = []
 
 [[rule]]
-not   = "walking the ancestry for an older verdict: the gate has no such rule"
-paths = ["walking-the-ancestry-for-an-older-verdict-the-gate-has-no-such-rule*"]
+not   = "the boundary walk over older verdicts"
+paths = ["the-boundary-walk-over-older-verdicts*"]
 deps  = []
 
 [[rule]]
-not   = "reading the verdict findings"
-paths = ["reading-the-verdict-findings*"]
-deps  = []
-
-[[rule]]
-not   = "changing review, check or summary behaviour"
-paths = ["changing-review-check-or-summary-behaviour*"]
+not   = "the refused answer from 0045"
+paths = ["the-refused-answer-from-0045*"]
 deps  = []
