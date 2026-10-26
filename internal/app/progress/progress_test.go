@@ -402,8 +402,30 @@ func TestTheReportCarriesTheOpenQuestions(t *testing.T) {
 	if !reflect.DeepEqual(result.State.OpenQuestions, want) {
 		t.Errorf("open questions = %+v, want %+v", result.State.OpenQuestions, want)
 	}
+	// The human reads the same words: the block comes right under the headline,
+	// before the plan it stops.
+	if got := result.Lines[1]; got != `P1 · "¿Se puede cancelar?"` {
+		t.Errorf("the line under the headline is %q, want the question", got)
+	}
 	if lines := strings.Join(result.Lines, "\n"); !strings.Contains(lines, "1 open question") {
 		t.Errorf("the lines do not say the count:\n%s", lines)
+	}
+}
+
+// TestAReportWithNoQuestionsSaysNothingExtra: a feature with nothing to answer
+// prints what it printed before -the headline, the steps, the proof and the
+// review- and no empty section for a list that has no rows.
+func TestAReportWithNoQuestionsSaysNothingExtra(t *testing.T) {
+	p := newProject()
+
+	result := p.run(progress.Options{ReviewMode: true, Review: nothingOwed})
+
+	lines := result.Lines
+	if want := 1 + 2 + 2; len(lines) != want {
+		t.Fatalf("the report has %d lines, want %d:\n%s", len(lines), want, strings.Join(lines, "\n"))
+	}
+	if !strings.HasPrefix(lines[1], "  T1 · ") {
+		t.Errorf("the first line under the headline is %q, want the first step", lines[1])
 	}
 }
 

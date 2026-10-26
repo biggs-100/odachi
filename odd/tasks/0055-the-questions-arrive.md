@@ -16,3 +16,4 @@ R1 · "the questions arrive in the report with their id and their words, not onl
 ## History
 L1 · "the questions arrive in the report with their id and their words, not only their count"
 L2 · OFICIO · "the state carries each question as id and text, without the answer command" (porque the command is a rendering of the id; a second copy inside another program would drift from ask)
+L3 · OFICIO · "the human report names the questions between the headline and the steps" (porque a question is what stops the work, and check already puts the words before the remedy; the count alone sends the human to another file)
