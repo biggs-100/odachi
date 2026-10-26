@@ -10,7 +10,7 @@ R1 · "the proof says which old files it cannot read, and keeps the line it can"
 - the ledger row moves to accepted, with the gating effect named
 
 ## Steps
-- [ ] T1 · the terminator line in the output survives the round trip, and the ambiguity is written where it is decided   R1
+- [x] T1 · the terminator line in the output survives the round trip, and the ambiguity is written where it is decided   R1 · 1b5f03c
 
 ## History
 L1 · "the proof says which old files it cannot read, and keeps the line it can"
