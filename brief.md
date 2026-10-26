@@ -1,23 +1,21 @@
-# progress-says-the
+# progress-and-check
 
 ## What must exist
-- progress says the same verdict the gate would use, and never invents one it could not read
+- progress and check give the same answer for the same tree, wired end to end
 
 ## Done when
-- progress asks the gate's own rule whether this tree owes a verdict, and says the same
-- the documents after the close do not reopen it: progress says so instead of owed
-- when the store cannot be read, progress says so instead of claiming a verdict is owed
-- an open feature and a tree with its own verdict are reported as today
-- tests pin the agreement, the unreadable store and the silence
+- ReviewOwed answers about the tree that stands when the caller names no base
+- an end-to-end test runs check and progress on the same repo and requires the same answer
+- a documents-only tail after the close: both say not due
+- the close itself: both say owed
 
 ## Not included (first version)
-- the gate rule: progress reads it and does not change it
-- walking the ancestry for an older verdict: the gate has no such rule
-- reading the verdict findings
-- changing review, check or summary behaviour
+- check base semantics: an empty --base still means compare to nothing
+- the boundary walk over older verdicts
+- the refused answer from 0045
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a report stays honest by asking the owner.
+- Wants to learn: how wiring becomes a test.
