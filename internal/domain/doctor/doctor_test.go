@@ -10,16 +10,16 @@ import (
 // check is appended after the ten the contract named, because inserting one in
 // the middle would silently rename every check after it.
 func TestEveryCheckHasATitle(t *testing.T) {
-	for number := CheckVersion; number <= CheckVoice; number++ {
+	for number := CheckVersion; number <= CheckTaskDocs; number++ {
 		if title(number) == "" {
 			t.Errorf("check %d has no title", number)
 		}
 	}
-	if CheckVoice != CheckVersion+CheckCount-1 {
-		t.Fatalf("the eleven checks are numbered %d..%d, got %d", CheckVersion, CheckVoice, CheckVersion+CheckCount-1)
+	if CheckTaskDocs != CheckVersion+CheckCount-1 {
+		t.Fatalf("the twelve checks are numbered %d..%d, got %d", CheckVersion, CheckTaskDocs, CheckVersion+CheckCount-1)
 	}
-	if CheckCount != 11 {
-		t.Fatalf("ten checks from Contract XV plus the voice one, got %d", CheckCount)
+	if CheckCount != 12 {
+		t.Fatalf("ten checks from Contract XV plus the voice one and the task docs one, got %d", CheckCount)
 	}
 }
 

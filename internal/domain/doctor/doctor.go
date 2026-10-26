@@ -1,4 +1,4 @@
-// Package doctor owns the rules of `odachi doctor`: the eleven health checks in
+// Package doctor owns the rules of `odachi doctor`: the twelve health checks in
 // order, how the pre-commit hook and the AGENTS.md block written by
 // `odachi init` are read back, and the exact phrase that repairs each problem.
 //
@@ -24,7 +24,7 @@ const (
 	// CheckVersion is the version this binary reports.
 	CheckVersion = iota + 1
 	// CheckOnPath asks whether a shell can run `odachi` by name. It is the most
-	// valuable of the eleven: when it fails, the agent cannot execute a single
+	// valuable of the twelve: when it fails, the agent cannot execute a single
 	// rule and spends its budget looking for the binary.
 	CheckOnPath
 	// CheckGit asks whether there is a repository: without one there is no hook.
@@ -55,11 +55,17 @@ const (
 	// another. It is appended after the ten Contract XV named, so no existing
 	// check changes its number.
 	CheckVoice
+	// CheckTaskDocs asks which documents in odd/tasks odachi can read. It is not a
+	// problem: a project may keep another shape - ODD names a feature without a
+	// number - and the two memories can live in the same folder. Saying it is the
+	// difference between "the tool ignores my history" and "the tool told me it
+	// does".
+	CheckTaskDocs
 )
 
 // CheckCount is how many checks a complete report has. A test asserts it, so a
 // report can never quietly grow or shrink.
-const CheckCount = 11
+const CheckCount = 12
 
 // Status is what one check found.
 type Status int
@@ -209,6 +215,8 @@ func title(number int) string {
 		return "the review store and proof/ are ignored"
 	case CheckVoice:
 		return "the block's voice matches the profile"
+	case CheckTaskDocs:
+		return "the task documents odachi reads"
 	default:
 		return ""
 	}

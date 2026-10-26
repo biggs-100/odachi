@@ -48,6 +48,32 @@ func doc(title, outcome string) string {
 
 // TestCurrentIsTheHighestNumber: there is one task document in play, always the
 // last feature the human opened.
+// TestSkippedNamesTheDocumentsOdachiDoesNotRead: the folder may hold another
+// shape - ODD names a feature without a number - and the tool says which files
+// it cannot read instead of dropping them silently.
+func TestSkippedNamesTheDocumentsOdachiDoesNotRead(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		filepath.Join("raiz", "odd", "tasks", "0007-turnos.md"):        "",
+		filepath.Join("raiz", "odd", "tasks", "qonta-einvoicing.md"):   "",
+		filepath.Join("raiz", "odd", "tasks", "qonta-pos.md.bak-2026"): "",
+		filepath.Join("raiz", "odd", "tasks", "notas.txt"):             "",
+	})
+
+	skipped, err := tasks.Skipped(files, "raiz")
+	if err != nil {
+		t.Fatalf("Skipped: %v", err)
+	}
+	if !slices.Equal(skipped, []string{"qonta-einvoicing.md"}) {
+		t.Errorf("Skipped = %v, want only the .md that is not numbered", skipped)
+	}
+	if line := tasks.SkippedLine(skipped); !strings.Contains(line, "qonta-einvoicing.md") || !strings.Contains(line, "1 document") {
+		t.Errorf("SkippedLine = %q, want the count and the name", line)
+	}
+	if line := tasks.SkippedLine(nil); line != "" {
+		t.Errorf("SkippedLine(nil) = %q, want silence", line)
+	}
+}
+
 func TestCurrentIsTheHighestNumber(t *testing.T) {
 	files := newFakeFiles(map[string]string{
 		filepath.Join("raiz", "odd", "tasks", "0001-reservar-turnos.md"): doc("reservar-turnos", "reservar turnos"),

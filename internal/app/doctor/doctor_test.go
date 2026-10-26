@@ -511,6 +511,32 @@ func TestProtectedDirectoriesAreClean(t *testing.T) {
 	}
 }
 
+// TestAForeignTaskDocIsAWarning: a project that keeps ODD names has documents
+// odachi does not read. The line names them and counts them, and the run stays
+// green: another shape is a decision, not a broken install.
+func TestAForeignTaskDocIsAWarning(t *testing.T) {
+	files := configured().
+		put(".odachi/reviews/.gitignore", "*\n")
+	files.put("proof/.gitignore", "*\n!.gitignore\n")
+	files.put("odd/tasks/qonta-einvoicing.md", "# qonta-einvoicing\n")
+	files.put("odd/tasks/0001-a-real-feature.md", "# a-real-feature\n")
+
+	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	if got.Code != CodeOK {
+		t.Fatalf("a foreign task doc must not fail the run, got %d:\n%s", got.Code, strings.Join(got.Lines, "\n"))
+	}
+	check := checkOf(t, got, domaindoctor.CheckTaskDocs)
+	if check.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a foreign task doc is a warning: %s", domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Detail, "1 document") || !strings.Contains(check.Detail, "qonta-einvoicing.md") {
+		t.Errorf("the line does not name the document: %s", domaindoctor.Line(check))
+	}
+	if strings.Contains(check.Detail, "a-real-feature") {
+		t.Errorf("the line counts a document odachi reads: %s", domaindoctor.Line(check))
+	}
+}
+
 // TestNoSkillsIsClean: a project without skills/ has nothing to drift.
 func TestNoSkillsIsClean(t *testing.T) {
 	files := configured()

@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
 	domainopencode "github.com/biggs-100/odachi/internal/domain/opencode"
@@ -160,6 +161,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.skills(),
 		r.ignored(),
 		r.voice(),
+		r.taskDocs(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)
@@ -623,6 +625,21 @@ const noProfileFile = "without " + profileFile + " there is no profile to compar
 // block carries the voice `odachi init` wrote. The persona files v0.10.0 left
 // behind are reported in the same line as leftovers — ok, not a warning: nothing
 // reads them and nothing is broken.
+// taskDocs names the documents in odd/tasks that odachi does not read. It never
+// fails the run: another shape of task document is a project decision, not a
+// broken install, and the line exists so the human hears what the tool skips
+// instead of wondering why summary counts one.
+func (r *runner) taskDocs() domaindoctor.Check {
+	skipped, err := tasks.Skipped(r.files, r.opts.Dir)
+	if err != nil {
+		return domaindoctor.Broken(domaindoctor.CheckTaskDocs, oneLine(err.Error()), "check the permissions of "+tasks.Dir)
+	}
+	if len(skipped) == 0 {
+		return domaindoctor.OK(domaindoctor.CheckTaskDocs, "")
+	}
+	return domaindoctor.Warning(domaindoctor.CheckTaskDocs, tasks.SkippedLine(skipped)+"; the project keeps two memories")
+}
+
 func (r *runner) voice() domaindoctor.Check {
 	content, exists, err := r.read(agentsFile)
 	if err != nil {

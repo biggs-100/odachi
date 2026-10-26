@@ -80,6 +80,50 @@ func All(files Files, dir string) ([]Document, error) {
 	return docs, nil
 }
 
+// Skipped returns the documents in the task folder that odachi does not read:
+// the ones whose name is not NNNN-<slug>.md. A project that keeps another shape
+// - ODD names a feature without a number - hears the truth here instead of
+// wondering why summary counts one.
+func Skipped(files Files, dir string) ([]string, error) {
+	names, err := files.List(filepath.Join(dir, Dir))
+	if err != nil {
+		return nil, fmt.Errorf("could not read %s: %w", Dir, err)
+	}
+
+	var skipped []string
+	for _, name := range names {
+		if !strings.HasSuffix(strings.ToLower(name), ".md") {
+			continue
+		}
+		if _, _, ok := parseName(name); !ok {
+			skipped = append(skipped, name)
+		}
+	}
+	slices.Sort(skipped)
+	return skipped, nil
+}
+
+// SkippedLine is the one sentence that names the documents odachi does not read,
+// or "" when the folder holds none: the tool says what it skips instead of
+// letting a project wonder why summary counts one.
+func SkippedLine(skipped []string) string {
+	if len(skipped) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d document(s) in %s are not features odachi reads: %s (the name is not NNNN-slug.md)",
+		len(skipped), Dir, fewNames(skipped))
+}
+
+// fewNames lists the first three names and counts the rest, so a folder with
+// forty foreign documents still prints one line.
+func fewNames(names []string) string {
+	const limit = 3
+	if len(names) <= limit {
+		return strings.Join(names, ", ")
+	}
+	return strings.Join(names[:limit], ", ") + fmt.Sprintf(" and %d more", len(names)-limit)
+}
+
 // Current returns the highest-numbered task document: the feature the human is
 // working on now. A project with no feature yet is an error a human can read,
 // and it names the command that creates the first one.
