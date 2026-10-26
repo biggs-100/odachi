@@ -9,7 +9,7 @@ does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: v0.11.28, closing feature 0056.
+Last written: after v0.11.28, closing feature 0057.
 
 ## Open
 
@@ -21,21 +21,12 @@ terminator: the line silently disappears from the recorded output. The format
 cannot tell the two apart by itself, so the fix is a decision, not a patch: keep
 the ambiguity and say so, or version the header.
 
-### WARNING · internal/app/review/review.go:1350 · reliability
+## Closed by feature 0057
 
-The keep-failure path of `refuse` and the two error branches of `keepRefused` have
-no test that drives them, and `dropRefused`'s early returns are unreachable with
-the current fake. If the guard were lost, a refusal would name an
-`--attach <file>` that was never written -exactly the second payment feature 0050
-removed- while every test stays green.
-
-### SUGGESTION · internal/app/tasks/tasks.go:124 · reliability
-
-`fewNames` truncates a long list to the first three plus `and N more`, and no test
-feeds it more than two names: an off-by-one in the bound or the count would print a
-wrong line in `doctor`, `start` and `summary` with the suite green.
-
-### SUGGESTION · internal/app/doctor/doctor.go:635 · reliability
-
-`taskDocs` returns `Broken` when `tasks.Skipped` fails, and no test makes `List`
-fail: the repair text of that branch is unpinned.
+- `internal/app/tasks/tasks.go:124` - the truncation has a test with five names
+  and the limit itself.
+- `internal/app/doctor/doctor.go:635` - a listing that fails is a problem, not the
+  same silence as a folder with no foreign documents.
+- `internal/app/review/review.go:1350` - the drop of a refused answer cannot cost
+  the verdict; the keep-failure half was already pinned by feature 0051, which the
+  store could not know because a test moves a different file's blob.
