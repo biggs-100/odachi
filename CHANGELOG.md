@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.19 - 2026-10-25
+
+The tool says what it does not read.
+
+- **`doctor` names the documents odachi does not read**: the `.md` files in
+  `odd/tasks` whose name is not `NNNN-slug.md`. It is a warning, not a failure: a
+  project may keep another shape - ODD names a feature without a number - and the
+  two memories can live in the same folder.
+- **`start` and `summary` say the same sentence**: at adoption, and in the
+  report - including the case where every document is foreign and the folder used
+  to look empty.
+- **Numbering stays**: the number is how odachi knows which feature is current,
+  and the README says so. Odachi does not read, rename or migrate the foreign
+  documents.
+
 ## v0.11.18 - 2026-10-25
 
 Closing a feature is reviewed; publishing it is not.
