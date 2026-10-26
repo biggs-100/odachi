@@ -1,21 +1,16 @@
 [[rule]]
-not   = "review --feature and its base"
-paths = ["review-feature-and-its-base*"]
+not   = "the per-tree exemption the close already has"
+paths = ["the-per-tree-exemption-the-close-already-has*"]
 deps  = []
 
 [[rule]]
-not   = "summary"
-paths = ["summary*"]
+not   = "review mode off and its meaning"
+paths = ["review-mode-off-and-its-meaning*"]
 deps  = []
 
 [[rule]]
-not   = "a pointer file"
-paths = ["a-pointer-file*"]
-deps  = []
-
-[[rule]]
-not   = "the numbering"
-paths = ["the-numbering*"]
+not   = "a waiver that hides the proof or the fence"
+paths = ["a-waiver-that-hides-the-proof-or-the-fence*"]
 deps  = []
 
 [[rule]]
