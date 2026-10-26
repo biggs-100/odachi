@@ -363,6 +363,9 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("odachi progress", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
+	var asJSON bool
+	flags.BoolVar(&asJSON, "json", false, "machine output: the same report as one object")
+
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
@@ -390,9 +393,31 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 			return check.ReviewOwed(check.Options{Dir: dir, ReviewMode: enabled}, osFiles{}, gitRepo{})
 		},
 	}, osFiles{}, gitRepo{})
+
+	if asJSON {
+		return reportProgressJSON(result, stdout, stderr)
+	}
 	for _, line := range result.Lines {
 		fmt.Fprintln(stdout, line)
 	}
+	return result.Code
+}
+
+// reportProgressJSON prints the report as one object: the same facts the lines
+// carry, for a renderer that lives in another program. The names are the contract.
+func reportProgressJSON(result progress.Result, stdout, stderr io.Writer) int {
+	payload := struct {
+		Code    int             `json:"code"`
+		Message string          `json:"message"`
+		State   *progress.State `json:"state,omitempty"`
+	}{Code: result.Code, Message: result.Message, State: result.State}
+
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: could not print the report as JSON: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+	fmt.Fprintln(stdout, string(data))
 	return result.Code
 }
 

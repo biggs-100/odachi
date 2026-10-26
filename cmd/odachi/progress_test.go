@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os/exec"
 	"strings"
 	"testing"
@@ -41,6 +42,66 @@ func featureAtBase(t *testing.T) (dir, base string) {
 	}.Render())
 	commitAll(t, dir, "the plan")
 	return dir, base
+}
+
+// TestProgressJSONIsTheContract is the shape another program reads: the report is
+// not only lines. The names here are the contract, so a renderer in another
+// language can depend on them without parsing English.
+func TestProgressJSONIsTheContract(t *testing.T) {
+	t.Parallel()
+	dir, _ := featureAtBase(t)
+
+	code, out, errOut := runDir(t, dir, []string{"progress", "--json"}, "")
+	if code != 0 {
+		t.Fatalf("progress --json: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	var got struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		State   *struct {
+			Number        int    `json:"number"`
+			Slug          string `json:"slug"`
+			OpenQuestions int    `json:"open_questions"`
+			Steps         []struct {
+				ID     string `json:"id"`
+				Text   string `json:"text"`
+				Done   bool   `json:"done"`
+				Commit string `json:"commit"`
+			} `json:"steps"`
+			Proof struct {
+				State string `json:"state"`
+				Path  string `json:"path"`
+			} `json:"proof"`
+			Review struct {
+				State string `json:"state"`
+				Why   string `json:"why"`
+				Base  string `json:"base"`
+			} `json:"review"`
+		} `json:"state"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("the machine output is not JSON: %v\n%s", err, out)
+	}
+	if got.Code != 0 || got.State == nil {
+		t.Fatalf("output = %+v, want a state and code 0", got)
+	}
+	state := got.State
+	if state.Number != 1 || state.Slug != "turnos" {
+		t.Errorf("feature = %04d-%s, want 0001-turnos", state.Number, state.Slug)
+	}
+	if len(state.Steps) != 1 || state.Steps[0].ID != "T1" || state.Steps[0].Done {
+		t.Errorf("steps = %+v, want one pending T1", state.Steps)
+	}
+	if state.Proof.State != "none" {
+		t.Errorf("proof = %+v, want none yet", state.Proof)
+	}
+	if state.Review.State != "not_due" || state.Review.Why != "feature_open" {
+		t.Errorf("review = %+v, want not due because the feature is open", state.Review)
+	}
+	if !strings.Contains(got.Message, "0 of 1") {
+		t.Errorf("message = %q, want the same headline the human reads", got.Message)
+	}
 }
 
 // TestProgressAndCheckAgreeAboutTheReview is the wiring test: the report asks the
