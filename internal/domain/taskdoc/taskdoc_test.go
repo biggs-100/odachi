@@ -46,6 +46,28 @@ func TestParseRecordsTheBase(t *testing.T) {
 	}
 }
 
+// TestABaseOutsideThePreambleIsProse: the field lives between the title and the
+// first section, and nowhere else. A note after a section that starts with
+// "Base:" would otherwise become the commit the closing gate must name, and the
+// write guard would not flag the line it silently relocated.
+func TestABaseOutsideThePreambleIsProse(t *testing.T) {
+	const sha = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+	md := "# turnos\nBase: " + sha + "\n\n## Notas\nBase: pending\n\n## Steps\n- [ ] T1 · reservar   R1\n"
+
+	if got := taskdoc.Parse(md); got.Base != sha {
+		t.Errorf("Base = %q, want the preamble value %q", got.Base, sha)
+	}
+	var flagged bool
+	for _, line := range taskdoc.Unaccounted(md) {
+		if line == "Base: pending" {
+			flagged = true
+		}
+	}
+	if !flagged {
+		t.Error("the write guard does not flag the Base line that a rewrite would move")
+	}
+}
+
 func TestParseCanonicalTaskDoc(t *testing.T) {
 	got := taskdoc.Parse(example(t, "task.md"))
 

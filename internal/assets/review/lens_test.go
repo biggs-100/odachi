@@ -8,6 +8,28 @@ import (
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 )
 
+// TestEveryLensInheritsTheSameRuleCount: the prompt states six rules once, and
+// every lens summary has to name the same number and include the reviewer's
+// first rule. A lens that says "five" tells the model to inherit a contract with
+// no "do not run anything", which is exactly how a transcript becomes a verdict.
+func TestEveryLensInheritsTheSameRuleCount(t *testing.T) {
+	for _, name := range assets.Names() {
+		body, err := assets.Lens(name)
+		if err != nil {
+			t.Fatalf("lens %s: %v", name, err)
+		}
+		if !strings.Contains(body, "six review rules") {
+			t.Errorf("lens %s does not inherit six rules:\n%s", name, body)
+		}
+		if strings.Contains(body, "five review rules") {
+			t.Errorf("lens %s still says five rules:\n%s", name, body)
+		}
+		if !strings.Contains(body, "run nothing") {
+			t.Errorf("lens %s does not carry the reviewer's first rule:\n%s", name, body)
+		}
+	}
+}
+
 // TestTheFourLensesAreBundled: the binary carries one prompt per specialist, and
 // the names are the ones the domain selects. A lens the selection can pick but
 // the binary cannot load is a dead end at run time.

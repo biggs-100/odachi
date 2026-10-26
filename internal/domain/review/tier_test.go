@@ -29,6 +29,15 @@ func TestTheFilesInitInstallsAreNotACandidate(t *testing.T) {
 		t.Errorf("lenses = %v, want none", lenses)
 	}
 
+	// The directory is not plumbing: a settings file that grants a tool, a config
+	// with a token or a human's agent stays in the candidate, because agent
+	// privileges and secrets live exactly there.
+	for _, path := range []string{".claude/settings.json", ".opencode/config.json"} {
+		if got := review.Classify([]string{path}); got == review.Passive {
+			t.Errorf("Classify(%s) = passive, want the file reviewed", path)
+		}
+	}
+
 	// The fence and .gitignore stay in the candidate: they are human decisions and
 	// an ignore rule changes the bytes the tree covers.
 	if got := review.Classify([]string{".gitignore", ".odachi/fence.toml"}); got == review.Passive {
