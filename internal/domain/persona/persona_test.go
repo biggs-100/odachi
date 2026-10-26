@@ -3,6 +3,7 @@ package persona_test
 import (
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -384,5 +385,23 @@ func TestTheDoorTellsTheAgentToRunTheCommands(t *testing.T) {
 		if !strings.Contains(file.Content, want) {
 			t.Errorf("the door does not contain %q:\n%s", want, file.Content)
 		}
+	}
+}
+
+// TestAgentNamesIsTheClosedSet: the review treats exactly these names as the
+// tool's own plumbing. The set is a contract: a generated agent whose name is not
+// here would be reviewed as if a human wrote it, and a human file whose name is
+// here would disappear from review, which is the defect this list closes.
+func TestAgentNamesIsTheClosedSet(t *testing.T) {
+	want := []string{
+		"odachi.md",
+		"odachi-worker.md",
+		"odachi-verify.md",
+		"odachi-reviewer.md",
+		"odachi-novato.md",
+		"odachi-senior.md",
+	}
+	if got := persona.AgentNames(); !slices.Equal(got, want) {
+		t.Errorf("AgentNames() = %v, want %v", got, want)
 	}
 }

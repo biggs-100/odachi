@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
 // Tier is how much review a candidate asks for, decided by evidence and never by
@@ -296,23 +298,43 @@ func isPlumbing(path string) bool {
 	return false
 }
 
+// agentDirs are the directories whose Markdown is instructions an agent obeys,
+// never documentation. An agent file grants tools and can carry a token in its
+// prompt: a change there decides what the agent may do, so its Markdown is code
+// and reaches a lens. The extension decides for every other directory.
+var agentDirs = map[string]bool{
+	".opencode/agents":      true,
+	".claude/agents":        true,
+	".claude/output-styles": true,
+}
+
 // odachiAgentFile reports whether the path is one of the agent files odachi
-// installs: the odachi-*.md subagents and the primary mirror. A file the human
-// added under the same directory is theirs — agent privileges and secrets live
-// there — so only the generated names are plumbing, never the whole directory.
+// installs: the primary mirror, the subagents and the leftovers of v0.10.0. The
+// names are a closed set, not a prefix. A file the human added under the same
+// directory is theirs — agent privileges and secrets live there — so
+// `odachi-helper.md` is code while `odachi-worker.md` is not.
 func odachiAgentFile(lower string) bool {
-	slash := strings.LastIndex(lower, "/")
-	if slash < 0 {
+	dir := dirOf(lower)
+	if !agentDirs[dir] {
 		return false
 	}
-	dir, base := lower[:slash], lower[slash+1:]
-	switch dir {
-	case ".opencode/agents", ".claude/agents":
-		return strings.HasPrefix(base, "odachi") && strings.HasSuffix(base, ".md")
-	case ".claude/output-styles":
-		return base == "odachi.md"
+	return slices.Contains(persona.AgentNames(), baseOf(lower))
+}
+
+// dirOf is the directory part of a normalized path, without its file name.
+func dirOf(path string) string {
+	if i := strings.LastIndexByte(path, '/'); i >= 0 {
+		return path[:i]
 	}
-	return false
+	return ""
+}
+
+// baseOf is the file name part of a normalized path.
+func baseOf(path string) string {
+	if i := strings.LastIndexByte(path, '/'); i >= 0 {
+		return path[i+1:]
+	}
+	return path
 }
 
 // touchesSignal reports whether any segment of the path starts with a signal.
@@ -337,9 +359,14 @@ func matchedSignal(path string) (string, bool) {
 
 // isDocumentation reports whether the path is a document: Markdown, plain text, a
 // README, or anything inside a docs directory. A `.go` file inside `docs/` is
-// code, so the extension decides before the directory does.
+// code, so the extension decides before the directory does — and an agent file is
+// code even when it is Markdown, because it grants tools.
 func isDocumentation(path string) bool {
 	lower := normalizePath(path)
+	if agentDirs[dirOf(lower)] {
+		return false
+	}
+
 	segments := strings.Split(lower, "/")
 	base := segments[len(segments)-1]
 

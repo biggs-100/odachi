@@ -17,7 +17,10 @@ func TestTheFilesInitInstallsAreNotACandidate(t *testing.T) {
 	installed := []string{
 		"AGENTS.md",
 		".agents/skills/data/SKILL.md",
+		".opencode/agents/odachi.md",
 		".opencode/agents/odachi-worker.md",
+		".opencode/agents/odachi-reviewer.md",
+		".claude/agents/odachi-worker.md",
 		".claude/agents/odachi-verify.md",
 		".claude/output-styles/odachi.md",
 	}
@@ -32,10 +35,22 @@ func TestTheFilesInitInstallsAreNotACandidate(t *testing.T) {
 	// The directory is not plumbing: a settings file that grants a tool, a config
 	// with a token or a human's agent stays in the candidate, because agent
 	// privileges and secrets live exactly there.
-	for _, path := range []string{".claude/settings.json", ".opencode/config.json"} {
+	for _, path := range []string{
+		".claude/settings.json",
+		".opencode/config.json",
+		".opencode/agents/odachi-helper.md", // the prefix is not the rule: this one is the human's
+		".claude/agents/odachi-tools.md",
+		".opencode/agents/helper.md", // nor is the extension: an agent file grants tools
+	} {
 		if got := review.Classify([]string{path}); got == review.Passive {
 			t.Errorf("Classify(%s) = passive, want the file reviewed", path)
 		}
+	}
+
+	// An agent file the human wrote asks for the lens that reads code, not for
+	// silence: it decides what the agent may do.
+	if got := review.Lenses(review.Classify([]string{".opencode/agents/odachi-helper.md"})); !slices.Equal(got, []string{review.Reliability}) {
+		t.Errorf("lenses(.opencode/agents/odachi-helper.md) = %v, want [reliability]", got)
 	}
 
 	// The fence and .gitignore stay in the candidate: they are human decisions and
