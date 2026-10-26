@@ -825,6 +825,24 @@ func TestStartRecordsTheFeatureBase(t *testing.T) {
 	}
 }
 
+// TestStartNamesTheDocumentsItDoesNotRead: a project that keeps ODD names gets
+// the truth once, at the moment it adopts odachi, instead of a summary that
+// counts one feature where there are ten.
+func TestStartNamesTheDocumentsItDoesNotRead(t *testing.T) {
+	var events []string
+	files := newFakeFiles(map[string]string{"odd/tasks/qonta-einvoicing.md": "# qonta-einvoicing\n"}, &events)
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+
+	got := start.Run(start.Options{}, interview, files, nil)
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	block := strings.Join(got.Lines, "\n")
+	if !strings.Contains(block, "not features odachi reads") || !strings.Contains(block, "qonta-einvoicing.md") {
+		t.Errorf("the run does not name the document it skips:\n%s", block)
+	}
+}
+
 // block renders the canonical block for one voice, so the tests compare against
 // the renderer instead of a copy of its text.
 func blockText(t *testing.T, voice string) string {

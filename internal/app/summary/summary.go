@@ -61,9 +61,17 @@ func Run(opts Options, files Files) Result {
 	if err != nil {
 		return Result{Code: CodeBlocked, Message: oneLine(err.Error())}
 	}
+	// The documents odachi does not read are named, never silently skipped: a
+	// project that keeps another shape hears it once instead of wondering why the
+	// count is short.
+	skipped, _ := tasks.Skipped(files, opts.Dir)
 	if len(docs) == 0 {
 		// A project with nothing built yet is a fact, not a failure.
-		return Result{Code: CodeOK, Message: "no features yet: run odachi start to create the first one"}
+		message := "no features yet: run odachi start to create the first one"
+		if line := tasks.SkippedLine(skipped); line != "" {
+			return Result{Code: CodeOK, Message: message, Lines: []string{message, line}}
+		}
+		return Result{Code: CodeOK, Message: message}
 	}
 
 	lines := make([]string, 0, len(docs)*4+2)
@@ -98,6 +106,9 @@ func Run(opts Options, files Files) Result {
 		plural(len(docs), "feature", "features"), totalDone, totalSteps,
 		plural(totalOpen, "open question", "open questions"))
 	lines = append(lines, "", totals)
+	if line := tasks.SkippedLine(skipped); line != "" {
+		lines = append(lines, line)
+	}
 
 	return Result{Code: CodeOK, Message: totals, Lines: lines}
 }

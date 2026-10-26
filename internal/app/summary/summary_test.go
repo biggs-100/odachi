@@ -81,6 +81,40 @@ func TestSummaryOnAProjectWithoutFeaturesSaysSo(t *testing.T) {
 	}
 }
 
+// TestSummaryNamesTheDocumentsItDoesNotRead: a folder with ODD names is not
+// empty, it is a different shape. The report says which documents it skipped
+// instead of counting one feature and letting the other nine disappear.
+func TestSummaryNamesTheDocumentsItDoesNotRead(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		filepath.Join("raiz", "odd", "tasks", "qonta-einvoicing.md"): "# qonta-einvoicing\n",
+		filepath.Join("raiz", "odd", "tasks", "qonta-pos.md"):        "# qonta-pos\n",
+	})
+
+	res := summary.Run(summary.Options{Dir: "raiz"}, files)
+
+	if res.Code != summary.CodeOK {
+		t.Fatalf("Code = %d, want %d", res.Code, summary.CodeOK)
+	}
+	block := strings.Join(res.Lines, "\n")
+	for _, want := range []string{"2 document(s)", "qonta-einvoicing.md", "qonta-pos.md", "odachi start"} {
+		if !strings.Contains(block, want) {
+			t.Errorf("the report does not carry %q:\n%s", want, block)
+		}
+	}
+
+	// A numbered feature plus a foreign document: the totals line stays, and the
+	// note follows it.
+	withFeature := newFakeFiles(map[string]string{
+		taskPath(1, "turnos"): feature("reservar turnos", 0, 1),
+		filepath.Join("raiz", "odd", "tasks", "qonta-pos.md"): "# qonta-pos\n",
+	})
+	got := summary.Run(summary.Options{Dir: "raiz"}, withFeature)
+	last := got.Lines[len(got.Lines)-1]
+	if !strings.Contains(last, "qonta-pos.md") {
+		t.Errorf("the last line is not the note about the skipped document: %q", last)
+	}
+}
+
 // TestSummaryReportsEveryFeature is the derived report: per feature the slug,
 // R1 verbatim, the steps, the open questions and the last three history lines;
 // then one line of totals.
