@@ -9,6 +9,58 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/review"
 )
 
+// TestTheFilesInitInstallsAreNotACandidate: the agent files and the skills odachi
+// installs talk about secrets and commands because that is their job. A tree that
+// only changes them asks for no lens: the tool does not review its own text, and
+// adopting it must not cost a four-lens review before the first line of code.
+func TestTheFilesInitInstallsAreNotACandidate(t *testing.T) {
+	installed := []string{
+		"AGENTS.md",
+		".agents/skills/data/SKILL.md",
+		".opencode/agents/odachi-worker.md",
+		".claude/agents/odachi-verify.md",
+		".claude/output-styles/odachi.md",
+	}
+
+	if got := review.Classify(installed); got != review.Passive {
+		t.Errorf("Classify(installed files) = %q, want passive", got)
+	}
+	if lenses := review.Lenses(review.Classify(installed)); len(lenses) != 0 {
+		t.Errorf("lenses = %v, want none", lenses)
+	}
+
+	// The fence and .gitignore stay in the candidate: they are human decisions and
+	// an ignore rule changes the bytes the tree covers.
+	if got := review.Classify([]string{".gitignore", ".odachi/fence.toml"}); got == review.Passive {
+		t.Errorf("Classify(.gitignore, fence) = passive, want ordinary code to review")
+	}
+
+	// A nested AGENTS.md is a document the human wrote inside the tree; only the
+	// root block init owns is plumbing.
+	if got := review.Classify([]string{"docs/AGENTS.md"}); got != review.Passive {
+		t.Errorf("Classify(docs/AGENTS.md) = %q, want passive as a document", got)
+	}
+}
+
+// TestTheTextInitInstallsDoesNotRaiseTheClass: a skill that says "never hardcode
+// a secret" is the tool's own text, not a security change in this repo. The
+// content signals read the candidate's lines, so the plumbing rows must not be
+// read: adopting odachi used to demand all four lenses on the plan commit
+// because a skill mentioned secrets.
+func TestTheTextInitInstallsDoesNotRaiseTheClass(t *testing.T) {
+	diff := "diff --git a/.agents/skills/data/SKILL.md b/.agents/skills/data/SKILL.md\n" +
+		"--- a/.agents/skills/data/SKILL.md\n+++ b/.agents/skills/data/SKILL.md\n" +
+		"@@ -1 +1,2 @@\n+never hardcode a secret or a token\n"
+	paths := []string{".gitignore", ".agents/skills/data/SKILL.md"}
+
+	if got := review.Assess(paths, diff); got != review.Focused {
+		t.Errorf("Assess = %q, want focused: the tool's own text is not a security change", got)
+	}
+	if reason := review.Reason(paths, diff); strings.Contains(reason, "secrets") {
+		t.Errorf("Reason = %q, want no content signal from the installed files", reason)
+	}
+}
+
 // TestNeedAsksPerFile: coverage is answered per file, so the demand is per file
 // too. Each path answers the lenses its own class requires, and a path whose
 // class asks for nothing never appears: asking a document for a specialist's

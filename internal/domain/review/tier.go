@@ -64,7 +64,7 @@ var signals = []string{
 func Classify(changedPaths []string) Tier {
 	candidate := make([]string, 0, len(changedPaths))
 	for _, path := range changedPaths {
-		if isGeneratedStore(path) {
+		if isPlumbing(path) {
 			continue
 		}
 		candidate = append(candidate, path)
@@ -137,7 +137,7 @@ func Need(changedPaths []string, diff string) map[string][]string {
 func Reason(paths []string, diff string) string {
 	candidate := make([]string, 0, len(paths))
 	for _, path := range paths {
-		if !isGeneratedStore(path) {
+		if !isPlumbing(path) {
 			candidate = append(candidate, path)
 		}
 	}
@@ -266,15 +266,31 @@ func inOrder(names []string) []string {
 	return ordered
 }
 
-// isGeneratedStore reports whether the path belongs to a store this tool writes.
-// Storing a verdict creates .odachi/reviews/.gitignore and running a proof creates
-// proof/.gitignore; both are plumbing, and counting them as changes turned a
-// documentation-only candidate into a focused review the second time it was asked.
-// Everything else under .odachi/ is a human decision (the fence, the profile) and
-// stays in the candidate.
-func isGeneratedStore(path string) bool {
+// isPlumbing reports whether the path is machinery odachi or its init writes,
+// not work the human asked for: the review store, the proofs, and the agent
+// files and skills init installs. A project that adopts odachi must not be
+// charged a review for the tool's own prompt text - a skill that mentions
+// secrets is not a security change to this codebase - and the tool must not
+// review itself into the candidate.
+//
+// Everything else under .odachi/ is a human decision (the fence, the profile)
+// and stays in the candidate, and so does .gitignore: an ignore rule changes the
+// bytes the tree covers, so it is never plumbing.
+func isPlumbing(path string) bool {
 	lower := normalizePath(path)
-	return strings.HasPrefix(lower, Dir+"/") || strings.HasPrefix(lower, "proof/")
+	switch {
+	case strings.HasPrefix(lower, Dir+"/"), strings.HasPrefix(lower, "proof/"):
+		return true
+	case strings.HasPrefix(lower, ".agents/"),
+		strings.HasPrefix(lower, ".opencode/"),
+		strings.HasPrefix(lower, ".claude/"):
+		return true
+	case lower == "agents.md":
+		// The root block is instructions to the agent, not the product; a nested
+		// AGENTS.md inside the tree is code the human wrote and is reviewed.
+		return true
+	}
+	return false
 }
 
 // touchesSignal reports whether any segment of the path starts with a signal.

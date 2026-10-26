@@ -4,7 +4,7 @@
 - adopting odachi in a real repo does not over-review what init wrote, does not leave a stale proof unexplained, and installs a reviewer that cannot change the tree
 
 ## Done when
-- the paths init writes are plumbing, not candidate: a plan commit that only adds them asks for no lens
+- the files init installs (agent files and skills) are plumbing, not candidate: a tree that only changes them asks for no lens
 - a stale proof names the paths that differ between the proof's tree and this one
 - init installs a reviewer agent that cannot edit files or run commands, in both clients
 - the README says how to run the review with that agent
