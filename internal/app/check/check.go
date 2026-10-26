@@ -224,6 +224,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	if problem != nil {
 		return *problem
 	}
+	r.feature = feature
 	if feature != nil {
 		state.OpenQuestions = len(feature.Doc.OpenQuestions())
 	}
@@ -325,11 +326,14 @@ func (r *runner) ensureProofDir() *Result {
 
 // runner holds the facts of one run.
 type runner struct {
-	opts     Options
-	files    Files
-	git      Git
-	shell    Shell
-	tree     string
+	opts  Options
+	files Files
+	git   Git
+	shell Shell
+	tree  string
+	// feature is the open task document: the gate counts its open questions, and
+	// the report names them. The domain gate reads no files, so the words live here.
+	feature  *tasks.Document
 	proofRel string
 	// failedRel is the failed output written by this run, empty when the run
 	// passed or the output could not be kept.
@@ -1065,6 +1069,17 @@ func (r *runner) changedSince(from, to string) string {
 }
 
 // report turns the gate's verdict into the verb's result.
+// openQuestions is what the gate only counts: the words the human is being asked.
+// It answers nothing and writes nothing; it only makes the block readable.
+func (r *runner) openQuestions(verdict gate.Result) []taskdoc.Question {
+	if verdict.Reason != gate.ReasonOpenQuestion || r.feature == nil {
+		return nil
+	}
+	return r.feature.Doc.OpenQuestions()
+}
+
+// report is the block the human reads: the message, what moved, and the command
+// that unblocks it.
 func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	result := Result{
 		Code:    int(verdict.Code),
@@ -1075,13 +1090,25 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 
 	if verdict.Code != gate.Ready {
 		result.Lines = []string{verdict.Message}
+		// The gate counts what blocks; the document knows the words. A block that
+		// only counts sends the human to read a file to discover what they are
+		// being asked, and to guess the command that answers it.
+		questions := r.openQuestions(verdict)
+		for _, question := range questions {
+			result.Lines = append(result.Lines, fmt.Sprintf("%s · %q", question.ID, question.Text))
+		}
 		if r.staleNote != "" {
 			result.Lines = append(result.Lines, "changed since the proof: "+r.staleNote)
 		}
 		if r.failedRel != "" {
 			result.Lines = append(result.Lines, "output: "+r.failedRel)
 		}
-		result.Lines = append(result.Lines, "next: "+verdict.Next)
+		next := verdict.Next
+		if len(questions) > 0 {
+			next = fmt.Sprintf("odachi ask --answer \"<answer>\" --for %s", questions[0].ID)
+			result.Next = next
+		}
+		result.Lines = append(result.Lines, "next: "+next)
 		return result
 	}
 

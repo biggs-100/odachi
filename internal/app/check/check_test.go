@@ -274,6 +274,35 @@ func run(t *testing.T, files *fakeFiles, git *fakeGit, opts check.Options) check
 	return check.Run(opts, files, git, &fakeShell{})
 }
 
+// TestTheBlockNamesTheOpenQuestions: the gate counts them; the task doc knows the
+// words. A block that says "1 unanswered question" and hands a bare `ask` sends the
+// human to read the file to discover the question and to guess the command that
+// answers it.
+func TestTheBlockNamesTheOpenQuestions(t *testing.T) {
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = featureDoc(
+		`L1 · PREGUNTA P1 · "¿Los turnos se pueden cancelar?"`,
+		`L2 · PREGUNTA P2 · "¿Quién puede cancelar?"`,
+	)
+
+	got := run(t, newFakeFiles(files), &fakeGit{tree: currentTree}, check.Options{})
+
+	lines := strings.Join(got.Lines, "\n")
+	for _, want := range []string{
+		"2 unanswered questions",
+		`P1 · "¿Los turnos se pueden cancelar?"`,
+		`P2 · "¿Quién puede cancelar?"`,
+		`next: odachi ask --answer "<answer>" --for P1`,
+	} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("the block does not say %q:\n%s", want, lines)
+		}
+	}
+	if got.Next != `odachi ask --answer "<answer>" --for P1` {
+		t.Errorf("Next = %q, want the form that answers the first question", got.Next)
+	}
+}
+
 // TestTheEightResults is the whole gate table through the app: ready, no brief,
 // brief incomplete, out of scope, open question, missing proof, stale proof and
 // failed proof.
@@ -353,7 +382,7 @@ deps  = ["stripe"]
 			code:    int(gate.NeedsDecision),
 			reason:  gate.ReasonOpenQuestion,
 			message: "1 unanswered question",
-			next:    "odachi ask \"<your decision>\"",
+			next:    `odachi ask --answer "<answer>" --for P1`,
 		},
 		{
 			name:    "missing proof",
