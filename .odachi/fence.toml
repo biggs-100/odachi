@@ -1,24 +1,24 @@
 [[rule]]
-not   = "the human lines of check"
-paths = ["the-human-lines-of-check*"]
+not   = "review --feature and its base"
+paths = ["review-feature-and-its-base*"]
 deps  = []
 
 [[rule]]
-not   = "the exit codes"
-paths = ["the-exit-codes*"]
+not   = "summary"
+paths = ["summary*"]
 deps  = []
 
 [[rule]]
-not   = "progress --json"
-paths = ["progress-json*"]
+not   = "a pointer file"
+paths = ["a-pointer-file*"]
+deps  = []
+
+[[rule]]
+not   = "the numbering"
+paths = ["the-numbering*"]
 deps  = []
 
 [[rule]]
 not   = "the panel itself"
 paths = ["the-panel-itself*"]
-deps  = []
-
-[[rule]]
-not   = "a schema version"
-paths = ["a-schema-version*"]
 deps  = []
