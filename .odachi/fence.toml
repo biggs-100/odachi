@@ -1,19 +1,19 @@
 [[rule]]
-not   = "the gate's domain rule: it keeps the count"
-paths = ["the-gate-s-domain-rule-it-keeps-the-count*"]
+not   = "the gate domain rule, which keeps counting"
+paths = ["the-gate-domain-rule-which-keeps-counting*"]
 deps  = []
 
 [[rule]]
-not   = "the output format of ask"
-paths = ["the-output-format-of-ask*"]
+not   = "answering a question from progress: it only reports"
+paths = ["answering-a-question-from-progress-it-only-reports*"]
 deps  = []
 
 [[rule]]
-not   = "answering from check: it only reports"
-paths = ["answering-from-check-it-only-reports*"]
+not   = "the answer command in the state: the id is enough"
+paths = ["the-answer-command-in-the-state-the-id-is-enough*"]
 deps  = []
 
 [[rule]]
-not   = "progress"
-paths = ["progress*"]
+not   = "the plugin itself"
+paths = ["the-plugin-itself*"]
 deps  = []
