@@ -8,6 +8,9 @@ build with no focused test is not verification.
 3. Build — `go build ./...`
 4. Vet — `go vet ./...`
 5. Behaviour probe — run the command a human would run and read the output.
+6. Review debt — at close, copy into `docs/review-debt.md` the potent rows the
+   review store still holds about unchanged bytes, and drop the rows whose bytes
+   changed. The store is per machine and ignored; that file travels.
 
 ## Rules
 
