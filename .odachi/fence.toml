@@ -1,14 +1,14 @@
 [[rule]]
-not   = "the TUI plugin and its npm packaging: another project"
-paths = ["the-tui-plugin-and-its-npm-packaging-another-project*"]
+not   = "new states or fields"
+paths = ["new-states-or-fields*"]
 deps  = []
 
 [[rule]]
-not   = "new facts the report does not already know"
-paths = ["new-facts-the-report-does-not-already-know*"]
+not   = "the plugin itself"
+paths = ["the-plugin-itself*"]
 deps  = []
 
 [[rule]]
-not   = "changing the human wording or the exit code"
-paths = ["changing-the-human-wording-or-the-exit-code*"]
+not   = "changing the wording"
+paths = ["changing-the-wording*"]
 deps  = []
