@@ -12,7 +12,7 @@ R1 · "the questions arrive in the report with their id and their words, not onl
 ## Steps
 - [x] T1 · the state carries each open question with its id and its words   R1 · 1002a92
 - [x] T2 · the human report names them from the same state, and says nothing when there are none   R1 · 00fb4ee
-- [ ] T3 · the review gate compares bases by commit, not by their spelling
+- [x] T3 · the review gate compares bases by commit, not by their spelling   · b829f88
 
 ## History
 L1 · "the questions arrive in the report with their id and their words, not only their count"
