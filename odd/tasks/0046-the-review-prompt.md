@@ -12,7 +12,7 @@ R1 · "the review prompt carries each row of the store once, not once per verdic
 - tests pin the duplicate, the merge and the order
 
 ## Steps
-- [ ] T1 · the carried section lists each row once, and two runs print the same prompt   R1
+- [x] T1 · the carried section lists each row once, and two runs print the same prompt   R1 · fff095c
 - [ ] T2 · two rows that differ in any part both survive: the dedupe never merges an answer   R1
 
 ## History
