@@ -1,21 +1,21 @@
-# a-generated-agent
+# the-three-branches
 
 ## What must exist
-- a generated agent file is matched by its exact name, so the human file is never skipped
+- the three branches the review named are driven by a test
 
 ## Done when
-- the names odachi writes are listed once, and the review treats only those as plumbing
-- a human file such as .opencode/agents/odachi-helper.md reaches a lens instead of disappearing
-- the generated files of both clients keep the classification they had
+- a list longer than the limit prints the first three and names the rest
+- a task list that cannot be read is a broken check, not a clean project
+- a refusal names the kept file only when it was kept, and a store that fails writes nothing
 
 ## Not included (first version)
-- the leftovers outside the agents directories
-- the other carried findings
-- the review store and its portability
-- the names a client may add in the future
+- the proof header ambiguity
+- the review store and the ledger
+- the wording of the refusal
+- the verdict receipts
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a closed set replaces a prefix, and why the default matters more than the rule.
+- Wants to learn: how a test kills a branch that looks harmless.

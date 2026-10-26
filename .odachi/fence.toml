@@ -1,19 +1,19 @@
 [[rule]]
-not   = "the leftovers outside the agents directories"
-paths = ["the-leftovers-outside-the-agents-directories*"]
+not   = "the proof header ambiguity"
+paths = ["the-proof-header-ambiguity*"]
 deps  = []
 
 [[rule]]
-not   = "the other carried findings"
-paths = ["the-other-carried-findings*"]
+not   = "the review store and the ledger"
+paths = ["the-review-store-and-the-ledger*"]
 deps  = []
 
 [[rule]]
-not   = "the review store and its portability"
-paths = ["the-review-store-and-its-portability*"]
+not   = "the wording of the refusal"
+paths = ["the-wording-of-the-refusal*"]
 deps  = []
 
 [[rule]]
-not   = "the names a client may add in the future"
-paths = ["the-names-a-client-may-add-in-the-future*"]
+not   = "the verdict receipts"
+paths = ["the-verdict-receipts*"]
 deps  = []
