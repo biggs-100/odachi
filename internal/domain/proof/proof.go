@@ -130,6 +130,14 @@ func Parse(text string) (Proof, error) {
 	// The terminator is optional: a proof written before it existed ends its
 	// headers wherever they stop, and that file keeps its old reading.
 	//
+	// The one ambiguity is that file's. With no terminator, a first output line
+	// that is exactly `# output` cannot be told from the header, so it is consumed.
+	// It reaches only a proof written before 2026-10-25 -the terminator arrived
+	// with 50cb850- and never one this version writes: the writer always writes
+	// the terminator, so the command's line is the second one and survives. It
+	// costs a line of the quotation, never the gate: validity is the tree, not the
+	// text. Documented in docs/review-debt.md as accepted.
+	//
 	// A model line only exists in the format with the terminator. In an older
 	// proof a line that looks like one is part of the output — the old writer
 	// never wrote that header — and dropping it would corrupt the quotation.
