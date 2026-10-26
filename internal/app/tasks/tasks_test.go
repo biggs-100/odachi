@@ -158,3 +158,24 @@ func TestAllOnAnEmptyProjectIsEmpty(t *testing.T) {
 		t.Errorf("All = %+v, want nothing", all)
 	}
 }
+
+// TestTheLongListCountsTheRest: a folder with more foreign documents than the
+// line can hold still prints one line. The first three are named, the rest are
+// counted; an off-by-one here would misname the documents of doctor, start and
+// summary with every test green.
+func TestTheLongListCountsTheRest(t *testing.T) {
+	line := tasks.SkippedLine([]string{"a.md", "b.md", "c.md", "d.md", "e.md"})
+
+	if !strings.Contains(line, "a.md, b.md, c.md and 2 more") {
+		t.Errorf("SkippedLine = %q, want the first three and the rest counted", line)
+	}
+	if strings.Contains(line, "d.md") || strings.Contains(line, "e.md") {
+		t.Errorf("SkippedLine = %q, want the tail counted, not listed", line)
+	}
+
+	// The limit itself is silent: three names are three names, not "and 0 more".
+	exact := tasks.SkippedLine([]string{"a.md", "b.md", "c.md"})
+	if strings.Contains(exact, "more") {
+		t.Errorf("SkippedLine = %q, want no remainder when the list fits", exact)
+	}
+}
