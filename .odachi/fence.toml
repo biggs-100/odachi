@@ -1,14 +1,14 @@
 [[rule]]
-not   = "the refusal message and the store layout"
-paths = ["the-refusal-message-and-the-store-layout*"]
+not   = "the TUI plugin and its npm packaging: another project"
+paths = ["the-tui-plugin-and-its-npm-packaging-another-project*"]
 deps  = []
 
 [[rule]]
-not   = "new behaviour in check or progress"
-paths = ["new-behaviour-in-check-or-progress*"]
+not   = "new facts the report does not already know"
+paths = ["new-facts-the-report-does-not-already-know*"]
 deps  = []
 
 [[rule]]
-not   = "the boundary walk over older verdicts"
-paths = ["the-boundary-walk-over-older-verdicts*"]
+not   = "changing the human wording or the exit code"
+paths = ["changing-the-human-wording-or-the-exit-code*"]
 deps  = []
