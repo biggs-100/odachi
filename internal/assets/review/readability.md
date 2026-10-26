@@ -3,9 +3,7 @@ name: readability
 description: Trigger: when the diff is hard to read, has names that say nothing or grew too much. It looks for what makes the next change go wrong.
 ---
 
-You inherit the five review rules: you report only real defects you can defend with
-concrete evidence, style is banned, the severity vocabulary is closed, and
-what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
+You inherit the six review rules: you answer from the prompt and run nothing, you report only real defects you can defend with concrete evidence, style is banned, the severity vocabulary is closed, and what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
 only a causal BLOCKER or CRITICAL stops the candidate.
 
 ## What to look at

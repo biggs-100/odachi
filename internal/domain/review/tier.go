@@ -281,14 +281,36 @@ func isPlumbing(path string) bool {
 	switch {
 	case strings.HasPrefix(lower, Dir+"/"), strings.HasPrefix(lower, "proof/"):
 		return true
-	case strings.HasPrefix(lower, ".agents/"),
-		strings.HasPrefix(lower, ".opencode/"),
-		strings.HasPrefix(lower, ".claude/"):
-		return true
 	case lower == "agents.md":
 		// The root block is instructions to the agent, not the product; a nested
 		// AGENTS.md inside the tree is code the human wrote and is reviewed.
 		return true
+	case strings.HasPrefix(lower, ".agents/skills/"):
+		// Skills are instructions to the agent. Their examples talk about money,
+		// secrets and concurrency as their subject, not as this repo's change, and
+		// a security lens that reads them reviews the skill's prose, not the tree.
+		return true
+	case odachiAgentFile(lower):
+		return true
+	}
+	return false
+}
+
+// odachiAgentFile reports whether the path is one of the agent files odachi
+// installs: the odachi-*.md subagents and the primary mirror. A file the human
+// added under the same directory is theirs — agent privileges and secrets live
+// there — so only the generated names are plumbing, never the whole directory.
+func odachiAgentFile(lower string) bool {
+	slash := strings.LastIndex(lower, "/")
+	if slash < 0 {
+		return false
+	}
+	dir, base := lower[:slash], lower[slash+1:]
+	switch dir {
+	case ".opencode/agents", ".claude/agents":
+		return strings.HasPrefix(base, "odachi") && strings.HasSuffix(base, ".md")
+	case ".claude/output-styles":
+		return base == "odachi.md"
 	}
 	return false
 }

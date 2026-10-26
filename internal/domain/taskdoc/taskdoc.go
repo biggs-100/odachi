@@ -101,6 +101,11 @@ func section(header string) string {
 func Parse(md string) TaskDoc {
 	var d TaskDoc
 	current := ""
+	// preamble is the only place the base line is read: after the title and
+	// before the first section. `current == ""` is not enough, because an unknown
+	// header or a `###` note also clears it, and a note later in the document
+	// would become the commit the closing gate must name.
+	preamble := true
 
 	for _, raw := range strings.Split(md, "\n") {
 		line := strings.TrimSpace(strings.TrimSuffix(raw, "\r"))
@@ -110,6 +115,7 @@ func Parse(md string) TaskDoc {
 
 		if strings.HasPrefix(line, "## ") {
 			current = section(line)
+			preamble = false
 			continue
 		}
 		if strings.HasPrefix(line, headerTitle) {
@@ -125,7 +131,7 @@ func Parse(md string) TaskDoc {
 		// The base lives in the preamble, between the title and the first
 		// section. Only that position is read: a "Base: " inside the history is
 		// prose the human wrote, not a field.
-		if current == "" && strings.HasPrefix(line, basePrefix) {
+		if preamble && strings.HasPrefix(line, basePrefix) {
 			d.Base = strings.TrimSpace(strings.TrimPrefix(line, basePrefix))
 			continue
 		}

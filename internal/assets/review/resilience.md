@@ -3,9 +3,7 @@ name: resilience
 description: Trigger: when the diff adds a remote call, a write, a retry or background work. It looks for what breaks when something fails halfway.
 ---
 
-You inherit the five review rules: you report only real defects you can defend with
-concrete evidence, style is banned, the severity vocabulary is closed, and
-what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
+You inherit the six review rules: you answer from the prompt and run nothing, you report only real defects you can defend with concrete evidence, style is banned, the severity vocabulary is closed, and what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
 only a causal BLOCKER or CRITICAL stops the candidate.
 
 ## What to look at

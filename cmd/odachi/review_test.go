@@ -428,6 +428,44 @@ func TestReviewModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	}
 }
 
+// TestStartWritesTheFeatureBaseEndToEnd: the wiring that reads HEAD before the
+// task doc is written is the whole of "the document records where its feature
+// started". Without it every document ships an empty base and the gate silently
+// falls back to a verdict per tree, which is the regression the once-per-feature
+// gate exists to prevent.
+func TestStartWritesTheFeatureBaseEndToEnd(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeFile(t, dir, "README.md", "# demo\n")
+	commitAll(t, dir, "base")
+	base := headOf(t, dir)
+
+	code, out, errOut := runDir(t, dir, []string{
+		"start", "--force",
+		"--outcome", "the base line is recorded",
+		"--audience", "cpu",
+		"--done", "the document names the commit the feature started from",
+		"--exclude", "no UI",
+		"--sensitive", "none",
+		"--deadline", "today",
+		"--learn", "how the base is read",
+	}, "")
+	if code != 0 {
+		t.Fatalf("start: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	path := filepath.Join(dir, "odd", "tasks", "0001-the-base-line.md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("the task doc was not written: %v", err)
+	}
+	doc := taskdoc.Parse(string(data))
+	if doc.Base != base {
+		t.Errorf("Base = %q, want the commit the feature started from %q", doc.Base, base)
+	}
+}
+
 // TestReviewModeRejectsAMangledSwitch: a typo in a human file blocks instead of
 // silently meaning off.
 func TestReviewModeRejectsAMangledSwitch(t *testing.T) {

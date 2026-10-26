@@ -24,6 +24,9 @@ func Unaccounted(md string) []string {
 
 	var out []string
 	current := ""
+	// preamble mirrors Parse: only the lines between the title and the first
+	// section can be the base field, so every other position is unaccounted.
+	preamble := true
 
 	for i, line := range lines {
 		if line == "" {
@@ -32,6 +35,7 @@ func Unaccounted(md string) []string {
 
 		if strings.HasPrefix(line, "## ") {
 			current = section(line)
+			preamble = false
 			if current == "" {
 				out = append(out, line)
 			}
@@ -68,7 +72,7 @@ func Unaccounted(md string) []string {
 		default:
 			// The base line is the one preamble line Parse reads; anything else
 			// outside the canonical sections is lost by a rewrite.
-			if current == "" && strings.HasPrefix(line, basePrefix) {
+			if preamble && strings.HasPrefix(line, basePrefix) {
 				continue
 			}
 			out = append(out, line)

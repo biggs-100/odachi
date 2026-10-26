@@ -15,7 +15,7 @@ R1 · "adopting odachi in a real repo does not over-review what init wrote, does
 ## Steps
 - [x] T1 · the paths init writes are plumbing, not candidate, so the plan commit asks for no lens   R1 · 02f5dc6
 - [x] T2 · a stale proof names the paths that differ, instead of only saying the code moved   R1 · 63fc5b6
-- [ ] T3 · init installs a read-only reviewer agent and the README says how to run it   R1
+- [x] T3 · init installs a read-only reviewer agent and the README says how to run it   R1 · bc87c31
 
 ## History
 L1 · "adopting odachi in a real repo does not over-review what init wrote, does not leave a stale proof unexplained, and installs a reviewer that cannot change the tree"
