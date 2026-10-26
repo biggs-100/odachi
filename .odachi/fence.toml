@@ -1,14 +1,19 @@
 [[rule]]
-not   = "new states or fields"
-paths = ["new-states-or-fields*"]
+not   = "the gate's domain rule: it keeps the count"
+paths = ["the-gate-s-domain-rule-it-keeps-the-count*"]
 deps  = []
 
 [[rule]]
-not   = "the plugin itself"
-paths = ["the-plugin-itself*"]
+not   = "the output format of ask"
+paths = ["the-output-format-of-ask*"]
 deps  = []
 
 [[rule]]
-not   = "changing the wording"
-paths = ["changing-the-wording*"]
+not   = "answering from check: it only reports"
+paths = ["answering-from-check-it-only-reports*"]
+deps  = []
+
+[[rule]]
+not   = "progress"
+paths = ["progress*"]
 deps  = []
