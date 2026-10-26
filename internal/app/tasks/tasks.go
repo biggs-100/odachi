@@ -160,11 +160,18 @@ func Feature(files Files, dir string, number int) (Document, error) {
 		return Document{}, fmt.Errorf("there is no task doc in %s yet; run odachi start to create the first one", Dir)
 	}
 
+	return Document{}, fmt.Errorf("%s", NotFound(docs, number))
+}
+
+// NotFound is the sentence for a number the project does not have: a selector
+// that answers nothing leaves the human guessing which numbers exist, and the
+// highest is not an answer to "give me 0001".
+func NotFound(docs []Document, number int) string {
 	names := make([]string, 0, len(docs))
 	for _, doc := range docs {
 		names = append(names, fmt.Sprintf("%04d-%s", doc.Number, doc.Slug))
 	}
-	return Document{}, fmt.Errorf("there is no feature %04d in %s; the ones odachi reads are %s", number, Dir, fewNames(names))
+	return fmt.Sprintf("there is no feature %04d in %s; the ones odachi reads are %s", number, Dir, fewNames(names))
 }
 
 // parseName reads NNNN-<slug>.md. Anything else in the directory — a backup, a

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,6 +63,39 @@ func TestAFeatureCanBeChosenByItsNumber(t *testing.T) {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("stderr %q does not name %q", errOut, want)
 		}
+	}
+
+	// The gate judges the one named: 0001 holds the open question, 0002 does not.
+	code, _, errOut = runDir(t, dir, []string{"check", "--feature", "1"}, "")
+	if code != 2 {
+		t.Fatalf("check --feature 1 = %d, want 2: its own question blocks", code)
+	}
+	if !strings.Contains(errOut, "¿y esto?") {
+		t.Errorf("check --feature 1 does not name its question: %q", errOut)
+	}
+	code, _, errOut = runDir(t, dir, []string{"check", "--feature", "2"}, "")
+	if code != 1 {
+		t.Fatalf("check --feature 2 = %d, want 1: its proof is missing", code)
+	}
+	if strings.Contains(errOut, "¿y esto?") {
+		t.Errorf("check --feature 2 judged 0001's question: %q", errOut)
+	}
+
+	// The report describes the one named, as data too.
+	code, out, errOut := runDir(t, dir, []string{"progress", "--feature", "1", "--json"}, "")
+	if code != 0 {
+		t.Fatalf("progress --feature 1: %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	var machine struct {
+		State struct {
+			Number int `json:"number"`
+		} `json:"state"`
+	}
+	if err := json.Unmarshal([]byte(out), &machine); err != nil {
+		t.Fatalf("progress --json is not JSON: %v\n%s", err, out)
+	}
+	if machine.State.Number != 1 {
+		t.Errorf("progress --feature 1 reports feature %d, want 1", machine.State.Number)
 	}
 }
 

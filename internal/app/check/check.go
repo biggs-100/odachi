@@ -82,6 +82,10 @@ const nextReview = "odachi review"
 type Options struct {
 	Dir string
 
+	// Feature is the number of the task document this run judges. Zero means the
+	// highest, which is the feature the human is working on now.
+	Feature int
+
 	// Run is the command to run. Its exit code is never the exit code of
 	// `check`: the gate decides, and a failing command is a failed proof.
 	Run string
@@ -451,9 +455,10 @@ func (r *runner) fenceViolations() ([]string, *Result) {
 	return messages, nil
 }
 
-// currentFeature is the highest-numbered task document: the feature the human
-// is working on now. No document is not an error — a project with no features
-// yet has no open questions and can still be verified.
+// currentFeature is the feature this run judges: the one the caller selected, or
+// the highest-numbered task document -the feature the human is working on now-.
+// No document is not an error: a project with no features yet has no open
+// questions and can still be verified.
 func (r *runner) currentFeature() (*tasks.Document, *Result) {
 	docs, err := tasks.All(r.files, r.opts.Dir)
 	if err != nil {
@@ -463,7 +468,16 @@ func (r *runner) currentFeature() (*tasks.Document, *Result) {
 	if len(docs) == 0 {
 		return nil, nil
 	}
-	return &docs[len(docs)-1], nil
+	if r.opts.Feature <= 0 {
+		return &docs[len(docs)-1], nil
+	}
+	for i := range docs {
+		if docs[i].Number == r.opts.Feature {
+			return &docs[i], nil
+		}
+	}
+	problem := blocked(tasks.NotFound(docs, r.opts.Feature))
+	return nil, &problem
 }
 
 // recordedProof is the proof already on disk for this feature. Without --proof
