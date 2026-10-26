@@ -1,24 +1,29 @@
 [[rule]]
-not   = "searching the store for a verdict of another tree"
-paths = ["searching-the-store-for-a-verdict-of-another-tree*"]
+not   = "reading ODD task docs without a number: a separate product decision"
+paths = ["reading-odd-task-docs-without-a-number-a-separate-product-decision*"]
 deps  = []
 
 [[rule]]
-not   = "a shared or remote store"
-paths = ["a-shared-or-remote-store*"]
+not   = "changing the slug rule"
+paths = ["changing-the-slug-rule*"]
 deps  = []
 
 [[rule]]
-not   = "changing CI or the release workflow"
-paths = ["changing-ci-or-the-release-workflow*"]
+not   = "a shared or remote review store"
+paths = ["a-shared-or-remote-review-store*"]
 deps  = []
 
 [[rule]]
-not   = "rewriting closed task docs"
-paths = ["rewriting-closed-task-docs*"]
+not   = "changing the lens vocabulary"
+paths = ["changing-the-lens-vocabulary*"]
 deps  = []
 
 [[rule]]
-not   = "changing the lens selection"
-paths = ["changing-the-lens-selection*"]
+not   = "running reviews automatically"
+paths = ["running-reviews-automatically*"]
+deps  = []
+
+[[rule]]
+not   = "the transaction store gentle-ai has"
+paths = ["the-transaction-store-gentle-ai-has*"]
 deps  = []
