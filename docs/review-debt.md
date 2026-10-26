@@ -9,17 +9,30 @@ does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after v0.11.28, closing feature 0057.
+Last written: after v0.11.28, closing feature 0058.
 
 ## Open
 
-### WARNING · internal/domain/proof/proof.go:137 · reliability
+Nothing. Every row the store carried about unchanged bytes has a test or a
+decision.
 
-An older proof -written before the `# output` terminator existed- whose command
-output begins with the literal line `# output` is parsed as if that line were the
-terminator: the line silently disappears from the recorded output. The format
-cannot tell the two apart by itself, so the fix is a decision, not a patch: keep
-the ambiguity and say so, or version the header.
+## Accepted
+
+### internal/domain/proof/proof.go · the terminator in an old proof's first output line
+
+An old proof -written before 2026-10-25, when the `# output` terminator arrived
+(50cb850)- whose command output starts with the literal line `# output` loses that
+line when parsed: with no terminator, the format cannot tell the header from the
+command's own line.
+
+Accepted, not fixed. A proof this version writes always carries the terminator, so
+the command's line is the second one and survives; a test pins the round trip. The
+gate compares the tree, never the text, so no proof is accepted or refused because
+of this. The files it can still reach were written by an older binary and not
+regenerated since, and the next `check --run` overwrites them. A length-prefixed
+header would remove the ambiguity and detect a truncated proof as well; it is a
+format change for a case this narrow, and it can wait until the format changes for
+another reason.
 
 ## Closed by feature 0057
 

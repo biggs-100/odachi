@@ -94,6 +94,22 @@ func TestAnOlderProofWithoutTheModelLineStillParses(t *testing.T) {
 	}
 }
 
+// TestATerminatorLineInTheOutputSurvivesTheRoundTrip: the writer always writes the
+// terminator, so a command whose first output line is the terminator produces two
+// identical lines and the parser consumes only the first. The older test covers a
+// header-looking line; this one covers the header the parser actually reads.
+func TestATerminatorLineInTheOutputSurvivesTheRoundTrip(t *testing.T) {
+	p := proof.Proof{Tree: "4a1c9f", Command: "printf '# output\\nok\\n'", Output: "# output\nok\n"}
+
+	back, err := proof.Parse(proof.Render(p))
+	if err != nil {
+		t.Fatalf("Parse(Render(x)) = %v", err)
+	}
+	if back.Output != "# output\nok\n" {
+		t.Errorf("Output = %q, want the command's line kept", back.Output)
+	}
+}
+
 // A proof without the tree header cannot say which tree produced it, and
 // guessing is the defect this tool exists to prevent.
 func TestParseRefusesAFileWithoutTheTreeHeader(t *testing.T) {
