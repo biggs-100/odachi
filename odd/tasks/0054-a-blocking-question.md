@@ -11,7 +11,7 @@ R1 · "a blocking question arrives with its text, not only its count"
 - tests pin the name, the count and the silence
 
 ## Steps
-- [ ] T1 · check names the open questions and the command that answers each one   R1
+- [x] T1 · check names the open questions and the command that answers each one   R1 · 1422095
 
 ## History
 L1 · "a blocking question arrives with its text, not only its count"
