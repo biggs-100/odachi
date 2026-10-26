@@ -1,25 +1,23 @@
-# odachi-progress-says
+# progress-says-the
 
 ## What must exist
-- odachi progress says where the open feature stands and what it still owes
+- progress says the same verdict the gate would use, and never invents one it could not read
 
 ## Done when
-- it names the open feature and counts the steps done
-- it names the commit of each done step
-- it says whether this tree has a proof of its own
-- it says whether the review is due and whether a verdict exists
-- it writes nothing: progress only reads
-- a project with no feature says so instead of printing an empty report
-- tests pin the report, the silence and the no-writes
+- progress asks the gate's own rule whether this tree owes a verdict, and says the same
+- the documents after the close do not reopen it: progress says so instead of owed
+- when the store cannot be read, progress says so instead of claiming a verdict is owed
+- an open feature and a tree with its own verdict are reported as today
+- tests pin the agreement, the unreadable store and the silence
 
 ## Not included (first version)
-- changing summary, start or check
-- showing closed features
-- reading the proof output or the verdict findings
-- an exit code for scripts
+- the gate rule: progress reads it and does not change it
+- walking the ancestry for an older verdict: the gate has no such rule
+- reading the verdict findings
+- changing review, check or summary behaviour
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how to count a state without inventing it.
+- Wants to learn: how a report stays honest by asking the owner.
