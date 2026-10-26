@@ -1,19 +1,19 @@
 [[rule]]
-not   = "the gate domain rule, which keeps counting"
-paths = ["the-gate-domain-rule-which-keeps-counting*"]
+not   = "the leftovers outside the agents directories"
+paths = ["the-leftovers-outside-the-agents-directories*"]
 deps  = []
 
 [[rule]]
-not   = "answering a question from progress: it only reports"
-paths = ["answering-a-question-from-progress-it-only-reports*"]
+not   = "the other carried findings"
+paths = ["the-other-carried-findings*"]
 deps  = []
 
 [[rule]]
-not   = "the answer command in the state: the id is enough"
-paths = ["the-answer-command-in-the-state-the-id-is-enough*"]
+not   = "the review store and its portability"
+paths = ["the-review-store-and-its-portability*"]
 deps  = []
 
 [[rule]]
-not   = "the plugin itself"
-paths = ["the-plugin-itself*"]
+not   = "the names a client may add in the future"
+paths = ["the-names-a-client-may-add-in-the-future*"]
 deps  = []
