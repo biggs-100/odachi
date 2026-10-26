@@ -1,19 +1,14 @@
 [[rule]]
-not   = "the coverage rule and the wording of the refusal"
-paths = ["the-coverage-rule-and-the-wording-of-the-refusal*"]
+not   = "the refusal message and the store layout"
+paths = ["the-refusal-message-and-the-store-layout*"]
 deps  = []
 
 [[rule]]
-not   = "re-running the reviewer automatically"
-paths = ["re-running-the-reviewer-automatically*"]
+not   = "new behaviour in check or progress"
+paths = ["new-behaviour-in-check-or-progress*"]
 deps  = []
 
 [[rule]]
-not   = "deleting refused answers by age or size"
-paths = ["deleting-refused-answers-by-age-or-size*"]
-deps  = []
-
-[[rule]]
-not   = "the layout of sealed verdicts"
-paths = ["the-layout-of-sealed-verdicts*"]
+not   = "the boundary walk over older verdicts"
+paths = ["the-boundary-walk-over-older-verdicts*"]
 deps  = []
