@@ -24,6 +24,12 @@ const CodeOK = 0
 type Options struct {
 	Dir        string
 	ReviewMode bool
+
+	// Review answers the question the gate answers: does this tree owe a
+	// verdict, and which base must that review name? The caller wires the gate's
+	// own rule in. A report that re-derived it would disagree with the gate the
+	// day either one changed, and this verb exists to say what is missing.
+	Review func() (owed bool, base string, err error)
 }
 
 // Files is the disk port: enough to find and read the task doc. Every Files
@@ -90,9 +96,9 @@ func proofLine(files Files, dir string, doc tasks.Document, tree string, treeErr
 	return "proof: " + rel + " · another tree"
 }
 
-// reviewLine says which moment the feature is in: the gate asks once per feature,
-// at the close, and only when the project has the review on. A verdict on file
-// answers it; a closed feature without one owes it.
+// reviewLine says which moment the feature is in. The rule belongs to the gate:
+// this function asks it instead of re-deriving it from the steps, so the report
+// and the gate cannot disagree about a tree.
 func reviewLine(opts Options, files Files, doc tasks.Document, tree string, treeErr error) string {
 	if !opts.ReviewMode {
 		return "review: off · the project does not ask for one"
@@ -108,15 +114,24 @@ func reviewLine(opts Options, files Files, doc tasks.Document, tree string, tree
 		return "review: on file · " + verdict
 	}
 
-	done, total := doc.Doc.Progress()
-	if total == 0 || done < total {
+	if opts.Review == nil {
+		return "review: cannot be read · the gate's rule was not wired"
+	}
+	owed, base, err := opts.Review()
+	if err != nil {
+		return "review: cannot be read · " + oneLine(err.Error())
+	}
+	if !owed {
+		if done, total := doc.Doc.Progress(); total > 0 && done == total {
+			return "review: not due yet · the documents after the close do not reopen it"
+		}
 		return "review: not due yet · the feature is open"
 	}
-	base := strings.TrimSpace(doc.Doc.Base)
+	base = strings.TrimSpace(base)
 	if base == "" {
 		return "review: owed · the feature is closed"
 	}
-	return "review: owed · the feature is closed; odachi review --base " + base
+	return "review: owed · odachi review --base " + base
 }
 
 // proofRel is where this feature's proof lives: the number and slug the task doc

@@ -9,6 +9,7 @@
 package check
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -663,6 +664,50 @@ func featureReview(feature *tasks.Document) (base string, closed, known bool) {
 		return "", false, false
 	}
 	return base, done == total, true
+}
+
+// ReviewOwed is the project-mode review question, exported so a report tells the
+// truth the gate tells instead of its own version of it: whether this tree owes a
+// verdict, and the base that review must name when it does. It writes nothing and
+// starts nothing.
+func ReviewOwed(opts Options, files Files, git Git) (bool, string, error) {
+	r := &runner{opts: opts, files: files, git: git}
+
+	feature, problem := r.currentFeature()
+	if problem != nil {
+		return false, "", errors.New(problem.Message)
+	}
+
+	// The same three questions reviewGate asks, in the same order. Sharing the
+	// answers is the point: two callers deriving them would drift.
+	base, closed, known := featureReview(feature)
+	if !opts.RequireReview {
+		if !opts.ReviewMode {
+			return false, "", nil
+		}
+		if known && !closed {
+			return false, "", nil
+		}
+		if known && closed {
+			owed, problem := r.theCloseOwes(feature)
+			if problem != nil {
+				return false, "", errors.New(problem.Message)
+			}
+			if !owed {
+				return false, "", nil
+			}
+			return true, base, nil
+		}
+	}
+	if known && closed {
+		return true, base, nil
+	}
+
+	required, _, _, problem := r.requiredLenses()
+	if problem != nil {
+		return false, "", errors.New(problem.Message)
+	}
+	return len(required) > 0, "", nil
 }
 
 // requireReview is the optional design gate: a stored verdict for THIS tree, one
