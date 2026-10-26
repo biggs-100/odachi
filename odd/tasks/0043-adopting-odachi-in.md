@@ -5,7 +5,7 @@ Base: 5eca09489ed3ac93d13342ca2636ca255250febb
 R1 · "adopting odachi in a real repo does not over-review what init wrote, does not leave a stale proof unexplained, and installs a reviewer that cannot change the tree"
 
 ## Done when
-- the paths init writes are plumbing, not candidate: a plan commit that only adds them asks for no lens
+- the files init installs (agent files and skills) are plumbing, not candidate: a tree that only changes them asks for no lens
 - a stale proof names the paths that differ between the proof's tree and this one
 - init installs a reviewer agent that cannot edit files or run commands, in both clients
 - the README says how to run the review with that agent
@@ -19,3 +19,4 @@ R1 · "adopting odachi in a real repo does not over-review what init wrote, does
 
 ## History
 L1 · "adopting odachi in a real repo does not over-review what init wrote, does not leave a stale proof unexplained, and installs a reviewer that cannot change the tree"
+L2 · OFICIO · "The rows of the files init installs are not read for content signals, and their paths are plumbing" (porque a skill that mentions secrets is the tool's own text, not a security change in the adopting repo; the adoption must not cost four lenses before the first line of code)

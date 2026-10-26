@@ -68,9 +68,24 @@ var floorSignals = []struct {
 // The class is the content-aware one: the path class is the floor and these
 // rows can raise it, never lower it (see Assess).
 func FloorFor(paths []string, diff string) Floor {
-	floor := Floor{Rows: readRows(diff)}
+	floor := Floor{Rows: withoutPlumbing(readRows(diff))}
 	floor.Class = assessClass(paths, floor.Rows)
 	return floor
+}
+
+// withoutPlumbing drops the rows of the files the tool installed. Their text
+// talks about secrets and commands because that is their job, and a signal read
+// there would raise the class of the project that adopted the tool: a skill that
+// says "never hardcode a secret" is not a security change in this repository.
+func withoutPlumbing(rows []FloorRow) []FloorRow {
+	kept := rows[:0]
+	for _, row := range rows {
+		if isPlumbing(row.Path) {
+			continue
+		}
+		kept = append(kept, row)
+	}
+	return kept
 }
 
 // Assess is the class of the candidate with the diff's content taken into
