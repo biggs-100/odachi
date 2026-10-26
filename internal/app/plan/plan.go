@@ -39,6 +39,9 @@ type Options struct {
 	Done string
 	// Commit is the commit that closed the step; it only makes sense with Done.
 	Commit string
+	// Feature is the number of the task document to write to. Zero means the
+	// highest, which is the feature the human is working on now.
+	Feature int
 }
 
 // Files is the disk port: enough to find the document, read it, back it up and
@@ -80,7 +83,7 @@ func Run(opts Options, files Files) Result {
 		return blocked(problem)
 	}
 
-	current, err := tasks.Current(files, opts.Dir)
+	current, err := tasks.Feature(files, opts.Dir, opts.Feature)
 	if err != nil {
 		return blocked(oneLine(err.Error()))
 	}

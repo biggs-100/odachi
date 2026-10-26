@@ -179,3 +179,43 @@ func TestTheLongListCountsTheRest(t *testing.T) {
 		t.Errorf("SkippedLine = %q, want no remainder when the list fits", exact)
 	}
 }
+
+// TestFeatureSelectsByNumber: a project may hold more than one feature, and the
+// verbs that read or write one can be told which. Zero keeps today's answer -the
+// highest- and a number the project does not have names the ones it does.
+func TestFeatureSelectsByNumber(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		filepath.Join("raiz", "odd", "tasks", "0001-turnos.md"): "# turnos\n",
+		filepath.Join("raiz", "odd", "tasks", "0002-otro.md"):   "# otro\n",
+		filepath.Join("raiz", "odd", "tasks", "qonta-notas.md"): "# notas\n",
+	})
+
+	first, err := tasks.Feature(files, "raiz", 1)
+	if err != nil {
+		t.Fatalf("Feature(1): %v", err)
+	}
+	if first.Number != 1 || first.Slug != "turnos" {
+		t.Errorf("Feature(1) = %04d-%s, want 0001-turnos", first.Number, first.Slug)
+	}
+
+	current, err := tasks.Feature(files, "raiz", 0)
+	if err != nil {
+		t.Fatalf("Feature(0): %v", err)
+	}
+	if current.Number != 2 {
+		t.Errorf("Feature(0) = %04d, want the highest, 0002", current.Number)
+	}
+
+	_, err = tasks.Feature(files, "raiz", 9)
+	if err == nil {
+		t.Fatal("Feature(9) = nil error, want the numbers that exist")
+	}
+	for _, want := range []string{"0009", "0001-turnos", "0002-otro"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not name %q", err.Error(), want)
+		}
+	}
+	if strings.Contains(err.Error(), "qonta-notas") {
+		t.Errorf("error %q names a document odachi does not read", err.Error())
+	}
+}

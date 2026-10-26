@@ -138,6 +138,35 @@ func Current(files Files, dir string) (Document, error) {
 	return docs[len(docs)-1], nil
 }
 
+// Feature returns the feature with this number, or the current one when the
+// number is zero. A number the project does not have is an error that names the
+// features it does: a selector that answers nothing leaves the human guessing
+// which numbers exist, and the highest is not an answer to "give me 0001".
+func Feature(files Files, dir string, number int) (Document, error) {
+	if number <= 0 {
+		return Current(files, dir)
+	}
+
+	docs, err := All(files, dir)
+	if err != nil {
+		return Document{}, err
+	}
+	for _, doc := range docs {
+		if doc.Number == number {
+			return doc, nil
+		}
+	}
+	if len(docs) == 0 {
+		return Document{}, fmt.Errorf("there is no task doc in %s yet; run odachi start to create the first one", Dir)
+	}
+
+	names := make([]string, 0, len(docs))
+	for _, doc := range docs {
+		names = append(names, fmt.Sprintf("%04d-%s", doc.Number, doc.Slug))
+	}
+	return Document{}, fmt.Errorf("there is no feature %04d in %s; the ones odachi reads are %s", number, Dir, fewNames(names))
+}
+
 // parseName reads NNNN-<slug>.md. Anything else in the directory — a backup, a
 // note, a document the human named by hand — is housekeeping, not a feature.
 func parseName(name string) (number int, slug string, ok bool) {
