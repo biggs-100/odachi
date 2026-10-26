@@ -457,9 +457,20 @@ func (r *runner) fenceViolations() ([]string, *Result) {
 
 // currentFeature is the feature this run judges: the one the caller selected, or
 // the highest-numbered task document -the feature the human is working on now-.
-// No document is not an error: a project with no features yet has no open
-// questions and can still be verified.
+// No document is not an error when no feature was named: a project with no
+// features yet has no open questions and can still be verified. A named number on
+// that project is an error, exactly as it is for every other verb: a selector
+// never answers nothing.
 func (r *runner) currentFeature() (*tasks.Document, *Result) {
+	if r.opts.Feature > 0 {
+		doc, err := tasks.Feature(r.files, r.opts.Dir, r.opts.Feature)
+		if err != nil {
+			problem := blocked(oneLine(err.Error()))
+			return nil, &problem
+		}
+		return &doc, nil
+	}
+
 	docs, err := tasks.All(r.files, r.opts.Dir)
 	if err != nil {
 		problem := blocked(oneLine(err.Error()) + "; check the permissions of " + tasks.Dir + " and run odachi check again")
@@ -468,16 +479,7 @@ func (r *runner) currentFeature() (*tasks.Document, *Result) {
 	if len(docs) == 0 {
 		return nil, nil
 	}
-	if r.opts.Feature <= 0 {
-		return &docs[len(docs)-1], nil
-	}
-	for i := range docs {
-		if docs[i].Number == r.opts.Feature {
-			return &docs[i], nil
-		}
-	}
-	problem := blocked(tasks.NotFound(docs, r.opts.Feature))
-	return nil, &problem
+	return &docs[len(docs)-1], nil
 }
 
 // recordedProof is the proof already on disk for this feature. Without --proof

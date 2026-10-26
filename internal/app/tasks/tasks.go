@@ -143,7 +143,7 @@ func Current(files Files, dir string) (Document, error) {
 // features it does: a selector that answers nothing leaves the human guessing
 // which numbers exist, and the highest is not an answer to "give me 0001".
 func Feature(files Files, dir string, number int) (Document, error) {
-	if number <= 0 {
+	if number == 0 {
 		return Current(files, dir)
 	}
 
