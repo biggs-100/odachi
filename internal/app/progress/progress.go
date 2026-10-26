@@ -110,7 +110,13 @@ func reviewLine(opts Options, files Files, doc tasks.Document, tree string, tree
 	if err != nil {
 		return "review: cannot be read · " + oneLine(err.Error())
 	}
-	if exists, err := files.Exists(fullPath(opts.Dir, verdict)); err == nil && exists {
+	exists, err := files.Exists(fullPath(opts.Dir, verdict))
+	if err != nil {
+		// A store that cannot be read is not a store with no verdict: claiming a
+		// review is owed would send the human to pay for one that may be there.
+		return "review: cannot be read · " + oneLine(err.Error())
+	}
+	if exists {
 		return "review: on file · " + verdict
 	}
 
