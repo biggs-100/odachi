@@ -219,6 +219,17 @@ You receive the task doc, the step, the base commit and the verification command
 Return: verdict per requirement (met/unmet/unverified), ` + "`path:line`" + ` evidence, observed commands, blockers and what was left unverified. ≤2k tokens.
 `
 
+// reviewerPrompt is the read-only reviewer odachi installs. It answers the JSON
+// the review prompt asks for and nothing else; it cannot read, run or edit, so
+// the prompt's first rule is a capability instead of a request.
+const reviewerPrompt = `You are odachi-reviewer. You answer one review prompt and nothing else.
+
+- Everything you need is in the prompt: the brief, the changed paths, the diff and the lens rules. You cannot read files, run commands or edit anything, and you do not need to.
+- Answer with the JSON object the prompt asks for and only that: no prose before or after, no markdown fences.
+- Judge only the lenses the prompt lists, and list one pass per (file, lens) you audited without a finding.
+- Never invent a finding to have something to say: "findings": [] is the right answer when you found nothing.
+`
+
 // Subagent is one native subagent: its name, the one-line description the client
 // shows, its prompt, and the two client-specific capability lines. The prompt is
 // shared; only the frontmatter is per client.
@@ -244,6 +255,16 @@ var subagents = []Subagent{
 		OpenCodePermission: "permission:\n  edit: deny\n  task: deny\n",
 		ClaudeTools:        "tools: Read, Grep, Glob, Bash\n",
 	},
+	{
+		// The reviewer answers a prompt it receives whole: it has no reason to read
+		// the live tree (the candidate is frozen in the prompt), and a reviewer that
+		// can run commands puts its transcript in the verdict's stdout.
+		Name:               "odachi-reviewer",
+		Description:        "odachi-reviewer: answers the review prompt with its JSON, without reading or running anything",
+		Prompt:             reviewerPrompt,
+		OpenCodePermission: "permission:\n  read: deny\n  edit: deny\n  glob: deny\n  grep: deny\n  list: deny\n  bash: deny\n  task: deny\n  webfetch: deny\n  websearch: deny\n",
+		ClaudeTools:        "tools: []\n",
+	},
 }
 
 // File is one native agent file: where it goes relative to the project root, and
@@ -268,6 +289,16 @@ func Files(block string) []File {
 	out := make([]File, 0, len(clients))
 	for _, row := range clients {
 		out = append(out, fileFor(row, block))
+	}
+	return out
+}
+
+// SubagentNames returns the native subagents' names, in the order init reports
+// them.
+func SubagentNames() []string {
+	out := make([]string, 0, len(subagents))
+	for _, s := range subagents {
+		out = append(out, s.Name)
 	}
 	return out
 }
