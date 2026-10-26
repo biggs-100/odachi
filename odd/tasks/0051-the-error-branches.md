@@ -12,7 +12,7 @@ R1 · "the error branches of the refusal and of the review rule answer as they p
 
 ## Steps
 - [x] T1 · a refused answer that cannot be kept is reported, never named   R1 · 9357506
-- [ ] T2 · the review rule and the report answer their error paths   R1
+- [x] T2 · the review rule and the report answer their error paths   R1 · 4c5d112
 
 ## History
 L1 · "the error branches of the refusal and of the review rule answer as they promise, and a test says so"
