@@ -367,6 +367,7 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 
 	var asJSON bool
 	flags.BoolVar(&asJSON, "json", false, "machine output: the same report as one object")
+	feature := flags.Int("feature", 0, "the feature number to report on (default: the highest)")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -390,9 +391,10 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 	result := progress.Run(progress.Options{
 		Dir:        dir,
 		ReviewMode: enabled,
+		Feature:    *feature,
 		// The gate's own rule, asked instead of re-derived: one owner, one answer.
 		Review: func() (bool, string, error) {
-			return check.ReviewOwed(check.Options{Dir: dir, ReviewMode: enabled}, osFiles{}, gitRepo{})
+			return check.ReviewOwed(check.Options{Dir: dir, ReviewMode: enabled, Feature: *feature}, osFiles{}, gitRepo{})
 		},
 	}, osFiles{}, gitRepo{})
 
@@ -443,6 +445,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&opts.RequireReview, "require-review", false, "requires a review verdict for this tree (default: the project mode)")
 	flags.BoolVar(&noReview, "no-review", false, "does not require review even when the project has it on")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
+	flags.IntVar(&opts.Feature, "feature", 0, "the feature number to judge (default: the highest)")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {

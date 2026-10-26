@@ -10,7 +10,7 @@ R1 · "a feature can be chosen by its number, not only the highest"
 - an unknown number is blocked and names the features that exist
 
 ## Steps
-- [ ] T1 · the selector resolves a number to its feature, and plan and ask act on it   R1
+- [x] T1 · the selector resolves a number to its feature, and plan and ask act on it   R1 · eeb2fff
 - [ ] T2 · check and progress judge the selected feature, and an unknown number names the ones that exist   R1
 
 ## History

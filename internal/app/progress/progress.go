@@ -49,6 +49,10 @@ type Options struct {
 	Dir        string
 	ReviewMode bool
 
+	// Feature is the number of the task document this report describes. Zero
+	// means the highest, which is the feature the human is working on now.
+	Feature int
+
 	// Review answers the question the gate answers: does this tree owe a
 	// verdict, and which base must that review name? The caller wires the gate's
 	// own rule in. A report that re-derived it would disagree with the gate the
@@ -123,7 +127,7 @@ type Result struct {
 
 // Run reads the open feature and reports where it stands.
 func Run(opts Options, files Files, git Git) Result {
-	doc, problem := currentFeature(files, opts.Dir)
+	doc, problem := currentFeature(files, opts.Dir, opts.Feature)
 	if problem != "" {
 		return Result{Code: CodeOK, Message: problem, Lines: []string{problem}}
 	}
@@ -153,8 +157,8 @@ func Run(opts Options, files Files, git Git) Result {
 // currentFeature is the highest-numbered task doc: the feature the human is
 // working on now. A project with no feature is not an error to hide behind an
 // empty report: the line says what to run.
-func currentFeature(files Files, dir string) (tasks.Document, string) {
-	doc, err := tasks.Current(files, dir)
+func currentFeature(files Files, dir string, number int) (tasks.Document, string) {
+	doc, err := tasks.Feature(files, dir, number)
 	if err != nil {
 		return tasks.Document{}, oneLine(err.Error())
 	}
