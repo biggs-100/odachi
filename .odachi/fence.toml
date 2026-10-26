@@ -1,29 +1,24 @@
 [[rule]]
-not   = "reading ODD task docs without a number: a separate product decision"
-paths = ["reading-odd-task-docs-without-a-number-a-separate-product-decision*"]
+not   = "reading the unnumbered documents"
+paths = ["reading-the-unnumbered-documents*"]
 deps  = []
 
 [[rule]]
-not   = "changing the slug rule"
-paths = ["changing-the-slug-rule*"]
+not   = "renaming or migrating them"
+paths = ["renaming-or-migrating-them*"]
 deps  = []
 
 [[rule]]
-not   = "a shared or remote review store"
-paths = ["a-shared-or-remote-review-store*"]
+not   = "a pointer file or --task flag"
+paths = ["a-pointer-file-or-task-flag*"]
 deps  = []
 
 [[rule]]
-not   = "changing the lens vocabulary"
-paths = ["changing-the-lens-vocabulary*"]
+not   = "changing the numbering rule"
+paths = ["changing-the-numbering-rule*"]
 deps  = []
 
 [[rule]]
-not   = "running reviews automatically"
-paths = ["running-reviews-automatically*"]
-deps  = []
-
-[[rule]]
-not   = "the transaction store gentle-ai has"
-paths = ["the-transaction-store-gentle-ai-has*"]
+not   = "changing the other doctor checks"
+paths = ["changing-the-other-doctor-checks*"]
 deps  = []
