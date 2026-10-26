@@ -1,24 +1,22 @@
-# a-project-can
+# the-review-never
 
 ## What must exist
-- a project can keep two memories, and odachi says which task documents it does not read
+- the review never seals a verdict that covers less than the tree, and names the rows it is missing
 
 ## Done when
-- doctor names the documents in odd/tasks that are not NNNN-slug.md, with the count and the first few
-- start and summary say it too, so a project that adopts odachi next to ODD hears the truth once
-- a project with no such documents sees no new line
-- the tool does not read, rename or migrate them: it only says so
-- tests pin the count, the names and the silence
+- an answer that misses a row writes no verdict and names the missing file and lens
+- a --lens run still stores: its gaps are legitimate and the store inherits them
+- an answer that covers every row writes the verdict exactly as today
+- tests pin the refusal, the stored partial run and the silence
 
 ## Not included (first version)
-- reading the unnumbered documents
-- renaming or migrating them
-- a pointer file or --task flag
-- changing the numbering rule
-- changing the other doctor checks
+- the coverage arithmetic of check (ADR 0016)
+- the reviewer prompt and its wording
+- paying a second call or re-running the reviewer by itself
+- rewriting a verdict already stored
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: cómo decir lo que no leés sin fingir que no está.
+- Wants to learn: how a gate rule becomes a promise of the command.

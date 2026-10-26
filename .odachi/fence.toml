@@ -1,24 +1,19 @@
 [[rule]]
-not   = "reading the unnumbered documents"
-paths = ["reading-the-unnumbered-documents*"]
+not   = "the coverage arithmetic of check (ADR 0016)"
+paths = ["the-coverage-arithmetic-of-check-adr-0016*"]
 deps  = []
 
 [[rule]]
-not   = "renaming or migrating them"
-paths = ["renaming-or-migrating-them*"]
+not   = "the reviewer prompt and its wording"
+paths = ["the-reviewer-prompt-and-its-wording*"]
 deps  = []
 
 [[rule]]
-not   = "a pointer file or --task flag"
-paths = ["a-pointer-file-or-task-flag*"]
+not   = "paying a second call or re-running the reviewer by itself"
+paths = ["paying-a-second-call-or-re-running-the-reviewer-by-itself*"]
 deps  = []
 
 [[rule]]
-not   = "changing the numbering rule"
-paths = ["changing-the-numbering-rule*"]
-deps  = []
-
-[[rule]]
-not   = "changing the other doctor checks"
-paths = ["changing-the-other-doctor-checks*"]
+not   = "rewriting a verdict already stored"
+paths = ["rewriting-a-verdict-already-stored*"]
 deps  = []
