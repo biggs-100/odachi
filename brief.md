@@ -1,21 +1,22 @@
-# the-proof-says
+# the-gate-json
 
 ## What must exist
-- the proof says which old files it cannot read, and keeps the line it can
+- the gate JSON names every reason, and its keys, in a test
 
 ## Done when
-- a new proof whose output starts with the terminator keeps that line, pinned by a test
-- the parser says which old files are ambiguous and why, with the date the terminator arrived
-- the ledger row moves to accepted, with the gating effect named
+- every reason the gate can print appears as a literal in a test, so renaming one breaks the suite
+- the keys are pinned for a ready tree and for a blocked one, with next only where it exists
+- the README names check --json as the gates machine contract
 
 ## Not included (first version)
-- a change of the proof format
-- reading old proofs differently
-- the review store
-- the proofs on other machines
+- the human lines of check
+- the exit codes
+- progress --json
+- the panel itself
+- a schema version
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how to tell an accepted ambiguity from an unfixed bug.
+- Wants to learn: how a contract stops being a convention.
