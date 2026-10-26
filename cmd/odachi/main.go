@@ -19,6 +19,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/level"
 	"github.com/biggs-100/odachi/internal/app/pack"
 	"github.com/biggs-100/odachi/internal/app/plan"
+	"github.com/biggs-100/odachi/internal/app/progress"
 	reviewapp "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/summary"
@@ -87,6 +88,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runLevel(dir, args[1:], stdin, stdout, stderr)
 	case "summary":
 		return runSummary(dir, args[1:], stdout, stderr)
+	case "progress":
+		return runProgress(dir, args[1:], stdout, stderr)
 	case "undo":
 		return runUndo(dir, args[1:], stdout, stderr)
 	case "check":
@@ -112,7 +115,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), undo (odachi undo), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), undo (odachi undo), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -351,6 +354,39 @@ func runSummary(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	return reportSummary(summary.Run(summary.Options{Dir: dir}, osFiles{}), asJSON, stdout, stderr)
+}
+
+// runProgress prints where the open feature stands. It reads the project's
+// review switch the same way check does, so the report never claims a gate the
+// project turned off, and it writes nothing.
+func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi progress", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi progress -h to see the flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi progress takes no arguments (run odachi progress -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	enabled, err := reviewapp.Enabled(dir, osFiles{}, reviewModeCodec{})
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+
+	result := progress.Run(progress.Options{Dir: dir, ReviewMode: enabled}, osFiles{}, gitRepo{})
+	for _, line := range result.Lines {
+		fmt.Fprintln(stdout, line)
+	}
+	return result.Code
 }
 
 // runCheck parses the flags, wires the three adapters and reports the gate.
@@ -1192,6 +1228,7 @@ usage:
   odachi plan --done T2 [--commit abc1234]
   odachi level [--to <profile>]
   odachi summary
+  odachi progress
   odachi undo [--list | --collect] [--file brief]
   odachi check [flags]
   odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
