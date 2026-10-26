@@ -11,7 +11,7 @@ R1 · "the review never seals a verdict that covers less than the tree, and name
 - tests pin the refusal, the stored partial run and the silence
 
 ## Steps
-- [ ] T1 · a full answer with a gap writes nothing and names the missing path and lens   R1
+- [x] T1 · a full answer with a gap writes nothing and names the missing path and lens   R1 · 027eabe
 - [ ] T2 · a --lens partial run still stores, and an answer that covers everything is untouched   R1
 
 ## History
