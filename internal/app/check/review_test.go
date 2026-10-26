@@ -162,6 +162,31 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	}
 }
 
+// TestReviewOwedAsksAboutTheTreeThatStands: the question is about this worktree,
+// so a caller that names no base gets HEAD, the same default `odachi check` uses.
+// An empty base means "compare against nothing" for the fence, and here it would
+// turn every file into code: the answer the report got wrong by wiring it so.
+func TestReviewOwedAsksAboutTheTreeThatStands(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"CHANGELOG.md", "README.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+	}
+
+	if _, _, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(files), git); err != nil {
+		t.Fatalf("ReviewOwed: %v", err)
+	}
+
+	for _, asked := range git.bases {
+		if asked == check.EmptyTree {
+			t.Errorf("the rule asked about the empty tree; want HEAD, the default check uses (%v)", git.bases)
+		}
+	}
+}
+
 // TestReviewOwedAgreesWithTheGate: the exported question answers what the gate
 // answers, for the same tree. That shared answer is the whole reason it is
 // exported: a report that asks it cannot disagree with the gate about a tree.
