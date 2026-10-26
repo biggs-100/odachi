@@ -1049,6 +1049,10 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		return *problem
 	}
 
+	// The lenses this answer claims. A hole outside them is not this run's: it is
+	// a lens another run was asked for, and the store grows by lens.
+	asked := stamped.Lenses
+
 	var downgraded int
 	stamped.Findings, downgraded = domain.Earned(stamped.Findings, floor)
 
@@ -1093,6 +1097,18 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 			return blocked(oneLine(err.Error()) + "; I wrote nothing")
 		}
 		sealed = resealed
+	}
+
+	// Coverage is a promise of this command, not a surprise of the gate: a store
+	// cannot be rewritten, so a verdict written with a hole would leave the tree
+	// with no way out. The answer is refused before it is filed, and the refusal
+	// names the rows while the reviewer's answer is still in hand.
+	gaps, problem := r.uncoveredBy(sealed, work, asked)
+	if problem != nil {
+		return *problem
+	}
+	if len(gaps) > 0 {
+		return uncovered(gaps)
 	}
 
 	if err := r.files.Write(target, domain.Render(sealed)); err != nil {
@@ -1262,6 +1278,72 @@ func (r *runner) stampBlob(what, path string) (string, *Result) {
 		return "", &problem
 	}
 	return blob, nil
+}
+
+// uncoveredBy is what one answer still owes the tree: the (file, lens) rows of
+// the lenses it claimed, for every file whose bytes git can measure now. The
+// arithmetic is the gate's (domain.Uncovered), asked here so the human hears it
+// while the answer is still in hand instead of at `odachi check`, after the call
+// was paid for and the file can no longer be rewritten.
+//
+// A lens this run did not claim is not a gap: it is a lens another run was
+// asked for. A file git cannot measure is not one either - a deleted path owes
+// no answer about bytes that are not here.
+func (r *runner) uncoveredBy(verdict domain.Verdict, work *worktree, asked []string) ([]domain.Gap, *Result) {
+	claimed := make(map[string]bool, len(asked))
+	for _, lens := range asked {
+		claimed[strings.ToLower(strings.TrimSpace(lens))] = true
+	}
+
+	need := domain.Need(work.paths, work.diff)
+	blobs := make(map[string]string, len(need))
+	for path, lenses := range need {
+		kept := make([]string, 0, len(lenses))
+		for _, lens := range lenses {
+			if claimed[strings.ToLower(lens)] {
+				kept = append(kept, lens)
+			}
+		}
+		if len(kept) == 0 {
+			delete(need, path)
+			continue
+		}
+		need[path] = kept
+
+		blob, problem := r.stampBlob("the coverage row's content receipt", path)
+		if problem != nil {
+			return nil, problem
+		}
+		if blob == "" {
+			delete(need, path)
+			continue
+		}
+		blobs[path] = blob
+	}
+	return verdict.Uncovered(need, blobs), nil
+}
+
+// uncovered is the refusal for an answer that answered less than it claimed.
+// It names the rows, because "a row is missing" without the row is a riddle the
+// human pays for twice.
+func uncovered(gaps []domain.Gap) Result {
+	first := gaps[0]
+	message := fmt.Sprintf("the answer does not cover %s under the %s lens (%d row(s) missing); no verdict was written",
+		first.Path, first.Lens, len(gaps))
+
+	rows := make([]string, 0, len(gaps))
+	for _, gap := range gaps {
+		rows = append(rows, gap.Path+" ("+gap.Lens+")")
+	}
+	return Result{
+		Code:    CodeBlocked,
+		Message: message,
+		Lines: []string{
+			message,
+			"rows missing: " + strings.Join(rows, ", "),
+			"next: odachi review --show",
+		},
+	}
 }
 
 // carriedRows is how much the store lent to one verdict, and how many fresh

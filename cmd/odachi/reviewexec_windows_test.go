@@ -35,7 +35,7 @@ func TestReviewExecStoresTheVerdictOfAReviewerThatReadsStdin(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
 
-	command := `findstr /c:"odachi review" >nul && echo {"findings":[]}`
+	command := `findstr /c:"odachi review" >nul && echo {"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`
 
 	code, out, errOut := runDir(t, dir, []string{"review", "--exec", command}, "")
 
