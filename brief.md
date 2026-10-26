@@ -1,25 +1,26 @@
-# closing-a-feature
+# adopting-odachi-in
 
 ## What must exist
-- closing a feature is reviewed and publishing it is not: the verdict is owed by the commit that marks the last step done, and a later documents-only tree does not ask for it again
+- adopting odachi in a real repo does not over-review what init wrote, does not leave a stale proof unexplained, and installs a reviewer that cannot change the tree
 
 ## Done when
-- with the mode on, the commit that closes a feature owes the verdict of the feature's base
-- a documents-only tree after the close is ready with its proof, as long as the task doc did not change
-- a tree with code after the close still owes a verdict: the gate does not go blind
-- a feature with no steps or no base keeps the old per-tree rule
-- --require-review still forces one tree and --no-review still turns the mode off for one run
-- tests pin the four cases and the README says the review is owed by the close, not by the tail
+- the paths init writes are plumbing, not candidate: a plan commit that only adds them asks for no lens
+- a stale proof names the paths that differ between the proof's tree and this one
+- init installs a reviewer agent that cannot edit files or run commands, in both clients
+- the README says how to run the review with that agent
+- real code still asks for its lenses, so the gate does not go blind
+- tests pin the passive plan, the named stale paths and the installed agent
 
 ## Not included (first version)
-- searching the store for a verdict of another tree
-- a shared or remote store
-- changing CI or the release workflow
-- rewriting closed task docs
-- changing the lens selection
+- reading ODD task docs without a number: a separate product decision
+- changing the slug rule
+- a shared or remote review store
+- changing the lens vocabulary
+- running reviews automatically
+- the transaction store gentle-ai has
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how to tell a unit of work from the paperwork that follows it.
+- Wants to learn: how to adopt a tool in a repo without charging the repo for the tool's own files.
