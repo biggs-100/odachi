@@ -77,6 +77,13 @@ type Step struct {
 	Commit string `json:"commit,omitempty"`
 }
 
+// Question is one open question as data: the id the history gave it and the words
+// the human is being asked.
+type Question struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
 // Proof is the proof line as data: which file, in which of the states.
 type Proof struct {
 	State string `json:"state"`
@@ -96,12 +103,12 @@ type Review struct {
 // State is the report as data. The names are the contract an external renderer
 // depends on, so they are pinned by a test.
 type State struct {
-	Number        int    `json:"number"`
-	Slug          string `json:"slug"`
-	Steps         []Step `json:"steps"`
-	OpenQuestions int    `json:"open_questions"`
-	Proof         Proof  `json:"proof"`
-	Review        Review `json:"review"`
+	Number        int        `json:"number"`
+	Slug          string     `json:"slug"`
+	Steps         []Step     `json:"steps"`
+	OpenQuestions []Question `json:"open_questions"`
+	Proof         Proof      `json:"proof"`
+	Review        Review     `json:"review"`
 }
 
 // Result is the report: the lines the human reads, in order, and the state they
@@ -129,7 +136,7 @@ func Run(opts Options, files Files, git Git) Result {
 		Number:        doc.Number,
 		Slug:          doc.Slug,
 		Steps:         steps(doc.Doc.Steps),
-		OpenQuestions: len(doc.Doc.OpenQuestions()),
+		OpenQuestions: questions(doc.Doc.OpenQuestions()),
 		Proof:         proofState(files, opts.Dir, doc, tree, treeErr),
 		Review:        reviewState(opts, files, doc, tree, treeErr),
 	}
@@ -220,7 +227,7 @@ func reviewState(opts Options, files Files, doc tasks.Document, tree string, tre
 // projection of a field: the machine reader and the human read the same facts.
 func render(state State) []string {
 	lines := []string{fmt.Sprintf("%04d-%s · %d of %d steps · %s",
-		state.Number, state.Slug, doneSteps(state.Steps), len(state.Steps), questions(state.OpenQuestions))}
+		state.Number, state.Slug, doneSteps(state.Steps), len(state.Steps), questionCount(len(state.OpenQuestions)))}
 
 	for _, step := range state.Steps {
 		landed := "pending"
@@ -309,9 +316,20 @@ func fullPath(dir, rel string) string {
 	return filepath.Join(dir, filepath.FromSlash(rel))
 }
 
-// questions says how many decisions the feature still owes, in the voice the rest
-// of the tool uses.
-func questions(n int) string {
+// questions turns the document's open questions into data, in the order the
+// history records them. The list is never nil: a renderer loops over it, and "no
+// questions" must not look like a missing field.
+func questions(open []taskdoc.Question) []Question {
+	out := make([]Question, 0, len(open))
+	for _, question := range open {
+		out = append(out, Question{ID: question.ID, Text: question.Text})
+	}
+	return out
+}
+
+// questionCount says how many decisions the feature still owes, in the voice the
+// rest of the tool uses.
+func questionCount(n int) string {
 	if n == 0 {
 		return "0 open questions"
 	}

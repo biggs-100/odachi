@@ -1,8 +1,10 @@
 package progress_test
 
 import (
+	"encoding/json"
 	"errors"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -383,9 +385,10 @@ func TestTheStateNamesAreTheContract(t *testing.T) {
 	}
 }
 
-// TestTheReportCountsOpenQuestions: the field is advertised in the state, and a
-// number that is always zero proves nothing. One recorded question must be one.
-func TestTheReportCountsOpenQuestions(t *testing.T) {
+// TestTheReportCarriesTheOpenQuestions: the count is not the fact, the words are.
+// The state publishes each open question with the id the history gives it and the
+// sentence the human is being asked, so a renderer can show what blocks.
+func TestTheReportCarriesTheOpenQuestions(t *testing.T) {
 	p := newProject()
 	p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(strings.Replace(
 		taskDoc, "L1 · ", "L2 · PREGUNTA P1 · \"¿Se puede cancelar?\"\nL1 · ", 1))
@@ -395,11 +398,34 @@ func TestTheReportCountsOpenQuestions(t *testing.T) {
 	if result.State == nil {
 		t.Fatal("no state")
 	}
-	if result.State.OpenQuestions != 1 {
-		t.Errorf("open questions = %d, want 1", result.State.OpenQuestions)
+	want := []progress.Question{{ID: "P1", Text: "¿Se puede cancelar?"}}
+	if !reflect.DeepEqual(result.State.OpenQuestions, want) {
+		t.Errorf("open questions = %+v, want %+v", result.State.OpenQuestions, want)
 	}
 	if lines := strings.Join(result.Lines, "\n"); !strings.Contains(lines, "1 open question") {
 		t.Errorf("the lines do not say the count:\n%s", lines)
+	}
+}
+
+// TestAFeatureWithNoQuestionsPublishesAnEmptyList: the field is a list, always.
+// A nil would make every reader tell "no questions" from "the field is missing",
+// and the JSON would say null where the renderer expects to loop.
+func TestAFeatureWithNoQuestionsPublishesAnEmptyList(t *testing.T) {
+	p := newProject()
+
+	result := p.run(progress.Options{ReviewMode: true, Review: nothingOwed})
+
+	if result.State == nil {
+		t.Fatal("no state")
+	}
+	if result.State.OpenQuestions == nil {
+		t.Fatal("open questions = nil, want an empty list")
+	}
+	if len(result.State.OpenQuestions) != 0 {
+		t.Errorf("open questions = %+v, want none", result.State.OpenQuestions)
+	}
+	if data, err := json.Marshal(result.State.OpenQuestions); err != nil || string(data) != "[]" {
+		t.Errorf("the list marshals as %s (err %v), want []", data, err)
 	}
 }
 
@@ -419,8 +445,8 @@ func TestTheReportIsDataBeforeItIsLines(t *testing.T) {
 	if state.Number != 7 || state.Slug != "reserva" {
 		t.Errorf("feature = %04d-%s, want 0007-reserva", state.Number, state.Slug)
 	}
-	if state.OpenQuestions != 0 {
-		t.Errorf("open questions = %d, want 0", state.OpenQuestions)
+	if len(state.OpenQuestions) != 0 {
+		t.Errorf("open questions = %+v, want none", state.OpenQuestions)
 	}
 	if len(state.Steps) != 2 {
 		t.Fatalf("steps = %v, want two", state.Steps)

@@ -62,8 +62,11 @@ func TestProgressJSONIsTheContract(t *testing.T) {
 		State   *struct {
 			Number        int    `json:"number"`
 			Slug          string `json:"slug"`
-			OpenQuestions int    `json:"open_questions"`
-			Steps         []struct {
+			OpenQuestions []struct {
+				ID   string `json:"id"`
+				Text string `json:"text"`
+			} `json:"open_questions"`
+			Steps []struct {
 				ID     string `json:"id"`
 				Text   string `json:"text"`
 				Done   bool   `json:"done"`
@@ -93,6 +96,9 @@ func TestProgressJSONIsTheContract(t *testing.T) {
 	if len(state.Steps) != 1 || state.Steps[0].ID != "T1" || state.Steps[0].Done {
 		t.Errorf("steps = %+v, want one pending T1", state.Steps)
 	}
+	if len(state.OpenQuestions) != 0 {
+		t.Errorf("open questions = %+v, want none", state.OpenQuestions)
+	}
 	if state.Proof.State != "none" {
 		t.Errorf("proof = %+v, want none yet", state.Proof)
 	}
@@ -113,8 +119,56 @@ func TestProgressJSONIsTheContract(t *testing.T) {
 			t.Errorf("the state does not carry %q: %s", key, out)
 		}
 	}
+	// A feature with no questions says so with an empty list, not with null: a
+	// renderer loops over the field, it does not branch on its absence.
+	if raw := string(keys.State["open_questions"]); raw != "[]" {
+		t.Errorf("open_questions = %s, want []", raw)
+	}
 	if !strings.Contains(got.Message, "0 of 1") {
 		t.Errorf("message = %q, want the same headline the human reads", got.Message)
+	}
+}
+
+// TestProgressJSONCarriesTheQuestions: the field is a list of questions, and the
+// names id and text are the contract. A fixture with one open question proves the
+// shape is read, not only advertised.
+func TestProgressJSONCarriesTheQuestions(t *testing.T) {
+	t.Parallel()
+	dir, base := featureAtBase(t)
+
+	writeFile(t, dir, "odd/tasks/0001-turnos.md", taskdoc.TaskDoc{
+		Title:        "turnos",
+		Base:         base,
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:     []string{"reservo un turno"},
+		Steps:        []taskdoc.Step{{ID: "T1", Text: "reservar un turno", Requirement: "R1"}},
+		History: []string{
+			`L1 · "reservar turnos"`,
+			`L2 · PREGUNTA P1 · "¿Se puede cancelar?"`,
+		},
+	}.Render())
+
+	code, out, errOut := runDir(t, dir, []string{"progress", "--json"}, "")
+	if code != 0 {
+		t.Fatalf("progress --json: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	var got struct {
+		State struct {
+			OpenQuestions []struct {
+				ID   string `json:"id"`
+				Text string `json:"text"`
+			} `json:"open_questions"`
+		} `json:"state"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("the machine output is not JSON: %v\n%s", err, out)
+	}
+	if len(got.State.OpenQuestions) != 1 {
+		t.Fatalf("open questions = %+v, want one", got.State.OpenQuestions)
+	}
+	if q := got.State.OpenQuestions[0]; q.ID != "P1" || q.Text != "¿Se puede cancelar?" {
+		t.Errorf("question = %+v, want P1 and its words", q)
 	}
 }
 
