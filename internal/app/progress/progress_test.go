@@ -1,6 +1,7 @@
 package progress_test
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -15,8 +16,9 @@ const dir = "/proyecto"
 // fakeFiles is the disk port in memory. It records writes so a test can prove
 // there are none.
 type fakeFiles struct {
-	files  map[string][]byte
-	writes []string
+	files    map[string][]byte
+	writes   []string
+	existErr error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -32,6 +34,9 @@ func fullPath(rel string) string {
 }
 
 func (f *fakeFiles) Exists(path string) (bool, error) {
+	if f.existErr != nil {
+		return false, f.existErr
+	}
 	_, ok := f.files[path]
 	return ok, nil
 }
@@ -231,6 +236,23 @@ func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
 			t.Errorf("a project with the review off is asked for a verdict anyway:\n%s", lines)
 		}
 	})
+}
+
+// TestProgressSaysWhenTheStoreCannotBeRead: an I/O failure on the verdict store
+// is not the absence of a verdict. Reporting "owed" would send the human to pay
+// for a review that may already exist, from the one verb whose job is accuracy.
+func TestProgressSaysWhenTheStoreCannotBeRead(t *testing.T) {
+	p := newProject()
+	p.files.existErr = errors.New("permission denied reading .odachi/reviews")
+
+	lines := strings.Join(p.run(progress.Options{ReviewMode: true, Review: owing("abc1234")}).Lines, "\n")
+
+	if !strings.Contains(lines, "review: cannot be read") {
+		t.Errorf("the report does not say the store could not be read:\n%s", lines)
+	}
+	if strings.Contains(lines, "review: owed") {
+		t.Errorf("an unreadable store is reported as a verdict owed:\n%s", lines)
+	}
 }
 
 // TestProgressAsksTheGateInsteadOfDeriving: the report does not re-derive the
