@@ -235,6 +235,44 @@ func TestProgressDoesNotDependOnTheReviewForItsCode(t *testing.T) {
 	}
 }
 
+// TestProgressSaysSoWhenThereIsNoFeature: an empty report would look like a
+// project with nothing to do. The line names the command that creates the first
+// feature instead.
+func TestProgressSaysSoWhenThereIsNoFeature(t *testing.T) {
+	p := &project{
+		files: newFakeFiles(map[string]string{"brief.md": "# algo\n"}),
+		git:   &fakeGit{tree: "4a1c9f7d2e3b5a6c8d9e0f1a2b3c4d5e6f7a8b9c"},
+	}
+
+	result := p.run(progress.Options{})
+
+	if result.Code != 0 {
+		t.Errorf("code = %d, want 0: a project with no feature is not an error", result.Code)
+	}
+	if !strings.Contains(result.Message, "odachi start") {
+		t.Errorf("message = %q, want the command that creates the first feature", result.Message)
+	}
+	if len(result.Lines) != 1 {
+		t.Errorf("lines = %v, want one line: an empty report would look like work to do", result.Lines)
+	}
+}
+
+// TestProgressWritesNothing: the verb that reports the state cannot be the verb
+// that changes it. Every path is exercised - feature, proof, verdict - and the
+// disk port records zero writes.
+func TestProgressWritesNothing(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("proof/0007-reserva.txt")] = []byte(proofFor(p.git.tree))
+	p.files.files[fullPath(".odachi/reviews/"+p.git.tree+".json")] = []byte(`{"tree":"` + p.git.tree + `"}`)
+	p.files.writes = nil
+
+	p.run(progress.Options{ReviewMode: true})
+
+	if len(p.files.writes) != 0 {
+		t.Errorf("progress wrote %v, want nothing: it only reads", p.files.writes)
+	}
+}
+
 // TestProgressNamesTheFeatureAndItsSteps: the report answers one question - where
 // does the open feature stand - and it answers it with what the task doc already
 // says: the name, how many steps are done, and the commit each one landed in.
