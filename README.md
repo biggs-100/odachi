@@ -240,6 +240,11 @@ odachi start   # the interview: brief.md, fence and first task doc
 odachi check   # tells you what is missing and how to unblock it
 ```
 
+`odachi check` answers as data when a script asks: `odachi check --json` prints one
+object -`code`, `reason`, `message`, `next`, `lines`, `proof` and `files`- and
+exits with the same code, so a hook or a panel reads the gate instead of parsing
+English. The reason names are the contract and are pinned by literals in a test.
+
 `odachi init` leaves the project ready in one step: the git history if it was
 missing, the rules block the agent reads, the project agent (picked with Tab),
 the `.gitignore` block, the pre-commit hook, the thirteen skills in
