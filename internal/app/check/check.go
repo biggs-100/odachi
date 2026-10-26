@@ -671,6 +671,13 @@ func featureReview(feature *tasks.Document) (base string, closed, known bool) {
 // verdict, and the base that review must name when it does. It writes nothing and
 // starts nothing.
 func ReviewOwed(opts Options, files Files, git Git) (bool, string, error) {
+	// The question is about the tree that stands. A caller that names no base gets
+	// HEAD, the default `odachi check` uses: an empty base means "compare against
+	// nothing" for the fence, and here it would turn every file into code.
+	if strings.TrimSpace(opts.Base) == "" {
+		opts.Base = "HEAD"
+	}
+
 	r := &runner{opts: opts, files: files, git: git}
 
 	feature, problem := r.currentFeature()
