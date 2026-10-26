@@ -325,6 +325,17 @@ tools. And a change the evidence asks nothing of is named as such -`this change
 asks for no lens: documents only`, with `--lens all` to ask anyway- : `already
 has a verdict` is only said when it is true.
 
+`odachi init` installs `odachi-reviewer` for the clients that have subagents: a
+reviewer that cannot read, run or edit, so the rule above is a capability instead
+of a request. Run the review with it:
+
+```sh
+odachi review --exec "opencode run --agent odachi-reviewer --model {model} --file {prompt} \"Answer the review prompt in the attached file.\""
+```
+
+The agent answers the JSON from the prompt alone; `review.toml` still decides
+which model judges each lens.
+
 `{model}` is the model this session is using, so `--exec` can judge with the
 same one you are talking to. The order is `--model`, then `ODACHI_MODEL` —any
 host can set it—, then the OpenCode session. When the placeholder is there and

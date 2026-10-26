@@ -222,7 +222,7 @@ func personaLine(dir, switchText string, written, kept []string, subagents bool)
 		line += "; " + switchText
 	}
 	if subagents {
-		line += "; odachi-worker and odachi-verify are invoked by the agent"
+		line += "; " + humanList(persona.SubagentNames()) + " are invoked by the agent"
 	}
 	return line
 }

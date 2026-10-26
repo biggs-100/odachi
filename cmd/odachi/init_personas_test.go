@@ -263,9 +263,9 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 	// Claude Code reads the primary from output-styles and the subagents from
 	// agents. The home has only the door, one file per client.
 	want := map[string]int{
-		"project|.opencode/agents":       3,
+		"project|.opencode/agents":       4,
 		"project|.claude/output-styles":  1,
-		"project|.claude/agents":         2,
+		"project|.claude/agents":         3,
 		"home|~/.config/opencode/agents": 1,
 		"home|~/.claude/output-styles":   1,
 	}

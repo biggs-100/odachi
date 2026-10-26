@@ -263,8 +263,10 @@ func TestSubagentFilesAreSubagentsForEveryClient(t *testing.T) {
 	wantPaths := []string{
 		".opencode/agents/odachi-worker.md",
 		".opencode/agents/odachi-verify.md",
+		".opencode/agents/odachi-reviewer.md",
 		".claude/agents/odachi-worker.md",
 		".claude/agents/odachi-verify.md",
+		".claude/agents/odachi-reviewer.md",
 	}
 	if len(files) != len(wantPaths) {
 		t.Fatalf("SubagentFiles() = %d files, want %d", len(files), len(wantPaths))
@@ -279,17 +281,41 @@ func TestSubagentFilesAreSubagentsForEveryClient(t *testing.T) {
 	}
 	for _, file := range files {
 		switch file.Path {
-		case ".opencode/agents/odachi-worker.md", ".opencode/agents/odachi-verify.md":
+		case ".opencode/agents/odachi-worker.md", ".opencode/agents/odachi-verify.md", ".opencode/agents/odachi-reviewer.md":
 			if !strings.Contains(file.Content, "mode: subagent") {
 				t.Errorf("%s is not an OpenCode subagent:\n%s", file.Path, file.Content)
 			}
-		case ".claude/agents/odachi-worker.md", ".claude/agents/odachi-verify.md":
+		case ".claude/agents/odachi-worker.md", ".claude/agents/odachi-verify.md", ".claude/agents/odachi-reviewer.md":
 			if !strings.Contains(file.Content, "name: odachi-") {
 				t.Errorf("%s does not declare the Claude name:\n%s", file.Path, file.Content)
 			}
 		}
 		if strings.Contains(file.Content, "mode: primary") {
 			t.Errorf("%s declares mode: primary: subagents are not selected with Tab", file.Path)
+		}
+	}
+}
+
+// TestTheReviewerCannotAct: the reviewer answers from the prompt; it must not be
+// able to read the live tree (the candidate is frozen), run commands or edit. In
+// OpenCode every tool it could use is denied; in Claude Code the allowlist is
+// empty.
+func TestTheReviewerCannotAct(t *testing.T) {
+	for _, file := range persona.SubagentFiles() {
+		switch file.Path {
+		case ".opencode/agents/odachi-reviewer.md":
+			for _, want := range []string{"read: deny", "edit: deny", "bash: deny", "task: deny", "webfetch: deny"} {
+				if !strings.Contains(file.Content, want) {
+					t.Errorf("%s does not deny %q:\n%s", file.Path, want, file.Content)
+				}
+			}
+			if !strings.Contains(file.Content, "Everything you need is in the prompt") {
+				t.Errorf("%s lost the reviewer's contract:\n%s", file.Path, file.Content)
+			}
+		case ".claude/agents/odachi-reviewer.md":
+			if !strings.Contains(file.Content, "tools: []") {
+				t.Errorf("%s does not declare an empty tool list:\n%s", file.Path, file.Content)
+			}
 		}
 	}
 }
