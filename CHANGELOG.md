@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.23 - 2026-10-26
+
+The report and the gate ask the same question the same way.
+
+- **The review rule answers about the tree that stands** (#47): `ReviewOwed`
+  defaulted to no base, and for the fence that means "compare against nothing" -
+  every file looked like code, the close rule never fired, and `progress` claimed
+  a verdict `check` never asked for. It now uses the same `HEAD` default `check`
+  uses. v0.11.22 shipped that disagreement; this release is the fix.
+- **The two verbs are tested together** (#47): an end-to-end test builds a real
+  repository, closes a feature and requires `check` and `progress` to agree twice
+  - at the close, and on the documents-only tail after it.
+
 ## v0.11.22 - 2026-10-26
 
 The report asks the gate instead of guessing.
