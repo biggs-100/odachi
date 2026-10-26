@@ -351,6 +351,58 @@ func TestProgressWritesNothing(t *testing.T) {
 	}
 }
 
+// TestTheStateNamesAreTheContract: another program reads these strings, and a
+// test that compares a name against its own constant pins nothing - rename the
+// constant's value and the suite stays green while the contract changes. Each
+// literal appears here once, so a rename is a failure.
+func TestTheStateNamesAreTheContract(t *testing.T) {
+	names := map[string]string{
+		"this_tree":       progress.ProofThisTree,
+		"another_tree":    progress.ProofAnotherTree,
+		"none":            progress.ProofNone,
+		"unmeasurable":    progress.ProofUnmeasurable,
+		"off":             progress.ReviewOff,
+		"not_due":         progress.ReviewNotDue,
+		"owed":            progress.ReviewOwed,
+		"on_file":         progress.ReviewOnFile,
+		"feature_open":    progress.WhyOpen,
+		"after_the_close": progress.WhyAfterClose,
+	}
+	for want, got := range names {
+		if got != want {
+			t.Errorf("a state name changed: the contract says %q, the code says %q", want, got)
+		}
+	}
+
+	// Two states share the word: a proof and a review that cannot be read.
+	if progress.ProofUnreadable != "unreadable" {
+		t.Errorf("ProofUnreadable = %q, want %q", progress.ProofUnreadable, "unreadable")
+	}
+	if progress.ReviewUnreadable != "unreadable" {
+		t.Errorf("ReviewUnreadable = %q, want %q", progress.ReviewUnreadable, "unreadable")
+	}
+}
+
+// TestTheReportCountsOpenQuestions: the field is advertised in the state, and a
+// number that is always zero proves nothing. One recorded question must be one.
+func TestTheReportCountsOpenQuestions(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(strings.Replace(
+		taskDoc, "L1 · ", "L2 · PREGUNTA P1 · \"¿Se puede cancelar?\"\nL1 · ", 1))
+
+	result := p.run(progress.Options{ReviewMode: true, Review: nothingOwed})
+
+	if result.State == nil {
+		t.Fatal("no state")
+	}
+	if result.State.OpenQuestions != 1 {
+		t.Errorf("open questions = %d, want 1", result.State.OpenQuestions)
+	}
+	if lines := strings.Join(result.Lines, "\n"); !strings.Contains(lines, "1 open question") {
+		t.Errorf("the lines do not say the count:\n%s", lines)
+	}
+}
+
 // TestTheReportIsDataBeforeItIsLines: the report is one shape rendered twice. The
 // state carries the same facts the lines carry, so the machine reader and the
 // human cannot be told different things.

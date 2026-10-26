@@ -99,6 +99,20 @@ func TestProgressJSONIsTheContract(t *testing.T) {
 	if state.Review.State != "not_due" || state.Review.Why != "feature_open" {
 		t.Errorf("review = %+v, want not due because the feature is open", state.Review)
 	}
+
+	// The key names are the contract too: a field that vanishes from the object is
+	// as broken as one that changes value.
+	var keys struct {
+		State map[string]json.RawMessage `json:"state"`
+	}
+	if err := json.Unmarshal([]byte(out), &keys); err != nil {
+		t.Fatalf("the machine output is not JSON: %v", err)
+	}
+	for _, key := range []string{"number", "slug", "steps", "open_questions", "proof", "review"} {
+		if _, ok := keys.State[key]; !ok {
+			t.Errorf("the state does not carry %q: %s", key, out)
+		}
+	}
 	if !strings.Contains(got.Message, "0 of 1") {
 		t.Errorf("message = %q, want the same headline the human reads", got.Message)
 	}
