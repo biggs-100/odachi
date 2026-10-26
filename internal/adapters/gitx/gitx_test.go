@@ -53,6 +53,27 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
+// TestBetweenNamesWhatMovedBetweenTwoTrees: the proof gate knows two hashes
+// differ; this is the answer that tells a human which file moved.
+func TestBetweenNamesWhatMovedBetweenTwoTrees(t *testing.T) {
+	root, base := newRepo(t)
+	write(t, filepath.Join(root, "notes.txt"), "segunda línea\n")
+	write(t, filepath.Join(root, "nuevo.txt"), "algo\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "second")
+
+	from := git(t, root, "rev-parse", base+"^{tree}")
+	to := git(t, root, "rev-parse", "HEAD^{tree}")
+
+	paths, err := gitx.Between(root, from, to)
+	if err != nil {
+		t.Fatalf("Between: %v", err)
+	}
+	if !slices.Equal(paths, []string{"notes.txt", "nuevo.txt"}) {
+		t.Errorf("Between = %v, want the two moved paths, sorted", paths)
+	}
+}
+
 // TestHeadIsTheCommitAndAnEmptyRepositoryHasNone: the base a feature records is
 // the commit that exists when it starts; a repository with no commit has nothing
 // to record, and the error is the answer, not a crash.

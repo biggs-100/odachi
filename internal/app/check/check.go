@@ -135,6 +135,10 @@ type Git interface {
 	// reads the paths, the lens class reads the diff, and the proof is named
 	// after the tree; all three describe the same bytes.
 	Candidate(root, base string) (tree string, paths []string, diff string, err error)
+	// Between names the paths that differ between two trees. The proof gate knows
+	// the two hashes differ; this is what tells a human which file moved, because a
+	// stray backup, an editor and a real edit look identical in one line.
+	Between(root, from, to string) ([]string, error)
 	// FileAt reads a file from a git ref, which is how the fence is read from a
 	// base branch the candidate cannot edit.
 	FileAt(root, rev, path string) ([]byte, bool, error)
@@ -257,6 +261,13 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 
 	verdict := gate.Evaluate(state)
+	// The gate is pure and only knows that two hashes differ; the human needs the
+	// paths, because a stray backup, an editor and a real edit look identical in
+	// one line. The note is best-effort: an object git can no longer read leaves
+	// the generic message.
+	if verdict.Reason == gate.ReasonProofStale {
+		r.staleNote = r.changedSince(state.ProofTreeHash, state.TreeHash)
+	}
 	if verdict.Code == gate.Ready {
 		// The review gate is last on purpose: everything before it is something
 		// the agent can act on, and sending an agent to `odachi review` while the
@@ -325,6 +336,9 @@ type runner struct {
 	// proofModel is the model the evidence came from: the recorded proof's, or
 	// the one this run stamps. Empty when no session could be named.
 	proofModel string
+	// staleNote names the paths that differ between the proof's tree and this
+	// one, when the proof is stale. Empty means the diff could not be read.
+	staleNote string
 	// work is the one read of the candidate: tree, changed paths and diff. The
 	// fence, the lens class and the proof all describe these same bytes.
 	work *worktree
@@ -980,6 +994,24 @@ func reviewFinding(finding reviewdomain.Finding) string {
 	return where + " " + string(finding.Severity) + " " + finding.Why
 }
 
+// changedSince names the paths that differ between the proof's tree and this one,
+// in one line. It never blocks: a tree git can no longer read is the generic
+// message's business, and a second failure on top of the first would be noise.
+func (r *runner) changedSince(from, to string) string {
+	if from == "" || to == "" || from == to {
+		return ""
+	}
+	paths, err := r.git.Between(r.opts.Dir, from, to)
+	if err != nil || len(paths) == 0 {
+		return ""
+	}
+	const limit = 8
+	if len(paths) > limit {
+		return strings.Join(paths[:limit], ", ") + fmt.Sprintf(" and %d more", len(paths)-limit)
+	}
+	return strings.Join(paths, ", ")
+}
+
 // report turns the gate's verdict into the verb's result.
 func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	result := Result{
@@ -991,6 +1023,9 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 
 	if verdict.Code != gate.Ready {
 		result.Lines = []string{verdict.Message}
+		if r.staleNote != "" {
+			result.Lines = append(result.Lines, "changed since the proof: "+r.staleNote)
+		}
 		if r.failedRel != "" {
 			result.Lines = append(result.Lines, "output: "+r.failedRel)
 		}

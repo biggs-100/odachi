@@ -140,6 +140,13 @@ type fakeGit struct {
 	// filesAt answers FileAt, keyed by "rev:path"; fileAtErr is the ref failing.
 	filesAt   map[string]string
 	fileAtErr error
+
+	// between answers Between: the paths that moved between the proof's tree and
+	// this one, and betweenErr is git failing for real. betweenCalls counts the
+	// question, because a proof that is not stale must not ask it.
+	between      []string
+	betweenErr   error
+	betweenCalls int
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
@@ -156,6 +163,14 @@ func (g *fakeGit) Candidate(root, base string) (string, []string, string, error)
 		return "", nil, "", g.diffErr
 	}
 	return g.tree, g.changed, g.diff, nil
+}
+
+func (g *fakeGit) Between(root, from, to string) ([]string, error) {
+	g.betweenCalls++
+	if g.betweenErr != nil {
+		return nil, g.betweenErr
+	}
+	return g.between, nil
 }
 
 func (g *fakeGit) BlobHash(root, path string) (string, error) {
