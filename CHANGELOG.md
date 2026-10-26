@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.20 - 2026-10-25
+
+The review answers coverage before the gate asks for it.
+
+- **`review` refuses an answer that leaves a row unanswered**: before sealing, the
+  run asks the gate's own arithmetic about the lenses the answer claimed, measured
+  on the bytes git can hash now. Nothing is written, and the refusal names the file
+  and the lens.
+- **A split run still stores**: the promise covers the lenses the run was asked
+  for, so a sensitive candidate judged by two models files each group's answer, and
+  the store keeps growing by lens.
+- **A complete answer is untouched**: same message, same file, no new line.
+- **The failure moves to where it is cheap**: the rows are named while the answer
+  is in hand, instead of at `check`, after the reviewer call was paid for and the
+  verdict could no longer be rewritten.
+
 ## v0.11.19 - 2026-10-25
 
 The tool says what it does not read.
