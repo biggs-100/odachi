@@ -13,7 +13,7 @@ R1 · "progress says the same verdict the gate would use, and never invents one 
 
 ## Steps
 - [x] T1 · progress asks the gate whether this tree owes a verdict, and reports the same   R1 · 633e259
-- [ ] T2 · an unreadable store is reported as unreadable, never as a verdict owed   R1
+- [x] T2 · an unreadable store is reported as unreadable, never as a verdict owed   R1 · d719057
 
 ## History
 L1 · "progress says the same verdict the gate would use, and never invents one it could not read"
