@@ -11,7 +11,7 @@ R1 · "the gate JSON names every reason, and its keys, in a test"
 
 ## Steps
 - [x] T1 · every reason the gate prints is a pinned literal, and the keys are pinned for a ready tree and a blocked one   R1 · 6b786aa
-- [ ] T2 · the README names check --json as the machine contract of the gate   R1
+- [x] T2 · the README names check --json as the machine contract of the gate   R1 · aabbaa9
 
 ## History
 L1 · "the gate JSON names every reason, and its keys, in a test"
