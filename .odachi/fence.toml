@@ -1,19 +1,19 @@
 [[rule]]
-not   = "the coverage arithmetic of check (ADR 0016)"
-paths = ["the-coverage-arithmetic-of-check-adr-0016*"]
+not   = "the lens rules and the six rules"
+paths = ["the-lens-rules-and-the-six-rules*"]
 deps  = []
 
 [[rule]]
-not   = "the reviewer prompt and its wording"
-paths = ["the-reviewer-prompt-and-its-wording*"]
+not   = "which rows count as potent"
+paths = ["which-rows-count-as-potent*"]
 deps  = []
 
 [[rule]]
-not   = "paying a second call or re-running the reviewer by itself"
-paths = ["paying-a-second-call-or-re-running-the-reviewer-by-itself*"]
+not   = "truncating by size or a budget"
+paths = ["truncating-by-size-or-a-budget*"]
 deps  = []
 
 [[rule]]
-not   = "rewriting a verdict already stored"
-paths = ["rewriting-a-verdict-already-stored*"]
+not   = "the verdict schema"
+paths = ["the-verdict-schema*"]
 deps  = []
