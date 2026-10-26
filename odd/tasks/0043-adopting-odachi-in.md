@@ -13,10 +13,11 @@ R1 · "adopting odachi in a real repo does not over-review what init wrote, does
 - tests pin the passive plan, the named stale paths and the installed agent
 
 ## Steps
-- [ ] T1 · the paths init writes are plumbing, not candidate, so the plan commit asks for no lens   R1
+- [x] T1 · the paths init writes are plumbing, not candidate, so the plan commit asks for no lens   R1 · 02f5dc6
 - [ ] T2 · a stale proof names the paths that differ, instead of only saying the code moved   R1
 - [ ] T3 · init installs a read-only reviewer agent and the README says how to run it   R1
 
 ## History
 L1 · "adopting odachi in a real repo does not over-review what init wrote, does not leave a stale proof unexplained, and installs a reviewer that cannot change the tree"
 L2 · OFICIO · "The rows of the files init installs are not read for content signals, and their paths are plumbing" (porque a skill that mentions secrets is the tool's own text, not a security change in the adopting repo; the adoption must not cost four lenses before the first line of code)
+L3 · OFICIO · "The proof gate names the paths that differ between the proof's tree and this one, and never blocks on the diff" (porque a stray backup, an editor and a real edit look identical in one line, and the generic message makes the human audit the whole tree; if git cannot read the old tree, the generic message stands)

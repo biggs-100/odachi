@@ -371,6 +371,8 @@ func (gitRepo) Candidate(root, base string) (string, []string, string, error) {
 	return gitx.Candidate(root, base)
 }
 
+func (gitRepo) Between(root, from, to string) ([]string, error) { return gitx.Between(root, from, to) }
+
 func (gitRepo) AddedDeps(root, base string) ([]string, error) {
 	return gitx.AddedDeps(root, base)
 }

@@ -271,6 +271,54 @@ func TestNoReviewBeatsTheMode(t *testing.T) {
 	}
 }
 
+// TestAStaleProofNamesWhatChanged: "from another state of the code" is true and
+// useless. A stray backup, an editor and a real edit look identical in one line,
+// so the gate names the paths that moved between the proof's tree and this one.
+func TestAStaleProofNamesWhatChanged(t *testing.T) {
+	files := readyFiles()
+	files["proof/0007-turnos.txt"] = proofFile(otherTree, "go test ./...", "ok\n")
+	git := &fakeGit{tree: currentTree, between: []string{"stray.bak"}}
+
+	got := run(t, newFakeFiles(files), git, check.Options{})
+
+	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofStale {
+		t.Fatalf("state = %d/%q, want a stale proof", got.Code, got.Reason)
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "changed since the proof: stray.bak") {
+		t.Errorf("lines = %v, want the path that moved", got.Lines)
+	}
+	if git.betweenCalls != 1 {
+		t.Errorf("Between calls = %d, want one question", git.betweenCalls)
+	}
+
+	// A current proof does not ask: the question is only for the stale case.
+	fresh := readyFiles()
+	freshGit := &fakeGit{tree: currentTree, between: []string{"noise"}}
+	if got := run(t, newFakeFiles(fresh), freshGit, check.Options{}); got.Code != int(gate.Ready) {
+		t.Fatalf("a current proof = %d (%s), want ready", got.Code, got.Message)
+	}
+	if freshGit.betweenCalls != 0 {
+		t.Errorf("Between calls = %d for a current proof, want none", freshGit.betweenCalls)
+	}
+}
+
+// TestAStaleProofWithoutAPathKeepsTheGenericMessage: if git can no longer read
+// the proof's tree, the message stays as it was: a second failure is noise.
+func TestAStaleProofWithoutAPathKeepsTheGenericMessage(t *testing.T) {
+	files := readyFiles()
+	files["proof/0007-turnos.txt"] = proofFile(otherTree, "go test ./...", "ok\n")
+	git := &fakeGit{tree: currentTree, betweenErr: errors.New("fatal: bad object")}
+
+	got := run(t, newFakeFiles(files), git, check.Options{})
+
+	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofStale {
+		t.Fatalf("state = %d/%q, want a stale proof", got.Code, got.Reason)
+	}
+	if strings.Contains(strings.Join(got.Lines, "\n"), "changed since the proof") {
+		t.Errorf("lines = %v, want no note when git cannot name the paths", got.Lines)
+	}
+}
+
 // TestRequireReviewRefusesASelfReview: the proof and the verdict name the same
 // model, so the tree is approving itself. The gate names the identity and the
 // command that fixes it, because "find another reviewer" is not a next step.

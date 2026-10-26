@@ -86,6 +86,30 @@ func TreeHash(root string) (string, error) {
 	return strings.TrimSpace(tree), nil
 }
 
+// Between names the paths that differ between two trees. Both are tree ids, as
+// git writes them; the empty tree is one of them when the proof predates the
+// first commit. A tree git no longer has in its object database is an error, and
+// the caller keeps the generic message it already had.
+func Between(root, from, to string) ([]string, error) {
+	out, err := run(root, "diff", "--name-only", from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]bool)
+	paths := make([]string, 0, 8)
+	for _, line := range strings.Split(out, "\n") {
+		path := strings.TrimSpace(strings.TrimSuffix(line, "\r"))
+		if path == "" || seen[path] {
+			continue
+		}
+		seen[path] = true
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths, nil
+}
+
 // Head is the commit the worktree is on: what a feature starts from when its
 // task doc is written. A repository with no commit has no HEAD, and that error is
 // the answer "nothing to record".
