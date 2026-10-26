@@ -219,6 +219,7 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 
 	flags.StringVar(&opts.Answer, "answer", "", "the human's answer to an open question")
 	flags.StringVar(&opts.For, "for", "", "P<n> of the question being answered (required when two or more are open)")
+	flags.IntVar(&opts.Feature, "feature", 0, "the feature number to write to (default: the highest)")
 	flags.StringVar(&opts.Craft, "craft", "", "decision the agent took without asking")
 	flags.StringVar(&opts.Because, "because", "", "why the agent took that decision (required with --craft)")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
@@ -260,6 +261,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.Requirement, "req", "", "R<n> of the requirement the new step is tied to")
 	flags.StringVar(&opts.Done, "done", "", "T<n> of the step that is marked done")
 	flags.StringVar(&opts.Commit, "commit", "", "commit that closed the step (goes with --done)")
+	flags.IntVar(&opts.Feature, "feature", 0, "the feature number to write to (default: the highest)")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	// The documented shape starts with the step text, so a leading argument is

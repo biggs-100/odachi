@@ -42,6 +42,9 @@ type Options struct {
 	// Craft is a decision the agent took alone, and Because is why.
 	Craft   string
 	Because string
+	// Feature is the number of the task document to write to. Zero means the
+	// highest, which is the feature the human is working on now.
+	Feature int
 }
 
 // Files is the disk port: enough to find, read and rewrite a task document.
@@ -84,7 +87,7 @@ func Run(opts Options, files Files) Result {
 		return *problem
 	}
 
-	current, err := tasks.Current(files, opts.Dir)
+	current, err := tasks.Feature(files, opts.Dir, opts.Feature)
 	if err != nil {
 		return blocked(oneLine(err.Error()))
 	}
