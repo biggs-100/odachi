@@ -218,4 +218,9 @@ func TestFeatureSelectsByNumber(t *testing.T) {
 	if strings.Contains(err.Error(), "qonta-notas") {
 		t.Errorf("error %q names a document odachi does not read", err.Error())
 	}
+
+	// A negative number is unknown, not a way to ask for the default.
+	if _, err := tasks.Feature(files, "raiz", -1); err == nil || !strings.Contains(err.Error(), "0001-turnos") {
+		t.Errorf("Feature(-1) = %v, want the numbers that exist", err)
+	}
 }

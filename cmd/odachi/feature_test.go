@@ -81,6 +81,19 @@ func TestAFeatureCanBeChosenByItsNumber(t *testing.T) {
 		t.Errorf("check --feature 2 judged 0001's question: %q", errOut)
 	}
 
+	// The gate refuses a number the tree does not have, and a negative one is not
+	// a way to reach the default.
+	code, _, errOut = runDir(t, dir, []string{"check", "--feature", "9"}, "")
+	if code != 1 {
+		t.Fatalf("check --feature 9 = %d, want 1: the number does not exist", code)
+	}
+	if !strings.Contains(errOut, "the ones odachi reads are") {
+		t.Errorf("check --feature 9 does not name the features: %q", errOut)
+	}
+	if code, _, _ := runDir(t, dir, []string{"plan", "x", "--feature", "-1"}, ""); code != 1 {
+		t.Errorf("plan --feature -1 = %d, want 1: it is unknown, not the default", code)
+	}
+
 	// The report describes the one named, as data too.
 	code, out, errOut := runDir(t, dir, []string{"progress", "--feature", "1", "--json"}, "")
 	if code != 0 {
@@ -107,4 +120,27 @@ func featureText(t *testing.T, dir, name string) string {
 		t.Fatalf("read %s: %v", name, err)
 	}
 	return string(data)
+}
+
+// TestANamedFeatureOnAProjectWithoutDocsIsRefused: a project before its first
+// feature can still be verified -there is nothing to ask about-, but asking for a
+// number there is refused exactly like any other unknown number. The gate is the
+// last place a selector may answer nothing.
+func TestANamedFeatureOnAProjectWithoutDocsIsRefused(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+	seedProject(t, dir)
+	if err := os.Remove(filepath.Join(dir, "odd", "tasks", "0001-turnos.md")); err != nil {
+		t.Fatalf("remove the task doc: %v", err)
+	}
+
+	code, _, errOut := runDir(t, dir, []string{"check", "--feature", "9"}, "")
+
+	if code != 1 {
+		t.Fatalf("check --feature 9 without docs = %d, want 1 (stderr: %q)", code, errOut)
+	}
+	if !strings.Contains(errOut, "there is no task doc") {
+		t.Errorf("stderr %q does not name the missing document", errOut)
+	}
 }
