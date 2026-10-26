@@ -1,19 +1,19 @@
 [[rule]]
-not   = "the lens rules and the six rules"
-paths = ["the-lens-rules-and-the-six-rules*"]
+not   = "changing summary, start or check"
+paths = ["changing-summary-start-or-check*"]
 deps  = []
 
 [[rule]]
-not   = "which rows count as potent"
-paths = ["which-rows-count-as-potent*"]
+not   = "showing closed features"
+paths = ["showing-closed-features*"]
 deps  = []
 
 [[rule]]
-not   = "truncating by size or a budget"
-paths = ["truncating-by-size-or-a-budget*"]
+not   = "reading the proof output or the verdict findings"
+paths = ["reading-the-proof-output-or-the-verdict-findings*"]
 deps  = []
 
 [[rule]]
-not   = "the verdict schema"
-paths = ["the-verdict-schema*"]
+not   = "an exit code for scripts"
+paths = ["an-exit-code-for-scripts*"]
 deps  = []
