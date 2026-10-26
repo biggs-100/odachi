@@ -47,6 +47,35 @@ func TestCarriedSectionPrintsEachRowOnce(t *testing.T) {
 	}
 }
 
+// TestCarriedSectionKeepsRowsThatDiffer: the dedupe is about the same row, not
+// about the same file. Two defects on one path, one line apart, or under another
+// lens, are different answers and the reviewer must hear both.
+func TestCarriedSectionKeepsRowsThatDiffer(t *testing.T) {
+	base := review.Finding{
+		Path: "a.go", Line: 3, Lens: review.Reliability,
+		Severity: review.Warning, Why: "pierde el turno", Blob: "b",
+	}
+	otherWhy := base
+	otherWhy.Why = "devuelve otro turno"
+	otherLine := base
+	otherLine.Line = 7
+	otherLens := base
+	otherLens.Lens = review.Risk
+
+	got := carriedPrompt([]review.Finding{base, otherWhy, otherLine, otherLens}, nil)
+
+	for _, want := range []string{
+		"(reliability, WARNING) pierde el turno",
+		"(reliability, WARNING) devuelve otro turno",
+		"a.go:7 (reliability, WARNING)",
+		"(risk, WARNING) pierde el turno",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a row that differs was dropped: missing %q\n%s", want, carriedRows(got))
+		}
+	}
+}
+
 // TestCarriedSectionOrderIsTheStores: two runs against the same store print the
 // same prompt, so two reviews are comparable and a re-run does not look like a
 // different question.
