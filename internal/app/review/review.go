@@ -13,6 +13,8 @@
 package review
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -1108,7 +1110,7 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		return *problem
 	}
 	if len(gaps) > 0 {
-		return uncovered(gaps)
+		return r.refuse(sealed, gaps, rel)
 	}
 
 	if err := r.files.Write(target, domain.Render(sealed)); err != nil {
@@ -1326,10 +1328,26 @@ func (r *runner) uncoveredBy(verdict domain.Verdict, work *worktree, asked []str
 // uncovered is the refusal for an answer that answered less than it claimed.
 // It names the rows, because "a row is missing" without the row is a riddle the
 // human pays for twice.
-func uncovered(gaps []domain.Gap) Result {
+func uncovered(gaps []domain.Gap) string {
 	first := gaps[0]
-	message := fmt.Sprintf("the answer does not cover %s under the %s lens (%d row(s) missing); no verdict was written",
+	return fmt.Sprintf("the answer does not cover %s under the %s lens (%d row(s) missing); no verdict was written",
 		first.Path, first.Lens, len(gaps))
+}
+
+// refuse keeps the answer the run would not seal and says where it is. The
+// reviewer was paid for those bytes: throwing them away means paying again for
+// the same rejection. The file lives in the store the project already ignores,
+// and its name is the tree plus a digest of the answer, so two different answers
+// coexist and the same one is written once - an occupied slot is never
+// overwritten.
+func (r *runner) refuse(sealed domain.Verdict, gaps []domain.Gap, rel string) Result {
+	message := uncovered(gaps)
+
+	kept, problem := r.keepRefused(sealed, rel)
+	if problem != nil {
+		message += "; I could not keep it: " + problem.Message
+		return blocked(message)
+	}
 
 	rows := make([]string, 0, len(gaps))
 	for _, gap := range gaps {
@@ -1341,9 +1359,34 @@ func uncovered(gaps []domain.Gap) Result {
 		Lines: []string{
 			message,
 			"rows missing: " + strings.Join(rows, ", "),
-			"next: odachi review --show",
+			"the answer is kept in " + kept + ": fix the rows and attach it again",
+			"next: odachi review --attach " + kept,
 		},
 	}
+}
+
+// keepRefused writes the answer under a name its own bytes decide and returns the
+// project-relative path. Writing twice the same bytes writes nothing the second
+// time: the name is the content.
+func (r *runner) keepRefused(sealed domain.Verdict, rel string) (string, *Result) {
+	data := domain.Render(sealed)
+	sum := sha256.Sum256(data)
+	kept := strings.TrimSuffix(rel, ".json") + ".refused-" + hex.EncodeToString(sum[:])[:8] + ".json"
+
+	path := fullPath(r.opts.Dir, kept)
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not check whether %s exists: %s", kept, oneLine(err.Error())))
+		return "", &problem
+	}
+	if exists {
+		return kept, nil
+	}
+	if err := r.files.Write(path, data); err != nil {
+		problem := blocked(fmt.Sprintf("could not write %s: %s", kept, oneLine(err.Error())))
+		return "", &problem
+	}
+	return kept, nil
 }
 
 // carriedRows is how much the store lent to one verdict, and how many fresh

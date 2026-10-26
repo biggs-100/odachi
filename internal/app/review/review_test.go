@@ -855,11 +855,12 @@ func TestAttachStoresTheVerdictUnderTheTree(t *testing.T) {
 	}
 }
 
-// TestAnAnswerThatMissesARowIsNotStored: coverage is a promise of the command,
-// not a discovery of the gate. The store cannot be rewritten, so a verdict
-// stored with a hole leaves that tree with no way out; the answer that would
-// have made the hole is refused and the refusal names the row.
-func TestAnAnswerThatMissesARowIsNotStored(t *testing.T) {
+// TestARefusedAnswerIsKeptAndNamed: coverage is a promise of the command, not a
+// discovery of the gate. The answer that would have left a hole is not sealed, and
+// it is not thrown away either: the reviewer was paid for it, so it is kept under
+// a name its own bytes decide and the refusal names the file. The human fixes the
+// rows and attaches the same answer again.
+func TestARefusedAnswerIsKeptAndNamed(t *testing.T) {
 	p := newProject()
 	p.git.blobs = map[string]string{"a.go": gitBlob}
 	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"agente","findings":[],"passes":[]}`)
@@ -873,11 +874,50 @@ func TestAnAnswerThatMissesARowIsNotStored(t *testing.T) {
 		t.Errorf("message = %q, want the file and the lens that never answered", result.Message)
 	}
 	if !strings.Contains(result.Message, "no verdict was written") {
-		t.Errorf("message = %q, want the promise that the store is untouched", result.Message)
+		t.Errorf("message = %q, want the promise that nothing was sealed", result.Message)
 	}
-	if writes := p.verdictWrites(); len(writes) != 0 {
-		t.Fatalf("writes = %v, want none", writes)
+
+	// The answer is kept: one file, named with this tree and a digest of these
+	// bytes, in the store the project already ignores.
+	kept := keptAnswers(t, p)
+	if len(kept) != 1 {
+		t.Fatalf("kept answers = %v, want exactly one", kept)
 	}
+	rel := relative(kept[0])
+	if !strings.HasPrefix(rel, domainreview.Dir+"/"+currentTree+".refused-") || !strings.HasSuffix(rel, ".json") {
+		t.Errorf("kept file %q is not named by the tree and the answer", rel)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, rel) {
+		t.Errorf("the refusal does not name the kept answer %q:\n%s", rel, lines)
+	}
+	if !strings.Contains(lines, "odachi review --attach "+rel) {
+		t.Errorf("the refusal does not say how to attach it again:\n%s", lines)
+	}
+	if _, sealed := p.files.files[storePath(currentTree)]; sealed {
+		t.Error("a verdict was sealed for an answer that never covered the tree")
+	}
+
+	stored, err := domainreview.Parse(p.files.files[fullPath(rel)])
+	if err != nil {
+		t.Fatalf("the kept answer does not parse: %v", err)
+	}
+	if stored.Tree != currentTree || len(stored.Findings) != 0 {
+		t.Errorf("kept answer = %+v, want the answer as it arrived, under this tree", stored)
+	}
+}
+
+// keptAnswers is every refused answer the store holds, in path spelling.
+func keptAnswers(t *testing.T, p *project) []string {
+	t.Helper()
+	var kept []string
+	for path := range p.files.files {
+		if strings.Contains(filepath.ToSlash(path), ".refused-") {
+			kept = append(kept, path)
+		}
+	}
+	slices.Sort(kept)
+	return kept
 }
 
 // gitBlob is what the git port answers for a.go: the blob id of the bytes as
