@@ -112,6 +112,13 @@ attested build of a compromised tree is still signed and attested.
 
 Complete examples in `testdata/examples/`.
 
+The task document is numbered because the number is how odachi knows which
+feature is current. A project that keeps another shape - ODD names a feature
+without a number - can keep it: odachi does not read, rename or migrate those
+files, and `doctor`, `start` and `summary` say which ones they are, so the two
+memories live in the same folder without either pretending the other is not
+there.
+
 `proof/` and `.odachi/reviews/` are **generated evidence**, not versioned: the
 proof carries the hash of the tree that produced it, and the verdict is named
 after the tree it judges. That is why both must stay out of git: otherwise the

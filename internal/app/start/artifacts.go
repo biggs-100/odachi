@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/fence"
 	"github.com/biggs-100/odachi/internal/domain/persona"
@@ -219,9 +220,20 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		}
 	}
 
+	// The documents odachi does not read are named once: a project that keeps
+	// another shape (ODD names a feature without a number) must hear what the
+	// tool skips instead of wondering why summary counts one.
+	var lines []string
+	if skipped, err := tasks.Skipped(r.files, r.opts.Dir); err == nil {
+		if line := tasks.SkippedLine(skipped); line != "" {
+			lines = append(lines, line)
+		}
+	}
+
 	return Result{
 		Code:    CodeOK,
 		Message: "done: wrote " + humanList(r.written) + "; commit what start wrote (the plan) before you build",
+		Lines:   lines,
 		Profile: r.profile.Name,
 		Task:    filepath.ToSlash(taskPath),
 		Files:   r.written,
