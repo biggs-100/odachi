@@ -134,9 +134,12 @@ func TestReviewWithoutChangesHasNothingToReview(t *testing.T) {
 func TestReviewAttachStoresAndShowReads(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
-	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","findings":[]}`)
+	// The answer lives outside the project: a document inside it would be part of
+	// the change it judges.
+	verdict := filepath.Join(t.TempDir(), "veredicto.json")
+	writeAt(t, verdict, `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
 
-	code, out, errOut := runDir(t, dir, []string{"review", "--attach", "veredicto.json"}, "")
+	code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, "")
 	if code != 0 {
 		t.Fatalf("attach: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
@@ -159,7 +162,7 @@ func TestReviewAttachStoresAndShowReads(t *testing.T) {
 		}
 	}
 
-	code, _, errOut = runDir(t, dir, []string{"review", "--attach", "veredicto.json"}, "")
+	code, _, errOut = runDir(t, dir, []string{"review", "--attach", verdict}, "")
 	if code != 1 {
 		t.Fatalf("second attach: code = %d, want 1", code)
 	}
@@ -173,8 +176,9 @@ func TestReviewAttachStoresAndShowReads(t *testing.T) {
 func TestReviewShowAnotherTreeSaysThereIsNone(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
-	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","findings":[]}`)
-	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", "veredicto.json"}, ""); code != 0 {
+	verdict := filepath.Join(t.TempDir(), "veredicto.json")
+	writeAt(t, verdict, `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
+	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 
@@ -495,13 +499,16 @@ func TestCheckRequireReviewReportsChangesRequested(t *testing.T) {
 	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 {
 		t.Fatalf("check --run: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	writeFile(t, dir, "veredicto.json", `{
+	// The answer lives outside the project: a document inside it would be part of
+	// the change it judges.
+	verdict := filepath.Join(t.TempDir(), "veredicto.json")
+	writeAt(t, verdict, `{
   "reviewer": "claude",
   "findings": [
-    {"path": "internal/app/turnos.go", "line": 3, "severity": "CRITICAL", "causal": true, "why": "devuelve nuevo sin guardar el turno"}
+    {"path": "internal/app/turnos.go", "line": 3, "severity": "CRITICAL", "causal": true, "lens": "reliability", "why": "devuelve nuevo sin guardar el turno"}
   ]
 }`)
-	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", "veredicto.json"}, ""); code != 0 {
+	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 {

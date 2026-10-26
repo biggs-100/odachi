@@ -799,6 +799,31 @@ func TestAttachStoresTheVerdictUnderTheTree(t *testing.T) {
 	}
 }
 
+// TestAnAnswerThatMissesARowIsNotStored: coverage is a promise of the command,
+// not a discovery of the gate. The store cannot be rewritten, so a verdict
+// stored with a hole leaves that tree with no way out; the answer that would
+// have made the hole is refused and the refusal names the row.
+func TestAnAnswerThatMissesARowIsNotStored(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"agente","findings":[],"passes":[]}`)
+
+	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 for an answer that answered nothing (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "a.go") || !strings.Contains(result.Message, "reliability") {
+		t.Errorf("message = %q, want the file and the lens that never answered", result.Message)
+	}
+	if !strings.Contains(result.Message, "no verdict was written") {
+		t.Errorf("message = %q, want the promise that the store is untouched", result.Message)
+	}
+	if writes := p.verdictWrites(); len(writes) != 0 {
+		t.Fatalf("writes = %v, want none", writes)
+	}
+}
+
 // gitBlob is what the git port answers for a.go: the blob id of the bytes as
 // they stand in the worktree, computed from the content, not from anyone's word.
 const gitBlob = "c1a0f9e8d7b6a5c4d3e2f1a0b9c8d7e6f5a4b3c2"
@@ -1202,7 +1227,7 @@ func TestStaleBytesDoNotTravel(t *testing.T) {
 		t.Fatalf("sealing the previous verdict: %v", err)
 	}
 	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
-	p.shell.output = `{"findings":[]}`
+	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}]}`
 
 	if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
@@ -1212,8 +1237,18 @@ func TestStaleBytesDoNotTravel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the stored verdict does not parse: %v", err)
 	}
-	if len(parsed.Findings) != 0 || len(parsed.Passes) != 0 {
-		t.Errorf("findings = %d, passes = %d, want none: stale receipts never travel", len(parsed.Findings), len(parsed.Passes))
+	if len(parsed.Findings) != 0 {
+		t.Errorf("findings = %d, want none: stale receipts never travel", len(parsed.Findings))
+	}
+	for _, pass := range parsed.Passes {
+		if pass.Blob == stale.Blob {
+			t.Errorf("passes = %v, want no row about the old bytes", parsed.Passes)
+		}
+	}
+	// The run answered the row itself, about the bytes that stand now: the fresh
+	// pass is the run's answer, not the stale one carried over.
+	if len(parsed.Passes) != 1 || parsed.Passes[0].Blob != gitBlob {
+		t.Errorf("passes = %v, want the run's own answer about the current bytes", parsed.Passes)
 	}
 }
 
