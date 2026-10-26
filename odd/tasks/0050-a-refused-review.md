@@ -13,7 +13,7 @@ R1 · "a refused review answer is kept, named and attachable again, so the same 
 
 ## Steps
 - [x] T1 · a refused answer is kept under a name its bytes decide, and the refusal names it   R1 · 8339a67
-- [ ] T2 · an answer that lands removes the kept file, and two different answers coexist   R1
+- [x] T2 · an answer that lands removes the kept file, and two different answers coexist   R1 · 14757ff
 
 ## History
 L1 · "a refused review answer is kept, named and attachable again, so the same rejection is never paid twice"
