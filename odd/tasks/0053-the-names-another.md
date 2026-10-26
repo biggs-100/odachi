@@ -10,7 +10,7 @@ R1 · "the names another program reads are pinned by a test, not compared with t
 - the human report and the JSON read exactly as today
 
 ## Steps
-- [ ] T1 · the state vocabulary is pinned by literals and open_questions carries a number   R1
+- [x] T1 · the state vocabulary is pinned by literals and open_questions carries a number   R1 · 122ea0d
 
 ## History
 L1 · "the names another program reads are pinned by a test, not compared with themselves"
