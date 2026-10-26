@@ -162,6 +162,51 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	}
 }
 
+// TestReviewOwedAgreesWithTheGate: the exported question answers what the gate
+// answers, for the same tree. That shared answer is the whole reason it is
+// exported: a report that asks it cannot disagree with the gate about a tree.
+func TestReviewOwedAgreesWithTheGate(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+
+	// The release tail: a documents-only change after the close, with no verdict.
+	tail := readyFiles()
+	tail["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	after := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"CHANGELOG.md", "README.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+	}
+	owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(tail), after)
+	if err != nil {
+		t.Fatalf("ReviewOwed on the release tail: %v", err)
+	}
+	if owed || gotBase != "" {
+		t.Errorf("ReviewOwed(release tail) = %v, %q; want nothing owed", owed, gotBase)
+	}
+	if got := run(t, newFakeFiles(tail), after, check.Options{ReviewMode: true}); got.Code != int(gate.Ready) {
+		t.Fatalf("the gate and the exported answer disagree: gate = %d %q", got.Code, got.Message)
+	}
+
+	// The close itself: the document that marked the last step done.
+	closing := readyFiles()
+	closing["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	atClose := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"odd/tasks/0007-turnos.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
+	}
+	owed, gotBase, err = check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(closing), atClose)
+	if err != nil {
+		t.Fatalf("ReviewOwed at the close: %v", err)
+	}
+	if !owed || gotBase != base {
+		t.Errorf("ReviewOwed(close) = %v, %q; want owed at %q", owed, gotBase, base)
+	}
+	if got := run(t, newFakeFiles(closing), atClose, check.Options{ReviewMode: true}); got.Code == int(gate.Ready) {
+		t.Fatalf("the gate asked for no verdict while the exported answer says it is owed")
+	}
+}
+
 // TestTheReleaseTailDoesNotOweTheFeatureVerdict: after the close, a documents-
 // only change -the release notes- is paperwork. The verdict it would ask for
 // already judged the same code, so the gate leaves it with its proof.

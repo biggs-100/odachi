@@ -382,7 +382,14 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	result := progress.Run(progress.Options{Dir: dir, ReviewMode: enabled}, osFiles{}, gitRepo{})
+	result := progress.Run(progress.Options{
+		Dir:        dir,
+		ReviewMode: enabled,
+		// The gate's own rule, asked instead of re-derived: one owner, one answer.
+		Review: func() (bool, string, error) {
+			return check.ReviewOwed(check.Options{Dir: dir, ReviewMode: enabled}, osFiles{}, gitRepo{})
+		},
+	}, osFiles{}, gitRepo{})
 	for _, line := range result.Lines {
 		fmt.Fprintln(stdout, line)
 	}

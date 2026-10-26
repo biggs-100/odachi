@@ -172,6 +172,16 @@ func TestProgressSaysWhetherThisTreeHasItsOwnProof(t *testing.T) {
 	})
 }
 
+// owing is the gate's answer for a tree that owes a verdict: do it, and name
+// this base.
+func owing(base string) func() (bool, string, error) {
+	return func() (bool, string, error) { return true, base, nil }
+}
+
+// nothingOwed is the gate's answer for a tree it does not ask about: an open
+// feature, or documents written after the close.
+func nothingOwed() (bool, string, error) { return false, "", nil }
+
 // TestProgressSaysWhetherTheReviewIsOwed: the gate asks once per feature, at the
 // close, and only when the project has the review on. The report says which of
 // those moments this tree is in, and whether a verdict already covers it.
@@ -181,7 +191,7 @@ func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
 	t.Run("open feature", func(t *testing.T) {
 		p := newProject()
 
-		lines := strings.Join(p.run(progress.Options{ReviewMode: true}).Lines, "\n")
+		lines := strings.Join(p.run(progress.Options{ReviewMode: true, Review: nothingOwed}).Lines, "\n")
 
 		if !strings.Contains(lines, "review: not due yet") {
 			t.Errorf("an open feature asks for the review early:\n%s", lines)
@@ -192,7 +202,7 @@ func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
 		p := newProject()
 		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(closed)
 
-		lines := strings.Join(p.run(progress.Options{ReviewMode: true}).Lines, "\n")
+		lines := strings.Join(p.run(progress.Options{ReviewMode: true, Review: owing("abc1234")}).Lines, "\n")
 
 		if !strings.Contains(lines, "review: owed") {
 			t.Errorf("a closed feature owes the verdict and the report hides it:\n%s", lines)
@@ -204,7 +214,7 @@ func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
 		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(closed)
 		p.files.files[fullPath(".odachi/reviews/"+p.git.tree+".json")] = []byte(`{"tree":"` + p.git.tree + `"}`)
 
-		lines := strings.Join(p.run(progress.Options{ReviewMode: true}).Lines, "\n")
+		lines := strings.Join(p.run(progress.Options{ReviewMode: true, Review: nothingOwed}).Lines, "\n")
 
 		if !strings.Contains(lines, "review: on file") {
 			t.Errorf("a tree with a verdict is reported as owing one:\n%s", lines)
@@ -221,6 +231,35 @@ func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
 			t.Errorf("a project with the review off is asked for a verdict anyway:\n%s", lines)
 		}
 	})
+}
+
+// TestProgressAsksTheGateInsteadOfDeriving: the report does not re-derive the
+// gate's rule from what it can see; it asks. A closed feature whose only change
+// since the close is documents owes nothing - the exemption v0.11.18 already
+// gives the gate - and the report says that instead of pointing at a review
+// nobody owes.
+func TestProgressAsksTheGateInsteadOfDeriving(t *testing.T) {
+	closed := strings.Replace(taskDoc, "- [ ] T2", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1)
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(closed)
+
+	asked := false
+	answer := func() (bool, string, error) {
+		asked = true
+		return false, "", nil
+	}
+
+	lines := strings.Join(p.run(progress.Options{ReviewMode: true, Review: answer}).Lines, "\n")
+
+	if !asked {
+		t.Error("the report answered the question without asking the gate")
+	}
+	if strings.Contains(lines, "review: owed") {
+		t.Errorf("a tree the gate does not ask about is reported as owing a verdict:\n%s", lines)
+	}
+	if !strings.Contains(lines, "the documents after the close") {
+		t.Errorf("the report does not say why nothing is owed:\n%s", lines)
+	}
 }
 
 // TestProgressDoesNotDependOnTheReviewForItsCode: a report is not a gate. A
