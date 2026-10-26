@@ -1360,7 +1360,7 @@ after start:
   odachi review --lens --show                   which lenses this tree asks for and which are missing
   odachi review --refute <verdict>              the refuter's prompt for that verdict
   odachi check --require-review                 requires review for this tree and its lenses
-  odachi doctor                                 eleven health checks, read-only
+  odachi doctor                                 twelve health checks, read-only
   odachi bench                                  measures how a person gets stuck (in-band / dead-end)
   odachi init                                   AGENTS.md (with the profile voice) + the project
                                                  agent and the home door (chosen with Tab)

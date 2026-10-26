@@ -66,19 +66,19 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
-	if len(lines) != 12 {
-		t.Fatalf("eleven checks and a summary, got %d lines:\n%s", len(lines), out)
+	if len(lines) != 13 {
+		t.Fatalf("twelve checks and a summary, got %d lines:\n%s", len(lines), out)
 	}
 	for i, line := range lines[:11] {
 		if !strings.HasPrefix(line, "ok ") {
 			t.Fatalf("line %d is not ok in a configured project: %s", i+1, line)
 		}
 	}
-	if !strings.HasPrefix(lines[11], "all clear") {
-		t.Fatalf("the last line is the summary, got %q", lines[11])
+	if !strings.HasPrefix(lines[12], "all clear") {
+		t.Fatalf("the last line is the summary, got %q", lines[12])
 	}
-	if !strings.Contains(lines[11], "11 checks") {
-		t.Fatalf("the summary counts the eleven checks, got %q", lines[11])
+	if !strings.Contains(lines[12], "12 checks") {
+		t.Fatalf("the summary counts the twelve checks, got %q", lines[12])
 	}
 	// This is also the guard that init and doctor agree on the hook marker: if
 	// init renamed it, check 5 would stop recognising its own hook.
@@ -241,8 +241,8 @@ func TestDoctorJSONSaysTheSameThing(t *testing.T) {
 		t.Fatalf("--json must be valid JSON: %v\n%s", err, machine)
 	}
 
-	if len(payload.Checks) != 11 {
-		t.Fatalf("--json carries eleven checks, got %d", len(payload.Checks))
+	if len(payload.Checks) != 12 {
+		t.Fatalf("--json carries twelve checks, got %d", len(payload.Checks))
 	}
 	lines := strings.Split(strings.TrimRight(human, "\n"), "\n")
 	if payload.Message != lines[len(lines)-1] {
