@@ -430,6 +430,25 @@ func Voice(profileName string) (string, error) {
 	return voices[name], nil
 }
 
+// AgentNames is the closed set of agent file names odachi writes: the primary
+// mirror, every subagent, and the two leftovers of v0.10.0. The review treats
+// exactly these names as plumbing; anything else under an agent directory belongs
+// to the human, because tool grants and secrets live there. Derived from the
+// writers, so a new subagent joins the set the day it exists.
+func AgentNames() []string {
+	names := []string{FileName}
+	for _, sub := range subagents {
+		names = append(names, sub.Name+".md")
+	}
+	for _, path := range Deprecated() {
+		name := path[strings.LastIndexByte(path, '/')+1:]
+		if !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 // Deprecated is what v0.10.0 wrote: two persona files per client, one per
 // profile. They still work as a voice, but they no longer mirror the block, so
 // odachi reports them as leftovers and never deletes them: a binary that removes
