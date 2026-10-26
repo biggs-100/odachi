@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.21 - 2026-10-25
+
+The tool stops repeating itself and starts reporting.
+
+- **The review prompt says each carried row once** (#42): a row travels from
+  verdict to verdict as it is inherited, so the store accumulates copies of the
+  same finding. The prompt now writes each row once and keeps the store's order.
+  On this repository's own store the same tree went from 192 KB and 2599 rows -
+  207 distinct - to 34 KB and 207 rows.
+- **The dedupe never merges two answers**: two defects on one path, one line
+  apart, or under another lens, both reach the reviewer.
+- **`odachi progress`** (#43): the open feature, its steps with the commit each
+  one landed in, the proof of this tree and the review it owes. Read-only by
+  construction: its disk port has no writer to call.
+
 ## v0.11.20 - 2026-10-25
 
 The review answers coverage before the gate asks for it.
