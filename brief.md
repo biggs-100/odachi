@@ -1,20 +1,22 @@
-# the-names-another
+# a-blocking-question
 
 ## What must exist
-- the names another program reads are pinned by a test, not compared with themselves
+- a blocking question arrives with its text, not only its count
 
 ## Done when
-- every state name of the report appears as a literal in a test, so renaming one breaks the suite
-- a fixture with an open question proves the field carries a number above zero
-- the human report and the JSON read exactly as today
+- check names each open question with its id and its words, and the command that answers it
+- the message still says how many questions block, and the reason and code do not change
+- a feature with no open questions keeps today's output
+- tests pin the name, the count and the silence
 
 ## Not included (first version)
-- new states or fields
-- the plugin itself
-- changing the wording
+- the gate's domain rule: it keeps the count
+- the output format of ask
+- answering from check: it only reports
+- progress
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a contract stops being a convention.
+- Wants to learn: how a block teaches instead of pointing.
