@@ -13,7 +13,7 @@ R1 · "a project can keep two memories, and odachi says which task documents it 
 
 ## Steps
 - [x] T1 · tasks names the documents it skips, and doctor reports them in a check of its own   R1 · 25a5679
-- [ ] T2 · start and summary say it once, and a folder with nothing skipped stays silent   R1
+- [x] T2 · start and summary say it once, and a folder with nothing skipped stays silent   R1 · 77981c0
 
 ## History
 L1 · "a project can keep two memories, and odachi says which task documents it does not read"
