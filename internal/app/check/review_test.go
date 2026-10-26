@@ -160,6 +160,18 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("the feature's own verdict was refused: %s (%s)", got.Message, got.Next)
 	}
+
+	// The same commit, spelled short, answers the same diff. A base is a commit,
+	// not a text: comparing the strings made `--base 6aeb877` pay a review that
+	// judged exactly these bytes and that the gate then refused.
+	short := readyFiles()
+	short["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	short[filepath.ToSlash(filepath.Join(domainreview.Dir, currentTree+".json"))] = verdictFileAtBase(t, currentTree, base[:7])
+	docs.commits = map[string]string{base[:7]: base, base: base}
+	got = run(t, newFakeFiles(short), docs, check.Options{ReviewMode: true})
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a verdict naming the same commit short was refused: %s (%s)", got.Message, got.Next)
+	}
 }
 
 // TestReviewOwedAsksAboutTheTreeThatStands: the question is about this worktree,

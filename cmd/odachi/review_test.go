@@ -432,6 +432,42 @@ func TestReviewModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	}
 }
 
+// TestCheckAcceptsAVerdictThatNamesTheBaseShort: a base is a commit, not a text.
+// A receipt that spells it with seven characters judged exactly the same diff,
+// and the gate used to refuse it - after the review was paid for.
+func TestCheckAcceptsAVerdictThatNamesTheBaseShort(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+	base := headOf(t, dir)
+
+	doc := taskdoc.TaskDoc{
+		Title:        "turnos",
+		Base:         base,
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:     []string{"reservo un turno"},
+		Steps:        []taskdoc.Step{{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: base}},
+		History:      []string{`L1 · "reservar turnos"`},
+	}
+	writeFile(t, dir, "odd/tasks/0001-turnos.md", doc.Render())
+	// The same two lines `odachi init` writes: the store and the proof are
+	// evidence, not content, so taking a proof cannot change the tree it proves.
+	writeFile(t, dir, ".gitignore", "/.odachi/reviews/\n/proof/\n")
+
+	// The store arrives with the attach; the proof is taken after it, because a
+	// proof is evidence about one tree and the store's own ignore file is part of
+	// the project. A short spelling of the base is the same diff.
+	verdict := filepath.Join(t.TempDir(), "veredicto.json")
+	writeAt(t, verdict, `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"},{"path":".gitignore","lens":"reliability"}]}`)
+	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict, "--base", base[:7]}, ""); code != 0 {
+		t.Fatalf("attach with a short base: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok", "--require-review"}, "")
+	if code != 0 {
+		t.Fatalf("a verdict naming the base short was refused: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+}
+
 // TestStartWritesTheFeatureBaseEndToEnd: the wiring that reads HEAD before the
 // task doc is written is the whole of "the document records where its feature
 // started". Without it every document ships an empty base and the gate silently

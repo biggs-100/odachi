@@ -147,9 +147,27 @@ type fakeGit struct {
 	between      []string
 	betweenErr   error
 	betweenCalls int
+
+	// commits says which spellings name the same commit. A spelling that is not
+	// here resolves to itself, so a test declares only the pair it cares about.
+	commits map[string]string
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
+
+// Resolve names the commit a spelling points at. The fake has no repository, so a
+// spelling resolves to itself unless the test declared that two spellings are one
+// commit: the pair a gate that compares commits must tell apart from two commits.
+func (g *fakeGit) Resolve(root, ref string) (string, error) {
+	trimmed := strings.TrimSpace(ref)
+	if trimmed == "" {
+		return "", errors.New("no ref to resolve")
+	}
+	if resolved, ok := g.commits[trimmed]; ok {
+		return resolved, nil
+	}
+	return trimmed, nil
+}
 
 // Candidate is the one read: it records every call, because "the fence, the
 // lens class and the proof tree describe the same bytes" is the property.

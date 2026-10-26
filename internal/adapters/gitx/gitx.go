@@ -121,6 +121,23 @@ func Head(root string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// Resolve names the commit a spelling points at, in full. A base is a commit, not
+// a text: `6aeb877` and its forty characters describe the same diff, and a gate
+// that compared the strings refused a verdict that judged exactly those bytes.
+// The `^{commit}` suffix refuses a tree or a blob: what a base must name is the
+// commit itself.
+func Resolve(root, ref string) (string, error) {
+	trimmed := strings.TrimSpace(ref)
+	if trimmed == "" {
+		return "", fmt.Errorf("no ref to resolve: a base names a commit")
+	}
+	out, err := run(root, "rev-parse", "--verify", trimmed+"^{commit}")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // ChangedPaths returns every path that differs between the base's fork point and
 // the worktree: tracked files changed or staged since that merge-base, plus
 // untracked files that are not ignored. The result is sorted and de-duplicated

@@ -95,6 +95,30 @@ func TestHeadIsTheCommitAndAnEmptyRepositoryHasNone(t *testing.T) {
 	}
 }
 
+// TestResolveNamesTheCommitASpellingPointsAt: a base is a commit, and the gate
+// asks which one a spelling names. A prefix answers the full hash, so a receipt
+// written short still describes the diff it judged; a ref that names nothing is
+// an error, not an empty answer.
+func TestResolveNamesTheCommitASpellingPointsAt(t *testing.T) {
+	t.Parallel()
+	root, base := newRepo(t)
+
+	got, err := gitx.Resolve(root, base[:7])
+	if err != nil {
+		t.Fatalf("Resolve(%q): %v", base[:7], err)
+	}
+	if got != base {
+		t.Errorf("Resolve(%q) = %q, want %q", base[:7], got, base)
+	}
+
+	if _, err := gitx.Resolve(root, "no-such-ref"); err == nil {
+		t.Error("Resolve of a ref that does not exist = nil error, want the failure")
+	}
+	if _, err := gitx.Resolve(root, "  "); err == nil {
+		t.Error("Resolve of an empty ref = nil error, want the failure")
+	}
+}
+
 // TestTreeHashTracksTheWorktree is the property the whole product rests on: an
 // uncommitted edit must change the tree hash, otherwise a proof could be
 // accepted for a tree that was never tested.

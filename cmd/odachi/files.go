@@ -365,6 +365,10 @@ func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root
 
 func (gitRepo) Head(root string) (string, error) { return gitx.Head(root) }
 
+// Resolve is the gate's question "which commit does this spelling name": a base
+// is a commit, and two spellings of it are one diff.
+func (gitRepo) Resolve(root, ref string) (string, error) { return gitx.Resolve(root, ref) }
+
 // Candidate is the one read both verbs share: the tree, the changed paths and
 // the diff of the same worktree, from one throwaway index.
 func (gitRepo) Candidate(root, base string) (string, []string, string, error) {
