@@ -1,21 +1,23 @@
-# progress-and-check
+# a-refused-review
 
 ## What must exist
-- progress and check give the same answer for the same tree, wired end to end
+- a refused review answer is kept, named and attachable again, so the same rejection is never paid twice
 
 ## Done when
-- ReviewOwed answers about the tree that stands when the caller names no base
-- an end-to-end test runs check and progress on the same repo and requires the same answer
-- a documents-only tail after the close: both say not due
-- the close itself: both say owed
+- the refused answer is written in the ignored store under a name its own bytes decide
+- the refusal names the file and the command that attaches it again
+- two different refused answers for one tree coexist; the same bytes are written once
+- an answer that lands leaves no refused file behind for that tree
+- tests pin the kept bytes, the name, the coexistence and the cleanup
 
 ## Not included (first version)
-- check base semantics: an empty --base still means compare to nothing
-- the boundary walk over older verdicts
-- the refused answer from 0045
+- the coverage rule and the wording of the refusal
+- re-running the reviewer automatically
+- deleting refused answers by age or size
+- the layout of sealed verdicts
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how wiring becomes a test.
+- Wants to learn: how evidence is kept without becoming authority.
