@@ -187,6 +187,67 @@ func TestReviewOwedAsksAboutTheTreeThatStands(t *testing.T) {
 	}
 }
 
+// TestReviewOwedForcedAndItsErrors: the exported question has three ways to fail
+// and one way to be forced. A silent "not owed" on any of them would be the report
+// telling the human there is nothing to do while the gate is asking - so each one
+// is driven here.
+func TestReviewOwedForcedAndItsErrors(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+
+	t.Run("forced", func(t *testing.T) {
+		tail := readyFiles()
+		tail["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+		after := &fakeGit{
+			tree:    currentTree,
+			changed: []string{"CHANGELOG.md", "README.md"},
+			filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+		}
+
+		owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true, RequireReview: true}, newFakeFiles(tail), after)
+		if err != nil {
+			t.Fatalf("ReviewOwed: %v", err)
+		}
+		if !owed || gotBase != base {
+			t.Errorf("ReviewOwed(--require-review) = %v, %q; want the verdict forced at %q", owed, gotBase, base)
+		}
+	})
+
+	t.Run("the project cannot be listed", func(t *testing.T) {
+		files := newFakeFiles(readyFiles())
+		files.err = errors.New("permiso denegado")
+
+		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, files, &fakeGit{tree: currentTree}); err == nil {
+			t.Error("an unreadable project answered without an error")
+		}
+	})
+
+	t.Run("the worktree cannot be read", func(t *testing.T) {
+		// A feature with no base is not "known": the rule falls through to the
+		// lenses, and reading them is where git fails.
+		unknown := readyFiles()
+		unknown["odd/tasks/0007-turnos.md"] = reviewableDoc("", false)
+		git := &fakeGit{tree: currentTree, diffErr: errors.New("git roto")}
+
+		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(unknown), git); err == nil {
+			t.Error("an unreadable worktree answered without an error")
+		}
+	})
+
+	t.Run("the document at HEAD cannot be read", func(t *testing.T) {
+		closed := readyFiles()
+		closed["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+		git := &fakeGit{
+			tree:      currentTree,
+			changed:   []string{"odd/tasks/0007-turnos.md"},
+			fileAtErr: errors.New("git roto"),
+		}
+
+		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(closed), git); err == nil {
+			t.Error("an unreadable HEAD answered without an error")
+		}
+	})
+}
+
 // TestReviewOwedAgreesWithTheGate: the exported question answers what the gate
 // answers, for the same tree. That shared answer is the whole reason it is
 // exported: a report that asks it cannot disagree with the gate about a tree.

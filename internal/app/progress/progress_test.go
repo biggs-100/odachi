@@ -238,6 +238,23 @@ func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
 	})
 }
 
+// TestProgressSaysWhenTheGateCannotAnswer: the rule is a dependency, and a
+// dependency can fail. A failed question is reported as such: turning it into
+// "not due" would tell the human there is nothing to do while the gate cannot say.
+func TestProgressSaysWhenTheGateCannotAnswer(t *testing.T) {
+	p := newProject()
+	failing := func() (bool, string, error) { return false, "", errors.New("git roto") }
+
+	lines := strings.Join(p.run(progress.Options{ReviewMode: true, Review: failing}).Lines, "\n")
+
+	if !strings.Contains(lines, "review: cannot be read") {
+		t.Errorf("a failed rule is not reported:\n%s", lines)
+	}
+	if strings.Contains(lines, "review: owed") || strings.Contains(lines, "not due") {
+		t.Errorf("a failed rule was answered as if it had said something:\n%s", lines)
+	}
+}
+
 // TestProgressSaysWhenTheStoreCannotBeRead: an I/O failure on the verdict store
 // is not the absence of a verdict. Reporting "owed" would send the human to pay
 // for a review that may already exist, from the one verb whose job is accuracy.
