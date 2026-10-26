@@ -103,6 +103,8 @@ type Files interface {
 	// List answers the file names one directory holds. An absent directory is
 	// an empty answer, not an error: a project with no store carries nothing.
 	List(dir string) ([]string, error)
+	// Remove deletes one file: the refused answers a sealed verdict supersedes.
+	Remove(path string) error
 }
 
 // Git is the repository port: which tree is here, what changed since the base,
@@ -1117,6 +1119,7 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		return blocked(fmt.Sprintf("could not write the verdict %s: %s; check the permissions and run odachi review --attach <file> again",
 			rel, oneLine(err.Error())))
 	}
+	r.dropRefused(tree)
 
 	message := "verdict saved in " + rel + ": " + sealed.Verdict
 	lines := []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At, lenses(sealed.Lenses)}
@@ -1362,6 +1365,28 @@ func (r *runner) refuse(sealed domain.Verdict, gaps []domain.Gap, rel string) Re
 			"the answer is kept in " + kept + ": fix the rows and attach it again",
 			"next: odachi review --attach " + kept,
 		},
+	}
+}
+
+// dropRefused removes the answers kept for this tree: the sealed verdict is the
+// record now, and a refused answer it supersedes is litter. Best effort on
+// purpose: the verdict is already written, the folder is ignored, and failing a
+// stored review for a leftover would be worse than the leftover.
+func (r *runner) dropRefused(tree string) {
+	rel, err := domain.Path(tree)
+	if err != nil {
+		return
+	}
+	dir := filepath.Dir(fullPath(r.opts.Dir, rel))
+	names, err := r.files.List(dir)
+	if err != nil {
+		return
+	}
+	prefix := tree + ".refused-"
+	for _, name := range names {
+		if strings.HasPrefix(name, prefix) {
+			_ = r.files.Remove(filepath.Join(dir, name))
+		}
 	}
 }
 

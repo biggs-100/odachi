@@ -12,7 +12,7 @@ R1 · "a refused review answer is kept, named and attachable again, so the same 
 - tests pin the kept bytes, the name, the coexistence and the cleanup
 
 ## Steps
-- [ ] T1 · a refused answer is kept under a name its bytes decide, and the refusal names it   R1
+- [x] T1 · a refused answer is kept under a name its bytes decide, and the refusal names it   R1 · 8339a67
 - [ ] T2 · an answer that lands removes the kept file, and two different answers coexist   R1
 
 ## History
