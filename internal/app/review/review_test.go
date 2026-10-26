@@ -522,12 +522,13 @@ func TestExecOnADocumentsOnlyChangeSaysNothingIsDue(t *testing.T) {
 func TestASecondRunCompletesTheVerdict(t *testing.T) {
 	p := newProject()
 	p.host.model = "host/default"
+	p.git.blobs = map[string]string{"a.go": gitBlob}
 	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"risk"}]}`
 
 	first, err := domainreview.Seal(domainreview.Verdict{
 		Reviewer: "first",
 		Lenses:   []string{"reliability"},
-		Passes:   []domainreview.Pass{{Path: "a.go", Blob: "b", Lens: "reliability"}},
+		Passes:   []domainreview.Pass{{Path: "a.go", Blob: gitBlob, Lens: "reliability"}},
 	}, currentTree, "HEAD", now)
 	if err != nil {
 		t.Fatalf("seeding the verdict: %v", err)
@@ -566,6 +567,61 @@ func TestASecondRunCompletesTheVerdict(t *testing.T) {
 	}
 	if stored.Verdict == "" {
 		t.Errorf("the completed verdict has no derived verdict field: %+v", stored)
+	}
+}
+
+// TestAPartialRunStillStores: coverage is asked about the lenses this run
+// claimed, not about the tree. A sensitive candidate asks for four lenses, and
+// when two models split them the first group's answer - complete for the two
+// lenses it was asked - is stored before the second group even starts. Refusing
+// it for the rows the other model owns would make the split impossible and throw
+// away an answer that was already paid for.
+func TestAPartialRunStillStores(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.changed = []string{"auth/login.go"}
+	p.git.diff = "diff --git a/auth/login.go b/auth/login.go\n--- a/auth/login.go\n+++ b/auth/login.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
+	p.git.blobs = map[string]string{"auth/login.go": gitBlob}
+	p.shell.script = []fakeAnswer{
+		{output: `{"findings":[],"passes":[{"path":"auth/login.go","lens":"risk"},{"path":"auth/login.go","lens":"readability"}]}`},
+		{output: `{"findings":[],"passes":[{"path":"auth/login.go","lens":"reliability"},{"path":"auth/login.go","lens":"resilience"}]}`},
+	}
+
+	result := p.run(review.Options{
+		Exec:       "revisor --model {model}",
+		LensModels: map[string]string{"risk": "sharp/model", "readability": "sharp/model"},
+	})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if len(stored.Lenses) != 4 {
+		t.Errorf("lenses = %v, want the answer of each group", stored.Lenses)
+	}
+}
+
+// TestAFullAnswerThatCoversEverythingIsUntouched: the command gains a promise,
+// not a line. An answer with one row per file and lens stores exactly as before,
+// and the human hears the same message.
+func TestAFullAnswerThatCoversEverythingIsUntouched(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}]}`
+
+	result := p.run(review.Options{Exec: "revisor"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	for _, line := range result.Lines {
+		if strings.Contains(line, "rows missing") || strings.Contains(line, "does not cover") {
+			t.Errorf("a complete answer gained a refusal line: %q", line)
+		}
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; !ok {
+		t.Fatal("a complete answer was not stored")
 	}
 }
 
