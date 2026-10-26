@@ -1,19 +1,19 @@
 [[rule]]
-not   = "changing summary, start or check"
-paths = ["changing-summary-start-or-check*"]
+not   = "the gate rule: progress reads it and does not change it"
+paths = ["the-gate-rule-progress-reads-it-and-does-not-change-it*"]
 deps  = []
 
 [[rule]]
-not   = "showing closed features"
-paths = ["showing-closed-features*"]
+not   = "walking the ancestry for an older verdict: the gate has no such rule"
+paths = ["walking-the-ancestry-for-an-older-verdict-the-gate-has-no-such-rule*"]
 deps  = []
 
 [[rule]]
-not   = "reading the proof output or the verdict findings"
-paths = ["reading-the-proof-output-or-the-verdict-findings*"]
+not   = "reading the verdict findings"
+paths = ["reading-the-verdict-findings*"]
 deps  = []
 
 [[rule]]
-not   = "an exit code for scripts"
-paths = ["an-exit-code-for-scripts*"]
+not   = "changing review, check or summary behaviour"
+paths = ["changing-review-check-or-summary-behaviour*"]
 deps  = []
