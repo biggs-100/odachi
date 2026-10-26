@@ -149,6 +149,10 @@ type Git interface {
 	// exactly this, so a measurement is load-bearing; it answers "" for a file
 	// that is not in the worktree, and a real git failure is an err.
 	BlobHash(root, path string) (string, error)
+	// Resolve names the commit a ref points at, in full. The review gate compares
+	// bases by commit, not by spelling: `6aeb877` and its forty characters are the
+	// same diff, and a receipt that names either one answers it.
+	Resolve(root, ref string) (string, error)
 	// Ignored reports whether the repository's own rules already keep path out
 	// of the tree. It is what makes the lazy ignore file unnecessary in a project
 	// that ran `odachi init`.
@@ -790,7 +794,7 @@ func (r *runner) requireReview(base string) *Result {
 	// A closed feature owes the verdict of its own diff. A verdict that judged
 	// something else - the closing commit, another base - does not answer the
 	// question this tree asks, and accepting it would make the base decoration.
-	if base != "" && strings.TrimSpace(verdict.Base) != base {
+	if base != "" && !sameCommit(r.git, r.opts.Dir, verdict.Base, base) {
 		message := fmt.Sprintf("the review of this tree judged another diff (base %q): the feature starts at %s", strings.TrimSpace(verdict.Base), base)
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
@@ -870,6 +874,31 @@ func (r *runner) requireReview(base string) *Result {
 	}
 
 	return nil
+}
+
+// sameCommit reports whether two spellings name the same commit. A base is a
+// commit, not a text: `6aeb877` and its forty characters describe the same diff,
+// and comparing the strings made a paid review unusable the day the flag was
+// typed short. What cannot be resolved is not accepted: a receipt that names an
+// unreadable ref answers nothing.
+func sameCommit(git Git, root, judged, start string) bool {
+	judged = strings.TrimSpace(judged)
+	start = strings.TrimSpace(start)
+	if judged == start {
+		return true
+	}
+	if judged == "" || start == "" {
+		return false
+	}
+	left, err := git.Resolve(root, judged)
+	if err != nil {
+		return false
+	}
+	right, err := git.Resolve(root, start)
+	if err != nil {
+		return false
+	}
+	return left == right
 }
 
 // requiredLenses is the lens selection the candidate asks for. It is the same
