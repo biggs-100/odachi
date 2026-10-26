@@ -44,10 +44,15 @@ const diff = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -1 +1 @@\n-vi
 // outside .odachi/reviews/ is written" is the property a test has to be able to
 // see.
 type fakeFiles struct {
-	files   map[string][]byte
-	writes  []string
-	backups []string
-	err     error
+	files    map[string][]byte
+	writes   []string
+	backups  []string
+	err      error
+	existErr error
+	writeErr error
+	// failExists fails Exists for one path only, so a test can reach the refusal
+	// without breaking the store checks that run before it.
+	failExists func(path string) error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -67,6 +72,14 @@ func (f *fakeFiles) Exists(path string) (bool, error) {
 	if f.err != nil {
 		return false, f.err
 	}
+	if f.existErr != nil {
+		return false, f.existErr
+	}
+	if f.failExists != nil {
+		if err := f.failExists(path); err != nil {
+			return false, err
+		}
+	}
 	_, ok := f.files[path]
 	return ok, nil
 }
@@ -85,6 +98,9 @@ func (f *fakeFiles) Read(path string) ([]byte, error) {
 func (f *fakeFiles) Write(path string, data []byte) error {
 	if f.err != nil {
 		return f.err
+	}
+	if f.writeErr != nil {
+		return f.writeErr
 	}
 	f.writes = append(f.writes, path)
 	f.files[path] = data
@@ -862,6 +878,64 @@ func TestAttachStoresTheVerdictUnderTheTree(t *testing.T) {
 	}
 	if parsed.Verdict != domainreview.Approved {
 		t.Errorf("verdict = %q, want approved", parsed.Verdict)
+	}
+}
+
+// TestARefusedAnswerThatCannotBeKeptIsReported: the promise of this feature is
+// that a refused answer is kept and the refusal names it. When the store cannot
+// be read or written, the refusal must say that instead of naming a file nobody
+// wrote - an attach command pointing at nothing is the second payment this
+// feature exists to prevent.
+func TestARefusedAnswerThatCannotBeKeptIsReported(t *testing.T) {
+	answer := []byte(`{"reviewer":"agente","findings":[],"passes":[]}`)
+
+	t.Run("the store cannot be checked", func(t *testing.T) {
+		p := newProject()
+		p.git.blobs = map[string]string{"a.go": gitBlob}
+		p.files.files[fullPath("veredicto.json")] = answer
+		p.git.ignored = true
+		p.files.failExists = func(path string) error {
+			if strings.Contains(path, ".refused-") {
+				return errors.New("permiso denegado")
+			}
+			return nil
+		}
+
+		result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+
+		assertKeepFailure(t, result)
+	})
+
+	t.Run("the store cannot be written", func(t *testing.T) {
+		p := newProject()
+		p.git.blobs = map[string]string{"a.go": gitBlob}
+		p.files.files[fullPath("veredicto.json")] = answer
+		p.git.ignored = true
+		p.files.writeErr = errors.New("disco lleno")
+
+		result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+
+		assertKeepFailure(t, result)
+	})
+}
+
+// assertKeepFailure pins the two halves of the refusal when keeping fails: it is
+// blocked, it says so, and it never names a file that was not written.
+func assertKeepFailure(t *testing.T, result review.Result) {
+	t.Helper()
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "could not keep it") {
+		t.Errorf("message = %q, want the failure to keep the answer", result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if strings.Contains(lines, "odachi review --attach") {
+		t.Errorf("the refusal names an attach command for a file it did not write:\n%s", lines)
+	}
+	if strings.Contains(lines, "the answer is kept in") {
+		t.Errorf("the refusal claims the answer is kept when it is not:\n%s", lines)
 	}
 }
 
