@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/biggs-100/odachi/internal/app/check"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -370,4 +372,94 @@ func TestCheckJSONCarriesTheReason(t *testing.T) {
 	if !strings.HasPrefix(payload.Next, "odachi ") {
 		t.Errorf("JSON next = %q, want a command", payload.Next)
 	}
+}
+
+// TestTheGateJSONContract: the names another program reads -the reasons and the
+// keys- are the contract, so they are pinned here by literals. Before this, only
+// proof_missing had one and a renamed key or reason kept every suite green.
+func TestTheGateJSONContract(t *testing.T) {
+	t.Parallel()
+
+	reasons := map[string]string{
+		"ready":                        gate.ReasonReady,
+		"no_brief":                     gate.ReasonNoBrief,
+		"brief_incomplete":             gate.ReasonBriefIncomplete,
+		"out_of_scope":                 gate.ReasonOutOfScope,
+		"fence_loosened":               gate.ReasonFenceLoosened,
+		"open_question":                gate.ReasonOpenQuestion,
+		"proof_missing":                gate.ReasonProofMissing,
+		"proof_stale":                  gate.ReasonProofStale,
+		"proof_failed":                 gate.ReasonProofFailed,
+		"review_missing":               check.ReasonReviewMissing,
+		"review_changes_requested":     check.ReasonReviewChanges,
+		"review_lens_missing":          check.ReasonReviewLensMissing,
+		"review_refutation_unreadable": check.ReasonReviewRefutedUnreadable,
+		"review_coverage":              check.ReasonReviewCoverage,
+		"review_self":                  check.ReasonReviewSelf,
+	}
+	for want, got := range reasons {
+		if got != want {
+			t.Errorf("a reason changed: the contract says %q, the code says %q", want, got)
+		}
+	}
+
+	// A blocked tree: the keys the gate prints, and the continuation.
+	blocked := t.TempDir()
+	initRepo(t, blocked)
+	seedProject(t, blocked)
+	code, out, errOut := runDir(t, blocked, []string{"check", "--json"}, "")
+	if code != 1 {
+		t.Fatalf("check --json on a tree without proof = %d, want 1 (stderr: %q)", code, errOut)
+	}
+	blockedKeys := gateJSONKeys(t, out)
+	for _, key := range []string{"code", "reason", "message", "next", "lines", "files"} {
+		if _, ok := blockedKeys[key]; !ok {
+			t.Errorf("a blocked answer does not carry %q: %s", key, out)
+		}
+	}
+	if _, ok := blockedKeys["proof"]; ok {
+		t.Errorf("a blocked answer carries a proof: %s", out)
+	}
+
+	// A ready tree: the same answer as data, with the proof and no continuation.
+	ready := t.TempDir()
+	initRepo(t, ready)
+	seedProject(t, ready)
+	if code, out, errOut := runDir(t, ready, []string{"check", "--run", "echo ok"}, ""); code != 0 {
+		t.Fatalf("check --run: %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	code, out, errOut = runDir(t, ready, []string{"check", "--json"}, "")
+	if code != 0 {
+		t.Fatalf("check --json on a ready tree = %d, want 0 (stderr: %q)", code, errOut)
+	}
+	readyKeys := gateJSONKeys(t, out)
+	for _, key := range []string{"code", "reason", "message", "lines", "proof", "files"} {
+		if _, ok := readyKeys[key]; !ok {
+			t.Errorf("a ready answer does not carry %q: %s", key, out)
+		}
+	}
+	if _, ok := readyKeys["next"]; ok {
+		t.Errorf("a ready answer carries a continuation: %s", out)
+	}
+	var machine struct {
+		Code   int    `json:"code"`
+		Reason string `json:"reason"`
+		Proof  string `json:"proof"`
+	}
+	if err := json.Unmarshal([]byte(out), &machine); err != nil {
+		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
+	}
+	if machine.Reason != "ready" || machine.Proof == "" {
+		t.Errorf("ready = %+v, want the ready reason and the proof", machine)
+	}
+}
+
+// gateJSONKeys is the key set of one JSON object, so a vanished field is visible.
+func gateJSONKeys(t *testing.T, out string) map[string]json.RawMessage {
+	t.Helper()
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(out), &keys); err != nil {
+		t.Fatalf("stdout is not a JSON object: %v\n%s", err, out)
+	}
+	return keys
 }
