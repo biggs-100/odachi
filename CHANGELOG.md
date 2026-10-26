@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.24 - 2026-10-26
+
+A rejection is not a reason to pay twice.
+
+- **A refused review answer is kept, named and attachable again** (#49): the bytes
+  the gate would not seal are written to the ignored store as
+  `<tree>.refused-<digest>.json`, and the refusal says where they are and which
+  `odachi review --attach` sends them back. The name is the content, so the same
+  answer twice is one file and two different answers coexist - an occupied slot is
+  never overwritten.
+- **The answer that lands ends them**: once a review covers its rows, the sealed
+  verdict is the record and the refused answers for that tree are removed.
+
 ## v0.11.23 - 2026-10-26
 
 The report and the gate ask the same question the same way.
