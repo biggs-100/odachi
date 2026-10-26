@@ -10,7 +10,7 @@ R1 · "a generated agent file is matched by its exact name, so the human file is
 - the generated files of both clients keep the classification they had
 
 ## Steps
-- [ ] T1 · the review treats only the agent files odachi writes as plumbing, and a human file with the same prefix reaches a lens   R1
+- [x] T1 · the review treats only the agent files odachi writes as plumbing, and a human file with the same prefix reaches a lens   R1 · ecea87c
 
 ## History
 L1 · "a generated agent file is matched by its exact name, so the human file is never skipped"
