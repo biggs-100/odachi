@@ -1022,3 +1022,33 @@ func TestInstalledSkillsDirIsTheStandardRow(t *testing.T) {
 		t.Fatalf("doctor counts %s and init installs into %s", installedSkillsDir, row.Dest)
 	}
 }
+
+// TestATaskListThatCannotBeReadIsBroken: another shape of task document is a
+// decision and stays a warning; a directory the tool cannot read is a broken
+// install. "no foreign documents" and "I could not look" are different answers,
+// and the second one is not green.
+func TestATaskListThatCannotBeReadIsBroken(t *testing.T) {
+	files := configured().
+		put(".odachi/reviews/.gitignore", "*\n")
+	files.put("proof/.gitignore", "*\n!.gitignore\n")
+	files.errOn = at("odd/tasks")
+
+	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if got.Code == CodeOK {
+		t.Fatalf("an unreadable task list must not be clean:\n%s", strings.Join(got.Lines, "\n"))
+	}
+	if got.Problems != 1 {
+		t.Errorf("problems = %d, want exactly the unreadable list", got.Problems)
+	}
+	check := checkOf(t, got, domaindoctor.CheckTaskDocs)
+	if check.Status != domaindoctor.StatusProblem {
+		t.Fatalf("an unreadable task list is a problem: %s", domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Detail, "could not read odd/tasks") {
+		t.Errorf("the line does not say what could not be read: %s", domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Fix, "check the permissions of odd/tasks") {
+		t.Errorf("the repair is not named: %s", domaindoctor.Line(check))
+	}
+}
