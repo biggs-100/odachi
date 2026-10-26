@@ -1,23 +1,25 @@
-# the-review-prompt
+# odachi-progress-says
 
 ## What must exist
-- the review prompt carries each row of the store once, not once per verdict that repeats it
+- odachi progress says where the open feature stands and what it still owes
 
 ## Done when
-- the carried section lists each row once
-- two rows that differ in any part both survive
-- the order is deterministic: two runs print the same prompt
-- a store with one verdict prints the same prompt as today
-- tests pin the duplicate, the merge and the order
+- it names the open feature and counts the steps done
+- it names the commit of each done step
+- it says whether this tree has a proof of its own
+- it says whether the review is due and whether a verdict exists
+- it writes nothing: progress only reads
+- a project with no feature says so instead of printing an empty report
+- tests pin the report, the silence and the no-writes
 
 ## Not included (first version)
-- the lens rules and the six rules
-- which rows count as potent
-- truncating by size or a budget
-- the verdict schema
+- changing summary, start or check
+- showing closed features
+- reading the proof output or the verdict findings
+- an exit code for scripts
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a repeated datum becomes a cost.
+- Wants to learn: how to count a state without inventing it.
