@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.22 - 2026-10-26
+
+The report asks the gate instead of guessing.
+
+- **`progress` asks the gate** whether this tree owes a verdict, instead of
+  deriving it from the steps: one owner, one answer. The documents written after
+  the close are reported as not due, which is what `check` always said - the two
+  verbs used to disagree on `main` after every release.
+- **An unreadable review store is not a verdict owed**: the report says it could
+  not read the store instead of sending the human to pay for a verdict that may
+  already exist.
+
 ## v0.11.21 - 2026-10-25
 
 The tool stops repeating itself and starts reporting.
