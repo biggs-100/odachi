@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.28 - 2026-10-26
+
+An agent file is code.
+
+- **Only the names odachi writes are plumbing** (#61): the review matched
+  `.opencode/agents/odachi*.md` by prefix, so a file the human wrote there -where
+  tool grants and tokens live- disappeared from the candidate and never reached a
+  lens. The generated names are a closed set derived from the writer.
+- **Agent directories are code** (#61, decision 0030): their Markdown is
+  instructions an agent obeys, not documentation, so a human agent file reaches
+  the lens that reads what the agent may do.
+- **The default is human**: a name odachi does not write is reviewed, even when it
+  starts with `odachi`.
+
 ## v0.11.27 - 2026-10-26
 
 A block arrives with its words in both readers, and a base is a commit.
