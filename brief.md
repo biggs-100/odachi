@@ -1,21 +1,21 @@
-# the-questions-arrive
+# a-generated-agent
 
 ## What must exist
-- the questions arrive in the report with their id and their words, not only their count
+- a generated agent file is matched by its exact name, so the human file is never skipped
 
 ## Done when
-- progress --json publishes each open question with its id and its words
-- the human report names them from the same state, and a feature with none prints what it printed before
-- the contract test pins the names id and text, and an empty list instead of null
+- the names odachi writes are listed once, and the review treats only those as plumbing
+- a human file such as .opencode/agents/odachi-helper.md reaches a lens instead of disappearing
+- the generated files of both clients keep the classification they had
 
 ## Not included (first version)
-- the gate domain rule, which keeps counting
-- answering a question from progress: it only reports
-- the answer command in the state: the id is enough
-- the plugin itself
+- the leftovers outside the agents directories
+- the other carried findings
+- the review store and its portability
+- the names a client may add in the future
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a contract changes a day before its first reader freezes it.
+- Wants to learn: how a closed set replaces a prefix, and why the default matters more than the rule.
