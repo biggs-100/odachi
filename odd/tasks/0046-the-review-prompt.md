@@ -13,7 +13,7 @@ R1 · "the review prompt carries each row of the store once, not once per verdic
 
 ## Steps
 - [x] T1 · the carried section lists each row once, and two runs print the same prompt   R1 · fff095c
-- [ ] T2 · two rows that differ in any part both survive: the dedupe never merges an answer   R1
+- [x] T2 · two rows that differ in any part both survive: the dedupe never merges an answer   R1 · 9b46c65
 
 ## History
 L1 · "the review prompt carries each row of the store once, not once per verdict that repeats it"
