@@ -179,6 +179,18 @@ func carriedSection(known []Finding, carried []Pass) string {
 
 	var out strings.Builder
 	out.WriteString("## What the store already carries for these exact bytes\n\n")
+	// A row travels from verdict to verdict as it is inherited, so the store
+	// accumulates copies of the same finding. The reviewer reads this section to
+	// know what not to re-report, and the second copy teaches it nothing: the row
+	// is written once, in the order the store lists it.
+	written := make(map[string]bool, len(known)+len(carried))
+	row := func(line string) {
+		if written[line] {
+			return
+		}
+		written[line] = true
+		out.WriteString(line)
+	}
 	dismissed := false
 	for _, finding := range known {
 		where := finding.Path
@@ -191,17 +203,17 @@ func carriedSection(known []Finding, carried []Pass) string {
 		}
 		if IsDismissed(finding) {
 			dismissed = true
-			out.WriteString("- " + where + " (" + who + string(finding.Severity) + ") dismissed: " + finding.Reason + "\n")
+			row("- " + where + " (" + who + string(finding.Severity) + ") dismissed: " + finding.Reason + "\n")
 			continue
 		}
-		out.WriteString("- " + where + " (" + who + string(finding.Severity) + ") " + finding.Why + "\n")
+		row("- " + where + " (" + who + string(finding.Severity) + ") " + finding.Why + "\n")
 	}
 	for _, pass := range carried {
 		who := pass.Lens
 		if who == "" {
 			who = "?"
 		}
-		out.WriteString("- " + pass.Path + " (" + who + ") audited clean\n")
+		row("- " + pass.Path + " (" + who + ") audited clean\n")
 	}
 	out.WriteString("\nDo not re-report the findings above in \"findings\": the verdict inherits\n")
 	out.WriteString("them as they are, with their receipts. Report a finding only when a defect\n")
