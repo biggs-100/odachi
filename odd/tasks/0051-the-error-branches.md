@@ -11,7 +11,7 @@ R1 · "the error branches of the refusal and of the review rule answer as they p
 - every branch covered has a test that fails if the branch is inverted
 
 ## Steps
-- [ ] T1 · a refused answer that cannot be kept is reported, never named   R1
+- [x] T1 · a refused answer that cannot be kept is reported, never named   R1 · 9357506
 - [ ] T2 · the review rule and the report answer their error paths   R1
 
 ## History
