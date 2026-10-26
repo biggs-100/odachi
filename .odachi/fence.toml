@@ -1,19 +1,19 @@
 [[rule]]
-not   = "the proof header ambiguity"
-paths = ["the-proof-header-ambiguity*"]
+not   = "a change of the proof format"
+paths = ["a-change-of-the-proof-format*"]
 deps  = []
 
 [[rule]]
-not   = "the review store and the ledger"
-paths = ["the-review-store-and-the-ledger*"]
+not   = "reading old proofs differently"
+paths = ["reading-old-proofs-differently*"]
 deps  = []
 
 [[rule]]
-not   = "the wording of the refusal"
-paths = ["the-wording-of-the-refusal*"]
+not   = "the review store"
+paths = ["the-review-store*"]
 deps  = []
 
 [[rule]]
-not   = "the verdict receipts"
-paths = ["the-verdict-receipts*"]
+not   = "the proofs on other machines"
+paths = ["the-proofs-on-other-machines*"]
 deps  = []
