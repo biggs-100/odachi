@@ -53,6 +53,9 @@ type fakeFiles struct {
 	// failExists fails Exists for one path only, so a test can reach the refusal
 	// without breaking the store checks that run before it.
 	failExists func(path string) error
+	// failList counts and can fail a listing, so a test can reach the drop of the
+	// refused answers without breaking the read of the potent rows before it.
+	failList func(dir string) error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -120,6 +123,11 @@ func (f *fakeFiles) Backup(path string) (string, error) {
 func (f *fakeFiles) List(dir string) ([]string, error) {
 	if f.err != nil {
 		return nil, f.err
+	}
+	if f.failList != nil {
+		if err := f.failList(dir); err != nil {
+			return nil, err
+		}
 	}
 
 	prefix := filepath.ToSlash(dir)
@@ -973,6 +981,45 @@ func TestARefusedAnswerIsKeptOnceAndDroppedWhenOneLands(t *testing.T) {
 	}
 	if _, ok := p.files.files[storePath(currentTree)]; !ok {
 		t.Error("the covering answer was not sealed")
+	}
+}
+
+// TestAVerdictStillLandsWhenTheRefusedAnswersCannotBeDropped: dropping the
+// refused answers is best effort by design -the verdict is already written, and
+// failing a stored review for litter would be worse than the litter-. A store that
+// cannot be listed at that moment must not cost the verdict the run just paid for,
+// and the litter stays where it is.
+func TestAVerdictStillLandsWhenTheRefusedAnswersCannotBeDropped(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+
+	// An answer an earlier run refused, and a listing that answers the read of the
+	// potent rows and fails the drop that comes after the write.
+	keptRel := domainreview.Dir + "/" + currentTree + ".refused-deadbeef.json"
+	p.files.files[fullPath(keptRel)] = []byte(`{"reviewer":"antes","findings":[],"passes":[]}`)
+	calls := 0
+	p.files.failList = func(string) error {
+		calls++
+		if calls > 1 {
+			return errors.New("store unavailable")
+		}
+		return nil
+	}
+
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"agente","findings":[],"passes":[{"path":"a.go","lens":"reliability"}]}`)
+	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("the verdict was lost to the drop: %d (%s)", result.Code, result.Message)
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; !ok {
+		t.Error("no verdict was sealed")
+	}
+	if _, ok := p.files.files[fullPath(keptRel)]; !ok {
+		t.Error("the refused answer was dropped even though the listing failed")
+	}
+	if calls != 2 {
+		t.Errorf("the store was listed %d time(s), want the potent rows and the drop", calls)
 	}
 }
 
