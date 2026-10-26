@@ -12,7 +12,7 @@ R1 · "the review never seals a verdict that covers less than the tree, and name
 
 ## Steps
 - [x] T1 · a full answer with a gap writes nothing and names the missing path and lens   R1 · 027eabe
-- [ ] T2 · a --lens partial run still stores, and an answer that covers everything is untouched   R1
+- [x] T2 · a --lens partial run still stores, and an answer that covers everything is untouched   R1 · b3c5057
 
 ## History
 L1 · "the review never seals a verdict that covers less than the tree, and names the rows it is missing"
