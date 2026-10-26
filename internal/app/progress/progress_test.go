@@ -131,6 +131,110 @@ func (p *project) run(opts progress.Options) progress.Result {
 	return progress.Run(opts, p.files, p.git)
 }
 
+// proofFor is a proof file of the shape the tool writes: the tree it measured,
+// the command, and its output.
+func proofFor(tree string) string {
+	return "# tree " + tree + "\n# command go test ./...\n# output\nok\n"
+}
+
+// TestProgressSaysWhetherThisTreeHasItsOwnProof: a proof is evidence about one
+// tree. One from another tree is not evidence about this one, and the report
+// says which of the three it is: this tree, another, or none.
+func TestProgressSaysWhetherThisTreeHasItsOwnProof(t *testing.T) {
+	t.Run("this tree", func(t *testing.T) {
+		p := newProject()
+		p.files.files[fullPath("proof/0007-reserva.txt")] = []byte(proofFor(p.git.tree))
+
+		lines := strings.Join(p.run(progress.Options{}).Lines, "\n")
+
+		if !strings.Contains(lines, "proof: proof/0007-reserva.txt · this tree") {
+			t.Errorf("the report does not name the proof of this tree:\n%s", lines)
+		}
+	})
+
+	t.Run("another tree", func(t *testing.T) {
+		p := newProject()
+		p.files.files[fullPath("proof/0007-reserva.txt")] = []byte(proofFor("9f2b7c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b"))
+
+		lines := strings.Join(p.run(progress.Options{}).Lines, "\n")
+
+		if !strings.Contains(lines, "another tree") {
+			t.Errorf("a proof about other bytes is reported as this tree's:\n%s", lines)
+		}
+	})
+
+	t.Run("none", func(t *testing.T) {
+		lines := strings.Join(newProject().run(progress.Options{}).Lines, "\n")
+
+		if !strings.Contains(lines, "proof: none yet") {
+			t.Errorf("a project with no proof does not say so:\n%s", lines)
+		}
+	})
+}
+
+// TestProgressSaysWhetherTheReviewIsOwed: the gate asks once per feature, at the
+// close, and only when the project has the review on. The report says which of
+// those moments this tree is in, and whether a verdict already covers it.
+func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
+	closed := strings.Replace(taskDoc, "- [ ] T2", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1)
+
+	t.Run("open feature", func(t *testing.T) {
+		p := newProject()
+
+		lines := strings.Join(p.run(progress.Options{ReviewMode: true}).Lines, "\n")
+
+		if !strings.Contains(lines, "review: not due yet") {
+			t.Errorf("an open feature asks for the review early:\n%s", lines)
+		}
+	})
+
+	t.Run("closed feature owes one", func(t *testing.T) {
+		p := newProject()
+		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(closed)
+
+		lines := strings.Join(p.run(progress.Options{ReviewMode: true}).Lines, "\n")
+
+		if !strings.Contains(lines, "review: owed") {
+			t.Errorf("a closed feature owes the verdict and the report hides it:\n%s", lines)
+		}
+	})
+
+	t.Run("closed feature with a verdict", func(t *testing.T) {
+		p := newProject()
+		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(closed)
+		p.files.files[fullPath(".odachi/reviews/"+p.git.tree+".json")] = []byte(`{"tree":"` + p.git.tree + `"}`)
+
+		lines := strings.Join(p.run(progress.Options{ReviewMode: true}).Lines, "\n")
+
+		if !strings.Contains(lines, "review: on file") {
+			t.Errorf("a tree with a verdict is reported as owing one:\n%s", lines)
+		}
+	})
+
+	t.Run("review off", func(t *testing.T) {
+		p := newProject()
+		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(closed)
+
+		lines := strings.Join(p.run(progress.Options{}).Lines, "\n")
+
+		if !strings.Contains(lines, "review: off") {
+			t.Errorf("a project with the review off is asked for a verdict anyway:\n%s", lines)
+		}
+	})
+}
+
+// TestProgressDoesNotDependOnTheReviewForItsCode: a report is not a gate. A
+// feature that owes a review still exits 0, because the human asked what is
+// missing, not whether it may commit.
+func TestProgressDoesNotDependOnTheReviewForItsCode(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(strings.Replace(taskDoc, "- [ ] T2", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1))
+
+	if result := p.run(progress.Options{ReviewMode: true}); result.Code != 0 {
+		t.Errorf("code = %d, want 0: the report names what is missing, it does not gate it", result.Code)
+	}
+}
+
 // TestProgressNamesTheFeatureAndItsSteps: the report answers one question - where
 // does the open feature stand - and it answers it with what the task doc already
 // says: the name, how many steps are done, and the commit each one landed in.

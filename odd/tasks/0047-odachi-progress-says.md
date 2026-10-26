@@ -14,7 +14,7 @@ R1 · "odachi progress says where the open feature stands and what it still owes
 - tests pin the report, the silence and the no-writes
 
 ## Steps
-- [ ] T1 · progress names the open feature and the commit of each done step   R1
+- [x] T1 · progress names the open feature and the commit of each done step   R1 · 43f96da
 - [ ] T2 · progress says whether this tree has its own proof and whether the review is owed   R1
 - [ ] T3 · a project with no feature says so, and progress writes nothing   R1
 
