@@ -5,6 +5,25 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.27 - 2026-10-26
+
+A block arrives with its words in both readers, and a base is a commit.
+
+- **`open_questions` is the list** (#57): `progress --json` publishes each open
+  question as `{id, text}` instead of a count, so a panel in another program can
+  show what blocks instead of a number. The count is the length of the list; a
+  feature with none says `[]`, never `null`.
+- **The human report names them too**: the same id and the same words, under the
+  headline and before the steps. With no questions it prints exactly what it
+  printed before, down to the line count.
+- **The gate compares commits, not spellings** (#57, decision 0029): a receipt
+  filed from `--base 6aeb877` answers the feature whose base is the full hash.
+  Before, `check` refused it as "another diff" and `review` would not judge again,
+  so the review was paid for and could not be used.
+- **The plan lands first** (#58): the brief, the fence and the task doc reach main
+  before the work, which is what decision 0028 asks and what a fence read from the
+  base ref needs.
+
 ## v0.11.26 - 2026-10-26
 
 A block teaches instead of pointing.
