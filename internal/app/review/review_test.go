@@ -120,6 +120,16 @@ func (f *fakeFiles) List(dir string) ([]string, error) {
 	return names, nil
 }
 
+// Remove deletes one file, as the store does when a sealed verdict supersedes the
+// answers kept for its tree.
+func (f *fakeFiles) Remove(path string) error {
+	if f.err != nil {
+		return f.err
+	}
+	delete(f.files, path)
+	return nil
+}
+
 // written is every write as a project-relative path with forward slashes, in the
 // order the run made them.
 func (f *fakeFiles) written() []string {
@@ -852,6 +862,43 @@ func TestAttachStoresTheVerdictUnderTheTree(t *testing.T) {
 	}
 	if parsed.Verdict != domainreview.Approved {
 		t.Errorf("verdict = %q, want approved", parsed.Verdict)
+	}
+}
+
+// TestARefusedAnswerIsKeptOnceAndDroppedWhenOneLands: the name is the content, so
+// the same answer twice is one file; two different answers for one tree coexist,
+// because each is evidence of what the reviewer said. The answer that lands is the
+// explicit act that ends them: the sealed verdict is the record, and the leftovers
+// in the ignored store go away.
+func TestARefusedAnswerIsKeptOnceAndDroppedWhenOneLands(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+
+	// Two different refusals, then the same one again.
+	for _, answer := range []string{
+		`{"reviewer":"uno","findings":[],"passes":[]}`,
+		`{"reviewer":"otro","findings":[],"passes":[]}`,
+		`{"reviewer":"uno","findings":[],"passes":[]}`,
+	} {
+		p.files.files[fullPath("veredicto.json")] = []byte(answer)
+		if result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"}); result.Code != review.CodeBlocked {
+			t.Fatalf("answer %q: code = %d, want 1 (%s)", answer, result.Code, result.Message)
+		}
+	}
+	if kept := keptAnswers(t, p); len(kept) != 2 {
+		t.Fatalf("kept answers = %d (%v), want two: one per distinct answer", len(kept), kept)
+	}
+
+	// The answer that covers the row lands, and the refused ones go.
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"agente","findings":[],"passes":[{"path":"a.go","lens":"reliability"}]}`)
+	if result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"}); result.Code != review.CodeOK {
+		t.Fatalf("the covering answer was refused: %s", result.Message)
+	}
+	if kept := keptAnswers(t, p); len(kept) != 0 {
+		t.Errorf("kept answers = %v, want none after one landed", kept)
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; !ok {
+		t.Error("the covering answer was not sealed")
 	}
 }
 
