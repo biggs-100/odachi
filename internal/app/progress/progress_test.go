@@ -191,7 +191,7 @@ func nothingOwed() (bool, string, error) { return false, "", nil }
 // close, and only when the project has the review on. The report says which of
 // those moments this tree is in, and whether a verdict already covers it.
 func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
-	closed := strings.Replace(taskDoc, "- [ ] T2", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1)
+	closed := strings.Replace(taskDoc, "- [ ] T2 · el turno se puede cancelar   R1", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1)
 
 	t.Run("open feature", func(t *testing.T) {
 		p := newProject()
@@ -278,7 +278,7 @@ func TestProgressSaysWhenTheStoreCannotBeRead(t *testing.T) {
 // gives the gate - and the report says that instead of pointing at a review
 // nobody owes.
 func TestProgressAsksTheGateInsteadOfDeriving(t *testing.T) {
-	closed := strings.Replace(taskDoc, "- [ ] T2", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1)
+	closed := strings.Replace(taskDoc, "- [ ] T2 · el turno se puede cancelar   R1", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1)
 	p := newProject()
 	p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(closed)
 
@@ -306,7 +306,7 @@ func TestProgressAsksTheGateInsteadOfDeriving(t *testing.T) {
 // missing, not whether it may commit.
 func TestProgressDoesNotDependOnTheReviewForItsCode(t *testing.T) {
 	p := newProject()
-	p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(strings.Replace(taskDoc, "- [ ] T2", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1))
+	p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(strings.Replace(taskDoc, "- [ ] T2 · el turno se puede cancelar   R1", "- [x] T2 · el turno se puede cancelar   R1 · def5678", 1))
 
 	if result := p.run(progress.Options{ReviewMode: true}); result.Code != 0 {
 		t.Errorf("code = %d, want 0: the report names what is missing, it does not gate it", result.Code)
@@ -348,6 +348,46 @@ func TestProgressWritesNothing(t *testing.T) {
 
 	if len(p.files.writes) != 0 {
 		t.Errorf("progress wrote %v, want nothing: it only reads", p.files.writes)
+	}
+}
+
+// TestTheReportIsDataBeforeItIsLines: the report is one shape rendered twice. The
+// state carries the same facts the lines carry, so the machine reader and the
+// human cannot be told different things.
+func TestTheReportIsDataBeforeItIsLines(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("proof/0007-reserva.txt")] = []byte(proofFor(p.git.tree))
+
+	result := p.run(progress.Options{ReviewMode: true, Review: owing("abc1234")})
+
+	if result.State == nil {
+		t.Fatal("the report has no state: a machine can only read the lines")
+	}
+	state := result.State
+	if state.Number != 7 || state.Slug != "reserva" {
+		t.Errorf("feature = %04d-%s, want 0007-reserva", state.Number, state.Slug)
+	}
+	if state.OpenQuestions != 0 {
+		t.Errorf("open questions = %d, want 0", state.OpenQuestions)
+	}
+	if len(state.Steps) != 2 {
+		t.Fatalf("steps = %v, want two", state.Steps)
+	}
+	if !state.Steps[0].Done || state.Steps[0].Commit != "abc1234" {
+		t.Errorf("first step = %+v, want done at abc1234", state.Steps[0])
+	}
+	if state.Steps[1].Done || state.Steps[1].Commit != "" {
+		t.Errorf("second step = %+v, want pending", state.Steps[1])
+	}
+	if state.Proof.State != progress.ProofThisTree || state.Proof.Path != "proof/0007-reserva.txt" {
+		t.Errorf("proof = %+v, want this tree's", state.Proof)
+	}
+	if state.Review.State != progress.ReviewOwed || state.Review.Base != "abc1234" {
+		t.Errorf("review = %+v, want owed at abc1234", state.Review)
+	}
+
+	if lines := strings.Join(result.Lines, "\n"); !strings.Contains(lines, "1 of 2") {
+		t.Errorf("the lines do not say what the state says:\n%s", lines)
 	}
 }
 
