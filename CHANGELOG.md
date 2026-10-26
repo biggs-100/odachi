@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.25 - 2026-10-26
+
+The report can be read by a machine.
+
+- **`progress --json`** (#52): the same report as one object - `code`, `message`
+  and `state` - so a renderer in another program depends on names, not on English.
+- **One shape, two readers**: the state carries the feature, the steps with their
+  commit, the proof state and the review state; the human lines are rendered from
+  it, so the two cannot be told different facts.
+- **The unreadable branches keep their cause**: when the store or the rule cannot
+  be read, the report says which one and why, instead of blaming the tree.
+
 ## v0.11.24 - 2026-10-26
 
 A rejection is not a reason to pay twice.
