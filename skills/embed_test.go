@@ -103,6 +103,38 @@ func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 	}
 }
 
+// TestShapeTeachesExplorationBeforeTheBrief: the front of the cycle is a skill,
+// not a verb. It explores before the brief, ends in `start --brief`, keeps the
+// brief in the human's hands, and `drive` is what loads it when the request does
+// not fit in one reading.
+func TestShapeTeachesExplorationBeforeTheBrief(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["shape"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill shape: el frente del ciclo no existe")
+	}
+	for _, want := range []string{
+		"Explore before you declare",
+		"odachi start --brief",
+		"Exploration is not a verb",
+		"the human owns",
+		"odachi ask",
+		"the least information",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("shape no dice %q: explorar antes de declarar se perdio", want)
+		}
+	}
+}
+
 // TestDriveTeachesTheWorkflowDiscipline: ODD-lite is content, and content
 // drifts. `drive` names the spec rule, the RED before GREEN rule, the delegation
 // record and the risk line; `commits` owns the risk vocabulary.
