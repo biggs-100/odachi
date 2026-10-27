@@ -1,19 +1,14 @@
 [[rule]]
-not   = "implementing shape, the verifier trigger or the requirement-change rule"
-paths = ["implementing-shape-the-verifier-trigger-or-the-requirement-change-rule*"]
+not   = "a shape verb, a flag or a change to check"
+paths = ["a-shape-verb-a-flag-or-a-change-to-check*"]
 deps  = []
 
 [[rule]]
-not   = "changing the current cycle"
-paths = ["changing-the-current-cycle*"]
+not   = "the six-item table and the requirement-change rule"
+paths = ["the-six-item-table-and-the-requirement-change-rule*"]
 deps  = []
 
 [[rule]]
-not   = "rewriting old task docs or ADRs"
-paths = ["rewriting-old-task-docs-or-adrs*"]
-deps  = []
-
-[[rule]]
-not   = "the panel itself"
-paths = ["the-panel-itself*"]
+not   = "rewriting the interview or the brief format"
+paths = ["rewriting-the-interview-or-the-brief-format*"]
 deps  = []
