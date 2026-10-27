@@ -33,6 +33,7 @@ const (
 	ReviewOff         = "off"
 	ReviewNotDue      = "not_due"
 	ReviewOwed        = "owed"
+	ReviewWaived      = "waived"
 	ReviewOnFile      = "on_file"
 	ReviewUnreadable  = "unreadable"
 
@@ -211,6 +212,16 @@ func reviewState(opts Options, files Files, doc tasks.Document, tree string, tre
 		return Review{State: ReviewOnFile, Path: verdict}
 	}
 
+	// The human's decision is a state of its own. It is not "not due yet" -which
+	// says the feature is open or that the paperwork after the close does not
+	// reopen it- and it is not "on file", which would claim a verdict. It is the
+	// waiver, named so nobody reads the silence as one.
+	if doc.Doc.ReviewWaived {
+		if done, total := doc.Doc.Progress(); total > 0 && done == total {
+			return Review{State: ReviewWaived}
+		}
+	}
+
 	if opts.Review == nil {
 		return Review{State: ReviewUnreadable}
 	}
@@ -280,6 +291,8 @@ func reviewLine(r Review) string {
 			return "review: owed · the feature is closed"
 		}
 		return "review: owed · odachi review --base " + r.Base
+	case ReviewWaived:
+		return "review: waived by the human"
 	case ReviewUnreadable:
 		return "review: cannot be read · this tree cannot be measured"
 	default:
