@@ -11,7 +11,7 @@ R1 · "a step marked with --commit names the bytes of that commit, so the mark s
 - tests pin the canonical mark, the fallback and the resolution
 
 ## Steps
-- [ ] T1 · plan --done --commit records the tree of the commit when it can read it, and the sha when it cannot   R1
+- [x] T1 · plan --done --commit records the tree of the commit when it can read it, and the sha when it cannot   R1 · tree:23b30858d0c1c96e19025b62980ccd7f62937183
 
 ## History
 L1 · "a step marked with --commit names the bytes of that commit, so the mark survives a rebase too"
