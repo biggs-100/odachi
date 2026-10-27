@@ -10,7 +10,7 @@ R1 · "the ladder counts a requirement the human changed, not only the questions
 - the tests pin the count, the sum and the unchanged craft rule, and the impact map records it
 
 ## Steps
-- [ ] T1 · level counts a requirement change as a vision decision, with its own number and the tests, and the map records it   R1
+- [x] T1 · level counts a requirement change as a vision decision, with its own number and the tests, and the map records it   R1 · tree:ec7711b4e567c2efea37ceae90495ff499727fba
 
 ## History
 L1 · "the ladder counts a requirement the human changed, not only the questions they answered, so a correction counts as a vision decision"
