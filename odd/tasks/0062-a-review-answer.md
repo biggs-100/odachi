@@ -12,8 +12,8 @@ R1 · "a review answer that cannot be read is kept, named and attachable again, 
 - tests pin the kept bytes, the name, the coexistence and the cleanup
 
 ## Steps
-- [ ] T1 · an unreadable answer is kept under a name its bytes decide, and the blockage names it   R1
-- [ ] T2 · the answer that lands drops the kept file, and two different answers coexist   R1
+- [x] T1 · an unreadable answer is kept under a name its bytes decide, and the blockage names it   R1 · 36c734c
+- [x] T2 · the answer that lands drops the kept file, and two different answers coexist   R1 · 73b799f
 
 ## History
 L1 · "a review answer that cannot be read is kept, named and attachable again, so the same answer is never paid twice"
