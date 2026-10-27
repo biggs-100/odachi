@@ -453,3 +453,32 @@ func TestRoleCraftTeachesTheInterviewAndTheResearch(t *testing.T) {
 		}
 	}
 }
+
+// TestSkillCraftTeachesExplorationAndResearch: a rule about the outside world
+// ages the day the system changes, so the creator explores the code, researches
+// the current docs, and puts the version and the date in the rule.
+func TestSkillCraftTeachesExplorationAndResearch(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["skill-craft"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill skill-craft: el creador de skills no existe")
+	}
+	for _, want := range []string{
+		"Explore before writing",
+		"version and the date",
+		"Research facts, not fashions",
+		"odachi skill new",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("skill-craft no dice %q: explorar e investigar se perdio", want)
+		}
+	}
+}
