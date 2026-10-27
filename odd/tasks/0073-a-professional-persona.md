@@ -24,3 +24,5 @@ R1 · "a professional persona is created by an interview and research, and odach
 L1 · "a professional persona is created by an interview and research, and odachi writes it as a selectable agent and a skill from one source"
 L2 · OFICIO · "the role source is Markdown in .odachi/personas/" (porque a role is human content with sources and a probe, not machine config; TOML would force prose into a field)
 L3 · OFICIO · "a role whose rules do not fit in the 60-line skill is refused, not truncated" (porque the cap is a contract of the renderer: a role that cannot be loaded is not a role)
+L4 · CAMBIO R1 · "the verb is role, not persona, and the source lives in .odachi/roles/: persona is the voice, and one word with two owners is the defect ADR 0006 fixed"
+L5 · CAMBIO R1 · "the creator skill is role-craft, not persona-craft, for the same reason"
