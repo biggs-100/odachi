@@ -27,7 +27,11 @@ type TaskDoc struct {
 	Title string
 	// Base is the commit this feature started from: the gate asks for the review
 	// of that diff, not of the commit that closes the feature.
-	Base         string
+	Base string
+	// ReviewWaived is the human's decision that this feature lands without a
+	// review verdict. The gate names it instead of hiding it; the proof and the
+	// fence still apply.
+	ReviewWaived bool
 	Requirements []Requirement
 	DoneWhen     []string
 	Steps        []Step
@@ -43,6 +47,11 @@ const (
 	headerDoneWhen     = "## Done when"
 	headerSteps        = "## Steps"
 	headerHistory      = "## History"
+
+	// reviewWaivedLine is the human's decision that this feature lands without a
+	// review verdict. It lives in the preamble, where the gate reads it, and it
+	// is the only ceremony a small change may skip: the proof and the fence stay.
+	reviewWaivedLine = "Review: waived"
 
 	headerRequirementsES = "## Requisitos (textual, del usuario)"
 	headerDoneWhenES     = "## Listo cuando"
@@ -136,6 +145,14 @@ func Parse(md string) TaskDoc {
 			continue
 		}
 
+		// The waiver lives in the same preamble for the same reason: a line in
+		// the history that says "Review: waived" is prose, not a decision the
+		// gate must obey.
+		if preamble && line == reviewWaivedLine {
+			d.ReviewWaived = true
+			continue
+		}
+
 		switch current {
 		case "requirements":
 			if r, ok := parseRequirement(line); ok {
@@ -208,6 +225,9 @@ func (d TaskDoc) Render() string {
 	}
 	if d.Base != "" {
 		b.WriteString(basePrefix + d.Base + "\n")
+	}
+	if d.ReviewWaived {
+		b.WriteString(reviewWaivedLine + "\n")
 	}
 
 	b.WriteString("\n" + headerRequirements + "\n")

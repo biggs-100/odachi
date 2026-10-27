@@ -87,6 +87,12 @@ type Options struct {
 	// repository with no commit yet.
 	Base string
 
+	// WaiveReview writes the human's decision that this feature lands without a
+	// review verdict. It is the one ceremony a small change may skip without
+	// breaking a hard rule: the proof and the fence still apply, and the waiver
+	// is recorded in the task doc so the gate names it instead of hiding it.
+	WaiveReview bool
+
 	// Profile is the already-resolved profile loaded by the caller from
 	// .odachi/profile.toml. Nil means "infer it from what we can see".
 	Profile *profile.Profile

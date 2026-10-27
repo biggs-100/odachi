@@ -156,6 +156,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	flags.Var(&learn, "learn", "answer 7: what you want to learn (repeatable)")
 	flags.StringVar(&brief, "brief", "", "read an existing brief instead of asking")
 	flags.BoolVar(&force, "force", false, "rewrite an existing brief.md")
+	flags.BoolVar(&opts.WaiveReview, "waive-review", false, "record that this feature lands without a review verdict (the proof and the fence still apply)")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {

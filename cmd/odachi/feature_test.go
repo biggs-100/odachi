@@ -144,3 +144,38 @@ func TestANamedFeatureOnAProjectWithoutDocsIsRefused(t *testing.T) {
 		t.Errorf("stderr %q does not name the missing document", errOut)
 	}
 }
+
+// TestStartWritesTheWaiverOnlyWhenAsked: the waiver is the human's decision, so
+// it is written when the flag is there and absent when it is not. A document
+// written without it must parse as a document without it.
+func TestStartWritesTheWaiverOnlyWhenAsked(t *testing.T) {
+	t.Parallel()
+	base := []string{
+		"start", "--force",
+		"--outcome", "the waiver is recorded",
+		"--audience", "cpu",
+		"--done", "the waiver is written",
+		"--sensitive", "none",
+		"--deadline", "today",
+		"--learn", "how a recorded exception stays honest",
+	}
+
+	waived := t.TempDir()
+	initRepo(t, waived)
+	withFlag := append(append([]string(nil), base[:2]...), append([]string{"--waive-review"}, base[2:]...)...)
+	if code, out, errOut := runDir(t, waived, withFlag, ""); code != 0 {
+		t.Fatalf("start --waive-review: %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	if !strings.Contains(featureText(t, waived, "0001-the-waiver-is.md"), "Review: waived") {
+		t.Error("the document does not carry the waiver")
+	}
+
+	plain := t.TempDir()
+	initRepo(t, plain)
+	if code, out, errOut := runDir(t, plain, base, ""); code != 0 {
+		t.Fatalf("start: %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	if strings.Contains(featureText(t, plain, "0001-the-waiver-is.md"), "Review: waived") {
+		t.Error("a document nobody waived carries the waiver")
+	}
+}
