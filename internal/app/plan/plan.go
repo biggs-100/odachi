@@ -181,7 +181,13 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 	// rebase; a tree does, and it is the identity a proof and a verdict already use.
 	var note string
 	if mark == "" {
-		mark, note = committedTree(opts)
+		if hasDoneAfter(current.Doc, id) {
+			// Marking an older step after a later one is done: HEAD is not this
+			// step's commit, and guessing would attach the wrong bytes.
+			note = "pass --commit: a later step is already done"
+		} else {
+			mark, note = committedTree(opts)
+		}
 	}
 
 	grown, err := current.Doc.Record(id, mark)
@@ -205,6 +211,22 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 		Task:    current.Rel,
 		Files:   []string{current.Rel},
 	}
+}
+
+// hasDoneAfter reports whether a step later than id is already done. Marking an
+// older step then would read HEAD, which is a later commit, and record its bytes
+// as this step's: a wrong mark is worse than none.
+func hasDoneAfter(doc taskdoc.TaskDoc, id string) bool {
+	seen := false
+	for _, step := range doc.Steps {
+		if seen && step.Done {
+			return true
+		}
+		if strings.EqualFold(step.ID, id) {
+			seen = true
+		}
+	}
+	return false
 }
 
 // committedTree is the mark a step can honestly carry: the tree of HEAD, and only

@@ -284,6 +284,36 @@ func (g fakeGit) HeadTree(string) (string, error) {
 
 func (g fakeGit) WorktreeTree(string) (string, error) { return g.worktree, nil }
 
+// TestPlanDoneDoesNotGuessAnOlderStep: marking a step after a later one is done
+// would read HEAD -a later commit- and record its bytes as this step's. The tool
+// refuses to guess and names --commit.
+func TestPlanDoneDoesNotGuessAnOlderStep(t *testing.T) {
+	files := project()
+	swapped := taskdoc.TaskDoc{
+		Title:        "reserva-de-turno",
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}, {ID: "R2", Text: "ver la agenda"}},
+		DoneWhen:     []string{"Reservo un turno y aparece en la agenda (R1)"},
+		Steps: []taskdoc.Step{
+			{ID: "T1", Text: "horario libre u ocupado", Requirement: "R1"},
+			{ID: "T2", Text: "agenda del día", Requirement: "R2", Commit: "deadbee", Done: true},
+		},
+		History: []string{`L1 · "reservar turnos"`},
+	}.Render()
+	files.files[taskPath] = []byte(swapped)
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "T1", Git: fakeGit{head: "aaa", worktree: "aaa"}}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if !strings.Contains(res.Message, "--commit") {
+		t.Errorf("Message = %q, want it to name --commit", res.Message)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[0]; step.Commit != "" {
+		t.Errorf("step = %+v, want no guessed mark", step)
+	}
+}
+
 // TestPlanDoneRecordsTheTreeItProduced: a step is remembered by its bytes. When
 // the worktree is the commit, plan records "tree:<head tree>" instead of a sha a
 // rebase may rewrite: the same identity the proof and the verdict already use.

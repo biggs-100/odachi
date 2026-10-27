@@ -9,8 +9,10 @@ package gitx
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -130,6 +132,76 @@ func HeadTree(root string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(out), nil
+}
+
+// TreeOf is the tree a commit carries. The commit must still exist in this clone:
+// an unknown or collected sha is an error, and the caller says so instead of
+// guessing.
+func TreeOf(root, commit string) (string, error) {
+	trimmed := strings.TrimSpace(commit)
+	if trimmed == "" {
+		return "", fmt.Errorf("no commit to read a tree from")
+	}
+	out, err := run(root, "rev-parse", "--verify", trimmed+"^{tree}")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// Has reports whether commit is reachable from HEAD: "this commit is on this
+// branch". Exit 1 is the answer "no", not an error; any other failure is an error.
+func Has(root, commit string) (bool, error) {
+	trimmed := strings.TrimSpace(commit)
+	if trimmed == "" {
+		return false, nil
+	}
+
+	cmd := execGit(root, "merge-base", "--is-ancestor", trimmed, "HEAD")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err == nil {
+		return true, nil
+	}
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return false, nil
+	}
+	return false, fmt.Errorf("git merge-base --is-ancestor %s HEAD: %w: %s", trimmed, err, strings.TrimSpace(stderr.String()))
+}
+
+// CommitWithTree is the oldest commit reachable from HEAD carrying the tree: the
+// commit those bytes landed in, when they landed as one. A rebase rewrites the
+// commit and keeps the tree, so this is how a step is found on the branch. The
+// oldest match is the commit that introduced the bytes, not a later return to them.
+func CommitWithTree(root, tree string) (string, error) {
+	trimmed := strings.TrimSpace(tree)
+	if trimmed == "" {
+		return "", nil
+	}
+	if _, err := run(root, "rev-parse", "--verify", "HEAD"); err != nil {
+		// No commit yet: no history to search, and nothing to claim.
+		return "", nil
+	}
+
+	out, err := run(root, "log", "--format=%H %T", "HEAD")
+	if err != nil {
+		return "", err
+	}
+
+	found := ""
+	for _, line := range strings.Split(out, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+		if strings.HasPrefix(fields[1], trimmed) {
+			found = fields[0]
+		}
+	}
+	return found, nil
 }
 
 // Resolve names the commit a spelling points at, in full. A base is a commit, not
