@@ -17,3 +17,4 @@ R1 · "a review answer that cannot be read is kept, named and attachable again, 
 
 ## History
 L1 · "a review answer that cannot be read is kept, named and attachable again, so the same answer is never paid twice"
+L2 · OFICIO · "an unreadable answer shares the refused namespace" (porque both are answers odachi would not seal, and one cleanup rule -the answer that lands ends them- is cheaper to keep honest than two namespaces)
