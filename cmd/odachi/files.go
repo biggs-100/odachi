@@ -373,6 +373,16 @@ func (gitRepo) HeadTree(root string) (string, error) { return gitx.HeadTree(root
 // HEAD so a step is only marked with bytes a commit can back.
 func (gitRepo) WorktreeTree(root string) (string, error) { return gitx.TreeHash(root) }
 
+// TreeOf, Has and CommitWithTree are how progress finds the commit a step landed
+// in: a rebase rewrites the commit and keeps the tree, so the tree is the search.
+func (gitRepo) TreeOf(root, commit string) (string, error) { return gitx.TreeOf(root, commit) }
+
+func (gitRepo) Has(root, commit string) (bool, error) { return gitx.Has(root, commit) }
+
+func (gitRepo) CommitWithTree(root, tree string) (string, error) {
+	return gitx.CommitWithTree(root, tree)
+}
+
 // Resolve is the gate's question "which commit does this spelling name": a base
 // is a commit, and two spellings of it are one diff.
 func (gitRepo) Resolve(root, ref string) (string, error) { return gitx.Resolve(root, ref) }

@@ -79,10 +79,28 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 type fakeGit struct {
 	tree string
 	err  error
+
+	// onBranch, trees and treeCommits answer the ledger questions: a test seeds
+	// only the ones it exercises.
+	onBranch    map[string]bool
+	trees       map[string]string
+	treeCommits map[string]string
 }
 
-func (g *fakeGit) TreeHash(root string) (string, error) {
-	return g.tree, g.err
+func (g *fakeGit) TreeHash(string) (string, error) { return g.tree, g.err }
+
+func (g *fakeGit) TreeOf(_, commit string) (string, error) {
+	tree, ok := g.trees[commit]
+	if !ok {
+		return "", errors.New("unknown commit")
+	}
+	return tree, nil
+}
+
+func (g *fakeGit) Has(_, commit string) (bool, error) { return g.onBranch[commit], g.err }
+
+func (g *fakeGit) CommitWithTree(_, tree string) (string, error) {
+	return g.treeCommits[tree], g.err
 }
 
 // missing is the error a read of a file that is not there returns.
@@ -129,7 +147,10 @@ type project struct {
 func newProject() *project {
 	return &project{
 		files: newFakeFiles(map[string]string{"odd/tasks/0007-reserva.md": taskDoc}),
-		git:   &fakeGit{tree: "4a1c9f7d2e3b5a6c8d9e0f1a2b3c4d5e6f7a8b9c"},
+		git: &fakeGit{
+			tree:     "4a1c9f7d2e3b5a6c8d9e0f1a2b3c4d5e6f7a8b9c",
+			onBranch: map[string]bool{"abc1234": true, "def5678": true},
+		},
 	}
 }
 
@@ -515,6 +536,65 @@ func TestProgressNamesTheFeatureAndItsSteps(t *testing.T) {
 	if result.Code != 0 {
 		t.Errorf("code = %d, want 0: a report is not a gate", result.Code)
 	}
+}
+
+// TestProgressNamesTheCommitAStepLandedIn: the task doc records the tree a step
+// produced, and a rebase keeps the tree and rewrites the commit. The report names
+// the commit that carries it; an older mark that landed with another sha is found
+// through its bytes; and bytes that never landed as a commit say so instead of
+// naming one that does not exist.
+func TestProgressNamesTheCommitAStepLandedIn(t *testing.T) {
+	const tree = "7bc78db4200c32c2d4fb706b78a5b40c485170ac"
+
+	t.Run("a tree mark", func(t *testing.T) {
+		p := newProject()
+		p.git.treeCommits = map[string]string{tree: "82377db0000000000000000000000000000000000"}
+		doc := strings.Replace(taskDoc, "R1 · abc1234", "R1 · tree:"+tree, 1)
+		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(doc)
+
+		result := p.run(progress.Options{})
+
+		step := result.State.Steps[0]
+		if step.Commit != "82377db" || step.Note != "" {
+			t.Errorf("step = %+v, want the commit that carries the tree", step)
+		}
+		if lines := strings.Join(result.Lines, "\n"); !strings.Contains(lines, "82377db") {
+			t.Errorf("the report does not name the landed commit:\n%s", lines)
+		}
+	})
+
+	t.Run("a commit that landed with another sha", func(t *testing.T) {
+		p := newProject()
+		p.git.onBranch = map[string]bool{}
+		p.git.trees = map[string]string{"682f1d4": tree}
+		p.git.treeCommits = map[string]string{tree: "82377db0000000000000000000000000000000000"}
+		doc := strings.Replace(taskDoc, "R1 · abc1234", "R1 · 682f1d4", 1)
+		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(doc)
+
+		result := p.run(progress.Options{})
+
+		if step := result.State.Steps[0]; step.Commit != "82377db" || step.Note != "" {
+			t.Errorf("step = %+v, want the commit found through its bytes", step)
+		}
+	})
+
+	t.Run("bytes that never landed", func(t *testing.T) {
+		p := newProject()
+		p.git.onBranch = map[string]bool{}
+		p.git.trees = map[string]string{"682f1d4": tree}
+		doc := strings.Replace(taskDoc, "R1 · abc1234", "R1 · 682f1d4", 1)
+		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(doc)
+
+		result := p.run(progress.Options{})
+
+		step := result.State.Steps[0]
+		if step.Commit != "" || step.Note != "not on this branch" {
+			t.Errorf("step = %+v, want no commit and the reason", step)
+		}
+		if lines := strings.Join(result.Lines, "\n"); !strings.Contains(lines, "not on this branch") {
+			t.Errorf("the report names a commit that does not exist:\n%s", lines)
+		}
+	})
 }
 
 // TestAReportSaysTheReviewWasWaived: a closed feature that waived its review is

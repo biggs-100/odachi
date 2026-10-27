@@ -69,9 +69,14 @@ type Files interface {
 	List(dir string) ([]string, error)
 }
 
-// Git is the repository port: enough to name the tree this report describes.
+// Git is the repository port: enough to name the tree this report describes, and
+// to find the commit a step's bytes landed in. A rebase rewrites the commit and
+// keeps the tree, so the tree is what the ledger records.
 type Git interface {
 	TreeHash(root string) (string, error)
+	TreeOf(root, commit string) (string, error)
+	Has(root, commit string) (bool, error)
+	CommitWithTree(root, tree string) (string, error)
 }
 
 // Step is one task-doc step as data.
@@ -80,6 +85,9 @@ type Step struct {
 	Text   string `json:"text"`
 	Done   bool   `json:"done"`
 	Commit string `json:"commit,omitempty"`
+	// Note says why a mark has no commit on this branch. Empty when the step has
+	// no mark, or when the mark resolved.
+	Note string `json:"note,omitempty"`
 }
 
 // Question is one open question as data: the id the history gave it and the words
@@ -140,7 +148,7 @@ func Run(opts Options, files Files, git Git) Result {
 	state := State{
 		Number:        doc.Number,
 		Slug:          doc.Slug,
-		Steps:         steps(doc.Doc.Steps),
+		Steps:         steps(doc.Doc.Steps, func(mark string) (string, string) { return landed(git, opts.Dir, mark) }),
 		OpenQuestions: questions(doc.Doc.OpenQuestions()),
 		Proof:         proofState(files, opts.Dir, doc, tree, treeErr),
 		Review:        reviewState(opts, files, doc, tree, treeErr),
@@ -254,6 +262,9 @@ func render(state State) []string {
 		landed := "pending"
 		if step.Done {
 			landed = step.Commit
+			if landed == "" && step.Note != "" {
+				landed = step.Note
+			}
 			if landed == "" {
 				landed = "done"
 			}
@@ -304,17 +315,58 @@ func reviewLine(r Review) string {
 }
 
 // steps turns the task doc's steps into data, in the order the plan wrote them.
-func steps(recorded []taskdoc.Step) []Step {
+// resolve names the commit the step's mark landed in, or why it has none.
+func steps(recorded []taskdoc.Step, resolve func(mark string) (string, string)) []Step {
 	out := make([]Step, 0, len(recorded))
 	for _, step := range recorded {
+		commit, note := resolve(step.Commit)
 		out = append(out, Step{
 			ID:     step.ID,
 			Text:   step.Text,
 			Done:   step.Done,
-			Commit: step.Commit,
+			Commit: commit,
+			Note:   note,
 		})
 	}
 	return out
+}
+
+// landed names the commit a step's mark refers to on this branch. Two marks are
+// possible: the tree the step produced (the durable form), and a commit recorded
+// by name (the older form). A commit that landed with another sha is found through
+// its tree, which is what a rebase preserves; when there is no such commit the
+// report says so instead of naming one that does not exist.
+func landed(git Git, dir, mark string) (string, string) {
+	mark = strings.TrimSpace(mark)
+	if mark == "" {
+		return "", ""
+	}
+
+	if tree, ok := strings.CutPrefix(mark, "tree:"); ok {
+		if commit, err := git.CommitWithTree(dir, tree); err == nil && commit != "" {
+			return shortHash(commit), ""
+		}
+		return "", "bytes not on this branch"
+	}
+
+	if on, err := git.Has(dir, mark); err == nil && on {
+		return mark, ""
+	}
+	if tree, err := git.TreeOf(dir, mark); err == nil && tree != "" {
+		if commit, err := git.CommitWithTree(dir, tree); err == nil && commit != "" {
+			return shortHash(commit), ""
+		}
+	}
+	return "", "not on this branch"
+}
+
+// shortHash is the seven characters a task doc records: enough to find a commit,
+// short enough to read in a line.
+func shortHash(hash string) string {
+	if len(hash) > 7 {
+		return hash[:7]
+	}
+	return hash
 }
 
 // doneSteps is how many steps the feature finished.
