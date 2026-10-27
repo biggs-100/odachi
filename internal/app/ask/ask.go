@@ -28,8 +28,8 @@ const (
 	CodeNeedsAnswer = 2
 )
 
-// Options is one `odachi ask` invocation. Exactly one of Question, Answer or
-// Craft is set: one call records one thing.
+// Options is one `odachi ask` invocation. Exactly one of Question, Answer,
+// Craft or Change is set: one call records one thing.
 type Options struct {
 	Dir string
 
@@ -42,6 +42,10 @@ type Options struct {
 	// Craft is a decision the agent took alone, and Because is why.
 	Craft   string
 	Because string
+	// Change is a requirement the human changed, in their words, and
+	// Requirement names the R it changes: the steps that cite it reopen.
+	Change      string
+	Requirement string
 	// Feature is the number of the task document to write to. Zero means the
 	// highest, which is the feature the human is working on now.
 	Feature int
@@ -65,16 +69,17 @@ type Result struct {
 	Files   []string
 }
 
-// The three forms of the command, once the flags are validated.
+// The four forms of the command, once the flags are validated.
 const (
 	formQuestion = "question"
 	formAnswer   = "answer"
 	formCraft    = "craft"
+	formChange   = "change"
 )
 
-// usage is the one-line reminder of the three shapes, repeated in errors
-// because a blocked message must name the command that unblocks it.
-const usage = `odachi ask "<question>" · odachi ask --answer "<answer>" [--for P1] · odachi ask --craft "<decision>" --because "<reason>"`
+// usage is the one-line reminder of the four shapes, repeated in errors because
+// a blocked message must name the command that unblocks it.
+const usage = `odachi ask "<question>" · odachi ask --answer "<answer>" [--for P1] · odachi ask --craft "<decision>" --because "<reason>" · odachi ask --change "<words>" --req R1`
 
 // Run performs one `odachi ask`.
 func Run(opts Options, files Files) Result {
@@ -102,6 +107,8 @@ func Run(opts Options, files Files) Result {
 			current.Doc.NextLine(), quoted(opts.Craft), oneLine(opts.Because))
 		return record(current, files, current.Doc.AppendHistory(line),
 			"recorded the craft decision in "+current.Rel)
+	case formChange:
+		return change(current, files, opts)
 	default:
 		return answer(current, files, opts)
 	}
@@ -116,9 +123,11 @@ func validate(opts Options) (string, *Result) {
 	craft := strings.TrimSpace(opts.Craft)
 	because := strings.TrimSpace(opts.Because)
 	which := strings.TrimSpace(opts.For)
+	change := strings.TrimSpace(opts.Change)
+	requirement := strings.TrimSpace(opts.Requirement)
 
 	given := 0
-	for _, value := range []string{question, answer, craft} {
+	for _, value := range []string{question, answer, craft, change} {
 		if value != "" {
 			given++
 		}
@@ -131,6 +140,10 @@ func validate(opts Options) (string, *Result) {
 		return "", failure(blocked(`missing --because: a decision without a reason teaches nothing; run odachi ask --craft "<decision>" --because "<reason>"`))
 	case craft == "" && because != "":
 		return "", failure(blocked(`--because only goes with --craft: run odachi ask --craft "<decision>" --because "<reason>"`))
+	case change != "" && requirement == "":
+		return "", failure(blocked(`missing --req: a change names the requirement it changes, and that is what reopens its steps; run odachi ask --change "<words>" --req R1`))
+	case change == "" && requirement != "":
+		return "", failure(blocked(`--req only goes with --change: run odachi ask --change "<words>" --req ` + requirement))
 	case which != "" && answer == "":
 		return "", failure(blocked(`--for only goes with --answer: run odachi ask --answer "<answer>" --for ` + which))
 	case given == 0 && opts.Question == "":
@@ -138,6 +151,8 @@ func validate(opts Options) (string, *Result) {
 			"missing what to record: " + usage)})
 	case given == 0:
 		return "", failure(blocked(`the question cannot be empty: it is what the human decides; write it in your words (odachi ask "<question>")`))
+	case change != "":
+		return formChange, nil
 	case craft != "":
 		return formCraft, nil
 	case answer != "":
@@ -169,6 +184,38 @@ func answer(current tasks.Document, files Files, opts Options) Result {
 		return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
 	}
 	return record(current, files, closed, fmt.Sprintf("closed question %s in %s", id, current.Rel))
+}
+
+// change records a requirement the human changed. Their words go to the history
+// as given, and every done step that cites the requirement reopens: a step that
+// claimed it cannot stay closed over a requirement that moved.
+func change(current tasks.Document, files Files, opts Options) Result {
+	requirement := strings.ToUpper(strings.TrimSpace(opts.Requirement))
+	if !current.Doc.HasRequirement(requirement) {
+		return blocked(fmt.Sprintf("%s has no requirement %s; the requirements are %s",
+			current.Rel, requirement, requirementChoices(current.Doc)))
+	}
+
+	line := fmt.Sprintf("L%d · CAMBIO %s · %s", current.Doc.NextLine(), requirement, quoted(opts.Change))
+	grown, reopened := current.Doc.AppendHistory(line).Reopen(requirement)
+
+	message := "recorded the change in " + current.Rel
+	if len(reopened) == 0 {
+		message += "; no done step cites " + requirement + ", nothing reopened"
+	} else {
+		message += "; reopened " + strings.Join(reopened, ", ")
+	}
+	return record(current, files, grown, message)
+}
+
+// requirementChoices names the requirements the document declares, so a typo in
+// --req is answered with the ones that exist.
+func requirementChoices(doc taskdoc.TaskDoc) string {
+	ids := make([]string, 0, len(doc.Requirements))
+	for _, requirement := range doc.Requirements {
+		ids = append(ids, requirement.ID)
+	}
+	return strings.Join(ids, ", ")
 }
 
 // record rewrites the task document with the grown version and reports where it

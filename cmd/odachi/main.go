@@ -223,6 +223,8 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.IntVar(&opts.Feature, "feature", 0, "the feature number to write to (default: the highest)")
 	flags.StringVar(&opts.Craft, "craft", "", "decision the agent took without asking")
 	flags.StringVar(&opts.Because, "because", "", "why the agent took that decision (required with --craft)")
+	flags.StringVar(&opts.Change, "change", "", "a requirement the human changed, in their words")
+	flags.StringVar(&opts.Requirement, "req", "", "R<n> the change names (required with --change)")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	// The documented shape starts with the question, so a leading argument is
@@ -1263,6 +1265,7 @@ usage:
   odachi ask "<question>"
   odachi ask --answer "<answer>" [--for P1]
   odachi ask --craft "<decision>" --because "<reason>"
+  odachi ask --change "<words>" --req R1
   odachi plan "<text>" [--req R1]
   odachi plan --done T2 [--commit abc1234]
   odachi level [--to <profile>]
@@ -1417,6 +1420,7 @@ after start:
   odachi ask "<question>"                       record an open question
   odachi ask --answer "<answer>" [--for P1]     record your answer
   odachi ask --craft "<decision>" --because "<reason>"  record a decision the agent took
+  odachi ask --change "<words>" --req R1        record the requirement the human changed; its steps reopen
   odachi plan "<text>" [--req R1]               add the next step to the task doc
   odachi plan --done T2 [--commit abc1234]      mark a step done; the tree of its commit is recorded
   odachi level                                  see your facts; it proposes senior when earned
