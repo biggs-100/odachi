@@ -16,7 +16,7 @@ R1 · "a professional persona is created by an interview and research, and odach
 - the impact map records the third axis: role is not voice and not profile
 
 ## Steps
-- [ ] T1 · the role source parses into its eight sections, and persona new writes the skeleton   R1
+- [x] T1 · the role source parses into its eight sections, and persona new writes the skeleton   R1 · tree:708083d529ff2a1ec4e7f4f3ec70287f4e0ecd91
 - [ ] T2 · persona-craft teaches the interview and the research, and the impact map records the third axis   R1
 - [ ] T3 · persona renders the agent and the skill from the source, and a role over 60 lines is refused   R1
 
