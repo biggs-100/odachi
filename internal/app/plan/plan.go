@@ -39,9 +39,20 @@ type Options struct {
 	Done string
 	// Commit is the commit that closed the step; it only makes sense with Done.
 	Commit string
+	// Git answers the two trees the done form compares. It is optional: without
+	// it a step closes with no mark, which is what the first day and a test
+	// without a repository need.
+	Git Git
 	// Feature is the number of the task document to write to. Zero means the
 	// highest, which is the feature the human is working on now.
 	Feature int
+}
+
+// Git answers the done form's one question: are the bytes the step produced the
+// commit that carries them? A mark is only honest when the worktree is that commit.
+type Git interface {
+	HeadTree(root string) (string, error)
+	WorktreeTree(root string) (string, error)
 }
 
 // Files is the disk port: enough to find the document, read it, back it up and
@@ -161,12 +172,19 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 
 	// A commit recorded on an open step is not thrown away when the caller does
 	// not pass one: plan records, it never erases.
-	commit := step.Commit
+	mark := step.Commit
 	if given := strings.TrimSpace(opts.Commit); given != "" {
-		commit = given
+		mark = given
+	}
+	// No commit was given: the step is remembered by the bytes it produced, when
+	// those bytes are a commit. The sha of a local commit does not survive a
+	// rebase; a tree does, and it is the identity a proof and a verdict already use.
+	var note string
+	if mark == "" {
+		mark, note = committedTree(opts)
 	}
 
-	grown, err := current.Doc.Record(id, commit)
+	grown, err := current.Doc.Record(id, mark)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
 	}
@@ -175,8 +193,11 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 	}
 
 	message := fmt.Sprintf("step %s done", id)
-	if commit != "" {
-		message += " · " + commit
+	if mark != "" {
+		message += " · " + shortMark(mark)
+	}
+	if note != "" {
+		message += " · " + note
 	}
 	return Result{
 		Code:    CodeOK,
@@ -184,6 +205,37 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 		Task:    current.Rel,
 		Files:   []string{current.Rel},
 	}
+}
+
+// committedTree is the mark a step can honestly carry: the tree of HEAD, and only
+// when the worktree is that commit. Marking a step before committing it is legal
+// and records nothing, as it always did; a tree describing uncommitted bytes would
+// be a claim the repository cannot back.
+func committedTree(opts Options) (string, string) {
+	if opts.Git == nil {
+		return "", ""
+	}
+	head, err := opts.Git.HeadTree(opts.Dir)
+	if err != nil || strings.TrimSpace(head) == "" {
+		return "", ""
+	}
+	worktree, err := opts.Git.WorktreeTree(opts.Dir)
+	if err != nil {
+		return "", ""
+	}
+	if worktree != head {
+		return "", "the tree was not recorded: the worktree is not the commit"
+	}
+	return "tree:" + head, ""
+}
+
+// shortMark is what the message prints: a tree or a commit in the seven characters
+// a human reads, while the document keeps the whole value.
+func shortMark(mark string) string {
+	if tree, ok := strings.CutPrefix(mark, "tree:"); ok && len(tree) > 7 {
+		return "tree:" + tree[:7]
+	}
+	return mark
 }
 
 // findStep returns the step with the given id, ignoring case.

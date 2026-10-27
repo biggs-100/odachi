@@ -121,6 +121,17 @@ func Head(root string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// HeadTree is the tree HEAD carries: the bytes of the last commit. A step is
+// remembered by these bytes because a rebase rewrites the commit, never the tree.
+// A repository with no commit has no tree, and the error says so.
+func HeadTree(root string) (string, error) {
+	out, err := run(root, "rev-parse", "--verify", "HEAD^{tree}")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // Resolve names the commit a spelling points at, in full. A base is a commit, not
 // a text: `6aeb877` and its forty characters describe the same diff, and a gate
 // that compared the strings refused a verdict that judged exactly those bytes.

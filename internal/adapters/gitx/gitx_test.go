@@ -95,6 +95,27 @@ func TestHeadIsTheCommitAndAnEmptyRepositoryHasNone(t *testing.T) {
 	}
 }
 
+// TestHeadTreeIsTheBytesTheCommitCarries: a rebase rewrites the commit and never
+// the tree, so the tree is what a step records. A repository with no commit has
+// no tree to remember.
+func TestHeadTreeIsTheBytesTheCommitCarries(t *testing.T) {
+	root, _ := newRepo(t)
+
+	got, err := gitx.HeadTree(root)
+	if err != nil {
+		t.Fatalf("HeadTree: %v", err)
+	}
+	if want := git(t, root, "rev-parse", "HEAD^{tree}"); got != want {
+		t.Errorf("HeadTree = %q, want %q", got, want)
+	}
+
+	empty := t.TempDir()
+	git(t, empty, "init")
+	if _, err := gitx.HeadTree(empty); err == nil {
+		t.Error("HeadTree on a repository with no commit = nil error, want none to record")
+	}
+}
+
 // TestResolveNamesTheCommitASpellingPointsAt: a base is a commit, and the gate
 // asks which one a spelling names. A prefix answers the full hash, so a receipt
 // written short still describes the diff it judged; a ref that names nothing is
