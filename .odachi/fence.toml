@@ -1,14 +1,14 @@
 [[rule]]
-not   = "changing the thresholds or the ladder"
-paths = ["changing-the-thresholds-or-the-ladder*"]
+not   = "changing the record format or escaping the quotes"
+paths = ["changing-the-record-format-or-escaping-the-quotes*"]
 deps  = []
 
 [[rule]]
-not   = "counting craft decisions as vision"
-paths = ["counting-craft-decisions-as-vision*"]
+not   = "touching start or plan"
+paths = ["touching-start-or-plan*"]
 deps  = []
 
 [[rule]]
-not   = "a new verb or flag"
-paths = ["a-new-verb-or-flag*"]
+not   = "rewriting old task docs"
+paths = ["rewriting-old-task-docs*"]
 deps  = []
