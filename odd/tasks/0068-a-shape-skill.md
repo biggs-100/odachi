@@ -11,7 +11,7 @@ R1 · "a shape skill explores before the brief and ends in start --brief, so the
 
 ## Steps
 - [x] T1 · shape exists: the skill explores before the brief and ends in start --brief, with its embed test and registry   R1 · tree:e65872c8a8e59a42ed25620273bb671d9ece2cc2
-- [ ] T2 · drive, README and the impact map send the agent to shape before start   R1
+- [x] T2 · drive, README and the impact map send the agent to shape before start   R1 · tree:83dcd042df1a18040eee13b798cebc3ccdf8ae40
 
 ## History
 L1 · "a shape skill explores before the brief and ends in start --brief, so the brief is written with the most information the feature will have"
