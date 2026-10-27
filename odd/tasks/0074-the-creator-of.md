@@ -10,7 +10,7 @@ R1 · "the creator of skills explores and researches the external facts its rule
 - skills --check is green, the embed test pins the contract, and the impact map records it
 
 ## Steps
-- [ ] T1 · skill-craft names the exploration and the research, cites version and date, and the test and the map record it   R1
+- [x] T1 · skill-craft names the exploration and the research, cites version and date, and the test and the map record it   R1 · tree:d1a730fc1e3738a5a2bb08b7944ec5b76a130bd3
 
 ## History
 L1 · "the creator of skills explores and researches the external facts its rules claim, and cites the version and the date in the rule"
