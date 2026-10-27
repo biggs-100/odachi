@@ -37,7 +37,7 @@ real parallelism or a long session, never for size or file count.
 - Requirements quoted **verbatim** and "Done when" observable; if missing, `ask`.
 - Before a step, load `tests` and observe RED; `check --run` only with GREEN.
 - If you delegate a step, record it with `ask --craft "delegated step: ..." --because "..."`.
-- Close the commit with the `Risk:` line from `commits`; a risk asks for `review`.
+- Close the commit with the `Risk:` line from `commits`: its table names the lens and the verifier, and a risk allows no waiver.
 
 The verbs: `start` interviews · `ask` asks or records a craft decision (`--craft`) · `plan` opens and closes steps · `check` gates and proof · `review` verdict per tree · `doctor` health without writing · `level` profile · `summary` state · `undo` undoes the last write · `init`, `skills`, `skill new` and `pack` are installation; `--version` touches nothing.
 

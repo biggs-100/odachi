@@ -11,7 +11,7 @@ R1 · "the six risk items decide the ceremony: the lens a change asks for, the v
 - the impact map records the second follow-up as implemented
 
 ## Steps
-- [ ] T1 · commits carries the table: each item names its lens, the verifier and no waiver, and a test pins it   R1
+- [x] T1 · commits carries the table: each item names its lens, the verifier and no waiver, and a test pins it   R1 · tree:ca1220afad30105b4cbb2e5aaeb19f20eafa7630
 - [ ] T2 · slices names the verifier trigger, drive sends the agent to the table, and the impact map records it   R1
 
 ## History
