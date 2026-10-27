@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.31 - 2026-10-26
+
+A paid review survives a tool's refusal.
+
+- **`review --exec` keeps the answer it cannot read** (#77): an answer the strict
+  JSON refuses -an ANSI footer after the JSON, a declared verdict that contradicts
+  its own findings- is written in the ignored store under a name its own bytes
+  decide, and the blockage names the file and `odachi review --attach <file>`.
+  Repair it and attach it instead of paying for the same review twice.
+- **Refused and unreadable answers share one namespace**, because both are answers
+  odachi would not seal, and the answer that lands is the one act that drops them.
+- **A reviewer that never ran, timed out or exited nonzero keeps nothing**: there
+  are no bytes to keep, and that half is still a plain failure.
+- **The debt ledger names the waiver branch of `ReviewOwed`**: a WARNING the last
+  verdict carried about unchanged bytes, written where the next person looks.
+
 ## v0.11.30 - 2026-10-26
 
 A feature can waive its review, and the gate says so.
