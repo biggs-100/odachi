@@ -5,9 +5,11 @@ package profile
 // key, because the file is the thing being changed.
 type Change struct{ Field, From, To string }
 
-// Evidence is what the project shows about the human's progress. Craft
-// decisions are counted because the tutor reports them, but they never buy a
-// graduation: the graduation is about vision answered, not work delivered.
+// Evidence is what the project shows about the human's progress. VisionAnswers
+// counts the decisions only the human could make: the questions they answered
+// and the requirements they changed. Craft decisions are counted because the
+// tutor reports them, but they never buy a graduation: the graduation is about
+// vision decided, not work delivered.
 type Evidence struct{ Features, VisionAnswers, CraftDecisions int }
 
 // nextProfile is the only profile the tool ever proposes by itself.

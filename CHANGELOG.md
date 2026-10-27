@@ -5,6 +5,17 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.35 - 2026-10-27
+
+A correction counts.
+
+- **`level` counts a requirement change as a vision decision**: the line shows
+  `requirement changes` as its own number and the graduation sums them with the
+  answered questions, so five changes and three finished features earn the senior
+  proposal without a single answered question.
+- **Craft decisions still buy nothing**: the agent deciding is not the human
+  deciding, however many there are. The thresholds and the ladder do not move.
+
 ## v0.11.34 - 2026-10-27
 
 The work is shaped before it is declared, and a requirement that moves says so.

@@ -90,9 +90,9 @@ func Run(opts Options, files Files) Result {
 	return facts(opts.Current, count(docs))
 }
 
-// evidence is what the project shows: the three numbers the tour of the tool
+// evidence is what the project shows: the four numbers the tour of the tool
 // reports and the two the graduation is made of.
-type evidence struct{ features, answers, craft, open int }
+type evidence struct{ features, answers, changes, craft, open int }
 
 // count reads every task document once. A feature counts when at least one of
 // its steps is done: a document nobody advanced is a plan, not a feature.
@@ -106,6 +106,8 @@ func count(docs []tasks.Document) evidence {
 			switch event.Kind {
 			case taskdoc.KindAnswer:
 				e.answers++
+			case taskdoc.KindChange:
+				e.changes++
 			case taskdoc.KindCraft:
 				e.craft++
 			}
@@ -123,22 +125,26 @@ func facts(current profile.Profile, e evidence) Result {
 		name = "(no profile)"
 	}
 
-	line := fmt.Sprintf("profile: %s · features with steps: %d · answered questions: %d · craft decisions: %d · open questions: %d",
-		name, e.features, e.answers, e.craft, e.open)
+	line := fmt.Sprintf("profile: %s · features with steps: %d · answered questions: %d · requirement changes: %d · craft decisions: %d · open questions: %d",
+		name, e.features, e.answers, e.changes, e.craft, e.open)
 	lines := []string{line}
 
-	earned := profile.Evidence{Features: e.features, VisionAnswers: e.answers, CraftDecisions: e.craft}
+	// A change is a vision decision: the human moved the requirement, which is
+	// the strongest thing they can decide. It sums with the answers; a craft
+	// decision still does not.
+	vision := e.answers + e.changes
+	earned := profile.Evidence{Features: e.features, VisionAnswers: vision, CraftDecisions: e.craft}
 	switch next, ok := profile.Next(name, earned); {
 	case ok:
 		lines = append(lines, fmt.Sprintf(
-			"you earned the %s profile: %d features with done steps and %d answered questions; to accept it run odachi level --to %s",
-			next, e.features, e.answers, next))
+			"you earned the %s profile: %d features with done steps and %d vision decisions (answered questions and requirement changes); to accept it run odachi level --to %s",
+			next, e.features, vision, next))
 	case name != "novato":
 		// Only a novato graduates: there is nothing to propose to someone who
 		// is already past the first step of the ladder.
 		lines = append(lines, fmt.Sprintf("you are already at %s: there is nothing to propose", name))
 	default:
-		lines = append(lines, "the senior profile is not earned yet: keep adding features with done steps and answered questions")
+		lines = append(lines, "the senior profile is not earned yet: keep adding features with done steps and vision decisions (answered questions or requirement changes)")
 	}
 
 	return Result{Code: CodeOK, Message: line, Lines: lines, Profile: name}

@@ -1,22 +1,20 @@
-# the-plan-grows
+# the-ladder-counts
 
 ## What must exist
-- the plan grows and the vision does not: when the human changes a requirement, the words land in the history and the steps that claimed it reopen
+- the ladder counts a requirement the human changed, not only the questions they answered, so a correction counts as a vision decision
 
 ## Done when
-- odachi ask --change "<words>" --req R1 appends the words verbatim to the history and reopens every done step that cites R1, dropping its mark
-- a change with no --req is refused, because the vision changes with a new feature and not with a reopened step
-- drive teaches the rule, the ask help names the form, and the tests pin the line, the reopen and the refusal
-- the impact map records the third follow-up as implemented
+- level shows requirement changes as their own number and adds them to the vision decisions that earn the senior profile
+- a change alone can move a project to the proposal, and a craft decision still cannot
+- the tests pin the count, the sum and the unchanged craft rule, and the impact map records it
 
 ## Not included (first version)
-- rewriting brief.md or the Requirements section
-- reopening a step that does not cite the requirement
-- a new verb
-- changing how a step is marked done
+- changing the thresholds or the ladder
+- counting craft decisions as vision
+- a new verb or flag
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a change of requirement is recorded without rewriting the vision.
+- Wants to learn: how a new record kind changes a count without changing the ladder.

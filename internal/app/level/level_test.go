@@ -621,3 +621,61 @@ func TestLevelToAProfileWithoutAVoiceSaysWhichNamesHaveOne(t *testing.T) {
 		}
 	}
 }
+
+// TestLevelCountsARequirementChangeAsAVisionDecision: the human moving a
+// requirement is a vision decision, so five changes with three finished features
+// earn the proposal without a single answered question, and the line says how
+// many there were.
+func TestLevelCountsARequirementChangeAsAVisionDecision(t *testing.T) {
+	history := []string{`L1 · "reservar turnos"`}
+	for i := 1; i <= 5; i++ {
+		history = append(history, fmt.Sprintf(`L%d · CAMBIO R1 · "cambio %d"`, i+1, i))
+	}
+
+	files := newFakeFiles(map[string]string{
+		taskPath(1, "reservar-turnos"): feature("reservar turnos", 1, 2, history...),
+		taskPath(2, "facturar-obras"):  feature("facturar obras", 1, 1, `L1 · "facturar obras"`),
+		taskPath(3, "cobrar-senas"):    feature("cobrar senas", 1, 3, `L1 · "cobrar senas"`),
+	})
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "novato")}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	block := strings.Join(res.Lines, "\n")
+	if !strings.Contains(block, "requirement changes: 5") {
+		t.Errorf("block does not count the five changes:\n%s", block)
+	}
+	if !strings.Contains(block, "answered questions: 0") {
+		t.Errorf("block does not keep the answers apart from the changes:\n%s", block)
+	}
+	if !strings.Contains(block, "odachi level --to senior") {
+		t.Errorf("block does not propose the senior profile the changes earned:\n%s", block)
+	}
+}
+
+// TestLevelDoesNotCountCraftAsVision: a craft decision is the agent deciding, and
+// it still buys no graduation however many there are.
+func TestLevelDoesNotCountCraftAsVision(t *testing.T) {
+	history := []string{`L1 · "reservar turnos"`}
+	for i := 1; i <= 20; i++ {
+		history = append(history, fmt.Sprintf(`L%d · OFICIO · "decision %d" (porque razon %d)`, i+1, i, i))
+	}
+
+	files := newFakeFiles(map[string]string{
+		taskPath(1, "reservar-turnos"): feature("reservar turnos", 1, 2, history...),
+		taskPath(2, "facturar-obras"):  feature("facturar obras", 1, 1, `L1 · "facturar obras"`),
+		taskPath(3, "cobrar-senas"):    feature("cobrar senas", 1, 3, `L1 · "cobrar senas"`),
+	})
+
+	res := level.Run(level.Options{Dir: "raiz", Current: builtin(t, "novato")}, files)
+
+	block := strings.Join(res.Lines, "\n")
+	if !strings.Contains(block, "craft decisions: 20") {
+		t.Errorf("block does not count the craft decisions:\n%s", block)
+	}
+	if strings.Contains(block, "odachi level --to senior") {
+		t.Errorf("craft decisions bought a graduation:\n%s", block)
+	}
+}
