@@ -41,7 +41,7 @@ func (d TaskDoc) AddStep(text, requirement string) (TaskDoc, error) {
 	}
 
 	link := strings.ToUpper(strings.TrimSpace(requirement))
-	if link != "" && !d.hasRequirement(link) {
+	if link != "" && !d.HasRequirement(link) {
 		return d, fmt.Errorf("requirement %s is not in this task doc; the requirements are %s", link, requirementIDs(d.Requirements))
 	}
 
@@ -53,15 +53,42 @@ func (d TaskDoc) AddStep(text, requirement string) (TaskDoc, error) {
 	return d, nil
 }
 
-// hasRequirement reports whether the document declares the id, ignoring case
+// HasRequirement reports whether the document declares the id, ignoring case
 // because an agent typing `--req r1` means R1.
-func (d TaskDoc) hasRequirement(id string) bool {
+func (d TaskDoc) HasRequirement(id string) bool {
 	for _, r := range d.Requirements {
 		if strings.EqualFold(r.ID, id) {
 			return true
 		}
 	}
 	return false
+}
+
+// Reopen unchecks every done step that cites the requirement and drops its mark.
+// The change line already carries the human's words; the mark was evidence for
+// the step as it was, and it does not survive a change that invalidates it. An
+// empty requirement reopens nothing: without a link there is no step to blame.
+func (d TaskDoc) Reopen(requirement string) (TaskDoc, []string) {
+	link := strings.ToUpper(strings.TrimSpace(requirement))
+	if link == "" {
+		return d, nil
+	}
+
+	steps := make([]Step, len(d.Steps))
+	copy(steps, d.Steps)
+
+	reopened := []string{}
+	for i, s := range steps {
+		if !s.Done || !strings.EqualFold(s.Requirement, link) {
+			continue
+		}
+		steps[i].Done = false
+		steps[i].Commit = ""
+		reopened = append(reopened, s.ID)
+	}
+
+	d.Steps = steps
+	return d, reopened
 }
 
 // canonicalStepText validates and normalizes a step's text: one line, no
