@@ -9,12 +9,19 @@ does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after v0.11.28, closing feature 0058.
+Last written: after v0.11.30, closing feature 0062.
 
 ## Open
 
-Nothing. Every row the store carried about unchanged bytes has a test or a
-decision.
+### internal/app/check/check.go · the waiver branch of the exported ReviewOwed
+
+`ReviewOwed` answers "nothing owed" for a closed feature whose task doc records
+`Review: waived` (check.go:723-730), and no test calls it there: the closed-waiver
+test drives `reviewGate`, the report test injects the answer, and the taskdoc test
+stops at the parser. If the branch were lost or inverted, every test would stay
+green and a waived feature would owe a verdict again. The fix is a test that calls
+`check.ReviewOwed` with a closed waived document, and with the same document
+without the waiver.
 
 ## Accepted
 
