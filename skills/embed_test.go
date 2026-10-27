@@ -421,3 +421,64 @@ func TestBootstrapSaysTheAgentRunsTheCommands(t *testing.T) {
 		t.Errorf("the bootstrap skill does not say the agent runs the commands:\n%s", bootstrap.Content)
 	}
 }
+
+// TestRoleCraftTeachesTheInterviewAndTheResearch: a role is written from an
+// interview and evidence, not from adjectives. The skill names the questions, the
+// sources, the probe and the command that writes the source.
+func TestRoleCraftTeachesTheInterviewAndTheResearch(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["role-craft"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill role-craft: un profesional no se puede crear")
+	}
+	for _, want := range []string{
+		"Ask for the scars",
+		"Years are not a field",
+		"three to five sources with a date",
+		"Write the probe",
+		"The human owns the words",
+		"odachi role new <slug>",
+		"60 lines",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("role-craft no dice %q: la disciplina de la entrevista se perdio", want)
+		}
+	}
+}
+
+// TestSkillCraftTeachesExplorationAndResearch: a rule about the outside world
+// ages the day the system changes, so the creator explores the code, researches
+// the current docs, and puts the version and the date in the rule.
+func TestSkillCraftTeachesExplorationAndResearch(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["skill-craft"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill skill-craft: el creador de skills no existe")
+	}
+	for _, want := range []string{
+		"Explore before writing",
+		"version and the date",
+		"Research facts, not fashions",
+		"odachi skill new",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("skill-craft no dice %q: explorar e investigar se perdio", want)
+		}
+	}
+}

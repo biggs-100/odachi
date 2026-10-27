@@ -308,3 +308,40 @@ L4 · OFICIO · "Guardé los turnos en SQLite" (porque dos personas no pueden es
 		t.Errorf("Render is not stable after a round trip:\n%s", got)
 	}
 }
+
+// TestARecordKeepsTheWordsWhateverTheyCarry: the words are the human's, so the
+// parser gives them back as given even when they carry the quote that delimits
+// the record, the separator that splits it, or the shape of a craft reason. The
+// format does not escape; it survives.
+func TestARecordKeepsTheWordsWhateverTheyCarry(t *testing.T) {
+	words := []string{
+		`dice "hola" y adios`,
+		`a · b`,
+		`el bug (porque el test)`,
+		`un (caso)`,
+		`"`,
+		`con "comillas" y · medio`,
+		`termina con "`,
+	}
+
+	for _, text := range words {
+		change := withHistory(`L1 · CAMBIO R1 · "` + text + `"`).Events()
+		if len(change) != 1 || change[0].Kind != taskdoc.KindChange {
+			t.Fatalf("%q: Events() = %+v, want one change", text, change)
+		}
+		if change[0].Text != text {
+			t.Errorf("change text = %q, want %q", change[0].Text, text)
+		}
+
+		craft := withHistory(`L1 · OFICIO · "` + text + `" (porque la razon)`).Events()
+		if len(craft) != 1 || craft[0].Kind != taskdoc.KindCraft {
+			t.Fatalf("%q: Events() = %+v, want one craft", text, craft)
+		}
+		if craft[0].Text != text {
+			t.Errorf("craft text = %q, want %q", craft[0].Text, text)
+		}
+		if craft[0].Because != "la razon" {
+			t.Errorf("craft because = %q, want %q", craft[0].Because, "la razon")
+		}
+	}
+}

@@ -5,6 +5,28 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.36 - 2026-10-27
+
+A professional is written as decisions, and a rule about the outside world carries its version.
+
+- **`odachi role` creates a professional** from one source:
+  `.odachi/roles/<slug>.md` holds the eight sections -who it is, what it asks
+  before starting, how it works, what it refuses, how it knows it worked, what it
+  does not know, where this comes from, and a probe-. `role new <slug>` writes the
+  skeleton, `role <slug>` renders the agent of each chosen client and the role's
+  skill from that source, and a role that would not fit in 60 lines is refused
+  instead of truncated. `role` lists which roles are stale.
+- **`role-craft` runs the interview and the research**: six questions, two scars,
+  three to five sources with a date and a probe. The human approves the words and
+  the binary writes them.
+- **`skill-craft` explores and researches too**: a rule that claims how an
+  outside system behaves carries the version and the date inside the rule, and
+  what the model already knows needs no source.
+- **A role is not a voice**: the persona stays how the agent talks (ADR 0006), the
+  profile is the ceremony, and the role is what the professional knows and how
+  they work. The rendered agent carries the project's block, so a role never
+  skips the fence, the proof or the review.
+
 ## v0.11.35 - 2026-10-27
 
 A correction counts.

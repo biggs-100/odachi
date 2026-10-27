@@ -1,20 +1,21 @@
-# the-ladder-counts
+# the-creator-of
 
 ## What must exist
-- the ladder counts a requirement the human changed, not only the questions they answered, so a correction counts as a vision decision
+- the creator of skills explores and researches the external facts its rules claim, and cites the version and the date in the rule
 
 ## Done when
-- level shows requirement changes as their own number and adds them to the vision decisions that earn the senior profile
-- a change alone can move a project to the proposal, and a craft decision still cannot
-- the tests pin the count, the sum and the unchanged craft rule, and the impact map records it
+- skill-craft names the exploration and the research, and demands version and date in any rule about how an external system behaves
+- a rule that describes the outside world without a version or a date is refused by the skill itself
+- skills --check is green, the embed test pins the contract, and the impact map records it
 
 ## Not included (first version)
-- changing the thresholds or the ladder
-- counting craft decisions as vision
-- a new verb or flag
+- researching general best practices
+- a sources section inside a skill
+- a network call from the binary
+- changing role-craft
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a new record kind changes a count without changing the ladder.
+- Wants to learn: how a rule about the outside world stays true.

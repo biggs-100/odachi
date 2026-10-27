@@ -629,7 +629,9 @@ func TestLevelToAProfileWithoutAVoiceSaysWhichNamesHaveOne(t *testing.T) {
 func TestLevelCountsARequirementChangeAsAVisionDecision(t *testing.T) {
 	history := []string{`L1 · "reservar turnos"`}
 	for i := 1; i <= 5; i++ {
-		history = append(history, fmt.Sprintf(`L%d · CAMBIO R1 · "cambio %d"`, i+1, i))
+		// The words carry a quote and the separator on purpose: the count only
+		// reaches five when the parser gives every one of them back.
+		history = append(history, fmt.Sprintf(`L%d · CAMBIO R1 · "cambio %d: "comillas" y · medio"`, i+1, i))
 	}
 
 	files := newFakeFiles(map[string]string{

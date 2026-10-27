@@ -1,14 +1,19 @@
 [[rule]]
-not   = "changing the thresholds or the ladder"
-paths = ["changing-the-thresholds-or-the-ladder*"]
+not   = "researching general best practices"
+paths = ["researching-general-best-practices*"]
 deps  = []
 
 [[rule]]
-not   = "counting craft decisions as vision"
-paths = ["counting-craft-decisions-as-vision*"]
+not   = "a sources section inside a skill"
+paths = ["a-sources-section-inside-a-skill*"]
 deps  = []
 
 [[rule]]
-not   = "a new verb or flag"
-paths = ["a-new-verb-or-flag*"]
+not   = "a network call from the binary"
+paths = ["a-network-call-from-the-binary*"]
+deps  = []
+
+[[rule]]
+not   = "changing role-craft"
+paths = ["changing-role-craft*"]
 deps  = []

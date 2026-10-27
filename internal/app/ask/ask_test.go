@@ -506,3 +506,27 @@ func TestRequirementOnlyGoesWithAChange(t *testing.T) {
 		t.Errorf("a blocked run wrote %v", files.wrote)
 	}
 }
+
+// TestAChangeKeepsTheWordsWhateverTheyCarry: the writer and the parser agree on
+// the promise the domain test pins, so a quote or the separator never costs the
+// human a word.
+func TestAChangeKeepsTheWordsWhateverTheyCarry(t *testing.T) {
+	for _, words := range []string{
+		`dice "hola" y adios`,
+		`a · b`,
+		`el bug (porque el test)`,
+	} {
+		files := project()
+
+		res := ask.Run(ask.Options{Dir: "raiz", Change: words, Requirement: "R1"}, files)
+
+		if res.Code != ask.CodeOK {
+			t.Fatalf("%q: Code = %d, want %d (message: %s)", words, res.Code, ask.CodeOK, res.Message)
+		}
+		events := taskdoc.Parse(files.content(t, taskPath)).Events()
+		last := events[len(events)-1]
+		if last.Kind != taskdoc.KindChange || last.Text != words {
+			t.Errorf("%q: last event = %+v, want a change with the words as given", words, last)
+		}
+	}
+}
