@@ -1,19 +1,14 @@
 [[rule]]
-not   = "rewriting brief.md or the Requirements section"
-paths = ["rewriting-brief-md-or-the-requirements-section*"]
+not   = "changing the thresholds or the ladder"
+paths = ["changing-the-thresholds-or-the-ladder*"]
 deps  = []
 
 [[rule]]
-not   = "reopening a step that does not cite the requirement"
-paths = ["reopening-a-step-that-does-not-cite-the-requirement*"]
+not   = "counting craft decisions as vision"
+paths = ["counting-craft-decisions-as-vision*"]
 deps  = []
 
 [[rule]]
-not   = "a new verb"
-paths = ["a-new-verb*"]
-deps  = []
-
-[[rule]]
-not   = "changing how a step is marked done"
-paths = ["changing-how-a-step-is-marked-done*"]
+not   = "a new verb or flag"
+paths = ["a-new-verb-or-flag*"]
 deps  = []
