@@ -1075,6 +1075,148 @@ func TestARefusedAnswerIsKeptAndNamed(t *testing.T) {
 	}
 }
 
+// TestAnUnreadableAnswerIsKeptAndNamed: a reviewer that answers with a verdict the
+// tool cannot parse -an ANSI footer after the JSON is the case that started this-
+// still answered, and the human paid for those bytes. The run seals nothing for the
+// tree, keeps the answer exactly as it arrived under a name its bytes decide, and
+// names the file and the command that attaches it again.
+func TestAnUnreadableAnswerIsKeptAndNamed(t *testing.T) {
+	answers := map[string]string{
+		"prose":                    "I think it is quite good.",
+		"JSON with an ANSI footer": `{"reviewer":"agente","findings":[],"passes":[{"path":"a.go","lens":"reliability"}]}` + "\x1b[0m\n",
+	}
+
+	for name, answer := range answers {
+		t.Run(name, func(t *testing.T) {
+			p := newProject()
+			p.git.blobs = map[string]string{"a.go": gitBlob}
+			p.shell.output = answer
+
+			result := p.run(review.Options{Exec: "revisor"})
+
+			if result.Code != review.CodeBlocked {
+				t.Fatalf("code = %d, want 1 for an answer that cannot be read (%s)", result.Code, result.Message)
+			}
+			if _, sealed := p.files.files[storePath(currentTree)]; sealed {
+				t.Error("a verdict was sealed for an answer the tool cannot read")
+			}
+
+			kept := keptAnswers(t, p)
+			if len(kept) != 1 {
+				t.Fatalf("kept answers = %v, want exactly one", kept)
+			}
+			rel := relative(kept[0])
+			if !strings.HasPrefix(rel, domainreview.Dir+"/"+currentTree+".refused-") || !strings.HasSuffix(rel, ".json") {
+				t.Errorf("kept file %q is not named by the tree and the answer", rel)
+			}
+			if got := string(p.files.files[fullPath(rel)]); got != answer {
+				t.Errorf("kept bytes = %q, want the answer as it arrived %q", got, answer)
+			}
+
+			lines := strings.Join(result.Lines, "\n")
+			if !strings.Contains(lines, "the answer is kept in "+rel) {
+				t.Errorf("the blockage does not name the kept answer %q:\n%s", rel, lines)
+			}
+			if !strings.Contains(lines, "odachi review --attach "+rel) {
+				t.Errorf("the blockage does not say how to attach it again:\n%s", lines)
+			}
+			if strings.Contains(lines, "I wrote nothing") {
+				t.Errorf("the blockage claims nothing was written while it kept the answer:\n%s", lines)
+			}
+			if !strings.Contains(result.Output, answer) {
+				t.Errorf("the output does not carry the reviewer's answer: %q", result.Output)
+			}
+		})
+	}
+}
+
+// TestAnUnreadableRefutationIsKeptAndNamed: a refuter's answer is an answer too.
+// When it lands as a refutation the tool cannot parse, the bytes are kept the same
+// way, because the refuter was paid for them just as the reviewer was.
+func TestAnUnreadableRefutationIsKeptAndNamed(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.shell.output = `{"refutations":"not a list"}`
+
+	result := p.run(review.Options{Exec: "revisor"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 for a refutation that cannot be read (%s)", result.Code, result.Message)
+	}
+	kept := keptAnswers(t, p)
+	if len(kept) != 1 {
+		t.Fatalf("kept answers = %v, want exactly one", kept)
+	}
+	rel := relative(kept[0])
+	if got := string(p.files.files[fullPath(rel)]); got != p.shell.output {
+		t.Errorf("kept bytes = %q, want the answer as it arrived %q", got, p.shell.output)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "odachi review --attach "+rel) {
+		t.Errorf("the blockage does not say how to attach it again:\n%s", lines)
+	}
+}
+
+// TestAnAnswerThatFailsValidationIsKeptAndNamed: parse and validation are two
+// different gates, and both can refuse an answer the reviewer was paid for. The
+// declared verdict that contradicts its own findings is the case: the bytes are
+// kept, because repairing them is cheaper than another call.
+func TestAnAnswerThatFailsValidationIsKeptAndNamed(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.shell.output = `{"reviewer":"agente","verdict":"approved","findings":[{"path":"a.go","line":1,"severity":"BLOCKER","causal":true,"lens":"reliability","why":"pierde el turno"}]}`
+
+	result := p.run(review.Options{Exec: "revisor"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 for an answer that contradicts itself (%s)", result.Code, result.Message)
+	}
+	kept := keptAnswers(t, p)
+	if len(kept) != 1 {
+		t.Fatalf("kept answers = %v, want exactly one", kept)
+	}
+	rel := relative(kept[0])
+	if got := string(p.files.files[fullPath(rel)]); got != p.shell.output {
+		t.Errorf("kept bytes = %q, want the answer as it arrived %q", got, p.shell.output)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "odachi review --attach "+rel) {
+		t.Errorf("the blockage does not say how to attach it again:\n%s", lines)
+	}
+}
+
+// TestAnUnreadableAnswerThatCannotBeKeptSaysSo: keeping is a promise, and a
+// promise the store cannot keep must not name a file nobody wrote - an attach
+// command pointing at nothing is the second payment this feature exists to prevent.
+func TestAnUnreadableAnswerThatCannotBeKeptSaysSo(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.git.ignored = true
+	p.shell.output = `{"reviewer":"agente","findings":[]}` + "\x1b[0m"
+	p.files.failExists = func(path string) error {
+		if strings.Contains(path, ".refused-") {
+			return errors.New("permiso denegado")
+		}
+		return nil
+	}
+
+	result := p.run(review.Options{Exec: "revisor"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "could not keep it") {
+		t.Errorf("message = %q, want the failure to keep the answer", result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if strings.Contains(lines, "odachi review --attach") {
+		t.Errorf("the blockage names an attach command for a file it did not write:\n%s", lines)
+	}
+	if strings.Contains(lines, "the answer is kept in") {
+		t.Errorf("the blockage claims the answer is kept when it is not:\n%s", lines)
+	}
+}
+
 // keptAnswers is every refused answer the store holds, in path spelling.
 func keptAnswers(t *testing.T, p *project) []string {
 	t.Helper()
@@ -2128,13 +2270,14 @@ func TestExecGivesTheReviewerThePrompt(t *testing.T) {
 }
 
 // TestExecFailureWritesNothing: a reviewer that fails is not a review. Exit 1, no
-// file, and the command's own output shown.
+// file, and the command's own output shown. An answer that arrived and cannot be
+// read is not a failed reviewer: it is kept and named, which
+// TestAnUnreadableAnswerIsKeptAndNamed pins on its own.
 func TestExecFailureWritesNothing(t *testing.T) {
 	cases := map[string]*fakeShell{
 		"exit code":    {output: "boom: could not read the brief", exitCode: 1},
 		"timeout":      {output: "starting…", timedOut: true},
 		"does not run": {err: errors.New("no known shell")},
-		"not JSON":     {output: "I think it is quite good."},
 	}
 
 	for name, shell := range cases {
