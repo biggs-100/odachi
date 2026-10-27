@@ -140,4 +140,3 @@ func reportRole(result roleapp.Result, asJSON bool, stdout, stderr io.Writer) in
 	}
 	return result.Code
 }
-
