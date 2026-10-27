@@ -11,7 +11,7 @@ R1 · "pack installs the skills of the project too, so a skill created with skil
 - the tests pin the merge, the clash and the empty project, and the impact map records it
 
 ## Steps
-- [ ] T1 · pack merges the project skills with the bundled ones, and the tests pin the clash and the empty project   R1
+- [x] T1 · pack merges the project skills with the bundled ones, and the tests pin the clash and the empty project   R1 · tree:961830616c0889d5c2c632af5531c4fe8353fbdc
 
 ## History
 L1 · "pack installs the skills of the project too, so a skill created with skill new reaches the folder the agent reads"
