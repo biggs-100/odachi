@@ -5,6 +5,25 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.37 - 2026-10-27
+
+The project keeps the rules and the plan; the agents can live in the home.
+
+- **`odachi pack` installs the project's own skills** (`./skills`) next to the
+  bundled ones, so a skill created with `odachi skill new` reaches
+  `.agents/skills`. A project skill with a bundled name replaces it, and the
+  replacement is named. A catalog that cannot be read is refused instead of
+  looking empty.
+- **`init --global` writes the subagents in the home** (`odachi-worker`,
+  `odachi-verify` and `odachi-reviewer`) next to the door, so a project that
+  never writes `.opencode/` keeps delegation and verification.
+- **`init --no-project-agents`** skips the project's agent files; it needs
+  `--global`, because skipping both halves would leave no agent at all. `start`
+  refreshes a mirror it finds and never installs one.
+- **`doctor` calls the clean mode a decision**: with the door and its subagents
+  in the home, an empty project agents folder is reported as such, not as
+  missing files.
+
 ## v0.11.36 - 2026-10-27
 
 A professional is written as decisions, and a rule about the outside world carries its version.
