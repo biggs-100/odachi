@@ -1217,6 +1217,40 @@ func TestAnUnreadableAnswerThatCannotBeKeptSaysSo(t *testing.T) {
 	}
 }
 
+// TestAnUnreadableAnswerIsKeptOnceAndDroppedWhenOneLands: the name is the content,
+// so the same unreadable answer twice is one file; two different ones coexist for
+// one tree. The answer that lands is the explicit act that ends them. One rule for
+// every answer odachi would not seal is why they share the refused namespace.
+func TestAnUnreadableAnswerIsKeptOnceAndDroppedWhenOneLands(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+
+	for _, answer := range []string{
+		`{"reviewer":"uno","findings":[]}` + "\x1b[0m",
+		`{"reviewer":"otro","findings":[]}` + "\x1b[0m",
+		`{"reviewer":"uno","findings":[]}` + "\x1b[0m",
+	} {
+		p.shell.output = answer
+		if result := p.run(review.Options{Exec: "revisor"}); result.Code != review.CodeBlocked {
+			t.Fatalf("answer %q: code = %d, want 1 (%s)", answer, result.Code, result.Message)
+		}
+	}
+	if kept := keptAnswers(t, p); len(kept) != 2 {
+		t.Fatalf("kept answers = %d (%v), want two: one per distinct answer", len(kept), kept)
+	}
+
+	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}]}`
+	if result := p.run(review.Options{Exec: "revisor"}); result.Code != review.CodeOK {
+		t.Fatalf("the readable answer was refused: %s", result.Message)
+	}
+	if kept := keptAnswers(t, p); len(kept) != 0 {
+		t.Errorf("kept answers = %v, want none after one landed", kept)
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; !ok {
+		t.Error("the readable answer was not sealed")
+	}
+}
+
 // keptAnswers is every refused answer the store holds, in path spelling.
 func keptAnswers(t *testing.T, p *project) []string {
 	t.Helper()
