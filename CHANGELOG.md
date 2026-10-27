@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.30 - 2026-10-26
+
+A feature can waive its review, and the gate says so.
+
+- **`Review: waived`** (#74): `odachi start --waive-review` records the human's
+  decision in the task doc's preamble, next to `Base:`. A closed feature with the
+  waiver is ready and its block says `review: waived by the human`; the proof and
+  the fence still gate it.
+- **The decision outranks `--require-review`**, so the lane holds in CI as well.
+- **`progress` publishes `waived` as its own state**, not `not_due` and not
+  `on_file`: a decision, not a silence. The contract test pins the name.
+- **No size rule**: size is not risk, and a twenty-line hole can be the security
+  one. A waiver is signed; a threshold is guessed.
+
 ## v0.11.29 - 2026-10-26
 
 A feature can be chosen by its number.
