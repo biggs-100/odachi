@@ -94,6 +94,10 @@ type Options struct {
 	// without the flag does not write the home, because a primary agent in every
 	// folder is the human's decision and not an effect of initializing a project.
 	Global bool
+	// NoProjectAgents skips the project's native agent files, so a project that
+	// keeps its agents in the home carries only the rules and the plan. It needs
+	// Global: skipping both halves would leave no agent at all.
+	NoProjectAgents bool
 }
 
 // AgentSelection is the selection port: the choice a project recorded, when
@@ -154,6 +158,9 @@ func Run(opts Options, files Files, skills Skills) Result {
 	if r.dir == "" {
 		r.dir = "."
 	}
+	if opts.NoProjectAgents && !opts.Global {
+		return blocked("--no-project-agents needs --global: skipping the project agents without the door would leave no agent at all; run odachi init --global --no-project-agents")
+	}
 
 	hasGit, err := r.files.Exists(filepath.Join(r.dir, gitDir))
 	if err != nil {
@@ -196,7 +203,9 @@ func Run(opts Options, files Files, skills Skills) Result {
 		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
-	if problem := r.writePersonas(); problem != nil {
+	if opts.NoProjectAgents {
+		r.skipProjectPersonas()
+	} else if problem := r.writePersonas(); problem != nil {
 		// The hook and the rules block are already in place: report how much of
 		// the job is done instead of pretending nothing happened.
 		problem.Files = append(append([]string{}, r.changed...), r.personaFiles...)
@@ -528,4 +537,11 @@ func relative(dir, path string) string {
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
 	return strings.Join(strings.Fields(message), " ")
+}
+
+// skipProjectPersonas is the clean mode: the project keeps the rules and the
+// plan, and the agents it would have written stay in the home, where the door
+// and its subagents are the ones that run.
+func (r *runner) skipProjectPersonas() {
+	r.lines = append(r.lines, "project agents: not written (--no-project-agents); the door in the home is the one that runs")
 }

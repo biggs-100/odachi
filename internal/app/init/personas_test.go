@@ -367,3 +367,55 @@ func TestInitGlobalInstallsTheGlobalSubagents(t *testing.T) {
 		t.Errorf("the report does not name the subagents:\n%s", strings.Join(got.Lines, "\n"))
 	}
 }
+
+// TestInitNoProjectAgentsWritesTheHomeOnly: the clean mode. The project keeps
+// the rules and the plan; the door and its subagents live in the home.
+func TestInitNoProjectAgentsWritesTheHomeOnly(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}, Global: true, NoProjectAgents: true}, files, &fakeSkills{})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	body, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, file := range persona.Files(body) {
+		if _, ok := files.files[filepath.Join(dir, filepath.FromSlash(file.Path))]; ok {
+			t.Errorf("%s was written in the project with --no-project-agents", file.Path)
+		}
+	}
+	for _, client := range persona.Clients() {
+		for _, file := range persona.SubagentFilesFor(client.Agent) {
+			if _, ok := files.files[filepath.Join(dir, filepath.FromSlash(file.Path))]; ok {
+				t.Errorf("%s was written in the project with --no-project-agents", file.Path)
+			}
+		}
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			if _, ok := files.files[filepath.Join(home, filepath.FromSlash(file.Path))]; !ok {
+				t.Errorf("%s was not written in the home", file.Path)
+			}
+		}
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "not written") {
+		t.Errorf("the report does not say the project agents were skipped:\n%s", strings.Join(got.Lines, "\n"))
+	}
+}
+
+// TestInitNoProjectAgentsNeedsGlobal: skipping both halves would leave no agent
+// at all, so the flag names what it needs.
+func TestInitNoProjectAgentsNeedsGlobal(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: "hogar"}, NoProjectAgents: true}, files, &fakeSkills{})
+
+	if got.Code == 0 {
+		t.Fatal("init accepted --no-project-agents without --global")
+	}
+	if !strings.Contains(got.Message, "--global") {
+		t.Errorf("the refusal does not name --global: %q", got.Message)
+	}
+}
