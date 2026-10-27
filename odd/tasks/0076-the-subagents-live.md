@@ -11,8 +11,8 @@ R1 · "the subagents live in the home too, so a project that never writes .openc
 - the tests pin the paths, the write and the comparison, and the map and README record it
 
 ## Steps
-- [ ] T1 · the domain renders the global subagents and --global writes them, with the tests   R1
-- [ ] T2 · doctor compares the home copies, and the map and the README record it   R1
+- [x] T1 · the domain renders the global subagents and --global writes them, with the tests   R1 · tree:638d9f59c3540ec129c26e894562e428011bc753
+- [x] T2 · doctor compares the home copies, and the map and the README record it   R1 · tree:1781dc2f63f8fabc672672fef5ab83ac908de586
 
 ## History
 L1 · "the subagents live in the home too, so a project that never writes .opencode keeps the worker, the verifier and the reviewer"
