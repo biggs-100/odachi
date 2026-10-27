@@ -1,24 +1,22 @@
-# the-ledger-names
+# a-step-marked
 
 ## What must exist
-- the ledger names the commit a step landed in, and that commit exists on the branch, without manual correction
+- a step marked with --commit names the bytes of that commit, so the mark survives a rebase too
 
 ## Done when
-- plan --done T1 without --commit records the tree of HEAD in the step's mark
-- progress resolves that mark to the commit that carries the tree on this branch
-- a mark whose bytes are not on the branch says so instead of naming a commit that does not exist
-- a task doc that carries a commit keeps working, and progress resolves it when its bytes landed elsewhere
-- tests pin the mark, the resolution and the missing case
+- plan --done T1 --commit <sha> stores the tree of that commit when the commit exists
+- a commit the repository cannot read keeps the sha as given, because that is all that is known
+- the message names what was stored, and progress resolves it to the landed commit
+- tests pin the canonical mark, the fallback and the resolution
 
 ## Not included (first version)
 - rewriting the old task docs
-- changing the repository's merge strategy
-- resolving a squashed step into the several commits it became
-- a new verb, or a flag beyond the optional --commit
+- a new flag
+- changing the default: the tree of HEAD stays
 - the panel itself
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why a commit is not the identity of a change.
+- Wants to learn: what makes a mark durable.
