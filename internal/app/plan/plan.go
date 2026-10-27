@@ -48,11 +48,13 @@ type Options struct {
 	Feature int
 }
 
-// Git answers the done form's one question: are the bytes the step produced the
-// commit that carries them? A mark is only honest when the worktree is that commit.
+// Git answers the done form's two questions: are the bytes the step produced the
+// commit that carries them, and which tree does a commit carry? A mark is only
+// honest when the worktree is that commit, and a commit is remembered by its tree.
 type Git interface {
 	HeadTree(root string) (string, error)
 	WorktreeTree(root string) (string, error)
+	TreeOf(root, commit string) (string, error)
 }
 
 // Files is the disk port: enough to find the document, read it, back it up and
@@ -174,7 +176,9 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 	// not pass one: plan records, it never erases.
 	mark := step.Commit
 	if given := strings.TrimSpace(opts.Commit); given != "" {
-		mark = given
+		// --commit names a commit; the document records its bytes, because a rebase
+		// rewrites the commit and keeps the tree.
+		mark = canonicalMark(opts, given)
 	}
 	// No commit was given: the step is remembered by the bytes it produced, when
 	// those bytes are a commit. The sha of a local commit does not survive a
@@ -211,6 +215,21 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 		Task:    current.Rel,
 		Files:   []string{current.Rel},
 	}
+}
+
+// canonicalMark names the bytes of a commit the repository can read: the same
+// identity the default records, so an explicit --commit survives a rebase too. A
+// commit the repository cannot read keeps the spelling it came with, because that
+// is all there is.
+func canonicalMark(opts Options, commit string) string {
+	if opts.Git == nil {
+		return commit
+	}
+	tree, err := opts.Git.TreeOf(opts.Dir, commit)
+	if err != nil || strings.TrimSpace(tree) == "" {
+		return commit
+	}
+	return "tree:" + tree
 }
 
 // hasDoneAfter reports whether a step later than id is already done. Marking an
