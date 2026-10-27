@@ -10,7 +10,7 @@ R1 · "the history keeps the words the human gave when they carry a quote or the
 - the format does not change: the lines an older binary wrote still parse
 
 ## Steps
-- [ ] T1 · the round trip with quotes and separators is pinned in the domain and through ask, and the map records it   R1
+- [x] T1 · the round trip with quotes and separators is pinned in the domain and through ask, and the map records it   R1 · tree:d9f19ac438e7efdd46d67984c28423d2ff6b82f6
 
 ## History
 L1 · "the history keeps the words the human gave when they carry a quote or the separator, and a test holds that promise"
