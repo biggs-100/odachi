@@ -1,19 +1,19 @@
 [[rule]]
-not   = "researching general best practices"
-paths = ["researching-general-best-practices*"]
+not   = "skill new --scope home"
+paths = ["skill-new-scope-home*"]
 deps  = []
 
 [[rule]]
-not   = "a sources section inside a skill"
-paths = ["a-sources-section-inside-a-skill*"]
+not   = "a registry or a check for the home"
+paths = ["a-registry-or-a-check-for-the-home*"]
 deps  = []
 
 [[rule]]
-not   = "a network call from the binary"
-paths = ["a-network-call-from-the-binary*"]
+not   = "changing init"
+paths = ["changing-init*"]
 deps  = []
 
 [[rule]]
-not   = "changing role-craft"
-paths = ["changing-role-craft*"]
+not   = "installing automatically when skill new runs"
+paths = ["installing-automatically-when-skill-new-runs*"]
 deps  = []
