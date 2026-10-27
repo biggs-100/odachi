@@ -11,9 +11,9 @@ R1 · "the plan grows and the vision does not: when the human changes a requirem
 - the impact map records the third follow-up as implemented
 
 ## Steps
-- [ ] T1 · the task doc records a change line and reopens the done steps that cite the requirement, with tests   R1
+- [x] T1 · the task doc records a change line and reopens the done steps that cite the requirement, with tests   R1 · tree:acdbcd614af49f2e4eb06983099d661a335802ab
 - [x] T2 · ask --change writes it and refuses a change with no requirement, and the CLI names the form   R1 · tree:915ab2bda7c28c8903796407ba5ab2aada64a9e0
-- [ ] T3 · drive teaches the rule and the impact map records the third follow-up   R1
+- [x] T3 · drive teaches the rule and the impact map records the third follow-up   R1 · tree:5be5563ebd8c4d3994e649437ddf247474f19c3c
 
 ## History
 L1 · "the plan grows and the vision does not: when the human changes a requirement, the words land in the history and the steps that claimed it reopen"
