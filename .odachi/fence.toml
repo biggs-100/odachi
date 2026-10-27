@@ -4,18 +4,13 @@ paths = ["rewriting-the-old-task-docs*"]
 deps  = []
 
 [[rule]]
-not   = "changing the repository's merge strategy"
-paths = ["changing-the-repository-s-merge-strategy*"]
+not   = "a new flag"
+paths = ["a-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "resolving a squashed step into the several commits it became"
-paths = ["resolving-a-squashed-step-into-the-several-commits-it-became*"]
-deps  = []
-
-[[rule]]
-not   = "a new verb, or a flag beyond the optional --commit"
-paths = ["a-new-verb-or-a-flag-beyond-the-optional-commit*"]
+not   = "changing the default: the tree of HEAD stays"
+paths = ["changing-the-default-the-tree-of-head-stays*"]
 deps  = []
 
 [[rule]]
