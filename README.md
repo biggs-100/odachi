@@ -498,9 +498,9 @@ whose four checks passed, and the gate keeps the failed output when it does not.
 ## Status
 
 Pure domain in `internal/domain/...` with an import guard, adapters in
-`internal/adapters/...`, and seventeen surfaces: `start`, `ask`, `plan`, `level`,
+`internal/adapters/...`, and eighteen surfaces: `start`, `ask`, `plan`, `level`,
 `summary`, `progress`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `setup`,
-`skills`, `skill new`, `pack` and `--version`. 42 packages, green on Linux, macOS and
+`skills`, `skill new`, `role new`, `pack` and `--version`. 44 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
 Published: `v0.11.35`. What changed in each version is in

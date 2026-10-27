@@ -102,6 +102,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runSkills(dir, args[1:], stdout, stderr)
 	case "skill":
 		return runSkill(dir, args[1:], stdout, stderr)
+	case "role":
+		return runRole(dir, args[1:], stdout, stderr)
 	case "pack":
 		return runPack(dir, args[1:], stdout, stderr)
 	case "review":
@@ -115,7 +117,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), undo (odachi undo), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), undo (odachi undo), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -1281,6 +1283,7 @@ usage:
   odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]
   odachi setup [--agents opencode|claude|both] [--json]
   odachi skills [--check | --write]
+  odachi role new <slug>
   odachi skill new <slug>
   odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <folder>] [--dry-run]
   odachi --version
