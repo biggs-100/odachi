@@ -337,3 +337,33 @@ func TestInitRerunStillWritesNothing(t *testing.T) {
 		t.Errorf("Message = %q, want it to say nothing changed", got.Message)
 	}
 }
+
+// TestInitGlobalInstallsTheGlobalSubagents: the door is global, so the agents it
+// invokes are too: a project that never writes .opencode keeps the worker, the
+// verifier and the reviewer.
+func TestInitGlobalInstallsTheGlobalSubagents(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}, Global: true}, files, &fakeSkills{})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			abs := filepath.Join(home, filepath.FromSlash(file.Path))
+			content, ok := files.files[abs]
+			if !ok {
+				t.Errorf("%s was not installed in the home", file.Path)
+				continue
+			}
+			if string(content) != file.Content {
+				t.Errorf("%s is not the subagent:\n%q\nvs\n%q", file.Path, content, file.Content)
+			}
+		}
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), persona.SubagentNames()[0]) {
+		t.Errorf("the report does not name the subagents:\n%s", strings.Join(got.Lines, "\n"))
+	}
+}

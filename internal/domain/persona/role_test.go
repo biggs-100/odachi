@@ -38,3 +38,30 @@ func TestRoleFileIsOnlyForClientsWithANativeMechanism(t *testing.T) {
 		t.Error("RoleFile(codex) = ok, want a refusal")
 	}
 }
+
+// TestGlobalSubagentFilesLiveInTheHome: the door is global, so the agents it
+// invokes are too, in the folder each client reads from the home.
+func TestGlobalSubagentFilesLiveInTheHome(t *testing.T) {
+	opencode := persona.GlobalSubagentFilesFor("opencode")
+	if len(opencode) != len(persona.SubagentNames()) {
+		t.Fatalf("opencode has %d global subagents, want %d", len(opencode), len(persona.SubagentNames()))
+	}
+	for _, file := range opencode {
+		if !strings.HasPrefix(file.Path, ".config/opencode/agents/") {
+			t.Errorf("Path = %q, want the OpenCode global agents folder", file.Path)
+		}
+		if !strings.Contains(file.Content, "mode: subagent") {
+			t.Errorf("%s is not an OpenCode subagent:\n%s", file.Path, file.Content)
+		}
+	}
+
+	for _, file := range persona.GlobalSubagentFilesFor("claude") {
+		if !strings.HasPrefix(file.Path, ".claude/agents/") {
+			t.Errorf("Path = %q, want the Claude global agents folder", file.Path)
+		}
+	}
+
+	if got := persona.GlobalSubagentFilesFor("codex"); got != nil {
+		t.Errorf("GlobalSubagentFilesFor(codex) = %v, want none", got)
+	}
+}

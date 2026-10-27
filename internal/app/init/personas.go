@@ -188,6 +188,57 @@ func (r *runner) installGlobalPersonas() {
 		r.personaFiles = append(r.personaFiles, display)
 		r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, []string{persona.FileName}, nil, false))
 	}
+
+	r.installGlobalSubagents(home)
+}
+
+// installGlobalSubagents writes the worker, the verifier and the reviewer in the
+// human's home: the door is global, so the agents it invokes are global too, and
+// a project that never writes `.opencode/` still has them.
+func (r *runner) installGlobalSubagents(home string) {
+	for _, client := range r.clients {
+		files := persona.GlobalSubagentFilesFor(client.Agent)
+		if len(files) == 0 {
+			continue
+		}
+
+		dir := "~/" + client.HomeSubagentDir
+		written := make([]string, 0, len(files))
+		kept := make([]string, 0, len(files))
+		for _, file := range files {
+			display := "~/" + file.Path
+			path := filepath.Join(home, filepath.FromSlash(file.Path))
+
+			exists, err := r.files.Exists(path)
+			if err != nil {
+				r.pendGlobal("could not check " + display + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+				continue
+			}
+			if exists {
+				current, err := r.files.Read(path)
+				if err != nil {
+					r.pendGlobal("could not read " + display + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+					continue
+				}
+				if string(current) == file.Content {
+					kept = append(kept, filepath.Base(file.Path))
+					continue
+				}
+				if _, err := r.files.Backup(path); err != nil {
+					r.pendGlobal("could not back up " + display + " before rewriting it: " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+					continue
+				}
+			}
+
+			if err := r.files.Write(path, []byte(file.Content)); err != nil {
+				r.pendGlobal("could not write " + display + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+				continue
+			}
+			written = append(written, filepath.Base(file.Path))
+			r.personaFiles = append(r.personaFiles, display)
+		}
+		r.lines = append(r.lines, personaLine(dir, "", written, kept, true))
+	}
 }
 
 // pendGlobal keeps one pending line for the home half. It never changes the exit
