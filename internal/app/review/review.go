@@ -755,7 +755,7 @@ func (r *runner) exec() Result {
 		if domain.Sniff([]byte(stdout)) == domain.KindRefutation {
 			refutation, err := domain.ParseRefutation([]byte(stdout))
 			if err != nil {
-				return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, rel, len(covered), selected, todo, landed)
+				return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(stdout), rel, len(covered), selected, todo, landed)
 			}
 			// The refuter may have moved the worktree too; what it cites is the diff
 			// it was given, and the file is filed under the tree that exists now.
@@ -765,7 +765,7 @@ func (r *runner) exec() Result {
 
 		parsed, err := domain.Parse([]byte(stdout))
 		if err != nil {
-			return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, rel, len(covered), selected, todo, landed)
+			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(stdout), rel, len(covered), selected, todo, landed)
 		}
 		// The command is the reviewer: it is the one fact the tool knows about an
 		// answer that came out of a shell.
@@ -777,7 +777,7 @@ func (r *runner) exec() Result {
 		// the resolution of THIS group, not from a field the last one wrote.
 		parsed.Model = resolved[i]
 		if err := parsed.Validate(); err != nil {
-			return r.stopped(command+" did not give a verdict: "+err.Error(), diagnosis, rel, len(covered), selected, todo, landed)
+			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(stdout), rel, len(covered), selected, todo, landed)
 		}
 		// The per-lens map is what lets the identity gate judge each lens on its
 		// own: this group's lenses were judged by this group's model.
@@ -843,10 +843,20 @@ func (r *runner) exec() Result {
 // lenses the tree requires, names the ones still owed, and gives the command that
 // asks for exactly those.
 func (r *runner) stopped(reason, output, rel string, savedBefore int, selected, todo, landed []string) Result {
+	return r.stoppedWith(reason, output, rel, savedBefore, selected, todo, landed, "")
+}
+
+// stoppedWith is stopped for a run that also kept an answer the tool could not
+// use. The kept file is named with the command that attaches it again, because an
+// answer in the ignored store is only worth keeping if the human knows where it is.
+func (r *runner) stoppedWith(reason, output, rel string, savedBefore int, selected, todo, landed []string, kept string) Result {
 	saved := savedBefore + len(landed)
 	missing := unanswered(todo, landed)
 
 	message := oneLine(reason)
+	if kept != "" {
+		message += "; the answer is kept in " + kept
+	}
 	if saved > 0 {
 		message += fmt.Sprintf("; saved %d of %d lenses", saved, len(selected))
 		files := []string{}
@@ -858,6 +868,9 @@ func (r *runner) stopped(reason, output, rel string, savedBefore int, selected, 
 			message += " (missing " + strings.Join(missing, ", ") + ")"
 		}
 		lines := []string{message}
+		if kept != "" {
+			lines = append(lines, "the answer is kept in "+kept+": repair it and attach it again")
+		}
 		if len(missing) > 0 {
 			lines = append(lines, "next: odachi review --lens "+strings.Join(missing, ","))
 		}
@@ -870,8 +883,22 @@ func (r *runner) stopped(reason, output, rel string, savedBefore int, selected, 
 		}
 	}
 
-	// Nothing landed: the run is the failure it always was, and saying so is the
-	// truthful answer.
+	if kept != "" {
+		lines := []string{
+			message,
+			"the answer is kept in " + kept + ": repair it and attach it again",
+			"next: odachi review --attach " + kept,
+		}
+		return Result{
+			Code:    CodeBlocked,
+			Message: message,
+			Lines:   lines,
+			Output:  output,
+		}
+	}
+
+	// Nothing landed and nothing was kept: the run is the failure it always was,
+	// and saying so is the truthful answer.
 	message += "; I wrote nothing"
 	return Result{
 		Code:    CodeBlocked,
@@ -879,6 +906,21 @@ func (r *runner) stopped(reason, output, rel string, savedBefore int, selected, 
 		Lines:   []string{message},
 		Output:  output,
 	}
+}
+
+// unreadable keeps the answer the tool cannot parse or accept and reports the run
+// the way stopped does. The reviewer was paid for those bytes: keeping them turns
+// a refusal into a repair instead of a second call. An answer with no bytes keeps
+// nothing - there is no text to repair - and the run says it wrote nothing.
+func (r *runner) unreadable(reason, output string, answer []byte, rel string, savedBefore int, selected, todo, landed []string) Result {
+	kept, problem := r.keepAnswer(answer, rel)
+	if problem != nil {
+		return r.stopped(oneLine(reason)+"; I could not keep it: "+problem.Message, output, rel, savedBefore, selected, todo, landed)
+	}
+	if kept == "" {
+		return r.stopped(reason, output, rel, savedBefore, selected, todo, landed)
+	}
+	return r.stoppedWith(reason, output, rel, savedBefore, selected, todo, landed, kept)
 }
 
 // show reads this tree's verdict, or says there is none. It writes nothing: a
@@ -1394,8 +1436,19 @@ func (r *runner) dropRefused(tree string) {
 // project-relative path. Writing twice the same bytes writes nothing the second
 // time: the name is the content.
 func (r *runner) keepRefused(sealed domain.Verdict, rel string) (string, *Result) {
-	data := domain.Render(sealed)
-	sum := sha256.Sum256(data)
+	return r.keepAnswer(domain.Render(sealed), rel)
+}
+
+// keepAnswer writes an answer odachi would not seal under a name its own bytes
+// decide. Refused and unreadable answers share one namespace on purpose: both are
+// evidence the human paid for, and one rule -the answer that lands ends them- is
+// cheaper to keep honest than two.
+func (r *runner) keepAnswer(answer []byte, rel string) (string, *Result) {
+	if strings.TrimSpace(string(answer)) == "" {
+		return "", nil
+	}
+
+	sum := sha256.Sum256(answer)
 	kept := strings.TrimSuffix(rel, ".json") + ".refused-" + hex.EncodeToString(sum[:])[:8] + ".json"
 
 	path := fullPath(r.opts.Dir, kept)
@@ -1407,7 +1460,7 @@ func (r *runner) keepRefused(sealed domain.Verdict, rel string) (string, *Result
 	if exists {
 		return kept, nil
 	}
-	if err := r.files.Write(path, data); err != nil {
+	if err := r.files.Write(path, answer); err != nil {
 		problem := blocked(fmt.Sprintf("could not write %s: %s", kept, oneLine(err.Error())))
 		return "", &problem
 	}
