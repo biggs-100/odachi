@@ -1,16 +1,21 @@
 [[rule]]
-not   = "a new verb, a new flag or a new grammar"
-paths = ["a-new-verb-a-new-flag-or-a-new-grammar*"]
+not   = "rewriting the old task docs"
+paths = ["rewriting-the-old-task-docs*"]
 deps  = []
 
 [[rule]]
-not   = "renaming ODD-lite across the history: the old documents keep their words"
-paths = ["renaming-odd-lite-across-the-history-the-old-documents-keep-their-words*"]
+not   = "changing the repository's merge strategy"
+paths = ["changing-the-repository-s-merge-strategy*"]
 deps  = []
 
 [[rule]]
-not   = "a website, a manifesto or a logo"
-paths = ["a-website-a-manifesto-or-a-logo*"]
+not   = "resolving a squashed step into the several commits it became"
+paths = ["resolving-a-squashed-step-into-the-several-commits-it-became*"]
+deps  = []
+
+[[rule]]
+not   = "a new verb, or a flag beyond the optional --commit"
+paths = ["a-new-verb-or-a-flag-beyond-the-optional-commit*"]
 deps  = []
 
 [[rule]]
