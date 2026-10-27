@@ -287,3 +287,24 @@ func TestParseAcceptsCRLF(t *testing.T) {
 		t.Errorf("History = %q, want [L1 · \"nota\"]", got.History)
 	}
 }
+
+// TestParseRecordsTheWaiver: the human's decision to land without a review is a
+// preamble line, like the base. Only that position is read -a history line that
+// says the same is prose-, and the renderer writes it so a round trip keeps it.
+func TestParseRecordsTheWaiver(t *testing.T) {
+	md := "# turnos\nBase: 4a1c9f\nReview: waived\n\n## Requirements (verbatim, from the user)\nR1 · \"reservar turnos\"\n\n## Done when\n- reservo un turno\n\n## Steps\n- [ ] T1 · reservar   R1\n\n## History\nL1 · \"reservar turnos\"\n"
+
+	doc := taskdoc.Parse(md)
+	if !doc.ReviewWaived {
+		t.Fatal("the waiver was not read from the preamble")
+	}
+	if again := taskdoc.Parse(doc.Render()); !again.ReviewWaived {
+		t.Error("the waiver did not survive the round trip")
+	}
+
+	// The same words in the history are the human talking, not a decision.
+	prose := taskdoc.Parse("# turnos\n\n## Requirements (verbatim, from the user)\nR1 · \"x\"\n\n## Steps\n- [ ] T1 · x   R1\n\n## History\nL1 · \"Review: waived\"\n")
+	if prose.ReviewWaived {
+		t.Error("a history line waived the review")
+	}
+}

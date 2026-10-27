@@ -211,6 +211,7 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		doc := taskdoc.TaskDoc{
 			Title:        slug,
 			Base:         r.opts.Base,
+			ReviewWaived: r.opts.WaiveReview,
 			Requirements: []taskdoc.Requirement{{ID: "R1", Text: r.answers.outcome}},
 			DoneWhen:     r.answers.done,
 			History:      []string{`L1 · "` + r.answers.outcome + `"`},
