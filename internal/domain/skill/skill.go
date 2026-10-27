@@ -41,12 +41,15 @@ var namePattern = regexp.MustCompile(NamePattern)
 // Skill is one parsed SKILL.md. Dir is its directory name, which the declared
 // name has to match; Path is how the file is named in messages and the registry.
 type Skill struct {
-	Dir            string
-	Path           string
-	Name           string
-	Description    string
-	Trigger        string
-	Body           string
+	Dir         string
+	Path        string
+	Name        string
+	Description string
+	Trigger     string
+	Body        string
+	// Raw is the exact bytes this file was parsed from: pack installs them, and
+	// a copy that re-renders a skill would not be the skill.
+	Raw            []byte
 	HasFrontmatter bool
 }
 
@@ -59,7 +62,7 @@ type Problem struct {
 // Parse reads one SKILL.md. It is total: malformed input never panics, it just
 // fails validation later.
 func Parse(dir, path, text string) Skill {
-	s := Skill{Dir: dir, Path: path, Body: text}
+	s := Skill{Dir: dir, Path: path, Body: text, Raw: []byte(text)}
 
 	front, body, ok := splitFrontmatter(text)
 	if !ok {

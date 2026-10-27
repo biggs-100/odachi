@@ -780,15 +780,17 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 
 	var (
-		asJSON      bool
-		skillsScope string
-		agents      string
-		global      bool
+		asJSON         bool
+		skillsScope    string
+		agents         string
+		global         bool
+		noProjectAgent bool
 	)
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 	flags.StringVar(&skillsScope, "skills", "project", "where to install the skills: project | home")
 	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
 	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, and make it OpenCode's default agent")
+	flags.BoolVar(&noProjectAgent, "no-project-agents", false, "do not write the project's agent files: the door in the home is the one that runs (needs --global)")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -827,14 +829,15 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	result := initapp.Run(initapp.Options{
-		Dir:            dir,
-		Exe:            hookExe(),
-		PathMissing:    pathMissing(),
-		Profiles:       writtenProfile{},
-		Agents:         agents,
-		AgentSelection: agentSelection{},
-		Home:           osHome{},
-		Global:         global,
+		Dir:             dir,
+		Exe:             hookExe(),
+		PathMissing:     pathMissing(),
+		Profiles:        writtenProfile{},
+		Agents:          agents,
+		AgentSelection:  agentSelection{},
+		Home:            osHome{},
+		Global:          global,
+		NoProjectAgents: noProjectAgent,
 	}, osFiles{}, &initSkills{dir: dir, scope: skillsScope})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
@@ -1362,6 +1365,9 @@ init flags:
                   not only in this project, and make it OpenCode's default agent.
                   It is opt-in: without the flag nothing is written
                   to your home, because the selector of any folder is yours
+  --no-project-agents  do not write the project's agent files: with --global, the
+                  door and its subagents in the home are the ones that run, and the
+                  project keeps only the rules and the plan (needs --global)
   --json          machine output, with the destinations of the skills and of the agent
 
 setup flags:
@@ -1384,7 +1390,8 @@ what init leaves written, in one command (--skills project and --agents both, th
 
 the home door -the agent that shows up in any folder- is opt-in: an init without
 --global does not write it. With --global it goes to ~/.config/opencode/agents and
-~/.claude/output-styles, one per chosen client, and OpenCode gets default_agent
+~/.claude/output-styles, one per chosen client, with the subagents it invokes
+next to it, and OpenCode gets default_agent
 in ~/.config/opencode/opencode.json (or the .jsonc that already exists) unless a
 default you picked is already there.
 

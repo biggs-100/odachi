@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
@@ -286,7 +287,8 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 	}
 
 	// The same fence with the flag: --global is what adds the two doors, one per
-	// chosen client, and the OpenCode config that makes one of them the default.
+	// chosen client, the OpenCode config that makes one of them the default, and
+	// the subagents each door invokes.
 	withGlobal := t.TempDir()
 	withHome(t, withGlobal)
 	if code, out, errOut := runDir(t, dir, []string{"init", "--global"}, ""); code != 0 {
@@ -298,6 +300,12 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 		".config/opencode/agents/odachi.md",
 		".config/opencode/opencode.json",
 	}
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			wantGlobal = append(wantGlobal, file.Path)
+		}
+	}
+	slices.Sort(wantGlobal)
 	if got := homeTree(t, withGlobal); !slices.Equal(got, wantGlobal) {
 		t.Fatalf("the home with --global has %v, want exactly %v", got, wantGlobal)
 	}

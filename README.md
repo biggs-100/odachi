@@ -30,7 +30,7 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 odachi --version
 ```
 
-Those three lines work. The latest release is `v0.11.36`: six binaries (Linux,
+Those three lines work. The latest release is `v0.11.37`: six binaries (Linux,
 macOS and Windows, amd64 and arm64) and a `checksums.txt`. The installer resolves
 the latest version through the API, verifies the sha256 and only then writes; a
 checksum that does not match exits with an error and leaves **nothing** at the
@@ -61,7 +61,7 @@ and later carry the bundle; use the version you downloaded.
 ```sh
 cosign verify-blob \
   --bundle checksums.txt.sigstore.json \
-  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.36' \
+  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.37' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   checksums.txt
 ```
@@ -71,15 +71,15 @@ here. Then check the archive you downloaded against the signed list:
 
 ```sh
 # linux
-grep ' odachi_0.11.36_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
+grep ' odachi_0.11.37_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
 # macOS ships shasum, not sha256sum
-grep ' odachi_0.11.36_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
+grep ' odachi_0.11.37_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
 ```
 
 ```powershell
 # windows: compare the hash of the zip with its line in the signed list
 $want = (Select-String -Path checksums.txt -Pattern 'odachi_0\.11\.30_windows_amd64\.zip$').Line.Split()[0]
-(Get-FileHash .\odachi_0.11.36_windows_amd64.zip -Algorithm SHA256).Hash -eq $want.ToUpper()
+(Get-FileHash .\odachi_0.11.37_windows_amd64.zip -Algorithm SHA256).Hash -eq $want.ToUpper()
 # True means the zip matches the signed list
 ```
 
@@ -88,7 +88,7 @@ which names the repository, the commit and the workflow that produced it. It
 lives in the repository, not in the release, and `gh` fetches it by digest:
 
 ```sh
-gh attestation verify odachi_0.11.36_windows_amd64.zip --repo biggs-100/odachi
+gh attestation verify odachi_0.11.37_windows_amd64.zip --repo biggs-100/odachi
 ```
 
 The three links answer three different questions: the signature says who
@@ -217,7 +217,9 @@ one bounded step) and `odachi-verify` (verifies without editing). They are not
 picked with a key: the main agent invokes them when `slices` triggers. The parent
 passes them the task doc, the step, the edit surfaces, the commands and the exact
 skill paths; they return evidence and ≤2k tokens. The parent keeps git, the gate
-and the vision; there is no separate orchestrator.
+and the vision; there is no separate orchestrator. With `--global` the same
+subagents are written in the home, next to the door, so a project that never
+writes `.opencode/` still has them.
 
 ### Three more ways to say where
 
@@ -304,12 +306,17 @@ The **home** copy is the door: `~/.config/opencode/agents/odachi.md` and
 `~/.claude/output-styles/odachi.md`, one per chosen client. It is opt-in:
 `odachi init --global` installs it, because a primary agent that appears in
 **any** folder and can replace the one you chose is your decision, not an effect
-of initializing a project. Once installed it appears in any folder, not only the
+of initializing a project. The same command writes the subagents next to it
+(`~/.config/opencode/agents/odachi-worker.md` and friends), so a project without
+`.opencode/` keeps the worker, the verifier and the reviewer. Once installed it appears in any folder, not only the
 one that ran `init`. If the folder has the `odachi` block, it reads it and adopts
 its voice; if not, it loads the entry skill and guides you to start a project. It
 is short on purpose: it does not repeat the rules, it only says where they are.
 `doctor` tells you if it is missing or stopped matching, and for both the command
-is `odachi init --global`. The two per-profile personas from v0.10.0 remain as
+is `odachi init --global`. With `--no-project-agents` the project gets no agent
+files at all: the door and its subagents in the home are the ones that run, and
+`doctor` calls that the clean mode instead of reporting missing files. The two
+per-profile personas from v0.10.0 remain as
 leftovers: `init` names them and does not delete them, they are yours.
 
 ## Review: four lenses, no ceremony
@@ -504,7 +511,7 @@ Pure domain in `internal/domain/...` with an import guard, adapters in
 `skills`, `skill new`, `role`, `pack` and `--version`. 44 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
-Published: `v0.11.36`. What changed in each version is in
+Published: `v0.11.37`. What changed in each version is in
 [CHANGELOG.md](CHANGELOG.md). The one-line installation is tested against the
 real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP

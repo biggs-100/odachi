@@ -71,6 +71,10 @@ type Options struct {
 	Dir string
 	// Skills is the bundled payload, wired by the CLI from the embedded bytes.
 	Skills []Skill
+	// Project is the project's own catalog, read from ./skills by the CLI. A
+	// project skill with a bundled name replaces it: the bundled one is a
+	// starter, the project copy is the project's decision.
+	Project []Skill
 }
 
 // Files is the disk port: enough to install a file and never lose one.
@@ -131,7 +135,7 @@ type Result struct {
 
 // Run performs one `odachi pack`.
 func Run(opts Options, files Files, home Home) Result {
-	skills := normalize(opts.Skills)
+	skills, replaced := merge(opts.Skills, opts.Project)
 	if err := validate(skills); err != nil {
 		return blocked(err.Error())
 	}
@@ -204,6 +208,9 @@ func Run(opts Options, files Files, home Home) Result {
 	targets := targetsFor(selected, labels, dest, roots)
 
 	out := Result{Code: CodeOK, DryRun: opts.DryRun}
+	// The replacements come first: they say which bytes the agent will read
+	// before the destinations say where they went.
+	out.Lines = append(out.Lines, replaced...)
 	summaries := make([]string, 0, len(targets))
 	dests := make([]string, 0, len(targets))
 	for _, t := range targets {
@@ -508,6 +515,36 @@ func normalize(skills []Skill) []Skill {
 	}
 	slices.SortStableFunc(out, func(a, b Skill) int { return strings.Compare(a.Name, b.Name) })
 	return out
+}
+
+// merge puts the project's skills on top of the bundled ones. A project skill
+// with a bundled name replaces it, and the replacement is named: the bundled
+// skill is a starter, the project copy is the project's decision, and a human
+// has to know which bytes the agent will read.
+func merge(bundled, project []Skill) ([]Skill, []string) {
+	merged := normalize(bundled)
+	if len(project) == 0 {
+		return merged, nil
+	}
+
+	byName := make(map[string]int, len(merged))
+	for i, skill := range merged {
+		byName[skill.Name] = i
+	}
+
+	lines := make([]string, 0, len(project))
+	for _, skill := range normalize(project) {
+		if i, ok := byName[skill.Name]; ok {
+			merged[i] = skill
+			lines = append(lines, "project skill "+skill.Name+" replaces the bundled one")
+			continue
+		}
+		byName[skill.Name] = len(merged)
+		merged = append(merged, skill)
+	}
+
+	slices.SortStableFunc(merged, func(a, b Skill) int { return strings.Compare(a.Name, b.Name) })
+	return merged, lines
 }
 
 // validate refuses a payload that could write outside the agent's directory.

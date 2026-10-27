@@ -1,19 +1,14 @@
 [[rule]]
-not   = "researching general best practices"
-paths = ["researching-general-best-practices*"]
+not   = "changing the default: init still writes the project agents unless asked"
+paths = ["changing-the-default-init-still-writes-the-project-agents-unless-asked*"]
 deps  = []
 
 [[rule]]
-not   = "a sources section inside a skill"
-paths = ["a-sources-section-inside-a-skill*"]
+not   = "a scope on other verbs"
+paths = ["a-scope-on-other-verbs*"]
 deps  = []
 
 [[rule]]
-not   = "a network call from the binary"
-paths = ["a-network-call-from-the-binary*"]
-deps  = []
-
-[[rule]]
-not   = "changing role-craft"
-paths = ["changing-role-craft*"]
+not   = "deleting project files that already exist"
+paths = ["deleting-project-files-that-already-exist*"]
 deps  = []

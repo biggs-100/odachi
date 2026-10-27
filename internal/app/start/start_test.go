@@ -853,3 +853,26 @@ func blockText(t *testing.T, voice string) string {
 	}
 	return content
 }
+
+// TestStartDoesNotInstallTheAgentsItDoesNotFind: the mirror is refreshed, never
+// installed. A project that keeps its agents in the home stays without them.
+func TestStartDoesNotInstallTheAgentsItDoesNotFind(t *testing.T) {
+	var events []string
+	interview := newScriptedInterview(&events, interviewAnswers()...)
+	files := newFakeFiles(map[string]string{"AGENTS.md": blockText(t, persona.Novato)}, &events)
+
+	got := start.Run(start.Options{}, interview, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
+	}
+	body, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, file := range persona.Files(body) {
+		if _, ok := files.files[files.key(file.Path)]; ok {
+			t.Errorf("%s was installed by start; the mirror is refreshed, never installed", file.Path)
+		}
+	}
+}

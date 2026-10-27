@@ -61,6 +61,13 @@ func (osFiles) List(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// Windows reports a file opened as a directory as "not found", so
+			// "missing" and "it is a file" have to be told apart before saying
+			// the directory is empty: an empty catalog and an unreadable one
+			// are not the same thing.
+			if info, statErr := os.Stat(dir); statErr == nil && !info.IsDir() {
+				return nil, fmt.Errorf("%s is not a directory", dir)
+			}
 			return nil, nil
 		}
 		return nil, err

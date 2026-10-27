@@ -1027,3 +1027,106 @@ func TestTheFirstFailedFileKeepsItsPathAndReason(t *testing.T) {
 		t.Errorf("Failed = %d, want %d", result.Dests[0].Failed, len(bundled()))
 	}
 }
+
+// projectSkill is one skill of the project's own catalog, with bytes that cannot
+// be confused with the bundled ones.
+func projectSkill(name string) pack.Skill {
+	return pack.Skill{
+		Name:    name,
+		Content: []byte("---\nname: " + name + "\ndescription: Trigger: the project's own " + name + "\n---\n\n## When\n\ncuando el proyecto lo pide\n"),
+	}
+}
+
+// TestTheProjectSkillsAreInstalledToo: a skill created with `odachi skill new`
+// lives in skills/ and the agent reads .agents/skills, so pack is the join.
+func TestTheProjectSkillsAreInstalledToo(t *testing.T) {
+	root := projectDir()
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{
+		Agents:  "standard",
+		Project: []pack.Skill{projectSkill("marketing")},
+	})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	path := target(root, "standard", "marketing")
+	if got := string(files.files[path]); got != string(projectSkill("marketing").Content) {
+		t.Errorf("%s = %q, want the project's own bytes", path, got)
+	}
+	if !slices.ContainsFunc(result.Files, func(f string) bool {
+		return strings.HasSuffix(f, ".agents/skills/marketing/SKILL.md")
+	}) {
+		t.Errorf("Files = %v, want it to name the project skill", result.Files)
+	}
+}
+
+// TestAProjectSkillReplacesABundledOne: the bundled skill is a starter and the
+// project copy is the project's decision, so the project wins and the
+// replacement is named instead of hidden.
+func TestAProjectSkillReplacesABundledOne(t *testing.T) {
+	root := projectDir()
+	files := newFakeFiles(nil)
+	own := projectSkill("data")
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "standard", Project: []pack.Skill{own}})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	path := target(root, "standard", "data")
+	if got := string(files.files[path]); got != string(own.Content) {
+		t.Errorf("%s = %q, want the project's own bytes", path, got)
+	}
+	if !slices.Contains(result.Lines, "project skill data replaces the bundled one") {
+		t.Errorf("the replacement is not named: %v", result.Lines)
+	}
+}
+
+// TestAProjectWithoutSkillsInstallsTheBundledSet: a user project that never ran
+// `odachi skill new` gets exactly what it got before.
+func TestAProjectWithoutSkillsInstallsTheBundledSet(t *testing.T) {
+	root := projectDir()
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "standard"})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	for _, skill := range bundled() {
+		if _, ok := files.files[target(root, "standard", skill.Name)]; !ok {
+			t.Errorf("the bundled skill %q was not installed", skill.Name)
+		}
+	}
+	for _, line := range result.Lines {
+		if strings.Contains(line, "replaces the bundled one") {
+			t.Errorf("a run with no project skills reported a replacement: %q", line)
+		}
+	}
+}
+
+// TestDryRunWithProjectSkillsWritesNothing: the plan names the project skill and
+// the destination, and the disk stays as it was.
+func TestDryRunWithProjectSkillsWritesNothing(t *testing.T) {
+	files := newFakeFiles(nil)
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{
+		Agents:  "standard",
+		DryRun:  true,
+		Project: []pack.Skill{projectSkill("marketing")},
+	})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	if len(files.writes) != 0 {
+		t.Errorf("a dry run wrote %v", files.writes)
+	}
+	if !slices.ContainsFunc(result.Lines, func(line string) bool {
+		return strings.Contains(line, "would install") && strings.Contains(line, "marketing")
+	}) {
+		t.Errorf("the plan does not name the project skill: %v", result.Lines)
+	}
+}

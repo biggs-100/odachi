@@ -109,7 +109,12 @@ type Client struct {
 	Dir         string
 	HomeDir     string
 	SubagentDir string
-	Switch      string
+	// HomeSubagentDir is where the same subagents live in the human's home: the
+	// door is global, so the agents it invokes are too. A client whose global
+	// agents folder is its project one (Claude Code) repeats the path, relative
+	// to a different root.
+	HomeSubagentDir string
+	Switch          string
 }
 
 // clients is the verified table, in the order the skills table lists the same
@@ -124,11 +129,12 @@ var clients = []Client{
 	// OpenCode 2.1.3: both `.opencode/agents/` and `.opencode/mode/` are listed
 	// as primary, and a directory without `.git` lists nothing at all.
 	{
-		Agent:       "opencode",
-		Dir:         ".opencode/agents",
-		HomeDir:     ".config/opencode/agents",
-		SubagentDir: ".opencode/agents",
-		Switch:      "selected with Tab",
+		Agent:           "opencode",
+		Dir:             ".opencode/agents",
+		HomeDir:         ".config/opencode/agents",
+		SubagentDir:     ".opencode/agents",
+		HomeSubagentDir: ".config/opencode/agents",
+		Switch:          "selected with Tab",
 	},
 	// Claude Code: `.claude/output-styles/<name>.md`, frontmatter `name`,
 	// `description` and `keep-coding-instructions: true`, and the body becomes
@@ -138,11 +144,12 @@ var clients = []Client{
 	// dropping its tools. The human picks it in /config (the /output-style
 	// command that used to do it only prints a deprecation notice now).
 	{
-		Agent:       "claude",
-		Dir:         ".claude/output-styles",
-		HomeDir:     ".claude/output-styles",
-		SubagentDir: ".claude/agents",
-		Switch:      "selected with /config (output style)",
+		Agent:           "claude",
+		Dir:             ".claude/output-styles",
+		HomeDir:         ".claude/output-styles",
+		SubagentDir:     ".claude/agents",
+		HomeSubagentDir: ".claude/agents",
+		Switch:          "selected with /config (output style)",
 	},
 }
 
@@ -477,4 +484,26 @@ func DeprecatedDirs() []string {
 		}
 	}
 	return out
+}
+
+// GlobalSubagentFilesFor returns the subagents of one client as they live in the
+// human's home. The door is global, so the agents it invokes are global too: a
+// project that never writes `.opencode/` still has a worker, a verifier and a
+// reviewer available.
+func GlobalSubagentFilesFor(client string) []File {
+	key := strings.ToLower(strings.TrimSpace(client))
+	for _, row := range clients {
+		if row.Agent != key {
+			continue
+		}
+		out := make([]File, 0, len(subagents))
+		for _, sub := range subagents {
+			out = append(out, File{
+				Path:    row.HomeSubagentDir + "/" + sub.Name + ".md",
+				Content: subagentWrapper(row.Agent, sub) + generated + "\n\n" + sub.Prompt,
+			})
+		}
+		return out
+	}
+	return nil
 }

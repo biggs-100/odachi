@@ -337,3 +337,99 @@ func TestInitRerunStillWritesNothing(t *testing.T) {
 		t.Errorf("Message = %q, want it to say nothing changed", got.Message)
 	}
 }
+
+// TestInitGlobalInstallsTheGlobalSubagents: the door is global, so the agents it
+// invokes are too: a project that never writes .opencode keeps the worker, the
+// verifier and the reviewer.
+func TestInitGlobalInstallsTheGlobalSubagents(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}, Global: true}, files, &fakeSkills{})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			abs := filepath.Join(home, filepath.FromSlash(file.Path))
+			content, ok := files.files[abs]
+			if !ok {
+				t.Errorf("%s was not installed in the home", file.Path)
+				continue
+			}
+			if string(content) != file.Content {
+				t.Errorf("%s is not the subagent:\n%q\nvs\n%q", file.Path, content, file.Content)
+			}
+		}
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), persona.SubagentNames()[0]) {
+		t.Errorf("the report does not name the subagents:\n%s", strings.Join(got.Lines, "\n"))
+	}
+}
+
+// TestInitNoProjectAgentsWritesTheHomeOnly: the clean mode. The project keeps
+// the rules and the plan; the door and its subagents live in the home.
+func TestInitNoProjectAgentsWritesTheHomeOnly(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}, Global: true, NoProjectAgents: true}, files, &fakeSkills{})
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	body, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, file := range persona.Files(body) {
+		if _, ok := files.files[filepath.Join(dir, filepath.FromSlash(file.Path))]; ok {
+			t.Errorf("%s was written in the project with --no-project-agents", file.Path)
+		}
+	}
+	for _, client := range persona.Clients() {
+		for _, file := range persona.SubagentFilesFor(client.Agent) {
+			if _, ok := files.files[filepath.Join(dir, filepath.FromSlash(file.Path))]; ok {
+				t.Errorf("%s was written in the project with --no-project-agents", file.Path)
+			}
+		}
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			if _, ok := files.files[filepath.Join(home, filepath.FromSlash(file.Path))]; !ok {
+				t.Errorf("%s was not written in the home", file.Path)
+			}
+		}
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "not written") {
+		t.Errorf("the report does not say the project agents were skipped:\n%s", strings.Join(got.Lines, "\n"))
+	}
+}
+
+// TestInitNoProjectAgentsNeedsGlobal: skipping both halves would leave no agent
+// at all, so the flag names what it needs.
+func TestInitNoProjectAgentsNeedsGlobal(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: "hogar"}, NoProjectAgents: true}, files, &fakeSkills{})
+
+	if got.Code == 0 {
+		t.Fatal("init accepted --no-project-agents without --global")
+	}
+	if !strings.Contains(got.Message, "--global") {
+		t.Errorf("the refusal does not name --global: %q", got.Message)
+	}
+}
+
+// TestTheGlobalSubagentLineHasNoEmptyClause: the subagents are not selected with
+// a key, so the line must not leave the switch clause empty.
+func TestTheGlobalSubagentLineHasNoEmptyClause(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: "hogar"}, Global: true}, files, &fakeSkills{})
+
+	for _, line := range got.Lines {
+		if strings.Contains(line, "; ;") || strings.HasSuffix(line, "; ") {
+			t.Errorf("the line leaves an empty clause: %q", line)
+		}
+	}
+}

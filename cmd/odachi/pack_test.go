@@ -439,7 +439,7 @@ func TestPackDoesNotTouchTheProject(t *testing.T) {
 	withHome(t, home)
 	project := t.TempDir()
 	seed := map[string]string{
-		"skills/acceptance/SKILL.md": "mi skill local\n",
+		"skills/acceptance/SKILL.md": "---\nname: acceptance\ndescription: Trigger: cuando el proyecto lo pide\n---\n\n## When\n\ncuando el proyecto lo pide\n\n## Rules\n\n- una regla del proyecto\n\n## Never\n\n- nada\n",
 		"SKILLS.md":                  "registro\n",
 	}
 	for path, content := range seed {

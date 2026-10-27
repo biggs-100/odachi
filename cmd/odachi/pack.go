@@ -8,7 +8,9 @@ import (
 	"io"
 
 	"github.com/biggs-100/odachi/internal/app/pack"
+	skillsapp "github.com/biggs-100/odachi/internal/app/skills"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/skill"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
@@ -60,7 +62,30 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 		payload = append(payload, pack.Skill{Name: s.Name, Content: s.Content})
 	}
 
-	return reportPack(pack.Run(pack.Options{Agents: agents, Scope: scope, Dest: dest, DryRun: dryRun, Dir: dir, Skills: payload}, osFiles{}, osHome{}), asJSON, stdout, stderr)
+	// The project's own catalog: a skill created with `odachi skill new` lives
+	// in ./skills and the agent reads .agents/skills, so this is the join. A
+	// project without skills/ contributes nothing, and a broken catalog is
+	// refused by name: installing half a skill is worse than not installing it.
+	own := skillsapp.Run(skillsapp.Options{Dir: dir}, osFiles{})
+	if own.Code != start.CodeOK {
+		// A catalog that cannot be read is not an empty catalog: installing only
+		// the bundled set would hide the project's own skills without saying so.
+		fmt.Fprintln(stderr, "odachi: "+own.Message)
+		return start.CodeBlocked
+	}
+	if problems := projectProblems(own.Skills); len(problems) > 0 {
+		for _, line := range problems {
+			fmt.Fprintln(stderr, "odachi: "+line)
+		}
+		fmt.Fprintln(stderr, "odachi: the project's catalog does not pass its check: fix it and run odachi pack again (odachi skills --check lists every problem)")
+		return start.CodeBlocked
+	}
+	project := make([]pack.Skill, 0, len(own.Skills))
+	for _, s := range own.Skills {
+		project = append(project, pack.Skill{Name: s.Name, Content: s.Raw})
+	}
+
+	return reportPack(pack.Run(pack.Options{Agents: agents, Scope: scope, Dest: dest, DryRun: dryRun, Dir: dir, Skills: payload, Project: project}, osFiles{}, osHome{}), asJSON, stdout, stderr)
 }
 
 // packDest is one row of the machine report: the same numbers the summary line a
@@ -149,4 +174,17 @@ func reportPack(result pack.Result, asJSON bool, stdout, stderr io.Writer) int {
 		fmt.Fprintln(out, line)
 	}
 	return result.Code
+}
+
+// projectProblems lists every violation in the project's own skills, one line
+// each, so pack refuses a broken catalog by the file a human has to open
+// instead of installing half a skill.
+func projectProblems(loaded []skill.Skill) []string {
+	lines := []string{}
+	for _, s := range loaded {
+		for _, problem := range s.Problems() {
+			lines = append(lines, problem.File+": "+problem.Reason)
+		}
+	}
+	return lines
 }
