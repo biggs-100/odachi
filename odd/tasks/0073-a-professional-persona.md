@@ -17,8 +17,8 @@ R1 · "a professional persona is created by an interview and research, and odach
 
 ## Steps
 - [x] T1 · the role source parses into its eight sections, and persona new writes the skeleton   R1 · tree:708083d529ff2a1ec4e7f4f3ec70287f4e0ecd91
-- [ ] T2 · persona-craft teaches the interview and the research, and the impact map records the third axis   R1
-- [ ] T3 · persona renders the agent and the skill from the source, and a role over 60 lines is refused   R1
+- [x] T2 · persona-craft teaches the interview and the research, and the impact map records the third axis   R1 · tree:6a1479da9ec205e7d4b588dbab83407372c1bc8a
+- [x] T3 · persona renders the agent and the skill from the source, and a role over 60 lines is refused   R1 · tree:432792d4cc9a868237fc042d75c21832aa025a15
 
 ## History
 L1 · "a professional persona is created by an interview and research, and odachi writes it as a selectable agent and a skill from one source"
