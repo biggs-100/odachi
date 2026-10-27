@@ -1,22 +1,21 @@
-# pack-installs-the
+# the-subagents-live
 
 ## What must exist
-- pack installs the skills of the project too, so a skill created with skill new reaches the folder the agent reads
+- the subagents live in the home too, so a project that never writes .opencode keeps the worker, the verifier and the reviewer
 
 ## Done when
-- odachi pack installs the bundled skills and the ones in ./skills, and a project skill wins over a bundled one with the same name, naming the replacement
-- a skill created with odachi skill new reaches .agents/skills after pack
-- a project without skills/ installs exactly the bundled set, as today, and --dry-run writes nothing
-- the tests pin the merge, the clash and the empty project, and the impact map records it
+- init --global and odachi setup write odachi-worker, odachi-verify and odachi-reviewer in the home of each chosen client, next to the door
+- without --global the home gets nothing, and a second run reports the subagents unchanged
+- doctor compares the home copies and names a stale one
+- the tests pin the paths, the write and the comparison, and the map and README record it
 
 ## Not included (first version)
-- skill new --scope home
-- a registry or a check for the home
-- changing init
-- installing automatically when skill new runs
+- removing the project copies
+- a new flag
+- changing the subagent prompts
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a source and its copies stay one thing.
+- Wants to learn: how a file that lives in two roots stays one thing.

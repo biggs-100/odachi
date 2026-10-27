@@ -1,19 +1,14 @@
 [[rule]]
-not   = "skill new --scope home"
-paths = ["skill-new-scope-home*"]
+not   = "removing the project copies"
+paths = ["removing-the-project-copies*"]
 deps  = []
 
 [[rule]]
-not   = "a registry or a check for the home"
-paths = ["a-registry-or-a-check-for-the-home*"]
+not   = "a new flag"
+paths = ["a-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "changing init"
-paths = ["changing-init*"]
-deps  = []
-
-[[rule]]
-not   = "installing automatically when skill new runs"
-paths = ["installing-automatically-when-skill-new-runs*"]
+not   = "changing the subagent prompts"
+paths = ["changing-the-subagent-prompts*"]
 deps  = []
