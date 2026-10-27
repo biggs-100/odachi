@@ -10,7 +10,7 @@ R1 · "the method has a name and the project says it once: Proof-Driven Developm
 - ADR 0008 points to the new name and keeps every decision it took
 
 ## Steps
-- [ ] T1 · the README, ADR 0031 and ADR 0008 name the method PDD, and the decisions of 0008 stand   R1
+- [x] T1 · the README, ADR 0031 and ADR 0008 name the method PDD, and the decisions of 0008 stand   R1 · 682f1d4
 
 ## History
 L1 · "the method has a name and the project says it once: Proof-Driven Development"
