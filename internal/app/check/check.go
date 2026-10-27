@@ -620,7 +620,16 @@ func (r *runner) reviewGate(feature *tasks.Document) *Result {
 	if r.opts.NoReview {
 		return nil
 	}
-	base, closed, known := featureReview(feature)
+	base, closed, waived, known := featureReview(feature)
+
+	// The human can waive this feature's review. The decision is recorded in the
+	// document, it outranks the per-run flag -the lane exists so a small feature
+	// does not pay a verdict in CI either- and it removes the verdict, never the
+	// proof or the fence. The report names it.
+	if known && closed && waived {
+		return nil
+	}
+
 	if !r.opts.RequireReview {
 		if !r.opts.ReviewMode {
 			return nil
@@ -678,16 +687,16 @@ func (r *runner) theCloseOwes(feature *tasks.Document) (bool, *Result) {
 // featureReview reads the feature's review state from its document: the base its
 // diff starts from, whether every step is done, and whether the document is the
 // one that can be reviewed once at all.
-func featureReview(feature *tasks.Document) (base string, closed, known bool) {
+func featureReview(feature *tasks.Document) (base string, closed, waived, known bool) {
 	if feature == nil {
-		return "", false, false
+		return "", false, false, false
 	}
 	base = strings.TrimSpace(feature.Doc.Base)
 	done, total := feature.Doc.Progress()
 	if base == "" || total == 0 {
-		return "", false, false
+		return "", false, false, false
 	}
-	return base, done == total, true
+	return base, done == total, feature.Doc.ReviewWaived, true
 }
 
 // ReviewOwed is the project-mode review question, exported so a report tells the
@@ -709,9 +718,16 @@ func ReviewOwed(opts Options, files Files, git Git) (bool, string, error) {
 		return false, "", errors.New(problem.Message)
 	}
 
-	// The same three questions reviewGate asks, in the same order. Sharing the
+	// The same questions reviewGate asks, in the same order. Sharing the
 	// answers is the point: two callers deriving them would drift.
-	base, closed, known := featureReview(feature)
+	base, closed, waived, known := featureReview(feature)
+
+	// A waived feature owes no verdict: the human decided it lands without one,
+	// and the report says so instead of inventing a review.
+	if known && closed && waived {
+		return false, "", nil
+	}
+
 	if !opts.RequireReview {
 		if !opts.ReviewMode {
 			return false, "", nil
@@ -1161,6 +1177,11 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	if haveProof && r.proofRel != "" {
 		result.Proof = r.proofRel
 		result.Lines = append(result.Lines, "proof: "+r.proofRel)
+	}
+	// A waived review is a decision, not a silence: the ready tree says so, or
+	// the next reader believes a verdict was made and lost.
+	if _, closed, waived, known := featureReview(r.feature); known && closed && waived {
+		result.Lines = append(result.Lines, "review: waived by the human")
 	}
 	return result
 }
