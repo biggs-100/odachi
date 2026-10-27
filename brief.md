@@ -1,22 +1,21 @@
-# a-step-marked
+# the-organic-front
 
 ## What must exist
-- a step marked with --commit names the bytes of that commit, so the mark survives a rebase too
+- the organic front of PDD is written down: how work is shaped before it is declared, and the limits of that shaping
 
 ## Done when
-- plan --done T1 --commit <sha> stores the tree of that commit when the commit exists
-- a commit the repository cannot read keeps the sha as given, because that is all that is known
-- the message names what was stored, and progress resolves it to the landed commit
-- tests pin the canonical mark, the fallback and the resolution
+- ADR 0032 records the six rules, what is not taken and why
+- the ADR names the three pieces that would implement it as separate features
+- the impact map points to the ADR from the PDD row
 
 ## Not included (first version)
-- rewriting the old task docs
-- a new flag
-- changing the default: the tree of HEAD stays
+- implementing shape, the verifier trigger or the requirement-change rule
+- changing the current cycle
+- rewriting old task docs or ADRs
 - the panel itself
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: what makes a mark durable.
+- Wants to learn: how a design is recorded without pretending it is built.

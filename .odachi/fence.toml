@@ -1,16 +1,16 @@
 [[rule]]
-not   = "rewriting the old task docs"
-paths = ["rewriting-the-old-task-docs*"]
+not   = "implementing shape, the verifier trigger or the requirement-change rule"
+paths = ["implementing-shape-the-verifier-trigger-or-the-requirement-change-rule*"]
 deps  = []
 
 [[rule]]
-not   = "a new flag"
-paths = ["a-new-flag*"]
+not   = "changing the current cycle"
+paths = ["changing-the-current-cycle*"]
 deps  = []
 
 [[rule]]
-not   = "changing the default: the tree of HEAD stays"
-paths = ["changing-the-default-the-tree-of-head-stays*"]
+not   = "rewriting old task docs or ADRs"
+paths = ["rewriting-old-task-docs-or-adrs*"]
 deps  = []
 
 [[rule]]
