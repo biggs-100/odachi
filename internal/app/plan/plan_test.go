@@ -1,6 +1,7 @@
 package plan_test
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -264,6 +265,94 @@ func TestPlanDoneMarksAndRecordsTheCommit(t *testing.T) {
 	}
 	if want := []string{"backup " + taskPath, "write " + taskPath}; !slices.Equal(files.order, want) {
 		t.Errorf("order = %v, want %v (backup before write)", files.order, want)
+	}
+}
+
+// fakeGit answers the two trees the done form compares: HEAD and the worktree.
+type fakeGit struct {
+	head     string
+	worktree string
+	err      error
+}
+
+func (g fakeGit) HeadTree(string) (string, error) {
+	if g.err != nil {
+		return "", g.err
+	}
+	return g.head, nil
+}
+
+func (g fakeGit) WorktreeTree(string) (string, error) { return g.worktree, nil }
+
+// TestPlanDoneRecordsTheTreeItProduced: a step is remembered by its bytes. When
+// the worktree is the commit, plan records "tree:<head tree>" instead of a sha a
+// rebase may rewrite: the same identity the proof and the verdict already use.
+func TestPlanDoneRecordsTheTreeItProduced(t *testing.T) {
+	files := project()
+	const tree = "7bc78db4200c32c2d4fb706b78a5b40c485170ac"
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "T2", Git: fakeGit{head: tree, worktree: tree}}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if want := "step T2 done · tree:7bc78db"; res.Message != want {
+		t.Errorf("Message = %q, want %q", res.Message, want)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done || step.Commit != "tree:"+tree {
+		t.Errorf("step = %+v, want done with the tree it produced", step)
+	}
+}
+
+// TestPlanDoneRecordsNothingWhenTheWorktreeIsNotTheCommit: marking a step before
+// committing it, or with changes around, would claim bytes the repository cannot
+// back. The step closes -that is legal- with no mark, and the message says why.
+func TestPlanDoneRecordsNothingWhenTheWorktreeIsNotTheCommit(t *testing.T) {
+	files := project()
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "T2", Git: fakeGit{head: "aaa", worktree: "bbb"}}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if !strings.Contains(res.Message, "not recorded") {
+		t.Errorf("Message = %q, want it to say the tree was not recorded", res.Message)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done || step.Commit != "" {
+		t.Errorf("step = %+v, want done with no mark", step)
+	}
+}
+
+// TestPlanDoneInARepositoryWithNoCommitClosesTheStep: the first day has no HEAD
+// to remember; the step closes with no mark, exactly as before.
+func TestPlanDoneInARepositoryWithNoCommitClosesTheStep(t *testing.T) {
+	files := project()
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "T2", Git: fakeGit{err: errors.New("no HEAD")}}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if want := "step T2 done"; res.Message != want {
+		t.Errorf("Message = %q, want %q", res.Message, want)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "" {
+		t.Errorf("step = %+v, want no mark", step)
+	}
+}
+
+// TestPlanDonePrefersTheCommitItWasGiven: --commit stays as the explicit form,
+// and the tree is not even read.
+func TestPlanDonePrefersTheCommitItWasGiven(t *testing.T) {
+	files := project()
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "T2", Commit: "deadbee", Git: fakeGit{head: "aaa", worktree: "bbb"}}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "deadbee" {
+		t.Errorf("step = %+v, want the commit it was given", step)
 	}
 }
 

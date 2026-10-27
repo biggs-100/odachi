@@ -23,7 +23,7 @@ The feature cycle, in order:
 3. Commit what start wrote -brief, fence, profile and task doc, steps included- before you branch. If they do not land together, the next change is judged by the last feature's fence, or a reset loses them.
 4. Work the step. If a vision decision appears: `odachi ask "<question>"` and wait.
 5. `odachi check --run "<command>"`: green is the only definition of done.
-6. One commit per step, and `odachi plan --done T1 --commit <sha>`.
+6. One commit per step, and `odachi plan --done T1`: it records the tree the step produced, which a rebase cannot rewrite.
 7. At the end, `odachi summary` and tell in three lines what the human decided.
 
 If the request does not fit in one read, load `slices` before splitting. Its delegation policy wins over other global skills: a writer only for real parallelism or a long session, never for size or file count.

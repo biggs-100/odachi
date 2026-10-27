@@ -293,6 +293,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
+	opts.Git = gitRepo{}
 	return reportPlan(plan.Run(opts, osFiles{}), asJSON, stdout, stderr)
 }
 
@@ -1317,7 +1318,7 @@ review mode:
 plan flags:
   --req R<n>      requirement the new step is tied to
   --done T<n>     step that is marked done
-  --commit sha    commit that closed the step (goes with --done)
+  --commit sha    commit that closed the step (goes with --done; by default the tree of HEAD is recorded)
   --json          machine output
 
 undo flags:
@@ -1417,7 +1418,7 @@ after start:
   odachi ask --answer "<answer>" [--for P1]     record your answer
   odachi ask --craft "<decision>" --because "<reason>"  record a decision the agent took
   odachi plan "<text>" [--req R1]               add the next step to the task doc
-  odachi plan --done T2 [--commit abc1234]      mark a step done and record the commit
+  odachi plan --done T2 [--commit abc1234]      mark a step done; the tree it produced is recorded
   odachi level                                  see your facts; it proposes senior when earned
   odachi level --to <profile>                   apply a profile and its voice (both are backed up)
   odachi summary                                what is done in each feature

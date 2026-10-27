@@ -365,6 +365,14 @@ func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root
 
 func (gitRepo) Head(root string) (string, error) { return gitx.Head(root) }
 
+// HeadTree is the tree the step's commit carries: the bytes plan records, because
+// a rebase rewrites the commit and never the tree.
+func (gitRepo) HeadTree(root string) (string, error) { return gitx.HeadTree(root) }
+
+// WorktreeTree is the tree the worktree holds right now; plan compares it with
+// HEAD so a step is only marked with bytes a commit can back.
+func (gitRepo) WorktreeTree(root string) (string, error) { return gitx.TreeHash(root) }
+
 // Resolve is the gate's question "which commit does this spelling name": a base
 // is a commit, and two spellings of it are one diff.
 func (gitRepo) Resolve(root, ref string) (string, error) { return gitx.Resolve(root, ref) }
