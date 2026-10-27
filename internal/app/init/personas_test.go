@@ -419,3 +419,17 @@ func TestInitNoProjectAgentsNeedsGlobal(t *testing.T) {
 		t.Errorf("the refusal does not name --global: %q", got.Message)
 	}
 }
+
+// TestTheGlobalSubagentLineHasNoEmptyClause: the subagents are not selected with
+// a key, so the line must not leave the switch clause empty.
+func TestTheGlobalSubagentLineHasNoEmptyClause(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: "hogar"}, Global: true}, files, &fakeSkills{})
+
+	for _, line := range got.Lines {
+		if strings.Contains(line, "; ;") || strings.HasSuffix(line, "; ") {
+			t.Errorf("the line leaves an empty clause: %q", line)
+		}
+	}
+}

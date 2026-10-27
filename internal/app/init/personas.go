@@ -269,7 +269,7 @@ func personaLine(dir, switchText string, written, kept []string, subagents bool)
 		parts = append(parts, humanList(kept)+" unchanged")
 	}
 	line := dir + ": " + strings.Join(parts, ", ")
-	if len(written) > 0 {
+	if len(written) > 0 && switchText != "" {
 		line += "; " + switchText
 	}
 	if subagents {
