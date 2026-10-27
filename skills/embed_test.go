@@ -138,6 +138,49 @@ func TestShapeTeachesExplorationBeforeTheBrief(t *testing.T) {
 	}
 }
 
+// TestCommitsTeachesRiskByBlastRadius: the six Risk: names are a vocabulary, and
+// a vocabulary without consequences is decoration. Each one names its lens and
+// its verifier, and none of them buys a waiver.
+func TestCommitsTeachesRiskByBlastRadius(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	content, ok := byName["commits"]
+	if !ok {
+		t.Fatal("el payload no tiene la skill commits: el riesgo no tiene vocabulario")
+	}
+	if !strings.Contains(content, "Risk by blast radius") {
+		t.Error("commits no tiene la tabla de riesgo por radio de impacto")
+	}
+	for _, item := range []string{"data", "security", "contract", "concurrency", "delivery", "no-test"} {
+		line := ""
+		for _, candidate := range strings.Split(content, "\n") {
+			if strings.HasPrefix(candidate, "| "+item+" |") {
+				line = candidate
+				break
+			}
+		}
+		if line == "" {
+			t.Errorf("commits no tiene la fila %q: el item no dice que fuerza", item)
+			continue
+		}
+		if !strings.Contains(line, "| yes |") {
+			t.Errorf("la fila %q no pide verifier: %s", item, line)
+		}
+	}
+	for _, want := range []string{"odachi review --lens", "odachi-verify", "waiver"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("commits no dice %q: la ceremonia se perdio", want)
+		}
+	}
+}
+
 // TestDriveTeachesTheWorkflowDiscipline: ODD-lite is content, and content
 // drifts. `drive` names the spec rule, the RED before GREEN rule, the delegation
 // record and the risk line; `commits` owns the risk vocabulary.
