@@ -27,7 +27,7 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 odachi --version
 ```
 
-Those three lines work. The latest release is `v0.11.30`: six binaries (Linux,
+Those three lines work. The latest release is `v0.11.31`: six binaries (Linux,
 macOS and Windows, amd64 and arm64) and a `checksums.txt`. The installer resolves
 the latest version through the API, verifies the sha256 and only then writes; a
 checksum that does not match exits with an error and leaves **nothing** at the
@@ -58,7 +58,7 @@ and later carry the bundle; use the version you downloaded.
 ```sh
 cosign verify-blob \
   --bundle checksums.txt.sigstore.json \
-  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.30' \
+  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.31' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   checksums.txt
 ```
@@ -68,15 +68,15 @@ here. Then check the archive you downloaded against the signed list:
 
 ```sh
 # linux
-grep ' odachi_0.11.30_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
+grep ' odachi_0.11.31_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
 # macOS ships shasum, not sha256sum
-grep ' odachi_0.11.30_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
+grep ' odachi_0.11.31_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
 ```
 
 ```powershell
 # windows: compare the hash of the zip with its line in the signed list
 $want = (Select-String -Path checksums.txt -Pattern 'odachi_0\.11\.30_windows_amd64\.zip$').Line.Split()[0]
-(Get-FileHash .\odachi_0.11.30_windows_amd64.zip -Algorithm SHA256).Hash -eq $want.ToUpper()
+(Get-FileHash .\odachi_0.11.31_windows_amd64.zip -Algorithm SHA256).Hash -eq $want.ToUpper()
 # True means the zip matches the signed list
 ```
 
@@ -85,7 +85,7 @@ which names the repository, the commit and the workflow that produced it. It
 lives in the repository, not in the release, and `gh` fetches it by digest:
 
 ```sh
-gh attestation verify odachi_0.11.30_windows_amd64.zip --repo biggs-100/odachi
+gh attestation verify odachi_0.11.31_windows_amd64.zip --repo biggs-100/odachi
 ```
 
 The three links answer three different questions: the signature says who
@@ -499,7 +499,7 @@ Pure domain in `internal/domain/...` with an import guard, adapters in
 `skills`, `skill new`, `pack` and `--version`. 42 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
-Published: `v0.11.30`. What changed in each version is in
+Published: `v0.11.31`. What changed in each version is in
 [CHANGELOG.md](CHANGELOG.md). The one-line installation is tested against the
 real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP
