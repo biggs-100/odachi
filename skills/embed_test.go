@@ -181,6 +181,31 @@ func TestCommitsTeachesRiskByBlastRadius(t *testing.T) {
 	}
 }
 
+// TestDriveTeachesTheRequirementChangeRule: the plan grows and the vision does
+// not. A requirement the human changes goes to `ask --change`, which reopens the
+// steps that claimed it, and the brief only moves when the vision does.
+func TestDriveTeachesTheRequirementChangeRule(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Content)
+	}
+
+	for _, want := range []string{
+		"odachi ask --change",
+		"--req R1",
+		"steps reopen",
+		"`brief.md` does not move",
+	} {
+		if !strings.Contains(byName["drive"], want) {
+			t.Errorf("drive no dice %q: la regla del cambio de requisito se perdio", want)
+		}
+	}
+}
+
 // TestDriveTeachesTheWorkflowDiscipline: ODD-lite is content, and content
 // drifts. `drive` names the spec rule, the RED before GREEN rule, the delegation
 // record and the risk line; `commits` owns the risk vocabulary.

@@ -12,7 +12,7 @@ R1 · "the plan grows and the vision does not: when the human changes a requirem
 
 ## Steps
 - [ ] T1 · the task doc records a change line and reopens the done steps that cite the requirement, with tests   R1
-- [ ] T2 · ask --change writes it and refuses a change with no requirement, and the CLI names the form   R1
+- [x] T2 · ask --change writes it and refuses a change with no requirement, and the CLI names the form   R1 · tree:915ab2bda7c28c8903796407ba5ab2aada64a9e0
 - [ ] T3 · drive teaches the rule and the impact map records the third follow-up   R1
 
 ## History
