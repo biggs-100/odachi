@@ -382,6 +382,12 @@ the next `odachi review` judges only those. `review --show` calls such a file
 **partial**, and with the gate on it still blocks: a partial verdict is not a
 review, and `check` asks for the lenses nobody judged.
 
+An answer that came back but cannot be read -a verdict the strict JSON refuses, an
+ANSI footer after the JSON- is not thrown away either: it is written in the ignored
+store under a name its own bytes decide, and the blockage names the file and
+`odachi review --attach <file>`. Repair it and attach it instead of paying for the
+same review twice.
+
 The verdict and the proof both name the model behind them. With the gate on, the
 lenses judged by the model that produced the proof are refused - `review_self`,
 a model does not judge its own tree - and the fix is `odachi review --model
