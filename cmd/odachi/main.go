@@ -1284,6 +1284,7 @@ usage:
   odachi setup [--agents opencode|claude|both] [--json]
   odachi skills [--check | --write]
   odachi role new <slug>
+  odachi role [<slug>]
   odachi skill new <slug>
   odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <folder>] [--dry-run]
   odachi --version

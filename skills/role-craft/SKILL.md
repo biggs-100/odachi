@@ -28,7 +28,9 @@ Not for the voice -novato or senior is `level`- and not for a feature.
   refuses Y-. A role nobody probed is a wish.
 - One role, one responsibility. If it needs "and", it is two roles.
 - End in `odachi role new <slug>`: the human approves the words and the binary
-  writes the skeleton. Never hand-edit the agent or the skill the role renders.
+  writes the skeleton. Then `odachi role <slug>` renders the agent and the skill
+  from that source, and `odachi role` says which ones are stale. Never
+  hand-edit what the renderer writes.
 - A role whose rules do not fit in 60 lines is refused: cut the role, do not
   split the skill.
 

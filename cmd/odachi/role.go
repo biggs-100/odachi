@@ -2,51 +2,103 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
 
 	roleapp "github.com/biggs-100/odachi/internal/app/role"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/rules"
 )
 
-// runRole parses `odachi role`: one subcommand today, `new <slug>`, because
-// writing the source is the first half of the loop and rendering is the second.
+// runRole parses `odachi role`: `new <slug>` writes the source, `<slug>`
+// renders the agent and the skill from it, and no slug lists every role.
+//
+// The two flags are read by hand instead of by flag.FlagSet because the slug is
+// positional and `role marketing --json` has to mean the same as
+// `role --json marketing`: the standard parser stops at the first positional and
+// would call --json an extra argument.
 func runRole(dir string, args []string, stdout, stderr io.Writer) int {
-	if len(args) == 0 {
-		fmt.Fprintln(stderr, "odachi: missing the slug: odachi role new <slug>")
-		return start.CodeBlocked
-	}
-	if args[0] != "new" {
-		fmt.Fprintf(stderr, "odachi: unknown subcommand: %s; today the only one is odachi role new <slug>\n", args[0])
-		return start.CodeBlocked
-	}
-
-	flags := flag.NewFlagSet("odachi role new", flag.ContinueOnError)
-	flags.SetOutput(io.Discard)
-
 	var asJSON bool
-	flags.BoolVar(&asJSON, "json", false, "machine output")
-
-	if err := flags.Parse(args[1:]); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
+	kept := make([]string, 0, len(args))
+	for _, arg := range args {
+		switch arg {
+		case "--json":
+			asJSON = true
+		case "-h", "--help":
 			usage(stdout)
 			return start.CodeOK
+		default:
+			kept = append(kept, arg)
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi role new -h to see the flags")
-		return start.CodeBlocked
 	}
-	if flags.NArg() == 0 {
-		fmt.Fprintln(stderr, "odachi: missing the slug: odachi role new <slug>")
-		return start.CodeBlocked
-	}
-	if flags.NArg() > 1 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role new takes a single slug\n", flags.Arg(1))
-		return start.CodeBlocked
+	args = kept
+
+	sub := ""
+	if len(args) > 0 {
+		sub = args[0]
+		args = args[1:]
 	}
 
-	return reportRole(roleapp.New(dir, flags.Arg(0), osFiles{}), asJSON, stdout, stderr)
+	if sub == "new" {
+		if len(args) == 0 {
+			fmt.Fprintln(stderr, "odachi: missing the slug: odachi role new <slug>")
+			return start.CodeBlocked
+		}
+		if len(args) > 1 {
+			fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role new takes a single slug\n", args[1])
+			return start.CodeBlocked
+		}
+		return reportRole(roleapp.New(dir, args[0], osFiles{}), asJSON, stdout, stderr)
+	}
+
+	block, clients, code, message := roleContext(dir)
+	if code != start.CodeOK {
+		fmt.Fprintln(stderr, "odachi: "+message)
+		return code
+	}
+	if sub == "" {
+		return reportRole(roleapp.List(dir, block, clients, osFiles{}), asJSON, stdout, stderr)
+	}
+	if len(args) > 0 {
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role takes a single slug\n", args[0])
+		return start.CodeBlocked
+	}
+	return reportRole(roleapp.Render(dir, sub, block, clients, osFiles{}), asJSON, stdout, stderr)
+}
+
+// roleContext resolves what a render needs: the block the agent will read, with
+// the voice the profile names, and the clients the project chose.
+func roleContext(dir string) (block string, clients []string, code int, message string) {
+	name := "novato"
+	if loaded, code, message := loadProfile(dir, "odachi role"); code != start.CodeOK {
+		return "", nil, code, message
+	} else if loaded != nil {
+		name = loaded.Name
+	}
+
+	voice, err := persona.VoiceName(name)
+	if err != nil {
+		return "", nil, start.CodeBlocked, oneLine(err.Error()) + "; run odachi role again"
+	}
+	block, err = rules.Body(voice)
+	if err != nil {
+		return "", nil, start.CodeBlocked, "could not build the rules block: " + oneLine(err.Error()) + "; run odachi role again"
+	}
+
+	selection, code, message := storedAgents(dir, "odachi role")
+	if code != start.CodeOK {
+		return "", nil, code, message
+	}
+	_, resolved, err := persona.ResolveSelection(selection)
+	if err != nil {
+		return "", nil, start.CodeBlocked, oneLine(err.Error()) + "; fix .odachi/agents.toml and run odachi role again"
+	}
+	clients = make([]string, 0, len(resolved))
+	for _, client := range resolved {
+		clients = append(clients, client.Agent)
+	}
+	return block, clients, start.CodeOK, ""
 }
 
 // reportRole prints the result of `odachi role`.
@@ -88,3 +140,4 @@ func reportRole(result roleapp.Result, asJSON bool, stdout, stderr io.Writer) in
 	}
 	return result.Code
 }
+
