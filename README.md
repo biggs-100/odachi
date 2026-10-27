@@ -217,7 +217,9 @@ one bounded step) and `odachi-verify` (verifies without editing). They are not
 picked with a key: the main agent invokes them when `slices` triggers. The parent
 passes them the task doc, the step, the edit surfaces, the commands and the exact
 skill paths; they return evidence and ≤2k tokens. The parent keeps git, the gate
-and the vision; there is no separate orchestrator.
+and the vision; there is no separate orchestrator. With `--global` the same
+subagents are written in the home, next to the door, so a project that never
+writes `.opencode/` still has them.
 
 ### Three more ways to say where
 
@@ -304,7 +306,9 @@ The **home** copy is the door: `~/.config/opencode/agents/odachi.md` and
 `~/.claude/output-styles/odachi.md`, one per chosen client. It is opt-in:
 `odachi init --global` installs it, because a primary agent that appears in
 **any** folder and can replace the one you chose is your decision, not an effect
-of initializing a project. Once installed it appears in any folder, not only the
+of initializing a project. The same command writes the subagents next to it
+(`~/.config/opencode/agents/odachi-worker.md` and friends), so a project without
+`.opencode/` keeps the worker, the verifier and the reviewer. Once installed it appears in any folder, not only the
 one that ran `init`. If the folder has the `odachi` block, it reads it and adopts
 its voice; if not, it loads the entry skill and guides you to start a project. It
 is short on purpose: it does not repeat the rules, it only says where they are.

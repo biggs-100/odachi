@@ -1052,3 +1052,31 @@ func TestATaskListThatCannotBeReadIsBroken(t *testing.T) {
 		t.Errorf("the repair is not named: %s", domaindoctor.Line(check))
 	}
 }
+
+// TestDoctorNamesAGlobalSubagentThatDoesNotMatch: the door is global and so are
+// the agents it invokes; a stale one is named with the command that fixes it.
+func TestDoctorNamesAGlobalSubagentThatDoesNotMatch(t *testing.T) {
+	files := configured()
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			files.putHome(file.Path, file.Content)
+		}
+	}
+
+	clean := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	if got := checkOf(t, clean, domaindoctor.CheckVoice); !strings.Contains(got.Detail, "global subagents are up to date") {
+		t.Fatalf("a seeded home is not reported as clean: %q", got.Detail)
+	}
+
+	stale := persona.GlobalSubagentFilesFor("opencode")[0]
+	files.putHome(stale.Path, "stale\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"global subagents do not match this binary", "~/" + stale.Path, "odachi init --global"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("the line must say %q: %q", want, got.Detail)
+		}
+	}
+}

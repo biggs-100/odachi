@@ -1384,7 +1384,8 @@ what init leaves written, in one command (--skills project and --agents both, th
 
 the home door -the agent that shows up in any folder- is opt-in: an init without
 --global does not write it. With --global it goes to ~/.config/opencode/agents and
-~/.claude/output-styles, one per chosen client, and OpenCode gets default_agent
+~/.claude/output-styles, one per chosen client, with the subagents it invokes
+next to it, and OpenCode gets default_agent
 in ~/.config/opencode/opencode.json (or the .jsonc that already exists) unless a
 default you picked is already there.
 

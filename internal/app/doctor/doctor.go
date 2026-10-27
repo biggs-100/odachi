@@ -865,6 +865,12 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 		result = "the global door is up to date in the home"
 	}
 
+	// The door is global and the agents it invokes are too, so they are compared
+	// by the same command and named by the same line.
+	if extra := r.globalSubagentsNote(clients); extra != "" {
+		result += "; " + extra
+	}
+
 	if extra := r.opencodeDefaultNote(clients); extra != "" {
 		if result == "" {
 			return extra
@@ -872,6 +878,59 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 		return result + "; " + extra
 	}
 	return result
+}
+
+// globalSubagentsNote compares the subagents in the home with the files this
+// binary would install there. Like the door it is a note: the project works
+// without them, and what is lost is delegating and verifying in a project that
+// never writes `.opencode/`.
+func (r *runner) globalSubagentsNote(clients []persona.Client) string {
+	if r.opts.Home == "" {
+		return ""
+	}
+
+	missing, stale := []string{}, []string{}
+	dirs := []string{}
+	for _, client := range clients {
+		files := persona.GlobalSubagentFilesFor(client.Agent)
+		if len(files) == 0 {
+			continue
+		}
+		dirs = append(dirs, "~/"+client.HomeSubagentDir)
+
+		for _, file := range files {
+			path := filepath.Join(r.opts.Home, filepath.FromSlash(file.Path))
+			display := "~/" + file.Path
+
+			exists, err := r.files.Exists(path)
+			if err != nil {
+				return "could not check the global subagents " + display + ": " + oneLine(err.Error()) + "; run odachi init --global"
+			}
+			if !exists {
+				missing = append(missing, display)
+				continue
+			}
+
+			data, err := r.files.Read(path)
+			if err != nil {
+				return "could not read the global subagents " + display + ": " + oneLine(err.Error()) + "; run odachi init --global"
+			}
+			if string(data) != file.Content {
+				stale = append(stale, display)
+			}
+		}
+	}
+
+	switch {
+	case len(missing) > 0:
+		return "the global subagents are not in " + strings.Join(dirs, ", ") + "; run odachi init --global to install them"
+	case len(stale) > 0:
+		return "the global subagents do not match this binary in " + strings.Join(stale, ", ") + "; run odachi init --global"
+	case len(dirs) == 0:
+		return ""
+	default:
+		return "the global subagents are up to date in " + strings.Join(dirs, ", ")
+	}
 }
 
 // opencodeDefaultNote says whether the global OpenCode config starts a session
