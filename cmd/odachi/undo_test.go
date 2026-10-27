@@ -57,6 +57,7 @@ func backupsOf(t *testing.T, dir, rel string) []string {
 func backupProject(t *testing.T) (dir, written string) {
 	t.Helper()
 	dir, _ = startedProject(t)
+	initRepo(t, dir)
 	written = readRel(t, dir, briefRel)
 
 	if code, _, stderr := runDir(t, dir, append([]string{"start", "--force"}, allFlags()...), ""); code != 0 {
@@ -71,6 +72,7 @@ func backupProject(t *testing.T) (dir, written string) {
 func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	initRepo(t, dir)
 
 	// A project with the four artifacts but no backups has nothing to undo, and
 	// says what odachi writes and which command writes it.

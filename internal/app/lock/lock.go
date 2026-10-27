@@ -21,9 +21,10 @@ import (
 	"time"
 )
 
-// File is the lock, relative to the project root. One name, so every message
-// that names the file names the same one.
-const File = ".odachi/lock"
+// File is the lock's name inside the store. One name, so every message that
+// names the file names the same one; the store root is the caller's, because
+// only the verb knows where the clone's state lives.
+const File = "lock"
 
 // StaleAfter is when a lock stops meaning "someone is writing right now" and
 // starts meaning "someone was writing and never finished". Ten minutes: longer
@@ -102,10 +103,11 @@ func Age(age time.Duration) string {
 
 // StaleLine is the announcement a run prints when it took over an abandoned
 // lock: one line, because taking a lock that is not yours is something the human
-// has to know.
-func StaleLine(owner Owner, age time.Duration) string {
+// has to know. path is the lock itself, so the line names the file that was
+// found and not a relative guess.
+func StaleLine(path string, owner Owner, age time.Duration) string {
 	if owner.Verb == "" {
-		return fmt.Sprintf("there was an old lock at %s, %s ago; I took it", File, Age(age))
+		return fmt.Sprintf("there was an old lock at %s, %s ago; I took it", path, Age(age))
 	}
 	return fmt.Sprintf("there was an old lock from %s, %s ago; I took it", owner.Verb, Age(age))
 }
@@ -113,15 +115,15 @@ func StaleLine(owner Owner, age time.Duration) string {
 // Refusal is the message when a live lock blocks a run. It names who is writing,
 // how long ago, and the file a human can delete by hand once they are sure
 // nothing is running: odachi itself never deletes a live lock.
-func Refusal(owner Owner, age time.Duration) string {
+func Refusal(path string, owner Owner, age time.Duration) string {
 	if owner.Verb == "" || owner.PID == "" {
 		return fmt.Sprintf(
 			"another odachi run is writing to this project (could not read %s, %s ago); wait and try again; if you know nothing is running, delete %s by hand",
-			File, Age(age), File)
+			path, Age(age), path)
 	}
 	return fmt.Sprintf(
 		"another odachi run is writing to this project (%s, pid %s, %s ago); wait and try again; if you know nothing is running, delete %s by hand",
-		owner.Verb, owner.PID, Age(age), File)
+		owner.Verb, owner.PID, Age(age), path)
 }
 
 // Held is the lock as one verb sees it: taken, announced, or refused.
@@ -138,18 +140,18 @@ type Held struct {
 	held bool
 }
 
-// Take acquires the lock for verb in dir. The caller writes
+// Take acquires the lock under root, the clone's store. The caller writes
 // `defer held.Release()` right away: a run that fails while holding the lock
 // would block the project until the lock grew old.
 //
 // A nil port takes nothing. That is for a test that is not about the lock; the
 // binary always wires one, so every real run of a multi-file verb takes it.
-func Take(port Lock, dir, verb string) Held {
+func Take(port Lock, root, verb string) Held {
 	if port == nil {
 		return Held{}
 	}
 
-	path := filepath.Join(dir, filepath.FromSlash(File))
+	path := filepath.Join(root, File)
 	held, line, err := port.Acquire(path, verb)
 
 	switch {
@@ -157,13 +159,13 @@ func Take(port Lock, dir, verb string) Held {
 		// No lock means no exclusive write, and a verb that writes anyway is the
 		// incoherent project this whole file exists to prevent.
 		return Held{Refusal: oneLine(fmt.Sprintf(
-			"could not take %s: %s; check the project permissions and try again",
-			File, err.Error()))}
+			"could not take %s: %s; check the permissions and try again",
+			path, err.Error()))}
 	case !held:
 		if strings.TrimSpace(line) == "" {
 			// An adapter that refuses without saying why still has to name the
 			// file: a refusal that cannot be acted on is a dead end.
-			line = Refusal(Owner{}, UnknownAge)
+			line = Refusal(path, Owner{}, UnknownAge)
 		}
 		return Held{Refusal: oneLine(line)}
 	}

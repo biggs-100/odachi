@@ -22,6 +22,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/progress"
 	reviewapp "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/store"
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
 	"github.com/biggs-100/odachi/internal/domain/agent"
@@ -175,6 +176,13 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	}
 
 	opts.Dir = dir
+	// The lock lives in the clone's store, so the store is resolved before the
+	// first write. A folder that is not a git repository has no store and runs
+	// without the lock: there is nowhere to put it, and guessing is what this
+	// change removes.
+	if storeRoot, err := store.Root(dir, gitRepo{}); err == nil {
+		opts.Store = storeRoot
+	}
 	// The feature starts from the commit that exists now: the task doc records
 	// it, and the closing gate asks for the review of that diff. A repository
 	// with no commit records nothing, and the gate keeps asking per tree.
@@ -641,7 +649,14 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
+	storeRoot, storeErr := store.Root(dir, gitRepo{})
+	if storeErr != nil {
+		fmt.Fprintln(stderr, "odachi: "+oneLine(storeErr.Error())+"; odachi undo needs the clone's store, so run it inside a git repository")
+		return start.CodeBlocked
+	}
+
 	opts.Dir = dir
+	opts.Store = storeRoot
 	return reportUndo(undo.Run(opts, osFiles{}, &osLock{}), asJSON, stdout, stderr)
 }
 

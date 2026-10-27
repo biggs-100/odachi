@@ -113,15 +113,15 @@ func TestAgeIsWhatTheHumanReads(t *testing.T) {
 // says so in one line instead of doing it silently.
 func TestStaleLineIsTheAnnouncement(t *testing.T) {
 	known := lock.Owner{Verb: "start", PID: "4242", Instant: "2026-10-21T15:47:03Z"}
-	if got, want := lock.StaleLine(known, 31*time.Minute+12*time.Second), "there was an old lock from start, 31m12s ago; I took it"; got != want {
+	if got, want := lock.StaleLine("store/lock", known, 31*time.Minute+12*time.Second), "there was an old lock from start, 31m12s ago; I took it"; got != want {
 		t.Errorf("StaleLine = %q, want %q", got, want)
 	}
 
 	// A lock whose line cannot be read still gets announced, naming the file:
 	// the human has to know a lock was taken over, even when nobody signed it.
-	unreadable := lock.StaleLine(lock.Owner{}, time.Hour)
-	if !strings.Contains(unreadable, lock.File) {
-		t.Errorf("StaleLine for an unreadable lock = %q, want it to name %s", unreadable, lock.File)
+	unreadable := lock.StaleLine("store/lock", lock.Owner{}, time.Hour)
+	if !strings.Contains(unreadable, "store/lock") {
+		t.Errorf("StaleLine for an unreadable lock = %q, want it to name the file", unreadable)
 	}
 	if !strings.Contains(unreadable, "I took it") {
 		t.Errorf("StaleLine for an unreadable lock = %q, want it to say it was taken", unreadable)
@@ -133,17 +133,17 @@ func TestStaleLineIsTheAnnouncement(t *testing.T) {
 // deletes a live lock.
 func TestRefusalIsTheExactSentence(t *testing.T) {
 	owner := lock.Owner{Verb: "start", PID: "4242", Instant: "2026-10-21T15:47:03Z"}
-	got := lock.Refusal(owner, 42*time.Second)
+	got := lock.Refusal("store/lock", owner, 42*time.Second)
 
-	want := "another odachi run is writing to this project (start, pid 4242, 42s ago); wait and try again; if you know nothing is running, delete .odachi/lock by hand"
+	want := "another odachi run is writing to this project (start, pid 4242, 42s ago); wait and try again; if you know nothing is running, delete store/lock by hand"
 	if got != want {
 		t.Errorf("Refusal = %q, want %q", got, want)
 	}
 
 	// A lock with unexpected content blocks just the same; it names the file
 	// instead of inventing a verb and a pid.
-	junk := lock.Refusal(lock.Owner{}, 42*time.Second)
-	for _, want := range []string{"another odachi run is writing to this project", lock.File, "42s ago"} {
+	junk := lock.Refusal("store/lock", lock.Owner{}, 42*time.Second)
+	for _, want := range []string{"another odachi run is writing to this project", "store/lock", "42s ago"} {
 		if !strings.Contains(junk, want) {
 			t.Errorf("Refusal for an unreadable lock = %q, want it to contain %q", junk, want)
 		}
@@ -153,13 +153,14 @@ func TestRefusalIsTheExactSentence(t *testing.T) {
 	}
 }
 
-// TestTakeTakesTheLockInTheProject pins the path and the owner: the file lives
-// under .odachi/ and the owner is the verb, so the next run can say who wrote.
-func TestTakeTakesTheLockInTheProject(t *testing.T) {
+// TestTakeTakesTheLockInTheStore pins the path and the owner: the file lives in
+// the store root the caller resolved, and the owner is the verb, so the next run
+// can say who wrote.
+func TestTakeTakesTheLockInTheStore(t *testing.T) {
 	port := &fakeLock{held: true}
 	held := lock.Take(port, "proyecto", "start")
 
-	wantPath := filepath.Join("proyecto", ".odachi", "lock")
+	wantPath := filepath.Join("proyecto", lock.File)
 	if len(port.paths) != 1 || port.paths[0] != wantPath {
 		t.Errorf("Acquire paths = %v, want one call with %q", port.paths, wantPath)
 	}

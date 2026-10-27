@@ -369,8 +369,11 @@ func withDefaults(loaded profile.Profile, known map[string]profile.Profile) prof
 type gitRepo struct{}
 
 func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root) }
+func (gitRepo) Head(root string) (string, error)     { return gitx.Head(root) }
 
-func (gitRepo) Head(root string) (string, error) { return gitx.Head(root) }
+// CommonDir is where the clone's store hangs from: the directory every worktree
+// of this clone shares, which is what makes the store one per clone.
+func (gitRepo) CommonDir(root string) (string, error) { return gitx.CommonDir(root) }
 
 // HeadTree is the tree the step's commit carries: the bytes plan records, because
 // a rebase rewrites the commit and never the tree.

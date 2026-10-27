@@ -37,9 +37,9 @@ func (f *fakeLock) Release() error {
 	return nil
 }
 
-// busyLock is a lock another run holds right now.
+// busyLock is a lock another run holds right now, in the store the run resolved.
 func busyLock() (*fakeLock, string) {
-	line := lock.Refusal(lock.Owner{Verb: "start", PID: "4242", Instant: "2026-10-21T15:47:03Z"}, 42*time.Second)
+	line := lock.Refusal(filepath.Join("store", lock.File), lock.Owner{Verb: "start", PID: "4242", Instant: "2026-10-21T15:47:03Z"}, 42*time.Second)
 	return &fakeLock{held: false, line: line}, line
 }
 
@@ -63,7 +63,7 @@ func TestStartIsRefusedWhileAnotherRunHoldsTheLock(t *testing.T) {
 		"another odachi run is writing to this project",
 		"start, pid 4242",
 		"42s ago",
-		".odachi/lock",
+		filepath.Join("store", lock.File),
 	} {
 		if !strings.Contains(got.Message, want) {
 			t.Errorf("Message = %q, want it to contain %q", got.Message, want)
@@ -87,8 +87,9 @@ func TestStartIsRefusedWhileAnotherRunHoldsTheLock(t *testing.T) {
 	if len(port.owners) != 1 || port.owners[0] != "start" {
 		t.Errorf("Acquire owners = %v, want one call with %q", port.owners, "start")
 	}
-	// The port speaks the platform's separator; the file it names is .odachi/lock.
-	wantPath := filepath.Join(".odachi", "lock")
+	// The port speaks the platform's separator; the file it names is the one inside
+	// the store the caller resolved.
+	wantPath := filepath.Join("store", lock.File)
 	if len(port.paths) != 1 || !strings.HasSuffix(port.paths[0], wantPath) {
 		t.Errorf("Acquire paths = %v, want one call ending in %q", port.paths, wantPath)
 	}
@@ -164,7 +165,7 @@ func TestStartStopsWhenTheLockCannotBeTaken(t *testing.T) {
 	if got.Code != start.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
 	}
-	for _, want := range []string{".odachi/lock", "permission denied"} {
+	for _, want := range []string{filepath.Join("store", lock.File), "permission denied"} {
 		if !strings.Contains(got.Message, want) {
 			t.Errorf("Message = %q, want it to contain %q", got.Message, want)
 		}

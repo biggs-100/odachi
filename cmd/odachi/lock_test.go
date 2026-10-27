@@ -14,7 +14,7 @@ import (
 )
 
 // lockRel is the lock, relative to the project root. Contract XI pins the name.
-const lockRel = ".odachi/lock"
+const lockRel = ".git/odachi/lock"
 
 // lockPath is that file inside a throwaway project.
 func lockPath(dir string) string {
@@ -136,7 +136,7 @@ func TestALiveLockRefusesAndIsNeverDeleted(t *testing.T) {
 		"another odachi run is writing to this project",
 		"start, pid " + strconv.Itoa(os.Getpid()),
 		" ago",
-		lockRel,
+		lockPath(dir),
 	} {
 		if !strings.Contains(line, want) {
 			t.Errorf("refusal = %q, want it to contain %q", line, want)
@@ -219,7 +219,7 @@ func TestAnUnreadableLockIsJudgedByItsAge(t *testing.T) {
 	if held {
 		t.Fatal("Acquire took a fresh lock it could not read")
 	}
-	for _, want := range []string{"another odachi run is writing to this project", "could not read " + lockRel, " ago"} {
+	for _, want := range []string{"another odachi run is writing to this project", "could not read " + lockPath(fresh), " ago"} {
 		if !strings.Contains(line, want) {
 			t.Errorf("refusal = %q, want it to contain %q", line, want)
 		}
@@ -238,7 +238,7 @@ func TestAnUnreadableLockIsJudgedByItsAge(t *testing.T) {
 	if !held {
 		t.Fatalf("Acquire held = false on an old lock with unexpected content (line: %q)", line)
 	}
-	for _, want := range []string{"there was an old lock", lockRel, "I took it"} {
+	for _, want := range []string{"there was an old lock", lockPath(old), "I took it"} {
 		if !strings.Contains(line, want) {
 			t.Errorf("announcement = %q, want it to contain %q", line, want)
 		}
@@ -295,12 +295,13 @@ func startArgs(extra ...string) []string {
 func TestStartLeavesNoLockBehind(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	initRepo(t, dir)
 
 	if code, _, stderr := runDir(t, dir, startArgs(), ""); code != 0 {
 		t.Fatalf("start: exit %d, stderr=%s", code, stderr)
 	}
 	if lockExists(t, dir) {
-		t.Error("start left .odachi/lock behind")
+		t.Error("start left the store lock behind")
 	}
 }
 
@@ -309,6 +310,7 @@ func TestStartLeavesNoLockBehind(t *testing.T) {
 func TestStartIsRefusedByALiveLockAndTouchesNothing(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	initRepo(t, dir)
 	if code, _, stderr := runDir(t, dir, startArgs(), ""); code != 0 {
 		t.Fatalf("first start: exit %d, stderr=%s", code, stderr)
 	}
@@ -323,7 +325,7 @@ func TestStartIsRefusedByALiveLockAndTouchesNothing(t *testing.T) {
 		"another odachi run is writing to this project",
 		"start, pid 4242",
 		" ago",
-		lockRel,
+		lockPath(dir),
 	} {
 		if !strings.Contains(stderr, want) {
 			t.Errorf("stderr = %q, want it to contain %q", stderr, want)
@@ -368,6 +370,7 @@ func keys(files map[string]string) []string {
 func TestAnOldLockIsTakenOverEndToEnd(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	initRepo(t, dir)
 	handLock(t, dir, "start 111 2026-10-21T10:00:00Z\n", 30*time.Minute)
 
 	code, stdout, stderr := runDir(t, dir, startArgs(), "")
@@ -380,7 +383,7 @@ func TestAnOldLockIsTakenOverEndToEnd(t *testing.T) {
 		}
 	}
 	if lockExists(t, dir) {
-		t.Error("start left .odachi/lock behind after taking over an old one")
+		t.Error("start left the store lock behind after taking over an old one")
 	}
 }
 
@@ -414,13 +417,14 @@ func TestTheSingleFileVerbsTakeNoLock(t *testing.T) {
 func TestAFailingStartLeavesNoLockBehind(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	initRepo(t, dir)
 
 	// A flag the command does not have: start never runs.
 	if code, _, stderr := runDir(t, dir, []string{"start", "--no-existe"}, ""); code != 1 {
 		t.Fatalf("start --no-existe: exit %d, want 1 (stderr=%s)", code, stderr)
 	}
 	if lockExists(t, dir) {
-		t.Error("a failed flag parse created .odachi/lock")
+		t.Error("a failed flag parse created the store lock")
 	}
 
 	// A run that starts, takes the lock and then stops on its own rule.
@@ -435,6 +439,6 @@ func TestAFailingStartLeavesNoLockBehind(t *testing.T) {
 		t.Errorf("stderr = %q, want it to name --force", stderr)
 	}
 	if lockExists(t, dir) {
-		t.Error("a start that failed on its own rule left .odachi/lock behind")
+		t.Error("a start that failed on its own rule left the store lock behind")
 	}
 }

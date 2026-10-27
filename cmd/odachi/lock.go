@@ -10,7 +10,8 @@ import (
 	"github.com/biggs-100/odachi/internal/app/lock"
 )
 
-// osLock is the Lock adapter: `.odachi/lock`, created with O_EXCL so two runs
+// osLock is the Lock adapter: the `lock` file inside the clone's store, created
+// with O_EXCL so two runs
 // cannot both believe they created it, dated by the filesystem so a lock left by
 // a run that died can be told apart from a live one, and removed by the run that
 // took it.
@@ -51,7 +52,7 @@ func (l *osLock) Acquire(path, owner string) (bool, string, error) {
 		case statErr != nil:
 			// The lock is there and its age cannot be measured. It is never
 			// ignored, so the run stops and the message names the file.
-			return false, lock.Refusal(lock.Owner{}, lock.UnknownAge), nil
+			return false, lock.Refusal(path, lock.Owner{}, lock.UnknownAge), nil
 		}
 
 		// The modification time decides staleness, never the content: a lock
@@ -67,7 +68,7 @@ func (l *osLock) Acquire(path, owner string) (bool, string, error) {
 		// waiting one more second costs nothing and refusing a live run costs an
 		// incoherent project.
 		if age <= lock.StaleAfter {
-			return false, lock.Refusal(who, age), nil
+			return false, lock.Refusal(path, who, age), nil
 		}
 
 		// Abandoned. Taking it over is remove-then-exclusive-create, so two runs
@@ -83,10 +84,10 @@ func (l *osLock) Acquire(path, owner string) (bool, string, error) {
 			return false, "", err
 		}
 		l.path, l.mine, l.held = path, line, true
-		return true, lock.StaleLine(who, age), nil
+		return true, lock.StaleLine(path, who, age), nil
 	}
 
-	return false, lock.Refusal(lock.Owner{}, lock.UnknownAge), nil
+	return false, lock.Refusal(path, lock.Owner{}, lock.UnknownAge), nil
 }
 
 // Release removes the lock, and only if it is still the one this run wrote.

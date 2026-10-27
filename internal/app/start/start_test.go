@@ -110,9 +110,11 @@ func interviewAnswers() []string {
 }
 
 // flagsCarryTheSameAnswers describes the same run without a human: every
-// answer arrives as a flag.
+// answer arrives as a flag. Store is the root the caller resolved from the
+// repository; the lock lives there, so the run that passes a port takes it.
 func flagsCarryTheSameAnswers() start.Options {
 	return start.Options{
+		Store:     "store",
 		Outcome:   outcome,
 		Audience:  "phone",
 		Done:      []string{"Reservo un turno y aparece en la agenda"},

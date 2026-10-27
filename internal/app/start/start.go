@@ -101,6 +101,12 @@ type Options struct {
 	// from .odachi/agents.toml. Empty means both, the default of a project
 	// that never chose.
 	Agents string
+
+	// Store is the absolute root of the clone's state, resolved by the caller
+	// from the repository's git common directory. It is where the write lock
+	// lives. Empty means the project is not a git repository: there is no store
+	// to lock, and the run proceeds without the lock instead of inventing one.
+	Store string
 }
 
 // Result is what the CLI prints and exits with.
@@ -130,7 +136,14 @@ func Run(opts Options, interview Interview, files Files, guard lock.Lock) Result
 	// artifacts are written one by one, so two interleaved runs would leave every
 	// file valid and the set incoherent; the defer is what releases it when the
 	// run stops on its own rules, not only when it succeeds.
-	held := lock.Take(guard, r.opts.Dir, verbName)
+	//
+	// A run outside a git repository has no store to hold a lock in. That is the
+	// one case where this verb writes more than one file unlocked, and it is
+	// named here instead of hidden: there is nowhere else to put the file.
+	held := lock.Held{}
+	if r.opts.Store != "" {
+		held = lock.Take(guard, r.opts.Store, verbName)
+	}
 	if held.Refusal != "" {
 		return blocked(held.Refusal)
 	}

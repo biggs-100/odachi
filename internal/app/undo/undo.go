@@ -48,6 +48,12 @@ const codeHint = "I did not touch git: undoing code is yours, with git revert <s
 type Options struct {
 	Dir string
 
+	// Store is the absolute root of the clone's state, resolved by the caller
+	// from the repository's git common directory. The lock lives there. Empty
+	// means there is no repository to name one, which the caller refuses before
+	// this function runs.
+	Store string
+
 	// List shows what can be undone instead of restoring anything.
 	List bool
 	// Collect moves the backups that still live beside their artifacts into the
@@ -95,7 +101,7 @@ func Run(opts Options, files Files, guard lock.Lock) Result {
 	// undo replaces one artifact and backs up the one it replaces, so it writes
 	// more than one file and takes the lock like start does. It comes before the
 	// first listing: a refusal must not read a single backup.
-	held := lock.Take(guard, opts.Dir, verbName)
+	held := lock.Take(guard, opts.Store, verbName)
 	if held.Refusal != "" {
 		return blocked(held.Refusal)
 	}
