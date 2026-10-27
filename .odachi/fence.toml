@@ -1,14 +1,19 @@
 [[rule]]
-not   = "a shape verb, a flag or a change to check"
-paths = ["a-shape-verb-a-flag-or-a-change-to-check*"]
+not   = "changing the floor or how the binary picks lenses"
+paths = ["changing-the-floor-or-how-the-binary-picks-lenses*"]
 deps  = []
 
 [[rule]]
-not   = "the six-item table and the requirement-change rule"
-paths = ["the-six-item-table-and-the-requirement-change-rule*"]
+not   = "a new verb or flag"
+paths = ["a-new-verb-or-flag*"]
 deps  = []
 
 [[rule]]
-not   = "rewriting the interview or the brief format"
-paths = ["rewriting-the-interview-or-the-brief-format*"]
+not   = "the requirement-change rule"
+paths = ["the-requirement-change-rule*"]
+deps  = []
+
+[[rule]]
+not   = "making review mandatory for every feature"
+paths = ["making-review-mandatory-for-every-feature*"]
 deps  = []
