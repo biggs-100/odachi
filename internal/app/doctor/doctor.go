@@ -809,6 +809,11 @@ func (r *runner) personaNote(content string, clients []persona.Client) string {
 	}
 
 	switch {
+	case len(missing) > 0 && r.homeCarriesTheAgents(clients):
+		// The clean mode: the project keeps the rules and the plan, and the
+		// agents it would carry live in the home. Saying "missing" would call a
+		// decision a defect.
+		return "the project has no agent files: the door in the home is the one that runs"
 	case len(missing) > 0:
 		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") + "; run odachi init"
 	case len(stale) > 0:
@@ -817,6 +822,32 @@ func (r *runner) personaNote(content string, clients []persona.Client) string {
 		return "the native agent matches the block in " + strings.Join(dirs, " and ") +
 			"; the subagents match in " + strings.Join(subDirs, " and ")
 	}
+}
+
+// homeCarriesTheAgents reports whether the home already carries the door and the
+// subagents that make the project's agent files optional. It is a question about
+// the home, not a guess: no home, or half of what it needs, means no clean mode.
+func (r *runner) homeCarriesTheAgents(clients []persona.Client) bool {
+	if r.opts.Home == "" {
+		return false
+	}
+	for _, client := range clients {
+		file, ok := persona.GlobalFilesFor(client.Agent)
+		if !ok {
+			continue
+		}
+		exists, err := r.files.Exists(filepath.Join(r.opts.Home, filepath.FromSlash(file.Path)))
+		if err != nil || !exists {
+			return false
+		}
+		for _, sub := range persona.GlobalSubagentFilesFor(client.Agent) {
+			subExists, subErr := r.files.Exists(filepath.Join(r.opts.Home, filepath.FromSlash(sub.Path)))
+			if subErr != nil || !subExists {
+				return false
+			}
+		}
+	}
+	return len(clients) > 0
 }
 
 // globalPersonaNote compares the door in the human's home with the files this

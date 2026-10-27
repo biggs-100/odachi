@@ -313,7 +313,10 @@ one that ran `init`. If the folder has the `odachi` block, it reads it and adopt
 its voice; if not, it loads the entry skill and guides you to start a project. It
 is short on purpose: it does not repeat the rules, it only says where they are.
 `doctor` tells you if it is missing or stopped matching, and for both the command
-is `odachi init --global`. The two per-profile personas from v0.10.0 remain as
+is `odachi init --global`. With `--no-project-agents` the project gets no agent
+files at all: the door and its subagents in the home are the ones that run, and
+`doctor` calls that the clean mode instead of reporting missing files. The two
+per-profile personas from v0.10.0 remain as
 leftovers: `init` names them and does not delete them, they are yours.
 
 ## Review: four lenses, no ceremony

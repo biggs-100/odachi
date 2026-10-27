@@ -1080,3 +1080,34 @@ func TestDoctorNamesAGlobalSubagentThatDoesNotMatch(t *testing.T) {
 		}
 	}
 }
+
+// TestDoctorCallsTheCleanModeADecision: with the door and its subagents in the
+// home, a project without agent files is the clean mode, not a defect.
+func TestDoctorCallsTheCleanModeADecision(t *testing.T) {
+	files := configured()
+	body, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, file := range persona.Files(body) {
+		delete(files.files, at(file.Path))
+	}
+	for _, file := range persona.SubagentFiles() {
+		delete(files.files, at(file.Path))
+	}
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			files.putHome(file.Path, file.Content)
+		}
+	}
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	if !strings.Contains(got.Detail, "the project has no agent files") {
+		t.Fatalf("the clean mode is not named: %q", got.Detail)
+	}
+	if strings.Contains(got.Detail, "are missing in") {
+		t.Errorf("a decision is reported as a defect: %q", got.Detail)
+	}
+}
