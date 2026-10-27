@@ -179,3 +179,43 @@ func TestStartWritesTheWaiverOnlyWhenAsked(t *testing.T) {
 		t.Error("a document nobody waived carries the waiver")
 	}
 }
+
+// TestAClosedFeatureWithAWaiverIsReadyAndNamed: the waiver removes the verdict
+// and nothing else. The proof is still the gate, the fence still applies, and the
+// ready tree says the review was waived so nobody reads the silence as one.
+func TestAClosedFeatureWithAWaiverIsReadyAndNamed(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+	seedProject(t, dir)
+	commitAll(t, dir, "the project")
+	base := headSHA(t, dir)
+
+	writeFile(t, dir, "odd/tasks/0001-turnos.md", taskdoc.TaskDoc{
+		Title:        "turnos",
+		Base:         base,
+		ReviewWaived: true,
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:     []string{"reservo un turno"},
+		Steps:        []taskdoc.Step{{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: base}},
+		History:      []string{`L1 · "reservar turnos"`},
+	}.Render())
+
+	// --require-review is the strongest demand a run can make, and the recorded
+	// decision outranks it: that is the lane.
+	code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok", "--require-review"}, "")
+	if code != 0 {
+		t.Fatalf("a waived feature is ready: %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	if !strings.Contains(out, "review: waived by the human") {
+		t.Errorf("the ready tree does not name the waiver: %q", out)
+	}
+
+	// The proof is still required: the waiver removes the verdict, not the evidence.
+	if err := os.Remove(filepath.Join(dir, "proof", "0001-turnos.txt")); err != nil {
+		t.Fatalf("remove the proof: %v", err)
+	}
+	if code, _, _ := runDir(t, dir, []string{"check", "--require-review"}, ""); code != 1 {
+		t.Errorf("without its proof a waived feature = %d, want 1", code)
+	}
+}
