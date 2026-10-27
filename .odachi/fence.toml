@@ -1,16 +1,16 @@
 [[rule]]
-not   = "the per-tree exemption the close already has"
-paths = ["the-per-tree-exemption-the-close-already-has*"]
+not   = "repairing the answer (ANSI, banners): the human repairs it before attaching"
+paths = ["repairing-the-answer-ansi-banners-the-human-repairs-it-before-attaching*"]
 deps  = []
 
 [[rule]]
-not   = "review mode off and its meaning"
-paths = ["review-mode-off-and-its-meaning*"]
+not   = "a reviewer that could not run, timed out or exited nonzero: no answer exists to keep"
+paths = ["a-reviewer-that-could-not-run-timed-out-or-exited-nonzero-no-answer-exists-to-keep*"]
 deps  = []
 
 [[rule]]
-not   = "a waiver that hides the proof or the fence"
-paths = ["a-waiver-that-hides-the-proof-or-the-fence*"]
+not   = "teaching --attach to accept a raw stream"
+paths = ["teaching-attach-to-accept-a-raw-stream*"]
 deps  = []
 
 [[rule]]
