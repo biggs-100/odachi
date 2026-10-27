@@ -1,16 +1,16 @@
 [[rule]]
-not   = "repairing the answer (ANSI, banners): the human repairs it before attaching"
-paths = ["repairing-the-answer-ansi-banners-the-human-repairs-it-before-attaching*"]
+not   = "changing when the gate asks: the rule of 0061 stays"
+paths = ["changing-when-the-gate-asks-the-rule-of-0061-stays*"]
 deps  = []
 
 [[rule]]
-not   = "a reviewer that could not run, timed out or exited nonzero: no answer exists to keep"
-paths = ["a-reviewer-that-could-not-run-timed-out-or-exited-nonzero-no-answer-exists-to-keep*"]
+not   = "a new flag, a new mode or a new message"
+paths = ["a-new-flag-a-new-mode-or-a-new-message*"]
 deps  = []
 
 [[rule]]
-not   = "teaching --attach to accept a raw stream"
-paths = ["teaching-attach-to-accept-a-raw-stream*"]
+not   = "the other branches of ReviewOwed, already pinned by 0051"
+paths = ["the-other-branches-of-reviewowed-already-pinned-by-0051*"]
 deps  = []
 
 [[rule]]
