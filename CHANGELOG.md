@@ -5,6 +5,28 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.34 - 2026-10-27
+
+The work is shaped before it is declared, and a requirement that moves says so.
+
+- **`skills/shape` explores before the brief** and ends in
+  `odachi start --brief`: what to read, which question the exploration opened, and
+  no artifact of its own. The brief stays the human's, and `drive` loads the skill
+  when the request does not fit in one reading.
+- **The six `Risk:` items now decide the ceremony** (`commits`): `data`,
+  `security`, `contract`, `concurrency`, `delivery` and `no-test` each name the
+  lens to add and the verifier to run, and none of them buys a waiver. `slices`
+  owns the trigger: a risk asks for `odachi-verify` even when the parent wrote
+  inline.
+- **`odachi ask --change "<words>" --req R1`** appends the human's words to the
+  history as `CAMBIO R1` and reopens every done step that cites R1, dropping its
+  tree mark, because the mark was evidence for the step the change invalidated.
+  A change with no requirement is refused: `brief.md` moves only when the vision
+  does, and that is a new feature.
+- **ADR 0032 records Organic PDD**: the plan grows and the vision does not, and
+  the ceremony is sized by what the change can break. The fence and the proof
+  stay for every change.
+
 ## v0.11.33 - 2026-10-26
 
 A mark is durable whichever form you use.

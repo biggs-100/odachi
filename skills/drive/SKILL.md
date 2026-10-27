@@ -18,22 +18,27 @@ The four pieces and who owns each one:
 
 The feature cycle, in order:
 
-1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`.
+1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`, or with `--brief` when `shape` drafted it.
 2. `odachi plan "<step>" --req R1`: one step per deliverable behavior.
 3. Commit what start wrote -brief, fence, profile and task doc, steps included- before you branch. If they do not land together, the next change is judged by the last feature's fence, or a reset loses them.
-4. Work the step. If a vision decision appears: `odachi ask "<question>"` and wait.
+4. Work the step. A vision decision: `odachi ask "<question>"` and wait. A
+   requirement the human changes: `odachi ask --change "<words>" --req R1`: its steps reopen and `brief.md` does not move.
 5. `odachi check --run "<command>"`: green is the only definition of done.
 6. One commit per step, and `odachi plan --done T1`: it records the tree the step produced, which a rebase cannot rewrite.
 7. At the end, `odachi summary` and tell in three lines what the human decided.
 
-If the request does not fit in one read, load `slices` before splitting. Its delegation policy wins over other global skills: a writer only for real parallelism or a long session, never for size or file count.
+If the request does not fit in one reading -you cannot say what must exist or what
+it must not touch- load `shape` before `start`: it ends in `odachi start --brief`.
+Once the work is understood, load `slices` before splitting when it does not fit in
+one step. Its delegation policy wins over other global skills: a writer only for
+real parallelism or a long session, never for size or file count.
 
 ## Specs, test-first and risk
 
 - Requirements quoted **verbatim** and "Done when" observable; if missing, `ask`.
 - Before a step, load `tests` and observe RED; `check --run` only with GREEN.
 - If you delegate a step, record it with `ask --craft "delegated step: ..." --because "..."`.
-- Close the commit with the `Risk:` line from `commits`; a risk asks for `review`.
+- Close the commit with the `Risk:` line from `commits`: its table names the lens and the verifier, and a risk allows no waiver.
 
 The verbs: `start` interviews · `ask` asks or records a craft decision (`--craft`) · `plan` opens and closes steps · `check` gates and proof · `review` verdict per tree · `doctor` health without writing · `level` profile · `summary` state · `undo` undoes the last write · `init`, `skills`, `skill new` and `pack` are installation; `--version` touches nothing.
 
@@ -45,16 +50,11 @@ The verbs: `start` interviews · `ask` asks or records a craft decision (`--craf
 
 ## Review, when it applies
 
-`odachi review --show` says whether this tree asks for a review and why: ask for
-one when the tree asks (it requires lenses) or the human asks, and not otherwise.
-`odachi review` prints the prompt; `--exec "<command>"` hands it to the reviewer
-through stdin, `{prompt}` and `{model}` (the model the session is using). A causal
-`BLOCKER` blocks: fix the code or `--refute` citing the diff. The verdict is valid
-for THAT tree: any change invalidates it.
-
-One correction, one re-review: fix what blocks, ask once more, stop. A `WARNING`
-or `SUGGESTION` goes to the task doc and earns no second round: reviewing every
-intermediate tree makes review the slowest part of the feature.
+`odachi review --show` says whether this tree asks for one and why: ask when it
+does or the human asks, not otherwise. `--exec` hands the prompt to the reviewer;
+a causal `BLOCKER` blocks: fix it or `--refute` citing the diff. The verdict is
+valid for THAT tree. One correction, one re-review; a `WARNING` or `SUGGESTION`
+goes to the task doc and earns no second round.
 
 ## Never
 

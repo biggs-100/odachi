@@ -131,3 +131,37 @@ func TestAskJSONReportsTheTaskDocument(t *testing.T) {
 		t.Errorf("files = %v, want [%s]", payload.Files, taskPath)
 	}
 }
+
+// TestAskChangeReopensTheStepThatCitedTheRequirementEndToEnd is the CLI contract
+// for the fourth shape: the words land verbatim, the step that claimed the
+// requirement reopens, and the requirement itself is not rewritten.
+func TestAskChangeReopensTheStepThatCitedTheRequirementEndToEnd(t *testing.T) {
+	t.Parallel()
+	dir, taskPath := startedProject(t)
+
+	if code, _, stderr := runDir(t, dir, []string{"plan", "reservar un turno", "--req", "R1"}, ""); code != 0 {
+		t.Fatalf("plan: exit %d, stderr=%s", code, stderr)
+	}
+	if code, _, stderr := runDir(t, dir, []string{"plan", "--done", "T1"}, ""); code != 0 {
+		t.Fatalf("plan --done: exit %d, stderr=%s", code, stderr)
+	}
+
+	code, stdout, stderr := runDir(t, dir, []string{"ask", "--change", "el turno dura 45 minutos", "--req", "R1"}, "")
+	if code != 0 {
+		t.Fatalf("ask --change: exit %d, stderr=%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "reopened T1") {
+		t.Errorf("stdout %q does not name the reopened step", stdout)
+	}
+
+	doc := taskdoc.Parse(tree(t, dir)[taskPath])
+	if last := doc.History[len(doc.History)-1]; last != `L2 · CAMBIO R1 · "el turno dura 45 minutos"` {
+		t.Errorf("history last line = %q, want the change with the words as given", last)
+	}
+	if doc.Steps[0].Done {
+		t.Errorf("T1 = %+v, want it reopened", doc.Steps[0])
+	}
+	if doc.Requirements[0].Text != "Quiero reservar turnos desde el teléfono" {
+		t.Errorf("R1 = %q, want the vision untouched", doc.Requirements[0].Text)
+	}
+}

@@ -14,26 +14,59 @@ func withHistory(lines ...string) taskdoc.TaskDoc {
 	return taskdoc.Parse("# reserva-de-turno\n\n## Historial\n" + strings.Join(lines, "\n") + "\n")
 }
 
-// TestEventsParseTheThreeRecordShapes pins Contract IV: the history is an
-// append-only log with exactly three deterministic line shapes, and everything
-// else is a note the human wrote.
-func TestEventsParseTheThreeRecordShapes(t *testing.T) {
+// TestEventsParseTheRecordShapes pins Contract IV: the history is an append-only
+// log with deterministic line shapes, and everything else is a note the human
+// wrote.
+func TestEventsParseTheRecordShapes(t *testing.T) {
 	doc := withHistory(
 		`L7 · PREGUNTA P1 · "¿Los turnos se pueden cancelar?"`,
 		`L8 · VOS P1 · "No en la primera versión"`,
 		`L9 · OFICIO · "Guardé los turnos en SQLite" (porque dos personas no pueden escribir el mismo archivo)`,
-		`L10 · se decide que un turno dura 30 minutos`,
+		`L10 · CAMBIO R1 · "el turno dura 45 minutos, no 30"`,
+		`L11 · se decide que un turno dura 30 minutos`,
 	)
 
 	want := []taskdoc.Event{
 		{Line: 7, Kind: taskdoc.KindQuestion, ID: "P1", Text: "¿Los turnos se pueden cancelar?"},
 		{Line: 8, Kind: taskdoc.KindAnswer, ID: "P1", Text: "No en la primera versión"},
 		{Line: 9, Kind: taskdoc.KindCraft, Text: "Guardé los turnos en SQLite", Because: "dos personas no pueden escribir el mismo archivo"},
-		{Line: 10, Kind: taskdoc.KindNote, Text: "se decide que un turno dura 30 minutos"},
+		{Line: 10, Kind: taskdoc.KindChange, ID: "R1", Text: "el turno dura 45 minutos, no 30"},
+		{Line: 11, Kind: taskdoc.KindNote, Text: "se decide que un turno dura 30 minutos"},
 	}
 
 	if got := doc.Events(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("Events() =\n%+v\nwant\n%+v", got, want)
+	}
+}
+
+// TestAChangeWithoutARequirementIsANote: the reopen is derived from the id, so a
+// change line that names no requirement, or names something that is not one,
+// cannot be acted on and stays prose.
+func TestAChangeWithoutARequirementIsANote(t *testing.T) {
+	for _, line := range []string{
+		`L1 · CAMBIO · "el turno dura 45 minutos"`,
+		`L1 · CAMBIO T1 · "el turno dura 45 minutos"`,
+	} {
+		doc := withHistory(line)
+
+		events := doc.Events()
+		if len(events) != 1 {
+			t.Fatalf("%q: Events() returned %d events, want 1: %+v", line, len(events), events)
+		}
+		if events[0].Kind != taskdoc.KindNote {
+			t.Errorf("%q: Kind = %q, want %q: only a requirement can be changed", line, events[0].Kind, taskdoc.KindNote)
+		}
+	}
+}
+
+// TestAChangeNamesTheRequirementInAnyCase: the canonical line is uppercase, but a
+// human typing `CAMBIO r1` by hand means R1 and the parser does not punish it.
+func TestAChangeNamesTheRequirementInAnyCase(t *testing.T) {
+	doc := withHistory(`L1 · CAMBIO r1 · "el turno dura 45 minutos"`)
+
+	events := doc.Events()
+	if len(events) != 1 || events[0].Kind != taskdoc.KindChange || events[0].ID != "R1" {
+		t.Fatalf("Events() = %+v, want one change with ID R1", events)
 	}
 }
 

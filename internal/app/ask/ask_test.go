@@ -395,3 +395,114 @@ func TestADocumentOutsideTheCanonicalShapeIsNotRewritten(t *testing.T) {
 		t.Errorf("the document was rewritten:\n%s", got)
 	}
 }
+
+// twoRequirementDoc is one feature whose steps already landed: T1 cites R1 and
+// T2 cites R2, both done and both with their mark.
+func twoRequirementDoc() taskdoc.TaskDoc {
+	return taskdoc.TaskDoc{
+		Title:        "reservar-turnos",
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}, {ID: "R2", Text: "ver la agenda"}},
+		DoneWhen:     []string{"Reservo un turno y aparece en la agenda (R1)"},
+		Steps: []taskdoc.Step{
+			{ID: "T1", Text: "reservar", Requirement: "R1", Done: true, Commit: "tree:abc"},
+			{ID: "T2", Text: "agenda", Requirement: "R2", Done: true, Commit: "tree:def"},
+		},
+		History: []string{`L1 · "reservar turnos"`},
+	}
+}
+
+// TestAChangeRecordsTheWordsAndReopensTheStepsThatCiteTheRequirement: the
+// human's words land verbatim, and a step that claimed the requirement cannot
+// stay closed over a requirement that moved.
+func TestAChangeRecordsTheWordsAndReopensTheStepsThatCiteTheRequirement(t *testing.T) {
+	seed := twoRequirementDoc()
+	files := newFakeFiles(map[string]string{taskPath: seed.Render()})
+
+	res := ask.Run(ask.Options{Dir: "raiz", Change: "el turno dura 45 minutos", Requirement: "r1"}, files)
+
+	if res.Code != ask.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, ask.CodeOK, res.Message)
+	}
+	grown := taskdoc.Parse(files.content(t, taskPath))
+	if last := grown.History[len(grown.History)-1]; last != `L2 · CAMBIO R1 · "el turno dura 45 minutos"` {
+		t.Errorf("history last line = %q, want the change with the words as given", last)
+	}
+	if grown.Steps[0].Done || grown.Steps[0].Commit != "" {
+		t.Errorf("T1 = %+v, want it open and with no mark", grown.Steps[0])
+	}
+	if !grown.Steps[1].Done || grown.Steps[1].Commit != "tree:def" {
+		t.Errorf("T2 = %+v, want it untouched: it cites R2", grown.Steps[1])
+	}
+	if !strings.Contains(res.Message, "reopened T1") {
+		t.Errorf("message %q does not say which step reopened", res.Message)
+	}
+	if strings.Contains(res.Message, "T2") {
+		t.Errorf("message %q names T2, which was not reopened", res.Message)
+	}
+}
+
+// TestAChangeWithoutARequirementIsRefused: a change is not a free note; without
+// the R there is no step to reopen and the vision would change by accident.
+func TestAChangeWithoutARequirementIsRefused(t *testing.T) {
+	files := newFakeFiles(map[string]string{taskPath: twoRequirementDoc().Render()})
+
+	res := ask.Run(ask.Options{Dir: "raiz", Change: "el turno dura 45 minutos"}, files)
+
+	message := assertBlocked(t, res)
+	if !strings.Contains(message, "--req") {
+		t.Errorf("message %q does not name --req", message)
+	}
+	if len(files.wrote) != 0 {
+		t.Errorf("a blocked run wrote %v", files.wrote)
+	}
+}
+
+// TestAChangeWithAnUnknownRequirementListsTheOnesThatExist: a typo is answered
+// with the requirements the document has, not with a guessed link.
+func TestAChangeWithAnUnknownRequirementListsTheOnesThatExist(t *testing.T) {
+	files := newFakeFiles(map[string]string{taskPath: twoRequirementDoc().Render()})
+
+	res := ask.Run(ask.Options{Dir: "raiz", Change: "el turno dura 45 minutos", Requirement: "R9"}, files)
+
+	message := assertBlocked(t, res)
+	if !strings.Contains(message, "R1, R2") {
+		t.Errorf("message %q does not list the requirements", message)
+	}
+	if len(files.wrote) != 0 {
+		t.Errorf("a blocked run wrote %v", files.wrote)
+	}
+}
+
+// TestAChangeWithNoClosedStepSaysNothingReopened: the words still land, and the
+// message says the reopen found nothing instead of pretending it did.
+func TestAChangeWithNoClosedStepSaysNothingReopened(t *testing.T) {
+	files := project()
+
+	res := ask.Run(ask.Options{Dir: "raiz", Change: "el turno dura 45 minutos", Requirement: "R1"}, files)
+
+	if res.Code != ask.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, ask.CodeOK, res.Message)
+	}
+	if !strings.Contains(res.Message, "nothing reopened") {
+		t.Errorf("message %q does not say the reopen found nothing", res.Message)
+	}
+	if got := historyOf(t, files); len(got) != 2 {
+		t.Errorf("history = %v, want the change appended", got)
+	}
+}
+
+// TestRequirementOnlyGoesWithAChange: --req names what a change changes; next to
+// a question it would be silently ignored.
+func TestRequirementOnlyGoesWithAChange(t *testing.T) {
+	files := project()
+
+	res := ask.Run(ask.Options{Dir: "raiz", Question: "Se pueden cancelar?", Requirement: "R1"}, files)
+
+	message := assertBlocked(t, res)
+	if !strings.Contains(message, "--req only goes with --change") {
+		t.Errorf("message %q does not explain --req", message)
+	}
+	if len(files.wrote) != 0 {
+		t.Errorf("a blocked run wrote %v", files.wrote)
+	}
+}

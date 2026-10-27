@@ -17,6 +17,9 @@ const (
 	// KindCraft is `L9 · OFICIO · "decisión" (porque razón)`: the agent
 	// deciding alone and saying why. It is never a question.
 	KindCraft = "craft"
+	// KindChange is `L10 · CAMBIO R1 · "el turno dura 45 minutos"`: the human
+	// changed a requirement, and their words are kept as they gave them.
+	KindChange = "change"
 	// KindNote is anything else, including a line the human typed by hand.
 	KindNote = "note"
 )
@@ -40,6 +43,7 @@ const (
 	recordQuestion = "PREGUNTA "
 	recordAnswer   = "VOS "
 	recordCraft    = "OFICIO"
+	recordChange   = "CAMBIO "
 	reasonOpen     = "(porque "
 )
 
@@ -49,6 +53,11 @@ var (
 
 	// questionIDPattern is the "P1" of a question or an answer.
 	questionIDPattern = regexp.MustCompile(`^P\d+$`)
+
+	// requirementIDPattern is the "R1" a change line has to name: a change is
+	// about a requirement, and anything else is prose the human wrote. A human
+	// typing `CAMBIO r1` by hand means R1, so the case does not matter.
+	requirementIDPattern = regexp.MustCompile(`(?i)^r\d+$`)
 )
 
 // Events returns the history as records, in file order. A malformed line is a
@@ -185,6 +194,11 @@ func parseEvent(line string) Event {
 		event.Kind = KindCraft
 		event.Text, event.Because = parseCraft(strings.TrimSpace(strings.TrimPrefix(body, recordCraft)))
 		return event
+	case strings.HasPrefix(body, recordChange):
+		if change, ok := parseChange(body); ok {
+			change.Line = event.Line
+			return change
+		}
 	}
 
 	event.Text = body
@@ -214,6 +228,17 @@ func parseCraft(body string) (text, because string) {
 	text = strings.TrimSpace(body[:index])
 	because = strings.TrimSpace(strings.TrimSuffix(body[index+len(reasonOpen):], closing))
 	return unquote(text), because
+}
+
+// parseChange reads `CAMBIO R1 · "the words the human gave"`. The requirement id
+// is what makes the reopen derivable; a line that names anything else, or
+// nothing, is a note.
+func parseChange(body string) (Event, bool) {
+	id, text, ok := cut(strings.TrimSpace(strings.TrimPrefix(body, recordChange)))
+	if !ok || !requirementIDPattern.MatchString(id) {
+		return Event{}, false
+	}
+	return Event{Kind: KindChange, ID: strings.ToUpper(id), Text: unquote(text)}, true
 }
 
 // unquote drops the quotes the canonical shape puts around the human's words.

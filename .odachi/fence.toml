@@ -1,19 +1,19 @@
 [[rule]]
-not   = "implementing shape, the verifier trigger or the requirement-change rule"
-paths = ["implementing-shape-the-verifier-trigger-or-the-requirement-change-rule*"]
+not   = "rewriting brief.md or the Requirements section"
+paths = ["rewriting-brief-md-or-the-requirements-section*"]
 deps  = []
 
 [[rule]]
-not   = "changing the current cycle"
-paths = ["changing-the-current-cycle*"]
+not   = "reopening a step that does not cite the requirement"
+paths = ["reopening-a-step-that-does-not-cite-the-requirement*"]
 deps  = []
 
 [[rule]]
-not   = "rewriting old task docs or ADRs"
-paths = ["rewriting-old-task-docs-or-adrs*"]
+not   = "a new verb"
+paths = ["a-new-verb*"]
 deps  = []
 
 [[rule]]
-not   = "the panel itself"
-paths = ["the-panel-itself*"]
+not   = "changing how a step is marked done"
+paths = ["changing-how-a-step-is-marked-done*"]
 deps  = []

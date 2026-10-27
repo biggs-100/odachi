@@ -217,3 +217,54 @@ func TestAddStepKeepsTextOnOneCanonicalLine(t *testing.T) {
 		t.Errorf("round-trip changed the document:\n got %+v\nwant %+v", round, grown)
 	}
 }
+
+// TestReopenUnchecksOnlyTheStepsThatCiteTheRequirement: a change to R1 reopens
+// the done steps that claimed R1 and drops their marks. A step of another
+// requirement, a step still open, and a step with no link are not touched, and
+// the ids it reopened come back in document order.
+func TestReopenUnchecksOnlyTheStepsThatCiteTheRequirement(t *testing.T) {
+	doc := canonical(t,
+		taskdoc.Step{ID: "T1", Text: "reservar", Requirement: "R1", Done: true, Commit: "4a1c9f"},
+		taskdoc.Step{ID: "T2", Text: "ver la agenda", Requirement: "R2", Done: true, Commit: "9b2e11"},
+		taskdoc.Step{ID: "T3", Text: "cancelar", Requirement: "R1"},
+		taskdoc.Step{ID: "T4", Text: "sin requisito", Done: true, Commit: "77aa01"},
+	)
+
+	grown, reopened := doc.Reopen("r1")
+
+	if want := []string{"T1"}; !reflect.DeepEqual(reopened, want) {
+		t.Fatalf("reopened = %v, want %v", reopened, want)
+	}
+	if grown.Steps[0].Done || grown.Steps[0].Commit != "" {
+		t.Errorf("T1 = %+v, want it open and with no mark", grown.Steps[0])
+	}
+	if !grown.Steps[1].Done || grown.Steps[1].Commit != "9b2e11" {
+		t.Errorf("T2 = %+v, want it untouched: it cites R2", grown.Steps[1])
+	}
+	if grown.Steps[2].Done {
+		t.Errorf("T3 = %+v, want it open: it was never done", grown.Steps[2])
+	}
+	if !grown.Steps[3].Done || grown.Steps[3].Commit != "77aa01" {
+		t.Errorf("T4 = %+v, want it untouched: it cites no requirement", grown.Steps[3])
+	}
+	if round := taskdoc.Parse(grown.Render()); !reflect.DeepEqual(round, grown) {
+		t.Errorf("round-trip changed the document:\n got %+v\nwant %+v", round, grown)
+	}
+}
+
+// TestReopenWithNoRequirementReopensNothing: an empty link must not match the
+// steps that carry no requirement at all.
+func TestReopenWithNoRequirementReopensNothing(t *testing.T) {
+	doc := canonical(t,
+		taskdoc.Step{ID: "T1", Text: "sin requisito", Done: true, Commit: "77aa01"},
+	)
+
+	grown, reopened := doc.Reopen("")
+
+	if len(reopened) != 0 {
+		t.Fatalf("reopened = %v, want none", reopened)
+	}
+	if !grown.Steps[0].Done {
+		t.Errorf("T1 = %+v, want it still done", grown.Steps[0])
+	}
+}
