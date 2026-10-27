@@ -105,7 +105,7 @@ func skillPath(root, name string) string {
 }
 
 // TestInitInstallsTheSkillsInOneCommand: `odachi init` leaves the project ready.
-// The thirteen curriculum skills go to the cross-client project location and the
+// Every curriculum skill goes to the cross-client project location and the
 // bootstrap skill goes to the home, so an agent learns how to start a project
 // before a project exists. One command, not two.
 func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {

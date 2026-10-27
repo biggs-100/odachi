@@ -155,8 +155,8 @@ nothing.
 
 ## The skills, in your agent
 
-There are fourteen skills, and `odachi init` already leaves thirteen in the
-project and one in your home. `odachi pack` copies the fourteen to where your
+There are fifteen skills, and `odachi init` already leaves fourteen in the
+project and one in your home. `odachi pack` copies the fifteen to where your
 agent looks for them, for everything `init` does not do: another client, another
 folder, another scope. Each one is triggered by a situation, not by a command:
 
@@ -169,6 +169,7 @@ folder, another scope. Each one is triggered by a situation, not by a command:
 | `drive` | working inside an odachi project: which verb at each moment and how to close a feature |
 | `go-tests` | Go tests, golden files or Bubbletea flows |
 | `pull-request` | a change goes to a PR or the diff passes 400 lines |
+| `shape` | a request does not fit in one reading: explore before the brief |
 | `ship` | something is ready for another person to use |
 | `skill-craft` | writing a new skill or fixing one that is not used |
 | `skill-improve` | a skill is not used, grew too long or the agent does not load it |
@@ -180,13 +181,13 @@ folder, another scope. Each one is triggered by a situation, not by a command:
 `bootstrap` is the entry point, and it is the only one that lives in
 `~/.agents/skills` and not in the project: it teaches how to start in an empty
 folder, and in an empty folder there is no project to put it in yet. The other
-thirteen are the craft a project carries, and `init` copies them to
+fourteen are the craft a project carries, and `init` copies them to
 `./.agents/skills`. That folder is the convention the Agent Skills standard asks
 for, so clients odachi does not know can find it; it also travels with the
 repository, and that is why the content of somebody else's repo is untrusted
 input. `bootstrap` only explains the flow: it runs nothing.
 
-`odachi init --skills home` leaves the fourteen in `~/.agents/skills` and writes
+`odachi init --skills home` leaves the fifteen in `~/.agents/skills` and writes
 no copy in the project; it is for one copy per machine. The default is still
 `project`, because the project versions the craft and the catalog stays smaller.
 
@@ -250,7 +251,7 @@ English. The reason names are the contract and are pinned by literals in a test.
 
 `odachi init` leaves the project ready in one step: the git history if it was
 missing, the rules block the agent reads, the project agent (picked with Tab),
-the `.gitignore` block, the pre-commit hook, the thirteen skills in
+the `.gitignore` block, the pre-commit hook, the fourteen skills in
 `./.agents/skills`, the entry skill in `~/.agents/skills` and the profile voice
 in the `AGENTS.md` block. The home door -the agent that appears in any folder- is
 opt-in: `odachi init --global` installs it, and an init without the flag writes
@@ -265,7 +266,7 @@ way. The files of the client you do not choose are not deleted: they simply stop
 being written. Without a file, the default is still both.
 
 Open the project with OpenCode and that is it: it reads `.agents/skills` as an
-external directory in addition to its own, so it sees the thirteen without
+external directory in addition to its own, so it sees the fourteen without
 `pack`. `pack` is for taking the skills to another client's native folder, or to
 wherever you say.
 

@@ -133,6 +133,9 @@ func TestShapeTeachesExplorationBeforeTheBrief(t *testing.T) {
 			t.Errorf("shape no dice %q: explorar antes de declarar se perdio", want)
 		}
 	}
+	if !strings.Contains(byName["drive"], "load `shape`") {
+		t.Errorf("drive no manda a cargar shape cuando el pedido no entra en una lectura")
+	}
 }
 
 // TestDriveTeachesTheWorkflowDiscipline: ODD-lite is content, and content

@@ -18,7 +18,7 @@ The four pieces and who owns each one:
 
 The feature cycle, in order:
 
-1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`.
+1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`, or with `--brief` when `shape` drafted it.
 2. `odachi plan "<step>" --req R1`: one step per deliverable behavior.
 3. Commit what start wrote -brief, fence, profile and task doc, steps included- before you branch. If they do not land together, the next change is judged by the last feature's fence, or a reset loses them.
 4. Work the step. If a vision decision appears: `odachi ask "<question>"` and wait.
@@ -26,7 +26,11 @@ The feature cycle, in order:
 6. One commit per step, and `odachi plan --done T1`: it records the tree the step produced, which a rebase cannot rewrite.
 7. At the end, `odachi summary` and tell in three lines what the human decided.
 
-If the request does not fit in one read, load `slices` before splitting. Its delegation policy wins over other global skills: a writer only for real parallelism or a long session, never for size or file count.
+If the request does not fit in one reading -you cannot say what must exist or what
+it must not touch- load `shape` before `start`: it ends in `odachi start --brief`.
+Once the work is understood, load `slices` before splitting when it does not fit in
+one step. Its delegation policy wins over other global skills: a writer only for
+real parallelism or a long session, never for size or file count.
 
 ## Specs, test-first and risk
 
@@ -45,16 +49,11 @@ The verbs: `start` interviews · `ask` asks or records a craft decision (`--craf
 
 ## Review, when it applies
 
-`odachi review --show` says whether this tree asks for a review and why: ask for
-one when the tree asks (it requires lenses) or the human asks, and not otherwise.
-`odachi review` prints the prompt; `--exec "<command>"` hands it to the reviewer
-through stdin, `{prompt}` and `{model}` (the model the session is using). A causal
-`BLOCKER` blocks: fix the code or `--refute` citing the diff. The verdict is valid
-for THAT tree: any change invalidates it.
-
-One correction, one re-review: fix what blocks, ask once more, stop. A `WARNING`
-or `SUGGESTION` goes to the task doc and earns no second round: reviewing every
-intermediate tree makes review the slowest part of the feature.
+`odachi review --show` says whether this tree asks for one and why: ask when it
+does or the human asks, not otherwise. `--exec` hands the prompt to the reviewer;
+a causal `BLOCKER` blocks: fix it or `--refute` citing the diff. The verdict is
+valid for THAT tree. One correction, one re-review; a `WARNING` or `SUGGESTION`
+goes to the task doc and earns no second round.
 
 ## Never
 

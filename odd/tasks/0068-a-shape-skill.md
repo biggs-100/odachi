@@ -10,7 +10,7 @@ R1 · "a shape skill explores before the brief and ends in start --brief, so the
 - drive sends the agent to shape before start, and the impact map points to the skill from the Organic PDD row
 
 ## Steps
-- [ ] T1 · shape exists: the skill explores before the brief and ends in start --brief, with its embed test and registry   R1
+- [x] T1 · shape exists: the skill explores before the brief and ends in start --brief, with its embed test and registry   R1 · tree:e65872c8a8e59a42ed25620273bb671d9ece2cc2
 - [ ] T2 · drive, README and the impact map send the agent to shape before start   R1
 
 ## History
