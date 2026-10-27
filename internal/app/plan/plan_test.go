@@ -268,10 +268,12 @@ func TestPlanDoneMarksAndRecordsTheCommit(t *testing.T) {
 	}
 }
 
-// fakeGit answers the two trees the done form compares: HEAD and the worktree.
+// fakeGit answers the trees the done form asks about: HEAD, the worktree, and the
+// tree of a commit a test says the repository can read.
 type fakeGit struct {
 	head     string
 	worktree string
+	trees    map[string]string
 	err      error
 }
 
@@ -283,6 +285,14 @@ func (g fakeGit) HeadTree(string) (string, error) {
 }
 
 func (g fakeGit) WorktreeTree(string) (string, error) { return g.worktree, nil }
+
+func (g fakeGit) TreeOf(_, commit string) (string, error) {
+	tree, ok := g.trees[commit]
+	if !ok {
+		return "", errors.New("unknown commit")
+	}
+	return tree, nil
+}
 
 // TestPlanDoneDoesNotGuessAnOlderStep: marking a step after a later one is done
 // would read HEAD -a later commit- and record its bytes as this step's. The tool
@@ -311,6 +321,48 @@ func TestPlanDoneDoesNotGuessAnOlderStep(t *testing.T) {
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[0]; step.Commit != "" {
 		t.Errorf("step = %+v, want no guessed mark", step)
+	}
+}
+
+// TestPlanDoneCanonicalizesTheCommitItWasGiven: --commit names a commit; the
+// document records its tree, so the mark survives the rebase that rewrites the
+// commit. The message says what was recorded.
+func TestPlanDoneCanonicalizesTheCommitItWasGiven(t *testing.T) {
+	files := project()
+	const tree = "5055fcf605aaf853f750b93dc95f6f1fdc21569b"
+
+	res := plan.Run(plan.Options{
+		Dir: "raiz", Done: "T2", Commit: "6c0847c",
+		Git: fakeGit{trees: map[string]string{"6c0847c": tree}},
+	}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if want := "step T2 done · tree:5055fcf"; res.Message != want {
+		t.Errorf("Message = %q, want %q", res.Message, want)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "tree:"+tree {
+		t.Errorf("step = %+v, want the bytes of the commit", step)
+	}
+}
+
+// TestPlanDoneKeepsTheShaItCannotRead: a commit this clone cannot read -collected,
+// misspelled, from another repository- keeps the spelling it came with. Inventing
+// a tree there would be worse than a sha that may not resolve.
+func TestPlanDoneKeepsTheShaItCannotRead(t *testing.T) {
+	files := project()
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "T2", Commit: "deadbee", Git: fakeGit{}}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if want := "step T2 done · deadbee"; res.Message != want {
+		t.Errorf("Message = %q, want %q", res.Message, want)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "deadbee" {
+		t.Errorf("step = %+v, want the sha as it came", step)
 	}
 }
 
@@ -371,8 +423,9 @@ func TestPlanDoneInARepositoryWithNoCommitClosesTheStep(t *testing.T) {
 	}
 }
 
-// TestPlanDonePrefersTheCommitItWasGiven: --commit stays as the explicit form,
-// and the tree is not even read.
+// TestPlanDonePrefersTheCommitItWasGiven: --commit stays as the explicit form.
+// When the repository cannot read that commit, the sha is what is stored; the
+// readable case is pinned by TestPlanDoneCanonicalizesTheCommitItWasGiven.
 func TestPlanDonePrefersTheCommitItWasGiven(t *testing.T) {
 	files := project()
 
