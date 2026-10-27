@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.33 - 2026-10-26
+
+A mark is durable whichever form you use.
+
+- **`plan --done T1 --commit <sha>` records the tree of that commit** (#88), the
+  same durable mark the default writes: a rebase rewrites the commit and keeps the
+  tree.
+- **A commit this clone cannot read keeps the sha**, because inventing a tree would
+  be worse than a sha that may not resolve.
+- **The message names what was stored**, and `progress` resolves it to the landed
+  commit.
+- **Dogfooded on itself**: 0066's T1 is marked `tree:23b3085…` and `progress` prints
+  `c8daa04`.
+
 ## v0.11.32 - 2026-10-26
 
 The ledger names commits that exist.
