@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.32 - 2026-10-26
+
+The ledger names commits that exist.
+
+- **`plan --done T1` records the tree of the commit** (#85), the identity a rebase
+  cannot rewrite: the same one a proof and a verdict already use. It stays honest
+  too: a step marked before its commit, or an older step marked after a later one,
+  records no tree and says why.
+- **`progress` names the landed commit**: it resolves the tree to the commit on the
+  branch, resolves an older sha through its bytes when it landed with another one,
+  and says `not on this branch` when the bytes never landed. The machine state
+  carries `note`.
+- **`--commit` still works** as the explicit form for a step whose commit you know.
+- **No manual corrections**: 0064 and 0065 now report the commits that exist on
+  `main` from marks that were local.
+
 ## v0.11.31 - 2026-10-26
 
 A paid review survives a tool's refusal.
