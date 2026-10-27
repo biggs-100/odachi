@@ -366,6 +366,7 @@ func TestTheStateNamesAreTheContract(t *testing.T) {
 		"off":             progress.ReviewOff,
 		"not_due":         progress.ReviewNotDue,
 		"owed":            progress.ReviewOwed,
+		"waived":          progress.ReviewWaived,
 		"on_file":         progress.ReviewOnFile,
 		"feature_open":    progress.WhyOpen,
 		"after_the_close": progress.WhyAfterClose,
@@ -513,5 +514,27 @@ func TestProgressNamesTheFeatureAndItsSteps(t *testing.T) {
 	}
 	if result.Code != 0 {
 		t.Errorf("code = %d, want 0: a report is not a gate", result.Code)
+	}
+}
+
+// TestAReportSaysTheReviewWasWaived: a closed feature that waived its review is
+// not "not due yet" and not "on file": it is the waiver, named, so the panel and
+// the human read the decision instead of a silence.
+func TestAReportSaysTheReviewWasWaived(t *testing.T) {
+	p := newProject()
+	doc := strings.Replace(taskDoc, "- [ ] T2 · el turno se puede cancelar   R1", "- [x] T2 · el turno se puede cancelar   R1 · abc1234", 1)
+	doc = strings.Replace(doc, "# reserva\n", "# reserva\nReview: waived\n", 1)
+	p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(doc)
+
+	result := p.run(progress.Options{ReviewMode: true, Review: nothingOwed})
+
+	if result.State == nil {
+		t.Fatal("no state")
+	}
+	if got := result.State.Review.State; got != progress.ReviewWaived {
+		t.Fatalf("review = %q, want %q", got, progress.ReviewWaived)
+	}
+	if lines := strings.Join(result.Lines, "\n"); !strings.Contains(lines, "review: waived by the human") {
+		t.Errorf("the lines do not name the waiver:\n%s", lines)
 	}
 }
