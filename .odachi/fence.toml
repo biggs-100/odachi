@@ -1,19 +1,19 @@
 [[rule]]
-not   = "changing the floor or how the binary picks lenses"
-paths = ["changing-the-floor-or-how-the-binary-picks-lenses*"]
+not   = "rewriting brief.md or the Requirements section"
+paths = ["rewriting-brief-md-or-the-requirements-section*"]
 deps  = []
 
 [[rule]]
-not   = "a new verb or flag"
-paths = ["a-new-verb-or-flag*"]
+not   = "reopening a step that does not cite the requirement"
+paths = ["reopening-a-step-that-does-not-cite-the-requirement*"]
 deps  = []
 
 [[rule]]
-not   = "the requirement-change rule"
-paths = ["the-requirement-change-rule*"]
+not   = "a new verb"
+paths = ["a-new-verb*"]
 deps  = []
 
 [[rule]]
-not   = "making review mandatory for every feature"
-paths = ["making-review-mandatory-for-every-feature*"]
+not   = "changing how a step is marked done"
+paths = ["changing-how-a-step-is-marked-done*"]
 deps  = []

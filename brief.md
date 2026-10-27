@@ -1,22 +1,22 @@
-# the-six-risk
+# the-plan-grows
 
 ## What must exist
-- the six risk items decide the ceremony: the lens a change asks for, the verifier that runs, and whether a waiver is on the table
+- the plan grows and the vision does not: when the human changes a requirement, the words land in the history and the steps that claimed it reopen
 
 ## Done when
-- commits carries the table: each item names its lens, the verifier and that no waiver applies
-- slices names the verifier trigger for the six, and drive sends the agent to the table
-- the embed tests pin the table and the trigger, and odachi skills --check passes
-- the impact map records the second follow-up as implemented
+- odachi ask --change "<words>" --req R1 appends the words verbatim to the history and reopens every done step that cites R1, dropping its mark
+- a change with no --req is refused, because the vision changes with a new feature and not with a reopened step
+- drive teaches the rule, the ask help names the form, and the tests pin the line, the reopen and the refusal
+- the impact map records the third follow-up as implemented
 
 ## Not included (first version)
-- changing the floor or how the binary picks lenses
-- a new verb or flag
-- the requirement-change rule
-- making review mandatory for every feature
+- rewriting brief.md or the Requirements section
+- reopening a step that does not cite the requirement
+- a new verb
+- changing how a step is marked done
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a risk changes ceremony without changing the binary.
+- Wants to learn: how a change of requirement is recorded without rewriting the vision.
