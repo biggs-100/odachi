@@ -12,8 +12,8 @@ R1 · "the ledger names the commit a step landed in, and that commit exists on t
 - tests pin the mark, the resolution and the missing case
 
 ## Steps
-- [ ] T1 · plan --done records the tree of HEAD when no commit was given, and a repository with no commit says so   R1
-- [ ] T2 · progress resolves a tree mark, and a commit whose bytes landed elsewhere, to the commit on this branch   R1
+- [x] T1 · plan --done records the tree of HEAD when no commit was given, and a repository with no commit says so   R1 · 6c0847c
+- [x] T2 · progress resolves a tree mark, and a commit whose bytes landed elsewhere, to the commit on this branch   R1 · tree:5055fcf605aaf853f750b93dc95f6f1fdc21569b
 
 ## History
 L1 · "the ledger names the commit a step landed in, and that commit exists on the branch, without manual correction"
