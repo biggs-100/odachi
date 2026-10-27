@@ -9,19 +9,12 @@ does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after v0.11.30, closing feature 0062.
+Last written: after v0.11.31, closing feature 0063.
 
 ## Open
 
-### internal/app/check/check.go · the waiver branch of the exported ReviewOwed
-
-`ReviewOwed` answers "nothing owed" for a closed feature whose task doc records
-`Review: waived` (check.go:723-730), and no test calls it there: the closed-waiver
-test drives `reviewGate`, the report test injects the answer, and the taskdoc test
-stops at the parser. If the branch were lost or inverted, every test would stay
-green and a waived feature would owe a verdict again. The fix is a test that calls
-`check.ReviewOwed` with a closed waived document, and with the same document
-without the waiver.
+Nothing. Every row the store carried about unchanged bytes has a test or a
+decision.
 
 ## Accepted
 
@@ -40,6 +33,16 @@ regenerated since, and the next `check --run` overwrites them. A length-prefixed
 header would remove the ambiguity and detect a truncated proof as well; it is a
 format change for a case this narrow, and it can wait until the format changes for
 another reason.
+
+## Closed by feature 0063
+
+### internal/app/check/check.go · the waiver branch of the exported ReviewOwed
+
+`TestReviewOwedAnswersTheWaiver` calls the exported function with a closed
+document that records `Review: waived`, and with the same document without the
+line: the branch answers "nothing owed" in the first case and owed at the base in
+the second, on the same tree and the same git. Observed red by making the branch
+answer owed, so the test is not a comment.
 
 ## Closed by feature 0057
 

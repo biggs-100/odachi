@@ -10,7 +10,7 @@ R1 · "the gate's waiver answer is driven by a test that calls ReviewOwed direct
 - the test fails when the waiver branch is removed, verified by mutation
 
 ## Steps
-- [ ] T1 · check.ReviewOwed is called with a closed waived document, and with the same document without the waiver   R1
+- [x] T1 · check.ReviewOwed is called with a closed waived document, and with the same document without the waiver   R1 · 0416636
 
 ## History
 L1 · "the gate's waiver answer is driven by a test that calls ReviewOwed directly, so the branch cannot be lost or inverted"
