@@ -23,3 +23,4 @@ R1 · "the store leaves the project, and the clone's state lives in .git/odachi"
 L1 · "the store leaves the project, and the clone's state lives in .git/odachi"
 L2 · OFICIO · "the ignored state moves first and the tracked files second" (porque each step leaves the repo green, and the store can be proven without touching what the human commits)
 L3 · OFICIO · "the migration is its own verb, odachi store move, not a flag on init" (porque init is idempotent setup and moving evidence looks destructive; a verb that only migrates is provable on its own)
+L4 · OFICIO · "the first step is cut in six: eight verbs write backups through one adapter, and the verdict store drags the ignore machinery" (porque a step is sized by the outcomes it changes, not by the files it touches; three stores in one commit would hide the review change inside a path change)
