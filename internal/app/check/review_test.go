@@ -55,7 +55,19 @@ func proofPath() string { return filepath.Join(dir, "proof", "0007-turnos.txt") 
 
 // reviewableDoc is a task document that records its base and one step, open or
 // done: the two states the review gate tells apart.
+// reviewableDoc is a feature document; waivedRecord records the human's decision
+// in the preamble, which is the only difference between the two halves of
+// TestReviewOwedAnswersTheWaiver.
 func reviewableDoc(base string, done bool) string {
+	return reviewableDocWith(base, done, false)
+}
+
+// waivedReviewableDoc is reviewableDoc with "Review: waived" in the preamble.
+func waivedReviewableDoc(base string, done bool) string {
+	return reviewableDocWith(base, done, true)
+}
+
+func reviewableDocWith(base string, done, waived bool) string {
 	step := taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1"}
 	if done {
 		step.Done = true
@@ -64,6 +76,7 @@ func reviewableDoc(base string, done bool) string {
 	return taskdoc.TaskDoc{
 		Title:        "turnos",
 		Base:         base,
+		ReviewWaived: waived,
 		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
 		DoneWhen:     []string{"reservo un turno"},
 		Steps:        []taskdoc.Step{step},
@@ -302,6 +315,48 @@ func TestReviewOwedAgreesWithTheGate(t *testing.T) {
 	}
 	if got := run(t, newFakeFiles(closing), atClose, check.Options{ReviewMode: true}); got.Code == int(gate.Ready) {
 		t.Fatalf("the gate asked for no verdict while the exported answer says it is owed")
+	}
+}
+
+// TestReviewOwedAnswersTheWaiver: the exported question is what the report asks,
+// and its waiver branch was new behavior no test drove. Both halves run on the
+// SAME tree and the SAME git -a feature whose closing step is this change-, so the
+// only difference is the line in the preamble: a waived close owes nothing, and the
+// same document without the line is owed at its base. Wiring the halves differently
+// would let the branch disappear and the test still pass, which is the defect this
+// test exists to prevent.
+//
+// It is a characterization test: it was observed red by removing the branch before
+// it was committed.
+func TestReviewOwedAnswersTheWaiver(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+
+	// The close: the worktree document marks the last step done, and HEAD still has
+	// it open. That is the tree where the gate owes the feature's verdict.
+	atClose := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"odd/tasks/0007-turnos.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
+	}
+
+	waived := readyFiles()
+	waived["odd/tasks/0007-turnos.md"] = waivedReviewableDoc(base, true)
+	owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(waived), atClose)
+	if err != nil {
+		t.Fatalf("ReviewOwed on the waived close: %v", err)
+	}
+	if owed || gotBase != "" {
+		t.Errorf("ReviewOwed(waived close) = %v, %q; want nothing owed", owed, gotBase)
+	}
+
+	plain := readyFiles()
+	plain["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	owed, gotBase, err = check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(plain), atClose)
+	if err != nil {
+		t.Fatalf("ReviewOwed on the same close without the waiver: %v", err)
+	}
+	if !owed || gotBase != base {
+		t.Errorf("ReviewOwed(close without the waiver) = %v, %q; want owed at %q", owed, gotBase, base)
 	}
 }
 
