@@ -1,29 +1,19 @@
 [[rule]]
-not   = "shipping a role of our own: marketing is created with the skill as the acceptance proof, not carried in the binary"
-paths = ["shipping-a-role-of-our-own-marketing-is-created-with-the-skill-as-the-acceptance-proof-not-carried-in-the-binary*"]
+not   = "researching general best practices"
+paths = ["researching-general-best-practices*"]
 deps  = []
 
 [[rule]]
-not   = "managing several roles at once, or a `--role` flag on other verbs"
-paths = ["managing-several-roles-at-once-or-a-role-flag-on-other-verbs*"]
+not   = "a sources section inside a skill"
+paths = ["a-sources-section-inside-a-skill*"]
 deps  = []
 
 [[rule]]
-not   = "internet access from the binary: the agent researches, the binary renders"
-paths = ["internet-access-from-the-binary-the-agent-researches-the-binary-renders*"]
+not   = "a network call from the binary"
+paths = ["a-network-call-from-the-binary*"]
 deps  = []
 
 [[rule]]
-not   = "touching novato/senior, the profile, the subagents, or the review lenses"
-paths = ["touching-novato-senior-the-profile-the-subagents-or-the-review-lenses*"]
-deps  = []
-
-[[rule]]
-not   = "a knowledge base, a corpus or a vector store: the role is prose with sources, not an index"
-paths = ["a-knowledge-base-a-corpus-or-a-vector-store-the-role-is-prose-with-sources-not-an-index*"]
-deps  = []
-
-[[rule]]
-not   = "a `seniority = 10` field: the years are not verifiable, and what the role asks and refuses is"
-paths = ["a-seniority-10-field-the-years-are-not-verifiable-and-what-the-role-asks-and-refuses-is*"]
+not   = "changing role-craft"
+paths = ["changing-role-craft*"]
 deps  = []
