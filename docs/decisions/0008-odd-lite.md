@@ -1,6 +1,6 @@
 # 0008 · ODD-lite: the discipline without the grammar
 
-Status: accepted · Date: 2026-10 · Session: v0.11.0
+Status: accepted · Date: 2026-10 · Session: v0.11.0 · Name superseded by 0031 (the decisions stand)
 
 ## Context
 

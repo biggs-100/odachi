@@ -4,6 +4,9 @@
 
 ## What it is
 
+- **Proof-Driven Development**: the method has a name. Nothing is done without a
+  green run of **this** tree, the close asks for a verdict instead of a summary,
+  and the fence -what is not included- is yours. Proof, not product.
 - A CLI that makes the agent do the dirty work with senior discipline, while you
   make the decisions that matter: the vision, the scope, what is non-negotiable.
 - A tutor: every question explains why it exists, so the person stops being a
