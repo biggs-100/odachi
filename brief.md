@@ -1,21 +1,21 @@
-# the-gate-s
+# the-method-has
 
 ## What must exist
-- the gate's waiver answer is driven by a test that calls ReviewOwed directly, so the branch cannot be lost or inverted
+- the method has a name and the project says it once: Proof-Driven Development
 
 ## Done when
-- check.ReviewOwed answers nothing owed for a closed feature whose document records the waiver
-- the same document without the waiver is owed at the feature's base
-- the test fails when the waiver branch is removed, verified by mutation
+- the README names Proof-Driven Development in one sentence, with the proof as the atom and the verdict as the close
+- a new ADR records the decision and the difference from Product-Driven Development
+- ADR 0008 points to the new name and keeps every decision it took
 
 ## Not included (first version)
-- changing when the gate asks: the rule of 0061 stays
-- a new flag, a new mode or a new message
-- the other branches of ReviewOwed, already pinned by 0051
+- a new verb, a new flag or a new grammar
+- renaming ODD-lite across the history: the old documents keep their words
+- a website, a manifesto or a logo
 - the panel itself
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a characterization test proves it can fail.
+- Wants to learn: how a name changes what a project claims.

@@ -1,16 +1,16 @@
 [[rule]]
-not   = "changing when the gate asks: the rule of 0061 stays"
-paths = ["changing-when-the-gate-asks-the-rule-of-0061-stays*"]
+not   = "a new verb, a new flag or a new grammar"
+paths = ["a-new-verb-a-new-flag-or-a-new-grammar*"]
 deps  = []
 
 [[rule]]
-not   = "a new flag, a new mode or a new message"
-paths = ["a-new-flag-a-new-mode-or-a-new-message*"]
+not   = "renaming ODD-lite across the history: the old documents keep their words"
+paths = ["renaming-odd-lite-across-the-history-the-old-documents-keep-their-words*"]
 deps  = []
 
 [[rule]]
-not   = "the other branches of ReviewOwed, already pinned by 0051"
-paths = ["the-other-branches-of-reviewowed-already-pinned-by-0051*"]
+not   = "a website, a manifesto or a logo"
+paths = ["a-website-a-manifesto-or-a-logo*"]
 deps  = []
 
 [[rule]]
