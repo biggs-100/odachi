@@ -10,6 +10,21 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
+// TestStartHelpNamesTheWaiverLane: the refusal for an unattributed verdict sends a
+// human to `odachi start --waive-review`, and a lane the help does not mention is a
+// command nobody finds. The flag existed before this line; the help did not say so.
+func TestStartHelpNamesTheWaiverLane(t *testing.T) {
+	t.Parallel()
+
+	code, out, errOut := runDir(t, t.TempDir(), []string{"start", "--help"}, "")
+	if code != 0 {
+		t.Fatalf("start --help: code = %d (stderr: %q)", code, errOut)
+	}
+	if !strings.Contains(out, "--waive-review") {
+		t.Errorf("the help does not name the waiver lane:\n%s", out)
+	}
+}
+
 // TestAFeatureCanBeChosenByItsNumber: two features live in one tree, and the
 // writer acts on the one named instead of the highest. Without the flag nothing
 // changes: the highest is the feature the human is working on now.

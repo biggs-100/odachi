@@ -13,7 +13,8 @@ R1 · "the verdict says who judged it, and the gate refuses one that names no mo
 
 ## Steps
 - [x] T1 · the review prompt asks the answer to name the model that judged it   R1
-- [ ] T2 · check refuses a verdict whose required lens names no model while the proof names one, and offers the waiver   R1
+- [x] T2 · check refuses a verdict whose required lens names no model while the proof names one, and offers the waiver   R1
+- [ ] T3 · the start help names the waiver lane it already writes   R1
 
 ## History
 L1 · "the verdict says who judged it, and the gate refuses one that names no model when the proof names one"

@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A gate is only as strong as the least it lets you say.
+
+- **A verdict that says nobody judged it is refused.** `check` compares the model
+  in a verdict with the one in the proof, and a verdict that named none passed
+  that comparison by saying less. It now refuses it, names the lenses and the
+  model the proof carries, and offers the two honest roads: re-run the review
+  naming the model that judged (`odachi review --model <provider/model>`), or
+  record the human's decision that there is no second model
+  (`odachi start --waive-review`). The prompt now asks the answer to name its
+  model, and `--help` lists the waiver lane it always had.
+
 ## v0.11.42 - 2026-10-28
 
 Three refusals learn to say the true thing: a name is not an identity, a gap goes

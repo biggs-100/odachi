@@ -73,6 +73,10 @@ const (
 	// one agent approving the tree it wrote. Both identities are what each side
 	// declared, so this is disclosure, not proof of who signed.
 	ReasonReviewSelf = "review_self"
+	// ReasonReviewUnattributed means the proof names a model and the verdict
+	// names none, so the identity gate has nothing to compare: a silence would
+	// otherwise be the cheapest way past it.
+	ReasonReviewUnattributed = "review_unattributed"
 )
 
 // nextReview is the continuation for a missing verdict, and the command that
@@ -869,6 +873,27 @@ func (r *runner) requireReview(base string) *Result {
 		return &problem
 	}
 
+	// Silence is not an identity. The gate compares two declarations, so a verdict
+	// that names no model would pass it by saying less - the cheapest way around a
+	// rule - and the tree would be approved by nobody in particular.
+	if lenses := unattributedLenses(r.proofModel, verdict, required); len(lenses) > 0 {
+		message := fmt.Sprintf("the review of %s does not say who judged it, and the proof names %s: a verdict that names no model cannot be compared with the tree's builder",
+			strings.Join(lenses, ", "), strings.TrimSpace(r.proofModel))
+		problem := Result{
+			Code:    int(gate.NeedsDecision),
+			Reason:  ReasonReviewUnattributed,
+			Message: message,
+			Next:    "odachi review --model <provider/model>",
+			Lines: []string{
+				message,
+				"next: odachi review --model <provider/model>",
+				"or record the decision that there is no second model: odachi start --waive-review",
+				"why: an identity nobody declared is an identity nobody can check",
+			},
+		}
+		return &problem
+	}
+
 	if missing := verdict.Missing(required); len(missing) > 0 {
 		problem := lensMissing(missing, r.storeFile(rel))
 		return &problem
@@ -1100,6 +1125,33 @@ func selfJudgedLenses(proofModel string, verdict reviewdomain.Verdict, required 
 			model = strings.TrimSpace(verdict.Model)
 		}
 		if model != "" && strings.EqualFold(model, proofModel) {
+			lenses = append(lenses, name)
+		}
+	}
+	return lenses
+}
+
+// unattributedLenses is the required lenses this verdict answered while naming no
+// model, on a tree whose proof names one. It is the mirror of selfJudgedLenses: one
+// compares what both sides declare, and this one refuses the case where a side
+// declares nothing at all.
+func unattributedLenses(proofModel string, verdict reviewdomain.Verdict, required []string) []string {
+	proofModel = strings.TrimSpace(proofModel)
+	if proofModel == "" {
+		return nil
+	}
+
+	var lenses []string
+	for _, lens := range required {
+		name := strings.ToLower(strings.TrimSpace(lens))
+		if !answered(verdict.Lenses, name) {
+			continue
+		}
+		model := strings.TrimSpace(verdict.Models[name])
+		if model == "" {
+			model = strings.TrimSpace(verdict.Model)
+		}
+		if model == "" {
 			lenses = append(lenses, name)
 		}
 	}

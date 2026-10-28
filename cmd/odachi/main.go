@@ -1522,6 +1522,7 @@ flags:
   --learn s       answer 7 (repeatable): what you want to learn
   --brief path    read an existing brief instead of asking
   --force         rewrite an existing brief.md (it is backed up first)
+  --waive-review  record that this feature lands without a review verdict (the proof and the fence still apply)
   --json          machine output
 
 after start:
