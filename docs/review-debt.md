@@ -13,6 +13,32 @@ Last written: after 0080, the sentinel is pinned end to end.
 
 ## Open
 
+### the review gate - a verdict that names no model is a review the gate cannot attribute
+
+`check` refuses a verdict whose `model` is the proof's ("a model does not judge
+its own tree"), and the refusal is right. What it cannot do is notice the same
+reviewer arriving unnamed: `--attach` stores whatever `model` the answer carries,
+an empty one included, and `--exec` fills it only when the command names
+`{model}`. 0085's closing verdict was written by the model that built and proved
+the tree, at the human's cost decision, and the file does not say so - the gate
+read it as attributed by nobody and passed. The honest shape is a refusal when the
+proof names a model and the verdict names none, unless the human records the
+trade; that is a small change with a large blast radius (every old verdict), and
+it needs its own feature.
+
+### internal/app/review - `opencode run` as the `--exec` reviewer, measured
+
+The 0082 debt asked for one cheap probe before calling the 600s timeout a defect.
+Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
+--file <prompt> "..."` with a **tiny** file answers in seconds (mimo-v2.6-flash);
+with 0085's **122 KB** prompt it prints its banner and produces nothing until the
+600s timeout, twice (mimo-v2.6-flash), while `deepseek-v4.1-flash` returns the
+full JSON for the same file in the same session. So the variable is the pair
+(model, prompt size), not the CLI or `--file`. A reviewer that cannot take a
+120 KB prompt is not a reviewer this tool can hand a large diff to; the next
+feature that touches the review pipeline should either split the prompt by lens
+group or pin a model known to read it whole.
+
 ### internal/app/start/artifacts.go - an unreadable task document blocks the run, untested
 
 `documentOpen` returns a blocked result when a document whose slug matches cannot
