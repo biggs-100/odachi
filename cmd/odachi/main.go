@@ -525,7 +525,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
-	flags.StringVar(&opts.Exec, "exec", "", "run this command with the prompt on stdin and save the verdict it answers")
+	flags.StringVar(&opts.Exec, "exec", "", "run this command with the prompt on stdin (and {prompt} as a path to it) and save the verdict it answers, or the file it writes when it names {verdict}")
 	flags.StringVar(&opts.Model, "model", "", "model that replaces {model} in --exec (default: the session's, or ODACHI_MODEL)")
 	flags.StringVar(&opts.Attach, "attach", "", "save a verdict or a refutation already written in this file")
 	flags.BoolVar(&opts.Show, "show", false, "which verdict exists for this tree, or that there is none")
@@ -1403,7 +1403,8 @@ check flags:
 
 review flags:
   --exec s        run this command with the prompt on stdin (and {prompt} as the path to that
-                  same file) and save the verdict it answers
+                  same file) and save the verdict it answers; a command that names
+                  {verdict} writes its answer in that file and stdout is diagnosis
   --model s       model that replaces {model} in --exec (default: the session's, or
                   ODACHI_MODEL)
   --attach path   save a verdict or a refutation that is already written (agent or human)
@@ -1538,9 +1539,11 @@ after start:
   odachi undo --file brief                      only that one: brief | profile | fence | task
   odachi check                                  is it ready? brief, fence, questions and proof
   odachi check --run "<command>"                run the proof and save it with its tree
-  odachi review                                 the review prompt for this candidate
+  odachi review                                 the review prompt for this candidate, also saved
+                                                 in the clone's store and named on stderr
   odachi review --exec "<command>"              run the reviewer with the prompt on stdin and save its verdict
   odachi review --exec "agent {prompt}"         the same, but the reviewer receives the prompt path
+  odachi review --exec "agent --write {verdict}"  the answer comes from that file, and stdout is diagnosis
   odachi review --attach <file>                 save a verdict or a refutation that is already written
   odachi review --show                          which verdict exists for this tree
   odachi review --lens risk                     add a lens to the ones the evidence asks for

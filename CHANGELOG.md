@@ -24,6 +24,23 @@ A decision stops being a one-time order: the store remembers it, so the next
   same rule that refuses a typo: upgrade the installed odachi before the project
   records the choice.
 
+## Unreleased
+
+The review grows the two artifacts it was missing: the question and the answer.
+
+- **The prompt has a home beside its verdict.** `odachi review` writes it into
+  the clone's store as `reviews/<tree>.prompt.md` and names it on stderr, so an
+  agent hands a reviewer that path instead of inventing one. stdout stays the
+  prompt alone, because a pipe into a reviewer must carry nothing else; a prompt
+  in `proof/` is no longer something anyone has to improvise.
+- **A reviewer can answer in a file.** A command that names `{verdict}` gets an
+  empty file in the store's `answers/`, writes its JSON there, and stdout becomes
+  diagnosis only: banners, spinners and logs stop being part of the answer. The
+  path is quoted exactly as `{prompt}` is, the file is emptied before each lens
+  group so a group cannot inherit another's answer, and it is removed once read. A
+  command without the token still answers on stdout, and an empty file is refused
+  instead of silently falling back to it.
+
 ## v0.11.40 - 2026-10-27
 
 The first row of the debt file closes with the test that keeps it closed.

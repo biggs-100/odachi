@@ -493,6 +493,10 @@ func (osShell) Run(dir, command string, timeoutSeconds int) (string, string, int
 	return shellcmd.Run(dir, command, timeoutSeconds)
 }
 
+// Quote is how this platform's shell spells one path, so a token the verb
+// substitutes is quoted exactly like {prompt}.
+func (osShell) Quote(path string) string { return shellcmd.Quote(path) }
+
 // RunInput is the review's form: the reviewer receives the prompt the verb built.
 func (osShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {
 	return shellcmd.RunInput(dir, command, input, timeoutSeconds)

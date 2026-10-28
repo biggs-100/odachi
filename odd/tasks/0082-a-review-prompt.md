@@ -12,7 +12,9 @@ R1 · "a review prompt and its answer have an owner, so neither lands in the tre
 
 ## Steps
 - [x] T1 · the printed review writes its prompt into the clone's store and names the path   R1 · tree:889c6b78fb562000d55417d13a1b0fb5754f745e
-- [ ] T2 · exec reads the answer from the {verdict} file the command was given, and stdout is diagnosis   R1
+- [x] T2 · exec reads the answer from the {verdict} file the command was given, and stdout is diagnosis   R1 · tree:d1462551e86c3cf765c5104a783197b1b978b604
+- [x] T3 · the help and the changelog say where the prompt and the answer live   R1
+- [x] T4 · the corrections the review asked for: a quoted answer path, a separate folder, and no inheritance   R1
 
 ## History
 L1 · "a review prompt and its answer have an owner, so neither lands in the tree nor in a scroll"

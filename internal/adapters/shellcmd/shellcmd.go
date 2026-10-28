@@ -31,6 +31,11 @@ const waitDelay = 2 * time.Second
 // in cmd /c, and a reviewer that takes a file needs a path, not a stream.
 const promptToken = "{prompt}"
 
+// Quote spells one path the way this platform's shell needs it. It is how a
+// caller that substitutes a path of its own - the review's {verdict} - gets the
+// same spelling the adapter gives {prompt}.
+func Quote(path string) string { return quotePath(path) }
+
 // ErrUnsupported is returned on a platform with no known shell.
 var ErrUnsupported = errors.New("cannot run commands on this platform: there is no known shell; run the proof by hand and pass it with odachi check --proof <file>")
 

@@ -277,6 +277,9 @@ type fakeShell struct {
 
 	// input is the prompt the reviewer was given, once --exec delivers one.
 	input string
+
+	// quote is how this fake spells one path for the shell; nil keeps the path.
+	quote func(string) string
 }
 
 // fakeAnswer is one call's result in a scripted shell.
@@ -304,6 +307,14 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string
 		s.after()
 	}
 	return answer.output, answer.stderr, answer.exitCode, answer.timedOut, answer.err
+}
+
+// Quote spells a path the way the fake shell wants it; nil is the path itself.
+func (s *fakeShell) Quote(path string) string {
+	if s.quote != nil {
+		return s.quote(path)
+	}
+	return path
 }
 
 func (s *fakeShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {
@@ -845,7 +856,7 @@ func TestExecReadsTheAnswerFromTheVerdictFile(t *testing.T) {
 	if parsed.Verdict != domainreview.Approved {
 		t.Errorf("verdict = %q, want approved", parsed.Verdict)
 	}
-	if _, ok := p.files.files[storeFile(domainreview.Dir+"/"+currentTree+".verdict.json")]; ok {
+	if _, ok := p.files.files[storeFile(domainreview.AnswerDir+"/"+currentTree+".json")]; ok {
 		t.Error("the answer file was left in the store after it was read")
 	}
 }
@@ -862,7 +873,7 @@ func TestExecRefusesAVerdictFileLeftEmpty(t *testing.T) {
 	if result.Code != review.CodeBlocked {
 		t.Fatalf("code = %d, want blocked (message %q)", result.Code, result.Message)
 	}
-	for _, want := range []string{"{verdict}", currentTree + ".verdict.json"} {
+	for _, want := range []string{"{verdict}", domainreview.AnswerDir + "/" + currentTree + ".json"} {
 		if !strings.Contains(result.Message, want) {
 			t.Errorf("the message does not name %q: %q", want, result.Message)
 		}
@@ -872,11 +883,65 @@ func TestExecRefusesAVerdictFileLeftEmpty(t *testing.T) {
 	}
 }
 
+// TestTheAnswerPathIsQuotedForTheShell: the app substitutes the path, so it asks
+// the shell how to spell it. {prompt} is quoted inside the adapter for the same
+// reason: a clone under a directory with a space is an ordinary Windows profile,
+// and an unquoted redirect target ends at the space.
+func TestTheAnswerPathIsQuotedForTheShell(t *testing.T) {
+	p := newProject()
+	p.shell.quote = func(path string) string { return "<" + path + ">" }
+	p.shell.after = func() {
+		path := verdictPathIn(t, p.shell.command)
+		p.files.files[path] = []byte(`{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"verdict":"approved"}`)
+	}
+
+	result := p.run(review.Options{Exec: "agent --write {verdict}"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(p.shell.command, "<") || !strings.Contains(p.shell.command, ".json>") {
+		t.Errorf("the command carries the path unquoted: %q", p.shell.command)
+	}
+}
+
+// TestEachGroupGetsAFreshAnswerFile: a command that names {verdict} runs once per
+// model group, and the file is emptied before each one. A second group that writes
+// nothing must fail, not inherit the first group's answer: that is what the
+// empty-before-run write is for.
+func TestEachGroupGetsAFreshAnswerFile(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	answers := 0
+	p.shell.after = func() {
+		answers++
+		if answers > 1 {
+			return // the second group writes nothing
+		}
+		path := verdictPathIn(t, p.shell.command)
+		p.files.files[path] = []byte(`{"findings":[],"passes":[{"path":"a.go","lens":"risk"}],"verdict":"approved"}`)
+	}
+
+	result := p.run(review.Options{
+		Exec:       "agent --write {verdict} --model {model}",
+		Lens:       "risk,reliability",
+		LensModels: map[string]string{"reliability": "sharp/model"},
+	})
+
+	if result.Code == review.CodeOK {
+		t.Fatalf("code = 0: the second group inherited the first answer (message %q)", result.Message)
+	}
+	if !strings.Contains(result.Message, "wrote nothing") {
+		t.Errorf("the message does not name the empty answer: %q", result.Message)
+	}
+}
+
 // verdictPathIn is the path a command names where the reviewer writes its answer.
 func verdictPathIn(t *testing.T, command string) string {
 	t.Helper()
 	for _, word := range strings.Fields(command) {
-		if strings.HasSuffix(word, ".verdict.json") {
+		word = strings.Trim(word, `"'<>`)
+		if strings.Contains(word, domainreview.AnswerDir) && strings.HasSuffix(word, ".json") {
 			return word
 		}
 	}

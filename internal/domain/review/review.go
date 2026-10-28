@@ -389,6 +389,11 @@ func PromptPath(tree string) (string, error) {
 	return Dir + "/" + tree + ".prompt.md", nil
 }
 
+// AnswerDir is where a reviewer told to write {verdict} leaves its answer. It is
+// apart from Dir on purpose: a file under reviews/ that is not a verdict is a
+// leftover somebody will read as one.
+const AnswerDir = "answers"
+
 // AnswerPath is where a reviewer told to write {verdict} leaves its answer. It is
 // scaffolding, not evidence: the parsed answer becomes the verdict file, and this
 // one is removed once it has been read.
@@ -396,7 +401,7 @@ func AnswerPath(tree string) (string, error) {
 	if !hashLike(tree) {
 		return "", fmt.Errorf("the tree %q cannot name an answer file: it must be a hash", tree)
 	}
-	return Dir + "/" + tree + ".verdict.json", nil
+	return AnswerDir + "/" + tree + ".json", nil
 }
 
 // hashLike reports whether s can be a tree hash. Only hex is accepted, which is

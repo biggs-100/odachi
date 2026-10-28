@@ -338,9 +338,25 @@ for it.
 odachi review                            # the prompt, to paste into your agent
 odachi review --exec "agent {prompt}"    # or have it run it: prompt on stdin and in {prompt}
 odachi review --exec "cli --model {model} {prompt}"   # and with the session's model
+odachi review --exec "cli {prompt} > {verdict}"       # if its stdout is noisy, it writes the answer
 odachi review --attach verdict.json      # or save what it answered
 odachi review --show                     # which verdict exists, and whether one is due
 ```
+
+The prompt has a home. The printed form writes it into the clone's store as
+`reviews/<tree>.prompt.md`, beside the verdict it will judge, and names it on
+stderr: stdout carries the prompt alone, because a pipe into a reviewer must carry
+nothing else. An agent that needs the prompt on disk -to hand it to a subagent,
+say- uses that path instead of picking a folder, and `proof/` keeps meaning "the
+output of `check --run` for this tree".
+
+A reviewer answers on stdout, unless the command names `{verdict}`: then odachi
+creates that file empty under `answers/` in the clone's store, the reviewer writes
+the JSON there, and stdout becomes diagnosis only. That is for a command that
+prints banners, spinners or its own logs. The path is quoted the way `{prompt}` is,
+the file is emptied before each lens group runs, and it is removed once read; one
+left empty is refused rather than read from stdout, and one that cannot be removed
+is named.
 
 `--show` also answers whether this tree asks for a review at all: it names the
 lenses and the reason -a path, or added lines that touch concurrency or secrets-
@@ -350,10 +366,11 @@ causal `BLOCKER` earns one correction and one re-review; `WARNING` and
 
 The reviewer is a reader: the prompt says everything it needs is inside, so it
 must not run commands, edit files or read others. A reviewer that does puts its
-transcript in stdout, and stdout is the verdict; the retry asks it again with no
-tools. And a change the evidence asks nothing of is named as such -`this change
-asks for no lens: documents only`, with `--lens all` to ask anyway- : `already
-has a verdict` is only said when it is true.
+transcript in stdout, and stdout is the verdict unless the command named
+`{verdict}`; the retry asks it again with no tools. And a change the evidence
+asks nothing of is named as such -`this change asks for no lens: documents only`,
+with `--lens all` to ask anyway- : `already has a verdict` is only said when it is
+true.
 
 `odachi init` installs `odachi-reviewer` for the clients that have subagents: a
 reviewer that cannot read, run or edit, so the rule above is a capability instead

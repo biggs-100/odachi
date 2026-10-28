@@ -146,6 +146,10 @@ type Git interface {
 type Shell interface {
 	Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
 	RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
+	// Quote spells one path the way this platform's shell needs it. The app
+	// substitutes {verdict} itself, so it asks the shell instead of guessing:
+	// {prompt} is quoted inside the adapter for the same reason.
+	Quote(path string) string
 }
 
 // Lenses is the port for the four specialist prompts. It returns the file
@@ -755,7 +759,7 @@ func (r *runner) exec() Result {
 					oneLine(err.Error()) + "; the reviewer was not started")
 				return problem
 			}
-			command = strings.ReplaceAll(command, answerToken, answerPath)
+			command = strings.ReplaceAll(command, answerToken, r.shell.Quote(answerPath))
 		}
 
 		stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
@@ -835,8 +839,12 @@ func (r *runner) exec() Result {
 			return r.stopped(oneLine(last.Message), diagnosis, rel, len(covered), selected, todo, landed)
 		}
 		if answerPath != "" {
-			// The answer is the verdict file now; this one was scaffolding.
-			_ = r.files.Remove(answerPath)
+			// The answer is the verdict file now; this one was scaffolding. If it
+			// stays, the human is told where: a leftover nobody names is read as a
+			// verdict by the next person who looks.
+			if err := r.files.Remove(answerPath); err != nil {
+				notes = appendUnique(notes, "the answer file stayed in "+r.storeLabel(answerRel)+": "+oneLine(err.Error()))
+			}
 		}
 		landed = append(landed, group.lenses...)
 		if len(last.Lines) > 2 {
