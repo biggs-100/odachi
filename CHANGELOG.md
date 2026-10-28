@@ -5,6 +5,17 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.40 - 2026-10-27
+
+The first row of the debt file closes with the test that keeps it closed.
+
+- **The client selection's two answers are pinned end to end.** The adapter that
+  reads the choice answers "both clients" only when git says the folder has no
+  repository, and lets a git failure through so a verb stops instead of guessing;
+  `init` names the clone's store when it cannot resolve it and writes no
+  `agents.toml`. The repository port is a field with a nil default, so the test
+  swaps one value instead of bending the machine's environment.
+
 ## v0.11.39 - 2026-10-27
 
 The review debt of the store move is paid: three rows leave the debt file, each

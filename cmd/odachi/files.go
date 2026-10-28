@@ -225,13 +225,29 @@ func (osFiles) Write(path string, data []byte) error {
 
 // agentSelection is the store adapter for init's --agents and for the verbs that
 // read the choice: the app owns the names, this type owns the TOML and the disk.
-type agentSelection struct{}
+//
+// The git port is a field so a test can drive both answers the adapter has to
+// tell apart - "this folder has no repository" and "git failed" - without
+// breaking the machine it runs on. The binary always leaves it nil, and nil means
+// the real repository.
+type agentSelection struct {
+	git store.Git
+}
+
+// repository is the git port this adapter asks: the real one unless a test put
+// another here.
+func (a agentSelection) repository() store.Git {
+	if a.git != nil {
+		return a.git
+	}
+	return gitRepo{}
+}
 
 // Written returns the stored selection, or empty when the project never chose.
 // The file lives in the clone's store: the choice belongs to the person, and a
 // teammate clones the rules, not somebody else's clients.
-func (agentSelection) Written(dir string) (string, error) {
-	path, _, err := (agentSelection{}).Target(dir)
+func (a agentSelection) Written(dir string) (string, error) {
+	path, _, err := a.Target(dir)
 	switch {
 	case errors.Is(err, gitx.ErrNoRepository):
 		// No repository, no store: a project that never chose, which is both.
@@ -253,8 +269,8 @@ func (agentSelection) Written(dir string) (string, error) {
 // folder with no repository has no store, and that is ErrNoRepository, not an
 // empty answer: the caller that reads treats it as "the project never chose", and
 // the caller that writes names the store it could not find.
-func (agentSelection) Target(dir string) (path, label string, err error) {
-	root, err := store.Root(dir, gitRepo{})
+func (a agentSelection) Target(dir string) (path, label string, err error) {
+	root, err := store.Root(dir, a.repository())
 	if err != nil {
 		return "", "", err
 	}

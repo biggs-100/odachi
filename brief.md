@@ -1,21 +1,19 @@
-# the-review-debt
+# the-sentinel-is
 
 ## What must exist
-- the review debt of 0078 is paid, and three rows leave the debt file
+- the sentinel is pinned end to end, and the debt row leaves the file
 
 ## Done when
-- the client-selection adapter tells no repository from a git failure, and init names the store it could not find
-- review refuses a store it could not resolve instead of building a path relative to the process
-- TreeOf, Has and CommitWithTree have adapter tests against a real repository
-- the three open rows leave docs/review-debt.md, and the 0073 divergence stays written down
+- the selection adapter answers both only when git says the folder has no repository, and names a git failure instead of guessing
+- init names the clone's store when it cannot resolve it, and writes nothing
+- a fake git port makes both branches reachable in a test
 
 ## Not included (first version)
-- no new verb and no new flag
-- the 0073 task document is not rewritten: the fence keeps it
 - no change to where the store lives
+- no new verb and no new flag
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a port says I could not look without saying there is nothing.
+- Wants to learn: how a test reaches an error branch without breaking the machine.

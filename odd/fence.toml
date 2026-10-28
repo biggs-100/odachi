@@ -1,14 +1,9 @@
 [[rule]]
-not   = "no new verb and no new flag"
-paths = ["no-new-verb-and-no-new-flag*"]
-deps  = []
-
-[[rule]]
-not   = "the 0073 task document is not rewritten: the fence keeps it"
-paths = ["the-0073-task-document-is-not-rewritten-the-fence-keeps-it*"]
-deps  = []
-
-[[rule]]
 not   = "no change to where the store lives"
 paths = ["no-change-to-where-the-store-lives*"]
+deps  = []
+
+[[rule]]
+not   = "no new verb and no new flag"
+paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
