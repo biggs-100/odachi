@@ -1,24 +1,21 @@
-# the-store-leaves
+# the-review-debt
 
 ## What must exist
-- the store leaves the project, and the clone's state lives in .git/odachi
+- the review debt of 0078 is paid, and three rows leave the debt file
 
 ## Done when
-- reviews, backups and the lock live under .git/odachi and the worktree carries none of them
-- .odachi no longer exists: fence, profile, review and roles live under odd, and agents.toml lives in the clone store
-- reading never creates the store; only start, review and undo --collect do, under a lock
-- one resolver reads the git common dir, so linked worktrees share the store and there is no second path
-- the migration moves the existing ignored state byte-preserving, repeats without change, and doctor names what is left behind
+- the client-selection adapter tells no repository from a git failure, and init names the store it could not find
+- review refuses a store it could not resolve instead of building a path relative to the process
+- TreeOf, Has and CommitWithTree have adapter tests against a real repository
+- the three open rows leave docs/review-debt.md, and the 0073 divergence stays written down
 
 ## Not included (first version)
-- proof/ does not move: the evidence of a close stays where the human reads it
-- no env override for the clone store
-- no retention or size cap for backups and reviews
-- no sharing of state between clones of the same repository
-- no change to how init writes the project agents
+- no new verb and no new flag
+- the 0073 task document is not rewritten: the fence keeps it
+- no change to where the store lives
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a tool finds its own state without a key.
+- Wants to learn: how a port says I could not look without saying there is nothing.
