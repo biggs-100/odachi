@@ -1,6 +1,7 @@
 package gitx_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -84,13 +85,15 @@ func TestCommonDirAnswersFromASubdirectory(t *testing.T) {
 	}
 }
 
-// TestCommonDirRefusesADirectoryThatIsNotARepository: a folder with no git gets
-// git's own refusal, which names the fix. Guessing a store for it is the defect
-// this adapter exists to prevent.
-func TestCommonDirRefusesADirectoryThatIsNotARepository(t *testing.T) {
+// TestCommonDirNamesTheFolderWithNoRepository: "there is nothing here" is a
+// different answer from "git failed", and the sentinel is what lets a caller tell
+// them apart. Guessing a store for a folder with no git is the defect this
+// adapter exists to prevent.
+func TestCommonDirNamesTheFolderWithNoRepository(t *testing.T) {
 	plain := t.TempDir()
 
-	if _, err := gitx.CommonDir(plain); err == nil {
-		t.Fatal("CommonDir outside a repository = nil error, want git's refusal")
+	_, err := gitx.CommonDir(plain)
+	if !errors.Is(err, gitx.ErrNoRepository) {
+		t.Fatalf("CommonDir outside a repository = %v, want gitx.ErrNoRepository", err)
 	}
 }

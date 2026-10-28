@@ -9,6 +9,25 @@ import (
 	"github.com/biggs-100/odachi/internal/app/review"
 )
 
+// TestAShowWithoutAStoreIsRefused: a store that was not resolved is not an empty
+// one. Joining an empty root would put a verdict relative to the process
+// directory, and the run says why instead.
+func TestAShowWithoutAStoreIsRefused(t *testing.T) {
+	p := newProject()
+
+	result := p.runWithoutStore(review.Options{Show: true})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want a refusal (message: %s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "clone's store") {
+		t.Errorf("message = %q, want it to name the store", result.Message)
+	}
+	if writes := p.files.written(); len(writes) != 0 {
+		t.Errorf("writes = %v, want none", writes)
+	}
+}
+
 // TestTheVerdictIsWrittenOutsideTheWorktree: the whole point of the move. A
 // review writes exactly the verdict, and the verdict is not a path inside the
 // project: storing it cannot change the tree that names it, so no ignore rule has

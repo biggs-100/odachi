@@ -759,6 +759,19 @@ func TestShowCallsAPartialVerdictPartial(t *testing.T) {
 func (p *project) run(opts review.Options) review.Result {
 	opts.Dir = dir
 	opts.Store = store
+	return p.runWith(opts)
+}
+
+// runWithoutStore is the same run in a folder that has no repository: the CLI
+// leaves the store empty there, and the verb has to refuse it.
+func (p *project) runWithoutStore(opts review.Options) review.Result {
+	opts.Dir = dir
+	opts.Store = ""
+	return p.runWith(opts)
+}
+
+// runWith performs one run with the ports the project already holds.
+func (p *project) runWith(opts review.Options) review.Result {
 	if opts.Now.IsZero() {
 		opts.Now = now
 	}
@@ -2367,7 +2380,7 @@ func TestBaseFallsBackToTheEmptyTreeWithoutCommits(t *testing.T) {
 	p := newProject()
 	git := &flakyGit{inner: p.git}
 
-	result := review.Run(review.Options{Dir: dir, Now: now}, p.files, git, p.shell, &fakeLenses{}, p.host)
+	result := review.Run(review.Options{Dir: dir, Store: store, Now: now}, p.files, git, p.shell, &fakeLenses{}, p.host)
 
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)

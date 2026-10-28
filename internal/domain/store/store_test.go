@@ -62,3 +62,15 @@ func TestRootRefusesWithoutAGitDirectory(t *testing.T) {
 		t.Fatal("Root without a git directory = nil error, want a refusal")
 	}
 }
+
+// TestRootKeepsTheSentinel: a caller that has to tell "there is no store here"
+// from "git could not answer" gets the distinction through the wrap, because the
+// error is wrapped with %w and not flattened into a sentence.
+func TestRootKeepsTheSentinel(t *testing.T) {
+	sentinel := errors.New("not a git repository")
+	_, err := store.Root("/un/proyecto", &fakeGit{err: sentinel})
+
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("Root error = %v, want it to wrap the adapter's sentinel", err)
+	}
+}

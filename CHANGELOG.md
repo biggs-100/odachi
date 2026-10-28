@@ -5,6 +5,26 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.39 - 2026-10-27
+
+The review debt of the store move is paid: three rows leave the debt file, each
+with the test that keeps it closed.
+
+- **The client selection tells "no repository" from "git failed".**
+  `gitx.CommonDir` returns `gitx.ErrNoRepository` when a folder is not inside a
+  repository, `store.Root` keeps that answer through the wrap, and the adapter
+  that reads the choice answers "the project never chose" only for it. A broken
+  repository now stops the verb and names the store instead of falling back to
+  both clients, and `init` names the store it could not find instead of writing
+  with an empty path.
+- **`review` refuses a store it could not resolve.** Joining an empty root put the
+  verdict relative to the process directory, which is the one place the evidence
+  must never land; the verb says why and writes nothing.
+- **The ledger's three git questions are pinned against a real repository**:
+  `TreeOf` (full and short sha), `Has` (exit 1 is the answer "no", not a failure)
+  and `CommitWithTree` (the oldest match for a tree, and a repository with no
+  history).
+
 ## v0.11.38 - 2026-10-27
 
 The store leaves the project: the rules stay with the team, the evidence stays

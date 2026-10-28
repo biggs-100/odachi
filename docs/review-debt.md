@@ -9,37 +9,22 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0078, the store leaves the project.
+Last written: after 0079, the review debt of 0078 is paid.
 
 ## Open
 
-### cmd/odachi/files.go — `agentSelection.Target` cannot tell "no repository" from "git failed"
+### cmd/odachi/files.go — the new classification branch of the selection adapter is not pinned
 
-`Target` and `Written` swallow the error from `store.Root` and answer "the
-project never chose". When git cannot name the common directory (not installed,
-corrupt repo, permissions), the verbs that read the selection fall back to `both`
-and refresh the agent files of the client the person excluded, with no line
-saying the store was unreadable; `init` then writes with an empty path and the
-message names an empty file. Named by two reviews, on trees 4fb1049 and the one
-before it. The fix is a sentinel: an error the caller can tell apart from the
-empty answer.
+`Written` gained two branches: `errors.Is(err, gitx.ErrNoRepository)` answers "the
+project never chose", and any other error propagates so a broken repository stops
+a reader instead of falling back to `both`. `Target` changed contract from always
+nil to propagating. The sentinel itself is tested in `gitx` and `store`, but
+nothing in the tree pins that `gitRepo`'s delegation preserves it into `Written`,
+nor that `init` surfaces the store error instead of quietly falling back. A
+regression that re-swallows it — the exact defect 0078 named — would leave every
+test green. Named by the review of 0079, tree 97f94c8.
 
-### internal/app/review/review.go — `storePath` joins an empty store
-
-`storePath` joins `r.opts.Store` with `rel` without checking for the empty string.
-A folder that is not a git repository has no store, and the path becomes relative
-to the process directory instead of being refused. `check` and `progress` treat
-an empty store as "no verdict on file"; `review` should refuse the same way.
-
-### internal/adapters/gitx — `TreeOf`, `Has` and `CommitWithTree` have no adapter test
-
-The ledger depends on them: `Has` maps `git merge-base --is-ancestor` exit 1 to
-"no", and `CommitWithTree` keeps the *oldest* matching commit. The app tests drive
-both through fakes, so a change that keeps the newest match would pass every test
-and name the wrong commit for a step. One test against a real repository pins the
-resolution.
-
-### odd/tasks/0073-a-professional-persona.md — the doc speaks the old vocabulary
+### odd/tasks/0073-a-professional-persona.md - the doc speaks the old vocabulary
 
 Its Done-when and Steps describe `odachi persona new`, `persona-craft` and
 `.odachi/personas/<slug>.md`; the shipped tree has `odachi role`, `role-craft` and
@@ -84,3 +69,4 @@ answer owed, so the test is not a comment.
 - `internal/app/review/review.go:1350` - the drop of a refused answer cannot cost
   the verdict; the keep-failure half was already pinned by feature 0051, which the
   store could not know because a test moves a different file's blob.
+

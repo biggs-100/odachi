@@ -232,12 +232,12 @@ type agentSelection struct{}
 // teammate clones the rules, not somebody else's clients.
 func (agentSelection) Written(dir string) (string, error) {
 	path, _, err := (agentSelection{}).Target(dir)
-	if err != nil {
-		return "", err
-	}
-	if path == "" {
+	switch {
+	case errors.Is(err, gitx.ErrNoRepository):
 		// No repository, no store: a project that never chose, which is both.
 		return "", nil
+	case err != nil:
+		return "", err
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -249,13 +249,14 @@ func (agentSelection) Written(dir string) (string, error) {
 	return agentstoml.Decode(data)
 }
 
-// Target names the file the choice lives in, and the label a human reads. No
-// repository means no store: the path is empty, and the caller treats it as "the
-// project never chose", the same answer as a missing file.
+// Target names the file the choice lives in, and the label a human reads. A
+// folder with no repository has no store, and that is ErrNoRepository, not an
+// empty answer: the caller that reads treats it as "the project never chose", and
+// the caller that writes names the store it could not find.
 func (agentSelection) Target(dir string) (path, label string, err error) {
 	root, err := store.Root(dir, gitRepo{})
 	if err != nil {
-		return "", "", nil
+		return "", "", err
 	}
 	path = filepath.Join(root, filepath.FromSlash(persona.SelectionPath))
 	return path, storeLabel(dir, path), nil

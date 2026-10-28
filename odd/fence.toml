@@ -1,24 +1,14 @@
 [[rule]]
-not   = "proof/ does not move: the evidence of a close stays where the human reads it"
-paths = ["proof-does-not-move-the-evidence-of-a-close-stays-where-the-human-reads-it*"]
+not   = "no new verb and no new flag"
+paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no env override for the clone store"
-paths = ["no-env-override-for-the-clone-store*"]
+not   = "the 0073 task document is not rewritten: the fence keeps it"
+paths = ["the-0073-task-document-is-not-rewritten-the-fence-keeps-it*"]
 deps  = []
 
 [[rule]]
-not   = "no retention or size cap for backups and reviews"
-paths = ["no-retention-or-size-cap-for-backups-and-reviews*"]
-deps  = []
-
-[[rule]]
-not   = "no sharing of state between clones of the same repository"
-paths = ["no-sharing-of-state-between-clones-of-the-same-repository*"]
-deps  = []
-
-[[rule]]
-not   = "no change to how init writes the project agents"
-paths = ["no-change-to-how-init-writes-the-project-agents*"]
+not   = "no change to where the store lives"
+paths = ["no-change-to-where-the-store-lives*"]
 deps  = []
