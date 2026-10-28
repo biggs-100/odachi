@@ -15,16 +15,27 @@ Last written: after 0080, the sentinel is pinned end to end.
 
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
-The 0082 debt asked for one cheap probe before calling the 600s timeout a defect.
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
---file <prompt> "..."` with a **tiny** file answers in seconds (mimo-v2.6-flash);
-with 0085's **122 KB** prompt it prints its banner and produces nothing until the
-600s timeout, twice (mimo-v2.6-flash), while `deepseek-v4.1-flash` returns the
-full JSON for the same file in the same session. 0086's **69 KB** prompt closed
-cleanly on mimo in one run, so the wall sits between 69 and 122 KB. A reviewer
-that cannot take a 120 KB prompt is not a reviewer this tool can hand a large diff
-to; the next feature that touches the review pipeline should either split the
-prompt by lens group or pin a model known to read it whole.
+--file <prompt> "..."` with a **tiny** file answers in seconds; 69 KB and 74 KB
+close in 46 seconds and one run; 89 KB closes in 46 seconds; 0085's **122 KB**
+prompt prints its banner and produces nothing until the 600s timeout, twice. So
+the wall sits between 89 and 122 KB and it is not slowness: a reviewer that stalls
+at a size does not answer late. 0087 turned that into `max_prompt_kb`, so the tool
+now refuses before spending - what is left is capability, not safety: a candidate
+whose prompt passes the limit cannot be reviewed by this model at all, and the
+choice between a model that reads more and splitting the candidate by paths is the
+human's. Nothing in the tool splits a prompt today.
+
+### the review pipeline - the configured reviewer missed a test it was shown
+
+On 0087 the reviewer reported "the CLI's propagation of the size limit has no test"
+twice, the second time about a tree whose prompt carried
+`TestTheReviewRefusesWhatTheProjectWillNotPayFor` at line 139 and whose diff added
+it. The finding was approved as a WARNING and verified false by reading the prompt
+it judged. At 74 KB with 21 changed paths, a reviewer is not reading every line it
+is handed; a tool that trusts its silence as coverage (ADR 0033) should know that a
+reviewer can miss a row it declared, and the next feature that touches the review
+pipeline should measure this instead of assuming the answer is no.
 
 ### internal/adapters/gitx - the ledger's reads run only through fakes
 
@@ -76,7 +87,9 @@ name that says it failed.
 The printed form writes `reviews/<tree>.prompt.md`. A run that hands the prompt to
 a reviewer does not, so the bytes that produced a verdict cannot be read again
 without regenerating them, and regenerating needs the same base to build the same
-question. Same home, same name, written by both forms.
+question. Same home, same name, written by both forms. 0087 paid for it: a
+reviewer's finding could only be judged false by regenerating the prompt by hand
+and assuming the tree had not moved since.
 
 ### internal/app/doctor/doctor.go - the last branch of personaNote has no test
 
