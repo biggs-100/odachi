@@ -19,6 +19,10 @@ A decision stops being a one-time order: the store remembers it, so the next
   files is the clean mode when `agents.toml` says so, and a project that lost its
   files while nothing recorded why is sent to `--global --no-project-agents`; a
   home-only project with no door is sent to `--global`, not back to the mirrors.
+- **An older binary refuses the new key, on purpose.** A store carrying
+  `project_agents` is an error to a binary that predates it (`unknown keys`), the
+  same rule that refuses a typo: upgrade the installed odachi before the project
+  records the choice.
 
 ## v0.11.40 - 2026-10-27
 
