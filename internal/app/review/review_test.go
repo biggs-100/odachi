@@ -57,6 +57,9 @@ type fakeFiles struct {
 	// failExists fails Exists for one path only, so a test can reach the refusal
 	// without breaking the store checks that run before it.
 	failExists func(path string) error
+	// failWrite fails Write for one path only, so a test can fail the question's
+	// file without failing the answer's.
+	failWrite func(path string) error
 	// failList counts and can fail a listing, so a test can reach the drop of the
 	// refused answers without breaking the read of the potent rows before it.
 	failList func(dir string) error
@@ -108,6 +111,11 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 	}
 	if f.writeErr != nil {
 		return f.writeErr
+	}
+	if f.failWrite != nil {
+		if err := f.failWrite(path); err != nil {
+			return err
+		}
 	}
 	f.writes = append(f.writes, path)
 	f.files[path] = data
@@ -842,6 +850,11 @@ func (p *project) verdictWrites() []string {
 	var claims []string
 	for _, written := range p.files.written() {
 		if strings.HasSuffix(filepath.ToSlash(written), ".gitignore") {
+			continue
+		}
+		// The question a verdict answered is filed beside it (0088): it is the
+		// record of what the reviewer was handed, not a claim about the tree.
+		if strings.Contains(filepath.Base(written), ".prompt") {
 			continue
 		}
 		claims = append(claims, written)

@@ -407,6 +407,28 @@ func PromptPath(tree string) (string, error) {
 	return Dir + "/" + tree + ".prompt.md", nil
 }
 
+// GroupPromptPath is where the question one lens group was handed lives, named by
+// its lenses. A run with a single group files it under the canonical name the
+// printed form writes (the caller decides that); a run split across models asks one
+// question per group, and a file holding only the last of them would be a lie about
+// the others.
+func GroupPromptPath(tree string, lenses []string) (string, error) {
+	if !hashLike(tree) {
+		return "", fmt.Errorf("the tree %q cannot name a prompt file: it must be a hash", tree)
+	}
+	if len(lenses) == 0 {
+		return PromptPath(tree)
+	}
+	names := make([]string, 0, len(lenses))
+	for _, lens := range lenses {
+		if !IsLens(lens) {
+			return "", fmt.Errorf("%q cannot name a prompt file: the lenses are %s", lens, strings.Join(AllLenses(), ", "))
+		}
+		names = append(names, strings.ToLower(strings.TrimSpace(lens)))
+	}
+	return Dir + "/" + tree + ".prompt-" + strings.Join(names, "+") + ".md", nil
+}
+
 // AnswerDir is where a reviewer told to write {verdict} leaves its answer. It is
 // apart from Dir on purpose: a file under reviews/ that is not a verdict is a
 // leftover somebody will read as one.

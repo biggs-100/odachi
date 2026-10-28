@@ -1,14 +1,14 @@
 [[rule]]
-not   = "no new verb and no new flag: the limit is a key in odd/review.toml"
-paths = ["no-new-verb-and-no-new-flag-the-limit-is-a-key-in-odd-review-toml*"]
+not   = "no new verb and no new flag"
+paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no change to how the prompt is built"
-paths = ["no-change-to-how-the-prompt-is-built*"]
+not   = "no change to where the verdicts live"
+paths = ["no-change-to-where-the-verdicts-live*"]
 deps  = []
 
 [[rule]]
-not   = "no model chosen by the tool"
-paths = ["no-model-chosen-by-the-tool*"]
+not   = "no change to how a prompt is built"
+paths = ["no-change-to-how-a-prompt-is-built*"]
 deps  = []

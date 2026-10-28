@@ -70,7 +70,24 @@ func declared(t *testing.T, dir string) string {
 	return `"inspection":{"status":"completed","paths":` + string(quoted) + `},"model":"fixture/reviewer",`
 }
 
+// reviewsIn lists the verdicts inside the clone's store. The question each verdict
+// answered is filed beside it (0088), and a test that says "nothing was stored"
+// means nothing was judged.
 func reviewsIn(t *testing.T, dir string) []string {
+	t.Helper()
+
+	var verdicts []string
+	for _, name := range storeEntries(t, dir) {
+		if strings.Contains(name, ".prompt") {
+			continue
+		}
+		verdicts = append(verdicts, name)
+	}
+	return verdicts
+}
+
+// storeEntries lists everything the clone's store holds, question files included.
+func storeEntries(t *testing.T, dir string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(filepath.Join(dir, ".git", "odachi", "reviews"))
 	if err != nil {
@@ -80,11 +97,11 @@ func reviewsIn(t *testing.T, dir string) []string {
 		t.Fatalf("reading the store: %v", err)
 	}
 
-	var verdicts []string
+	var names []string
 	for _, entry := range entries {
-		verdicts = append(verdicts, entry.Name())
+		names = append(names, entry.Name())
 	}
-	return verdicts
+	return names
 }
 
 // changedProject is a project with a real commit and one real change on top of
@@ -129,8 +146,11 @@ func TestReviewPrintsThePromptForTheCandidate(t *testing.T) {
 			t.Errorf("the prompt does not contain %q\n%s", want, out)
 		}
 	}
-	if verdicts := reviewsIn(t, dir); len(verdicts) != 1 || !strings.HasSuffix(verdicts[0], ".prompt.md") {
-		t.Errorf("the store holds %v, want exactly the prompt file and no verdict", verdicts)
+	if verdicts := reviewsIn(t, dir); len(verdicts) != 0 {
+		t.Errorf("the store holds %v, want no verdict", verdicts)
+	}
+	if files := storeEntries(t, dir); len(files) != 1 || !strings.HasSuffix(files[0], ".prompt.md") {
+		t.Errorf("the store holds %v, want exactly the prompt file", files)
 	}
 	// The prompt has a home and the human is told where: the store copy is what an
 	// agent hands to a reviewer, and stdout stays the prompt alone so a pipe into

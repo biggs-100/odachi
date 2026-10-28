@@ -5,6 +5,24 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A review is evidence, and evidence that is overwritten is not evidence.
+
+- **A failed run keeps the answer it paid for.** When a reviewer writes into the
+  `{verdict}` file and then fails - a timeout, a bad exit code - the bytes are
+  copied under a name their content decides, the refusal names the file, and the
+  scaffolding is removed so the next run on the same tree cannot empty it. The
+  same path already kept an answer the tool could not read; now it keeps the ones
+  it never got to read.
+- **`review --exec` files the prompt it sends.** The printed form wrote
+  `reviews/<tree>.prompt.md`; a run that handed the prompt to a reviewer kept it
+  nowhere, so the bytes that produced a verdict could only be recovered by
+  regenerating them and hoping the base had not moved. The question is filed once
+  it has been sent, under the same name, and a run split across models files one
+  per group. A store that cannot hold it says so and keeps the verdict: the
+  answer is the paid thing.
+
 ## v0.11.44 - 2026-10-28
 
 A gate is only as strong as the least it lets you say, and a reviewer is only as
