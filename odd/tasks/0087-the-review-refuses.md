@@ -16,3 +16,5 @@ R1 · "the review refuses to start a reviewer on a prompt bigger than the projec
 
 ## History
 L1 · "the review refuses to start a reviewer on a prompt bigger than the project allows, and says the size, the limit and the ways out"
+L2 · OFICIO · "the size limit is the project's, not the model's: the tool cannot know what a model reads, so a human measures it once and writes it in odd/review.toml" (porque a per-model table would be a guess dressed as configuration; the measurement in this project's file says 89 KB closed in 46s and 122 KB stalled, and only the human can decide which model they pay for)
+L3 · OFICIO · "the printed form never refuses, because it spends nothing" (porque the human's debugging tool cannot be blocked by a limit that exists to protect a paid call; it prints and says the size where the run's notes go)
