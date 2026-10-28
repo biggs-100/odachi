@@ -18,3 +18,5 @@ R1 · "the verdict says who judged it, and the gate refuses one that names no mo
 
 ## History
 L1 · "the verdict says who judged it, and the gate refuses one that names no model when the proof names one"
+L2 · OFICIO · "a gate refuses a silence, and the way out is a decision on the record, never an omission" (porque the identity gate compared two declarations and a verdict that named none passed by saying less; the two roads out are a named reviewer or the human's waiver, which the help now lists)
+L3 · OFICIO · "the refusal names the verdict's file, not only the lens and the model" (porque the review of this feature read the Done-when and found the first version naming the lens and the model but not the tree, so a project with two trees could not tell which review it read)
