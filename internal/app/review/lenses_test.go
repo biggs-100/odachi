@@ -267,7 +267,7 @@ func TestShowWithLensAsksAboutThatLens(t *testing.T) {
 // and the instant.
 func TestStoredVerdictRecordsTheLensesTheToolAsked(t *testing.T) {
 	p := newLensProject()
-	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","findings":[]}`)
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
 
 	result := p.run(review.Options{Attach: "veredicto.json", Lens: "risk"})
 

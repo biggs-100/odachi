@@ -13,6 +13,41 @@ Last written: after 0080, the sentinel is pinned end to end.
 
 ## Open
 
+### the review gate - a verdict that names no model is a review the gate cannot attribute
+
+`check` refuses a verdict whose `model` is the proof's ("a model does not judge
+its own tree"), and the refusal is right. What it cannot do is notice the same
+reviewer arriving unnamed: `--attach` stores whatever `model` the answer carries,
+an empty one included, and `--exec` fills it only when the command names
+`{model}`. 0085's closing verdict was written by the model that built and proved
+the tree, at the human's cost decision, and the file does not say so - the gate
+read it as attributed by nobody and passed. The honest shape is a refusal when the
+proof names a model and the verdict names none, unless the human records the
+trade; that is a small change with a large blast radius (every old verdict), and
+it needs its own feature.
+
+### internal/app/review - `opencode run` as the `--exec` reviewer, measured
+
+The 0082 debt asked for one cheap probe before calling the 600s timeout a defect.
+Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
+--file <prompt> "..."` with a **tiny** file answers in seconds (mimo-v2.6-flash);
+with 0085's **122 KB** prompt it prints its banner and produces nothing until the
+600s timeout, twice (mimo-v2.6-flash), while `deepseek-v4.1-flash` returns the
+full JSON for the same file in the same session. So the variable is the pair
+(model, prompt size), not the CLI or `--file`. A reviewer that cannot take a
+120 KB prompt is not a reviewer this tool can hand a large diff to; the next
+feature that touches the review pipeline should either split the prompt by lens
+group or pin a model known to read it whole.
+
+### internal/app/start/artifacts.go - an unreadable task document blocks the run, untested
+
+`documentOpen` returns a blocked result when a document whose slug matches cannot
+be read. Before 0083 `start` never read that file, so this is a new way for a run
+to stop — after `brief.md`, `profile.toml` and `fence.toml` are already written, so
+the retry needs `--force` — and the fake cannot inject a read error, so no test
+reaches the branch. A read-error seam in `fakeFiles` and one assertion on the
+message close it.
+
 ### internal/app/review/review.go - the answer file of a failed run is left unnamed
 
 A command that names `{verdict}` gets `answers/<tree>.json`, emptied before each
@@ -29,14 +64,18 @@ a reviewer does not, so the bytes that produced a verdict cannot be read again
 without regenerating them, and regenerating needs the same base to build the same
 question. Same home, same name, written by both forms.
 
-### the review gate - a verdict with rows missing is accepted when someone pads it
+### the review gate - a complete set of rows cannot say who wrote them
 
-`review --attach` checks one row per (path, lens) and accepts what it is given: it
-cannot tell a complete pass list from one a caller completed. In 0082 a reviewer
-returned 49 of 52 rows and the caller wrote the other three to get through. The
-gate should refuse an incomplete verdict and ask for it again, and the answer
-should say which rows were missing - the same idea as gentle-ai's typed
-`inspection.paths`, which asserts what was actually read.
+`review --attach` refuses an incomplete answer and names every missing (path, lens)
+row, so nothing incomplete is ever sealed. What it cannot do is tell a row the
+reviewer wrote from a row the caller filled in: when 0083's reviewer omitted the one
+file its finding was about, the caller added that row by hand and the verdict was
+sealed. 0084 changed the refusal so it sends the gap back to the reviewer instead of
+saying "fix the rows", which is the teaching half; the structural half is the one
+gentle-ai solved - the reviewer *declares* what it read (`inspection.status` plus
+the complete path list) and the gate refuses an answer that does not, so a padded
+list is a lie the tool can see. That is a verdict-schema change and it needs its own
+feature.
 
 ### internal/app/doctor/doctor.go - the last branch of personaNote has no test
 

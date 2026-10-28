@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,6 +41,35 @@ func commitAll(t *testing.T, dir, message string) {
 }
 
 // reviewsIn lists the verdict files inside the clone's store.
+//
+// declared is the inspection a complete answer carries: every path the fixture's
+// repository changed, asked of git the way the gate measures it. A hardcoded list
+// drifts the moment a fixture seeds one more file, and the drift reads as a gate
+// refusing the wrong thing.
+func declared(t *testing.T, dir string) string {
+	t.Helper()
+	cmd := exec.Command("git", "-C", dir, "status", "--porcelain", "--untracked-files=all")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("git status: %v", err)
+	}
+
+	paths := []string{}
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimRight(line, "\r")
+		if len(line) < 4 {
+			continue
+		}
+		path := strings.TrimSpace(line[3:])
+		if i := strings.Index(path, " -> "); i >= 0 {
+			path = path[i+4:]
+		}
+		paths = append(paths, path)
+	}
+	quoted, _ := json.Marshal(paths)
+	return `"inspection":{"status":"completed","paths":` + string(quoted) + `},`
+}
+
 func reviewsIn(t *testing.T, dir string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(filepath.Join(dir, ".git", "odachi", "reviews"))
@@ -143,7 +173,7 @@ func TestReviewAttachStoresAndShowReads(t *testing.T) {
 	// The answer lives outside the project: a document inside it would be part of
 	// the change it judges.
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
-	writeAt(t, verdict, `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
+	writeAt(t, verdict, `{"reviewer":"humano","inspection":{"status":"completed","paths":["internal/app/turnos.go"]},"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
 
 	code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, "")
 	if code != 0 {
@@ -183,7 +213,7 @@ func TestReviewShowAnotherTreeSaysThereIsNone(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
-	writeAt(t, verdict, `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
+	writeAt(t, verdict, `{"reviewer":"humano","inspection":{"status":"completed","paths":["internal/app/turnos.go"]},"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
@@ -329,7 +359,7 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 	// and the proof has to be retaken. The message says exactly that. The verdict
 	// says what it looked at: one pass row for the changed file, whose content
 	// receipt the tool stamps.
-	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"},{"path":"veredicto.json","lens":"reliability"}]}`)
+	writeFile(t, dir, "veredicto.json", `{"reviewer":"humano","inspection":{"status":"completed","paths":["internal/app/turnos.go","veredicto.json","proof/.gitignore"]},"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"},{"path":"veredicto.json","lens":"reliability"}]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", "veredicto.json"}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
@@ -463,7 +493,7 @@ func TestCheckAcceptsAVerdictThatNamesTheBaseShort(t *testing.T) {
 	// proof is evidence about one tree and the store's own ignore file is part of
 	// the project. A short spelling of the base is the same diff.
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
-	writeAt(t, verdict, `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"},{"path":".gitignore","lens":"reliability"}]}`)
+	writeAt(t, verdict, `{"reviewer":"humano",`+declared(t, dir)+`"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"},{"path":".gitignore","lens":"reliability"}]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict, "--base", base[:7]}, ""); code != 0 {
 		t.Fatalf("attach with a short base: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
@@ -546,7 +576,7 @@ func TestCheckRequireReviewReportsChangesRequested(t *testing.T) {
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
 	writeAt(t, verdict, `{
   "reviewer": "claude",
-  "findings": [
+`+declared(t, dir)+`  "findings": [
     {"path": "internal/app/turnos.go", "line": 3, "severity": "CRITICAL", "causal": true, "lens": "reliability", "why": "devuelve nuevo sin guardar el turno"}
   ]
 }`)

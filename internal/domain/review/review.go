@@ -132,8 +132,13 @@ type Verdict struct {
 	// found empty. They are the other half of coverage — a finding answers its
 	// own row, a pass answers the row of a clean blob. A verdict stored before
 	// coverage existed has none, and the gate treats that as "covers nothing".
-	Passes  []Pass `json:"passes,omitempty"`
-	Verdict string `json:"verdict"`
+	Passes []Pass `json:"passes,omitempty"`
+	// Inspection is the reviewer's account of what it read. A row says a (file,
+	// lens) was answered; it cannot say who answered it, and this is the claim
+	// the gate compares with the changed paths. A verdict stored before the
+	// declaration existed has none, and still parses.
+	Inspection *Inspection `json:"inspection,omitempty"`
+	Verdict    string      `json:"verdict"`
 }
 
 // Missing reports which required lenses this verdict does not cover, in the order
@@ -220,6 +225,15 @@ func Render(v Verdict) []byte {
 	if canonical.Passes == nil {
 		canonical.Passes = []Pass{}
 	}
+	// The declaration's path list is a set, and a set with nothing in it is an
+	// empty array, not null: a file a person reads says "and no path" instead of
+	// leaving them to guess. The copy keeps Render from writing to the caller's
+	// declaration.
+	if canonical.Inspection != nil && canonical.Inspection.Paths == nil {
+		declared := *canonical.Inspection
+		declared.Paths = []string{}
+		canonical.Inspection = &declared
+	}
 
 	data, err := json.MarshalIndent(canonical, "", "  ")
 	if err != nil {
@@ -272,6 +286,10 @@ func (v Verdict) Validate() error {
 	}
 
 	if err := validatePasses(v); err != nil {
+		return err
+	}
+
+	if err := validateInspection(v.Inspection); err != nil {
 		return err
 	}
 

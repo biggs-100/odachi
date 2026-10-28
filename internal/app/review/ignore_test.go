@@ -34,7 +34,7 @@ func TestAShowWithoutAStoreIsRefused(t *testing.T) {
 // to keep it out.
 func TestTheVerdictIsWrittenOutsideTheWorktree(t *testing.T) {
 	p := newProject()
-	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","findings":[]}`)
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
 
 	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
 
@@ -66,7 +66,7 @@ func TestTheVerdictIsWrittenOutsideTheWorktree(t *testing.T) {
 // that does not depend on an ignore rule either.
 func TestASecondReviewOfTheSameTreeWritesNothingNew(t *testing.T) {
 	p := newProject()
-	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","findings":[]}`)
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
 	if first := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"}); first.Code != review.CodeOK {
 		t.Fatalf("first review: code = %d (%s)", first.Code, first.Message)
 	}

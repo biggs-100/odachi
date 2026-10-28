@@ -93,6 +93,24 @@ func TestPromptCarriesTheSchema(t *testing.T) {
 	}
 }
 
+// TestPromptAsksWhatTheReviewerRead: the gate compares a declaration the reviewer
+// can only produce if it was told. The prompt names the field, both statuses and
+// what an unavailable one owes, and it says that a failure described anywhere else
+// is a completion the gate cannot trust.
+func TestPromptAsksWhatTheReviewerRead(t *testing.T) {
+	prompt := review.Prompt(promptInput())
+
+	for _, want := range []string{
+		`"status": "completed | unavailable"`,
+		`"reason": "<only when unavailable`,
+		"the gate cannot trust",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("the prompt does not ask for the inspection: missing %q", want)
+		}
+	}
+}
+
 // TestPromptAsksForOnlyTheJSON: the answer is machine-read, so prose around it
 // is a parse error waiting to happen.
 func TestPromptAsksForOnlyTheJSON(t *testing.T) {

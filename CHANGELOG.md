@@ -5,6 +5,37 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.42 - 2026-10-28
+
+Three refusals learn to say the true thing: a name is not an identity, a gap goes
+back to the reviewer, and an answer that cannot say what it read is not a verdict.
+
+- **`start` never reuses a closed task document.** A document whose steps are all
+  done is the memory of a finished feature. A new feature whose slug collides with
+  it now gets the next number and its own file, instead of planning into the old
+  one and reporting done without writing anything; a document that still has work
+  is still reused, so one feature never leaves two files behind. The run names the
+  document it kept.
+- **The refusal asks the reviewer for the rows it left out.** `review --attach`
+  already names every missing (path, lens) row and keeps the answer, but its last
+  line said "fix the rows and attach it again", which is an instruction the caller
+  can satisfy by inventing them. It now sends the gap back to the reviewer and
+  says the answer is not edited to pass the gate; the kept file and the command
+  that attaches it again are unchanged.
+- **The reviewer declares what it inspected.** Every answer to a review that asks
+  for lenses now carries `inspection`: `{"status": "completed", "paths": [...]}`
+  with every changed path it read, or `{"status": "unavailable", "reason": "..."}`
+  when it could not read the candidate at all. `review --attach` and the `--exec`
+  path refuse an answer whose declaration leaves a changed path out, names a path
+  the candidate does not change, or says unavailable, and the refusal says where
+  the answer is kept so the reviewer is asked for it, not the caller. The prompt
+  asks for the field with both statuses, and the schema it prints carries it. A
+  verdict stored before this field existed still parses.
+- **An older binary refuses the new key, on purpose.** A verdict carrying
+  `inspection` is an error to a binary that predates it (`unknown field`), the
+  same rule that refuses a typo: upgrade the installed odachi before the store
+  holds a verdict the old binary cannot read.
+
 ## v0.11.41 - 2026-10-28
 
 Two decisions stop being improvised: where the project's agent lives, and where a

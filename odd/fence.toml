@@ -9,6 +9,6 @@ paths = ["no-change-to-where-the-verdicts-live*"]
 deps  = []
 
 [[rule]]
-not   = "no new field in the verdict schema"
-paths = ["no-new-field-in-the-verdict-schema*"]
+not   = "no refusal of a verdict stored before this feature, which still parses"
+paths = ["no-refusal-of-a-verdict-stored-before-this-feature-which-still-parses*"]
 deps  = []
