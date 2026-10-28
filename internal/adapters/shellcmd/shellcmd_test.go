@@ -80,6 +80,20 @@ func TestRunInputDoesNotHangWhenTheCommandIgnoresItsStdin(t *testing.T) {
 	}
 }
 
+// TestQuoteSpellsAPathForTheShell: the review substitutes {verdict} itself, so it
+// asks this adapter for the spelling {prompt} already gets. A path with a space is
+// the case that matters: an unquoted one ends at the space in every shell odachi
+// supports.
+func TestQuoteSpellsAPathForTheShell(t *testing.T) {
+	quoted := shellcmd.Quote(`C:\Users\ana perez\clone\.git\odachi\answers\x.json`)
+	if !strings.Contains(quoted, "ana perez") {
+		t.Fatalf("Quote = %q, want the path itself", quoted)
+	}
+	if quoted == `C:\Users\ana perez\clone\.git\odachi\answers\x.json` {
+		t.Errorf("Quote = %q, want it quoted", quoted)
+	}
+}
+
 // A command without the token is untouched, and a command with the token but no
 // prompt is left alone too: nothing is invented.
 func TestRunInputLeavesTheTokenAloneWhenThereIsNoPrompt(t *testing.T) {

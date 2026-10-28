@@ -277,6 +277,9 @@ type fakeShell struct {
 
 	// input is the prompt the reviewer was given, once --exec delivers one.
 	input string
+
+	// quote is how this fake spells one path for the shell; nil keeps the path.
+	quote func(string) string
 }
 
 // fakeAnswer is one call's result in a scripted shell.
@@ -304,6 +307,14 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string
 		s.after()
 	}
 	return answer.output, answer.stderr, answer.exitCode, answer.timedOut, answer.err
+}
+
+// Quote spells a path the way the fake shell wants it; nil is the path itself.
+func (s *fakeShell) Quote(path string) string {
+	if s.quote != nil {
+		return s.quote(path)
+	}
+	return path
 }
 
 func (s *fakeShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {
@@ -815,6 +826,129 @@ func storeRel(rel string) string {
 	return relative(storeFile(rel))
 }
 
+// TestExecReadsTheAnswerFromTheVerdictFile: a command that names {verdict} writes
+// its answer there, and odachi reads that file instead of stdout. A reviewer that
+// prints a banner, a spinner or its own logs keeps its answer readable, which is
+// the whole reason the token exists.
+func TestExecReadsTheAnswerFromTheVerdictFile(t *testing.T) {
+	p := newProject()
+	answer := `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"verdict":"approved"}`
+	// stdout is everything an agent CLI prints around the answer.
+	p.shell.output = "> thinking...\n> tool call\n"
+	p.shell.after = func() {
+		path := verdictPathIn(t, p.shell.command)
+		p.files.files[path] = []byte(answer)
+	}
+
+	result := p.run(review.Options{Exec: "agent --write {verdict} --model {model}", Model: "m/x"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, output %q)", result.Code, result.Message, result.Output)
+	}
+	stored, ok := p.files.files[storePath(currentTree)]
+	if !ok {
+		t.Fatal("the answer was not stored as a verdict")
+	}
+	parsed, err := domainreview.Parse(stored)
+	if err != nil {
+		t.Fatalf("the stored answer does not parse: %v", err)
+	}
+	if parsed.Verdict != domainreview.Approved {
+		t.Errorf("verdict = %q, want approved", parsed.Verdict)
+	}
+	if _, ok := p.files.files[storeFile(domainreview.AnswerDir+"/"+currentTree+".json")]; ok {
+		t.Error("the answer file was left in the store after it was read")
+	}
+}
+
+// TestExecRefusesAVerdictFileLeftEmpty: naming {verdict} is a promise to write
+// there. An empty file is not an empty verdict, and stdout is not a fallback: a
+// reviewer that answered somewhere else answered nowhere.
+func TestExecRefusesAVerdictFileLeftEmpty(t *testing.T) {
+	p := newProject()
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "agent {verdict}"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (message %q)", result.Code, result.Message)
+	}
+	for _, want := range []string{"{verdict}", domainreview.AnswerDir + "/" + currentTree + ".json"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the message does not name %q: %q", want, result.Message)
+		}
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; ok {
+		t.Error("an empty answer was stored as a verdict")
+	}
+}
+
+// TestTheAnswerPathIsQuotedForTheShell: the app substitutes the path, so it asks
+// the shell how to spell it. {prompt} is quoted inside the adapter for the same
+// reason: a clone under a directory with a space is an ordinary Windows profile,
+// and an unquoted redirect target ends at the space.
+func TestTheAnswerPathIsQuotedForTheShell(t *testing.T) {
+	p := newProject()
+	p.shell.quote = func(path string) string { return "<" + path + ">" }
+	p.shell.after = func() {
+		path := verdictPathIn(t, p.shell.command)
+		p.files.files[path] = []byte(`{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"verdict":"approved"}`)
+	}
+
+	result := p.run(review.Options{Exec: "agent --write {verdict}"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(p.shell.command, "<") || !strings.Contains(p.shell.command, ".json>") {
+		t.Errorf("the command carries the path unquoted: %q", p.shell.command)
+	}
+}
+
+// TestEachGroupGetsAFreshAnswerFile: a command that names {verdict} runs once per
+// model group, and the file is emptied before each one. A second group that writes
+// nothing must fail, not inherit the first group's answer: that is what the
+// empty-before-run write is for.
+func TestEachGroupGetsAFreshAnswerFile(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	answers := 0
+	p.shell.after = func() {
+		answers++
+		if answers > 1 {
+			return // the second group writes nothing
+		}
+		path := verdictPathIn(t, p.shell.command)
+		p.files.files[path] = []byte(`{"findings":[],"passes":[{"path":"a.go","lens":"risk"}],"verdict":"approved"}`)
+	}
+
+	result := p.run(review.Options{
+		Exec:       "agent --write {verdict} --model {model}",
+		Lens:       "risk,reliability",
+		LensModels: map[string]string{"reliability": "sharp/model"},
+	})
+
+	if result.Code == review.CodeOK {
+		t.Fatalf("code = 0: the second group inherited the first answer (message %q)", result.Message)
+	}
+	if !strings.Contains(result.Message, "wrote nothing") {
+		t.Errorf("the message does not name the empty answer: %q", result.Message)
+	}
+}
+
+// verdictPathIn is the path a command names where the reviewer writes its answer.
+func verdictPathIn(t *testing.T, command string) string {
+	t.Helper()
+	for _, word := range strings.Fields(command) {
+		word = strings.Trim(word, `"'<>`)
+		if strings.Contains(word, domainreview.AnswerDir) && strings.HasSuffix(word, ".json") {
+			return word
+		}
+	}
+	t.Fatalf("the command names no {verdict} path: %q", command)
+	return ""
+}
+
 // TestPromptCarriesTheCandidate: with no flags the verb prints the review prompt,
 // built from the brief and the diff, and stores nothing.
 func TestPromptCarriesTheCandidate(t *testing.T) {
@@ -838,19 +972,49 @@ func TestPromptCarriesTheCandidate(t *testing.T) {
 	}
 }
 
-// TestPromptWritesNothing: the store lives outside the worktree, so printing the
-// prompt has nothing to prepare and nothing to ignore. The old order — write an
-// ignore file before hashing — is gone with the reason for it.
-func TestPromptWritesNothing(t *testing.T) {
+// TestPromptHasAHome: the printed form also writes the prompt into the clone's
+// store, beside the verdict and under the same tree, so an agent that needs it on
+// disk hands the reviewer that path instead of inventing one - 0081 invented
+// three of them inside proof/, where proof means the output of check --run.
+func TestPromptHasAHome(t *testing.T) {
 	p := newProject()
 
 	result := p.run(review.Options{})
 
-	if written := p.files.written(); len(written) != 0 {
-		t.Fatalf("writes = %v, want none: printing the prompt writes nothing", written)
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	if len(result.Files) != 0 {
-		t.Errorf("result.Files = %v, want none", result.Files)
+	rel := domainreview.Dir + "/" + currentTree + ".prompt.md"
+	content, ok := p.files.files[storeFile(rel)]
+	if !ok {
+		t.Fatalf("the prompt was not written to %s", storeRel(rel))
+	}
+	if string(content) != result.Prompt {
+		t.Error("the file and the printed prompt are not the same bytes")
+	}
+	if !slices.Contains(result.Files, storeRel(rel)) {
+		t.Errorf("Files = %v, want it to name %s", result.Files, storeRel(rel))
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; ok {
+		t.Error("printing the prompt wrote a verdict")
+	}
+}
+
+// TestPromptWritesOnlyThePrompt: the store lives outside the worktree, so the
+// printed form has nothing to prepare and nothing to ignore. The one write is the
+// prompt itself, filed under the tree it names: a verdict file here would be an
+// approval nobody gave.
+func TestPromptWritesOnlyThePrompt(t *testing.T) {
+	p := newProject()
+
+	result := p.run(review.Options{})
+
+	want := storeRel(domainreview.Dir + "/" + currentTree + ".prompt.md")
+	if written := p.files.written(); len(written) != 1 || written[0] != want {
+		t.Fatalf("writes = %v, want only %s", written, want)
+	}
+	if len(result.Files) != 1 || result.Files[0] != want {
+		t.Errorf("result.Files = %v, want [%s]", result.Files, want)
 	}
 }
 

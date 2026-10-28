@@ -246,21 +246,21 @@ func (a agentSelection) repository() store.Git {
 // Written returns the stored selection, or empty when the project never chose.
 // The file lives in the clone's store: the choice belongs to the person, and a
 // teammate clones the rules, not somebody else's clients.
-func (a agentSelection) Written(dir string) (string, error) {
+func (a agentSelection) Written(dir string) (persona.Store, error) {
 	path, _, err := a.Target(dir)
 	switch {
 	case errors.Is(err, gitx.ErrNoRepository):
 		// No repository, no store: a project that never chose, which is both.
-		return "", nil
+		return persona.Store{}, nil
 	case err != nil:
-		return "", err
+		return persona.Store{}, err
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", nil
+			return persona.Store{}, nil
 		}
-		return "", err
+		return persona.Store{}, err
 	}
 	return agentstoml.Decode(data)
 }
@@ -288,18 +288,18 @@ func storeLabel(dir, path string) string {
 	return filepath.ToSlash(path)
 }
 
-func (agentSelection) Render(selection string) ([]byte, error) { return agentstoml.Render(selection) }
+func (agentSelection) Render(store persona.Store) ([]byte, error) { return agentstoml.Render(store) }
 
 // storedAgents is the choice a verb that refreshes the mirror reads. No file
 // means both; a file the tool cannot read is named instead of guessed, because
 // guessing which client the human chose is what the switch exists to prevent.
 func storedAgents(dir, verb string) (string, int, string) {
-	selection, err := agentSelection{}.Written(dir)
+	stored, err := agentSelection{}.Written(dir)
 	if err != nil {
 		return "", start.CodeBlocked, "could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
 			"; fix the file or run odachi init --agents both, and run " + verb + " again"
 	}
-	return selection, start.CodeOK, ""
+	return stored.Agents, start.CodeOK, ""
 }
 
 // reviewModeCodec is the format adapter for `odachi review mode`: the app owns
@@ -492,6 +492,10 @@ type osShell struct{}
 func (osShell) Run(dir, command string, timeoutSeconds int) (string, string, int, bool, error) {
 	return shellcmd.Run(dir, command, timeoutSeconds)
 }
+
+// Quote is how this platform's shell spells one path, so a token the verb
+// substitutes is quoted exactly like {prompt}.
+func (osShell) Quote(path string) string { return shellcmd.Quote(path) }
 
 // RunInput is the review's form: the reviewer receives the prompt the verb built.
 func (osShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {

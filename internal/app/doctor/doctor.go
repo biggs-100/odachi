@@ -83,9 +83,10 @@ type Options struct {
 }
 
 // Agents is the selection port: which clients the project chose for the native
-// agent. It only reads: doctor has no way to change the choice.
+// agent, and whether it carries them at all. It only reads: doctor has no way to
+// change the choice.
 type Agents interface {
-	Written(dir string) (string, error)
+	Written(dir string) (persona.Store, error)
 }
 
 // Files is the disk port. It can only read: doctor has no way to write, which is
@@ -705,9 +706,9 @@ func (r *runner) voice() domaindoctor.Check {
 // did not write in this version.
 func (r *runner) voiceCheck(check domaindoctor.Check, content string) domaindoctor.Check {
 	notes := make([]string, 0, 4)
-	_, clients, selectionNote, readable := r.clientSelection()
+	selection, clients, selectionNote, readable := r.clientSelection()
 	if readable {
-		if note := r.personaNote(content, clients); note != "" {
+		if note := r.personaNote(content, selection, clients); note != "" {
 			notes = append(notes, note)
 		}
 		if note := r.globalPersonaNote(clients); note != "" {
@@ -751,7 +752,7 @@ func (r *runner) clientSelection() (string, []persona.Client, string, bool) {
 		return "", nil, "could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
 			"; fix the file or run odachi init --agents both", false
 	}
-	name, clients, err := persona.ResolveSelection(stored)
+	name, clients, err := persona.ResolveSelection(stored.Agents)
 	if err != nil {
 		return "", nil, "could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
 			"; fix the file or run odachi init --agents both", false
@@ -768,7 +769,7 @@ func (r *runner) clientSelection() (string, []persona.Client, string, bool) {
 // the agent a human picks would read a voice the project no longer promises. It
 // is a note and not a Problem because the block still works without a selector;
 // the fix is the same command that installs the mirror.
-func (r *runner) personaNote(content string, clients []persona.Client) string {
+func (r *runner) personaNote(content, selection string, clients []persona.Client) string {
 	body, ok := rules.BodyIn(content)
 	if !ok {
 		return ""
@@ -809,20 +810,60 @@ func (r *runner) personaNote(content string, clients []persona.Client) string {
 		subDirs = append(subDirs, client.SubagentDir)
 	}
 
+	choice := r.storedProjectChoice()
+	home := r.homeCarriesTheAgents(clients)
+	store := persona.SelectionPath + ": project_agents = "
+
 	switch {
-	case len(missing) > 0 && r.homeCarriesTheAgents(clients):
-		// The clean mode: the project keeps the rules and the plan, and the
-		// agents it would carry live in the home. Saying "missing" would call a
-		// decision a defect.
-		return "the project has no agent files: the door in the home is the one that runs"
+	case len(missing) > 0 && choice == persona.ProjectAgentsNone && home:
+		// The store is the authority: the absence of the mirrors is the answer it
+		// already recorded, not a gap the home happens to explain.
+		return "the project has no agent files, and the store says so (" + store +
+			"none): the door in the home is the one that runs"
+	case len(missing) > 0 && choice == persona.ProjectAgentsNone:
+		return "the project has no agent files because the store keeps the agent in the home (" + store +
+			"none), and the home does not carry the door: run odachi init --global"
+	case len(missing) > 0 && choice == persona.ProjectAgentsWrite:
+		// A recorded write is a decision too: the mirror is what is wrong, and
+		// the home carrying the door does not turn that decision into silence.
+		return "the store says this project writes its agents (" + store +
+			"write), and they are missing in " + strings.Join(missing, ", ") + ": run odachi init"
+	case len(missing) > 0 && home:
+		// The home explains the absence, and nothing recorded the choice: a
+		// teammate who clones this project would not know where its agent lives.
+		return "the project has no agent files: the door in the home is the one that runs, and " + persona.SelectionPath +
+			" does not say so; run odachi init --global --no-project-agents to record it"
 	case len(missing) > 0:
 		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") + "; run odachi init"
+	case len(stale) > 0 && choice == persona.ProjectAgentsNone:
+		// The store keeps the agent in the home, so init skips these files: the
+		// advice has to be something that actually resolves them.
+		return "the store keeps the agent in the home (" + store + "none), and " +
+			strings.Join(stale, ", ") + " in the project are leftovers nobody reads; odachi does not delete them: remove them, or run odachi init --agents " + selection + " to put them back in use"
 	case len(stale) > 0:
 		return "the native agent or its subagents do not match what was generated in " + strings.Join(stale, ", ") + "; run odachi init"
+	case choice == persona.ProjectAgentsNone:
+		return "the native agent matches the block in " + strings.Join(dirs, " and ") +
+			"; the subagents match in " + strings.Join(subDirs, " and ") +
+			"; the store keeps the agent in the home (" + store + "none), so these files are leftovers nobody reads"
 	default:
 		return "the native agent matches the block in " + strings.Join(dirs, " and ") +
 			"; the subagents match in " + strings.Join(subDirs, " and ")
 	}
+}
+
+// storedProjectChoice is where the store says the project's agent lives, or
+// empty when nothing recorded it. A store doctor cannot read is the selection
+// note's business, not this one's.
+func (r *runner) storedProjectChoice() string {
+	if r.opts.Agents == nil {
+		return ""
+	}
+	stored, err := r.opts.Agents.Written(r.opts.Dir)
+	if err != nil {
+		return ""
+	}
+	return stored.ProjectAgents
 }
 
 // homeCarriesTheAgents reports whether the home already carries the door and the

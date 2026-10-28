@@ -525,7 +525,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
-	flags.StringVar(&opts.Exec, "exec", "", "run this command with the prompt on stdin and save the verdict it answers")
+	flags.StringVar(&opts.Exec, "exec", "", "run this command with the prompt on stdin (and {prompt} as a path to it) and save the verdict it answers, or the file it writes when it names {verdict}")
 	flags.StringVar(&opts.Model, "model", "", "model that replaces {model} in --exec (default: the session's, or ODACHI_MODEL)")
 	flags.StringVar(&opts.Attach, "attach", "", "save a verdict or a refutation already written in this file")
 	flags.BoolVar(&opts.Show, "show", false, "which verdict exists for this tree, or that there is none")
@@ -830,6 +830,11 @@ func reportReview(result reviewapp.Result, asJSON bool, stdout, stderr io.Writer
 	}
 
 	if result.Prompt != "" {
+		// The store copy is the one an agent hands to a reviewer; stdout stays the
+		// prompt alone, because a pipe into a reviewer must carry nothing else.
+		for _, file := range result.Files {
+			fmt.Fprintln(stderr, "odachi: the prompt is also at "+file)
+		}
 		fmt.Fprint(stdout, result.Prompt)
 		if !strings.HasSuffix(result.Prompt, "\n") {
 			fmt.Fprintln(stdout)
@@ -878,7 +883,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&skillsScope, "skills", "project", "where to install the skills: project | home")
 	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
 	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, and make it OpenCode's default agent")
-	flags.BoolVar(&noProjectAgent, "no-project-agents", false, "do not write the project's agent files: the door in the home is the one that runs (needs --global)")
+	flags.BoolVar(&noProjectAgent, "no-project-agents", false, "do not write the project's agent files: the door in the home is the one that runs, and the choice is remembered (needs --global)")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -1398,7 +1403,8 @@ check flags:
 
 review flags:
   --exec s        run this command with the prompt on stdin (and {prompt} as the path to that
-                  same file) and save the verdict it answers
+                  same file) and save the verdict it answers; a command that names
+                  {verdict} writes its answer in that file and stdout is diagnosis
   --model s       model that replaces {model} in --exec (default: the session's, or
                   ODACHI_MODEL)
   --attach path   save a verdict or a refutation that is already written (agent or human)
@@ -1456,7 +1462,9 @@ init flags:
                   to your home, because the selector of any folder is yours
   --no-project-agents  do not write the project's agent files: with --global, the
                   door and its subagents in the home are the ones that run, and the
-                  project keeps only the rules and the plan (needs --global)
+                  project keeps only the rules and the plan; the choice is stored in
+                  agents.toml, so a plain init honors it until --agents asks for the
+                  mirrors back (needs --global)
   --json          machine output, with the destinations of the skills and of the agent
 
 setup flags:
@@ -1531,9 +1539,11 @@ after start:
   odachi undo --file brief                      only that one: brief | profile | fence | task
   odachi check                                  is it ready? brief, fence, questions and proof
   odachi check --run "<command>"                run the proof and save it with its tree
-  odachi review                                 the review prompt for this candidate
+  odachi review                                 the review prompt for this candidate, also saved
+                                                 in the clone's store and named on stderr
   odachi review --exec "<command>"              run the reviewer with the prompt on stdin and save its verdict
   odachi review --exec "agent {prompt}"         the same, but the reviewer receives the prompt path
+  odachi review --exec "agent --write {verdict}"  the answer comes from that file, and stdout is diagnosis
   odachi review --attach <file>                 save a verdict or a refutation that is already written
   odachi review --show                          which verdict exists for this tree
   odachi review --lens risk                     add a lens to the ones the evidence asks for

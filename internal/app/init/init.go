@@ -106,14 +106,15 @@ type Options struct {
 // read of the TOML here because the domain owns the names and the adapter owns
 // the format.
 type AgentSelection interface {
-	// Written returns the stored selection, or empty when there is no file.
-	Written(dir string) (string, error)
+	// Written returns the stored choices, or an empty Store when there is no
+	// file.
+	Written(dir string) (persona.Store, error)
 	// Target names the file the selection lives in: the absolute path to write,
 	// and the label a human reads. The file is in the clone's store, so the app
 	// cannot build it from the project root.
 	Target(dir string) (path, label string, err error)
-	// Render turns a selection into the bytes of the store.
-	Render(selection string) ([]byte, error)
+	// Render turns the choices into the bytes of the store.
+	Render(store persona.Store) ([]byte, error)
 }
 
 // Home is the port that answers where the human lives. The global agent is the
@@ -183,6 +184,7 @@ func Run(opts Options, files Files, skills Skills) Result {
 	}
 	r.selection = selection
 	r.clients = clients
+	r.projectAgents = r.resolveProjectAgents(opts)
 
 	if problem := r.writeAgents(); problem != nil {
 		return *problem
@@ -202,14 +204,14 @@ func Run(opts Options, files Files, skills Skills) Result {
 		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
-	if problem := r.writeAgentStore(opts.Agents != ""); problem != nil {
+	if problem := r.writeAgentStore(opts.Agents != "" || opts.NoProjectAgents); problem != nil {
 		// The hook and the rules block are already in place: report how much of
 		// the job is done instead of pretending nothing happened.
 		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
-	if opts.NoProjectAgents {
-		r.skipProjectPersonas()
+	if r.projectAgents == persona.ProjectAgentsNone {
+		r.skipProjectPersonas(opts.NoProjectAgents)
 	} else if problem := r.writePersonas(); problem != nil {
 		// The hook and the rules block are already in place: report how much of
 		// the job is done instead of pretending nothing happened.
@@ -252,7 +254,8 @@ func (r *runner) resolveAgents(requested string) (string, []persona.Client, *Res
 				"; fix the file or run odachi init --agents both")
 			return "", nil, &problem
 		}
-		r.storedSelection = stored
+		r.storedSelection = stored.Agents
+		r.storedProject = stored.ProjectAgents
 	}
 
 	value := strings.TrimSpace(requested)
@@ -268,23 +271,54 @@ func (r *runner) resolveAgents(requested string) (string, []persona.Client, *Res
 	return selection, clients, nil
 }
 
+// effectiveProject is what a store asks for: the absent key is the mirror in the
+// tree, the answer every project had before the key existed. Comparing the
+// effective answers keeps a plain run from rewriting an old store only to add a
+// line that says what its silence already said.
+func effectiveProject(store persona.Store) persona.Store {
+	if store.ProjectAgents == "" {
+		store.ProjectAgents = persona.ProjectAgentsWrite
+	}
+	return store
+}
+
+// resolveProjectAgents decides where the native agent files live. The flag wins;
+// an explicit --agents asks for the project's own copy, which is the only way out
+// of the home-only choice and needs no second flag; otherwise the stored answer
+// stands, and a project that never chose keeps the mirror in the tree.
+func (r *runner) resolveProjectAgents(opts Options) string {
+	switch {
+	case opts.NoProjectAgents:
+		return persona.ProjectAgentsNone
+	case strings.TrimSpace(opts.Agents) != "":
+		return persona.ProjectAgentsWrite
+	case r.storedProject != "":
+		return r.storedProject
+	default:
+		return persona.ProjectAgentsWrite
+	}
+}
+
 // writeAgentStore persists the choice only when someone made it: an explicit
 // flag, or a store that already exists. A project that never chose keeps no file
 // and both clients, so the default install gains no new artifact.
 func (r *runner) writeAgentStore(explicit bool) *Result {
+	want := effectiveProject(persona.Store{Agents: r.selection, ProjectAgents: r.projectAgents})
+	stored := effectiveProject(persona.Store{Agents: r.storedSelection, ProjectAgents: r.storedProject})
 	if !explicit && r.storedSelection == "" {
 		return nil
 	}
-	if r.storedSelection == r.selection {
-		r.lines = append(r.lines, persona.SelectionPath+": "+r.selection+", unchanged")
+	if stored == want {
+		r.lines = append(r.lines, persona.SelectionPath+": "+r.selection+", "+want.ProjectAgents+", unchanged")
 		return nil
 	}
 	if r.agentSelection == nil {
-		problem := blocked("cannot save the client selection: the store adapter is missing; run odachi init --agents both")
-		return &problem
+		// A caller that wired no store (the tests that only care about the
+		// project) has nowhere to record the choice; the run still honors it.
+		return nil
 	}
 
-	data, err := r.agentSelection.Render(r.selection)
+	data, err := r.agentSelection.Render(want)
 	if err != nil {
 		problem := blocked("could not build " + persona.SelectionPath + ": " + oneLine(err.Error()) +
 			"; run odachi init --agents " + r.selection + " again")
@@ -350,6 +384,12 @@ type runner struct {
 	storedSelection string
 	selection       string
 	clients         []persona.Client
+	// storedProject is where the project said its agent lives, and projectAgents
+	// is what this run decided: the flag wins, an explicit client choice asks for
+	// the mirror, and otherwise the stored answer stands. Empty means the project
+	// never chose, which keeps the mirror in the tree.
+	storedProject string
+	projectAgents string
 	// voiceNote is the sentence for a profile init could not read or name: the
 	// block still gets the default voice, and the human learns why.
 	voiceNote string
@@ -575,6 +615,10 @@ func oneLine(message string) string {
 // skipProjectPersonas is the clean mode: the project keeps the rules and the
 // plan, and the agents it would have written stay in the home, where the door
 // and its subagents are the ones that run.
-func (r *runner) skipProjectPersonas() {
-	r.lines = append(r.lines, "project agents: not written (--no-project-agents); the door in the home is the one that runs")
+func (r *runner) skipProjectPersonas(byFlag bool) {
+	reason := "the store says the agent lives in the home"
+	if byFlag {
+		reason = "--no-project-agents"
+	}
+	r.lines = append(r.lines, "project agents: not written ("+reason+"); the door in the home is the one that runs, and --agents "+r.selection+" puts the mirrors back")
 }

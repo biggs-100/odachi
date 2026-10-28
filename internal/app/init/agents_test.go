@@ -14,13 +14,18 @@ import (
 // there is one, and the canonical bytes the app writes. It never touches disk.
 type fakeAgentSelection struct {
 	stored string
-	err    error
+	// project is the second key the store carries: where the project said its
+	// agent lives, empty when it never chose.
+	project string
+	err     error
 	// targetErr is the failure of the store lookup itself: Written can succeed
 	// and the write still have nowhere to go.
 	targetErr error
 }
 
-func (s *fakeAgentSelection) Written(string) (string, error) { return s.stored, s.err }
+func (s *fakeAgentSelection) Written(string) (persona.Store, error) {
+	return persona.Store{Agents: s.stored, ProjectAgents: s.project}, s.err
+}
 
 // Target is the file the fake choice lives in: inside the project, because this
 // test is about the choice and not about where the store hangs.
@@ -34,8 +39,12 @@ func (s *fakeAgentSelection) Target(dir string) (string, string, error) {
 	return filepath.Join(dir, "agents.toml"), "agents.toml", nil
 }
 
-func (s *fakeAgentSelection) Render(selection string) ([]byte, error) {
-	return []byte("agents = \"" + selection + "\"\n"), nil
+func (s *fakeAgentSelection) Render(store persona.Store) ([]byte, error) {
+	text := "agents = \"" + store.Agents + "\"\n"
+	if store.ProjectAgents != "" {
+		text += "project_agents = \"" + store.ProjectAgents + "\"\n"
+	}
+	return []byte(text), nil
 }
 
 // runAgents performs one init with the selection and, when the test wants it, a
@@ -243,7 +252,126 @@ func TestInitAgentsExplicitBothIsStored(t *testing.T) {
 	}
 }
 
-// TestInitAgentsNoChoiceWritesNoStore: a project that never chose keeps the
+// TestInitNoProjectAgentsIsStored: the flag is a decision, not a one-time order.
+// The store records it, so the next plain run honors it instead of rebuilding the
+// mirrors - the defect that opened this feature.
+func TestInitNoProjectAgentsIsStored(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+	store := &fakeAgentSelection{}
+
+	first := initapp.Run(initapp.Options{
+		Dir:             dir,
+		AgentSelection:  store,
+		Global:          true,
+		NoProjectAgents: true,
+	}, files, &fakeSkills{})
+
+	if first.Code != 0 {
+		t.Fatalf("first run Code = %d, want 0 (message %q)", first.Code, first.Message)
+	}
+	content, ok := files.get(persona.SelectionPath)
+	if !ok {
+		t.Fatalf("%s was not written: the choice was not recorded", persona.SelectionPath)
+	}
+	if !strings.Contains(content, `project_agents = "none"`) {
+		t.Errorf("%s = %q, want project_agents = \"none\"", persona.SelectionPath, content)
+	}
+
+	// The store now answers what the file says, and a plain run must respect it.
+	store.project = persona.ProjectAgentsNone
+	files.events = nil
+
+	second := runAgents(files, "", store, "hogar")
+
+	if second.Code != 0 {
+		t.Fatalf("second run Code = %d, want 0 (message %q)", second.Code, second.Message)
+	}
+	if _, ok := files.get(".opencode/agents/odachi.md"); ok {
+		t.Error("the plain run rebuilt a mirror the store had turned off")
+	}
+	for _, event := range files.events {
+		if strings.Contains(event, "agents.toml") {
+			t.Errorf("the second run rewrote the store: %s", event)
+		}
+	}
+}
+
+// TestInitNamesTheStoredSelectionAsTheWayBack: the way out of home-only is the
+// client selection the project already has, not a verbatim "opencode". Naming a
+// fixed client would rewrite a store that says both, which is the choice the store
+// exists to protect.
+func TestInitNamesTheStoredSelectionAsTheWayBack(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+	store := &fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone}
+
+	got := runAgents(files, "", store, "hogar")
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	joined := strings.Join(got.Lines, "\n")
+	if !strings.Contains(joined, "--agents "+persona.SelectionBoth) {
+		t.Errorf("the lines do not name the stored selection:\n%s", joined)
+	}
+	if strings.Contains(joined, "--agents "+persona.SelectionOpenCode) {
+		t.Errorf("the lines name one client for a project that chose both:\n%s", joined)
+	}
+}
+
+// TestInitHonorsTheStoredProjectChoice: a project that recorded that its agent
+// lives in the home keeps it there on a plain run. Without this, one bare init
+// silently rebuilt the mirrors the person had chosen to delete, and doctor then
+// reported them as healthy.
+func TestInitHonorsTheStoredProjectChoice(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+	store := &fakeAgentSelection{stored: persona.SelectionOpenCode, project: persona.ProjectAgentsNone}
+
+	got := runAgents(files, "", store, "hogar")
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	for _, path := range []string{
+		persona.SubagentFilesFor(persona.SelectionOpenCode)[0].Path,
+		".opencode/agents/odachi.md",
+	} {
+		if _, ok := files.get(path); ok {
+			t.Errorf("the run wrote %s although the store keeps the agent in the home", path)
+		}
+	}
+	joined := strings.Join(got.Lines, "\n")
+	for _, want := range []string{"home", "--agents opencode"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the lines do not name %q:\n%s", want, joined)
+		}
+	}
+}
+
+// TestInitExplicitAgentsPutsTheMirrorsBack: the flag that names clients is the
+// way out of the home-only choice, so the stored answer changes with it. The
+// alternative was a second flag, and the fence of this feature forbids one.
+func TestInitExplicitAgentsPutsTheMirrorsBack(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+	store := &fakeAgentSelection{stored: persona.SelectionOpenCode, project: persona.ProjectAgentsNone}
+
+	got := runAgents(files, persona.SelectionOpenCode, store, "hogar")
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
+	}
+	if _, ok := files.get(".opencode/agents/odachi.md"); !ok {
+		t.Error(".opencode/agents/odachi.md was not written back")
+	}
+	content, ok := files.get(persona.SelectionPath)
+	if !ok {
+		t.Fatalf("%s was not rewritten", persona.SelectionPath)
+	}
+	if !strings.Contains(content, `project_agents = "write"`) {
+		t.Errorf("%s = %q, want project_agents = \"write\"", persona.SelectionPath, content)
+	}
+}
+
+// TestInitNoChoiceWritesNoStore: a project that never chose keeps the
 // default and gains no new file. The absence is the default, not a missing
 // write.
 func TestInitAgentsNoChoiceWritesNoStore(t *testing.T) {

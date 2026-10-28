@@ -1,9 +1,14 @@
 [[rule]]
-not   = "no change to where the store lives"
-paths = ["no-change-to-where-the-store-lives*"]
+not   = "no new verb and no new flag"
+paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no new verb and no new flag"
-paths = ["no-new-verb-and-no-new-flag*"]
+not   = "no change to where the verdicts live"
+paths = ["no-change-to-where-the-verdicts-live*"]
+deps  = []
+
+[[rule]]
+not   = "no new field in the verdict schema"
+paths = ["no-new-field-in-the-verdict-schema*"]
 deps  = []

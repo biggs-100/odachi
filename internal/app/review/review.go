@@ -60,6 +60,11 @@ const noBrief = "(there is no brief.md yet: run odachi start)"
 // spells its model, and the human keeps writing the command they know.
 const modelToken = "{model}"
 
+// answerToken is where a command that cannot keep its answer out of stdout
+// writes it: odachi substitutes the path of a file in the clone's store and reads
+// that file instead of the command's own output.
+const answerToken = "{verdict}"
+
 // Options is one `odachi review` invocation.
 type Options struct {
 	Dir string
@@ -141,6 +146,10 @@ type Git interface {
 type Shell interface {
 	Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
 	RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
+	// Quote spells one path the way this platform's shell needs it. The app
+	// substitutes {verdict} itself, so it asks the shell instead of guessing:
+	// {prompt} is quoted inside the adapter for the same reason.
+	Quote(path string) string
 }
 
 // Lenses is the port for the four specialist prompts. It returns the file
@@ -270,11 +279,26 @@ func (r *runner) prompt() Result {
 		return *problem
 	}
 
+	// The question gets the same home as the answer: the store, under the tree it
+	// names. An agent that needs the prompt on disk asks this verb where it is
+	// instead of picking a folder - proof/ is not a prompt's home.
+	rel, err := domain.PromptPath(tree)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; the prompt was not written")
+	}
+	path := r.storePath(rel)
+	if err := r.files.Write(path, []byte(text)); err != nil {
+		problem := blocked("could not write the prompt into the clone's store (" + r.storeLabel(rel) + "): " +
+			oneLine(err.Error()) + "; check the permissions and run odachi review again")
+		return problem
+	}
+
 	return Result{
 		Code:    CodeOK,
 		Message: promptMessage(tree, selected),
 		Prompt:  text,
 		Lenses:  selected,
+		Files:   []string{r.storeLabel(rel)},
 	}
 }
 
@@ -719,10 +743,29 @@ func (r *runner) exec() Result {
 			return *problem
 		}
 
+		// A command that names {verdict} is given a file before it runs, emptied
+		// first: an answer a previous group left there is not this group's, and a
+		// reviewer that writes nothing must not inherit it.
+		answerRel, answerPath := "", ""
+		if strings.Contains(command, answerToken) {
+			rel, err := domain.AnswerPath(cand.tree)
+			if err != nil {
+				return blocked(oneLine(err.Error()) + "; the reviewer was not started")
+			}
+			answerRel = rel
+			answerPath = r.storePath(rel)
+			if err := r.files.Write(answerPath, nil); err != nil {
+				problem := blocked("could not prepare " + r.storeLabel(rel) + " for the reviewer's answer: " +
+					oneLine(err.Error()) + "; the reviewer was not started")
+				return problem
+			}
+			command = strings.ReplaceAll(command, answerToken, r.shell.Quote(answerPath))
+		}
+
 		stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
-		// The answer is stdout. stderr is the command's own diagnosis - banners,
-		// warnings, ANSI - and it is shown when something fails, never parsed as
-		// part of the verdict.
+		// The answer is stdout, unless the command was given a file to write it
+		// in. Then the file is the answer and stdout is only diagnosis: a reviewer
+		// that prints a banner, a spinner or its own logs keeps its answer readable.
 		diagnosis := stdout
 		if stderr != "" {
 			diagnosis += stderr
@@ -736,11 +779,20 @@ func (r *runner) exec() Result {
 			return r.stopped(fmt.Sprintf("%s did not give a verdict: the reviewer exited with code %d", command, exitCode), diagnosis, rel, len(covered), selected, todo, landed)
 		}
 
+		answer := stdout
+		if answerPath != "" {
+			data, problem := r.answerFrom(answerRel, answerPath, command)
+			if problem != nil {
+				return r.stopped(problem.Message, diagnosis, rel, len(covered), selected, todo, landed)
+			}
+			answer = data
+		}
+
 		// A refutation is an answer too, and it is stored beside the verdict it judges.
-		if domain.Sniff([]byte(stdout)) == domain.KindRefutation {
-			refutation, err := domain.ParseRefutation([]byte(stdout))
+		if domain.Sniff([]byte(answer)) == domain.KindRefutation {
+			refutation, err := domain.ParseRefutation([]byte(answer))
 			if err != nil {
-				return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(stdout), rel, len(covered), selected, todo, landed)
+				return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(answer), rel, len(covered), selected, todo, landed)
 			}
 			// The refuter may have moved the worktree too; what it cites is the diff
 			// it was given, and the file is filed under the tree that exists now.
@@ -748,9 +800,9 @@ func (r *runner) exec() Result {
 			return r.storeRefutation(refutation, command)
 		}
 
-		parsed, err := domain.Parse([]byte(stdout))
+		parsed, err := domain.Parse([]byte(answer))
 		if err != nil {
-			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(stdout), rel, len(covered), selected, todo, landed)
+			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(answer), rel, len(covered), selected, todo, landed)
 		}
 		// The command is the reviewer: it is the one fact the tool knows about an
 		// answer that came out of a shell.
@@ -762,7 +814,7 @@ func (r *runner) exec() Result {
 		// the resolution of THIS group, not from a field the last one wrote.
 		parsed.Model = resolved[i]
 		if err := parsed.Validate(); err != nil {
-			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(stdout), rel, len(covered), selected, todo, landed)
+			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(answer), rel, len(covered), selected, todo, landed)
 		}
 		// The per-lens map is what lets the identity gate judge each lens on its
 		// own: this group's lenses were judged by this group's model.
@@ -785,6 +837,14 @@ func (r *runner) exec() Result {
 				return last
 			}
 			return r.stopped(oneLine(last.Message), diagnosis, rel, len(covered), selected, todo, landed)
+		}
+		if answerPath != "" {
+			// The answer is the verdict file now; this one was scaffolding. If it
+			// stays, the human is told where: a leftover nobody names is read as a
+			// verdict by the next person who looks.
+			if err := r.files.Remove(answerPath); err != nil {
+				notes = appendUnique(notes, "the answer file stayed in "+r.storeLabel(answerRel)+": "+oneLine(err.Error()))
+			}
 		}
 		landed = append(landed, group.lenses...)
 		if len(last.Lines) > 2 {
@@ -829,6 +889,24 @@ func (r *runner) exec() Result {
 // asks for exactly those.
 func (r *runner) stopped(reason, output, rel string, savedBefore int, selected, todo, landed []string) Result {
 	return r.stoppedWith(reason, output, rel, savedBefore, selected, todo, landed, "")
+}
+
+// answerFrom reads the file a {verdict} command was told to write. An empty file
+// is not an empty verdict: a reviewer that answered somewhere else answered
+// nowhere, and a fallback to stdout would turn a broken contract into a quiet one.
+func (r *runner) answerFrom(rel, path, command string) (string, *Result) {
+	data, err := r.files.Read(path)
+	if err != nil {
+		problem := blocked(command + " did not give a verdict: it names " + answerToken +
+			" and the answer in " + r.storeLabel(rel) + " could not be read: " + oneLine(err.Error()))
+		return "", &problem
+	}
+	if strings.TrimSpace(string(data)) == "" {
+		problem := blocked(command + " did not give a verdict: it names " + answerToken +
+			" and wrote nothing in " + r.storeLabel(rel) + "; write the JSON there and run odachi review again")
+		return "", &problem
+	}
+	return string(data), nil
 }
 
 // stoppedWith is stopped for a run that also kept an answer the tool could not

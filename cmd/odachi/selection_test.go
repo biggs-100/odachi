@@ -24,8 +24,8 @@ func TestTheSelectionAdapterAnswersBothOnlyWhenThereIsNoRepository(t *testing.T)
 	if err != nil {
 		t.Fatalf("Written in a folder with no repository = error %v, want the empty answer", err)
 	}
-	if got != "" {
-		t.Errorf("Written = %q, want empty (both clients)", got)
+	if got.Agents != "" || got.ProjectAgents != "" {
+		t.Errorf("Written = %+v, want the empty answer (both clients, the mirror in the tree)", got)
 	}
 }
 
@@ -62,7 +62,7 @@ func TestTheSelectionAdapterReadsTheStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Written: %v", err)
 	}
-	if got != "opencode" {
-		t.Errorf("Written = %q, want opencode", got)
+	if got.Agents != "opencode" {
+		t.Errorf("Written = %+v, want opencode", got)
 	}
 }
