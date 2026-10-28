@@ -792,7 +792,32 @@ func (r *runner) exec() Result {
 			command = strings.ReplaceAll(command, answerToken, r.shell.Quote(answerPath))
 		}
 
+		// The question is filed once it has been sent, whatever came back: the bytes
+		// that produced a verdict - or a failure - are the only way to read the run
+		// again without regenerating them. A command that never started was handed
+		// nothing, and a run that refuses before this point writes nothing.
+		promptRel, err := domain.GroupPromptPath(cand.tree, group.lenses)
+		if err != nil {
+			return blocked(oneLine(err.Error()) + "; the reviewer was not started")
+		}
+		if len(groups) == 1 {
+			if canonical, err := domain.PromptPath(cand.tree); err == nil {
+				promptRel = canonical
+			}
+		}
 		stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
+		// The question is filed once it has been sent, whatever came back: the bytes
+		// that produced a verdict - or a failure - are the only way to read the run
+		// again without regenerating them, and a command that never started was
+		// handed nothing to file.
+		if err == nil {
+			// A store that cannot hold the question says so and keeps going: the
+			// answer is the paid thing, and throwing it away to report a missing
+			// file would be the same loss this feature exists to prevent.
+			if writeErr := r.files.Write(r.storePath(promptRel), []byte(text)); writeErr != nil {
+				notes = appendUnique(notes, "the prompt could not be filed in "+r.storeLabel(promptRel)+": "+oneLine(writeErr.Error()))
+			}
+		}
 		// The answer is stdout, unless the command was given a file to write it
 		// in. Then the file is the answer and stdout is only diagnosis: a reviewer
 		// that prints a banner, a spinner or its own logs keeps its answer readable.
@@ -802,11 +827,11 @@ func (r *runner) exec() Result {
 		}
 		switch {
 		case err != nil:
-			return r.stopped(command+" did not give a verdict: could not run the reviewer: "+oneLine(err.Error()), diagnosis, rel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(command+" did not give a verdict: could not run the reviewer: "+oneLine(err.Error()), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		case timedOut:
-			return r.stopped(fmt.Sprintf("%s did not give a verdict: the review did not finish in %ds", command, ExecTimeoutSeconds), diagnosis, rel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict: the review did not finish in %ds", command, ExecTimeoutSeconds), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		case exitCode != 0:
-			return r.stopped(fmt.Sprintf("%s did not give a verdict: the reviewer exited with code %d", command, exitCode), diagnosis, rel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict: the reviewer exited with code %d", command, exitCode), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		}
 
 		answer := stdout
@@ -919,6 +944,33 @@ func (r *runner) exec() Result {
 // asks for exactly those.
 func (r *runner) stopped(reason, output, rel string, savedBefore int, selected, todo, landed []string) Result {
 	return r.stoppedWith(reason, output, rel, savedBefore, selected, todo, landed, "")
+}
+
+// stoppedWithAnswer is stopped for a run that left bytes in the {verdict} file it
+// handed the reviewer. Those bytes were paid for, and the file is scaffolding: the
+// next run on this tree empties it. So the run copies them under a name their
+// content decides, removes the scaffolding, and names the copy in the refusal.
+func (r *runner) stoppedWithAnswer(reason, output, rel, answerPath, answerRel string, savedBefore int, selected, todo, landed []string) Result {
+	if answerPath == "" {
+		return r.stopped(reason, output, rel, savedBefore, selected, todo, landed)
+	}
+
+	data, err := r.files.Read(answerPath)
+	if err != nil || strings.TrimSpace(string(data)) == "" {
+		return r.stopped(reason, output, rel, savedBefore, selected, todo, landed)
+	}
+
+	kept, problem := r.keepAnswer(data, rel)
+	if problem != nil {
+		return r.stopped(oneLine(reason)+"; the answer in "+r.storeLabel(answerRel)+" could be read but not kept: "+problem.Message,
+			output, rel, savedBefore, selected, todo, landed)
+	}
+	// The scaffolding goes once its bytes have a name of their own. Best effort on
+	// purpose: the copy is the evidence, and failing the run for the leftover would
+	// throw away what the copy was made to protect.
+	_ = r.files.Remove(answerPath)
+
+	return r.stoppedWith(reason, output, rel, savedBefore, selected, todo, landed, kept)
 }
 
 // answerFrom reads the file a {verdict} command was told to write. An empty file
