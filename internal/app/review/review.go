@@ -89,6 +89,10 @@ type Options struct {
 	// A lens with no entry is left to the reviewer command, which is what the
 	// file meant before the table existed.
 	LensModels map[string]string
+	// MaxPromptKB is the largest prompt this project pays a reviewer for, read
+	// from `odd/review.toml`. Zero means no limit: a project that never wrote the
+	// key reviews as it always did.
+	MaxPromptKB int
 	// Attach is a verdict someone already wrote.
 	Attach string
 	// Show reads this tree's verdict instead of producing one.
@@ -299,7 +303,20 @@ func (r *runner) prompt() Result {
 		Prompt:  text,
 		Lenses:  selected,
 		Files:   []string{r.storeLabel(rel)},
+		Lines:   r.sizeNote(text),
 	}
+}
+
+// sizeNote is the one thing the printed form owes a project with a limit: the
+// size, so the human learns it here and not from a reviewer that stalls. Printing
+// spends nothing, so this never refuses.
+func (r *runner) sizeNote(text string) []string {
+	limit := r.opts.MaxPromptKB
+	size := (len(text) + 1023) / 1024
+	if limit <= 0 || size <= limit {
+		return nil
+	}
+	return []string{fmt.Sprintf("the prompt is %d KB and odd/review.toml allows %d KB: a reviewer that stalls at this size does not answer", size, limit)}
 }
 
 // promptText is the prompt for one candidate, plus the tree it names and the
@@ -726,23 +743,35 @@ func (r *runner) exec() Result {
 		resolved[i] = model
 	}
 
+	// The prompt is what the reviewer is paid for, and its size is the one thing
+	// odachi knows before spending anything: a model that stalls at a size does
+	// not answer late, it does not answer at all. Every group's prompt is built
+	// and measured here, so a run that cannot be answered starts nothing.
+	prompts := make([]string, len(groups))
+	for i, group := range groups {
+		text, problem := r.promptFor(cand, group.lenses)
+		if problem != nil {
+			return *problem
+		}
+		prompts[i] = text
+	}
+	if problem := r.promptTooBig(prompts); problem != nil {
+		return *problem
+	}
+
 	// landed is what this run answered; notes is what each store reported about
 	// the file it wrote. A failure counts both to say what the tree holds.
 	var landed []string
 	var notes []string
 	var last Result
-
 	for i, group := range groups {
 		command := commands[i]
 
 		// The command is a reviewer, so it gets the prompt the verb prints, for the
-		// lenses this group owns. A reviewer started without one reviews whatever it
-		// decides to look at, and that is not the candidate this verdict is filed
-		// under.
-		text, problem := r.promptFor(cand, group.lenses)
-		if problem != nil {
-			return *problem
-		}
+		// lenses this group owns. The text was built and measured before any group
+		// ran: a reviewer started without one reviews whatever it decides to look
+		// at, and that is not the candidate this verdict is filed under.
+		text := prompts[i]
 
 		// A command that names {verdict} is given a file before it runs, emptied
 		// first: an answer a previous group left there is not this group's, and a
@@ -1469,6 +1498,36 @@ func (r *runner) refuse(sealed domain.Verdict, gaps []domain.Gap, rel string) Re
 			"next: odachi review --attach " + kept,
 		},
 	}
+}
+
+// promptTooBig refuses a run whose prompt is larger than the project pays for.
+// The size is the one fact odachi knows before spending, and a reviewer that
+// stalls at a size does not answer late: it does not answer at all.
+func (r *runner) promptTooBig(prompts []string) *Result {
+	limit := r.opts.MaxPromptKB
+	if limit <= 0 {
+		return nil
+	}
+
+	for _, text := range prompts {
+		size := (len(text) + 1023) / 1024
+		if size <= limit {
+			continue
+		}
+		message := fmt.Sprintf("the review prompt is %d KB and odd/review.toml allows %d KB: no reviewer was started", size, limit)
+		problem := Result{
+			Code:    CodeBlocked,
+			Message: message,
+			Lines: []string{
+				message,
+				"next: raise max_prompt_kb in odd/review.toml to the size your reviewer really takes",
+				"or give the review a smaller candidate: the limit is the reviewer's, not odachi's",
+				"why: a reviewer that stalls at a size does not answer late, it does not answer at all",
+			},
+		}
+		return &problem
+	}
+	return nil
 }
 
 // inspectionRefusal says why an answer's declaration does not describe the

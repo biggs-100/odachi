@@ -130,3 +130,42 @@ func TestRenderWritesACanonicalSwitch(t *testing.T) {
 		t.Errorf("Decode(Render(on)) = %q, want %q", decoded.Mode, review.ModeOn)
 	}
 }
+
+// TestTheSizeLimitSurvivesARoundTrip: the limit is the human's measurement of
+// what their reviewer takes, and `review mode on|off` rewrites this file. A writer
+// that dropped the key would erase the measurement the first time somebody flipped
+// the switch.
+func TestTheSizeLimitSurvivesARoundTrip(t *testing.T) {
+	data, err := reviewtoml.Render(review.ProjectConfig{Mode: review.ModeOn, MaxPromptKB: 96})
+	if err != nil {
+		t.Fatalf("Render = %v", err)
+	}
+	if !strings.Contains(string(data), "max_prompt_kb = 96") {
+		t.Errorf("Render = %q, want the limit written", data)
+	}
+
+	decoded, err := reviewtoml.Decode(data)
+	if err != nil {
+		t.Fatalf("Decode(Render) = %v", err)
+	}
+	if decoded.MaxPromptKB != 96 {
+		t.Errorf("MaxPromptKB = %d, want 96", decoded.MaxPromptKB)
+	}
+
+	// A file that never wrote the key is no limit, and Render writes no line for
+	// it: absence and zero are the same decision.
+	plain, err := reviewtoml.Render(review.ProjectConfig{Mode: review.ModeOn})
+	if err != nil {
+		t.Fatalf("Render(no limit) = %v", err)
+	}
+	if strings.Contains(string(plain), "max_prompt_kb") {
+		t.Errorf("Render = %q, want no limit line for zero", plain)
+	}
+}
+
+// TestTheSizeLimitRefusesANegative: a negative size is a typo, not a rule.
+func TestTheSizeLimitRefusesANegative(t *testing.T) {
+	if _, err := reviewtoml.Decode([]byte("mode = \"on\"\nmax_prompt_kb = -3\n")); err == nil {
+		t.Fatal("a negative limit passed")
+	}
+}

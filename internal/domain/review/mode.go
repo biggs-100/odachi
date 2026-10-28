@@ -20,12 +20,27 @@ const (
 	ModeOff = "off"
 )
 
-// ProjectConfig is what odd/review.toml holds: the switch, and optionally
-// the model that judges each lens. A lens without an entry is judged by the
-// session's model, which is what the file meant before this table existed.
+// ProjectConfig is what odd/review.toml holds: the switch, optionally the model
+// that judges each lens, and the biggest prompt this project pays for. A lens
+// without an entry is judged by the session's model, which is what the file meant
+// before this table existed.
 type ProjectConfig struct {
 	Mode   string
 	Lenses map[string]string
+	// MaxPromptKB is the largest prompt size, in kilobytes, this project will
+	// spend a reviewer on. Zero means no limit: a file that never wrote the key
+	// reviews as it always did.
+	MaxPromptKB int
+}
+
+// NormalizeMaxPromptKB checks the size limit. It is a size a human measured for
+// their reviewer, so a negative number is a typo and not a rule; zero is the
+// absence of one.
+func NormalizeMaxPromptKB(value int) (int, error) {
+	if value < 0 {
+		return 0, fmt.Errorf("the size limit is %d KB: a limit is zero (none) or a positive number of kilobytes", value)
+	}
+	return value, nil
 }
 
 // AllLenses is the lens vocabulary in its fixed order, for a writer that has to
