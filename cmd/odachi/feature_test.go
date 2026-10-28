@@ -25,6 +25,27 @@ func TestStartHelpNamesTheWaiverLane(t *testing.T) {
 	}
 }
 
+// TestTheReviewRefusesWhatTheProjectWillNotPayFor: the limit lives in the
+// project's file, and the CLI is what carries it to the app. Without this the app
+// could enforce a limit no project's file ever reaches, or enforce none at all,
+// and every package test would stay green.
+func TestTheReviewRefusesWhatTheProjectWillNotPayFor(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+	writeFile(t, dir, "odd/review.toml", "mode = \"on\"\nmax_prompt_kb = 1\n")
+
+	code, _, errOut := runDir(t, dir, []string{"review", "--exec", "echo ok"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
+	}
+	for _, want := range []string{"max_prompt_kb", "no reviewer was started"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("stderr %q does not carry %q", errOut, want)
+		}
+	}
+}
+
 // TestAFeatureCanBeChosenByItsNumber: two features live in one tree, and the
 // writer acts on the one named instead of the highest. Without the flag nothing
 // changes: the highest is the feature the human is working on now.

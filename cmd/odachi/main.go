@@ -570,6 +570,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 	opts.LensModels = config.Lenses
+	opts.MaxPromptKB = config.MaxPromptKB
 
 	return reportReview(reviewapp.Run(opts, disk(dir), gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
 }

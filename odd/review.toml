@@ -1,5 +1,8 @@
 # odachi: the review is the human's decision; on requires it in check, off leaves it optional
 mode = "on"
+# the biggest prompt this project pays a reviewer for; a reviewer that stalls at a size does not answer late
+# measured 2026-10-28: 89 KB closed in 46s on mimo-v2.6-flash, 122 KB stalled until the 600s timeout
+max_prompt_kb = 96
 
 [lenses]
 risk = "opencode-go/mimo-v2.6-flash"

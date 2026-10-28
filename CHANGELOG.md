@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A gate is only as strong as the least it lets you say, and a reviewer is only as
+strong as the prompt it can take.
+
+- **A review refuses a prompt its reviewer cannot take.** `odd/review.toml` carries
+  `max_prompt_kb`: the largest prompt this project pays a reviewer for. A model
+  that stalls at a size does not answer late - it does not answer at all - and the
+  size is the one thing odachi knows before spending. `review --exec` refuses
+  before starting anything, naming the size, the limit and the two ways out; the
+  printed form still prints, because it spends nothing, and says the size where a
+  person reading the run can see it. A file without the key is no limit.
+- **An older binary refuses the new key, on purpose.** `review.toml` carrying
+  `max_prompt_kb` is an error to a binary that predates it (`unknown keys`): the
+  key and the binary land together.
+
 ## v0.11.43 - 2026-10-28
 
 A gate is only as strong as the least it lets you say.
