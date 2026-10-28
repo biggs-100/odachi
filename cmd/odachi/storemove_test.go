@@ -67,6 +67,25 @@ func TestStoreMoveAdoptsTheEvidenceAndNamesTheGitMoves(t *testing.T) {
 	}
 }
 
+// TestUndoWorksOutsideARepository: start creates a project in a folder that is
+// not a git repository and saves its versions beside the artifacts. Undo has to
+// read exactly those: refusing would strand a project the tool itself created.
+func TestUndoWorksOutsideARepository(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeFile(t, dir, "brief.md", "brief nuevo\n")
+	writeFile(t, dir, "brief.md.bak-00000000", "brief viejo\n")
+
+	code, out, stderr := runDir(t, dir, []string{"undo", "--list"}, "")
+
+	if code != 0 {
+		t.Fatalf("undo --list outside a repository: exit %d (stderr: %s)", code, stderr)
+	}
+	if !strings.Contains(out, "brief.md") {
+		t.Errorf("stdout = %q, want the beside-artifact version listed", out)
+	}
+}
+
 // TestStoreMoveWithoutARepositoryNamesTheFix: there is no store outside git, and
 // the refusal says so instead of inventing a location.
 func TestStoreMoveWithoutARepositoryNamesTheFix(t *testing.T) {

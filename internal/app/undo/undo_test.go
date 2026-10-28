@@ -441,6 +441,43 @@ func TestListFileFiltersToOneArtifact(t *testing.T) {
 	}
 }
 
+// TestTheOldProfileVersionIsStillFound: the old project store kept the profile
+// under `.odachi/backups/.odachi/`, and today the artifact lives under `odd/`.
+// Discovery has to look in the folder the old release used, not in today's, or a
+// migration adopts nothing and the tool then tells the human to delete the
+// folder that still holds the version.
+func TestTheOldProfileVersionIsStillFound(t *testing.T) {
+	const old = "perfil viejo"
+	legacy := filepath.Join(dir, ".odachi", "backups", ".odachi", "profile.toml.bak-"+digest(old))
+
+	files := newFakeFiles()
+	files.put(profileRel, "perfil actual", at(21, 23, 0))
+	files.putPath(legacy, old, at(20, 9, 0))
+
+	listed := undo.Run(undo.Options{Dir: dir, Store: store, List: true}, files, nil)
+	if listed.Code != undo.CodeOK || !strings.Contains(listed.Message, profileRel) {
+		t.Fatalf("--list does not see the old profile version: %s", listed.Message)
+	}
+
+	restored := undo.Run(undo.Options{Dir: dir, Store: store, File: "profile"}, files, nil)
+	if restored.Code != undo.CodeOK {
+		t.Fatalf("restore: Code = %d (%s)", restored.Code, restored.Message)
+	}
+	if got := files.content(t, profileRel); got != old {
+		t.Errorf("%s = %q, want the old version %q", profileRel, got, old)
+	}
+
+	// And --collect moves it to today's folder inside the store, so the second
+	// read finds it where the new layout expects it.
+	if collected := undo.Run(undo.Options{Dir: dir, Store: store, Collect: true}, files, nil); collected.Code != undo.CodeOK {
+		t.Fatalf("collect: Code = %d (%s)", collected.Code, collected.Message)
+	}
+	want := filepath.Join(store, "backups", "odd", "profile.toml.bak-"+digest(old))
+	if _, ok := files.files[want]; !ok {
+		t.Errorf("the old version was not adopted into %s; files: %v", want, files.paths())
+	}
+}
+
 // TestStoreBackupIsRestored: the store is the new home, but a backup is still a
 // backup. Undo reads it and names the path it used.
 func TestStoreBackupIsRestored(t *testing.T) {

@@ -90,6 +90,20 @@ func (k Kind) BackupSubdir() string {
 	return k.Dir()
 }
 
+// LegacySubdir is where this kind's versions lived inside the old project store,
+// `.odachi/backups`. It is the artifact's directory as that release knew it, not
+// today's: the profile and the fence lived in `.odachi/` then and live in `odd/`
+// now, and a migration that looked for today's path would miss every version of
+// them.
+func (k Kind) LegacySubdir() string {
+	switch k {
+	case Profile, Fence:
+		return layout.LegacyDir
+	default:
+		return k.Dir()
+	}
+}
+
 // Target is the artifact as a human reads it in a project: the list a blocked
 // message repeats, so the human knows exactly what undo can put back.
 func (k Kind) Target() string {

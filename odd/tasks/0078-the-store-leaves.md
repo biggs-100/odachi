@@ -17,7 +17,7 @@ R1 · "the store leaves the project, and the clone's state lives in .git/odachi"
 - [x] T3 · the verdicts leave: review reads and writes in the store, and the ignore machinery retires from init, doctor and tier   R1 · tree:82137011baa034d5e60c3efc8ce8d4d8479b8fc2
 - [x] T4 · the rules move: fence, profile, review and roles live under odd, and agents.toml lives in the clone store   R1 · tree:31cde8be49c0561877bb89099296ebb40bc41f69
 - [x] T5 · the leftovers: doctor names what an old project still carries, and init prints the moves git has to make   R1 · tree:0b0876f1cea1c3e0e609adf360ed33f129ad42a4
-- [ ] T6 · the map follows: docs, the AGENTS block and the drive skill say where the store lives, and this repo moves its own   R1
+- [x] T6 · the map follows: docs, the AGENTS block and the drive skill say where the store lives, and this repo moves its own   R1 · tree:323d167444222bc92ddb049b5861272e6a1e4bc4
 
 ## History
 L1 · "the store leaves the project, and the clone's state lives in .git/odachi"

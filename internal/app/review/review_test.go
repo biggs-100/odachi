@@ -1924,12 +1924,8 @@ func TestAttachRefusesABrokenVerdictWithoutWriting(t *testing.T) {
 }
 
 // TestAttachRefusesAVerdictForAnotherTree: approval cannot float. The refusal
-// names both trees and no verdict is stored.
-//
-// The store's ignore file may be created by this attempt: the verdict is checked
-// against the tree hash, and the hash can only be taken once the store is out of
-// the tree. That file belongs to the tool, is idempotent, and is inside
-// the store's reviews/; the verdict is not written.
+// names both trees and no verdict is stored. Nothing is written at all: an
+// attached document for another tree is refused before the store is touched.
 func TestAttachRefusesAVerdictForAnotherTree(t *testing.T) {
 	p := newProject()
 	p.files.files[fullPath("veredicto.json")] = []byte(`{"tree":"` + otherTree + `","reviewer":"humano","findings":[]}`)

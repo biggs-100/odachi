@@ -45,6 +45,23 @@ func TestBackupSubdirPreservesTheArtifactPath(t *testing.T) {
 	}
 }
 
+// TestLegacySubdirKeepsTheOldFolder: the old project store kept the profile and
+// the fence under `.odachi/`, and today they live under `odd/`. A migration that
+// looked for today's path would miss every version of them, silently.
+func TestLegacySubdirKeepsTheOldFolder(t *testing.T) {
+	cases := map[undo.Kind]string{
+		undo.Brief:   ".",
+		undo.Profile: ".odachi",
+		undo.Fence:   ".odachi",
+		undo.Task:    "odd/tasks",
+	}
+	for kind, want := range cases {
+		if got := kind.LegacySubdir(); got != want {
+			t.Errorf("%s.LegacySubdir() = %q, want %q", kind, got, want)
+		}
+	}
+}
+
 // TestParseKindReadsTheFlag: --file takes the short name, and a miss is a miss
 // so the caller can list the four.
 func TestParseKindReadsTheFlag(t *testing.T) {

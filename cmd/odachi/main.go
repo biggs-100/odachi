@@ -653,15 +653,12 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	storeRoot, storeErr := store.Root(dir, gitRepo{})
-	if storeErr != nil {
-		fmt.Fprintln(stderr, "odachi: "+oneLine(storeErr.Error())+"; odachi undo needs the clone's store, so run it inside a git repository")
-		return start.CodeBlocked
-	}
-
+	// A folder that is not a git repository has no store, and undo still works
+	// there: start creates a project without a repository and saves its versions
+	// beside the artifacts, and undo reads exactly those.
 	opts.Dir = dir
-	opts.Store = storeRoot
-	return reportUndo(undo.Run(opts, osFiles{project: dir, store: storeRoot}, &osLock{}), asJSON, stdout, stderr)
+	opts.Store = storeRoot(dir)
+	return reportUndo(undo.Run(opts, disk(dir), &osLock{}), asJSON, stdout, stderr)
 }
 
 // runStore parses the two words of `odachi store` and dispatches the one action

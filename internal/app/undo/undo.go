@@ -101,7 +101,15 @@ func Run(opts Options, files Files, guard lock.Lock) Result {
 	// undo replaces one artifact and backs up the one it replaces, so it writes
 	// more than one file and takes the lock like start does. It comes before the
 	// first listing: a refusal must not read a single backup.
-	held := lock.Take(guard, opts.Store, verbName)
+	//
+	// A project that is not a git repository has no store and no place for a
+	// lock. start keeps working there and saves its versions beside the
+	// artifacts, so undo has to keep working there too: refusing would strand a
+	// project the tool itself created.
+	held := lock.Held{}
+	if opts.Store != "" {
+		held = lock.Take(guard, opts.Store, verbName)
+	}
 	if held.Refusal != "" {
 		return blocked(held.Refusal)
 	}
@@ -124,6 +132,9 @@ func run(opts Options, files Files) Result {
 	if opts.Collect {
 		if opts.List || opts.File != "" {
 			return blocked("--collect moves every old backup at once: it does not go with --list or --file")
+		}
+		if opts.Store == "" {
+			return blocked("--collect moves versions into the clone's store, and this folder is not a git repository; run it inside one")
 		}
 		return Collect(opts.Dir, opts.Store, files)
 	}
@@ -207,7 +218,7 @@ func discover(project, store string, kinds []undodomain.Kind, files Files) ([]un
 	for _, kind := range kinds {
 		locations := []location{
 			{store, path.Join(undodomain.StoreBackups, kind.BackupSubdir())},
-			{project, path.Join(undodomain.LegacyBackups, kind.BackupSubdir())},
+			{project, path.Join(undodomain.LegacyBackups, kind.LegacySubdir())},
 			{project, kind.Dir()},
 		}
 		for _, at := range locations {
