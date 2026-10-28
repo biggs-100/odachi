@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// Profile mirrors .odachi/profile.toml one field per line. An empty field means
+// Profile mirrors odd/profile.toml one field per line. An empty field means
 // "inherit from Extends".
 type Profile struct {
 	Name        string

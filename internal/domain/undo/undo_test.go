@@ -20,7 +20,7 @@ func TestTheAllowListIsExactlyFour(t *testing.T) {
 		t.Fatalf("Kinds() = %v, want four", kinds)
 	}
 
-	want := []string{"brief.md", ".odachi/profile.toml", ".odachi/fence.toml", "odd/tasks/*.md"}
+	want := []string{"brief.md", "odd/profile.toml", "odd/fence.toml", "odd/tasks/*.md"}
 	for i, kind := range kinds {
 		if got := kind.Target(); got != want[i] {
 			t.Errorf("Kinds()[%d].Target() = %q, want %q", i, got, want[i])
@@ -34,8 +34,8 @@ func TestTheAllowListIsExactlyFour(t *testing.T) {
 func TestBackupSubdirPreservesTheArtifactPath(t *testing.T) {
 	cases := map[undo.Kind]string{
 		undo.Brief:   ".",
-		undo.Profile: ".odachi",
-		undo.Fence:   ".odachi",
+		undo.Profile: "odd",
+		undo.Fence:   "odd",
 		undo.Task:    "odd/tasks",
 	}
 	for kind, want := range cases {
@@ -77,10 +77,10 @@ func TestArtifactOfKeepsOnlyTheFour(t *testing.T) {
 		{undo.Brief, "brief.md", "brief.md", true},
 		{undo.Brief, "README.md", "", false},
 		{undo.Brief, "brief.md.tmp", "", false},
-		{undo.Profile, "profile.toml", ".odachi/profile.toml", true},
+		{undo.Profile, "profile.toml", "odd/profile.toml", true},
 		{undo.Profile, "fence.toml", "", false},
 		{undo.Profile, "otro.toml", "", false},
-		{undo.Fence, "fence.toml", ".odachi/fence.toml", true},
+		{undo.Fence, "fence.toml", "odd/fence.toml", true},
 		{undo.Fence, "fence.yaml", "", false},
 		{undo.Task, "0001-reserva-de-turno.md", "odd/tasks/0001-reserva-de-turno.md", true},
 		{undo.Task, "notas.txt", "", false},

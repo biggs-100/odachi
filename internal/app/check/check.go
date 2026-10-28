@@ -18,6 +18,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/fence"
 	"github.com/biggs-100/odachi/internal/domain/gate"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	reviewdomain "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
@@ -38,7 +39,7 @@ const head = "HEAD"
 // The paths this command reads, and the directory it may write into.
 const (
 	briefFile = "brief.md"
-	fenceFile = ".odachi/fence.toml"
+	fenceFile = layout.Fence
 	proofDir  = "proof"
 )
 

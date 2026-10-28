@@ -3,12 +3,14 @@ package persona
 import (
 	"fmt"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/store"
 )
 
 // SelectionPath is where a project records which clients receive the native
 // agent. The file is optional: no file means both clients, the behavior every
 // project had before the switch existed.
-const SelectionPath = ".odachi/agents.toml"
+const SelectionPath = store.Agents
 
 // The three values `odachi init --agents` and the store know.
 const (

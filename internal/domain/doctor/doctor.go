@@ -35,7 +35,7 @@ const (
 	CheckHook
 	// CheckHookExe asks whether the binary the hook names is still there.
 	CheckHookExe
-	// CheckProfile asks whether .odachi/profile.toml resolves to a valid profile.
+	// CheckProfile asks whether odd/profile.toml resolves to a valid profile.
 	CheckProfile
 	// CheckBrief asks whether brief.md exists and nothing is missing from it.
 	CheckBrief
@@ -49,7 +49,7 @@ const (
 	// that, every review would invalidate the proof and the other way round.
 	CheckIgnored
 	// CheckVoice asks whether the last section of the AGENTS.md block talks the
-	// way the profile in .odachi/profile.toml says it should, and whether the
+	// way the profile in odd/profile.toml says it should, and whether the
 	// native agent still mirrors that block. The binary writes both, so the
 	// halves disagreeing is a project that prints one register and talks in
 	// another. It is appended after the ten Contract XV named, so no existing
@@ -206,7 +206,7 @@ func title(number int) string {
 	case CheckHookExe:
 		return "the binary the hook names exists"
 	case CheckProfile:
-		return ".odachi/profile.toml resolves to a valid profile"
+		return "odd/profile.toml resolves to a valid profile"
 	case CheckBrief:
 		return "brief.md exists and nothing is missing from it"
 	case CheckSkills:

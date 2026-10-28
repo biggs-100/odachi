@@ -1,4 +1,4 @@
-// Package profiletoml decodes .odachi/profile.toml into a profile.Profile.
+// Package profiletoml decodes odd/profile.toml into a profile.Profile.
 //
 // This is the only place TOML meets the domain: the adapter owns the file
 // format's key names, and the domain owns the eight fields and their allowed

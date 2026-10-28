@@ -1,4 +1,4 @@
-// Package agentstoml decodes and renders .odachi/agents.toml, the project's
+// Package agentstoml decodes and renders agents.toml, in the clone's store, the project's
 // choice of which clients receive the native agent.
 package agentstoml
 

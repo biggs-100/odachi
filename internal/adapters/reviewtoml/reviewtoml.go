@@ -1,4 +1,4 @@
-// Package reviewtoml decodes and writes .odachi/review.toml: the project's review
+// Package reviewtoml decodes and writes odd/review.toml: the project's review
 // switch and, optionally, the model that judges each lens.
 //
 // The adapter is strict about both: a typo must be named instead of silently

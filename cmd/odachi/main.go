@@ -22,12 +22,12 @@ import (
 	"github.com/biggs-100/odachi/internal/app/progress"
 	reviewapp "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
-	"github.com/biggs-100/odachi/internal/app/store"
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
 	"github.com/biggs-100/odachi/internal/domain/agent"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/store"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
@@ -317,7 +317,7 @@ func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		asJSON bool
 	)
 
-	flags.StringVar(&to, "to", "", "profile to apply: .odachi/profile.toml is backed up and rewritten")
+	flags.StringVar(&to, "to", "", "profile to apply: odd/profile.toml is backed up and rewritten")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
@@ -1339,7 +1339,7 @@ review mode:
   odachi review mode status   whether the project requires review (default: off)
   odachi review mode on       check requires the verdict for this tree
   odachi review mode off      check does not require it, even when the hook runs check
-  the mode lives in .odachi/review.toml; --require-review and --no-review override it for one run
+  the mode lives in odd/review.toml; --require-review and --no-review override it for one run
 
 plan flags:
   --req R<n>      requirement the new step is tied to
@@ -1375,7 +1375,7 @@ init flags:
   --skills s      project | home (default project): the project carries the craft skills;
                   home leaves all of them in ~/.agents/skills and writes no copy in the project
   --agents s      opencode | claude | both (default both): which clients receive the native
-                  agent and the home door; the choice stays in .odachi/agents.toml
+                  agent and the home door; the choice stays in the clone's store
                   and does not delete the files another client already has
   --global        install the home door: the agent that shows up in any folder,
                   not only in this project, and make it OpenCode's default agent.
@@ -1413,7 +1413,7 @@ default you picked is already there.
 
 with --agents opencode nothing is written to .claude, and with --agents claude nothing is
 written to .opencode; the files of a client that is already installed are not deleted. The choice
-is kept in .odachi/agents.toml and a later init preserves it; without the file, the default
+is kept in the clone's store and a later init preserves it; without the file, the default
 is still both.
 
 with --skills home, all the skills go to ~/.agents/skills and the project gets no copy;
@@ -1424,7 +1424,7 @@ a key. The parent hands them the task doc, the step, the surfaces, the commands 
 the skill paths; they come back with evidence and ≤2k tokens, and they do not commit.
 
 the voice —how the agent talks to you— is the last section of the block, and the binary
-writes it: novato when there is no .odachi/profile.toml yet, otherwise the one of the profile
+writes it: novato when there is no odd/profile.toml yet, otherwise the one of the profile
 it names. The native agent has two copies per chosen client: the project
 mirror, with the same rules and the same voice, and the home door, which shows up
 in any folder and reads the project block when it exists; when it does not exist, it guides you to start with

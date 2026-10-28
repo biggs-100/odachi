@@ -45,7 +45,7 @@ const brief = `# turnos
 const diff = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
 
 // fakeFiles is the Files port in memory. It records every write, because "nothing
-// outside .odachi/reviews/ is written" is the property a test has to be able to
+// outside the store's reviews/ is written" is the property a test has to be able to
 // see.
 type fakeFiles struct {
 	files    map[string][]byte
@@ -876,7 +876,7 @@ func TestAttachStoresTheVerdictUnderTheTree(t *testing.T) {
 	}
 	stored, ok := p.files.files[storePath(currentTree)]
 	if !ok {
-		t.Fatalf("no verdict stored at .odachi/reviews/%s.json", currentTree)
+		t.Fatalf("no verdict stored at .git/odachi/reviews/%s.json", currentTree)
 	}
 
 	parsed, err := domainreview.Parse(stored)
@@ -1307,7 +1307,7 @@ func TestTheVerdictStampsTheBlobGitComputes(t *testing.T) {
 
 	stored, ok := p.files.files[storePath(currentTree)]
 	if !ok {
-		t.Fatalf("no verdict stored at .odachi/reviews/%s.json", currentTree)
+		t.Fatalf("no verdict stored at .git/odachi/reviews/%s.json", currentTree)
 	}
 	parsed, err := domainreview.Parse(stored)
 	if err != nil {
@@ -1495,7 +1495,7 @@ func TestTheStoreLendsItsPotentRows(t *testing.T) {
 
 	stored, ok := p.files.files[storePath(currentTree)]
 	if !ok {
-		t.Fatalf("no verdict stored at .odachi/reviews/%s.json", currentTree)
+		t.Fatalf("no verdict stored at .git/odachi/reviews/%s.json", currentTree)
 	}
 	parsed, err := domainreview.Parse(stored)
 	if err != nil {
@@ -1929,7 +1929,7 @@ func TestAttachRefusesABrokenVerdictWithoutWriting(t *testing.T) {
 // The store's ignore file may be created by this attempt: the verdict is checked
 // against the tree hash, and the hash can only be taken once the store is out of
 // the tree. That file belongs to the tool, is idempotent, and is inside
-// .odachi/reviews/; the verdict is not written.
+// the store's reviews/; the verdict is not written.
 func TestAttachRefusesAVerdictForAnotherTree(t *testing.T) {
 	p := newProject()
 	p.files.files[fullPath("veredicto.json")] = []byte(`{"tree":"` + otherTree + `","reviewer":"humano","findings":[]}`)
@@ -2411,7 +2411,7 @@ func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ign
 func (g *flakyGit) BlobHash(root, path string) (string, error) { return g.inner.BlobHash(root, path) }
 
 // TestNothingOutsideTheStoreIsWritten: the whole surface of this verb is
-// .odachi/reviews/. A review that touched the brief or the code would be a
+// the store's reviews/. A review that touched the brief or the code would be a
 // different tool.
 func TestNothingOutsideTheStoreIsWritten(t *testing.T) {
 	storePrefix := filepath.ToSlash(store) + "/"

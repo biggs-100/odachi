@@ -277,7 +277,7 @@ func inOrder(names []string) []string {
 // The review store is not here because it is not in the tree at all: verdicts
 // live in the clone's store, outside the worktree.
 //
-// Everything else under .odachi/ is a human decision (the fence, the profile)
+// Everything else under odd/ is a human decision (the fence, the profile)
 // and stays in the candidate, and so does .gitignore: an ignore rule changes the
 // bytes the tree covers, so it is never plumbing.
 func isPlumbing(path string) bool {

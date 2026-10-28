@@ -10,9 +10,9 @@ import (
 // one of the mechanisms that keeps the evidence out of the tree, and it is the
 // one `odachi init` writes.
 func TestIgnoredByReadsTheRulesAPersonWrites(t *testing.T) {
-	block := "# odachi:begin\n/proof/\n/.odachi/reviews/\n# odachi:end\n"
+	block := "# odachi:begin\n/proof/\n*.bak-*\n# odachi:end\n"
 
-	for _, dir := range []string{"proof", ".odachi/reviews"} {
+	for _, dir := range []string{"proof"} {
 		if !doctor.IgnoredBy(block, dir) {
 			t.Errorf("IgnoredBy(%q) = false, want true for the block init writes", dir)
 		}
@@ -44,7 +44,7 @@ func TestIgnoredByIsNotFooledByAFolderName(t *testing.T) {
 	if doctor.IgnoredBy("proofs/\n", "proof") {
 		t.Error("IgnoredBy(proofs/, proof) = true, want false: a different folder")
 	}
-	if doctor.IgnoredBy(".odachi/reviews-otras/\n", ".odachi/reviews") {
-		t.Error("IgnoredBy(reviews-otras, .odachi/reviews) = true, want false")
+	if doctor.IgnoredBy("odd/tasks-otras/\n", "odd/tasks") {
+		t.Error("IgnoredBy(tasks-otras, odd/tasks) = true, want false")
 	}
 }

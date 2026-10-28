@@ -12,6 +12,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 )
 
 // runDir runs the CLI inside dir with a non-terminal stdin, so the machine path
@@ -158,7 +159,7 @@ func TestStartJSONWritesTheFourArtifacts(t *testing.T) {
 	}
 
 	files := tree(t, dir)
-	for _, want := range []string{"brief.md", ".odachi/profile.toml", ".odachi/fence.toml"} {
+	for _, want := range []string{"brief.md", "odd/profile.toml", "odd/fence.toml"} {
 		if _, ok := files[want]; !ok {
 			t.Errorf("missing %s; files: %v", want, files)
 		}
@@ -167,7 +168,7 @@ func TestStartJSONWritesTheFourArtifacts(t *testing.T) {
 		t.Errorf("missing the task doc; files: %v", files)
 	}
 
-	loaded, err := profiletoml.Load(filepath.Join(dir, ".odachi", "profile.toml"))
+	loaded, err := profiletoml.Load(filepath.Join(dir, filepath.FromSlash(layout.Profile)))
 	if err != nil {
 		t.Fatalf("the written profile does not decode: %v", err)
 	}
@@ -228,11 +229,11 @@ func TestForceBacksUpTheBriefAndKeepsItsBytes(t *testing.T) {
 	}
 }
 
-// TestExistingProfileWinsOverInference: the human owns .odachi/profile.toml.
+// TestExistingProfileWinsOverInference: the human owns odd/profile.toml.
 func TestExistingProfileWinsOverInference(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	profileDir := filepath.Join(dir, ".odachi")
+	profileDir := filepath.Join(dir, filepath.FromSlash(layout.Odd))
 	if err := os.MkdirAll(profileDir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -264,7 +265,7 @@ extends = ""
 func TestProfileWithoutNameBlocksWithAHumanSentence(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	profileDir := filepath.Join(dir, ".odachi")
+	profileDir := filepath.Join(dir, filepath.FromSlash(layout.Odd))
 	if err := os.MkdirAll(profileDir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}

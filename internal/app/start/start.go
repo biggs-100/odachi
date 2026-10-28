@@ -17,6 +17,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/lock"
 	"github.com/biggs-100/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
@@ -34,8 +35,8 @@ const (
 const (
 	briefFile   = "brief.md"
 	taskDir     = "odd/tasks"
-	profileFile = ".odachi/profile.toml"
-	fenceFile   = ".odachi/fence.toml"
+	profileFile = layout.Profile
+	fenceFile   = layout.Fence
 )
 
 // Question is one interview question. Why is the one-line explanation the tutor
@@ -94,11 +95,11 @@ type Options struct {
 	WaiveReview bool
 
 	// Profile is the already-resolved profile loaded by the caller from
-	// .odachi/profile.toml. Nil means "infer it from what we can see".
+	// odd/profile.toml. Nil means "infer it from what we can see".
 	Profile *profile.Profile
 
 	// Agents is the stored client selection, already resolved by the caller
-	// from .odachi/agents.toml. Empty means both, the default of a project
+	// from the clone's store. Empty means both, the default of a project
 	// that never chose.
 	Agents string
 
@@ -257,7 +258,7 @@ func (r *runner) runFromBrief() Result {
 func (r *runner) resolveProfile() (profile.Profile, *Result) {
 	if r.opts.Profile != nil {
 		if err := profile.Validate(*r.opts.Profile); err != nil {
-			return profile.Profile{}, failure(blocked("the profile is not valid: " + oneLine(err.Error()) + "; fix .odachi/profile.toml and run odachi start again"))
+			return profile.Profile{}, failure(blocked("the profile is not valid: " + oneLine(err.Error()) + "; fix odd/profile.toml and run odachi start again"))
 		}
 		return *r.opts.Profile, nil
 	}

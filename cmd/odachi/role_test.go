@@ -6,7 +6,7 @@ import (
 )
 
 // TestRoleNewWritesTheSourceEndToEnd is the CLI contract for the first half of
-// the loop: the skeleton lands under .odachi/roles, and the message names the
+// the loop: the skeleton lands under odd/roles, and the message names the
 // command that continues.
 func TestRoleNewWritesTheSourceEndToEnd(t *testing.T) {
 	t.Parallel()
@@ -16,14 +16,14 @@ func TestRoleNewWritesTheSourceEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("role new: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, ".odachi/roles/marketing.md") {
+	if !strings.Contains(stdout, "odd/roles/marketing.md") {
 		t.Errorf("stdout %q does not name the source", stdout)
 	}
 	if !strings.Contains(stdout, "odachi role marketing") {
 		t.Errorf("stdout %q does not name the next command", stdout)
 	}
 
-	if _, ok := tree(t, dir)[".odachi/roles/marketing.md"]; !ok {
-		t.Fatalf("the source was not written under .odachi/roles")
+	if _, ok := tree(t, dir)["odd/roles/marketing.md"]; !ok {
+		t.Fatalf("the source was not written under odd/roles")
 	}
 }

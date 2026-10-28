@@ -80,7 +80,7 @@ type Options struct {
 	// Model is the raw --model value: the identity that replaces {model}.
 	// Empty means the host's answer.
 	Model string
-	// LensModels is the project's model per lens, from `.odachi/review.toml`.
+	// LensModels is the project's model per lens, from `odd/review.toml`.
 	// A lens with no entry is left to the reviewer command, which is what the
 	// file meant before the table existed.
 	LensModels map[string]string

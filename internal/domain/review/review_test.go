@@ -401,7 +401,7 @@ func TestSealNeedsATree(t *testing.T) {
 
 // TestStoreNameIsTheTree: one file per tree, and the name can only ever be a
 // hash. A tree hash that could describe a path is refused, because the store
-// must never write outside .odachi/reviews/.
+// must never write outside the store's reviews/.
 func TestStoreNameIsTheTree(t *testing.T) {
 	name, err := review.Name(tree)
 	if err != nil {

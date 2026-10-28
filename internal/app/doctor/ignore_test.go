@@ -54,7 +54,7 @@ func TestUnprotectedEvidenceNamesInit(t *testing.T) {
 // so the old rule says nothing about anything. What still matters is proof/.
 func TestAProjectThatStillCarriesTheOldReviewRule(t *testing.T) {
 	files := configured().
-		put(".gitignore", "/.odachi/reviews/\n").
+		put(".gitignore", "/the store's reviews/\n").
 		put("proof/0001-turnos.txt", "# tree abc\n")
 
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")

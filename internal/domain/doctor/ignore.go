@@ -4,7 +4,7 @@ import "strings"
 
 // IgnoredBy reports whether the repository's .gitignore content keeps dir out of
 // the tree. dir is a project-relative directory, spelled without slashes:
-// "proof" or ".odachi/reviews".
+// "proof".
 //
 // It reads the file a person writes, so it understands the shapes a person
 // writes for a generated folder and nothing more: the exact path, with or without

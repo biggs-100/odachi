@@ -54,7 +54,7 @@ func TestThePreflightOnlyFiresWhenThereIsNothing(t *testing.T) {
 		{name: "only .git as a file (a linked worktree)", files: newFakeFiles().put(".git", "gitdir: /other/repo/.git/worktrees/branch\n")},
 		{name: "only brief.md", files: newFakeFiles().put("brief.md", briefComplete)},
 		{name: "only AGENTS.md", files: newFakeFiles().put("AGENTS.md", "# my project\n")},
-		{name: "only .odachi/", files: newFakeFiles().mkdir(".odachi")},
+		{name: "only odd/", files: newFakeFiles().mkdir("odd")},
 	}
 
 	for _, c := range cases {

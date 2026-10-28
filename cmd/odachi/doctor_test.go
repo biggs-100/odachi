@@ -152,21 +152,21 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 		{
 			name: "the profile does not resolve",
 			break_: func(t *testing.T, dir string) {
-				writeFile(t, dir, ".odachi/profile.toml", "name = \"\"\n")
+				writeFile(t, dir, "odd/profile.toml", "name = \"\"\n")
 			},
 			want: []string{"does not resolve", "does not say name", "odachi doctor"},
 		},
 		{
 			name: "the profile has a value the tool would never obey",
 			break_: func(t *testing.T, dir string) {
-				writeFile(t, dir, ".odachi/profile.toml", "name = \"novato\"\nquestions = \"cuando-pueda\"\n")
+				writeFile(t, dir, "odd/profile.toml", "name = \"novato\"\nquestions = \"cuando-pueda\"\n")
 			},
 			want: []string{"does not resolve", "questions", "odachi doctor"},
 		},
 		{
 			name: "the profile is not TOML",
 			break_: func(t *testing.T, dir string) {
-				writeFile(t, dir, ".odachi/profile.toml", "this is not toml\n")
+				writeFile(t, dir, "odd/profile.toml", "this is not toml\n")
 			},
 			want: []string{"does not resolve", "odachi doctor"},
 		},

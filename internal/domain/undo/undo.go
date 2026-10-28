@@ -18,6 +18,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/biggs-100/odachi/internal/domain/layout"
 )
 
 // backupMark separates an artifact from the digest of the bytes it held when
@@ -43,9 +45,9 @@ type Kind string
 const (
 	// Brief is the human's own words: brief.md.
 	Brief Kind = "brief"
-	// Profile is the ceremony knob: .odachi/profile.toml.
+	// Profile is the ceremony knob: odd/profile.toml.
 	Profile Kind = "profile"
-	// Fence is what the project refuses to do: .odachi/fence.toml.
+	// Fence is what the project refuses to do: odd/fence.toml.
 	Fence Kind = "fence"
 	// Task is one feature's document: odd/tasks/NNNN-<slug>.md.
 	Task Kind = "task"
@@ -72,9 +74,9 @@ func ParseKind(value string) (Kind, bool) {
 func (k Kind) Dir() string {
 	switch k {
 	case Profile, Fence:
-		return ".odachi"
+		return layout.Odd
 	case Task:
-		return "odd/tasks"
+		return layout.Tasks
 	default:
 		return "."
 	}
@@ -82,7 +84,7 @@ func (k Kind) Dir() string {
 
 // BackupSubdir is where this kind's versions live inside the store's backups
 // directory. The artifact's own directory is preserved underneath, so
-// `.odachi/profile.toml` keeps its path and a task keeps its place in
+// `odd/profile.toml` keeps its path and a task keeps its place in
 // `odd/tasks`.
 func (k Kind) BackupSubdir() string {
 	return k.Dir()
@@ -93,13 +95,13 @@ func (k Kind) BackupSubdir() string {
 func (k Kind) Target() string {
 	switch k {
 	case Brief:
-		return "brief.md"
+		return layout.Brief
 	case Profile:
-		return ".odachi/profile.toml"
+		return layout.Profile
 	case Fence:
-		return ".odachi/fence.toml"
+		return layout.Fence
 	default:
-		return "odd/tasks/*.md"
+		return layout.Tasks + "/*.md"
 	}
 }
 

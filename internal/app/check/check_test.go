@@ -10,6 +10,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/check"
 	"github.com/biggs-100/odachi/internal/domain/gate"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
@@ -283,9 +284,9 @@ func readyFiles() map[string]string {
 	return map[string]string{
 		"brief.md":                 completeBrief,
 		"odd/tasks/0007-turnos.md": featureDoc(`L1 · "reservar turnos"`),
-		".odachi/fence.toml":       "",
+		"odd/fence.toml":           "",
 		"proof/0007-turnos.txt":    proofFile(currentTree, "go test ./...", "ok\n"),
-		".odachi/profile.toml":     `name = "novato"`,
+		"odd/profile.toml":         `name = "novato"`,
 	}
 }
 
@@ -337,7 +338,7 @@ func TestTheBlockNamesTheOpenQuestions(t *testing.T) {
 // failed proof.
 func TestTheEightResults(t *testing.T) {
 	outOfScope := readyFiles()
-	outOfScope[".odachi/fence.toml"] = `[[rule]]
+	outOfScope["odd/fence.toml"] = `[[rule]]
 not   = "pagos"
 paths = ["payment*", "**/payments/**"]
 deps  = ["stripe"]
@@ -875,7 +876,7 @@ func TestRunWithoutATaskDocumentStillWritesAProof(t *testing.T) {
 // the worktree counts as new and the fence is still checked.
 func TestEmptyBaseComparesAgainstTheEmptyTree(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte(`[[rule]]
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte(`[[rule]]
 not   = "pagos"
 paths = ["**/payments/**"]
 `)
@@ -895,7 +896,7 @@ paths = ["**/payments/**"]
 // uncommitted is what the fence compares against.
 func TestNoCommitFallsBackToTheEmptyTree(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte(`[[rule]]
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte(`[[rule]]
 not   = "pagos"
 paths = ["**/payments/**"]
 `)
@@ -915,7 +916,7 @@ paths = ["**/payments/**"]
 // not a silent fallback.
 func TestUnknownBaseBlocksAndNamesTheFlag(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte(`[[rule]]
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte(`[[rule]]
 not   = "pagos"
 paths = ["**/payments/**"]
 `)
@@ -938,7 +939,7 @@ paths = ["**/payments/**"]
 // parts it is missing, instead of crashing.
 func TestUnreadableFenceBlocksWithAHumanSentence(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("[[rule]\nnot = \n")
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte("[[rule]\nnot = \n")
 
 	got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{})

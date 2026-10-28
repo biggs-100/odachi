@@ -92,7 +92,7 @@ func roleContext(dir string) (block string, clients []string, code int, message 
 	}
 	_, resolved, err := persona.ResolveSelection(selection)
 	if err != nil {
-		return "", nil, start.CodeBlocked, oneLine(err.Error()) + "; fix .odachi/agents.toml and run odachi role again"
+		return "", nil, start.CodeBlocked, oneLine(err.Error()) + "; fix the client selection in the clone's store and run odachi role again"
 	}
 	clients = make([]string, 0, len(resolved))
 	for _, client := range resolved {

@@ -8,7 +8,7 @@
 // curriculum in the project and the bootstrap skill in the human's home, so an
 // agent can learn how to start a project in a folder where nothing exists yet.
 //
-// One voice, one owner. The profile (in .odachi/profile.toml, owned by `odachi
+// One voice, one owner. The profile (in odd/profile.toml, owned by `odachi
 // start`) decides the ceremony and the voice; the block publishes it where every
 // client reads it, the project agent mirrors the same block, and the home agent
 // is the door that reads the project's block when there is one. init reads the
@@ -107,6 +107,10 @@ type Options struct {
 type AgentSelection interface {
 	// Written returns the stored selection, or empty when there is no file.
 	Written(dir string) (string, error)
+	// Target names the file the selection lives in: the absolute path to write,
+	// and the label a human reads. The file is in the clone's store, so the app
+	// cannot build it from the project root.
+	Target(dir string) (path, label string, err error)
 	// Render turns a selection into the bytes of the store.
 	Render(selection string) ([]byte, error)
 }
@@ -119,7 +123,7 @@ type Home interface {
 }
 
 // Profiles is the profile port, one question wide: which profile did the human
-// write down, if any? Written returns the profile named in .odachi/profile.toml
+// write down, if any? Written returns the profile named in odd/profile.toml
 // and an empty name when there is no file. It is a port and not a read of the
 // TOML here because the domain owns the names and the adapter owns the format,
 // and because init must not infer a profile: inference is a guess about a person
@@ -286,7 +290,12 @@ func (r *runner) writeAgentStore(explicit bool) *Result {
 		return &problem
 	}
 
-	path := filepath.Join(r.dir, filepath.FromSlash(persona.SelectionPath))
+	path, label, err := r.agentSelection.Target(r.dir)
+	if err != nil {
+		problem := blocked("could not find the clone's store: " + oneLine(err.Error()) +
+			"; run odachi init --agents " + r.selection + " again")
+		return &problem
+	}
 	exists, err := r.files.Exists(path)
 	if err != nil {
 		problem := blocked("could not check " + persona.SelectionPath + ": " + oneLine(err.Error()) +
@@ -306,8 +315,8 @@ func (r *runner) writeAgentStore(explicit bool) *Result {
 		return &problem
 	}
 
-	r.changed = append(r.changed, persona.SelectionPath)
-	r.lines = append(r.lines, persona.SelectionPath+": saved the choice "+r.selection+"; the other clients files are not touched")
+	r.changed = append(r.changed, label)
+	r.lines = append(r.lines, label+": saved the choice "+r.selection+"; the other clients files are not touched")
 	return nil
 }
 

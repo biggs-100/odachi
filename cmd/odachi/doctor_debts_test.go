@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 	bundledskills "github.com/biggs-100/odachi/skills"
@@ -39,10 +40,10 @@ func TestDoctorUnderstandsAWorktree(t *testing.T) {
 // has to call that a problem, because every verb would run with a blank ceremony.
 func TestDoctorRefusesAProfileThatInheritsFromNobody(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, ".odachi"), 0o755); err != nil {
-		t.Fatalf("mkdir .odachi: %v", err)
+	if err := os.MkdirAll(filepath.Join(dir, filepath.FromSlash(layout.Odd)), 0o755); err != nil {
+		t.Fatalf("mkdir odd: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".odachi", "profile.toml"), []byte("name = \"inventado\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(layout.Profile)), []byte("name = \"inventado\"\n"), 0o644); err != nil {
 		t.Fatalf("write profile.toml: %v", err)
 	}
 
@@ -64,11 +65,11 @@ func TestDoctorRefusesAProfileThatInheritsFromNobody(t *testing.T) {
 // must stay green so the rule only catches the empty ceremony.
 func TestDoctorAcceptsAProfileThatInherits(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, ".odachi"), 0o755); err != nil {
-		t.Fatalf("mkdir .odachi: %v", err)
+	if err := os.MkdirAll(filepath.Join(dir, filepath.FromSlash(layout.Odd)), 0o755); err != nil {
+		t.Fatalf("mkdir odd: %v", err)
 	}
 	content := "name = \"mio\"\nextends = \"senior\"\n"
-	if err := os.WriteFile(filepath.Join(dir, ".odachi", "profile.toml"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(layout.Profile)), []byte(content), 0o644); err != nil {
 		t.Fatalf("write profile.toml: %v", err)
 	}
 
@@ -204,13 +205,13 @@ func TestDoctorSaysTheV0100PersonaFilesAreLeftovers(t *testing.T) {
 	}
 }
 
-// A project without .odachi/profile.toml has nothing to compare the voice against:
+// A project without odd/profile.toml has nothing to compare the voice against:
 // the block carries the one init wrote and nothing is broken. Failing here would
 // tell someone who just ran init that their project is wrong.
 func TestDoctorSaysNoProfileIsNothingToCompare(t *testing.T) {
 	dir := configuredProject(t)
-	if err := os.Remove(filepath.Join(dir, ".odachi", "profile.toml")); err != nil {
-		t.Fatalf("delete .odachi/profile.toml: %v", err)
+	if err := os.Remove(filepath.Join(dir, filepath.FromSlash(layout.Profile))); err != nil {
+		t.Fatalf("delete odd/profile.toml: %v", err)
 	}
 
 	code, stdout, stderr := runDir(t, dir, []string{"doctor"}, "")
@@ -229,9 +230,9 @@ func TestDoctorSaysNoProfileIsNothingToCompare(t *testing.T) {
 // readProfileName is the profile the binary reads, for the lines that name it.
 func readProfileName(t *testing.T, dir string) string {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join(dir, ".odachi", "profile.toml"))
+	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(layout.Profile)))
 	if err != nil {
-		t.Fatalf("read .odachi/profile.toml: %v", err)
+		t.Fatalf("read odd/profile.toml: %v", err)
 	}
 	for _, line := range strings.Split(string(data), "\n") {
 		key, value, ok := strings.Cut(line, "=")

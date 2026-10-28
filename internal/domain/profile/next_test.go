@@ -46,7 +46,7 @@ func TestNextIsEarnedAndNeverAutomatic(t *testing.T) {
 }
 
 // TestApplyReportsEveryChangedField: the human reads exactly what the profile
-// change does, field by field, in the order .odachi/profile.toml uses.
+// change does, field by field, in the order odd/profile.toml uses.
 func TestApplyReportsEveryChangedField(t *testing.T) {
 	current := resolved(t, "novato")
 	target := resolved(t, "senior")

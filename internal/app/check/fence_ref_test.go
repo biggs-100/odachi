@@ -8,6 +8,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/check"
 	"github.com/biggs-100/odachi/internal/domain/gate"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 )
 
 // TestTheFenceCanComeFromATrustedRef: a CI gate reads the base branch's fence,
@@ -18,7 +19,7 @@ func TestTheFenceCanComeFromATrustedRef(t *testing.T) {
 		tree:    currentTree,
 		changed: []string{"internal/payments/stripe.go"},
 		filesAt: map[string]string{
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"pagos\"\npaths = [\"**/payments/**\"]\n",
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"pagos\"\npaths = [\"**/payments/**\"]\n",
 		},
 	}
 
@@ -41,12 +42,12 @@ func TestTheFenceCanComeFromATrustedRef(t *testing.T) {
 // Emptying the fence with the same brief is the probe the review found green.
 func TestALoosenedFenceNeedsANewBrief(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte("")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           completeBrief,
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+			"origin/main:brief.md":       completeBrief,
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
 
@@ -65,12 +66,12 @@ func TestALoosenedFenceNeedsANewBrief(t *testing.T) {
 // what the fence is made of, so they are what has to change.
 func TestANewBriefMayBringANewFence(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte("")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           "# the previous feature\n\n## Not included (first version)\n- something else\n",
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+			"origin/main:brief.md":       "# the previous feature\n\n## Not included (first version)\n- something else\n",
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
 
@@ -86,12 +87,12 @@ func TestANewBriefMayBringANewFence(t *testing.T) {
 func TestATrailingSpaceIsNotANewBrief(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, "brief.md")] = []byte(strings.Replace(completeBrief, "## NO incluye (primera versión)", "## NO incluye (primera versión)   ", 1))
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte("")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           completeBrief,
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+			"origin/main:brief.md":       completeBrief,
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
 
@@ -110,12 +111,12 @@ func TestATrailingSpaceIsNotANewBrief(t *testing.T) {
 func TestAChangedOutcomeIsNotANewPolicy(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, "brief.md")] = []byte(strings.Replace(completeBrief, "- reservar turnos", "- reservar turnos y cancelarlos", 1))
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte("")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           completeBrief,
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+			"origin/main:brief.md":       completeBrief,
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
 
@@ -139,12 +140,12 @@ func TestAReorderedNonGoalsIsTheSamePolicy(t *testing.T) {
 
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, "brief.md")] = []byte(briefWith("firmas", "pagos"))
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("")
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte("")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           briefWith("pagos", "firmas"),
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+			"origin/main:brief.md":       briefWith("pagos", "firmas"),
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
 
@@ -160,12 +161,12 @@ func TestAReorderedNonGoalsIsTheSamePolicy(t *testing.T) {
 // and every later run would read it as the base.
 func TestAMalformedCandidateFenceBlocksEvenWithANewBrief(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("not toml [[[")
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte("not toml [[[")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           "# the previous feature\n\n## Not included (first version)\n- something else\n",
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+			"origin/main:brief.md":       "# the previous feature\n\n## Not included (first version)\n- something else\n",
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
 
@@ -183,14 +184,14 @@ func TestAMalformedCandidateFenceBlocksEvenWithANewBrief(t *testing.T) {
 // policy, so the same brief is enough.
 func TestAStricterFenceNeedsNoNewBrief(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte(
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte(
 		"[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\", \"extra/*\"]\n" +
 			"[[rule]]\nnot = \"a new rule\"\npaths = [\"x/*\"]\n")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           completeBrief,
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+			"origin/main:brief.md":       completeBrief,
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
 
@@ -206,12 +207,12 @@ func TestAStricterFenceNeedsNoNewBrief(t *testing.T) {
 // read must stop the change, not travel silently.
 func TestAnUnreadableCandidateFenceBlocks(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("not toml [[[")
+	files.files[filepath.Join(dir, filepath.FromSlash(layout.Fence))] = []byte("not toml [[[")
 	git := &fakeGit{
 		tree: currentTree,
 		filesAt: map[string]string{
-			"origin/main:brief.md":           completeBrief,
-			"origin/main:.odachi/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
+			"origin/main:brief.md":       completeBrief,
+			"origin/main:odd/fence.toml": "[[rule]]\nnot = \"monorepo scopes\"\npaths = [\"internal/tenants/*\"]\n",
 		},
 	}
 

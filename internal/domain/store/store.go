@@ -37,6 +37,9 @@ const (
 	Backups = "backups"
 	// Lock is the write lock the multi-file verbs hold.
 	Lock = "lock"
+	// Agents is the client selection: which clients receive the native agent.
+	// It is the person's choice, not the team's, so it does not travel.
+	Agents = "agents.toml"
 )
 
 // Git is the one fact the store needs from the repository: where its common

@@ -55,7 +55,7 @@ func TestTheFilesInitInstallsAreNotACandidate(t *testing.T) {
 
 	// The fence and .gitignore stay in the candidate: they are human decisions and
 	// an ignore rule changes the bytes the tree covers.
-	if got := review.Classify([]string{".gitignore", ".odachi/fence.toml"}); got == review.Passive {
+	if got := review.Classify([]string{".gitignore", "odd/fence.toml"}); got == review.Passive {
 		t.Errorf("Classify(.gitignore, fence) = passive, want ordinary code to review")
 	}
 
@@ -500,10 +500,10 @@ func TestClassifyStillSeesTheCandidatesOwnFiles(t *testing.T) {
 		paths []string
 		want  review.Tier
 	}{
-		"code next to the store":  {[]string{".odachi/reviews/.gitignore", "internal/gastos/x.go"}, review.Focused},
-		"auth next to the store":  {[]string{".odachi/reviews/.gitignore", "internal/auth/session.go"}, review.Full},
-		"the fence is a decision": {[]string{".odachi/fence.toml"}, review.Focused},
-		"the profile is a config": {[]string{".odachi/profile.toml"}, review.Focused},
+		"code next to the store":  {[]string{"proof/.gitignore", "internal/gastos/x.go"}, review.Focused},
+		"auth next to the store":  {[]string{"proof/.gitignore", "internal/auth/session.go"}, review.Full},
+		"the fence is a decision": {[]string{"odd/fence.toml"}, review.Focused},
+		"the profile is a config": {[]string{"odd/profile.toml"}, review.Focused},
 	}
 
 	for name, tc := range cases {

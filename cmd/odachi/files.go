@@ -18,10 +18,11 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 	"github.com/biggs-100/odachi/internal/app/start"
-	"github.com/biggs-100/odachi/internal/app/store"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/store"
 )
 
 // osFiles is the Files adapter: the only place the verbs reach the disk. Writes
@@ -227,8 +228,17 @@ func (osFiles) Write(path string, data []byte) error {
 type agentSelection struct{}
 
 // Written returns the stored selection, or empty when the project never chose.
+// The file lives in the clone's store: the choice belongs to the person, and a
+// teammate clones the rules, not somebody else's clients.
 func (agentSelection) Written(dir string) (string, error) {
-	path := filepath.Join(dir, filepath.FromSlash(persona.SelectionPath))
+	path, _, err := (agentSelection{}).Target(dir)
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		// No repository, no store: a project that never chose, which is both.
+		return "", nil
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -237,6 +247,28 @@ func (agentSelection) Written(dir string) (string, error) {
 		return "", err
 	}
 	return agentstoml.Decode(data)
+}
+
+// Target names the file the choice lives in, and the label a human reads. No
+// repository means no store: the path is empty, and the caller treats it as "the
+// project never chose", the same answer as a missing file.
+func (agentSelection) Target(dir string) (path, label string, err error) {
+	root, err := store.Root(dir, gitRepo{})
+	if err != nil {
+		return "", "", nil
+	}
+	path = filepath.Join(root, filepath.FromSlash(persona.SelectionPath))
+	return path, storeLabel(dir, path), nil
+}
+
+// storeLabel names a file inside the store the way a human reads it: relative to
+// the project when it can be, so the usual answer is `.git/odachi/agents.toml`,
+// and absolute when the store lives outside the worktree.
+func storeLabel(dir, path string) string {
+	if out, err := filepath.Rel(dir, path); err == nil && out != ".." && !strings.HasPrefix(out, ".."+string(filepath.Separator)) {
+		return filepath.ToSlash(out)
+	}
+	return filepath.ToSlash(path)
 }
 
 func (agentSelection) Render(selection string) ([]byte, error) { return agentstoml.Render(selection) }
@@ -264,12 +296,12 @@ func (reviewModeCodec) Render(config review.ProjectConfig) ([]byte, error) {
 	return reviewtoml.Render(config)
 }
 
-// loadProfile reads .odachi/profile.toml when it exists. The human owns that
+// loadProfile reads odd/profile.toml when it exists. The human owns that
 // file: it wins over inference, and a malformed one blocks with a sentence
 // instead of being silently replaced. The verb is the command the human has to
 // run again, so the message never sends them to the wrong one.
 func loadProfile(dir, verb string) (*profile.Profile, int, string) {
-	rel := filepath.Join(".odachi", "profile.toml")
+	rel := filepath.FromSlash(layout.Profile)
 	path := filepath.Join(dir, rel)
 
 	if _, err := os.Stat(path); err != nil {

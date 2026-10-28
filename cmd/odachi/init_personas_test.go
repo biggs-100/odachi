@@ -149,7 +149,7 @@ func TestInitUsesTheProfileTheHumanWroteDown(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
-	writeFile(t, dir, ".odachi/profile.toml", "name = \"senior\"\n")
+	writeFile(t, dir, "odd/profile.toml", "name = \"senior\"\n")
 
 	if code, _, errOut := runDir(t, dir, []string{"init"}, ""); code != 0 {
 		t.Fatalf("code = %d (stderr %q)", code, errOut)

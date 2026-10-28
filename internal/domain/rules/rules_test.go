@@ -186,7 +186,7 @@ func TestBlockSaysWhatOdachiIsAndWhereTheVoiceComesFrom(t *testing.T) {
 
 	// The profile file is read by the binary only; that contract is not the
 	// block's to publish.
-	if strings.Contains(block, ".odachi/profile.toml") {
+	if strings.Contains(block, "odd/profile.toml") {
 		t.Errorf("the block sends the agent to the profile file:\n%s", block)
 	}
 }

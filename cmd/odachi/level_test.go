@@ -78,7 +78,7 @@ func TestLevelToAppliesTheProfileAndKeepsTheOldFile(t *testing.T) {
 	}
 
 	files := tree(t, dir)
-	profile := files[".odachi/profile.toml"]
+	profile := files["odd/profile.toml"]
 	if !strings.Contains(profile, `"novato"`) {
 		t.Errorf("profile.toml does not hold the new profile:\n%s", profile)
 	}
@@ -118,7 +118,7 @@ func TestLevelToUnknownProfileListsTheAvailableOnes(t *testing.T) {
 		}
 	}
 	after := tree(t, dir)
-	if after[".odachi/profile.toml"] != before[".odachi/profile.toml"] {
+	if after["odd/profile.toml"] != before["odd/profile.toml"] {
 		t.Errorf("a blocked level rewrote the profile")
 	}
 }

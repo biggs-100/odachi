@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/adapters/hostmodel"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -352,7 +353,7 @@ func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "on"}, ""); code != 0 {
 		t.Fatalf("mode on: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	data, err := os.ReadFile(filepath.Join(dir, ".odachi", "review.toml"))
+	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(layout.Review)))
 	if err != nil {
 		t.Fatalf("the switch was not written: %v", err)
 	}
@@ -507,7 +508,7 @@ func TestStartWritesTheFeatureBaseEndToEnd(t *testing.T) {
 func TestReviewModeRejectsAMangledSwitch(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	writeFile(t, dir, ".odachi/review.toml", `mode = "maybe"`+"\n")
+	writeFile(t, dir, "odd/review.toml", `mode = "maybe"`+"\n")
 
 	code, _, errOut := runDir(t, dir, []string{"check"}, "")
 

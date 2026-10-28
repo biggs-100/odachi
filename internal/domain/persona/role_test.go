@@ -23,7 +23,7 @@ func TestRoleFileCarriesTheBlockAndTheRole(t *testing.T) {
 		"mode: primary",
 		"THE BLOCK",
 		"The role you play",
-		".odachi/roles/marketing.md",
+		"odd/roles/marketing.md",
 	} {
 		if !strings.Contains(file.Content, want) {
 			t.Errorf("the agent file does not say %q:\n%s", want, file.Content)

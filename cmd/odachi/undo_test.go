@@ -85,7 +85,7 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("undo without backups: exit %d, want 1 (stderr=%s)", code, stderr)
 	}
-	for _, want := range []string{"odachi start", "brief.md", ".odachi/profile.toml", ".odachi/fence.toml", "odd/tasks/*.md"} {
+	for _, want := range []string{"odachi start", "brief.md", "odd/profile.toml", "odd/fence.toml", "odd/tasks/*.md"} {
 		if !strings.Contains(stderr, want) {
 			t.Errorf("stderr %q does not say %q", stderr, want)
 		}

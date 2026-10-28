@@ -26,8 +26,8 @@ var store = filepath.Join(dir, ".git", "odachi")
 // show them.
 const (
 	briefRel   = "brief.md"
-	profileRel = ".odachi/profile.toml"
-	fenceRel   = ".odachi/fence.toml"
+	profileRel = "odd/profile.toml"
+	fenceRel   = "odd/fence.toml"
 	taskRel    = "odd/tasks/0001-reserva-de-turno.md"
 )
 
@@ -262,7 +262,7 @@ func (f *fakeFiles) assertOnlyTheFourArtifacts(t *testing.T) {
 		if rel == ".odachi/backups" || strings.HasPrefix(rel, ".odachi/backups/") {
 			return true
 		}
-		return rel == "." || rel == ".odachi" || rel == "odd/tasks"
+		return rel == "." || rel == ".odachi" || rel == "odd" || rel == "odd/tasks"
 	}
 	for _, path := range f.touched {
 		if !allowed(path) {
@@ -587,7 +587,7 @@ func TestNoBackupsExplainsWhatOdachiWrites(t *testing.T) {
 	if strings.Contains(res.Message, "\n") {
 		t.Errorf("the message must be one line: %q", res.Message)
 	}
-	for _, want := range []string{"brief.md", ".odachi/profile.toml", ".odachi/fence.toml", "odd/tasks/*.md", "odachi start"} {
+	for _, want := range []string{"brief.md", "odd/profile.toml", "odd/fence.toml", "odd/tasks/*.md", "odachi start"} {
 		if !strings.Contains(res.Message, want) {
 			t.Errorf("Message = %q, want it to name %q", res.Message, want)
 		}

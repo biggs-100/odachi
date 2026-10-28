@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/biggs-100/odachi/internal/app/store"
+	"github.com/biggs-100/odachi/internal/domain/store"
 )
 
 // fakeGit answers the one question the store asks.

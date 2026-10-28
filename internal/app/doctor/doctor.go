@@ -28,6 +28,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	domainopencode "github.com/biggs-100/odachi/internal/domain/opencode"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/rules"
@@ -49,8 +50,7 @@ const (
 	gitDir      = ".git"
 	hookRel     = ".git/hooks/pre-commit"
 	agentsFile  = "AGENTS.md"
-	odachiDir   = ".odachi"
-	profileFile = odachiDir + "/profile.toml"
+	profileFile = layout.Profile
 	briefFile   = "brief.md"
 	skillsDir   = "skills"
 	skillFile   = "SKILL.md"
@@ -210,7 +210,7 @@ func (r *runner) isProject() bool {
 		}
 	}
 
-	found, err := r.isDir(odachiDir)
+	found, err := r.isDir(layout.Odd)
 	if err != nil {
 		return true
 	}
