@@ -815,6 +815,75 @@ func storeRel(rel string) string {
 	return relative(storeFile(rel))
 }
 
+// TestExecReadsTheAnswerFromTheVerdictFile: a command that names {verdict} writes
+// its answer there, and odachi reads that file instead of stdout. A reviewer that
+// prints a banner, a spinner or its own logs keeps its answer readable, which is
+// the whole reason the token exists.
+func TestExecReadsTheAnswerFromTheVerdictFile(t *testing.T) {
+	p := newProject()
+	answer := `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"verdict":"approved"}`
+	// stdout is everything an agent CLI prints around the answer.
+	p.shell.output = "> thinking...\n> tool call\n"
+	p.shell.after = func() {
+		path := verdictPathIn(t, p.shell.command)
+		p.files.files[path] = []byte(answer)
+	}
+
+	result := p.run(review.Options{Exec: "agent --write {verdict} --model {model}", Model: "m/x"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, output %q)", result.Code, result.Message, result.Output)
+	}
+	stored, ok := p.files.files[storePath(currentTree)]
+	if !ok {
+		t.Fatal("the answer was not stored as a verdict")
+	}
+	parsed, err := domainreview.Parse(stored)
+	if err != nil {
+		t.Fatalf("the stored answer does not parse: %v", err)
+	}
+	if parsed.Verdict != domainreview.Approved {
+		t.Errorf("verdict = %q, want approved", parsed.Verdict)
+	}
+	if _, ok := p.files.files[storeFile(domainreview.Dir+"/"+currentTree+".verdict.json")]; ok {
+		t.Error("the answer file was left in the store after it was read")
+	}
+}
+
+// TestExecRefusesAVerdictFileLeftEmpty: naming {verdict} is a promise to write
+// there. An empty file is not an empty verdict, and stdout is not a fallback: a
+// reviewer that answered somewhere else answered nowhere.
+func TestExecRefusesAVerdictFileLeftEmpty(t *testing.T) {
+	p := newProject()
+	p.shell.output = `{"findings":[]}`
+
+	result := p.run(review.Options{Exec: "agent {verdict}"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (message %q)", result.Code, result.Message)
+	}
+	for _, want := range []string{"{verdict}", currentTree + ".verdict.json"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the message does not name %q: %q", want, result.Message)
+		}
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; ok {
+		t.Error("an empty answer was stored as a verdict")
+	}
+}
+
+// verdictPathIn is the path a command names where the reviewer writes its answer.
+func verdictPathIn(t *testing.T, command string) string {
+	t.Helper()
+	for _, word := range strings.Fields(command) {
+		if strings.HasSuffix(word, ".verdict.json") {
+			return word
+		}
+	}
+	t.Fatalf("the command names no {verdict} path: %q", command)
+	return ""
+}
+
 // TestPromptCarriesTheCandidate: with no flags the verb prints the review prompt,
 // built from the brief and the diff, and stores nothing.
 func TestPromptCarriesTheCandidate(t *testing.T) {

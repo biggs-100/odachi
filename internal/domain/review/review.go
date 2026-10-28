@@ -389,6 +389,16 @@ func PromptPath(tree string) (string, error) {
 	return Dir + "/" + tree + ".prompt.md", nil
 }
 
+// AnswerPath is where a reviewer told to write {verdict} leaves its answer. It is
+// scaffolding, not evidence: the parsed answer becomes the verdict file, and this
+// one is removed once it has been read.
+func AnswerPath(tree string) (string, error) {
+	if !hashLike(tree) {
+		return "", fmt.Errorf("the tree %q cannot name an answer file: it must be a hash", tree)
+	}
+	return Dir + "/" + tree + ".verdict.json", nil
+}
+
 // hashLike reports whether s can be a tree hash. Only hex is accepted, which is
 // what makes it impossible for a verdict name to describe a path: no separator,
 // no dots, nothing a filesystem would read as more than a file name.
