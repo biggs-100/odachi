@@ -73,24 +73,6 @@ the retry needs `--force` — and the fake cannot inject a read error, so no tes
 reaches the branch. A read-error seam in `fakeFiles` and one assertion on the
 message close it.
 
-### internal/app/review/review.go - the answer file of a failed run is left unnamed
-
-A command that names `{verdict}` gets `answers/<tree>.json`, emptied before each
-group, and the success path removes it. The failure returns — bad exit, timeout, a
-refutation, a store refusal — leave it behind without naming it, and the next run
-on the same tree empties it: an answer somebody paid for disappears silently. The
-fix is the one the success path already applies: name the file, or keep it under a
-name that says it failed.
-
-### internal/app/review/review.go - --exec does not file the prompt it sends
-
-The printed form writes `reviews/<tree>.prompt.md`. A run that hands the prompt to
-a reviewer does not, so the bytes that produced a verdict cannot be read again
-without regenerating them, and regenerating needs the same base to build the same
-question. Same home, same name, written by both forms. 0087 paid for it: a
-reviewer's finding could only be judged false by regenerating the prompt by hand
-and assuming the tree had not moved since.
-
 ### internal/app/doctor/doctor.go - the last branch of personaNote has no test
 
 The branch that answers "the files match and the store records `project_agents =
@@ -144,6 +126,16 @@ regenerated since, and the next `check --run` overwrites them. A length-prefixed
 header would remove the ambiguity and detect a truncated proof as well; it is a
 format change for a case this narrow, and it can wait until the format changes for
 another reason.
+
+## Closed by feature 0088
+
+- `internal/app/review/review.go` - the answer file of a failed run: an answer left
+  behind by a bad exit or a timeout is copied under a name its content decides,
+  named in the refusal, and the scaffolding is removed, so the next run cannot
+  empty it. A store that cannot file the prompt says so and keeps the answer.
+- `internal/app/review/review.go` - `--exec` files the prompt it sends: once sent,
+  under the canonical name for one group and one file per group for a split run.
+  0087's false positive can now be checked against the bytes that were sent.
 
 ## Closed by feature 0086
 
