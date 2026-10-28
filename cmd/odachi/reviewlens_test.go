@@ -144,7 +144,7 @@ func TestShowListsRequiredAndMissingLenses(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
-	writeAt(t, verdict, `{"reviewer":"humano","lenses":["reliability"],"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
+	writeAt(t, verdict, `{"reviewer":"humano","lenses":["reliability"],`+declared(t, dir)+`"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
 
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
@@ -186,7 +186,7 @@ func TestRefutePrintsThePromptForTheStoredVerdict(t *testing.T) {
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
 	writeAt(t, verdict, `{
   "reviewer": "claude",
-  "findings": [
+`+declared(t, dir)+`  "findings": [
     {"path": "internal/app/turnos.go", "line": 3, "severity": "BLOCKER", "causal": true, "why": "devuelve nuevo sin guardar el turno"}
   ]
 }`)
@@ -232,7 +232,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
 	writeAt(t, verdict, `{
   "reviewer": "claude",
-  "findings": [
+`+declared(t, dir)+`  "findings": [
     {"path": "internal/app/turnos.go", "line": 3, "severity": "BLOCKER", "causal": true, "why": "devuelve nuevo sin guardar el turno"}
   ]
 }`)
@@ -304,7 +304,7 @@ func TestCheckRequireReviewNamesTheMissingLens(t *testing.T) {
 
 	proof("before the verdict")
 	verdict := filepath.Join(t.TempDir(), "veredicto.json")
-	writeAt(t, verdict, `{"reviewer":"humano","findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
+	writeAt(t, verdict, `{"reviewer":"humano",`+declared(t, dir)+`"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"}]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
 		t.Fatalf("attach: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}

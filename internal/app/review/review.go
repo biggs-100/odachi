@@ -425,6 +425,7 @@ func mergeVerdicts(existing, incoming domain.Verdict) domain.Verdict {
 	merged.Reviewer = existing.Reviewer + " + " + incoming.Reviewer
 	merged.At = incoming.At
 	merged.Verdict = ""
+	merged.Inspection = domain.MergeInspection(existing.Inspection, incoming.Inspection)
 
 	models := make(map[string]string, len(existing.Models)+len(incoming.Models))
 	for lens, model := range existing.Models {
@@ -1208,6 +1209,17 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		sealed = resealed
 	}
 
+	// The declaration comes before the rows: the reviewer's account of what it
+	// read is the claim the rows are answers to. An answer that leaves a changed
+	// path out of it is incomplete, and one that names a path nobody changed is
+	// inventing - either way the caller cannot complete it, because the caller is
+	// not the one who read the candidate.
+	if len(asked) > 0 {
+		if message, detail, ok := inspectionRefusal(sealed, work.paths); !ok {
+			return r.refuseInspection(sealed, rel, message, detail)
+		}
+	}
+
 	// Coverage is a promise of this command, not a surprise of the gate: a store
 	// cannot be rewritten, so a verdict written with a hole would leave the tree
 	// with no way out. The answer is refused before it is filed, and the refusal
@@ -1455,6 +1467,61 @@ func (r *runner) refuse(sealed domain.Verdict, gaps []domain.Gap, rel string) Re
 			"the answer is kept in " + kept + ": ask the reviewer for these rows and attach the answer again - a verdict is not edited to pass the gate",
 			"next: odachi review --attach " + kept,
 		},
+	}
+}
+
+// inspectionRefusal says why an answer's declaration does not describe the
+// candidate it judges, or ok when it does. It is the half of coverage a row
+// cannot carry: the rows say what was answered, and this says who read the tree
+// and whether it read all of it.
+func inspectionRefusal(verdict domain.Verdict, changed []string) (message string, detail []string, ok bool) {
+	declared := verdict.Inspection
+	if declared == nil {
+		return "the answer does not say what its reviewer inspected: it carries no \"inspection\"; no verdict was written",
+			[]string{"the candidate changed: " + strings.Join(changed, ", ")},
+			false
+	}
+
+	if declared.Status == domain.InspectionUnavailable {
+		return "the reviewer could not inspect the candidate: " + oneLine(declared.Reason) + "; no verdict was written",
+			[]string{"ask the reviewer to read the candidate and answer again when it can"},
+			false
+	}
+
+	missing, foreign := verdict.InspectionCoverage(changed)
+	if len(missing) > 0 {
+		return fmt.Sprintf("the declaration leaves %d changed path(s) out: %s; no verdict was written",
+				len(missing), strings.Join(missing, ", ")),
+			[]string{"ask the reviewer to declare the paths it read - a verdict is not edited to pass the gate"},
+			false
+	}
+	if len(foreign) > 0 {
+		return fmt.Sprintf("the declaration names %d path(s) the candidate does not change: %s; no verdict was written",
+				len(foreign), strings.Join(foreign, ", ")),
+			[]string{"the declaration is the reviewer's account of this candidate: list the changed paths, nothing else"},
+			false
+	}
+	return "", nil, true
+}
+
+// refuseInspection keeps the answer and says where it is, like refuse does for a
+// missing row. The reviewer was paid for those bytes, and the next reader is the
+// reviewer: the caller attaching the file is not the one who read the candidate.
+func (r *runner) refuseInspection(sealed domain.Verdict, rel, message string, detail []string) Result {
+	kept, problem := r.keepRefused(sealed, rel)
+	if problem != nil {
+		message += "; I could not keep it: " + problem.Message
+		return blocked(message)
+	}
+
+	lines := append([]string{message}, detail...)
+	lines = append(lines,
+		"the answer is kept in "+kept+": ask the reviewer for the declaration and attach the answer again - a verdict is not edited to pass the gate",
+		"next: odachi review --attach "+kept)
+	return Result{
+		Code:    CodeBlocked,
+		Message: message,
+		Lines:   lines,
 	}
 }
 

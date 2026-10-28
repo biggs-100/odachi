@@ -27,6 +27,19 @@ A refusal that teaches the wrong thing is worse than no refusal.
   says the answer is not edited to pass the gate; the kept file and the command
   that attaches it again are unchanged.
 
+## Unreleased
+
+An answer that cannot say what it read is not a verdict.
+
+- **The reviewer declares what it inspected.** Every answer to a review that asks
+  for lenses now carries `inspection`: `{"status": "completed", "paths": [...]}`
+  with every changed path it read, or `{"status": "unavailable", "reason": "..."}`
+  when it could not read the candidate at all. `review --attach` and the `--exec`
+  path refuse an answer whose declaration leaves a changed path out, names a path
+  the candidate does not change, or says unavailable, and the refusal says where
+  the answer is kept so the reviewer is asked for it, not the caller. A verdict
+  stored before this field existed still parses.
+
 ## v0.11.41 - 2026-10-28
 
 Two decisions stop being improvised: where the project's agent lives, and where a

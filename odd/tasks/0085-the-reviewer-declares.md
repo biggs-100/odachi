@@ -13,7 +13,7 @@ R1 · "the reviewer declares what it inspected, and the gate refuses an answer w
 - a test drives each refusal, observed red first
 
 ## Steps
-- [ ] T1 · the verdict carries the inspection declaration, and attach refuses one that does not cover every changed path   R1
+- [x] T1 · the verdict carries the inspection declaration, and attach refuses one that does not cover every changed path   R1
 - [ ] T2 · the review prompt asks for the declaration and the printed schema shows it   R1
 
 ## History
