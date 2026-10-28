@@ -13,7 +13,18 @@ Last written: after 0079, the review debt of 0078 is paid.
 
 ## Open
 
-### odd/tasks/0073-a-professional-persona.md — the doc speaks the old vocabulary
+### cmd/odachi/files.go — the new classification branch of the selection adapter is not pinned
+
+`Written` gained two branches: `errors.Is(err, gitx.ErrNoRepository)` answers "the
+project never chose", and any other error propagates so a broken repository stops
+a reader instead of falling back to `both`. `Target` changed contract from always
+nil to propagating. The sentinel itself is tested in `gitx` and `store`, but
+nothing in the tree pins that `gitRepo`'s delegation preserves it into `Written`,
+nor that `init` surfaces the store error instead of quietly falling back. A
+regression that re-swallows it — the exact defect 0078 named — would leave every
+test green. Named by the review of 0079, tree 97f94c8.
+
+### odd/tasks/0073-a-professional-persona.md - the doc speaks the old vocabulary
 
 Its Done-when and Steps describe `odachi persona new`, `persona-craft` and
 `.odachi/personas/<slug>.md`; the shipped tree has `odachi role`, `role-craft` and
