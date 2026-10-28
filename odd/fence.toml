@@ -4,8 +4,8 @@ paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no behavior change: the three are tests and one refactor"
-paths = ["no-behavior-change-the-three-are-tests-and-one-refactor*"]
+not   = "no behavior change: the three are a doc line and two tests"
+paths = ["no-behavior-change-the-three-are-a-doc-line-and-two-tests*"]
 deps  = []
 
 [[rule]]

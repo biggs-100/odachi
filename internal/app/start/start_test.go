@@ -1,6 +1,7 @@
 package start_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -956,6 +957,37 @@ func TestStartDoesNotInstallTheAgentsItDoesNotFind(t *testing.T) {
 	for _, file := range persona.Files(body) {
 		if _, ok := files.files[files.key(file.Path)]; ok {
 			t.Errorf("%s was installed by start; the mirror is refreshed, never installed", file.Path)
+		}
+	}
+}
+
+// TestStartStopsWhenTheMatchingDocumentCannotBeRead: a document whose slug matches
+// is read to tell a re-run from a new feature that repeats its first three words.
+// A read that fails is a block the agent can fix - and it happens after the brief and
+// the fence are written - so the message names the document instead of planning into
+// one nobody could read.
+func TestStartStopsWhenTheMatchingDocumentCannotBeRead(t *testing.T) {
+	var events []string
+	files := newFakeFiles(map[string]string{
+		"odd/tasks/0001-el-turno-queda.md": closedDocument(true),
+	}, &events)
+	files.failRead = func(path string) error {
+		if strings.HasSuffix(path, "0001-el-turno-queda.md") {
+			return errors.New("permiso denegado")
+		}
+		return nil
+	}
+	opts := flagsCarryTheSameAnswers()
+	opts.Outcome = "el turno queda"
+
+	got := start.Run(opts, nil, files, nil)
+
+	if got.Code != start.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+	}
+	for _, want := range []string{"could not read", "0001-el-turno-queda.md"} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("Message = %q, want %q", got.Message, want)
 		}
 	}
 }
