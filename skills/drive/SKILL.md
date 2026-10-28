@@ -12,9 +12,9 @@ You are inside an odachi project: there is `brief.md`, `odd/tasks/` and the odac
 The four pieces and who owns each one:
 
 - `brief.md` — the vision and the fence. The human writes it; do not rewrite it.
-- `odd/tasks/` — the plan: requirements, steps and history. You move it with `odachi plan`.
+- `odd/` — the plan and the rules: `odd/tasks/` (moved with `odachi plan`) plus `fence.toml`, `profile.toml`, `review.toml` and `roles/`, which travel with the repository.
 - `proof/` — the evidence: real command output, tied to the tree. `check --run` writes it.
-- `.odachi/` — gates and ceremony. The binary reads the profile, not you.
+- `.git/odachi/` — the clone's store: verdicts, versions, the lock and the client choice. It never travels. An older project carrying `.odachi/`: `store move` adopts it and prints the git commands.
 
 The feature cycle, in order:
 

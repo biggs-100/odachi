@@ -10,10 +10,10 @@ done. A contribution follows the same loop, by hand or with your agent.
   pull request; a fix that changes a contract or a file format should be
   discussed first.
 - **A feature:** open an issue first. The maintainer writes `brief.md` (the
-  vision and what is *not* included) and `.odachi/fence.toml`; nobody else edits
+  vision and what is *not* included) and `odd/fence.toml`; nobody else edits
   them. CI reads the fence from the base branch, so the copy in your branch does
   not change the policy you are judged by — but the gate does not block an edit
-  to the file: `.github/CODEOWNERS` asks for an owner review of `.odachi/`, and
+  to the file: `.github/CODEOWNERS` asks for an owner review of `odd/`, and
   the maintainer reads that diff before merging. Once the brief exists, the
   implementation is a normal pull request.
 - **No CLA.** Contributions are MIT, like the project.
@@ -83,3 +83,4 @@ real, and own the result. A person reads the diff, the proof and the findings;
 ## Reporting a vulnerability
 
 Never in a public issue. See [SECURITY.md](SECURITY.md).
+

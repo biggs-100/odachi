@@ -10,6 +10,5 @@ dist/
 
 # odachi:begin
 /proof/
-/.odachi/reviews/
 *.bak-*
 # odachi:end
