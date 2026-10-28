@@ -9,10 +9,24 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0080, the sentinel is pinned end to end.
+Last written: after 0089, one row was verified false and three were closed.
+
 
 ## Open
 
+### the review store - a false warning is carried forever
+
+A potent row leaves the store only when the bytes it names change, and a warning
+cannot be refuted: `--refute` takes causal `BLOCKER` and `CRITICAL` rows, and
+"warnings are never refutable". So a finding the reviewer got wrong about a file
+nobody touches again is re-reported by every verdict that inherits it. Evidence: the
+row `cmd/odachi/main.go:573 - the propagation of max_prompt_kb is pinned by no test`
+was filed by 0087's review, is false (the test is
+`cmd/odachi/feature_test.go` `TestTheReviewRefusesWhatTheProjectWillNotPayFor`, and
+it fails when the line is removed), and has been carried through 0087, 0088 and
+0089. Two ways out, both for a feature of their own: let a refutation cite a file
+outside the diff for a non-blocking row, or let the human dismiss a row with a
+reason the way a finding is dismissed.
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
