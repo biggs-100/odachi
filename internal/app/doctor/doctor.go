@@ -83,9 +83,10 @@ type Options struct {
 }
 
 // Agents is the selection port: which clients the project chose for the native
-// agent. It only reads: doctor has no way to change the choice.
+// agent, and whether it carries them at all. It only reads: doctor has no way to
+// change the choice.
 type Agents interface {
-	Written(dir string) (string, error)
+	Written(dir string) (persona.Store, error)
 }
 
 // Files is the disk port. It can only read: doctor has no way to write, which is
@@ -751,7 +752,7 @@ func (r *runner) clientSelection() (string, []persona.Client, string, bool) {
 		return "", nil, "could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
 			"; fix the file or run odachi init --agents both", false
 	}
-	name, clients, err := persona.ResolveSelection(stored)
+	name, clients, err := persona.ResolveSelection(stored.Agents)
 	if err != nil {
 		return "", nil, "could not read " + persona.SelectionPath + ": " + oneLine(err.Error()) +
 			"; fix the file or run odachi init --agents both", false

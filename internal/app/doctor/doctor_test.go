@@ -230,11 +230,14 @@ func cleanProfiles() *fakeProfiles {
 // fakeAgentSelection is the selection port: the choice the project stored, or
 // the error a malformed file gives. It only reads.
 type fakeAgentSelection struct {
-	stored string
-	err    error
+	stored  string
+	project string
+	err     error
 }
 
-func (s fakeAgentSelection) Written(string) (string, error) { return s.stored, s.err }
+func (s fakeAgentSelection) Written(string) (persona.Store, error) {
+	return persona.Store{Agents: s.stored, ProjectAgents: s.project}, s.err
+}
 
 // run is one doctor over the given world.
 func run(files *fakeFiles, lookup *fakeLookup, profiles *fakeProfiles, exe string) Result {
