@@ -379,6 +379,16 @@ func Path(tree string) (string, error) {
 	return Dir + "/" + name, nil
 }
 
+// PromptPath is where the question that tree's verdict answers lives, beside it
+// and under the same name: a prompt nobody files is a prompt somebody improvises
+// a home for, and the tree it judged is the only fact that keeps it honest.
+func PromptPath(tree string) (string, error) {
+	if !hashLike(tree) {
+		return "", fmt.Errorf("the tree %q cannot name a prompt file: it must be a hash", tree)
+	}
+	return Dir + "/" + tree + ".prompt.md", nil
+}
+
 // hashLike reports whether s can be a tree hash. Only hex is accepted, which is
 // what makes it impossible for a verdict name to describe a path: no separator,
 // no dots, nothing a filesystem would read as more than a file name.

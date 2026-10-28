@@ -838,19 +838,49 @@ func TestPromptCarriesTheCandidate(t *testing.T) {
 	}
 }
 
-// TestPromptWritesNothing: the store lives outside the worktree, so printing the
-// prompt has nothing to prepare and nothing to ignore. The old order — write an
-// ignore file before hashing — is gone with the reason for it.
-func TestPromptWritesNothing(t *testing.T) {
+// TestPromptHasAHome: the printed form also writes the prompt into the clone's
+// store, beside the verdict and under the same tree, so an agent that needs it on
+// disk hands the reviewer that path instead of inventing one - 0081 invented
+// three of them inside proof/, where proof means the output of check --run.
+func TestPromptHasAHome(t *testing.T) {
 	p := newProject()
 
 	result := p.run(review.Options{})
 
-	if written := p.files.written(); len(written) != 0 {
-		t.Fatalf("writes = %v, want none: printing the prompt writes nothing", written)
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	if len(result.Files) != 0 {
-		t.Errorf("result.Files = %v, want none", result.Files)
+	rel := domainreview.Dir + "/" + currentTree + ".prompt.md"
+	content, ok := p.files.files[storeFile(rel)]
+	if !ok {
+		t.Fatalf("the prompt was not written to %s", storeRel(rel))
+	}
+	if string(content) != result.Prompt {
+		t.Error("the file and the printed prompt are not the same bytes")
+	}
+	if !slices.Contains(result.Files, storeRel(rel)) {
+		t.Errorf("Files = %v, want it to name %s", result.Files, storeRel(rel))
+	}
+	if _, ok := p.files.files[storePath(currentTree)]; ok {
+		t.Error("printing the prompt wrote a verdict")
+	}
+}
+
+// TestPromptWritesOnlyThePrompt: the store lives outside the worktree, so the
+// printed form has nothing to prepare and nothing to ignore. The one write is the
+// prompt itself, filed under the tree it names: a verdict file here would be an
+// approval nobody gave.
+func TestPromptWritesOnlyThePrompt(t *testing.T) {
+	p := newProject()
+
+	result := p.run(review.Options{})
+
+	want := storeRel(domainreview.Dir + "/" + currentTree + ".prompt.md")
+	if written := p.files.written(); len(written) != 1 || written[0] != want {
+		t.Fatalf("writes = %v, want only %s", written, want)
+	}
+	if len(result.Files) != 1 || result.Files[0] != want {
+		t.Errorf("result.Files = %v, want [%s]", result.Files, want)
 	}
 }
 

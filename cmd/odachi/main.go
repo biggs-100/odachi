@@ -830,6 +830,11 @@ func reportReview(result reviewapp.Result, asJSON bool, stdout, stderr io.Writer
 	}
 
 	if result.Prompt != "" {
+		// The store copy is the one an agent hands to a reviewer; stdout stays the
+		// prompt alone, because a pipe into a reviewer must carry nothing else.
+		for _, file := range result.Files {
+			fmt.Fprintln(stderr, "odachi: the prompt is also at "+file)
+		}
 		fmt.Fprint(stdout, result.Prompt)
 		if !strings.HasSuffix(result.Prompt, "\n") {
 			fmt.Fprintln(stdout)

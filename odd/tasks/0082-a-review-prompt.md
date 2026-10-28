@@ -11,6 +11,7 @@ R1 · "a review prompt and its answer have an owner, so neither lands in the tre
 - a test drives both capture paths and the prompt path, observed red first
 
 ## Steps
+- [ ] T1 · the printed review writes its prompt into the clone's store and names the path   R1
 
 ## History
 L1 · "a review prompt and its answer have an owner, so neither lands in the tree nor in a scroll"

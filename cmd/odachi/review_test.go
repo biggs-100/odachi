@@ -99,8 +99,17 @@ func TestReviewPrintsThePromptForTheCandidate(t *testing.T) {
 			t.Errorf("the prompt does not contain %q\n%s", want, out)
 		}
 	}
-	if verdicts := reviewsIn(t, dir); len(verdicts) != 0 {
-		t.Errorf("printing the prompt stored %v, want nothing", verdicts)
+	if verdicts := reviewsIn(t, dir); len(verdicts) != 1 || !strings.HasSuffix(verdicts[0], ".prompt.md") {
+		t.Errorf("the store holds %v, want exactly the prompt file and no verdict", verdicts)
+	}
+	// The prompt has a home and the human is told where: the store copy is what an
+	// agent hands to a reviewer, and stdout stays the prompt alone so a pipe into
+	// that reviewer carries nothing else.
+	if !strings.Contains(errOut, ".prompt.md") {
+		t.Errorf("stderr does not name the prompt file: %q", errOut)
+	}
+	if !strings.HasPrefix(out, "# odachi review") {
+		t.Errorf("stdout does not start with the prompt: %q", out)
 	}
 }
 

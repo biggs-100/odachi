@@ -270,11 +270,26 @@ func (r *runner) prompt() Result {
 		return *problem
 	}
 
+	// The question gets the same home as the answer: the store, under the tree it
+	// names. An agent that needs the prompt on disk asks this verb where it is
+	// instead of picking a folder - proof/ is not a prompt's home.
+	rel, err := domain.PromptPath(tree)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; the prompt was not written")
+	}
+	path := r.storePath(rel)
+	if err := r.files.Write(path, []byte(text)); err != nil {
+		problem := blocked("could not write the prompt into the clone's store (" + r.storeLabel(rel) + "): " +
+			oneLine(err.Error()) + "; check the permissions and run odachi review again")
+		return problem
+	}
+
 	return Result{
 		Code:    CodeOK,
 		Message: promptMessage(tree, selected),
 		Prompt:  text,
 		Lenses:  selected,
+		Files:   []string{r.storeLabel(rel)},
 	}
 }
 
