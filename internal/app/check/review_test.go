@@ -559,6 +559,32 @@ func TestRequireReviewRefusesASelfReview(t *testing.T) {
 	}
 }
 
+// TestRequireReviewRefusesAVerdictThatSaysNobodyJudged: the identity gate compares
+// two declarations, and a silence is the cheapest way past it. A verdict that names
+// no model while the proof names one is refused, and the refusal offers the two
+// honest roads: name the model that judged, or record the human's waiver.
+func TestRequireReviewRefusesAVerdictThatSaysNobodyJudged(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[proofPath()] = []byte(proofFileByModel(currentTree, "provider/builder"))
+	files.files[reviewPath(currentTree)] = []byte(verdictFileByModel(t, currentTree, ""))
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
+		files, codeChange(), &fakeShell{})
+
+	if got.Reason != check.ReasonReviewUnattributed {
+		t.Fatalf("Reason = %q, want %q (message: %s)", got.Reason, check.ReasonReviewUnattributed, got.Message)
+	}
+	lines := strings.Join(got.Lines, "\n")
+	// The tree, the lens, the model the proof carries and the two roads out: the
+	// refusal has to name the file it is about, the way lensMissing does, or a
+	// project with more than one tree cannot tell which review it read.
+	for _, want := range []string{currentTree, "provider/builder", "odachi review --model", "waive-review"} {
+		if !strings.Contains(strings.ToLower(lines), want) {
+			t.Errorf("the refusal does not carry %q:\n%s", want, lines)
+		}
+	}
+}
+
 // TestRequireReviewRefusesOnlyTheLensesTheBuilderJudged: with a model per lens,
 // the gate names the lenses that are self-reviewed and leaves the others alone.
 func TestRequireReviewRefusesOnlyTheLensesTheBuilderJudged(t *testing.T) {
