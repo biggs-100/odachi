@@ -877,8 +877,8 @@ func (r *runner) requireReview(base string) *Result {
 	// that names no model would pass it by saying less - the cheapest way around a
 	// rule - and the tree would be approved by nobody in particular.
 	if lenses := unattributedLenses(r.proofModel, verdict, required); len(lenses) > 0 {
-		message := fmt.Sprintf("the review of %s does not say who judged it, and the proof names %s: a verdict that names no model cannot be compared with the tree's builder",
-			strings.Join(lenses, ", "), strings.TrimSpace(r.proofModel))
+		message := fmt.Sprintf("the review of %s (%s) does not say who judged it, and the proof names %s: a verdict that names no model cannot be compared with the tree's builder",
+			strings.Join(lenses, ", "), r.storeFile(rel), strings.TrimSpace(r.proofModel))
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewUnattributed,

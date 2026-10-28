@@ -575,7 +575,10 @@ func TestRequireReviewRefusesAVerdictThatSaysNobodyJudged(t *testing.T) {
 		t.Fatalf("Reason = %q, want %q (message: %s)", got.Reason, check.ReasonReviewUnattributed, got.Message)
 	}
 	lines := strings.Join(got.Lines, "\n")
-	for _, want := range []string{"provider/builder", "odachi review --model", "waive-review"} {
+	// The tree, the lens, the model the proof carries and the two roads out: the
+	// refusal has to name the file it is about, the way lensMissing does, or a
+	// project with more than one tree cannot tell which review it read.
+	for _, want := range []string{currentTree, "provider/builder", "odachi review --model", "waive-review"} {
 		if !strings.Contains(strings.ToLower(lines), want) {
 			t.Errorf("the refusal does not carry %q:\n%s", want, lines)
 		}
