@@ -4,11 +4,11 @@ paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no change to when a verdict is refused"
-paths = ["no-change-to-when-a-verdict-is-refused*"]
+not   = "no change to where the verdicts live"
+paths = ["no-change-to-where-the-verdicts-live*"]
 deps  = []
 
 [[rule]]
-not   = "the verdict schema does not change"
-paths = ["the-verdict-schema-does-not-change*"]
+not   = "no refusal of a verdict stored before this feature, which still parses"
+paths = ["no-refusal-of-a-verdict-stored-before-this-feature-which-still-parses*"]
 deps  = []
