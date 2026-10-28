@@ -10,6 +10,7 @@ R1 · "the refusal asks the reviewer for the missing rows, because a verdict is 
 - a test pins the wording, observed red first
 
 ## Steps
+- [x] T1 · the refusal asks the reviewer for the missing rows and never teaches the caller to edit them   R1
 
 ## History
 L1 · "the refusal asks the reviewer for the missing rows, because a verdict is not edited to pass the gate"

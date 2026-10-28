@@ -1452,7 +1452,7 @@ func (r *runner) refuse(sealed domain.Verdict, gaps []domain.Gap, rel string) Re
 		Lines: []string{
 			message,
 			"rows missing: " + strings.Join(rows, ", "),
-			"the answer is kept in " + kept + ": fix the rows and attach it again",
+			"the answer is kept in " + kept + ": ask the reviewer for these rows and attach the answer again - a verdict is not edited to pass the gate",
 			"next: odachi review --attach " + kept,
 		},
 	}

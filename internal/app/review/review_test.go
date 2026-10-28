@@ -1211,11 +1211,43 @@ func TestAVerdictStillLandsWhenTheRefusedAnswersCannotBeDropped(t *testing.T) {
 	}
 }
 
+// TestTheRefusalAsksTheReviewerForTheRows: the rows a reviewer did not write are
+// the reviewer's to write. A refusal that says "fix the rows" teaches whoever
+// holds the file to invent them - an agent did exactly that, twice, rather than
+// paying for the missing rows again.
+func TestTheRefusalAsksTheReviewerForTheRows(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"agente","findings":[],"passes":[]}`)
+
+	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "ask the reviewer") {
+		t.Errorf("the refusal does not send the gap back to the reviewer:\n%s", lines)
+	}
+	if !strings.Contains(lines, "not edited") {
+		t.Errorf("the refusal does not say the answer is not edited to pass:\n%s", lines)
+	}
+	if strings.Contains(lines, "fix the rows") {
+		t.Errorf("the refusal still teaches the caller to fill the rows:\n%s", lines)
+	}
+	if !strings.Contains(lines, "rows missing: a.go (reliability)") {
+		t.Errorf("the refusal lost the rows it names:\n%s", lines)
+	}
+	if !strings.Contains(lines, "next: odachi review --attach") {
+		t.Errorf("the refusal lost the command that attaches it again:\n%s", lines)
+	}
+}
+
 // TestARefusedAnswerIsKeptAndNamed: coverage is a promise of the command, not a
 // discovery of the gate. The answer that would have left a hole is not sealed, and
 // it is not thrown away either: the reviewer was paid for it, so it is kept under
-// a name its own bytes decide and the refusal names the file. The human fixes the
-// rows and attaches the same answer again.
+// a name its own bytes decide and the refusal names the file. The reviewer writes
+// the rows it left out; the caller attaches the fuller answer, it does not fill it.
 func TestARefusedAnswerIsKeptAndNamed(t *testing.T) {
 	p := newProject()
 	p.git.blobs = map[string]string{"a.go": gitBlob}

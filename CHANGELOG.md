@@ -16,6 +16,17 @@ A name is not an identity: two features can share their first three words.
   is still reused, so one feature never leaves two files behind. The run names the
   document it kept.
 
+## Unreleased
+
+A refusal that teaches the wrong thing is worse than no refusal.
+
+- **The refusal asks the reviewer for the rows it left out.** `review --attach`
+  already names every missing (path, lens) row and keeps the answer, but its last
+  line said "fix the rows and attach it again", which is an instruction the caller
+  can satisfy by inventing them. It now sends the gap back to the reviewer and
+  says the answer is not edited to pass the gate; the kept file and the command
+  that attaches it again are unchanged.
+
 ## v0.11.41 - 2026-10-28
 
 Two decisions stop being improvised: where the project's agent lives, and where a
