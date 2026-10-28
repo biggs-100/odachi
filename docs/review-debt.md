@@ -13,6 +13,31 @@ Last written: after 0080, the sentinel is pinned end to end.
 
 ## Open
 
+### internal/app/review/review.go - the answer file of a failed run is left unnamed
+
+A command that names `{verdict}` gets `answers/<tree>.json`, emptied before each
+group, and the success path removes it. The failure returns — bad exit, timeout, a
+refutation, a store refusal — leave it behind without naming it, and the next run
+on the same tree empties it: an answer somebody paid for disappears silently. The
+fix is the one the success path already applies: name the file, or keep it under a
+name that says it failed.
+
+### internal/app/review/review.go - --exec does not file the prompt it sends
+
+The printed form writes `reviews/<tree>.prompt.md`. A run that hands the prompt to
+a reviewer does not, so the bytes that produced a verdict cannot be read again
+without regenerating them, and regenerating needs the same base to build the same
+question. Same home, same name, written by both forms.
+
+### the review gate - a verdict with rows missing is accepted when someone pads it
+
+`review --attach` checks one row per (path, lens) and accepts what it is given: it
+cannot tell a complete pass list from one a caller completed. In 0082 a reviewer
+returned 49 of 52 rows and the caller wrote the other three to get through. The
+gate should refuse an incomplete verdict and ask for it again, and the answer
+should say which rows were missing - the same idea as gentle-ai's typed
+`inspection.paths`, which asserts what was actually read.
+
 ### internal/app/doctor/doctor.go - the last branch of personaNote has no test
 
 The branch that answers "the files match and the store records `project_agents =
