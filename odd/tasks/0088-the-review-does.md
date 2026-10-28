@@ -16,3 +16,4 @@ R1 · "the review does not lose what it already paid for: a failed answer keeps 
 
 ## History
 L1 · "the review does not lose what it already paid for: a failed answer keeps its name, and the prompt that was sent is filed"
+L2 · OFICIO · "the question is filed only once it has been sent, and a store that cannot hold it keeps the answer anyway" (porque a command that never started was handed nothing to file, and after the reviewer answered the answer is the paid thing: reporting a missing prompt by throwing that answer away is the loss this feature exists to prevent)
