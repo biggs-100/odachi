@@ -18,3 +18,5 @@ R1 · "the reviewer declares what it inspected, and the gate refuses an answer w
 
 ## History
 L1 · "the reviewer declares what it inspected, and the gate refuses an answer whose declaration does not cover every changed path"
+L2 · OFICIO · "the declaration is judged on the answer, never on the merged verdict" (porque the store lends a verdict its rows; the moment the merge runs a second lens group inherits the first group's inspection, and checking the union seals an answer that declared nothing - the review of this feature found it)
+L3 · OFICIO · "the review model is the one odd/review.toml names; the closing verdict of 0085 names none, so check cannot see it was written by the model that built the tree" (porque the human pays for the tokens, and a second model for one review was not authorized; the price is a gate that cannot attribute this verdict, written down in docs/review-debt.md)
