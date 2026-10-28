@@ -33,18 +33,14 @@ func Render(dir, slug, block string, clients []string, files Files) Result {
 		return blocked(err.Error() + " (in " + Dir + "/" + slug + FileExt + ")")
 	}
 
-	targets := []persona.File{{Path: SkillPath(slug), Content: skill}}
-	for _, client := range clients {
-		file, ok := persona.RoleFile(client, slug, source.Description, block, sectionText(source))
-		if !ok {
-			return blocked("the client " + client + " has no native agent file: the ones that do are " + strings.Join(clientNames(), ", "))
-		}
-		targets = append(targets, file)
+	wanted, unknown := targets(slug, skill, block, source, clients)
+	if unknown != "" {
+		return blocked("the client " + unknown + " has no native agent file: the ones that do are " + strings.Join(clientNames(), ", "))
 	}
 
-	lines := make([]string, 0, len(targets))
-	written := make([]string, 0, len(targets))
-	for _, target := range targets {
+	lines := make([]string, 0, len(wanted))
+	written := make([]string, 0, len(wanted))
+	for _, target := range wanted {
 		path := filepath.Join(rootOf(dir), filepath.FromSlash(target.Path))
 		current, err := files.Read(path)
 		switch {
@@ -105,18 +101,31 @@ func List(dir, block string, clients []string, files Files) Result {
 	return Result{Code: CodeOK, Message: strings.Join(lines, "\n"), Lines: lines}
 }
 
-// matches reports whether every artifact of the role is already the bytes the
-// source would render.
-func matches(dir, slug, skill, block string, source role.Role, clients []string, files Files) bool {
-	targets := []persona.File{{Path: SkillPath(slug), Content: skill}}
+// targets is the one definition of what a role owns: its skill and one persona file
+// per client. Render writes this list and matches compares it, so a target added to
+// one path is added to both. Two copies would let the listing answer about a file
+// nobody writes, with every test green.
+func targets(slug, skill, block string, source role.Role, clients []string) (files []persona.File, unknown string) {
+	files = make([]persona.File, 0, len(clients)+1)
+	files = append(files, persona.File{Path: SkillPath(slug), Content: skill})
 	for _, client := range clients {
 		file, ok := persona.RoleFile(client, slug, source.Description, block, sectionText(source))
 		if !ok {
-			return false
+			return nil, client
 		}
-		targets = append(targets, file)
+		files = append(files, file)
 	}
-	for _, target := range targets {
+	return files, ""
+}
+
+// matches reports whether every artifact of the role is already the bytes the
+// source would render.
+func matches(dir, slug, skill, block string, source role.Role, clients []string, files Files) bool {
+	wanted, unknown := targets(slug, skill, block, source, clients)
+	if unknown != "" {
+		return false
+	}
+	for _, target := range wanted {
 		current, err := files.Read(filepath.Join(rootOf(dir), filepath.FromSlash(target.Path)))
 		if err != nil || string(current) != target.Content {
 			return false

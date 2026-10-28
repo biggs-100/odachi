@@ -35,6 +35,17 @@ func TestPackInstallsTheProjectSkillEndToEnd(t *testing.T) {
 			t.Errorf("%s was not installed", path)
 		}
 	}
+
+	// The installed file is the source: the one path that feeds it is
+	// skill.Parse's Raw joined into pack.Skill{Content}, and dropping it would
+	// install an empty SKILL.md with a test that only checks the name.
+	source := files["skills/marketing/SKILL.md"]
+	if source == "" {
+		t.Fatal("the project skill's source is not in the tree")
+	}
+	if installed := files[".agents/skills/marketing/SKILL.md"]; installed != source {
+		t.Errorf("the installed skill is not its source:\ninstalled: %q\nsource:    %q", installed, source)
+	}
 }
 
 // TestPackRefusesABrokenProjectSkill: a catalog that does not pass its check is

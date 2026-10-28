@@ -37,33 +37,6 @@ is handed; a tool that trusts its silence as coverage (ADR 0033) should know tha
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
 
-### internal/adapters/gitx - the ledger's reads run only through fakes
-
-`TreeOf`, `Has` and `CommitWithTree` are the adapter functions the ledger depends
-on: `Has` maps `git merge-base --is-ancestor` exit 1 to `(false, nil)` and any
-other nonzero exit to an error, and `CommitWithTree` keeps the *oldest* matching
-line to name the commit that introduced the bytes. No adapter-level test drives
-them against a real repository - `gitx_test.go` covers only `HeadTree` - so the
-app-layer tests exercise `fakeGit` answers instead of git's. A change that kept the
-newest match instead of the oldest would name the wrong commit for a step whose
-bytes returned later, and every test would stay green.
-
-### internal/app/role - the target list is built twice in one package
-
-`Render` assembles the skill plus one `persona.RoleFile` per client, and `matches`
-assembles the identical list to decide stale versus up to date. Nothing couples the
-two, so adding a target to one and not the other makes `odachi role` report a state
-that is wrong, with the tests green because they drive both halves today. One
-`targets(...)` helper makes the two answers one definition.
-
-### cmd/odachi - pack's installed bytes are never compared with their source
-
-The end-to-end contract is that a skill created with `odachi skill new` reaches
-`.agents/skills` with its bytes, and the test checks membership and a stdout
-substring only. The one path that feeds that file - `skill.Parse`'s `Raw` joined
-into `pack.Skill{Content: s.Raw}` - is exercised by no test that compares content,
-so dropping `Raw` would install an empty `SKILL.md` with every test green.
-
 ### internal/app/start/artifacts.go - an unreadable task document blocks the run, untested
 
 `documentOpen` returns a blocked result when a document whose slug matches cannot
@@ -126,6 +99,20 @@ regenerated since, and the next `check --run` overwrites them. A length-prefixed
 header would remove the ambiguity and detect a truncated proof as well; it is a
 format change for a case this narrow, and it can wait until the format changes for
 another reason.
+
+## Closed by feature 0089
+
+- `internal/adapters/gitx` - **the row was false**. `internal/adapters/gitx/ledger_test.go`
+  already drives `TreeOf`, `Has` (exit 1 as the answer, an unresolvable name as the
+  error) and `CommitWithTree` (the oldest match, through an empty commit that
+  repeats the tree) against a real repository. The reviewer looked at
+  `gitx_test.go` and missed that file; the row is closed as verified, not paid.
+- `internal/app/role` - the target list is one definition: `targets(...)` returns the
+  skill plus one persona file per client and the client that has none, and both
+  `Render` and `matches` use it.
+- `cmd/odachi` - pack's installed bytes are compared with their source: dropping the
+  `skill.Parse` → `pack.Skill` join now fails
+  `TestPackInstallsTheProjectSkillEndToEnd`.
 
 ## Closed by feature 0088
 
