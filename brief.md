@@ -1,21 +1,21 @@
-# the-review-does
+# the-three-silent
 
 ## What must exist
-- the review does not lose what it already paid for: a failed answer keeps its name, and the prompt that was sent is filed
+- the three silent regressions are paid: the ledger's reads, the target list and pack's bytes each have a test that fails without the fix
 
 ## Done when
-- an answer left behind by a failed run keeps a name its own bytes decide, and the refusal names it
-- a later run on the same tree cannot empty it, because the name is not the scaffolding name
-- review --exec writes the prompt it sends to the reviewer, under the same home and name the printed form uses
-- a test drives each, observed red first
+- TreeOf, Has and CommitWithTree run against a real repository, including Has's exit-1 path and CommitWithTree's oldest match
+- role builds its target list once, and the existing tests stay green
+- pack's installed skill is compared byte for byte with its source
+- each new test is observed failing when the behavior it pins is broken
 
 ## Not included (first version)
 - no new verb and no new flag
-- no change to where the verdicts live
-- no change to how a prompt is built
+- no behavior change: the three are tests and one refactor
+- no model and no network
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a name is the difference between evidence and litter.
+- Wants to learn: how a test is paid for by breaking the code it claims to guard.

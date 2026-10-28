@@ -4,11 +4,11 @@ paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no change to where the verdicts live"
-paths = ["no-change-to-where-the-verdicts-live*"]
+not   = "no behavior change: the three are tests and one refactor"
+paths = ["no-behavior-change-the-three-are-tests-and-one-refactor*"]
 deps  = []
 
 [[rule]]
-not   = "no change to how a prompt is built"
-paths = ["no-change-to-how-a-prompt-is-built*"]
+not   = "no model and no network"
+paths = ["no-model-and-no-network*"]
 deps  = []
