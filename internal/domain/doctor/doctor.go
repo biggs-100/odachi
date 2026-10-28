@@ -1,4 +1,4 @@
-// Package doctor owns the rules of `odachi doctor`: the twelve health checks in
+// Package doctor owns the rules of `odachi doctor`: the thirteen health checks in
 // order, how the pre-commit hook and the AGENTS.md block written by
 // `odachi init` are read back, and the exact phrase that repairs each problem.
 //
@@ -61,11 +61,16 @@ const (
 	// difference between "the tool ignores my history" and "the tool told me it
 	// does".
 	CheckTaskDocs
+	// CheckLeftovers asks whether the project still carries the folder older
+	// releases used. A leftover is not broken by itself, but the rules inside it
+	// are no longer read: a fence nobody enforces is worse than no fence, because
+	// the human believes it is there.
+	CheckLeftovers
 )
 
 // CheckCount is how many checks a complete report has. A test asserts it, so a
 // report can never quietly grow or shrink.
-const CheckCount = 12
+const CheckCount = 13
 
 // Status is what one check found.
 type Status int
@@ -217,6 +222,8 @@ func title(number int) string {
 		return "the block's voice matches the profile"
 	case CheckTaskDocs:
 		return "the task documents odachi reads"
+	case CheckLeftovers:
+		return "no folder from an older release"
 	default:
 		return ""
 	}

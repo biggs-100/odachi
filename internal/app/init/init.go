@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
@@ -474,6 +475,7 @@ func (r *runner) result() Result {
 	message := "done: " + humanList(written) + " are up to date"
 
 	lines := append([]string{}, r.lines...)
+	lines = append(lines, r.legacyMoves()...)
 	// The human does not commit: the agent does. Saying "commit" here assumed the
 	// one thing this tool exists to remove from their plate.
 	lines = append(lines, "next: check "+agentsFile+"; when odachi check --quiet is green, the agent saves the progress")
@@ -487,6 +489,28 @@ func (r *runner) result() Result {
 		SkillDests:   r.skillDests,
 		PersonaDests: r.personaDests,
 	}
+}
+
+// legacyMoves names the rules an older release kept in .odachi/ and the exact git
+// command that moves each one. init prints them and never runs them: a tracked
+// file belongs to git, and the human commits the move.
+func (r *runner) legacyMoves() []string {
+	present := []string{}
+	for _, to := range layout.LegacyRules[0:3] {
+		rel := filepath.ToSlash(filepath.Join(layout.LegacyDir, filepath.Base(to)))
+		if found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(rel))); err == nil && found {
+			present = append(present, rel)
+		}
+	}
+	if found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(layout.LegacyDir), filepath.Base(layout.Roles))); err == nil && found {
+		present = append(present, filepath.ToSlash(filepath.Join(layout.LegacyDir, filepath.Base(layout.Roles))))
+	}
+
+	moves := layout.LegacyMoves(present)
+	if len(moves) == 0 {
+		return nil
+	}
+	return append([]string{"the rules an older release kept in " + layout.LegacyDir + "/ move with git (I do not touch a tracked file):"}, moves...)
 }
 
 // code is the exit code of a finished run. A block inside the project is a

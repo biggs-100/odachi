@@ -33,6 +33,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/skill"
+	"github.com/biggs-100/odachi/internal/domain/store"
 )
 
 // Exit codes, the same shape as the other verbs.
@@ -161,6 +162,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.ignored(),
 		r.voice(),
 		r.taskDocs(),
+		r.legacyFolder(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)
@@ -1189,6 +1191,55 @@ func (r *runner) ignored() domaindoctor.Check {
 	default:
 		return domaindoctor.OK(domaindoctor.CheckIgnored, "yes: "+strings.Join(protected, " and ")+": they do not move the tree they certify")
 	}
+}
+
+// legacyFolder reports the folder older releases used. The distinction that matters
+// is whether the rules inside it are still the ones being read: a project that
+// never moved its fence has a fence nobody enforces, and that is a problem, not a
+// notice. Once the new path exists too, the old file is dead weight and the line
+// is a warning.
+func (r *runner) legacyFolder() domaindoctor.Check {
+	old := layout.LegacyDir
+
+	oldFiles := []string{}
+	for _, name := range []string{filepath.Base(layout.Profile), filepath.Base(layout.Fence), filepath.Base(layout.Review), store.Agents} {
+		if r.has(filepath.FromSlash(filepath.Join(old, name))) {
+			oldFiles = append(oldFiles, filepath.ToSlash(filepath.Join(old, name)))
+		}
+	}
+	for _, name := range []string{store.Reviews, store.Backups} {
+		if found, err := r.isDir(filepath.Join(old, name)); err == nil && found {
+			oldFiles = append(oldFiles, filepath.ToSlash(filepath.Join(old, name))+"/")
+		}
+	}
+
+	if len(oldFiles) == 0 && !r.has(filepath.Join(old, filepath.Base(layout.Roles))) {
+		return domaindoctor.OK(domaindoctor.CheckLeftovers, "there is no "+old+"/: the rules live in odd/ and the store in the clone")
+	}
+
+	// A rule that moved in name but not in place: the file the team wrote is not
+	// the one this binary reads.
+	notRead := []string{}
+	for _, to := range []string{layout.Profile, layout.Fence, layout.Review, layout.Roles} {
+		from := filepath.ToSlash(filepath.Join(old, filepath.Base(to)))
+		if r.has(filepath.FromSlash(from)) && !r.has(to) {
+			notRead = append(notRead, from+" (today "+to+")")
+		}
+	}
+	if len(notRead) > 0 {
+		return domaindoctor.Broken(domaindoctor.CheckLeftovers,
+			"the rules this project wrote are not read any more: "+strings.Join(notRead, ", ")+"; a fence nobody enforces is worse than no fence",
+			"run odachi store move (it adopts the evidence and prints the git mv for the rules)")
+	}
+
+	return domaindoctor.Warning(domaindoctor.CheckLeftovers,
+		old+"/ is still there ("+strings.Join(oldFiles, ", ")+") and nothing reads it; run odachi store move to adopt the evidence, then the git mv it prints")
+}
+
+// has reports whether a project-relative path exists.
+func (r *runner) has(rel string) bool {
+	found, err := r.exists(rel)
+	return err == nil && found
 }
 
 // unreadable turns an adapter error into a line a human can act on. doctor reads

@@ -110,13 +110,22 @@ func Run(opts Options, files Files, guard lock.Lock) Result {
 	return withNotice(run(opts, files), held.Notice)
 }
 
+// Collect moves every version that still sits beside an artifact, or in the old
+// project store, into the clone's store. The caller holds the lock: `undo
+// --collect` takes it, and `odachi store move` already has it for the rest of the
+// migration. It never overwrites a version with different bytes and never loses
+// one it cannot move.
+func Collect(project, store string, files Files) Result {
+	return collect(project, store, files)
+}
+
 // run does the work once the lock is held.
 func run(opts Options, files Files) Result {
 	if opts.Collect {
 		if opts.List || opts.File != "" {
 			return blocked("--collect moves every old backup at once: it does not go with --list or --file")
 		}
-		return collect(opts.Dir, opts.Store, files)
+		return Collect(opts.Dir, opts.Store, files)
 	}
 
 	kind, problem := parseFile(opts.File)

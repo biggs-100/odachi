@@ -10,6 +10,8 @@
 // twice is a path that drifts.
 package layout
 
+import "path/filepath"
+
 const (
 	// Odd is the folder the team reads: the plan and the rules.
 	Odd = "odd"
@@ -27,3 +29,34 @@ const (
 	// Review is the review switch and the lens table.
 	Review = "odd/review.toml"
 )
+
+// LegacyDir is the folder older releases used for everything: the rules, the
+// store and the lock. It is read only to point a project at today's layout.
+const LegacyDir = ".odachi"
+
+// LegacyRules is the tracked half of the old folder, in the order a human reads
+// the move: the profile, the fence, the review table, and the roles folder.
+// Verdicts, versions and the client choice were never the team's and are adopted
+// by `odachi store move`.
+var LegacyRules = []string{Profile, Fence, Review, Roles}
+
+// LegacyMoves is the git commands that move one old rule into today's layout.
+// present are the old paths that still exist (`.odachi/fence.toml`, ...). The
+// tool prints these and never runs them: a tracked file is moved by git and
+// committed by the human, so a migration cannot rewrite somebody's history
+// behind their back.
+func LegacyMoves(present []string) []string {
+	in := make(map[string]bool, len(present))
+	for _, path := range present {
+		in[path] = true
+	}
+
+	moves := make([]string, 0, len(present))
+	for _, to := range LegacyRules {
+		from := filepath.ToSlash(filepath.Join(LegacyDir, filepath.Base(to)))
+		if in[from] {
+			moves = append(moves, "git mv "+from+" "+to)
+		}
+	}
+	return moves
+}

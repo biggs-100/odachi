@@ -244,18 +244,18 @@ func readProfileName(t *testing.T, dir string) string {
 	return ""
 }
 
-// The closing line says how many checks ran: with a new one there are twelve, and
+// The closing line says how many checks ran: with a new one there are thirteen, and
 // the verb's usage cannot keep saying ten.
-func TestDoctorUsageAndSummaryCountTwelveChecks(t *testing.T) {
+func TestDoctorUsageAndSummaryCountThirteenChecks(t *testing.T) {
 	dir := configuredProject(t)
 
 	out, _ := output(t, dir, []string{"doctor"})
-	if !strings.Contains(out, "all clear: 12 checks") {
-		t.Fatalf("the summary counts twelve checks:\n%s", out)
+	if !strings.Contains(out, "all clear: 13 checks") {
+		t.Fatalf("the summary counts thirteen checks:\n%s", out)
 	}
 
 	usageOut, _ := output(t, dir, []string{"doctor", "-h"})
-	if !strings.Contains(usageOut, "twelve health checks") {
+	if !strings.Contains(usageOut, "thirteen health checks") {
 		t.Fatalf("the usage cannot keep saying ten:\n%s", usageOut)
 	}
 }

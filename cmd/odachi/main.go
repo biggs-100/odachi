@@ -22,6 +22,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/progress"
 	reviewapp "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/storemove"
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
 	"github.com/biggs-100/odachi/internal/domain/agent"
@@ -93,6 +94,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runProgress(dir, args[1:], stdout, stderr)
 	case "undo":
 		return runUndo(dir, args[1:], stdout, stderr)
+	case "store":
+		return runStore(dir, args[1:], stdout, stderr)
 	case "check":
 		return runCheck(dir, args[1:], stdout, stderr)
 	case "init":
@@ -659,6 +662,78 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 	opts.Dir = dir
 	opts.Store = storeRoot
 	return reportUndo(undo.Run(opts, osFiles{project: dir, store: storeRoot}, &osLock{}), asJSON, stdout, stderr)
+}
+
+// runStore parses the two words of `odachi store` and dispatches the one action
+// that exists. The action is a word and not a flag, like `review mode`.
+func runStore(dir string, args []string, stdout, stderr io.Writer) int {
+	const usageLine = "usage: odachi store move [--dry-run] [--json]"
+
+	if len(args) == 0 {
+		fmt.Fprintln(stderr, "odachi: store needs an action: "+usageLine)
+		return start.CodeBlocked
+	}
+	if args[0] != "move" {
+		fmt.Fprintf(stderr, "odachi: store %s is not an action; %s\n", args[0], usageLine)
+		return start.CodeBlocked
+	}
+
+	dryRun := false
+	asJSON := false
+	for _, arg := range args[1:] {
+		switch arg {
+		case "--dry-run":
+			dryRun = true
+		case "--json":
+			asJSON = true
+		case "-h", "--help":
+			fmt.Fprintln(stdout, usageLine)
+			return start.CodeOK
+		default:
+			fmt.Fprintf(stderr, "odachi: %s is not a flag of store move; %s\n", arg, usageLine)
+			return start.CodeBlocked
+		}
+	}
+
+	storeRoot, err := store.Root(dir, gitRepo{})
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error())+"; odachi store move needs the clone's store, so run it inside a git repository")
+		return start.CodeBlocked
+	}
+
+	result := storemove.Run(storemove.Options{Dir: dir, Store: storeRoot, DryRun: dryRun}, disk(dir), &osLock{})
+	if asJSON {
+		return reportStoreMoveJSON(result, stdout, stderr)
+	}
+	for _, line := range result.Lines {
+		fmt.Fprintln(stdout, line)
+	}
+	if result.Code != storemove.CodeOK {
+		fmt.Fprintln(stderr, "odachi: "+result.Message)
+	}
+	return result.Code
+}
+
+// reportStoreMoveJSON prints the migration as one object.
+func reportStoreMoveJSON(result storemove.Result, stdout, stderr io.Writer) int {
+	files := result.Files
+	if files == nil {
+		files = []string{}
+	}
+	payload := struct {
+		Code    int      `json:"code"`
+		Message string   `json:"message"`
+		Lines   []string `json:"lines,omitempty"`
+		Files   []string `json:"files"`
+	}{Code: result.Code, Message: result.Message, Lines: result.Lines, Files: files}
+
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+	fmt.Fprintln(stdout, string(data))
+	return result.Code
 }
 
 // reportCheck prints the gate's verdict. A ready run is silent under --quiet,
@@ -1293,6 +1368,7 @@ usage:
   odachi summary
   odachi progress
   odachi undo [--list | --collect] [--file brief]
+  odachi store move [--dry-run]
   odachi check [flags]
   odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
   odachi review [--lens <lens>]
@@ -1467,7 +1543,7 @@ after start:
   odachi review --lens --show                   which lenses this tree asks for and which are missing
   odachi review --refute <verdict>              the refuter's prompt for that verdict
   odachi check --require-review                 requires review for this tree and its lenses
-  odachi doctor                                 twelve health checks, read-only
+  odachi doctor                                 thirteen health checks, read-only
   odachi bench                                  measures how a person gets stuck (in-band / dead-end)
   odachi init                                   AGENTS.md (with the profile voice) + the project
                                                  agent and the home door (chosen with Tab)
