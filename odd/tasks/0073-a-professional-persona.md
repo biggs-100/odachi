@@ -5,6 +5,15 @@ Base: 519c797fd1753ffc3f2ca4425b0c92ebdda6005e
 R1 · "a professional persona is created by an interview and research, and odachi writes it as a selectable agent and a skill from one source"
 
 ## Done when
+
+> The words below are the ones this feature was accepted in. The rename landed
+> afterwards (L4-L6), so a reader today runs: `odachi role new <slug>` instead of
+> `odachi persona new <slug>`, `odachi role <slug>` instead of
+> `odachi persona <slug>`, the source at `odd/roles/<slug>.md` instead of
+> `.odachi/personas/<slug>.md`, and the `role-craft` skill instead of
+> `persona-craft`. The bullets stay as the human accepted them: a closed document
+> is memory, and rewriting its contract would rewrite the decision.
+
 - `.odachi/personas/<slug>.md` is the only source, with its eight sections: who it is, what it asks before starting, how it works, what it refuses, how it knows it worked, what it does not know, where this comes from, and a probe
 - `odachi persona new <slug>` writes that skeleton, refuses a bad or repeated slug, and the file parses back into the same sections
 - `odachi persona <slug>` renders the agent file for each chosen client and the role's skill from the source; a second run is byte-identical, and a changed source rewrites both naming what changed
@@ -27,3 +36,4 @@ L3 · OFICIO · "a role whose rules do not fit in the 60-line skill is refused, 
 L4 · CAMBIO R1 · "the verb is role, not persona, and the source lives in .odachi/roles/: persona is the voice, and one word with two owners is the defect ADR 0006 fixed"
 L5 · CAMBIO R1 · "the creator skill is role-craft, not persona-craft, for the same reason"
 L6 · CAMBIO R1 · "the Done-when bullets still say .odachi/personas/ and persona new; brief.md and the code say .odachi/roles/ and role, and the brief is the vision"
+L7 · OFICIO · "the Done-when keeps its words and gains a note at the top mapping them to the shipped commands" (porque un documento cerrado es memoria: reescribir su contrato reescribe la decisión, y una nota arriba es lo primero que un lector ve)

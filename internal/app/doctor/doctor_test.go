@@ -1241,3 +1241,27 @@ func TestDoctorPointsToTheDoorWhenTheStoreIsHomeOnly(t *testing.T) {
 		t.Errorf("the line does not name the door: %q", got.Detail)
 	}
 }
+
+// TestDoctorSaysTheMirrorsAreLeftoversWhenTheStoreIsHomeOnly: the files match the
+// block and the store says the agent lives in the home. Saying only "they match"
+// would bless files nobody reads; the line names the store and what the files are,
+// which is the state right after `init --global --no-project-agents` over a project
+// whose mirrors were current.
+func TestDoctorSaysTheMirrorsAreLeftoversWhenTheStoreIsHomeOnly(t *testing.T) {
+	files := configured()
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			files.putHome(file.Path, file.Content)
+		}
+	}
+
+	result := runSelected(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+		fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone})
+
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{"matches the block", "project_agents = none", "leftovers nobody reads"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("the line must say %q: %q", want, got.Detail)
+		}
+	}
+}

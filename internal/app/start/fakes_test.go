@@ -16,6 +16,9 @@ import (
 type fakeFiles struct {
 	files  map[string][]byte
 	events *[]string
+	// failRead fails Read for one path, so a test can reach a branch only a real
+	// disk produces: a file that exists and cannot be read.
+	failRead func(path string) error
 }
 
 func newFakeFiles(seed map[string]string, events *[]string) *fakeFiles {
@@ -44,6 +47,11 @@ func (f *fakeFiles) Exists(path string) (bool, error) {
 }
 
 func (f *fakeFiles) Read(path string) ([]byte, error) {
+	if f.failRead != nil {
+		if err := f.failRead(path); err != nil {
+			return nil, err
+		}
+	}
 	data, ok := f.files[f.key(path)]
 	if !ok {
 		return nil, fmt.Errorf("missing file: %s", path)
