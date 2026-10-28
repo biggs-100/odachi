@@ -190,6 +190,13 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses, host Ho
 
 	r := &runner{opts: opts, files: files, git: git, shell: shell, lenses: lenses, host: host}
 
+	// The verdict lives in the clone's store, and a store that was not resolved
+	// is not an empty one: joining an empty root would write relative to the
+	// process directory, which is the one place the evidence must never land.
+	if strings.TrimSpace(opts.Store) == "" {
+		return blocked("odachi review saves its verdict in the clone's store, and this folder has none: run it inside a git repository")
+	}
+
 	// --model only exists for {model} in --exec. In any other form it would be
 	// accepted and silently ignored, which is the same lie as a missing answer.
 	if strings.TrimSpace(opts.Model) != "" && opts.Exec == "" {
