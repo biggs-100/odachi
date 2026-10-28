@@ -64,19 +64,6 @@ a reviewer does not, so the bytes that produced a verdict cannot be read again
 without regenerating them, and regenerating needs the same base to build the same
 question. Same home, same name, written by both forms.
 
-### the review gate - a complete set of rows cannot say who wrote them
-
-`review --attach` refuses an incomplete answer and names every missing (path, lens)
-row, so nothing incomplete is ever sealed. What it cannot do is tell a row the
-reviewer wrote from a row the caller filled in: when 0083's reviewer omitted the one
-file its finding was about, the caller added that row by hand and the verdict was
-sealed. 0084 changed the refusal so it sends the gap back to the reviewer instead of
-saying "fix the rows", which is the teaching half; the structural half is the one
-gentle-ai solved - the reviewer *declares* what it read (`inspection.status` plus
-the complete path list) and the gate refuses an answer that does not, so a padded
-list is a lie the tool can see. That is a verdict-schema change and it needs its own
-feature.
-
 ### internal/app/doctor/doctor.go - the last branch of personaNote has no test
 
 The branch that answers "the files match and the store records `project_agents =
@@ -130,6 +117,15 @@ regenerated since, and the next `check --run` overwrites them. A length-prefixed
 header would remove the ambiguity and detect a truncated proof as well; it is a
 format change for a case this narrow, and it can wait until the format changes for
 another reason.
+
+## Closed by feature 0085
+
+### the review gate - a complete set of rows cannot say who wrote them
+
+An answer to a lens-bearing candidate with no `inspection` is refused, and the
+declaration is compared with the changed paths in both directions before the
+store lends it anything. A padded row is now a declared path or a named gap.
+ADR 0033 says why, and what the gate still cannot prove (that the reader read).
 
 ## Closed by feature 0063
 
