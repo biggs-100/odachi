@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A decision stops being a one-time order: the store remembers it, so the next
+`init` does not undo it.
+
+- **`agents.toml` remembers where the project's agent lives.** `project_agents`
+  sits next to the client selection: `none` keeps the door in the home, `write`
+  (or the key's absence) keeps the mirror in the tree. `init` honors the stored
+  answer on a plain run, records it when a flag makes the choice, and an explicit
+  `--agents` is the way back - no second flag to learn.
+- **`doctor` names the choice instead of guessing it.** A project with no agent
+  files is the clean mode when `agents.toml` says so, and a project that lost its
+  files while nothing recorded why is sent to `--global --no-project-agents`; a
+  home-only project with no door is sent to `--global`, not back to the mirrors.
+
 ## v0.11.40 - 2026-10-27
 
 The first row of the debt file closes with the test that keeps it closed.

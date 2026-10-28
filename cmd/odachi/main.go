@@ -878,7 +878,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&skillsScope, "skills", "project", "where to install the skills: project | home")
 	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
 	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, and make it OpenCode's default agent")
-	flags.BoolVar(&noProjectAgent, "no-project-agents", false, "do not write the project's agent files: the door in the home is the one that runs (needs --global)")
+	flags.BoolVar(&noProjectAgent, "no-project-agents", false, "do not write the project's agent files: the door in the home is the one that runs, and the choice is remembered (needs --global)")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -1456,7 +1456,9 @@ init flags:
                   to your home, because the selector of any folder is yours
   --no-project-agents  do not write the project's agent files: with --global, the
                   door and its subagents in the home are the ones that run, and the
-                  project keeps only the rules and the plan (needs --global)
+                  project keeps only the rules and the plan; the choice is stored in
+                  agents.toml, so a plain init honors it until --agents asks for the
+                  mirrors back (needs --global)
   --json          machine output, with the destinations of the skills and of the agent
 
 setup flags:

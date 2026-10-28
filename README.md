@@ -317,7 +317,11 @@ is short on purpose: it does not repeat the rules, it only says where they are.
 `doctor` tells you if it is missing or stopped matching, and for both the command
 is `odachi init --global`. With `--no-project-agents` the project gets no agent
 files at all: the door and its subagents in the home are the ones that run, and
-`doctor` calls that the clean mode instead of reporting missing files. The two
+`doctor` calls that the clean mode instead of reporting missing files. That
+choice is remembered in `agents.toml`, next to the client selection, so a later
+plain `odachi init` keeps the agent in the home instead of rebuilding the files
+you removed; `--agents both` (or the client you use) is how you ask for them
+back. The two
 per-profile personas from v0.10.0 remain as
 leftovers: `init` names them and does not delete them, they are yours.
 

@@ -13,7 +13,8 @@ R1 · "the home-only choice survives a plain init, and the store is what remembe
 
 ## Steps
 - [x] T1 · the store remembers the project-agents choice, and a plain init honors it while --agents writes the mirrors back   R1 · tree:77e2f2bb3df3d814cb4e33a690af94c06f3f7930
-- [ ] T2 · doctor names the stored choice where the agent lives, and warns when nothing says it   R1
+- [x] T2 · doctor names the stored choice where the agent lives, and warns when nothing says it   R1 · tree:71a95333ed0b7d259033695a37042384e6dd0980
+- [x] T3 · the map, the help and the changelog say the choice is remembered   R1
 
 ## History
 L1 · "the home-only choice survives a plain init, and the store is what remembers it"

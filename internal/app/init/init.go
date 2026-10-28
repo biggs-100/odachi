@@ -620,5 +620,5 @@ func (r *runner) skipProjectPersonas(byFlag bool) {
 	if byFlag {
 		reason = "--no-project-agents"
 	}
-	r.lines = append(r.lines, "project agents: not written ("+reason+"); the door in the home is the one that runs, and --agents opencode puts the mirrors back")
+	r.lines = append(r.lines, "project agents: not written ("+reason+"); the door in the home is the one that runs, and --agents "+r.selection+" puts the mirrors back")
 }
