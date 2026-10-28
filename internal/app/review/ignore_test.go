@@ -1,44 +1,20 @@
 package review_test
 
 import (
-	"errors"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/review"
-	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 )
 
-// TestPromptWritesNothingWhenTheRepositoryIgnoresTheStore: a project that ran
-// `odachi init` already has the store ignored by its own .gitignore, so the verb
-// writes nothing. A second ignore file would be a new path in the worktree, which
-// is exactly the tree shift this rule exists to remove.
-func TestPromptWritesNothingWhenTheRepositoryIgnoresTheStore(t *testing.T) {
+// TestTheVerdictIsWrittenOutsideTheWorktree: the whole point of the move. A
+// review writes exactly the verdict, and the verdict is not a path inside the
+// project: storing it cannot change the tree that names it, so no ignore rule has
+// to keep it out.
+func TestTheVerdictIsWrittenOutsideTheWorktree(t *testing.T) {
 	p := newProject()
-	p.git.ignored = true
-
-	result := p.run(review.Options{})
-
-	if result.Code != review.CodeOK {
-		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
-	}
-	if !slices.Equal(p.git.ignoredAs, []string{domainreview.Dir}) {
-		t.Errorf("the git port was asked about %v, want the store directory", p.git.ignoredAs)
-	}
-	if writes := p.files.written(); len(writes) != 0 {
-		t.Fatalf("writes = %v, want none when the repository already ignores the store", writes)
-	}
-	if len(result.Files) != 0 {
-		t.Errorf("result.Files = %v, want none: this run wrote nothing", result.Files)
-	}
-}
-
-// TestStoreFallsBackToItsOwnIgnoreFileWhenTheProbeFails: a probe that cannot
-// answer is not permission to write a verdict into the tree it names. The
-// fallback is the per-directory ignore file, written before the hash, as before.
-func TestStoreFallsBackToItsOwnIgnoreFileWhenTheProbeFails(t *testing.T) {
-	p := newProject()
-	p.git.ignoredErr = errors.New("git is not installed")
 	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","findings":[]}`)
 
 	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
@@ -46,14 +22,41 @@ func TestStoreFallsBackToItsOwnIgnoreFileWhenTheProbeFails(t *testing.T) {
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	want := domainreview.Dir + "/" + domainreview.IgnoreName
-	written := p.files.written()
-	if !slices.Contains(written, want) {
-		t.Fatalf("writes = %v, want the store's %s after a failed probe", written, want)
+
+	writes := p.files.written()
+	if want := relative(storePath(currentTree)); !slices.Equal(writes, []string{want}) {
+		t.Fatalf("writes = %v, want exactly the verdict at %s", writes, want)
 	}
-	// The order is still the trick: the ignore file comes before the verdict, or
-	// the verdict would move the tree that names it.
-	if slices.Index(written, want) > slices.Index(written, relative(storePath(currentTree))) {
-		t.Errorf("writes = %v, want the ignore file before the verdict", written)
+
+	inProject := []string{}
+	for _, written := range writes {
+		slashed := filepath.ToSlash(written)
+		if strings.HasPrefix(slashed, filepath.ToSlash(dir)+"/") && !strings.HasPrefix(slashed, relative(store)+"/") {
+			inProject = append(inProject, slashed)
+		}
+	}
+	if len(inProject) != 0 {
+		t.Errorf("writes = %v, want nothing under the worktree", inProject)
+	}
+	if want := relative(storePath(currentTree)); !slices.Equal(result.Files, []string{want}) {
+		t.Errorf("result.Files = %v, want the label of the file it wrote (%s)", result.Files, want)
+	}
+}
+
+// TestASecondReviewOfTheSameTreeWritesNothingNew: the store is immutable, and
+// that does not depend on an ignore rule either.
+func TestASecondReviewOfTheSameTreeWritesNothingNew(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","findings":[]}`)
+	if first := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"}); first.Code != review.CodeOK {
+		t.Fatalf("first review: code = %d (%s)", first.Code, first.Message)
+	}
+
+	second := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+	if second.Code == review.CodeOK {
+		t.Fatalf("second review: code = 0, want a refusal")
+	}
+	if !strings.Contains(second.Message, "already has a verdict") {
+		t.Errorf("message = %q, want it to say the tree already has one", second.Message)
 	}
 }

@@ -15,6 +15,10 @@ import (
 // read-only, and a test that cannot write is the strongest way to say so.
 const dir = "/proyecto"
 
+// store is the clone's state, inside the project it describes and outside the
+// worktree: the real one is <proyecto>/.git/odachi.
+var store = filepath.Join(dir, ".git", "odachi")
+
 // fakeFiles is the disk port in memory. It records writes so a test can prove
 // there are none.
 type fakeFiles struct {
@@ -156,6 +160,7 @@ func newProject() *project {
 
 func (p *project) run(opts progress.Options) progress.Result {
 	opts.Dir = dir
+	opts.Store = store
 	return progress.Run(opts, p.files, p.git)
 }
 
@@ -240,7 +245,7 @@ func TestProgressSaysWhetherTheReviewIsOwed(t *testing.T) {
 	t.Run("closed feature with a verdict", func(t *testing.T) {
 		p := newProject()
 		p.files.files[fullPath("odd/tasks/0007-reserva.md")] = []byte(closed)
-		p.files.files[fullPath(".odachi/reviews/"+p.git.tree+".json")] = []byte(`{"tree":"` + p.git.tree + `"}`)
+		p.files.files[filepath.Join(store, "reviews", p.git.tree+".json")] = []byte(`{"tree":"` + p.git.tree + `"}`)
 
 		lines := strings.Join(p.run(progress.Options{ReviewMode: true, Review: nothingOwed}).Lines, "\n")
 
@@ -364,7 +369,7 @@ func TestProgressSaysSoWhenThereIsNoFeature(t *testing.T) {
 func TestProgressWritesNothing(t *testing.T) {
 	p := newProject()
 	p.files.files[fullPath("proof/0007-reserva.txt")] = []byte(proofFor(p.git.tree))
-	p.files.files[fullPath(".odachi/reviews/"+p.git.tree+".json")] = []byte(`{"tree":"` + p.git.tree + `"}`)
+	p.files.files[filepath.Join(store, "reviews", p.git.tree+".json")] = []byte(`{"tree":"` + p.git.tree + `"}`)
 	p.files.writes = nil
 
 	p.run(progress.Options{ReviewMode: true})

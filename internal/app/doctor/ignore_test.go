@@ -12,9 +12,8 @@ import (
 // Doctor must call that clean, because it is the state init produces.
 func TestTheRepositoryRulesAreEnough(t *testing.T) {
 	files := configured().
-		put(".gitignore", "# odachi:begin\n/proof/\n/.odachi/reviews/\n# odachi:end\n").
-		put("proof/0001-turnos.txt", "# tree abc\n").
-		put(".odachi/reviews/abc.json", `{"verdict":"approved"}`)
+		put(".gitignore", "# odachi:begin\n/proof/\n*.bak-*\n# odachi:end\n").
+		put("proof/0001-turnos.txt", "# tree abc\n")
 
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
@@ -25,7 +24,7 @@ func TestTheRepositoryRulesAreEnough(t *testing.T) {
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("check 10 = %s, want ok", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"proof", ".odachi/reviews"} {
+	for _, want := range []string{"proof"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Errorf("the line must say what it found protected, missing %q: %s", want, domaindoctor.Line(got))
 		}
@@ -51,9 +50,9 @@ func TestUnprotectedEvidenceNamesInit(t *testing.T) {
 	}
 }
 
-// TestOneOfTheTwoDirectoriesProtected is the half-done project: a rule for the
-// store and none for the proof still moves the tree on the first run.
-func TestOneOfTheTwoDirectoriesProtected(t *testing.T) {
+// TestAProjectThatStillCarriesTheOldReviewRule: the verdicts left the worktree,
+// so the old rule says nothing about anything. What still matters is proof/.
+func TestAProjectThatStillCarriesTheOldReviewRule(t *testing.T) {
 	files := configured().
 		put(".gitignore", "/.odachi/reviews/\n").
 		put("proof/0001-turnos.txt", "# tree abc\n")
@@ -64,10 +63,10 @@ func TestOneOfTheTwoDirectoriesProtected(t *testing.T) {
 	if got.Status != domaindoctor.StatusProblem {
 		t.Fatalf("proof/ is not ignored: want a problem, got %s", domaindoctor.Line(got))
 	}
-	if strings.Contains(got.Detail, ".odachi/reviews is not ignored") {
-		t.Errorf("the store IS ignored, and the line says it is not: %s", domaindoctor.Line(got))
-	}
 	if !strings.Contains(got.Detail, "proof/") {
 		t.Errorf("Detail = %q, want it to name proof/", got.Detail)
+	}
+	if strings.Contains(got.Detail, "reviews") {
+		t.Errorf("the old rule is gone from the tool, and the line still mentions it: %s", domaindoctor.Line(got))
 	}
 }

@@ -64,6 +64,11 @@ const modelToken = "{model}"
 type Options struct {
 	Dir string
 
+	// Store is the absolute root of the clone's state, resolved by the caller
+	// from the repository's git common directory. Verdicts live there, outside
+	// the worktree: storing one cannot move the tree that names it.
+	Store string
+
 	// Base is what the candidate is compared against. Empty means the empty
 	// tree: everything counts as new.
 	Base string
@@ -124,10 +129,6 @@ type Git interface {
 	// (the candidate deleted it, or the reviewer invented the path); a real git
 	// failure is an err, not an empty receipt.
 	BlobHash(root, path string) (string, error)
-	// Ignored reports whether the repository's own rules already keep path out
-	// of the tree. It is what makes the lazy ignore file unnecessary in a project
-	// that ran `odachi init`.
-	Ignored(root, path string) (bool, error)
 }
 
 // Shell is the command port for --exec. A non-zero exit is the command's result,
@@ -221,13 +222,6 @@ type runner struct {
 	// may move the worktree, so afterReviewer drops it and the file is read
 	// again; a review's own groups keep the value the prompt named.
 	work *worktree
-	// storeReady is whether this run already asked the repository whether the
-	// store is ignored. The probe is a git process and the answer cannot change
-	// between reads, so it is asked once.
-	storeReady bool
-	// storeIgnoreWritten is whether this run had to write the store's own
-	// ignore file, so the result reports only files it really wrote.
-	storeIgnoreWritten bool
 	// hostModel is the session's model, asked once: grouping lenses by model must
 	// not pay a probe per lens, and two lenses that resolve to the same model must
 	// run as one group.
@@ -255,10 +249,9 @@ type candidate struct {
 	diff  string
 }
 
-// prompt prints the review prompt for the current candidate. It prepares the
-// store first: the verdict lives inside the candidate, so the directory has to be
-// ignored before the tree is hashed or storing the verdict would change the tree
-// that names it.
+// prompt prints the review prompt for the current candidate. The store lives
+// outside the worktree, so nothing has to be prepared before the tree is hashed:
+// storing the verdict later cannot change the tree that names it.
 func (r *runner) prompt() Result {
 	cand, problem := r.candidateForReview()
 	if problem != nil {
@@ -270,20 +263,11 @@ func (r *runner) prompt() Result {
 		return *problem
 	}
 
-	files := []string{}
-	if r.storeIgnoreWritten {
-		// Only what this run actually wrote: a project whose .gitignore already
-		// ignores the store gets no second ignore file, and claiming one would be
-		// machine output that lies about the worktree.
-		files = append(files, ignoreRel())
-	}
-
 	return Result{
 		Code:    CodeOK,
 		Message: promptMessage(tree, selected),
 		Prompt:  text,
 		Lenses:  selected,
-		Files:   files,
 	}
 }
 
@@ -345,7 +329,7 @@ func (r *runner) coveredLenses(tree string) ([]string, *Result) {
 	if err != nil {
 		return nil, nil
 	}
-	path := fullPath(r.opts.Dir, rel)
+	path := r.storePath(rel)
 	exists, err := r.files.Exists(path)
 	if err != nil {
 		problem := blocked(fmt.Sprintf("could not check the review of this tree (%s): %s; fix the permissions and run odachi review again",
@@ -523,12 +507,6 @@ func (r *runner) attach() Result {
 		return refused(r.opts.Attach, err.Error())
 	}
 
-	// The verdict is filed inside the candidate: the store must be ignorable
-	// before the tree it names is read. A malformed document was refused above,
-	// so a refusal still writes nothing.
-	if _, problem := r.ensureStore(); problem != nil {
-		return *problem
-	}
 	return r.store(parsed, r.base(), nil)
 }
 
@@ -699,7 +677,7 @@ func (r *runner) exec() Result {
 		if len(selected) == 0 {
 			return nothingDue(domain.Reason(cand.paths, cand.diff))
 		}
-		return alreadyStored(rel)
+		return alreadyStored(r.storeLabel(rel))
 	}
 
 	// Every group is resolved before any of them runs: a group that cannot name
@@ -949,7 +927,7 @@ func (r *runner) show() Result {
 		return blocked(oneLine(err.Error()) + "; check the git tree and run odachi review --show again")
 	}
 
-	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	data, err := r.files.Read(r.storePath(rel))
 	if err != nil {
 		if !assessed {
 			// The candidate could not be read: the lenses it asks for are
@@ -978,7 +956,7 @@ func (r *runner) show() Result {
 	}
 
 	summary := summaryLine(tree, parsed, required)
-	lines := shown(summary, rel, parsed)
+	lines := shown(summary, r.storeLabel(rel), parsed)
 	lines = append(lines, r.lensCoverage(work, parsed)...)
 	if assessed {
 		lines = append(lines, r.modelPlan(required)...)
@@ -996,7 +974,7 @@ func (r *runner) show() Result {
 	if refutation, refRel := r.storedRefutation(tree); refutation != nil {
 		result.Refutation = refutation
 		result.Files = append(result.Files, refRel)
-		result.Lines = append(result.Lines, refutationLine(refutation, refRel, parsed.Findings))
+		result.Lines = append(result.Lines, refutationLine(refutation, r.storeLabel(refRel), parsed.Findings))
 	}
 	return result
 }
@@ -1116,7 +1094,7 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
-	target := fullPath(r.opts.Dir, rel)
+	target := r.storePath(rel)
 
 	exists, err := r.files.Exists(target)
 	if err != nil {
@@ -1132,7 +1110,7 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		}
 		for _, lens := range sealed.Lenses {
 			if containsLens(existing.Lenses, lens) {
-				return alreadyStored(rel)
+				return alreadyStored(r.storeLabel(rel))
 			}
 		}
 		sealed = mergeVerdicts(existing, sealed)
@@ -1163,7 +1141,7 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	}
 	r.dropRefused(tree)
 
-	message := "verdict saved in " + rel + ": " + sealed.Verdict
+	message := "verdict saved in " + r.storeLabel(rel) + ": " + sealed.Verdict
 	lines := []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At, lenses(sealed.Lenses)}
 	if downgraded > 0 {
 		lines = append(lines, fmt.Sprintf("earned blocking: %d finding(s) downgraded for citing outside the candidate", downgraded))
@@ -1181,7 +1159,7 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		Lines:   lines,
 		Verdict: &sealed,
 		Lenses:  sealed.Lenses,
-		Files:   []string{rel},
+		Files:   []string{r.storeLabel(rel)},
 	}
 }
 
@@ -1211,26 +1189,11 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
-	wrote, problem := r.ensureStore()
-	if problem != nil {
-		return *problem
-	}
-	if wrote {
-		r.work = nil
-		after, problem := r.worktree()
-		if problem != nil {
-			return *problem
-		}
-		if after.tree != tree {
-			return blocked("the tree changed while preparing the review store: run odachi review again")
-		}
-	}
-
 	rel, err := domain.RefutationPath(tree)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
-	target := fullPath(r.opts.Dir, rel)
+	target := r.storePath(rel)
 
 	exists, err := r.files.Exists(target)
 	if err != nil {
@@ -1245,10 +1208,10 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 	}
 
 	stands, refuted := counts(sealed)
-	message := "refutation saved in " + rel + " · " + domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
+	message := "refutation saved in " + r.storeLabel(rel) + " · " + domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
 	return Result{
 		Code:       CodeOK,
-		Message:    "refutation saved in " + rel,
+		Message:    "refutation saved in " + r.storeLabel(rel),
 		Lines:      []string{message},
 		Refutation: &sealed,
 		Lenses:     verdict.Lenses,
@@ -1419,7 +1382,7 @@ func (r *runner) dropRefused(tree string) {
 	if err != nil {
 		return
 	}
-	dir := filepath.Dir(fullPath(r.opts.Dir, rel))
+	dir := filepath.Dir(r.storePath(rel))
 	names, err := r.files.List(dir)
 	if err != nil {
 		return
@@ -1451,20 +1414,20 @@ func (r *runner) keepAnswer(answer []byte, rel string) (string, *Result) {
 	sum := sha256.Sum256(answer)
 	kept := strings.TrimSuffix(rel, ".json") + ".refused-" + hex.EncodeToString(sum[:])[:8] + ".json"
 
-	path := fullPath(r.opts.Dir, kept)
+	path := r.storePath(kept)
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		problem := blocked(fmt.Sprintf("could not check whether %s exists: %s", kept, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not check whether %s exists: %s", r.storeLabel(kept), oneLine(err.Error())))
 		return "", &problem
 	}
 	if exists {
-		return kept, nil
+		return r.storeLabel(kept), nil
 	}
 	if err := r.files.Write(path, answer); err != nil {
-		problem := blocked(fmt.Sprintf("could not write %s: %s", kept, oneLine(err.Error())))
+		problem := blocked(fmt.Sprintf("could not write %s: %s", r.storeLabel(kept), oneLine(err.Error())))
 		return "", &problem
 	}
-	return kept, nil
+	return r.storeLabel(kept), nil
 }
 
 // carriedRows is how much the store lent to one verdict, and how many fresh
@@ -1548,7 +1511,7 @@ func (r *runner) inherit(verdict domain.Verdict, tree string) (domain.Verdict, c
 // not be read so neither — a broken neighbor never blocks a verdict, but
 // nobody is told it said nothing.
 func (r *runner) potentRows(verdictTree string) (findings []domain.Finding, passes []domain.Pass, notes []string, problem *Result) {
-	names, err := r.files.List(fullPath(r.opts.Dir, domain.Dir))
+	names, err := r.files.List(r.storePath(domain.Dir))
 	if err != nil {
 		problem := blocked(fmt.Sprintf("could not read the review store to weigh the potent rows: %s; I wrote nothing", oneLine(err.Error())))
 		return nil, nil, nil, &problem
@@ -1669,7 +1632,7 @@ func hexName(s string) bool {
 // reported, not skipped in silence: silence would be a lie about what the
 // store said.
 func (r *runner) storedNeighbor(tree string) (domain.Verdict, string) {
-	data, err := r.files.Read(fullPath(r.opts.Dir, domain.Dir+"/"+tree+".json"))
+	data, err := r.files.Read(r.storePath(domain.Dir + "/" + tree + ".json"))
 	if err != nil {
 		return domain.Verdict{}, fmt.Sprintf("the stored verdict %s could not be read; its potent rows are not carried", tree+".json")
 	}
@@ -1689,7 +1652,7 @@ func (r *runner) refutedFindings(tree string) (map[string]string, string) {
 	if err != nil {
 		return nil, fmt.Sprintf("the refutation path of %s cannot be built: %s", tree, oneLine(err.Error()))
 	}
-	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	data, err := r.files.Read(r.storePath(rel))
 	if err != nil {
 		return nil, "" // no refutation stored: nothing was killed
 	}
@@ -1780,7 +1743,7 @@ func (r *runner) storedVerdictFor(tree string) (domain.Verdict, *Result) {
 		return domain.Verdict{}, &problem
 	}
 
-	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	data, err := r.files.Read(r.storePath(rel))
 	if err != nil {
 		problem := noVerdictToRefute(tree)
 		return domain.Verdict{}, &problem
@@ -1842,7 +1805,7 @@ func (r *runner) storedRefutation(tree string) (*domain.Refutation, string) {
 		return nil, ""
 	}
 
-	data, err := r.files.Read(fullPath(r.opts.Dir, rel))
+	data, err := r.files.Read(r.storePath(rel))
 	if err != nil {
 		return nil, ""
 	}
@@ -1898,7 +1861,6 @@ func (r *runner) worktree() (*worktree, *Result) {
 // prompt named, and the run stops if the worktree moved.
 func (r *runner) afterReviewer() {
 	r.work = nil
-	r.storeReady = false
 }
 
 // candidate gathers the brief and the worktree. Without a diff there is nothing
@@ -1921,32 +1883,20 @@ func (r *runner) candidate() (candidate, *Result) {
 	return candidate{brief: briefText, base: work.base, tree: work.tree, paths: work.paths, diff: work.diff}, nil
 }
 
-// candidateForReview is candidate() plus the store preparation: a verdict is
-// filed inside the candidate, so its directory must be ignorable before the
-// tree it names is final. The write usually changes nothing; when it does, the
-// candidate is read again so the prompt names the tree the verdict will carry.
+// candidateForReview is candidate() plus the lens flag: a verdict is named by
+// the tree, and the flag is validated before anything is written, so an invented
+// lens leaves no file behind while refusing.
 func (r *runner) candidateForReview() (candidate, *Result) {
 	cand, problem := r.candidate()
 	if problem != nil {
 		return candidate{}, problem
 	}
 
-	// The flag is validated before the store write: an invented lens must not
-	// leave a file behind while refusing.
 	if _, problem := r.lensFlag(); problem != nil {
 		return candidate{}, problem
 	}
 
-	wrote, problem := r.ensureStore()
-	if problem != nil {
-		return candidate{}, problem
-	}
-	if !wrote {
-		return cand, nil
-	}
-
-	r.work = nil
-	return r.candidate()
+	return cand, nil
 }
 
 // brief reads brief.md. A missing brief is a state, not an error: the review is
@@ -1974,47 +1924,21 @@ func (r *runner) brief() (string, *Result) {
 	return noBrief, nil
 }
 
-// ensureStore makes the store's directory ignorable before the tree that names
-// the verdict is read. The order is the whole trick: the verdict is written
-// inside the candidate, so without an ignore rule, writing it would change the
-// tree that names it and every verdict would invalidate itself.
-//
-// The rule is asked of the repository first. A project that ran `odachi init`
-// carries the block in its own .gitignore, and there the store's own file would
-// only be a new path in the worktree - the shift this function exists to avoid.
-// A probe that cannot answer is not permission to skip the file: a verdict must
-// never move the tree because git failed, so the fallback is the store's own
-// ignore file, written before the tree is read.
-//
-// It reports whether it wrote the file: a write can remove earlier verdicts from
-// the candidate, and the caller decides whether the read has to happen again.
-func (r *runner) ensureStore() (bool, *Result) {
-	if r.storeReady {
-		return false, nil
-	}
-	r.storeReady = true
+// storePath is the absolute path of one entry inside the clone's store.
+func (r *runner) storePath(rel string) string {
+	return filepath.Join(r.opts.Store, filepath.FromSlash(rel))
+}
 
-	if ignored, err := r.git.Ignored(r.opts.Dir, domain.Dir); err == nil && ignored {
-		return false, nil
+// storeLabel names a store entry the way the human and the CLI read it: relative
+// to the project when it can be, so `.git/odachi/reviews/<tree>.json` is a path
+// `--attach` can take from the project root, and absolute when the store lives
+// outside the worktree.
+func (r *runner) storeLabel(rel string) string {
+	full := r.storePath(rel)
+	if out, err := filepath.Rel(r.opts.Dir, full); err == nil && out != ".." && !strings.HasPrefix(out, ".."+string(filepath.Separator)) {
+		return filepath.ToSlash(out)
 	}
-
-	rel := ignoreRel()
-	path := fullPath(r.opts.Dir, rel)
-
-	exists, err := r.files.Exists(path)
-	if err != nil {
-		problem := blocked(fmt.Sprintf("could not check %s: %s; check the permissions", rel, oneLine(err.Error())))
-		return false, &problem
-	}
-	if exists {
-		return false, nil
-	}
-	if err := r.files.Write(path, []byte(domain.IgnoreContent)); err != nil {
-		problem := blocked(fmt.Sprintf("could not prepare %s: %s; check the permissions", rel, oneLine(err.Error())))
-		return false, &problem
-	}
-	r.storeIgnoreWritten = true
-	return true, nil
+	return filepath.ToSlash(full)
 }
 
 // treeHash is the current worktree, which is what the verdict is named after.
@@ -2078,11 +2002,6 @@ func findingLine(finding domain.Finding) string {
 		line += " · dismissed: " + finding.Reason
 	}
 	return line
-}
-
-// ignoreRel is the store's ignore file, relative to the project.
-func ignoreRel() string {
-	return domain.Dir + "/" + domain.IgnoreName
 }
 
 // fullPath resolves a project-relative path, accepted with forward slashes on

@@ -82,6 +82,12 @@ const nextReview = "odachi review"
 type Options struct {
 	Dir string
 
+	// Store is the absolute root of the clone's state, resolved by the caller
+	// from the repository's git common directory. The review gate reads the
+	// verdict for this tree from there; an empty value means no store was found
+	// and no verdict can exist, which is the same answer as "not reviewed yet".
+	Store string
+
 	// Feature is the number of the task document this run judges. Zero means the
 	// highest, which is the feature the human is working on now.
 	Feature int
@@ -790,7 +796,7 @@ func (r *runner) requireReview(base string) *Result {
 		return &problem
 	}
 
-	data, err := r.files.Read(filepath.Join(r.opts.Dir, filepath.FromSlash(rel)))
+	data, err := r.files.Read(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
 	if err != nil {
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
@@ -816,7 +822,7 @@ func (r *runner) requireReview(base string) *Result {
 			Code:   int(gate.NeedsDecision),
 			Reason: ReasonReviewMissing,
 			Message: fmt.Sprintf("this tree's review cannot be read (%s): %s; write it again with odachi review --attach <file>",
-				rel, oneLine(err.Error())),
+				r.storeFile(rel), oneLine(err.Error())),
 			Next: nextReview,
 		}
 		problem.Lines = []string{problem.Message, "next: odachi review --attach <file>"}
@@ -863,7 +869,7 @@ func (r *runner) requireReview(base string) *Result {
 	}
 
 	if missing := verdict.Missing(required); len(missing) > 0 {
-		problem := lensMissing(missing, rel)
+		problem := lensMissing(missing, r.storeFile(rel))
 		return &problem
 	}
 	refutation, problem := r.refutation(verdict)
@@ -901,11 +907,19 @@ func (r *runner) requireReview(base string) *Result {
 		}
 	}
 	if gaps := verdict.Uncovered(need, blobs); len(gaps) > 0 {
-		problem := coverageMissing(verdict, gaps, rel)
+		problem := coverageMissing(verdict, gaps, r.storeFile(rel))
 		return &problem
 	}
 
 	return nil
+}
+
+// storeFile names a path inside the store as the file a human can delete: the
+// absolute path, with forward slashes so a message reads the same on every
+// platform. `odachi check` may run from anywhere, so a project-relative spelling
+// would not be runnable.
+func (r *runner) storeFile(rel string) string {
+	return filepath.ToSlash(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
 }
 
 // sameCommit reports whether two spellings name the same commit. A base is a
@@ -1013,7 +1027,7 @@ func (r *runner) refutation(verdict reviewdomain.Verdict) (reviewdomain.Refutati
 		return reviewdomain.Refutation{}, nil
 	}
 
-	data, err := r.files.Read(filepath.Join(r.opts.Dir, filepath.FromSlash(rel)))
+	data, err := r.files.Read(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
 	if err != nil {
 		return reviewdomain.Refutation{}, nil
 	}

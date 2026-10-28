@@ -6,11 +6,14 @@ import (
 )
 
 // The block `odachi init` keeps in the project's .gitignore. It is the reason the
-// generated evidence never shifts the tree it certifies: proof/ and the review
-// store live inside the worktree, and their own ignore files used to arrive one
-// run late, invalidating the proof taken before them. The backups `plan` and
-// `ask --craft` write next to the task doc are generated too: they are undo
-// material, not project content, and a clean `git status` is part of the deal.
+// generated evidence never shifts the tree it certifies: proof/ lives inside the
+// worktree, and its own ignore file used to arrive one run late, invalidating the
+// proof taken before it. The backups `plan` and `ask --craft` write next to the
+// task doc are generated too: they are undo material, not project content, and a
+// clean `git status` is part of the deal.
+//
+// The verdicts are not here: they live in the clone's store, outside the worktree,
+// so no ignore rule has to keep them out of the tree they describe.
 //
 // The rules live in the project instead of inside the tool: they survive a clone,
 // a human can read them, and `odachi init` is the single owner of the block.
@@ -19,18 +22,17 @@ const (
 	ignoreBegin = "# odachi:begin"
 	ignoreEnd   = "# odachi:end"
 
-	// The two directories the block keeps out of the tree, without the slashes
-	// the rule spells them with, and the backup suffix every rewrite leaves.
+	// The one directory the block keeps out of the tree, without the slashes the
+	// rule spells it with, and the backup suffix every rewrite leaves.
 	proofRule  = "proof"
-	reviewRule = ".odachi/reviews"
 	backupRule = "*.bak-*"
 )
 
-// ignoreRules are the two generated directories and the backup suffix. The
-// directories are written with a leading slash, so each one means "this folder
-// at the root of THIS project" and nothing else; the backup pattern matches the
-// `file.bak-<8 hex>` files `undo` reads.
-var ignoreRules = []string{"/" + proofRule + "/", "/" + reviewRule + "/", backupRule}
+// ignoreRules is the generated directory and the backup suffix. The directory is
+// written with a leading slash, so it means "this folder at the root of THIS
+// project" and nothing else; the backup pattern matches the `file.bak-<8 hex>`
+// files `undo` reads.
+var ignoreRules = []string{"/" + proofRule + "/", backupRule}
 
 // ignoreBlock is the canonical content of the block, trailing newline included.
 func ignoreBlock() string {
@@ -134,7 +136,7 @@ func (r *runner) writeIgnore() *Result {
 
 	updated, changed := withIgnoreBlock(current)
 	if !changed {
-		r.lines = append(r.lines, ignoreFile+": unchanged, it already ignores /"+proofRule+"/, /"+reviewRule+"/ and the "+backupRule+" backups")
+		r.lines = append(r.lines, ignoreFile+": unchanged, it already ignores /"+proofRule+"/ and the "+backupRule+" backups")
 		return nil
 	}
 
@@ -148,6 +150,6 @@ func (r *runner) writeIgnore() *Result {
 		action = "created with the odachi block"
 	}
 	r.changed = append(r.changed, ignoreFile)
-	r.lines = append(r.lines, ignoreFile+": "+action+": /"+proofRule+"/ and /"+reviewRule+"/ do not dirty the tree they certify, and the "+backupRule+" backups stay out of git")
+	r.lines = append(r.lines, ignoreFile+": "+action+": /"+proofRule+"/ does not dirty the tree it certifies, and the "+backupRule+" backups stay out of git")
 	return nil
 }

@@ -7,10 +7,10 @@
 // no lifecycle: a causal BLOCKER or CRITICAL requests changes, everything else
 // approves. A reviewer supplies findings; the tool does the arithmetic.
 //
-// A verdict is CONTENT-ADDRESSED. It is stored as .odachi/reviews/<tree>.json,
-// so approval cannot float to a tree nobody reviewed: it is literally the name
-// of the file. One tree, one verdict, and a second verdict for the same tree is
-// reported instead of applied.
+// A verdict is CONTENT-ADDRESSED. It is stored in the clone's store as
+// reviews/<tree>.json, so approval cannot float to a tree nobody reviewed: it is
+// literally the name of the file. One tree, one verdict, and a second verdict for
+// the same tree is reported instead of applied.
 //
 // The package is pure: strings, bytes and time in, strings, bytes and time out.
 // It reads no files, runs no commands and knows nothing about git; the tree hash
@@ -26,18 +26,13 @@ import (
 	"time"
 )
 
-// The store: one file per tree, and the ignore file that keeps the store out of
-// the tree it describes. Without it, storing a verdict would change the tree
-// that names it, and every verdict would invalidate itself.
+// The store: one file per tree, named by the tree it judged. It lives in the
+// clone's state, outside the worktree, so writing a verdict cannot change the
+// tree that names it — the immutability is a consequence of where the file lives,
+// not of an ignore rule somebody has to remember to write.
 const (
-	// Dir is where verdicts live, relative to the project root.
-	Dir = ".odachi/reviews"
-	// IgnoreName is the file inside Dir that keeps the verdicts out of git.
-	IgnoreName = ".gitignore"
-	// IgnoreContent ignores everything in Dir except the ignore file itself,
-	// which is versioned: the rule that keeps verdicts out of the tree travels
-	// with the project instead of living inside the tool.
-	IgnoreContent = "# odachi: one verdict per tree and they are generated; they are not versioned\n*\n!.gitignore\n"
+	// Dir is where verdicts live, relative to the clone's store.
+	Dir = "reviews"
 )
 
 // NoFindings is the canonical empty answer. A reviewer with nothing to report
@@ -374,7 +369,7 @@ func Name(tree string) (string, error) {
 	return tree + ".json", nil
 }
 
-// Path is the verdict's path relative to the project root, with forward slashes
+// Path is the verdict's path relative to the clone's store, with forward slashes
 // so the store has one spelling on every platform.
 func Path(tree string) (string, error) {
 	name, err := Name(tree)

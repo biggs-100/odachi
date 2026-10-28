@@ -60,7 +60,6 @@ const (
 	// `standard` row — and a test pins that this string still matches it, so the
 	// count doctor reports is the count init wrote.
 	installedSkillsDir = ".agents/skills"
-	reviewStore        = odachiDir + "/reviews"
 	proofDir           = "proof"
 	ignoreFile         = ".gitignore"
 )
@@ -1105,14 +1104,16 @@ func (r *runner) loadSkills() ([]skill.Skill, error) {
 	return loaded, nil
 }
 
-// ignored: the review store and proof/ live inside the tree they certify, so
-// without an ignore rule every write invalidates the evidence that was already
-// there. Two mechanisms count, and either one is enough: the project's own
-// .gitignore (the block `odachi init` writes) and the legacy per-directory
-// .gitignore this tool used to write lazily. Only when neither is there is the
-// evidence moving the tree, and then the fix is the command that writes the rule:
-// init owns it now, and `check`/`review` are what produce evidence, not what
-// protects it.
+// ignored: proof/ lives inside the tree it certifies, so without an ignore rule
+// every write invalidates the evidence that was already there. Two mechanisms
+// count, and either one is enough: the project's own .gitignore (the block
+// `odachi init` writes) and the per-directory .gitignore the proof itself lands
+// with. Only when neither is there is the evidence moving the tree, and then the
+// fix is the command that writes the rule: init owns it now, and `check` is what
+// produces evidence, not what protects it.
+//
+// The verdicts are not checked here: they live in the clone's store, outside the
+// worktree, so there is no rule they could need.
 //
 // An existing but empty directory is still a warning: nothing is broken yet, and
 // the next write is the one that would be.
@@ -1124,11 +1125,6 @@ func (r *runner) ignored() domaindoctor.Check {
 	}
 
 	parts := []part{
-		{
-			rel:    reviewStore,
-			ignore: reviewStore + "/" + ignoreFile,
-			detail: reviewStore + " is not ignored: every review would invalidate the proof",
-		},
 		{
 			rel:    proofDir,
 			ignore: proofDir + "/" + ignoreFile,
@@ -1189,7 +1185,7 @@ func (r *runner) ignored() domaindoctor.Check {
 	case len(warnings) > 0:
 		return domaindoctor.Warning(domaindoctor.CheckIgnored, strings.Join(warnings, "; "))
 	case len(protected) == 0:
-		return domaindoctor.OK(domaindoctor.CheckIgnored, "there are no reviews or proofs yet: nothing to ignore")
+		return domaindoctor.OK(domaindoctor.CheckIgnored, "there are no proofs yet: nothing to ignore")
 	default:
 		return domaindoctor.OK(domaindoctor.CheckIgnored, "yes: "+strings.Join(protected, " and ")+": they do not move the tree they certify")
 	}

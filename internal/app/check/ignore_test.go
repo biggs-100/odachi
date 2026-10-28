@@ -19,7 +19,7 @@ func TestRunWritesNothingWhenTheRepositoryIgnoresProof(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	git := &fakeGit{tree: currentTree, ignored: true}
 
-	got := check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
 		files, git, &fakeShell{output: "ok\n"})
 
 	if got.Code != int(gate.Ready) {
@@ -43,7 +43,7 @@ func TestRunFallsBackToItsOwnIgnoreFileWhenTheProbeFails(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	git := &fakeGit{tree: currentTree, ignoredErr: errors.New("git is not installed")}
 
-	got := check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
 		files, git, &fakeShell{output: "ok\n"})
 
 	if got.Code != int(gate.Ready) {

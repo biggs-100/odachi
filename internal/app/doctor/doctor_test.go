@@ -430,15 +430,6 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			detail: "the catalogue drifted",
 		},
 		{
-			name: "the review store is not ignored",
-			mutate: func(f *fakeFiles, _ *fakeLookup, _ *fakeProfiles) {
-				f.put(".odachi/reviews/abc123.json", "{}")
-			},
-			check:  domaindoctor.CheckIgnored,
-			fix:    "odachi init",
-			detail: "every review would invalidate the proof",
-		},
-		{
 			name: "proof/ is not ignored",
 			mutate: func(f *fakeFiles, _ *fakeLookup, _ *fakeProfiles) {
 				f.put("proof/0001-turnos.txt", "# tree abc\n# command true\n")
@@ -498,15 +489,14 @@ func TestEmptyProtectedDirectoryIsAWarning(t *testing.T) {
 // between a usable review loop and one that invalidates the proof every time.
 func TestProtectedDirectoriesAreClean(t *testing.T) {
 	files := configured().
-		put(".odachi/reviews/.gitignore", "*\n")
-	files.put("proof/.gitignore", "*\n!.gitignore\n")
+		put("proof/.gitignore", "*\n!.gitignore\n")
 
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 	if result.Code != CodeOK {
 		t.Fatalf("must be clean:\n%s", strings.Join(result.Lines, "\n"))
 	}
 	got := checkOf(t, result, domaindoctor.CheckIgnored)
-	if !strings.Contains(got.Detail, ".odachi/reviews") || !strings.Contains(got.Detail, "proof") {
+	if !strings.Contains(got.Detail, "proof") {
 		t.Fatalf("the line must say what it found protected: %s", domaindoctor.Line(got))
 	}
 }
@@ -516,8 +506,7 @@ func TestProtectedDirectoriesAreClean(t *testing.T) {
 // green: another shape is a decision, not a broken install.
 func TestAForeignTaskDocIsAWarning(t *testing.T) {
 	files := configured().
-		put(".odachi/reviews/.gitignore", "*\n")
-	files.put("proof/.gitignore", "*\n!.gitignore\n")
+		put("proof/.gitignore", "*\n!.gitignore\n")
 	files.put("odd/tasks/qonta-einvoicing.md", "# qonta-einvoicing\n")
 	files.put("odd/tasks/0001-a-real-feature.md", "# a-real-feature\n")
 
@@ -1029,8 +1018,7 @@ func TestInstalledSkillsDirIsTheStandardRow(t *testing.T) {
 // and the second one is not green.
 func TestATaskListThatCannotBeReadIsBroken(t *testing.T) {
 	files := configured().
-		put(".odachi/reviews/.gitignore", "*\n")
-	files.put("proof/.gitignore", "*\n!.gitignore\n")
+		put("proof/.gitignore", "*\n!.gitignore\n")
 	files.errOn = at("odd/tasks")
 
 	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")

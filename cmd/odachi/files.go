@@ -35,15 +35,22 @@ type osFiles struct {
 	store   string
 }
 
+// storeRoot resolves the root of the clone's state, or the empty string when the
+// folder is not a git repository. The verbs that only read evidence treat an
+// empty root as "nothing on file"; the ones that write it refuse before writing.
+func storeRoot(dir string) string {
+	if root, err := store.Root(dir, gitRepo{}); err == nil {
+		return root
+	}
+	return ""
+}
+
 // disk is the Files adapter for a verb that writes: the project root, and the
 // clone's store when the folder is a git repository. A folder with no repository
 // has no store, and a backup there stays beside the artifact - the one case
 // where the old shape survives, because there is nowhere else to put it.
 func disk(dir string) osFiles {
-	if root, err := store.Root(dir, gitRepo{}); err == nil {
-		return osFiles{project: dir, store: root}
-	}
-	return osFiles{project: dir}
+	return osFiles{project: dir, store: storeRoot(dir)}
 }
 
 func (f osFiles) Exists(path string) (bool, error) {

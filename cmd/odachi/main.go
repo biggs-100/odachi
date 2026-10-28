@@ -180,9 +180,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	// first write. A folder that is not a git repository has no store and runs
 	// without the lock: there is nowhere to put it, and guessing is what this
 	// change removes.
-	if storeRoot, err := store.Root(dir, gitRepo{}); err == nil {
-		opts.Store = storeRoot
-	}
+	opts.Store = storeRoot(dir)
 	// The feature starts from the commit that exists now: the task doc records
 	// it, and the closing gate asks for the review of that diff. A repository
 	// with no commit records nothing, and the gate keeps asking per tree.
@@ -404,11 +402,12 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 
 	result := progress.Run(progress.Options{
 		Dir:        dir,
+		Store:      storeRoot(dir),
 		ReviewMode: enabled,
 		Feature:    *feature,
 		// The gate's own rule, asked instead of re-derived: one owner, one answer.
 		Review: func() (bool, string, error) {
-			return check.ReviewOwed(check.Options{Dir: dir, ReviewMode: enabled, Feature: *feature}, osFiles{}, gitRepo{})
+			return check.ReviewOwed(check.Options{Dir: dir, Store: storeRoot(dir), ReviewMode: enabled, Feature: *feature}, osFiles{}, gitRepo{})
 		},
 	}, osFiles{}, gitRepo{})
 
@@ -500,6 +499,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
+	opts.Store = storeRoot(dir)
 	// Only a run records who ran it. Resolving the model costs a process, so a
 	// check that judges an existing proof (the hook, CI) pays nothing.
 	if opts.Run != "" {
@@ -558,6 +558,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
+	opts.Store = storeRoot(dir)
 	// The project's lens table is read here, not inside the verb: a malformed file
 	// blocks with the path and the fix, which is the CLI's job to say.
 	config, err := reviewapp.Config(dir, osFiles{}, reviewModeCodec{})

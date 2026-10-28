@@ -442,21 +442,20 @@ func TestDifferentTreesAreDifferentFiles(t *testing.T) {
 	}
 }
 
-// TestStoreKeepsVerdictsOutOfTheTree: the verdict lives inside the candidate it
-// describes, so the store's own directory has to be ignored or writing a verdict
-// would change the tree that names it.
-func TestStoreKeepsVerdictsOutOfTheTree(t *testing.T) {
-	if !strings.Contains(review.IgnoreContent, "*") {
-		t.Errorf("ignore content %q does not ignore the verdicts", review.IgnoreContent)
+// TestStoreNamesTheVerdictsAndNothingElse: the store's directory is named once,
+// and it holds no ignore file. A verdict lives outside the worktree, so the tool
+// does not need a rule to keep it out of the tree it describes — that is where
+// the immutability comes from now, not from a file somebody remembers to write.
+func TestStoreNamesTheVerdictsAndNothingElse(t *testing.T) {
+	if review.Dir != "reviews" {
+		t.Errorf("Dir = %q, want reviews", review.Dir)
 	}
-	if !strings.Contains(review.IgnoreContent, "!.gitignore") {
-		t.Errorf("ignore content %q does not keep itself versioned", review.IgnoreContent)
+	path, err := review.Path(tree)
+	if err != nil {
+		t.Fatalf("Path: %v", err)
 	}
-	if review.IgnoreName != ".gitignore" {
-		t.Errorf("IgnoreName = %q, want .gitignore", review.IgnoreName)
-	}
-	if review.Dir != ".odachi/reviews" {
-		t.Errorf("Dir = %q, want .odachi/reviews", review.Dir)
+	if path != "reviews/"+tree+".json" {
+		t.Errorf("Path = %q, want reviews/%s.json", path, tree)
 	}
 }
 

@@ -50,6 +50,11 @@ type Options struct {
 	Dir        string
 	ReviewMode bool
 
+	// Store is the absolute root of the clone's state, resolved by the caller
+	// from the repository's git common directory. The verdict this report names
+	// lives there, outside the worktree.
+	Store string
+
 	// Feature is the number of the task document this report describes. Zero
 	// means the highest, which is the feature the human is working on now.
 	Feature int
@@ -210,14 +215,14 @@ func reviewState(opts Options, files Files, doc tasks.Document, tree string, tre
 	if err != nil {
 		return Review{State: ReviewUnreadable}
 	}
-	exists, err := files.Exists(fullPath(opts.Dir, verdict))
+	exists, err := files.Exists(fullPath(opts.Store, verdict))
 	if err != nil {
 		// A store that cannot be read is not a store with no verdict: claiming a
 		// review is owed would send the human to pay for one that may be there.
 		return Review{State: ReviewUnreadable}
 	}
 	if exists {
-		return Review{State: ReviewOnFile, Path: verdict}
+		return Review{State: ReviewOnFile, Path: storeLabel(opts.Dir, opts.Store, verdict)}
 	}
 
 	// The human's decision is a state of its own. It is not "not due yet" -which
@@ -389,6 +394,17 @@ func proofRel(doc tasks.Document) string {
 // fullPath resolves a project-relative path the way every adapter does.
 func fullPath(dir, rel string) string {
 	return filepath.Join(dir, filepath.FromSlash(rel))
+}
+
+// storeLabel names an entry of the clone's store the way the human reads it:
+// relative to the project when it can be, so the usual answer is
+// `.git/odachi/reviews/...`, and absolute when the store lives outside it.
+func storeLabel(dir, store, rel string) string {
+	full := filepath.Join(store, filepath.FromSlash(rel))
+	if out, err := filepath.Rel(dir, full); err == nil && out != ".." && !strings.HasPrefix(out, ".."+string(filepath.Separator)) {
+		return filepath.ToSlash(out)
+	}
+	return filepath.ToSlash(full)
 }
 
 // questions turns the document's open questions into data, in the order the

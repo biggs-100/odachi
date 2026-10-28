@@ -269,11 +269,13 @@ func inOrder(names []string) []string {
 }
 
 // isPlumbing reports whether the path is machinery odachi or its init writes,
-// not work the human asked for: the review store, the proofs, and the agent
-// files and skills init installs. A project that adopts odachi must not be
-// charged a review for the tool's own prompt text - a skill that mentions
-// secrets is not a security change to this codebase - and the tool must not
-// review itself into the candidate.
+// not work the human asked for: the proofs, and the agent files and skills init
+// installs. A project that adopts odachi must not be charged a review for the
+// tool's own prompt text - a skill that mentions secrets is not a security change
+// to this codebase - and the tool must not review itself into the candidate.
+//
+// The review store is not here because it is not in the tree at all: verdicts
+// live in the clone's store, outside the worktree.
 //
 // Everything else under .odachi/ is a human decision (the fence, the profile)
 // and stays in the candidate, and so does .gitignore: an ignore rule changes the
@@ -281,7 +283,7 @@ func inOrder(names []string) []string {
 func isPlumbing(path string) bool {
 	lower := normalizePath(path)
 	switch {
-	case strings.HasPrefix(lower, Dir+"/"), strings.HasPrefix(lower, "proof/"):
+	case strings.HasPrefix(lower, "proof/"):
 		return true
 	case lower == "agents.md":
 		// The root block is instructions to the agent, not the product; a nested

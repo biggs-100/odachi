@@ -45,9 +45,10 @@ func verdictFileWithRows(t *testing.T, tree string, findings []domainreview.Find
 	return string(domainreview.Render(sealed))
 }
 
-// reviewPath is where a verdict for tree lives, in the fake's spelling.
+// reviewPath is where a verdict for tree lives, in the fake's spelling: inside
+// the clone's store, not the worktree.
 func reviewPath(tree string) string {
-	return filepath.Join(dir, filepath.FromSlash(domainreview.Dir), tree+".json")
+	return filepath.Join(store, filepath.FromSlash(domainreview.Dir), tree+".json")
 }
 
 // proofPath is this feature's proof, in the fake's spelling.
@@ -159,7 +160,7 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	// answer this tree.
 	wrong := readyFiles()
 	wrong["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
-	wrong[filepath.ToSlash(filepath.Join(domainreview.Dir, currentTree+".json"))] = verdictFileAtBase(t, currentTree, "HEAD")
+	wrong[filepath.ToSlash(reviewPath(currentTree))] = verdictFileAtBase(t, currentTree, "HEAD")
 	got = run(t, newFakeFiles(wrong), docs, check.Options{ReviewMode: true})
 	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
 		t.Fatalf("a verdict for another diff passed: %d/%q (%s)", got.Code, got.Reason, got.Message)
@@ -168,7 +169,7 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	// The verdict that names the feature's base is the one it owes.
 	right := readyFiles()
 	right["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
-	right[filepath.ToSlash(filepath.Join(domainreview.Dir, currentTree+".json"))] = verdictFileAtBase(t, currentTree, base)
+	right[filepath.ToSlash(reviewPath(currentTree))] = verdictFileAtBase(t, currentTree, base)
 	got = run(t, newFakeFiles(right), docs, check.Options{ReviewMode: true})
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("the feature's own verdict was refused: %s (%s)", got.Message, got.Next)
@@ -179,7 +180,7 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	// judged exactly these bytes and that the gate then refused.
 	short := readyFiles()
 	short["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
-	short[filepath.ToSlash(filepath.Join(domainreview.Dir, currentTree+".json"))] = verdictFileAtBase(t, currentTree, base[:7])
+	short[filepath.ToSlash(reviewPath(currentTree))] = verdictFileAtBase(t, currentTree, base[:7])
 	docs.commits = map[string]string{base[:7]: base, base: base}
 	got = run(t, newFakeFiles(short), docs, check.Options{ReviewMode: true})
 	if got.Code != int(gate.Ready) {
@@ -201,7 +202,7 @@ func TestReviewOwedAsksAboutTheTreeThatStands(t *testing.T) {
 		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
 	}
 
-	if _, _, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(files), git); err != nil {
+	if _, _, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(files), git); err != nil {
 		t.Fatalf("ReviewOwed: %v", err)
 	}
 
@@ -228,7 +229,7 @@ func TestReviewOwedForcedAndItsErrors(t *testing.T) {
 			filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
 		}
 
-		owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true, RequireReview: true}, newFakeFiles(tail), after)
+		owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true, RequireReview: true}, newFakeFiles(tail), after)
 		if err != nil {
 			t.Fatalf("ReviewOwed: %v", err)
 		}
@@ -241,7 +242,7 @@ func TestReviewOwedForcedAndItsErrors(t *testing.T) {
 		files := newFakeFiles(readyFiles())
 		files.err = errors.New("permiso denegado")
 
-		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, files, &fakeGit{tree: currentTree}); err == nil {
+		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, files, &fakeGit{tree: currentTree}); err == nil {
 			t.Error("an unreadable project answered without an error")
 		}
 	})
@@ -253,7 +254,7 @@ func TestReviewOwedForcedAndItsErrors(t *testing.T) {
 		unknown["odd/tasks/0007-turnos.md"] = reviewableDoc("", false)
 		git := &fakeGit{tree: currentTree, diffErr: errors.New("git roto")}
 
-		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(unknown), git); err == nil {
+		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(unknown), git); err == nil {
 			t.Error("an unreadable worktree answered without an error")
 		}
 	})
@@ -267,7 +268,7 @@ func TestReviewOwedForcedAndItsErrors(t *testing.T) {
 			fileAtErr: errors.New("git roto"),
 		}
 
-		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(closed), git); err == nil {
+		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(closed), git); err == nil {
 			t.Error("an unreadable HEAD answered without an error")
 		}
 	})
@@ -287,7 +288,7 @@ func TestReviewOwedAgreesWithTheGate(t *testing.T) {
 		changed: []string{"CHANGELOG.md", "README.md"},
 		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
 	}
-	owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(tail), after)
+	owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(tail), after)
 	if err != nil {
 		t.Fatalf("ReviewOwed on the release tail: %v", err)
 	}
@@ -306,7 +307,7 @@ func TestReviewOwedAgreesWithTheGate(t *testing.T) {
 		changed: []string{"odd/tasks/0007-turnos.md"},
 		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
 	}
-	owed, gotBase, err = check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(closing), atClose)
+	owed, gotBase, err = check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(closing), atClose)
 	if err != nil {
 		t.Fatalf("ReviewOwed at the close: %v", err)
 	}
@@ -341,7 +342,7 @@ func TestReviewOwedAnswersTheWaiver(t *testing.T) {
 
 	waived := readyFiles()
 	waived["odd/tasks/0007-turnos.md"] = waivedReviewableDoc(base, true)
-	owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(waived), atClose)
+	owed, gotBase, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(waived), atClose)
 	if err != nil {
 		t.Fatalf("ReviewOwed on the waived close: %v", err)
 	}
@@ -351,7 +352,7 @@ func TestReviewOwedAnswersTheWaiver(t *testing.T) {
 
 	plain := readyFiles()
 	plain["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
-	owed, gotBase, err = check.ReviewOwed(check.Options{Dir: dir, ReviewMode: true}, newFakeFiles(plain), atClose)
+	owed, gotBase, err = check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(plain), atClose)
 	if err != nil {
 		t.Fatalf("ReviewOwed on the same close without the waiver: %v", err)
 	}
@@ -542,7 +543,7 @@ func TestRequireReviewRefusesASelfReview(t *testing.T) {
 			files.files[proofPath()] = []byte(tc.proof)
 			files.files[reviewPath(currentTree)] = []byte(tc.verdict)
 
-			got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
+			got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
 				files, codeChange(), &fakeShell{})
 
 			if got.Reason != check.ReasonReviewSelf {
@@ -593,7 +594,7 @@ func TestRequireReviewRefusesOnlyTheLensesTheBuilderJudged(t *testing.T) {
 			}
 			files.files[reviewPath(currentTree)] = []byte(domainreview.Render(sealed))
 
-			got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
+			got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
 				files, codeChange(), &fakeShell{})
 
 			self := got.Reason == check.ReasonReviewSelf
@@ -634,7 +635,7 @@ func TestRequireReviewAcceptsAReviewByAnotherModelOrByNobody(t *testing.T) {
 			files.files[proofPath()] = []byte(tc.proof)
 			files.files[reviewPath(currentTree)] = []byte(tc.verdict)
 
-			got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
+			got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120, RequireReview: true},
 				files, codeChange(), &fakeShell{})
 
 			if got.Reason == check.ReasonReviewSelf {
@@ -870,7 +871,7 @@ func TestRequireReviewRefusesReceiptsForOtherBytes(t *testing.T) {
 	if result.Next != "odachi review" {
 		t.Errorf("next = %q, want odachi review", result.Next)
 	}
-	rel := filepath.ToSlash(filepath.Join(domainreview.Dir, currentTree+".json"))
+	rel := filepath.ToSlash(reviewPath(currentTree))
 	for _, want := range []string{"delete", rel} {
 		if !slices.ContainsFunc(result.Lines, func(line string) bool { return strings.Contains(line, want) }) {
 			t.Errorf("lines %v do not tell the human to delete %s", result.Lines, rel)

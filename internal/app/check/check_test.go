@@ -18,6 +18,10 @@ import (
 // touched: every port is a double.
 const dir = "/proyecto"
 
+// store is the clone's state, inside the project it describes and outside the
+// worktree: the real one is <proyecto>/.git/odachi.
+var store = filepath.Join(dir, ".git", "odachi")
+
 // The tree hash the fake git always reports, and the one the seeded proof
 // files carry when they are supposed to be current.
 const (
@@ -43,7 +47,13 @@ type fakeFiles struct {
 func newFakeFiles(seed map[string]string) *fakeFiles {
 	f := &fakeFiles{files: map[string][]byte{}}
 	for path, content := range seed {
-		f.files[filepath.Join(dir, filepath.FromSlash(path))] = []byte(content)
+		// A path already under the project root (the clone's store lives there)
+		// is kept as it is; the rest is project-relative.
+		key := filepath.Join(dir, filepath.FromSlash(path))
+		if slashed, root := filepath.ToSlash(filepath.FromSlash(path)), filepath.ToSlash(dir)+"/"; strings.HasPrefix(slashed, root) {
+			key = filepath.FromSlash(path)
+		}
+		f.files[key] = []byte(content)
 	}
 	return f
 }
@@ -283,6 +293,7 @@ func readyFiles() map[string]string {
 func run(t *testing.T, files *fakeFiles, git *fakeGit, opts check.Options) check.Result {
 	t.Helper()
 	opts.Dir = dir
+	opts.Store = store
 	if opts.Base == "" {
 		opts.Base = "HEAD"
 	}
@@ -478,7 +489,7 @@ deps  = ["stripe"]
 func TestCheckWritesNothingWithoutRun(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 
-	check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120}, files, &fakeGit{tree: currentTree}, &fakeShell{})
+	check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120}, files, &fakeGit{tree: currentTree}, &fakeShell{})
 
 	if len(files.writes) != 0 {
 		t.Errorf("check wrote %v, want no writes", files.writes)
@@ -496,7 +507,7 @@ func TestRunWritesTheProofOfTheCurrentFeature(t *testing.T) {
 	git := &fakeGit{tree: currentTree}
 	shell := &fakeShell{output: "ok  github.com/biggs-100/odachi 0.02s\n"}
 
-	got := check.Run(check.Options{Dir: dir, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45}, files, git, shell)
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45}, files, git, shell)
 
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("Code = %d, want 0 (reason %q, message %q)", got.Code, got.Reason, got.Message)
@@ -538,7 +549,7 @@ func TestTheProofKeepsBothStreams(t *testing.T) {
 	git := &fakeGit{tree: currentTree}
 	shell := &fakeShell{output: "ok  github.com/biggs-100/odachi 0.02s\n", stderr: "warning: one test was skipped\n"}
 
-	got := check.Run(check.Options{Dir: dir, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45}, files, git, shell)
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45}, files, git, shell)
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("Code = %d, want 0 (%s)", got.Code, got.Message)
 	}
@@ -556,7 +567,7 @@ func TestTheProofNamesTheSessionThatRanIt(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
 
-	check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120,
+	check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120,
 		Model: "provider/model#variant"}, files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
 
 	body := string(files.files[filepath.Join(dir, "proof", "0007-turnos.txt")])
@@ -577,7 +588,7 @@ func TestTheProofNamesTheSessionThatRanIt(t *testing.T) {
 func TestRunWritesTheProofIgnoreFile(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 
-	check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
+	check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
 
 	ignore := filepath.Join(dir, "proof", ".gitignore")
@@ -591,7 +602,7 @@ func TestRunWritesTheProofIgnoreFile(t *testing.T) {
 
 	// A second run finds it and does not write it again.
 	files.writes = nil
-	check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
+	check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
 	if slices.Contains(files.writes, ignore) {
 		t.Errorf("a rerun rewrote %s, want it written once", ignore)
@@ -607,7 +618,7 @@ func TestTwoRunsOnTheSameTreeProduceTheSameProof(t *testing.T) {
 	delete(second.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
 
 	shell := &fakeShell{output: "ok\n"}
-	opts := check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120}
+	opts := check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120}
 
 	check.Run(opts, first, &fakeGit{tree: currentTree}, shell)
 	check.Run(opts, second, &fakeGit{tree: currentTree}, shell)
@@ -624,7 +635,7 @@ func TestFailingRunDoesNotWriteAProof(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
 
-	got := check.Run(check.Options{Dir: dir, Run: "exit 1", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "exit 1", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{output: "boom\nla que importa\n\n", exitCode: 1})
 
 	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofFailed {
@@ -646,7 +657,7 @@ func TestFailingRunDoesNotWriteAProof(t *testing.T) {
 func TestTimedOutRunSaysHowLongItWaited(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 
-	got := check.Run(check.Options{Dir: dir, Run: "sleep 60", Base: "HEAD", TimeoutSeconds: 7},
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "sleep 60", Base: "HEAD", TimeoutSeconds: 7},
 		files, &fakeGit{tree: currentTree}, &fakeShell{timedOut: true, exitCode: -1})
 
 	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofFailed {
@@ -673,7 +684,7 @@ func TestFailingRunKeepsTheWholeOutput(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
 
-	got := check.Run(check.Options{Dir: dir, Run: "exit 1", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "exit 1", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree},
 		&fakeShell{output: "--- FAIL: TestX\nboom\nla que importa\n", stderr: "detalle del build\n", exitCode: 1})
 
@@ -711,7 +722,7 @@ func TestFailedRunWithoutItsEvidenceNamesNoPath(t *testing.T) {
 		return nil
 	}
 
-	got := check.Run(check.Options{Dir: dir, Run: "exit 1", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "exit 1", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree},
 		&fakeShell{output: "--- FAIL: TestX\nla que importa\n", exitCode: 1})
 
@@ -740,7 +751,7 @@ func TestTimedOutRunKeepsTheOutputToo(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
 
-	got := check.Run(check.Options{Dir: dir, Run: "sleep 60", Base: "HEAD", TimeoutSeconds: 7},
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "sleep 60", Base: "HEAD", TimeoutSeconds: 7},
 		files, &fakeGit{tree: currentTree}, &fakeShell{output: "starting\n", timedOut: true, exitCode: -1})
 
 	body := string(files.files[filepath.Join(dir, "proof", "0007-turnos.failed.txt")])
@@ -758,7 +769,7 @@ func TestGreenRunRemovesTheStaleFailedFile(t *testing.T) {
 	stale := filepath.Join(dir, "proof", "0007-turnos.failed.txt")
 	files.files[stale] = []byte("# failed una-otra\n")
 
-	check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
+	check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
 
 	if _, still := files.files[stale]; still {
@@ -783,7 +794,7 @@ func TestProofFlagRefusesTheFailedEvidence(t *testing.T) {
 		Output:  "--- FAIL: TestX\nFAIL\n",
 	}, 1, false))
 
-	got := check.Run(check.Options{Dir: dir, Proof: "manual.failed.txt", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Proof: "manual.failed.txt", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{})
 
 	if got.Code != int(gate.NeedsWork) {
@@ -800,7 +811,7 @@ func TestProofFlagRefusesAFileWithoutTheHeader(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, "manual.txt")] = []byte("ok\n")
 
-	got := check.Run(check.Options{Dir: dir, Proof: "manual.txt", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Proof: "manual.txt", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{})
 
 	if got.Code != int(gate.NeedsWork) {
@@ -819,7 +830,7 @@ func TestProofFlagUsesTheGivenProof(t *testing.T) {
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
 	files.files[filepath.Join(dir, "otra.txt")] = []byte(proofFile(currentTree, "go test ./...", "ok\n"))
 
-	got := check.Run(check.Options{Dir: dir, Proof: "otra.txt", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Proof: "otra.txt", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{})
 
 	if got.Code != int(gate.Ready) {
@@ -837,7 +848,7 @@ func TestNoTaskDocumentMeansZeroOpenQuestions(t *testing.T) {
 		"brief.md": completeBrief,
 	})
 
-	got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{})
 
 	if got.Reason != gate.ReasonProofMissing {
@@ -848,7 +859,7 @@ func TestNoTaskDocumentMeansZeroOpenQuestions(t *testing.T) {
 func TestRunWithoutATaskDocumentStillWritesAProof(t *testing.T) {
 	files := newFakeFiles(map[string]string{"brief.md": completeBrief})
 
-	got := check.Run(check.Options{Dir: dir, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
 
 	if got.Code != int(gate.Ready) {
@@ -870,7 +881,7 @@ paths = ["**/payments/**"]
 `)
 	git := &fakeGit{tree: currentTree, changed: []string{"internal/payments/stripe.go"}}
 
-	got := check.Run(check.Options{Dir: dir, Base: "", TimeoutSeconds: 120}, files, git, &fakeShell{})
+	got := check.Run(check.Options{Dir: dir, Store: store, Base: "", TimeoutSeconds: 120}, files, git, &fakeShell{})
 
 	if got.Reason != gate.ReasonOutOfScope {
 		t.Fatalf("Reason = %q, want %q (base \"\" must still run the fence)", got.Reason, gate.ReasonOutOfScope)
@@ -890,7 +901,7 @@ paths = ["**/payments/**"]
 `)
 	git := &fakeGit{tree: currentTree, changedErr: fmt.Errorf("git diff: exit status 128: unknown revision HEAD")}
 
-	got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120}, files, git, &fakeShell{})
+	got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120}, files, git, &fakeShell{})
 
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("Code = %d, want 0 (reason %q, message %q)", got.Code, got.Reason, got.Message)
@@ -910,7 +921,7 @@ paths = ["**/payments/**"]
 `)
 	git := &fakeGit{tree: currentTree, changedErr: fmt.Errorf("git diff: exit status 128: unknown revision origin/main")}
 
-	got := check.Run(check.Options{Dir: dir, Base: "origin/main", TimeoutSeconds: 120}, files, git, &fakeShell{})
+	got := check.Run(check.Options{Dir: dir, Store: store, Base: "origin/main", TimeoutSeconds: 120}, files, git, &fakeShell{})
 
 	if got.Code != int(gate.NeedsWork) {
 		t.Fatalf("Code = %d, want %d", got.Code, gate.NeedsWork)
@@ -929,7 +940,7 @@ func TestUnreadableFenceBlocksWithAHumanSentence(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, ".odachi", "fence.toml")] = []byte("[[rule]\nnot = \n")
 
-	got := check.Run(check.Options{Dir: dir, Base: "HEAD", TimeoutSeconds: 120},
+	got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120},
 		files, &fakeGit{tree: currentTree}, &fakeShell{})
 
 	if got.Code != int(gate.NeedsWork) {
