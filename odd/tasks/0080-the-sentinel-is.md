@@ -10,7 +10,7 @@ R1 · "the sentinel is pinned end to end, and the debt row leaves the file"
 - a fake git port makes both branches reachable in a test
 
 ## Steps
-- [ ] T1 · the adapter takes the git port: a test drives no-repository and git-failed, and init names the store   R1
+- [x] T1 · the adapter takes the git port: a test drives no-repository and git-failed, and init names the store   R1 · tree:889431d0da9c5539fd082bbd56e172088d8d1a2b
 
 ## History
 L1 · "the sentinel is pinned end to end, and the debt row leaves the file"

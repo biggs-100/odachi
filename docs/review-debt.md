@@ -9,20 +9,9 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0079, the review debt of 0078 is paid.
+Last written: after 0080, the sentinel is pinned end to end.
 
 ## Open
-
-### cmd/odachi/files.go — the new classification branch of the selection adapter is not pinned
-
-`Written` gained two branches: `errors.Is(err, gitx.ErrNoRepository)` answers "the
-project never chose", and any other error propagates so a broken repository stops
-a reader instead of falling back to `both`. `Target` changed contract from always
-nil to propagating. The sentinel itself is tested in `gitx` and `store`, but
-nothing in the tree pins that `gitRepo`'s delegation preserves it into `Written`,
-nor that `init` surfaces the store error instead of quietly falling back. A
-regression that re-swallows it — the exact defect 0078 named — would leave every
-test green. Named by the review of 0079, tree 97f94c8.
 
 ### odd/tasks/0073-a-professional-persona.md - the doc speaks the old vocabulary
 
@@ -69,4 +58,5 @@ answer owed, so the test is not a comment.
 - `internal/app/review/review.go:1350` - the drop of a refused answer cannot cost
   the verdict; the keep-failure half was already pinned by feature 0051, which the
   store could not know because a test moves a different file's blob.
+
 
