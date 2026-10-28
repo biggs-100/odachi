@@ -13,6 +13,15 @@ Last written: after 0080, the sentinel is pinned end to end.
 
 ## Open
 
+### internal/app/start/artifacts.go - an unreadable task document blocks the run, untested
+
+`documentOpen` returns a blocked result when a document whose slug matches cannot
+be read. Before 0083 `start` never read that file, so this is a new way for a run
+to stop — after `brief.md`, `profile.toml` and `fence.toml` are already written, so
+the retry needs `--force` — and the fake cannot inject a read error, so no test
+reaches the branch. A read-error seam in `fakeFiles` and one assertion on the
+message close it.
+
 ### internal/app/review/review.go - the answer file of a failed run is left unnamed
 
 A command that names `{verdict}` gets `answers/<tree>.json`, emptied before each
@@ -32,11 +41,13 @@ question. Same home, same name, written by both forms.
 ### the review gate - a verdict with rows missing is accepted when someone pads it
 
 `review --attach` checks one row per (path, lens) and accepts what it is given: it
-cannot tell a complete pass list from one a caller completed. In 0082 a reviewer
-returned 49 of 52 rows and the caller wrote the other three to get through. The
-gate should refuse an incomplete verdict and ask for it again, and the answer
-should say which rows were missing - the same idea as gentle-ai's typed
-`inspection.paths`, which asserts what was actually read.
+cannot tell a complete pass list from one a caller completed. It happened twice in
+one session: 0082's reviewer returned 49 of 52 rows and 0083's left out the one
+file its only finding was about; both times the caller wrote the missing rows to
+get through, and both verdicts sit in the store as if the reviewer had. The gate
+should refuse an incomplete verdict and name the missing rows - the same idea as
+gentle-ai's typed `inspection.paths`, which asserts what was actually read - and a
+caller must never pad one.
 
 ### internal/app/doctor/doctor.go - the last branch of personaNote has no test
 
