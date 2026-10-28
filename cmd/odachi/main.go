@@ -22,11 +22,13 @@ import (
 	"github.com/biggs-100/odachi/internal/app/progress"
 	reviewapp "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/storemove"
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
 	"github.com/biggs-100/odachi/internal/domain/agent"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/store"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
@@ -92,6 +94,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runProgress(dir, args[1:], stdout, stderr)
 	case "undo":
 		return runUndo(dir, args[1:], stdout, stderr)
+	case "store":
+		return runStore(dir, args[1:], stdout, stderr)
 	case "check":
 		return runCheck(dir, args[1:], stdout, stderr)
 	case "init":
@@ -175,6 +179,11 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	}
 
 	opts.Dir = dir
+	// The lock lives in the clone's store, so the store is resolved before the
+	// first write. A folder that is not a git repository has no store and runs
+	// without the lock: there is nowhere to put it, and guessing is what this
+	// change removes.
+	opts.Store = storeRoot(dir)
 	// The feature starts from the commit that exists now: the task doc records
 	// it, and the closing gate asks for the review of that diff. A repository
 	// with no commit records nothing, and the gate keeps asking per tree.
@@ -207,7 +216,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		interview = &terminalInterview{in: bufio.NewReader(stdin), out: stdout}
 	}
 
-	return report(start.Run(opts, interview, osFiles{}, &osLock{}), asJSON, stdout, stderr)
+	return report(start.Run(opts, interview, disk(dir), &osLock{}), asJSON, stdout, stderr)
 }
 
 // runAsk parses the flags, wires the Files adapter and reports the result.
@@ -250,7 +259,7 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
-	return reportAsk(ask.Run(opts, osFiles{}), asJSON, stdout, stderr)
+	return reportAsk(ask.Run(opts, disk(dir)), asJSON, stdout, stderr)
 }
 
 // runPlan parses the flags, wires the Files adapter and reports the result.
@@ -298,7 +307,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	opts.Git = gitRepo{}
-	return reportPlan(plan.Run(opts, osFiles{}), asJSON, stdout, stderr)
+	return reportPlan(plan.Run(opts, disk(dir)), asJSON, stdout, stderr)
 }
 
 // runLevel parses the flags, reads the profile in force and reports the result.
@@ -311,7 +320,7 @@ func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		asJSON bool
 	)
 
-	flags.StringVar(&to, "to", "", "profile to apply: .odachi/profile.toml is backed up and rewritten")
+	flags.StringVar(&to, "to", "", "profile to apply: odd/profile.toml is backed up and rewritten")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
@@ -337,7 +346,7 @@ func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		return reportLevel(level.Result{Code: agentsCode, Message: agentsMessage}, asJSON, stdout, stderr)
 	}
 
-	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to, Agents: agents}, osFiles{}), asJSON, stdout, stderr)
+	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to, Agents: agents}, disk(dir)), asJSON, stdout, stderr)
 }
 
 // runSummary parses the flags and prints the derived report.
@@ -396,11 +405,12 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 
 	result := progress.Run(progress.Options{
 		Dir:        dir,
+		Store:      storeRoot(dir),
 		ReviewMode: enabled,
 		Feature:    *feature,
 		// The gate's own rule, asked instead of re-derived: one owner, one answer.
 		Review: func() (bool, string, error) {
-			return check.ReviewOwed(check.Options{Dir: dir, ReviewMode: enabled, Feature: *feature}, osFiles{}, gitRepo{})
+			return check.ReviewOwed(check.Options{Dir: dir, Store: storeRoot(dir), ReviewMode: enabled, Feature: *feature}, osFiles{}, gitRepo{})
 		},
 	}, osFiles{}, gitRepo{})
 
@@ -492,6 +502,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
+	opts.Store = storeRoot(dir)
 	// Only a run records who ran it. Resolving the model costs a process, so a
 	// check that judges an existing proof (the hook, CI) pays nothing.
 	if opts.Run != "" {
@@ -550,6 +561,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
+	opts.Store = storeRoot(dir)
 	// The project's lens table is read here, not inside the verb: a malformed file
 	// blocks with the path and the fix, which is the CLI's job to say.
 	config, err := reviewapp.Config(dir, osFiles{}, reviewModeCodec{})
@@ -559,7 +571,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 	opts.LensModels = config.Lenses
 
-	return reportReview(reviewapp.Run(opts, osFiles{}, gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
+	return reportReview(reviewapp.Run(opts, disk(dir), gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
 }
 
 // runReviewMode parses the small mode grammar by hand: the action is a word,
@@ -591,7 +603,7 @@ func runReviewMode(dir string, args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	result := reviewapp.Mode(reviewapp.ModeOptions{Dir: dir, Action: action}, osFiles{}, reviewModeCodec{})
+	result := reviewapp.Mode(reviewapp.ModeOptions{Dir: dir, Action: action}, disk(dir), reviewModeCodec{})
 	return reportReview(result, asJSON, stdout, stderr)
 }
 
@@ -624,7 +636,7 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.BoolVar(&opts.List, "list", false, "what can be undone, with its date")
-	flags.BoolVar(&opts.Collect, "collect", false, "move old backups to .odachi/backups")
+	flags.BoolVar(&opts.Collect, "collect", false, "move old backups into the clone's store")
 	flags.StringVar(&opts.File, "file", "", "only that artifact: brief | profile | fence | task")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
@@ -641,8 +653,84 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
+	// A folder that is not a git repository has no store, and undo still works
+	// there: start creates a project without a repository and saves its versions
+	// beside the artifacts, and undo reads exactly those.
 	opts.Dir = dir
-	return reportUndo(undo.Run(opts, osFiles{}, &osLock{}), asJSON, stdout, stderr)
+	opts.Store = storeRoot(dir)
+	return reportUndo(undo.Run(opts, disk(dir), &osLock{}), asJSON, stdout, stderr)
+}
+
+// runStore parses the two words of `odachi store` and dispatches the one action
+// that exists. The action is a word and not a flag, like `review mode`.
+func runStore(dir string, args []string, stdout, stderr io.Writer) int {
+	const usageLine = "usage: odachi store move [--dry-run] [--json]"
+
+	if len(args) == 0 {
+		fmt.Fprintln(stderr, "odachi: store needs an action: "+usageLine)
+		return start.CodeBlocked
+	}
+	if args[0] != "move" {
+		fmt.Fprintf(stderr, "odachi: store %s is not an action; %s\n", args[0], usageLine)
+		return start.CodeBlocked
+	}
+
+	dryRun := false
+	asJSON := false
+	for _, arg := range args[1:] {
+		switch arg {
+		case "--dry-run":
+			dryRun = true
+		case "--json":
+			asJSON = true
+		case "-h", "--help":
+			fmt.Fprintln(stdout, usageLine)
+			return start.CodeOK
+		default:
+			fmt.Fprintf(stderr, "odachi: %s is not a flag of store move; %s\n", arg, usageLine)
+			return start.CodeBlocked
+		}
+	}
+
+	storeRoot, err := store.Root(dir, gitRepo{})
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error())+"; odachi store move needs the clone's store, so run it inside a git repository")
+		return start.CodeBlocked
+	}
+
+	result := storemove.Run(storemove.Options{Dir: dir, Store: storeRoot, DryRun: dryRun}, disk(dir), &osLock{})
+	if asJSON {
+		return reportStoreMoveJSON(result, stdout, stderr)
+	}
+	for _, line := range result.Lines {
+		fmt.Fprintln(stdout, line)
+	}
+	if result.Code != storemove.CodeOK {
+		fmt.Fprintln(stderr, "odachi: "+result.Message)
+	}
+	return result.Code
+}
+
+// reportStoreMoveJSON prints the migration as one object.
+func reportStoreMoveJSON(result storemove.Result, stdout, stderr io.Writer) int {
+	files := result.Files
+	if files == nil {
+		files = []string{}
+	}
+	payload := struct {
+		Code    int      `json:"code"`
+		Message string   `json:"message"`
+		Lines   []string `json:"lines,omitempty"`
+		Files   []string `json:"files"`
+	}{Code: result.Code, Message: result.Message, Lines: result.Lines, Files: files}
+
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+	fmt.Fprintln(stdout, string(data))
+	return result.Code
 }
 
 // reportCheck prints the gate's verdict. A ready run is silent under --quiet,
@@ -838,7 +926,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		Home:            osHome{},
 		Global:          global,
 		NoProjectAgents: noProjectAgent,
-	}, osFiles{}, &initSkills{dir: dir, scope: skillsScope})
+	}, disk(dir), &initSkills{dir: dir, scope: skillsScope})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -923,7 +1011,7 @@ func (s initSkills) Install() initapp.SkillReport {
 		if err != nil {
 			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: "odachi init"}
 		}
-		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all)}, osFiles{}, osHome{})
+		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all)}, disk(s.dir), osHome{})
 		report := s.report([]pack.Result{home})
 		if standard, err := agent.Resolve(agent.Standard); err == nil {
 			exists, err := (osFiles{}).Exists(filepath.Join(s.dir, filepath.FromSlash(standard.Dest)))
@@ -943,8 +1031,8 @@ func (s initSkills) Install() initapp.SkillReport {
 	// The project gets the craft, in the cross-client location every client
 	// reads. The home gets the one skill that teaches how to arrive, because
 	// before a project exists the home is the only place a skill can live.
-	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum)}, osFiles{}, osHome{})
-	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap})}, osFiles{}, osHome{})
+	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum)}, disk(s.dir), osHome{})
+	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap})}, disk(s.dir), osHome{})
 	return s.report([]pack.Result{project, home})
 }
 
@@ -1277,6 +1365,7 @@ usage:
   odachi summary
   odachi progress
   odachi undo [--list | --collect] [--file brief]
+  odachi store move [--dry-run]
   odachi check [flags]
   odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
   odachi review [--lens <lens>]
@@ -1323,7 +1412,7 @@ review mode:
   odachi review mode status   whether the project requires review (default: off)
   odachi review mode on       check requires the verdict for this tree
   odachi review mode off      check does not require it, even when the hook runs check
-  the mode lives in .odachi/review.toml; --require-review and --no-review override it for one run
+  the mode lives in odd/review.toml; --require-review and --no-review override it for one run
 
 plan flags:
   --req R<n>      requirement the new step is tied to
@@ -1333,7 +1422,7 @@ plan flags:
 
 undo flags:
   --list          what can be undone, with its date
-  --collect       move old backups to .odachi/backups; it deletes no version
+  --collect       move old backups into the clone's store; it deletes no version
   --file s        only that artifact: brief | profile | fence | task
   --json          machine output
 
@@ -1359,7 +1448,7 @@ init flags:
   --skills s      project | home (default project): the project carries the craft skills;
                   home leaves all of them in ~/.agents/skills and writes no copy in the project
   --agents s      opencode | claude | both (default both): which clients receive the native
-                  agent and the home door; the choice stays in .odachi/agents.toml
+                  agent and the home door; the choice stays in the clone's store
                   and does not delete the files another client already has
   --global        install the home door: the agent that shows up in any folder,
                   not only in this project, and make it OpenCode's default agent.
@@ -1397,7 +1486,7 @@ default you picked is already there.
 
 with --agents opencode nothing is written to .claude, and with --agents claude nothing is
 written to .opencode; the files of a client that is already installed are not deleted. The choice
-is kept in .odachi/agents.toml and a later init preserves it; without the file, the default
+is kept in the clone's store and a later init preserves it; without the file, the default
 is still both.
 
 with --skills home, all the skills go to ~/.agents/skills and the project gets no copy;
@@ -1408,7 +1497,7 @@ a key. The parent hands them the task doc, the step, the surfaces, the commands 
 the skill paths; they come back with evidence and ≤2k tokens, and they do not commit.
 
 the voice —how the agent talks to you— is the last section of the block, and the binary
-writes it: novato when there is no .odachi/profile.toml yet, otherwise the one of the profile
+writes it: novato when there is no odd/profile.toml yet, otherwise the one of the profile
 it names. The native agent has two copies per chosen client: the project
 mirror, with the same rules and the same voice, and the home door, which shows up
 in any folder and reads the project block when it exists; when it does not exist, it guides you to start with
@@ -1451,7 +1540,7 @@ after start:
   odachi review --lens --show                   which lenses this tree asks for and which are missing
   odachi review --refute <verdict>              the refuter's prompt for that verdict
   odachi check --require-review                 requires review for this tree and its lenses
-  odachi doctor                                 twelve health checks, read-only
+  odachi doctor                                 thirteen health checks, read-only
   odachi bench                                  measures how a person gets stuck (in-band / dead-end)
   odachi init                                   AGENTS.md (with the profile voice) + the project
                                                  agent and the home door (chosen with Tab)

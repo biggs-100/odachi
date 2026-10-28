@@ -16,6 +16,10 @@ import (
 // is a double.
 const dir = "/proyecto"
 
+// store is the clone's state, inside the project it describes and outside the
+// worktree: the real one is <proyecto>/.git/odachi.
+var store = filepath.Join(dir, ".git", "odachi")
+
 // The two candidates. A different tree is a different verdict, and that is the
 // property this store exists for.
 const (
@@ -41,7 +45,7 @@ const brief = `# turnos
 const diff = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
 
 // fakeFiles is the Files port in memory. It records every write, because "nothing
-// outside .odachi/reviews/ is written" is the property a test has to be able to
+// outside the store's reviews/ is written" is the property a test has to be able to
 // see.
 type fakeFiles struct {
 	files    map[string][]byte
@@ -754,6 +758,7 @@ func TestShowCallsAPartialVerdictPartial(t *testing.T) {
 // run performs one `odachi review` with the fixed clock.
 func (p *project) run(opts review.Options) review.Result {
 	opts.Dir = dir
+	opts.Store = store
 	if opts.Now.IsZero() {
 		opts.Now = now
 	}
@@ -783,7 +788,18 @@ func (p *project) verdictWrites() []string {
 
 // storePath is where a verdict for one tree lives, in the spelling the app uses.
 func storePath(tree string) string {
-	return filepath.Join(dir, filepath.FromSlash(domainreview.Dir), tree+".json")
+	return storeFile(domainreview.Dir + "/" + tree + ".json")
+}
+
+// storeFile is the absolute path of one entry of the clone's store.
+func storeFile(rel string) string {
+	return filepath.Join(store, filepath.FromSlash(rel))
+}
+
+// storeRel is the project-relative spelling of a store entry, the shape the
+// messages use.
+func storeRel(rel string) string {
+	return relative(storeFile(rel))
 }
 
 // TestPromptCarriesTheCandidate: with no flags the verb prints the review prompt,
@@ -809,24 +825,19 @@ func TestPromptCarriesTheCandidate(t *testing.T) {
 	}
 }
 
-// TestPromptKeepsTheStoreOutOfTheTree: the verdict lives inside the candidate it
-// describes, so the store's directory is ignored BEFORE the tree is hashed.
-// Without that order, storing a verdict changes the tree that names it.
-func TestPromptKeepsTheStoreOutOfTheTree(t *testing.T) {
+// TestPromptWritesNothing: the store lives outside the worktree, so printing the
+// prompt has nothing to prepare and nothing to ignore. The old order — write an
+// ignore file before hashing — is gone with the reason for it.
+func TestPromptWritesNothing(t *testing.T) {
 	p := newProject()
 
 	result := p.run(review.Options{})
 
-	want := domainreview.Dir + "/" + domainreview.IgnoreName
-	written := p.files.written()
-	if !slices.Contains(written, want) {
-		t.Fatalf("writes = %v, want the store's %s", written, want)
+	if written := p.files.written(); len(written) != 0 {
+		t.Fatalf("writes = %v, want none: printing the prompt writes nothing", written)
 	}
-	if len(written) != 1 {
-		t.Fatalf("writes = %v, want exactly the ignore file", written)
-	}
-	if slices.Contains(result.Files, want) == false {
-		t.Errorf("result.Files = %v, want it to report %s", result.Files, want)
+	if len(result.Files) != 0 {
+		t.Errorf("result.Files = %v, want none", result.Files)
 	}
 }
 
@@ -865,7 +876,7 @@ func TestAttachStoresTheVerdictUnderTheTree(t *testing.T) {
 	}
 	stored, ok := p.files.files[storePath(currentTree)]
 	if !ok {
-		t.Fatalf("no verdict stored at .odachi/reviews/%s.json", currentTree)
+		t.Fatalf("no verdict stored at .git/odachi/reviews/%s.json", currentTree)
 	}
 
 	parsed, err := domainreview.Parse(stored)
@@ -996,7 +1007,7 @@ func TestAVerdictStillLandsWhenTheRefusedAnswersCannotBeDropped(t *testing.T) {
 	// An answer an earlier run refused, and a listing that answers the read of the
 	// potent rows and fails the drop that comes after the write.
 	keptRel := domainreview.Dir + "/" + currentTree + ".refused-deadbeef.json"
-	p.files.files[fullPath(keptRel)] = []byte(`{"reviewer":"antes","findings":[],"passes":[]}`)
+	p.files.files[storeFile(keptRel)] = []byte(`{"reviewer":"antes","findings":[],"passes":[]}`)
 	calls := 0
 	p.files.failList = func(string) error {
 		calls++
@@ -1015,7 +1026,7 @@ func TestAVerdictStillLandsWhenTheRefusedAnswersCannotBeDropped(t *testing.T) {
 	if _, ok := p.files.files[storePath(currentTree)]; !ok {
 		t.Error("no verdict was sealed")
 	}
-	if _, ok := p.files.files[fullPath(keptRel)]; !ok {
+	if _, ok := p.files.files[storeFile(keptRel)]; !ok {
 		t.Error("the refused answer was dropped even though the listing failed")
 	}
 	if calls != 2 {
@@ -1052,7 +1063,7 @@ func TestARefusedAnswerIsKeptAndNamed(t *testing.T) {
 		t.Fatalf("kept answers = %v, want exactly one", kept)
 	}
 	rel := relative(kept[0])
-	if !strings.HasPrefix(rel, domainreview.Dir+"/"+currentTree+".refused-") || !strings.HasSuffix(rel, ".json") {
+	if !strings.HasPrefix(rel, storeRel(domainreview.Dir)+"/"+currentTree+".refused-") || !strings.HasSuffix(rel, ".json") {
 		t.Errorf("kept file %q is not named by the tree and the answer", rel)
 	}
 	lines := strings.Join(result.Lines, "\n")
@@ -1106,7 +1117,7 @@ func TestAnUnreadableAnswerIsKeptAndNamed(t *testing.T) {
 				t.Fatalf("kept answers = %v, want exactly one", kept)
 			}
 			rel := relative(kept[0])
-			if !strings.HasPrefix(rel, domainreview.Dir+"/"+currentTree+".refused-") || !strings.HasSuffix(rel, ".json") {
+			if !strings.HasPrefix(rel, storeRel(domainreview.Dir)+"/"+currentTree+".refused-") || !strings.HasSuffix(rel, ".json") {
 				t.Errorf("kept file %q is not named by the tree and the answer", rel)
 			}
 			if got := string(p.files.files[fullPath(rel)]); got != answer {
@@ -1296,7 +1307,7 @@ func TestTheVerdictStampsTheBlobGitComputes(t *testing.T) {
 
 	stored, ok := p.files.files[storePath(currentTree)]
 	if !ok {
-		t.Fatalf("no verdict stored at .odachi/reviews/%s.json", currentTree)
+		t.Fatalf("no verdict stored at .git/odachi/reviews/%s.json", currentTree)
 	}
 	parsed, err := domainreview.Parse(stored)
 	if err != nil {
@@ -1484,7 +1495,7 @@ func TestTheStoreLendsItsPotentRows(t *testing.T) {
 
 	stored, ok := p.files.files[storePath(currentTree)]
 	if !ok {
-		t.Fatalf("no verdict stored at .odachi/reviews/%s.json", currentTree)
+		t.Fatalf("no verdict stored at .git/odachi/reviews/%s.json", currentTree)
 	}
 	parsed, err := domainreview.Parse(stored)
 	if err != nil {
@@ -1534,7 +1545,7 @@ func refutedProject(t *testing.T) *project {
 	if err != nil {
 		t.Fatalf("the refutation path: %v", err)
 	}
-	p.files.files[fullPath(refRel)] = domainreview.RenderRefutation(sealedRefutation)
+	p.files.files[storeFile(refRel)] = domainreview.RenderRefutation(sealedRefutation)
 	return p
 }
 
@@ -1913,12 +1924,8 @@ func TestAttachRefusesABrokenVerdictWithoutWriting(t *testing.T) {
 }
 
 // TestAttachRefusesAVerdictForAnotherTree: approval cannot float. The refusal
-// names both trees and no verdict is stored.
-//
-// The store's ignore file may be created by this attempt: the verdict is checked
-// against the tree hash, and the hash can only be taken once the store is out of
-// the tree. That file belongs to the tool, is idempotent, and is inside
-// .odachi/reviews/; the verdict is not written.
+// names both trees and no verdict is stored. Nothing is written at all: an
+// attached document for another tree is refused before the store is touched.
 func TestAttachRefusesAVerdictForAnotherTree(t *testing.T) {
 	p := newProject()
 	p.files.files[fullPath("veredicto.json")] = []byte(`{"tree":"` + otherTree + `","reviewer":"humano","findings":[]}`)
@@ -2400,10 +2407,10 @@ func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ign
 func (g *flakyGit) BlobHash(root, path string) (string, error) { return g.inner.BlobHash(root, path) }
 
 // TestNothingOutsideTheStoreIsWritten: the whole surface of this verb is
-// .odachi/reviews/. A review that touched the brief or the code would be a
+// the store's reviews/. A review that touched the brief or the code would be a
 // different tool.
 func TestNothingOutsideTheStoreIsWritten(t *testing.T) {
-	store := filepath.ToSlash(filepath.Join(dir, filepath.FromSlash(domainreview.Dir))) + "/"
+	storePrefix := filepath.ToSlash(store) + "/"
 
 	for _, opts := range []review.Options{
 		{},
@@ -2418,7 +2425,7 @@ func TestNothingOutsideTheStoreIsWritten(t *testing.T) {
 		p.run(opts)
 
 		for _, path := range p.files.writes {
-			if !strings.HasPrefix(filepath.ToSlash(path), store) {
+			if !strings.HasPrefix(filepath.ToSlash(path), storePrefix) {
 				t.Errorf("opts %+v wrote outside the store: %s", opts, path)
 			}
 		}

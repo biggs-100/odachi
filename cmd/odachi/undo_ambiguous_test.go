@@ -12,6 +12,7 @@ import (
 func TestUndoWithoutFilterRefusesWhenSeveralArtifactsHaveBackups(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	initRepo(t, dir)
 	args := allFlags()[:len(allFlags())-1] // human output, no --json
 
 	if code, _, stderr := runDir(t, dir, args, ""); code != 0 {
@@ -39,6 +40,7 @@ func TestUndoWithoutFilterRefusesWhenSeveralArtifactsHaveBackups(t *testing.T) {
 func TestUndoIsANoOpWhenTheCurrentBytesAreAlreadyTheBackup(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	initRepo(t, dir)
 	args := allFlags()[:len(allFlags())-1]
 
 	if code, _, stderr := runDir(t, dir, args, ""); code != 0 {

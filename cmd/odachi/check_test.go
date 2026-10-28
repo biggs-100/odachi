@@ -68,7 +68,7 @@ func initRepo(t *testing.T, dir string) {
 func seedProject(t *testing.T, dir string) {
 	t.Helper()
 	writeFile(t, dir, "brief.md", checkBrief)
-	writeFile(t, dir, ".odachi/fence.toml", checkFence)
+	writeFile(t, dir, "odd/fence.toml", checkFence)
 	writeFile(t, dir, "odd/tasks/0001-turnos.md", taskdoc.TaskDoc{
 		Title:        "turnos",
 		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},

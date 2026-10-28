@@ -25,7 +25,7 @@ func verdictWithLenses(t *testing.T, tree string, lenses []string, findings []do
 
 // refutationPath is where a refutation for tree lives, in the fake's spelling.
 func refutationPath(tree string) string {
-	return filepath.Join(dir, filepath.FromSlash(domainreview.Dir), tree+".refuted.json")
+	return filepath.Join(store, filepath.FromSlash(domainreview.Dir), tree+".refuted.json")
 }
 
 // blockingFinding is the one finding the refutation tests argue about.

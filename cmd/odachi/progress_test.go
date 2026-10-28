@@ -26,7 +26,7 @@ func featureAtBase(t *testing.T) (dir, base string) {
 	dir = t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
-	writeFile(t, dir, ".odachi/review.toml", "mode = \"on\"\n")
+	writeFile(t, dir, "odd/review.toml", "mode = \"on\"\n")
 	commitAll(t, dir, "the project")
 	base = headSHA(t, dir)
 

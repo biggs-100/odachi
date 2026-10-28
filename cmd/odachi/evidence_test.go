@@ -52,10 +52,16 @@ func TestInitKeepsTheProofValidAcrossAReview(t *testing.T) {
 	if err != nil {
 		t.Fatalf(".gitignore was not written: %v", err)
 	}
-	for _, want := range []string{"# odachi:begin", "/proof/", "/.odachi/reviews/", "*.bak-*", "# odachi:end"} {
+	for _, want := range []string{"# odachi:begin", "/proof/", "*.bak-*", "# odachi:end"} {
 		if !strings.Contains(string(ignore), want) {
 			t.Errorf(".gitignore does not carry %q:\n%s", want, ignore)
 		}
+	}
+	// The verdicts left the worktree, so the rule that used to keep them out of
+	// the tree has no reason to exist. A stale rule is a lie about where the store
+	// is, and this is the test that would let it back in.
+	if strings.Contains(string(ignore), ".odachi/reviews") {
+		t.Errorf(".gitignore still carries the review store rule:\n%s", ignore)
 	}
 
 	outside := t.TempDir()

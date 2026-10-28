@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/role"
 )
 
@@ -24,7 +25,7 @@ const (
 const (
 	// Dir is where the sources live: one file per role, the only thing a human
 	// edits.
-	Dir = ".odachi/roles"
+	Dir = layout.Roles
 	// FileExt is the suffix of a source file.
 	FileExt = ".md"
 )

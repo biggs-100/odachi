@@ -357,7 +357,7 @@ func TestSubagentFilesForUnknownClient(t *testing.T) {
 }
 
 // TestTheRendererDoesNotReadTheProfile: the voices do not depend on
-// .odachi/profile.toml. If the two axes ever get wired together, this fails.
+// odd/profile.toml. If the two axes ever get wired together, this fails.
 func TestTheRendererDoesNotReadTheProfile(t *testing.T) {
 	out, err := exec.Command("go", "list", "-f", "{{join .Imports \"\\n\"}}", ".").CombinedOutput()
 	if err != nil {

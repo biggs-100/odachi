@@ -19,6 +19,15 @@ type fakeAgentSelection struct {
 
 func (s *fakeAgentSelection) Written(string) (string, error) { return s.stored, s.err }
 
+// Target is the file the fake choice lives in: inside the project, because this
+// test is about the choice and not about where the store hangs.
+func (s *fakeAgentSelection) Target(dir string) (string, string, error) {
+	if s.err != nil {
+		return "", "", s.err
+	}
+	return filepath.Join(dir, "agents.toml"), "agents.toml", nil
+}
+
 func (s *fakeAgentSelection) Render(selection string) ([]byte, error) {
 	return []byte("agents = \"" + selection + "\"\n"), nil
 }

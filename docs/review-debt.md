@@ -1,20 +1,51 @@
 # Review debt
 
 What the review store still holds potent about bytes that have not changed. The
-store (`.odachi/reviews/`) is evidence about one tree and is ignored by git, so it
-does not travel with the repository. This file does.
+store (`.git/odachi/reviews/`) is evidence about one tree and lives in the clone,
+outside the worktree, so it does not travel with the repository. This file does.
 
 - **Written at close**, from the rows the last verdict carried.
 - **A row leaves** when the bytes it names change or the fix lands with its test.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after v0.11.31, closing feature 0063.
+Last written: after 0078, the store leaves the project.
 
 ## Open
 
-Nothing. Every row the store carried about unchanged bytes has a test or a
-decision.
+### cmd/odachi/files.go — `agentSelection.Target` cannot tell "no repository" from "git failed"
+
+`Target` and `Written` swallow the error from `store.Root` and answer "the
+project never chose". When git cannot name the common directory (not installed,
+corrupt repo, permissions), the verbs that read the selection fall back to `both`
+and refresh the agent files of the client the person excluded, with no line
+saying the store was unreadable; `init` then writes with an empty path and the
+message names an empty file. Named by two reviews, on trees 4fb1049 and the one
+before it. The fix is a sentinel: an error the caller can tell apart from the
+empty answer.
+
+### internal/app/review/review.go — `storePath` joins an empty store
+
+`storePath` joins `r.opts.Store` with `rel` without checking for the empty string.
+A folder that is not a git repository has no store, and the path becomes relative
+to the process directory instead of being refused. `check` and `progress` treat
+an empty store as "no verdict on file"; `review` should refuse the same way.
+
+### internal/adapters/gitx — `TreeOf`, `Has` and `CommitWithTree` have no adapter test
+
+The ledger depends on them: `Has` maps `git merge-base --is-ancestor` exit 1 to
+"no", and `CommitWithTree` keeps the *oldest* matching commit. The app tests drive
+both through fakes, so a change that keeps the newest match would pass every test
+and name the wrong commit for a step. One test against a real repository pins the
+resolution.
+
+### odd/tasks/0073-a-professional-persona.md — the doc speaks the old vocabulary
+
+Its Done-when and Steps describe `odachi persona new`, `persona-craft` and
+`.odachi/personas/<slug>.md`; the shipped tree has `odachi role`, `role-craft` and
+`odd/roles/<slug>.md`. The Requirements are verbatim and untouchable, and the
+fence says an old task doc is not rewritten; the divergence is recorded here so
+the next reader does not follow a command that does not exist.
 
 ## Accepted
 

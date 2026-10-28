@@ -43,7 +43,7 @@ func TestIgnoredIsFalseWithoutARule(t *testing.T) {
 	root, _ := newRepo(t)
 	write(t, filepath.Join(root, ".gitignore"), "/proof/\n")
 
-	for _, path := range []string{"proof.txt", "notes.txt", ".odachi/reviews/abc.json"} {
+	for _, path := range []string{"proof.txt", "notes.txt", "odd/tasks/0001-x.md"} {
 		ignored, err := gitx.Ignored(root, path)
 		if err != nil {
 			t.Fatalf("Ignored(%s): %v", path, err)

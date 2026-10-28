@@ -20,7 +20,7 @@ func TestTheAllowListIsExactlyFour(t *testing.T) {
 		t.Fatalf("Kinds() = %v, want four", kinds)
 	}
 
-	want := []string{"brief.md", ".odachi/profile.toml", ".odachi/fence.toml", "odd/tasks/*.md"}
+	want := []string{"brief.md", "odd/profile.toml", "odd/fence.toml", "odd/tasks/*.md"}
 	for i, kind := range kinds {
 		if got := kind.Target(); got != want[i] {
 			t.Errorf("Kinds()[%d].Target() = %q, want %q", i, got, want[i])
@@ -28,19 +28,36 @@ func TestTheAllowListIsExactlyFour(t *testing.T) {
 	}
 }
 
-// TestBackupDirPreservesTheArtifactPath: the store is one directory, but each
-// kind keeps its place inside it so a backup can never collide with a name from
-// another directory.
-func TestBackupDirPreservesTheArtifactPath(t *testing.T) {
+// TestBackupSubdirPreservesTheArtifactPath: the store's backups directory is one,
+// but each kind keeps its place inside it so a backup can never collide with a
+// name from another directory.
+func TestBackupSubdirPreservesTheArtifactPath(t *testing.T) {
 	cases := map[undo.Kind]string{
-		undo.Brief:   ".odachi/backups",
-		undo.Profile: ".odachi/backups/.odachi",
-		undo.Fence:   ".odachi/backups/.odachi",
-		undo.Task:    ".odachi/backups/odd/tasks",
+		undo.Brief:   ".",
+		undo.Profile: "odd",
+		undo.Fence:   "odd",
+		undo.Task:    "odd/tasks",
 	}
 	for kind, want := range cases {
-		if got := kind.BackupDir(); got != want {
-			t.Errorf("%s.BackupDir() = %q, want %q", kind, got, want)
+		if got := kind.BackupSubdir(); got != want {
+			t.Errorf("%s.BackupSubdir() = %q, want %q", kind, got, want)
+		}
+	}
+}
+
+// TestLegacySubdirKeepsTheOldFolder: the old project store kept the profile and
+// the fence under `.odachi/`, and today they live under `odd/`. A migration that
+// looked for today's path would miss every version of them, silently.
+func TestLegacySubdirKeepsTheOldFolder(t *testing.T) {
+	cases := map[undo.Kind]string{
+		undo.Brief:   ".",
+		undo.Profile: ".odachi",
+		undo.Fence:   ".odachi",
+		undo.Task:    "odd/tasks",
+	}
+	for kind, want := range cases {
+		if got := kind.LegacySubdir(); got != want {
+			t.Errorf("%s.LegacySubdir() = %q, want %q", kind, got, want)
 		}
 	}
 }
@@ -77,10 +94,10 @@ func TestArtifactOfKeepsOnlyTheFour(t *testing.T) {
 		{undo.Brief, "brief.md", "brief.md", true},
 		{undo.Brief, "README.md", "", false},
 		{undo.Brief, "brief.md.tmp", "", false},
-		{undo.Profile, "profile.toml", ".odachi/profile.toml", true},
+		{undo.Profile, "profile.toml", "odd/profile.toml", true},
 		{undo.Profile, "fence.toml", "", false},
 		{undo.Profile, "otro.toml", "", false},
-		{undo.Fence, "fence.toml", ".odachi/fence.toml", true},
+		{undo.Fence, "fence.toml", "odd/fence.toml", true},
 		{undo.Fence, "fence.yaml", "", false},
 		{undo.Task, "0001-reserva-de-turno.md", "odd/tasks/0001-reserva-de-turno.md", true},
 		{undo.Task, "notas.txt", "", false},

@@ -258,7 +258,7 @@ func TestInitNamesABrokenProfileAndKeepsGoing(t *testing.T) {
 		t.Errorf("the block did not come out with the novato voice:\n%q", content)
 	}
 	joined := strings.Join(got.Lines, "\n")
-	for _, want := range []string{".odachi/profile.toml", "odachi init"} {
+	for _, want := range []string{"odd/profile.toml", "odachi init"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("the lines do not name %q:\n%s", want, joined)
 		}

@@ -6,9 +6,9 @@
 // itself undoable, and a hand edit made after the agent's last write survives as
 // a backup instead of disappearing.
 //
-// Backups live in the project store, `.odachi/backups`; `discover` also reads
-// the old ones beside their artifacts, and `--collect` moves those into the
-// store without rewriting them.
+// Backups live in the clone's store; `discover` also reads the old project
+// store and the versions left beside their artifacts, and `--collect` moves
+// both into the store without rewriting them.
 //
 // undo never touches git. The code is the human's and git's; a tool that starts
 // choosing commits to revert becomes exactly what this one criticises, so the
@@ -47,6 +47,12 @@ const codeHint = "I did not touch git: undoing code is yours, with git revert <s
 // Options is one `odachi undo` invocation.
 type Options struct {
 	Dir string
+
+	// Store is the absolute root of the clone's state, resolved by the caller
+	// from the repository's git common directory. The lock lives there. Empty
+	// means there is no repository to name one, which the caller refuses before
+	// this function runs.
+	Store string
 
 	// List shows what can be undone instead of restoring anything.
 	List bool
@@ -95,7 +101,15 @@ func Run(opts Options, files Files, guard lock.Lock) Result {
 	// undo replaces one artifact and backs up the one it replaces, so it writes
 	// more than one file and takes the lock like start does. It comes before the
 	// first listing: a refusal must not read a single backup.
-	held := lock.Take(guard, opts.Dir, verbName)
+	//
+	// A project that is not a git repository has no store and no place for a
+	// lock. start keeps working there and saves its versions beside the
+	// artifacts, so undo has to keep working there too: refusing would strand a
+	// project the tool itself created.
+	held := lock.Held{}
+	if opts.Store != "" {
+		held = lock.Take(guard, opts.Store, verbName)
+	}
 	if held.Refusal != "" {
 		return blocked(held.Refusal)
 	}
@@ -104,13 +118,25 @@ func Run(opts Options, files Files, guard lock.Lock) Result {
 	return withNotice(run(opts, files), held.Notice)
 }
 
+// Collect moves every version that still sits beside an artifact, or in the old
+// project store, into the clone's store. The caller holds the lock: `undo
+// --collect` takes it, and `odachi store move` already has it for the rest of the
+// migration. It never overwrites a version with different bytes and never loses
+// one it cannot move.
+func Collect(project, store string, files Files) Result {
+	return collect(project, store, files)
+}
+
 // run does the work once the lock is held.
 func run(opts Options, files Files) Result {
 	if opts.Collect {
 		if opts.List || opts.File != "" {
 			return blocked("--collect moves every old backup at once: it does not go with --list or --file")
 		}
-		return collect(opts.Dir, files)
+		if opts.Store == "" {
+			return blocked("--collect moves versions into the clone's store, and this folder is not a git repository; run it inside one")
+		}
+		return Collect(opts.Dir, opts.Store, files)
 	}
 
 	kind, problem := parseFile(opts.File)
@@ -125,7 +151,7 @@ func run(opts Options, files Files) Result {
 		kinds = []undodomain.Kind{kind}
 	}
 
-	found, err := discover(opts.Dir, kinds, files)
+	found, err := discover(opts.Dir, opts.Store, kinds, files)
 	if err != nil {
 		return blocked(err.Error())
 	}
@@ -176,15 +202,32 @@ func allowedTargets() string {
 // discover finds the backups of the given artifacts. Everything else in those
 // directories — a note, a temporary, a backup of a file odachi never writes — is
 // left alone.
-func discover(dir string, kinds []undodomain.Kind, files Files) ([]undodomain.Backup, error) {
+//
+// Three places can hold a version, and all three are read so a project can move
+// at its own pace: the clone's store, where new backups go; the old project
+// store a previous release used; and beside the artifact, before any store
+// existed. Nothing is rewritten by reading.
+func discover(project, store string, kinds []undodomain.Kind, files Files) ([]undodomain.Backup, error) {
+	type location struct {
+		root string
+		dir  string
+	}
+
 	found := make([]undodomain.Backup, 0, len(kinds))
 
 	for _, kind := range kinds {
-		// The store is the new home; the artifact's own directory is the old
-		// one. Both are read so a project can move at its own pace and `undo`
-		// never loses a version that is still on disk.
-		for _, dirRel := range []string{kind.BackupDir(), kind.Dir()} {
-			backups, err := scan(dir, dirRel, kind, files)
+		locations := []location{
+			{store, path.Join(undodomain.StoreBackups, kind.BackupSubdir())},
+			{project, path.Join(undodomain.LegacyBackups, kind.LegacySubdir())},
+			{project, kind.Dir()},
+		}
+		for _, at := range locations {
+			if at.root == "" {
+				// No store resolved: there is nowhere to look, and reading the
+				// project twice would list the same file as two versions.
+				continue
+			}
+			backups, err := scan(at.root, at.dir, kind, files)
 			if err != nil {
 				return nil, err
 			}
@@ -196,8 +239,8 @@ func discover(dir string, kinds []undodomain.Kind, files Files) ([]undodomain.Ba
 
 // scan reads one directory and keeps only the files that are backups of this
 // kind. Anything else is left alone.
-func scan(dir, dirRel string, kind undodomain.Kind, files Files) ([]undodomain.Backup, error) {
-	names, err := files.List(filepath.Join(dir, filepath.FromSlash(dirRel)))
+func scan(root, dirRel string, kind undodomain.Kind, files Files) ([]undodomain.Backup, error) {
+	names, err := files.List(filepath.Join(root, filepath.FromSlash(dirRel)))
 	if err != nil {
 		return nil, fmt.Errorf("could not read %s: %s; check the permissions and try again",
 			dirRel, oneLine(err.Error()))
@@ -215,7 +258,7 @@ func scan(dir, dirRel string, kind undodomain.Kind, files Files) ([]undodomain.B
 		}
 
 		backupRel := path.Join(dirRel, name)
-		when, err := files.ModTime(filepath.Join(dir, filepath.FromSlash(backupRel)))
+		when, err := files.ModTime(filepath.Join(root, filepath.FromSlash(backupRel)))
 		if err != nil {
 			return nil, fmt.Errorf("could not read the date of %s: %s; check the permissions and try again",
 				backupRel, oneLine(err.Error()))
@@ -224,7 +267,9 @@ func scan(dir, dirRel string, kind undodomain.Kind, files Files) ([]undodomain.B
 		found = append(found, undodomain.Backup{
 			Kind:     kind,
 			Artifact: artifact,
+			Root:     root,
 			Path:     backupRel,
+			Entry:    path.Join(kind.BackupSubdir(), name),
 			ModTime:  when,
 		})
 	}
@@ -252,14 +297,15 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 	}
 
 	artifactPath := filepath.Join(dir, filepath.FromSlash(chosen.Artifact))
-	backupPath := filepath.Join(dir, filepath.FromSlash(chosen.Path))
+	backupPath := filepath.Join(chosen.Root, filepath.FromSlash(chosen.Path))
+	label := relativeBackup(dir, backupPath)
 
 	// The bytes are read before anything moves: the restore cannot depend on the
 	// file it is about to replace.
 	data, err := files.Read(backupPath)
 	if err != nil {
 		return blocked(fmt.Sprintf("could not read %s: %s; check the permissions and try again",
-			chosen.Path, oneLine(err.Error())))
+			relativeBackup(dir, backupPath), oneLine(err.Error())))
 	}
 
 	// The rule the whole safety story rests on: what is in the artifact now is
@@ -280,7 +326,7 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 		// Restoring what is already there is not a change, and saying it was
 		// would print the same backup name as both the source and the result.
 		if bytes.Equal(current, data) {
-			message := fmt.Sprintf("no changes: %s was already the same as %s", chosen.Artifact, chosen.Path)
+			message := fmt.Sprintf("no changes: %s was already the same as %s", chosen.Artifact, label)
 			return Result{Code: CodeOK, Message: message, Lines: []string{message, codeHint}}
 		}
 
@@ -298,11 +344,11 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 	}
 
 	message := fmt.Sprintf("restored %s from %s; %s did not exist, so there was nothing to back up",
-		chosen.Artifact, chosen.Path, chosen.Artifact)
+		chosen.Artifact, label, chosen.Artifact)
 	affected := []string{chosen.Artifact}
 	if previous != "" {
 		message = fmt.Sprintf("restored %s from %s; what was there was left in %s",
-			chosen.Artifact, chosen.Path, previous)
+			chosen.Artifact, label, previous)
 		affected = append(affected, previous)
 	}
 
@@ -314,31 +360,34 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 	}
 }
 
-// collect moves the backups that still live beside their artifacts into the
-// project store. It is a move, not a copy: the target keeps the bytes and the
-// date, so the next `undo` still restores the same version. A target that
-// already exists is compared first; a different file is never overwritten.
-func collect(dir string, files Files) Result {
-	found, err := discover(dir, undodomain.Kinds(), files)
+// collect moves the backups that still live beside their artifacts, or in the
+// old project store, into the clone's store. It is a move, not a copy: the
+// target keeps the bytes and the date, so the next `undo` still restores the
+// same version. A target that already exists is compared first; a different file
+// is never overwritten.
+func collect(dir, store string, files Files) Result {
+	found, err := discover(dir, store, undodomain.Kinds(), files)
 	if err != nil {
 		return blocked(err.Error())
 	}
 
+	label := storeLabel(dir, store)
+
 	moved := 0
 	targets := make([]string, 0, len(found))
 	for _, backup := range found {
-		if inStore(backup.Path) {
+		if backup.Root == store {
 			continue
 		}
 
-		source := filepath.Join(dir, filepath.FromSlash(backup.Path))
-		targetRel := path.Join(undodomain.BackupDir, backup.Path)
-		target := filepath.Join(dir, filepath.FromSlash(targetRel))
+		source := filepath.Join(backup.Root, filepath.FromSlash(backup.Path))
+		target := filepath.Join(store, filepath.FromSlash(path.Join(undodomain.StoreBackups, backup.Entry)))
+		targetRel := relativeBackup(dir, target)
 
 		data, err := files.Read(source)
 		if err != nil {
 			return blocked(fmt.Sprintf("could not read %s to move it: %s; check the permissions and try again",
-				backup.Path, oneLine(err.Error())))
+				relativeBackup(dir, source), oneLine(err.Error())))
 		}
 
 		exists, err := files.Exists(target)
@@ -355,15 +404,15 @@ func collect(dir string, files Files) Result {
 			}
 			if !bytes.Equal(current, data) {
 				return blocked(fmt.Sprintf("did not move %s: %s already exists with other contents; I do not overwrite a backup",
-					backup.Path, targetRel))
+					relativeBackup(dir, source), targetRel))
 			}
 			if err := files.Remove(source); err != nil {
-				return blocked(fmt.Sprintf("could not delete the old backup %s: %s", backup.Path, oneLine(err.Error())))
+				return blocked(fmt.Sprintf("could not delete the old backup %s: %s", relativeBackup(dir, source), oneLine(err.Error())))
 			}
 		} else {
 			if err := files.Rename(source, target); err != nil {
 				return blocked(fmt.Sprintf("could not move %s to %s: %s; check the permissions and try again",
-					backup.Path, targetRel, oneLine(err.Error())))
+					relativeBackup(dir, source), targetRel, oneLine(err.Error())))
 			}
 		}
 
@@ -372,18 +421,19 @@ func collect(dir string, files Files) Result {
 	}
 
 	if moved == 0 {
-		message := "there are no old backups to move: they are all in " + undodomain.BackupDir
+		message := "there are no old backups to move: they are all in " + label
 		return Result{Code: CodeOK, Message: message, Lines: []string{message}}
 	}
 
-	message := fmt.Sprintf("moved %d backups to %s", moved, undodomain.BackupDir)
+	message := fmt.Sprintf("moved %d backups to %s", moved, label)
 	return Result{Code: CodeOK, Message: message, Lines: []string{message}, Files: targets}
 }
 
-// inStore reports whether a backup path already lives in the project store.
-// The comparison is slash-based because every path the domain builds is.
-func inStore(rel string) bool {
-	return rel == undodomain.BackupDir || strings.HasPrefix(rel, undodomain.BackupDir+"/")
+// storeLabel is how a message names the clone's store: relative to the project
+// when it can be, so the usual line reads `.git/odachi`, and absolute when the
+// store lives outside it (an external git directory).
+func storeLabel(dir, store string) string {
+	return relativeBackup(dir, store)
 }
 
 // listing is `--list`: one line per artifact with backups, newest first.
@@ -432,8 +482,8 @@ func withNotice(result Result, notice string) Result {
 }
 
 // relativeBackup names a backup the way the message reads it: relative to the
-// project, so a store backup says `.odachi/backups/...` and an old one keeps
-// its place beside the artifact.
+// project, so a version in the clone's store says `.git/odachi/backups/...` and
+// an old one keeps its place beside the artifact.
 func relativeBackup(root, backupPath string) string {
 	rel, err := filepath.Rel(root, backupPath)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {

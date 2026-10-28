@@ -13,8 +13,9 @@ import (
 // excludes.
 //
 // It answers for a path that does not exist yet, which is the whole point: the
-// evidence this tool writes (proof/ and .odachi/reviews/) has to be ignored
-// BEFORE it is written, or writing it moves the very tree it describes.
+// evidence this tool writes (proof/) has to be ignored BEFORE it is written, or
+// writing it moves the very tree it describes. The verdicts are not asked about
+// any more: they live in the clone's store, outside the worktree.
 //
 // A directory that is not on disk is asked with and without its trailing slash
 // in ONE process. Git only matches a directory rule (`/proof/`) when it can tell

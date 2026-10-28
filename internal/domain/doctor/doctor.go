@@ -1,4 +1,4 @@
-// Package doctor owns the rules of `odachi doctor`: the twelve health checks in
+// Package doctor owns the rules of `odachi doctor`: the thirteen health checks in
 // order, how the pre-commit hook and the AGENTS.md block written by
 // `odachi init` are read back, and the exact phrase that repairs each problem.
 //
@@ -35,7 +35,7 @@ const (
 	CheckHook
 	// CheckHookExe asks whether the binary the hook names is still there.
 	CheckHookExe
-	// CheckProfile asks whether .odachi/profile.toml resolves to a valid profile.
+	// CheckProfile asks whether odd/profile.toml resolves to a valid profile.
 	CheckProfile
 	// CheckBrief asks whether brief.md exists and nothing is missing from it.
 	CheckBrief
@@ -49,7 +49,7 @@ const (
 	// that, every review would invalidate the proof and the other way round.
 	CheckIgnored
 	// CheckVoice asks whether the last section of the AGENTS.md block talks the
-	// way the profile in .odachi/profile.toml says it should, and whether the
+	// way the profile in odd/profile.toml says it should, and whether the
 	// native agent still mirrors that block. The binary writes both, so the
 	// halves disagreeing is a project that prints one register and talks in
 	// another. It is appended after the ten Contract XV named, so no existing
@@ -61,11 +61,16 @@ const (
 	// difference between "the tool ignores my history" and "the tool told me it
 	// does".
 	CheckTaskDocs
+	// CheckLeftovers asks whether the project still carries the folder older
+	// releases used. A leftover is not broken by itself, but the rules inside it
+	// are no longer read: a fence nobody enforces is worse than no fence, because
+	// the human believes it is there.
+	CheckLeftovers
 )
 
 // CheckCount is how many checks a complete report has. A test asserts it, so a
 // report can never quietly grow or shrink.
-const CheckCount = 12
+const CheckCount = 13
 
 // Status is what one check found.
 type Status int
@@ -206,7 +211,7 @@ func title(number int) string {
 	case CheckHookExe:
 		return "the binary the hook names exists"
 	case CheckProfile:
-		return ".odachi/profile.toml resolves to a valid profile"
+		return "odd/profile.toml resolves to a valid profile"
 	case CheckBrief:
 		return "brief.md exists and nothing is missing from it"
 	case CheckSkills:
@@ -217,6 +222,8 @@ func title(number int) string {
 		return "the block's voice matches the profile"
 	case CheckTaskDocs:
 		return "the task documents odachi reads"
+	case CheckLeftovers:
+		return "no folder from an older release"
 	default:
 		return ""
 	}

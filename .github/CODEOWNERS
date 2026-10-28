@@ -5,4 +5,5 @@
 # a change that edits `.github/` or the fence must be reviewed by the owner.
 # Enforce this with a repository ruleset that requires code-owner review.
 /.github/ @biggs-100
-/.odachi/ @biggs-100
+/odd/ @biggs-100
+

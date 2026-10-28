@@ -4,7 +4,7 @@
 //
 // It never rewrites the profile on its own. `level --to <profile>` is the human
 // accepting the proposal, and that is the only path that writes. It writes two
-// things for one decision: the ceremony in .odachi/profile.toml and the voice of
+// things for one decision: the ceremony in odd/profile.toml and the voice of
 // the agent in the last section of the AGENTS.md block. Every other byte of the
 // block is preserved, so a human's lines and the rules survive.
 package level
@@ -16,6 +16,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/rules"
@@ -31,14 +32,14 @@ const (
 )
 
 // profileFile is the human's profile, relative to the project root.
-const profileFile = ".odachi/profile.toml"
+const profileFile = layout.Profile
 
 // agentsFile is the file the rules block —and the voice, its last section— lives
 // in. The renderer owns the name; this package only writes one section of it.
 const agentsFile = rules.File
 
 // Options is one `odachi level` invocation. Current is the profile in force,
-// already resolved by the caller from .odachi/profile.toml or from inference.
+// already resolved by the caller from odd/profile.toml or from inference.
 type Options struct {
 	Dir string
 
@@ -47,7 +48,7 @@ type Options struct {
 	// To is the profile the human accepted with --to. Empty means "show me".
 	To string
 	// Agents is the stored client selection, already resolved by the caller
-	// from .odachi/agents.toml. Empty means both, the default of a project
+	// from the clone's store. Empty means both, the default of a project
 	// that never chose.
 	Agents string
 }

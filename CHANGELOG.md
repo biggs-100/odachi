@@ -5,6 +5,29 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.38 - 2026-10-27
+
+The store leaves the project: the rules stay with the team, the evidence stays
+with the clone.
+
+- **`.odachi/` is gone.** The rules the team decided — `odd/profile.toml`,
+  `odd/fence.toml`, `odd/review.toml` and `odd/roles/` — live next to the plan in
+  `odd/`, because they travel with the repository. The state that never travels —
+  verdicts, versions, the write lock and the client choice — lives in the clone's
+  store at `.git/odachi/`, which git does not track: no ignore rule has to keep
+  evidence out of the tree it describes.
+- **`odachi store move`** migrates a project from an older release: it adopts
+  `.odachi/reviews` and `.odachi/agents.toml` into the store byte for byte, moves
+  the old versions with the same rule as `undo --collect`, and prints the `git mv`
+  lines for the tracked rules. It never moves or deletes a tracked file, and a
+  second run changes nothing.
+- **`review` no longer prepares an ignore file** and `init`'s `.gitignore` block
+  is `/proof/` and `*.bak-*`. A verdict cannot invalidate itself because it does
+  not live in the worktree.
+- **`doctor` gained a thirteenth check** that names a leftover `.odachi/`: a
+  problem when the rules inside it are the ones not being read, a warning when
+  they are dead weight next to the new ones.
+
 ## v0.11.37 - 2026-10-27
 
 The project keeps the rules and the plan; the agents can live in the home.
@@ -795,3 +818,4 @@ Listo en un comando, y el agente sabe manejarlo.
 
 - Primera versión que se instala: `start`, `ask`, `level`, `summary`, `check`, `init`,
   `--version`, hook de pre-commit, instaladores `sh` y `ps1`, y seis binarios.
+

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/level"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/rules"
@@ -90,7 +91,7 @@ func keys(files map[string][]byte) []string {
 }
 
 // profilePath is where the resolved profile lives.
-var profilePath = filepath.Join("raiz", ".odachi", "profile.toml")
+var profilePath = filepath.Join("raiz", filepath.FromSlash(layout.Profile))
 
 // taskPath is odd/tasks/<NNNN>-<slug>.md inside the fake project.
 func taskPath(number int, slug string) string {
@@ -286,7 +287,7 @@ func TestLevelToBacksUpBeforeWriting(t *testing.T) {
 }
 
 // TestLevelToWithoutAProfileFileWritesOne: a project that never wrote
-// .odachi/profile.toml gets it now, with nothing to back up.
+// odd/profile.toml gets it now, with nothing to back up.
 func TestLevelToWithoutAProfileFileWritesOne(t *testing.T) {
 	files := newFakeFiles(nil)
 

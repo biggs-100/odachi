@@ -12,9 +12,7 @@ import (
 func TestFilesBackupUsesTheProjectStore(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".odachi"), 0o755); err != nil {
-		t.Fatalf("mkdir .odachi: %v", err)
-	}
+	store := filepath.Join(root, ".git", "odachi")
 	path := filepath.Join(root, "odd", "tasks", "0001-turnos.md")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatalf("mkdir tasks: %v", err)
@@ -23,12 +21,12 @@ func TestFilesBackupUsesTheProjectStore(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	backup, err := (osFiles{}).Backup(path)
+	backup, err := (osFiles{project: root, store: store}).Backup(path)
 	if err != nil {
 		t.Fatalf("Backup: %v", err)
 	}
 
-	wantPrefix := filepath.Join(root, ".odachi", "backups", "odd", "tasks", "0001-turnos.md.bak-")
+	wantPrefix := filepath.Join(store, "backups", "odd", "tasks", "0001-turnos.md.bak-")
 	if !strings.HasPrefix(backup, wantPrefix) {
 		t.Errorf("backup = %q, want it under %q", backup, wantPrefix)
 	}
@@ -51,7 +49,7 @@ func TestFilesBackupLeavesOutsideFilesBesideThem(t *testing.T) {
 		t.Fatalf("mkdir .odachi: %v", err)
 	}
 
-	backup, err := (osFiles{}).Backup(path)
+	backup, err := (osFiles{project: root, store: filepath.Join(root, ".git", "odachi")}).Backup(path)
 	if err != nil {
 		t.Fatalf("Backup: %v", err)
 	}

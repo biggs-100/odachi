@@ -204,7 +204,7 @@ func configured() *fakeFiles {
 	// project gets there without a project copy.
 	files.putHome(".agents/skills/bootstrap/SKILL.md", skill.Template("bootstrap"))
 	files.put("brief.md", briefComplete)
-	files.put(".odachi/profile.toml", "name = \"novato\"\n")
+	files.put("odd/profile.toml", "name = \"novato\"\n")
 	files.put("skills/acceptance/SKILL.md", skill.Template("acceptance"))
 	files.put(skill.RegistryFile, skill.Registry([]skill.Skill{
 		skill.Parse("acceptance", "skills/acceptance/SKILL.md", skill.Template("acceptance")),
@@ -430,15 +430,6 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 			detail: "the catalogue drifted",
 		},
 		{
-			name: "the review store is not ignored",
-			mutate: func(f *fakeFiles, _ *fakeLookup, _ *fakeProfiles) {
-				f.put(".odachi/reviews/abc123.json", "{}")
-			},
-			check:  domaindoctor.CheckIgnored,
-			fix:    "odachi init",
-			detail: "every review would invalidate the proof",
-		},
-		{
 			name: "proof/ is not ignored",
 			mutate: func(f *fakeFiles, _ *fakeLookup, _ *fakeProfiles) {
 				f.put("proof/0001-turnos.txt", "# tree abc\n# command true\n")
@@ -498,15 +489,14 @@ func TestEmptyProtectedDirectoryIsAWarning(t *testing.T) {
 // between a usable review loop and one that invalidates the proof every time.
 func TestProtectedDirectoriesAreClean(t *testing.T) {
 	files := configured().
-		put(".odachi/reviews/.gitignore", "*\n")
-	files.put("proof/.gitignore", "*\n!.gitignore\n")
+		put("proof/.gitignore", "*\n!.gitignore\n")
 
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 	if result.Code != CodeOK {
 		t.Fatalf("must be clean:\n%s", strings.Join(result.Lines, "\n"))
 	}
 	got := checkOf(t, result, domaindoctor.CheckIgnored)
-	if !strings.Contains(got.Detail, ".odachi/reviews") || !strings.Contains(got.Detail, "proof") {
+	if !strings.Contains(got.Detail, "proof") {
 		t.Fatalf("the line must say what it found protected: %s", domaindoctor.Line(got))
 	}
 }
@@ -516,8 +506,7 @@ func TestProtectedDirectoriesAreClean(t *testing.T) {
 // green: another shape is a decision, not a broken install.
 func TestAForeignTaskDocIsAWarning(t *testing.T) {
 	files := configured().
-		put(".odachi/reviews/.gitignore", "*\n")
-	files.put("proof/.gitignore", "*\n!.gitignore\n")
+		put("proof/.gitignore", "*\n!.gitignore\n")
 	files.put("odd/tasks/qonta-einvoicing.md", "# qonta-einvoicing\n")
 	files.put("odd/tasks/0001-a-real-feature.md", "# a-real-feature\n")
 
@@ -655,7 +644,7 @@ func TestAVoiceThatDoesNotMatchTheProfileIsAProblem(t *testing.T) {
 	if got.Status != domaindoctor.StatusProblem {
 		t.Fatalf("check 11 must be a problem: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"senior", ".odachi/profile.toml says novato", "the agent talks differently"} {
+	for _, want := range []string{"senior", "odd/profile.toml says novato", "the agent talks differently"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
 		}
@@ -678,7 +667,7 @@ func TestABlockWithoutTheVoiceSectionAndAProfileIsAProblem(t *testing.T) {
 	if got.Status != domaindoctor.StatusProblem {
 		t.Fatalf("a block with no voice and a profile is a problem: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{rules.Section, ".odachi/profile.toml says novato"} {
+	for _, want := range []string{rules.Section, "odd/profile.toml says novato"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
 		}
@@ -688,12 +677,12 @@ func TestABlockWithoutTheVoiceSectionAndAProfileIsAProblem(t *testing.T) {
 	}
 }
 
-// TestNoProfileFileIsNotAProblem: with no .odachi/profile.toml there is no claim
+// TestNoProfileFileIsNotAProblem: with no odd/profile.toml there is no claim
 // to compare against, and the block carries the voice init wrote. Failing here
 // would tell a person who just ran init that their green project is broken.
 func TestNoProfileFileIsNotAProblem(t *testing.T) {
 	files := configured()
-	delete(files.files, at(".odachi/profile.toml"))
+	delete(files.files, at("odd/profile.toml"))
 	profiles := &fakeProfiles{name: "novato", inferred: true}
 
 	result := run(files, cleanLookup(), profiles, "/home/ana/bin/odachi")
@@ -718,7 +707,7 @@ func TestAVoiceThatMatchesTheProfileIsClean(t *testing.T) {
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("check 11 must be ok in a configured project: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"novato", ".odachi/profile.toml"} {
+	for _, want := range []string{"novato", "odd/profile.toml"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the line must name %q, got %q", want, got.Detail)
 		}
@@ -1029,8 +1018,7 @@ func TestInstalledSkillsDirIsTheStandardRow(t *testing.T) {
 // and the second one is not green.
 func TestATaskListThatCannotBeReadIsBroken(t *testing.T) {
 	files := configured().
-		put(".odachi/reviews/.gitignore", "*\n")
-	files.put("proof/.gitignore", "*\n!.gitignore\n")
+		put("proof/.gitignore", "*\n!.gitignore\n")
 	files.errOn = at("odd/tasks")
 
 	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")

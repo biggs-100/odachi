@@ -52,7 +52,7 @@ Task: a launch with no baseline. Expected: it asks for the baseline and refuses 
 `
 
 func parse(text string) role.Role {
-	return role.Parse(".odachi/roles/marketing.md", text)
+	return role.Parse("odd/roles/marketing.md", text)
 }
 
 func joined(problems []role.Problem) string {
@@ -157,7 +157,7 @@ func TestTODOAndTheNameAreRefused(t *testing.T) {
 // TestTheTemplatePassesItsOwnCheck: `role new` writes this file, so a human's
 // first read cannot be a violation.
 func TestTheTemplatePassesItsOwnCheck(t *testing.T) {
-	got := role.Parse(".odachi/roles/marketing.md", role.Template("marketing"))
+	got := role.Parse("odd/roles/marketing.md", role.Template("marketing"))
 
 	if problems := got.Problems("marketing"); len(problems) != 0 {
 		t.Fatalf("the template does not pass its own check:\n%s\n---\n%s", joined(problems), role.Template("marketing"))

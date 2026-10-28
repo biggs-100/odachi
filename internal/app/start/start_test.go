@@ -110,9 +110,11 @@ func interviewAnswers() []string {
 }
 
 // flagsCarryTheSameAnswers describes the same run without a human: every
-// answer arrives as a flag.
+// answer arrives as a flag. Store is the root the caller resolved from the
+// repository; the lock lives there, so the run that passes a port takes it.
 func flagsCarryTheSameAnswers() start.Options {
 	return start.Options{
+		Store:     "store",
 		Outcome:   outcome,
 		Audience:  "phone",
 		Done:      []string{"Reservo un turno y aparece en la agenda"},
@@ -145,18 +147,18 @@ func TestScriptedInterviewWritesExactlyTheFourArtifacts(t *testing.T) {
 
 	wantFiles := []string{
 		"brief.md",
-		".odachi/profile.toml",
-		".odachi/fence.toml",
+		"odd/profile.toml",
+		"odd/fence.toml",
 		"odd/tasks/0001-quiero-reservar-turnos.md",
 	}
 	if strings.Join(got.Files, "|") != strings.Join(wantFiles, "|") {
 		t.Errorf("Files = %v, want %v", got.Files, wantFiles)
 	}
 
-	if briefPath := filepath.Join(".odachi", "profile.toml"); files.content(t, briefPath) != expectedProfile {
+	if briefPath := filepath.Join("odd", "profile.toml"); files.content(t, briefPath) != expectedProfile {
 		t.Errorf("profile.toml =\n%s\nwant\n%s", files.content(t, briefPath), expectedProfile)
 	}
-	if fencePath := filepath.Join(".odachi", "fence.toml"); files.content(t, fencePath) != expectedFence {
+	if fencePath := filepath.Join("odd", "fence.toml"); files.content(t, fencePath) != expectedFence {
 		t.Errorf("fence.toml =\n%s\nwant\n%s", files.content(t, fencePath), expectedFence)
 	}
 	taskPath := filepath.Join("odd", "tasks", "0001-quiero-reservar-turnos.md")
@@ -345,8 +347,8 @@ func TestForceBacksUpTheBriefAndWritesTheSameBytes(t *testing.T) {
 		t.Fatalf("first run Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
 	}
 	firstBrief := first.content(t, "brief.md")
-	firstProfile := first.content(t, filepath.Join(".odachi", "profile.toml"))
-	firstFence := first.content(t, filepath.Join(".odachi", "fence.toml"))
+	firstProfile := first.content(t, filepath.Join("odd", "profile.toml"))
+	firstFence := first.content(t, filepath.Join("odd", "fence.toml"))
 
 	var secondEvents []string
 	second := &fakeFiles{files: first.files, events: &secondEvents}
@@ -363,10 +365,10 @@ func TestForceBacksUpTheBriefAndWritesTheSameBytes(t *testing.T) {
 	if second.content(t, "brief.md") != firstBrief {
 		t.Errorf("brief.md changed with the same answers:\n%s\nvs\n%s", second.content(t, "brief.md"), firstBrief)
 	}
-	if second.content(t, filepath.Join(".odachi", "profile.toml")) != firstProfile {
+	if second.content(t, filepath.Join("odd", "profile.toml")) != firstProfile {
 		t.Errorf("profile.toml changed with the same answers")
 	}
-	if second.content(t, filepath.Join(".odachi", "fence.toml")) != firstFence {
+	if second.content(t, filepath.Join("odd", "fence.toml")) != firstFence {
 		t.Errorf("fence.toml changed with the same answers")
 	}
 	taskDoc := "odd/tasks/0001-quiero-reservar-turnos.md"
@@ -558,7 +560,7 @@ not   = "datos de pacientes"
 paths = ["datos-de-pacientes*"]
 deps  = []
 `
-	if got := files.content(t, filepath.Join(".odachi", "fence.toml")); got != want {
+	if got := files.content(t, filepath.Join("odd", "fence.toml")); got != want {
 		t.Errorf("fence.toml =\n%s\nwant\n%s", got, want)
 	}
 }
@@ -576,7 +578,7 @@ func TestPresetNonGoalIsMatchedCaseAndAccentInsensitively(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
 	}
 
-	fenceText := files.content(t, filepath.Join(".odachi", "fence.toml"))
+	fenceText := files.content(t, filepath.Join("odd", "fence.toml"))
 	if strings.Count(fenceText, "[[rule]]") != 2 {
 		t.Errorf("fence.toml has %d rules, want 2:\n%s", strings.Count(fenceText, "[[rule]]"), fenceText)
 	}
@@ -608,8 +610,8 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 		t.Errorf("--brief must not rewrite the human's brief")
 	}
 	wantFiles := []string{
-		".odachi/profile.toml",
-		".odachi/fence.toml",
+		"odd/profile.toml",
+		"odd/fence.toml",
 		"odd/tasks/0001-turnos-consultorio.md",
 	}
 	if strings.Join(got.Files, "|") != strings.Join(wantFiles, "|") {
@@ -629,7 +631,7 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 		t.Errorf("task doc done-when = %q, want the five lines from the brief", doc.DoneWhen)
 	}
 
-	fenceText := files.content(t, filepath.Join(".odachi", "fence.toml"))
+	fenceText := files.content(t, filepath.Join("odd", "fence.toml"))
 	if strings.Count(fenceText, "[[rule]]") != 5 {
 		t.Errorf("fence.toml has %d rules, want one per non-goal:\n%s", strings.Count(fenceText, "[[rule]]"), fenceText)
 	}
@@ -673,7 +675,7 @@ func TestStartDoesNotInferSeniorFromRepository(t *testing.T) {
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
 	}
-	profile := files.content(t, ".odachi/profile.toml")
+	profile := files.content(t, "odd/profile.toml")
 	if !strings.Contains(profile, `name         = "novato"`) {
 		t.Errorf("a repo without a brief must start on novato:\n%s", profile)
 	}

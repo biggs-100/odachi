@@ -1,7 +1,7 @@
 package profile
 
 // Change is one field a profile change rewrites, in the order
-// .odachi/profile.toml uses. The human reads this: the field name is the TOML
+// odd/profile.toml uses. The human reads this: the field name is the TOML
 // key, because the file is the thing being changed.
 type Change struct{ Field, From, To string }
 

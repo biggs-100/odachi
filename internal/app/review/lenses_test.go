@@ -2,7 +2,6 @@ package review_test
 
 import (
 	"errors"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -382,7 +381,7 @@ func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	refutedPath := filepath.Join(dir, filepath.FromSlash(domainreview.Dir), currentTree+".refuted.json")
+	refutedPath := storeFile(domainreview.Dir + "/" + currentTree + ".refuted.json")
 	stored, ok := p.files.files[refutedPath]
 	if !ok {
 		t.Fatalf("the refutation was not stored; writes = %v", p.files.written())
@@ -454,7 +453,7 @@ func TestExecStoresARefutationAnswer(t *testing.T) {
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Output)
 	}
-	refutedPath := filepath.Join(dir, filepath.FromSlash(domainreview.Dir), currentTree+".refuted.json")
+	refutedPath := storeFile(domainreview.Dir + "/" + currentTree + ".refuted.json")
 	stored, ok := p.files.files[refutedPath]
 	if !ok {
 		t.Fatalf("the refutation was not stored; writes = %v", p.files.written())
@@ -481,7 +480,7 @@ func TestShowListsTheRefutation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SealRefutation = %v", err)
 	}
-	refutedPath := filepath.Join(dir, filepath.FromSlash(domainreview.Dir), currentTree+".refuted.json")
+	refutedPath := storeFile(domainreview.Dir + "/" + currentTree + ".refuted.json")
 	p.files.files[refutedPath] = domainreview.RenderRefutation(refutation)
 
 	result := p.run(review.Options{Show: true})

@@ -28,10 +28,12 @@ import (
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	domainopencode "github.com/biggs-100/odachi/internal/domain/opencode"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/skill"
+	"github.com/biggs-100/odachi/internal/domain/store"
 )
 
 // Exit codes, the same shape as the other verbs.
@@ -49,8 +51,7 @@ const (
 	gitDir      = ".git"
 	hookRel     = ".git/hooks/pre-commit"
 	agentsFile  = "AGENTS.md"
-	odachiDir   = ".odachi"
-	profileFile = odachiDir + "/profile.toml"
+	profileFile = layout.Profile
 	briefFile   = "brief.md"
 	skillsDir   = "skills"
 	skillFile   = "SKILL.md"
@@ -60,7 +61,6 @@ const (
 	// `standard` row — and a test pins that this string still matches it, so the
 	// count doctor reports is the count init wrote.
 	installedSkillsDir = ".agents/skills"
-	reviewStore        = odachiDir + "/reviews"
 	proofDir           = "proof"
 	ignoreFile         = ".gitignore"
 )
@@ -162,6 +162,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.ignored(),
 		r.voice(),
 		r.taskDocs(),
+		r.legacyFolder(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)
@@ -211,7 +212,7 @@ func (r *runner) isProject() bool {
 		}
 	}
 
-	found, err := r.isDir(odachiDir)
+	found, err := r.isDir(layout.Odd)
 	if err != nil {
 		return true
 	}
@@ -1105,14 +1106,16 @@ func (r *runner) loadSkills() ([]skill.Skill, error) {
 	return loaded, nil
 }
 
-// ignored: the review store and proof/ live inside the tree they certify, so
-// without an ignore rule every write invalidates the evidence that was already
-// there. Two mechanisms count, and either one is enough: the project's own
-// .gitignore (the block `odachi init` writes) and the legacy per-directory
-// .gitignore this tool used to write lazily. Only when neither is there is the
-// evidence moving the tree, and then the fix is the command that writes the rule:
-// init owns it now, and `check`/`review` are what produce evidence, not what
-// protects it.
+// ignored: proof/ lives inside the tree it certifies, so without an ignore rule
+// every write invalidates the evidence that was already there. Two mechanisms
+// count, and either one is enough: the project's own .gitignore (the block
+// `odachi init` writes) and the per-directory .gitignore the proof itself lands
+// with. Only when neither is there is the evidence moving the tree, and then the
+// fix is the command that writes the rule: init owns it now, and `check` is what
+// produces evidence, not what protects it.
+//
+// The verdicts are not checked here: they live in the clone's store, outside the
+// worktree, so there is no rule they could need.
 //
 // An existing but empty directory is still a warning: nothing is broken yet, and
 // the next write is the one that would be.
@@ -1124,11 +1127,6 @@ func (r *runner) ignored() domaindoctor.Check {
 	}
 
 	parts := []part{
-		{
-			rel:    reviewStore,
-			ignore: reviewStore + "/" + ignoreFile,
-			detail: reviewStore + " is not ignored: every review would invalidate the proof",
-		},
 		{
 			rel:    proofDir,
 			ignore: proofDir + "/" + ignoreFile,
@@ -1189,10 +1187,59 @@ func (r *runner) ignored() domaindoctor.Check {
 	case len(warnings) > 0:
 		return domaindoctor.Warning(domaindoctor.CheckIgnored, strings.Join(warnings, "; "))
 	case len(protected) == 0:
-		return domaindoctor.OK(domaindoctor.CheckIgnored, "there are no reviews or proofs yet: nothing to ignore")
+		return domaindoctor.OK(domaindoctor.CheckIgnored, "there are no proofs yet: nothing to ignore")
 	default:
 		return domaindoctor.OK(domaindoctor.CheckIgnored, "yes: "+strings.Join(protected, " and ")+": they do not move the tree they certify")
 	}
+}
+
+// legacyFolder reports the folder older releases used. The distinction that matters
+// is whether the rules inside it are still the ones being read: a project that
+// never moved its fence has a fence nobody enforces, and that is a problem, not a
+// notice. Once the new path exists too, the old file is dead weight and the line
+// is a warning.
+func (r *runner) legacyFolder() domaindoctor.Check {
+	old := layout.LegacyDir
+
+	oldFiles := []string{}
+	for _, name := range []string{filepath.Base(layout.Profile), filepath.Base(layout.Fence), filepath.Base(layout.Review), store.Agents} {
+		if r.has(filepath.FromSlash(filepath.Join(old, name))) {
+			oldFiles = append(oldFiles, filepath.ToSlash(filepath.Join(old, name)))
+		}
+	}
+	for _, name := range []string{store.Reviews, store.Backups} {
+		if found, err := r.isDir(filepath.Join(old, name)); err == nil && found {
+			oldFiles = append(oldFiles, filepath.ToSlash(filepath.Join(old, name))+"/")
+		}
+	}
+
+	if len(oldFiles) == 0 && !r.has(filepath.Join(old, filepath.Base(layout.Roles))) {
+		return domaindoctor.OK(domaindoctor.CheckLeftovers, "there is no "+old+"/: the rules live in odd/ and the store in the clone")
+	}
+
+	// A rule that moved in name but not in place: the file the team wrote is not
+	// the one this binary reads.
+	notRead := []string{}
+	for _, to := range []string{layout.Profile, layout.Fence, layout.Review, layout.Roles} {
+		from := filepath.ToSlash(filepath.Join(old, filepath.Base(to)))
+		if r.has(filepath.FromSlash(from)) && !r.has(to) {
+			notRead = append(notRead, from+" (today "+to+")")
+		}
+	}
+	if len(notRead) > 0 {
+		return domaindoctor.Broken(domaindoctor.CheckLeftovers,
+			"the rules this project wrote are not read any more: "+strings.Join(notRead, ", ")+"; a fence nobody enforces is worse than no fence",
+			"run odachi store move (it adopts the evidence and prints the git mv for the rules)")
+	}
+
+	return domaindoctor.Warning(domaindoctor.CheckLeftovers,
+		old+"/ is still there ("+strings.Join(oldFiles, ", ")+") and nothing reads it; run odachi store move to adopt the evidence, then the git mv it prints")
+}
+
+// has reports whether a project-relative path exists.
+func (r *runner) has(rel string) bool {
+	found, err := r.exists(rel)
+	return err == nil && found
 }
 
 // unreadable turns an adapter error into a line a human can act on. doctor reads

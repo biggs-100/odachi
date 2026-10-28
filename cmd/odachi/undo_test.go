@@ -57,6 +57,7 @@ func backupsOf(t *testing.T, dir, rel string) []string {
 func backupProject(t *testing.T) (dir, written string) {
 	t.Helper()
 	dir, _ = startedProject(t)
+	initRepo(t, dir)
 	written = readRel(t, dir, briefRel)
 
 	if code, _, stderr := runDir(t, dir, append([]string{"start", "--force"}, allFlags()...), ""); code != 0 {
@@ -71,6 +72,7 @@ func backupProject(t *testing.T) (dir, written string) {
 func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	initRepo(t, dir)
 
 	// A project with the four artifacts but no backups has nothing to undo, and
 	// says what odachi writes and which command writes it.
@@ -83,7 +85,7 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("undo without backups: exit %d, want 1 (stderr=%s)", code, stderr)
 	}
-	for _, want := range []string{"odachi start", "brief.md", ".odachi/profile.toml", ".odachi/fence.toml", "odd/tasks/*.md"} {
+	for _, want := range []string{"odachi start", "brief.md", "odd/profile.toml", "odd/fence.toml", "odd/tasks/*.md"} {
 		if !strings.Contains(stderr, want) {
 			t.Errorf("stderr %q does not say %q", stderr, want)
 		}
@@ -186,7 +188,7 @@ func TestUndoCollectMovesLegacyBackups(t *testing.T) {
 	dir, _ := backupProject(t)
 	const legacy = "brief legado\n"
 	legacyRel := briefRel + ".bak-00000000"
-	storeRel := ".odachi/backups/" + legacyRel
+	storeRel := ".git/odachi/backups/" + legacyRel
 	writeRel(t, dir, legacyRel, legacy)
 
 	code, stdout, stderr := runDir(t, dir, []string{"undo", "--collect"}, "")

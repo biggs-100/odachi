@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/biggs-100/odachi/internal/domain/layout"
 )
 
 // roleSource is a complete source, written by the test where `role new` would
@@ -56,7 +58,7 @@ func TestRoleRendersFromTheSourceEndToEnd(t *testing.T) {
 	if code, _, stderr := runDir(t, dir, []string{"role", "new", "marketing"}, ""); code != 0 {
 		t.Fatalf("role new: exit %d, stderr=%s", code, stderr)
 	}
-	sourcePath := filepath.Join(dir, ".odachi", "roles", "marketing.md")
+	sourcePath := filepath.Join(dir, filepath.FromSlash(layout.Roles), "marketing.md")
 	if err := os.WriteFile(sourcePath, []byte(roleSource), 0o644); err != nil {
 		t.Fatalf("write the source: %v", err)
 	}

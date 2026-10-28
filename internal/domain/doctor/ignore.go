@@ -4,13 +4,14 @@ import "strings"
 
 // IgnoredBy reports whether the repository's .gitignore content keeps dir out of
 // the tree. dir is a project-relative directory, spelled without slashes:
-// "proof" or ".odachi/reviews".
+// "proof".
 //
 // It reads the file a person writes, so it understands the shapes a person
 // writes for a generated folder and nothing more: the exact path, with or without
 // a leading slash and a trailing slash, its contents (`proof/*`), and the blanket
 // `*` that ignores every entry at the root. Comments are not rules and a negation
-// keeps the path in the tree.
+// keeps the path in the tree. The review store is not a caller: it lives in the
+// clone, outside the worktree.
 //
 // This is one of the two mechanisms doctor accepts. The other is the legacy
 // per-directory `.gitignore` this tool used to write, which a project that never

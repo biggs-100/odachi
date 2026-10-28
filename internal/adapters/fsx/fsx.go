@@ -1,7 +1,7 @@
 // Package fsx is the filesystem edge: content digests, atomic replacement of a
-// file the human owns, and backups before the agent rewrites anything. Project
-// backups go under `.odachi/backups`; a file outside a project keeps its backup
-// beside it.
+// file the human owns, and backups before the agent rewrites anything. Backups
+// go under the clone's store; a file outside a project keeps its backup beside
+// it.
 package fsx
 
 import (
@@ -77,26 +77,29 @@ func Backup(path string) (string, error) {
 	return backupTo(path, path)
 }
 
-// BackupIn copies path to root/.odachi/backups, preserving its path relative to
-// root. The store is the project's; a file outside root has no project to
-// belong to, so it falls back to the backup beside it instead of refusing to
-// save a version.
-func BackupIn(root, path string) (string, error) {
-	rootAbs, err := filepath.Abs(root)
+// BackupIn copies path to store/backups, preserving its path relative to
+// project. The two roots are separate because the artifact belongs to the
+// project and the version belongs to the clone: a teammate clones the worktree
+// and nothing else, so the versions they generate are theirs.
+//
+// A file outside project has no project to belong to, so it falls back to the
+// backup beside it instead of refusing to save a version.
+func BackupIn(project, store, path string) (string, error) {
+	projectAbs, err := filepath.Abs(project)
 	if err != nil {
-		return "", fmt.Errorf("fsx: could not resolve the project %s: %w", root, err)
+		return "", fmt.Errorf("fsx: could not resolve the project %s: %w", project, err)
 	}
 	pathAbs, err := filepath.Abs(path)
 	if err != nil {
 		return "", fmt.Errorf("fsx: could not resolve %s: %w", path, err)
 	}
 
-	rel, err := filepath.Rel(rootAbs, pathAbs)
+	rel, err := filepath.Rel(projectAbs, pathAbs)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return Backup(path)
 	}
 
-	target := filepath.Join(rootAbs, ".odachi", "backups", rel)
+	target := filepath.Join(store, "backups", rel)
 	return backupTo(path, target)
 }
 

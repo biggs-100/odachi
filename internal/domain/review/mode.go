@@ -3,6 +3,8 @@ package review
 import (
 	"fmt"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/layout"
 )
 
 // The project's review switch. It is a human decision, not an inference: a
@@ -11,14 +13,14 @@ import (
 // is not a flag somebody has to remember on every commit.
 const (
 	// ModePath is where the switch lives, relative to the project root.
-	ModePath = ".odachi/review.toml"
+	ModePath = layout.Review
 	// ModeOn makes `odachi check` require the verdict.
 	ModeOn = "on"
 	// ModeOff leaves the review optional, the same behavior as no file.
 	ModeOff = "off"
 )
 
-// ProjectConfig is what .odachi/review.toml holds: the switch, and optionally
+// ProjectConfig is what odd/review.toml holds: the switch, and optionally
 // the model that judges each lens. A lens without an entry is judged by the
 // session's model, which is what the file meant before this table existed.
 type ProjectConfig struct {

@@ -15,7 +15,7 @@ func RoleFile(client, slug, description, block, section string) (File, bool) {
 		if wrapper == "" {
 			return File{}, false
 		}
-		seal := "The role of this agent is the one in .odachi/roles/" + slug + ".md; the rules are the project's block. Do not edit it by hand: odachi role " + slug + " rewrites it."
+		seal := "The role of this agent is the one in odd/roles/" + slug + ".md; the rules are the project's block. Do not edit it by hand: odachi role " + slug + " rewrites it."
 		return File{
 			Path:    row.Dir + "/" + slug + ".md",
 			Content: wrapper + roleGenerated(slug) + "\n" + seal + "\n\n" + block + "\n\n" + section,

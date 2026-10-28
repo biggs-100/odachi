@@ -3,6 +3,7 @@ package init
 import (
 	"path/filepath"
 
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 )
@@ -13,7 +14,7 @@ const agentsFile = rules.File
 
 // profileFile is the human's profile, relative to the project root. init reads it
 // to know which voice the block gets and never writes it.
-const profileFile = ".odachi/profile.toml"
+const profileFile = layout.Profile
 
 // writeAgents writes the rules block with the voice of the profile at hand,
 // replacing it in place when it is already there and backing up the human's file

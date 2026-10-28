@@ -162,7 +162,7 @@ func TestInitReplacesTheBlockAndKeepsTheRest(t *testing.T) {
 			t.Errorf("AGENTS.md lost %q:\n%s", want, content)
 		}
 	}
-	if matches, err := filepath.Glob(filepath.Join(dir, "AGENTS.md.bak-*")); err != nil || len(matches) != 1 {
+	if matches, err := filepath.Glob(filepath.Join(dir, ".git", "odachi", "backups", "AGENTS.md.bak-*")); err != nil || len(matches) != 1 {
 		t.Errorf("backups = %v (err %v), want exactly one backup of AGENTS.md", matches, err)
 	}
 }

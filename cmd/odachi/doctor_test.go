@@ -66,19 +66,19 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
-	if len(lines) != 13 {
-		t.Fatalf("twelve checks and a summary, got %d lines:\n%s", len(lines), out)
+	if len(lines) != 14 {
+		t.Fatalf("thirteen checks and a summary, got %d lines:\n%s", len(lines), out)
 	}
-	for i, line := range lines[:11] {
+	for i, line := range lines[:13] {
 		if !strings.HasPrefix(line, "ok ") {
 			t.Fatalf("line %d is not ok in a configured project: %s", i+1, line)
 		}
 	}
-	if !strings.HasPrefix(lines[12], "all clear") {
-		t.Fatalf("the last line is the summary, got %q", lines[12])
+	if !strings.HasPrefix(lines[13], "all clear") {
+		t.Fatalf("the last line is the summary, got %q", lines[13])
 	}
-	if !strings.Contains(lines[12], "12 checks") {
-		t.Fatalf("the summary counts the twelve checks, got %q", lines[12])
+	if !strings.Contains(lines[13], "13 checks") {
+		t.Fatalf("the summary counts the thirteen checks, got %q", lines[13])
 	}
 	// This is also the guard that init and doctor agree on the hook marker: if
 	// init renamed it, check 5 would stop recognising its own hook.
@@ -152,21 +152,21 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 		{
 			name: "the profile does not resolve",
 			break_: func(t *testing.T, dir string) {
-				writeFile(t, dir, ".odachi/profile.toml", "name = \"\"\n")
+				writeFile(t, dir, "odd/profile.toml", "name = \"\"\n")
 			},
 			want: []string{"does not resolve", "does not say name", "odachi doctor"},
 		},
 		{
 			name: "the profile has a value the tool would never obey",
 			break_: func(t *testing.T, dir string) {
-				writeFile(t, dir, ".odachi/profile.toml", "name = \"novato\"\nquestions = \"cuando-pueda\"\n")
+				writeFile(t, dir, "odd/profile.toml", "name = \"novato\"\nquestions = \"cuando-pueda\"\n")
 			},
 			want: []string{"does not resolve", "questions", "odachi doctor"},
 		},
 		{
 			name: "the profile is not TOML",
 			break_: func(t *testing.T, dir string) {
-				writeFile(t, dir, ".odachi/profile.toml", "this is not toml\n")
+				writeFile(t, dir, "odd/profile.toml", "this is not toml\n")
 			},
 			want: []string{"does not resolve", "odachi doctor"},
 		},
@@ -241,8 +241,8 @@ func TestDoctorJSONSaysTheSameThing(t *testing.T) {
 		t.Fatalf("--json must be valid JSON: %v\n%s", err, machine)
 	}
 
-	if len(payload.Checks) != 12 {
-		t.Fatalf("--json carries twelve checks, got %d", len(payload.Checks))
+	if len(payload.Checks) != 13 {
+		t.Fatalf("--json carries thirteen checks, got %d", len(payload.Checks))
 	}
 	lines := strings.Split(strings.TrimRight(human, "\n"), "\n")
 	if payload.Message != lines[len(lines)-1] {

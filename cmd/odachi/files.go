@@ -18,16 +18,43 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/store"
 )
 
-// osFiles is the Files adapter for `odachi start`: the only place that command
-// reaches the disk. Writes are atomic and an existing file is backed up first.
-type osFiles struct{}
+// osFiles is the Files adapter: the only place the verbs reach the disk. Writes
+// are atomic and an existing file is backed up first.
+//
+// project and store are the two roots a backup needs: the artifact lives under
+// project, the version under store. They are separate because the worktree
+// travels with the repository and the store does not.
+type osFiles struct {
+	project string
+	store   string
+}
 
-func (osFiles) Exists(path string) (bool, error) {
+// storeRoot resolves the root of the clone's state, or the empty string when the
+// folder is not a git repository. The verbs that only read evidence treat an
+// empty root as "nothing on file"; the ones that write it refuse before writing.
+func storeRoot(dir string) string {
+	if root, err := store.Root(dir, gitRepo{}); err == nil {
+		return root
+	}
+	return ""
+}
+
+// disk is the Files adapter for a verb that writes: the project root, and the
+// clone's store when the folder is a git repository. A folder with no repository
+// has no store, and a backup there stays beside the artifact - the one case
+// where the old shape survives, because there is nowhere else to put it.
+func disk(dir string) osFiles {
+	return osFiles{project: dir, store: storeRoot(dir)}
+}
+
+func (f osFiles) Exists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	switch {
 	case err == nil:
@@ -79,32 +106,17 @@ func (osFiles) List(dir string) ([]string, error) {
 	return names, nil
 }
 
-// Backup keeps a version before a rewrite. When path belongs to a project, the
-// version goes to that project's .odachi/backups store; a file outside a
-// project keeps the backup beside it, because it has no store to join.
-func (osFiles) Backup(path string) (string, error) {
-	if root, ok := projectRoot(path); ok {
-		return fsx.BackupIn(root, path)
+// Backup keeps a version before a rewrite. The version belongs to the clone, so
+// it goes under the store's backups directory with the artifact's path
+// preserved; a file outside the project keeps the backup beside it, because it
+// has no project to belong to. With no store resolved — the binary always
+// resolves one inside a repository, so this is a test or a folder with no git —
+// the backup lands beside the file rather than in an invented location.
+func (f osFiles) Backup(path string) (string, error) {
+	if f.store == "" {
+		return fsx.Backup(path)
 	}
-	return fsx.Backup(path)
-}
-
-// projectRoot finds the nearest ancestor that owns a .odachi directory: the
-// same boundary the rest of the verbs use. It starts at the file's directory,
-// so a file inside .odachi walks up to the project root and not to itself.
-func projectRoot(path string) (string, bool) {
-	dir := filepath.Dir(path)
-	for {
-		info, err := os.Stat(filepath.Join(dir, ".odachi"))
-		if err == nil && info.IsDir() {
-			return dir, true
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", false
-		}
-		dir = parent
-	}
+	return fsx.BackupIn(f.project, f.store, path)
 }
 
 func (osFiles) Remove(path string) error {
@@ -216,8 +228,17 @@ func (osFiles) Write(path string, data []byte) error {
 type agentSelection struct{}
 
 // Written returns the stored selection, or empty when the project never chose.
+// The file lives in the clone's store: the choice belongs to the person, and a
+// teammate clones the rules, not somebody else's clients.
 func (agentSelection) Written(dir string) (string, error) {
-	path := filepath.Join(dir, filepath.FromSlash(persona.SelectionPath))
+	path, _, err := (agentSelection{}).Target(dir)
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		// No repository, no store: a project that never chose, which is both.
+		return "", nil
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -226,6 +247,28 @@ func (agentSelection) Written(dir string) (string, error) {
 		return "", err
 	}
 	return agentstoml.Decode(data)
+}
+
+// Target names the file the choice lives in, and the label a human reads. No
+// repository means no store: the path is empty, and the caller treats it as "the
+// project never chose", the same answer as a missing file.
+func (agentSelection) Target(dir string) (path, label string, err error) {
+	root, err := store.Root(dir, gitRepo{})
+	if err != nil {
+		return "", "", nil
+	}
+	path = filepath.Join(root, filepath.FromSlash(persona.SelectionPath))
+	return path, storeLabel(dir, path), nil
+}
+
+// storeLabel names a file inside the store the way a human reads it: relative to
+// the project when it can be, so the usual answer is `.git/odachi/agents.toml`,
+// and absolute when the store lives outside the worktree.
+func storeLabel(dir, path string) string {
+	if out, err := filepath.Rel(dir, path); err == nil && out != ".." && !strings.HasPrefix(out, ".."+string(filepath.Separator)) {
+		return filepath.ToSlash(out)
+	}
+	return filepath.ToSlash(path)
 }
 
 func (agentSelection) Render(selection string) ([]byte, error) { return agentstoml.Render(selection) }
@@ -253,12 +296,12 @@ func (reviewModeCodec) Render(config review.ProjectConfig) ([]byte, error) {
 	return reviewtoml.Render(config)
 }
 
-// loadProfile reads .odachi/profile.toml when it exists. The human owns that
+// loadProfile reads odd/profile.toml when it exists. The human owns that
 // file: it wins over inference, and a malformed one blocks with a sentence
 // instead of being silently replaced. The verb is the command the human has to
 // run again, so the message never sends them to the wrong one.
 func loadProfile(dir, verb string) (*profile.Profile, int, string) {
-	rel := filepath.Join(".odachi", "profile.toml")
+	rel := filepath.FromSlash(layout.Profile)
 	path := filepath.Join(dir, rel)
 
 	if _, err := os.Stat(path); err != nil {
@@ -369,8 +412,11 @@ func withDefaults(loaded profile.Profile, known map[string]profile.Profile) prof
 type gitRepo struct{}
 
 func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root) }
+func (gitRepo) Head(root string) (string, error)     { return gitx.Head(root) }
 
-func (gitRepo) Head(root string) (string, error) { return gitx.Head(root) }
+// CommonDir is where the clone's store hangs from: the directory every worktree
+// of this clone shares, which is what makes the store one per clone.
+func (gitRepo) CommonDir(root string) (string, error) { return gitx.CommonDir(root) }
 
 // HeadTree is the tree the step's commit carries: the bytes plan records, because
 // a rebase rewrites the commit and never the tree.

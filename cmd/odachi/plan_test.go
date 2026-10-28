@@ -239,7 +239,7 @@ func TestPlanLeavesTheOtherArtifactsAlone(t *testing.T) {
 	}
 	after := tree(t, dir)
 
-	for _, name := range []string{"brief.md", ".odachi/profile.toml", ".odachi/fence.toml"} {
+	for _, name := range []string{"brief.md", "odd/profile.toml", "odd/fence.toml"} {
 		if after[name] != before[name] {
 			t.Errorf("%s changed:\nbefore %q\nafter  %q", name, before[name], after[name])
 		}

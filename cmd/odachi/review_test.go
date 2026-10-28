@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/adapters/hostmodel"
+	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -38,11 +39,10 @@ func commitAll(t *testing.T, dir, message string) {
 	}
 }
 
-// reviewsIn lists the verdict files under .odachi/reviews, without the ignore
-// file: what is left is the stored verdicts.
+// reviewsIn lists the verdict files inside the clone's store.
 func reviewsIn(t *testing.T, dir string) []string {
 	t.Helper()
-	entries, err := os.ReadDir(filepath.Join(dir, ".odachi", "reviews"))
+	entries, err := os.ReadDir(filepath.Join(dir, ".git", "odachi", "reviews"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -52,9 +52,6 @@ func reviewsIn(t *testing.T, dir string) []string {
 
 	var verdicts []string
 	for _, entry := range entries {
-		if entry.Name() == ".gitignore" {
-			continue
-		}
 		verdicts = append(verdicts, entry.Name())
 	}
 	return verdicts
@@ -124,8 +121,8 @@ func TestReviewWithoutChangesHasNothingToReview(t *testing.T) {
 	if !strings.Contains(errOut, "there is nothing to review in this tree") {
 		t.Errorf("stderr %q does not say there is nothing to review", errOut)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".odachi", "reviews")); !os.IsNotExist(err) {
-		t.Errorf("the run created .odachi/reviews without a diff: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, ".git", "odachi", "reviews")); !os.IsNotExist(err) {
+		t.Errorf("the run created the store without a diff: %v", err)
 	}
 }
 
@@ -356,7 +353,7 @@ func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "on"}, ""); code != 0 {
 		t.Fatalf("mode on: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	data, err := os.ReadFile(filepath.Join(dir, ".odachi", "review.toml"))
+	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(layout.Review)))
 	if err != nil {
 		t.Fatalf("the switch was not written: %v", err)
 	}
@@ -451,7 +448,7 @@ func TestCheckAcceptsAVerdictThatNamesTheBaseShort(t *testing.T) {
 	writeFile(t, dir, "odd/tasks/0001-turnos.md", doc.Render())
 	// The same two lines `odachi init` writes: the store and the proof are
 	// evidence, not content, so taking a proof cannot change the tree it proves.
-	writeFile(t, dir, ".gitignore", "/.odachi/reviews/\n/proof/\n")
+	writeFile(t, dir, ".gitignore", "/proof/\n*.bak-*\n")
 
 	// The store arrives with the attach; the proof is taken after it, because a
 	// proof is evidence about one tree and the store's own ignore file is part of
@@ -511,7 +508,7 @@ func TestStartWritesTheFeatureBaseEndToEnd(t *testing.T) {
 func TestReviewModeRejectsAMangledSwitch(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	writeFile(t, dir, ".odachi/review.toml", `mode = "maybe"`+"\n")
+	writeFile(t, dir, "odd/review.toml", `mode = "maybe"`+"\n")
 
 	code, _, errOut := runDir(t, dir, []string{"check"}, "")
 

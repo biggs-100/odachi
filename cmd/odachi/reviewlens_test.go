@@ -333,18 +333,18 @@ func TestCheckRequireReviewNamesTheMissingLens(t *testing.T) {
 // branch, because the verb itself always stamps the lenses it asked for.
 func blackLensVerdict(t *testing.T, dir string) {
 	t.Helper()
-	entries, err := os.ReadDir(filepath.Join(dir, ".odachi", "reviews"))
+	entries, err := os.ReadDir(filepath.Join(dir, ".git", "odachi", "reviews"))
 	if err != nil {
 		t.Fatalf("reading the store: %v", err)
 	}
 
 	written := false
 	for _, entry := range entries {
-		if entry.Name() == ".gitignore" || !strings.HasSuffix(entry.Name(), ".json") || written {
+		if !strings.HasSuffix(entry.Name(), ".json") || written {
 			continue
 		}
 		content := `{"tree":"` + strings.TrimSuffix(entry.Name(), ".json") + `","base":"HEAD","reviewer":"humano","at":"2026-10-21T20:31:00Z","findings":[],"verdict":"approved"}`
-		writeFile(t, dir, filepath.ToSlash(filepath.Join(".odachi", "reviews", entry.Name())), content)
+		writeFile(t, dir, filepath.ToSlash(filepath.Join(".git", "odachi", "reviews", entry.Name())), content)
 		written = true
 	}
 	if !written {

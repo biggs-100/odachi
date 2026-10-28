@@ -33,7 +33,7 @@ func TestInitAgentsOpenCodeLeavesClaudeAlone(t *testing.T) {
 		t.Errorf("the OpenCode agent was not written: %v", err)
 	}
 
-	store, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(persona.SelectionPath)))
+	store, err := os.ReadFile(filepath.Join(dir, ".git", "odachi", filepath.FromSlash(persona.SelectionPath)))
 	if err != nil {
 		t.Fatalf("%s was not written: %v", persona.SelectionPath, err)
 	}
@@ -71,7 +71,7 @@ func TestInitAgentsBothRestoresTheOtherClient(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, ".claude", "output-styles", persona.FileName)); err != nil {
 		t.Errorf("the Claude agent was not restored: %v", err)
 	}
-	store, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(persona.SelectionPath)))
+	store, err := os.ReadFile(filepath.Join(dir, ".git", "odachi", filepath.FromSlash(persona.SelectionPath)))
 	if err != nil {
 		t.Fatalf("%s was not written: %v", persona.SelectionPath, err)
 	}

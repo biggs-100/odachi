@@ -12,7 +12,7 @@
 - A tutor: every question explains why it exists, so the person stops being a
   beginner and does not depend on the agent forever.
 - Four plain-text artifacts that act as memory: `brief.md`,
-  `odd/tasks/NNNN-<slug>.md`, `proof/NNNN-<slug>.txt` and `.odachi/profile.toml`.
+  `odd/tasks/NNNN-<slug>.md`, `proof/NNNN-<slug>.txt` and `odd/profile.toml`.
 
 ## Installation
 
@@ -30,7 +30,7 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 odachi --version
 ```
 
-Those three lines work. The latest release is `v0.11.37`: six binaries (Linux,
+Those three lines work. The latest release is `v0.11.38`: six binaries (Linux,
 macOS and Windows, amd64 and arm64) and a `checksums.txt`. The installer resolves
 the latest version through the API, verifies the sha256 and only then writes; a
 checksum that does not match exits with an error and leaves **nothing** at the
@@ -61,7 +61,7 @@ and later carry the bundle; use the version you downloaded.
 ```sh
 cosign verify-blob \
   --bundle checksums.txt.sigstore.json \
-  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.37' \
+  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.38' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   checksums.txt
 ```
@@ -71,15 +71,15 @@ here. Then check the archive you downloaded against the signed list:
 
 ```sh
 # linux
-grep ' odachi_0.11.37_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
+grep ' odachi_0.11.38_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
 # macOS ships shasum, not sha256sum
-grep ' odachi_0.11.37_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
+grep ' odachi_0.11.38_darwin_arm64.tar.gz$' checksums.txt | shasum -a 256 -c -
 ```
 
 ```powershell
 # windows: compare the hash of the zip with its line in the signed list
 $want = (Select-String -Path checksums.txt -Pattern 'odachi_0\.11\.30_windows_amd64\.zip$').Line.Split()[0]
-(Get-FileHash .\odachi_0.11.37_windows_amd64.zip -Algorithm SHA256).Hash -eq $want.ToUpper()
+(Get-FileHash .\odachi_0.11.38_windows_amd64.zip -Algorithm SHA256).Hash -eq $want.ToUpper()
 # True means the zip matches the signed list
 ```
 
@@ -88,7 +88,7 @@ which names the repository, the commit and the workflow that produced it. It
 lives in the repository, not in the release, and `gh` fetches it by digest:
 
 ```sh
-gh attestation verify odachi_0.11.37_windows_amd64.zip --repo biggs-100/odachi
+gh attestation verify odachi_0.11.38_windows_amd64.zip --repo biggs-100/odachi
 ```
 
 The three links answer three different questions: the signature says who
@@ -111,7 +111,7 @@ attested build of a compromised tree is still signed and attested.
 | `brief.md` | human | vision, non-goals, durable decisions |
 | `odd/tasks/NNNN-<slug>.md` | agent | requirements R#, steps and history |
 | `proof/NNNN-<slug>.txt` | agent | real output of the proof command |
-| `.odachi/profile.toml` | human | 8 lines of ceremony, never of rigor |
+| `odd/profile.toml` | human | 8 lines of ceremony, never of rigor |
 
 Complete examples in `testdata/examples/`.
 
@@ -122,11 +122,11 @@ files, and `doctor`, `start` and `summary` say which ones they are, so the two
 memories live in the same folder without either pretending the other is not
 there.
 
-`proof/` and `.odachi/reviews/` are **generated evidence**, not versioned: the
-proof carries the hash of the tree that produced it, and the verdict is named
-after the tree it judges. That is why both must stay out of git: otherwise the
-first proof would invalidate the previous review and the first review would
-invalidate the previous proof.
+`proof/` is **generated evidence**, not versioned: the proof carries the hash of
+the tree that produced it. The verdict is evidence too, and it lives in the
+clone's store (`.git/odachi/reviews/`), outside the worktree: the file name *is*
+the tree it judges, so storing it cannot change the tree, and no ignore rule has
+to keep it out.
 
 A proof is a green run: `check --run` writes `proof/NNNN-<slug>.txt` only when
 the command exits 0. A failed run leaves `proof/NNNN-<slug>.failed.txt` instead,
@@ -139,19 +139,20 @@ of the tree that passed. In CI the file rides along with `proof/`, which the
 workflow uploads even when the gate fails.
 
 `init` takes care of that for you, and of two things that are not artifacts: it
-leaves a marked block in the project's `.gitignore` (`/proof/` and
-`/.odachi/reviews/`, versioned, so it survives a clone) and a rules block in
-`AGENTS.md` —what the agent reads before touching anything— plus the pre-commit
-hook that runs `odachi check --quiet` on this tree's proof. In a project without
-`init`, `check --run` and `review` protect themselves with their own internal
-`.gitignore`, at the price of moving the tree once.
+leaves a marked block in the project's `.gitignore` (`/proof/` and `*.bak-*`,
+versioned, so it survives a clone) and a rules block in `AGENTS.md` —what the
+agent reads before touching anything— plus the pre-commit hook that runs
+`odachi check --quiet` on this tree's proof. In a project without `init`, the
+proof protects itself with its own `proof/.gitignore`. The verdicts need no rule:
+they are not in the worktree.
 
 Before rewriting one of your files, `odachi` keeps the previous version so `undo`
-can go back. Those backups live in `.odachi/backups/`, preserving the artifact's
-path, not beside `brief.md` or the task docs. The old ones left beside the
-artifact are still read, and `odachi undo --collect` moves them into the store
-without rewriting them: they keep their bytes and date, and a second run does
-nothing.
+can go back. Those versions live in the clone's store,
+`.git/odachi/backups/`, preserving the artifact's path, not beside `brief.md` or
+the task docs. The ones an older release left in `.odachi/backups/` or beside the
+artifact are still read, and `odachi undo --collect` (or `odachi store move`)
+moves them into the store without rewriting them: they keep their bytes and date,
+and a second run does nothing.
 
 ## The skills, in your agent
 
@@ -263,7 +264,8 @@ nothing in your home. With the door, OpenCode also gets `default_agent` in
 session starts as odachi; a default you picked before is named, never replaced.
 
 If you do not use Claude Code, `odachi init --agents opencode` writes only the
-OpenCode agent and stores the choice in `.odachi/agents.toml`; `init`, `start`,
+OpenCode agent and stores the choice in the clone's store
+(`.git/odachi/agents.toml`); `init`, `start`,
 `level` and `doctor` respect it, and `--agents claude` does the same the other
 way. The files of the client you do not choose are not deleted: they simply stop
 being written. Without a file, the default is still both.
@@ -278,7 +280,7 @@ wherever you say.
 Two different things, with different owners.
 
 The **profile** is the ceremony the binary enforces: how much it asks, how much
-it prints, what counts as proof. It lives in `.odachi/profile.toml`, `odachi
+it prints, what counts as proof. It lives in `odd/profile.toml`, `odachi
 start` writes it with your answers and the binary reads it. The agent does not
 read it: it cannot loosen or change a gate.
 
@@ -369,7 +371,7 @@ before, and the verdict records the command that really ran.
 
 ### Choosing the model of each lens
 
-`.odachi/review.toml` names a model per lens, so the cheap model carries the
+`odd/review.toml` names a model per lens, so the cheap model carries the
 cheap lenses and the expensive one runs only where you put it:
 
 ```toml
@@ -409,7 +411,7 @@ is the common one, and it does not replace a second person or a review app; a
 verdict with no model (a human, or one written before the field existed) is still
 valid.
 
-The verdict lives in `.odachi/reviews/<tree-hash>.json`, so approval cannot
+The verdict lives in the clone's store, `.git/odachi/reviews/<tree-hash>.json`, so approval cannot
 float: the file name *is* the state of the code that was approved. A causal
 `BLOCKER` blocks, and to unblock it there is `odachi review --refute`: the
 refuter has to cite the diff line that disproves the finding, because what cannot
@@ -421,7 +423,7 @@ filed under the tree it judged, and the bytes now in the tree ask for their own
 review - because a verdict that describes two trees describes neither.
 
 Review is a human decision, not the agent's. By default it is off; the project
-switch lives in `.odachi/review.toml` and is written with
+switch lives in `odd/review.toml` and is written with
 `odachi review mode status|on|off`. With `on`, `odachi check` asks once per
 feature: while a step is still open the tree owes only its proof, and the commit
 that closes the feature owes the verdict. That verdict has to judge the diff the
@@ -472,16 +474,15 @@ A proof is written when the run exits 0. A failing command leaves
 `proof/<feature>.failed.txt` with the whole output, and the gate prints the last
 line and the path. When the gate blocks for another reason -the fence, an open
 question- the proof of that green run is still uploaded. The workflow file itself
-is not trusted: `.github/CODEOWNERS` asks for an owner review of `.github/` and
-`.odachi/`, and a pull request can edit the workflow it runs under until a second
-reviewer exists.
+is not trusted: `.github/CODEOWNERS` asks for an owner review of `.github/` and `odd/`, and a
+pull request can edit the workflow it runs under until a second reviewer exists.
 
 `main` takes a change only through a pull request whose four checks passed. The
 policy lives in `.github/main-ruleset.json` and is applied by
 `scripts/protect-main.ps1` (idempotent; needs `gh` with admin): it requires the
 pull request, the four job names in `gate.yml`, and no force push or deletion.
 No approval is required, because a solo maintainer cannot approve their own pull
-request; CODEOWNERS still asks for one on `.github/` and `.odachi/`.
+request; CODEOWNERS still asks for one on `.github/` and `odd/`.
 
 `ODACHI_NO_SETUP=1` makes the installers leave only the binary — no home door, no
 default agent — which is what a shared runner wants. A missing file at a valid
@@ -511,7 +512,7 @@ Pure domain in `internal/domain/...` with an import guard, adapters in
 `skills`, `skill new`, `role`, `pack` and `--version`. 44 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
-Published: `v0.11.37`. What changed in each version is in
+Published: `v0.11.38`. What changed in each version is in
 [CHANGELOG.md](CHANGELOG.md). The one-line installation is tested against the
 real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP
@@ -525,3 +526,5 @@ it). Each of those is added when it exists, not before.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+
