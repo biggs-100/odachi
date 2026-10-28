@@ -5,10 +5,10 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.41 - 2026-10-28
 
-A decision stops being a one-time order: the store remembers it, so the next
-`init` does not undo it.
+Two decisions stop being improvised: where the project's agent lives, and where a
+review's question and answer live.
 
 - **`agents.toml` remembers where the project's agent lives.** `project_agents`
   sits next to the client selection: `none` keeps the door in the home, `write`
@@ -19,18 +19,9 @@ A decision stops being a one-time order: the store remembers it, so the next
   files is the clean mode when `agents.toml` says so, and a project that lost its
   files while nothing recorded why is sent to `--global --no-project-agents`; a
   home-only project with no door is sent to `--global`, not back to the mirrors.
-- **An older binary refuses the new key, on purpose.** A store carrying
-  `project_agents` is an error to a binary that predates it (`unknown keys`), the
-  same rule that refuses a typo: upgrade the installed odachi before the project
-  records the choice.
-
-## Unreleased
-
-The review grows the two artifacts it was missing: the question and the answer.
-
-- **The prompt has a home beside its verdict.** `odachi review` writes it into
-  the clone's store as `reviews/<tree>.prompt.md` and names it on stderr, so an
-  agent hands a reviewer that path instead of inventing one. stdout stays the
+- **The review prompt has a home beside its verdict.** `odachi review` writes it
+  into the clone's store as `reviews/<tree>.prompt.md` and names it on stderr, so
+  an agent hands a reviewer that path instead of inventing one. stdout stays the
   prompt alone, because a pipe into a reviewer must carry nothing else; a prompt
   in `proof/` is no longer something anyone has to improvise.
 - **A reviewer can answer in a file.** A command that names `{verdict}` gets an
@@ -40,6 +31,10 @@ The review grows the two artifacts it was missing: the question and the answer.
   group so a group cannot inherit another's answer, and it is removed once read. A
   command without the token still answers on stdout, and an empty file is refused
   instead of silently falling back to it.
+- **An older binary refuses the new key, on purpose.** A store carrying
+  `project_agents` is an error to a binary that predates it (`unknown keys`), the
+  same rule that refuses a typo: upgrade the installed odachi before the project
+  records the choice.
 
 ## v0.11.40 - 2026-10-27
 
