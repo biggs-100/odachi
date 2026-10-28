@@ -1,21 +1,21 @@
-# a-review-prompt
+# a-closed-task
 
 ## What must exist
-- a review prompt and its answer have an owner, so neither lands in the tree nor in a scroll
+- a closed task document is never reused, so a new feature with the same three words gets its own number
 
 ## Done when
-- odachi review writes the prompt into the clone's store beside the verdict and names the path, so an agent never improvises one
-- odachi review --exec reads the answer from the {verdict} file the command was given, and stdout becomes diagnosis
-- without {verdict} the answer is still read from stdout, so no existing reviewer breaks
-- a test drives both capture paths and the prompt path, observed red first
+- start picks the next number when the only document that matches the slug is closed, and writes a new one
+- a re-run of start for the same open feature still reuses its document, so one feature never gets two
+- the run says which document it wrote or reused
+- a test drives both answers with two documents that share a slug, observed red first
 
 ## Not included (first version)
 - no new verb and no new flag
-- no change to where the verdicts live
-- no new field in the verdict schema
+- no change to how a number is chosen for a slug nobody used
+- no rewrite of an existing task document
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how to capture a child process's answer without trusting its stdout.
+- Wants to learn: how a name decides identity: reuse by intent, not by string.

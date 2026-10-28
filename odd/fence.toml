@@ -4,11 +4,11 @@ paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no change to where the verdicts live"
-paths = ["no-change-to-where-the-verdicts-live*"]
+not   = "no change to how a number is chosen for a slug nobody used"
+paths = ["no-change-to-how-a-number-is-chosen-for-a-slug-nobody-used*"]
 deps  = []
 
 [[rule]]
-not   = "no new field in the verdict schema"
-paths = ["no-new-field-in-the-verdict-schema*"]
+not   = "no rewrite of an existing task document"
+paths = ["no-rewrite-of-an-existing-task-document*"]
 deps  = []
