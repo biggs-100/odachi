@@ -37,8 +37,9 @@ An answer that cannot say what it read is not a verdict.
   when it could not read the candidate at all. `review --attach` and the `--exec`
   path refuse an answer whose declaration leaves a changed path out, names a path
   the candidate does not change, or says unavailable, and the refusal says where
-  the answer is kept so the reviewer is asked for it, not the caller. A verdict
-  stored before this field existed still parses.
+  the answer is kept so the reviewer is asked for it, not the caller. The prompt
+  asks for the field with both statuses, and the schema it prints carries it. A
+  verdict stored before this field existed still parses.
 
 ## v0.11.41 - 2026-10-28
 
