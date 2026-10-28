@@ -811,11 +811,19 @@ func (r *runner) personaNote(content string, clients []persona.Client) string {
 	}
 
 	switch {
+	case len(missing) > 0 && r.storedProjectChoice() == persona.ProjectAgentsNone && r.homeCarriesTheAgents(clients):
+		// The store is the authority: the absence of the mirrors is the answer it
+		// already recorded, not a gap the home happens to explain.
+		return "the project has no agent files, and the store says so (" + persona.SelectionPath +
+			": project_agents = none): the door in the home is the one that runs"
+	case len(missing) > 0 && r.storedProjectChoice() == persona.ProjectAgentsNone:
+		return "the project has no agent files because the store keeps the agent in the home (" + persona.SelectionPath +
+			": project_agents = none), and the home does not carry the door: run odachi init --global"
 	case len(missing) > 0 && r.homeCarriesTheAgents(clients):
-		// The clean mode: the project keeps the rules and the plan, and the
-		// agents it would carry live in the home. Saying "missing" would call a
-		// decision a defect.
-		return "the project has no agent files: the door in the home is the one that runs"
+		// The home explains the absence, and nothing recorded the choice: a
+		// teammate who clones this project would not know where its agent lives.
+		return "the project has no agent files: the door in the home is the one that runs, and " + persona.SelectionPath +
+			" does not say so; run odachi init --global --no-project-agents to record it"
 	case len(missing) > 0:
 		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") + "; run odachi init"
 	case len(stale) > 0:
@@ -824,6 +832,20 @@ func (r *runner) personaNote(content string, clients []persona.Client) string {
 		return "the native agent matches the block in " + strings.Join(dirs, " and ") +
 			"; the subagents match in " + strings.Join(subDirs, " and ")
 	}
+}
+
+// storedProjectChoice is where the store says the project's agent lives, or
+// empty when nothing recorded it. A store doctor cannot read is the selection
+// note's business, not this one's.
+func (r *runner) storedProjectChoice() string {
+	if r.opts.Agents == nil {
+		return ""
+	}
+	stored, err := r.opts.Agents.Written(r.opts.Dir)
+	if err != nil {
+		return ""
+	}
+	return stored.ProjectAgents
 }
 
 // homeCarriesTheAgents reports whether the home already carries the door and the

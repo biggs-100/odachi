@@ -1073,8 +1073,45 @@ func TestDoctorNamesAGlobalSubagentThatDoesNotMatch(t *testing.T) {
 }
 
 // TestDoctorCallsTheCleanModeADecision: with the door and its subagents in the
-// home, a project without agent files is the clean mode, not a defect.
+// home and the store saying so, a project without agent files is the clean mode,
+// not a defect - and the line names the store, the reason the files are absent.
 func TestDoctorCallsTheCleanModeADecision(t *testing.T) {
+	files := configured()
+	body, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, file := range persona.Files(body) {
+		delete(files.files, at(file.Path))
+	}
+	for _, file := range persona.SubagentFiles() {
+		delete(files.files, at(file.Path))
+	}
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			files.putHome(file.Path, file.Content)
+		}
+	}
+
+	result := runSelected(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+		fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone})
+
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	if !strings.Contains(got.Detail, "the project has no agent files") {
+		t.Fatalf("the clean mode is not named: %q", got.Detail)
+	}
+	if !strings.Contains(got.Detail, persona.SelectionPath) {
+		t.Errorf("the line does not name the store that says so: %q", got.Detail)
+	}
+	if strings.Contains(got.Detail, "are missing in") {
+		t.Errorf("a decision is reported as a defect: %q", got.Detail)
+	}
+}
+
+// TestDoctorNamesAProjectWhoseStoreSaysNothing: the mirrors are gone and nothing
+// recorded where they went. The clean mode is not a decision the tool can assume:
+// the line names the command that records it, instead of blessing the absence.
+func TestDoctorNamesAProjectWhoseStoreSaysNothing(t *testing.T) {
 	files := configured()
 	body, err := rules.Body(persona.Novato)
 	if err != nil {
@@ -1095,10 +1132,37 @@ func TestDoctorCallsTheCleanModeADecision(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	if !strings.Contains(got.Detail, "the project has no agent files") {
-		t.Fatalf("the clean mode is not named: %q", got.Detail)
+	for _, want := range []string{persona.SelectionPath, "--global --no-project-agents"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("the line must say %q: %q", want, got.Detail)
+		}
 	}
-	if strings.Contains(got.Detail, "are missing in") {
-		t.Errorf("a decision is reported as a defect: %q", got.Detail)
+}
+
+// TestDoctorPointsToTheDoorWhenTheStoreIsHomeOnly: the store says none and the
+// home carries nothing, so no agent runs. The fix is the door, not the mirrors:
+// "run odachi init" would put back the files the person chose to leave behind.
+func TestDoctorPointsToTheDoorWhenTheStoreIsHomeOnly(t *testing.T) {
+	files := configured()
+	body, err := rules.Body(persona.Novato)
+	if err != nil {
+		t.Fatalf("rules.Body(novato): %v", err)
+	}
+	for _, file := range persona.Files(body) {
+		delete(files.files, at(file.Path))
+	}
+	for _, file := range persona.SubagentFiles() {
+		delete(files.files, at(file.Path))
+	}
+
+	result := runSelected(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+		fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone})
+
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	if !strings.Contains(got.Detail, "project_agents = none") {
+		t.Fatalf("the line does not name the stored choice: %q", got.Detail)
+	}
+	if !strings.Contains(got.Detail, "odachi init --global") {
+		t.Errorf("the line does not name the door: %q", got.Detail)
 	}
 }

@@ -12,7 +12,8 @@ R1 · "the home-only choice survives a plain init, and the store is what remembe
 - a fake port drives both answers in a test, observed red first
 
 ## Steps
-- [ ] T1 · the store remembers the project-agents choice, and a plain init honors it while --agents writes the mirrors back   R1
+- [x] T1 · the store remembers the project-agents choice, and a plain init honors it while --agents writes the mirrors back   R1 · tree:77e2f2bb3df3d814cb4e33a690af94c06f3f7930
+- [ ] T2 · doctor names the stored choice where the agent lives, and warns when nothing says it   R1
 
 ## History
 L1 · "the home-only choice survives a plain init, and the store is what remembers it"
