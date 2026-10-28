@@ -13,19 +13,6 @@ Last written: after 0080, the sentinel is pinned end to end.
 
 ## Open
 
-### the review gate - a verdict that names no model is a review the gate cannot attribute
-
-`check` refuses a verdict whose `model` is the proof's ("a model does not judge
-its own tree"), and the refusal is right. What it cannot do is notice the same
-reviewer arriving unnamed: `--attach` stores whatever `model` the answer carries,
-an empty one included, and `--exec` fills it only when the command names
-`{model}`. 0085's closing verdict was written by the model that built and proved
-the tree, at the human's cost decision, and the file does not say so - the gate
-read it as attributed by nobody and passed. The honest shape is a refusal when the
-proof names a model and the verdict names none, unless the human records the
-trade; that is a small change with a large blast radius (every old verdict), and
-it needs its own feature.
-
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 The 0082 debt asked for one cheap probe before calling the 600s timeout a defect.
@@ -33,11 +20,38 @@ Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
 --file <prompt> "..."` with a **tiny** file answers in seconds (mimo-v2.6-flash);
 with 0085's **122 KB** prompt it prints its banner and produces nothing until the
 600s timeout, twice (mimo-v2.6-flash), while `deepseek-v4.1-flash` returns the
-full JSON for the same file in the same session. So the variable is the pair
-(model, prompt size), not the CLI or `--file`. A reviewer that cannot take a
-120 KB prompt is not a reviewer this tool can hand a large diff to; the next
-feature that touches the review pipeline should either split the prompt by lens
-group or pin a model known to read it whole.
+full JSON for the same file in the same session. 0086's **69 KB** prompt closed
+cleanly on mimo in one run, so the wall sits between 69 and 122 KB. A reviewer
+that cannot take a 120 KB prompt is not a reviewer this tool can hand a large diff
+to; the next feature that touches the review pipeline should either split the
+prompt by lens group or pin a model known to read it whole.
+
+### internal/adapters/gitx - the ledger's reads run only through fakes
+
+`TreeOf`, `Has` and `CommitWithTree` are the adapter functions the ledger depends
+on: `Has` maps `git merge-base --is-ancestor` exit 1 to `(false, nil)` and any
+other nonzero exit to an error, and `CommitWithTree` keeps the *oldest* matching
+line to name the commit that introduced the bytes. No adapter-level test drives
+them against a real repository - `gitx_test.go` covers only `HeadTree` - so the
+app-layer tests exercise `fakeGit` answers instead of git's. A change that kept the
+newest match instead of the oldest would name the wrong commit for a step whose
+bytes returned later, and every test would stay green.
+
+### internal/app/role - the target list is built twice in one package
+
+`Render` assembles the skill plus one `persona.RoleFile` per client, and `matches`
+assembles the identical list to decide stale versus up to date. Nothing couples the
+two, so adding a target to one and not the other makes `odachi role` report a state
+that is wrong, with the tests green because they drive both halves today. One
+`targets(...)` helper makes the two answers one definition.
+
+### cmd/odachi - pack's installed bytes are never compared with their source
+
+The end-to-end contract is that a skill created with `odachi skill new` reaches
+`.agents/skills` with its bytes, and the test checks membership and a stdout
+substring only. The one path that feeds that file - `skill.Parse`'s `Raw` joined
+into `pack.Skill{Content: s.Raw}` - is exercised by no test that compares content,
+so dropping `Raw` would install an empty `SKILL.md` with every test green.
 
 ### internal/app/start/artifacts.go - an unreadable task document blocks the run, untested
 
@@ -117,6 +131,17 @@ regenerated since, and the next `check --run` overwrites them. A length-prefixed
 header would remove the ambiguity and detect a truncated proof as well; it is a
 format change for a case this narrow, and it can wait until the format changes for
 another reason.
+
+## Closed by feature 0086
+
+### the review gate - a verdict that names no model is a review the gate cannot attribute
+
+`check` now refuses a verdict that names no model for a required lens while the
+proof names one, naming the lens, the verdict's file and the model the proof
+carries. The way out is a decision on the record: re-review with
+`--model <provider/model>`, or the human's `start --waive-review`, which the help
+now lists. The prompt asks the answer to name its model, so an attached answer can
+still be attributed.
 
 ## Closed by feature 0085
 
