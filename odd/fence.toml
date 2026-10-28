@@ -7,3 +7,8 @@ deps  = []
 not   = "no new verb and no new flag"
 paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
+
+[[rule]]
+not   = "init never deletes files it did not write"
+paths = ["init-never-deletes-files-it-did-not-write*"]
+deps  = []
