@@ -53,10 +53,14 @@ type Git interface {
 // It does not create anything. Reading a verdict, listing backups or checking
 // whether a feature has a proof must never leave a directory behind, so only the
 // verbs that write create the entries they need.
+//
+// A folder that is not a repository keeps the adapter's sentinel error, so a
+// caller can tell "there is no store here" from "git could not answer"; the
+// message still names the question that failed.
 func Root(dir string, git Git) (string, error) {
 	common, err := git.CommonDir(dir)
 	if err != nil {
-		return "", fmt.Errorf("could not find the repository's git directory: %s", oneLine(err.Error()))
+		return "", fmt.Errorf("could not find the repository's git directory: %w", err)
 	}
 	return filepath.Join(common, DirName), nil
 }
