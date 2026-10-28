@@ -12,7 +12,7 @@ R1 · "the verdict says who judged it, and the gate refuses one that names no mo
 - a test drives each answer, observed red first
 
 ## Steps
-- [ ] T1 · the review prompt asks the answer to name the model that judged it   R1
+- [x] T1 · the review prompt asks the answer to name the model that judged it   R1
 - [ ] T2 · check refuses a verdict whose required lens names no model while the proof names one, and offers the waiver   R1
 
 ## History

@@ -111,6 +111,22 @@ func TestPromptAsksWhatTheReviewerRead(t *testing.T) {
 	}
 }
 
+// TestPromptAsksForTheModelThatJudged: the gate compares the model in the answer
+// with the one in the proof, so an answer written by hand has to name it. An
+// --exec run has it stamped by the tool; a person attaching a file has only this.
+func TestPromptAsksForTheModelThatJudged(t *testing.T) {
+	prompt := review.Prompt(promptInput())
+
+	for _, want := range []string{
+		`"model": "<the model that judged`,
+		"the gate compares it with the proof",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("the prompt does not ask who judged: missing %q", want)
+		}
+	}
+}
+
 // TestPromptAsksForOnlyTheJSON: the answer is machine-read, so prose around it
 // is a parse error waiting to happen.
 func TestPromptAsksForOnlyTheJSON(t *testing.T) {
