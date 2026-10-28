@@ -13,6 +13,15 @@ Last written: after 0080, the sentinel is pinned end to end.
 
 ## Open
 
+### internal/app/doctor/doctor.go - the last branch of personaNote has no test
+
+The branch that answers "the files match and the store records `project_agents =
+none`" ships with no test: it is the state right after `init --global
+--no-project-agents` over a project whose mirrors were current. One test with
+`configured()` intact and a store that records `none`, asserting the store is
+named and the "matches" wording is replaced, closes it. Owed by 0081; the next
+feature that touches `internal/app/doctor` pays it, the way 0079 paid 0078's.
+
 ### odd/tasks/0073-a-professional-persona.md - the doc speaks the old vocabulary
 
 Its Done-when and Steps describe `odachi persona new`, `persona-craft` and
@@ -22,6 +31,25 @@ fence says an old task doc is not rewritten; the divergence is recorded here so
 the next reader does not follow a command that does not exist.
 
 ## Accepted
+
+### the store · a verdict attached with the wrong base cannot be replaced
+
+`review --attach` seals the base from `--base`; without it the verdict stores
+`HEAD` and `check` refuses it for a feature that started elsewhere. The tree then
+already has a verdict, so a second attach is refused too, and no verb deletes a
+verdict: the only way out is removing the file in the clone's store by hand,
+which 0081 did once. Accepted for now: the message names the exact `--base` to
+use, so the mistake is loud. A `review --forget <tree>` is a new verb, and 0081's
+fence forbade one.
+
+### internal/app/init/init.go · a run with no store adapter records nothing
+
+`writeAgentStore` returns without a line when the caller wired no selection port,
+so an explicit `--agents` or `--no-project-agents` from such a caller exits 0 and
+records nothing. The binary always wires the adapter, so no user path regresses;
+the tests that only care about the project files rely on it. Accepted: a named
+refusal is better and costs two lines, but it changes a test-only path and this
+feature had its verdict.
 
 ### internal/domain/proof/proof.go · the terminator in an old proof's first output line
 
