@@ -1159,8 +1159,15 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		return *problem
 	}
 
-	// The lenses this answer claims. A hole outside them is not this run's: it is
-	// a lens another run was asked for, and the store grows by lens.
+	rel, err := domain.Path(tree)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; I wrote nothing")
+	}
+
+	// The declaration is the answer's own claim, and it is judged on the answer,
+	// never on the merged verdict: a second lens group inherits the first group's
+	// declaration the moment the merge runs, and checking the union would seal an
+	// answer that declared nothing under somebody else's reading.
 	asked := stamped.Lenses
 
 	var downgraded int
@@ -1176,10 +1183,6 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
-	rel, err := domain.Path(tree)
-	if err != nil {
-		return blocked(oneLine(err.Error()) + "; I wrote nothing")
-	}
 	target := r.storePath(rel)
 
 	exists, err := r.files.Exists(target)
@@ -1209,14 +1212,12 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		sealed = resealed
 	}
 
-	// The declaration comes before the rows: the reviewer's account of what it
-	// read is the claim the rows are answers to. An answer that leaves a changed
-	// path out of it is incomplete, and one that names a path nobody changed is
-	// inventing - either way the caller cannot complete it, because the caller is
-	// not the one who read the candidate.
+	// The declaration comes before the rows, and it is the answer's: a changed
+	// path it leaves out is a hole, and a path nobody changed is an invention.
+	// The caller cannot complete it, because the caller is not the reader.
 	if len(asked) > 0 {
-		if message, detail, ok := inspectionRefusal(sealed, work.paths); !ok {
-			return r.refuseInspection(sealed, rel, message, detail)
+		if message, detail, ok := inspectionRefusal(stamped, work.paths); !ok {
+			return r.refuseInspection(stamped, rel, message, detail)
 		}
 	}
 

@@ -347,7 +347,7 @@ func newProject() *project {
 func TestEachModelRunsItsOwnReviewer(t *testing.T) {
 	p := newProject()
 	p.host.model = "host/default"
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{
 		Exec:       "revisor --model {model}",
@@ -386,7 +386,7 @@ func TestEachModelRunsItsOwnReviewer(t *testing.T) {
 func TestTheSameModelIsOneRun(t *testing.T) {
 	p := newProject()
 	p.host.model = "host/default"
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{
 		Exec:       "revisor --model {model}",
@@ -572,7 +572,7 @@ func TestASecondRunCompletesTheVerdict(t *testing.T) {
 	p := newProject()
 	p.host.model = "host/default"
 	p.git.blobs = map[string]string{"a.go": gitBlob}
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"risk"}]}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"risk"}]}`
 
 	first, err := domainreview.Seal(domainreview.Verdict{
 		Reviewer: "first",
@@ -619,6 +619,45 @@ func TestASecondRunCompletesTheVerdict(t *testing.T) {
 	}
 }
 
+// TestASecondGroupCannotRideOnTheFirstDeclaration: the store lends a verdict its
+// rows, never its declaration. A second lens group inherits the first group's
+// inspection the moment the merge runs, so checking the merged verdict would let
+// an answer that declares nothing be sealed under somebody else's reading. The
+// answer is judged first, and a group that says nothing is refused.
+func TestASecondGroupCannotRideOnTheFirstDeclaration(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"risk"}]}`
+
+	first, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer:   "first",
+		Lenses:     []string{"reliability"},
+		Inspection: &domainreview.Inspection{Status: domainreview.InspectionCompleted, Paths: []string{"a.go"}},
+		Passes:     []domainreview.Pass{{Path: "a.go", Blob: gitBlob, Lens: "reliability"}},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(first)
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1: the second answer declared nothing (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "inspection") {
+		t.Errorf("message = %q, want the field the answer is missing", result.Message)
+	}
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the seeded verdict no longer parses: %v", err)
+	}
+	if slices.Contains(stored.Lenses, "risk") {
+		t.Errorf("lenses = %v: an answer that declared nothing was sealed", stored.Lenses)
+	}
+}
+
 // TestAPartialRunStillStores: coverage is asked about the lenses this run
 // claimed, not about the tree. A sensitive candidate asks for four lenses, and
 // when two models split them the first group's answer - complete for the two
@@ -658,7 +697,7 @@ func TestAPartialRunStillStores(t *testing.T) {
 func TestAFullAnswerThatCoversEverythingIsUntouched(t *testing.T) {
 	p := newProject()
 	p.git.blobs = map[string]string{"a.go": gitBlob}
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"reliability"}]}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"reliability"}]}`
 
 	result := p.run(review.Options{Exec: "revisor"})
 	if result.Code != review.CodeOK {
@@ -866,7 +905,7 @@ func TestExecReadsTheAnswerFromTheVerdictFile(t *testing.T) {
 // reviewer that answered somewhere else answered nowhere.
 func TestExecRefusesAVerdictFileLeftEmpty(t *testing.T) {
 	p := newProject()
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "agent {verdict}"})
 
@@ -1459,7 +1498,7 @@ func TestAnUnreadableAnswerIsKeptOnceAndDroppedWhenOneLands(t *testing.T) {
 		t.Fatalf("kept answers = %d (%v), want two: one per distinct answer", len(kept), kept)
 	}
 
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"reliability"}]}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"reliability"}]}`
 	if result := p.run(review.Options{Exec: "revisor"}); result.Code != review.CodeOK {
 		t.Fatalf("the readable answer was refused: %s", result.Message)
 	}
@@ -1698,7 +1737,7 @@ func potentStore(t *testing.T) *project {
 // describe the exact bytes on disk.
 func TestTheStoreLendsItsPotentRows(t *testing.T) {
 	p := potentStore(t)
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "claude -p"})
 	if result.Code != review.CodeOK {
@@ -1767,7 +1806,7 @@ func refutedProject(t *testing.T) *project {
 // instead of re-litigating it.
 func TestARefutedFindingTravelsDismissed(t *testing.T) {
 	p := refutedProject(t)
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "claude -p"})
 	if result.Code != review.CodeOK {
@@ -1890,7 +1929,7 @@ func TestStaleBytesDoNotTravel(t *testing.T) {
 		t.Fatalf("sealing the previous verdict: %v", err)
 	}
 	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"reliability"}]}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"reliability"}]}`
 
 	if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
@@ -2276,7 +2315,7 @@ func TestShowRefusesAVerdictThatCannotBeRead(t *testing.T) {
 // decoration, not the answer. The verdict must come from stdout alone.
 func TestTheVerdictComesFromStdout(t *testing.T) {
 	p := newProject()
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 	p.shell.stderr = "\x1b[31m> reviewing...\x1b[0m\n"
 
 	result := p.run(review.Options{Exec: "revisor"})
@@ -2294,7 +2333,7 @@ func TestTheVerdictComesFromStdout(t *testing.T) {
 func TestTheSessionModelFillsThePlaceholder(t *testing.T) {
 	p := newProject()
 	p.host.model = "opencode-go/deepseek-v4.1-flash#max"
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "revisor --model {model}"})
 	if result.Code != review.CodeOK {
@@ -2332,7 +2371,7 @@ func TestTheSessionModelFillsThePlaceholder(t *testing.T) {
 func TestTheExplicitModelWinsOverTheSession(t *testing.T) {
 	p := newProject()
 	p.host.model = "host/default"
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "revisor --model {model}", Model: "human/model"})
 	if result.Code != review.CodeOK {
@@ -2351,7 +2390,7 @@ func TestTheExplicitModelWinsOverTheSession(t *testing.T) {
 func TestACommandWithoutThePlaceholderIsUntouched(t *testing.T) {
 	p := newProject()
 	p.host.model = "host/default"
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "claude -p"})
 	if result.Code != review.CodeOK {
@@ -2367,7 +2406,7 @@ func TestACommandWithoutThePlaceholderIsUntouched(t *testing.T) {
 // would file a verdict whose model nobody can name.
 func TestAModelThatDoesNotResolveStopsBeforeTheReviewer(t *testing.T) {
 	p := newProject()
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "revisor --model {model}"})
 	if result.Code != review.CodeBlocked {
@@ -2390,7 +2429,7 @@ func TestAModelThatDoesNotResolveStopsBeforeTheReviewer(t *testing.T) {
 // a lie about what ran, so it is named instead of ignored.
 func TestAModelFlagWithoutThePlaceholderIsRefused(t *testing.T) {
 	p := newProject()
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "claude -p", Model: "human/model"})
 	if result.Code != review.CodeBlocked {
@@ -2427,7 +2466,7 @@ func TestThePromptReadsTheWorktreeOnce(t *testing.T) {
 func TestTheExecReadsTheCandidateOnce(t *testing.T) {
 	p := newProject()
 	p.git.ignored = true
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "revisor"})
 	if result.Code != review.CodeOK {
@@ -2475,7 +2514,7 @@ func TestAFailingReviewerShowsBothStreams(t *testing.T) {
 // answer, stamped with the command as the reviewer when the answer omits one.
 func TestExecStoresWhatTheCommandAnswered(t *testing.T) {
 	p := newProject()
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	result := p.run(review.Options{Exec: "claude -p"})
 
@@ -2512,7 +2551,7 @@ func TestExecGivesTheReviewerThePrompt(t *testing.T) {
 	}
 
 	p := newProject()
-	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
@@ -2634,7 +2673,7 @@ func TestNothingOutsideTheStoreIsWritten(t *testing.T) {
 		{Attach: "veredicto.json"},
 	} {
 		p := newProject()
-		p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+		p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 		p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
 
 		p.run(opts)
