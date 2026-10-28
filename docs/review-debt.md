@@ -38,16 +38,18 @@ a reviewer does not, so the bytes that produced a verdict cannot be read again
 without regenerating them, and regenerating needs the same base to build the same
 question. Same home, same name, written by both forms.
 
-### the review gate - a verdict with rows missing is accepted when someone pads it
+### the review gate - a complete set of rows cannot say who wrote them
 
-`review --attach` checks one row per (path, lens) and accepts what it is given: it
-cannot tell a complete pass list from one a caller completed. It happened twice in
-one session: 0082's reviewer returned 49 of 52 rows and 0083's left out the one
-file its only finding was about; both times the caller wrote the missing rows to
-get through, and both verdicts sit in the store as if the reviewer had. The gate
-should refuse an incomplete verdict and name the missing rows - the same idea as
-gentle-ai's typed `inspection.paths`, which asserts what was actually read - and a
-caller must never pad one.
+`review --attach` refuses an incomplete answer and names every missing (path, lens)
+row, so nothing incomplete is ever sealed. What it cannot do is tell a row the
+reviewer wrote from a row the caller filled in: when 0083's reviewer omitted the one
+file its finding was about, the caller added that row by hand and the verdict was
+sealed. 0084 changed the refusal so it sends the gap back to the reviewer instead of
+saying "fix the rows", which is the teaching half; the structural half is the one
+gentle-ai solved - the reviewer *declares* what it read (`inspection.status` plus
+the complete path list) and the gate refuses an answer that does not, so a padded
+list is a lie the tool can see. That is a verdict-schema change and it needs its own
+feature.
 
 ### internal/app/doctor/doctor.go - the last branch of personaNote has no test
 
