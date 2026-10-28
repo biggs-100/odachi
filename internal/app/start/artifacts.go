@@ -207,7 +207,10 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	// An existing task document is the memory of work already done: its steps
 	// and its history are never rewritten by starting again. The brief is what
 	// a rerun corrects; the log of the work is not.
-	if !existing {
+	reused := ""
+	if existing {
+		reused = filepath.ToSlash(taskPath) + ": kept, the steps and history it carries are the memory of the work"
+	} else {
 		doc := taskdoc.TaskDoc{
 			Title:        slug,
 			Base:         r.opts.Base,
@@ -225,6 +228,9 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	// another shape (ODD names a feature without a number) must hear what the
 	// tool skips instead of wondering why summary counts one.
 	var lines []string
+	if reused != "" {
+		lines = append(lines, reused)
+	}
 	if skipped, err := tasks.Skipped(r.files, r.opts.Dir); err == nil {
 		if line := tasks.SkippedLine(skipped); line != "" {
 			lines = append(lines, line)
@@ -341,11 +347,12 @@ func (r *runner) put(rel string, data []byte) *Result {
 	return nil
 }
 
-// taskPathFor returns the task document for this feature: the existing one
-// whose slug matches (reported as existing), or a new one with the next number.
-// Reusing by slug is what keeps one feature to one document, so a beginner who
-// fixes the brief by running start again does not leave the agent two documents
-// to choose from.
+// taskPathFor returns the task document for this feature: the existing one whose
+// slug matches and still has work (reported as existing), or a new one with the
+// next number. Reusing by slug is what keeps one feature to one document, so a
+// beginner who fixes the brief by running start again does not leave the agent two
+// documents to choose from. A document with every step done is another feature's
+// memory: its name is the same three words, and it is not this feature's to fill.
 func (r *runner) taskPathFor(slug string) (path string, existing bool, problem *Result) {
 	names, err := r.files.List(filepath.Join(r.opts.Dir, taskDir))
 	if err != nil {
@@ -354,8 +361,16 @@ func (r *runner) taskPathFor(slug string) (path string, existing bool, problem *
 
 	suffix := "-" + slug + ".md"
 	for _, name := range names {
-		if strings.HasSuffix(name, suffix) {
-			return filepath.Join(taskDir, name), true, nil
+		if !strings.HasSuffix(name, suffix) {
+			continue
+		}
+		rel := filepath.Join(taskDir, name)
+		open, problem := r.documentOpen(rel)
+		if problem != nil {
+			return "", false, problem
+		}
+		if open {
+			return rel, true, nil
 		}
 	}
 
@@ -364,6 +379,20 @@ func (r *runner) taskPathFor(slug string) (path string, existing bool, problem *
 		return "", false, problem
 	}
 	return filepath.Join(taskDir, fmt.Sprintf("%04d-%s.md", number, slug)), false, nil
+}
+
+// documentOpen reports whether a document still has work: a step not done, or no
+// steps yet, which is what a fresh document looks like. Reading it is the only way
+// to tell a re-run of this feature from a new feature that repeats its first three
+// words.
+func (r *runner) documentOpen(rel string) (bool, *Result) {
+	data, err := r.files.Read(filepath.Join(r.opts.Dir, rel))
+	if err != nil {
+		problem := failure(blocked("could not read " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
+		return false, problem
+	}
+	done, total := taskdoc.Parse(string(data)).Progress()
+	return total == 0 || done < total, nil
 }
 
 // nextNumber is one more than the highest task-document number on disk, or 1

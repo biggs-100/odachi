@@ -5,6 +5,17 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A name is not an identity: two features can share their first three words.
+
+- **`start` never reuses a closed task document.** A document whose steps are all
+  done is the memory of a finished feature. A new feature whose slug collides with
+  it now gets the next number and its own file, instead of planning into the old
+  one and reporting done without writing anything; a document that still has work
+  is still reused, so one feature never leaves two files behind. The run names the
+  document it kept.
+
 ## v0.11.41 - 2026-10-28
 
 Two decisions stop being improvised: where the project's agent lives, and where a

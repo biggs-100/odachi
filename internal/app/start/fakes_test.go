@@ -68,12 +68,14 @@ func (f *fakeFiles) Backup(path string) (string, error) {
 	if _, ok := f.files[f.key(path)]; !ok {
 		return "", fmt.Errorf("cannot back up %s: it does not exist", path)
 	}
-	f.record("backup " + path)
+	// The event is recorded the way the port documents paths: forward slashes on
+	// every OS, so an assertion on a slash literal can fail on Windows.
+	f.record("backup " + filepath.ToSlash(path))
 	return path + ".bak-test", nil
 }
 
 func (f *fakeFiles) Write(path string, data []byte) error {
-	f.record("write " + path)
+	f.record("write " + filepath.ToSlash(path))
 	f.files[f.key(path)] = data
 	return nil
 }

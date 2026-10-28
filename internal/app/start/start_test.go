@@ -382,6 +382,87 @@ func TestForceBacksUpTheBriefAndWritesTheSameBytes(t *testing.T) {
 	}
 }
 
+// closedDocument renders one task document whose only step is done: the memory of
+// a finished feature, which a new one must not plan into.
+func closedDocument(done bool) string {
+	return taskdoc.TaskDoc{
+		Title:        "the-review-prompt",
+		Base:         "abc1234",
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "the review prompt carries each row once"}},
+		DoneWhen:     []string{"each row appears once"},
+		Steps:        []taskdoc.Step{{ID: "T1", Text: "the rows", Done: done, Requirement: "R1"}},
+		History:      []string{`L1 · "the review prompt carries each row once"`},
+	}.Render()
+}
+
+// openDocument is the same document with its only step still unchecked.
+// openDocument is the same shape with its only step unchecked.
+func openDocument() string {
+	return closedDocument(false)
+}
+
+// TestStartDoesNotReuseAClosedDocument: a document with every step done is the
+// memory of a finished feature. A new feature whose first three words repeat it
+// gets the next number, instead of planning into that file and reporting done
+// without writing anything - what happened to 0046.
+func TestStartDoesNotReuseAClosedDocument(t *testing.T) {
+	var events []string
+	files := newFakeFiles(map[string]string{
+		"odd/tasks/0046-the-review-prompt.md": closedDocument(true),
+	}, &events)
+	opts := flagsCarryTheSameAnswers()
+	opts.Outcome = "the review prompt carries each row once, again"
+	opts.Profile = novatoProfile(t)
+
+	got := start.Run(opts, nil, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	want := "odd/tasks/0047-the-review-prompt.md"
+	if got.Task != want {
+		t.Fatalf("Task = %q, want the next number %q", got.Task, want)
+	}
+	if _, ok := files.files[want]; !ok {
+		t.Errorf("%s was not written", want)
+	}
+	for _, event := range events {
+		if event == "write odd/tasks/0046-the-review-prompt.md" || event == "backup odd/tasks/0046-the-review-prompt.md" {
+			t.Errorf("the closed document was touched: %s", event)
+		}
+	}
+}
+
+// TestStartReusesAnOpenDocument: the other half. Running start again on the same
+// unfinished feature must not leave the agent two documents to choose from.
+func TestStartReusesAnOpenDocument(t *testing.T) {
+	var events []string
+	// The steady state this feature creates: the finished feature's closed
+	// document and the open one that followed it share the same three words.
+	files := newFakeFiles(map[string]string{
+		"odd/tasks/0046-the-review-prompt.md": closedDocument(true),
+		"odd/tasks/0047-the-review-prompt.md": openDocument(),
+	}, &events)
+	opts := flagsCarryTheSameAnswers()
+	opts.Outcome = "the review prompt carries each row once, again"
+	opts.Profile = novatoProfile(t)
+
+	got := start.Run(opts, nil, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	if want := "odd/tasks/0047-the-review-prompt.md"; got.Task != want {
+		t.Errorf("Task = %q, want the open document %q", got.Task, want)
+	}
+	if _, ok := files.files["odd/tasks/0048-the-review-prompt.md"]; ok {
+		t.Error("a third document was written for the same open feature")
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "odd/tasks/0047-the-review-prompt.md") {
+		t.Errorf("the run does not say which document it kept:\n%s", strings.Join(got.Lines, "\n"))
+	}
+}
+
 // TestExistingBriefWithoutForceIsBlocked names the flag that unblocks it.
 func TestExistingBriefWithoutForceIsBlocked(t *testing.T) {
 	var events []string

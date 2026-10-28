@@ -11,6 +11,7 @@ R1 · "a closed task document is never reused, so a new feature with the same th
 - a test drives both answers with two documents that share a slug, observed red first
 
 ## Steps
+- [x] T1 · start reuses a document only while it has unfinished steps, and numbers a closed one's name anew   R1
 
 ## History
 L1 · "a closed task document is never reused, so a new feature with the same three words gets its own number"
