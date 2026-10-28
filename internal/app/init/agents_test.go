@@ -15,6 +15,9 @@ import (
 type fakeAgentSelection struct {
 	stored string
 	err    error
+	// targetErr is the failure of the store lookup itself: Written can succeed
+	// and the write still have nowhere to go.
+	targetErr error
 }
 
 func (s *fakeAgentSelection) Written(string) (string, error) { return s.stored, s.err }
@@ -22,6 +25,9 @@ func (s *fakeAgentSelection) Written(string) (string, error) { return s.stored, 
 // Target is the file the fake choice lives in: inside the project, because this
 // test is about the choice and not about where the store hangs.
 func (s *fakeAgentSelection) Target(dir string) (string, string, error) {
+	if s.targetErr != nil {
+		return "", "", s.targetErr
+	}
 	if s.err != nil {
 		return "", "", s.err
 	}
