@@ -51,32 +51,6 @@ is handed; a tool that trusts its silence as coverage (ADR 0033) should know tha
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
 
-### internal/app/start/artifacts.go - an unreadable task document blocks the run, untested
-
-`documentOpen` returns a blocked result when a document whose slug matches cannot
-be read. Before 0083 `start` never read that file, so this is a new way for a run
-to stop — after `brief.md`, `profile.toml` and `fence.toml` are already written, so
-the retry needs `--force` — and the fake cannot inject a read error, so no test
-reaches the branch. A read-error seam in `fakeFiles` and one assertion on the
-message close it.
-
-### internal/app/doctor/doctor.go - the last branch of personaNote has no test
-
-The branch that answers "the files match and the store records `project_agents =
-none`" ships with no test: it is the state right after `init --global
---no-project-agents` over a project whose mirrors were current. One test with
-`configured()` intact and a store that records `none`, asserting the store is
-named and the "matches" wording is replaced, closes it. Owed by 0081; the next
-feature that touches `internal/app/doctor` pays it, the way 0079 paid 0078's.
-
-### odd/tasks/0073-a-professional-persona.md - the doc speaks the old vocabulary
-
-Its Done-when and Steps describe `odachi persona new`, `persona-craft` and
-`.odachi/personas/<slug>.md`; the shipped tree has `odachi role`, `role-craft` and
-`odd/roles/<slug>.md`. The Requirements are verbatim and untouchable, and the
-fence says an old task doc is not rewritten; the divergence is recorded here so
-the next reader does not follow a command that does not exist.
-
 ## Accepted
 
 ### the store · a verdict attached with the wrong base cannot be replaced
@@ -113,6 +87,18 @@ regenerated since, and the next `check --run` overwrites them. A length-prefixed
 header would remove the ambiguity and detect a truncated proof as well; it is a
 format change for a case this narrow, and it can wait until the format changes for
 another reason.
+
+## Closed by feature 0090
+
+- `internal/app/start/artifacts.go` - `documentOpen`'s read error is reachable: the
+  fake fails one path, and the test drives the block that lands after the brief and
+  the fence are written.
+- `internal/app/doctor/doctor.go` - the last branch of `personaNote` has its test:
+  mirrors matching while the store records `project_agents = none`, asserting the
+  store is named and the files are called leftovers.
+- `odd/tasks/0073-a-professional-persona.md` - the Done-when keeps the words the
+  human accepted and gains a note at the top mapping them to `odachi role new`,
+  `odd/roles/` and `role-craft`. Changing the bytes also retired the reviewer's row.
 
 ## Closed by feature 0089
 
