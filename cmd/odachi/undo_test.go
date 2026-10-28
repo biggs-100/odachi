@@ -188,7 +188,7 @@ func TestUndoCollectMovesLegacyBackups(t *testing.T) {
 	dir, _ := backupProject(t)
 	const legacy = "brief legado\n"
 	legacyRel := briefRel + ".bak-00000000"
-	storeRel := ".odachi/backups/" + legacyRel
+	storeRel := ".git/odachi/backups/" + legacyRel
 	writeRel(t, dir, legacyRel, legacy)
 
 	code, stdout, stderr := runDir(t, dir, []string{"undo", "--collect"}, "")

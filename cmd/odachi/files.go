@@ -18,16 +18,35 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/store"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/review"
 )
 
-// osFiles is the Files adapter for `odachi start`: the only place that command
-// reaches the disk. Writes are atomic and an existing file is backed up first.
-type osFiles struct{}
+// osFiles is the Files adapter: the only place the verbs reach the disk. Writes
+// are atomic and an existing file is backed up first.
+//
+// project and store are the two roots a backup needs: the artifact lives under
+// project, the version under store. They are separate because the worktree
+// travels with the repository and the store does not.
+type osFiles struct {
+	project string
+	store   string
+}
 
-func (osFiles) Exists(path string) (bool, error) {
+// disk is the Files adapter for a verb that writes: the project root, and the
+// clone's store when the folder is a git repository. A folder with no repository
+// has no store, and a backup there stays beside the artifact - the one case
+// where the old shape survives, because there is nowhere else to put it.
+func disk(dir string) osFiles {
+	if root, err := store.Root(dir, gitRepo{}); err == nil {
+		return osFiles{project: dir, store: root}
+	}
+	return osFiles{project: dir}
+}
+
+func (f osFiles) Exists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	switch {
 	case err == nil:
@@ -79,32 +98,17 @@ func (osFiles) List(dir string) ([]string, error) {
 	return names, nil
 }
 
-// Backup keeps a version before a rewrite. When path belongs to a project, the
-// version goes to that project's .odachi/backups store; a file outside a
-// project keeps the backup beside it, because it has no store to join.
-func (osFiles) Backup(path string) (string, error) {
-	if root, ok := projectRoot(path); ok {
-		return fsx.BackupIn(root, path)
+// Backup keeps a version before a rewrite. The version belongs to the clone, so
+// it goes under the store's backups directory with the artifact's path
+// preserved; a file outside the project keeps the backup beside it, because it
+// has no project to belong to. With no store resolved — the binary always
+// resolves one inside a repository, so this is a test or a folder with no git —
+// the backup lands beside the file rather than in an invented location.
+func (f osFiles) Backup(path string) (string, error) {
+	if f.store == "" {
+		return fsx.Backup(path)
 	}
-	return fsx.Backup(path)
-}
-
-// projectRoot finds the nearest ancestor that owns a .odachi directory: the
-// same boundary the rest of the verbs use. It starts at the file's directory,
-// so a file inside .odachi walks up to the project root and not to itself.
-func projectRoot(path string) (string, bool) {
-	dir := filepath.Dir(path)
-	for {
-		info, err := os.Stat(filepath.Join(dir, ".odachi"))
-		if err == nil && info.IsDir() {
-			return dir, true
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", false
-		}
-		dir = parent
-	}
+	return fsx.BackupIn(f.project, f.store, path)
 }
 
 func (osFiles) Remove(path string) error {

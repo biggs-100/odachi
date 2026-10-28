@@ -66,7 +66,7 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 	// in ./skills and the agent reads .agents/skills, so this is the join. A
 	// project without skills/ contributes nothing, and a broken catalog is
 	// refused by name: installing half a skill is worse than not installing it.
-	own := skillsapp.Run(skillsapp.Options{Dir: dir}, osFiles{})
+	own := skillsapp.Run(skillsapp.Options{Dir: dir}, disk(dir))
 	if own.Code != start.CodeOK {
 		// A catalog that cannot be read is not an empty catalog: installing only
 		// the bundled set would hide the project's own skills without saying so.
@@ -85,7 +85,7 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 		project = append(project, pack.Skill{Name: s.Name, Content: s.Raw})
 	}
 
-	return reportPack(pack.Run(pack.Options{Agents: agents, Scope: scope, Dest: dest, DryRun: dryRun, Dir: dir, Skills: payload, Project: project}, osFiles{}, osHome{}), asJSON, stdout, stderr)
+	return reportPack(pack.Run(pack.Options{Agents: agents, Scope: scope, Dest: dest, DryRun: dryRun, Dir: dir, Skills: payload, Project: project}, disk(dir), osHome{}), asJSON, stdout, stderr)
 }
 
 // packDest is one row of the machine report: the same numbers the summary line a

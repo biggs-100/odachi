@@ -9,10 +9,11 @@ import (
 )
 
 // TestBackupInPutsTheBackupUnderTheProjectStore is the order this feature
-// exists for: the backup is still a file, but it lives in the project's store
+// exists for: the backup is still a file, but it lives in the clone's store
 // and not beside the artifact the human reads.
-func TestBackupInPutsTheBackupUnderTheProjectStore(t *testing.T) {
+func TestBackupInPutsTheBackupUnderTheCloneStore(t *testing.T) {
 	root := t.TempDir()
+	store := filepath.Join(t.TempDir(), "odachi")
 	path := filepath.Join(root, "odd", "tasks", "0001-turnos.md")
 	content := []byte("# turnos\n")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -22,12 +23,12 @@ func TestBackupInPutsTheBackupUnderTheProjectStore(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	backup, err := fsx.BackupIn(root, path)
+	backup, err := fsx.BackupIn(root, store, path)
 	if err != nil {
 		t.Fatalf("BackupIn: %v", err)
 	}
 
-	want := filepath.Join(root, ".odachi", "backups", "odd", "tasks", "0001-turnos.md.bak-"+fsx.Digest(content)[:8])
+	want := filepath.Join(store, "backups", "odd", "tasks", "0001-turnos.md.bak-"+fsx.Digest(content)[:8])
 	if backup != want {
 		t.Errorf("BackupIn path = %q, want %q", backup, want)
 	}
@@ -48,6 +49,7 @@ func TestBackupInPutsTheBackupUnderTheProjectStore(t *testing.T) {
 // worse.
 func TestBackupInLeavesOutsideFilesBesideThem(t *testing.T) {
 	root := t.TempDir()
+	store := filepath.Join(t.TempDir(), "odachi")
 	outside := t.TempDir()
 	path := filepath.Join(outside, "SKILL.md")
 	content := []byte("# skill\n")
@@ -55,7 +57,7 @@ func TestBackupInLeavesOutsideFilesBesideThem(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	backup, err := fsx.BackupIn(root, path)
+	backup, err := fsx.BackupIn(root, store, path)
 	if err != nil {
 		t.Fatalf("BackupIn: %v", err)
 	}

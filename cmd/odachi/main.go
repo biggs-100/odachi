@@ -215,7 +215,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		interview = &terminalInterview{in: bufio.NewReader(stdin), out: stdout}
 	}
 
-	return report(start.Run(opts, interview, osFiles{}, &osLock{}), asJSON, stdout, stderr)
+	return report(start.Run(opts, interview, disk(dir), &osLock{}), asJSON, stdout, stderr)
 }
 
 // runAsk parses the flags, wires the Files adapter and reports the result.
@@ -258,7 +258,7 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	opts.Dir = dir
-	return reportAsk(ask.Run(opts, osFiles{}), asJSON, stdout, stderr)
+	return reportAsk(ask.Run(opts, disk(dir)), asJSON, stdout, stderr)
 }
 
 // runPlan parses the flags, wires the Files adapter and reports the result.
@@ -306,7 +306,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	opts.Git = gitRepo{}
-	return reportPlan(plan.Run(opts, osFiles{}), asJSON, stdout, stderr)
+	return reportPlan(plan.Run(opts, disk(dir)), asJSON, stdout, stderr)
 }
 
 // runLevel parses the flags, reads the profile in force and reports the result.
@@ -345,7 +345,7 @@ func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		return reportLevel(level.Result{Code: agentsCode, Message: agentsMessage}, asJSON, stdout, stderr)
 	}
 
-	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to, Agents: agents}, osFiles{}), asJSON, stdout, stderr)
+	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to, Agents: agents}, disk(dir)), asJSON, stdout, stderr)
 }
 
 // runSummary parses the flags and prints the derived report.
@@ -567,7 +567,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 	opts.LensModels = config.Lenses
 
-	return reportReview(reviewapp.Run(opts, osFiles{}, gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
+	return reportReview(reviewapp.Run(opts, disk(dir), gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
 }
 
 // runReviewMode parses the small mode grammar by hand: the action is a word,
@@ -599,7 +599,7 @@ func runReviewMode(dir string, args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	result := reviewapp.Mode(reviewapp.ModeOptions{Dir: dir, Action: action}, osFiles{}, reviewModeCodec{})
+	result := reviewapp.Mode(reviewapp.ModeOptions{Dir: dir, Action: action}, disk(dir), reviewModeCodec{})
 	return reportReview(result, asJSON, stdout, stderr)
 }
 
@@ -632,7 +632,7 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.BoolVar(&opts.List, "list", false, "what can be undone, with its date")
-	flags.BoolVar(&opts.Collect, "collect", false, "move old backups to .odachi/backups")
+	flags.BoolVar(&opts.Collect, "collect", false, "move old backups into the clone's store")
 	flags.StringVar(&opts.File, "file", "", "only that artifact: brief | profile | fence | task")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
@@ -657,7 +657,7 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	opts.Store = storeRoot
-	return reportUndo(undo.Run(opts, osFiles{}, &osLock{}), asJSON, stdout, stderr)
+	return reportUndo(undo.Run(opts, osFiles{project: dir, store: storeRoot}, &osLock{}), asJSON, stdout, stderr)
 }
 
 // reportCheck prints the gate's verdict. A ready run is silent under --quiet,
@@ -853,7 +853,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		Home:            osHome{},
 		Global:          global,
 		NoProjectAgents: noProjectAgent,
-	}, osFiles{}, &initSkills{dir: dir, scope: skillsScope})
+	}, disk(dir), &initSkills{dir: dir, scope: skillsScope})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -938,7 +938,7 @@ func (s initSkills) Install() initapp.SkillReport {
 		if err != nil {
 			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: "odachi init"}
 		}
-		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all)}, osFiles{}, osHome{})
+		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all)}, disk(s.dir), osHome{})
 		report := s.report([]pack.Result{home})
 		if standard, err := agent.Resolve(agent.Standard); err == nil {
 			exists, err := (osFiles{}).Exists(filepath.Join(s.dir, filepath.FromSlash(standard.Dest)))
@@ -958,8 +958,8 @@ func (s initSkills) Install() initapp.SkillReport {
 	// The project gets the craft, in the cross-client location every client
 	// reads. The home gets the one skill that teaches how to arrive, because
 	// before a project exists the home is the only place a skill can live.
-	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum)}, osFiles{}, osHome{})
-	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap})}, osFiles{}, osHome{})
+	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum)}, disk(s.dir), osHome{})
+	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap})}, disk(s.dir), osHome{})
 	return s.report([]pack.Result{project, home})
 }
 
@@ -1348,7 +1348,7 @@ plan flags:
 
 undo flags:
   --list          what can be undone, with its date
-  --collect       move old backups to .odachi/backups; it deletes no version
+  --collect       move old backups into the clone's store; it deletes no version
   --file s        only that artifact: brief | profile | fence | task
   --json          machine output
 

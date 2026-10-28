@@ -41,18 +41,18 @@ func (f *fakeLock) Release() error {
 // backs up what it replaces, so it writes more than one file and takes the lock.
 // A refusal happens before any backup is even listed.
 func TestUndoIsRefusedWhileAnotherRunHoldsTheLock(t *testing.T) {
-	refusal := lock.Refusal(filepath.Join("store", lock.File), lock.Owner{Verb: "undo", PID: "5150", Instant: "2026-10-21T15:47:03Z"}, 12*time.Second)
+	refusal := lock.Refusal(filepath.Join(store, lock.File), lock.Owner{Verb: "undo", PID: "5150", Instant: "2026-10-21T15:47:03Z"}, 12*time.Second)
 	port := &fakeLock{held: false, line: refusal}
 	files := newFakeFiles()
 	files.put(briefRel, "brief nuevo", at(21, 23, 0))
 	files.put(briefRel+".bak-"+digest("brief viejo"), "brief viejo", at(20, 9, 0))
 
-	res := undo.Run(undo.Options{Dir: dir, Store: "store"}, files, port)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, port)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
 	}
-	for _, want := range []string{"another odachi run is writing to this project", "undo, pid 5150", "12s ago", filepath.Join("store", lock.File)} {
+	for _, want := range []string{"another odachi run is writing to this project", "undo, pid 5150", "12s ago", filepath.Join(store, lock.File)} {
 		if !strings.Contains(res.Message, want) {
 			t.Errorf("Message = %q, want it to contain %q", res.Message, want)
 		}
@@ -80,7 +80,7 @@ func TestUndoAnnouncesAStaleLock(t *testing.T) {
 	files.put(briefRel+".bak-"+digest("brief viejo"), "brief viejo", at(20, 9, 0))
 	port := &fakeLock{held: true, line: notice}
 
-	res := undo.Run(undo.Options{Dir: dir, Store: "store", File: "brief"}, files, port)
+	res := undo.Run(undo.Options{Dir: dir, Store: store, File: "brief"}, files, port)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -102,7 +102,7 @@ func TestUndoReleasesTheLockWhenThereIsNothingToUndo(t *testing.T) {
 	files := newFakeFiles()
 	port := &fakeLock{held: true}
 
-	res := undo.Run(undo.Options{Dir: dir, Store: "store"}, files, port)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, port)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
@@ -119,12 +119,12 @@ func TestUndoStopsWhenTheLockCannotBeTaken(t *testing.T) {
 	files.put(briefRel+".bak-"+digest("brief viejo"), "brief viejo", at(20, 9, 0))
 	port := &fakeLock{err: errors.New("permission denied")}
 
-	res := undo.Run(undo.Options{Dir: dir, Store: "store"}, files, port)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, port)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
 	}
-	for _, want := range []string{filepath.Join("store", lock.File), "permission denied"} {
+	for _, want := range []string{filepath.Join(store, lock.File), "permission denied"} {
 		if !strings.Contains(res.Message, want) {
 			t.Errorf("Message = %q, want it to contain %q", res.Message, want)
 		}

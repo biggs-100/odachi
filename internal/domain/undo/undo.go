@@ -1,11 +1,12 @@
 // Package undo decides which backup of which artifact `odachi undo` restores.
 //
 // odachi writes four kinds of artifact and keeps a backup before rewriting it.
-// New backups live in the project store, `.odachi/backups`; the old ones beside
-// the artifact are still read so a project can migrate at its own pace. Undoing
-// is putting one of those backups back — never a commit, never a file of
-// somebody else's: the code belongs to the human and to git, and a tool that
-// starts choosing commits to revert becomes exactly what this one criticises.
+// New versions live in the clone's store, outside the worktree; the old project
+// store and the versions left beside the artifact are still read so a project can
+// migrate at its own pace. Undoing is putting one of those backups back — never
+// a commit, never a file of somebody else's: the code belongs to the human and to
+// git, and a tool that starts choosing commits to revert becomes exactly what
+// this one criticises.
 //
 // The domain answers "which artifact" and "which backup, out of which set". The
 // app layer is the one that touches the disk. Stdlib only, like the rest of the
@@ -23,10 +24,15 @@ import (
 // the backup was taken. fsx.Backup writes exactly this shape.
 const backupMark = ".bak-"
 
-// BackupDir is the project store for new backups, relative to the project root.
-// A backup keeps its artifact's path inside it, so one directory holds every
-// version without a second naming scheme.
-const BackupDir = ".odachi/backups"
+// StoreBackups is the directory inside the clone's store that holds the
+// versions. A backup keeps its artifact's path inside it, so one directory holds
+// every version without a second naming scheme.
+const StoreBackups = "backups"
+
+// LegacyBackups is the project-relative directory older versions used. It is
+// read and adopted by --collect, never written again: the worktree keeps the
+// rules and the plan, and the versions of them belong to the clone.
+const LegacyBackups = ".odachi/backups"
 
 // digestLen is how many hex characters fsx.Backup keeps of the content digest.
 const digestLen = 8
@@ -74,11 +80,12 @@ func (k Kind) Dir() string {
 	}
 }
 
-// BackupDir is where this kind's backups live in the project store. The
-// artifact's own directory is preserved underneath, so `.odachi/profile.toml`
-// keeps its path and a task keeps its place in `odd/tasks`.
-func (k Kind) BackupDir() string {
-	return path.Join(BackupDir, k.Dir())
+// BackupSubdir is where this kind's versions live inside the store's backups
+// directory. The artifact's own directory is preserved underneath, so
+// `.odachi/profile.toml` keeps its path and a task keeps its place in
+// `odd/tasks`.
+func (k Kind) BackupSubdir() string {
+	return k.Dir()
 }
 
 // Target is the artifact as a human reads it in a project: the list a blocked
@@ -151,11 +158,17 @@ func isHex(c rune) bool {
 	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 }
 
-// Backup is one backup file next to the artifact it restores.
+// Backup is one backup file of one artifact. Root is the directory Path is
+// relative to: the clone's store for a version this tool wrote, the project for
+// a version that still sits where older releases left it. Entry is the same file
+// relative to the store's backups directory, which is what --collect needs to
+// move it without recomputing the artifact's path.
 type Backup struct {
 	Kind     Kind
 	Artifact string // artifact path relative to the project root, slash-separated
-	Path     string // the backup's own path, same form
+	Root     string // absolute directory Path is relative to
+	Path     string // the backup's own path, relative to Root
+	Entry    string // the backup's path inside the store's backups directory
 	ModTime  time.Time
 }
 

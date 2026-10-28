@@ -18,6 +18,10 @@ import (
 // port speaks the platform's separator.
 const dir = "proyecto"
 
+// store is the clone's state, outside the project: the versions live there and
+// not in the tree the human reads.
+var store = filepath.Join(dir, ".git", "odachi")
+
 // The four artifacts, relative to the project root, in the shape the messages
 // show them.
 const (
@@ -47,9 +51,9 @@ func backupName(path, content string) string {
 	return path + ".bak-" + digest(content)
 }
 
-// storeName is where a new backup of rel lives under the project store.
+// storeName is where a new backup of rel lives under the clone's store.
 func storeName(rel, content string) string {
-	return backupName(filepath.ToSlash(filepath.Join(".odachi", "backups", filepath.FromSlash(rel))), content)
+	return backupName(filepath.Join(store, "backups", filepath.FromSlash(rel)), content)
 }
 
 // fakeFiles is the disk in memory with a ledger: a test asserts what was read,
@@ -74,12 +78,21 @@ func newFakeFiles() *fakeFiles {
 	}
 }
 
-// put seeds a file with its date.
+// put seeds a file of the project with its date.
 func (f *fakeFiles) put(rel, content string, when time.Time) *fakeFiles {
-	path := filepath.Join(dir, filepath.FromSlash(rel))
+	return f.putPath(filepath.Join(dir, filepath.FromSlash(rel)), content, when)
+}
+
+// putPath seeds a file at the path as given, store paths included.
+func (f *fakeFiles) putPath(path, content string, when time.Time) *fakeFiles {
 	f.files[path] = []byte(content)
 	f.mod[path] = when
 	return f
+}
+
+// putStore seeds a version in the clone's store, as a previous run would have.
+func (f *fakeFiles) putStore(rel, content string, when time.Time) *fakeFiles {
+	return f.putPath(storeName(rel, content), content, when)
 }
 
 // tick advances the fake clock, so a backup taken now is newer than any seeded
@@ -154,18 +167,30 @@ func (f *fakeFiles) Rename(from, to string) error {
 	return nil
 }
 
+// Backup saves a version the way the adapter does: inside the clone's store when
+// the file belongs to the project, beside it when it does not.
 func (f *fakeFiles) Backup(path string) (string, error) {
 	data, ok := f.files[path]
 	if !ok {
 		return "", fmt.Errorf("could not read %s to back it up", path)
 	}
-	backup := backupName(path, string(data))
+	backup := backupTarget(path, string(data))
 	f.backups = append(f.backups, path)
 	f.order = append(f.order, "backup "+path)
 	f.touched = append(f.touched, path)
 	f.files[backup] = append([]byte(nil), data...)
 	f.mod[backup] = f.tick()
 	return backup, nil
+}
+
+// backupTarget is the path the adapter would write: the artifact's place inside
+// the store's backups directory, or beside a file that has no project.
+func backupTarget(path, content string) string {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return backupName(path, content)
+	}
+	return backupName(filepath.Join(store, "backups", rel), content)
 }
 
 func (f *fakeFiles) ModTime(path string) (time.Time, error) {
@@ -177,13 +202,27 @@ func (f *fakeFiles) ModTime(path string) (time.Time, error) {
 	return when, nil
 }
 
+// label is how a message names a path: relative to the project, forward
+// slashes, the shape the CLI prints on every platform.
+func label(path string) string {
+	if rel, err := filepath.Rel(dir, path); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return filepath.ToSlash(rel)
+	}
+	return filepath.ToSlash(path)
+}
+
 // content reads a file the fake holds, failing when it is not there.
 func (f *fakeFiles) content(t *testing.T, rel string) string {
 	t.Helper()
-	path := filepath.Join(dir, filepath.FromSlash(rel))
+	return f.contentAt(t, filepath.Join(dir, filepath.FromSlash(rel)))
+}
+
+// contentAt reads a file at the path as given, store paths included.
+func (f *fakeFiles) contentAt(t *testing.T, path string) string {
+	t.Helper()
 	data, ok := f.files[path]
 	if !ok {
-		t.Fatalf("%s does not exist; files: %v", rel, f.paths())
+		t.Fatalf("%s does not exist; files: %v", path, f.paths())
 	}
 	return string(data)
 }
@@ -216,6 +255,10 @@ func (f *fakeFiles) assertOnlyTheFourArtifacts(t *testing.T) {
 		// are found; the directories themselves are not artifacts. The store
 		// is undo's own directory now, and its subdirectories mirror the
 		// artifact paths.
+		if rel == ".git/odachi" || strings.HasPrefix(rel, ".git/odachi/") {
+			return true
+		}
+		// The old project store is still read, so undo still lists it.
 		if rel == ".odachi/backups" || strings.HasPrefix(rel, ".odachi/backups/") {
 			return true
 		}
@@ -241,7 +284,7 @@ func TestRestoreBacksUpTheCurrentStateFirst(t *testing.T) {
 	files.put(briefRel, hand, at(21, 23, 0))
 	files.put(briefRel+".bak-"+digest(written), written, at(21, 20, 31))
 
-	res := undo.Run(undo.Options{Dir: dir}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -256,13 +299,13 @@ func TestRestoreBacksUpTheCurrentStateFirst(t *testing.T) {
 		t.Errorf("%s = %q, want the restored bytes %q", briefRel, got, want)
 	}
 
-	saved := briefRel + ".bak-" + digest(hand)
-	if got := files.content(t, saved); got != hand {
+	saved := storeName(briefRel, hand)
+	if got := files.contentAt(t, saved); got != hand {
 		t.Errorf("the hand edit was not saved in %s: %q", saved, got)
 	}
 
 	want := "restored " + briefRel + " from " + briefRel + ".bak-" + digest(written) +
-		"; what was there was left in " + saved
+		"; what was there was left in " + label(saved)
 	if res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
@@ -288,19 +331,19 @@ func TestUndoingTheUndoPutsTheHandEditBack(t *testing.T) {
 	files.put(briefRel, hand, at(21, 23, 0))
 	files.put(briefRel+".bak-"+digest(written), written, at(21, 20, 31))
 
-	if res := undo.Run(undo.Options{Dir: dir}, files, nil); res.Code != undo.CodeOK {
+	if res := undo.Run(undo.Options{Dir: dir, Store: store}, files, nil); res.Code != undo.CodeOK {
 		t.Fatalf("first undo: Code = %d (message: %s)", res.Code, res.Message)
 	}
 
-	second := undo.Run(undo.Options{Dir: dir}, files, nil)
+	second := undo.Run(undo.Options{Dir: dir, Store: store}, files, nil)
 	if second.Code != undo.CodeOK {
 		t.Fatalf("second undo: Code = %d (message: %s)", second.Code, second.Message)
 	}
 	if got := files.content(t, briefRel); got != hand {
 		t.Errorf("%s = %q, want the hand edit back (%q)", briefRel, got, hand)
 	}
-	if want := "restored " + briefRel + " from " + briefRel + ".bak-" + digest(hand) + "; what was there was left in " +
-		briefRel + ".bak-" + digest(written); second.Message != want {
+	if want := "restored " + briefRel + " from " + label(storeName(briefRel, hand)) + "; what was there was left in " +
+		label(storeName(briefRel, written)); second.Message != want {
 		t.Errorf("Message = %q, want %q", second.Message, want)
 	}
 }
@@ -316,7 +359,7 @@ func TestUndoRefusesToGuessBetweenArtifacts(t *testing.T) {
 	files.put(taskRel, "documento nuevo", at(21, 23, 0))
 	files.put(taskRel+".bak-"+digest("documento viejo"), "documento viejo", at(22, 9, 30))
 
-	res := undo.Run(undo.Options{Dir: dir}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, nil)
 
 	if res.Code == undo.CodeOK {
 		t.Fatalf("Code = %d: guessed which artifact to restore", res.Code)
@@ -341,7 +384,7 @@ func TestFileFiltersToOneArtifact(t *testing.T) {
 	files.put(taskRel, "documento nuevo", at(21, 23, 0))
 	files.put(taskRel+".bak-"+digest("documento viejo"), "documento viejo", at(22, 9, 30))
 
-	res := undo.Run(undo.Options{Dir: dir, File: "brief"}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store, File: "brief"}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -363,7 +406,7 @@ func TestListShowsOneLinePerArtifactNewestFirst(t *testing.T) {
 	files.put(profileRel, "perfil actual", at(21, 23, 0))
 	files.put(profileRel+".bak-"+digest("perfil 1"), "perfil 1", at(22, 8, 15))
 
-	res := undo.Run(undo.Options{Dir: dir, List: true}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store, List: true}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -388,7 +431,7 @@ func TestListFileFiltersToOneArtifact(t *testing.T) {
 	files.put(briefRel+".bak-"+digest("brief 1"), "brief 1", at(20, 10, 0))
 	files.put(profileRel+".bak-"+digest("perfil 1"), "perfil 1", at(22, 8, 15))
 
-	res := undo.Run(undo.Options{Dir: dir, List: true, File: "profile"}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store, List: true, File: "profile"}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -403,10 +446,10 @@ func TestListFileFiltersToOneArtifact(t *testing.T) {
 func TestStoreBackupIsRestored(t *testing.T) {
 	files := newFakeFiles()
 	files.put(briefRel, "actual", at(21, 23, 0))
-	old := storeName(briefRel, "viejo")
-	files.put(old, "viejo", at(21, 20, 31))
+	files.putStore(briefRel, "viejo", at(21, 20, 31))
+	old := label(storeName(briefRel, "viejo"))
 
-	res := undo.Run(undo.Options{Dir: dir}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -424,9 +467,9 @@ func TestStoreBackupIsRestored(t *testing.T) {
 func TestListReadsLegacyAndStoreBackups(t *testing.T) {
 	files := newFakeFiles()
 	files.put(briefRel+".bak-"+digest("brief viejo"), "brief viejo", at(20, 10, 0))
-	files.put(storeName(profileRel, "perfil viejo"), "perfil viejo", at(22, 8, 15))
+	files.putStore(profileRel, "perfil viejo", at(22, 8, 15))
 
-	res := undo.Run(undo.Options{Dir: dir, List: true}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store, List: true}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -453,7 +496,7 @@ func TestCollectMovesLegacyBackupsIntoTheStore(t *testing.T) {
 	files.put(taskRel, "task actual", at(21, 23, 0))
 	files.put(taskRel+".bak-"+digest(oldTask), oldTask, at(20, 11, 0))
 
-	res := undo.Run(undo.Options{Dir: dir, Collect: true}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store, Collect: true}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)
@@ -464,20 +507,20 @@ func TestCollectMovesLegacyBackupsIntoTheStore(t *testing.T) {
 
 	briefStore := storeName(briefRel, oldBrief)
 	taskStore := storeName(taskRel, oldTask)
-	if got := files.content(t, briefStore); got != oldBrief {
+	if got := files.contentAt(t, briefStore); got != oldBrief {
 		t.Errorf("%s = %q, want %q", briefStore, got, oldBrief)
 	}
-	if got := files.content(t, taskStore); got != oldTask {
+	if got := files.contentAt(t, taskStore); got != oldTask {
 		t.Errorf("%s = %q, want %q", taskStore, got, oldTask)
 	}
-	if !files.mod[filepath.Join(dir, filepath.FromSlash(briefStore))].Equal(at(20, 10, 0)) {
+	if !files.mod[briefStore].Equal(at(20, 10, 0)) {
 		t.Errorf("the migration lost the backup's date")
 	}
 	if _, ok := files.files[filepath.Join(dir, filepath.FromSlash(briefRel+".bak-"+digest(oldBrief)))]; ok {
 		t.Errorf("the legacy brief backup still exists after collect")
 	}
 
-	second := undo.Run(undo.Options{Dir: dir, Collect: true}, files, nil)
+	second := undo.Run(undo.Options{Dir: dir, Store: store, Collect: true}, files, nil)
 	if second.Code != undo.CodeOK {
 		t.Fatalf("second collect: Code = %d (message: %s)", second.Code, second.Message)
 	}
@@ -499,9 +542,9 @@ func TestCollectNeverOverwritesADifferentBackup(t *testing.T) {
 	files := newFakeFiles()
 	files.put(briefRel, "actual", at(21, 23, 0))
 	files.put(legacy, old, at(20, 10, 0))
-	files.put(target, "otro contenido", at(20, 9, 0))
+	files.putPath(target, "otro contenido", at(20, 9, 0))
 
-	res := undo.Run(undo.Options{Dir: dir, Collect: true}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store, Collect: true}, files, nil)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
@@ -509,8 +552,8 @@ func TestCollectNeverOverwritesADifferentBackup(t *testing.T) {
 	if !strings.Contains(res.Message, "I do not overwrite a backup") {
 		t.Errorf("message = %q, want the refusal", res.Message)
 	}
-	for _, rel := range []string{legacy, target} {
-		if _, ok := files.files[filepath.Join(dir, filepath.FromSlash(rel))]; !ok {
+	for _, rel := range []string{filepath.Join(dir, filepath.FromSlash(legacy)), target} {
+		if _, ok := files.files[rel]; !ok {
 			t.Errorf("%s disappeared after a refused collect", rel)
 		}
 	}
@@ -520,8 +563,8 @@ func TestCollectNeverOverwritesADifferentBackup(t *testing.T) {
 // or for a listing at the same time is a different question.
 func TestCollectRefusesTheOtherForms(t *testing.T) {
 	for _, opts := range []undo.Options{
-		{Dir: dir, Collect: true, List: true},
-		{Dir: dir, Collect: true, File: "brief"},
+		{Dir: dir, Store: store, Collect: true, List: true},
+		{Dir: dir, Store: store, Collect: true, File: "brief"},
 	} {
 		res := undo.Run(opts, newFakeFiles(), nil)
 		if res.Code != undo.CodeBlocked {
@@ -536,7 +579,7 @@ func TestNoBackupsExplainsWhatOdachiWrites(t *testing.T) {
 	files := newFakeFiles()
 	files.put(briefRel, "sin backups", at(21, 23, 0))
 
-	res := undo.Run(undo.Options{Dir: dir}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, nil)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d", res.Code, undo.CodeBlocked)
@@ -560,7 +603,7 @@ func TestUnknownFileListsTheFour(t *testing.T) {
 	files := newFakeFiles()
 	files.put(briefRel+".bak-"+digest("brief 1"), "brief 1", at(20, 10, 0))
 
-	res := undo.Run(undo.Options{Dir: dir, File: "inventado"}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store, File: "inventado"}, files, nil)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d", res.Code, undo.CodeBlocked)
@@ -586,7 +629,7 @@ func TestABackupOfSomeOtherFileIsNotUndoable(t *testing.T) {
 	files.put("odd/tasks/notas.txt", "notas", at(21, 23, 0))
 	files.put("odd/tasks/notas.txt.bak-"+digest("notas viejas"), "notas viejas", at(22, 10, 0))
 
-	res := undo.Run(undo.Options{Dir: dir}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, nil)
 
 	if res.Code != undo.CodeBlocked {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
@@ -607,7 +650,7 @@ func TestRestoringADeletedArtifactNeedsNoBackup(t *testing.T) {
 	fencePath := filepath.Join(dir, filepath.FromSlash(fenceRel))
 	files.put(fenceRel+".bak-"+digest("reglas viejas"), "reglas viejas", at(20, 10, 0))
 
-	res := undo.Run(undo.Options{Dir: dir}, files, nil)
+	res := undo.Run(undo.Options{Dir: dir, Store: store}, files, nil)
 
 	if res.Code != undo.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeOK, res.Message)

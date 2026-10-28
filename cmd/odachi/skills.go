@@ -44,7 +44,7 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	return reportSkills(skillsapp.Run(skillsapp.Options{Dir: dir, Check: check, Write: write}, osFiles{}), asJSON, stdout, stderr)
+	return reportSkills(skillsapp.Run(skillsapp.Options{Dir: dir, Check: check, Write: write}, disk(dir)), asJSON, stdout, stderr)
 }
 
 // runSkill parses `odachi skill new <slug>`. `skill` has one subcommand on
@@ -82,7 +82,7 @@ func runSkill(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	return reportSkills(skillsapp.New(skillsapp.Options{Dir: dir, Slug: flags.Arg(0)}, osFiles{}), asJSON, stdout, stderr)
+	return reportSkills(skillsapp.New(skillsapp.Options{Dir: dir, Slug: flags.Arg(0)}, disk(dir)), asJSON, stdout, stderr)
 }
 
 // skillEntry is one row of the machine listing.

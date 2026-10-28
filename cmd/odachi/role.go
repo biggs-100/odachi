@@ -49,7 +49,7 @@ func runRole(dir string, args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role new takes a single slug\n", args[1])
 			return start.CodeBlocked
 		}
-		return reportRole(roleapp.New(dir, args[0], osFiles{}), asJSON, stdout, stderr)
+		return reportRole(roleapp.New(dir, args[0], disk(dir)), asJSON, stdout, stderr)
 	}
 
 	block, clients, code, message := roleContext(dir)
@@ -58,13 +58,13 @@ func runRole(dir string, args []string, stdout, stderr io.Writer) int {
 		return code
 	}
 	if sub == "" {
-		return reportRole(roleapp.List(dir, block, clients, osFiles{}), asJSON, stdout, stderr)
+		return reportRole(roleapp.List(dir, block, clients, disk(dir)), asJSON, stdout, stderr)
 	}
 	if len(args) > 0 {
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role takes a single slug\n", args[0])
 		return start.CodeBlocked
 	}
-	return reportRole(roleapp.Render(dir, sub, block, clients, osFiles{}), asJSON, stdout, stderr)
+	return reportRole(roleapp.Render(dir, sub, block, clients, disk(dir)), asJSON, stdout, stderr)
 }
 
 // roleContext resolves what a render needs: the block the agent will read, with
