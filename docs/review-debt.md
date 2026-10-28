@@ -14,6 +14,32 @@ Last written: after 0089, one row was verified false and three were closed.
 
 ## Open
 
+### the review store - a new field makes an old binary call a good file broken
+
+`verdicts`, `agents.toml` and `odd/review.toml` decode strictly on purpose: a typo
+must be named instead of silently half-understood. What the strictness cannot tell is
+a typo from a *newer writer*: a binary that predates a field reports `unknown keys` /
+`unknown field` about a file that is perfectly well formed, and the message sends the
+human to fix a file that is not broken. It cost three closes in one session
+(`project_agents` in 0081, `inspection` in 0085, `max_prompt_kb` in 0087), each time
+solved by building the tree locally and swapping the installed binary. gentle-ai
+solves it from the other side: an older binary reports the authority as
+`applicability: corrupted` with action `repair_authority`, and the repair section
+says which release can continue the lineage. The odachi shape is a `schema` field
+written by every new verdict, agent selection and review config, so a decoder that
+meets an unknown value can say "this file was written by a newer odachi: upgrade or
+use the binary that wrote it" instead of naming keys.
+
+### the review record - the scope a run judged is not written down
+
+`--lens` widens or narrows what a run reviews, and nothing records that the human (or
+the agent) asked for it: the verdict stamps the lenses it answered, but not why this
+candidate was judged by one lens and that one by four. gentle-ai freezes an
+`agent_escalation` - an item from the shared high-risk list plus a reason - inside the
+authority, so a later reader sees that the scope was raised deliberately and a replay
+cannot drop it. The odachi shape is a line in the verdict: who widened the scope, to
+which lenses and in whose words, beside the declaration that landed in 0085.
+
 ### the review store - a false warning is carried forever
 
 A potent row leaves the store only when the bytes it names change, and a warning
