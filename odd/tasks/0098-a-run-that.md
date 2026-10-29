@@ -14,8 +14,9 @@ R1 · "a run that asks for a lens the evidence did not require writes it beside 
 - [x] T1 · the domain names the scope record: what the evidence asked, what was added, the flag and the instant, and its file   R1 · tree:ef4a6fe731cee6b0f524e1f706c714b481920530
 - [x] T2 · a run that adds a lens writes the record beside the verdict, and a run that adds none writes nothing   R1
 - [x] T3 · review --show and the prompt say the scope was raised, and the record belongs to the tree that asked   R1 · tree:bad9ac6267f466f293d6d31992d5fc22e809dbb3
-- [ ] T4 · the debt row leaves the file, and the changelog says why   R1
+- [x] T4 · the debt row leaves the file, and the changelog says why   R1 · tree:6958bb1c65ff3596d702ba92d8eabee03fd2a656
 
 ## History
 L1 · "a run that asks for a lens the evidence did not require writes it beside the verdict, so a later reader sees the scope was raised and a replay cannot drop it"
 L2 · OFICIO · "the step about the report was written by hand: plan refused text that starts with a flag name" (porque odachi plan reads a step that starts with -- as its own flag; the step now says 'review --show' so the next call cannot be misread, and the tool still owns the numbering)
+L3 · OFICIO · "the verdict filed with the wrong base was deleted, not kept: it judged the diff since the plan commit instead of the diff since the feature's base, and the gate named it as describing another diff" (porque a verdict is evidence about the bytes it judged; mine judged the wrong range, so keeping it would preserve a file the gate refuses as if it were an answer)
