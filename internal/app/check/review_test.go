@@ -1222,3 +1222,63 @@ func TestACodeFeatureStillOwesTheVerdictAtItsClose(t *testing.T) {
 		t.Errorf("Next = %q, want %q", got.Next, want)
 	}
 }
+
+// TestACommittedCodeChangeAfterTheCloseOwesTheVerdict: the candidate is measured
+// against HEAD, so a change that is already committed has disappeared from it - and a
+// local check answered "ready" for a tree CI would block. The question is what arrived
+// after the verdict that judged the close, which the store already names.
+func TestACommittedCodeChangeAfterTheCloseOwesTheVerdict(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	const closeTree = "9e9a800f6d1578115dafb0b154ff34bfa4499bd8"
+
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	files[filepath.ToSlash(reviewPath(closeTree))] = verdictFileAtBase(t, closeTree, base)
+
+	after := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"odd/tasks/0007-turnos.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+		betweenByFrom: map[string][]string{
+			base:      {"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
+			closeTree: {"internal/app/check/check.go"},
+		},
+	}
+
+	got := run(t, newFakeFiles(files), after, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("a committed code change after the close = %d/%q, want the verdict owed", got.Code, got.Reason)
+	}
+	if want := "odachi review --base " + base; got.Next != want {
+		t.Errorf("Next = %q, want %q", got.Next, want)
+	}
+}
+
+// TestACommittedReleaseNoteAfterTheCloseStaysPaperwork: the same anchor must not reopen
+// the gate for the note that follows every release. A document after the verdict that
+// judged the close is the paperwork the exemption exists for.
+func TestACommittedReleaseNoteAfterTheCloseStaysPaperwork(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	const closeTree = "9e9a800f6d1578115dafb0b154ff34bfa4499bd8"
+
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	files[filepath.ToSlash(reviewPath(closeTree))] = verdictFileAtBase(t, closeTree, base)
+
+	note := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"CHANGELOG.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+		betweenByFrom: map[string][]string{
+			base:      {"internal/app/check/check.go", "CHANGELOG.md", "odd/tasks/0007-turnos.md"},
+			closeTree: {"CHANGELOG.md"},
+		},
+	}
+
+	got := run(t, newFakeFiles(files), note, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a release note after the close asked for a verdict: %s (%s)", got.Message, got.Next)
+	}
+}

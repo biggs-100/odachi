@@ -73,6 +73,12 @@ func (f *fakeFiles) Read(path string) ([]byte, error) {
 	}
 	data, ok := f.files[path]
 	if !ok {
+		// The store is read through a slashed spelling while the seed builds OS paths;
+		// a real filesystem accepts both on Windows, so the fake must not answer
+		// differently from it.
+		data, ok = f.files[filepath.FromSlash(filepath.ToSlash(path))]
+	}
+	if !ok {
 		return nil, fmt.Errorf("archivo inexistente: %s", path)
 	}
 	return data, nil
@@ -84,7 +90,7 @@ func (f *fakeFiles) List(path string) ([]string, error) {
 	}
 	var names []string
 	for file := range f.files {
-		if filepath.Dir(file) == path {
+		if filepath.ToSlash(filepath.Dir(file)) == filepath.ToSlash(path) {
 			names = append(names, filepath.Base(file))
 		}
 	}
@@ -158,6 +164,11 @@ type fakeGit struct {
 	between      []string
 	betweenErr   error
 	betweenCalls int
+	// betweenByFrom answers Between per starting tree. The review gate asks twice
+	// about different ranges - the feature's own diff, and what arrived after the
+	// verdict that judged the close - and one answer for both would make the test
+	// pass for the wrong reason.
+	betweenByFrom map[string][]string
 
 	// commits says which spellings name the same commit. A spelling that is not
 	// here resolves to itself, so a test declares only the pair it cares about.
@@ -198,6 +209,9 @@ func (g *fakeGit) Between(root, from, to string) ([]string, error) {
 	g.betweenCalls++
 	if g.betweenErr != nil {
 		return nil, g.betweenErr
+	}
+	if paths, ok := g.betweenByFrom[from]; ok {
+		return paths, nil
 	}
 	return g.between, nil
 }
