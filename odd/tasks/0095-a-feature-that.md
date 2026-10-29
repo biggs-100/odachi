@@ -11,8 +11,8 @@ R1 · "a feature that has a plan and no steps is open, so its plan commit lands 
 - a test drives each of those answers, and one of them fails without the change
 
 ## Steps
-- [ ] T1 · a document with a base and no steps is an open feature, so its plan commit owes no verdict   R1
-- [ ] T2 · the debt file says the row closed, and the changelog says why   R1
+- [x] T1 · a document with a base and no steps is an open feature, so its plan commit owes no verdict   R1 · tree:455848c6cb33a4dea1fd536fa75990983d6a4bd9
+- [x] T2 · the debt file says the row closed, and the changelog says why   R1
 
 ## History
 L1 · "a feature that has a plan and no steps is open, so its plan commit lands without a verdict and its close still owes one"

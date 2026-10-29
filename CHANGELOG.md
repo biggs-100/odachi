@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The plan commit stops being a stranger to the gate.
+
+- **A feature with a plan and no steps is open.** `check` reads the task document
+  to decide whether this tree is a feature, and answered no while the document had
+  no steps, so the review gate fell through and asked a tree that writes only the
+  brief and the fence for a verdict. The fence is ordinary code on purpose -it is
+  a human decision, like `.gitignore`- so the plan commit was a code candidate, and
+  the honest fence was the one that could not land without `--no-verify`. It is
+  open now: a document with a base and no steps, the same rule the proof already
+  followed, and an open feature owes its verdict at the close.
+- **What it still owes.** The tree that marks the last step still owes the one
+  verdict at the document's base; a step in the middle still owes nothing; and a
+  release note written after the close is still paperwork.
+
 ## v0.11.48 - 2026-10-28
 
 Three files odachi writes say which odachi wrote them.
