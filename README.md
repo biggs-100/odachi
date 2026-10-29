@@ -315,13 +315,13 @@ one that ran `init`. If the folder has the `odachi` block, it reads it and adopt
 its voice; if not, it loads the entry skill and guides you to start a project. It
 is short on purpose: it does not repeat the rules, it only says where they are.
 `doctor` tells you if it is missing or stopped matching, and for both the command
-is `odachi init --global`. With `--no-project-agents` the project gets no agent
-files at all: the door and its subagents in the home are the ones that run, and
-`doctor` calls that the clean mode instead of reporting missing files. That
+is `odachi init --global`. A global install leaves the project alone: the door and
+its subagents in the home are the ones that run, the project gets no agent files at
+all, and `doctor` calls that the clean mode instead of reporting missing files. That
 choice is remembered in `agents.toml`, next to the client selection, so a later
 plain `odachi init` keeps the agent in the home instead of rebuilding the files
-you removed; `--agents both` (or the client you use) is how you ask for them
-back. The two
+nobody wrote; `--agents both` (or the client you use) is how you ask for the
+project's own copies.
 per-profile personas from v0.10.0 remain as
 leftovers: `init` names them and does not delete them, they are yours.
 

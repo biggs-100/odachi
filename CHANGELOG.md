@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A global install leaves the project alone.
+
+- **`odachi init --global` no longer writes the project's agent files.** The door in the
+  home is the one that runs in every folder, and the project keeps only the rules and the
+  plan; `doctor` calls that the clean mode instead of reporting missing files. A plain
+  `odachi init` is the run that writes a project's own copies, and the choice stays in
+  `agents.toml`, so a plain init after a global one keeps the agent in the home.
+- **`--no-project-agents` is gone.** Its only legal use was with `--global`, where it is
+  now the default; a flag that cannot change the outcome is a lie about what ran. The
+  refusal for the old spelling names the run that does the same thing, and `--agents`
+  brings the project's copies back.
+
 ## v0.11.56 - 2026-10-29
 
 A local check no longer lies about committed code.
