@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A widened scope needs its words.
+
+- **`--lens` that adds a lens now needs `--because`.** The scope record exists to say
+  who asked, for what and in whose words; a run that would write it without words is
+  refused before any reviewer starts, and the refusal names the flag, the lenses it
+  would add and the words it needs. The comparison with gentle-ai agrees: its
+  escalation takes the item and the reason together.
+- **The words already on file count.** A tree whose record exists keeps working with
+  `--lens` and no new words, and a run that adds no lens is never asked - the record
+  is the memory, not the ceremony.
+- **The help text is unchanged:** the fence protects `cmd/odachi/main.go`, so the rule
+  arrives with the refusal rather than in the flag list.
+
 ## v0.11.53 - 2026-10-29
 
 A refused answer writes nothing.

@@ -11,7 +11,7 @@ R1 · "a run cannot widen the scope without saying why: --lens that adds a lens 
 - a test drives each answer, and one of them fails without the change
 
 ## Steps
-- [ ] T1 · a run that widens the scope without words is refused before it spends anything   R1
+- [x] T1 · a run that widens the scope without words is refused before it spends anything   R1 · tree:3d924fe0a3bc5efde09b0679fe77f64b5698fa0b
 - [ ] T2 · the debt file and the changelog say the gap closed   R1
 
 ## History
