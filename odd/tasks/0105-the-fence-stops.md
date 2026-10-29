@@ -11,7 +11,7 @@ R1 · "the fence stops protecting the CLI surface, so the feature after it can c
 - a test drives nothing new here: the change is the policy, and check proves it by passing
 
 ## Steps
-- [ ] T1 · the fence stops naming the CLI, and the brief says why   R1
+- [x] T1 · the fence stops naming the CLI, and the brief says why   R1 · tree:a9981da23b02222dc4f2db0ec51cb980bf62508b
 
 ## History
 L1 · "the fence stops protecting the CLI surface, so the feature after it can change a default: the policy moves in its own commit, before the code that depends on it"
