@@ -361,10 +361,17 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 	// The store's potent rows are part of the question: a reviewer that knows
 	// which findings are already carried files no duplicates, and a review fresh
 	// from scratch would re-litigate bytes nobody changed.
+	// The memory the prompt needs is the part this review can act on: every finding,
+	// because a known defect must not be re-raised as new, and the clean rows of the
+	// paths this candidate changed, because a clean row about an untouched path is
+	// evidence for a review that already happened. The store keeps every row and the
+	// verdict inherits them all; this cut is the prompt's alone, measured at ~40 % of
+	// its bytes in 0104.
 	known, cleanRows, _, problem := r.potentRows(cand.tree)
 	if problem != nil {
 		return "", problem
 	}
+	cleanRows = knownCleanRows(cleanRows, cand.paths)
 
 	// The prompt must not claim the evidence chose lenses somebody added: the
 	// lenses section states what the evidence asked for and what --lens added on
@@ -2321,6 +2328,29 @@ func (r *runner) scopeLine(tree string) (string, bool) {
 // for the same scope write the same bytes.
 func inOrderLenses(lenses []string) []string {
 	return domain.Add(lenses, nil)
+}
+
+// knownCleanRows is the clean memory this candidate can use: the rows about a path it
+// changed. A pass says "this file was read and nothing was found", which matters when
+// the file is in the diff and is noise when it is not - 99.7 % of the carried passes
+// name a path the candidate never touched. The store is not touched: potentRows reads it
+// whole, and the verdict inherits every row.
+func knownCleanRows(passes []domain.Pass, paths []string) []domain.Pass {
+	if len(passes) == 0 {
+		return passes
+	}
+	changed := make(map[string]bool, len(paths))
+	for _, path := range paths {
+		changed[strings.TrimSpace(path)] = true
+	}
+
+	kept := make([]domain.Pass, 0, len(passes))
+	for _, pass := range passes {
+		if changed[strings.TrimSpace(pass.Path)] {
+			kept = append(kept, pass)
+		}
+	}
+	return kept
 }
 
 // lensBodies loads the prompts of the selected lenses through the port.

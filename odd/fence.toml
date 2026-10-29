@@ -1,8 +1,5 @@
 # a rule names paths, not a phrase: a glob of the phrase's own words matches
 # files named like the phrase and protects nothing.
-#
-# The CLI surface is not fenced: `odachi init --global` stops writing the project's
-# agent files unless a person asks for them, and that default lives in main.go.
 
 [[rule]]
 not   = "no change to the verdict shape"

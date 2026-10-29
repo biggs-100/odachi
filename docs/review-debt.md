@@ -14,53 +14,6 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
-### the review prompt - the memory is bigger than the question
-
-The prompt this project pays for is mostly what the store already carries. Measured on
-2026-10-29 over the 37 prompts in `.git/odachi/reviews`: total 2,882,450 B, of which
-1,553,334 B (54 %) is the section "What the store already carries for these exact
-bytes"; the median prompt is 71,489 B with 41,388 B of memory in it (58 %), the worst is
-83 %, and the biggest carries 44 KB. That section is **23,498 rows**: 168 findings and
-23,330 "audited clean" passes, one per (path, lens).
-
-The rows are not about the candidate. **23,269 of the 23,330 passes (99.7 %) name a path
-the candidate never touched** - they are the repo's memory, carried into a review of a
-few hundred lines. That is why eleven of these prompts run within 10 KB of the 96 KB
-limit while their diffs are small: the wall the row above measures is pressed by memory,
-not by the change.
-
-What three ways of pruning would save, measured on the same 37 prompts:
-
-| pruning | rows kept of 23,498 | median prompt | what it takes away |
-| --- | --- | --- | --- |
-| only the candidate's paths | 64 (0.3 %) | ~30 KB | the reviewer no longer sees that an unchanged path already carries a known defect, so it can only re-raise it as a follow-up (`causal: false`), never as a new causal finding |
-| findings always, passes only for the candidate's paths | 232 (1 %) | ~45 KB | keeps every known defect and drops only the "audited clean" memory of paths nobody touched: the reviewer may re-audit a clean path, and nothing it can cite is lost |
-| findings without passes | 168 (0.7 %) | ~44 KB | the same as the row above plus the clean rows of the paths that changed, which are the ones this run could have used |
-| a byte budget (8 KB of rows) | 2,878 (12 %) | ~38 KB | an arbitrary cut: the rows are ordered by path, so the reviewer gets the alphabet's first eighth and is not told |
-
-The four do not cost the same in what they drop. The candidate's paths keep only what the
-review can act on; the two findings-first variants keep the shape of the verdict (what is
-known) and differ in whether the clean rows of the *changed* paths survive, which are the
-ones this run could have used; the budget keeps neither and hides what it dropped, which
-is why it is the only pruning with no argument behind it beyond a number.
-
-What the numbers say about the row above: the two ways out it names -a bigger
-`max_prompt_kb` or splitting a candidate by paths- are the wrong levers while 99 % of the
-prompt is memory. Splitting would pay one prompt per piece to fit a prompt whose size the
-pieces barely touch, and a bigger limit would buy attempts against a wall this measurement
-can move. The cheapest honest change is the hybrid: keep every finding, keep the clean rows
-of the paths that changed, drop the rest.
-
-What it does not prove: that a reviewer behaves the same with less memory. That is a
-before-and-after on a real candidate, with the probe method 0101 used, and it belongs to
-the feature that prunes - not to this row. The decision stays the human's, and it now has
-the numbers it was missing.
-
-None of them costs the gate anything, and that is the fact that makes any of them possible:
-the prompt is the reviewer's context, while the verdict's inheritance and the coverage
-check read the store. `inherit` and `--show` do not consult the prompt, so pruning it
-changes what the reviewer reads and nothing about what the tool proves.
-
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
@@ -126,6 +79,74 @@ its declaration. The declaration and the coverage check stay what they are - a r
 that names a path it left out is refused - and the promise "silence is coverage" is now
 a promise about reading, which is measured, not about judgment, which is not. A future
 miss of the same shape is a data point about the model, not about the prompt's size.
+
+## Closed by feature 0107
+
+### the review prompt - the memory is bigger than the question
+
+The prompt this project pays for is mostly what the store already carries. Measured on
+2026-10-29 over the 37 prompts in `.git/odachi/reviews`: total 2,882,450 B, of which
+1,553,334 B (54 %) is the section "What the store already carries for these exact
+bytes"; the median prompt is 71,489 B with 41,388 B of memory in it (58 %), the worst is
+83 %, and the biggest carries 44 KB. That section is **23,498 rows**: 168 findings and
+23,330 "audited clean" passes, one per (path, lens).
+
+The rows are not about the candidate. **23,269 of the 23,330 passes (99.7 %) name a path
+the candidate never touched** - they are the repo's memory, carried into a review of a
+few hundred lines. That is why eleven of these prompts run within 10 KB of the 96 KB
+limit while their diffs are small: the wall the row above measures is pressed by memory,
+not by the change.
+
+What three ways of pruning would save, measured on the same 37 prompts:
+
+| pruning | rows kept of 23,498 | median prompt | what it takes away |
+| --- | --- | --- | --- |
+| only the candidate's paths | 64 (0.3 %) | ~30 KB | the reviewer no longer sees that an unchanged path already carries a known defect, so it can only re-raise it as a follow-up (`causal: false`), never as a new causal finding |
+| findings always, passes only for the candidate's paths | 232 (1 %) | ~45 KB | keeps every known defect and drops only the "audited clean" memory of paths nobody touched: the reviewer may re-audit a clean path, and nothing it can cite is lost |
+| findings without passes | 168 (0.7 %) | ~44 KB | the same as the row above plus the clean rows of the paths that changed, which are the ones this run could have used |
+| a byte budget (8 KB of rows) | 2,878 (12 %) | ~38 KB | an arbitrary cut: the rows are ordered by path, so the reviewer gets the alphabet's first eighth and is not told |
+
+The four do not cost the same in what they drop. The candidate's paths keep only what the
+review can act on; the two findings-first variants keep the shape of the verdict (what is
+known) and differ in whether the clean rows of the *changed* paths survive, which are the
+ones this run could have used; the budget keeps neither and hides what it dropped, which
+is why it is the only pruning with no argument behind it beyond a number.
+
+What the numbers say about the row above: the two ways out it names -a bigger
+`max_prompt_kb` or splitting a candidate by paths- are the wrong levers while 99 % of the
+prompt is memory. Splitting would pay one prompt per piece to fit a prompt whose size the
+pieces barely touch, and a bigger limit would buy attempts against a wall this measurement
+can move. The cheapest honest change is the hybrid: keep every finding, keep the clean rows
+of the paths that changed, drop the rest.
+
+What it does not prove: that a reviewer behaves the same with less memory. That is a
+before-and-after on a real candidate, with the probe method 0101 used, and it belongs to
+the feature that prunes - not to this row. The decision stays the human's, and it now has
+the numbers it was missing.
+
+Measured on 2026-10-29, after the human chose the hybrid: tree 56641e43's prompt cut by
+the rule (every finding, plus the clean rows of the eleven changed paths) goes from
+**94,678 B to 56,915 B (40 % less)**, keeping 3 rows of 645. The same model was asked
+the three questions 0101 asked before, by the same plain `opencode run --file`:
+
+| probe | full prompt (0101) | pruned prompt | time |
+| --- | --- | --- | --- |
+| 1. changed paths and new files | 11 and all 5 - correct | **one miss in two runs** (4 of 5 files), then correct | 12 s / 5 s |
+| 2. every test added in `scope_test.go` | correct, 5 tests and the helper | correct, the same six names | 8 s |
+| 3. what the prompt says about `inspection` | correct | correct, and sharper: "a top-level field, a sibling of findings" | 7 s |
+
+A control run of the full prompt on the same question answered correctly (9 s), and the
+miss did not repeat with the same pruned prompt, so it is the variance this model has
+shown at full size - 0087's miss was the same shape - not the cut. What this shows is
+narrow and worth writing exactly: a 40 % cut did not make the prompt unreadable to this
+model; it does not prove that two arms are equal on four runs.
+
+None of them costs the gate anything, and that is the fact that makes any of them possible:
+the prompt is the reviewer's context, while the verdict's inheritance and the coverage
+check read the store. `inherit` and `--show` do not consult the prompt, so pruning it
+changes what the reviewer reads and nothing about what the tool proves.
+
+The cut ships here: promptFor keeps every finding and filters the clean rows to the candidate's paths, while potentRows still reads the store whole and the verdict still inherits every row.
 
 ## Closed by feature 0103
 

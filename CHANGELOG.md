@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The review prompt carries what the review can use.
+
+- **The memory stops being the whole repository.** The prompt carried 23,498 rows, and
+  99.7 % of the clean rows named a path the candidate never touched. It now carries every
+  finding -a known defect must not be re-raised as new- and the clean rows of the paths
+  that changed, which are the ones a reviewer can act on.
+- **The store is untouched.** Inheritance and coverage still read every row; the cut is
+  the prompt's alone. On tree 56641e43 it takes the prompt from 94,678 B to 56,915 B
+  (40 % less), and the same three factual probes answered correctly before and after.
+
 ## v0.11.57 - 2026-10-29
 
 A global install leaves the project alone.
