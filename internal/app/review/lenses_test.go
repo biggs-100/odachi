@@ -269,7 +269,7 @@ func TestStoredVerdictRecordsTheLensesTheToolAsked(t *testing.T) {
 	p := newLensProject()
 	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
 
-	result := p.run(review.Options{Attach: "veredicto.json", Lens: "risk"})
+	result := p.run(review.Options{Attach: "veredicto.json", Lens: "risk", Because: "the test asks for a wider scope"})
 
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
