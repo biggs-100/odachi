@@ -13,10 +13,15 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
 // file mirrors the two things a human writes.
 type file struct {
+	// Schema is the version that wrote this file. It is not a human choice: a
+	// file written before the key existed carries none and reads as the first
+	// schema, and a value above this binary's is refused as newer, not broken.
+	Schema      int               `toml:"schema"`
 	Mode        string            `toml:"mode"`
 	Lenses      map[string]string `toml:"lenses"`
 	MaxPromptKB int               `toml:"max_prompt_kb"`
@@ -29,6 +34,13 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 	md, err := toml.Decode(string(data), &f)
 	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: invalid TOML: %w", err)
+	}
+
+	// The version is asked before the unknown keys are named: a file from a newer
+	// odachi carries both, and the key that makes it newer is not a typo for the
+	// human to fix.
+	if _, err := schema.Read(f.Schema); err != nil {
+		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
 
 	if unknown := md.Undecoded(); len(unknown) > 0 {
@@ -64,6 +76,8 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 	}
 
 	var out strings.Builder
+	out.WriteString("# odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken\n")
+	out.WriteString("schema = " + strconv.Itoa(schema.Current) + "\n")
 	out.WriteString("# odachi: the review is the human's decision; on requires it in check, off leaves it optional\n")
 	out.WriteString("mode = \"" + normalized + "\"\n")
 	limit, err := review.NormalizeMaxPromptKB(config.MaxPromptKB)
