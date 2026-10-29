@@ -1,13 +1,13 @@
-# a-closing-tree
+# a-code-change
 
 ## What must exist
-- a closing tree that asks for no lens owes no verdict: the gate asks the same classifier the review asks, and a feature whose whole diff is documents closes without paying for a review
+- a code change committed after the close still owes the verdict: the gate measures what arrived after the verdict that judged the close, not only the worktree against HEAD
 
 ## Done when
-- a feature whose diff from its base is documents only closes ready, with no verdict and no --lens forced
-- a feature whose diff carries code still owes the verdict at its base
-- code after the close still owes, and a waived close still owes nothing
-- a test drives each answer, and one of them fails without the change
+- with a verdict at the close in the store, a committed code change after it makes the close owe the verdict at the feature's base
+- a committed release note after the same close stays paperwork and the gate is ready
+- a close with no verdict in the store keeps the answer it gives today
+- a test drives each one, and one of them fails without the change
 
 ## Not included (first version)
 - no new verb and no new flag
@@ -18,4 +18,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
-- Wants to learn: how a gate and the tool it asks can share one question.
+- Wants to learn: how a gate stays honest when the evidence it compares is committed instead of pending.
