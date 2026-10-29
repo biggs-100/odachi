@@ -27,6 +27,18 @@ whose prompt passes the limit cannot be reviewed by this model at all, and the
 choice between a model that reads more and splitting the candidate by paths is the
 human's. Nothing in the tool splits a prompt today.
 
+Measured again on 2026-10-29, against this project's own store instead of one
+afternoon's experiments: `ls .git/odachi/reviews/*.prompt.md` holds 34 prompts, the
+median is 71.5 KB, the biggest is 125,759 B, **11 run within 10 KB of the limit**
+(≥ 88 KB) and **3 are over it** - all three from before v0.11.44 shipped
+`max_prompt_kb`, so the project can no longer collect evidence above 96 KB.
+
+The three that are over the limit are the interesting part: 122,672 B and 123,679 B
+left no verdict, and 125,759 B has one. Same size, opposite outcomes, so the wall is
+not a line a size crosses; it is a probability a run meets. That is worth knowing
+before the choice the row leaves to the human: raising `max_prompt_kb` would buy
+attempts, not certainty, and splitting by paths is the shape that removes the bet.
+
 ### the review pipeline - the configured reviewer missed a test it was shown
 
 On 0087 the reviewer reported "the CLI's propagation of the size limit has no test"
