@@ -1,13 +1,13 @@
-# a-code-change
+# the-rows-the
 
 ## What must exist
-- a code change committed after the close still owes the verdict: the gate measures what arrived after the verdict that judged the close, not only the worktree against HEAD
+- the rows the store carries into a review prompt are measured: how much of the prompt they are, how many name paths the candidate never touched, and what each way of pruning them would save
 
 ## Done when
-- with a verdict at the close in the store, a committed code change after it makes the close owe the verdict at the feature's base
-- a committed release note after the same close stays paperwork and the gate is ready
-- a close with no verdict in the store keeps the answer it gives today
-- a test drives each one, and one of them fails without the change
+- every prompt the store holds is measured: total bytes, the carried section, its rows, and how many name a path the candidate never touched
+- each of the three prunings is measured on the same prompts: only the candidate's paths, findings without passes, and a byte budget
+- the measurement says what each pruning would take away, and why the gate does not lose coverage when the prompt is pruned
+- the numbers, the method and the decision they open land in docs/review-debt.md
 
 ## Not included (first version)
 - no new verb and no new flag
@@ -18,4 +18,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
-- Wants to learn: how a gate stays honest when the evidence it compares is committed instead of pending.
+- Wants to learn: whether a review prompt should carry the whole memory or only the part it can act on.
