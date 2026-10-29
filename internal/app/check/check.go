@@ -710,8 +710,15 @@ func featureReview(feature *tasks.Document) (base string, closed, waived, known 
 	}
 	base = strings.TrimSpace(feature.Doc.Base)
 	done, total := feature.Doc.Progress()
-	if base == "" || total == 0 {
+	if base == "" {
 		return "", false, false, false
+	}
+	// A document with no steps yet is open too: the plan lands before the work,
+	// the same rule the proof follows above. Without it the plan commit -which
+	// writes the fence, ordinary code on purpose because it is a human decision-
+	// is a stranger, and check asks it for the verdict of a tree nobody built.
+	if total == 0 {
+		return base, false, feature.Doc.ReviewWaived, true
 	}
 	return base, done == total, feature.Doc.ReviewWaived, true
 }

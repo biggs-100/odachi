@@ -85,6 +85,18 @@ func reviewableDocWith(base string, done, waived bool) string {
 	}.Render()
 }
 
+// planOnlyDoc is a feature before its first step: a base and no steps at all,
+// which is what `start` writes and the plan commit carries.
+func planOnlyDoc(base string) string {
+	return taskdoc.TaskDoc{
+		Title:        "turnos",
+		Base:         base,
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:     []string{"reservo un turno"},
+		History:      []string{`L1 · "reservar turnos"`},
+	}.Render()
+}
+
 // verdictFileAtBase seals a verdict that says which diff it judged.
 func verdictFileAtBase(t *testing.T, tree, base string) string {
 	t.Helper()
@@ -358,6 +370,46 @@ func TestReviewOwedAnswersTheWaiver(t *testing.T) {
 	}
 	if !owed || gotBase != base {
 		t.Errorf("ReviewOwed(close without the waiver) = %v, %q; want owed at %q", owed, gotBase, base)
+	}
+}
+
+// TestThePlanCommitIsAFeatureThatHasNotStarted: a document with a base and no
+// steps is a feature before its first step, and the plan commit is the tree that
+// writes the fence. check called it a stranger and asked for a verdict before any
+// behaviour existed - the fence is ordinary code on purpose, so the plan was a
+// candidate - and the only way to land it was --no-verify. The same document with
+// its one step done still owes the feature's verdict, so the pair stays whole.
+func TestThePlanCommitIsAFeatureThatHasNotStarted(t *testing.T) {
+	const base = "6f1c2d84a5e0b93c7d2f4a8b1e6c0d5f3a9b7c2e"
+
+	plan := readyFiles()
+	plan["odd/tasks/0007-turnos.md"] = planOnlyDoc(base)
+	// The plan commit writes the fence, which is the path that made this a code
+	// candidate in the first place.
+	git := &fakeGit{tree: currentTree, changed: []string{"odd/fence.toml", "odd/tasks/0007-turnos.md"}}
+
+	got := run(t, newFakeFiles(plan), git, check.Options{ReviewMode: true})
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the plan commit asked for a review: %s (%s)", got.Message, got.Next)
+	}
+
+	// The question the report asks answers the same thing the gate answers.
+	owed, _, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(plan), git)
+	if err != nil {
+		t.Fatalf("ReviewOwed: %v", err)
+	}
+	if owed {
+		t.Error("ReviewOwed said the plan owes a verdict")
+	}
+
+	// The close of the same feature still owes it, at the document's base.
+	closing := readyFiles()
+	closing["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	docs := &fakeGit{tree: currentTree, changed: []string{"odd/tasks/0007-turnos.md"}}
+	blocked := run(t, newFakeFiles(closing), docs, check.Options{ReviewMode: true})
+	if blocked.Code != int(gate.NeedsDecision) || blocked.Next != "odachi review --base "+base {
+		t.Fatalf("the close of the same feature = %d/%q (%q), want the verdict at %q",
+			blocked.Code, blocked.Reason, blocked.Next, base)
 	}
 }
 
