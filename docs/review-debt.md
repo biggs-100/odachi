@@ -14,6 +14,24 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
+### the gate - a committed change after the close is invisible to a local check
+
+Found by the smoke test of 0102 while proving the other half of the rule: commit a code
+change after a feature closes, run `odachi check` with its default base, and the gate
+answers ready. The candidate it measures is the worktree against HEAD, which is empty
+once the change is committed, and `theCloseOwes` reads code from that candidate - so the
+"code after the close still owes" rule only sees uncommitted code.
+
+CI does not have the hole: the workflow runs `check --base <branch base> --fence-from
+<base>`, so the candidate is the whole diff and code shows up. The lie is local, and it
+is the worst kind for this method: the agent believes a tree is ready that CI will
+block, after the moment it could have asked for the review.
+
+The shape of the question: the review gate should measure the feature's own range -base
+to the tree that stands- for the "code after the close" half too, the way 0102 taught it
+for the letter of the rule. That is a change to `theCloseOwes` and its tests, so it is a
+feature of its own.
+
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
