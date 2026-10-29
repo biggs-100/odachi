@@ -12,7 +12,7 @@ R1 · "a file odachi wrote says which schema wrote it, and a binary that reads a
 
 ## Steps
 - [x] T1 · the schema vocabulary is one definition: a value the binary does not know is refused as a newer writer   R1 · tree:b5739473c9da123319d9d2f75bd881f18902d5e8
-- [ ] T2 · the verdict carries the schema it was written with, and its reader checks it before it names an unknown key   R1
+- [x] T2 · the verdict carries the schema it was written with, and its reader checks it before it names an unknown key   R1 · tree:ecd74aedcfee0003ad8bb53081c1ddaed9ebbc46
 - [ ] T3 · agents.toml and odd/review.toml write schema = 1, absence still means 1, and a newer value says upgrade   R1
 - [ ] T4 · the debt file and the changelog say what closed and what the plan commit exposed   R1
 

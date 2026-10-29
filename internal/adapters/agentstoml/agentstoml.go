@@ -5,15 +5,21 @@ package agentstoml
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
 // file mirrors the fields a human writes. ProjectAgents is optional: its absence
 // is the project that never chose, which keeps the mirror in the tree.
 type file struct {
+	// Schema is the version that wrote this store. It is not a human choice: a
+	// store written before the key existed carries none and reads as the first
+	// schema, and a value above this binary's is refused as newer, not broken.
+	Schema        int    `toml:"schema"`
 	Agents        string `toml:"agents"`
 	ProjectAgents string `toml:"project_agents"`
 }
@@ -26,6 +32,13 @@ func Decode(data []byte) (persona.Store, error) {
 	md, err := toml.Decode(string(data), &f)
 	if err != nil {
 		return persona.Store{}, fmt.Errorf("agents: invalid TOML: %w", err)
+	}
+
+	// The version is asked before the unknown keys are named: a store from a newer
+	// odachi carries both, and the key that makes it newer is not a typo for the
+	// human to fix.
+	if _, err := schema.Read(f.Schema); err != nil {
+		return persona.Store{}, fmt.Errorf("agents: %w", err)
 	}
 
 	if unknown := md.Undecoded(); len(unknown) > 0 {
@@ -60,7 +73,9 @@ func Render(store persona.Store) ([]byte, error) {
 		return nil, fmt.Errorf("agents: %w", err)
 	}
 
-	text := "# odachi: which clients receive the native agent; changing the choice does not delete it, it only stops writing it\n" +
+	text := "# odachi: the schema that wrote this store; an older binary says upgrade instead of calling it broken\n" +
+		"schema = " + strconv.Itoa(schema.Current) + "\n" +
+		"# odachi: which clients receive the native agent; changing the choice does not delete it, it only stops writing it\n" +
 		"agents = \"" + normalized + "\"\n"
 	if projectAgents != "" {
 		text += "# odachi: project_agents = none keeps the agent in the home; write puts the project's own copy back\n" +
