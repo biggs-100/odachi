@@ -11,7 +11,7 @@ R1 · "a refused answer writes nothing: the scope record is written only when th
 
 ## Steps
 - [x] T1 · a refused answer writes no scope record, because the record follows the verdict   R1 · tree:ef387c31a99d06d5fffa095bd506fa4b83460726
-- [ ] T2 · the changelog names the defect and what the fix changes   R1
+- [x] T2 · the changelog names the defect and what the fix changes   R1 · tree:ca4e6736df479cd890eb04831c9d1b9f5baaeeaa
 
 ## History
 L1 · "a refused answer writes nothing: the scope record is written only when the verdict it explains is written, the way gentle-ai creates no authority for a refusal"
