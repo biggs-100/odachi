@@ -11,8 +11,8 @@ R1 · "a Markdown the binary ships is code, not a document: the classifier knows
 - a test drives each answer, and one of them fails without the change
 
 ## Steps
-- [ ] T1 · the classifier calls shipped text code, and one list names what ships   R1
-- [ ] T2 · the proof lane asks that list instead of its own copy, and the installed copy still owes the suite   R1
+- [x] T1 · the classifier calls shipped text code, and one list names what ships   R1 · tree:ad3aa4913432deef2888559be2a5a60ce345831c
+- [x] T2 · the proof lane asks that list instead of its own copy, and the installed copy still owes the suite   R1
 - [ ] T3 · the debt row leaves the file and the changelog says why   R1
 
 ## History

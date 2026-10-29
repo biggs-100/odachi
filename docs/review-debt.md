@@ -9,24 +9,10 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0096, which closed the release-note row.
+Last written: after 0097, which closed the shipped-text row.
 
 
 ## Open
-
-### the classifier · a Markdown the suite reads is called a document
-
-`isDocumentation` in `internal/domain/review/tier.go` answers by extension, README
-name and `docs/` segment, and excludes only the agent directories. A skill
-(`skills/*/SKILL.md`, compiled into the binary), a review prompt
-(`internal/assets/review/*.md`, the same) and the installed copy (`.agents/skills/`,
-which the pack tests compare byte for byte with its source) are all `.md`, so a
-change to one of them asks for no lens, and the proof lane had to grow its own refusal
-(`internal/app/check/shippedText`) so a tree that changed one still owes the suite.
-Both gates read the same function for lenses, so the gap is one and the fix is small
--those three prefixes are shipped text, not documents. It could not land in 0096: its
-base fence protected `internal/domain/review/**`, and CI reads the base fence. It needs
-its own feature, and the lane's list moves into the classifier with it.
 
 ### the review record · the scope a run judged is not written down
 
@@ -62,6 +48,23 @@ is handed; a tool that trusts its silence as coverage (ADR 0033) should know tha
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
 
+## Closed by feature 0097
+
+### the classifier · a Markdown the suite reads is called a document
+
+The row 0096 opened, paid where it belongs. `review.ShippedText` is the one list of
+what travels inside the binary or beside it -`skills/`, `internal/assets/` and
+`.agents/`- and `isDocumentation` asks it: shipped text is code, so a skill or a
+review prompt that changed asks for a lens, and a tree whose only change is one of
+them is focused instead of passive. The proof lane deleted its copy and asks the same
+function, so the two gates cannot drift again.
+
+The installed copy stays plumbing for the lenses: 0043 decided that adopting odachi
+must not cost a review before the first line of code, and a change under
+`.agents/skills/` still asks for none. It owes the suite all the same, because the
+pack test compares those bytes with their source - the reason the lane asks the list
+at all, and the reason `TestAReleaseNoteIsPaperwork` was already watching it.
+
 ## Closed by feature 0096
 
 ### the proof · the tree that writes a release note owes the suite
@@ -80,7 +83,8 @@ format". The gate caught it on the pull request, and the change was reverted ins
 of argued. The refusal the brief demands lives in the lane for now
 (`internal/app/check/shippedText`): shipped text is never paperwork for this gate,
 while the review's classifier still calls it a document, which is the open row below
-and the reason that row exists.
+and the reason that row exists. Closed by 0097, above: the list moved into the
+classifier and the lane's copy is gone.
 
 ## Closed by feature 0095
 
