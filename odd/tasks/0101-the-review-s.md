@@ -11,8 +11,8 @@ R1 · "the review's size wall is measured on this project's own prompts: how clo
 - the numbers, the method and what they do not prove land in docs/review-debt.md
 
 ## Steps
-- [ ] T1 · the prompts the store holds are measured: count, biggest, and how close to the limit   R1
-- [ ] T2 · one probe on a prompt that closed inside the limit is run and its answer recorded   R1
+- [x] T1 · the prompts the store holds are measured: count, biggest, and how close to the limit   R1 · tree:eabb53c4ee39afcb97292cf3e0614084c8571d99
+- [x] T2 · one probe on a prompt that closed inside the limit is run and its answer recorded   R1
 - [ ] T3 · the numbers, the method and what they do not prove land in the debt file   R1
 
 ## History

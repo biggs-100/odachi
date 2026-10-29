@@ -39,6 +39,12 @@ not a line a size crosses; it is a probability a run meets. That is worth knowin
 before the choice the row leaves to the human: raising `max_prompt_kb` would buy
 attempts, not certainty, and splitting by paths is the shape that removes the bet.
 
+What is left is a decision, not a measurement: this project's prompts already run
+within 10 KB of its own limit, so the next large feature meets the wall. The two ways
+out cost different things - a bigger limit risks a stall the tool cannot undo, and
+splitting by paths costs one more prompt per piece and a merge of their answers - and
+only the human knows which price this project should pay.
+
 ### the review pipeline - the configured reviewer missed a test it was shown
 
 On 0087 the reviewer reported "the CLI's propagation of the size limit has no test"
@@ -67,6 +73,12 @@ handed at the size where 0087's miss happened (74 KB). The miss was in the reaso
 the reviewer concluded a test was absent from a prompt that carried it, which is a
 different failure from not reading - and the difference decides what the tool should do
 about it (nothing about size).
+
+What that leaves: the tool cannot promise a reviewer's reasoning, only its reading and
+its declaration. The declaration and the coverage check stay what they are - a reader
+that names a path it left out is refused - and the promise "silence is coverage" is now
+a promise about reading, which is measured, not about judgment, which is not. A future
+miss of the same shape is a data point about the model, not about the prompt's size.
 
 ## Closed by feature 0098
 
