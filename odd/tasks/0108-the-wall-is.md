@@ -12,7 +12,7 @@ R1 · "the wall is measured again with the cut in place, and the two rows that r
 
 ## Steps
 - [x] T1 · the prompt the binary prints today is measured against the pre-cut baseline   R1
-- [ ] T2 · the two rows close or narrow with the numbers, and the changelog says nothing shipped   R1
+- [x] T2 · the two rows close or narrow with the numbers, and the changelog says nothing shipped   R1 · tree:46d008228b004e84b91bdb4bff0264ae4619c60a
 
 ## History
 L1 · "the wall is measured again with the cut in place, and the two rows that remain are closed with what the numbers say"
