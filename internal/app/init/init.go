@@ -171,7 +171,7 @@ func Run(opts Options, files Files, skills Skills) Result {
 		r.dir = "."
 	}
 	if opts.NoProjectAgents && !opts.Global {
-		return blocked("--no-project-agents needs --global: skipping the project agents without the door would leave no agent at all; run odachi init --global --no-project-agents")
+		return blocked("skipping the project's agent files needs the home door: without it there would be no agent at all; run odachi init --global")
 	}
 
 	hasGit, err := r.files.Exists(filepath.Join(r.dir, gitDir))
