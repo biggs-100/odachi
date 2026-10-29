@@ -1,21 +1,20 @@
-# the-rows-the
+# the-fence-stops
 
 ## What must exist
-- the rows the store carries into a review prompt are measured: how much of the prompt they are, how many name paths the candidate never touched, and what each way of pruning them would save
+- the fence stops protecting the CLI surface, so the feature after it can change a default: the policy moves in its own commit, before the code that depends on it
 
 ## Done when
-- every prompt the store holds is measured: total bytes, the carried section, its rows, and how many name a path the candidate never touched
-- each of the three prunings is measured on the same prompts: only the candidate's paths, findings without passes, and a byte budget
-- the measurement says what each pruning would take away, and why the gate does not lose coverage when the prompt is pruned
-- the numbers, the method and the decision they open land in docs/review-debt.md
+- this feature closes with no code, and the fence in force no longer names cmd/odachi/main.go
+- the two rules that stay are the verdict shape and the proof format, unchanged
+- the next feature can change the CLI default and CI reads a base fence that allows it
+- a test drives nothing new here: the change is the policy, and check proves it by passing
 
 ## Not included (first version)
-- no new verb and no new flag
 - no change to the verdict shape
 - no change to the proof format, and the stored proof is never rewritten
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
-- First usable version: this week.
-- Wants to learn: whether a review prompt should carry the whole memory or only the part it can act on.
+- First usable version: today.
+- Wants to learn: how a fence moves without pretending the code did.

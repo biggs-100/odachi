@@ -3,11 +3,11 @@
 #
 # "no change to what an open feature owes" and "no change to what the closing tree
 # owes" are not paths: they are behaviour, and they live in the brief's Done when.
-
-[[rule]]
-not   = "no new verb and no new flag"
-paths = ["cmd/odachi/main.go"]
-deps  = []
+#
+# The CLI surface is not fenced by this feature on purpose: `odachi init --global`
+# must stop writing project agent files unless a person asks for them, and that
+# default lives in cmd/odachi/main.go. 0105 moved the policy before the code, which
+# is the only order CI allows: it judges a pull request with the base fence.
 
 [[rule]]
 not   = "no change to the verdict shape"
