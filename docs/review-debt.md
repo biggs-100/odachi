@@ -14,6 +14,21 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
+### the review prompt - the memory is bigger than the question
+
+The prompt this project pays for is mostly what the store already carries. Measured on
+2026-10-29 over the 37 prompts in `.git/odachi/reviews`: total 2,882,450 B, of which
+1,553,334 B (54 %) is the section "What the store already carries for these exact
+bytes"; the median prompt is 71,489 B with 41,388 B of memory in it (58 %), the worst is
+83 %, and the biggest carries 44 KB. That section is **23,498 rows**: 168 findings and
+23,330 "audited clean" passes, one per (path, lens).
+
+The rows are not about the candidate. **23,269 of the 23,330 passes (99.7 %) name a path
+the candidate never touched** - they are the repo's memory, carried into a review of a
+few hundred lines. That is why eleven of these prompts run within 10 KB of the 96 KB
+limit while their diffs are small: the wall the row above measures is pressed by memory,
+not by the change.
+
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
