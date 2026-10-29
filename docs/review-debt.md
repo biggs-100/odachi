@@ -9,20 +9,10 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0097, which closed the shipped-text row.
+Last written: after 0098, which closed the scope row.
 
 
 ## Open
-
-### the review record · the scope a run judged is not written down
-
-`--lens` widens or narrows what a run reviews, and nothing records that the human (or
-the agent) asked for it: the verdict stamps the lenses it answered, but not why this
-candidate was judged by one lens and that one by four. gentle-ai freezes an
-`agent_escalation` - an item from the shared high-risk list plus a reason - inside the
-authority, so a later reader sees that the scope was raised deliberately and a replay
-cannot drop it. The odachi shape is a line in the verdict: who widened the scope, to
-which lenses and in whose words, beside the declaration that landed in 0085.
 
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
@@ -47,6 +37,29 @@ it judged. At 74 KB with 21 changed paths, a reviewer is not reading every line 
 is handed; a tool that trusts its silence as coverage (ADR 0033) should know that a
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
+
+## Closed by feature 0098
+
+### the review record · the scope a run judged is not written down
+
+`--lens` widened what a run reviewed and nothing recorded that the human or the agent
+asked for it. The row said the record belonged in the verdict; it could not land
+there -the fence in force protects `internal/domain/review/review.go` under "no change
+to the verdict shape", and CI reads the base fence, which is the wall 0096 hit- and a
+new flag could not land either, because `cmd/odachi/main.go` is protected too.
+
+So the record lives beside the verdict, the way 0091 put the human's dismissal there:
+`reviews/<tree>.scope.json`, written by the run that added the lens, once, and read by
+tree. It names the lenses the evidence asked for, the ones added, the flag as the
+caller wrote it, and the caller's words and person when they gave them -the tool never
+invents a reason. `--show` prints it and the prompt states it, because the lenses
+section used to claim the evidence chose every lens and that sentence stopped being
+true the moment somebody added one.
+
+What it still cannot say: `--because` is optional, so a run can raise the scope
+without words. The record is honest about that (it omits them) but the row's "in whose
+words" is only complete when the caller gives them. Making the flag required is a
+small change of its own.
 
 ## Closed by feature 0097
 
