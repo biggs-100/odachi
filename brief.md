@@ -1,13 +1,13 @@
-# a-global-install
+# the-review-prompt
 
 ## What must exist
-- a global install leaves the project alone: odachi init --global writes the door in the home and no agent files in the project, and a plain init is the run that writes a project's own
+- the review prompt carries what the review can act on: every finding, and the clean rows of the paths the candidate changed, and the same questions are answered after the cut
 
 ## Done when
-- odachi init --global in a project writes the home door and no .opencode/agents, and the store says project_agents = none
-- odachi init without --global still writes the project's agent files and the store says write
-- the flag that asked for what is now the default is refused, and the help names the two runs
-- a test drives each one, and one of them fails without the change
+- a prompt built for a candidate carries every finding and only the clean rows of the paths that changed
+- the same three probes that answered 0101 are answered on a pruned prompt of the same tree, and the answers and times are recorded
+- the suite pins the filter: findings stay, passes of untouched paths go
+- the numbers and the decision land in the debt file, and the changelog says what changed
 
 ## Not included (first version)
 - no change to the verdict shape
@@ -17,4 +17,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a default and the flag that asked for it stop living in the same place.
+- Wants to learn: whether less memory changes what a reviewer answers.
