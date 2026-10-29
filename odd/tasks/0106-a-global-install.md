@@ -12,7 +12,7 @@ R1 · "a global install leaves the project alone: odachi init --global writes th
 
 ## Steps
 - [x] T1 · init --global leaves the project alone, and a plain init is the run that writes it   R1
-- [ ] T2 · the help and the changelog say which run writes what   R1
+- [x] T2 · the help and the changelog say which run writes what   R1 · tree:8da8af892eac13b2bccb4d9047d53719bce0dadd
 
 ## History
 L1 · "a global install leaves the project alone: odachi init --global writes the door in the home and no agent files in the project, and a plain init is the run that writes a project's own"
