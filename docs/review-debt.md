@@ -14,6 +14,12 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
+Nothing open. The rows that remain are the accepted ones below, each with the reason it
+is not work.
+
+## Closed by feature 0108
+
+
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
@@ -93,6 +99,10 @@ its declaration. The declaration and the coverage check stay what they are - a r
 that names a path it left out is refused - and the promise "silence is coverage" is now
 a promise about reading, which is measured, not about judgment, which is not. A future
 miss of the same shape is a data point about the model, not about the prompt's size.
+
+
+The two rows closed here were the last of the review debt: both were measurements, and
+both had their answer in the numbers the store already held.
 
 ## Closed by feature 0107
 
