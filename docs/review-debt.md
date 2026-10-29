@@ -14,24 +14,6 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
-### the gate - a committed change after the close is invisible to a local check
-
-Found by the smoke test of 0102 while proving the other half of the rule: commit a code
-change after a feature closes, run `odachi check` with its default base, and the gate
-answers ready. The candidate it measures is the worktree against HEAD, which is empty
-once the change is committed, and `theCloseOwes` reads code from that candidate - so the
-"code after the close still owes" rule only sees uncommitted code.
-
-CI does not have the hole: the workflow runs `check --base <branch base> --fence-from
-<base>`, so the candidate is the whole diff and code shows up. The lie is local, and it
-is the worst kind for this method: the agent believes a tree is ready that CI will
-block, after the moment it could have asked for the review.
-
-The shape of the question: the review gate should measure the feature's own range -base
-to the tree that stands- for the "code after the close" half too, the way 0102 taught it
-for the letter of the rule. That is a change to `theCloseOwes` and its tests, so it is a
-feature of its own.
-
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
@@ -97,6 +79,24 @@ its declaration. The declaration and the coverage check stay what they are - a r
 that names a path it left out is refused - and the promise "silence is coverage" is now
 a promise about reading, which is measured, not about judgment, which is not. A future
 miss of the same shape is a data point about the model, not about the prompt's size.
+
+## Closed by feature 0103
+
+### the gate - a committed change after the close is invisible to a local check
+
+Found by the smoke test of 0102: commit code after a close, run `odachi check` with its
+default base, and the gate answered ready - the candidate it measures is the worktree
+against HEAD, which is empty once the change is committed. CI caught it; the lie was
+local, which is the worst kind for this method.
+
+The gate now anchors on the verdict that judged the close: a feature's verdicts share the
+document's base, so the newest one names the furthest bytes the review looked at, and
+`Between(that tree, the tree that stands)` says what arrived after. Anything there that
+is not a document is a change nobody reviewed, committed or not. Nothing guesses the
+close commit; the store wrote the answer.
+
+A close with no verdict in the store keeps the answer it gave before, `--require-review`
+keeps its meaning, and the release note after a paid close stays paperwork.
 
 ## Closed by feature 0102
 

@@ -11,7 +11,7 @@ R1 · "a code change committed after the close still owes the verdict: the gate 
 - a test drives each one, and one of them fails without the change
 
 ## Steps
-- [ ] T1 · the close measures what arrived after the verdict, so committed code still owes   R1
+- [x] T1 · the close measures what arrived after the verdict, so committed code still owes   R1 · tree:90896b38cc15fa4c7a797e1b993ceb93d1f68018
 - [ ] T2 · the debt row leaves the file and the changelog says why   R1
 
 ## History

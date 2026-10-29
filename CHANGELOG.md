@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A local check no longer lies about committed code.
+
+- **The gate anchors on the verdict.** After a close, "did anything non-document arrive"
+  was answered from the candidate - the worktree against HEAD - which is empty once a
+  change is committed. CI caught such a tree; a local `check` said ready. The gate now
+  reads the newest verdict of the feature from the store and asks what changed between
+  that tree and the one that stands: a committed code change owes the verdict, a release
+  note stays paperwork.
+- **A close with no verdict in the store keeps the answer it had**, and
+  `--require-review` keeps its meaning.
+
 ## v0.11.55 - 2026-10-29
 
 A documents-only close owes no verdict.
