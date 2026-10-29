@@ -14,6 +14,12 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
+Nothing open. The rows that remain are the accepted ones below, each with the reason it
+is not work.
+
+## Closed by feature 0108
+
+
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
@@ -44,6 +50,20 @@ within 10 KB of its own limit, so the next large feature meets the wall. The two
 out cost different things - a bigger limit risks a stall the tool cannot undo, and
 splitting by paths costs one more prompt per piece and a merge of their answers - and
 only the human knows which price this project should pay.
+
+Measured again on 2026-10-29, with the cut of 0107 in place and the binary that carries it
+(v0.11.58): the prompts it prints today for the last four candidates of this project are
+**52,938, 53,014, 35,046 and 70,397 B**, a median of 53,014 B with **7.4 to 8 KB of carried
+memory and 10 to 20 rows**. Before the cut the same comparison was a median of 71,489 B
+with 41,388 B of memory and 632 rows. The memory went from 58 % of the prompt to about
+14 %, and the largest prompt is now the one whose diff is largest (0103), not the one with
+the most history.
+
+So the wall is no longer a memory wall: it is a candidate-size wall, and this project's
+candidates run at 35 to 70 KB with 26 KB of headroom. The two ways out the row named stay
+available and stay the human's - a bigger `max_prompt_kb` or splitting by paths - but
+neither is pressing, and the next time one is needed it deserves a fresh row with the
+candidate that crosses the line, not this one.
 
 ### the review pipeline - the configured reviewer missed a test it was shown
 
@@ -79,6 +99,10 @@ its declaration. The declaration and the coverage check stay what they are - a r
 that names a path it left out is refused - and the promise "silence is coverage" is now
 a promise about reading, which is measured, not about judgment, which is not. A future
 miss of the same shape is a data point about the model, not about the prompt's size.
+
+
+The two rows closed here were the last of the review debt: both were measurements, and
+both had their answer in the numbers the store already held.
 
 ## Closed by feature 0107
 
