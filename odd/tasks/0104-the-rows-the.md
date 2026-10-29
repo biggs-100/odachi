@@ -13,7 +13,7 @@ R1 · "the rows the store carries into a review prompt are measured: how much of
 ## Steps
 - [x] T1 · the carried section is measured on every prompt: bytes, rows, and rows outside the candidate   R1 · tree:b6f9e64a3b7a31c78772d2fa4e7776a29d85b8ca
 - [x] T2 · the three prunings are measured on the same prompts, with what each takes away   R1
-- [ ] T3 · the numbers and the decision they open land in the debt file   R1
+- [x] T3 · the numbers and the decision they open land in the debt file   R1 · tree:7437a7509b185bcba4207f46d83f72fbe8e19fbd
 
 ## History
 L1 · "the rows the store carries into a review prompt are measured: how much of the prompt they are, how many name paths the candidate never touched, and what each way of pruning them would save"
