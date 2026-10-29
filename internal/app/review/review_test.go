@@ -360,6 +360,7 @@ func TestEachModelRunsItsOwnReviewer(t *testing.T) {
 	result := p.run(review.Options{
 		Exec:       "revisor --model {model}",
 		Lens:       "reliability,risk",
+		Because:    "the test splits the run by model",
 		LensModels: map[string]string{"risk": "sharp/model"},
 	})
 	if result.Code != review.CodeOK {
@@ -399,6 +400,7 @@ func TestTheSameModelIsOneRun(t *testing.T) {
 	result := p.run(review.Options{
 		Exec:       "revisor --model {model}",
 		Lens:       "reliability,risk",
+		Because:    "the test splits the run by model",
 		LensModels: map[string]string{"risk": "host/default"},
 	})
 	if result.Code != review.CodeOK {
@@ -431,6 +433,7 @@ func TestAFailedGroupKeepsTheAnswerThatLanded(t *testing.T) {
 	result := p.run(review.Options{
 		Exec:       "revisor --model {model}",
 		Lens:       "risk",
+		Because:    "the test asks for a wider scope",
 		LensModels: map[string]string{"risk": "sharp/model"},
 	})
 
@@ -486,6 +489,7 @@ func TestAReviewerThatMovesTheTreeCannotSplitTheAnswer(t *testing.T) {
 	p.run(review.Options{
 		Exec:       "revisor --model {model}",
 		Lens:       "risk",
+		Because:    "the test asks for a wider scope",
 		LensModels: map[string]string{"risk": "sharp/model"},
 	})
 
@@ -520,6 +524,7 @@ func TestAReviewerThatMovesTheTreeStopsTheRun(t *testing.T) {
 	result := p.run(review.Options{
 		Exec:       "revisor --model {model}",
 		Lens:       "risk",
+		Because:    "the test asks for a wider scope",
 		LensModels: map[string]string{"risk": "sharp/model"},
 	})
 
@@ -592,7 +597,7 @@ func TestASecondRunCompletesTheVerdict(t *testing.T) {
 	}
 	p.files.files[storePath(currentTree)] = domainreview.Render(first)
 
-	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk"})
+	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk", Because: "the test asks for a wider scope"})
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
@@ -649,7 +654,7 @@ func TestASecondGroupCannotRideOnTheFirstDeclaration(t *testing.T) {
 	}
 	p.files.files[storePath(currentTree)] = domainreview.Render(first)
 
-	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk"})
+	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk", Because: "the test asks for a wider scope"})
 
 	if result.Code != review.CodeBlocked {
 		t.Fatalf("code = %d, want 1: the second answer declared nothing (%s)", result.Code, result.Message)
@@ -977,6 +982,7 @@ func TestEachGroupGetsAFreshAnswerFile(t *testing.T) {
 	result := p.run(review.Options{
 		Exec:       "agent --write {verdict} --model {model}",
 		Lens:       "risk,reliability",
+		Because:    "the test splits the run by model",
 		LensModels: map[string]string{"reliability": "sharp/model"},
 	})
 

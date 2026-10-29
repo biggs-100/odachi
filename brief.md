@@ -1,12 +1,13 @@
-# a-refused-answer
+# a-run-cannot
 
 ## What must exist
-- a refused answer writes nothing: the scope record is written only when the verdict it explains is written, the way gentle-ai creates no authority for a refusal
+- a run cannot widen the scope without saying why: --lens that adds a lens needs --because, and the refusal names the flag and the lenses it would add
 
 ## Done when
-- an answer refused for its declaration or its coverage leaves no scope record, and the store keeps only the refused answer
-- the record still lands when the verdict lands, with the same fields it had
-- a test drives the refusal, and it fails without the move
+- a run whose --lens adds a lens and has no --because is refused before any reviewer starts, and the refusal names --because and the lenses
+- the refusal writes nothing: no verdict, no record, no refused answer
+- a tree that already has its record keeps working with --lens and no new words, and a run that adds no lens is never asked
+- a test drives each answer, and one of them fails without the change
 
 ## Not included (first version)
 - no new verb and no new flag
@@ -17,4 +18,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
-- Wants to learn: how a transaction that writes two files stays atomic when the second can be refused.
+- Wants to learn: how a tool asks for the reason at the moment it is paid, without a new flag.

@@ -56,19 +56,74 @@ func TestARunThatAddsALensFilesTheScopeBesideTheVerdict(t *testing.T) {
 	}
 }
 
-// TestAScopeWithoutWordsSaysNothingInsteadOfInventing: the tool keeps the caller's
-// reason only when they gave one. A record that wrote a reason in the tool's words
-// would be the tool talking about a decision it did not make.
-func TestAScopeWithoutWordsSaysNothingInsteadOfInventing(t *testing.T) {
+// TestAWidenedScopeWithoutWordsIsRefused: the record exists to say who raised the
+// scope and why, so a run that would write it without words is refused before it
+// pays for anything. The refusal names the flag, the lenses and the words it needs,
+// and it writes nothing at all.
+func TestAWidenedScopeWithoutWordsIsRefused(t *testing.T) {
 	p := newLensProject()
 	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
 
-	if result := p.run(review.Options{Attach: "veredicto.json", Lens: "risk"}); result.Code != review.CodeOK {
-		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
-	}
+	result := p.run(review.Options{Attach: "veredicto.json", Lens: "risk"})
 
-	if scope := scopeOf(t, p); scope.Because != "" {
-		t.Errorf("because = %q, want no words", scope.Because)
+	if result.Code == review.CodeOK {
+		t.Fatalf("a scope raised without words was accepted: %s", result.Message)
+	}
+	for _, want := range []string{"--because", "--lens risk", "risk"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, result.Message)
+		}
+	}
+	rel, err := domainreview.ScopePath(currentTree)
+	if err != nil {
+		t.Fatalf("ScopePath: %v", err)
+	}
+	if _, written := p.files.files[storeFile(rel)]; written {
+		t.Errorf("the refusal wrote %s", rel)
+	}
+	if _, written := p.files.files[storePath(currentTree)]; written {
+		t.Errorf("the refusal wrote the verdict too")
+	}
+}
+
+// TestTheReviewerIsNotStartedForAScopeWithoutWords: the refusal comes before the
+// money. A reviewer that already ran cannot be un-paid, so the check lives where the
+// selection is made.
+func TestTheReviewerIsNotStartedForAScopeWithoutWords(t *testing.T) {
+	p := newLensProject()
+
+	result := p.run(review.Options{Exec: "reviewer --file {prompt}", Lens: "risk"})
+
+	if result.Code == review.CodeOK {
+		t.Fatalf("the run was accepted: %s", result.Message)
+	}
+	if len(p.shell.commands) != 0 {
+		t.Errorf("the reviewer ran: %v", p.shell.commands)
+	}
+}
+
+// TestATreeThatAlreadyExplainedItsScopeKeepsWorking: the words are on file from the
+// run that asked first, so a later run that narrows back to the same flag has nothing
+// to explain - the record is the memory, not the ceremony.
+func TestATreeThatAlreadyExplainedItsScopeKeepsWorking(t *testing.T) {
+	p := newLensProject()
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
+
+	rel, err := domainreview.ScopePath(currentTree)
+	if err != nil {
+		t.Fatalf("ScopePath: %v", err)
+	}
+	p.files.files[storeFile(rel)] = domainreview.RenderScope(domainreview.Scope{
+		Required: []string{domainreview.Reliability},
+		Added:    []string{domainreview.Risk},
+		Asked:    "risk",
+		Because:  "the first run's words",
+	})
+
+	result := p.run(review.Options{Attach: "veredicto.json", Lens: "risk"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s): the words are already on file", result.Code, result.Message)
 	}
 }
 

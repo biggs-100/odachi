@@ -736,6 +736,11 @@ func (r *runner) exec() Result {
 	if problem != nil {
 		return *problem
 	}
+	// The refusal comes before the money: a reviewer that already ran cannot be
+	// un-paid, so the words are asked for where the selection is made.
+	if problem := r.widenedRefusal(cand.tree, required, selected); problem != nil {
+		return *problem
+	}
 
 	// A verdict for this tree may be incomplete, and a run never answers twice
 	// the lenses already answered: the store grows by lens, it is not rewritten.
@@ -1503,6 +1508,9 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	// authority. A run's own groups pass judged, and exec files the record once for
 	// the whole selection instead of once per group.
 	if judged == nil {
+		if problem := r.widenedRefusal(tree, domain.Lenses(floor.Class), sealed.Lenses); problem != nil {
+			return *problem
+		}
 		if problem := r.fileScope(tree, domain.Lenses(floor.Class), sealed.Lenses); problem != nil {
 			return *problem
 		}
@@ -2206,6 +2214,33 @@ func (r *runner) requiredLenses(work *worktree) []string {
 		extra = nil
 	}
 	return domain.Add(domain.Lenses(domain.Assess(work.paths, work.diff)), extra)
+}
+
+// widenedRefusal refuses a run that would raise this tree's scope without saying
+// why. The record exists to answer "who asked, for what and in whose words", and a
+// width nobody explains is a width a replay cannot justify; so the run stops before
+// it spends anything. The words already on file count: a tree whose record exists has
+// explained itself, and a later run that asks for the same width has nothing to add.
+func (r *runner) widenedRefusal(tree string, required, selected []string) *Result {
+	added := domain.Raised(required, selected)
+	if len(added) == 0 || strings.TrimSpace(r.opts.Because) != "" {
+		return nil
+	}
+
+	if rel, err := domain.ScopePath(tree); err == nil {
+		if exists, err := r.files.Exists(r.storePath(rel)); err == nil && exists {
+			return nil
+		}
+	}
+
+	asked := "the evidence asks for no lens"
+	if len(required) > 0 {
+		asked = "the evidence asks for " + strings.Join(required, ", ")
+	}
+	problem := blocked("--lens " + oneLine(strings.TrimSpace(r.opts.Lens)) + " adds " + strings.Join(added, ", ") +
+		" to a tree where " + asked + "; say why with --because \"<why>\", because the scope record is the only place" +
+		" a later reader learns who asked and in whose words")
+	return &problem
 }
 
 // fileScope writes the record of a raised scope beside this tree's verdict, and

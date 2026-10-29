@@ -48,6 +48,7 @@ func TestASplitRunFilesOnePromptPerGroup(t *testing.T) {
 	if result := p.run(review.Options{
 		Exec:       "revisor --model {model}",
 		Lens:       "reliability,risk",
+		Because:    "the test splits the run by model",
 		LensModels: map[string]string{"risk": "sharp/model"},
 	}); result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)

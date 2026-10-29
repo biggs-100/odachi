@@ -56,10 +56,9 @@ invents a reason. `--show` prints it and the prompt states it, because the lense
 section used to claim the evidence chose every lens and that sentence stopped being
 true the moment somebody added one.
 
-What it still cannot say: `--because` is optional, so a run can raise the scope
-without words. The record is honest about that (it omits them) but the row's "in whose
-words" is only complete when the caller gives them. Making the flag required is a
-small change of its own.
+What it still cannot say: nothing, as of 0100. `--because` is required when `--lens`
+adds a lens, and the words already on file count, so a raised scope either carries its
+reason or does not happen.
 
 The first version of the file had a defect 0099 paid: it was written before the
 declaration and coverage refusals, so a refused `--attach` answer left a record beside
