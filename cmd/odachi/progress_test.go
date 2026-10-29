@@ -180,6 +180,13 @@ func TestProgressAndCheckAgreeAboutTheReview(t *testing.T) {
 	t.Parallel()
 	dir, base := featureAtBase(t)
 
+	// The step that wrote code: it is what makes this close owe a verdict. Without it
+	// the feature's whole diff is documents, the gate answers "none is due" - the rule
+	// 0102 gave the review, the twin of the proof's paperwork - and this test would be
+	// measuring the other branch.
+	writeFile(t, dir, "cmd/turnos/main.go", "package main\n")
+	commitAll(t, dir, "the work")
+
 	// The close: the document that marks the last step done, not committed yet.
 	// Both verbs owe the verdict of the feature from here.
 	writeFile(t, dir, "odd/tasks/0001-turnos.md", taskdoc.TaskDoc{

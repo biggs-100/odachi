@@ -158,7 +158,7 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	// change. Its own lenses are none, and it still owes the feature's verdict.
 	closing := readyFiles()
 	closing["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
-	docs := &fakeGit{tree: currentTree, changed: []string{"odd/tasks/0007-turnos.md"}}
+	docs := &fakeGit{tree: currentTree, changed: []string{"odd/tasks/0007-turnos.md"}, between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"}}
 
 	blocked := run(t, newFakeFiles(closing), docs, check.Options{ReviewMode: true})
 	if blocked.Code != int(gate.NeedsDecision) || blocked.Reason != check.ReasonReviewMissing {
@@ -277,6 +277,7 @@ func TestReviewOwedForcedAndItsErrors(t *testing.T) {
 		git := &fakeGit{
 			tree:      currentTree,
 			changed:   []string{"odd/tasks/0007-turnos.md"},
+			between:   []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
 			fileAtErr: errors.New("git roto"),
 		}
 
@@ -317,6 +318,7 @@ func TestReviewOwedAgreesWithTheGate(t *testing.T) {
 	atClose := &fakeGit{
 		tree:    currentTree,
 		changed: []string{"odd/tasks/0007-turnos.md"},
+		between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
 		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
 	}
 	owed, gotBase, err = check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(closing), atClose)
@@ -349,6 +351,7 @@ func TestReviewOwedAnswersTheWaiver(t *testing.T) {
 	atClose := &fakeGit{
 		tree:    currentTree,
 		changed: []string{"odd/tasks/0007-turnos.md"},
+		between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
 		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
 	}
 
@@ -405,7 +408,7 @@ func TestThePlanCommitIsAFeatureThatHasNotStarted(t *testing.T) {
 	// The close of the same feature still owes it, at the document's base.
 	closing := readyFiles()
 	closing["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
-	docs := &fakeGit{tree: currentTree, changed: []string{"odd/tasks/0007-turnos.md"}}
+	docs := &fakeGit{tree: currentTree, changed: []string{"odd/tasks/0007-turnos.md"}, between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"}}
 	blocked := run(t, newFakeFiles(closing), docs, check.Options{ReviewMode: true})
 	if blocked.Code != int(gate.NeedsDecision) || blocked.Next != "odachi review --base "+base {
 		t.Fatalf("the close of the same feature = %d/%q (%q), want the verdict at %q",
@@ -443,6 +446,7 @@ func TestTheClosingCommitOwesTheFeatureVerdict(t *testing.T) {
 	closing := &fakeGit{
 		tree:    currentTree,
 		changed: []string{"odd/tasks/0007-turnos.md"},
+		between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
 		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
 	}
 
@@ -487,6 +491,7 @@ func TestAQuestionAnsweredAfterTheCloseDoesNotReopenTheGate(t *testing.T) {
 	tail := &fakeGit{
 		tree:    currentTree,
 		changed: []string{"odd/tasks/0007-turnos.md"},
+		between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
 		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": closed},
 	}
 
@@ -1168,5 +1173,52 @@ func TestAnOpenFeatureOwesTheProofAtItsClose(t *testing.T) {
 	got = run(t, newFakeFiles(closed), &fakeGit{tree: currentTree}, check.Options{})
 	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofMissing {
 		t.Fatalf("the closing tree without a proof = %d/%q, want proof_missing", got.Code, got.Reason)
+	}
+}
+
+// TestADocumentsOnlyCloseOwesNoVerdict: the review twin of the proof's paperwork
+// rule. A feature whose own diff -base to the tree that closes it- asks for no lens
+// has nothing for a verdict to judge, so the gate that would demand one answers
+// "none is due" the way the review itself does. Without it a measurement feature pays
+// a forced four-lens review of a paragraph, or has to be waived before it starts.
+func TestADocumentsOnlyCloseOwesNoVerdict(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	docs := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"odd/tasks/0007-turnos.md", "docs/review-debt.md"},
+		between: []string{"CHANGELOG.md", "docs/review-debt.md", "odd/tasks/0007-turnos.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
+	}
+
+	got := run(t, newFakeFiles(files), docs, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a documents-only close asked for a verdict: %s (%s)", got.Message, got.Next)
+	}
+}
+
+// TestACodeFeatureStillOwesTheVerdictAtItsClose: the rule reads the feature's own
+// diff, so a close that only marks a step still owes the verdict when the feature
+// wrote code. Measuring the closing tree alone would go blind here.
+func TestACodeFeatureStillOwesTheVerdictAtItsClose(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	code := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"odd/tasks/0007-turnos.md"},
+		between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)},
+	}
+
+	got := run(t, newFakeFiles(files), code, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("a code feature closed without a verdict: %d/%q", got.Code, got.Reason)
+	}
+	if want := "odachi review --base " + base; got.Next != want {
+		t.Errorf("Next = %q, want %q", got.Next, want)
 	}
 }

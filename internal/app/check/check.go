@@ -716,11 +716,47 @@ func (r *runner) theCloseOwes(feature *tasks.Document) (bool, *Result) {
 		return true, nil
 	}
 
+	// The feature's own diff decides, and it is the diff a verdict would judge: from
+	// the document's base to the tree that stands. A feature that only wrote documents
+	// asks for no lens, so there is nothing to judge and the close is ready - the twin
+	// 0096 gave the proof, asked of the same classifier the review uses. Measuring the
+	// closing tree alone would answer "no code" about a feature that wrote plenty: that
+	// tree only marks the last step.
+	passive, problem := r.featurePassive(feature)
+	if problem != nil {
+		return false, problem
+	}
+	if passive {
+		return false, nil
+	}
+
 	closed, problem := r.closedBefore(feature)
 	if problem != nil {
 		return false, problem
 	}
 	return !closed, nil
+}
+
+// featurePassive asks the review's classifier about the diff this feature merges:
+// from the document's base to the tree that stands. It is the same function the
+// review asks, so the gate and the tool cannot answer differently about whether a
+// candidate deserves a verdict.
+func (r *runner) featurePassive(feature *tasks.Document) (bool, *Result) {
+	base, _, _, known := featureReview(feature)
+	if !known || base == "" {
+		return false, nil
+	}
+	work, problem := r.worktree()
+	if problem != nil {
+		return false, problem
+	}
+	paths, err := r.git.Between(r.opts.Dir, base, work.tree)
+	if err != nil {
+		problem := blocked(fmt.Sprintf("could not read what changed since %s: %s; check git and run odachi check again",
+			base, oneLine(err.Error())))
+		return false, &problem
+	}
+	return reviewdomain.Classify(paths) == reviewdomain.Passive, nil
 }
 
 // closedBefore says whether the document at HEAD already carried the close: the
