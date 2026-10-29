@@ -244,6 +244,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		return *problem
 	}
 	r.feature = feature
+	closedNow := false
 	if feature != nil {
 		state.OpenQuestions = len(feature.Doc.OpenQuestions())
 		// An open feature owes the proof at its close, not at every step: the tree
@@ -251,6 +252,8 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		// steps yet is open too - the plan lands before the work.
 		if done, total := feature.Doc.Progress(); total == 0 || done < total {
 			state.ProofDeferred = true
+		} else {
+			closedNow = true
 		}
 	}
 
@@ -287,14 +290,34 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		haveProof = haveProof || (!ran.failed && !ran.timedOut)
 	}
 
-	verdict := gate.Evaluate(state)
-	// The gate is pure and only knows that two hashes differ; the human needs the
-	// paths, because a stray backup, an editor and a real edit look identical in
-	// one line. The note is best-effort: an object git can no longer read leaves
-	// the generic message.
-	if verdict.Reason == gate.ReasonProofStale {
-		r.staleNote = r.changedSince(state.ProofTreeHash, state.TreeHash)
+	// One read of what moved between the proof and this tree. The note a block
+	// prints and the paperwork question below are the same evidence, and ask once:
+	// an editor, a stray backup and a real edit look identical in one line, and two
+	// questions about the same bytes is one question too many.
+	var moved []string
+	if state.ProofTreeHash != "" && state.ProofTreeHash != state.TreeHash {
+		if paths, err := r.git.Between(r.opts.Dir, state.ProofTreeHash, state.TreeHash); err == nil {
+			moved = paths
+			r.staleNote = pathNote(paths)
+		}
 	}
+
+	// The proof's twin of theCloseOwes: after the close, a tree that only moved
+	// documents is paperwork -a release note cannot fail a suite- and the proof that
+	// judged the code still speaks for it, because the pull request runs the suite
+	// from the base ref. The question is the review's own, asked of the same
+	// classifier, so the two gates cannot disagree about what a candidate is; the
+	// close itself is not paperwork, and neither is a tree whose paths git cannot
+	// name.
+	if closedNow && len(moved) > 0 && reviewdomain.Classify(moved) == reviewdomain.Passive && !shippedText(moved) {
+		if already, problem := r.closedBefore(feature); problem == nil && already {
+			state.ProofPaperwork = true
+			r.paperworkNote = fmt.Sprintf("the proof is for tree %s, and since then only documents moved: %s",
+				state.ProofTreeHash, strings.Join(moved, ", "))
+		}
+	}
+
+	verdict := gate.Evaluate(state)
 	if verdict.Code == gate.Ready {
 		// The review gate is last on purpose: everything before it is something
 		// the agent can act on, and sending an agent to `odachi review` while the
@@ -369,6 +392,9 @@ type runner struct {
 	// staleNote names the paths that differ between the proof's tree and this
 	// one, when the proof is stale. Empty means the diff could not be read.
 	staleNote string
+	// paperworkNote says which tree the proof belongs to when it is not owed
+	// again: the documents that moved since are not the code the suite ran on.
+	paperworkNote string
 	// work is the one read of the candidate: tree, changed paths and diff. The
 	// fence, the lens class and the proof all describe these same bytes.
 	work *worktree
@@ -688,17 +714,29 @@ func (r *runner) theCloseOwes(feature *tasks.Document) (bool, *Result) {
 		return true, nil
 	}
 
+	closed, problem := r.closedBefore(feature)
+	if problem != nil {
+		return false, problem
+	}
+	return !closed, nil
+}
+
+// closedBefore says whether the document at HEAD already carried the close: the
+// tree that closed a feature is the tree that owes its evidence, and the trees
+// after it are paperwork. A document that was not at HEAD yet was closed here, and
+// a document git cannot read is not paperwork either: the lane never opens on a
+// question the tool could not answer.
+func (r *runner) closedBefore(feature *tasks.Document) (bool, *Result) {
 	before, ok, err := r.git.FileAt(r.opts.Dir, "HEAD", feature.Rel)
 	if err != nil {
 		problem := blocked(fmt.Sprintf("could not read %s at HEAD: %s; check git and run odachi check again", feature.Rel, oneLine(err.Error())))
 		return false, &problem
 	}
 	if !ok {
-		// The document is new in this change, so whatever closed it closed here.
-		return true, nil
+		return false, nil
 	}
 	done, total := taskdoc.Parse(string(before)).Progress()
-	return total == 0 || done < total, nil
+	return total > 0 && done == total, nil
 }
 
 // featureReview reads the feature's review state from its document: the base its
@@ -1191,15 +1229,33 @@ func reviewFinding(finding reviewdomain.Finding) string {
 	return where + " " + string(finding.Severity) + " " + finding.Why
 }
 
-// changedSince names the paths that differ between the proof's tree and this one,
-// in one line. It never blocks: a tree git can no longer read is the generic
-// message's business, and a second failure on top of the first would be noise.
-func (r *runner) changedSince(from, to string) string {
-	if from == "" || to == "" || from == to {
-		return ""
+// shippedText reports whether one of the paths is text this binary ships: the
+// skills compiled into it, the review prompts beside them, or the copy of the
+// skills installed in the project, which the pack tests compare byte for byte with
+// its source. The suite reads those bytes, so a tree that changed one is not
+// paperwork and owes the proof.
+//
+// The review's classifier answers the same question for its lenses and does not
+// know about shipping, because the fence in force when this feature started protects
+// internal/domain/review. The list lives here until the row that owns it lands, and
+// it moves into the classifier with it: one definition, asked by both gates.
+func shippedText(paths []string) bool {
+	for _, path := range paths {
+		lower := strings.ToLower(filepath.ToSlash(path))
+		switch {
+		case strings.HasPrefix(lower, "skills/"),
+			strings.HasPrefix(lower, "internal/assets/"),
+			strings.HasPrefix(lower, ".agents/"):
+			return true
+		}
 	}
-	paths, err := r.git.Between(r.opts.Dir, from, to)
-	if err != nil || len(paths) == 0 {
+	return false
+}
+
+// pathNote names paths in one line, capped so a block stays readable: the human
+// needs to recognize what moved, not to read a manifest.
+func pathNote(paths []string) string {
+	if len(paths) == 0 {
 		return ""
 	}
 	const limit = 8
@@ -1257,6 +1313,11 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	if haveProof && r.proofRel != "" {
 		result.Proof = r.proofRel
 		result.Lines = append(result.Lines, "proof: "+r.proofRel)
+	}
+	// A ready tree the suite never ran on says so: the proof it keeps proved the
+	// code, and a silent ready would be the kind of quiet this gate exists to avoid.
+	if r.paperworkNote != "" {
+		result.Lines = append(result.Lines, r.paperworkNote)
 	}
 	// A waived review is a decision, not a silence: the ready tree says so, or
 	// the next reader believes a verdict was made and lost.

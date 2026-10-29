@@ -385,6 +385,35 @@ func TestCodeConstantsMatchTheCheckContract(t *testing.T) {
 	}
 }
 
+// TestAPaperworkTreeKeepsTheProofItHas: after a feature closed, a tree that only
+// moved documents is not a tree the suite has to run on again - a release note
+// cannot fail it - and the proof that judged the code still speaks for it. The
+// lane never rescues a missing proof, and a proof this run watched fail still
+// blocks: only staleness over documents is paperwork.
+func TestAPaperworkTreeKeepsTheProofItHas(t *testing.T) {
+	paper := gate.State{HasBrief: true, TreeHash: "tree", ProofTreeHash: "code", ProofPaperwork: true}
+	got := gate.Evaluate(paper)
+	if got.Code != gate.Ready {
+		t.Fatalf("a paperwork tree = %d/%q, want ready", got.Code, got.Reason)
+	}
+	if !strings.Contains(got.Message, "only documents moved since") {
+		t.Errorf("message = %q, want the documents named as the reason", got.Message)
+	}
+
+	// A tree with no proof at all is not paperwork: the lane answers staleness.
+	missing := gate.State{HasBrief: true, TreeHash: "tree", ProofPaperwork: true}
+	if got := gate.Evaluate(missing); got.Reason != gate.ReasonProofMissing {
+		t.Errorf("a missing proof with the lane open = %d/%q, want proof_missing", got.Code, got.Reason)
+	}
+
+	// And a red command is not a formality of the paperwork either.
+	failed := gate.State{HasBrief: true, TreeHash: "tree", ProofTreeHash: "code", ProofPaperwork: true,
+		ProofFailed: true, ProofLastLine: "FAIL github.com/x"}
+	if got := gate.Evaluate(failed); got.Reason != gate.ReasonProofFailed {
+		t.Errorf("a failed proof with the lane open = %d/%q, want proof_failed", got.Code, got.Reason)
+	}
+}
+
 // TestAProofIsOwedAtTheClose: an open feature does not owe a proof for every tree it
 // builds - the tree that closes it does, and that is the one a pull request and CI
 // judge. What the gate must keep is the failure it just saw: a red command is not a

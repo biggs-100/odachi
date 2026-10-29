@@ -9,25 +9,24 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0095, which closed the plan-commit row and opened the proof's
-paperwork one.
+Last written: after 0096, which closed the release-note row.
 
 
 ## Open
 
-### the proof · the tree that writes a release note owes the suite
+### the classifier · a Markdown the suite reads is called a document
 
-The review already knows this shape: `theCloseOwes` says a release note written
-after the close is paperwork, and the verdict it would ask for already judged the
-same code. The proof has no such rule, so the one-line commit that renames
-`## Unreleased` to `## v0.11.48` is a new tree, `check` answers "changed since the
-proof: CHANGELOG.md", and the hook refuses it. Every release therefore lands with
-`--no-verify` -v0.11.48 did, and the message says why- which is the same lesson
-0095 paid for one step earlier: a gate that says no to work nobody has done yet
-teaches the person to bypass it. The shape is the proof's version of
-`theCloseOwes`: after a feature closed, a tree whose changed paths are documents
-odachi does not read owes no new proof, and the gate that judges the pull request
-still runs the suite from the base ref.
+`isDocumentation` in `internal/domain/review/tier.go` answers by extension, README
+name and `docs/` segment, and excludes only the agent directories. A skill
+(`skills/*/SKILL.md`, compiled into the binary), a review prompt
+(`internal/assets/review/*.md`, the same) and the installed copy (`.agents/skills/`,
+which the pack tests compare byte for byte with its source) are all `.md`, so a
+change to one of them asks for no lens, and the proof lane had to grow its own refusal
+(`internal/app/check/shippedText`) so a tree that changed one still owes the suite.
+Both gates read the same function for lenses, so the gap is one and the fix is small
+-those three prefixes are shipped text, not documents. It could not land in 0096: its
+base fence protected `internal/domain/review/**`, and CI reads the base fence. It needs
+its own feature, and the lane's list moves into the classifier with it.
 
 ### the review record · the scope a run judged is not written down
 
@@ -62,6 +61,26 @@ it judged. At 74 KB with 21 changed paths, a reviewer is not reading every line 
 is handed; a tool that trusts its silence as coverage (ADR 0033) should know that a
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
+
+## Closed by feature 0096
+
+### the proof · the tree that writes a release note owes the suite
+
+The proof's twin of `theCloseOwes` landed: after a close, a tree whose paths that
+moved since the proof ask for no lens -the same classifier the review uses- is
+ready, and the report says which tree the proof belongs to and what moved. The lane
+asks the close's own question -the document at HEAD already carried the close- so
+the tree that closes a feature still owes the proof, a missing proof is never
+paperwork, and a command this run watched fail still blocks.
+
+The classifier half did not land here. It lives in `internal/domain/review/tier.go`,
+and the fence in force when this feature started -the one at its base, which CI
+reads on purpose- protects that domain under "no change to the verdict or the proof
+format". The gate caught it on the pull request, and the change was reverted instead
+of argued. The refusal the brief demands lives in the lane for now
+(`internal/app/check/shippedText`): shipped text is never paperwork for this gate,
+while the review's classifier still calls it a document, which is the open row below
+and the reason that row exists.
 
 ## Closed by feature 0095
 
