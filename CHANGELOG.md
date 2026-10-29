@@ -16,6 +16,18 @@ A rule that matches nothing is worse than no rule: it looks like a promise.
   (`paths`, `deps`), and adds how to prove a fence works: touch a path it protects
   and run `odachi check` - it must refuse. A non-goal from the closed vocabulary
   already carries real paths and stays silent.
+## Unreleased
+
+A rule belongs where the promise is made.
+
+- **The proof is owed by the feature that closes, not by every step.** `check` used
+  to demand a proof for any tree, so every intermediate commit cost a full run of the
+  suite - and on a repository whose suite takes forty minutes that is a workflow that
+  does not exist. While the feature is open, `check` now says it is ready for a step
+  and names the close; the tree that closes the feature owes the proof again, and
+  that tree is the one a pull request and CI judge. A proof this run watched fail
+  still blocks: what nobody has paid for yet is not owed, but what just broke is. The
+  hook needs no change, and its marker now says what it enforces.
 ## v0.11.46 - 2026-10-28
 
 A judgment somebody made must be able to outlive the reviewer who got it wrong.

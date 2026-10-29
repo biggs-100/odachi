@@ -290,6 +290,14 @@ func readyFiles() map[string]string {
 	}
 }
 
+// closedFiles is readyFiles with the feature's only step done: the tree that closes
+// a feature is the one that owes the proof, so a test about the proof gate closes it.
+func closedFiles() map[string]string {
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc("", true)
+	return files
+}
+
 // run evaluates the current state: no --run, no --proof.
 func run(t *testing.T, files *fakeFiles, git *fakeGit, opts check.Options) check.Result {
 	t.Helper()
@@ -347,10 +355,10 @@ deps  = ["stripe"]
 	openQuestion := readyFiles()
 	openQuestion["odd/tasks/0007-turnos.md"] = featureDoc(`L1 · PREGUNTA P1 · "¿Los turnos se pueden cancelar?"`)
 
-	staleProof := readyFiles()
+	staleProof := closedFiles()
 	staleProof["proof/0007-turnos.txt"] = proofFile(otherTree, "go test ./...", "ok\n")
 
-	missingProof := readyFiles()
+	missingProof := closedFiles()
 	delete(missingProof, "proof/0007-turnos.txt")
 
 	noBrief := readyFiles()

@@ -4,11 +4,11 @@ paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no change to the fence format"
-paths = ["no-change-to-the-fence-format*"]
+not   = "no change to the proof format"
+paths = ["no-change-to-the-proof-format*"]
 deps  = []
 
 [[rule]]
-not   = "no guessing of paths from free text"
-paths = ["no-guessing-of-paths-from-free-text*"]
+not   = "no relaxation of the closing tree"
+paths = ["no-relaxation-of-the-closing-tree*"]
 deps  = []

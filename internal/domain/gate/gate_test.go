@@ -384,3 +384,37 @@ func TestCodeConstantsMatchTheCheckContract(t *testing.T) {
 		t.Errorf("NeedsDecision = %d, want 2", gate.NeedsDecision)
 	}
 }
+
+// TestAProofIsOwedAtTheClose: an open feature does not owe a proof for every tree it
+// builds - the tree that closes it does, and that is the one a pull request and CI
+// judge. What the gate must keep is the failure it just saw: a red command is not a
+// formality of the closing, and silence about it would be the gate lying.
+func TestAProofIsOwedAtTheClose(t *testing.T) {
+	open := gate.State{HasBrief: true, TreeHash: "tree", ProofDeferred: true}
+	got := gate.Evaluate(open)
+	if got.Code != gate.Ready {
+		t.Fatalf("an open feature without a proof = %d/%q, want ready", got.Code, got.Reason)
+	}
+	if !strings.Contains(got.Message, "owed when this feature closes") {
+		t.Errorf("message = %q, want the close named", got.Message)
+	}
+
+	// A proof from another tree is not a block while the feature is open: it is the
+	// next step's business.
+	open.ProofTreeHash = "another"
+	if got := gate.Evaluate(open); got.Code != gate.Ready {
+		t.Errorf("an open feature with a stale proof = %d/%q, want ready", got.Code, got.Reason)
+	}
+
+	// The closing tree owes it again.
+	closed := gate.State{HasBrief: true, TreeHash: "tree"}
+	if got := gate.Evaluate(closed); got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofMissing {
+		t.Errorf("the closing tree without a proof = %d/%q, want proof_missing", got.Code, got.Reason)
+	}
+
+	// And a proof this run watched fail blocks even mid-feature.
+	failed := gate.State{HasBrief: true, TreeHash: "tree", ProofTreeHash: "tree", ProofDeferred: true, ProofFailed: true, ProofLastLine: "FAIL github.com/x"}
+	if got := gate.Evaluate(failed); got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofFailed {
+		t.Errorf("a failed proof mid-feature = %d/%q, want proof_failed", got.Code, got.Reason)
+	}
+}

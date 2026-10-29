@@ -69,6 +69,12 @@ type State struct {
 
 	OpenQuestions int
 	Violations    []string
+	// ProofDeferred says the feature is still open, so the proof is not owed yet:
+	// it is owed by the tree that closes the feature, which is the one a pull
+	// request and CI judge. Absence and staleness stop blocking; a proof this run
+	// took and watched fail still blocks, because a failure somebody just saw is
+	// not a formality of the closing.
+	ProofDeferred bool
 	// FenceLoosened names the rules, paths or dependencies the base fence had
 	// and the candidate no longer has. Only the caller with --fence-from can
 	// answer it: without a base ref, the worktree fence is the policy.
@@ -106,15 +112,18 @@ func Evaluate(s State) Result {
 	// still a proof: `go vet`, `tsc --noEmit` and `gofmt -l` all succeed while
 	// printing nothing, and telling a human "the proof is missing" right after
 	// they ran one is a dead end that names a command which cannot resolve it.
-	case s.ProofTreeHash == "":
+	case !s.ProofDeferred && s.ProofTreeHash == "":
 		return Result{NeedsWork, ReasonProofMissing, "the proof for this change is missing", nextCheckProof}
-	case s.ProofTreeHash != s.TreeHash:
+	case !s.ProofDeferred && s.ProofTreeHash != s.TreeHash:
 		return Result{NeedsWork, ReasonProofStale, "the proof is from another state of the code", nextCheckProof}
 	case s.ProofTimedOut:
 		return Result{NeedsWork, ReasonProofFailed, "the proof did not finish in " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
 	case s.ProofFailed:
 		return Result{NeedsWork, ReasonProofFailed, "the proof failed: " + proofLastLine(s.ProofLastLine), nextRun(s.ProofCommand)}
 	default:
+		if s.ProofDeferred && s.ProofTreeHash != s.TreeHash {
+			return Result{Ready, ReasonReady, "ready for a step: the proof is owed when this feature closes, and the tree that closes it is the one CI judges", ""}
+		}
 		return Result{Ready, ReasonReady, "ready: there is proof for this tree", ""}
 	}
 }

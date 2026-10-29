@@ -44,7 +44,13 @@ const (
 
 // hookMarker names the hook as odachi's. A hook without it is somebody else's
 // work and is never replaced.
-const hookMarker = "# odachi: no commit without a proof for this tree"
+const hookMarker = "# odachi: no commit with the gate red"
+
+// hookMarkerOld is the marker written before the proof moved to the feature's
+// close. It stays a read-only alias, like the Spanish one: the hook is still
+// odachi's and is rewritten in place, so an existing project does not have to paste
+// the lines by hand.
+const hookMarkerOld = "# odachi: no commit without a proof for this tree"
 
 // hookMarkerES is the marker written before the English migration. It stays a
 // read-only alias: the hook is still odachi's and gets rewritten in place, so an
@@ -436,7 +442,7 @@ func (r *runner) installHook(exe string) *Result {
 			return &problem
 		}
 
-		if !strings.Contains(string(data), hookMarker) && !strings.Contains(string(data), hookMarkerES) {
+		if !strings.Contains(string(data), hookMarker) && !strings.Contains(string(data), hookMarkerOld) && !strings.Contains(string(data), hookMarkerES) {
 			problem := foreignHook(exe)
 			return &problem
 		}

@@ -246,6 +246,12 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	r.feature = feature
 	if feature != nil {
 		state.OpenQuestions = len(feature.Doc.OpenQuestions())
+		// An open feature owes the proof at its close, not at every step: the tree
+		// that closes it is the one a pull request and CI judge. A document with no
+		// steps yet is open too - the plan lands before the work.
+		if done, total := feature.Doc.Progress(); total == 0 || done < total {
+			state.ProofDeferred = true
+		}
 	}
 
 	proofPath, proofRel := proofPathFor(opts.Dir, feature)

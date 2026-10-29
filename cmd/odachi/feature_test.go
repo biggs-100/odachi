@@ -58,6 +58,7 @@ func TestAFeatureCanBeChosenByItsNumber(t *testing.T) {
 		Title:        "otro",
 		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "otro"}},
 		DoneWhen:     []string{"otro"},
+		Steps:        []taskdoc.Step{{ID: "T1", Text: "hecho antes", Requirement: "R1", Done: true}},
 		History:      []string{`L1 · "otro"`},
 	}.Render())
 	commitAll(t, dir, "two features")
@@ -109,9 +110,14 @@ func TestAFeatureCanBeChosenByItsNumber(t *testing.T) {
 	if !strings.Contains(errOut, "¿y esto?") {
 		t.Errorf("check --feature 1 does not name its question: %q", errOut)
 	}
+	// The second feature owes its proof at the close: with one, its own gate is green
+	// while the first is still blocked by its question. That is the flag working.
+	if code, _, errOut := runDir(t, dir, []string{"check", "--run", "echo ok", "--feature", "2"}, ""); code != 0 {
+		t.Fatalf("check --run --feature 2 = %d (stderr: %q)", code, errOut)
+	}
 	code, _, errOut = runDir(t, dir, []string{"check", "--feature", "2"}, "")
-	if code != 1 {
-		t.Fatalf("check --feature 2 = %d, want 1: its proof is missing", code)
+	if code != 0 {
+		t.Fatalf("check --feature 2 = %d, want 0 with its proof (stderr: %q)", code, errOut)
 	}
 	if strings.Contains(errOut, "¿y esto?") {
 		t.Errorf("check --feature 2 judged 0001's question: %q", errOut)
