@@ -5,9 +5,10 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.47 - 2026-10-28
 
-A rule that matches nothing is worse than no rule: it looks like a promise.
+Two rules find the place where they can be kept: a fence rule that names nothing, and
+a proof that belongs to the close.
 
 - **`start` names a non-goal that protects nothing.** A non-goal written in free
   text became a fence rule whose path is a glob of its own words
@@ -16,9 +17,6 @@ A rule that matches nothing is worse than no rule: it looks like a promise.
   (`paths`, `deps`), and adds how to prove a fence works: touch a path it protects
   and run `odachi check` - it must refuse. A non-goal from the closed vocabulary
   already carries real paths and stays silent.
-## Unreleased
-
-A rule belongs where the promise is made.
 
 - **The proof is owed by the feature that closes, not by every step.** `check` used
   to demand a proof for any tree, so every intermediate commit cost a full run of the
@@ -28,6 +26,7 @@ A rule belongs where the promise is made.
   that tree is the one a pull request and CI judge. A proof this run watched fail
   still blocks: what nobody has paid for yet is not owed, but what just broke is. The
   hook needs no change, and its marker now says what it enforces.
+
 ## v0.11.46 - 2026-10-28
 
 A judgment somebody made must be able to outlive the reviewer who got it wrong.
