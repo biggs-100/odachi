@@ -5,6 +5,24 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+Three files odachi writes say which odachi wrote them.
+
+- **The verdict, `agents.toml` and `odd/review.toml` carry a `schema`.** They decode
+  strictly on purpose, and strictness cannot tell a typo from a writer that is ahead
+  of it: a field that arrived after the installed binary reads as `unknown keys`, and
+  the message sends the human to fix a file that is not broken. It cost three closes
+  in one session (`project_agents` in 0081, `inspection` in 0085, `max_prompt_kb` in
+  0087), each solved by swapping the installed binary by hand. The reader now asks
+  the version before it names a key, so the next field arrives as "written by a newer
+  odachi (schema 2); this binary reads schema 1 - upgrade odachi".
+- **Nothing written before this moves.** A file with no `schema` reads as the first
+  schema and keeps its bytes until something rewrites it; a key that is not a schema
+  field is still an error naming the key. The one thing the field cannot do is help a
+  binary that predates it, which cannot read a key it has never heard of: from here
+  on, that is the case every close avoids.
+
 ## v0.11.47 - 2026-10-28
 
 Two rules find the place where they can be kept: a fence rule that names nothing, and

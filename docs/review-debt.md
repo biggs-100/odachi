@@ -9,28 +9,29 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0089, one row was verified false and three were closed.
+Last written: after 0094, which closed the schema row and opened the plan-commit
+one; the stale warning row was closed by 0091 and the writing says so.
 
 
 ## Open
 
-### the review store - a new field makes an old binary call a good file broken
+### the gate · a plan commit that writes a real fence owes a review before it lands
 
-`verdicts`, `agents.toml` and `odd/review.toml` decode strictly on purpose: a typo
-must be named instead of silently half-understood. What the strictness cannot tell is
-a typo from a *newer writer*: a binary that predates a field reports `unknown keys` /
-`unknown field` about a file that is perfectly well formed, and the message sends the
-human to fix a file that is not broken. It cost three closes in one session
-(`project_agents` in 0081, `inspection` in 0085, `max_prompt_kb` in 0087), each time
-solved by building the tree locally and swapping the installed binary. gentle-ai
-solves it from the other side: an older binary reports the authority as
-`applicability: corrupted` with action `repair_authority`, and the repair section
-says which release can continue the lineage. The odachi shape is a `schema` field
-written by every new verdict, agent selection and review config, so a decoder that
-meets an unknown value can say "this file was written by a newer odachi: upgrade or
-use the binary that wrote it" instead of naming keys.
+`check` reads the task document to decide whether this tree is an open feature:
+`internal/app/check/check.go:713` answers "not a feature" while the document has no
+steps yet (`total == 0`), so the review gate falls through to `requireReview("")` —
+and `odd/fence.toml` counts as ordinary code on purpose ("the fence and .gitignore
+stay in the candidate: they are human decisions"). The two decisions collide at the
+one moment every feature passes through: `start` writes the fence, so the plan commit
+is a code candidate with no step and no verdict, and the only way to land it is
+`--no-verify`. 0093 wrote the opposite rule three lines above for the proof — "A
+document with no steps yet is open too - the plan lands before the work"
+(`check.go:249-253`) — so the same tree is ready for a step and owes a review at the
+same time. The shape is one condition: a document with a base and no steps is open,
+and an open feature owes the verdict at its close. 0094 was committed with
+`--no-verify` because of this.
 
-### the review record - the scope a run judged is not written down
+### the review record · the scope a run judged is not written down
 
 `--lens` widens or narrows what a run reviews, and nothing records that the human (or
 the agent) asked for it: the verdict stamps the lenses it answered, but not why this
@@ -40,19 +41,6 @@ authority, so a later reader sees that the scope was raised deliberately and a r
 cannot drop it. The odachi shape is a line in the verdict: who widened the scope, to
 which lenses and in whose words, beside the declaration that landed in 0085.
 
-### the review store - a false warning is carried forever
-
-A potent row leaves the store only when the bytes it names change, and a warning
-cannot be refuted: `--refute` takes causal `BLOCKER` and `CRITICAL` rows, and
-"warnings are never refutable". So a finding the reviewer got wrong about a file
-nobody touches again is re-reported by every verdict that inherits it. Evidence: the
-row `cmd/odachi/main.go:573 - the propagation of max_prompt_kb is pinned by no test`
-was filed by 0087's review, is false (the test is
-`cmd/odachi/feature_test.go` `TestTheReviewRefusesWhatTheProjectWillNotPayFor`, and
-it fails when the line is removed), and has been carried through 0087, 0088 and
-0089. Two ways out, both for a feature of their own: let a refutation cite a file
-outside the diff for a non-blocking row, or let the human dismiss a row with a
-reason the way a finding is dismissed.
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
@@ -76,6 +64,37 @@ it judged. At 74 KB with 21 changed paths, a reviewer is not reading every line 
 is handed; a tool that trusts its silence as coverage (ADR 0033) should know that a
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
+
+## Closed by feature 0094
+
+### the review store · a new field makes an old binary call a good file broken
+
+The verdict, `.git/odachi/agents.toml` and `odd/review.toml` say which schema wrote
+them, and their decoders ask the version before naming a key. A value above the
+binary's is refused as "written by a newer odachi: upgrade", never as `unknown keys`;
+a file with no value reads as the first schema and keeps its bytes until something
+rewrites it. One definition (`internal/domain/schema`) is asked by the three readers,
+so the day a fourth file joins, absence means the past and not the present.
+
+What it cannot do, named on purpose: a binary that predates the field still calls a
+newer file broken, because it cannot read a key it has never heard of. The next field
+this tool adds is the one that arrives as an upgrade — which is what every close from
+now on gets for free.
+
+## Closed by feature 0091
+
+### the review store · a false warning is carried forever
+
+The row named two ways out of a false warning, and the second one landed:
+`review --dismiss <path>:<line> --because "<why>"` retires a row with a reason, bound
+to the fingerprint of the bytes it judged, and the verdict is never rewritten. The
+first way out —letting a refutation cite a file outside the diff— is still unbuilt
+and no longer needed.
+
+The rows themselves are the human's to retire, not this file's: three false ones were
+still carried when 0094 was written (`internal/adapters/gitx/gitx.go:190`,
+`internal/app/doctor/doctor.go:845`, `cmd/odachi/main.go:578`), each with its reason
+already written in its task document.
 
 ## Accepted
 
