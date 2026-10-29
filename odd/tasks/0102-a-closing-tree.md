@@ -12,7 +12,7 @@ R1 · "a closing tree that asks for no lens owes no verdict: the gate asks the s
 
 ## Steps
 - [x] T1 · the gate asks the feature's own diff, so a documents-only close owes no verdict   R1 · tree:9c81aea399cef87b301c11db51f71ae24bd3fe74
-- [ ] T2 · the debt row leaves the file and the changelog says why   R1
+- [x] T2 · the debt row leaves the file and the changelog says why   R1 · tree:b397c1298383f455a682179f6f10503bb0e5c8a1
 
 ## History
 L1 · "a closing tree that asks for no lens owes no verdict: the gate asks the same classifier the review asks, and a feature whose whole diff is documents closes without paying for a review"
