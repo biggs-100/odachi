@@ -14,6 +14,20 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
+### the gate - a feature that writes only documents cannot close
+
+0096 gave the proof a twin so paperwork after a close owes no suite. The review has no
+twin: `check` asks the closing tree for a verdict, `review` answers "this change asks
+for no lens: documents only" and refuses to run, and the only way out the tool names is
+`--lens all`. So a feature whose whole diff is documents pays a four-lens review of a
+paragraph - the ceremony the passive tier exists to avoid - or is waived at open time
+with `start --waive-review`, which the human has to know before the work starts.
+
+0101 hit it: three steps of measurement, a docs-only diff, and a forced `--lens all`
+with the words 0100 now requires. The shape of the fix is the one 0096 chose for the
+proof: the gate asks the same classifier the review uses, and a closing tree that asks
+for no lens owes no verdict - while a tree that carries code still owes one.
+
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
@@ -27,6 +41,24 @@ whose prompt passes the limit cannot be reviewed by this model at all, and the
 choice between a model that reads more and splitting the candidate by paths is the
 human's. Nothing in the tool splits a prompt today.
 
+Measured again on 2026-10-29, against this project's own store instead of one
+afternoon's experiments: `ls .git/odachi/reviews/*.prompt.md` holds 34 prompts, the
+median is 71.5 KB, the biggest is 125,759 B, **11 run within 10 KB of the limit**
+(≥ 88 KB) and **3 are over it** - all three from before v0.11.44 shipped
+`max_prompt_kb`, so the project can no longer collect evidence above 96 KB.
+
+The three that are over the limit are the interesting part: 122,672 B and 123,679 B
+left no verdict, and 125,759 B has one. Same size, opposite outcomes, so the wall is
+not a line a size crosses; it is a probability a run meets. That is worth knowing
+before the choice the row leaves to the human: raising `max_prompt_kb` would buy
+attempts, not certainty, and splitting by paths is the shape that removes the bet.
+
+What is left is a decision, not a measurement: this project's prompts already run
+within 10 KB of its own limit, so the next large feature meets the wall. The two ways
+out cost different things - a bigger limit risks a stall the tool cannot undo, and
+splitting by paths costs one more prompt per piece and a merge of their answers - and
+only the human knows which price this project should pay.
+
 ### the review pipeline - the configured reviewer missed a test it was shown
 
 On 0087 the reviewer reported "the CLI's propagation of the size limit has no test"
@@ -37,6 +69,30 @@ it judged. At 74 KB with 21 changed paths, a reviewer is not reading every line 
 is handed; a tool that trusts its silence as coverage (ADR 0033) should know that a
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
+
+Measured on 2026-10-29 on a prompt this store already held: tree 56641e43's, 94,678 B,
+eleven changed paths, the same model the project configures
+(`opencode-go/mimo-v2.6-flash`), asked through `opencode run --model ... --file
+<prompt> "..."` with no agent override and three factual questions any reader of the
+prompt can answer:
+
+| probe | what it asked | answer | time |
+| --- | --- | --- | --- |
+| 1 | how many paths under "## The changed paths", and which ones the diff creates | **correct**: 11, and all five new files | 13 s |
+| 2 | every test function the diff adds in `internal/app/review/scope_test.go` | **correct**: the five tests and the one helper | 11 s |
+| 3 | what the prompt says about `inspection` and where it must appear | **correct**: the field, `completed`/`unavailable`, before `findings` | 9 s |
+
+Three out of three, at 94.7 KB and in seconds, so this model does read what it is
+handed at the size where 0087's miss happened (74 KB). The miss was in the reasoning:
+the reviewer concluded a test was absent from a prompt that carried it, which is a
+different failure from not reading - and the difference decides what the tool should do
+about it (nothing about size).
+
+What that leaves: the tool cannot promise a reviewer's reasoning, only its reading and
+its declaration. The declaration and the coverage check stay what they are - a reader
+that names a path it left out is refused - and the promise "silence is coverage" is now
+a promise about reading, which is measured, not about judgment, which is not. A future
+miss of the same shape is a data point about the model, not about the prompt's size.
 
 ## Closed by feature 0098
 
