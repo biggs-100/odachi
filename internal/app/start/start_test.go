@@ -991,3 +991,35 @@ func TestStartStopsWhenTheMatchingDocumentCannotBeRead(t *testing.T) {
 		}
 	}
 }
+
+// TestStartNamesANonGoalThatProtectsNothing: a non-goal in free text becomes a glob
+// of its own words, so the fence rule matches no path in any repository. Saying
+// nothing there is a fence that passes for a promise; the run names the rule, the
+// file to edit and how to prove the rule works. A keyed non-goal already carries real
+// paths and must stay silent.
+func TestStartNamesANonGoalThatProtectsNothing(t *testing.T) {
+	run := func(nonGoals []string) start.Result {
+		var events []string
+		files := newFakeFiles(nil, &events)
+		opts := flagsCarryTheSameAnswers()
+		opts.Outcome = "no tocar la base de datos"
+		opts.Exclude = nonGoals
+		return start.Run(opts, nil, files, nil)
+	}
+
+	loose := run([]string{"no tocar la base de datos"})
+	if loose.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", loose.Code, start.CodeOK, loose.Message)
+	}
+	lines := strings.Join(loose.Lines, "\n")
+	for _, want := range []string{"no tocar la base de datos", "no-tocar-la-base-de-datos*", "odd/fence.toml", "odachi check - it must refuse"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("the run does not carry %q:\n%s", want, lines)
+		}
+	}
+
+	keyed := run([]string{"pagos"})
+	if strings.Contains(strings.Join(keyed.Lines, "\n"), "came as free text") {
+		t.Errorf("a keyed non-goal was reported as loose:\n%s", strings.Join(keyed.Lines, "\n"))
+	}
+}

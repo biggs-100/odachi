@@ -88,6 +88,24 @@ func rulesFor(selections []string) []fence.Rule {
 	return rules
 }
 
+// looseNonGoals is the non-goals that arrived as free text. Their rule is a glob of
+// the phrase's own words, and no repository names a file like that, so the fence
+// rule protects nothing until a person writes the paths or deps it meant.
+func looseNonGoals(selections []string) []string {
+	var loose []string
+	for _, selection := range selections {
+		text := strings.TrimSpace(selection)
+		if text == "" {
+			continue
+		}
+		if _, ok := presetFor(text); ok {
+			continue
+		}
+		loose = append(loose, text)
+	}
+	return loose
+}
+
 // renderFence writes the fence in the canonical TOML shape: one [[rule]] per
 // non-goal, one key per line.
 func renderFence(rules []fence.Rule) string {
@@ -195,7 +213,12 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	if problem := r.refreshVoice(); problem != nil {
 		return *problem
 	}
-	if problem := r.put(fenceFile, []byte(renderFence(rulesFor(in.nonGoals)))); problem != nil {
+	// The fence is written from the non-goals, and a non-goal in free text becomes a
+	// glob of its own words: a rule that matches no real path. It protects nothing,
+	// and a fence nobody can trust is worse than no fence. The run says so, once per
+	// rule, instead of letting the file pass for a promise.
+	rules := rulesFor(in.nonGoals)
+	if problem := r.put(fenceFile, []byte(renderFence(rules))); problem != nil {
 		return *problem
 	}
 
@@ -230,6 +253,15 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	var lines []string
 	if reused != "" {
 		lines = append(lines, reused)
+	}
+	loose := looseNonGoals(in.nonGoals)
+	for _, text := range loose {
+		lines = append(lines, fmt.Sprintf(
+			"the non-goal %q came as free text, so the fence wrote %q: a glob of its own words, which matches files named like that phrase and not the code you meant. Write what it has to protect in %s (paths = [...], deps = [...])",
+			text, slugify(text)+"*", filepath.ToSlash(fenceFile)))
+	}
+	if len(loose) > 0 {
+		lines = append(lines, "to prove a rule works: touch a path it protects and run odachi check - it must refuse")
 	}
 	if skipped, err := tasks.Skipped(r.files, r.opts.Dir); err == nil {
 		if line := tasks.SkippedLine(skipped); line != "" {
