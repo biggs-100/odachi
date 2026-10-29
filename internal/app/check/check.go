@@ -730,11 +730,70 @@ func (r *runner) theCloseOwes(feature *tasks.Document) (bool, *Result) {
 		return false, nil
 	}
 
+	// The anchor is the verdict that judged the close: the store names the bytes a
+	// review judged, so what arrived after them is the question. The candidate cannot
+	// answer it - it is measured against HEAD, and a committed change has already
+	// disappeared from it, which is how a local check answered "ready" for a tree CI
+	// would block.
+	if judged, ok := r.lastVerdictTree(feature); ok {
+		work, problem := r.worktree()
+		if problem != nil {
+			return false, problem
+		}
+		paths, err := r.git.Between(r.opts.Dir, judged, work.tree)
+		if err != nil {
+			problem := blocked(fmt.Sprintf("could not read what changed since the verdict of %s: %s; check git and run odachi check again",
+				judged, oneLine(err.Error())))
+			return false, &problem
+		}
+		return reviewdomain.Classify(paths) != reviewdomain.Passive, nil
+	}
+
 	closed, problem := r.closedBefore(feature)
 	if problem != nil {
 		return false, problem
 	}
 	return !closed, nil
+}
+
+// lastVerdictTree names the bytes this feature's review judged: the tree of the newest
+// verdict whose base is the document's base. A feature's verdicts share that base, so
+// the newest one is the furthest the review has looked, and the store is the tool's own
+// evidence - asking it beats guessing the close commit out of the document's history.
+func (r *runner) lastVerdictTree(feature *tasks.Document) (string, bool) {
+	base, _, _, known := featureReview(feature)
+	if !known || base == "" {
+		return "", false
+	}
+
+	names, err := r.files.List(r.storeFile(reviewdomain.Dir))
+	if err != nil {
+		return "", false
+	}
+
+	best, bestAt := "", ""
+	for _, name := range names {
+		if !strings.HasSuffix(name, ".json") {
+			continue
+		}
+		data, err := r.files.Read(r.storeFile(reviewdomain.Dir + "/" + name))
+		if err != nil {
+			continue
+		}
+		// A scope record, a dismissal or a refused answer is not a verdict: the strict
+		// parser is what tells them apart, and one it cannot read is not evidence.
+		verdict, err := reviewdomain.Parse(data)
+		if err != nil || strings.TrimSpace(verdict.Tree) == "" {
+			continue
+		}
+		if !sameCommit(r.git, r.opts.Dir, verdict.Base, base) {
+			continue
+		}
+		if verdict.At > bestAt {
+			best, bestAt = verdict.Tree, verdict.At
+		}
+	}
+	return best, best != ""
 }
 
 // featurePassive asks the review's classifier about the diff this feature merges:
