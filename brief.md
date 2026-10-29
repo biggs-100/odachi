@@ -1,22 +1,21 @@
-# a-file-odachi
+# a-feature-that
 
 ## What must exist
-- a file odachi wrote says which schema wrote it, and a binary that reads a newer value says upgrade instead of naming keys as unknown
+- a feature that has a plan and no steps is open, so its plan commit lands without a verdict and its close still owes one
 
 ## Done when
-- a verdict, agents.toml and odd/review.toml written today carry schema = 1, and a file without it decodes exactly as today
-- a value the binary does not know is refused as written by a newer odachi, naming the value it knows and asking for an upgrade
-- strictness stays: a key that is not a schema field is still an error naming the key
-- a test drives each of the three decoders
+- with the review switch on, a tree whose document has a base and no steps owes no verdict and check is ready for a step
+- the tree that marks the last step still owes the verdict at the document's base
+- a step in the middle still owes nothing, and a waived close still owes nothing
+- a test drives each of those answers, and one of them fails without the change
 
 ## Not included (first version)
-- no migration: a file written before this change keeps its bytes until something rewrites it
+- no change to what a closed feature owes
 - no new verb and no new flag
-- no change to the proof format
-- odd/profile.toml, dismissed.json and refute.json are left out of this first version
+- no change to the verdict or the proof format
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: where compatibility is paid.
+- Wants to learn: where a gate is allowed to say no before the work exists.

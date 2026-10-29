@@ -9,27 +9,25 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0094, which closed the schema row and opened the plan-commit
-one; the stale warning row was closed by 0091 and the writing says so.
+Last written: after 0095, which closed the plan-commit row and opened the proof's
+paperwork one.
 
 
 ## Open
 
-### the gate · a plan commit that writes a real fence owes a review before it lands
+### the proof · the tree that writes a release note owes the suite
 
-`check` reads the task document to decide whether this tree is an open feature:
-`internal/app/check/check.go:713` answers "not a feature" while the document has no
-steps yet (`total == 0`), so the review gate falls through to `requireReview("")` —
-and `odd/fence.toml` counts as ordinary code on purpose ("the fence and .gitignore
-stay in the candidate: they are human decisions"). The two decisions collide at the
-one moment every feature passes through: `start` writes the fence, so the plan commit
-is a code candidate with no step and no verdict, and the only way to land it is
-`--no-verify`. 0093 wrote the opposite rule three lines above for the proof — "A
-document with no steps yet is open too - the plan lands before the work"
-(`check.go:249-253`) — so the same tree is ready for a step and owes a review at the
-same time. The shape is one condition: a document with a base and no steps is open,
-and an open feature owes the verdict at its close. 0094 was committed with
-`--no-verify` because of this.
+The review already knows this shape: `theCloseOwes` says a release note written
+after the close is paperwork, and the verdict it would ask for already judged the
+same code. The proof has no such rule, so the one-line commit that renames
+`## Unreleased` to `## v0.11.48` is a new tree, `check` answers "changed since the
+proof: CHANGELOG.md", and the hook refuses it. Every release therefore lands with
+`--no-verify` -v0.11.48 did, and the message says why- which is the same lesson
+0095 paid for one step earlier: a gate that says no to work nobody has done yet
+teaches the person to bypass it. The shape is the proof's version of
+`theCloseOwes`: after a feature closed, a tree whose changed paths are documents
+odachi does not read owes no new proof, and the gate that judges the pull request
+still runs the suite from the base ref.
 
 ### the review record · the scope a run judged is not written down
 
@@ -64,6 +62,20 @@ it judged. At 74 KB with 21 changed paths, a reviewer is not reading every line 
 is handed; a tool that trusts its silence as coverage (ADR 0033) should know that a
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
+
+## Closed by feature 0095
+
+### the gate · a plan commit that writes a real fence owes a review before it lands
+
+The row 0094 opened. `featureReview` answered "not a feature" while the document
+had no steps (`total == 0`), so the review gate fell through to `requireReview("")`
+and asked the plan commit for a verdict -and the plan commit writes
+`odd/fence.toml`, ordinary code on purpose. The fix is the rule 0093 had already
+written three lines above for the proof: a document with a base and no steps is
+open, the plan lands before the work. An open feature owes the verdict at its
+close, the closing tree still owes it at the document's base, and a waived close
+still owes nothing. `ReviewOwed` asks the same function, so `review --show` and
+the gate cannot answer differently.
 
 ## Closed by feature 0094
 
