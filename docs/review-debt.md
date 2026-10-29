@@ -45,6 +45,20 @@ out cost different things - a bigger limit risks a stall the tool cannot undo, a
 splitting by paths costs one more prompt per piece and a merge of their answers - and
 only the human knows which price this project should pay.
 
+Measured again on 2026-10-29, with the cut of 0107 in place and the binary that carries it
+(v0.11.58): the prompts it prints today for the last four candidates of this project are
+**52,938, 53,014, 35,046 and 70,397 B**, a median of 53,014 B with **7.4 to 8 KB of carried
+memory and 10 to 20 rows**. Before the cut the same comparison was a median of 71,489 B
+with 41,388 B of memory and 632 rows. The memory went from 58 % of the prompt to about
+14 %, and the largest prompt is now the one whose diff is largest (0103), not the one with
+the most history.
+
+So the wall is no longer a memory wall: it is a candidate-size wall, and this project's
+candidates run at 35 to 70 KB with 26 KB of headroom. The two ways out the row named stay
+available and stay the human's - a bigger `max_prompt_kb` or splitting by paths - but
+neither is pressing, and the next time one is needed it deserves a fresh row with the
+candidate that crosses the line, not this one.
+
 ### the review pipeline - the configured reviewer missed a test it was shown
 
 On 0087 the reviewer reported "the CLI's propagation of the size limit has no test"
