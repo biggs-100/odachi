@@ -5,6 +5,17 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A rule that matches nothing is worse than no rule: it looks like a promise.
+
+- **`start` names a non-goal that protects nothing.** A non-goal written in free
+  text became a fence rule whose path is a glob of its own words
+  (`no-tocar-la-base-de-datos*`), which matches no file anybody has. The run now
+  says so for each one, names `odd/fence.toml` and what a real rule looks like
+  (`paths`, `deps`), and adds how to prove a fence works: touch a path it protects
+  and run `odachi check` - it must refuse. A non-goal from the closed vocabulary
+  already carries real paths and stays silent.
 ## v0.11.46 - 2026-10-28
 
 A judgment somebody made must be able to outlive the reviewer who got it wrong.

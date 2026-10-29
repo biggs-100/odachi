@@ -1,14 +1,14 @@
 [[rule]]
-not   = "no new verb: the act is a flag on review"
-paths = ["no-new-verb-the-act-is-a-flag-on-review*"]
+not   = "no new verb and no new flag"
+paths = ["no-new-verb-and-no-new-flag*"]
 deps  = []
 
 [[rule]]
-not   = "no rewriting of a stored verdict"
-paths = ["no-rewriting-of-a-stored-verdict*"]
+not   = "no change to the fence format"
+paths = ["no-change-to-the-fence-format*"]
 deps  = []
 
 [[rule]]
-not   = "no dismissal of a causal blocker or critical"
-paths = ["no-dismissal-of-a-causal-blocker-or-critical*"]
+not   = "no guessing of paths from free text"
+paths = ["no-guessing-of-paths-from-free-text*"]
 deps  = []
