@@ -180,3 +180,27 @@ func TestShowSaysTheScopeWasRaised(t *testing.T) {
 		t.Errorf("--show does not carry the words of whoever asked:\n%s", lines)
 	}
 }
+
+// TestARefusedAnswerLeavesNoScopeRecord: the record explains a verdict, so it cannot
+// exist without one. gentle-ai validates before it touches the store and a refusal
+// creates no authority and writes nothing; here the verdict is the authority, and an
+// answer refused for its declaration must leave the decision behind with it.
+func TestARefusedAnswerLeavesNoScopeRecord(t *testing.T) {
+	p := newLensProject()
+	// The declaration covers nothing: the changed path is a.go and the reviewer
+	// declares a path nobody changed, which is refused before anything is filed.
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["b.go"]},"findings":[]}`)
+
+	result := p.run(review.Options{Attach: "veredicto.json", Lens: "risk"})
+
+	if result.Code == review.CodeOK {
+		t.Fatalf("the answer was accepted: %s", result.Message)
+	}
+	rel, err := domainreview.ScopePath(currentTree)
+	if err != nil {
+		t.Fatalf("ScopePath: %v", err)
+	}
+	if _, written := p.files.files[storeFile(rel)]; written {
+		t.Errorf("a refused answer left the scope record %s behind: the record explains a verdict that does not exist", rel)
+	}
+}
