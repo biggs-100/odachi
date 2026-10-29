@@ -61,6 +61,11 @@ without words. The record is honest about that (it omits them) but the row's "in
 words" is only complete when the caller gives them. Making the flag required is a
 small change of its own.
 
+The first version of the file had a defect 0099 paid: it was written before the
+declaration and coverage refusals, so a refused `--attach` answer left a record beside
+a verdict that never existed. The record now follows the verdict, which is the one
+order gentle-ai allows -a refusal creates no authority and writes nothing.
+
 ## Closed by feature 0097
 
 ### the classifier · a Markdown the suite reads is called a document

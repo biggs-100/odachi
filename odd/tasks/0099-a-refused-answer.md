@@ -10,7 +10,7 @@ R1 · "a refused answer writes nothing: the scope record is written only when th
 - a test drives the refusal, and it fails without the move
 
 ## Steps
-- [ ] T1 · a refused answer writes no scope record, because the record follows the verdict   R1
+- [x] T1 · a refused answer writes no scope record, because the record follows the verdict   R1 · tree:ef387c31a99d06d5fffa095bd506fa4b83460726
 - [ ] T2 · the changelog names the defect and what the fix changes   R1
 
 ## History
