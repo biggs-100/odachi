@@ -5,7 +5,7 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.56 - 2026-10-29
 
 A local check no longer lies about committed code.
 
