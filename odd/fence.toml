@@ -1,10 +1,10 @@
 # a rule names paths, not a phrase: a glob of the phrase's own words matches
 # files named like the phrase and protects nothing.
-
-[[rule]]
-not   = "no change to the proof format"
-paths = ["internal/domain/proof/**", "proof/**"]
-deps  = []
+#
+# "no change to what a closed feature owes" is not a path: it is behaviour, and it
+# lives in the brief's Done when ("the tree that marks the last step still owes the
+# verdict at the document's base"). A rule here would have to fence the function
+# this feature is allowed to change.
 
 [[rule]]
 not   = "no new verb and no new flag"
@@ -12,11 +12,6 @@ paths = ["cmd/odachi/main.go"]
 deps  = []
 
 [[rule]]
-not   = "odd/profile.toml, dismissed.json and refute.json are left out of this first version"
-paths = [
-  "internal/adapters/profiletoml/**",
-  "internal/domain/review/dismissed.go",
-  "internal/domain/review/dismiss.go",
-  "internal/domain/review/refute.go",
-]
+not   = "no change to the verdict or the proof format"
+paths = ["internal/domain/review/**", "internal/domain/proof/**", "internal/adapters/reviewtoml/**", "internal/adapters/agentstoml/**"]
 deps  = []
