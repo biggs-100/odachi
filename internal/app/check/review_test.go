@@ -522,6 +522,49 @@ func TestNoReviewBeatsTheMode(t *testing.T) {
 	}
 }
 
+// TestAReleaseNoteIsPaperwork: after a feature closed, the commit that only
+// rewrites documents -the release note- is a new tree with no new behaviour, and
+// the proof that judged the code still speaks for it; the suite runs again where
+// the change is judged, which is the pull request. Every release of this project
+// landed with --no-verify before this rule.
+func TestAReleaseNoteIsPaperwork(t *testing.T) {
+	const base = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	files["proof/0007-turnos.txt"] = proofFile(otherTree, "go test ./...", "ok\n")
+	closedAtHead := map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)}
+
+	paper := &fakeGit{tree: currentTree, between: []string{"CHANGELOG.md", "docs/notes.md"}, filesAt: closedAtHead}
+	got := run(t, newFakeFiles(files), paper, check.Options{})
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the release note asked for the suite: %s (%s)", got.Message, got.Next)
+	}
+	lines := strings.Join(got.Lines, "\n")
+	if !strings.Contains(lines, otherTree) || !strings.Contains(lines, "CHANGELOG.md") {
+		t.Errorf("lines = %v, want the tree the proof belongs to and what moved", got.Lines)
+	}
+
+	// One path that is not a document keeps the proof owed.
+	code := &fakeGit{tree: currentTree, between: []string{"CHANGELOG.md", "internal/app/check/check.go"}, filesAt: closedAtHead}
+	if got := run(t, newFakeFiles(files), code, check.Options{}); got.Reason != gate.ReasonProofStale {
+		t.Fatalf("a code change passed as paperwork: %d/%q", got.Code, got.Reason)
+	}
+
+	// A Markdown compiled into the binary is shipped text, not paperwork.
+	shipped := &fakeGit{tree: currentTree, between: []string{"skills/drive/SKILL.md"}, filesAt: closedAtHead}
+	if got := run(t, newFakeFiles(files), shipped, check.Options{}); got.Reason != gate.ReasonProofStale {
+		t.Fatalf("a shipped Markdown passed as paperwork: %d/%q", got.Code, got.Reason)
+	}
+
+	// The tree that closed the feature still owes the proof: the document at HEAD
+	// was open, so this is the close itself, not the paperwork after it.
+	closing := &fakeGit{tree: currentTree, between: []string{"CHANGELOG.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, false)}}
+	if got := run(t, newFakeFiles(files), closing, check.Options{}); got.Reason != gate.ReasonProofStale {
+		t.Fatalf("the closing tree passed as paperwork: %d/%q", got.Code, got.Reason)
+	}
+}
+
 // TestAStaleProofNamesWhatChanged: "from another state of the code" is true and
 // useless. A stray backup, an editor and a real edit look identical in one line,
 // so the gate names the paths that moved between the proof's tree and this one.

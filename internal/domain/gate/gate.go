@@ -75,6 +75,13 @@ type State struct {
 	// took and watched fail still blocks, because a failure somebody just saw is
 	// not a formality of the closing.
 	ProofDeferred bool
+	// ProofPaperwork says the proof is stale only because documents moved since it,
+	// and the feature had already closed: a release note cannot fail a suite, and
+	// the tree that judges the change -the pull request, with the suite run from
+	// the base ref- is where it is proved again. Staleness stops blocking; a
+	// missing proof does not become paperwork, and neither does the tree that
+	// closes the feature.
+	ProofPaperwork bool
 	// FenceLoosened names the rules, paths or dependencies the base fence had
 	// and the candidate no longer has. Only the caller with --fence-from can
 	// answer it: without a base ref, the worktree fence is the policy.
@@ -114,7 +121,7 @@ func Evaluate(s State) Result {
 	// they ran one is a dead end that names a command which cannot resolve it.
 	case !s.ProofDeferred && s.ProofTreeHash == "":
 		return Result{NeedsWork, ReasonProofMissing, "the proof for this change is missing", nextCheckProof}
-	case !s.ProofDeferred && s.ProofTreeHash != s.TreeHash:
+	case !s.ProofDeferred && !s.ProofPaperwork && s.ProofTreeHash != s.TreeHash:
 		return Result{NeedsWork, ReasonProofStale, "the proof is from another state of the code", nextCheckProof}
 	case s.ProofTimedOut:
 		return Result{NeedsWork, ReasonProofFailed, "the proof did not finish in " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
@@ -123,6 +130,9 @@ func Evaluate(s State) Result {
 	default:
 		if s.ProofDeferred && s.ProofTreeHash != s.TreeHash {
 			return Result{Ready, ReasonReady, "ready for a step: the proof is owed when this feature closes, and the tree that closes it is the one CI judges", ""}
+		}
+		if s.ProofPaperwork && s.ProofTreeHash != s.TreeHash {
+			return Result{Ready, ReasonReady, "ready: the proof belongs to the code it ran on, and only documents moved since", ""}
 		}
 		return Result{Ready, ReasonReady, "ready: there is proof for this tree", ""}
 	}

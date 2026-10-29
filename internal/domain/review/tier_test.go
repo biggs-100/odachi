@@ -514,3 +514,37 @@ func TestClassifyStillSeesTheCandidatesOwnFiles(t *testing.T) {
 		})
 	}
 }
+
+// TestAShippedMarkdownIsNotADocument: a Markdown compiled into the binary, or
+// installed beside it, is text the suite compares - a change there can fail it, so
+// it asks for a lens and, after a close, it owes the proof. The review and the
+// proof ask this one function, so they cannot disagree.
+func TestAShippedMarkdownIsNotADocument(t *testing.T) {
+	paper := []string{"CHANGELOG.md", "docs/notes.md", "odd/tasks/0007-turnos.md", "README.md"}
+	if !review.AllDocuments(paper) {
+		t.Errorf("AllDocuments(%v) = false, want the release note and the documents", paper)
+	}
+
+	code := [][]string{
+		{"skills/drive/SKILL.md"},
+		{"internal/assets/review/lens_readability.md"},
+		{".agents/skills/drive/SKILL.md"},
+		{"odd/fence.toml"},
+		{"internal/app/check/check.go"},
+		{"CHANGELOG.md", "skills/drive/SKILL.md"},
+		{},
+	}
+	for _, paths := range code {
+		if review.AllDocuments(paths) {
+			t.Errorf("AllDocuments(%v) = true, want a path the suite reads or code", paths)
+		}
+	}
+
+	// The same paths, asked of the review: shipped text asks for a lens.
+	if got := review.Classify([]string{"skills/drive/SKILL.md"}); got == review.Passive {
+		t.Errorf("Classify(skills/drive/SKILL.md) = %q, want a candidate with a lens", got)
+	}
+	if got := review.Classify([]string{"CHANGELOG.md"}); got != review.Passive {
+		t.Errorf("Classify(CHANGELOG.md) = %q, want passive", got)
+	}
+}
