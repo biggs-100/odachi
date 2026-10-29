@@ -5,6 +5,25 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A raised scope is written down.
+
+- **A run that adds a lens says so, beside the verdict.** `--lens` widened what a
+  run reviewed and nothing recorded that somebody asked for it: the verdict stamped
+  the lenses it answered, so a later reader saw four lenses and could not tell
+  whether the change asked for four or a person did, and a replay that dropped the
+  flag left no trace. The run now writes `reviews/<tree>.scope.json` beside the
+  verdict: the lenses the evidence asked for, the ones added, the flag as it was
+  given, and the caller's words when they gave them.
+- **`--show` and the prompt say it.** `--show` prints the scope line under the
+  verdict, and the prompt no longer claims the evidence chose lenses somebody added:
+  it names what was added, with which flag and why, so a reviewer knows the addition
+  is deliberate.
+- **The record is written once and only when it exists.** A second run that asks the
+  same thing does not rewrite it, and a run that added nothing writes no file: the
+  store is evidence, and a record of a decision nobody made is noise.
+
 ## v0.11.51 - 2026-10-29
 
 A Markdown the binary ships is code.

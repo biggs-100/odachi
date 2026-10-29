@@ -37,6 +37,11 @@ type PromptInput struct {
 	// writing is, read before any lens. Empty means nothing was measured, and
 	// the prompt stays exactly the one printed before floors existed.
 	Floor Floor
+	// Scope is what a person added on top of the evidence, when they did. The
+	// lenses section says the evidence chose the lenses, and that sentence stops
+	// being true the moment somebody adds one with --lens; nil means nobody did,
+	// and the prompt stays exactly the one printed before scopes existed.
+	Scope *Scope
 }
 
 // Lens is one specialist prompt: its name and its body.
@@ -100,7 +105,7 @@ func Prompt(in PromptInput) string {
 	out.WriteString("6. One pass per lens, exhaustive: do not loop.\n")
 	out.WriteString("\n")
 
-	out.WriteString(lensSection(in.Lenses))
+	out.WriteString(lensSection(in.Lenses, in.Scope))
 	out.WriteString(carriedSection(in.Known, in.KnownPasses))
 
 	out.WriteString("## What to return\n")
@@ -131,21 +136,50 @@ func Prompt(in PromptInput) string {
 // lensSection is the block that turns one generic prompt into a specialist's,
 // without repeating the six rules: they are stated once, above, and every lens
 // inherits them.
-func lensSection(lenses []Lens) string {
+func lensSection(lenses []Lens, scope *Scope) string {
 	if len(lenses) == 0 {
 		return ""
 	}
 
 	var out strings.Builder
 	out.WriteString("## The lenses of this tree\n")
-	out.WriteString("The lenses were chosen by the diff's evidence, not by anyone's taste. Make one pass per lens,\n")
-	out.WriteString("in the order of this list, and report each finding only once.\n\n")
+	if scope == nil {
+		out.WriteString("The lenses were chosen by the diff's evidence, not by anyone's taste. Make one pass per lens,\n")
+		out.WriteString("in the order of this list, and report each finding only once.\n\n")
+	} else {
+		// The evidence did not choose all of them: somebody added a lens on
+		// purpose, and a prompt that says otherwise asks the reviewer to judge a
+		// question nobody asked.
+		out.WriteString(scopeLine(*scope))
+		out.WriteString("Make one pass per lens, in the order of this list, and report each finding only once.\n\n")
+	}
 
 	for _, lens := range lenses {
 		out.WriteString("### " + lens.Name + "\n")
 		out.WriteString(strings.TrimRight(stripFrontmatter(lens.Body), " \n") + "\n\n")
 	}
 	return out.String()
+}
+
+// scopeLine says, in the prompt's own words, who raised the scope: what the
+// evidence asked for, what was added and with which flag, and the caller's reason
+// when they gave one. It never invents a reason: the tool reports the decision, it
+// does not make one.
+func scopeLine(scope Scope) string {
+	line := "The diff's evidence asked for "
+	if len(scope.Required) == 0 {
+		line += "no lens"
+	} else {
+		line += strings.Join(scope.Required, ", ")
+	}
+	line += "; " + strings.Join(scope.Added, ", ") + " was added with --lens"
+	if asked := strings.TrimSpace(scope.Asked); asked != "" {
+		line += " " + asked
+	}
+	if because := strings.TrimSpace(scope.Because); because != "" {
+		line += ", because " + because
+	}
+	return line + ". The addition is deliberate and is part of the question.\n"
 }
 
 // lensNames is the names of the lenses, in the order given.

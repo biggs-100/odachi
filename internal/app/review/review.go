@@ -366,6 +366,20 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 		return "", problem
 	}
 
+	// The prompt must not claim the evidence chose lenses somebody added: the
+	// lenses section states what the evidence asked for and what --lens added on
+	// top, in the caller's words when they gave any.
+	required := domain.Lenses(domain.Assess(cand.paths, cand.diff))
+	var scope *domain.Scope
+	if added := domain.Raised(required, selected); len(added) > 0 {
+		scope = &domain.Scope{
+			Required: required,
+			Added:    added,
+			Asked:    strings.TrimSpace(r.opts.Lens),
+			Because:  strings.TrimSpace(r.opts.Because),
+		}
+	}
+
 	return domain.Prompt(domain.PromptInput{
 		Brief:       cand.brief,
 		Tree:        cand.tree,
@@ -376,6 +390,7 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 		Known:       known,
 		KnownPasses: cleanRows,
 		Floor:       domain.FloorFor(cand.paths, cand.diff),
+		Scope:       scope,
 	}), nil
 }
 
@@ -713,6 +728,10 @@ func (r *runner) exec() Result {
 	}
 	frozen := &worktree{tree: cand.tree, base: cand.base, paths: cand.paths, diff: cand.diff}
 
+	// required is what the evidence asks for, before any flag adds to it: the
+	// scope record is the difference between this and what the run was told to
+	// judge, so the two are measured from the same reading of the candidate.
+	required := domain.Lenses(domain.Assess(cand.paths, cand.diff))
 	selected, problem := r.selectLenses(cand.paths, cand.diff)
 	if problem != nil {
 		return *problem
@@ -912,6 +931,17 @@ func (r *runner) exec() Result {
 			}
 		}
 		landed = append(landed, group.lenses...)
+
+		// The verdict for this tree exists now, so the decision that asked for its
+		// lenses is written beside it: a reader of the verdict cannot otherwise tell
+		// whether a change asked for four lenses or a person did. It is filed after
+		// the answer landed and never instead of it - a record that costs the run its
+		// paid answer would be the loss 0038 exists to prevent - and a file that
+		// cannot be written says so rather than hiding behind the verdict.
+		if problem := r.fileScope(cand.tree, required, selected); problem != nil {
+			landedNote := fmt.Sprintf("%s; the verdict landed in %s", problem.Message, r.storeLabel(rel))
+			return Result{Code: problem.Code, Message: landedNote, Lines: []string{landedNote}}
+		}
 		if len(last.Lines) > 2 {
 			for _, note := range last.Lines[2:] {
 				notes = appendUnique(notes, note)
@@ -1275,6 +1305,11 @@ func (r *runner) show() Result {
 			lines = append(lines, "dismissed by a person: "+row.Path+":"+strconv.Itoa(row.Line)+" - "+row.Reason)
 		}
 	}
+	// So is the decision that widened the scope: a reader who sees more lenses than
+	// the evidence asked for is told who asked, with which flag and in whose words.
+	if line, ok := r.scopeLine(tree); ok {
+		lines = append(lines, line)
+	}
 
 	result := Result{
 		Code:    CodeOK,
@@ -1385,6 +1420,16 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	stamped, problem = r.stampBlobs(stamped)
 	if problem != nil {
 		return *problem
+	}
+
+	// An attached verdict is filed the same way a run's is: the lenses it covers may
+	// include ones the evidence never asked for, and the decision that added them is
+	// written beside it. A run's own groups pass judged, and exec files the record
+	// once for the whole selection instead of once per group.
+	if judged == nil {
+		if problem := r.fileScope(tree, domain.Lenses(floor.Class), stamped.Lenses); problem != nil {
+			return *problem
+		}
 	}
 
 	rel, err := domain.Path(tree)
@@ -2159,6 +2204,86 @@ func (r *runner) requiredLenses(work *worktree) []string {
 		extra = nil
 	}
 	return domain.Add(domain.Lenses(domain.Assess(work.paths, work.diff)), extra)
+}
+
+// fileScope writes the record of a raised scope beside this tree's verdict, and
+// writes it once: the first run that asked is the evidence, and a later run that
+// asks the same thing has nothing to add. required is what the evidence asked for
+// and selected is what the run was told to judge; when they are the same, nothing
+// was raised and no file is written, because a record of a decision nobody made is
+// noise. The words and the person are the caller's, kept only when they gave them:
+// the tool never puts a reason in somebody else's mouth.
+func (r *runner) fileScope(tree string, required, selected []string) *Result {
+	added := domain.Raised(required, selected)
+	if len(added) == 0 {
+		return nil
+	}
+
+	rel, err := domain.ScopePath(tree)
+	if err != nil {
+		problem := blocked(oneLine(err.Error()) + "; I wrote nothing")
+		return &problem
+	}
+	path := r.storePath(rel)
+	if exists, err := r.files.Exists(path); err == nil && exists {
+		return nil
+	}
+
+	at := r.opts.Now
+	if at.IsZero() {
+		at = time.Now()
+	}
+	scope := domain.Scope{
+		Required: inOrderLenses(required),
+		Added:    added,
+		Asked:    strings.TrimSpace(r.opts.Lens),
+		Because:  strings.TrimSpace(r.opts.Because),
+		By:       strings.TrimSpace(r.opts.By),
+		At:       at.UTC().Format(time.RFC3339),
+	}
+	if err := r.files.Write(path, domain.RenderScope(scope)); err != nil {
+		problem := blocked("could not write the scope record in " + r.storeLabel(rel) + ": " + oneLine(err.Error()))
+		return &problem
+	}
+	return nil
+}
+
+// scopeLine is what --show says about a scope somebody raised. It is evidence, so
+// a missing record says nothing and an unreadable one is named instead of ignored:
+// a reader who sees more lenses than the evidence asked for deserves to know why.
+func (r *runner) scopeLine(tree string) (string, bool) {
+	rel, err := domain.ScopePath(tree)
+	if err != nil {
+		return "", false
+	}
+	data, err := r.files.Read(r.storePath(rel))
+	if err != nil {
+		return "", false
+	}
+	scope, err := domain.ParseScope(data)
+	if err != nil {
+		return "the scope record " + r.storeLabel(rel) + " cannot be read: " + oneLine(err.Error()), true
+	}
+
+	line := "scope raised: " + strings.Join(scope.Added, ", ") + " was added with --lens"
+	if asked := strings.TrimSpace(scope.Asked); asked != "" {
+		line += " " + asked
+	}
+	if len(scope.Required) == 0 {
+		line += " (the evidence asked for no lens)"
+	} else {
+		line += " (the evidence asked for " + strings.Join(scope.Required, ", ") + ")"
+	}
+	if because := strings.TrimSpace(scope.Because); because != "" {
+		line += ": " + because
+	}
+	return line, true
+}
+
+// inOrderLenses keeps the fixed lens order in the record, so two runs that asked
+// for the same scope write the same bytes.
+func inOrderLenses(lenses []string) []string {
+	return domain.Add(lenses, nil)
 }
 
 // lensBodies loads the prompts of the selected lenses through the port.

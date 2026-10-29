@@ -1,12 +1,12 @@
-# a-markdown-the
+# a-run-that
 
 ## What must exist
-- a Markdown the binary ships is code, not a document: the classifier knows it and the list of what ships lives once
+- a run that asks for a lens the evidence did not require writes it beside the verdict, so a later reader sees the scope was raised and a replay cannot drop it
 
 ## Done when
-- a skill or a review prompt that changed asks for a lens, and a tree whose only change is one of them is not passive
-- the proof lane and the classifier ask one list, so a Markdown the suite reads is never paperwork and one of them cannot drift
-- a tree that only moved the installed copy under .agents/ still owes the suite, because the pack test compares it byte for byte
+- a run whose --lens added a lens the evidence did not ask writes reviews/<tree>.scope.json beside the verdict, naming what the evidence asked, what was added and the flag as it was given
+- a run that added nothing writes no record, and a second run for the same tree does not rewrite the store
+- --show and the prompt say the scope was raised, and the record is read by tree, so a verdict never inherits another tree's scope
 - a test drives each answer, and one of them fails without the change
 
 ## Not included (first version)
@@ -18,4 +18,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
-- Wants to learn: whether one list can answer two gates without blurring a lens and a proof.
+- Wants to learn: whether a decision made before a run belongs in the artifact the run produces.
