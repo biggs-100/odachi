@@ -1,13 +1,8 @@
 # a rule names paths, not a phrase: a glob of the phrase's own words matches
 # files named like the phrase and protects nothing.
 #
-# "no change to what an open feature owes" and "no change to what the closing tree
-# owes" are not paths: they are behaviour, and they live in the brief's Done when.
-#
-# The CLI surface is not fenced by this feature on purpose: `odachi init --global`
-# must stop writing project agent files unless a person asks for them, and that
-# default lives in cmd/odachi/main.go. 0105 moved the policy before the code, which
-# is the only order CI allows: it judges a pull request with the base fence.
+# The CLI surface is not fenced: `odachi init --global` stops writing the project's
+# agent files unless a person asks for them, and that default lives in main.go.
 
 [[rule]]
 not   = "no change to the verdict shape"

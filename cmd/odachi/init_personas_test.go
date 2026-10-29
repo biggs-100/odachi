@@ -38,7 +38,7 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 
-	code, out, errOut := runDir(t, dir, []string{"init", "--global"}, "")
+	code, out, errOut := runDir(t, dir, []string{"init"}, "")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
@@ -101,22 +101,9 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 		}
 	}
 
-	// The door in the home is opt-in: --global is what leaves odachi available
-	// in every folder, not only in the project that ran init.
-	home, err := homeDir()
-	if err != nil {
-		t.Fatalf("homeDir: %v", err)
-	}
-	for _, file := range persona.GlobalFiles() {
-		got, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(file.Path)))
-		if err != nil {
-			t.Errorf("%s was not installed in the home: %v", file.Path, err)
-			continue
-		}
-		if string(got) != file.Content {
-			t.Errorf("%s is not the home door:\n%q\nvs\n%q", file.Path, got, file.Content)
-		}
-	}
+	// The door in the home is opt-in and belongs to --global, which now leaves the
+	// project's own files alone: TestGlobalInitLeavesTheProjectAgentsAlone drives
+	// both halves, and TestInitWithoutGlobalDoesNotWriteTheDoor drives the silence.
 }
 
 // TestInitWithoutGlobalDoesNotWriteTheDoor: an init without the flag leaves the
@@ -237,7 +224,7 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 
-	code, out, errOut := runDir(t, dir, []string{"init", "--json", "--global"}, "")
+	code, out, errOut := runDir(t, dir, []string{"init", "--json"}, "")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stderr %q)", code, errOut)
 	}
@@ -259,15 +246,14 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
 		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
 	}
-	// One row per destination: OpenCode shares the primary and subagent folder,
-	// Claude Code reads the primary from output-styles and the subagents from
-	// agents. The home has only the door, one file per client.
+	// One row per destination, and a plain init is the run that writes the project's
+	// own: OpenCode shares the primary and subagent folder, Claude Code reads the
+	// primary from output-styles and the subagents from agents. The home is untouched
+	// without --global (its rows are the next test's).
 	want := map[string]int{
-		"project|.opencode/agents":       4,
-		"project|.claude/output-styles":  1,
-		"project|.claude/agents":         3,
-		"home|~/.config/opencode/agents": 1,
-		"home|~/.claude/output-styles":   1,
+		"project|.opencode/agents":      4,
+		"project|.claude/output-styles": 1,
+		"project|.claude/agents":        3,
 	}
 	if len(payload.Personas) != len(want) {
 		t.Fatalf("personas = %+v, want %d destination rows", payload.Personas, len(want))
@@ -291,13 +277,48 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 			}
 		}
 	}
-	for _, scope := range []string{"project", "home"} {
+	for _, scope := range []string{"project"} {
 		if !scopes[scope] {
 			t.Errorf("the report does not carry the %q scope row: %+v", scope, payload.Personas)
 		}
 	}
-	if !slicesContains(payload.Files, "AGENTS.md") {
-		t.Errorf("files = %v, want it to name AGENTS.md", payload.Files)
+	if scopes["home"] {
+		t.Errorf("a plain init wrote the home: %+v", payload.Personas)
+	}
+
+	// The global run is the one that carries the home rows, and it leaves the
+	// project's files alone: the door runs in every folder and the project keeps
+	// only the rules and the plan.
+	code, out, errOut = runDir(t, dir, []string{"init", "--json", "--global"}, "")
+	if code != 0 {
+		t.Fatalf("init --global --json: code = %d (stderr %q)", code, errOut)
+	}
+	plainFiles := payload.Files
+	payload.Personas = nil
+	payload.Files = nil
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
+	}
+	homeRows := map[string]int{
+		"home|~/.config/opencode/agents": 1,
+		"home|~/.claude/output-styles":   1,
+	}
+	if len(payload.Personas) != len(homeRows) {
+		t.Fatalf("--global personas = %+v, want only the home rows", payload.Personas)
+	}
+	for _, row := range payload.Personas {
+		key := row.Scope + "|" + row.Dir
+		count, ok := homeRows[key]
+		if !ok {
+			t.Errorf("unexpected row %s = %+v", key, row)
+			continue
+		}
+		if row.Written+row.Unchanged != count || len(row.Files) != count {
+			t.Errorf("row %s = %+v, want %d files owned", key, row, count)
+		}
+	}
+	if !slicesContains(plainFiles, "AGENTS.md") {
+		t.Errorf("files = %v, want it to name AGENTS.md", plainFiles)
 	}
 	if len(payload.Skills) == 0 {
 		t.Errorf("the report lost the skills: %s", out)
