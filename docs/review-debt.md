@@ -9,25 +9,10 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0095, which closed the plan-commit row and opened the proof's
-paperwork one.
+Last written: after 0096, which closed the release-note row.
 
 
 ## Open
-
-### the proof · the tree that writes a release note owes the suite
-
-The review already knows this shape: `theCloseOwes` says a release note written
-after the close is paperwork, and the verdict it would ask for already judged the
-same code. The proof has no such rule, so the one-line commit that renames
-`## Unreleased` to `## v0.11.48` is a new tree, `check` answers "changed since the
-proof: CHANGELOG.md", and the hook refuses it. Every release therefore lands with
-`--no-verify` -v0.11.48 did, and the message says why- which is the same lesson
-0095 paid for one step earlier: a gate that says no to work nobody has done yet
-teaches the person to bypass it. The shape is the proof's version of
-`theCloseOwes`: after a feature closed, a tree whose changed paths are documents
-odachi does not read owes no new proof, and the gate that judges the pull request
-still runs the suite from the base ref.
 
 ### the review record · the scope a run judged is not written down
 
@@ -62,6 +47,21 @@ it judged. At 74 KB with 21 changed paths, a reviewer is not reading every line 
 is handed; a tool that trusts its silence as coverage (ADR 0033) should know that a
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
+
+## Closed by feature 0096
+
+### the proof · the tree that writes a release note owes the suite
+
+The proof's twin of `theCloseOwes` landed: after a close, a tree whose paths that
+moved since the proof are all paperwork is ready, and the report says which tree the
+proof belongs to and what moved. The lane asks the close's own question -the
+document at HEAD already carried the close- so the tree that closes a feature still
+owes the proof, a missing proof is never paperwork, and a command this run watched
+fail still blocks. The classifier learned the other half: a Markdown compiled into
+the binary, or installed beside it (`skills/`, `internal/assets/`, `.agents/`), is
+text the suite compares, so it asks for a lens and owes the proof. The two landed in
+one commit because the lane is unsafe without the second: a skill edit is exactly
+the document that breaks the suite.
 
 ## Closed by feature 0095
 

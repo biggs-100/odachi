@@ -5,6 +5,25 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A release note stops costing a suite.
+
+- **A tree that only rewrites documents after the close owes no new proof.** The
+  commit that renames `## Unreleased` to `## v0.11.50` is a new tree, and `check`
+  answered "changed since the proof": every release of this project landed with
+  `--no-verify`, which is the habit a gate should never teach. After a close, when
+  everything that moved since the proof is paperwork, the gate is ready and says
+  which tree the proof belongs to and what moved since. The pull request runs the
+  suite from the base ref, which is where the note is judged.
+- **The proof asks the review's question.** The lane is the proof's twin of
+  `theCloseOwes`: it never opens on the tree that closed the feature, never rescues
+  a missing proof, and never covers a command this run watched fail.
+- **A Markdown that ships is not paperwork.** The classifier learned it for both
+  gates: a skill, a review prompt and the installed copy of the skills are compared
+  byte for byte by the suite, so a change there asks for a lens and owes the proof.
+  Before this, editing a skill asked for no review at all.
+
 ## v0.11.49 - 2026-10-29
 
 The plan commit stops being a stranger to the gate.
