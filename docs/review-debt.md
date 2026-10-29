@@ -56,6 +56,23 @@ before-and-after on a real candidate, with the probe method 0101 used, and it be
 the feature that prunes - not to this row. The decision stays the human's, and it now has
 the numbers it was missing.
 
+Measured on 2026-10-29, after the human chose the hybrid: tree 56641e43's prompt cut by
+the rule (every finding, plus the clean rows of the eleven changed paths) goes from
+**94,678 B to 56,915 B (40 % less)**, keeping 3 rows of 645. The same model was asked
+the three questions 0101 asked before, by the same plain `opencode run --file`:
+
+| probe | full prompt (0101) | pruned prompt | time |
+| --- | --- | --- | --- |
+| 1. changed paths and new files | 11 and all 5 - correct | **one miss in two runs** (4 of 5 files), then correct | 12 s / 5 s |
+| 2. every test added in `scope_test.go` | correct, 5 tests and the helper | correct, the same six names | 8 s |
+| 3. what the prompt says about `inspection` | correct | correct, and sharper: "a top-level field, a sibling of findings" | 7 s |
+
+A control run of the full prompt on the same question answered correctly (9 s), and the
+miss did not repeat with the same pruned prompt, so it is the variance this model has
+shown at full size - 0087's miss was the same shape - not the cut. What this shows is
+narrow and worth writing exactly: a 40 % cut did not make the prompt unreadable to this
+model; it does not prove that two arms are equal on four runs.
+
 None of them costs the gate anything, and that is the fact that makes any of them possible:
 the prompt is the reviewer's context, while the verdict's inheritance and the coverage
 check read the store. `inherit` and `--show` do not consult the prompt, so pruning it
