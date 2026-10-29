@@ -1,14 +1,22 @@
-[[rule]]
-not   = "no new verb and no new flag"
-paths = ["no-new-verb-and-no-new-flag*"]
-deps  = []
+# a rule names paths, not a phrase: a glob of the phrase's own words matches
+# files named like the phrase and protects nothing.
 
 [[rule]]
 not   = "no change to the proof format"
-paths = ["no-change-to-the-proof-format*"]
+paths = ["internal/domain/proof/**", "proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no relaxation of the closing tree"
-paths = ["no-relaxation-of-the-closing-tree*"]
+not   = "no new verb and no new flag"
+paths = ["cmd/odachi/main.go"]
+deps  = []
+
+[[rule]]
+not   = "odd/profile.toml, dismissed.json and refute.json are left out of this first version"
+paths = [
+  "internal/adapters/profiletoml/**",
+  "internal/domain/review/dismissed.go",
+  "internal/domain/review/dismiss.go",
+  "internal/domain/review/refute.go",
+]
 deps  = []

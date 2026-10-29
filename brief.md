@@ -1,21 +1,22 @@
-# a-proof-is
+# a-file-odachi
 
 ## What must exist
-- a proof is owed by the feature that closes, not by every step that builds it
+- a file odachi wrote says which schema wrote it, and a binary that reads a newer value says upgrade instead of naming keys as unknown
 
 ## Done when
-- while the feature is open, check says it is ready for a step and names the proof as owed at the close
-- when the feature closes, check demands the proof for that tree and refuses a missing or stale one
-- a proof taken with --run mid-feature is still written and reported, and a stale one is a note
-- the hook needs no change, and a test drives each answer
+- a verdict, agents.toml and odd/review.toml written today carry schema = 1, and a file without it decodes exactly as today
+- a value the binary does not know is refused as written by a newer odachi, naming the value it knows and asking for an upgrade
+- strictness stays: a key that is not a schema field is still an error naming the key
+- a test drives each of the three decoders
 
 ## Not included (first version)
+- no migration: a file written before this change keeps its bytes until something rewrites it
 - no new verb and no new flag
 - no change to the proof format
-- no relaxation of the closing tree
+- odd/profile.toml, dismissed.json and refute.json are left out of this first version
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a rule moves to the boundary where the promise is made.
+- Wants to learn: where compatibility is paid.
