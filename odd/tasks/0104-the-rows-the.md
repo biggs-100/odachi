@@ -11,8 +11,8 @@ R1 · "the rows the store carries into a review prompt are measured: how much of
 - the numbers, the method and the decision they open land in docs/review-debt.md
 
 ## Steps
-- [ ] T1 · the carried section is measured on every prompt: bytes, rows, and rows outside the candidate   R1
-- [ ] T2 · the three prunings are measured on the same prompts, with what each takes away   R1
+- [x] T1 · the carried section is measured on every prompt: bytes, rows, and rows outside the candidate   R1 · tree:b6f9e64a3b7a31c78772d2fa4e7776a29d85b8ca
+- [x] T2 · the three prunings are measured on the same prompts, with what each takes away   R1
 - [ ] T3 · the numbers and the decision they open land in the debt file   R1
 
 ## History

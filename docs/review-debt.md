@@ -44,6 +44,18 @@ known) and differ in whether the clean rows of the *changed* paths survive, whic
 ones this run could have used; the budget keeps neither and hides what it dropped, which
 is why it is the only pruning with no argument behind it beyond a number.
 
+What the numbers say about the row above: the two ways out it names -a bigger
+`max_prompt_kb` or splitting a candidate by paths- are the wrong levers while 99 % of the
+prompt is memory. Splitting would pay one prompt per piece to fit a prompt whose size the
+pieces barely touch, and a bigger limit would buy attempts against a wall this measurement
+can move. The cheapest honest change is the hybrid: keep every finding, keep the clean rows
+of the paths that changed, drop the rest.
+
+What it does not prove: that a reviewer behaves the same with less memory. That is a
+before-and-after on a real candidate, with the probe method 0101 used, and it belongs to
+the feature that prunes - not to this row. The decision stays the human's, and it now has
+the numbers it was missing.
+
 None of them costs the gate anything, and that is the fact that makes any of them possible:
 the prompt is the reviewer's context, while the verdict's inheritance and the coverage
 check read the store. `inherit` and `--show` do not consult the prompt, so pruning it
