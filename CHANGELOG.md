@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A judgment somebody made must be able to outlive the reviewer who got it wrong.
+
+- **A person can retire a row, with evidence.** `odachi review --dismiss
+  <path>:<line> --because "<why>"` writes the judgment beside this tree's verdict -
+  `reviews/<tree>.dismissed.json`, bound to the row's fingerprint with the reason
+  and who wrote it - and the verdict is never rewritten. The gate, `--show` and the
+  inheritance apply it when the store is read: the row travels to the next candidate
+  dismissed, and the next reviewer is told not to raise it. A row that is not in
+  this tree's verdict is refused naming the rows it holds, and a causal BLOCKER or
+  CRITICAL is refuted or fixed, never dismissed.
 ## v0.11.45 - 2026-10-28
 
 A review is evidence, and evidence that is overwritten is not evidence.

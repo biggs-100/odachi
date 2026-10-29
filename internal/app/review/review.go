@@ -93,6 +93,14 @@ type Options struct {
 	// from `odd/review.toml`. Zero means no limit: a project that never wrote the
 	// key reviews as it always did.
 	MaxPromptKB int
+	// Dismiss is the row the human retires, as `path:line`, and Because is the
+	// evidence. Both or neither: a dismissal without a reason is the silent edit
+	// the file beside the verdict exists to replace.
+	Dismiss string
+	Because string
+	// By is who judged, when the caller knows it. It is the human at the
+	// keyboard, and the file records it so a reader knows whose word this is.
+	By string
 	// Attach is a verdict someone already wrote.
 	Attach string
 	// Show reads this tree's verdict instead of producing one.
@@ -219,6 +227,8 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses, host Ho
 	switch {
 	case opts.Show:
 		return r.show()
+	case opts.Dismiss != "":
+		return r.retire()
 	case opts.Refute != "":
 		return r.refute()
 	case opts.Attach != "":
@@ -1068,6 +1078,134 @@ func (r *runner) unreadable(reason, output string, answer []byte, rel string, sa
 	return r.stoppedWith(reason, output, rel, savedBefore, selected, todo, landed, kept)
 }
 
+// retire is the human's act: it writes the judgment beside this tree's verdict and
+// never touches the verdict itself. Only a row that is in this tree's verdict can be
+// retired - a judgment about a row nobody can see is a judgment about nothing - and a
+// causal blocking row is not dismissable: a block is refuted with a citation or
+// answered by a fix, and letting a person retire it would be the gate opening by
+// omission.
+func (r *runner) retire() Result {
+	if strings.TrimSpace(r.opts.Because) == "" {
+		return blocked("--dismiss says which row and --because says why: a dismissal without evidence is silence, and this file exists to replace that")
+	}
+
+	path, line, problem := r.dismissTarget()
+	if problem != nil {
+		return *problem
+	}
+
+	tree, problem := r.treeHash()
+	if problem != nil {
+		return *problem
+	}
+	verdict, problem := r.storedVerdictFor(tree)
+	if problem != nil {
+		return *problem
+	}
+	rel, err := domain.Path(tree)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; I wrote nothing")
+	}
+
+	var matched *domain.Finding
+	open := make([]string, 0, len(verdict.Findings))
+	for i, finding := range verdict.Findings {
+		if domain.IsDismissed(finding) {
+			continue
+		}
+		open = append(open, fmt.Sprintf("%s:%d", finding.Path, finding.Line))
+		if sameRow(finding, path, line) {
+			matched = &verdict.Findings[i]
+		}
+	}
+	if matched == nil {
+		if len(open) == 0 {
+			return blocked("the review of this tree holds no open row: there is nothing to dismiss in " + r.storeLabel(rel))
+		}
+		return blocked(fmt.Sprintf("the review of %s holds no open row at %s:%d: the rows it holds are %s",
+			r.storeLabel(rel), path, line, strings.Join(open, ", ")))
+	}
+	if matched.Causal && matched.Severity.Blocks() {
+		message := fmt.Sprintf("%s:%d is a causal %s: a blocking row is refuted with a citation or answered by a fix, not dismissed",
+			matched.Path, matched.Line, matched.Severity)
+		return Result{
+			Code:    CodeBlocked,
+			Message: message,
+			Lines: []string{
+				message,
+				"next: odachi review --refute " + r.storeLabel(rel) + " (the refuter answers with a line of the diff)",
+				"why: a gate that a person can open by omission is not a gate",
+			},
+		}
+	}
+
+	existing, note := r.dismissedRows(tree)
+	if note != "" {
+		return blocked(note + "; fix or remove the file and run odachi review --dismiss again")
+	}
+	at := r.opts.Now
+	if at.IsZero() {
+		at = time.Now()
+	}
+	judgment := domain.Dismissal{
+		Fingerprint: domain.Fingerprint(*matched),
+		Path:        matched.Path,
+		Line:        matched.Line,
+		Reason:      strings.TrimSpace(r.opts.Because),
+		By:          strings.TrimSpace(r.opts.By),
+		At:          at.UTC().Format(time.RFC3339),
+	}
+	updated := existing.With(judgment)
+
+	sidecar, err := domain.DismissedPath(tree)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; I wrote nothing")
+	}
+	if err := r.files.Write(r.storePath(sidecar), domain.RenderDismissals(updated)); err != nil {
+		return blocked("could not write " + r.storeLabel(sidecar) + ": " + oneLine(err.Error()) + "; run odachi review --dismiss again")
+	}
+
+	message := fmt.Sprintf("dismissed %s:%d in %s: the row travels with your reason", matched.Path, matched.Line, r.storeLabel(rel))
+	return Result{
+		Code:    CodeOK,
+		Message: message,
+		Lines: []string{
+			message,
+			"kept in " + r.storeLabel(sidecar) + " beside the verdict: the verdict itself is not rewritten",
+			"next: odachi review (the next question tells the reviewer the row was judged)",
+		},
+		Files: []string{r.storeLabel(sidecar)},
+	}
+}
+
+// dismissTarget reads `path:line` from the flag. The line is required: a row is a
+// place and a claim, and a path alone would dismiss every row a file carries.
+func (r *runner) dismissTarget() (string, int, *Result) {
+	target := strings.TrimSpace(r.opts.Dismiss)
+	at := strings.LastIndex(target, ":")
+	if at <= 0 || at == len(target)-1 {
+		problem := blocked("--dismiss takes <path>:<line>, the place the row names: for example internal/app/review.go:815")
+		return "", 0, &problem
+	}
+	path := strings.TrimSpace(target[:at])
+	number := strings.TrimSpace(target[at+1:])
+	line, err := strconv.Atoi(number)
+	if err != nil || line < 0 {
+		problem := blocked("--dismiss says " + number + " for a line: use the line number the row names, exactly as the verdict printed it")
+		return "", 0, &problem
+	}
+	return path, line, nil
+}
+
+// sameRow compares one finding with the place the human named, the way paths are
+// compared everywhere in the store: forward slashes and no case.
+func sameRow(finding domain.Finding, path string, line int) bool {
+	canonical := func(value string) string {
+		return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(value), "\\", "/"))
+	}
+	return canonical(finding.Path) == canonical(path) && finding.Line == line
+}
+
 // show reads this tree's verdict, or says there is none. It writes nothing: a
 // question is not a reason to touch the project.
 //
@@ -1127,6 +1265,15 @@ func (r *runner) show() Result {
 	lines = append(lines, r.lensCoverage(work, parsed)...)
 	if assessed {
 		lines = append(lines, r.modelPlan(required)...)
+	}
+	// The human's judgments are part of what this tree's review says: a row they
+	// retired is not a row to act on, and a reader of --show must see why.
+	if retired, note := r.dismissedRows(tree); note != "" {
+		lines = append(lines, note)
+	} else {
+		for _, row := range retired.Rows {
+			lines = append(lines, "dismissed by a person: "+row.Path+":"+strconv.Itoa(row.Line)+" - "+row.Reason)
+		}
 	}
 
 	result := Result{
@@ -1769,6 +1916,30 @@ func (r *runner) inherit(verdict domain.Verdict, tree string) (domain.Verdict, c
 	return merged, carried, notes, nil
 }
 
+// dismissedRows reads the human's judgments stored beside one verdict. A missing
+// file is no judgment at all; a file that cannot be read is a note, because the
+// verdict it sits beside is still evidence and a broken sidecar must not hide it.
+func (r *runner) dismissedRows(tree string) (domain.Dismissals, string) {
+	rel, err := domain.DismissedPath(tree)
+	if err != nil {
+		return domain.Dismissals{}, ""
+	}
+	path := r.storePath(rel)
+	exists, err := r.files.Exists(path)
+	if err != nil || !exists {
+		return domain.Dismissals{}, ""
+	}
+	data, err := r.files.Read(path)
+	if err != nil {
+		return domain.Dismissals{}, "the dismissals beside " + r.storeLabel(rel) + " could not be read: " + oneLine(err.Error())
+	}
+	parsed, err := domain.ParseDismissals(data)
+	if err != nil {
+		return domain.Dismissals{}, "the dismissals beside " + r.storeLabel(rel) + " cannot be read: " + oneLine(err.Error())
+	}
+	return parsed, ""
+}
+
 // potentRows is what the store holds potent right now: rows of previous
 // verdicts whose receipts still describe what git measures, minus the findings
 // the refuter killed with evidence. `notes` reports neighbor files that could
@@ -1818,9 +1989,20 @@ func (r *runner) potentRows(verdictTree string) (findings []domain.Finding, pass
 			continue
 		}
 
+		retired, note := r.dismissedRows(tree)
+		if note != "" {
+			notes = append(notes, note)
+		}
+
 		for i, finding := range origin.Findings {
 			if reason, killed := killed[domain.FindingIDs(origin.Findings)[i]]; killed {
 				finding = domain.Dismiss(finding, reason)
+			}
+			// The human's judgment outranks a re-report and the reviewer's own
+			// dismissal: it is the later word, and the one with the evidence a
+			// person was asked for.
+			if row, wasRetired := retired.Retires(finding); wasRetired {
+				finding = domain.Dismiss(finding, row.Reason)
 			}
 			if !domain.IsLens(finding.Lens) || strings.TrimSpace(finding.Blob) == "" {
 				continue

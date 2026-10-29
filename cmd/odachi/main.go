@@ -531,6 +531,8 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&opts.Show, "show", false, "which verdict exists for this tree, or that there is none")
 	flags.StringVar(&opts.Lens, "lens", "", "explicit lens: risk | readability | reliability | resilience | all (repeatable or comma-separated)")
 	flags.StringVar(&opts.Refute, "refute", "", "print the refuter's prompt for this verdict")
+	flags.StringVar(&opts.Dismiss, "dismiss", "", "retire one row of this tree's verdict: <path>:<line>, with --because")
+	flags.StringVar(&opts.Because, "because", "", "why the row is retired: the evidence a dismissal carries")
 	flags.StringVar(&opts.Base, "base", reviewapp.DefaultBase, "what to compare the candidate against (empty: against nothing, everything counts as new)")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
@@ -571,6 +573,9 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 	opts.LensModels = config.Lenses
 	opts.MaxPromptKB = config.MaxPromptKB
+	// The dismissal records whose word it is; the operating system already knows
+	// who is at the keyboard, and a single-user CLI needs nothing more.
+	opts.By = firstOf(os.Getenv("USERNAME"), os.Getenv("USER"))
 
 	return reportReview(reviewapp.Run(opts, disk(dir), gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
 }
@@ -1602,4 +1607,15 @@ func (l *stringList) Set(value string) error {
 // oneLine keeps a CLI message on one line whatever an adapter said.
 func oneLine(message string) string {
 	return strings.Join(strings.Fields(message), " ")
+}
+
+// firstOf is the first non-empty value: two environment names for the same fact
+// (Windows and the rest), and joining them would invent a person.
+func firstOf(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }

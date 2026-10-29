@@ -618,3 +618,58 @@ func TestCheckRequireReviewReportsChangesRequested(t *testing.T) {
 		}
 	}
 }
+
+// TestReviewDismissNeedsItsReason: the act is a flag on review, and its evidence is
+// another one. A dismissal without a reason is the silent edit the file beside the
+// verdict exists to replace, so the CLI refuses it before anything is written.
+func TestReviewDismissNeedsItsReason(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+
+	code, _, errOut := runDir(t, dir, []string{"review", "--dismiss", "internal/app/turnos.go:1"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
+	}
+	if !strings.Contains(errOut, "--because") {
+		t.Errorf("stderr %q does not name the evidence the act needs", errOut)
+	}
+}
+
+// TestTheHumanRetiresARowFromTheCLI: the act end to end - a stored verdict, the
+// flag, the file beside it and the evidence in it. The two things only the CLI
+// supplies (the parsed target and who is at the keyboard) have no other test.
+func TestTheHumanRetiresARowFromTheCLI(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+	verdict := filepath.Join(t.TempDir(), "veredicto.json")
+	writeAt(t, verdict, `{"reviewer":"claude",`+declared(t, dir)+`"findings":[{"path":"internal/app/turnos.go","line":3,"severity":"WARNING","causal":true,"lens":"reliability","why":"la propagación no tiene prueba"}]}`)
+	if code, _, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
+		t.Fatalf("attach: code = %d (stderr: %q)", code, errOut)
+	}
+
+	code, out, errOut := runDir(t, dir, []string{"review", "--dismiss", "internal/app/turnos.go:3", "--because", "la prueba existe en feature_test.go"}, "")
+	if code != 0 {
+		t.Fatalf("dismiss: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	dismissed, err := filepath.Glob(filepath.Join(dir, ".git", "odachi", "reviews", "*.dismissed.json"))
+	if err != nil || len(dismissed) != 1 {
+		t.Fatalf("dismissals = %v, %v, want one file beside the verdict", dismissed, err)
+	}
+	content, err := os.ReadFile(dismissed[0])
+	if err != nil {
+		t.Fatalf("reading the dismissals: %v", err)
+	}
+	for _, want := range []string{"la prueba existe en feature_test.go", "internal/app/turnos.go"} {
+		if !strings.Contains(string(content), want) {
+			t.Errorf("the file does not carry %q:\n%s", want, content)
+		}
+	}
+
+	// The question the gate asks names the row it will not act on.
+	code, shown, _ := runDir(t, dir, []string{"review", "--show"}, "")
+	if code != 0 || !strings.Contains(shown, "dismissed by a person") {
+		t.Errorf("--show = %d %q, want the retired row named", code, shown)
+	}
+}
