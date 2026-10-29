@@ -50,6 +50,24 @@ is handed; a tool that trusts its silence as coverage (ADR 0033) should know tha
 reviewer can miss a row it declared, and the next feature that touches the review
 pipeline should measure this instead of assuming the answer is no.
 
+Measured on 2026-10-29 on a prompt this store already held: tree 56641e43's, 94,678 B,
+eleven changed paths, the same model the project configures
+(`opencode-go/mimo-v2.6-flash`), asked through `opencode run --model ... --file
+<prompt> "..."` with no agent override and three factual questions any reader of the
+prompt can answer:
+
+| probe | what it asked | answer | time |
+| --- | --- | --- | --- |
+| 1 | how many paths under "## The changed paths", and which ones the diff creates | **correct**: 11, and all five new files | 13 s |
+| 2 | every test function the diff adds in `internal/app/review/scope_test.go` | **correct**: the five tests and the one helper | 11 s |
+| 3 | what the prompt says about `inspection` and where it must appear | **correct**: the field, `completed`/`unavailable`, before `findings` | 9 s |
+
+Three out of three, at 94.7 KB and in seconds, so this model does read what it is
+handed at the size where 0087's miss happened (74 KB). The miss was in the reasoning:
+the reviewer concluded a test was absent from a prompt that carried it, which is a
+different failure from not reading - and the difference decides what the tool should do
+about it (nothing about size).
+
 ## Closed by feature 0098
 
 ### the review record · the scope a run judged is not written down
