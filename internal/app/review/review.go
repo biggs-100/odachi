@@ -366,6 +366,20 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 		return "", problem
 	}
 
+	// The prompt must not claim the evidence chose lenses somebody added: the
+	// lenses section states what the evidence asked for and what --lens added on
+	// top, in the caller's words when they gave any.
+	required := domain.Lenses(domain.Assess(cand.paths, cand.diff))
+	var scope *domain.Scope
+	if added := domain.Raised(required, selected); len(added) > 0 {
+		scope = &domain.Scope{
+			Required: required,
+			Added:    added,
+			Asked:    strings.TrimSpace(r.opts.Lens),
+			Because:  strings.TrimSpace(r.opts.Because),
+		}
+	}
+
 	return domain.Prompt(domain.PromptInput{
 		Brief:       cand.brief,
 		Tree:        cand.tree,
@@ -376,6 +390,7 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 		Known:       known,
 		KnownPasses: cleanRows,
 		Floor:       domain.FloorFor(cand.paths, cand.diff),
+		Scope:       scope,
 	}), nil
 }
 
@@ -1289,6 +1304,11 @@ func (r *runner) show() Result {
 		for _, row := range retired.Rows {
 			lines = append(lines, "dismissed by a person: "+row.Path+":"+strconv.Itoa(row.Line)+" - "+row.Reason)
 		}
+	}
+	// So is the decision that widened the scope: a reader who sees more lenses than
+	// the evidence asked for is told who asked, with which flag and in whose words.
+	if line, ok := r.scopeLine(tree); ok {
+		lines = append(lines, line)
 	}
 
 	result := Result{
@@ -2226,6 +2246,38 @@ func (r *runner) fileScope(tree string, required, selected []string) *Result {
 		return &problem
 	}
 	return nil
+}
+
+// scopeLine is what --show says about a scope somebody raised. It is evidence, so
+// a missing record says nothing and an unreadable one is named instead of ignored:
+// a reader who sees more lenses than the evidence asked for deserves to know why.
+func (r *runner) scopeLine(tree string) (string, bool) {
+	rel, err := domain.ScopePath(tree)
+	if err != nil {
+		return "", false
+	}
+	data, err := r.files.Read(r.storePath(rel))
+	if err != nil {
+		return "", false
+	}
+	scope, err := domain.ParseScope(data)
+	if err != nil {
+		return "the scope record " + r.storeLabel(rel) + " cannot be read: " + oneLine(err.Error()), true
+	}
+
+	line := "scope raised: " + strings.Join(scope.Added, ", ") + " was added with --lens"
+	if asked := strings.TrimSpace(scope.Asked); asked != "" {
+		line += " " + asked
+	}
+	if len(scope.Required) == 0 {
+		line += " (the evidence asked for no lens)"
+	} else {
+		line += " (the evidence asked for " + strings.Join(scope.Required, ", ") + ")"
+	}
+	if because := strings.TrimSpace(scope.Because); because != "" {
+		line += ": " + because
+	}
+	return line, true
 }
 
 // inOrderLenses keeps the fixed lens order in the record, so two runs that asked

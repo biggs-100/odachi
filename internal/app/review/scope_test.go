@@ -119,3 +119,64 @@ func TestASecondRunKeepsTheFirstScope(t *testing.T) {
 		t.Errorf("the second run rewrote the scope record:\n%s\nwant:\n%s", got, first)
 	}
 }
+
+// TestThePrintedPromptSaysTheScopeWasRaised: the prompt the run prints is the one
+// a reviewer reads, so it carries the decision too. The lenses section cannot claim
+// the evidence chose a lens somebody added.
+func TestThePrintedPromptSaysTheScopeWasRaised(t *testing.T) {
+	p := newLensProject()
+
+	result := p.run(review.Options{Lens: "risk", Because: "the change touches the gate"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "risk was added with --lens risk") {
+		t.Errorf("the prompt does not say the scope was raised:\n%s", result.Prompt)
+	}
+	if !strings.Contains(result.Prompt, "the change touches the gate") {
+		t.Errorf("the prompt does not carry the caller's words:\n%s", result.Prompt)
+	}
+}
+
+// TestShowSaysTheScopeWasRaised: a later reader runs --show and sees why the verdict
+// asks for more lenses than the evidence did, in the words of whoever asked.
+func TestShowSaysTheScopeWasRaised(t *testing.T) {
+	p := newLensProject()
+	stored, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "humano",
+		Inspection: &domainreview.Inspection{
+			Status: domainreview.InspectionCompleted,
+			Paths:  []string{"a.go"},
+		},
+		Lenses: []string{domainreview.Reliability, domainreview.Risk},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(stored)
+
+	rel, err := domainreview.ScopePath(currentTree)
+	if err != nil {
+		t.Fatalf("ScopePath: %v", err)
+	}
+	p.files.files[storeFile(rel)] = domainreview.RenderScope(domainreview.Scope{
+		Required: []string{domainreview.Reliability},
+		Added:    []string{domainreview.Risk},
+		Asked:    "risk",
+		Because:  "the change touches the gate",
+	})
+
+	result := p.run(review.Options{Show: true})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "scope raised: risk was added with --lens risk") {
+		t.Errorf("--show does not say the scope was raised:\n%s", lines)
+	}
+	if !strings.Contains(lines, "the change touches the gate") {
+		t.Errorf("--show does not carry the words of whoever asked:\n%s", lines)
+	}
+}
