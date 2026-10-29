@@ -1,20 +1,22 @@
-# the-last-three
+# the-human-retires
 
 ## What must exist
-- the last three cheap debts are paid: the old task document points at the commands that exist, and the two untested branches have a test
+- the human retires a row with a reason, and the record travels without rewriting the verdict
 
 ## Done when
-- 0073 carries a history line that maps its old vocabulary to the shipped one, without rewriting what the human accepted
-- personaNote's last branch has a test that fails when the branch is removed
-- start's read-error branch is reachable from a test and pinned
+- a dismissal lives beside the verdict, bound to the row's fingerprint, with the reason and who wrote it
+- the gate, the show and the inheritance apply it on read, so the row stops being re-reported
+- review --dismiss path:line --because reason writes it, and refuses a row that is not in this tree's verdict
+- a causal blocker is refuted, not dismissed, and the refusal says so
+- a test drives each answer, observed red first
 
 ## Not included (first version)
-- no new verb and no new flag
-- no behavior change: the three are a doc line and two tests
-- no model and no network
+- no new verb: the act is a flag on review
+- no rewriting of a stored verdict
+- no dismissal of a causal blocker or critical
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a document that lies is worse than a document that is silent.
+- Wants to learn: how an override becomes a record instead of a silent edit.
