@@ -12,7 +12,7 @@ R1 · "a run cannot widen the scope without saying why: --lens that adds a lens 
 
 ## Steps
 - [x] T1 · a run that widens the scope without words is refused before it spends anything   R1 · tree:3d924fe0a3bc5efde09b0679fe77f64b5698fa0b
-- [ ] T2 · the debt file and the changelog say the gap closed   R1
+- [x] T2 · the debt file and the changelog say the gap closed   R1 · tree:b831bf44485ef332fb4a76fe242fae1aae8f5e76
 
 ## History
 L1 · "a run cannot widen the scope without saying why: --lens that adds a lens needs --because, and the refusal names the flag and the lenses it would add"
