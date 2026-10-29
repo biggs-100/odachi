@@ -11,6 +11,11 @@ R1 · "a file odachi wrote says which schema wrote it, and a binary that reads a
 - a test drives each of the three decoders
 
 ## Steps
+- [ ] T1 · the schema vocabulary is one definition: a value the binary does not know is refused as a newer writer   R1
+- [ ] T2 · the verdict carries the schema it was written with, and its reader checks it before it names an unknown key   R1
+- [ ] T3 · agents.toml and odd/review.toml write schema = 1, absence still means 1, and a newer value says upgrade   R1
+- [ ] T4 · the debt file and the changelog say what closed and what the plan commit exposed   R1
 
 ## History
 L1 · "a file odachi wrote says which schema wrote it, and a binary that reads a newer value says upgrade instead of naming keys as unknown"
+L2 · OFICIO · "the plan commit of 0094 landed with --no-verify" (porque a real fence is classified as ordinary code (tier.go: the fence is a human decision), so check asked for a review of a tree whose only behaviour is the human's declaration; paying a lens for it contradicts the rule that a run judges behaviour, so the friction goes to docs/review-debt.md as a tier row)
