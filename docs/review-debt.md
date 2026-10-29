@@ -29,6 +29,26 @@ few hundred lines. That is why eleven of these prompts run within 10 KB of the 9
 limit while their diffs are small: the wall the row above measures is pressed by memory,
 not by the change.
 
+What three ways of pruning would save, measured on the same 37 prompts:
+
+| pruning | rows kept of 23,498 | median prompt | what it takes away |
+| --- | --- | --- | --- |
+| only the candidate's paths | 64 (0.3 %) | ~30 KB | the reviewer no longer sees that an unchanged path already carries a known defect, so it can only re-raise it as a follow-up (`causal: false`), never as a new causal finding |
+| findings always, passes only for the candidate's paths | 232 (1 %) | ~45 KB | keeps every known defect and drops only the "audited clean" memory of paths nobody touched: the reviewer may re-audit a clean path, and nothing it can cite is lost |
+| findings without passes | 168 (0.7 %) | ~44 KB | the same as the row above plus the clean rows of the paths that changed, which are the ones this run could have used |
+| a byte budget (8 KB of rows) | 2,878 (12 %) | ~38 KB | an arbitrary cut: the rows are ordered by path, so the reviewer gets the alphabet's first eighth and is not told |
+
+The four do not cost the same in what they drop. The candidate's paths keep only what the
+review can act on; the two findings-first variants keep the shape of the verdict (what is
+known) and differ in whether the clean rows of the *changed* paths survive, which are the
+ones this run could have used; the budget keeps neither and hides what it dropped, which
+is why it is the only pruning with no argument behind it beyond a number.
+
+None of them costs the gate anything, and that is the fact that makes any of them possible:
+the prompt is the reviewer's context, while the verdict's inheritance and the coverage
+check read the store. `inherit` and `--show` do not consult the prompt, so pruning it
+changes what the reviewer reads and nothing about what the tool proves.
+
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
