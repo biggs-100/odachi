@@ -1,22 +1,21 @@
-# a-tree-that
+# a-markdown-the
 
 ## What must exist
-- a tree that only rewrites documents after the close does not owe the suite again: the proof it has still speaks for the code, and the gate that judges the pull request runs the suite from the base ref
+- a Markdown the binary ships is code, not a document: the classifier knows it and the list of what ships lives once
 
 ## Done when
-- after a close, a tree whose paths changed since the proof are all paperwork is ready, and the report names the proof's tree and what moved
-- a Markdown that ships inside the binary, or any path that is not a document, keeps the proof owed
-- while the feature is open nothing changes, and the tree that closes it still owes the proof
+- a skill or a review prompt that changed asks for a lens, and a tree whose only change is one of them is not passive
+- the proof lane and the classifier ask one list, so a Markdown the suite reads is never paperwork and one of them cannot drift
+- a tree that only moved the installed copy under .agents/ still owes the suite, because the pack test compares it byte for byte
 - a test drives each answer, and one of them fails without the change
 
 ## Not included (first version)
-- no change to what an open feature owes
-- no change to what the closing tree owes
 - no new verb and no new flag
+- no change to the verdict shape
 - no change to the proof format, and the stored proof is never rewritten
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
-- First usable version: today.
-- Wants to learn: what a document is worth when the suite is the evidence.
+- First usable version: this week.
+- Wants to learn: whether one list can answer two gates without blurring a lens and a proof.
