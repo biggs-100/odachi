@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A refused answer writes nothing.
+
+- **The scope record follows the verdict.** v0.11.52 wrote `reviews/<tree>.scope.json`
+  before the declaration and coverage checks, so an `--attach` answer the tool refused
+  still left a decision beside a verdict that does not exist. The record is now
+  written after every refusal and immediately before the verdict it explains.
+- **Why that order:** gentle-ai validates before it reads the repository and a refusal
+  creates no authority and writes nothing; its escalation is frozen with the authority,
+  never beside nothing. In odachi the verdict is the authority, so the record has no
+  life of its own.
+
 ## v0.11.52 - 2026-10-29
 
 A raised scope is written down.

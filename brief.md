@@ -1,13 +1,12 @@
-# a-run-that
+# a-refused-answer
 
 ## What must exist
-- a run that asks for a lens the evidence did not require writes it beside the verdict, so a later reader sees the scope was raised and a replay cannot drop it
+- a refused answer writes nothing: the scope record is written only when the verdict it explains is written, the way gentle-ai creates no authority for a refusal
 
 ## Done when
-- a run whose --lens added a lens the evidence did not ask writes reviews/<tree>.scope.json beside the verdict, naming what the evidence asked, what was added and the flag as it was given
-- a run that added nothing writes no record, and a second run for the same tree does not rewrite the store
-- --show and the prompt say the scope was raised, and the record is read by tree, so a verdict never inherits another tree's scope
-- a test drives each answer, and one of them fails without the change
+- an answer refused for its declaration or its coverage leaves no scope record, and the store keeps only the refused answer
+- the record still lands when the verdict lands, with the same fields it had
+- a test drives the refusal, and it fails without the move
 
 ## Not included (first version)
 - no new verb and no new flag
@@ -18,4 +17,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
-- Wants to learn: whether a decision made before a run belongs in the artifact the run produces.
+- Wants to learn: how a transaction that writes two files stays atomic when the second can be refused.

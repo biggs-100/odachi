@@ -1422,16 +1422,6 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		return *problem
 	}
 
-	// An attached verdict is filed the same way a run's is: the lenses it covers may
-	// include ones the evidence never asked for, and the decision that added them is
-	// written beside it. A run's own groups pass judged, and exec files the record
-	// once for the whole selection instead of once per group.
-	if judged == nil {
-		if problem := r.fileScope(tree, domain.Lenses(floor.Class), stamped.Lenses); problem != nil {
-			return *problem
-		}
-	}
-
 	rel, err := domain.Path(tree)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
@@ -1504,6 +1494,18 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	}
 	if len(gaps) > 0 {
 		return r.refuse(sealed, gaps, rel)
+	}
+
+	// The record of a raised scope is written here, after every refusal this store
+	// can answer and immediately before the verdict it explains: an attached verdict
+	// is filed the same way a run's is, and a refusal must leave nothing behind -
+	// gentle-ai creates no authority for a refusal, and in odachi the verdict is that
+	// authority. A run's own groups pass judged, and exec files the record once for
+	// the whole selection instead of once per group.
+	if judged == nil {
+		if problem := r.fileScope(tree, domain.Lenses(floor.Class), sealed.Lenses); problem != nil {
+			return *problem
+		}
 	}
 
 	if err := r.files.Write(target, domain.Render(sealed)); err != nil {
