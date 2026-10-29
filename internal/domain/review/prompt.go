@@ -104,7 +104,7 @@ func Prompt(in PromptInput) string {
 	out.WriteString(carriedSection(in.Known, in.KnownPasses))
 
 	out.WriteString("## What to return\n")
-	out.WriteString(schema(in))
+	out.WriteString(answerSchema(in))
 	out.WriteString("\n")
 	out.WriteString("The \"inspection\" is your own account of what you read: " + string(InspectionCompleted) + " with every changed path\n")
 	out.WriteString("when you read the whole candidate, or " + string(InspectionUnavailable) + " with the reason and no path when\n")
@@ -264,7 +264,7 @@ func floorSection(floor Floor) string {
 // schema is the expected answer, with the keys the domain parses. The tree is
 // stamped by the tool when it is empty, so a reviewer that cannot compute it
 // still produces a usable verdict.
-func schema(in PromptInput) string {
+func answerSchema(in PromptInput) string {
 	var out strings.Builder
 
 	out.WriteString("{\n")

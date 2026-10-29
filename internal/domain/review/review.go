@@ -24,6 +24,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
 // The store: one file per tree, named by the tree it judged. It lives in the
@@ -110,6 +112,13 @@ type Finding struct {
 
 // Verdict is what a review concluded about one tree.
 type Verdict struct {
+	// Schema is the version of this file, stamped by the tool and never by the
+	// reviewer, the way the tree is. It is what lets a binary older than the next
+	// field say "this file is newer than me" instead of "unknown field": the
+	// strict decoder cannot tell a typo from a writer that is ahead of it. A
+	// verdict stored before the field existed carries none and reads as the first
+	// schema.
+	Schema   int    `json:"schema"`
 	Tree     string `json:"tree"`
 	Base     string `json:"base"`
 	Reviewer string `json:"reviewer"`
@@ -189,6 +198,20 @@ func Parse(data []byte) (Verdict, error) {
 		return Verdict{Findings: []Finding{}}, nil
 	}
 
+	// The version is asked before the strict pass, and before anything else is
+	// refused: a verdict from a newer odachi carries fields this binary does not
+	// know, and naming them as unknown sends the human to fix a file that is not
+	// broken. A file that is not JSON fails here in silence and is named by the
+	// decoder below, in the words it already used.
+	var head struct {
+		Schema int `json:"schema"`
+	}
+	if json.Unmarshal([]byte(text), &head) == nil {
+		if _, err := schema.Read(head.Schema); err != nil {
+			return Verdict{}, fmt.Errorf("the verdict cannot be read: %w", err)
+		}
+	}
+
 	decoder := json.NewDecoder(strings.NewReader(text))
 	decoder.DisallowUnknownFields()
 
@@ -204,6 +227,11 @@ func Parse(data []byte) (Verdict, error) {
 		return Verdict{}, errors.New("the verdict is not a single JSON object: answer with the verdict only")
 	}
 
+	if parsed.Schema == 0 {
+		// A verdict written before the field existed: answered as the first
+		// schema, so a caller never compares against "no version".
+		parsed.Schema = schema.First
+	}
 	if parsed.Findings == nil {
 		parsed.Findings = []Finding{}
 	}
@@ -361,6 +389,7 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 	}
 
 	sealed := v
+	sealed.Schema = schema.Current
 	sealed.Tree = tree
 	sealed.Base = strings.TrimSpace(base)
 	sealed.Reviewer = strings.TrimSpace(v.Reviewer)
