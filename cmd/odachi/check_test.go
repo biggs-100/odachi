@@ -77,13 +77,29 @@ func seedProject(t *testing.T, dir string) {
 	}.Render())
 }
 
+// closeFeature is seedProject's document with its only step done: the tree that
+// closes a feature is the one that owes the proof, so the tests about the proof gate
+// close it first.
+func closeFeature(t *testing.T, dir string) {
+	t.Helper()
+	writeFile(t, dir, "odd/tasks/0001-turnos.md", taskdoc.TaskDoc{
+		Title:        "turnos",
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:     []string{"reservo un turno"},
+		Steps:        []taskdoc.Step{{ID: "T1", Text: "un paso", Requirement: "R1", Done: true}},
+		History:      []string{`L1 · "reservar turnos"`},
+	}.Render())
+}
+
 // TestCheckWithoutProofIsBlocked: no proof yet is the agent's work, exit 1, and
-// the block names the command that produces it.
+// the block names the command that produces it - on the tree that closes the
+// feature, which is the one that owes it.
 func TestCheckWithoutProofIsBlocked(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
+	closeFeature(t, dir)
 
 	code, out, errOut := runDir(t, dir, []string{"check"}, "")
 
@@ -282,6 +298,7 @@ func TestQuietStillPrintsTheBlock(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
+	closeFeature(t, dir)
 
 	code, _, errOut := runDir(t, dir, []string{"check", "--quiet"}, "")
 
@@ -323,6 +340,7 @@ func TestNoCommitAndEmptyBaseDoNotFail(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
+	closeFeature(t, dir)
 
 	code, _, errOut := runDir(t, dir, []string{"check"}, "")
 	if code != 1 {
@@ -350,6 +368,7 @@ func TestCheckJSONCarriesTheReason(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
+	closeFeature(t, dir)
 
 	code, out, errOut := runDir(t, dir, []string{"check", "--json"}, "")
 
@@ -407,6 +426,7 @@ func TestTheGateJSONContract(t *testing.T) {
 	blocked := t.TempDir()
 	initRepo(t, blocked)
 	seedProject(t, blocked)
+	closeFeature(t, blocked)
 	code, out, errOut := runDir(t, blocked, []string{"check", "--json"}, "")
 	if code != 1 {
 		t.Fatalf("check --json on a tree without proof = %d, want 1 (stderr: %q)", code, errOut)

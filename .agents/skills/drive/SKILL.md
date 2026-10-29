@@ -23,7 +23,7 @@ The feature cycle, in order:
 3. Commit what start wrote -brief, fence, profile and task doc, steps included- before you branch. If they do not land together, the next change is judged by the last feature's fence, or a reset loses them.
 4. Work the step. A vision decision: `odachi ask "<question>"` and wait. A
    requirement the human changes: `odachi ask --change "<words>" --req R1`: its steps reopen and `brief.md` does not move.
-5. `odachi check --run "<command>"`: green is the only definition of done.
+5. `odachi check`: the gate. The proof is owed by the closing tree, not by every step.
 6. One commit per step, and `odachi plan --done T1`: it records the tree the step produced, which a rebase cannot rewrite.
 7. At the end, `odachi summary` and tell in three lines what the human decided.
 

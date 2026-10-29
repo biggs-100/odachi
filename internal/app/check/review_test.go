@@ -474,7 +474,7 @@ func TestNoReviewBeatsTheMode(t *testing.T) {
 // useless. A stray backup, an editor and a real edit look identical in one line,
 // so the gate names the paths that moved between the proof's tree and this one.
 func TestAStaleProofNamesWhatChanged(t *testing.T) {
-	files := readyFiles()
+	files := closedFiles()
 	files["proof/0007-turnos.txt"] = proofFile(otherTree, "go test ./...", "ok\n")
 	git := &fakeGit{tree: currentTree, between: []string{"stray.bak"}}
 
@@ -491,7 +491,7 @@ func TestAStaleProofNamesWhatChanged(t *testing.T) {
 	}
 
 	// A current proof does not ask: the question is only for the stale case.
-	fresh := readyFiles()
+	fresh := closedFiles()
 	freshGit := &fakeGit{tree: currentTree, between: []string{"noise"}}
 	if got := run(t, newFakeFiles(fresh), freshGit, check.Options{}); got.Code != int(gate.Ready) {
 		t.Fatalf("a current proof = %d (%s), want ready", got.Code, got.Message)
@@ -504,7 +504,7 @@ func TestAStaleProofNamesWhatChanged(t *testing.T) {
 // TestAStaleProofWithoutAPathKeepsTheGenericMessage: if git can no longer read
 // the proof's tree, the message stays as it was: a second failure is noise.
 func TestAStaleProofWithoutAPathKeepsTheGenericMessage(t *testing.T) {
-	files := readyFiles()
+	files := closedFiles()
 	files["proof/0007-turnos.txt"] = proofFile(otherTree, "go test ./...", "ok\n")
 	git := &fakeGit{tree: currentTree, betweenErr: errors.New("fatal: bad object")}
 
@@ -1034,7 +1034,7 @@ func TestRequireReviewReportsAMangledVerdict(t *testing.T) {
 // actionable, so it is reported before a missing review. Sending an agent to
 // `odachi review` while the gate is failing for another reason is a dead end.
 func TestRequireReviewComesAfterTheGatesTheAgentCanActOn(t *testing.T) {
-	files := newFakeFiles(readyFiles())
+	files := newFakeFiles(closedFiles())
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
 
 	result := run(t, files, &fakeGit{tree: currentTree}, check.Options{RequireReview: true})
@@ -1044,5 +1044,30 @@ func TestRequireReviewComesAfterTheGatesTheAgentCanActOn(t *testing.T) {
 	}
 	if result.Reason != "proof_missing" {
 		t.Errorf("reason = %q, want proof_missing", result.Reason)
+	}
+}
+
+// TestAnOpenFeatureOwesTheProofAtItsClose: the wiring, not the rule. An open
+// feature's tree is ready without a proof - the plan and every step commit land
+// cheap - and the tree that closes it owes one again. Without this test the rule
+// could exist in the domain and never reach the gate.
+func TestAnOpenFeatureOwesTheProofAtItsClose(t *testing.T) {
+	open := readyFiles()
+	delete(open, "proof/0007-turnos.txt")
+
+	got := run(t, newFakeFiles(open), &fakeGit{tree: currentTree}, check.Options{})
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("an open feature without a proof = %d (%s), want ready", got.Code, got.Message)
+	}
+	if !strings.Contains(got.Message, "owed when this feature closes") {
+		t.Errorf("message = %q, want the close named", got.Message)
+	}
+
+	closed := closedFiles()
+	delete(closed, "proof/0007-turnos.txt")
+
+	got = run(t, newFakeFiles(closed), &fakeGit{tree: currentTree}, check.Options{})
+	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofMissing {
+		t.Fatalf("the closing tree without a proof = %d/%q, want proof_missing", got.Code, got.Reason)
 	}
 }

@@ -18,8 +18,9 @@ in one sitting, or when the history no longer reads in order.
   no later commit called "tests" or "docs".
 - A refactor and a behavior change do not share a commit: if something breaks,
   you do not know which one it was.
-- Before committing, the proof of this tree: `odachi check --run "<command>"`.
-  The hook will demand it anyway, and it is better to find out first.
+- Before committing, the gate: `odachi check`. The proof is owed by the feature's
+  close, not by every step: run `odachi check --run "<command>"` on the tree that
+  closes it, and let CI judge the pull request that carries it.
 - Close the body with `Risk: none` or
   `Risk: data|security|contract|concurrency|delivery|no-test`. A named risk asks
   for `odachi review` before the commit.

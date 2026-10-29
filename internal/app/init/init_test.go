@@ -357,7 +357,7 @@ func TestTheSpanishHookMarkerIsStillOurs(t *testing.T) {
 	if strings.Contains(after, "no se commitea") {
 		t.Errorf("the hook kept the old marker:\n%q", after)
 	}
-	if !strings.Contains(after, "# odachi: no commit without a proof for this tree") {
+	if !strings.Contains(after, "# odachi: no commit with the gate red") {
 		t.Errorf("the hook was not rewritten in English:\n%q", after)
 	}
 	if !slices.Contains(files.events, "backup .git/hooks/pre-commit") {
