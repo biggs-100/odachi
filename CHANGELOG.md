@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A documents-only close owes no verdict.
+
+- **The review gets the proof's twin.** 0096 stopped asking a suite for a paragraph
+  written after a close; the review kept asking for a verdict on a feature whose whole
+  diff is documents, and `review` answers "none is due", so the only way out was
+  `--lens all` - a four-lens review of a paragraph. `check` now classifies the
+  feature's own diff, base to the closing tree, with the same function the review uses:
+  a diff that asks for no lens has nothing to judge and the close is ready.
+- **What still owes:** code after the close, an explicit `--require-review`, and a
+  feature that carries code at its close. The closing tree is never measured alone,
+  because it only marks the last step.
+
 ## v0.11.54 - 2026-10-29
 
 A widened scope needs its words.
