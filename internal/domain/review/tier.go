@@ -363,20 +363,9 @@ func matchedSignal(path string) (string, bool) {
 // README, or anything inside a docs directory. A `.go` file inside `docs/` is
 // code, so the extension decides before the directory does — and an agent file is
 // code even when it is Markdown, because it grants tools.
-//
-// Text that ships is code too: the skills compiled into the binary, the review
-// prompts beside them, and the copy of the skills installed in the project are
-// compared byte for byte by the suite. A change there asks for a lens, and after a
-// close it owes the proof, because a suite that reads the file can fail on it.
 func isDocumentation(path string) bool {
 	lower := normalizePath(path)
 	if agentDirs[dirOf(lower)] {
-		return false
-	}
-	switch {
-	case strings.HasPrefix(lower, "skills/"),
-		strings.HasPrefix(lower, "internal/assets/"),
-		strings.HasPrefix(lower, ".agents/"):
 		return false
 	}
 
@@ -396,26 +385,6 @@ func isDocumentation(path string) bool {
 		}
 	}
 	return false
-}
-
-// AllDocuments reports whether every path is paperwork: a document that ships
-// nothing and nobody but a person reads. It is the proof's question after a
-// feature closed -a release note cannot fail a suite- and it is answered here
-// with the same rule the review uses to say a candidate asks for no lens, so the
-// two gates cannot disagree about what a document is.
-//
-// It is deliberately not "all plumbing": plumbing is what the tool generates, and
-// a document that was generated is still a document.
-func AllDocuments(changedPaths []string) bool {
-	if len(changedPaths) == 0 {
-		return false
-	}
-	for _, path := range changedPaths {
-		if !isDocumentation(path) {
-			return false
-		}
-	}
-	return true
 }
 
 // normalizePath is the one spelling every rule here matches against: forward

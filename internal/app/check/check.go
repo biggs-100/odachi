@@ -305,9 +305,11 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	// The proof's twin of theCloseOwes: after the close, a tree that only moved
 	// documents is paperwork -a release note cannot fail a suite- and the proof that
 	// judged the code still speaks for it, because the pull request runs the suite
-	// from the base ref. The close itself is not paperwork, and neither is a tree
-	// whose paths git cannot name.
-	if closedNow && len(moved) > 0 && reviewdomain.AllDocuments(moved) {
+	// from the base ref. The question is the review's own, asked of the same
+	// classifier, so the two gates cannot disagree about what a candidate is; the
+	// close itself is not paperwork, and neither is a tree whose paths git cannot
+	// name.
+	if closedNow && len(moved) > 0 && reviewdomain.Classify(moved) == reviewdomain.Passive && !shippedText(moved) {
 		if already, problem := r.closedBefore(feature); problem == nil && already {
 			state.ProofPaperwork = true
 			r.paperworkNote = fmt.Sprintf("the proof is for tree %s, and since then only documents moved: %s",
@@ -1225,6 +1227,29 @@ func reviewFinding(finding reviewdomain.Finding) string {
 		where = fmt.Sprintf("%s:%d", finding.Path, finding.Line)
 	}
 	return where + " " + string(finding.Severity) + " " + finding.Why
+}
+
+// shippedText reports whether one of the paths is text this binary ships: the
+// skills compiled into it, the review prompts beside them, or the copy of the
+// skills installed in the project, which the pack tests compare byte for byte with
+// its source. The suite reads those bytes, so a tree that changed one is not
+// paperwork and owes the proof.
+//
+// The review's classifier answers the same question for its lenses and does not
+// know about shipping, because the fence in force when this feature started protects
+// internal/domain/review. The list lives here until the row that owns it lands, and
+// it moves into the classifier with it: one definition, asked by both gates.
+func shippedText(paths []string) bool {
+	for _, path := range paths {
+		lower := strings.ToLower(filepath.ToSlash(path))
+		switch {
+		case strings.HasPrefix(lower, "skills/"),
+			strings.HasPrefix(lower, "internal/assets/"),
+			strings.HasPrefix(lower, ".agents/"):
+			return true
+		}
+	}
+	return false
 }
 
 // pathNote names paths in one line, capped so a block stays readable: the human

@@ -544,16 +544,20 @@ func TestAReleaseNoteIsPaperwork(t *testing.T) {
 		t.Errorf("lines = %v, want the tree the proof belongs to and what moved", got.Lines)
 	}
 
-	// One path that is not a document keeps the proof owed.
+	// A path that is not a document keeps the proof owed.
 	code := &fakeGit{tree: currentTree, between: []string{"CHANGELOG.md", "internal/app/check/check.go"}, filesAt: closedAtHead}
 	if got := run(t, newFakeFiles(files), code, check.Options{}); got.Reason != gate.ReasonProofStale {
 		t.Fatalf("a code change passed as paperwork: %d/%q", got.Code, got.Reason)
 	}
 
-	// A Markdown compiled into the binary is shipped text, not paperwork.
-	shipped := &fakeGit{tree: currentTree, between: []string{"skills/drive/SKILL.md"}, filesAt: closedAtHead}
-	if got := run(t, newFakeFiles(files), shipped, check.Options{}); got.Reason != gate.ReasonProofStale {
-		t.Fatalf("a shipped Markdown passed as paperwork: %d/%q", got.Code, got.Reason)
+	// A Markdown compiled into the binary is shipped text, not paperwork: the suite
+	// compares those bytes. One case per prefix the lane refuses, because a dropped
+	// prefix is a silent skip of the suite.
+	for _, shippedPath := range []string{"skills/drive/SKILL.md", "internal/assets/review/lens_readability.md", ".agents/skills/drive/SKILL.md"} {
+		shipped := &fakeGit{tree: currentTree, between: []string{shippedPath}, filesAt: closedAtHead}
+		if got := run(t, newFakeFiles(files), shipped, check.Options{}); got.Reason != gate.ReasonProofStale {
+			t.Fatalf("a shipped Markdown passed as paperwork: %s (%d/%q)", shippedPath, got.Code, got.Reason)
+		}
 	}
 
 	// The tree that closed the feature still owes the proof: the document at HEAD

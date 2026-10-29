@@ -14,6 +14,20 @@ Last written: after 0096, which closed the release-note row.
 
 ## Open
 
+### the classifier · a Markdown the suite reads is called a document
+
+`isDocumentation` in `internal/domain/review/tier.go` answers by extension, README
+name and `docs/` segment, and excludes only the agent directories. A skill
+(`skills/*/SKILL.md`, compiled into the binary), a review prompt
+(`internal/assets/review/*.md`, the same) and the installed copy (`.agents/skills/`,
+which the pack tests compare byte for byte with its source) are all `.md`, so a
+change to one of them asks for no lens, and the proof lane had to grow its own refusal
+(`internal/app/check/shippedText`) so a tree that changed one still owes the suite.
+Both gates read the same function for lenses, so the gap is one and the fix is small
+-those three prefixes are shipped text, not documents. It could not land in 0096: its
+base fence protected `internal/domain/review/**`, and CI reads the base fence. It needs
+its own feature, and the lane's list moves into the classifier with it.
+
 ### the review record · the scope a run judged is not written down
 
 `--lens` widens or narrows what a run reviews, and nothing records that the human (or
@@ -53,15 +67,20 @@ pipeline should measure this instead of assuming the answer is no.
 ### the proof · the tree that writes a release note owes the suite
 
 The proof's twin of `theCloseOwes` landed: after a close, a tree whose paths that
-moved since the proof are all paperwork is ready, and the report says which tree the
-proof belongs to and what moved. The lane asks the close's own question -the
-document at HEAD already carried the close- so the tree that closes a feature still
-owes the proof, a missing proof is never paperwork, and a command this run watched
-fail still blocks. The classifier learned the other half: a Markdown compiled into
-the binary, or installed beside it (`skills/`, `internal/assets/`, `.agents/`), is
-text the suite compares, so it asks for a lens and owes the proof. The two landed in
-one commit because the lane is unsafe without the second: a skill edit is exactly
-the document that breaks the suite.
+moved since the proof ask for no lens -the same classifier the review uses- is
+ready, and the report says which tree the proof belongs to and what moved. The lane
+asks the close's own question -the document at HEAD already carried the close- so
+the tree that closes a feature still owes the proof, a missing proof is never
+paperwork, and a command this run watched fail still blocks.
+
+The classifier half did not land here. It lives in `internal/domain/review/tier.go`,
+and the fence in force when this feature started -the one at its base, which CI
+reads on purpose- protects that domain under "no change to the verdict or the proof
+format". The gate caught it on the pull request, and the change was reverted instead
+of argued. The refusal the brief demands lives in the lane for now
+(`internal/app/check/shippedText`): shipped text is never paperwork for this gate,
+while the review's classifier still calls it a document, which is the open row below
+and the reason that row exists.
 
 ## Closed by feature 0095
 

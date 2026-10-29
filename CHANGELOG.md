@@ -18,11 +18,13 @@ A release note stops costing a suite.
   suite from the base ref, which is where the note is judged.
 - **The proof asks the review's question.** The lane is the proof's twin of
   `theCloseOwes`: it never opens on the tree that closed the feature, never rescues
-  a missing proof, and never covers a command this run watched fail.
-- **A Markdown that ships is not paperwork.** The classifier learned it for both
-  gates: a skill, a review prompt and the installed copy of the skills are compared
-  byte for byte by the suite, so a change there asks for a lens and owes the proof.
-  Before this, editing a skill asked for no review at all.
+  a missing proof, and never covers a command this run watched fail. A candidate is
+  paperwork when the same classifier the review already uses says it asks for no
+  lens, so the two gates cannot disagree about what a document is.
+- **What it does not cover, named:** a Markdown the suite reads -a skill, a review
+  prompt, the installed copy of the skills- is still "documentation" by its
+  classifier, so a change there after a close is paper. That gap is older than this
+  feature (it also means a skill edit asks for no lens) and it is a row of its own.
 
 ## v0.11.49 - 2026-10-29
 
