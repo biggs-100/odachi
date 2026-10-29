@@ -13,7 +13,7 @@ R1 · "the review prompt carries what the review can act on: every finding, and 
 ## Steps
 - [x] T1 · the pruned prompt answers the probes of 0101, measured on the same tree   R1
 - [x] T2 · a prompt carries every finding and the clean rows of the changed paths   R1
-- [ ] T3 · the debt file and the changelog say what the cut changes   R1
+- [x] T3 · the debt file and the changelog say what the cut changes   R1 · tree:f3559353b94f3427c48dc8df422929e832bbf54e
 
 ## History
 L1 · "the review prompt carries what the review can act on: every finding, and the clean rows of the paths the candidate changed, and the same questions are answered after the cut"
