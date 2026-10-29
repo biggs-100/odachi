@@ -5,6 +5,27 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A Markdown the binary ships is code.
+
+- **A skill or a review prompt that changed asks for a lens.** The classifier
+  decided a document by extension, README name and `docs/` segment, and excluded
+  only the agent directories. A `skills/*/SKILL.md` compiled into the binary, a
+  `internal/assets/review/*.md` that tells a reviewer what to look for, and the
+  installed copy under `.agents/` were all `.md`, so a tree that only edited one of
+  them classified as passive and asked for no lens at all — including a change to
+  the prompt that decides the review.
+- **One list of what ships.** `review.ShippedText` names the three prefixes and is
+  asked by both gates: the classifier uses it to call shipped text code, and the
+  proof lane uses it instead of the copy it had carried since 0096. Two lists that
+  answer one question drift; now there is one.
+- **The installed copy is still plumbing for the lens.** 0043 decided that adopting
+  odachi must not cost a review before the first line of code, and that decision
+  stands: `.agents/skills/**` never reaches a lens. It does owe the suite, because
+  the pack test compares those bytes with their source — which is why the lane asks
+  the list and the classifier asks it too.
+
 ## v0.11.50 - 2026-10-29
 
 A release note stops costing a suite.

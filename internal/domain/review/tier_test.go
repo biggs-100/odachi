@@ -514,3 +514,50 @@ func TestClassifyStillSeesTheCandidatesOwnFiles(t *testing.T) {
 		})
 	}
 }
+
+// TestClassifyShippedTextIsCode: a Markdown the binary packs is not a document.
+// A skill is instructions the agent obeys and a review prompt decides what a
+// reviewer looks for; both are embedded (skills/, internal/assets/) and both are
+// read by the suite, so a tree that only edits one is ordinary code and reaches a
+// lens. Calling them documents is how a tree that changed the reviewer's own
+// prompt asked for no review at all.
+func TestClassifyShippedTextIsCode(t *testing.T) {
+	for _, path := range []string{
+		"skills/drive/SKILL.md",
+		"internal/assets/review/risk.md",
+	} {
+		if got := review.Classify([]string{path}); got != review.Focused {
+			t.Errorf("Classify(%s) = %q, want focused", path, got)
+		}
+		if lenses := review.Need([]string{path}, ""); !slices.Equal(lenses[path], []string{review.Reliability}) {
+			t.Errorf("Need(%s) = %v, want [%s]", path, lenses[path], review.Reliability)
+		}
+	}
+}
+
+// TestShippedTextNamesWhatTheBinaryPacks: one list answers "does this travel
+// inside the binary or beside it". It is asked twice - by the classifier, for the
+// lenses, and by the proof lane, for the suite - so it names the installed copy
+// too, even though that copy is plumbing and never reaches a lens.
+func TestShippedTextNamesWhatTheBinaryPacks(t *testing.T) {
+	for _, path := range []string{
+		"skills/drive/SKILL.md",
+		"internal/assets/review/risk.md",
+		".agents/skills/drive/SKILL.md",
+	} {
+		if !review.ShippedText([]string{path}) {
+			t.Errorf("ShippedText(%s) = false, want true", path)
+		}
+	}
+	for _, path := range []string{"docs/decisions/0001-a.md", "README.md", "internal/app/check/check.go"} {
+		if review.ShippedText([]string{path}) {
+			t.Errorf("ShippedText(%s) = true, want false", path)
+		}
+	}
+
+	// The installed copy is plumbing: it is shipped text for the proof, and no
+	// lens for the review (0043, the adoption costs nothing).
+	if got := review.Classify([]string{".agents/skills/drive/SKILL.md"}); got != review.Passive {
+		t.Errorf("Classify(installed skill) = %q, want passive", got)
+	}
+}

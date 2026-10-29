@@ -359,13 +359,53 @@ func matchedSignal(path string) (string, bool) {
 	return "", false
 }
 
+// shippedPrefixes are the paths whose text this binary packs, or installs beside
+// it: the skills it embeds, the review prompts that tell a reviewer what to look
+// for, and the copies `init` and `pack` write into a project. The suite reads all
+// three - the embed tests, the review tests and the pack test that compares the
+// installed copy byte for byte with its source - so a change there can break the
+// build or the review, which no document can.
+var shippedPrefixes = []string{"skills/", "internal/assets/", ".agents/"}
+
+// ShippedText reports whether any of the paths is text this binary ships. It is
+// the one list of what travels, asked by two gates with two different questions:
+// the classifier asks whether the bytes are code (so they reach a lens), and the
+// proof lane in internal/app/check asks whether they are paperwork (so a tree that
+// changed them still owes the suite). The installed copy answers yes to both
+// questions at the proof and no to the lens, because it is plumbing: 0043 decided
+// that adopting odachi must not cost a review before the first line of code, while
+// the suite still reads those bytes.
+func ShippedText(paths []string) bool {
+	for _, path := range paths {
+		if isShippedText(path) {
+			return true
+		}
+	}
+	return false
+}
+
+// isShippedText reports whether one path is text the binary ships.
+func isShippedText(path string) bool {
+	lower := normalizePath(path)
+	for _, prefix := range shippedPrefixes {
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 // isDocumentation reports whether the path is a document: Markdown, plain text, a
 // README, or anything inside a docs directory. A `.go` file inside `docs/` is
 // code, so the extension decides before the directory does — and an agent file is
-// code even when it is Markdown, because it grants tools.
+// code even when it is Markdown, because it grants tools — and so is shipped text,
+// because the suite reads it.
 func isDocumentation(path string) bool {
 	lower := normalizePath(path)
 	if agentDirs[dirOf(lower)] {
+		return false
+	}
+	if isShippedText(lower) {
 		return false
 	}
 
