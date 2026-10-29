@@ -879,17 +879,15 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 
 	var (
-		asJSON         bool
-		skillsScope    string
-		agents         string
-		global         bool
-		noProjectAgent bool
+		asJSON      bool
+		skillsScope string
+		agents      string
+		global      bool
 	)
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 	flags.StringVar(&skillsScope, "skills", "project", "where to install the skills: project | home")
 	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
-	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, and make it OpenCode's default agent")
-	flags.BoolVar(&noProjectAgent, "no-project-agents", false, "do not write the project's agent files: the door in the home is the one that runs, and the choice is remembered (needs --global)")
+	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, make it OpenCode's default agent, and leave the project's agent files alone")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -936,7 +934,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		AgentSelection:  agentSelection{},
 		Home:            osHome{},
 		Global:          global,
-		NoProjectAgents: noProjectAgent,
+		NoProjectAgents: global,
 	}, disk(dir), &initSkills{dir: dir, scope: skillsScope})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
@@ -1465,12 +1463,11 @@ init flags:
   --global        install the home door: the agent that shows up in any folder,
                   not only in this project, and make it OpenCode's default agent.
                   It is opt-in: without the flag nothing is written
-                  to your home, because the selector of any folder is yours
-  --no-project-agents  do not write the project's agent files: with --global, the
+                  to your home, because the selector of any folder is yours.
+                  A global install leaves the project's agent files alone -the
                   door and its subagents in the home are the ones that run, and the
-                  project keeps only the rules and the plan; the choice is stored in
-                  agents.toml, so a plain init honors it until --agents asks for the
-                  mirrors back (needs --global)
+                  project keeps only the rules and the plan, the choice stored in
+                  agents.toml. A plain init is the run that writes a project's own
   --json          machine output, with the destinations of the skills and of the agent
 
 setup flags:
