@@ -14,6 +14,20 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
+### the gate - a feature that writes only documents cannot close
+
+0096 gave the proof a twin so paperwork after a close owes no suite. The review has no
+twin: `check` asks the closing tree for a verdict, `review` answers "this change asks
+for no lens: documents only" and refuses to run, and the only way out the tool names is
+`--lens all`. So a feature whose whole diff is documents pays a four-lens review of a
+paragraph - the ceremony the passive tier exists to avoid - or is waived at open time
+with `start --waive-review`, which the human has to know before the work starts.
+
+0101 hit it: three steps of measurement, a docs-only diff, and a forced `--lens all`
+with the words 0100 now requires. The shape of the fix is the one 0096 chose for the
+proof: the gate asks the same classifier the review uses, and a closing tree that asks
+for no lens owes no verdict - while a tree that carries code still owes one.
+
 ### internal/app/review - `opencode run` as the `--exec` reviewer, measured
 
 Measured on 2026-10-28: `opencode run --agent odachi-reviewer --model {model}
