@@ -3,6 +3,8 @@ package init
 import (
 	"fmt"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
 // SkillDest is one directory the skills half of `init` wrote in, or found already
@@ -38,13 +40,17 @@ type SkillReport struct {
 
 // Skills is the half of the job that belongs to `odachi pack`. init decides that
 // two destinations get skills — the project's cross-client directory and the
-// human's home — and pack owns how a skill is installed: the destination table,
-// the backup before a differing file, the identical bytes skipped. The two are
-// joined in cmd/odachi, the only layer that already wires pack's payload and
-// adapters; an app importing another app would inherit its error strings and its
-// table for a job that is not its own.
+// human's home — and where this run puts them, and pack owns how a skill is
+// installed: the destination table, the backup before a differing file, the
+// identical bytes skipped. The scope is an argument instead of a field because
+// init is the only one that can read the store: a caller that fixed the scope in
+// advance could not honour the choice the project recorded.
+//
+// The two are joined in cmd/odachi, the only layer that already wires pack's
+// payload and adapters; an app importing another app would inherit its error
+// strings and its table for a job that is not its own.
 type Skills interface {
-	Install() SkillReport
+	Install(scope string) SkillReport
 }
 
 // installSkills is the last step of a start: the project is not ready until the
@@ -55,7 +61,10 @@ func (r *runner) installSkills() {
 	if r.skills == nil {
 		return
 	}
-	report := r.skills.Install()
+	if line := r.skillsChoice(); line != "" {
+		r.lines = append(r.lines, line)
+	}
+	report := r.skills.Install(r.skillsScope)
 
 	for _, dest := range report.Dests {
 		r.skillDests = append(r.skillDests, dest)
@@ -73,6 +82,32 @@ func (r *runner) installSkills() {
 		r.skillFatal = report.Fatal
 		r.lines = append(r.lines, "pending: "+report.Blocked)
 	}
+}
+
+// skillsChoice names where the craft goes and who decided it, in the words that
+// explain the next step. It comes before the destinations because "where" is the
+// decision; "how many" is its consequence. The source matters: a human who reads
+// "from the store" learns the flag is remembered, and one who reads "the default"
+// learns nothing was ever chosen.
+func (r *runner) skillsChoice() string {
+	switch r.skillsSource {
+	case skillsFromFlag:
+		return "skills: " + r.skillsScope + ", from --skills; the store keeps the choice, and odachi init --skills " + other(r.skillsScope) + " changes it"
+	case skillsFromStore:
+		return "skills: " + r.skillsScope + ", from the store (" + persona.SelectionPath + "); odachi init --skills " + other(r.skillsScope) + " changes it"
+	case skillsFromSetup:
+		return "skills: " + r.skillsScope + "; setup keeps the craft once per machine, and every project reads it"
+	default:
+		return "skills: " + r.skillsScope + " (the default); odachi init --skills " + persona.SkillsHome + " keeps one copy per machine"
+	}
+}
+
+// other names the scope this run did not use.
+func other(scope string) string {
+	if scope == persona.SkillsHome {
+		return persona.SkillsProject
+	}
+	return persona.SkillsHome
 }
 
 // skillLine is one destination in one line: what arrived and what was already

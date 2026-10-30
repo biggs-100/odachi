@@ -105,6 +105,10 @@ type Options struct {
 	// keeps its agents in the home carries only the rules and the plan. It needs
 	// Global: skipping both halves would leave no agent at all.
 	NoProjectAgents bool
+	// Skills is where this run was asked to put the craft. Empty means "the
+	// stored one, or the project": a plain init after `--skills home` must not
+	// rebuild the project copy (the same rule 0081 gave the agent choice).
+	Skills string
 }
 
 // AgentSelection is the selection port: the choice a project recorded, when
@@ -191,6 +195,8 @@ func Run(opts Options, files Files, skills Skills) Result {
 	r.selection = selection
 	r.clients = clients
 	r.projectAgents = r.resolveProjectAgents(opts)
+	r.skillsScope = r.resolveSkillsScope(opts)
+	r.skillsSource = r.resolveSkillsSource(opts)
 
 	if problem := r.writeAgents(); problem != nil {
 		return *problem
@@ -210,7 +216,7 @@ func Run(opts Options, files Files, skills Skills) Result {
 		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
-	if problem := r.writeAgentStore(opts.Agents != "" || opts.NoProjectAgents); problem != nil {
+	if problem := r.writeAgentStore(opts.Agents != "" || opts.NoProjectAgents || opts.Skills != ""); problem != nil {
 		// The hook and the rules block are already in place: report how much of
 		// the job is done instead of pretending nothing happened.
 		problem.Files = append([]string{}, r.changed...)
@@ -262,6 +268,7 @@ func (r *runner) resolveAgents(requested string) (string, []persona.Client, *Res
 		}
 		r.storedSelection = stored.Agents
 		r.storedProject = stored.ProjectAgents
+		r.storedSkills = stored.Skills
 	}
 
 	value := strings.TrimSpace(requested)
@@ -288,6 +295,15 @@ func effectiveProject(store persona.Store) persona.Store {
 	return store
 }
 
+// effectiveSkills is the same rule for the other half of the store: an absent
+// scope is the project, which is the answer the tool always gave.
+func effectiveSkills(store persona.Store) persona.Store {
+	if store.Skills == "" {
+		store.Skills = persona.SkillsProject
+	}
+	return store
+}
+
 // resolveProjectAgents decides where the native agent files live. The flag wins;
 // an explicit --agents asks for the project's own copy, which is the only way out
 // of the home-only choice and needs no second flag; otherwise the stored answer
@@ -305,17 +321,52 @@ func (r *runner) resolveProjectAgents(opts Options) string {
 	}
 }
 
+// resolveSkillsScope decides where the craft lives, by the same rule: --skills
+// wins and is recorded, the stored answer stands when the flag is silent, and a
+// project that never chose keeps the project copy.
+func (r *runner) resolveSkillsScope(opts Options) string {
+	switch {
+	case strings.TrimSpace(opts.Skills) != "":
+		return strings.ToLower(strings.TrimSpace(opts.Skills))
+	case r.storedSkills != "":
+		return r.storedSkills
+	default:
+		return persona.SkillsProject
+	}
+}
+
+// The four answers to "who decided where the craft goes", spelled once so the
+// output and the tests name the same thing.
+const (
+	skillsFromFlag    = "flag"
+	skillsFromStore   = "store"
+	skillsFromDefault = "default"
+	skillsFromSetup   = "setup"
+)
+
+// resolveSkillsSource says which of the four decided this run.
+func (r *runner) resolveSkillsSource(opts Options) string {
+	switch {
+	case strings.TrimSpace(opts.Skills) != "":
+		return skillsFromFlag
+	case r.storedSkills != "":
+		return skillsFromStore
+	default:
+		return skillsFromDefault
+	}
+}
+
 // writeAgentStore persists the choice only when someone made it: an explicit
 // flag, or a store that already exists. A project that never chose keeps no file
 // and both clients, so the default install gains no new artifact.
 func (r *runner) writeAgentStore(explicit bool) *Result {
-	want := effectiveProject(persona.Store{Agents: r.selection, ProjectAgents: r.projectAgents})
-	stored := effectiveProject(persona.Store{Agents: r.storedSelection, ProjectAgents: r.storedProject})
+	want := effectiveSkills(effectiveProject(persona.Store{Agents: r.selection, ProjectAgents: r.projectAgents, Skills: r.skillsScope}))
+	stored := effectiveSkills(effectiveProject(persona.Store{Agents: r.storedSelection, ProjectAgents: r.storedProject, Skills: r.storedSkills}))
 	if !explicit && r.storedSelection == "" {
 		return nil
 	}
 	if stored == want {
-		r.lines = append(r.lines, persona.SelectionPath+": "+r.selection+", "+want.ProjectAgents+", unchanged")
+		r.lines = append(r.lines, persona.SelectionPath+": "+r.selection+", "+want.ProjectAgents+", "+want.Skills+", unchanged")
 		return nil
 	}
 	if r.agentSelection == nil {
@@ -396,6 +447,12 @@ type runner struct {
 	// never chose, which keeps the mirror in the tree.
 	storedProject string
 	projectAgents string
+	// storedSkills and skillsScope are the same pair for the craft: where the
+	// store said the skills live and what this run decided. skillsSource says who
+	// decided, so the output names where the answer came from.
+	storedSkills string
+	skillsScope  string
+	skillsSource string
 	// voiceNote is the sentence for a profile init could not read or name: the
 	// block still gets the default voice, and the human learns why.
 	voiceNote string

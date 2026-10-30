@@ -17,14 +17,17 @@ type fakeAgentSelection struct {
 	// project is the second key the store carries: where the project said its
 	// agent lives, empty when it never chose.
 	project string
-	err     error
+	// skills is the third key: where the project said the craft lives, empty
+	// when it never chose.
+	skills string
+	err    error
 	// targetErr is the failure of the store lookup itself: Written can succeed
 	// and the write still have nowhere to go.
 	targetErr error
 }
 
 func (s *fakeAgentSelection) Written(string) (persona.Store, error) {
-	return persona.Store{Agents: s.stored, ProjectAgents: s.project}, s.err
+	return persona.Store{Agents: s.stored, ProjectAgents: s.project, Skills: s.skills}, s.err
 }
 
 // Target is the file the fake choice lives in: inside the project, because this
@@ -43,6 +46,9 @@ func (s *fakeAgentSelection) Render(store persona.Store) ([]byte, error) {
 	text := "agents = \"" + store.Agents + "\"\n"
 	if store.ProjectAgents != "" {
 		text += "project_agents = \"" + store.ProjectAgents + "\"\n"
+	}
+	if store.Skills != "" {
+		text += "skills = \"" + store.Skills + "\"\n"
 	}
 	return []byte(text), nil
 }

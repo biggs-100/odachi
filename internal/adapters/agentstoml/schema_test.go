@@ -55,3 +55,20 @@ func TestDecodeOfAStoreWithoutASchemaStillWorks(t *testing.T) {
 		t.Errorf("Decode = %+v, want the store read as it always was", got)
 	}
 }
+
+// TestTheSkillsKeyMovedTheSchema: a store this binary writes carries a version an
+// older binary refuses as newer, so the key it never heard of arrives as "upgrade"
+// and not as a typo for the human to fix.
+func TestTheSkillsKeyMovedTheSchema(t *testing.T) {
+	if schema.Current <= schema.First {
+		t.Fatal("the store gained a key and its schema did not move")
+	}
+
+	data, err := agentstoml.Render(persona.Store{Agents: persona.SelectionBoth, Skills: persona.SkillsHome})
+	if err != nil {
+		t.Fatalf("Render = %v", err)
+	}
+	if !strings.Contains(string(data), "schema = "+strconv.Itoa(schema.Current)) {
+		t.Fatalf("Render = %q, want schema %d", data, schema.Current)
+	}
+}

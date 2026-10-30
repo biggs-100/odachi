@@ -13,8 +13,9 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
-// file mirrors the fields a human writes. ProjectAgents is optional: its absence
-// is the project that never chose, which keeps the mirror in the tree.
+// file mirrors the fields a human writes. ProjectAgents and Skills are optional:
+// their absence is the project that never chose, which keeps the mirror in the
+// tree and the craft in the project.
 type file struct {
 	// Schema is the version that wrote this store. It is not a human choice: a
 	// store written before the key existed carries none and reads as the first
@@ -22,6 +23,7 @@ type file struct {
 	Schema        int    `toml:"schema"`
 	Agents        string `toml:"agents"`
 	ProjectAgents string `toml:"project_agents"`
+	Skills        string `toml:"skills"`
 }
 
 // Decode parses the store. Unknown keys and unknown values are errors, because a
@@ -46,7 +48,7 @@ func Decode(data []byte) (persona.Store, error) {
 		for _, key := range unknown {
 			keys = append(keys, key.String())
 		}
-		return persona.Store{}, fmt.Errorf("agents: unknown keys: %s; this file only configures agents", strings.Join(keys, ", "))
+		return persona.Store{}, fmt.Errorf("agents: unknown keys: %s; this file holds the client choice, where the agent lives and where the skills live", strings.Join(keys, ", "))
 	}
 
 	selection, err := persona.NormalizeSelection(f.Agents)
@@ -57,18 +59,27 @@ func Decode(data []byte) (persona.Store, error) {
 	if err != nil {
 		return persona.Store{}, fmt.Errorf("agents: %w", err)
 	}
-	return persona.Store{Agents: selection, ProjectAgents: projectAgents}, nil
+	skills, err := persona.NormalizeSkills(f.Skills)
+	if err != nil {
+		return persona.Store{}, fmt.Errorf("agents: %w", err)
+	}
+	return persona.Store{Agents: selection, ProjectAgents: projectAgents, Skills: skills}, nil
 }
 
 // Render writes the canonical store. The comments are part of the artifact: the
 // human who opens it must see that skipping a client never deletes its files,
-// and that the project choice decides where the agent lives.
+// and that the project choice decides where the agent lives while the skills
+// choice decides where the craft lives.
 func Render(store persona.Store) ([]byte, error) {
 	normalized, err := persona.NormalizeSelection(store.Agents)
 	if err != nil {
 		return nil, fmt.Errorf("agents: %w", err)
 	}
 	projectAgents, err := persona.NormalizeProjectAgents(store.ProjectAgents)
+	if err != nil {
+		return nil, fmt.Errorf("agents: %w", err)
+	}
+	skills, err := persona.NormalizeSkills(store.Skills)
 	if err != nil {
 		return nil, fmt.Errorf("agents: %w", err)
 	}
@@ -80,6 +91,10 @@ func Render(store persona.Store) ([]byte, error) {
 	if projectAgents != "" {
 		text += "# odachi: project_agents = none keeps the agent in the home; write puts the project's own copy back\n" +
 			"project_agents = \"" + projectAgents + "\"\n"
+	}
+	if skills != "" {
+		text += "# odachi: skills = home keeps one copy of the craft per machine; project puts this project's own copy back\n" +
+			"skills = \"" + skills + "\"\n"
 	}
 	return []byte(text), nil
 }

@@ -1,15 +1,5 @@
 # a rule names paths, not a phrase: a glob of the phrase's own words matches
 # files named like the phrase and protects nothing.
-#
-# a rule protects what its name says. "the verdict's shape" listed
-# internal/adapters/agentstoml, which is the clone's store and not the verdict:
-# the gate read it, refused the store's next key, and the only way out was to
-# correct the policy before the change that needed it.
-
-[[rule]]
-not   = "no change to the verdict's shape or its schema, or to the review's settings"
-paths = ["internal/domain/review/review.go", "internal/domain/review/dismiss*.go", "internal/domain/review/refute.go", "internal/adapters/reviewtoml/**"]
-deps  = []
 
 [[rule]]
 not   = "no change to the proof format, and the stored proof is never rewritten"
@@ -17,6 +7,11 @@ paths = ["internal/domain/proof/**", "proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the fence's machinery or to the start that renders every artifact"
-paths = ["internal/app/check/fence.go", "internal/domain/fence/**", "internal/app/start/artifacts.go"]
+not   = "no change to odachi pack, and no new verb: the scope is a key in the store and a flag init already has"
+paths = ["internal/app/pack/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to which clients receive the native agent"
+paths = ["internal/domain/persona/selection.go", "internal/app/init/personas.go"]
 deps  = []

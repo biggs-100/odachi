@@ -18,6 +18,10 @@ func RunSetup(opts Options, files Files, skills Skills) Result {
 	if r.home == nil {
 		return blocked("there is no home to install the global half: run odachi setup again")
 	}
+	// Setup is the machine half: the craft goes to the home, because before a
+	// project exists the home is the only place a skill can live.
+	r.skillsScope = persona.SkillsHome
+	r.skillsSource = skillsFromSetup
 
 	selection, clients, problem := r.setupClients(opts.Agents)
 	if problem != nil {

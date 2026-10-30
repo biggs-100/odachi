@@ -7,6 +7,20 @@ tomorrow.
 
 ## Unreleased
 
+The store remembers where the skills went, so an upgrade stops scattering them.
+
+- **The skills scope is a stored choice.** `agents.toml` already kept which clients receive the
+  agent (0081) and whether the project carries it (0106); the one choice it forgot was where the
+  craft lives. `odachi init --skills home` installed the skills in the home, and the next plain
+  `init` -the one every upgrade suggests- rebuilt `.agents/skills` in the project. The key is
+  now `skills = project|home`, written when a run names it and honoured by every later run, and
+  the output says where the answer came from: the flag, the store or the default.
+- **A project that never chose keeps exactly what it had.** No key, no store, the project copy:
+  the same bytes as before the key existed.
+- **The store's schema moved to 2, so an older binary says upgrade instead of unknown key.**
+  One counter serves the three strict files, and that cost is written where the counter lives: a
+  verdict whose shape did not change also declares 2.
+
 The fence of a feature names what it protects.
 
 - **A rule that guarded the verdict listed the clone's store.** `internal/adapters/agentstoml`

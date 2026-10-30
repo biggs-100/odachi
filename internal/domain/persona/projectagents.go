@@ -15,11 +15,16 @@ const (
 )
 
 // Store is what the clone's agents.toml holds: which clients receive the native
-// agent, and whether the project carries them at all. Both answers live in the
-// same file because they are the same decision - where the agent comes from.
+// agent, whether the project carries them at all, and where the craft skills
+// live. The three answers share one file because they are one decision - where
+// the agent and the skills it reads come from - and because the next plain init
+// has to honour all three.
 type Store struct {
 	Agents        string
 	ProjectAgents string
+	// Skills is where the craft lives: persona.SkillsProject, persona.SkillsHome,
+	// or the empty string for a store that never chose, which keeps the project.
+	Skills string
 }
 
 // NormalizeProjectAgents accepts the two values the key knows, and the empty
