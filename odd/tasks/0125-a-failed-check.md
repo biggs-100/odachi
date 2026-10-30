@@ -18,3 +18,4 @@ R1 · "the footprint reads a failed check as not there: a stat that fails, an AG
 
 ## History
 L1 · "the footprint reads a failed check as not there: a stat that fails, an AGENTS.md that cannot be read, or a git that refuses the repository flips a project that does carry its craft into the full install, or the other way"
+L2 · OFICIO · "an error is never an absence: a failed read is reported by path, and the footprint is decided before the first byte" (porque the adoption inference installed the wrong footprint in silence when a stat or git failed, and the refusal now leaves the project untouched)

@@ -42,6 +42,10 @@ const (
 	hookPath = ".git/hooks/pre-commit"
 )
 
+// skillsCopy is the project's copy of the craft, spelled once: the adoption
+// inference asks it and the refusal names it.
+const skillsCopy = ".agents/skills"
+
 // hookMarker names the hook as odachi's. A hook without it is somebody else's
 // work and is never replaced.
 const hookMarker = "# odachi: no commit with the gate red"
@@ -209,8 +213,12 @@ func Run(opts Options, files Files, skills Skills) Result {
 	r.selection = selection
 	r.clients = clients
 	r.existing = opts.Existing
-	r.minimal = r.derivesMinimal()
-	r.adoptAgent = r.existing && r.storedProject == "" && !r.projectAgentPresent()
+	// The footprint is an inference, and an inference may not be drawn from a
+	// question odachi did not get an answer to: it is decided here, before the
+	// first byte, or the run stops naming the path.
+	if problem := r.resolveFootprint(); problem != nil {
+		return *problem
+	}
 	r.projectAgents = r.resolveProjectAgents(opts)
 	r.skillsScope = r.resolveSkillsScope(opts)
 	r.skillsSource = r.resolveSkillsSource(opts)
@@ -336,41 +344,73 @@ func effectiveSkills(store persona.Store) persona.Store {
 	return store
 }
 
+// resolveFootprint decides both halves of the adoption inference from what is on
+// disk. A check that fails is not an answer -"the craft is not here" and "I could
+// not look" are different facts, and one of them installs the wrong footprint- so
+// a failed check stops the run before it writes anything, naming the path.
+func (r *runner) resolveFootprint() *Result {
+	minimal, problem := r.derivesMinimal()
+	if problem != nil {
+		return problem
+	}
+	r.minimal = minimal
+
+	// The agent half is its own inference, and only a repository that already
+	// lives asks it: a fresh project has nothing to infer.
+	if !r.existing || r.storedProject != "" {
+		return nil
+	}
+	present, problem := r.projectAgentPresent()
+	if problem != nil {
+		return problem
+	}
+	r.adoptAgent = !present
+	return nil
+}
+
 // derivesMinimal is the footprint a repository that already lives gets: the
 // project never chose where the craft goes, and no project copy is here yet, so
 // the rules stay in the tree and the craft stays in the machine. The question is
 // about the craft alone -a store that only chose which clients receive the agent
 // is not an answer to it- and a project that already carries the copy keeps it:
 // an inference does not move a project that already has the craft.
-func (r *runner) derivesMinimal() bool {
+func (r *runner) derivesMinimal() (bool, *Result) {
 	if !r.existing || r.storedSkills != "" {
-		return false
+		return false, nil
 	}
 	// The copy, not the folder: `.agents/` belongs to other tools too, and a
 	// repository that keeps its notes there is still a repository without the
 	// craft.
-	if found, err := r.files.Exists(filepath.Join(r.dir, ".agents", "skills")); err == nil && found {
-		return false
+	found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(skillsCopy)))
+	if err != nil {
+		problem := blocked("could not check " + skillsCopy + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+		return false, &problem
 	}
-	return true
+	return !found, nil
 }
 
 // projectAgentPresent says the project already carries the native agent a client
 // reads, even if it never carried the craft: an old `--skills home` install leaves
 // exactly that split. The signal is the file, never the folder -a repository that
 // uses OpenCode or Claude for its own settings has the folder and no agent of
-// ours- so the craft's inference does not decide the agent half.
-func (r *runner) projectAgentPresent() bool {
+// ours- so the craft's inference does not decide the agent half. A file it could
+// not look at is not a file that is absent: the caller stops and says so.
+func (r *runner) projectAgentPresent() (bool, *Result) {
 	for _, client := range persona.Clients() {
 		file, ok := persona.FilesFor(client.Agent, "")
 		if !ok || file.Path == "" {
 			continue
 		}
-		if found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(file.Path))); err == nil && found {
-			return true
+		found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(file.Path)))
+		if err != nil {
+			problem := blocked("could not check " + file.Path + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+			return false, &problem
+		}
+		if found {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 // an explicit --agents asks for the project's own copy, which is the only way out
