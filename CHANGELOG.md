@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The human is in the loop, and the block says what that means.
+
+- **A question is answered, not implemented.** The block's rules gated decisions -the brief, the
+  fence- and said nothing about acting: an agent could take a question as a request and start a
+  feature, which is what happened. The block now says that an answer is not a proposal and that
+  work starts when the human asks for it or approves one.
+- **An irreversible action names its target and waits.** Push, pull request, merge, tag or
+  release, an install, another folder: each one is proposed with the exact target and waits for
+  a yes. It is the governance gentle-ai already had in its action gates, and this block had only
+  for folders.
+- **Ask at the gate, once**: a question that would not change what the agent does next is noise.
+  The `drive` skill carries the same rule one line before the cycle.
+
 ## v0.11.65 - 2026-10-30
 
 The suite checks that every Go file is what `gofmt` writes.
