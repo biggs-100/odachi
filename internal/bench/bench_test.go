@@ -249,3 +249,40 @@ func TestSandboxEnvIsAControlledHome(t *testing.T) {
 		t.Fatalf("git must read its config inside the sandbox, got %q", got["GIT_CONFIG_GLOBAL"])
 	}
 }
+
+// TestTheCheckJourneyFollowsTheRule: the journey that asks "am I ready before having a
+// proof" is the one a stale expectation burns. 0093 wrote the rule the gate follows -the
+// proof belongs to the tree that closes the feature- so the journey has to say that: an
+// open feature is ready for a step, and the close refuses until the proof runs.
+func TestTheCheckJourneyFollowsTheRule(t *testing.T) {
+	var journey *Journey
+	all := Journeys()
+	for i := range all {
+		if all[i].Name == "check-sin-prueba" {
+			journey = &all[i]
+		}
+	}
+	if journey == nil {
+		t.Fatal("the journey about a check without a proof is gone")
+	}
+
+	if len(journey.Steps) != 5 {
+		t.Fatalf("steps = %d, want start, a check, a step, the close and the check that refuses", len(journey.Steps))
+	}
+	want := []int{0, 0, 0, 0, 1}
+	got := stepWants(*journey)
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("exit codes = %v, want %v", got, want)
+		}
+	}
+}
+
+// stepWants is the exit code each step of a journey expects.
+func stepWants(journey Journey) []int {
+	wants := make([]int, 0, len(journey.Steps))
+	for _, step := range journey.Steps {
+		wants = append(wants, step.Want)
+	}
+	return wants
+}

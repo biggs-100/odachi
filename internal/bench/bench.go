@@ -122,10 +122,15 @@ func Journeys() []Journey {
 		},
 		{
 			Name:  "check-sin-prueba",
-			Why:   "the agent asks whether it is ready before having any proof",
+			Why:   "the agent asks whether it is ready before having any proof: while the feature is open it is ready for a step, and the tree that closes it owes the proof",
 			Setup: []Action{gitInit()},
 			Steps: []Step{
 				{Args: startArgs(), Want: 0},
+				// 0093 wrote the rule the gate follows: the proof belongs to the tree
+				// that closes the feature, so an open feature is ready for a step.
+				{Args: []string{"check"}, Want: 0},
+				{Args: []string{"plan", "un paso", "--req", "R1"}, Want: 0},
+				{Args: []string{"plan", "--done", "T1"}, Want: 0},
 				{Args: []string{"check"}, Want: 1},
 			},
 		},
