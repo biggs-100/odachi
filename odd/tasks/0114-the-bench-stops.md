@@ -12,7 +12,7 @@ R1 · "the bench stops lying: the journey about a check without a proof follows 
 
 ## Steps
 - [x] T1 · the journey shows where the proof is owed, and bench reports no surprises   R1 · tree:1b62a6ac2d8c713aa63bea875336553a9e6493ce
-- [ ] T2 · the changelog says one line, and the bench test follows   R1
+- [x] T2 · the changelog says one line, and the bench test follows   R1 · tree:85aec3957b33ea58a0853b0aff10e4558bd86220
 
 ## History
 L1 · "the bench stops lying: the journey about a check without a proof follows the rule the gate wrote, so the proof is owed at the close and the journey shows it"
