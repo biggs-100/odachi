@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.69 - 2026-10-30
+
+The rehearsal stops guessing about what it could not read.
+
+- **A folder odachi could not read is not a client that is absent.** The run printed `could not
+  check` for that client and then `no agent client found in the home: install OpenCode` -two
+  lines that contradict each other, the second telling the human to install a client that may be
+  right there. A failed read is now its own line with the error, and the advice only appears when
+  nothing failed.
+- **The three branches the review of 0121 left unpinned now have tests**, each checked backwards:
+  the error arm of detection, a settled machine whose only drift is one changed skill (it must say
+  `would replace`, never `nothing to write`), and a real `setup --json` that names
+  `~/.config/opencode/opencode.json` with `dry_run` false. `docs/review-debt.md` loses the rows
+  those tests paid.
+
 ## v0.11.68 - 2026-10-30
 
 `odachi setup` can rehearse, and it names what it leaves alone.
