@@ -12,7 +12,7 @@ R1 · "doctor says when the rules block is older than the binary: a project that
 
 ## Steps
 - [x] T1 · doctor compares the block it would write with the one AGENTS.md carries   R1 · tree:45136516837c80f4221d2d1c9f6493431022f41b
-- [ ] T2 · the changelog says a warning, not a blocker   R1
+- [x] T2 · the changelog says a warning, not a blocker   R1 · tree:f23a6629a798c7fcf82f8dcba923d96284761339
 
 ## History
 L1 · "doctor says when the rules block is older than the binary: a project that upgrades odachi learns that AGENTS.md carries text this binary would not write, and the repair is one command"
