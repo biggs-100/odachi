@@ -153,7 +153,7 @@ func TestCreatesAgentsMDWithTheBlock(t *testing.T) {
 	if strings.Count(content, "<!-- odachi:begin -->") != 1 || strings.Count(content, "<!-- odachi:end -->") != 1 {
 		t.Errorf("the block appears more than once:\n%s", content)
 	}
-	if line := "Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual."; strings.Count(content, line) != 1 {
+	if line := "Skills: the ones in `.agents/skills/`, or in `~/.agents/skills/` when the store says `skills = home`; inside this project, load `drive` before acting: it is the manual."; strings.Count(content, line) != 1 {
 		t.Errorf("the line %q appears %d times, want exactly one:\n%s", line, strings.Count(content, line), content)
 	}
 
@@ -163,7 +163,7 @@ func TestCreatesAgentsMDWithTheBlock(t *testing.T) {
 		"odachi ask",
 		`odachi check --run`,
 		"one commit",
-		"Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual.",
+		"Skills: the ones in `.agents/skills/`, or in `~/.agents/skills/` when the store says `skills = home`; inside this project, load `drive` before acting: it is the manual.",
 		"odachi start",
 		"odachi level",
 		"odachi summary",
