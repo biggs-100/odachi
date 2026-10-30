@@ -1,13 +1,12 @@
-# doctor-says-when
+# doctor-compares-the
 
 ## What must exist
-- doctor says when the rules block is older than the binary: a project that upgrades odachi learns that AGENTS.md carries text this binary would not write, and the repair is one command
+- doctor compares the block even when the profile is inferred: a project that ran init and never ran start still learns that its block is older than the binary
 
 ## Done when
-- a project whose block matches what this binary writes is ok, as it is today
-- a project whose block differs gets a warning that names odachi init, and it is a warning, not a blocker
-- line endings and trailing spaces do not make a block stale, so a Windows checkout is not a defect
-- a test drives each answer, and one of them fails without the change
+- a project with no odd/profile.toml and an older block gets the warning and names odachi init
+- a project with no profile and the current block stays ok
+- the tests that already exist keep their answer, and one of them fails without the change
 
 ## Not included (first version)
 - no change to the verdict shape
@@ -17,4 +16,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: cómo un doctor distingue presencia de vigencia.
+- Wants to learn: por qué un skip silencioso se descubre solo al probar.
