@@ -1,20 +1,20 @@
-# the-human-is
+# the-fence-names
 
 ## What must exist
-- the human is in the loop for control and governance: a question is answered and not implemented, work starts only when the human asks for it or approves a proposal, and every irreversible action names its exact target and waits for a yes
+- the fence names what it protects: the rule that guards the verdict's shape protects the verdict and not the store, so a key a project's store gains is a change to review and not a violation
 
 ## Done when
-- the block says a question is answered and not implemented, and that work starts on a request or an approved proposal
-- the block names the irreversible actions and says each one waits for a yes with its exact target
-- the drive skill carries the same rule at the top of the cycle, and the installed copy matches
-- this repo regenerates its AGENTS.md and skills, and one test fails without the change
+- the verdict rule in odd/fence.toml protects internal/domain/review and internal/adapters/reviewtoml, and stops protecting internal/adapters/agentstoml
+- a gate that reads this fence refuses a change to the verdict and accepts a change to the store
+- the next feature meets a fence it can obey, and the lesson is where the next reader looks
 
 ## Not included (first version)
-- no change to the verdict shape
+- no change to the verdict's shape or its schema
 - no change to the proof format, and the stored proof is never rewritten
+- no change to the gates themselves: this is the data of one rule, not a new verb or flag
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: cómo un agente distingue contestar de empezar.
+- Wants to learn: por que un fence que nombra de mas bloquea justo al que viene despues.
