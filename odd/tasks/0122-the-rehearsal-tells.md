@@ -10,8 +10,8 @@ R1 · "the rehearsal tells the truth about what it could not read: a client odac
 - a real run that sets the default agent names the config in its changed files and in the json
 
 ## Steps
-- [x] T1 · a client odachi could not read is not a client that is absent   R1
-- [ ] T2 · the three unpinned branches are pinned by tests that fail without them   R1
+- [x] T1 · a client odachi could not read is not a client that is absent   R1 · tree:640a0c2f2920599d28c4d29bbef7846aa766b3f7
+- [x] T2 · the three unpinned branches are pinned by tests that fail without them   R1 · tree:72779d32e5c138e79e14a913692e69a20d38ce7d
 
 ## History
 L1 · "the rehearsal tells the truth about what it could not read: a client odachi could not look at is never reported as one that is not installed, and every branch the review of 0121 found unpinned is pinned by a test that fails without it"

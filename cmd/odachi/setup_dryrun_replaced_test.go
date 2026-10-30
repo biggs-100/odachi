@@ -163,3 +163,40 @@ func TestASettledHomeWithOneChangedSkillIsNotNothingToWrite(t *testing.T) {
 		t.Errorf("a machine with a changed skill is reported as current:\n%s", report)
 	}
 }
+
+// TestASetDefaultAgentAppearsInTheJSONFiles: the machine output is what an agent
+// reads, and the brief of 0122 promises the config is named there after a real
+// run. The app test pins the changed list; this one pins the payload.
+func TestASetDefaultAgentAppearsInTheJSONFiles(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	writeFile(t, home, ".config/opencode/opencode.json", "{}")
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	code, out, errOut := runDir(t, dir, []string{"setup", "--json"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	var payload struct {
+		DryRun bool     `json:"dry_run"`
+		Files  []string `json:"files"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("the payload is not JSON: %v\n%s", err, out)
+	}
+	if payload.DryRun {
+		t.Errorf("a real run says it was a rehearsal: %+v", payload)
+	}
+	want := "~/.config/opencode/opencode.json"
+	found := false
+	for _, file := range payload.Files {
+		if file == want {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("files = %v, want %q among them", payload.Files, want)
+	}
+}

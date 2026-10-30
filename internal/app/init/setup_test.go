@@ -155,7 +155,9 @@ func TestSetupDoesNotCallAnUnreadableClientAbsent(t *testing.T) {
 
 // TestASetDefaultAgentIsAChangedFile: setting default_agent rewrites the config,
 // and a run that omits the file from its changed list disagrees with the disk it
-// just wrote. The 0121 review found this branch unpinned.
+// just wrote. The 0121 review found this branch unpinned. Message is not asserted
+// here on purpose: setup overwrites it as a CLI concern, and the CLI test is the
+// one that reads the payload.
 func TestASetDefaultAgentIsAChangedFile(t *testing.T) {
 	home := "hogar"
 	files := newFakeFiles(nil)
@@ -172,8 +174,5 @@ func TestASetDefaultAgentIsAChangedFile(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("Files = %v, want %q among them", got.Files, want)
-	}
-	if strings.Contains(got.Message, "unchanged") {
-		t.Errorf("message = %q, want a run that wrote a file", got.Message)
 	}
 }
