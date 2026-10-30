@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A fence rule protects a file, not a reason.
+
+- **Two rules written from a rationale left main's policy.** 0119 closed with "no new verb", and
+  `start` turned that reason into `internal/app/pack/**` and the persona writer. The feature this
+  correction unblocks (F3, the machine refresh) needs both for its report, and CI refused it with
+  a message about a verb it never added - the second time this session that a rule written for one
+  feature blocked the next. The pack rule is gone, because it had no file behind it; the client
+  rule is narrowed to `internal/domain/persona/selection.go`, the file that decides the choice,
+  instead of deleted.
+- **The lesson lands in `drive` and in ADR 0027:** a fence rule protects a file, never a reason.
+  It is advice and not enforcement - `start` still asks for paths on every non-goal - so the
+  changelog claims the lesson, not a rule that prevents the next one.
+
 ## v0.11.67 - 2026-10-30
 
 The store remembers where the skills went, so an upgrade stops scattering them.
