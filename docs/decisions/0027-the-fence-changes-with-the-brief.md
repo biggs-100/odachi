@@ -66,10 +66,11 @@ three rules; 0031's has four, and none of the three survived.
   same change: the base fence is the policy, so the correction travels first, in
   its own change. Feature 0117 paid it, for a rule whose name said "the verdict's
   shape" and whose paths listed `internal/adapters/agentstoml/**`, the clone's
-  store; 0118 is the correction that travelled first. Feature 0120 paid it again,
-  for two rules written from a reason rather than from a file. The lesson is the
-  rule's own text: a rule protects what its name says, and a path that does not
-  belong under that name blocks the first feature that needs it.
+  store; 0118 is the correction that travelled first. F3 -the machine refresh- paid
+  it again, for two rules written from a reason rather than from a file, and 0120 is
+  the correction that travelled first this time. The lesson is the rule's own text:
+  a rule protects what its name says, and a path that does not belong under that
+  name blocks the first feature that needs it.
 - **A rule protects a file, not a reason.** "No new verb" came out of `start` as a
   rule over the whole of `internal/app/pack/**`, and the next feature that needed
   pack's report was refused with a message about a verb it never added. A non-goal

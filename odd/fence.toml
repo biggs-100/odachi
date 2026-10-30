@@ -6,10 +6,20 @@
 # over the whole pack package, and the next feature that needed pack's report was
 # refused with a message about a verb it never added (0120 corrected it).
 #
+# the correction narrows, it does not delete: the rule that protected the client
+# choice named two files, and only the writer was over-reach. deleting the whole
+# rule would leave the decision itself with no fence, so a later feature could drop
+# a client and the gate would stay green.
+#
 # so every path below is a file this change really must leave alone, and the rule's
 # name says exactly that.
 
 [[rule]]
 not   = "no change to the proof format, and the stored proof is never rewritten"
 paths = ["internal/domain/proof/**", "proof/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to which clients receive the native agent"
+paths = ["internal/domain/persona/selection.go"]
 deps  = []

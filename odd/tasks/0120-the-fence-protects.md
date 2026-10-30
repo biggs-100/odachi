@@ -11,7 +11,7 @@ R1 · "the fence protects what a feature decided not to touch, not the reason it
 
 ## Steps
 - [x] T1 · main's fence stops naming the pack package and personas for a reason   R1 · tree:f751dd9b4243a494259d96a0105304199193f8bf
-- [ ] T2 · the lesson is where the next brief is written, and this repo takes it   R1
+- [x] T2 · the lesson is where the next brief is written, and this repo takes it   R1 · tree:b66dc3802baa09457c1a0e126f48b149dbf0f0d5
 
 ## History
 L1 · "the fence protects what a feature decided not to touch, not the reason it gave: a package named only to say no new verb stops blocking the next change that needs it, and a correction lands in its own change"

@@ -10,6 +10,7 @@
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
+- no change to which clients receive the native agent
 
 ## Decisions taken
 - It is used from the computer.
