@@ -7,6 +7,17 @@ tomorrow.
 
 ## Unreleased
 
+`odachi setup` can rehearse, and it names what it leaves alone.
+
+- **`odachi setup --dry-run` writes no byte.** The machine verb only knew how to act, so after
+  an upgrade the human ran it and hoped. The rehearsal reads every destination, compares the
+  bytes it would write, and says `would write` - the same code that does the work builds the
+  report, because the disk it writes through answers every question and swallows every write.
+- **A settled machine says so.** Run it twice and the second run reports nothing to write; the
+  real run twice changes nothing either.
+- **The report names the clients detection did not find**, with the folder it looked for, so an
+  installer that covers two of three tools cannot look like it forgot one.
+
 A fence rule protects a file, not a reason.
 
 - **Two rules written from a rationale left main's policy.** 0119 closed with "no new verb", and

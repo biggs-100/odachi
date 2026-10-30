@@ -45,6 +45,11 @@ The installer also runs `odachi setup`: the bootstrap skill in
 `odachi init` and `odachi start` itself, and asks permission before writing in a
 repository that is not yours. You never type those verbs.
 
+After an upgrade, `odachi setup` is the one command that brings the machine
+current -and `odachi setup --dry-run` first shows every file it would write and
+writes none. A second run changes nothing, and the report names the clients it did
+not find instead of skipping them in silence.
+
 If you prefer to build: `go build ./cmd/odachi` (you need Go 1.25 or newer), and
 the binary says `odachi dev`, because the release injects the version, not the
 code.

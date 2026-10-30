@@ -1413,7 +1413,7 @@ usage:
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]
-  odachi setup [--agents opencode|claude|both] [--json]
+  odachi setup [--agents opencode|claude|both] [--dry-run] [--json]
   odachi skills [--check | --write]
   odachi role new <slug>
   odachi role [<slug>]
@@ -1508,7 +1508,12 @@ setup flags:
                   ~/.agents/skills, the door for the clients found in the home,
                   and OpenCode's default agent. It writes nothing here. The
                   installer runs it, so the user only installs odachi and talks.
+                  After an upgrade it is the one command that refreshes the
+                  machine: run it twice and the second run changes nothing.
   --agents s      opencode | claude | both (default: the clients installed in the home)
+  --dry-run       report every file this run would write, and write none: the
+                  rehearsal names each destination, says "would write", and leaves
+                  the bytes exactly as they were
   --json          machine output
 
 what init leaves written, in one command (--skills project and --agents both, the defaults):

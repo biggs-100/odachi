@@ -11,7 +11,7 @@ R1 · "one command refreshes the machine: odachi setup reports what it would cha
 
 ## Steps
 - [x] T1 · setup --dry-run writes no byte and names every file it would write   R1 · tree:705a115e1ae8c16551246f6d69a1bb241bc5828a
-- [ ] T2 · the report names the clients that are not here and what it left alone   R1
+- [x] T2 · the report names the clients that are not here and what it left alone   R1 · tree:58b3df7d52e74afb65844c9fdd2db4d76fc79b4d
 - [ ] T3 · the docs and the changelog say how to refresh a machine   R1
 
 ## History
