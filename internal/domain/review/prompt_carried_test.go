@@ -98,7 +98,7 @@ func TestCarriedSectionOrderIsTheStores(t *testing.T) {
 
 // carriedRows is the section alone, to keep a failure readable.
 func carriedRows(prompt string) string {
-	const header = "## What the store already carries"
+	const header = "## What this review already knows about these bytes"
 	start := strings.Index(prompt, header)
 	if start < 0 {
 		return "(no carried section)"

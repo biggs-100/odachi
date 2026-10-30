@@ -208,17 +208,22 @@ func stripFrontmatter(body string) string {
 	return strings.TrimPrefix(rest[end+len("\n---\n"):], "\n")
 }
 
-// carriedSection names the potent rows the verdict will inherit. A reviewer
-// that does not know what the store holds files the same defect twice, and a
-// clean row re-reported as a finding is a defect nobody has. No carried rows
-// means no section: the prompt stays byte-identical to what it always was.
+// carriedSection names the rows this review already knows: every finding of an earlier
+// verdict about these bytes, and the clean rows of the paths the candidate changed. A
+// reviewer that does not know what is already known files the same defect twice, and a
+// clean row re-reported as a finding is a defect nobody has. The store holds more than
+// this section shows -the clean rows of paths nobody touched- so the heading says what it
+// carries and not what the store holds. No carried rows means no section: the prompt stays
+// byte-identical to what it always was.
 func carriedSection(known []Finding, carried []Pass) string {
 	if len(known) == 0 && len(carried) == 0 {
 		return ""
 	}
 
 	var out strings.Builder
-	out.WriteString("## What the store already carries for these exact bytes\n\n")
+	out.WriteString("## What this review already knows about these bytes\n\n")
+	out.WriteString("The findings of earlier reviews, and the clean rows of the paths this candidate changed.\n")
+	out.WriteString("The store keeps more of the clean rows; a path that is not in the diff is not repeated here.\n\n")
 	// A row travels from verdict to verdict as it is inherited, so the store
 	// accumulates copies of the same finding. The reviewer reads this section to
 	// know what not to re-report, and the second copy teaches it nothing: the row

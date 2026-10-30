@@ -1983,14 +1983,14 @@ func TestThePromptNamesWhatTheStoreCarries(t *testing.T) {
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	for _, want := range []string{"the store already carries", "a.go:3", "Do not re-report"} {
+	for _, want := range []string{"already knows about these bytes", "The store keeps more of the clean rows", "a.go:3", "Do not re-report"} {
 		if !strings.Contains(result.Prompt, want) {
 			t.Errorf("the prompt does not name what is carried: missing %q", want)
 		}
 	}
 
 	fresh := newProject().run(review.Options{})
-	if strings.Contains(fresh.Prompt, "the store already carries") {
+	if strings.Contains(fresh.Prompt, "already knows about these bytes") {
 		t.Errorf("an empty store must not name carried rows: %s", fresh.Prompt)
 	}
 }

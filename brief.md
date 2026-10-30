@@ -1,13 +1,13 @@
-# the-wall-is
+# the-prompt-says
 
 ## What must exist
-- the wall is measured again with the cut in place, and the two rows that remain are closed with what the numbers say
+- the prompt says what it carries: the findings of earlier reviews and the clean rows of the paths this candidate changed, so its own heading stops promising the whole store
 
 ## Done when
-- the prompt the current binary prints for the last four candidates is measured: bytes, carried section and rows, against the pre-cut baseline
-- the wall row closes or narrows to what the numbers still support
-- the reviewer row moves to Closed with the conclusion 0101 wrote
-- no code changes, and check proves the documents by passing
+- the carried section names what it carries instead of what the store holds
+- the instruction below the rows keeps saying the verdict inherits them, and no row is lost or added
+- a test pins the sentence, and it fails without the change
+- the changelog says what a reader sees in a prompt
 
 ## Not included (first version)
 - no change to the verdict shape
@@ -17,4 +17,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: cuándo una fila de deuda se cierra y cuándo se rebaja.
+- Wants to learn: how a heading can be true without becoming a paragraph.
