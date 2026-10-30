@@ -10,7 +10,7 @@ R1 · "doctor compares the block even when the profile is inferred: a project th
 - the tests that already exist keep their answer, and one of them fails without the change
 
 ## Steps
-- [ ] T1 · the comparison runs with an inferred profile, and a test without profile.toml drives it   R1
+- [x] T1 · the comparison runs with an inferred profile, and a test without profile.toml drives it   R1 · tree:6b2ac4b4620ddea32b3b2c4fafbbf3a66ab2f2e8
 - [ ] T2 · the changelog names the case the smoke found   R1
 
 ## History

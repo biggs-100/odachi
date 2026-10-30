@@ -5,6 +5,16 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The block comparison runs without a profile file too.
+
+- **0111's check skipped the case it was most needed in.** A project that ran `init` and never
+  ran `start` has no `odd/profile.toml`; the comparison treated an inferred profile as "no
+  voice to compare" and stayed silent, so an older block passed -exactly where a project has
+  just adopted odachi. The inferred name is the voice `init` writes the block with, so the
+  comparison now runs there as well.
+
 ## v0.11.61 - 2026-10-30
 
 Doctor says when the rules block is older than the binary.
