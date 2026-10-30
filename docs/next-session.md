@@ -45,7 +45,7 @@ default without the human's words.
 
 ### F1 - the store remembers the skills scope
 
-**Done, 0117.** `skills = "project" | "home"` lives in `agents.toml`, a plain init honours it,
+**Done, 0119.** `skills = "project" | "home"` lives in `agents.toml`, a plain init honours it,
 `--skills` changes it, and a project that never chose keeps the project copy. The store's schema
 moved to 2. What the next session still owes: nothing here.
 
@@ -96,3 +96,4 @@ infer them from this file.
 came from the human's own report or from running the tool's harness (`odachi bench`) and the
 hygiene trio (`go vet`, `go mod tidy`, `gofmt -l .`). That is still the cheapest way to find
 real work when no row is open.
+

@@ -1,5 +1,5 @@
 # the-store-remembers
-Base: 7e496ea17e4554fe4a561380f6a89287386ef153
+Base: fa318e6
 
 ## Requirements (verbatim, from the user)
 R1 · "the store remembers the skills scope: a plain odachi init honours the choice the project recorded, --skills changes it and says so in the output, and a project that never chose keeps the answer it always had"
@@ -21,3 +21,4 @@ L2 · OFICIO · "one schema counter serves the three strict files, and the store
 L3 · OFICIO · "the Skills port takes the scope as an argument instead of a field" (porque only init can read the store, so a caller that fixed the scope in advance could not honour the choice the project recorded)
 L4 · PREGUNTA P1 · "the base fence of 0116 protects internal/adapters/agentstoml under the verdict's rule, so CI refuses the store's new key: land the policy correction first, or merge with an override?"
 L5 · VOS P1 · "the policy correction lands first: 0118 narrows the rule to the verdict's own files, then this feature rebases onto it and its CI is re-run"
+L6 · OFICIO · "the feature is 0119 and not 0117: the number follows the landing order" (porque 0118 landed first, and check reads the highest task doc as the current feature, so an 0117 next to an 0118 made the gate judge the wrong one)
