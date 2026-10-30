@@ -190,7 +190,9 @@ repository, and that is why the content of somebody else's repo is untrusted
 input. `bootstrap` only explains the flow: it runs nothing.
 
 `odachi init --skills home` leaves the sixteen in `~/.agents/skills` and writes
-no copy in the project; it is for one copy per machine. The default is still
+no copy in the project; it is for one copy per machine. The flag is a decision and
+not a one-time order: it is kept in the clone's store, and a later plain `init`
+answers the same way. The default, for a project that never chose, is still
 `project`, because the project versions the craft and the catalog stays smaller.
 
 Supported agents:

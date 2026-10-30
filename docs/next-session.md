@@ -45,15 +45,19 @@ default without the human's words.
 
 ### F1 - the store remembers the skills scope
 
-`odd/profile.toml` is the profile; the store is `.git/odachi/agents.toml`. It already carries
-`agents` and `project_agents`. Add the skills scope (`project|home`) with the same rule 0081
-gave the agents: a plain `init` honours the stored choice, `--skills` changes it, and the choice
-is named in the output. Schema care: a new key in a file the binary reads is a release-bound
-change (see the schema note in the debt history - an old binary must say "upgrade", never
-"unknown key").
+**Done, 0117.** `skills = "project" | "home"` lives in `agents.toml`, a plain init honours it,
+`--skills` changes it, and a project that never chose keeps the project copy. The store's schema
+moved to 2. What the next session still owes: nothing here.
 
-Acceptance: after `init --skills home`, a plain `init` writes no `.agents/skills`; after
-`init --skills project`, it does; a project with no stored choice keeps today's answer.
+The original note, kept because it is the reasoning: `odd/profile.toml` is the profile; the
+store is `.git/odachi/agents.toml`. It already carried `agents` and `project_agents`. The skills
+scope joined them with the same rule 0081 gave the agents. Schema care: a new key in a file the
+binary reads is a release-bound change (see the schema note in the debt history - an old binary
+must say "upgrade", never "unknown key").
+
+Acceptance, now pinned as tests: after `init --skills home`, a plain `init` writes no
+`.agents/skills`; after `init --skills project`, it does; a project with no stored choice keeps
+today's answer.
 
 ### F3 - one command refreshes the machine, not each project
 
@@ -77,6 +81,9 @@ infer them from this file.
 
 - 0106: `init --global` leaves the project's agent files alone (the store records `none`).
 - 0081: the home-only agent choice survives a plain init.
+- 0117: the skills scope is the third stored choice (`skills = project|home`), so a plain init
+  after `--skills home` writes no `.agents/skills`. The store's schema is 2; one counter serves
+  the three strict files, and the accepted cost is written where the counter lives.
 - 0111 + 0112: `doctor` warns when `AGENTS.md` carries a block older than the binary, naming
   `odachi init`; the comparison runs even without `odd/profile.toml`.
 - The block (0116) says the human is in the loop: a question is answered, not implemented, and
