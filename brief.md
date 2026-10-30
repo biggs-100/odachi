@@ -1,13 +1,13 @@
-# a-checkout-is
+# the-bench-stops
 
 ## What must exist
-- a checkout is not an edit: a block with CRLF line endings reads the same as one with LF, so doctor does not call it hand-edited and the parser folds them once
+- the bench stops lying: the journey about a check without a proof follows the rule the gate wrote, so the proof is owed at the close and the journey shows it
 
 ## Done when
-- a CRLF block answers the same as an LF block: BodyIn, VoiceIn and HasBlock agree
-- doctor stops folding on its own, because the domain does it once, and its CRLF test stays green
-- a genuinely edited block is still detected as edited
-- the debt row closes and the changelog says one line
+- the journey about a check without a proof expects the answer the tool gives today, and shows where the proof is owed
+- odachi bench reports zero surprises, and the bench test pins the journey's new shape
+- no other journey changes, and the block count stays what it was unless the rule moved
+- the changelog says one line
 
 ## Not included (first version)
 - no change to the verdict shape
@@ -17,4 +17,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: dónde se pliega un fin de línea, una vez o en cada lector.
+- Wants to learn: qué hacer cuando el arnés y la regla discrepan.

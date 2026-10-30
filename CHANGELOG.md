@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The bench stops lying about a check without a proof.
+
+- **`odachi bench` reported one surprise and it was the journey.** `check-sin-prueba` expected
+  `check` without a proof to exit 1; since 0093 the proof belongs to the tree that closes the
+  feature, so an open feature is ready for a step and exits 0. The tool was right and the
+  journey was stale.
+- **The journey now walks the four moments** -start, a check ready for a step, a step, the
+  close and the check that refuses until the proof runs- and a test pins its exit codes, which
+  nothing did before: that is why the suite stayed green while the bench told the truth on its
+  own.
+
 ## v0.11.63 - 2026-10-30
 
 A checkout is not an edit.
