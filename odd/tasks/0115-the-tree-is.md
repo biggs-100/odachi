@@ -11,8 +11,9 @@ R1 · "the tree is gofmt-clean and a test keeps it so: every Go file in the repo
 - the changelog says one line
 
 ## Steps
-- [ ] T1 · the file is canonical, and a test walks every .go file with format.Source   R1
+- [x] T1 · the file is canonical, and a test walks every .go file with format.Source   R1
 - [ ] T2 · the changelog says one line   R1
 
 ## History
 L1 · "the tree is gofmt-clean and a test keeps it so: every Go file in the repository is the bytes gofmt would write, checked in process so a CRLF or a missing final newline cannot land again"
+L2 · OFICIO · "the plan said the blob carried CRLF and it did not: .gitattributes normalizes *.go to LF, the blob was canonical, and the CRLF lived in the worktree this machine wrote" (porque a plan written from a worktree reading must say which bytes it measured; the defect that survives is that nothing checked formatting in the suite)
