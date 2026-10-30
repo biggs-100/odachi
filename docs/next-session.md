@@ -81,9 +81,17 @@ infer them from this file.
 
 - 0106: `init --global` leaves the project's agent files alone (the store records `none`).
 - 0081: the home-only agent choice survives a plain init.
-- 0117: the skills scope is the third stored choice (`skills = project|home`), so a plain init
-  after `--skills home` writes no `.agents/skills`. The store's schema is 2; one counter serves
-  the three strict files, and the accepted cost is written where the counter lives.
+- 0117 + 0118: the fence names what it protects. A rule's paths must be described by its
+  name, and a feature that needs a path the previous fence protected lands the correction
+  first, in its own change (ADR 0027). That is how 0119 had to travel.
+- 0119: the skills scope is the third stored choice (`skills = project|home`), so a plain
+  init after `--skills home` writes no `.agents/skills`. The store's schema is 2; one
+  counter serves the three strict files, and the accepted cost is written where the counter
+  lives.
+- **Numbers follow the landing order, and `check` reads the highest task doc as the current
+  feature.** When a correction lands ahead of the feature that needed it, renumber the
+  feature (0117 became 0119) and move its recorded base: otherwise the gate judges the
+  wrong feature and asks for the wrong proof. A `check --feature NNNN` is still missing.
 - 0111 + 0112: `doctor` warns when `AGENTS.md` carries a block older than the binary, naming
   `odachi init`; the comparison runs even without `odd/profile.toml`.
 - The block (0116) says the human is in the loop: a question is answered, not implemented, and
