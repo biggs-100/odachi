@@ -12,7 +12,7 @@ R1 · "the footprint reads a failed check as not there: a stat that fails, an AG
 - odachi role with an AGENTS.md it cannot read is refused by name instead of writing the default block
 
 ## Steps
-- [ ] T1 · init refuses a footprint decided from a failed check, naming the path, and the rule is said once   R1
+- [x] T1 · init refuses a footprint decided from a failed check, naming the path, and the rule is said once   R1 · tree:c586a3431f34673ad02e4032a9f3ca698d5c2527
 - [ ] T2 · the CLI tells no commit apart from a repository git cannot read   R1
 - [ ] T3 · role refuses an AGENTS.md it cannot read instead of writing the default block   R1
 

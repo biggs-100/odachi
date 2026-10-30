@@ -186,6 +186,26 @@ func ensureHistory(dir string) (bool, error) {
 	return true, nil
 }
 
+// repositoryLives answers the one fact that decides the footprint: does this
+// repository already have a commit? A folder whose history this run just created
+// does not, and neither does one the human made with no commit yet - those are
+// states. A repository git cannot read is not a state but a failure, and the
+// answer built from it would install a footprint nobody chose, so it is refused
+// with the path and git's own words.
+func repositoryLives(dir string, created bool) (bool, error) {
+	if created {
+		return false, nil
+	}
+	history := gitRepo{}
+	if _, err := history.Head(dir); err == nil {
+		return true, nil
+	}
+	if _, err := history.CommonDir(dir); err != nil {
+		return false, fmt.Errorf("could not read this repository's history: %s; check that .git is a working repository and run odachi init again", oneLine(err.Error()))
+	}
+	return false, nil
+}
+
 // hookExe is how the pre-commit hook will reach this binary: the name when it is
 // on PATH, otherwise the absolute path of the running executable. A downloaded
 // binary is the normal case for a beginner, and a hook that cannot find it
