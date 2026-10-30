@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A fence rule protects a file, not a reason.
+
+- **Two rules written from a rationale left main's policy.** 0119 closed with "no new verb", and
+  `start` turned that reason into `internal/app/pack/**` and the persona writer. 0120 needs both
+  for its report, and CI refused it with a message about a verb it never added - the second time
+  this session that a rule written for one feature blocked the next. The fence keeps only the
+  proof rule, which names a file this change would be wrong to touch.
+- **The rule that prevents the next one** is in `drive` and in ADR 0027: a non-goal that is a
+  rationale gets no paths until someone names the file that must not move.
+
 ## v0.11.67 - 2026-10-30
 
 The store remembers where the skills went, so an upgrade stops scattering them.

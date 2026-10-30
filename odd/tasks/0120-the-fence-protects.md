@@ -10,7 +10,7 @@ R1 · "the fence protects what a feature decided not to touch, not the reason it
 - the lesson is written where the next agent reads it before writing a brief
 
 ## Steps
-- [ ] T1 · main's fence stops naming the pack package and personas for a reason   R1
+- [x] T1 · main's fence stops naming the pack package and personas for a reason   R1 · tree:f751dd9b4243a494259d96a0105304199193f8bf
 - [ ] T2 · the lesson is where the next brief is written, and this repo takes it   R1
 
 ## History

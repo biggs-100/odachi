@@ -11,6 +11,8 @@ You are inside an odachi project: there is `brief.md`, `odd/tasks/` and the odac
 
 Before anything: a question is answered, not implemented -an answer is not a proposal- and work starts when the human asks for it or approves one; an irreversible action (push, pull request, merge, tag or release, `init`, another folder) names its exact target and waits for a yes.
 
+A fence rule protects a file the feature must not touch, never a reason (ADR 0027).
+
 The four pieces and who owns each one:
 
 - `brief.md` — the vision and the fence. The human writes it; do not rewrite it.
@@ -23,16 +25,13 @@ The feature cycle, in order:
 1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`, or with `--brief` when `shape` drafted it.
 2. `odachi plan "<step>" --req R1`: one step per deliverable behavior.
 3. Commit what start wrote -brief, fence, profile and task doc, steps included- before you branch. If they do not land together, the next change is judged by the last feature's fence, or a reset loses them.
-4. Work the step. A vision decision: `odachi ask "<question>"` and wait. A
-   requirement the human changes: `odachi ask --change "<words>" --req R1`: its steps reopen and `brief.md` does not move.
+4. Work the step. A vision decision: `odachi ask "<question>"` and wait. A requirement the human changes: `odachi ask --change "<words>" --req R1`: its steps reopen and `brief.md` does not move.
 5. `odachi check`: the gate. The proof is owed by the closing tree, not by every step.
 6. One commit per step, and `odachi plan --done T1`: it records the tree the step produced, which a rebase cannot rewrite.
 7. At the end, `odachi summary` and tell in three lines what the human decided.
 
-If the request does not fit in one reading -you cannot say what must exist or what it must
-not touch- load `shape` before `start`: it ends in `odachi start --brief`. Once the work is
-understood, load `slices` before splitting; its delegation policy wins over other global
-skills: a writer only for real parallelism or a long session, never for size.
+If the request does not fit in one reading -you cannot say what must exist or what it must not touch- load `shape` before `start`: it ends in `odachi start --brief`.
+Once the work is understood, load `slices` before splitting; its policy wins over other global skills: a writer only for real parallelism or a long session, never for size.
 
 ## Specs, test-first and risk
 
