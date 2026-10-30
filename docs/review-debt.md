@@ -9,20 +9,12 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0122, which paid the three rows the review of 0120 left.
+Last written: after 0123, which made the block name both skill folders.
 
 ## Open
 
-### the block names `.agents/skills` even when the scope is the home
-
-Found by the review of 0119, and the feature makes it permanent: with
-`skills = "home"` the project is guaranteed not to get a `.agents/skills`, and the
-block `AGENTS.md` still tells the agent that the craft lives there (`internal/domain/rules`
-says "the ones in `.agents/skills/`", and the project's native agent is the same
-bytes). Before the choice was durable, the next plain `init` rebuilt the folder and
-healed the pointer; now it survives every run. The fix is the block knowing the
-scope, which touches `internal/app/init/personas.go` - fenced by this feature's own
-rule - so it needs its own change. Evidence: review of tree `cac852ae`.
+Nothing open. The rows that remain are the accepted ones below, each with the reason it
+is not work.
 
 ## Closed by feature 0113
 
@@ -457,6 +449,7 @@ answer owed, so the test is not a comment.
 - `internal/app/review/review.go:1350` - the drop of a refused answer cannot cost
   the verdict; the keep-failure half was already pinned by feature 0051, which the
   store could not know because a test moves a different file's blob.
+
 
 
 

@@ -27,7 +27,8 @@ func TestBlockForNovatoIsPinnedByteForByte(t *testing.T) {
 		"profile—. The binary enforces the gate; the artifacts are the memory. The human",
 		"decides the vision and what is non-negotiable; the agent executes with craft. If",
 		"you are unsure where the context lives: `brief.md` for the vision, `odd/tasks/` for the plan,",
-		"`.agents/skills/` for the craft.",
+		"the skills for the craft: `.agents/skills/` in the project, or `~/.agents/skills/` when the clone's",
+		"store says `skills = home`.",
 		"",
 		"Four hard rules. They are not advice: `odachi check` enforces them.",
 		"",
@@ -49,7 +50,7 @@ func TestBlockForNovatoIsPinnedByteForByte(t *testing.T) {
 		"install, another folder— names its exact target and waits for a yes. Ask at the gate,",
 		"once: a question that would not change what you do next is noise.",
 		"",
-		"Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual.",
+		"Skills: the ones in `.agents/skills/`, or in `~/.agents/skills/` when the store says `skills = home`; inside this project, load `drive` before acting: it is the manual.",
 		"",
 		"## The six verbs",
 		"",
@@ -187,7 +188,8 @@ func TestBlockSaysWhatOdachiIsAndWhereTheVoiceComesFrom(t *testing.T) {
 		"the agent executes with craft",
 		"`brief.md` for the vision",
 		"`odd/tasks/` for the plan",
-		"`.agents/skills/` for the craft",
+		"the skills for the craft: `.agents/skills/` in the project, or `~/.agents/skills/` when the clone's",
+		"store says `skills = home`",
 	} {
 		if !strings.Contains(flat, want) {
 			t.Errorf("the block does not say %q:\n%s", want, block)
@@ -429,5 +431,21 @@ func TestACRLFBlockReadsLikeAnLFBlock(t *testing.T) {
 	}
 	if gotVoice != wantVoice {
 		t.Errorf("VoiceIn = %q, want %q", gotVoice, wantVoice)
+	}
+}
+
+// TestTheBlockNamesBothSkillFolders: the block is written once and read by every
+// agent, whatever the project chose. Naming one folder makes it lie for the other
+// choice, which is what 0123 fixed: both are named, and the store decides.
+func TestTheBlockNamesBothSkillFolders(t *testing.T) {
+	body, err := rules.Body(persona.Senior)
+	if err != nil {
+		t.Fatalf("Body: %v", err)
+	}
+	flat := strings.Join(strings.Fields(body), " ")
+	for _, want := range []string{"`.agents/skills/`", "`~/.agents/skills/`", "skills = home"} {
+		if !strings.Contains(flat, want) {
+			t.Errorf("the block does not say %q:\n%s", want, body)
+		}
 	}
 }

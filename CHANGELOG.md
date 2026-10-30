@@ -5,6 +5,16 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The block names where the skills actually are.
+
+- **`AGENTS.md` pointed every project at `.agents/skills`, even one that keeps the craft in the
+  home.** With `skills = home` that folder is never written, so the block told every agent to load
+  a file that does not exist -and kept telling it after every `init`. The text now names both
+  folders and points at the clone's store as the authority, so it is true whatever the project
+  chose and a project that never chose reads exactly what it read before.
+
 ## v0.11.69 - 2026-10-30
 
 The rehearsal stops guessing about what it could not read.

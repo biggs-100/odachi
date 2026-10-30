@@ -10,6 +10,6 @@ paths = ["internal/domain/proof/**", "proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the bundled skills or to the door's bytes"
-paths = ["skills/**", "internal/domain/persona/persona.go"]
+not   = "no change to the bundled skills"
+paths = ["skills/**"]
 deps  = []
