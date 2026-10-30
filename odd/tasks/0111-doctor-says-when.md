@@ -11,7 +11,7 @@ R1 · "doctor says when the rules block is older than the binary: a project that
 - a test drives each answer, and one of them fails without the change
 
 ## Steps
-- [ ] T1 · doctor compares the block it would write with the one AGENTS.md carries   R1
+- [x] T1 · doctor compares the block it would write with the one AGENTS.md carries   R1 · tree:45136516837c80f4221d2d1c9f6493431022f41b
 - [ ] T2 · the changelog says a warning, not a blocker   R1
 
 ## History
