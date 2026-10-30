@@ -63,6 +63,10 @@ Four hard rules. They are not advice: ` + "`odachi check`" + ` enforces them.
    with the output saved in ` + "`proof/`" + `. Without that, it is not done.
 4. Small pieces, one commit each. One task-doc step, one commit.
 
+One more, about folders. This project is this repository. Another folder is another
+project —its own brief, its own fence, its own store, its own memory—, and odachi is
+never read or run there, and its files are never touched, unless the human asks for it.
+
 Skills: the ones in ` + "`.agents/skills/`" + `; inside this project, load ` + "`drive`" + ` before acting: it is the manual.
 
 ## The six verbs

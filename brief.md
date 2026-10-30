@@ -1,13 +1,13 @@
-# the-prompt-says
+# odachi-never-accesses
 
 ## What must exist
-- the prompt says what it carries: the findings of earlier reviews and the clean rows of the paths this candidate changed, so its own heading stops promising the whole store
+- odachi never accesses another folder or project without the human's permission: the block says it and the drive skill refuses it
 
 ## Done when
-- the carried section names what it carries instead of what the store holds
-- the instruction below the rows keeps saying the verdict inherits them, and no row is lost or added
-- a test pins the sentence, and it fails without the change
-- the changelog says what a reader sees in a prompt
+- the block carries the rule after the four hard rules, and a test pins it byte for byte
+- the drive skill's Never list refuses another repository, and the installed copy matches its source
+- this repo's own AGENTS.md and skills are regenerated from the new text, and doctor stays clean
+- a test drives the words, and one of the pins fails without the change
 
 ## Not included (first version)
 - no change to the verdict shape
@@ -17,4 +17,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: how a heading can be true without becoming a paragraph.
+- Wants to learn: cómo una regla de conducta entra en el artefacto que el agente lee.

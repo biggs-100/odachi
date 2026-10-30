@@ -44,17 +44,15 @@ The verbs: `start` interviews · `ask` asks or records a craft decision (`--craf
 
 ## What a block means
 
-- `0` ready: continue.
-- `1` you can act: the `next:` line names the exact command; run it.
+- `0` ready: continue. `1` you can act: the `next:` line names the exact command; run it.
 - `2` only the human can unblock: do not retry, do not go around, ask with `ask`.
 
 ## Review, when it applies
 
-`odachi review --show` says whether this tree asks for one and why: ask when it
-does or the human asks, not otherwise. `--exec` hands the prompt to the reviewer;
-a causal `BLOCKER` blocks: fix it or `--refute` citing the diff. The verdict is
-valid for THAT tree. One correction, one re-review; a `WARNING` or `SUGGESTION`
-goes to the task doc and earns no second round.
+`odachi review --show` says whether this tree asks for one and why: ask when it does or the
+human asks. `--exec` hands the prompt to the reviewer; a causal `BLOCKER` blocks: fix it or
+`--refute` citing the diff. The verdict is valid for THAT tree: one correction and one
+re-review; a `WARNING` or `SUGGESTION` goes to the task doc and earns no round.
 
 ## Never
 
@@ -63,3 +61,4 @@ goes to the task doc and earns no second round.
 - Change `brief.md` or the fence without the human asking.
 - Retry an exit 2, or invent the missing file or flag.
 - Add work outside the scope because "it was easy": ask, do not decide.
+- Read, run odachi in, or touch another folder or repository: another clone is another project, with its own brief, fence, store and memory. The human asks for that; never decide it.
