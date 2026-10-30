@@ -12,7 +12,7 @@ R1 · "the human is in the loop for control and governance: a question is answer
 
 ## Steps
 - [x] T1 · the block and the drive skill put the human in the loop, and the pins follow   R1 · tree:d387ce3c9c3b5948a52c5ada25445804cda5ff5f
-- [ ] T2 · this repo regenerates its own block and skill, and the changelog says one line   R1
+- [x] T2 · this repo regenerates its own block and skill, and the changelog says one line   R1 · tree:02e4f0d312b643cf4efc1678fa5035053a463b6c
 
 ## History
 L1 · "the human is in the loop for control and governance: a question is answered and not implemented, work starts only when the human asks for it or approves a proposal, and every irreversible action names its exact target and waits for a yes"
