@@ -100,10 +100,13 @@ func slashed(root, path string) string {
 type fakeSkills struct {
 	report initapp.SkillReport
 	calls  int
+	// scope is what init asked for: the stored choice, the flag, or the default.
+	scope string
 }
 
-func (f *fakeSkills) Install() initapp.SkillReport {
+func (f *fakeSkills) Install(scope string) initapp.SkillReport {
 	f.calls++
+	f.scope = scope
 	return f.report
 }
 

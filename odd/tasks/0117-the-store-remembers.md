@@ -11,7 +11,7 @@ R1 · "the store remembers the skills scope: a plain odachi init honours the cho
 - the store names the choice in its output and in the file, and an older binary that opens it says upgrade instead of unknown key
 
 ## Steps
-- [ ] T1 · the store carries the skills scope, and its absence still means the project   R1
+- [x] T1 · the store carries the skills scope, and its absence still means the project   R1 · tree:bc74c2e17c6e80b8c9c8ab6197fdd4af4d2c8eb8
 - [ ] T2 · a plain init honours the stored scope and names the choice it used   R1
 - [ ] T3 · one test per acceptance line, and this repo takes the change   R1
 

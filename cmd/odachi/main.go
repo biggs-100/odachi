@@ -885,7 +885,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		global      bool
 	)
 	flags.BoolVar(&asJSON, "json", false, "machine output")
-	flags.StringVar(&skillsScope, "skills", "project", "where to install the skills: project | home")
+	flags.StringVar(&skillsScope, "skills", "", "where to install the skills: project | home (default: the stored choice, or project)")
 	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
 	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, make it OpenCode's default agent, and leave the project's agent files alone")
 
@@ -901,11 +901,12 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi init only takes flags (run odachi init -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
-	switch skillsScope {
-	case "project", "home":
-	default:
-		fmt.Fprintf(stderr, "odachi: --skills has to be \"project\" or \"home\", not %q; project leaves the skills in the project, home leaves them in ~/.agents/skills\n", skillsScope)
-		return start.CodeBlocked
+	if skillsScope != "" {
+		if _, err := persona.NormalizeSkills(skillsScope); err != nil {
+			fmt.Fprintf(stderr, "odachi: --skills has to be \"project\" or \"home\", not %q; project leaves the skills in the project, home leaves them in ~/.agents/skills\n", skillsScope)
+			return start.CodeBlocked
+		}
+		skillsScope = strings.ToLower(strings.TrimSpace(skillsScope))
 	}
 	if strings.TrimSpace(agents) != "" {
 		if _, err := persona.NormalizeSelection(agents); err != nil {
@@ -935,7 +936,8 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		Home:            osHome{},
 		Global:          global,
 		NoProjectAgents: global,
-	}, disk(dir), &initSkills{dir: dir, scope: skillsScope})
+		Skills:          skillsScope,
+	}, disk(dir), &initSkills{dir: dir})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -984,30 +986,29 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 		Profiles: writtenProfile{},
 		Agents:   agents,
 		Home:     osHome{},
-	}, osFiles{}, &initSkills{dir: ".", scope: "home"})
+	}, osFiles{}, &initSkills{dir: "."})
 	return reportInit(result, asJSON, stdout, stderr)
 }
 
 // initSkills is the join between `odachi init` and `odachi pack`. init decides
-// where the skills go — the project's cross-client directory by default, or the
-// human's home when `--skills home` asks for one copy per machine — and pack owns
-// how a skill is installed: the destination table, the backup before a differing
-// file, the identical bytes skipped.
+// where the skills go — the project's cross-client directory, or the human's home
+// when the scope says one copy per machine — and pack owns how a skill is
+// installed: the destination table, the backup before a differing file, the
+// identical bytes skipped.
 //
 // The join lives here, in the CLI, and not in internal/app/init importing
 // internal/app/pack: the CLI is the only layer that already wires pack's payload
 // and its two adapters, and an app that imports another app would inherit its
 // error strings and its destination table for a job that is not its own.
 type initSkills struct {
-	dir   string
-	scope string
+	dir string
 }
 
-// Install writes the skills job and turns what pack reports into the lines a
-// human reads. Project scope is the default and keeps the old two destinations:
-// the curriculum in the project and bootstrap in the home. Home scope puts all
-// ten in the home; it never deletes a project copy an earlier run left.
-func (s initSkills) Install() initapp.SkillReport {
+// Install writes the skills job the scope asks for and turns what pack reports
+// into the lines a human reads. Project scope keeps the old two destinations: the
+// curriculum in the project and bootstrap in the home. Home scope puts the whole
+// payload in the home; it never deletes a project copy an earlier run left.
+func (s initSkills) Install(scope string) initapp.SkillReport {
 	if _, ok := bundledskills.Bootstrap(); !ok {
 		return initapp.SkillReport{
 			Blocked: "this binary does not carry the " + bundledskills.BootstrapName + " skill: it is an incomplete installation; download odachi again",
@@ -1015,7 +1016,7 @@ func (s initSkills) Install() initapp.SkillReport {
 		}
 	}
 
-	if s.scope == "home" {
+	if scope == persona.SkillsHome {
 		all, err := bundledskills.All()
 		if err != nil {
 			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: "odachi init"}
@@ -1455,8 +1456,10 @@ bench flags:
   --json          machine output
 
 init flags:
-  --skills s      project | home (default project): the project carries the craft skills;
-                  home leaves all of them in ~/.agents/skills and writes no copy in the project
+  --skills s      project | home: the project carries the craft skills; home leaves all of
+                  them in ~/.agents/skills and writes no copy in the project. Without the
+                  flag a plain init keeps the choice the store recorded, and a project that
+                  never chose keeps project
   --agents s      opencode | claude | both (default both): which clients receive the native
                   agent and the home door; the choice stays in the clone's store
                   and does not delete the files another client already has
@@ -1502,6 +1505,8 @@ is still both.
 
 with --skills home, all the skills go to ~/.agents/skills and the project gets no copy;
 if it already had .agents/skills from an earlier init, it is not deleted: it is reported.
+The flag is a decision and not a one-time order: it is kept in the clone's store, and a
+later plain init answers the same way until --skills names the other value.
 
 the odachi-worker and odachi-verify subagents are invoked by the agent, they are not chosen with
 a key. The parent hands them the task doc, the step, the surfaces, the commands and
