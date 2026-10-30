@@ -14,6 +14,11 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
+Nothing open. The rows that remain are the accepted ones below, each with the reason it
+is not work.
+
+## Closed by feature 0113
+
 ### the doctor - check 11 reads a CRLF block as hand-edited
 
 Found while writing 0111: oiceSpan in internal/domain/rules looks for the block's
@@ -24,7 +29,12 @@ folded the line endings in its own comparison (check 4) and did not touch check 
 reader lives in the domain.
 
 The repair is the same fold, once, where the block is parsed. A row rather than a line
-because it changes ules.VoiceIn and everything that reads it.
+because it changes 
+ules.VoiceIn and everything that reads it.
+
+The fold ships where the block is parsed: BodyIn, VoiceIn and HasBlock fold CRLF to LF
+before they look, the writer never folds, and a hand-edited block is still an edit.
+
 ## Closed by feature 0108
 
 

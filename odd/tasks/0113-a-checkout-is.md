@@ -11,7 +11,7 @@ R1 · "a checkout is not an edit: a block with CRLF line endings reads the same 
 - the debt row closes and the changelog says one line
 
 ## Steps
-- [ ] T1 · the domain folds CRLF once, and a CRLF block answers like an LF one   R1
+- [x] T1 · the domain folds CRLF once, and a CRLF block answers like an LF one   R1 · tree:8127db64000e1f1032e7d48b86182034acf33918
 - [ ] T2 · doctor drops its own fold, and the debt row closes   R1
 
 ## History
