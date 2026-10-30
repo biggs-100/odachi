@@ -12,7 +12,7 @@ R1 · "the tree is gofmt-clean and a test keeps it so: every Go file in the repo
 
 ## Steps
 - [x] T1 · the file is canonical, and a test walks every .go file with format.Source   R1
-- [ ] T2 · the changelog says one line   R1
+- [x] T2 · the changelog says one line   R1 · tree:e5cdc59cde1539624811e9715a311fda63cb965c
 
 ## History
 L1 · "the tree is gofmt-clean and a test keeps it so: every Go file in the repository is the bytes gofmt would write, checked in process so a CRLF or a missing final newline cannot land again"
