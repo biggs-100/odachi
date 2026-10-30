@@ -12,7 +12,7 @@ R1 · "odachi never accesses another folder or project without the human's permi
 
 ## Steps
 - [x] T1 · the block says another folder is another project, and the drive skill refuses it   R1 · tree:e5dfdc533b2f8a7de01e8412e21b4c60fbd374ab
-- [ ] T2 · this repo regenerates its own block and skills, and the changelog says one line   R1
+- [x] T2 · this repo regenerates its own block and skills, and the changelog says one line   R1 · tree:ca08cffc13b06cb2ca2589657d9aa376e3938ff6
 
 ## History
 L1 · "odachi never accesses another folder or project without the human's permission: the block says it and the drive skill refuses it"
