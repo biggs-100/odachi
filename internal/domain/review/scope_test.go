@@ -2,10 +2,12 @@ package review_test
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
 // TestRaisedNamesOnlyWhatTheEvidenceDidNotAsk: --lens adds, and the record says
@@ -70,7 +72,7 @@ func TestTheScopeFileRoundTrips(t *testing.T) {
 
 	data := review.RenderScope(scope)
 	text := string(data)
-	if !strings.HasPrefix(text, "{\n  \"schema\": 1,\n") {
+	if !strings.HasPrefix(text, "{\n  \"schema\": "+strconv.Itoa(schema.Current)+",\n") {
 		t.Errorf("the file does not open with the schema:\n%s", text)
 	}
 	if !strings.HasSuffix(text, "}\n") {

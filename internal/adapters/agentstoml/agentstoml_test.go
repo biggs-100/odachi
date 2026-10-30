@@ -47,6 +47,26 @@ func TestDecodeReadsTheProjectChoice(t *testing.T) {
 	}
 }
 
+// TestDecodeReadsTheSkillsScope: the third key says where the craft lives, and
+// its absence is the answer every project had before the key existed.
+func TestDecodeReadsTheSkillsScope(t *testing.T) {
+	cases := map[string]string{
+		"agents = \"opencode\"\nskills = \"home\"\n":      persona.SkillsHome,
+		"agents = \"opencode\"\nskills = \" PROJECT \"\n": persona.SkillsProject,
+		"agents = \"opencode\"\n":                         "",
+	}
+
+	for data, want := range cases {
+		got, err := agentstoml.Decode([]byte(data))
+		if err != nil {
+			t.Fatalf("Decode(%q) = %v", data, err)
+		}
+		if got.Skills != want {
+			t.Errorf("Decode(%q).Skills = %q, want %q", data, got.Skills, want)
+		}
+	}
+}
+
 // TestDecodeRefusesATypo: unknown keys and unknown values are errors, because a
 // store the tool half-understands would silently pick a client or silently put
 // the agent back in the tree.
@@ -57,6 +77,7 @@ func TestDecodeRefusesATypo(t *testing.T) {
 		"empty value":        "agents = \"\"\n",
 		"malformed":          "agents = \"opencode\n",
 		"bad project choice": "agents = \"opencode\"\nproject_agents = \"maybe\"\n",
+		"bad skills scope":   "agents = \"opencode\"\nskills = \"machine\"\n",
 	}
 
 	for name, data := range cases {
@@ -127,5 +148,34 @@ func TestRenderWritesTheProjectChoiceOnlyWhenChosen(t *testing.T) {
 	}
 	if round != (persona.Store{Agents: persona.SelectionOpenCode, ProjectAgents: persona.ProjectAgentsNone}) {
 		t.Errorf("Decode(Render(none)) = %+v, want the same store back", round)
+	}
+}
+
+// TestRenderWritesTheSkillsScopeOnlyWhenChosen: the same rule as the project
+// choice. A store that never named the scope keeps its bytes, and a store that
+// did round-trips the answer the next plain init has to honour.
+func TestRenderWritesTheSkillsScopeOnlyWhenChosen(t *testing.T) {
+	without, err := agentstoml.Render(persona.Store{Agents: persona.SelectionBoth})
+	if err != nil {
+		t.Fatalf("Render(no scope) = %v", err)
+	}
+	if strings.Contains(string(without), "skills") {
+		t.Errorf("Render wrote the skills key for a project that never chose:\n%s", without)
+	}
+
+	with, err := agentstoml.Render(persona.Store{Agents: persona.SelectionBoth, Skills: persona.SkillsHome})
+	if err != nil {
+		t.Fatalf("Render(home) = %v", err)
+	}
+	if !strings.Contains(string(with), `skills = "home"`) {
+		t.Errorf("Render = %q, want skills = \"home\"", with)
+	}
+
+	round, err := agentstoml.Decode(with)
+	if err != nil {
+		t.Fatalf("Decode(Render(home)) = %v", err)
+	}
+	if round != (persona.Store{Agents: persona.SelectionBoth, Skills: persona.SkillsHome}) {
+		t.Errorf("Decode(Render(home)) = %+v, want the same store back", round)
 	}
 }

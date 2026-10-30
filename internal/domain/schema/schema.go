@@ -18,7 +18,16 @@ const (
 	// oldest files do not silently gain fields they never had.
 	First = 1
 	// Current is the schema this binary writes, and the newest it understands.
-	Current = 1
+	//
+	// One counter serves the three files on purpose: they are one answer to the
+	// same question - can this binary read what is on disk - and a per-file
+	// counter would let a file the binary cannot fully read pass a check that
+	// only looks at its own number. The cost is accepted and paid at each move:
+	// a key added to one file makes all three declare Current, so a binary older
+	// than this one refuses a verdict whose shape did not change. The words are
+	// still true where it matters - the file on disk is newer than that binary -
+	// and the upgrade is the same command either way.
+	Current = 2
 )
 
 // Read answers which schema a file with this value was written with. A value this
