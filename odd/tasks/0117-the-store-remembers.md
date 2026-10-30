@@ -13,7 +13,7 @@ R1 · "the store remembers the skills scope: a plain odachi init honours the cho
 ## Steps
 - [x] T1 · the store carries the skills scope, and its absence still means the project   R1 · tree:bc74c2e17c6e80b8c9c8ab6197fdd4af4d2c8eb8
 - [x] T2 · a plain init honours the stored scope and names the choice it used   R1 · tree:0d8f4d7f4e5d0fdfadc7d4341e591aa6aac246ff
-- [ ] T3 · one test per acceptance line, and this repo takes the change   R1
+- [x] T3 · one test per acceptance line, and this repo takes the change   R1 · tree:2f55ef2990f30e2eaccb258dc1ca2cf6caca226a
 
 ## History
 L1 · "the store remembers the skills scope: a plain odachi init honours the choice the project recorded, --skills changes it and says so in the output, and a project that never chose keeps the answer it always had"
