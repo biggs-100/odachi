@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The prompt says what it carries.
+
+- **The carried section names its own contents.** After 0107 cut the clean rows of paths
+  the candidate never touched, the heading still said "What the store already carries for
+  these exact bytes" - the store carries more than the prompt shows. It now says what it
+  is: the findings of earlier reviews and the clean rows of the paths this candidate
+  changed, with one line admitting that the store keeps more.
+- **Nothing else moves:** the rows, their order and the instruction that the verdict
+  inherits them are the same.
+
 ## v0.11.58 - 2026-10-29
 
 The review prompt carries what the review can use.

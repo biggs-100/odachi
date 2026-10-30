@@ -11,7 +11,7 @@ R1 · "the prompt says what it carries: the findings of earlier reviews and the 
 - the changelog says what a reader sees in a prompt
 
 ## Steps
-- [ ] T1 · the carried section says what it carries, and a test pins it   R1
+- [x] T1 · the carried section says what it carries, and a test pins it   R1 · tree:27fcb0a1d33bdf0f2b5cf6d8a6e3478b1b8b8e2f
 - [ ] T2 · the changelog says what a reader sees in a prompt   R1
 
 ## History
