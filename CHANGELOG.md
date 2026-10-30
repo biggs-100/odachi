@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The fence of a feature names what it protects.
+
+- **A rule that guarded the verdict listed the clone's store.** `internal/adapters/agentstoml`
+  sat under "no change to the verdict shape", so the gate refused the store's next key with
+  `out of scope` - and the only way out was to correct the policy in a change that does not
+  touch the store. The rule now names every path it lists - the verdict's shape and its schema,
+  and the review's settings - and no longer the store.
+- **The deadlock is written down where the next reader looks:** a feature that needs a path the
+  previous fence protected lands the correction first, in its own change (ADR 0027).
+
 ## v0.11.66 - 2026-10-30
 
 The human is in the loop, and the block says what that means.
