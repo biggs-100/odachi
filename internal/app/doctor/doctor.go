@@ -288,7 +288,59 @@ func (r *runner) agents() domaindoctor.Check {
 			agentsFile+" does not have the odachi block (missing "+domaindoctor.AgentsBegin+" and "+domaindoctor.AgentsEnd+"): the agent does not read the rules",
 			"run odachi init")
 	}
+	if detail, stale := r.staleBlock(content); stale {
+		return domaindoctor.Warning(domaindoctor.CheckAgents, detail)
+	}
 	return domaindoctor.OK(domaindoctor.CheckAgents, "yes: "+agentsFile+" with the block")
+}
+
+// staleBlock reports whether the block AGENTS.md carries differs from the one this
+// binary writes for the project's voice. Presence is not currency: a project that
+// upgraded odachi keeps the rules it adopted with, and a rule that arrived later never
+// reaches its agent - the one about other folders, or the four hard rules when they
+// changed shape. It is a warning and not a blocker: the old block still works, it is
+// simply older. Line endings and trailing spaces are not a stale block, for the reason
+// 0031 already wrote for the brief: a Windows checkout is not an older rule.
+func (r *runner) staleBlock(content string) (string, bool) {
+	// A checkout is not an older rule: fold the line endings before looking for the
+	// markers, because a CRLF file is the same text to a person and a different byte
+	// stream to a search.
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	body, ok := rules.BodyIn(content)
+	if !ok {
+		return "", false
+	}
+	name, inferred, err := r.profiles.Resolve(r.opts.Dir)
+	if err != nil || inferred {
+		// Without a profile there is no voice to generate the block with, and the
+		// comparison would be against a guess. Check 7 owns that answer.
+		return "", false
+	}
+	want, err := rules.Body(name)
+	if err != nil {
+		return "", false
+	}
+	if sameBlock(body, want) {
+		return "", false
+	}
+	return agentsFile + " carries an older block than this binary writes: the rules that arrived after this project adopted odachi are not in it (run odachi init)", true
+}
+
+// sameBlock compares two blocks the way a person reads them: line endings, trailing
+// spaces and the blank lines at the end are not a difference; the words are.
+func sameBlock(carried, want string) bool {
+	return normalizeBlock(carried) == normalizeBlock(want)
+}
+
+// normalizeBlock folds what a checkout does to a file: CRLF becomes LF, a trailing
+// space goes, and the text ends where its last word does.
+func normalizeBlock(text string) string {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight(line, " \t")
+	}
+	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
 
 // hook: the local gate. A hook odachi did not write is somebody else's work and
