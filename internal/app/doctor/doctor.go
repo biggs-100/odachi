@@ -310,10 +310,10 @@ func (r *runner) staleBlock(content string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	name, inferred, err := r.profiles.Resolve(r.opts.Dir)
-	if err != nil || inferred {
-		// Without a profile there is no voice to generate the block with, and the
-		// comparison would be against a guess. Check 7 owns that answer.
+	name, _, err := r.profiles.Resolve(r.opts.Dir)
+	if err != nil {
+		// The profile port is what names the voice; a port that cannot answer leaves
+		// nothing to generate the block with. Check 7 owns that refusal.
 		return "", false
 	}
 	want, err := rules.Body(name)
