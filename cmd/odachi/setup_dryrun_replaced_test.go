@@ -134,3 +134,32 @@ func TestTheRealRunSaysItReplacedASkill(t *testing.T) {
 		t.Errorf("the replaced skill was not backed up: %v (%v)", backups, err)
 	}
 }
+
+// TestASettledHomeWithOneChangedSkillIsNotNothingToWrite: the state the 0121
+// review named and no test built -a machine that is current except for one skill
+// an older binary wrote. The rehearsal must say would replace, never nothing.
+func TestASettledHomeWithOneChangedSkillIsNotNothingToWrite(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	writeFile(t, home, ".config/opencode/opencode.json", "{}")
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	if code, _, errOut := runDir(t, dir, []string{"setup"}, ""); code != 0 {
+		t.Fatalf("the first setup failed: %s", errOut)
+	}
+	writeFile(t, home, ".agents/skills/acceptance/SKILL.md", "an older binary wrote this\n")
+
+	code, out, errOut := runDir(t, dir, []string{"setup", "--dry-run"}, "")
+	if code != 0 {
+		t.Fatalf("the rehearsal failed: %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	report := out + errOut
+	if !strings.Contains(report, "would replace") {
+		t.Errorf("the only drift is a skill and the rehearsal does not name it:\n%s", report)
+	}
+	if strings.Contains(report, "nothing to write") {
+		t.Errorf("a machine with a changed skill is reported as current:\n%s", report)
+	}
+}

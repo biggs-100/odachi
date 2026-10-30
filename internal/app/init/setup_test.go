@@ -152,3 +152,28 @@ func TestSetupDoesNotCallAnUnreadableClientAbsent(t *testing.T) {
 		t.Errorf("the run tells the human to install a client it could not check:\n%s", lines)
 	}
 }
+
+// TestASetDefaultAgentIsAChangedFile: setting default_agent rewrites the config,
+// and a run that omits the file from its changed list disagrees with the disk it
+// just wrote. The 0121 review found this branch unpinned.
+func TestASetDefaultAgentIsAChangedFile(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(nil)
+	files.files[homeFile(home, ".config/opencode/opencode.json")] = []byte("{}")
+
+	got := initapp.RunSetup(initapp.Options{Home: fakeHome{dir: home}}, files, &fakeSkills{})
+
+	want := "~/.config/opencode/opencode.json"
+	found := false
+	for _, file := range got.Files {
+		if file == want {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Files = %v, want %q among them", got.Files, want)
+	}
+	if strings.Contains(got.Message, "unchanged") {
+		t.Errorf("message = %q, want a run that wrote a file", got.Message)
+	}
+}
