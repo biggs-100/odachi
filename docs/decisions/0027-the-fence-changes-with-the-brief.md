@@ -62,6 +62,13 @@ three rules; 0031's has four, and none of the three survived.
 
 - A bug-fix pull request cannot touch the fence: its brief is main's brief, and
   the gate refuses a dropped rule.
+- A feature that needs a path the previous fence protected cannot land it in the
+  same change: the base fence is the policy, so the correction travels first, in
+  its own change. Feature 0118 paid it once, for a rule whose name said "the
+  verdict's shape" and whose paths listed `internal/adapters/agentstoml/**`, the
+  clone's store. The lesson is the rule's own text: a rule protects what its name
+  says, and a path that does not belong under that name blocks the first feature
+  that needs it.
 - A feature pull request can rewrite both, which is the workflow. A hostile
   change could rewrite the non-goals too; that diff is the vision, it is the
   maintainer's to read, and no mechanical rule can replace that reading.
