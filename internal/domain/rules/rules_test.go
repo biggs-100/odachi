@@ -386,3 +386,42 @@ func mustVoice(t *testing.T, name string) string {
 	}
 	return voice
 }
+
+// TestACRLFBlockReadsLikeAnLFBlock: a checkout is not an edit. A Windows clone with
+// core.autocrlf=true gives every line a CR, and the readers parse by line; folding the
+// endings once, here, keeps doctor from calling a fine block hand-edited - the repair it
+// names is for a different problem.
+func TestACRLFBlockReadsLikeAnLFBlock(t *testing.T) {
+	lf, err := rules.Block(persona.Novato)
+	if err != nil {
+		t.Fatalf("Block: %v", err)
+	}
+	crlf := strings.ReplaceAll(lf, "\n", "\r\n")
+
+	wantBody, ok := rules.BodyIn(lf)
+	if !ok {
+		t.Fatal("the LF block has no body")
+	}
+	gotBody, ok := rules.BodyIn(crlf)
+	if !ok {
+		t.Fatal("the CRLF block has no body")
+	}
+	if gotBody != wantBody {
+		t.Errorf("BodyIn differs by line endings:\n%q\nvs\n%q", gotBody, wantBody)
+	}
+
+	if !rules.HasBlock(crlf) {
+		t.Error("HasBlock says the CRLF block has no block")
+	}
+	wantVoice, ok := rules.VoiceIn(lf)
+	if !ok {
+		t.Fatal("the LF block has no voice")
+	}
+	gotVoice, ok := rules.VoiceIn(crlf)
+	if !ok {
+		t.Fatalf("VoiceIn does not read the CRLF block's voice")
+	}
+	if gotVoice != wantVoice {
+		t.Errorf("VoiceIn = %q, want %q", gotVoice, wantVoice)
+	}
+}

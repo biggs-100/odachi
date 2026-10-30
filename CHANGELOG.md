@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A checkout is not an edit.
+
+- **A CRLF block reads like an LF block.** `check 11` called a block with CRLF line endings
+  hand-edited - the parser looked for the markers by byte - so a Windows clone with
+  `core.autocrlf=true` was sent to `odachi level --to` for a file that was fine. `BodyIn`,
+  `VoiceIn` and `HasBlock` fold the endings once, where the block is parsed; the writer never
+  folds, and a block edited by hand is still an edit.
+- **`doctor` drops the fold it kept of its own**, which was the symptom that said the parser
+  should have done it.
+
 ## v0.11.62 - 2026-10-30
 
 The block comparison runs without a profile file too.
