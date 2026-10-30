@@ -102,11 +102,14 @@ type fakeSkills struct {
 	calls  int
 	// scope is what init asked for: the stored choice, the flag, or the default.
 	scope string
+	// dry is the rehearsal the run asked for.
+	dry bool
 }
 
-func (f *fakeSkills) Install(scope string) initapp.SkillReport {
+func (f *fakeSkills) Install(scope string, dryRun bool) initapp.SkillReport {
 	f.calls++
 	f.scope = scope
+	f.dry = dryRun
 	return f.report
 }
 

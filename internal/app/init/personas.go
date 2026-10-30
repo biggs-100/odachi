@@ -120,7 +120,7 @@ func (r *runner) writePersonaGroup(client persona.Client, dir string, files []pe
 
 	r.personaDests = append(r.personaDests, dest)
 	r.personaLabels = append(r.personaLabels, dir)
-	r.lines = append(r.lines, personaLine(dir, switchText, written, kept, subagents))
+	r.lines = append(r.lines, personaLine(dir, switchText, written, kept, subagents, r.dryRun))
 	return nil
 }
 
@@ -168,7 +168,7 @@ func (r *runner) installGlobalPersonas() {
 				dest.Files = append(dest.Files, display)
 				r.personaDests = append(r.personaDests, dest)
 				r.personaLabels = append(r.personaLabels, dest.Dir)
-				r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, nil, []string{persona.FileName}, false))
+				r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, nil, []string{persona.FileName}, false, r.dryRun))
 				continue
 			}
 			if _, err := r.files.Backup(path); err != nil {
@@ -186,7 +186,7 @@ func (r *runner) installGlobalPersonas() {
 		r.personaDests = append(r.personaDests, dest)
 		r.personaLabels = append(r.personaLabels, dest.Dir)
 		r.personaFiles = append(r.personaFiles, display)
-		r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, []string{persona.FileName}, nil, false))
+		r.lines = append(r.lines, personaLine(dest.Dir, client.Switch, []string{persona.FileName}, nil, false, r.dryRun))
 	}
 
 	r.installGlobalSubagents(home)
@@ -237,7 +237,7 @@ func (r *runner) installGlobalSubagents(home string) {
 			written = append(written, filepath.Base(file.Path))
 			r.personaFiles = append(r.personaFiles, display)
 		}
-		r.lines = append(r.lines, personaLine(dir, "", written, kept, true))
+		r.lines = append(r.lines, personaLine(dir, "", written, kept, true, r.dryRun))
 	}
 }
 
@@ -260,10 +260,17 @@ func personaBlocked(what string, err error) *Result {
 // personaLine is one destination in one line: what arrived, what was already
 // there, and how the human selects the agent in that client. The last part is the
 // point of the whole job — a file nobody knows how to pick is a file nobody uses.
-func personaLine(dir, switchText string, written, kept []string, subagents bool) string {
+//
+// dry is the rehearsal: the line names the file as one it would write, because a
+// report that says "wrote" over zero bytes is the lie the flag exists to avoid.
+func personaLine(dir, switchText string, written, kept []string, subagents, dry bool) string {
 	parts := make([]string, 0, 2)
 	if len(written) > 0 {
-		parts = append(parts, "wrote "+humanList(written))
+		verb := "wrote "
+		if dry {
+			verb = "would write "
+		}
+		parts = append(parts, verb+humanList(written))
 	}
 	if len(kept) > 0 {
 		parts = append(parts, humanList(kept)+" unchanged")

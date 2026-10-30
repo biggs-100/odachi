@@ -109,6 +109,10 @@ type Options struct {
 	// stored one, or the project": a plain init after `--skills home` must not
 	// rebuild the project copy (the same rule 0081 gave the agent choice).
 	Skills string
+	// DryRun is the rehearsal: the run reads the machine and reports every file
+	// it would write, and writes none. Only `setup` sets it -the verb a machine
+	// refresh runs- and an init that ignored it would be a flag that lies.
+	DryRun bool
 }
 
 // AgentSelection is the selection port: the choice a project recorded, when
@@ -453,6 +457,10 @@ type runner struct {
 	storedSkills string
 	skillsScope  string
 	skillsSource string
+	// dryRun is the rehearsal: every writer still compares, and the lines say
+	// "would write" because no byte moved. It is the runner's job and not the
+	// Files port's: a port that silently swallowed a write would hide the report.
+	dryRun bool
 	// voiceNote is the sentence for a profile init could not read or name: the
 	// block still gets the default voice, and the human learns why.
 	voiceNote string
@@ -545,12 +553,28 @@ func foreignHook(exe string) Result {
 // result reports what changed. A rerun that changed nothing says so instead of
 // claiming work it did not do, skills included.
 func (r *runner) result() Result {
+	// The rehearsal says so first, before any destination: a line list that opens
+	// with "would write" and never says "dry run" reads like a report of work done.
+	if r.dryRun {
+		notice := "dry run: this is what odachi setup would write, and it writes nothing"
+		if len(r.changed) == 0 && len(r.skillFiles) == 0 && len(r.personaFiles) == 0 {
+			notice = "dry run: nothing to write, this machine is already current"
+		}
+		r.lines = append([]string{notice}, r.lines...)
+	}
+
 	files := append(append(append([]string{}, r.changed...), r.skillFiles...), r.personaFiles...)
 
 	if len(r.changed) == 0 && len(r.skillFiles) == 0 && len(r.personaFiles) == 0 {
 		message := "unchanged: " + agentsFile + ", " + ignoreFile + ", the hook " + hookPath + " and the native agent were already up to date"
 		if len(r.skillLabels) > 0 {
 			message += "; the skills of " + humanList(r.skillLabels) + " as well"
+		}
+		if r.dryRun {
+			message = "dry run: nothing to write, everything is already current"
+			if len(r.skillLabels) > 0 {
+				message = "dry run: nothing to write, everything is already current (" + humanList(r.skillLabels) + " included)"
+			}
 		}
 		return Result{
 			Code:         r.code(),
@@ -576,12 +600,15 @@ func (r *runner) result() Result {
 		written = append(written, "the native agent ("+humanList(r.personaLabels)+")")
 	}
 	message := "done: " + humanList(written) + " are up to date"
+	if r.dryRun {
+		message = "dry run: would write " + humanList(written) + "; nothing was touched"
+	}
 
 	lines := append([]string{}, r.lines...)
 	lines = append(lines, r.legacyMoves()...)
 	// The human does not commit: the agent does. Saying "commit" here assumed the
 	// one thing this tool exists to remove from their plate.
-	lines = append(lines, "next: check "+agentsFile+"; when odachi check --quiet is green, the agent saves the progress")
+	lines = append(lines, "next: "+r.next())
 
 	return Result{
 		Code:         r.code(),
@@ -592,6 +619,19 @@ func (r *runner) result() Result {
 		SkillDests:   r.skillDests,
 		PersonaDests: r.personaDests,
 	}
+}
+
+// next is the command that finishes what this run started. A rehearsal's next
+// step is the same command without the flag, because the point of a dry run is
+// the run that follows it.
+func (r *runner) next() string {
+	if r.skillNext != "" {
+		return r.skillNext
+	}
+	if r.dryRun {
+		return "odachi setup"
+	}
+	return "check " + agentsFile + "; when odachi check --quiet is green, the agent saves the progress"
 }
 
 // legacyMoves names the rules an older release kept in .odachi/ and the exact git

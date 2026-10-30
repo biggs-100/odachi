@@ -22,6 +22,7 @@ func RunSetup(opts Options, files Files, skills Skills) Result {
 	// project exists the home is the only place a skill can live.
 	r.skillsScope = persona.SkillsHome
 	r.skillsSource = skillsFromSetup
+	r.dryRun = opts.DryRun
 
 	selection, clients, problem := r.setupClients(opts.Agents)
 	if problem != nil {

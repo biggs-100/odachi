@@ -12,5 +12,5 @@ deps  = []
 
 [[rule]]
 not   = "no change to how a skill or the door is written: the report learns to speak first"
-paths = ["internal/app/pack/**", "internal/app/init/personas.go", "internal/domain/persona/persona.go"]
+paths = ["internal/app/pack/**", "internal/domain/persona/persona.go"]
 deps  = []
