@@ -461,6 +461,10 @@ type runner struct {
 	// "would write" because no byte moved. It is the runner's job and not the
 	// Files port's: a port that silently swallowed a write would hide the report.
 	dryRun bool
+	// absent is what detection did not find: a client whose config folder is not
+	// in this home. It is reported, because an installer that stays quiet about a
+	// client looks like it forgot one.
+	absent []string
 	// voiceNote is the sentence for a profile init could not read or name: the
 	// block still gets the default voice, and the human learns why.
 	voiceNote string

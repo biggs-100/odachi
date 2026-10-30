@@ -10,7 +10,7 @@ R1 · "one command refreshes the machine: odachi setup reports what it would cha
 - the report names the clients that are not installed here and what it left alone, so nothing is silently skipped
 
 ## Steps
-- [ ] T1 · setup --dry-run writes no byte and names every file it would write   R1
+- [x] T1 · setup --dry-run writes no byte and names every file it would write   R1 · tree:705a115e1ae8c16551246f6d69a1bb241bc5828a
 - [ ] T2 · the report names the clients that are not here and what it left alone   R1
 - [ ] T3 · the docs and the changelog say how to refresh a machine   R1
 

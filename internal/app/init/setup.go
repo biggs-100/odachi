@@ -35,6 +35,13 @@ func RunSetup(opts Options, files Files, skills Skills) Result {
 	r.installOpenCodeDefault()
 	r.installSkills()
 
+	// The clients detection did not find are named after the work: they are the
+	// one thing a machine refresh leaves alone, and silence about them reads as an
+	// omission.
+	if len(r.absent) > 0 {
+		r.lines = append(r.lines, "not installed here: "+humanList(r.absent)+"; setup does not create another tool's config folder")
+	}
+
 	if len(clients) == 0 {
 		r.lines = append(r.lines, "no agent client found in the home: the bootstrap skill is installed; install OpenCode and run odachi setup again")
 	}
@@ -78,6 +85,10 @@ func (r *runner) setupClients(requested string) (string, []persona.Client, *Resu
 		configDir := path.Dir(client.HomeDir)
 		exists, err := r.files.Exists(filepath.Join(home, filepath.FromSlash(configDir)))
 		if err != nil || !exists {
+			// A client that is not here is named, not dropped: an installer that
+			// lists three destinations and stays quiet about the fourth looks like
+			// it forgot one.
+			r.absent = append(r.absent, client.Agent+" (~/"+configDir+")")
 			continue
 		}
 		found = append(found, client)
