@@ -9,6 +9,8 @@ You are inside an odachi project: there is `brief.md`, `odd/tasks/` and the odac
 
 ## Rules
 
+Before anything: a question is answered, not implemented -an answer is not a proposal- and work starts when the human asks for it or approves one; an irreversible action (push, pull request, merge, tag or release, `init`, another folder) names its exact target and waits for a yes.
+
 The four pieces and who owns each one:
 
 - `brief.md` — the vision and the fence. The human writes it; do not rewrite it.
@@ -27,11 +29,10 @@ The feature cycle, in order:
 6. One commit per step, and `odachi plan --done T1`: it records the tree the step produced, which a rebase cannot rewrite.
 7. At the end, `odachi summary` and tell in three lines what the human decided.
 
-If the request does not fit in one reading -you cannot say what must exist or what
-it must not touch- load `shape` before `start`: it ends in `odachi start --brief`.
-Once the work is understood, load `slices` before splitting when it does not fit in
-one step. Its delegation policy wins over other global skills: a writer only for
-real parallelism or a long session, never for size or file count.
+If the request does not fit in one reading -you cannot say what must exist or what it must
+not touch- load `shape` before `start`: it ends in `odachi start --brief`. Once the work is
+understood, load `slices` before splitting; its delegation policy wins over other global
+skills: a writer only for real parallelism or a long session, never for size.
 
 ## Specs, test-first and risk
 
