@@ -14,9 +14,17 @@ Last written: after 0098, which closed the scope row.
 
 ## Open
 
-Nothing open. The rows that remain are the accepted ones below, each with the reason it
-is not work.
+### the doctor - check 11 reads a CRLF block as hand-edited
 
+Found while writing 0111: oiceSpan in internal/domain/rules looks for the block's
+markers and the voice header by byte, so an AGENTS.md checked out with CRLF line endings
+reads as a block nobody wrote - check 11 answers "the block voice is neither one: they
+edited it by hand" and sends the human to odachi level --to for a file that is fine. 0111
+folded the line endings in its own comparison (check 4) and did not touch check 11, whose
+reader lives in the domain.
+
+The repair is the same fold, once, where the block is parsed. A row rather than a line
+because it changes ules.VoiceIn and everything that reads it.
 ## Closed by feature 0108
 
 

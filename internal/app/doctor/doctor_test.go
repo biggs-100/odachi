@@ -1265,3 +1265,44 @@ func TestDoctorSaysTheMirrorsAreLeftoversWhenTheStoreIsHomeOnly(t *testing.T) {
 		}
 	}
 }
+
+// TestDoctorWarnsWhenTheBlockIsOlder: presence is not currency. A project that upgraded
+// odachi keeps the rules it adopted with, and a rule that arrived later never reaches its
+// agent - the folder rule of 0110 is exactly that case. It is a warning, not a blocker:
+// the old block still works.
+func TestDoctorWarnsWhenTheBlockIsOlder(t *testing.T) {
+	files := configured()
+	older := strings.Replace(blockOf(persona.Novato), "One more, about folders.", "One more, about nothing at all.", 1)
+	if older == blockOf(persona.Novato) {
+		t.Fatal("the fixture did not change the block")
+	}
+	files.put("AGENTS.md", older)
+
+	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if got.Warnings != 1 {
+		t.Fatalf("warnings = %d, want 1: %v", got.Warnings, got.Lines)
+	}
+	lines := strings.Join(got.Lines, " | ")
+	if !strings.Contains(lines, "older block") || !strings.Contains(lines, "odachi init") {
+		t.Errorf("the warning does not say what is old nor how to fix it: %s", lines)
+	}
+	if got.Problems != 0 {
+		t.Errorf("an older block blocked the run: problems = %d", got.Problems)
+	}
+}
+
+// TestOnlyLineEndingsDoNotMakeABlockStale: a checkout is not an older rule. CRLF and a
+// trailing space are what git does to a file; 0031 wrote the same rule for the brief.
+// This check is the one under test: check 11 reads the voice another way and has its own
+// row for the CRLF case.
+func TestOnlyLineEndingsDoNotMakeABlockStale(t *testing.T) {
+	files := configured()
+	files.put("AGENTS.md", strings.ReplaceAll(blockOf(persona.Novato), "\n", "\r\n")+"   ")
+
+	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusOK {
+		t.Fatalf("a checkout made the block stale: %s", check.Detail)
+	}
+}

@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+Doctor says when the rules block is older than the binary.
+
+- **Presence is not currency.** `doctor` looked for the block's markers and never at its
+  text, so a project that upgraded odachi kept the rules it adopted with: a rule that
+  arrived later -the one about other folders, for instance- never reached its agent, and
+  nothing said so. Check 4 now compares the block with the one this binary would write for
+  the project's voice and warns, naming `odachi init`, when they differ.
+- **A warning, never a blocker**, and a checkout is not an older rule: CRLF and a trailing
+  space fold away before the comparison, the same rule the brief has had since 0031.
+
 ## v0.11.60 - 2026-10-30
 
 Another folder is another project.
