@@ -302,10 +302,9 @@ func (r *runner) agents() domaindoctor.Check {
 // simply older. Line endings and trailing spaces are not a stale block, for the reason
 // 0031 already wrote for the brief: a Windows checkout is not an older rule.
 func (r *runner) staleBlock(content string) (string, bool) {
-	// A checkout is not an older rule: fold the line endings before looking for the
-	// markers, because a CRLF file is the same text to a person and a different byte
-	// stream to a search.
-	content = strings.ReplaceAll(content, "\r\n", "\n")
+	// The parser folds line endings once (rules.fold), so a CRLF checkout reads here too;
+	// what is left to ignore is what a text editor does: trailing spaces and the blank
+	// lines at the end.
 	body, ok := rules.BodyIn(content)
 	if !ok {
 		return "", false

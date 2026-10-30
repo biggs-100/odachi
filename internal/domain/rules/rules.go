@@ -112,7 +112,16 @@ func Block(voice string) (string, error) {
 // the file has no complete block. It is the mirror's source of truth: a native
 // agent file written from this text cannot disagree with the block the agent
 // reads, even after the human edited the rules by hand.
+// fold is what a reader sees: CRLF becomes LF. A checkout is not an edit -a Windows clone
+// with core.autocrlf=true gives every line a CR- and every reader below parses by line, so
+// the endings are folded once, here, instead of in each caller. The writer never folds: a
+// file keeps the line endings its platform gave it.
+func fold(text string) string {
+	return strings.ReplaceAll(text, "\r\n", "\n")
+}
+
 func BodyIn(content string) (string, bool) {
+	content = fold(content)
 	begin := lineStart(content, Begin)
 	if begin < 0 {
 		return "", false
@@ -201,6 +210,7 @@ func WithVoice(content, voice string) (string, bool, error) {
 // that is a state to report, not a voice to guess. The text comes back trimmed,
 // because a human's trailing blank line is not a different voice.
 func VoiceIn(content string) (string, bool) {
+	content = fold(content)
 	start, end, insert, ok := voiceSpan(content)
 	if !ok || insert {
 		return "", false
@@ -212,7 +222,7 @@ func VoiceIn(content string) (string, bool) {
 // block is not one: `odachi init` repairs it, and a check that called it complete
 // would leave the agent without rules.
 func HasBlock(content string) bool {
-	_, _, _, ok := voiceSpan(content)
+	_, _, _, ok := voiceSpan(fold(content))
 	return ok
 }
 
