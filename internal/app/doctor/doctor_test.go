@@ -1207,10 +1207,16 @@ func TestDoctorNamesAProjectWhoseStoreSaysNothing(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{persona.SelectionPath, "--global --no-project-agents"} {
+	for _, want := range []string{persona.SelectionPath, "odachi init --global to record it", "odachi init --agents"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}
+	}
+	// The advice has to be a command this binary registers: --no-project-agents
+	// was removed with the global install, and a human following it got an
+	// invalid flag instead of a fix.
+	if strings.Contains(got.Detail, "--no-project-agents") {
+		t.Errorf("the line names a flag that no longer exists: %q", got.Detail)
 	}
 }
 
@@ -1321,5 +1327,27 @@ func TestTheBlockIsComparedWithoutAProfileFile(t *testing.T) {
 
 	if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusWarning {
 		t.Fatalf("an older block passed without a profile file: %s %s", check.Status, check.Detail)
+	}
+}
+
+// TestAHomeScopeBlockIsCurrent: an adopted project writes the block for the
+// machine's copy, and the doctor cannot know which scope the project chose without
+// repeating the inference that wrote it. A home block is current, and the check
+// says so instead of advising an init that would write the same bytes again.
+func TestAHomeScopeBlockIsCurrent(t *testing.T) {
+	files := configured()
+	home, err := rules.BlockFor(persona.Novato, persona.SkillsHome)
+	if err != nil {
+		t.Fatalf("BlockFor(home): %v", err)
+	}
+	if home == blockOf(persona.Novato) {
+		t.Fatal("the two scopes write the same block: the case cannot be distinguished")
+	}
+	files.put("AGENTS.md", home)
+
+	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusOK {
+		t.Fatalf("a home-scope block was called older: %s", check.Detail)
 	}
 }

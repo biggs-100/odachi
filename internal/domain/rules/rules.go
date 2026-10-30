@@ -40,20 +40,21 @@ const (
 	SectionES = "## Cómo hablás"
 )
 
-// head is the block up to and including the blank line that opens the voice
-// section. It is written once and closed by Body, which is what keeps the two
-// voices from differing anywhere but in that section: everything here is the
-// same bytes whatever voice is in force.
-const head = `
+// headTop, headRest and headTail are the block up to and including the blank line
+// that opens the voice section, split where the answer depends on where the craft
+// lives. Binding them in Body is what keeps the two voices from differing anywhere
+// but in that section: everything here is the same bytes whatever voice is in
+// force, and only the two sentences about the skills change with the scope.
+const (
+	headTop = `
 # Project rules (odachi)
 
 odachi is a binary and four plain-text artifacts —brief, task doc, proof and
 profile—. The binary enforces the gate; the artifacts are the memory. The human
 decides the vision and what is non-negotiable; the agent executes with craft. If
 you are unsure where the context lives: ` + "`brief.md`" + ` for the vision, ` + "`odd/tasks/`" + ` for the plan,
-the skills for the craft: ` + "`.agents/skills/`" + ` in the project, or ` + "`~/.agents/skills/`" + ` when the clone's
-store says ` + "`skills = home`" + `.
-
+`
+	headRest = `
 Four hard rules. They are not advice: ` + "`odachi check`" + ` enforces them.
 
 1. Brief before code. If ` + "`brief.md`" + ` is not complete, run ` + "`odachi start`" + ` first.
@@ -73,9 +74,8 @@ implemented: an answer is not a proposal, and work starts when the human asks fo
 approves one. An irreversible action —push, pull request, merge, tag or release, an
 install, another folder— names its exact target and waits for a yes. Ask at the gate,
 once: a question that would not change what you do next is noise.
-
-Skills: the ones in ` + "`.agents/skills/`" + `, or in ` + "`~/.agents/skills/`" + ` when the store says ` + "`skills = home`" + `; inside this project, load ` + "`drive`" + ` before acting: it is the manual.
-
+`
+	headTail = `
 ## The six verbs
 
 - ` + "`odachi start`" + ` — the interview: writes brief, profile, fence and task doc.
@@ -88,27 +88,55 @@ Skills: the ones in ` + "`.agents/skills/`" + `, or in ` + "`~/.agents/skills/`"
 ` + Section + `
 
 `
+)
+
+// skillsParagraph and skillsPlace are the two sentences that depend on where the
+// craft lives: a project that carries its own copy reads one folder, and a project
+// that keeps it in the machine reads the other. Naming both and letting the reader
+// choose was tried and it lies whenever a stale copy survives -the run says the
+// machine copy is the live one and the block pointed at the copy nothing refreshes.
+func skillsParagraph(scope string) string {
+	if scope == persona.SkillsHome {
+		return "the skills for the craft: " + "`~/.agents/skills/`" + ", the copy this machine keeps.\n"
+	}
+	return "the skills for the craft: " + "`.agents/skills/`" + ", this project's copy.\n"
+}
+
+// skillsPlace is the line the agent reads before acting, in the same two cases.
+func skillsPlace(scope string) string {
+	if scope == persona.SkillsHome {
+		return "Skills: the ones in " + "`~/.agents/skills/`" + ", the copy this machine keeps; inside this project, load " + "`drive`" + " before acting: it is the manual.\n"
+	}
+	return "Skills: the ones in " + "`.agents/skills/`" + "; inside this project, load " + "`drive`" + " before acting: it is the manual.\n"
+}
 
 // Body returns the text of the block without its markers, trailing newline
 // included. It is what a native agent file mirrors: the agent must read the same
 // words as the block, and the markers only exist so AGENTS.md can be edited in
 // place.
 //
-// voice is a profile name: novato and senior are their own, and `ci` gets
-// senior's. An unknown voice is an error naming the two that exist — nothing here
-// guesses what an unrecognised name should sound like.
-func Body(voice string) (string, error) {
+// Body is the block for a voice in the default scope: the project's own copy.
+// BodyFor is the same text for the scope the run resolved.
+func Body(voice string) (string, error) { return BodyFor(voice, persona.SkillsProject) }
+
+// BodyFor is Body with the scope the craft lives in: persona.SkillsHome names the
+// machine's copy, and anything else -including a project that never chose- names
+// the project's.
+func BodyFor(voice, scope string) (string, error) {
 	body, err := persona.Voice(voice)
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimPrefix(head, "\n") + body, nil
+	return strings.TrimPrefix(headTop, "\n") + skillsParagraph(scope) + headRest + "\n" + skillsPlace(scope) + headTail + body, nil
 }
 
-// Block returns the whole block for one voice, trailing newline included, with
-// the markers that let WithBlock replace it in place.
-func Block(voice string) (string, error) {
-	body, err := Body(voice)
+// Block is the whole block in the default scope; BlockFor names the scope.
+func Block(voice string) (string, error) { return BlockFor(voice, persona.SkillsProject) }
+
+// BlockFor returns the whole block for one voice and one scope, trailing newline
+// included, with the markers that let WithBlock replace it in place.
+func BlockFor(voice, scope string) (string, error) {
+	body, err := BodyFor(voice, scope)
 	if err != nil {
 		return "", err
 	}
@@ -149,7 +177,12 @@ func BodyIn(content string) (string, bool) {
 // block: it is replaced from the marker to the end instead of gaining a second
 // one.
 func WithBlock(content, voice string) (string, error) {
-	block, err := Block(voice)
+	return WithBlockFor(content, voice, persona.SkillsProject)
+}
+
+// WithBlockFor is WithBlock for the scope the run resolved.
+func WithBlockFor(content, voice, scope string) (string, error) {
+	block, err := BlockFor(voice, scope)
 	if err != nil {
 		return content, err
 	}

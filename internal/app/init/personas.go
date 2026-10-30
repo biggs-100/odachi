@@ -44,7 +44,7 @@ const (
 // differing one is backed up before the rewrite, because the human reads that the
 // file is generated on its first line and a hand edit is lost work either way.
 func (r *runner) writePersonas() *Result {
-	block, err := rules.Body(r.voiceName)
+	block, err := rules.BodyFor(r.voiceName, r.skillsScope)
 	if err != nil {
 		return personaBlocked("could not build the native agent", err)
 	}

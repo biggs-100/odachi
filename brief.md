@@ -1,12 +1,13 @@
-# the-block-names
+# adopting-odachi-in
 
 ## What must exist
-- the block names where the skills actually are: an agent reading AGENTS.md in a project that keeps the craft in the home finds the folder it must load instead of one that will never exist
+- adopting odachi in a repository that already lives proposes the minimal footprint: the project keeps the rules and the hook, the craft stays in the machine, and the copies come back only when the human asks for them
 
 ## Done when
-- the block names the project folder and the home folder, and says which one a project uses, so the text is true whatever the store records
-- a project that never chose keeps the text it had, and this repo regenerates its block without touching the store
-- one test fails if the block ever names a single folder as if it were the only one
+- a plain odachi init in a repository with a commit and no stored choice writes AGENTS.md, .gitignore and the hook, no .agents/skills and no project agent, and says where the craft went
+- a fresh repository keeps today's install: the craft in the project, the native agent in the project
+- a project that already carries .agents/skills keeps it: the inference never moves a project that already has the craft
+- --skills project and --agents put the copies back, are stored, and a later plain init honours them
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
@@ -16,4 +17,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que un bloque que adivina miente mejor que uno que remite al store.
+- Wants to learn: por que un default puede inferirse pero una eleccion del humano no.

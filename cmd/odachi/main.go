@@ -920,6 +920,12 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "odachi: "+err.Error())
 		return start.CodeBlocked
 	}
+	// A repository that already has a commit is a project that already lives, and
+	// adopting odachi there is a different job from starting one: the CLI reads
+	// that fact and the app decides the footprint. A folder whose history this run
+	// just created is not that case.
+	_, headErr := (gitRepo{}).Head(dir)
+	existing := !created && headErr == nil
 
 	if global && os.Getenv("ODACHI_NO_SETUP") != "" {
 		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: the home is not touched; run init without --global or unset the variable")
@@ -937,6 +943,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		Global:          global,
 		NoProjectAgents: global,
 		Skills:          skillsScope,
+		Existing:        existing,
 	}, disk(dir), &initSkills{dir: dir})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
@@ -1507,6 +1514,13 @@ init flags:
                   project keeps only the rules and the plan, the choice stored in
                   agents.toml. A plain init is the run that writes a project's own
   --json          machine output, with the destinations of the skills and of the agent
+
+adopting odachi in a repository that already lives: a project with a commit and no .agents/
+gets the minimal footprint -AGENTS.md, .gitignore and the hook here, the craft refreshed in the
+machine (~/.agents/skills) and no project agent, and the run says so. --skills project and
+--agents put the copies back in the project and are stored; a plain init afterwards honours
+them, and naming a client does not decide where the craft goes. A project that already carries
+.agents/ keeps it, and a folder with no history still gets the full install.
 
 setup flags:
   odachi setup    the global half only, from any folder: the bootstrap skill in
