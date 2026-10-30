@@ -1,19 +1,19 @@
-# the-rehearsal-tells
+# the-block-names
 
 ## What must exist
-- the rehearsal tells the truth about what it could not read: a client odachi could not look at is never reported as one that is not installed, and every branch the review of 0121 found unpinned is pinned by a test that fails without it
+- the block names where the skills actually are: an agent reading AGENTS.md in a project that keeps the craft in the home finds the folder it must load instead of one that will never exist
 
 ## Done when
-- a home whose client folder cannot be read reports could not check, never not installed here, and does not tell the human to install a client that may already be there
-- a settled home with one changed skill rehearses as would replace and never as nothing to write
-- a real run that sets the default agent names the config in its changed files and in the json
+- the block names the project folder and the home folder, and says which one a project uses, so the text is true whatever the store records
+- a project that never chose keeps the text it had, and this repo regenerates its block without touching the store
+- one test fails if the block ever names a single folder as if it were the only one
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
-- no change to the bundled skills or to the door's bytes
+- no change to the bundled skills
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que un test que no puede fallar no es cobertura.
+- Wants to learn: por que un bloque que adivina miente mejor que uno que remite al store.
