@@ -1,12 +1,12 @@
-# the-bench-stops
+# the-tree-is
 
 ## What must exist
-- the bench stops lying: the journey about a check without a proof follows the rule the gate wrote, so the proof is owed at the close and the journey shows it
+- the tree is gofmt-clean and a test keeps it so: every Go file in the repository is the bytes gofmt would write, checked in process so a CRLF or a missing final newline cannot land again
 
 ## Done when
-- the journey about a check without a proof expects the answer the tool gives today, and shows where the proof is owed
-- odachi bench reports zero surprises, and the bench test pins the journey's new shape
-- no other journey changes, and the block count stays what it was unless the rule moved
+- gofmt -l . prints nothing, and the file that was red is canonical
+- a test walks every .go file and fails when format.Source would rewrite it, with the path and the first difference
+- the test is fast: it parses the tree in one pass, without spawning a process per file
 - the changelog says one line
 
 ## Not included (first version)
@@ -17,4 +17,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: qué hacer cuando el arnés y la regla discrepan.
+- Wants to learn: cómo una higiene que nadie mira se queda roja catorce releases.
