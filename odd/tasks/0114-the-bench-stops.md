@@ -11,7 +11,7 @@ R1 · "the bench stops lying: the journey about a check without a proof follows 
 - the changelog says one line
 
 ## Steps
-- [ ] T1 · the journey shows where the proof is owed, and bench reports no surprises   R1
+- [x] T1 · the journey shows where the proof is owed, and bench reports no surprises   R1 · tree:1b62a6ac2d8c713aa63bea875336553a9e6493ce
 - [ ] T2 · the changelog says one line, and the bench test follows   R1
 
 ## History
