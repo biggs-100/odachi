@@ -1,20 +1,21 @@
-# the-fence-names
+# the-store-remembers
 
 ## What must exist
-- the fence names what it protects: the rule that guards the verdict's shape protects the verdict and not the store, so a key a project's store gains is a change to review and not a violation
+- the store remembers the skills scope: a plain odachi init honours the choice the project recorded, --skills changes it and says so in the output, and a project that never chose keeps the answer it always had
 
 ## Done when
-- the verdict rule in odd/fence.toml protects internal/domain/review and internal/adapters/reviewtoml, and stops protecting internal/adapters/agentstoml
-- a gate that reads this fence refuses a change to the verdict and accepts a change to the store
-- the next feature meets a fence it can obey, and the lesson is where the next reader looks
+- after odachi init --skills home, a plain odachi init writes no .agents/skills in the project
+- after odachi init --skills project, a plain odachi init writes .agents/skills again
+- a project that never chose keeps today's answer: a plain init writes the project copy
+- the store names the choice in its output and in the file, and an older binary that opens it says upgrade instead of unknown key
 
 ## Not included (first version)
-- no change to the verdict's shape or its schema, or to the review's settings
 - no change to the proof format, and the stored proof is never rewritten
-- no change to the fence's machinery or to the start that renders every artifact: this is the data of one rule, not a new verb or flag
+- no change to odachi pack, and no new verb: the scope is a key in the store and a flag init already has
+- no change to which clients receive the native agent
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que un fence que nombra de mas bloquea justo al que viene despues.
+- Wants to learn: como un archivo del clon guarda una decision y un flag la cambia sin que el siguiente init la borre.
