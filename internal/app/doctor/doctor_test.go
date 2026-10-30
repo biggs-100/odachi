@@ -1306,3 +1306,20 @@ func TestOnlyLineEndingsDoNotMakeABlockStale(t *testing.T) {
 		t.Fatalf("a checkout made the block stale: %s", check.Detail)
 	}
 }
+
+// TestTheBlockIsComparedWithoutAProfileFile: a project that ran init and never ran start
+// has no odd/profile.toml, and the port answers an inferred profile -the name init writes
+// the block with-. Skipping the comparison there would leave an older block passing in
+// silence exactly where a project is most likely to carry one.
+func TestTheBlockIsComparedWithoutAProfileFile(t *testing.T) {
+	files := configured()
+	delete(files.files, at("odd/profile.toml"))
+	files.put("AGENTS.md", strings.Replace(blockOf(persona.Novato), "One more, about folders.", "One more, about nothing at all.", 1))
+
+	// The port is what answers "inferred": no file, and the name it would infer.
+	got := run(files, cleanLookup(), &fakeProfiles{name: persona.Novato, inferred: true}, "/home/ana/bin/odachi")
+
+	if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusWarning {
+		t.Fatalf("an older block passed without a profile file: %s %s", check.Status, check.Detail)
+	}
+}
