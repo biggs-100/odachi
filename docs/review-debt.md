@@ -9,12 +9,56 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0123, which made the block name both skill folders.
+Last written: after 0124, which gives a repository that already lives the minimal footprint.
 
 ## Open
 
-Nothing open. The rows that remain are the accepted ones below, each with the reason it
-is not work.
+### `odachi role` scatters into `.agents/skills` and flips the adoption
+
+Found by the review of 0124 (tree `1795072d`). `odachi role <slug>` writes
+`.agents/skills/<slug>/SKILL.md` in the project, whatever the scope: in a project
+that just adopted odachi, that single skill makes `derivesMinimal` answer "this
+project carries the craft", so the next plain `init` installs the whole curriculum
+there and rewrites the block to the project's copy. The inference is right about what
+it sees; the bug is that odachi wrote the copy itself, outside any choice. Role
+should respect the scope the project has, which is a change of its own.
+
+### when the machine is the only destination, a home failure is the whole job
+
+Found by the review of 0124. `initSkills` treats a failed home destination as
+`pending:` and exit 0, because before the adoption the project still had its copy.
+Under the minimal footprint the home is the only destination and the block is written
+before the skills half runs, so a home that refuses the write leaves a green run with
+a block naming a folder nothing created -the state 0123 removed. A failure there has
+to fail the run, which changes the rule for every verb that installs in the home.
+
+### the doctor calls a correct adoption "an unfinished one"
+
+Found by the review of 0124 (suggestion). An adopted project has no agent file and no
+`project_agents` key -by design, because the inference is never stored- and check 11
+reports exactly that state as a gap, advising `odachi init --global` to record a
+choice. Either the note recognises the adopted state or the advice stops calling the
+missing key a defect.
+
+### the footprint reads a failed check as "not there"
+
+Found by the review of 0124. `derivesMinimal`, `projectAgentPresent` and
+`projectBlock` read an error as "no such file" (`err == nil && found`, a failed
+`ReadFile` falling back to the default block), and `runInit` flattens a failed
+`git rev-parse HEAD` into "this repository has no commit". So a stat that fails, an
+`AGENTS.md` that cannot be read, or a git that refuses the repository flips a project
+that does carry its craft into the full install, or the other way. The convention
+this feature skipped was already there (`Run` answers a failed `Exists` with
+`blocked("could not check ...")`), and the double that could pin it is already in the
+suite (`fakeFiles.existsErr`, used by the setup tests): the row is cheap.
+
+### the notes name `.agents/`, the code tests `.agents/skills`
+
+Found by the review of 0124 (suggestion). The changelog, the README and the help say
+a repository gets the minimal footprint when it has no `.agents/`; the code tests
+`.agents/skills`, on purpose -another tool's `.agents/` folder is not the craft. A
+repository with `.agents/notes.md` reads the notes and gets the other behaviour. Three
+lines to say the copy instead of the folder.
 
 ## Closed by feature 0113
 
@@ -449,6 +493,9 @@ answer owed, so the test is not a comment.
 - `internal/app/review/review.go:1350` - the drop of a refused answer cannot cost
   the verdict; the keep-failure half was already pinned by feature 0051, which the
   store could not know because a test moves a different file's blob.
+
+
+
 
 
 

@@ -27,8 +27,7 @@ func TestBlockForNovatoIsPinnedByteForByte(t *testing.T) {
 		"profile—. The binary enforces the gate; the artifacts are the memory. The human",
 		"decides the vision and what is non-negotiable; the agent executes with craft. If",
 		"you are unsure where the context lives: `brief.md` for the vision, `odd/tasks/` for the plan,",
-		"the skills for the craft: `.agents/skills/` in the project, or `~/.agents/skills/` when the clone's",
-		"store says `skills = home`.",
+		"the skills for the craft: `.agents/skills/`, this project's copy.",
 		"",
 		"Four hard rules. They are not advice: `odachi check` enforces them.",
 		"",
@@ -50,7 +49,7 @@ func TestBlockForNovatoIsPinnedByteForByte(t *testing.T) {
 		"install, another folder— names its exact target and waits for a yes. Ask at the gate,",
 		"once: a question that would not change what you do next is noise.",
 		"",
-		"Skills: the ones in `.agents/skills/`, or in `~/.agents/skills/` when the store says `skills = home`; inside this project, load `drive` before acting: it is the manual.",
+		"Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual.",
 		"",
 		"## The six verbs",
 		"",
@@ -188,8 +187,7 @@ func TestBlockSaysWhatOdachiIsAndWhereTheVoiceComesFrom(t *testing.T) {
 		"the agent executes with craft",
 		"`brief.md` for the vision",
 		"`odd/tasks/` for the plan",
-		"the skills for the craft: `.agents/skills/` in the project, or `~/.agents/skills/` when the clone's",
-		"store says `skills = home`",
+		"the skills for the craft: `.agents/skills/`, this project's copy.",
 	} {
 		if !strings.Contains(flat, want) {
 			t.Errorf("the block does not say %q:\n%s", want, block)
@@ -434,18 +432,52 @@ func TestACRLFBlockReadsLikeAnLFBlock(t *testing.T) {
 	}
 }
 
-// TestTheBlockNamesBothSkillFolders: the block is written once and read by every
-// agent, whatever the project chose. Naming one folder makes it lie for the other
-// choice, which is what 0123 fixed: both are named, and the store decides.
-func TestTheBlockNamesBothSkillFolders(t *testing.T) {
-	body, err := rules.Body(persona.Senior)
-	if err != nil {
-		t.Fatalf("Body: %v", err)
+// TestTheBlockNamesTheFolderTheScopeUses: the block names one folder, the one the
+// run resolved. Naming both and letting the reader choose was tried and it lies
+// when a stale copy survives; naming one for the wrong scope lies too. Each scope
+// names its own, and neither names the other.
+func TestTheBlockNamesTheFolderTheScopeUses(t *testing.T) {
+	cases := map[string]struct{ want, not string }{
+		persona.SkillsProject: {want: "`.agents/skills/`", not: "`~/.agents/skills/`"},
+		persona.SkillsHome:    {want: "`~/.agents/skills/`", not: "`.agents/skills/`"},
 	}
-	flat := strings.Join(strings.Fields(body), " ")
-	for _, want := range []string{"`.agents/skills/`", "`~/.agents/skills/`", "skills = home"} {
-		if !strings.Contains(flat, want) {
-			t.Errorf("the block does not say %q:\n%s", want, body)
+	for scope, c := range cases {
+		body, err := rules.BodyFor(persona.Senior, scope)
+		if err != nil {
+			t.Fatalf("BodyFor(%s): %v", scope, err)
 		}
+		if !strings.Contains(body, c.want) {
+			t.Errorf("the block for %s does not name %q:\n%s", scope, c.want, body)
+		}
+		if strings.Contains(body, c.not) {
+			t.Errorf("the block for %s names the other scope's folder %q:\n%s", scope, c.not, body)
+		}
+	}
+}
+
+// TestBlockForHomeIsPinnedByteForByte: the home scope is what every project that
+// adopts odachi now gets in AGENTS.md, so it is pinned the same way as the
+// project one. A body that changes by a space is a different block to the doctor
+// and a different sentence to the agent.
+func TestBlockForHomeIsPinnedByteForByte(t *testing.T) {
+	block, err := rules.BlockFor(persona.Novato, persona.SkillsHome)
+	if err != nil {
+		t.Fatalf("BlockFor(home): %v", err)
+	}
+	lines := strings.Split(strings.TrimSuffix(block, "\n"), "\n")
+	if len(lines) == 0 || lines[0] != "<!-- odachi:begin -->" {
+		t.Fatalf("the block does not open with the marker: %v", lines)
+	}
+	flat := strings.Join(strings.Fields(block), " ")
+	for _, want := range []string{
+		"the skills for the craft: `~/.agents/skills/`, the copy this machine keeps.",
+		"Skills: the ones in `~/.agents/skills/`, the copy this machine keeps; inside this project, load `drive` before acting: it is the manual.",
+	} {
+		if !strings.Contains(flat, want) {
+			t.Errorf("the home block does not say %q:\n%s", want, block)
+		}
+	}
+	if strings.Contains(block, "`.agents/skills/`") {
+		t.Errorf("the home block names the project's copy:\n%s", block)
 	}
 }

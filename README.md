@@ -278,14 +278,15 @@ way. The files of the client you do not choose are not deleted: they simply stop
 being written. Without a file, the default is still both.
 
 Adopting odachi in a repository that already lives is a different job. A project
-with a commit and none of odachi's folders gets the **minimal footprint**:
-`AGENTS.md`, the `.gitignore` block and the hook, with the craft and the agent left
-where they already are -in the machine, installed once by `odachi setup`- and the
-run says so. `--skills project` and `--agents` bring the copies into the project
-and are stored, so a later plain `init` honours them. A project that already
-carries `.agents/`, `.opencode/` or `.claude/` keeps what it has: the inference
-never moves a project that adopted odachi the old way, and a folder with no history
-still gets the full install, because there the project is starting now.
+with a commit and no `.agents/` gets the **minimal footprint**: `AGENTS.md`, the
+`.gitignore` block and the hook in the tree, the craft refreshed in the machine
+(`~/.agents/skills`, a no-op when `odachi setup` already put it there) and no
+project agent -the run says so. `--skills project` and `--agents` bring the copies
+into the project and are stored, so a later plain `init` honours them; naming a
+client does not decide where the craft goes. A project that already carries
+`.agents/` keeps it: the inference never moves a project that adopted odachi the
+old way, and a folder with no history still gets the full install, because there
+the project is starting now.
 
 Open the project with OpenCode and that is it: it reads `.agents/skills` as an
 external directory in addition to its own, so it sees the fifteen without

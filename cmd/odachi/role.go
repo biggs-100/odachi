@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
 	roleapp "github.com/biggs-100/odachi/internal/app/role"
 	"github.com/biggs-100/odachi/internal/app/start"
@@ -81,7 +83,10 @@ func roleContext(dir string) (block string, clients []string, code int, message 
 	if err != nil {
 		return "", nil, start.CodeBlocked, oneLine(err.Error()) + "; run odachi role again"
 	}
-	block, err = rules.Body(voice)
+	// The role mirrors the block the project already carries: the same words an
+	// agent reads in AGENTS.md, because two texts about where the craft lives are
+	// one text too many. A project with no block gets the block for its voice.
+	block, err = projectBlock(dir, voice)
 	if err != nil {
 		return "", nil, start.CodeBlocked, "could not build the rules block: " + oneLine(err.Error()) + "; run odachi role again"
 	}
@@ -139,4 +144,16 @@ func reportRole(result roleapp.Result, asJSON bool, stdout, stderr io.Writer) in
 		fmt.Fprintln(out, line)
 	}
 	return result.Code
+}
+
+// projectBlock is the block this project already carries, so a role written here
+// says what AGENTS.md says. A project with no block (or one the parser cannot
+// read) gets the block for its voice, which is what init would write there.
+func projectBlock(dir, voice string) (string, error) {
+	if data, err := os.ReadFile(filepath.Join(dir, "AGENTS.md")); err == nil {
+		if body, ok := rules.BodyIn(string(data)); ok {
+			return body, nil
+		}
+	}
+	return rules.Body(voice)
 }

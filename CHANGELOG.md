@@ -9,14 +9,15 @@ tomorrow.
 
 Adopting odachi in a project that already lives stops scattering folders in it.
 
-- **A repository with a commit and none of odachi's folders gets the minimal footprint.** The
-  project keeps the rules, the `.gitignore` block and the hook; the craft and the agent stay in
-  the machine, where `odachi setup` installed them. Before, the same run wrote `.agents/skills`,
-  `.opencode/agents` and `.claude/` into a project that only wanted the rules.
-- **The inference is never stored.** Only `--skills project` and `--agents` write a choice, so a
-  later plain `init` derives the footprint again instead of inheriting a decision nobody made. A
-  project that already carries any of the three keeps it, and a folder with no history still gets
-  the full install: there the project is starting now.
+- **A repository with a commit and no `.agents/` gets the minimal footprint.** The project keeps
+  the rules, the `.gitignore` block and the hook; the craft is refreshed in the machine
+  (`~/.agents/skills`, a no-op when `odachi setup` already put it there) and no project agent is
+  written. Before, the same run wrote `.agents/skills`, `.opencode/agents` and `.claude/` into a
+  project that only wanted the rules.
+- **The inference is never stored.** Only `--skills project` and `--agents` write a choice, and
+  the two are separate: naming a client does not decide where the craft goes. A project that
+  already carries `.agents/` keeps it, and a folder with no history still gets the full install:
+  there the project is starting now.
 
 ## v0.11.70 - 2026-10-30
 

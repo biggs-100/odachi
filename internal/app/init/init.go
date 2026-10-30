@@ -210,9 +210,25 @@ func Run(opts Options, files Files, skills Skills) Result {
 	r.clients = clients
 	r.existing = opts.Existing
 	r.minimal = r.derivesMinimal()
+	r.adoptAgent = r.existing && r.storedProject == "" && !r.projectAgentPresent()
 	r.projectAgents = r.resolveProjectAgents(opts)
 	r.skillsScope = r.resolveSkillsScope(opts)
 	r.skillsSource = r.resolveSkillsSource(opts)
+	// The store records decisions, never inferences. A flag names one, and only
+	// the flags are written when the footprint was inferred: otherwise the next
+	// plain init would read a choice nobody made.
+	r.persistProject = r.projectAgents
+	r.persistSkills = r.skillsScope
+	if r.minimal {
+		if strings.TrimSpace(opts.Skills) == "" {
+			r.persistSkills = r.storedSkills
+		}
+	}
+	// The agent half has its own inference, and an inference is never written:
+	// only --agents or --global make the absence of the mirrors a decision.
+	if r.adoptAgent && strings.TrimSpace(opts.Agents) == "" && !opts.NoProjectAgents {
+		r.persistProject = r.storedProject
+	}
 
 	if problem := r.writeAgents(); problem != nil {
 		return *problem
@@ -321,23 +337,42 @@ func effectiveSkills(store persona.Store) persona.Store {
 }
 
 // derivesMinimal is the footprint a repository that already lives gets: the
-// project never chose, and none of odachi's folders are here yet, so the rules
-// stay in the tree and the craft stays in the machine. A project that already
-// carries any of the three has adopted odachi the old way, and an inference does
-// not move a project that already has the craft.
+// project never chose where the craft goes, and no project copy is here yet, so
+// the rules stay in the tree and the craft stays in the machine. The question is
+// about the craft alone -a store that only chose which clients receive the agent
+// is not an answer to it- and a project that already carries the copy keeps it:
+// an inference does not move a project that already has the craft.
 func (r *runner) derivesMinimal() bool {
-	if !r.existing || r.storedSkills != "" || r.storedProject != "" {
+	if !r.existing || r.storedSkills != "" {
 		return false
 	}
-	for _, rel := range []string{".agents", ".opencode", ".claude"} {
-		if found, err := r.files.Exists(filepath.Join(r.dir, rel)); err == nil && found {
-			return false
-		}
+	// The copy, not the folder: `.agents/` belongs to other tools too, and a
+	// repository that keeps its notes there is still a repository without the
+	// craft.
+	if found, err := r.files.Exists(filepath.Join(r.dir, ".agents", "skills")); err == nil && found {
+		return false
 	}
 	return true
 }
 
-// resolveProjectAgents decides where the native agent files live. The flag wins;
+// projectAgentPresent says the project already carries the native agent a client
+// reads, even if it never carried the craft: an old `--skills home` install leaves
+// exactly that split. The signal is the file, never the folder -a repository that
+// uses OpenCode or Claude for its own settings has the folder and no agent of
+// ours- so the craft's inference does not decide the agent half.
+func (r *runner) projectAgentPresent() bool {
+	for _, client := range persona.Clients() {
+		file, ok := persona.FilesFor(client.Agent, "")
+		if !ok || file.Path == "" {
+			continue
+		}
+		if found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(file.Path))); err == nil && found {
+			return true
+		}
+	}
+	return false
+}
+
 // an explicit --agents asks for the project's own copy, which is the only way out
 // of the home-only choice and needs no second flag; otherwise the stored answer
 // stands, a repository that already lives keeps them in the machine, and a
@@ -350,7 +385,7 @@ func (r *runner) resolveProjectAgents(opts Options) string {
 		return persona.ProjectAgentsWrite
 	case r.storedProject != "":
 		return r.storedProject
-	case r.minimal:
+	case r.adoptAgent:
 		return persona.ProjectAgentsNone
 	default:
 		return persona.ProjectAgentsWrite
@@ -402,7 +437,11 @@ func (r *runner) resolveSkillsSource(opts Options) string {
 // flag, or a store that already exists. A project that never chose keeps no file
 // and both clients, so the default install gains no new artifact.
 func (r *runner) writeAgentStore(explicit bool) *Result {
-	want := effectiveSkills(effectiveProject(persona.Store{Agents: r.selection, ProjectAgents: r.projectAgents, Skills: r.skillsScope}))
+	// decided is what may be written; want is the same answer with the absent
+	// keys read as their defaults, which is how two stores are compared without
+	// rewarding a file for saying aloud what its silence already says.
+	decided := persona.Store{Agents: r.selection, ProjectAgents: r.persistProject, Skills: r.persistSkills}
+	want := effectiveSkills(effectiveProject(decided))
 	stored := effectiveSkills(effectiveProject(persona.Store{Agents: r.storedSelection, ProjectAgents: r.storedProject, Skills: r.storedSkills}))
 	if !explicit && r.storedSelection == "" {
 		return nil
@@ -417,7 +456,7 @@ func (r *runner) writeAgentStore(explicit bool) *Result {
 		return nil
 	}
 
-	data, err := r.agentSelection.Render(want)
+	data, err := r.agentSelection.Render(decided)
 	if err != nil {
 		problem := blocked("could not build " + persona.SelectionPath + ": " + oneLine(err.Error()) +
 			"; run odachi init --agents " + r.selection + " again")
@@ -504,6 +543,15 @@ type runner struct {
 	// odachi's footprint is here yet, and the machine is where the craft lives.
 	existing bool
 	minimal  bool
+	// adoptAgent is the agent half's own inference: a repository that already
+	// lives, no choice recorded about its agent, and no agent file here. It does
+	// not read the craft's answer, because a project that keeps its copy is not
+	// a project that asked for the mirrors.
+	adoptAgent bool
+	// persistProject and persistSkills are what a store may record: the resolved
+	// answer, except under an inference, where only a flag counts.
+	persistProject string
+	persistSkills  string
 	// absent is what detection did not find: a client whose config folder is not
 	// in this home. It is reported, because an installer that stays quiet about a
 	// client looks like it forgot one.
@@ -775,14 +823,14 @@ func (r *runner) skipProjectPersonas(byFlag bool) {
 	if byFlag {
 		reason = "--no-project-agents"
 	}
-	if r.minimal && r.storedProject == "" {
+	if r.adoptAgent {
 		reason = "this repository already lives, so the agent stays in the machine"
 	}
 	r.lines = append(r.lines, "project agents: not written ("+reason+"); the door in the home is the one that runs, and --agents "+r.selection+" puts the mirrors back")
 	// The minimal footprint skips both halves here, so the machine is the only
 	// place the agent can come from. Saying it is not advice: without setup the
 	// project has no agent at all.
-	if r.minimal {
-		r.lines = append(r.lines, "if this machine never ran odachi setup, do it once: it installs the door and the craft the whole machine reads")
+	if r.adoptAgent {
+		r.lines = append(r.lines, "if this machine never ran odachi setup, do it once: it installs the door the agent comes from")
 	}
 }

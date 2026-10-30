@@ -315,12 +315,16 @@ func (r *runner) staleBlock(content string) (string, bool) {
 		// nothing to generate the block with. Check 7 owns that refusal.
 		return "", false
 	}
-	want, err := rules.Body(name)
-	if err != nil {
-		return "", false
-	}
-	if sameBlock(body, want) {
-		return "", false
+	// The block may have been written for either scope and the doctor cannot know
+	// which without repeating the inference that wrote it: matching either variant
+	// is current, and the voice is what this comparison is about. sameBlock keeps
+	// what a checkout or an editor does to a file -trailing spaces, a final blank
+	// line- from reading as an older rule.
+	for _, scope := range []string{persona.SkillsProject, persona.SkillsHome} {
+		want, err := rules.BodyFor(name, scope)
+		if err == nil && sameBlock(body, want) {
+			return "", false
+		}
 	}
 	return agentsFile + " carries an older block than this binary writes: the rules that arrived after this project adopted odachi are not in it (run odachi init)", true
 }
@@ -882,10 +886,13 @@ func (r *runner) personaNote(content, selection string, clients []persona.Client
 	case len(missing) > 0 && home:
 		// The home explains the absence, and nothing recorded the choice: a
 		// teammate who clones this project would not know where its agent lives.
+		// The advice has to be a command this binary still has: --global records
+		// the home-only choice, and --agents puts the copies in the project.
 		return "the project has no agent files: the door in the home is the one that runs, and " + persona.SelectionPath +
-			" does not say so; run odachi init --global --no-project-agents to record it"
+			" does not say so; run odachi init --global to record it, or odachi init --agents " + selection + " to keep the agent here"
 	case len(missing) > 0:
-		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") + "; run odachi init"
+		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") +
+			"; run odachi init --global to install the door, or odachi init --agents " + selection + " to put them in this project"
 	case len(stale) > 0 && choice == persona.ProjectAgentsNone:
 		// The store keeps the agent in the home, so init skips these files: the
 		// advice has to be something that actually resolves them.

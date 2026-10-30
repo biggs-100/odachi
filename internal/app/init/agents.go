@@ -41,7 +41,7 @@ func (r *runner) writeAgents() *Result {
 		current = string(data)
 	}
 
-	updated, err := rules.WithBlock(current, voice)
+	updated, err := rules.WithBlockFor(current, voice, r.skillsScope)
 	if err != nil {
 		problem := blocked("could not build the block of " + agentsFile + ": " + oneLine(err.Error()) + "; run odachi init again")
 		return &problem
