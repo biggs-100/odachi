@@ -5,7 +5,8 @@ odachi is a binary and four plain-text artifacts —brief, task doc, proof and
 profile—. The binary enforces the gate; the artifacts are the memory. The human
 decides the vision and what is non-negotiable; the agent executes with craft. If
 you are unsure where the context lives: `brief.md` for the vision, `odd/tasks/` for the plan,
-`.agents/skills/` for the craft.
+the skills for the craft: `.agents/skills/` in the project, or `~/.agents/skills/` when the clone's
+store says `skills = home`.
 
 Four hard rules. They are not advice: `odachi check` enforces them.
 
@@ -27,7 +28,7 @@ approves one. An irreversible action —push, pull request, merge, tag or releas
 install, another folder— names its exact target and waits for a yes. Ask at the gate,
 once: a question that would not change what you do next is noise.
 
-Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual.
+Skills: the ones in `.agents/skills/`, or in `~/.agents/skills/` when the store says `skills = home`; inside this project, load `drive` before acting: it is the manual.
 
 ## The six verbs
 

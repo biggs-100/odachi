@@ -10,7 +10,7 @@ R1 · "the block names where the skills actually are: an agent reading AGENTS.md
 - one test fails if the block ever names a single folder as if it were the only one
 
 ## Steps
-- [ ] T1 · the block names both skill folders and says which one applies   R1
+- [x] T1 · the block names both skill folders and says which one applies   R1 · tree:003e4e0abc4480db895db98bb97a734688e0dd3c
 - [ ] T2 · this repo regenerates its block, and the ledger row leaves   R1
 
 ## History
