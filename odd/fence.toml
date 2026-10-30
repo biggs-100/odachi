@@ -1,17 +1,15 @@
 # a rule names paths, not a phrase: a glob of the phrase's own words matches
 # files named like the phrase and protects nothing.
+#
+# a rule protects a file the feature must not touch because touching it would be
+# wrong. it is not a place to restate a reason: "no new verb" once became a rule
+# over the whole pack package, and the next feature that needed pack's report was
+# refused with a message about a verb it never added (0120 corrected it).
+#
+# so every path below is a file this change really must leave alone, and the rule's
+# name says exactly that.
 
 [[rule]]
 not   = "no change to the proof format, and the stored proof is never rewritten"
 paths = ["internal/domain/proof/**", "proof/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to odachi pack, and no new verb: the scope is a key in the store and a flag init already has"
-paths = ["internal/app/pack/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to which clients receive the native agent"
-paths = ["internal/domain/persona/selection.go", "internal/app/init/personas.go"]
 deps  = []
