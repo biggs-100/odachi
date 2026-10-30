@@ -960,8 +960,10 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 	var (
 		agents string
 		asJSON bool
+		dryRun bool
 	)
 	flags.StringVar(&agents, "agents", "", "opencode | claude | both (default: the clients installed in the home)")
+	flags.BoolVar(&dryRun, "dry-run", false, "report every file this run would write, and write none")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
@@ -986,9 +988,37 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 		Profiles: writtenProfile{},
 		Agents:   agents,
 		Home:     osHome{},
-	}, osFiles{}, &initSkills{dir: "."})
+		DryRun:   dryRun,
+	}, setupFiles(dryRun), &initSkills{dir: "."})
 	return reportInit(result, asJSON, stdout, stderr)
 }
+
+// setupFiles is the disk the machine refresh reads through. A rehearsal gets a
+// port that answers every question from the real disk and swallows every write:
+// the run compares the bytes it would write and reports them, and not one byte
+// moves. It lives in the CLI because it is a decision about this verb; the app
+// only learns, through the report, that it was a rehearsal.
+func setupFiles(dryRun bool) initapp.Files {
+	if !dryRun {
+		return osFiles{}
+	}
+	return &dryRunFiles{real: osFiles{}}
+}
+
+// dryRunFiles is the rehearsal's disk: reads are real, writes are recorded and
+// dropped. Backup is recorded too, because a run that would rewrite a file also
+// would copy it first, and the report should not claim a backup nobody took.
+type dryRunFiles struct {
+	real osFiles
+}
+
+func (f *dryRunFiles) Exists(path string) (bool, error) { return f.real.Exists(path) }
+func (f *dryRunFiles) Read(path string) ([]byte, error) { return f.real.Read(path) }
+func (f *dryRunFiles) Write(string, []byte) error       { return nil }
+func (f *dryRunFiles) Backup(path string) (string, error) {
+	return path + ".bak", nil
+}
+func (f *dryRunFiles) MakeExecutable(string) error { return nil }
 
 // initSkills is the join between `odachi init` and `odachi pack`. init decides
 // where the skills go — the project's cross-client directory, or the human's home
@@ -1008,7 +1038,7 @@ type initSkills struct {
 // into the lines a human reads. Project scope keeps the old two destinations: the
 // curriculum in the project and bootstrap in the home. Home scope puts the whole
 // payload in the home; it never deletes a project copy an earlier run left.
-func (s initSkills) Install(scope string) initapp.SkillReport {
+func (s initSkills) Install(scope string, dryRun bool) initapp.SkillReport {
 	if _, ok := bundledskills.Bootstrap(); !ok {
 		return initapp.SkillReport{
 			Blocked: "this binary does not carry the " + bundledskills.BootstrapName + " skill: it is an incomplete installation; download odachi again",
@@ -1021,7 +1051,7 @@ func (s initSkills) Install(scope string) initapp.SkillReport {
 		if err != nil {
 			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: "odachi init"}
 		}
-		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all)}, disk(s.dir), osHome{})
+		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all), DryRun: dryRun}, disk(s.dir), osHome{})
 		report := s.report([]pack.Result{home})
 		if standard, err := agent.Resolve(agent.Standard); err == nil {
 			exists, err := (osFiles{}).Exists(filepath.Join(s.dir, filepath.FromSlash(standard.Dest)))
@@ -1041,8 +1071,8 @@ func (s initSkills) Install(scope string) initapp.SkillReport {
 	// The project gets the craft, in the cross-client location every client
 	// reads. The home gets the one skill that teaches how to arrive, because
 	// before a project exists the home is the only place a skill can live.
-	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum)}, disk(s.dir), osHome{})
-	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap})}, disk(s.dir), osHome{})
+	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum), DryRun: dryRun}, disk(s.dir), osHome{})
+	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap}), DryRun: dryRun}, disk(s.dir), osHome{})
 	return s.report([]pack.Result{project, home})
 }
 
@@ -1055,6 +1085,7 @@ func (s initSkills) report(results []pack.Result) initapp.SkillReport {
 			report.Dests = append(report.Dests, initapp.SkillDest{
 				Label:     dest.Dest,
 				Installed: dest.Installed,
+				Replaced:  dest.BackedUp,
 				Unchanged: dest.Unchanged,
 				Files:     dest.Files,
 			})
@@ -1144,6 +1175,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 			skills = append(skills, initSkillDest{
 				Dest:      dest.Label,
 				Installed: dest.Installed,
+				Replaced:  dest.Replaced,
 				Unchanged: dest.Unchanged,
 				Files:     destFiles,
 			})
@@ -1171,6 +1203,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 			Files    []string          `json:"files"`
 			Skills   []initSkillDest   `json:"skills"`
 			Personas []initPersonaDest `json:"personas"`
+			DryRun   bool              `json:"dry_run,omitempty"`
 		}{
 			Code:     result.Code,
 			Message:  result.Message,
@@ -1179,6 +1212,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 			Files:    files,
 			Skills:   skills,
 			Personas: personas,
+			DryRun:   result.DryRun,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
@@ -1212,6 +1246,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 type initSkillDest struct {
 	Dest      string   `json:"dest"`
 	Installed int      `json:"installed"`
+	Replaced  int      `json:"replaced,omitempty"`
 	Unchanged int      `json:"unchanged"`
 	Files     []string `json:"files"`
 }
@@ -1383,7 +1418,7 @@ usage:
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]
-  odachi setup [--agents opencode|claude|both] [--json]
+  odachi setup [--agents opencode|claude|both] [--dry-run] [--json]
   odachi skills [--check | --write]
   odachi role new <slug>
   odachi role [<slug>]
@@ -1478,7 +1513,12 @@ setup flags:
                   ~/.agents/skills, the door for the clients found in the home,
                   and OpenCode's default agent. It writes nothing here. The
                   installer runs it, so the user only installs odachi and talks.
+                  After an upgrade it is the one command that refreshes the
+                  machine: run it twice and the second run changes nothing.
   --agents s      opencode | claude | both (default: the clients installed in the home)
+  --dry-run       report every file this run would write, and write none: the
+                  rehearsal names each destination, says "would write", and leaves
+                  the bytes exactly as they were
   --json          machine output
 
 what init leaves written, in one command (--skills project and --agents both, the defaults):

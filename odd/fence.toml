@@ -1,18 +1,9 @@
 # a rule names paths, not a phrase: a glob of the phrase's own words matches
 # files named like the phrase and protects nothing.
 #
-# a rule protects a file the feature must not touch because touching it would be
-# wrong. it is not a place to restate a reason: "no new verb" once became a rule
-# over the whole pack package, and the next feature that needed pack's report was
-# refused with a message about a verb it never added (0120 corrected it).
-#
-# the correction narrows, it does not delete: the rule that protected the client
-# choice named two files, and only the writer was over-reach. deleting the whole
-# rule would leave the decision itself with no fence, so a later feature could drop
-# a client and the gate would stay green.
-#
-# so every path below is a file this change really must leave alone, and the rule's
-# name says exactly that.
+# a rule protects what its own name says; every path it lists is described there,
+# because a folder under a name that does not mention it blocks the first feature
+# that needs it (0117 paid for that lesson, 0118 corrected it).
 
 [[rule]]
 not   = "no change to the proof format, and the stored proof is never rewritten"
@@ -20,6 +11,6 @@ paths = ["internal/domain/proof/**", "proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to which clients receive the native agent"
-paths = ["internal/domain/persona/selection.go"]
+not   = "no change to the bundled skills or to the door's bytes: the report learns to speak first"
+paths = ["skills/**", "internal/domain/persona/persona.go"]
 deps  = []

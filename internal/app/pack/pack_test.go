@@ -298,6 +298,33 @@ func TestDryRunTouchesNothing(t *testing.T) {
 	}
 }
 
+// TestDryRunFilesNameWhatWouldBeWritten: Files is documented as "what this run
+// wrote, or would write", and a rehearsal of an upgraded machine is exactly the
+// case where the list decides a report: a missing skill and a changed one are
+// both work, and both have to appear.
+func TestDryRunFilesNameWhatWouldBeWritten(t *testing.T) {
+	root := home()
+	edited := target(root, "claude", "acceptance")
+	files := newFakeFiles(map[string]string{edited: "editado a mano\n"})
+
+	result := run(files, fakeHome{dir: root}, pack.Options{Agents: "claude", DryRun: true})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if len(result.Dests) != 1 {
+		t.Fatalf("Dests = %d, want 1", len(result.Dests))
+	}
+	dest := result.Dests[0]
+	// Four skills: the one edited here and three that are not there yet.
+	if want := dest.Installed + dest.BackedUp; len(dest.Files) != want {
+		t.Fatalf("Files = %v (%d), want one per skill this run would write (%d)", dest.Files, len(dest.Files), want)
+	}
+	if !slices.Contains(dest.Files, "~/.claude/skills/acceptance/SKILL.md") {
+		t.Errorf("the file it would replace is not named: %v", dest.Files)
+	}
+}
+
 // TestOneFailureDoesNotAbortTheOthers: a denied write in one agent is reported
 // with the agent and the path, and every other agent still gets its skills.
 func TestOneFailureDoesNotAbortTheOthers(t *testing.T) {

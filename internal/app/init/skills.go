@@ -13,6 +13,11 @@ import (
 type SkillDest struct {
 	Label     string
 	Installed int
+	// Replaced is a skill whose bytes differ from the binary's: a real run backs
+	// it up and writes it, a rehearsal says it would. Without the count a
+	// rehearsal of an upgraded binary reported "nothing to write" while every
+	// changed skill awaited a rewrite.
+	Replaced  int
 	Unchanged int
 	Files     []string
 }
@@ -50,7 +55,7 @@ type SkillReport struct {
 // payload and adapters; an app importing another app would inherit its error
 // strings and its table for a job that is not its own.
 type Skills interface {
-	Install(scope string) SkillReport
+	Install(scope string, dryRun bool) SkillReport
 }
 
 // installSkills is the last step of a start: the project is not ready until the
@@ -64,13 +69,13 @@ func (r *runner) installSkills() {
 	if line := r.skillsChoice(); line != "" {
 		r.lines = append(r.lines, line)
 	}
-	report := r.skills.Install(r.skillsScope)
+	report := r.skills.Install(r.skillsScope, r.dryRun)
 
 	for _, dest := range report.Dests {
 		r.skillDests = append(r.skillDests, dest)
 		r.skillLabels = append(r.skillLabels, dest.Label)
 		r.skillFiles = append(r.skillFiles, dest.Files...)
-		if line := skillLine(dest); line != "" {
+		if line := skillLine(dest, r.dryRun); line != "" {
 			r.lines = append(r.lines, line)
 		}
 	}
@@ -112,11 +117,23 @@ func other(scope string) string {
 
 // skillLine is one destination in one line: what arrived and what was already
 // there. A rerun says `unchanged` instead of claiming work it did not do. A
-// destination that got nothing and had nothing is not worth a line.
-func skillLine(dest SkillDest) string {
-	parts := make([]string, 0, 2)
+// destination that got nothing and had nothing is not worth a line. A rehearsal
+// says what it would install, in the same words the run would use.
+func skillLine(dest SkillDest, dry bool) string {
+	parts := make([]string, 0, 3)
 	if dest.Installed > 0 {
-		parts = append(parts, count(dest.Installed, "installed skill", "installed skills"))
+		if dry {
+			parts = append(parts, "would install "+count(dest.Installed, "skill", "skills"))
+		} else {
+			parts = append(parts, count(dest.Installed, "installed skill", "installed skills"))
+		}
+	}
+	if dest.Replaced > 0 {
+		if dry {
+			parts = append(parts, "would replace "+count(dest.Replaced, "skill", "skills"))
+		} else {
+			parts = append(parts, count(dest.Replaced, "replaced skill", "replaced skills"))
+		}
 	}
 	if dest.Unchanged > 0 {
 		parts = append(parts, count(dest.Unchanged, "unchanged", "unchanged"))

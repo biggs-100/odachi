@@ -7,6 +7,22 @@ tomorrow.
 
 ## Unreleased
 
+`odachi setup` can rehearse, and it names what it leaves alone.
+
+- **`odachi setup --dry-run` writes no byte.** The machine verb only knew how to act, so after
+  an upgrade the human ran it and hoped. The rehearsal reads every destination, compares the
+  bytes it would write, and says `would write` - the same code that does the work builds the
+  report, because the disk it writes through answers every question and swallows every write.
+- **A settled machine says so.** Run it twice and the second run reports nothing to write; the
+  real run twice changes nothing either.
+- **A skill whose bytes differ is counted.** The join between `init` and `pack` dropped the
+  count of replaced skills, so after an upgrade -the case this exists for- the rehearsal said
+  "nothing to write" while every changed skill awaited a rewrite. The list of files a rehearsal
+  would write now includes the ones it would replace, and the default agent in OpenCode's config
+  is named as a file this run changes instead of a step that leans on the disk.
+- **The report names the clients detection did not find**, with the folder it looked for, so an
+  installer that covers two of three tools cannot look like it forgot one.
+
 A fence rule protects a file, not a reason.
 
 - **Two rules written from a rationale left main's policy.** 0119 closed with "no new verb", and
