@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+Adopting odachi in a project that already lives stops scattering folders in it.
+
+- **A repository with a commit and none of odachi's folders gets the minimal footprint.** The
+  project keeps the rules, the `.gitignore` block and the hook; the craft and the agent stay in
+  the machine, where `odachi setup` installed them. Before, the same run wrote `.agents/skills`,
+  `.opencode/agents` and `.claude/` into a project that only wanted the rules.
+- **The inference is never stored.** Only `--skills project` and `--agents` write a choice, so a
+  later plain `init` derives the footprint again instead of inheriting a decision nobody made. A
+  project that already carries any of the three keeps it, and a folder with no history still gets
+  the full install: there the project is starting now.
+
 ## v0.11.70 - 2026-10-30
 
 The block names where the skills actually are.

@@ -11,7 +11,7 @@ R1 · "adopting odachi in a repository that already lives proposes the minimal f
 - --skills project and --agents put the copies back, are stored, and a later plain init honours them
 
 ## Steps
-- [ ] T1 · a repository that already lives gets the minimal footprint, inferred and not stored   R1
+- [x] T1 · a repository that already lives gets the minimal footprint, inferred and not stored   R1 · tree:562beb2bf1ebfd6efc54e73e2d9be0fbec4ca792
 - [ ] T2 · the docs and the help say what adoption writes, and what brings the copies back   R1
 
 ## History

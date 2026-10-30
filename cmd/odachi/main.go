@@ -1515,6 +1515,13 @@ init flags:
                   agents.toml. A plain init is the run that writes a project's own
   --json          machine output, with the destinations of the skills and of the agent
 
+adopting odachi in a repository that already lives: a project with a commit and none of
+odachi's folders gets the minimal footprint -AGENTS.md, .gitignore and the hook, with the
+craft and the agent left in the machine, and the run says so. --skills project and --agents
+put the copies back in the project and are stored; a plain init afterwards honours them.
+A project that already carries .agents/, .opencode/ or .claude/ keeps what it has, and a
+folder with no history still gets the full install.
+
 setup flags:
   odachi setup    the global half only, from any folder: the bootstrap skill in
                   ~/.agents/skills, the door for the clients found in the home,
