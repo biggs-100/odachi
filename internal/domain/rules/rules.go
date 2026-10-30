@@ -67,6 +67,12 @@ One more, about folders. This project is this repository. Another folder is anot
 project —its own brief, its own fence, its own store, its own memory—, and odachi is
 never read or run there, and its files are never touched, unless the human asks for it.
 
+And one about asking, because the human is in the loop. A question is answered, not
+implemented: an answer is not a proposal, and work starts when the human asks for it or
+approves one. An irreversible action —push, pull request, merge, tag or release, an
+install, another folder— names its exact target and waits for a yes. Ask at the gate,
+once: a question that would not change what you do next is noise.
+
 Skills: the ones in ` + "`.agents/skills/`" + `; inside this project, load ` + "`drive`" + ` before acting: it is the manual.
 
 ## The six verbs
