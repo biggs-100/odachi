@@ -134,3 +134,69 @@ func TestTheRealRunSaysItReplacedASkill(t *testing.T) {
 		t.Errorf("the replaced skill was not backed up: %v (%v)", backups, err)
 	}
 }
+
+// TestASettledHomeWithOneChangedSkillIsNotNothingToWrite: the state the 0121
+// review named and no test built -a machine that is current except for one skill
+// an older binary wrote. The rehearsal must say would replace, never nothing.
+func TestASettledHomeWithOneChangedSkillIsNotNothingToWrite(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	writeFile(t, home, ".config/opencode/opencode.json", "{}")
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	if code, _, errOut := runDir(t, dir, []string{"setup"}, ""); code != 0 {
+		t.Fatalf("the first setup failed: %s", errOut)
+	}
+	writeFile(t, home, ".agents/skills/acceptance/SKILL.md", "an older binary wrote this\n")
+
+	code, out, errOut := runDir(t, dir, []string{"setup", "--dry-run"}, "")
+	if code != 0 {
+		t.Fatalf("the rehearsal failed: %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	report := out + errOut
+	if !strings.Contains(report, "would replace") {
+		t.Errorf("the only drift is a skill and the rehearsal does not name it:\n%s", report)
+	}
+	if strings.Contains(report, "nothing to write") {
+		t.Errorf("a machine with a changed skill is reported as current:\n%s", report)
+	}
+}
+
+// TestASetDefaultAgentAppearsInTheJSONFiles: the machine output is what an agent
+// reads, and the brief of 0122 promises the config is named there after a real
+// run. The app test pins the changed list; this one pins the payload.
+func TestASetDefaultAgentAppearsInTheJSONFiles(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	writeFile(t, home, ".config/opencode/opencode.json", "{}")
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	code, out, errOut := runDir(t, dir, []string{"setup", "--json"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	var payload struct {
+		DryRun bool     `json:"dry_run"`
+		Files  []string `json:"files"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("the payload is not JSON: %v\n%s", err, out)
+	}
+	if payload.DryRun {
+		t.Errorf("a real run says it was a rehearsal: %+v", payload)
+	}
+	want := "~/.config/opencode/opencode.json"
+	found := false
+	for _, file := range payload.Files {
+		if file == want {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("files = %v, want %q among them", payload.Files, want)
+	}
+}

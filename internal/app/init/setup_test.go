@@ -2,6 +2,7 @@ package init_test
 
 import (
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -122,5 +123,56 @@ func TestSetupIsIdempotent(t *testing.T) {
 	}
 	if joined := strings.Join(second.Lines, "\n"); !strings.Contains(joined, "already the default") {
 		t.Errorf("the second setup does not say the default stands:\n%s", joined)
+	}
+}
+
+// TestSetupDoesNotCallAnUnreadableClientAbsent: a home whose client folders cannot
+// be read is a run that does not know, and "not installed here" plus "install
+// OpenCode" is a claim it cannot make. The error is named; the advice is not given.
+func TestSetupDoesNotCallAnUnreadableClientAbsent(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(nil)
+	// Both clients are here, and neither folder can be read: zero clients found,
+	// which is exactly the state the old run mistook for an empty machine.
+	files.existsErr = map[string]error{
+		homeFile(home, ".claude"):          errors.New("permission denied"),
+		homeFile(home, ".config/opencode"): errors.New("permission denied"),
+	}
+
+	got := initapp.RunSetup(initapp.Options{Home: fakeHome{dir: home}}, files, &fakeSkills{})
+
+	lines := strings.Join(got.Lines, "\n")
+	if !strings.Contains(lines, "could not check") || !strings.Contains(lines, "permission denied") {
+		t.Errorf("the run does not name the read that failed:\n%s", lines)
+	}
+	if strings.Contains(lines, "not installed here") {
+		t.Errorf("a folder it could not read is reported as absent:\n%s", lines)
+	}
+	if strings.Contains(lines, "no agent client found") {
+		t.Errorf("the run tells the human to install a client it could not check:\n%s", lines)
+	}
+}
+
+// TestASetDefaultAgentIsAChangedFile: setting default_agent rewrites the config,
+// and a run that omits the file from its changed list disagrees with the disk it
+// just wrote. The 0121 review found this branch unpinned. Message is not asserted
+// here on purpose: setup overwrites it as a CLI concern, and the CLI test is the
+// one that reads the payload.
+func TestASetDefaultAgentIsAChangedFile(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(nil)
+	files.files[homeFile(home, ".config/opencode/opencode.json")] = []byte("{}")
+
+	got := initapp.RunSetup(initapp.Options{Home: fakeHome{dir: home}}, files, &fakeSkills{})
+
+	want := "~/.config/opencode/opencode.json"
+	found := false
+	for _, file := range got.Files {
+		if file == want {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Files = %v, want %q among them", got.Files, want)
 	}
 }
