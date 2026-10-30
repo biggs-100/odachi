@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The suite checks that every Go file is what `gofmt` writes.
+
+- **Formatting was the one hygiene nobody read.** `vet` was clean, `mod tidy` changed nothing,
+  and `gofmt -l .` was red on a file this machine wrote without its final newline -the suite
+  pins behaviour, and formatting is not behaviour-. `internal/archtest` now walks every `.go`
+  file and compares it with `format.Source`, in process and in one pass, naming the path, the
+  line and the two spellings when it fails.
+- **The plan of this feature said the blob carried CRLF and it did not:** `.gitattributes`
+  normalizes `*.go` to LF, so the blob was canonical and the CRLF lived in the worktree. The
+  task doc records the correction.
+
 ## v0.11.64 - 2026-10-30
 
 The bench stops lying about a check without a proof.
