@@ -100,6 +100,8 @@ func (r *runner) skillsChoice() string {
 		return "skills: " + r.skillsScope + ", from --skills; the store keeps the choice, and odachi init --skills " + other(r.skillsScope) + " changes it"
 	case skillsFromStore:
 		return "skills: " + r.skillsScope + ", from the store (" + persona.SelectionPath + "); odachi init --skills " + other(r.skillsScope) + " changes it"
+	case skillsFromAdoption:
+		return "skills: " + r.skillsScope + "; this repository already lives, so the craft stays in the machine (odachi setup puts it there); odachi init --skills project puts this project's own copy here"
 	case skillsFromSetup:
 		return "skills: " + r.skillsScope + "; setup keeps the craft once per machine, and every project reads it"
 	default:

@@ -113,6 +113,12 @@ type Options struct {
 	// it would write, and writes none. Only `setup` sets it -the verb a machine
 	// refresh runs- and an init that ignored it would be a flag that lies.
 	DryRun bool
+	// Existing says this repository already has a commit: it is a project that
+	// already lives, and adopting odachi there proposes the minimal footprint -
+	// the rules and the hook here, the craft in the machine. It is a fact the CLI
+	// reads from git, never a guess: a folder with no history still gets the full
+	// install, because there the project is starting now.
+	Existing bool
 }
 
 // AgentSelection is the selection port: the choice a project recorded, when
@@ -202,6 +208,8 @@ func Run(opts Options, files Files, skills Skills) Result {
 	}
 	r.selection = selection
 	r.clients = clients
+	r.existing = opts.Existing
+	r.minimal = r.derivesMinimal()
 	r.projectAgents = r.resolveProjectAgents(opts)
 	r.skillsScope = r.resolveSkillsScope(opts)
 	r.skillsSource = r.resolveSkillsSource(opts)
@@ -312,10 +320,28 @@ func effectiveSkills(store persona.Store) persona.Store {
 	return store
 }
 
+// derivesMinimal is the footprint a repository that already lives gets: the
+// project never chose, and none of odachi's folders are here yet, so the rules
+// stay in the tree and the craft stays in the machine. A project that already
+// carries any of the three has adopted odachi the old way, and an inference does
+// not move a project that already has the craft.
+func (r *runner) derivesMinimal() bool {
+	if !r.existing || r.storedSkills != "" || r.storedProject != "" {
+		return false
+	}
+	for _, rel := range []string{".agents", ".opencode", ".claude"} {
+		if found, err := r.files.Exists(filepath.Join(r.dir, rel)); err == nil && found {
+			return false
+		}
+	}
+	return true
+}
+
 // resolveProjectAgents decides where the native agent files live. The flag wins;
 // an explicit --agents asks for the project's own copy, which is the only way out
 // of the home-only choice and needs no second flag; otherwise the stored answer
-// stands, and a project that never chose keeps the mirror in the tree.
+// stands, a repository that already lives keeps them in the machine, and a
+// project that never chose keeps the mirror in the tree.
 func (r *runner) resolveProjectAgents(opts Options) string {
 	switch {
 	case opts.NoProjectAgents:
@@ -324,41 +350,49 @@ func (r *runner) resolveProjectAgents(opts Options) string {
 		return persona.ProjectAgentsWrite
 	case r.storedProject != "":
 		return r.storedProject
+	case r.minimal:
+		return persona.ProjectAgentsNone
 	default:
 		return persona.ProjectAgentsWrite
 	}
 }
 
 // resolveSkillsScope decides where the craft lives, by the same rule: --skills
-// wins and is recorded, the stored answer stands when the flag is silent, and a
-// project that never chose keeps the project copy.
+// wins and is recorded, the stored answer stands when the flag is silent, a
+// repository that already lives leaves the craft in the machine, and a project
+// that never chose keeps the project copy.
 func (r *runner) resolveSkillsScope(opts Options) string {
 	switch {
 	case strings.TrimSpace(opts.Skills) != "":
 		return strings.ToLower(strings.TrimSpace(opts.Skills))
 	case r.storedSkills != "":
 		return r.storedSkills
+	case r.minimal:
+		return persona.SkillsHome
 	default:
 		return persona.SkillsProject
 	}
 }
 
-// The four answers to "who decided where the craft goes", spelled once so the
+// The five answers to "who decided where the craft goes", spelled once so the
 // output and the tests name the same thing.
 const (
-	skillsFromFlag    = "flag"
-	skillsFromStore   = "store"
-	skillsFromDefault = "default"
-	skillsFromSetup   = "setup"
+	skillsFromFlag     = "flag"
+	skillsFromStore    = "store"
+	skillsFromDefault  = "default"
+	skillsFromSetup    = "setup"
+	skillsFromAdoption = "adoption"
 )
 
-// resolveSkillsSource says which of the four decided this run.
+// resolveSkillsSource says who decided where the craft goes.
 func (r *runner) resolveSkillsSource(opts Options) string {
 	switch {
 	case strings.TrimSpace(opts.Skills) != "":
 		return skillsFromFlag
 	case r.storedSkills != "":
 		return skillsFromStore
+	case r.minimal:
+		return skillsFromAdoption
 	default:
 		return skillsFromDefault
 	}
@@ -465,6 +499,11 @@ type runner struct {
 	// "would write" because no byte moved. It is the runner's job and not the
 	// Files port's: a port that silently swallowed a write would hide the report.
 	dryRun bool
+	// existing says the repository already has a commit, and minimal is the
+	// answer this run derived from it: the project never chose, nothing of
+	// odachi's footprint is here yet, and the machine is where the craft lives.
+	existing bool
+	minimal  bool
 	// absent is what detection did not find: a client whose config folder is not
 	// in this home. It is reported, because an installer that stays quiet about a
 	// client looks like it forgot one.
@@ -736,5 +775,14 @@ func (r *runner) skipProjectPersonas(byFlag bool) {
 	if byFlag {
 		reason = "--no-project-agents"
 	}
+	if r.minimal && r.storedProject == "" {
+		reason = "this repository already lives, so the agent stays in the machine"
+	}
 	r.lines = append(r.lines, "project agents: not written ("+reason+"); the door in the home is the one that runs, and --agents "+r.selection+" puts the mirrors back")
+	// The minimal footprint skips both halves here, so the machine is the only
+	// place the agent can come from. Saying it is not advice: without setup the
+	// project has no agent at all.
+	if r.minimal {
+		r.lines = append(r.lines, "if this machine never ran odachi setup, do it once: it installs the door and the craft the whole machine reads")
+	}
 }
