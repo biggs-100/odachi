@@ -21,6 +21,9 @@ type fakeFiles struct {
 	events   []string
 	writeErr error
 	modeErr  error
+	// existsErr makes one path unreadable, the way a home with a permission
+	// problem answers: the call fails and the truth is unknown.
+	existsErr map[string]error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -41,6 +44,9 @@ func (f *fakeFiles) get(path string) (string, bool) {
 }
 
 func (f *fakeFiles) Exists(path string) (bool, error) {
+	if err, ok := f.existsErr[path]; ok {
+		return false, err
+	}
 	if _, ok := f.files[path]; ok {
 		return true, nil
 	}

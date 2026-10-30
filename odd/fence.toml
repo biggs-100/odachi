@@ -1,9 +1,8 @@
 # a rule names paths, not a phrase: a glob of the phrase's own words matches
 # files named like the phrase and protects nothing.
 #
-# a rule protects what its own name says; every path it lists is described there,
-# because a folder under a name that does not mention it blocks the first feature
-# that needs it (0117 paid for that lesson, 0118 corrected it).
+# a rule protects a file the feature must not touch because touching it would be
+# wrong - never a reason restated as a package (0120).
 
 [[rule]]
 not   = "no change to the proof format, and the stored proof is never rewritten"
@@ -11,6 +10,6 @@ paths = ["internal/domain/proof/**", "proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the bundled skills or to the door's bytes: the report learns to speak first"
+not   = "no change to the bundled skills or to the door's bytes"
 paths = ["skills/**", "internal/domain/persona/persona.go"]
 deps  = []
