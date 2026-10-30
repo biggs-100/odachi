@@ -9,28 +9,9 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0119, which made the skills scope a stored choice.
+Last written: after 0122, which paid the three rows the review of 0120 left.
 
 ## Open
-
-### setup · the rehearsal's lines are pinned, its error arms are not
-
-From the review of tree `8e466e79` (feature 0120). Three branches the suite cannot
-reach today:
-
-- `internal/app/init/setup.go` `could not check:` is untested: `fakeFiles.Exists`
-  has no error path and no CLI test makes a home path unreadable, so deleting the
-  line leaves the suite green. The same branch is still partial: when the client
-  that failed to stat was the last one, "no agent client found in the home" prints
-  directly under it and tells the human to install a client odachi could not read.
-- `cmd/odachi/setup_dryrun_replaced_test.go`'s "nothing to write" guard cannot
-  fire in the home it builds (the doors are absent, so the file list is never
-  empty). The state it names - a settled machine whose only drift is one changed
-  skill - needs a first setup and then one edited `SKILL.md`.
-- `internal/app/init/opencode.go`'s `r.changed` append for
-  `~/.config/opencode/opencode.json` is unpinned by a real run: only dry runs name
-  the file, and a revert would put `setup`/`init --global` back to "unchanged" and
-  back to omitting the config from `--json` after writing it.
 
 ### the block names `.agents/skills` even when the scope is the home
 
@@ -476,5 +457,6 @@ answer owed, so the test is not a comment.
 - `internal/app/review/review.go:1350` - the drop of a refused answer cannot cost
   the verdict; the keep-failure half was already pinned by feature 0051, which the
   store could not know because a test moves a different file's blob.
+
 
 
