@@ -11,7 +11,7 @@ R1 · "odachi never accesses another folder or project without the human's permi
 - a test drives the words, and one of the pins fails without the change
 
 ## Steps
-- [ ] T1 · the block says another folder is another project, and the drive skill refuses it   R1
+- [x] T1 · the block says another folder is another project, and the drive skill refuses it   R1 · tree:e5dfdc533b2f8a7de01e8412e21b4c60fbd374ab
 - [ ] T2 · this repo regenerates its own block and skills, and the changelog says one line   R1
 
 ## History

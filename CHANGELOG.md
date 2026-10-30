@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+Another folder is another project.
+
+- **The block says it.** After the four hard rules: this project is this repository, another
+  folder is another project with its own brief, fence, store and memory, and odachi is never
+  read or run there unless the human asks for it. The `drive` skill's *Never* list refuses the
+  same thing, so an agent that reads either learns it before acting.
+- **It is a rule of conduct, not a gate**, and the changelog says so on purpose: nothing can
+  tell that an agent browsed a sibling folder, and a check that fired on a sibling directory
+  would be noise. What the tool can do is put the rule where the agent reads it.
+
 ## v0.11.59 - 2026-10-29
 
 The prompt says what it carries.
