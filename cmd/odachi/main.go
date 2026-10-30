@@ -1085,6 +1085,7 @@ func (s initSkills) report(results []pack.Result) initapp.SkillReport {
 			report.Dests = append(report.Dests, initapp.SkillDest{
 				Label:     dest.Dest,
 				Installed: dest.Installed,
+				Replaced:  dest.BackedUp,
 				Unchanged: dest.Unchanged,
 				Files:     dest.Files,
 			})
@@ -1174,6 +1175,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 			skills = append(skills, initSkillDest{
 				Dest:      dest.Label,
 				Installed: dest.Installed,
+				Replaced:  dest.Replaced,
 				Unchanged: dest.Unchanged,
 				Files:     destFiles,
 			})
@@ -1201,6 +1203,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 			Files    []string          `json:"files"`
 			Skills   []initSkillDest   `json:"skills"`
 			Personas []initPersonaDest `json:"personas"`
+			DryRun   bool              `json:"dry_run,omitempty"`
 		}{
 			Code:     result.Code,
 			Message:  result.Message,
@@ -1209,6 +1212,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 			Files:    files,
 			Skills:   skills,
 			Personas: personas,
+			DryRun:   result.DryRun,
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
@@ -1242,6 +1246,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 type initSkillDest struct {
 	Dest      string   `json:"dest"`
 	Installed int      `json:"installed"`
+	Replaced  int      `json:"replaced,omitempty"`
 	Unchanged int      `json:"unchanged"`
 	Files     []string `json:"files"`
 }

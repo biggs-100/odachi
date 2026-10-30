@@ -1,7 +1,6 @@
 package main
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -32,9 +31,6 @@ func TestSetupNamesTheClientsItDidNotFind(t *testing.T) {
 	}
 	if strings.Contains(report, "not installed here: opencode") {
 		t.Errorf("the report calls a client that is here absent:\n%s", report)
-	}
-	if _, err := filepath.Abs(home); err != nil {
-		t.Fatalf("abs: %v", err)
 	}
 }
 

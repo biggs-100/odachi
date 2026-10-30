@@ -43,9 +43,14 @@ func (r *runner) installOpenCodeDefault() {
 	// The default points at the door: writing it for a door that was not
 	// installed would name an agent the client cannot find. The persona half
 	// already said why the door is missing.
+	//
+	// A rehearsal is the exception, and only because the door is written by the
+	// step before this one: in a dry run the file is not there, yet the real run
+	// would have written it, so the default travels with it. Deciding by the disk
+	// after a write that did not happen is how a report loses a file.
 	doorPath := filepath.Join(home, filepath.FromSlash(door.Path))
 	doorExists, err := r.files.Exists(doorPath)
-	if err != nil || !doorExists {
+	if err != nil || (!doorExists && !r.dryRun) {
 		return
 	}
 
@@ -95,6 +100,14 @@ func (r *runner) installOpenCodeDefault() {
 		}
 		if err := r.files.Write(target, updated); err != nil {
 			r.pendGlobal("could not write " + display + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init --global again")
+			return
+		}
+		// The file is part of what this run changed: a default agent set in the
+		// config is work, and a report that omits it makes the JSON and the
+		// "unchanged" line disagree with the disk.
+		r.changed = append(r.changed, display)
+		if r.dryRun {
+			r.lines = append(r.lines, display+": would write "+persona.AgentName+" as the default agent")
 			return
 		}
 		r.lines = append(r.lines, display+": "+persona.AgentName+" is the default agent")

@@ -10,7 +10,7 @@
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
-- no change to how a skill or the door is written: the report learns to speak first
+- no change to the bundled skills or to the door's bytes: the report learns to speak first
 
 ## Decisions taken
 - It is used from the computer.

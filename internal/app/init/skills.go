@@ -13,6 +13,11 @@ import (
 type SkillDest struct {
 	Label     string
 	Installed int
+	// Replaced is a skill whose bytes differ from the binary's: a real run backs
+	// it up and writes it, a rehearsal says it would. Without the count a
+	// rehearsal of an upgraded binary reported "nothing to write" while every
+	// changed skill awaited a rewrite.
+	Replaced  int
 	Unchanged int
 	Files     []string
 }
@@ -115,12 +120,19 @@ func other(scope string) string {
 // destination that got nothing and had nothing is not worth a line. A rehearsal
 // says what it would install, in the same words the run would use.
 func skillLine(dest SkillDest, dry bool) string {
-	parts := make([]string, 0, 2)
+	parts := make([]string, 0, 3)
 	if dest.Installed > 0 {
 		if dry {
 			parts = append(parts, "would install "+count(dest.Installed, "skill", "skills"))
 		} else {
 			parts = append(parts, count(dest.Installed, "installed skill", "installed skills"))
+		}
+	}
+	if dest.Replaced > 0 {
+		if dry {
+			parts = append(parts, "would replace "+count(dest.Replaced, "skill", "skills"))
+		} else {
+			parts = append(parts, count(dest.Replaced, "replaced skill", "replaced skills"))
 		}
 	}
 	if dest.Unchanged > 0 {

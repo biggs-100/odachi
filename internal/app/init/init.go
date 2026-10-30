@@ -170,6 +170,10 @@ type Result struct {
 	Files        []string
 	SkillDests   []SkillDest
 	PersonaDests []PersonaDest
+	// DryRun says this run was a rehearsal: the files above are the ones it would
+	// write. A machine reading the payload cannot tell a plan from a fact
+	// otherwise, and the two look identical by design.
+	DryRun bool
 }
 
 // Run performs one `odachi init`.
@@ -465,6 +469,9 @@ type runner struct {
 	// in this home. It is reported, because an installer that stays quiet about a
 	// client looks like it forgot one.
 	absent []string
+	// unchecked is what detection could not look at: a read that failed, which is
+	// not the same thing as a client that is not here.
+	unchecked []string
 	// voiceNote is the sentence for a profile init could not read or name: the
 	// block still gets the default voice, and the human learns why.
 	voiceNote string
@@ -587,6 +594,7 @@ func (r *runner) result() Result {
 			Lines:        r.lines,
 			SkillDests:   r.skillDests,
 			PersonaDests: r.personaDests,
+			DryRun:       r.dryRun,
 		}
 	}
 
@@ -622,6 +630,7 @@ func (r *runner) result() Result {
 		Files:        files,
 		SkillDests:   r.skillDests,
 		PersonaDests: r.personaDests,
+		DryRun:       r.dryRun,
 	}
 }
 

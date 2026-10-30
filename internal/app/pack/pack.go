@@ -364,6 +364,7 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 		if !exists {
 			if dryRun {
 				result.Installed++
+				result.Files = append(result.Files, label)
 				result.Lines = append(result.Lines, who+" · would install · "+label)
 				continue
 			}
@@ -390,6 +391,7 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 
 		if dryRun {
 			result.BackedUp++
+			result.Files = append(result.Files, label)
 			result.Lines = append(result.Lines, who+" · would back up and write · "+label)
 			continue
 		}

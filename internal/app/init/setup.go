@@ -41,13 +41,23 @@ func RunSetup(opts Options, files Files, skills Skills) Result {
 	if len(r.absent) > 0 {
 		r.lines = append(r.lines, "not installed here: "+humanList(r.absent)+"; setup does not create another tool's config folder")
 	}
+	// A read that failed is reported as what it is. The absent list above is a
+	// fact about the machine; this one is a fact about this run.
+	if len(r.unchecked) > 0 {
+		r.lines = append(r.lines, "could not check: "+humanList(r.unchecked)+"; check the permissions and run odachi setup again")
+	}
 
 	if len(clients) == 0 {
 		r.lines = append(r.lines, "no agent client found in the home: the bootstrap skill is installed; install OpenCode and run odachi setup again")
 	}
 
 	result := r.result()
-	result.Message = "odachi is ready: open your agent and ask for the project"
+	// A rehearsal is not ready for anything: it wrote nothing, and the message
+	// from result() says what it would write. Keeping "odachi is ready" here made
+	// the plan read like a fact in the one output a machine consumes.
+	if !opts.DryRun {
+		result.Message = "odachi is ready: open your agent and ask for the project"
+	}
 	return result
 }
 
@@ -84,7 +94,14 @@ func (r *runner) setupClients(requested string) (string, []persona.Client, *Resu
 		// client is installed when its config directory exists, one level up.
 		configDir := path.Dir(client.HomeDir)
 		exists, err := r.files.Exists(filepath.Join(home, filepath.FromSlash(configDir)))
-		if err != nil || !exists {
+		if err != nil {
+			// A read that failed is not a client that is absent: saying "not
+			// installed here" about a folder odachi could not look at is a claim
+			// about the machine it does not have.
+			r.unchecked = append(r.unchecked, client.Agent+" (~/"+configDir+"): "+oneLine(err.Error()))
+			continue
+		}
+		if !exists {
 			// A client that is not here is named, not dropped: an installer that
 			// lists three destinations and stays quiet about the fourth looks like
 			// it forgot one.

@@ -12,7 +12,7 @@ R1 · "one command refreshes the machine: odachi setup reports what it would cha
 ## Steps
 - [x] T1 · setup --dry-run writes no byte and names every file it would write   R1 · tree:705a115e1ae8c16551246f6d69a1bb241bc5828a
 - [x] T2 · the report names the clients that are not here and what it left alone   R1 · tree:58b3df7d52e74afb65844c9fdd2db4d76fc79b4d
-- [ ] T3 · the docs and the changelog say how to refresh a machine   R1
+- [x] T3 · the docs and the changelog say how to refresh a machine   R1 · tree:de0cab6531ed6d008cebe2fb30bb36d37c2e4a0b
 
 ## History
 L1 · "one command refreshes the machine: odachi setup reports what it would change before it changes it, writes nothing under --dry-run, and names what it skipped, so an upgraded binary leaves a current home in one run"
