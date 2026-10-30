@@ -7,7 +7,7 @@
 # correct the policy before the change that needed it.
 
 [[rule]]
-not   = "no change to the verdict's shape or its schema"
+not   = "no change to the verdict's shape or its schema, or to the review's settings"
 paths = ["internal/domain/review/review.go", "internal/domain/review/dismiss*.go", "internal/domain/review/refute.go", "internal/adapters/reviewtoml/**"]
 deps  = []
 
@@ -17,6 +17,6 @@ paths = ["internal/domain/proof/**", "proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the gates themselves: this is the data of one rule, not a new verb or flag"
-paths = ["internal/app/check/check.go", "internal/app/check/fence.go", "internal/domain/fence/fence.go", "internal/app/start/artifacts.go"]
+not   = "no change to the fence's machinery or to the start that renders every artifact"
+paths = ["internal/app/check/fence.go", "internal/domain/fence/**", "internal/app/start/artifacts.go"]
 deps  = []

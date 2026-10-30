@@ -9,9 +9,9 @@
 - the next feature meets a fence it can obey, and the lesson is where the next reader looks
 
 ## Not included (first version)
-- no change to the verdict's shape or its schema
+- no change to the verdict's shape or its schema, or to the review's settings
 - no change to the proof format, and the stored proof is never rewritten
-- no change to the gates themselves: this is the data of one rule, not a new verb or flag
+- no change to the fence's machinery or to the start that renders every artifact: this is the data of one rule, not a new verb or flag
 
 ## Decisions taken
 - It is used from the computer.
