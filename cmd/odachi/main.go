@@ -923,9 +923,14 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	// A repository that already has a commit is a project that already lives, and
 	// adopting odachi there is a different job from starting one: the CLI reads
 	// that fact and the app decides the footprint. A folder whose history this run
-	// just created is not that case.
-	_, headErr := (gitRepo{}).Head(dir)
-	existing := !created && headErr == nil
+	// just created is not that case, and neither is a repository git cannot read:
+	// that one is a refusal, because the answer would install a footprint nobody
+	// chose.
+	existing, err := repositoryLives(dir, created)
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: "+err.Error())
+		return start.CodeBlocked
+	}
 
 	if global && os.Getenv("ODACHI_NO_SETUP") != "" {
 		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: the home is not touched; run init without --global or unset the variable")

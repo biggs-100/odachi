@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A check odachi could not make no longer counts as a "no".
+
+- **`odachi init` stops instead of guessing the footprint.** The adoption inference reads two facts
+  off the disk -whether the project carries the craft, whether it carries the native agent- and a
+  failed read used to answer both of them "no": a project that keeps the curriculum in the machine
+  could get all fifteen skills written into it, with a green exit. It now names the path it could
+  not read and writes nothing.
+- **A repository git cannot read is not a repository with no commit.** `.git` that git refuses used
+  to choose the full install, as if the project were starting now. It is refused by name; a folder
+  with no history, or a repository with nothing committed yet, keeps the full install.
+- **`odachi role` refuses an `AGENTS.md` it cannot read** instead of writing the default block over
+  a file nobody saw.
+- The rule is written once in ADR 0034: an error is never an absence.
+
 ## v0.11.71 - 2026-10-30
 
 Adopting odachi in a project that already lives stops scattering folders in it.
