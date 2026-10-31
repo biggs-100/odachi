@@ -57,17 +57,77 @@ func withSource(text string) *fakeFiles {
 	return newFakeFiles(map[string]string{path: text})
 }
 
+// projectDest is the destination of a project that keeps its craft in the tree:
+// what every project had before the scope existed, and the default this feature
+// must not move.
+func projectDest() role.SkillDest {
+	return role.SkillDest{Root: "raiz", Base: ".agents/skills", Label: "./.agents/skills"}
+}
+
+// homeDest is the destination of a project whose craft lives once per machine.
+func homeDest() role.SkillDest {
+	return role.SkillDest{Root: "hogar", Base: ".agents/skills", Label: "~/.agents/skills"}
+}
+
+// TestARoleWritesItsSkillWhereTheDestinationSays: the scope is not the role's to
+// decide. A project that keeps the craft in the machine gets the skill there, and
+// the project keeps no copy -the folder the adoption inference reads.
+func TestARoleWritesItsSkillWhereTheDestinationSays(t *testing.T) {
+	files := withSource(source)
+
+	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, homeDest(), files)
+
+	if res.Code != role.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s / %v)", res.Code, role.CodeOK, res.Message, res.Lines)
+	}
+	if _, ok := files.files[filepath.Join("hogar", ".agents", "skills", "marketing", "SKILL.md")]; !ok {
+		t.Errorf("the skill did not go to the machine; wrote %v", files.wrote)
+	}
+	if _, ok := files.files[filepath.Join("raiz", ".agents", "skills", "marketing", "SKILL.md")]; ok {
+		t.Errorf("the project got a copy of the craft it said lives in the machine; wrote %v", files.wrote)
+	}
+	if _, ok := files.files[filepath.Join("raiz", ".opencode", "agents", "marketing.md")]; !ok {
+		t.Errorf("the agent file did not stay in the project; wrote %v", files.wrote)
+	}
+	// The line a human reads names the folder the skill went to, in the shape the
+	// rest of the tool prints a home path.
+	if joined := strings.Join(res.Lines, "\n"); !strings.Contains(joined, "wrote ~/.agents/skills/marketing/SKILL.md") {
+		t.Errorf("the run does not name the machine's copy:\n%s", joined)
+	}
+}
+
+// TestListReadsTheDestinationItIsGiven: the listing compares the bytes the scope
+// names, so a role rendered into the machine is up to date and not stale.
+func TestListReadsTheDestinationItIsGiven(t *testing.T) {
+	files := withSource(source)
+	if rendered := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, homeDest(), files); rendered.Code != role.CodeOK {
+		t.Fatalf("render: %s (lines %v)", rendered.Message, rendered.Lines)
+	}
+
+	fresh := role.List("raiz", "THE BLOCK", []string{"opencode"}, homeDest(), files)
+	if !strings.Contains(fresh.Message, "up to date") {
+		t.Errorf("a role rendered into the machine is reported as %q", fresh.Message)
+	}
+
+	// The same project read against the project destination is stale: the bytes
+	// are not there, and the listing says so instead of guessing.
+	stale := role.List("raiz", "THE BLOCK", []string{"opencode"}, projectDest(), files)
+	if !strings.Contains(stale.Message, "stale") {
+		t.Errorf("the listing does not read the destination it was given: %q", stale.Message)
+	}
+}
+
 // TestRenderWritesTheAgentAndTheSkill: one source, two artifacts, and the agent
 // carries the block the project reads plus its role section.
 func TestRenderWritesTheAgentAndTheSkill(t *testing.T) {
 	files := withSource(source)
 
-	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, files)
+	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, projectDest(), files)
 
 	if res.Code != role.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s / %v)", res.Code, role.CodeOK, res.Message, res.Lines)
 	}
-	skill := string(files.files[filepath.Join("raiz", filepath.FromSlash(role.SkillPath("marketing")))])
+	skill := string(files.files[filepath.FromSlash(projectDest().Path("marketing"))])
 	for _, want := range []string{"## When", "## Rules", "## Never", "Baseline first", "A campaign with no baseline", "when the work is marketing"} {
 		if !strings.Contains(skill, want) {
 			t.Errorf("the rendered skill does not say %q:\n%s", want, skill)
@@ -88,12 +148,12 @@ func TestRenderWritesTheAgentAndTheSkill(t *testing.T) {
 // source leaves the tree alone.
 func TestASecondRenderWritesNothing(t *testing.T) {
 	files := withSource(source)
-	if first := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, files); first.Code != role.CodeOK {
+	if first := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, projectDest(), files); first.Code != role.CodeOK {
 		t.Fatalf("first render: %s", first.Message)
 	}
 	before := len(files.wrote)
 
-	second := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, files)
+	second := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, projectDest(), files)
 
 	if second.Code != role.CodeOK {
 		t.Fatalf("second render: %s", second.Message)
@@ -113,7 +173,7 @@ func TestARoleThatDoesNotFitIsRefused(t *testing.T) {
 	tooLong := strings.Replace(source, "## What it refuses\n\n- A campaign with no baseline.\n", "## What it refuses\n\n"+refuses, 1)
 	files := withSource(tooLong)
 
-	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, files)
+	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, projectDest(), files)
 
 	if res.Code != role.CodeBlocked {
 		t.Fatalf("Code = %d, want %d", res.Code, role.CodeBlocked)
@@ -131,7 +191,7 @@ func TestARoleThatDoesNotFitIsRefused(t *testing.T) {
 func TestRenderRefusesASourceThatDoesNotPassItsCheck(t *testing.T) {
 	files := withSource(strings.Replace(source, "## What it refuses\n\n- A campaign with no baseline.\n", "", 1))
 
-	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, files)
+	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, projectDest(), files)
 
 	if res.Code != role.CodeBlocked {
 		t.Fatalf("Code = %d, want %d", res.Code, role.CodeBlocked)
@@ -149,7 +209,7 @@ func TestRenderRefusesASourceThatDoesNotPassItsCheck(t *testing.T) {
 func TestListSaysWhichRolesAreStale(t *testing.T) {
 	files := withSource(source)
 
-	stale := role.List("raiz", "THE BLOCK", []string{"opencode"}, files)
+	stale := role.List("raiz", "THE BLOCK", []string{"opencode"}, projectDest(), files)
 	if stale.Code != role.CodeOK {
 		t.Fatalf("List: %s", stale.Message)
 	}
@@ -157,11 +217,11 @@ func TestListSaysWhichRolesAreStale(t *testing.T) {
 		t.Errorf("a role never rendered is not reported as stale: %s", stale.Message)
 	}
 
-	if rendered := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, files); rendered.Code != role.CodeOK {
+	if rendered := role.Render("raiz", "marketing", "THE BLOCK", []string{"opencode"}, projectDest(), files); rendered.Code != role.CodeOK {
 		t.Fatalf("render: %s", rendered.Message)
 	}
 
-	fresh := role.List("raiz", "THE BLOCK", []string{"opencode"}, files)
+	fresh := role.List("raiz", "THE BLOCK", []string{"opencode"}, projectDest(), files)
 	if !strings.Contains(fresh.Message, "up to date") {
 		t.Errorf("a rendered role is not reported as up to date: %s", fresh.Message)
 	}
@@ -172,7 +232,7 @@ func TestListSaysWhichRolesAreStale(t *testing.T) {
 func TestListWithoutRolesNamesTheCommand(t *testing.T) {
 	files := newFakeFiles(nil)
 
-	res := role.List("raiz", "THE BLOCK", []string{"opencode"}, files)
+	res := role.List("raiz", "THE BLOCK", []string{"opencode"}, projectDest(), files)
 
 	if res.Code != role.CodeBlocked {
 		t.Fatalf("Code = %d, want %d", res.Code, role.CodeBlocked)
@@ -187,7 +247,7 @@ func TestListWithoutRolesNamesTheCommand(t *testing.T) {
 func TestRenderRefusesAClientWithoutANativeFile(t *testing.T) {
 	files := withSource(source)
 
-	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"codex"}, files)
+	res := role.Render("raiz", "marketing", "THE BLOCK", []string{"codex"}, projectDest(), files)
 
 	if res.Code != role.CodeBlocked {
 		t.Fatalf("Code = %d, want %d", res.Code, role.CodeBlocked)

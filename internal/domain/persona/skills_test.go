@@ -29,6 +29,30 @@ func TestNormalizeSkillsAcceptsTheTwoValues(t *testing.T) {
 	}
 }
 
+// TestTheScopeIsDecidedByTheFlagThenTheStoreThenTheAdoption: one definition, in
+// the order the four facts weigh. `init` and `role` ask this function, so the two
+// verbs cannot answer differently about the same project.
+func TestTheScopeIsDecidedByTheFlagThenTheStoreThenTheAdoption(t *testing.T) {
+	cases := []struct {
+		name   string
+		facts  persona.SkillsScope
+		scope  string
+		source string
+	}{
+		{"the flag wins over everything", persona.SkillsScope{Stored: persona.SkillsHome, Flag: " Project ", Adopted: true}, persona.SkillsProject, persona.SkillsFromFlag},
+		{"the store is the second answer", persona.SkillsScope{Stored: persona.SkillsHome}, persona.SkillsHome, persona.SkillsFromStore},
+		{"a store that chose the project is not moved by the adoption", persona.SkillsScope{Stored: persona.SkillsProject, Adopted: true}, persona.SkillsProject, persona.SkillsFromStore},
+		{"the adoption answers when nobody chose", persona.SkillsScope{Adopted: true}, persona.SkillsHome, persona.SkillsFromAdoption},
+		{"a project that never chose keeps the project", persona.SkillsScope{}, persona.SkillsProject, persona.SkillsFromDefault},
+	}
+	for _, c := range cases {
+		scope, source := c.facts.Resolve()
+		if scope != c.scope || source != c.source {
+			t.Errorf("%s: Resolve() = (%q, %q), want (%q, %q)", c.name, scope, source, c.scope, c.source)
+		}
+	}
+}
+
 // TestNormalizeSkillsRefusesATypo: an unknown scope names the two choices, so a
 // typo never silently puts the skills back in the project.
 func TestNormalizeSkillsRefusesATypo(t *testing.T) {
