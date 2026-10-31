@@ -12,7 +12,7 @@ R1 · "a hand-written document such as this repository's own odd/tasks/odachi-bo
 
 ## Steps
 - [x] T1 · the bootstrap document moves to docs/ and every pointer follows it   R1 · tree:5e5ba10ca0a62c412de9f7d1f55047be1363112a
-- [ ] T2 · the doctor warns about a plan it cannot read, and only names a document that is not a plan   R1
+- [x] T2 · the doctor warns about a plan it cannot read, and only names a document that is not a plan   R1 · tree:8ddbd18d31ccbba0599b96c636fe64cdcebeaeb4
 
 ## History
 L1 · "a hand-written document such as this repository's own odd/tasks/odachi-bootstrap.md is deliberately invisible to them, so their canonical render can never rewrite it" (docs/impact-map.md, the project's own note)

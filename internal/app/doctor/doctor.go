@@ -712,14 +712,20 @@ func (r *runner) taskDocs() domaindoctor.Check {
 		return domaindoctor.OK(domaindoctor.CheckTaskDocs, "")
 	}
 
-	planned, err := tasks.Planned(r.files, r.opts.Dir)
+	planned, prose, err := tasks.Split(r.files, r.opts.Dir)
 	if err != nil {
 		return domaindoctor.Broken(domaindoctor.CheckTaskDocs, oneLine(err.Error()), "check the permissions of "+tasks.Dir)
 	}
 	if len(planned) > 0 {
-		return domaindoctor.Warning(domaindoctor.CheckTaskDocs, tasks.SkippedLine(planned)+"; the project keeps two memories")
+		detail := tasks.SkippedLine(planned) + "; the project keeps two memories"
+		// A mixed folder is the ordinary state: the plan is the loss and the note
+		// is named next to it, so the warning never hides what it skipped.
+		if len(prose) > 0 {
+			detail += "; " + tasks.ProseLine(prose)
+		}
+		return domaindoctor.Warning(domaindoctor.CheckTaskDocs, detail)
 	}
-	return domaindoctor.OK(domaindoctor.CheckTaskDocs, tasks.SkippedLine(skipped)+"; no plan shape, so nothing is ignored")
+	return domaindoctor.OK(domaindoctor.CheckTaskDocs, tasks.ProseLine(prose))
 }
 
 func (r *runner) voice() domaindoctor.Check {

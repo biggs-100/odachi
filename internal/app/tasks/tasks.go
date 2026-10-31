@@ -103,30 +103,38 @@ func Skipped(files Files, dir string) ([]string, error) {
 	return skipped, nil
 }
 
-// Planned is the documents odachi cannot read that carry the shape of a plan: the
-// ones a human meant as a feature and the tool will ignore. A document with none of
-// a plan's headers is prose -it was never meant to be read- and naming it is enough.
-//
-// The distinction matters because only the first is a loss: a misnamed feature is
-// invisible to `check`, and a note in the folder of the plan is just in the wrong
-// folder, which is the human's to tidy.
-func Planned(files Files, dir string) ([]string, error) {
+// Split separates the documents odachi does not read into the ones that carry a
+// plan's shape and the ones that are prose, reading each file once. It is what the
+// doctor asks: only the first kind is a loss, and both are named.
+func Split(files Files, dir string) (planned, prose []string, err error) {
 	skipped, err := Skipped(files, dir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	planned := make([]string, 0, len(skipped))
 	for _, name := range skipped {
 		data, err := files.Read(filepath.Join(dir, Dir, name))
 		if err != nil {
-			return nil, fmt.Errorf("could not read %s/%s: %w", Dir, name, err)
+			return nil, nil, fmt.Errorf("could not read %s/%s: %w", Dir, name, err)
 		}
 		if LooksLikeAPlan(string(data)) {
 			planned = append(planned, name)
+			continue
 		}
+		prose = append(prose, name)
 	}
-	return planned, nil
+	return planned, prose, nil
+}
+
+// ProseLine names the documents that carry no plan shape, in the one sentence a
+// check has room for: they are skipped and nothing is lost, which is why they are
+// named without a warning around them.
+func ProseLine(names []string) string {
+	if len(names) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d document(s) in %s carry no plan shape, so nothing is ignored: %s",
+		len(names), Dir, fewNames(names))
 }
 
 // LooksLikeAPlan says this text carries the shape a task document has: a base
