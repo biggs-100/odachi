@@ -1,60 +1,83 @@
-# Next session: the file bump, and finding the next real work
+# Next session: nothing is owed, and where the next work comes from
 
-Written at the close of 0134, by the human's request: the plan and the method live
-here, because the chat is gone tomorrow.
+Written at the close of 0138, on v0.11.79. The chat is gone tomorrow; this file is
+the state.
 
-## The three features the human planned are shipped
+## What the last four features shipped
 
-- **0132 `odachi clean`** (v0.11.73): every class of file a clone accumulates, with
-  its owner, its size and what the run would do; `--apply` keeps a lifetime only on
-  the classes odachi wrote, `--legacy` names the notes an older agent left loose in
-  `.git/`. ADR 0038.
-- **0133 the store without copies** (v0.11.74): a verdict carries the rows of the
-  paths its candidate judged, plus a blocker that still stands, so it follows the
-  candidate and not the store. 126 KB became 2.4 KB on the feature's own review.
-  ADR 0039.
-- **0134 the project decides** (v0.11.75): `keep_verdicts` and `keep_prompts` in
-  `odd/review.toml`, prompts as their own class, the schema at 3. ADR 0040.
+- **0135 (v0.11.76)**: the two rows the review of 0134 left, and this repository's
+  `odd/review.toml` declaring `schema = 3`, `keep_verdicts = 10`, `keep_prompts = 0`
+  -the numbers it already obeyed, now that the binary that reads them is released-.
+- **0136 (v0.11.77, ADR 0041)**: a candidate whose prompt does not fit
+  `max_prompt_kb` is sent as parts that do, one reviewer per part with the group's
+  lenses and model, and the store merges the answers into the tree's one verdict.
+  The only refusal left is a file that cannot fit by itself.
+- **0137 (v0.11.78)**: `storeIn` takes the lenses this run has already landed and
+  judges the collision per lens, so a part of the same run adds its rows and a second
+  run over the same oversized candidate starts no reviewer.
+- **0138 (v0.11.79)**: the merge decision is one predicate, `collision`, which returns
+  the first lens an answer shares with the stored verdict that this run did not land
+  itself; `storeIn` asks it and the refusal names the lens already paid for. A table
+  test pins six answers, and putting the candidate's shape back now fails two tests.
 
-## What 0134 left open, and 0135 closed
+## What is open
 
-This repository's `odd/review.toml` carries `schema = 3`, `keep_verdicts = 10` and
-`keep_prompts = 0` since 0135, in a change of its own. The numbers are the ones it
-already obeyed, so nothing moved but the file telling the truth. The two rows the
-review of 0134 left are closed by the same feature and left `docs/review-debt.md`.
+- **`docs/review-debt.md` has no rows.** The first time since 0124. Every row the
+  reviews of 0136 and 0137 left is closed with its reason.
+- No open questions in `odd/tasks`, and every feature is closed.
 
 ## What is measured, so nobody re-measures it
 
-- The store after the first real `clean --apply` on 2026-10-31: 15.6 MB and 1004
-  files became 2.2 MB and 557. Before it: 240 review records (14.7 MB), 751
-  versions (792 KB), 82 notes in `.git/` and 366 KB of proofs.
-- After 0133: a verdict is 2-16 KB instead of 126 KB. The ten old ones still weigh
-  1.1 MB and will age out through `keep_verdicts`.
-- Prompts: 597 KB in eleven files, the largest 114 KB. `keep_prompts = 0` empties
-  them; the report says so before it does.
-- `mimo-v2.6-flash` closes a 59 KB prompt in about a minute and does **not** close
-  114 KB in 600s. `odd/review.toml` carries both measurements.
+- The clone after `odachi clean --apply` on 2026-10-31: 601 files and 1.5 MB, minus
+  27 files and 598 KB the run removed (4 prompts, 3 verdicts past the tenth tree, 10
+  undo backups, 10 notes of scratch). The store keeps what `odd/review.toml` declares.
+- **`opencode run` as `--exec` stalls to the 600s timeout on this machine**, twice, at
+  59 KB and at 29 KB. The review path that works: `odachi review --base <sha>` to
+  print the prompt into `.git/odachi/scratch/`, a subagent answers it, and
+  `odachi review --base <sha> --attach <answer.json>` files the verdict. The verdict
+  names the model that judged; `check` compares it with the proof's model.
+- `mimo-v2.6-flash` closes 59 KB in about a minute and does **not** close 114 KB in
+  600s; `odd/review.toml` carries both.
+- `check --run` needs `--timeout 400` for this suite on this machine (it passes at
+  120s but with no room).
 
 ## What is already true, so it is not re-decided
 
-- **Ownership is declared, never inferred** (ADR 0038). `proof/`, `odd/tasks`, the
-  client choice and the rest of `.git/` are named and never removed.
+- **Ownership is declared, never inferred** (ADR 0038).
 - **A failed read is not an absence.** `clean --apply` refuses before the first file
-  when a class it maintains cannot be read; the review refuses a store it cannot
-  read instead of borrowing the old answer.
-- **The bound lives in `potentRows`** (ADR 0039). A future lens that asks about an
-  untouched path moves the rule with it.
+  when a class it maintains cannot be read; the review refuses a store it cannot read.
+- **The bound lives in `potentRows`** (ADR 0039): a row travels when its path is
+  judged or when it still blocks.
 - **The fence in force protects** `internal/domain/proof/**`, `proof/**` and
-  `skills/**`. A feature that needs one of those lands the policy correction first,
-  in its own change (0120).
-- **Numbers follow the landing order**, and `check` reads the highest task document
-  as the current feature.
+  `skills/**`. A feature that needs one of those lands the policy correction first.
+- **A relaxed key stays at the schema the released binary reads.** CI builds the gate
+  from the base ref.
+- **The changelog goes back to `## Unreleased`**, the release PR renames it to
+  `## vX - date`, and the tag publishes. 0137 wrote a versioned heading and v0.11.78
+  needed no release commit; do not repeat that.
+- **Numbers follow the landing order**, and `check` reads the highest task document as
+  the current feature.
 - **Every irreversible action names its target and waits for the human.**
+
+## The one decision waiting, not taken
+
+This repository keeps the craft twice: `.agents/skills` (15 skills, 15 tracked files,
+`bootstrap` deliberately absent) and `~/.agents/skills` (56, `bootstrap` included). The
+block in `AGENTS.md` names the project's copy because the copy exists, and `setup`
+reports the machine's because that is what it maintains. Nothing contradicts -the block
+names a copy that is current- but one of them is refreshed by hand.
+
+The choice is the human's, and it is a feature rather than a cleanup: either the
+project keeps its copy on purpose, or it leaves and the block names
+`~/.agents/skills/` while `doctor` refuses a block that names the folder the store did
+not choose.
 
 ## How to find the next real work
 
-`docs/review-debt.md` holds the accepted rows; `odachi doctor` and `odachi bench`
-still find friction nobody has named; the hygiene trio (`go vet`, `go mod tidy`,
-`gofmt -l .`) is cheap. And run `odachi clean` itself: a class that grew back is a
-lifetime that does not fit the way the project works, which is a feature and not a
-cleanup.
+`docs/review-debt.md` holds the accepted rows (none today); `odachi doctor` and
+`odachi bench` find friction nobody has named; the hygiene trio (`go vet`,
+`go mod tidy -diff`, `gofmt -l .`) is cheap; and `odachi clean` says which class grew
+back, which is a lifetime that does not fit the way the project works.
+
+Measured on 2026-10-31 after the release: `doctor` 13/13, `bench` 8 journeys and 20
+steps with no dead ends, and the hygiene trio silent.
