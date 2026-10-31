@@ -2669,7 +2669,16 @@ func (r *runner) carriedRows(predecessor domain.Verdict) ([]domain.Finding, []do
 		if problem != nil {
 			return nil, nil, problem
 		}
-		if finding.Blocks() || (blob != "" && blob == strings.TrimSpace(finding.Blob)) {
+		switch {
+		case blob != "" && blob == strings.TrimSpace(finding.Blob):
+			findings = append(findings, finding)
+		case finding.Blocks():
+			// The fix moved the bytes this finding cited. A blocker about bytes
+			// nobody can read any more cannot keep blocking -the correction exists
+			// to clear it- and dropping it would let a fix launder what a reviewer
+			// called a reason not to ship. It travels as a follow-up: visible in the
+			// verdict, and not a verdict of its own.
+			finding.Causal = false
 			findings = append(findings, finding)
 		}
 	}
