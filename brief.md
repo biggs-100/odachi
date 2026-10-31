@@ -1,13 +1,11 @@
-# a-fix-after
+# the-two-rows
 
 ## What must exist
-- a fix after a verdict is reviewed as the delta, and closing a feature names the review debt it leaves
+- the two rows the review of 0140 left are paid, and a correction cannot silently drop a blocker or lose the base it completes
 
 ## Done when
-- a fix after a verdict is reviewed as the delta, not as the whole candidate
-- the stored verdict still answers every changed path after a correction
-- closing a feature names the open rows of docs/review-debt.md
-- the ADR and the changelog say why the review gate lives in the clone
+- a blocker about bytes the fix moved travels as a follow-up, and the correction's verdict approves
+- the stored correction keeps the predecessor's base, and the test fails when it does not
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
@@ -16,5 +14,5 @@
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
-- First usable version: this week.
-- Wants to learn: por que la evidencia sobre un arbol no puede vivir dentro de el, y cuanto cuesta corregir sin maquina de estados.
+- First usable version: today.
+- Wants to learn: por que un blocker que cita bytes movidos no puede seguir bloqueando ni desaparecer.
