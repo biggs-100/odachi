@@ -16,3 +16,4 @@ R1 · "the guard that decides whether an answer may merge into an existing verdi
 
 ## History
 L1 · "the guard that decides whether an answer may merge into an existing verdict is a predicate the package pins, so asking the wrong question fails a test"
+L2 · OFICIO · "T1 carries the test and the predicate in one commit: the red was observed, then the function landed" (porque a table test that names a function which does not exist leaves the suite uncompilable, and a commit with red tests is never allowed, so the step is closed by the commit that makes its own test green)
