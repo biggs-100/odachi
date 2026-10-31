@@ -9,7 +9,8 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0124, which gives a repository that already lives the minimal footprint.
+Last written: after 0125, which stops a footprint from being decided by a check
+that failed.
 
 ## Open
 
@@ -40,18 +41,6 @@ reports exactly that state as a gap, advising `odachi init --global` to record a
 choice. Either the note recognises the adopted state or the advice stops calling the
 missing key a defect.
 
-### the footprint reads a failed check as "not there"
-
-Found by the review of 0124. `derivesMinimal`, `projectAgentPresent` and
-`projectBlock` read an error as "no such file" (`err == nil && found`, a failed
-`ReadFile` falling back to the default block), and `runInit` flattens a failed
-`git rev-parse HEAD` into "this repository has no commit". So a stat that fails, an
-`AGENTS.md` that cannot be read, or a git that refuses the repository flips a project
-that does carry its craft into the full install, or the other way. The convention
-this feature skipped was already there (`Run` answers a failed `Exists` with
-`blocked("could not check ...")`), and the double that could pin it is already in the
-suite (`fakeFiles.existsErr`, used by the setup tests): the row is cheap.
-
 ### the notes name `.agents/`, the code tests `.agents/skills`
 
 Found by the review of 0124 (suggestion). The changelog, the README and the help say
@@ -59,6 +48,24 @@ a repository gets the minimal footprint when it has no `.agents/`; the code test
 `.agents/skills`, on purpose -another tool's `.agents/` folder is not the craft. A
 repository with `.agents/notes.md` reads the notes and gets the other behaviour. Three
 lines to say the copy instead of the folder.
+
+## Closed by feature 0125
+
+### the footprint reads a failed check as "not there"
+
+Found by the review of 0124. `derivesMinimal`, `projectAgentPresent` and
+`projectBlock` read an error as "no such file" (`err == nil && found`, a failed
+`ReadFile` falling back to the default block), and `runInit` flattened a failed
+`git rev-parse HEAD` into "this repository has no commit". A stat that fails, an
+`AGENTS.md` that cannot be read, or a git that refuses the repository flipped a
+project that does carry its craft into the full install, or the other way.
+
+Closed: the two inferences return the refusal with the answer and one function
+decides the footprint before the first writer runs; the CLI asks git twice, so
+"no commit yet" stays a state and a repository git cannot read is refused; and
+`role` falls back to the default block only when `AGENTS.md` is not there. Four
+tests pin it, three of them observed red first (`failed_check_test.go`,
+`init_history_test.go`, `role_block_test.go`), and ADR 0034 says the rule once.
 
 ## Closed by feature 0113
 
