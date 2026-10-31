@@ -18,3 +18,4 @@ R1 · "a fix after a verdict is reviewed as the delta, and closing a feature nam
 
 ## History
 L1 · "a fix after a verdict is reviewed as the delta, and closing a feature names the review debt it leaves"
+L2 · OFICIO · "T1 and T2 land in one commit: the delta and the predecessor's rows are one behaviour" (porque a correction that reviews only the delta without carrying the verdict it completes leaves paths unanswered, and a gate that refuses it is not a feature; the two are tested together and reverted together)

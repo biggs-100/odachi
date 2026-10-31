@@ -534,6 +534,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&opts.Show, "show", false, "which verdict exists for this tree, or that there is none")
 	flags.StringVar(&opts.Lens, "lens", "", "explicit lens: risk | readability | reliability | resilience | all (repeatable or comma-separated)")
 	flags.StringVar(&opts.Refute, "refute", "", "print the refuter's prompt for this verdict")
+	flags.StringVar(&opts.Since, "since", "", "correct the verdict for this tree: the prompt is the delta since it, and the stored verdict keeps its rows")
 	flags.StringVar(&opts.Dismiss, "dismiss", "", "retire one row of this tree's verdict: <path>:<line>, with --because")
 	flags.StringVar(&opts.Because, "because", "", "why the row is retired: the evidence a dismissal carries")
 	flags.StringVar(&opts.Base, "base", reviewapp.DefaultBase, "what to compare the candidate against (empty: against nothing, everything counts as new)")
@@ -562,6 +563,13 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 	if forms > 1 {
 		fmt.Fprintln(stderr, `odachi: --exec, --attach, --show and --refute do not go together: choose a single form (odachi review | odachi review --exec "<command>" | odachi review --attach <file> | odachi review --show | odachi review --refute <verdict>)`)
+		return start.CodeBlocked
+	}
+
+	// --since corrects a verdict, so it belongs to the forms that produce one: a
+	// correction of a read-only form would be a flag nobody reads.
+	if opts.Since != "" && (opts.Show || opts.Refute != "" || opts.Dismiss != "") {
+		fmt.Fprintln(stderr, "odachi: --since corrects a verdict; it does not go with --show, --refute or --dismiss")
 		return start.CodeBlocked
 	}
 
@@ -1545,6 +1553,8 @@ review flags:
                   ODACHI_MODEL)
   --attach path   save a verdict or a refutation that is already written (agent or human)
   --show          which verdict exists for this tree, or that there is none
+  --since tree    correct the verdict for that tree: the prompt is only what moved since
+                  those bytes, and the stored verdict carries its rows
   --lens s        explicit lens: risk | readability | reliability | resilience | all
   --refute path   print the refuter's prompt for that verdict
   --base ref      what to compare the candidate against (default HEAD; empty: against nothing)
@@ -1715,6 +1725,8 @@ after start:
   odachi review --exec "agent {prompt}"         the same, but the reviewer receives the prompt path
   odachi review --exec "agent --write {verdict}"  the answer comes from that file, and stdout is diagnosis
   odachi review --attach <file>                 save a verdict or a refutation that is already written
+  odachi review --since <tree>                  correct that verdict: the prompt is only what moved,
+                                                 and the stored verdict keeps its rows
   odachi review --show                          which verdict exists for this tree
   odachi review --lens risk                     add a lens to the ones the evidence asks for
   odachi review --lens --show                   which lenses this tree asks for and which are missing

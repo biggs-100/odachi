@@ -110,6 +110,11 @@ type Options struct {
 	Lens string
 	// Refute is a verdict file, and this run prints the refuter's prompt for it.
 	Refute string
+	// Since is the tree of a verdict this run corrects: the prompt is built from
+	// the delta between that tree and the worktree, and the stored verdict
+	// carries the predecessor's rows, so every path stays answered while only
+	// what moved is paid for. Empty means a review of the whole candidate.
+	Since string
 	// Now is the instant a stored verdict records. Zero means the wall clock;
 	// tests fix it so a stored verdict is byte-stable.
 	Now time.Time
@@ -139,6 +144,10 @@ type Git interface {
 	// tree, the paths that differ from base, and the diff, from one throwaway
 	// index. The three answers describe the same bytes.
 	Candidate(root, base string) (tree string, paths []string, diff string, err error)
+	// Correction is the worktree compared against one exact tree, without asking
+	// git for a fork point: the delta between the bytes a verdict judged and the
+	// bytes that stand. It is what a correction reviews.
+	Correction(root, tree string) (paths []string, diff string, err error)
 	// BlobHash is the content hash of one worktree file - the blob id git
 	// already owns. It is how a finding earns its content receipt without
 	// anybody declaring it: a hash is measured, not word of mouth.
@@ -257,6 +266,9 @@ type runner struct {
 	// run as one group.
 	hostModel string
 	hostAsked bool
+	// correction is the verdict --since names, read once: it is both the tree the
+	// delta is measured from and the answer the stored verdict completes.
+	correction *domain.Verdict
 }
 
 // worktree is one read of the candidate: its content tree, the paths that
@@ -405,6 +417,7 @@ func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptIn
 		KnownPasses: cleanRows,
 		Floor:       domain.FloorFor(cand.paths, cand.diff),
 		Scope:       scope,
+		Correction:  strings.TrimSpace(r.opts.Since),
 	}, nil
 }
 
@@ -1591,6 +1604,29 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		sealed = resealed
 	}
 
+	// A correction completes the verdict it names: the rows of the paths that did
+	// not move are the predecessor's, and they keep the whole candidate answered
+	// while this run paid only for the delta. The union is sealed again because a
+	// merge derives nothing, and the predecessor's base is the one that makes the
+	// stored verdict answer the feature's diff instead of the correction's.
+	if strings.TrimSpace(r.opts.Since) != "" {
+		predecessor, problem := r.sinceVerdict()
+		if problem != nil {
+			return *problem
+		}
+		sealed = mergeVerdicts(predecessor, sealed)
+		sealed.Tree = tree
+		base := strings.TrimSpace(sealed.Base)
+		if base == "" {
+			base = r.correctionBase(predecessor)
+		}
+		resealed, err := domain.Seal(sealed, tree, base, r.opts.Now)
+		if err != nil {
+			return blocked(oneLine(err.Error()) + "; I wrote nothing")
+		}
+		sealed = resealed
+	}
+
 	// The declaration comes before the rows, and it is the answer's: a changed
 	// path it leaves out is a hole, and a path nobody changed is an invention.
 	// The caller cannot complete it, because the caller is not the reader.
@@ -2566,11 +2602,73 @@ func (r *runner) base() string {
 	return EmptyTree
 }
 
+// sinceVerdict reads the verdict --since names, once. A correction completes an
+// answer this clone holds: without the file there is nothing to complete, and
+// reviewing the whole candidate is the way out.
+func (r *runner) sinceVerdict() (domain.Verdict, *Result) {
+	if r.correction != nil {
+		return *r.correction, nil
+	}
+	tree := strings.TrimSpace(r.opts.Since)
+	if tree == "" {
+		return domain.Verdict{}, nil
+	}
+	rel, err := domain.Path(tree)
+	if err != nil {
+		problem := blocked(oneLine(err.Error()) + "; --since takes the tree hash a stored verdict is named by, and odachi review --show names it")
+		return domain.Verdict{}, &problem
+	}
+	data, err := r.files.Read(r.storePath(rel))
+	if err != nil {
+		problem := blocked("there is no verdict for the tree --since names (" + tree + "): a correction completes an answer this clone holds, and odachi review --show names the one this tree has")
+		return domain.Verdict{}, &problem
+	}
+	parsed, err := domain.Parse(data)
+	if err != nil {
+		problem := blocked("the verdict for " + tree + " cannot be read: " + oneLine(err.Error()) + "; review the whole candidate with odachi review --base <ref>")
+		return domain.Verdict{}, &problem
+	}
+	r.correction = &parsed
+	return parsed, nil
+}
+
+// correctionBase is the base a correction keeps: the one its predecessor judged,
+// so the stored verdict still answers the feature the correction belongs to.
+func (r *runner) correctionBase(predecessor domain.Verdict) string {
+	if base := strings.TrimSpace(predecessor.Base); base != "" {
+		return base
+	}
+	return r.base()
+}
+
 // worktree reads the current candidate once. Every later question about the
 // candidate - the prompt, the floor, the blobs, the store - reads this value;
 // a second read of the same bytes was the cost this verb used to pay.
 func (r *runner) worktree() (*worktree, *Result) {
 	if r.work != nil {
+		return r.work, nil
+	}
+
+	// A correction measures the delta from the bytes the predecessor judged, not
+	// from the branch: the base of the feature is a different question, and the
+	// verdict keeps it.
+	if strings.TrimSpace(r.opts.Since) != "" {
+		predecessor, problem := r.sinceVerdict()
+		if problem != nil {
+			return nil, problem
+		}
+		paths, diff, err := r.git.Correction(r.opts.Dir, predecessor.Tree)
+		if err != nil {
+			p := blocked(fmt.Sprintf("could not read what changed since the verdict for %s: %s; run odachi review --show or drop --since",
+				predecessor.Tree, oneLine(err.Error())))
+			return nil, &p
+		}
+		tree, err := r.git.TreeHash(r.opts.Dir)
+		if err != nil {
+			p := blocked(oneLine(err.Error()) + "; check the git tree and run odachi review again")
+			return nil, &p
+		}
+		r.work = &worktree{tree: tree, base: r.correctionBase(predecessor), paths: paths, diff: diff}
 		return r.work, nil
 	}
 
@@ -2616,6 +2714,10 @@ func (r *runner) candidate() (candidate, *Result) {
 		return candidate{}, problem
 	}
 	if len(work.paths) == 0 || strings.TrimSpace(work.diff) == "" {
+		if since := strings.TrimSpace(r.opts.Since); since != "" {
+			problem := nothingToCorrect(since)
+			return candidate{}, &problem
+		}
 		problem := nothingToReview()
 		return candidate{}, &problem
 	}
@@ -2768,6 +2870,21 @@ func nothingToReview() Result {
 		Code:    CodeBlocked,
 		Message: "there is nothing to review in this tree",
 		Lines:   []string{"there is nothing to review in this tree"},
+	}
+}
+
+// nothingToCorrect is the answer for a correction with nothing to judge: the tree
+// that stands is the tree the predecessor already answered, and paying a reviewer
+// for the same bytes twice is the cost this flag exists to remove.
+func nothingToCorrect(predecessor string) Result {
+	message := "nothing changed since the verdict for " + predecessor + ": the bytes it judged are the bytes that stand"
+	return Result{
+		Code:    CodeBlocked,
+		Message: message,
+		Lines: []string{
+			message,
+			"next: odachi review --show",
+		},
 	}
 }
 

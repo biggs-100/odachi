@@ -1,6 +1,7 @@
 package gitx
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -20,6 +21,35 @@ import (
 // real index, the worktree and the human's git are never touched. Ignored files
 // stay out; untracked files and deletions are part of the candidate.
 func Candidate(root, base string) (tree string, paths []string, diff string, err error) {
+	// The empty tree is "compare against nothing": there is no base commit, so
+	// the index starts empty and every file in the worktree is an addition.
+	target, err := compareBase(root, base)
+	if err != nil {
+		return "", nil, "", err
+	}
+	return snapshot(root, target)
+}
+
+// Correction is the worktree compared against one exact tree, without asking git
+// for a fork point: the tree is the bytes a verdict judged, and a correction
+// reviews what moved since those bytes. The paths and the diff are the delta; the
+// tree the caller already knows is not re-read here.
+//
+// It reuses the one throwaway index Candidate builds, so the real index, the
+// worktree and the human's git are never touched.
+func Correction(root, tree string) (paths []string, diff string, err error) {
+	target := strings.TrimSpace(tree)
+	if target == "" {
+		return nil, "", fmt.Errorf("no tree to correct against")
+	}
+	_, paths, diff, err = snapshot(root, target)
+	return paths, diff, err
+}
+
+// snapshot writes the worktree into a throwaway index read from target and
+// answers the content tree the index holds, the paths that differ from target,
+// and their diff.
+func snapshot(root, target string) (tree string, paths []string, diff string, err error) {
 	dir, err := os.MkdirTemp("", "odachi-candidate-")
 	if err != nil {
 		return "", nil, "", err
@@ -28,12 +58,6 @@ func Candidate(root, base string) (tree string, paths []string, diff string, err
 
 	env := []string{"GIT_INDEX_FILE=" + filepath.Join(dir, "index")}
 
-	// The empty tree is "compare against nothing": there is no base commit, so
-	// the index starts empty and every file in the worktree is an addition.
-	target, err := compareBase(root, base)
-	if err != nil {
-		return "", nil, "", err
-	}
 	readTree := []string{"read-tree", target}
 	if target == "" {
 		target = EmptyTree
