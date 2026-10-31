@@ -12,7 +12,7 @@ R1 · "the guard that decides whether an answer may merge into an existing verdi
 ## Steps
 - [x] T1 · a table test names the collision rule and fails until the predicate exists   R1 · tree:a8aeee58739df8e34a693daa160bffe5cb027bb8
 - [x] T2 · storeIn asks the predicate, and the split and second-run tests still pass   R1 · tree:7ecd4252f3ea2f377bf6f42021718b42874b587a
-- [ ] T3 · the changelog and the review-debt row say the guard is pinned   R1
+- [x] T3 · the changelog and the review-debt row say the guard is pinned   R1 · tree:a179823a9f5863eb2cad872ca2a0b2ff306af18b
 
 ## History
 L1 · "the guard that decides whether an answer may merge into an existing verdict is a predicate the package pins, so asking the wrong question fails a test"
