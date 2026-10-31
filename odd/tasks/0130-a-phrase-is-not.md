@@ -12,7 +12,7 @@ R1 · "a rule names paths, not a phrase: a glob of the phrase's own words matche
 
 ## Steps
 - [x] T1 · a phrase writes a template, not a rule, and the run says so   R1 · tree:1eb29ccae848060c4629c04f710496035374a719
-- [ ] T2 · the ADR and the changelog say a phrase is not a rule   R1
+- [x] T2 · the ADR and the changelog say a phrase is not a rule   R1 · tree:b8700c63f8b939d1280eace79e1d8fbe8880f11d
 
 ## History
 L1 · "a rule names paths, not a phrase: a glob of the phrase's own words matches files named like the phrase and protects nothing"
