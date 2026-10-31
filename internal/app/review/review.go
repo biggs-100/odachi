@@ -1570,20 +1570,16 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		if problem != nil {
 			return *problem
 		}
-		for _, lens := range sealed.Lenses {
-			if !containsLens(existing.Lenses, lens) {
-				continue
-			}
+		if lens := collision(sealed.Lenses, existing.Lenses, landed); lens != "" {
 			// A part of the same run answers a lens the run itself already
 			// landed: it adds the rows of the paths it carries, it does not pay
 			// for the lens twice. Any other run landed nothing here, and a run
 			// that re-answers a lens is the double payment this refusal exists to
 			// prevent - the candidate being split says nothing about what this run
 			// has stored.
-			if containsLens(landed, lens) {
-				continue
-			}
-			return alreadyStored(r.storeLabel(rel))
+			refusal := alreadyStored(r.storeLabel(rel))
+			refusal.Lines = append(refusal.Lines, "the lens already paid for: "+lens)
+			return refusal
 		}
 		sealed = mergeVerdicts(existing, sealed)
 		// The union has to be sealed again: the merge derives nothing, and a verdict

@@ -10,7 +10,7 @@ R1 · "the guard that decides whether an answer may merge into an existing verdi
 - making the guard ask the candidate's shape again fails a test
 
 ## Steps
-- [ ] T1 · a table test names the collision rule and fails until the predicate exists   R1
+- [x] T1 · a table test names the collision rule and fails until the predicate exists   R1 · tree:a8aeee58739df8e34a693daa160bffe5cb027bb8
 - [ ] T2 · storeIn asks the predicate, and the split and second-run tests still pass   R1
 - [ ] T3 · the changelog and the review-debt row say the guard is pinned   R1
 
