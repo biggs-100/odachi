@@ -7,6 +7,30 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/review"
 )
 
+// TestNormalizeKeepIsALifetimeOrATypo: the two numbers the project decides -how
+// many review records and how many prompts survive `odachi clean --apply`-. Zero
+// is the absence of a choice and means the default; a negative number or one
+// nobody reaches is refused instead of silently becoming something else.
+func TestNormalizeKeepIsALifetimeOrATypo(t *testing.T) {
+	if got, err := review.NormalizeKeepVerdicts(0); err != nil || got != review.DefaultKeepVerdicts {
+		t.Errorf("NormalizeKeepVerdicts(0) = %d, %v; want the default", got, err)
+	}
+	if got, err := review.NormalizeKeepVerdicts(3); err != nil || got != 3 {
+		t.Errorf("NormalizeKeepVerdicts(3) = %d, %v; want 3", got, err)
+	}
+	if got, err := review.NormalizeKeepPrompts(0); err != nil || got != 0 {
+		t.Errorf("NormalizeKeepPrompts(0) = %d, %v; want 0", got, err)
+	}
+	for _, bad := range []int{-1, review.MaxKeep + 1} {
+		if _, err := review.NormalizeKeepVerdicts(bad); err == nil {
+			t.Errorf("NormalizeKeepVerdicts(%d) accepted a lifetime that cannot be one", bad)
+		}
+		if _, err := review.NormalizeKeepPrompts(bad); err == nil {
+			t.Errorf("NormalizeKeepPrompts(%d) accepted a lifetime that cannot be one", bad)
+		}
+	}
+}
+
 // A model is an identifier that replaces {model} inside a command: the review
 // must never run a repository's string as shell code.
 func TestNormalizeModelRefusesShellCode(t *testing.T) {

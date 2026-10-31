@@ -25,6 +25,11 @@ type file struct {
 	Mode        string            `toml:"mode"`
 	Lenses      map[string]string `toml:"lenses"`
 	MaxPromptKB int               `toml:"max_prompt_kb"`
+	// The two lifetimes `odachi clean` obeys. Absent -or a zero- means the
+	// defaults odachi shipped, so a file written before they existed cleans the
+	// same way it always did.
+	KeepVerdicts int `toml:"keep_verdicts"`
+	KeepPrompts  int `toml:"keep_prompts"`
 }
 
 // Decode parses the file. Unknown keys are an error naming them; an empty or
@@ -48,7 +53,7 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 		for _, key := range unknown {
 			keys = append(keys, key.String())
 		}
-		return review.ProjectConfig{}, fmt.Errorf("review: unknown keys: %s; this file configures mode, the model of each lens and the biggest prompt you pay for", strings.Join(keys, ", "))
+		return review.ProjectConfig{}, fmt.Errorf("review: unknown keys: %s; this file configures mode, the model of each lens, the biggest prompt you pay for and how many records and prompts you keep", strings.Join(keys, ", "))
 	}
 
 	mode, err := review.NormalizeMode(f.Mode)
@@ -63,7 +68,21 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
-	return review.ProjectConfig{Mode: mode, Lenses: lenses, MaxPromptKB: limit}, nil
+	verdicts, err := review.NormalizeKeepVerdicts(f.KeepVerdicts)
+	if err != nil {
+		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
+	}
+	prompts, err := review.NormalizeKeepPrompts(f.KeepPrompts)
+	if err != nil {
+		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
+	}
+	return review.ProjectConfig{
+		Mode:         mode,
+		Lenses:       lenses,
+		MaxPromptKB:  limit,
+		KeepVerdicts: verdicts,
+		KeepPrompts:  prompts,
+	}, nil
 }
 
 // Render writes the canonical file: the comment, the switch, and the lens table
@@ -88,6 +107,17 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 		out.WriteString("# the biggest prompt this project pays a reviewer for; a reviewer that stalls at a size does not answer late\n")
 		out.WriteString("max_prompt_kb = " + strconv.Itoa(limit) + "\n")
 	}
+	verdicts, err := review.NormalizeKeepVerdicts(config.KeepVerdicts)
+	if err != nil {
+		return nil, fmt.Errorf("review: %w", err)
+	}
+	prompts, err := review.NormalizeKeepPrompts(config.KeepPrompts)
+	if err != nil {
+		return nil, fmt.Errorf("review: %w", err)
+	}
+	out.WriteString("# odachi clean --apply keeps this many review records -the newest trees- and this many prompts\n")
+	out.WriteString("keep_verdicts = " + strconv.Itoa(verdicts) + "\n")
+	out.WriteString("keep_prompts = " + strconv.Itoa(prompts) + "\n")
 	if len(config.Lenses) > 0 {
 		out.WriteString("\n[lenses]\n")
 		for _, lens := range review.AllLenses() {

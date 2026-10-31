@@ -5,6 +5,24 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The project decides how much review evidence survives.
+
+- **`odd/review.toml` gains `keep_verdicts` and `keep_prompts`**, the lifetimes `odachi clean --apply`
+  obeys. They are counted in trees -a prompt belongs to the review it served- and zero means the default
+  odachi shipped: ten records, no prompt. More than a thousand, or a negative number, is refused by name.
+- **Prompts are their own class in the report.** A prompt is the question, not the evidence: 597 KB in
+  eleven files in this repository, the largest 114 KB, and nothing the gate reads touches it. A project
+  that wants the question on file writes how many trees keep theirs.
+- **The report says where the numbers came from**, `odd/review.toml` or odachi's defaults, so a lifetime
+  nobody remembers choosing is never a mystery. A file the tool cannot parse is refused by name instead of
+  falling back to a number nobody chose.
+- **The schema moves to 3**, so a binary older than this one says upgrade instead of naming `keep_verdicts`
+  as an unknown key. This repository's own `odd/review.toml` carries the keys once the release that reads
+  them is on the machine: CI builds the gate from the base ref, and a base binary that reads schema 2
+  refuses a candidate that says 3 before the suite runs.
+
 ## v0.11.74 - 2026-10-31
 
 A verdict carries the rows of the paths it judged, so it stops growing with the store.

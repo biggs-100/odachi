@@ -98,8 +98,8 @@ func TestCleanJSONCarriesTheSameMap(t *testing.T) {
 	if payload.Code != 0 {
 		t.Errorf("code = %d, want 0", payload.Code)
 	}
-	if len(payload.Report.Classes) != 9 {
-		t.Errorf("classes = %d, want the nine the map names", len(payload.Report.Classes))
+	if len(payload.Report.Classes) != 10 {
+		t.Errorf("classes = %d, want the ten the map names", len(payload.Report.Classes))
 	}
 	if payload.Report.TotalFiles != 2 || payload.Report.TotalBytes != 150 {
 		t.Errorf("totals = %d files, %d bytes; want the two verdicts", payload.Report.TotalFiles, payload.Report.TotalBytes)
@@ -193,6 +193,51 @@ func TestCleanApplyLegacyRemovesTheOldNotes(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".git", "COMMIT_EDITMSG")); err != nil {
 		t.Errorf("git's own file was removed: %v", err)
+	}
+}
+
+// TestCleanObeysTheProjectRetention: the numbers are the project's, read from
+// odd/review.toml, and the report says where they came from so a lifetime nobody
+// remembers choosing is never a mystery.
+func TestCleanObeysTheProjectRetention(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeFile(t, dir, "odd/review.toml", "mode = \"on\"\nkeep_verdicts = 2\nkeep_prompts = 1\n")
+	writeFile(t, dir, ".git/odachi/reviews/aaaa.json", "verdict")
+	writeFile(t, dir, ".git/odachi/reviews/aaaa.prompt.md", "prompt")
+
+	code, stdout, stderr := runDir(t, dir, []string{"clean"}, "")
+	if code != 0 {
+		t.Fatalf("clean: exit %d (stdout: %q, stderr: %q)", code, stdout, stderr)
+	}
+	for _, want := range []string{
+		"keeps the newest 2 trees",
+		"keeps the prompts of the newest 1 tree",
+		"retention: the newest 2 trees and the prompts of the newest 1, from odd/review.toml",
+	} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("the report does not say %q:\n%s", want, stdout)
+		}
+	}
+}
+
+// TestCleanRefusesABrokenReviewToml: the numbers are a decision, so a file the
+// tool cannot read is named instead of falling back to a default nobody chose.
+func TestCleanRefusesABrokenReviewToml(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeFile(t, dir, "odd/review.toml", "mode = \"on\"\nkeep_verdicts = -1\n")
+
+	code, _, stderr := runDir(t, dir, []string{"clean"}, "")
+	if code != 1 {
+		t.Fatalf("clean with a broken review.toml: exit %d, want 1 (stderr: %q)", code, stderr)
+	}
+	for _, want := range []string{"odd/review.toml", "keep_verdicts"} {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("the refusal does not name %q: %q", want, stderr)
+		}
 	}
 }
 

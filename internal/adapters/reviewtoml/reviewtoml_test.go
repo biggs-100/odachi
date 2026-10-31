@@ -108,6 +108,84 @@ func TestDecodeRefusesABrokenLensTable(t *testing.T) {
 	}
 }
 
+// TestDecodeReadsTheRetention: the file says how much review evidence survives.
+// A project that never wrote the keys keeps the numbers odachi shipped, and a
+// zero on keep_verdicts is that same absence -the gate reads the newest record,
+// so "keep none" is not a lifetime a project can choose-.
+func TestDecodeReadsTheRetention(t *testing.T) {
+	cases := []struct {
+		data   string
+		keep   int
+		prompt int
+	}{
+		{data: "mode = \"on\"\n", keep: review.DefaultKeepVerdicts, prompt: review.DefaultKeepPrompts},
+		{data: "mode = \"on\"\nkeep_verdicts = 3\nkeep_prompts = 1\n", keep: 3, prompt: 1},
+		{data: "mode = \"on\"\nkeep_verdicts = 0\n", keep: review.DefaultKeepVerdicts, prompt: review.DefaultKeepPrompts},
+		{data: "mode = \"on\"\nkeep_prompts = 0\n", keep: review.DefaultKeepVerdicts, prompt: 0},
+	}
+
+	for _, c := range cases {
+		got, err := reviewtoml.Decode([]byte(c.data))
+		if err != nil {
+			t.Fatalf("Decode(%q) = %v", c.data, err)
+		}
+		if got.KeepVerdicts != c.keep || got.KeepPrompts != c.prompt {
+			t.Errorf("Decode(%q) = %d/%d, want %d/%d", c.data, got.KeepVerdicts, got.KeepPrompts, c.keep, c.prompt)
+		}
+	}
+}
+
+// TestDecodeRefusesARetentionThatCannotBeOne: a negative number is a typo, not a
+// lifetime, and a number nobody would ever reach is one too.
+func TestDecodeRefusesARetentionThatCannotBeOne(t *testing.T) {
+	cases := map[string]string{
+		"negative records": "mode = \"on\"\nkeep_verdicts = -1\n",
+		"negative prompts": "mode = \"on\"\nkeep_prompts = -2\n",
+		"absurd records":   "mode = \"on\"\nkeep_verdicts = 100000\n",
+	}
+	for name, data := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := reviewtoml.Decode([]byte(data))
+			if err == nil {
+				t.Fatal("Decode accepted a lifetime that cannot be one")
+			}
+			if !strings.Contains(err.Error(), "keep_") {
+				t.Errorf("error = %q, want the key named", err)
+			}
+		})
+	}
+}
+
+// TestRenderKeepsTheRetention: the numbers survive the round trip, and a project
+// that never chose gets them written, so the file says what is in force instead
+// of leaving it to a default nobody reads.
+func TestRenderKeepsTheRetention(t *testing.T) {
+	rendered, err := reviewtoml.Render(review.ProjectConfig{Mode: review.ModeOn, KeepVerdicts: 3, KeepPrompts: 1})
+	if err != nil {
+		t.Fatalf("Render = %v", err)
+	}
+	back, err := reviewtoml.Decode(rendered)
+	if err != nil {
+		t.Fatalf("Decode(Render(x)) = %v", err)
+	}
+	if back.KeepVerdicts != 3 || back.KeepPrompts != 1 {
+		t.Errorf("the retention did not survive the round trip: %d/%d", back.KeepVerdicts, back.KeepPrompts)
+	}
+
+	empty, err := reviewtoml.Render(review.ProjectConfig{Mode: review.ModeOff})
+	if err != nil {
+		t.Fatalf("Render(off) = %v", err)
+	}
+	back, err = reviewtoml.Decode(empty)
+	if err != nil {
+		t.Fatalf("Decode(Render(off)) = %v", err)
+	}
+	if back.KeepVerdicts != review.DefaultKeepVerdicts || back.KeepPrompts != review.DefaultKeepPrompts {
+		t.Errorf("a file that never chose writes %d/%d, want the defaults %d/%d",
+			back.KeepVerdicts, back.KeepPrompts, review.DefaultKeepVerdicts, review.DefaultKeepPrompts)
+	}
+}
+
 // TestRenderWritesACanonicalSwitch: the comment tells the human whose switch it
 // is, and the value is the normalized one.
 func TestRenderWritesACanonicalSwitch(t *testing.T) {

@@ -21,9 +21,9 @@ const (
 )
 
 // ProjectConfig is what odd/review.toml holds: the switch, optionally the model
-// that judges each lens, and the biggest prompt this project pays for. A lens
-// without an entry is judged by the session's model, which is what the file meant
-// before this table existed.
+// that judges each lens, the biggest prompt this project pays for, and how much
+// evidence `odachi clean` keeps. A lens without an entry is judged by the
+// session's model, which is what the file meant before this table existed.
 type ProjectConfig struct {
 	Mode   string
 	Lenses map[string]string
@@ -31,6 +31,57 @@ type ProjectConfig struct {
 	// spend a reviewer on. Zero means no limit: a file that never wrote the key
 	// reviews as it always did.
 	MaxPromptKB int
+	// KeepVerdicts is how many review records survive `odachi clean --apply`, and
+	// KeepPrompts how many prompts. They are the project's decision, so the file
+	// carries the number in force: a project that never chose reads the defaults
+	// odachi shipped, and `Render` writes them.
+	KeepVerdicts int
+	KeepPrompts  int
+}
+
+// The numbers odachi ships, and the reason they are not the human's: a project
+// that never opened the file must still be cleanable, and the day it opens it the
+// defaults are written there so nothing changes behind its back.
+const (
+	// DefaultKeepVerdicts keeps the reviews of the last ten trees: the gate reads
+	// the newest one, and the rest are the week's evidence.
+	DefaultKeepVerdicts = 10
+	// DefaultKeepPrompts keeps none. A prompt is the question, not the evidence:
+	// it is the biggest file in the store -59 to 114 KB measured on this
+	// repository- and nothing in the gate reads it.
+	DefaultKeepPrompts = 0
+	// MaxKeep is the ceiling both lifetimes share. A number nobody reaches is a
+	// typo wearing a decision's clothes, and a store that never empties is what
+	// the lifetimes exist to prevent.
+	MaxKeep = 1000
+)
+
+// NormalizeKeepVerdicts reads the review records' lifetime. Zero is the absence
+// of a choice and means the default; a negative number or one above MaxKeep is a
+// typo. There is no "keep none": the gate reads the newest record, so a store
+// with no verdicts is a project that has to pay for its last review twice.
+func NormalizeKeepVerdicts(value int) (int, error) {
+	return normalizeKeep("keep_verdicts", value, DefaultKeepVerdicts)
+}
+
+// NormalizeKeepPrompts reads the prompts' lifetime. Zero is a real choice here -
+// it is also the default- because a prompt nobody reads has no reason to survive.
+func NormalizeKeepPrompts(value int) (int, error) {
+	return normalizeKeep("keep_prompts", value, DefaultKeepPrompts)
+}
+
+// normalizeKeep is the one rule both lifetimes obey, so the two keys cannot
+// disagree about what a typo is.
+func normalizeKeep(key string, value, fallback int) (int, error) {
+	switch {
+	case value < 0:
+		return 0, fmt.Errorf("%s is %d: a lifetime is zero or a positive number", key, value)
+	case value == 0:
+		return fallback, nil
+	case value > MaxKeep:
+		return 0, fmt.Errorf("%s is %d: the most a project keeps is %d", key, value, MaxKeep)
+	}
+	return value, nil
 }
 
 // NormalizeMaxPromptKB checks the size limit. It is a size a human measured for
