@@ -159,6 +159,16 @@ artifact are still read, and `odachi undo --collect` (or `odachi store move`)
 moves them into the store without rewriting them: they keep their bytes and date,
 and a second run does nothing.
 
+Nothing above has a lifetime of its own. `odachi clean` reads the clone and prints
+a map: each class of file, who wrote it, how many files and bytes it holds, and
+what the run would do to it. `--apply` keeps the newest ten review records and the
+newest five versions of each file, empties `.git/odachi/scratch/` -where an agent
+writes the note it is working with, never in the tree- and touches nothing else:
+`proof/`, the plan, the client choice and the rest of `.git/` are named and left
+alone. `--apply --legacy` also removes the notes an older agent left loose in the
+git directory, after naming them. A class the run cannot read stops it before the
+first file: deleting on a partial view is how a tool loses evidence.
+
 ## The skills, in your agent
 
 There are sixteen skills, and `odachi init` already leaves fifteen in the
