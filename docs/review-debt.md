@@ -9,18 +9,26 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0128, which gives the adoption one inference and stops the
-doctor calling it unfinished.
+Last written: after 0129, which makes the notes say the copy and not the folder.
 
 ## Open
 
+Nothing. The rows the review of 0124 left are closed by 0125, 0126, 0127, 0128 and
+0129, and the ones before them are closed by their features below.
+
+## Closed by feature 0129
+
 ### the notes name `.agents/`, the code tests `.agents/skills`
 
-Found by the review of 0124 (suggestion). The changelog, the README and the help say
+Found by the review of 0124 (suggestion). The changelog, the README and the help said
 a repository gets the minimal footprint when it has no `.agents/`; the code tests
 `.agents/skills`, on purpose -another tool's `.agents/` folder is not the craft. A
-repository with `.agents/notes.md` reads the notes and gets the other behaviour. Three
-lines to say the copy instead of the folder.
+repository with `.agents/notes.md` read the notes and got the other behaviour.
+
+Closed: the three texts say the copy -a project with a commit and no copy of the
+craft at `.agents/skills`- and name a bare `.agents/` as belonging to other tools. The
+v0.11.71 entry of the changelog is among them: it stated something false about the
+binary people installed.
 
 ## Closed by feature 0128
 
