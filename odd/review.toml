@@ -2,7 +2,9 @@
 mode = "on"
 # the biggest prompt this project pays a reviewer for; a reviewer that stalls at a size does not answer late
 # measured 2026-10-28: 89 KB closed in 46s on mimo-v2.6-flash, 122 KB stalled until the 600s timeout
-max_prompt_kb = 96
+# measured 2026-10-31: feature 0132's prompt is 113.7 KB -1869 new lines of clean.go and its tests- and
+# 96 KB refused it before the call; the human raised the limit to 120 KB for this one
+max_prompt_kb = 120
 
 [lenses]
 risk = "opencode-go/mimo-v2.6-flash"
