@@ -9,19 +9,42 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0134, which makes the retention the project's decision.
+Last written: after 0137, which makes the split's repeat bypass ask what the run
+landed.
 
 ## Open
 
-- **`internal/app/review/review.go:944`** - the split's `repeat` flag is keyed on
-  `unit.of > 1`, a property of the candidate, so a second attempt over the same
-  oversized candidate also skips the `alreadyStored` refusal and can pay twice for a
-  lens. Found by the review of 0136 (warning, no round earned: the answers are right
-  and the guard is too wide). Closed when the bypass asks what THIS run has already
-  stored -the lenses it landed, not the shape of the candidate- and a test drives a
-  second run over the same split candidate to see it refused.
+- **`internal/app/review/promptsize_test.go:51`** - the guard 0137 narrowed has no test
+  that tells the two keys apart. The second-run pin is refused by `exec` one layer up
+  before `storeIn` runs, and the split test passes whether the collision check reads
+  `landed` or the old `unit.of > 1`, so putting the candidate's shape back leaves every
+  test green. Found by the review of 0137 (warning, no round earned: the code asks the
+  right question). Closed when the collision decision is a predicate the package pins -a
+  run that landed the lens merges, a run that landed nothing is refused- so the wrong
+  key fails a test instead of passing all of them.
 
-The two rows of 0134 are closed (see below).
+The row the review of 0136 left is closed below.
+
+## Closed by feature 0137
+
+### the split's repeat bypass asked the wrong question
+
+Found by the review of 0136 (warning, no round earned: the answers are right and the
+guard is too wide). `storeIn` took a `repeat` flag that the run set from `unit.of > 1`,
+a property of the candidate: a candidate split into parts also covered a second run
+over the same oversized candidate.
+
+Closed: `storeIn` takes the lenses this run has already landed and judges the collision
+per lens, so a part may add the rows of the paths it carries to a lens an earlier part
+landed and nothing else may touch an existing verdict. The row's symptom did not
+reproduce -`exec` refuses a second run one layer up, before any group is resolved, and
+`TestASecondRunOverASplitCandidateStartsNoReviewer` pins it with no reviewer started- so
+the test is a pin and the fix is paid where the guard asked the wrong question: with the
+run's landed lenses withheld, `TestAReviewOverTheLimitRunsOneReviewerPerPart` goes red on
+"This tree already has a verdict; saved 1 of 1 lenses", which is the double-payment
+refusal the bypass exists to narrow.
+
+The two rows of 0134 are closed further down.
 
 ## Closed by feature 0135
 

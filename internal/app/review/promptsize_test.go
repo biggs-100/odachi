@@ -48,6 +48,46 @@ func TestAReviewOverTheLimitRunsOneReviewerPerPart(t *testing.T) {
 	}
 }
 
+// TestASecondRunOverASplitCandidateStartsNoReviewer: a split run answers lenses
+// the store already holds because its own parts do, and that bypass belongs to the
+// run, not to the candidate. A second run over the same oversized candidate has
+// landed nothing, so it is refused like any other second run: the store is
+// immutable, and the reviewer that would answer it is not started.
+//
+// This is a pin, not a fix: `exec` already refuses it one layer up, where the
+// lenses still owed are counted before any group is resolved. The test names the
+// promise the guard has to keep so the bypass cannot be widened back without it.
+func TestASecondRunOverASplitCandidateStartsNoReviewer(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.changed = []string{"a.go", "b.go"}
+	p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": gitBlob}
+	p.git.diff = bigDiff("a.go", "b.go")
+	p.shell.script = []fakeAnswer{
+		{output: `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+		{output: `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`},
+	}
+
+	first := p.run(review.Options{Exec: "revisor --model {model}", MaxPromptKB: 25})
+	if first.Code != review.CodeOK {
+		t.Fatalf("the first run = %d, want 0 (%s)", first.Code, first.Message)
+	}
+	if len(p.shell.commands) != 2 {
+		t.Fatalf("commands = %d, want one reviewer per part", len(p.shell.commands))
+	}
+
+	second := p.run(review.Options{Exec: "revisor --model {model}", MaxPromptKB: 25})
+	if second.Code == review.CodeOK {
+		t.Fatalf("the second run paid for lenses the store already holds: %s", second.Message)
+	}
+	if !strings.Contains(second.Message, "already has a verdict") {
+		t.Errorf("message = %q, want the tree said answered", second.Message)
+	}
+	if len(p.shell.commands) != 2 {
+		t.Errorf("the reviewer ran again for lenses already paid for: %v", p.shell.commands)
+	}
+}
+
 // bigDiff is a candidate of two files whose hunks are big enough that a limit of
 // 20 KB holds one of them and not both.
 func bigDiff(paths ...string) string {

@@ -941,7 +941,7 @@ func (r *runner) exec() Result {
 		// it claims: the tool stamps them. The answer is written before the next
 		// group starts, under the candidate the prompt named, so a later failure
 		// cannot lose it and a reviewer's edits cannot move it.
-		last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, unit.of > 1)
+		last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, landed)
 		if last.Code != CodeOK {
 			if len(landed) == 0 {
 				return last
@@ -1462,14 +1462,19 @@ func (r *runner) store(parsed domain.Verdict, base string, judged []string) Resu
 	if problem != nil {
 		return *problem
 	}
-	return r.storeIn(parsed, work, base, judged, false)
+	return r.storeIn(parsed, work, base, judged, nil)
 }
 
 // storeIn is store for one candidate the caller already holds. A run files every
 // answer under the tree its prompt named, even when the reviewer moved the
 // worktree: the floor is measured from that same value, so what a finding may
 // cite and what the file is named after describe the same bytes.
-func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged []string, repeat bool) Result {
+//
+// landed is what THIS run already stored: a part of a split candidate answers the
+// lenses its earlier parts landed, and that is the only reason an existing verdict
+// may be merged instead of refused. A caller that passed nothing is a second run
+// over bytes somebody already judged, whatever shape the candidate has.
+func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged, landed []string) Result {
 	tree := work.tree
 
 	// The floor is one reading of the candidate: it fixes the class this verdict
@@ -1540,24 +1545,27 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	}
 	if exists {
 		// A verdict that already answered these lenses is not rewritten: the run
-		// answers only what the tree still owes. A shared lens means this is not
-		// that run, and the store says so instead of replacing an answer.
+		// answers only what the tree still owes. A shared lens is either a lens
+		// this run landed a moment ago or another run's answer, and the store says
+		// which instead of replacing what it holds.
 		existing, problem := r.storedVerdictFor(tree)
 		if problem != nil {
 			return *problem
 		}
 		for _, lens := range sealed.Lenses {
-			if containsLens(existing.Lenses, lens) {
-				// A part of the same run answers lenses the store already holds:
-				// it adds the rows of the paths it carries, it does not pay for
-				// them twice. Every other caller is a second run, and a second run
-				// that re-answers a lens is the double payment this refusal exists
-				// to prevent.
-				if repeat {
-					break
-				}
-				return alreadyStored(r.storeLabel(rel))
+			if !containsLens(existing.Lenses, lens) {
+				continue
 			}
+			// A part of the same run answers a lens the run itself already
+			// landed: it adds the rows of the paths it carries, it does not pay
+			// for the lens twice. Any other run landed nothing here, and a run
+			// that re-answers a lens is the double payment this refusal exists to
+			// prevent - the candidate being split says nothing about what this run
+			// has stored.
+			if containsLens(landed, lens) {
+				continue
+			}
+			return alreadyStored(r.storeLabel(rel))
 		}
 		sealed = mergeVerdicts(existing, sealed)
 		// The union has to be sealed again: the merge derives nothing, and a verdict
