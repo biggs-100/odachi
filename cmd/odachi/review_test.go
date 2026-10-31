@@ -399,8 +399,6 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 	}
 }
 
-// TestReviewModeOnMakesCheckRequireTheVerdict: the switch is a project file, so
-// a plain `check` reads it; the flags override it for one run.
 // TestReviewModeKeepsTheRetention: `review mode` rewrites the file, so it must
 // carry the project's numbers forward instead of quietly resetting them to the
 // defaults.
