@@ -15,14 +15,52 @@ import (
 // and a role that cannot be loaded is not a role.
 const MaxSkillBody = skill.MaxBodyLines
 
-// SkillPath is where the rendered skill lands, relative to the project root. It
-// is the folder every client reads, so one write serves them all.
-func SkillPath(slug string) string { return ".agents/skills/" + slug + "/SKILL.md" }
+// skillFileName is the one file a skill is: every client reads exactly this name.
+const skillFileName = "SKILL.md"
+
+// SkillDest is where a role's skill goes: the folder every client reads, in the
+// scope this project chose. Root is the absolute folder Base hangs from -the
+// project, or the human's home-, Base is that folder in slash form, and Label is
+// how a human reads it: `./.agents/skills` in the project, `~/.agents/skills` in
+// the machine.
+//
+// The role does not decide the scope. A role that wrote into `.agents/skills`
+// whatever the project chose would hand the adoption inference a copy odachi wrote
+// itself, and the next plain init would install the whole curriculum there; so the
+// caller resolves the scope and passes the destination down.
+type SkillDest struct {
+	Root  string
+	Base  string
+	Label string
+}
+
+// Path is the absolute path of one role's skill.
+func (d SkillDest) Path(slug string) string {
+	return filepath.Join(d.Root, filepath.FromSlash(d.Base), slug, skillFileName)
+}
+
+// Display is the same path as a human reads it.
+func (d SkillDest) Display(slug string) string {
+	return d.Label + "/" + slug + "/" + skillFileName
+}
+
+// target is one artifact a role owns: the bytes it must have and where they go.
+// Root is absolute, because a role's skill can live outside the project.
+type target struct {
+	Root    string
+	Path    string
+	Label   string
+	Content string
+}
+
+// abs is the path the disk port is asked about.
+func (t target) abs() string { return filepath.Join(t.Root, filepath.FromSlash(t.Path)) }
 
 // Render writes the artifacts of one role from its source: the agent file for
-// each chosen client and the role's skill. A second run writes nothing when the
-// bytes already match, so the command is safe to repeat.
-func Render(dir, slug, block string, clients []string, files Files) Result {
+// each chosen client and the role's skill, in the destination the scope named. A
+// second run writes nothing when the bytes already match, so the command is safe
+// to repeat.
+func Render(dir, slug, block string, clients []string, dest SkillDest, files Files) Result {
 	source, problem := load(dir, slug, files)
 	if problem != nil {
 		return *problem
@@ -33,7 +71,7 @@ func Render(dir, slug, block string, clients []string, files Files) Result {
 		return blocked(err.Error() + " (in " + Dir + "/" + slug + FileExt + ")")
 	}
 
-	wanted, unknown := targets(slug, skill, block, source, clients)
+	wanted, unknown := targets(dir, slug, skill, block, source, clients, dest)
 	if unknown != "" {
 		return blocked("the client " + unknown + " has no native agent file: the ones that do are " + strings.Join(clientNames(), ", "))
 	}
@@ -41,22 +79,21 @@ func Render(dir, slug, block string, clients []string, files Files) Result {
 	lines := make([]string, 0, len(wanted))
 	written := make([]string, 0, len(wanted))
 	for _, target := range wanted {
-		path := filepath.Join(rootOf(dir), filepath.FromSlash(target.Path))
-		current, err := files.Read(path)
+		current, err := files.Read(target.abs())
 		switch {
 		case err == nil && string(current) == target.Content:
-			lines = append(lines, "unchanged "+target.Path)
+			lines = append(lines, "unchanged "+target.Label)
 			continue
 		case err != nil:
-			if exists, existsErr := files.Exists(path); existsErr != nil || exists {
-				return blocked("could not read " + target.Path + ": " + oneLine(err.Error()) + "; check the permissions and run odachi role " + slug + " again")
+			if exists, existsErr := files.Exists(target.abs()); existsErr != nil || exists {
+				return blocked("could not read " + target.Label + ": " + oneLine(err.Error()) + "; check the permissions and run odachi role " + slug + " again")
 			}
 		}
-		if err := files.Write(path, []byte(target.Content)); err != nil {
-			return blocked("could not write " + target.Path + ": " + oneLine(err.Error()) + "; check the permissions and run odachi role " + slug + " again")
+		if err := files.Write(target.abs(), []byte(target.Content)); err != nil {
+			return blocked("could not write " + target.Label + ": " + oneLine(err.Error()) + "; check the permissions and run odachi role " + slug + " again")
 		}
-		lines = append(lines, "wrote "+target.Path)
-		written = append(written, target.Path)
+		lines = append(lines, "wrote "+target.Label)
+		written = append(written, target.Label)
 	}
 
 	message := "rendered " + slug + " from " + Dir + "/" + slug + FileExt
@@ -67,7 +104,7 @@ func Render(dir, slug, block string, clients []string, files Files) Result {
 }
 
 // List reports every role and whether its artifacts match the source.
-func List(dir, block string, clients []string, files Files) Result {
+func List(dir, block string, clients []string, dest SkillDest, files Files) Result {
 	names, err := files.List(filepath.Join(rootOf(dir), filepath.FromSlash(Dir)))
 	if err != nil {
 		return blocked("could not list " + Dir + ": " + oneLine(err.Error()) + "; check the permissions and run odachi role again")
@@ -89,7 +126,7 @@ func List(dir, block string, clients []string, files Files) Result {
 			lines = append(lines, slug+": "+err.Error())
 			continue
 		}
-		if !matches(dir, slug, skill, block, source, clients, files) {
+		if !matches(dir, slug, skill, block, source, clients, dest, files) {
 			lines = append(lines, slug+": stale, run odachi role "+slug)
 			continue
 		}
@@ -105,28 +142,33 @@ func List(dir, block string, clients []string, files Files) Result {
 // per client. Render writes this list and matches compares it, so a target added to
 // one path is added to both. Two copies would let the listing answer about a file
 // nobody writes, with every test green.
-func targets(slug, skill, block string, source role.Role, clients []string) (files []persona.File, unknown string) {
-	files = make([]persona.File, 0, len(clients)+1)
-	files = append(files, persona.File{Path: SkillPath(slug), Content: skill})
+func targets(dir, slug, skill, block string, source role.Role, clients []string, dest SkillDest) ([]target, string) {
+	files := make([]target, 0, len(clients)+1)
+	files = append(files, target{
+		Root:    dest.Root,
+		Path:    dest.Base + "/" + slug + "/" + skillFileName,
+		Label:   dest.Display(slug),
+		Content: skill,
+	})
 	for _, client := range clients {
 		file, ok := persona.RoleFile(client, slug, source.Description, block, sectionText(source))
 		if !ok {
 			return nil, client
 		}
-		files = append(files, file)
+		files = append(files, target{Root: rootOf(dir), Path: file.Path, Label: file.Path, Content: file.Content})
 	}
 	return files, ""
 }
 
 // matches reports whether every artifact of the role is already the bytes the
 // source would render.
-func matches(dir, slug, skill, block string, source role.Role, clients []string, files Files) bool {
-	wanted, unknown := targets(slug, skill, block, source, clients)
+func matches(dir, slug, skill, block string, source role.Role, clients []string, dest SkillDest, files Files) bool {
+	wanted, unknown := targets(dir, slug, skill, block, source, clients, dest)
 	if unknown != "" {
 		return false
 	}
 	for _, target := range wanted {
-		current, err := files.Read(filepath.Join(rootOf(dir), filepath.FromSlash(target.Path)))
+		current, err := files.Read(target.abs())
 		if err != nil || string(current) != target.Content {
 			return false
 		}
