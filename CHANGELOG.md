@@ -5,6 +5,17 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The two rows the review of 0134 left are paid, and this repository declares its retention.
+
+- **`odachi clean` says "one tree"**: the summary line uses `plural2` like the class rows above it, so
+  `keep_verdicts = 1` no longer reads "the newest 1 trees" and `keep_prompts = 1` no longer drops the noun.
+- **The doc comment in `cmd/odachi/review_test.go` names its own test again**, after 0134 inserted a test
+  between the comment and the function it described.
+- **This repository's `odd/review.toml` declares `schema = 3`, `keep_verdicts = 10` and
+  `keep_prompts = 0`**, the numbers it already obeyed, now that the release that reads them is installed.
+
 ## v0.11.75 - 2026-10-31
 
 The project decides how much review evidence survives.

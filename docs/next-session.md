@@ -16,21 +16,12 @@ here, because the chat is gone tomorrow.
 - **0134 the project decides** (v0.11.75): `keep_verdicts` and `keep_prompts` in
   `odd/review.toml`, prompts as their own class, the schema at 3. ADR 0040.
 
-## What 0134 left open, and it is one command
+## What 0134 left open, and 0135 closed
 
-This repository's own `odd/review.toml` still says `schema = 2` and carries no
-retention keys. CI builds the gate from the base ref, so a candidate file that says
-3 is refused by a base binary that reads 2 before the suite runs. Once v0.11.75 or
-later is installed:
-
-```
-odachi review mode on
-```
-
-That rewrites the file with `schema = 3`, `keep_verdicts = 10` and
-`keep_prompts = 0`, which are the numbers in force today, so nothing changes but
-the file telling the truth. Commit it in its own change; the fence does not protect
-it.
+This repository's `odd/review.toml` carries `schema = 3`, `keep_verdicts = 10` and
+`keep_prompts = 0` since 0135, in a change of its own. The numbers are the ones it
+already obeyed, so nothing moved but the file telling the truth. The two rows the
+review of 0134 left are closed by the same feature and left `docs/review-debt.md`.
 
 ## What is measured, so nobody re-measures it
 
