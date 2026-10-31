@@ -418,11 +418,13 @@ func TestTheVoiceStylesTheChatAndNeverTheArtifacts(t *testing.T) {
 		}
 		for _, want := range []string{
 			"the artifacts are English",
-			"code",
+			"identifiers",
 			"comments",
 			"documents",
 			"commit messages",
 			"pull requests",
+			"the human's own words",
+			"quoted as they were said",
 			"regional slang",
 			"emphasis",
 		} {
@@ -458,7 +460,7 @@ func TestSeniorIsAVoiceOfItsOwn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Voice(senior): %v", err)
 	}
-	for _, want := range []string{"Lead with the decision", "its cost", "recap"} {
+	for _, want := range []string{"Lead with the decision", "its cost", "worth naming"} {
 		if !strings.Contains(senior, want) {
 			t.Errorf("the senior voice does not carry %q:\n%s", want, senior)
 		}

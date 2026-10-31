@@ -12,7 +12,7 @@ R1 · "the voice styles the chat and never the artifacts, only the human changes
 ## Steps
 - [x] T1 · both voices keep the chat and the artifacts apart, and only the human changes the language   R1
 - [x] T2 · senior leads with the decision and names its cost, and a test holds it apart   R1
-- [ ] T3 · this repository's block is regenerated with the new voices, and the docs say why   R1
+- [x] T3 · this repository's block is regenerated with the new voices, and the docs say why   R1 · tree:f38aa5214ee3f4cf81cead288067b16fcde892af
 
 ## History
 L1 · "the voice styles the chat and never the artifacts, only the human changes the language, and senior says what it does instead of what it stops doing"
