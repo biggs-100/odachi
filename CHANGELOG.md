@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+`odachi start` stops writing a fence rule for a phrase.
+
+- **A rule needs paths, and a phrase has none.** `start` turned every non-goal into a
+  rule, so a non-goal in free text became a glob of its own words
+  (`paths = ["datos-de-pacientes*"]`): the one thing the fence's own header forbids,
+  because it matches files named after the phrase and protects nothing. The rule is
+  written only for a non-goal that carries paths -the presets- and a phrase is
+  carried as a commented template in `odd/fence.toml` with the paths left to fill.
+- **The run says what it did**, naming the template and the file, instead of
+  claiming the fence wrote a glob.
+- The rule is ADR 0037, and it is 0120's rule with an enforcer: the verb that writes
+  fences can no longer produce a rule without paths.
+
 ## v0.11.72 - 2026-10-30
 
 The adoption is one inference, and `odachi doctor` stops calling it unfinished.
