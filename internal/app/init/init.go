@@ -21,9 +21,11 @@
 package init
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/adoption"
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 )
@@ -212,17 +214,19 @@ func Run(opts Options, files Files, skills Skills) Result {
 	}
 	r.selection = selection
 	r.clients = clients
-	r.existing = opts.Existing
 	// The footprint is an inference, and an inference may not be drawn from a
-	// question odachi did not get an answer to: it is decided here, before the
-	// first byte, or the run stops naming the path.
-	if problem := r.resolveFootprint(); problem != nil {
+	// question odachi did not get an answer to: the facts are read here, before the
+	// first byte, and a failed read stops the run naming the path.
+	facts, problem := r.footprint(opts.Existing)
+	if problem != nil {
 		return *problem
 	}
+	r.minimal = facts.Craft()
+	r.adoptAgent = facts.Agent()
 	r.projectAgents = r.resolveProjectAgents(opts)
-	// Where the craft lives is one decision, and persona owns it: `role` weighs
-	// the same three facts, and the two verbs must not answer differently.
-	r.skillsScope, r.skillsSource = persona.SkillsScope{Stored: r.storedSkills, Flag: opts.Skills, Adopted: r.minimal}.Resolve()
+	// Where the craft lives is one decision, and the package that owns the adoption
+	// answers it: `role` and `doctor` ask the same question about the same project.
+	r.skillsScope, r.skillsSource = facts.Scope(opts.Skills)
 	// The store records decisions, never inferences. A flag names one, and only
 	// the flags are written when the footprint was inferred: otherwise the next
 	// plain init would read a choice nobody made.
@@ -345,58 +349,40 @@ func effectiveSkills(store persona.Store) persona.Store {
 	return store
 }
 
-// resolveFootprint decides both halves of the adoption inference from what is on
-// disk. A check that fails is not an answer -"the craft is not here" and "I could
-// not look" are different facts, and one of them installs the wrong footprint- so
-// a failed check stops the run before it writes anything, naming the path.
-func (r *runner) resolveFootprint() *Result {
-	minimal, problem := r.derivesMinimal()
-	if problem != nil {
-		return problem
-	}
-	r.minimal = minimal
-
-	// The agent half is its own inference, and only a repository that already
-	// lives asks it: a fresh project has nothing to infer.
-	if !r.existing || r.storedProject != "" {
-		return nil
-	}
-	present, problem := r.projectAgentPresent()
-	if problem != nil {
-		return problem
-	}
-	r.adoptAgent = !present
-	return nil
-}
-
-// derivesMinimal is the footprint a repository that already lives gets: the
-// project never chose where the craft goes, and no project copy is here yet, so
-// the rules stay in the tree and the craft stays in the machine. The question is
-// about the craft alone -a store that only chose which clients receive the agent
-// is not an answer to it- and a project that already carries the copy keeps it:
-// an inference does not move a project that already has the craft.
-func (r *runner) derivesMinimal() (bool, *Result) {
-	if !r.existing || r.storedSkills != "" {
-		return false, nil
-	}
-	// The copy, not the folder: `.agents/` belongs to other tools too, and a
-	// repository that keeps its notes there is still a repository without the
-	// craft.
-	found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(skillsCopy)))
+// footprint gathers the adoption's facts through this run's own ports and asks the
+// one package that says what they mean together. A check that fails is not an
+// answer -"the craft is not here" and "I could not look" are different facts, and
+// one of them installs the wrong footprint- so a failed read stops the run before
+// it writes anything, naming the path.
+func (r *runner) footprint(existing bool) (adoption.Facts, *Result) {
+	facts, err := adoption.Read(adoption.Reader{
+		Lives: func() (bool, error) { return existing, nil },
+		CraftHere: func() (bool, error) {
+			found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(skillsCopy)))
+			if err != nil {
+				return false, fmt.Errorf("could not check %s: %s", skillsCopy, oneLine(err.Error()))
+			}
+			return found, nil
+		},
+		AgentHere: r.agentFileHere,
+		Stored: func() (persona.Store, error) {
+			return persona.Store{Skills: r.storedSkills, ProjectAgents: r.storedProject}, nil
+		},
+	})
 	if err != nil {
-		problem := blocked("could not check " + skillsCopy + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
-		return false, &problem
+		problem := blocked(err.Error() + "; check the permissions and run odachi init again")
+		return adoption.Facts{}, &problem
 	}
-	return !found, nil
+	return facts, nil
 }
 
-// projectAgentPresent says the project already carries the native agent a client
-// reads, even if it never carried the craft: an old `--skills home` install leaves
-// exactly that split. The signal is the file, never the folder -a repository that
-// uses OpenCode or Claude for its own settings has the folder and no agent of
-// ours- so the craft's inference does not decide the agent half. A file it could
-// not look at is not a file that is absent: the caller stops and says so.
-func (r *runner) projectAgentPresent() (bool, *Result) {
+// agentFileHere says the project already carries the native agent a client reads,
+// even if it never carried the craft: an old `--skills home` install leaves exactly
+// that split. The signal is the file, never the folder -a repository that uses
+// OpenCode or Claude for its own settings has the folder and no agent of ours- so
+// the craft's inference does not decide the agent half. A file it could not look at
+// is not a file that is absent: the read fails with the path.
+func (r *runner) agentFileHere() (bool, error) {
 	for _, client := range persona.Clients() {
 		file, ok := persona.FilesFor(client.Agent, "")
 		if !ok || file.Path == "" {
@@ -404,8 +390,7 @@ func (r *runner) projectAgentPresent() (bool, *Result) {
 		}
 		found, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(file.Path)))
 		if err != nil {
-			problem := blocked("could not check " + file.Path + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
-			return false, &problem
+			return false, fmt.Errorf("could not check %s: %s", file.Path, oneLine(err.Error()))
 		}
 		if found {
 			return true, nil
