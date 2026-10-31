@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -464,6 +465,30 @@ func GroupPromptPath(tree string, lenses []string) (string, error) {
 		names = append(names, strings.ToLower(strings.TrimSpace(lens)))
 	}
 	return Dir + "/" + tree + ".prompt-" + strings.Join(names, "+") + ".md", nil
+}
+
+// PartPromptPath is where the question one part of a candidate was handed lives.
+// A split review asks the same lenses several questions, and a single file holding
+// only the last of them would be a lie about the others.
+func PartPromptPath(tree string, lenses []string, part, of int) (string, error) {
+	if !hashLike(tree) {
+		return "", fmt.Errorf("the tree %q cannot name a prompt file: it must be a hash", tree)
+	}
+	if part < 1 || of < 2 || part > of {
+		return "", fmt.Errorf("part %d of %d cannot name a prompt file: a part is at least 1 and at most the number of parts", part, of)
+	}
+	names := make([]string, 0, len(lenses))
+	for _, lens := range lenses {
+		if !IsLens(lens) {
+			return "", fmt.Errorf("%q cannot name a prompt file: the lenses are %s", lens, strings.Join(AllLenses(), ", "))
+		}
+		names = append(names, strings.ToLower(strings.TrimSpace(lens)))
+	}
+	name := "-" + strings.Join(names, "+")
+	if len(names) == 0 {
+		name = ""
+	}
+	return Dir + "/" + tree + ".prompt" + name + "-part-" + strconv.Itoa(part) + "of" + strconv.Itoa(of) + ".md", nil
 }
 
 // AnswerDir is where a reviewer told to write {verdict} leaves its answer. It is

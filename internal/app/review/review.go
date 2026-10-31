@@ -353,9 +353,19 @@ func (r *runner) promptText(cand candidate) (text, tree string, selected []strin
 // promptFor builds the prompt for one group of lenses: the same text the printed
 // form uses, for the lenses this reviewer owns.
 func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) {
-	bodies, problem := r.lensBodies(selected)
+	input, problem := r.promptInput(cand, selected)
 	if problem != nil {
 		return "", problem
+	}
+	return domain.Prompt(input), nil
+}
+
+// promptInput is the candidate one prompt is asked about: the shape Split hands
+// out in parts when the whole prompt does not fit the project's limit.
+func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptInput, *Result) {
+	bodies, problem := r.lensBodies(selected)
+	if problem != nil {
+		return domain.PromptInput{}, problem
 	}
 
 	// The store's potent rows are part of the question: a reviewer that knows
@@ -367,7 +377,7 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 	// in one place.
 	known, cleanRows, _, problem := r.potentRows(cand.tree, cand.paths)
 	if problem != nil {
-		return "", problem
+		return domain.PromptInput{}, problem
 	}
 
 	// The prompt must not claim the evidence chose lenses somebody added: the
@@ -384,7 +394,7 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 		}
 	}
 
-	return domain.Prompt(domain.PromptInput{
+	return domain.PromptInput{
 		Brief:       cand.brief,
 		Tree:        cand.tree,
 		Base:        cand.base,
@@ -395,7 +405,7 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 		KnownPasses: cleanRows,
 		Floor:       domain.FloorFor(cand.paths, cand.diff),
 		Scope:       scope,
-	}), nil
+	}, nil
 }
 
 // coveredLenses is the lenses this tree's verdict already answered. A missing
@@ -730,7 +740,6 @@ func (r *runner) exec() Result {
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
-	frozen := &worktree{tree: cand.tree, base: cand.base, paths: cand.paths, diff: cand.diff}
 
 	// required is what the evidence asks for, before any flag adds to it: the
 	// scope record is the difference between this and what the run was told to
@@ -783,15 +792,17 @@ func (r *runner) exec() Result {
 
 	// The prompt is what the reviewer is paid for, and its size is the one thing
 	// odachi knows before spending anything: a model that stalls at a size does
-	// not answer late, it does not answer at all. Every group's prompt is built
-	// and measured here, so a run that cannot be answered starts nothing.
-	prompts := make([]string, len(groups))
-	for i, group := range groups {
-		text, problem := r.promptFor(cand, group.lenses)
-		if problem != nil {
-			return *problem
-		}
-		prompts[i] = text
+	// not answer late, it does not answer at all. A candidate whose prompt does not
+	// fit the project's limit is reviewed in parts -each one a reviewer of its own,
+	// with the group's lenses and model- and the store merges their answers into
+	// the tree's one verdict, the way it merges one group per lens.
+	units, problem := r.units(cand, groups, commands, resolved)
+	if problem != nil {
+		return *problem
+	}
+	prompts := make([]string, len(units))
+	for i, unit := range units {
+		prompts[i] = unit.prompt
 	}
 	if problem := r.promptTooBig(prompts); problem != nil {
 		return *problem
@@ -802,8 +813,9 @@ func (r *runner) exec() Result {
 	var landed []string
 	var notes []string
 	var last Result
-	for i, group := range groups {
-		command := commands[i]
+	for i, unit := range units {
+		command := unit.command
+		group := lensGroup{lenses: unit.lenses, model: unit.model}
 
 		// The command is a reviewer, so it gets the prompt the verb prints, for the
 		// lenses this group owns. The text was built and measured before any group
@@ -838,7 +850,12 @@ func (r *runner) exec() Result {
 		if err != nil {
 			return blocked(oneLine(err.Error()) + "; the reviewer was not started")
 		}
-		if len(groups) == 1 {
+		if unit.of > 1 {
+			promptRel, err = domain.PartPromptPath(cand.tree, group.lenses, unit.part, unit.of)
+			if err != nil {
+				return blocked(oneLine(err.Error()) + "; the reviewer was not started")
+			}
+		} else if len(groups) == 1 {
 			if canonical, err := domain.PromptPath(cand.tree); err == nil {
 				promptRel = canonical
 			}
@@ -905,7 +922,7 @@ func (r *runner) exec() Result {
 		// The identity that judged, when the command named one. It is the reviewer's
 		// own declaration, and the gate compares it with the proof's. It comes from
 		// the resolution of THIS group, not from a field the last one wrote.
-		parsed.Model = resolved[i]
+		parsed.Model = unit.model
 		if err := parsed.Validate(); err != nil {
 			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(answer), rel, len(covered), selected, todo, landed)
 		}
@@ -924,7 +941,7 @@ func (r *runner) exec() Result {
 		// it claims: the tool stamps them. The answer is written before the next
 		// group starts, under the candidate the prompt named, so a later failure
 		// cannot lose it and a reviewer's edits cannot move it.
-		last = r.storeIn(parsed, frozen, cand.base, group.lenses)
+		last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, unit.of > 1)
 		if last.Code != CodeOK {
 			if len(landed) == 0 {
 				return last
@@ -939,7 +956,9 @@ func (r *runner) exec() Result {
 				notes = appendUnique(notes, "the answer file stayed in "+r.storeLabel(answerRel)+": "+oneLine(err.Error()))
 			}
 		}
-		landed = append(landed, group.lenses...)
+		for _, lens := range group.lenses {
+			landed = appendUnique(landed, lens)
+		}
 
 		// The verdict for this tree exists now, so the decision that asked for its
 		// lenses is written beside it: a reader of the verdict cannot otherwise tell
@@ -985,6 +1004,64 @@ func (r *runner) exec() Result {
 		Lenses:  last.Lenses,
 		Files:   last.Files,
 	}
+}
+
+// unit is one reviewer's run: a lens group over one part of the candidate. A
+// candidate that fits is one unit per group, which is what this loop ran before
+// splitting existed.
+type unit struct {
+	lenses  []string
+	command string
+	model   string
+	prompt  string
+	// work is the slice of the candidate this reviewer judges: the whole thing,
+	// or one part of it. The tree and base are the candidate's either way, so
+	// every answer is filed under the tree the prompt named.
+	work *worktree
+	part int
+	of   int
+}
+
+// units builds every reviewer this run starts: one per lens group, and one per
+// part when the group's prompt does not fit the project's limit. The parts are
+// built before anything runs, so a candidate that cannot be split is refused
+// before the first command is paid for.
+func (r *runner) units(cand candidate, groups []lensGroup, commands, resolved []string) ([]unit, *Result) {
+	var units []unit
+	for i, group := range groups {
+		input, problem := r.promptInput(cand, group.lenses)
+		if problem != nil {
+			return nil, problem
+		}
+		parts, err := domain.Split(input, r.opts.MaxPromptKB)
+		if err != nil {
+			problem := splitRefusal(err)
+			return nil, &problem
+		}
+		for _, part := range parts {
+			units = append(units, unit{
+				lenses:  group.lenses,
+				command: commands[i],
+				model:   resolved[i],
+				prompt:  domain.Prompt(part),
+				work:    &worktree{tree: cand.tree, base: cand.base, paths: part.Paths, diff: part.Diff},
+				part:    part.Part,
+				of:      part.Of,
+			})
+		}
+	}
+	return units, nil
+}
+
+// splitRefusal is the refusal a split cannot answer: the size, the limit, the file
+// that cannot fit, and the two ways out.
+func splitRefusal(err error) Result {
+	message := oneLine(err.Error())
+	return Result{Code: CodeBlocked, Message: message, Lines: []string{
+		message,
+		"next: raise max_prompt_kb in odd/review.toml, or review a smaller candidate",
+		"why: a reviewer that stalls at a size does not answer late, it does not answer at all",
+	}}
 }
 
 // stopped is a run that did not finish every group. The answers that landed stay
@@ -1385,14 +1462,14 @@ func (r *runner) store(parsed domain.Verdict, base string, judged []string) Resu
 	if problem != nil {
 		return *problem
 	}
-	return r.storeIn(parsed, work, base, judged)
+	return r.storeIn(parsed, work, base, judged, false)
 }
 
 // storeIn is store for one candidate the caller already holds. A run files every
 // answer under the tree its prompt named, even when the reviewer moved the
 // worktree: the floor is measured from that same value, so what a finding may
 // cite and what the file is named after describe the same bytes.
-func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged []string) Result {
+func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged []string, repeat bool) Result {
 	tree := work.tree
 
 	// The floor is one reading of the candidate: it fixes the class this verdict
@@ -1471,6 +1548,14 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		}
 		for _, lens := range sealed.Lenses {
 			if containsLens(existing.Lenses, lens) {
+				// A part of the same run answers lenses the store already holds:
+				// it adds the rows of the paths it carries, it does not pay for
+				// them twice. Every other caller is a second run, and a second run
+				// that re-answers a lens is the double payment this refusal exists
+				// to prevent.
+				if repeat {
+					break
+				}
 				return alreadyStored(r.storeLabel(rel))
 			}
 		}

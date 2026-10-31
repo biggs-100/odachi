@@ -12,7 +12,7 @@ R1 · "a review whose prompt does not fit the project's limit is split into part
 - the prompt says which part it is, and the changelog and the ADR say why
 
 ## Steps
-- [ ] T1 · a prompt over the limit is split into parts that fit, each with its own paths, diff and part number   R1
+- [x] T1 · a prompt over the limit is split into parts that fit, each with its own paths, diff and part number   R1 · tree:c2438081ac37d3a6ab6f1c7248683615045a488a
 - [ ] T2 · the review runs one reviewer per part and the store merges them, refusing only a single file that cannot fit   R1
 - [ ] T3 · the changelog and the ADR say why a big review is split, and the impact map names the split   R1
 
