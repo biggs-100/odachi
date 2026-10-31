@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.78 - 2026-10-31
+
+The review's repeat bypass asks what the run has landed, not what shape the candidate has.
+
+- **`storeIn` takes the lenses this run already stored and judges the collision per lens**: a part of a
+  split candidate may add the rows of the paths it carries to a lens an earlier part landed, and nothing
+  else may touch an existing verdict.
+- **A second run over the same oversized candidate is refused and starts no reviewer**, pinned by
+  `TestASecondRunOverASplitCandidateStartsNoReviewer`. It was already refused one layer up, where `exec`
+  counts the lenses still owed, so the guard now asks the question the run asks.
+- Why: the bypass was keyed on `unit.of > 1`, a property of the candidate, and the shape of a candidate
+  says nothing about what this run has stored. Found by the review of 0136 as a warning; 0137 pays it.
+
 ## v0.11.77 - 2026-10-31
 
 A review whose prompt does not fit the project's limit is split, not stalled.

@@ -1545,8 +1545,9 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	}
 	if exists {
 		// A verdict that already answered these lenses is not rewritten: the run
-		// answers only what the tree still owes. A shared lens means this is not
-		// that run, and the store says so instead of replacing an answer.
+		// answers only what the tree still owes. A shared lens is either a lens
+		// this run landed a moment ago or another run's answer, and the store says
+		// which instead of replacing what it holds.
 		existing, problem := r.storedVerdictFor(tree)
 		if problem != nil {
 			return *problem
