@@ -14,7 +14,7 @@ R1 · "a fix after a verdict is reviewed as the delta, and closing a feature nam
 - [x] T1 · review --since <tree> builds the correction prompt from the delta since that verdict   R1 · tree:144d3afdd94a4ebf46f3e22b493726a187c0735d
 - [x] T2 · the correction's verdict carries the predecessor's rows and still answers every changed path   R1
 - [x] T3 · check names the open rows of docs/review-debt.md when the feature closes   R1
-- [ ] T4 · the ADR and the changelog say why the gate is local and what a correction costs   R1
+- [x] T4 · the ADR and the changelog say why the gate is local and what a correction costs   R1 · tree:71fec1dd65de9e6d12afe26bd0ad7f7682ff161f
 
 ## History
 L1 · "a fix after a verdict is reviewed as the delta, and closing a feature names the review debt it leaves"

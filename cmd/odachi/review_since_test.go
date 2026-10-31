@@ -26,3 +26,18 @@ func TestSinceDoesNotGoWithTheReadOnlyForms(t *testing.T) {
 		}
 	}
 }
+
+// TestSinceRefusesABaseItWouldSilentlyReplace: a correction keeps the base of the
+// verdict it completes. Accepting --base beside it would let the flag do nothing and
+// say nothing, which is a lie about what the run obeyed.
+func TestSinceRefusesABaseItWouldSilentlyReplace(t *testing.T) {
+	code, _, errOut := runDir(t, t.TempDir(),
+		[]string{"review", "--since", "1111111111111111111111111111111111111111", "--base", "main"}, "")
+
+	if code != 1 {
+		t.Errorf("code = %d, want 1", code)
+	}
+	if !strings.Contains(errOut, "keeps the base of the verdict it corrects") {
+		t.Errorf("the refusal does not name the substitution: %s", errOut)
+	}
+}

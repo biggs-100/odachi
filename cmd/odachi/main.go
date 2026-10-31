@@ -572,6 +572,13 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "odachi: --since corrects a verdict; it does not go with --show, --refute or --dismiss")
 		return start.CodeBlocked
 	}
+	// The base of a correction is the one its predecessor judged: a --base beside
+	// --since would be accepted and silently replaced, and a flag that does nothing
+	// is a lie about what the run obeyed.
+	if opts.Since != "" && hasFlag(args, "base") {
+		fmt.Fprintln(stderr, "odachi: --since keeps the base of the verdict it corrects; drop --base (the stored verdict names it)")
+		return start.CodeBlocked
+	}
 
 	opts.Dir = dir
 	opts.Store = storeRoot(dir)
@@ -589,6 +596,20 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	opts.By = firstOf(os.Getenv("USERNAME"), os.Getenv("USER"))
 
 	return reportReview(reviewapp.Run(opts, disk(dir), gitRepo{}, osShell{}, reviewLenses{}, hostModel{}), asJSON, stdout, stderr)
+}
+
+// hasFlag reports whether the caller wrote --name in any of the spellings the flag
+// package accepts: the parsed values cannot tell a default from a flag the caller
+// set, and this run has to know.
+func hasFlag(args []string, name string) bool {
+	for _, arg := range args {
+		for _, prefix := range []string{"--" + name, "-" + name} {
+			if arg == prefix || strings.HasPrefix(arg, prefix+"=") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // runReviewMode parses the small mode grammar by hand: the action is a word,

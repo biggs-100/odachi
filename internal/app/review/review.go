@@ -1614,6 +1614,16 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		if problem != nil {
 			return *problem
 		}
+		// The predecessor answers the paths that did not move. A row about bytes the
+		// fix changed is a receipt for bytes nobody judged, so it travels only when
+		// its blob still matches -the rule 0133 wrote for inheritance-, and a
+		// finding still travels when it blocks.
+		findings, passes, problem := r.carriedRows(predecessor)
+		if problem != nil {
+			return *problem
+		}
+		predecessor.Findings = findings
+		predecessor.Passes = passes
 		sealed = mergeVerdicts(predecessor, sealed)
 		sealed.Tree = tree
 		base := strings.TrimSpace(sealed.Base)
@@ -2630,6 +2640,51 @@ func (r *runner) sinceVerdict() (domain.Verdict, *Result) {
 	}
 	r.correction = &parsed
 	return parsed, nil
+}
+
+// carriedRows is the predecessor's answer about the paths a correction did not
+// move: a row travels when its blob still matches the worktree, which is the rule
+// inheritance already uses. A row about bytes the fix changed is a receipt for
+// bytes nobody judged, and a finding still travels when it blocks -a standing
+// blocker is the reason not to ship, not a row about a path.
+func (r *runner) carriedRows(predecessor domain.Verdict) ([]domain.Finding, []domain.Pass, *Result) {
+	blobs := make(map[string]string)
+	measure := func(path string) (string, *Result) {
+		if blob, ok := blobs[path]; ok {
+			return blob, nil
+		}
+		blob, err := r.git.BlobHash(r.opts.Dir, path)
+		if err != nil {
+			problem := blocked(fmt.Sprintf("could not hash %s to carry the verdict this correction completes: %s; I wrote nothing",
+				path, oneLine(err.Error())))
+			return "", &problem
+		}
+		blobs[path] = blob
+		return blob, nil
+	}
+
+	var findings []domain.Finding
+	for _, finding := range predecessor.Findings {
+		blob, problem := measure(finding.Path)
+		if problem != nil {
+			return nil, nil, problem
+		}
+		if finding.Blocks() || (blob != "" && blob == strings.TrimSpace(finding.Blob)) {
+			findings = append(findings, finding)
+		}
+	}
+
+	var passes []domain.Pass
+	for _, pass := range predecessor.Passes {
+		blob, problem := measure(pass.Path)
+		if problem != nil {
+			return nil, nil, problem
+		}
+		if blob != "" && blob == strings.TrimSpace(pass.Blob) {
+			passes = append(passes, pass)
+		}
+	}
+	return findings, passes, nil
 }
 
 // correctionBase is the base a correction keeps: the one its predecessor judged,

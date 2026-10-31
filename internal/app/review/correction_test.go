@@ -122,3 +122,48 @@ func TestACorrectionNeedsTheVerdictItCompletes(t *testing.T) {
 		t.Errorf("the reviewer ran without a verdict to complete: %v", p.shell.commands)
 	}
 }
+
+// TestACorrectionDropsThePredecessorRowsAboutWhatMoved: the rows the predecessor
+// earned about the paths the fix changed describe bytes nobody judged any more. They
+// do not travel -the rule 0133 wrote for inheritance- because a receipt for old bytes
+// counted as an answer is the gate vouching for a tree nobody read. The rows about
+// the paths that did not move travel, and the fresh answer is the only word about the
+// ones that did.
+func TestACorrectionDropsThePredecessorRowsAboutWhatMoved(t *testing.T) {
+	const oldBlob, newBlob = "1111111111111111111111111111111111111111", "2222222222222222222222222222222222222222"
+
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.changed = []string{"b.go"}
+	p.git.diff = "diff --git a/b.go b/b.go\n--- a/b.go\n+++ b/b.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
+	p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": newBlob}
+	p.shell.output = `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`
+	p.files.files[storePath(correctedTree)] = []byte(verdictFor(t, correctedTree, "HEAD", []string{"reliability"},
+		domainreview.Pass{Path: "a.go", Lens: "reliability", Blob: gitBlob},
+		domainreview.Pass{Path: "b.go", Lens: "reliability", Blob: oldBlob}))
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Since: correctedTree})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	for _, pass := range stored.Passes {
+		if pass.Path == "b.go" && pass.Blob == oldBlob {
+			t.Errorf("a clean row about the bytes the fix changed travelled: %+v", pass)
+		}
+	}
+	if !slices.ContainsFunc(stored.Passes, func(pass domainreview.Pass) bool {
+		return pass.Path == "b.go" && pass.Blob == newBlob
+	}) {
+		t.Errorf("the correction's own answer about b.go is missing: %+v", stored.Passes)
+	}
+	if !slices.ContainsFunc(stored.Passes, func(pass domainreview.Pass) bool {
+		return pass.Path == "a.go" && pass.Blob == gitBlob
+	}) {
+		t.Errorf("the row about the path that did not move did not travel: %+v", stored.Passes)
+	}
+}
