@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/adoption"
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
@@ -80,6 +81,17 @@ type Options struct {
 	// Agents is the client selection the project stored. nil means no store:
 	// both clients, the default of a project that never chose.
 	Agents Agents
+	// Git is the repository port. Check 11 asks it one question -does this
+	// repository already have a commit?- because that is the fact the adoption is
+	// drawn from. nil answers nothing, and a note that cannot tell never claims an
+	// adoption.
+	Git Git
+}
+
+// Git is the repository port, one question wide. doctor reports; it never runs
+// anything that writes, and a repository it cannot read is check 2's business.
+type Git interface {
+	Head(dir string) (string, error)
 }
 
 // Agents is the selection port: which clients the project chose for the native
@@ -867,9 +879,23 @@ func (r *runner) personaNote(content, selection string, clients []persona.Client
 
 	choice := r.storedProjectChoice()
 	home := r.homeCarriesTheAgents(clients)
+	adopted := r.adoptedHere(len(missing) == 0)
 	store := persona.SelectionPath + ": project_agents = "
 
 	switch {
+	case len(missing) > 0 && adopted && home:
+		// The shape the adoption leaves, and everything it needs is in place: the
+		// rules and the hook here, the craft and the agent in the machine. The store
+		// keeps no choice because an inference is not a decision, and a note that
+		// called that gap would send the human to record one nobody made.
+		return "this project adopted odachi: the rules and the hook live here, and the craft and the agent live in the machine -the door is installed-; " +
+			persona.SelectionPath + " keeps no choice because the adoption is inferred, not decided: nothing to run"
+	case len(missing) > 0 && adopted:
+		// The adoption, without the door: the machine is the only place the agent
+		// comes from, and `setup` installs it once per machine without recording a
+		// choice in the project's store.
+		return "this project adopted odachi: the rules and the hook live here, and the craft and the agent live in the machine; " +
+			"the door is not installed, and it is what the agent comes from: run odachi setup once"
 	case len(missing) > 0 && choice == persona.ProjectAgentsNone && home:
 		// The store is the authority: the absence of the mirrors is the answer it
 		// already recorded, not a gap the home happens to explain.
@@ -914,14 +940,53 @@ func (r *runner) personaNote(content, selection string, clients []persona.Client
 // empty when nothing recorded it. A store doctor cannot read is the selection
 // note's business, not this one's.
 func (r *runner) storedProjectChoice() string {
-	if r.opts.Agents == nil {
-		return ""
-	}
-	stored, err := r.opts.Agents.Written(r.opts.Dir)
+	stored, err := r.stored()
 	if err != nil {
 		return ""
 	}
 	return stored.ProjectAgents
+}
+
+// stored is the clone's store as this run reads it: the keys the checks ask about.
+// A doctor wired without the port answers nothing, which is the same as a project
+// that never chose.
+func (r *runner) stored() (persona.Store, error) {
+	if r.opts.Agents == nil {
+		return persona.Store{}, nil
+	}
+	return r.opts.Agents.Written(r.opts.Dir)
+}
+
+// adoptedHere says this project carries the shape the adoption leaves: a
+// repository that already lives, no copy of the craft here, the agent absent from
+// the project, and nothing recorded -because an inference is never stored. It is
+// the same inference init writes from, asked through the package that owns it, so
+// the note cannot call a correct adoption unfinished.
+//
+// A repository git cannot read answers "no commit" here and never an error: check 2
+// already names a broken repository, and a note that cannot tell does not claim an
+// adoption.
+func (r *runner) adoptedHere(agentHere bool) bool {
+	facts, err := adoption.Read(adoption.Reader{
+		Lives: func() (bool, error) {
+			if r.opts.Git == nil {
+				return false, nil
+			}
+			if _, err := r.opts.Git.Head(r.opts.Dir); err != nil {
+				return false, nil
+			}
+			return true, nil
+		},
+		CraftHere: func() (bool, error) { return r.exists(".agents/skills") },
+		// The agent files were scanned a few lines above, by the same definition:
+		// asking the disk again would be a second answer to one question.
+		AgentHere: func() (bool, error) { return agentHere, nil },
+		Stored:    r.stored,
+	})
+	if err != nil {
+		return false
+	}
+	return facts.Craft() && facts.Agent()
 }
 
 // homeCarriesTheAgents reports whether the home already carries the door and the
