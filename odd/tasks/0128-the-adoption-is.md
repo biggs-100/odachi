@@ -13,7 +13,7 @@ R1 · "the doctor calls a correct adoption an unfinished one: an adopted project
 ## Steps
 - [x] T1 · the adoption's three facts are read in one package, and init and role ask it   R1 · tree:f3e8afae7aa73e572bb4cc56724afebcb020ae6d
 - [x] T2 · the doctor recognises the adopted state and stops calling a silent store a defect   R1 · tree:088e3dc57c5bee80d7b064562fb08513b2901b49
-- [ ] T3 · the ADR and the changelog say the adoption is one inference   R1
+- [x] T3 · the ADR and the changelog say the adoption is one inference   R1 · tree:31a2a4ed789797ce976f7122bcebb25004cdf48f
 
 ## History
 L1 · "the doctor calls a correct adoption an unfinished one: an adopted project has no agent file and no project_agents key -by design, because the inference is never stored- and check 11 reports exactly that state as a gap, advising odachi init --global to record a choice. Either the note recognises the adopted state or the advice stops calling the missing key a defect"
