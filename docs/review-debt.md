@@ -9,19 +9,10 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0126, which makes a role write and read where the project
-keeps its craft.
+Last written: after 0127, which makes the destination the scope chose the one that
+must be written.
 
 ## Open
-
-### when the machine is the only destination, a home failure is the whole job
-
-Found by the review of 0124. `initSkills` treats a failed home destination as
-`pending:` and exit 0, because before the adoption the project still had its copy.
-Under the minimal footprint the home is the only destination and the block is written
-before the skills half runs, so a home that refuses the write leaves a green run with
-a block naming a folder nothing created -the state 0123 removed. A failure there has
-to fail the run, which changes the rule for every verb that installs in the home.
 
 ### the doctor calls a correct adoption "an unfinished one"
 
@@ -38,6 +29,22 @@ a repository gets the minimal footprint when it has no `.agents/`; the code test
 `.agents/skills`, on purpose -another tool's `.agents/` folder is not the craft. A
 repository with `.agents/notes.md` reads the notes and gets the other behaviour. Three
 lines to say the copy instead of the folder.
+
+## Closed by feature 0127
+
+### when the machine is the only destination, a home failure is the whole job
+
+Found by the review of 0124. `initSkills` treated a failed home destination as
+`pending:` and exit 0, because before the adoption the project still had its copy.
+Under the minimal footprint the home is the only destination and the block is
+written before the skills half runs, so a home that refuses the write left a green
+run with a block naming a folder nothing created -the state 0123 removed.
+
+Closed: fatality follows the scope the run asked for instead of the folder that
+failed, a fatal destination is said as `failed:` instead of `pending:`, and the
+refusal names the verb that ran -`setup` used to send the human to `init`. The two
+end-to-end tests were observed red first, on the row's exact symptom: exit 0 with
+`pending:` and a block naming `~/.agents/skills`. ADR 0035.
 
 ## Closed by feature 0126
 
@@ -410,6 +417,14 @@ still carried when 0094 was written (`internal/adapters/gitx/gitx.go:190`,
 already written in its task document.
 
 ## Accepted
+
+### cmd/odachi/main.go - the incomplete-payload branch has no test
+
+`initSkills.Install` fails the run when the binary does not carry its own payload
+(no bootstrap skill, an unreadable bundle). That branch cannot be reached by a test
+in this repository: the payload is embedded in the binary, so building a test binary
+without it means building a different program. The branch is three lines and sets
+`Fatal: true` for every scope; it is named here instead of pinned (0127).
 
 ### the store · a verdict attached with the wrong base cannot be replaced
 

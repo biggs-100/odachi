@@ -46,6 +46,30 @@ func TestInitFailsWhenTheScopeItChoseCannotBeWritten(t *testing.T) {
 	}
 }
 
+// TestSetupDoesNotClaimTheSkillWhenTheWriteFailed: the closing line of a setup
+// that installed nothing used to say the bootstrap skill was installed. This
+// fixture reaches that branch -the home is a folder, so no client is found, and
+// `.agents` is a file, so the skills write fails- and the line must not claim it.
+func TestSetupDoesNotClaimTheSkillWhenTheWriteFailed(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	writeFile(t, home, ".agents", "no soy una carpeta\n")
+	dir := t.TempDir()
+
+	code, out, errOut := runDir(t, dir, []string{"setup"}, "")
+
+	report := out + errOut
+	if code == 0 {
+		t.Fatalf("code = 0, want a refusal: setup wrote no skill into the home\n%s", report)
+	}
+	if !strings.Contains(report, "no agent client found in the home") {
+		t.Fatalf("the fixture does not reach the line under test:\n%s", report)
+	}
+	if strings.Contains(report, "the bootstrap skill is installed") {
+		t.Errorf("the run claims the skill was installed while the write failed:\n%s", report)
+	}
+}
+
 // TestSetupFailsWhenTheHomeRefusesTheWrite: setup's only destination is the home,
 // and its refusal has to name setup. It used to exit 0 with the work left pending.
 func TestSetupFailsWhenTheHomeRefusesTheWrite(t *testing.T) {

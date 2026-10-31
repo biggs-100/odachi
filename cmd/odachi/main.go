@@ -1054,17 +1054,21 @@ type initSkills struct {
 // curriculum in the project and bootstrap in the home. Home scope puts the whole
 // payload in the home; it never deletes a project copy an earlier run left.
 func (s initSkills) Install(scope string, dryRun bool) initapp.SkillReport {
+	// A binary that does not carry its own payload is a failed install for every
+	// scope: there is nothing to put in the project and nothing in the machine, so
+	// the run did not do its job. It is not a destination left pending.
 	if _, ok := bundledskills.Bootstrap(); !ok {
 		return initapp.SkillReport{
 			Blocked: "this binary does not carry the " + bundledskills.BootstrapName + " skill: it is an incomplete installation; download odachi again",
 			Next:    s.verb,
+			Fatal:   true,
 		}
 	}
 
 	if scope == persona.SkillsHome {
 		all, err := bundledskills.All()
 		if err != nil {
-			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: s.verb}
+			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: s.verb, Fatal: true}
 		}
 		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all), DryRun: dryRun}, disk(s.dir), osHome{})
 		report := s.report(scope, scopedResult{scope: string(agent.ScopeHome), result: home})
@@ -1079,7 +1083,7 @@ func (s initSkills) Install(scope string, dryRun bool) initapp.SkillReport {
 
 	curriculum, err := bundledskills.Curriculum()
 	if err != nil {
-		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: s.verb}
+		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: s.verb, Fatal: true}
 	}
 	bootstrap, _ := bundledskills.Bootstrap()
 
