@@ -16,3 +16,4 @@ R1 · "the review's repeat guard asks for the lenses this run already landed, ne
 
 ## History
 L1 · "the review's repeat guard asks for the lenses this run already landed, never for the shape of the candidate"
+L2 · OFICIO · "T1 is a pin, not a red: the second run over a split candidate is already refused one layer up, before any reviewer runs" (porque exec counts the lenses still owed before it resolves a group, so the double payment the row feared cannot happen today; the guard asks the wrong question but nothing pays twice, and the test makes the promise un-returnable)
