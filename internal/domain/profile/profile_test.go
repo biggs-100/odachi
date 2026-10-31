@@ -8,7 +8,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
-// specFieldOrder is the closed set from odd/tasks/odachi-bootstrap.md, Contract
+// specFieldOrder is the closed set from docs/odachi-bootstrap.md, Contract
 // A. A profile changes ceremony, never rigor: there is no ninth field.
 var specFieldOrder = []string{
 	"Name",
@@ -41,7 +41,7 @@ func TestSchemaHasExactlyTheAllowedFields(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(got, specFieldOrder) {
-		t.Fatalf("profile.Profile fields = %v, want %v; the profile schema is a closed set with exactly these eight fields (odd/tasks/odachi-bootstrap.md, Contract A and B)", got, specFieldOrder)
+		t.Fatalf("profile.Profile fields = %v, want %v; the profile schema is a closed set with exactly these eight fields (docs/odachi-bootstrap.md, Contract A and B)", got, specFieldOrder)
 	}
 }
 
@@ -56,7 +56,7 @@ func TestSchemaCannotExpressAGate(t *testing.T) {
 		name := strings.ToLower(typ.Field(i).Name)
 		for _, word := range forbidden {
 			if strings.Contains(name, word) {
-				t.Errorf("field %q contains %q: a profile may change ceremony, never rigor (odd/tasks/odachi-bootstrap.md, Contract B)", typ.Field(i).Name, word)
+				t.Errorf("field %q contains %q: a profile may change ceremony, never rigor (docs/odachi-bootstrap.md, Contract B)", typ.Field(i).Name, word)
 			}
 		}
 	}

@@ -7,6 +7,17 @@ tomorrow.
 
 ## Unreleased
 
+The doctor tells a note from a plan.
+
+- **A document in `odd/tasks` that is not a plan no longer makes the run unclean.** It carried no plan
+  shape -no base, no requirement, no step, no history- so nothing was lost by not reading it, and the
+  line now names it as what it is. Before, any document with a name odachi cannot read was a warning,
+  which is how this repository's own bootstrap history screamed on every run.
+- **A document that carries a plan's shape and a name odachi cannot read is still a warning**: that one
+  is a feature that would be silently ignored, and it is the only case the line has to shout about.
+- This repository's bootstrap history moved to `docs/odachi-bootstrap.md`, where its own first lines say
+  it belongs: it is read to understand why odachi is the way it is, and no task is added to it.
+
 `odachi start` stops writing a fence rule for a phrase.
 
 - **A rule needs paths, and a phrase has none.** `start` turned every non-goal into a

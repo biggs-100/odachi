@@ -2,7 +2,7 @@
 // change how much the tool talks, how it asks, and what counts as proof. It may
 // never change whether a gate exists: this struct has eight fields, and a
 // reflection test fails the build if a ninth appears (see Contract B in
-// odd/tasks/odachi-bootstrap.md).
+// docs/odachi-bootstrap.md).
 package profile
 
 import (

@@ -504,25 +504,78 @@ func TestProtectedDirectoriesAreClean(t *testing.T) {
 	}
 }
 
-// TestAForeignTaskDocIsAWarning: a project that keeps ODD names has documents
-// odachi does not read. The line names them and counts them, and the run stays
-// green: another shape is a decision, not a broken install.
-func TestAForeignTaskDocIsAWarning(t *testing.T) {
+// TestAnUnreadableForeignDocumentIsBrokenAndNotProse: a document the doctor cannot
+// open is not a document with no plan shape, and saying "nothing is ignored" about a
+// file it never read is the false claim this feature exists to remove.
+func TestAnUnreadableForeignDocumentIsBrokenAndNotProse(t *testing.T) {
 	files := configured().
 		put("proof/.gitignore", "*\n!.gitignore\n")
-	files.put("odd/tasks/qonta-einvoicing.md", "# qonta-einvoicing\n")
+	files.put("odd/tasks/notas.md", "# Notas\n")
+	files.errOn = at("odd/tasks/notas.md")
+
+	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	check := checkOf(t, got, domaindoctor.CheckTaskDocs)
+	if check.Status != domaindoctor.StatusProblem {
+		t.Fatalf("a document that cannot be read is not prose: %s", domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Detail, "odd/tasks/notas.md") {
+		t.Errorf("the refusal does not name the file: %s", domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Fix, "check the permissions of odd/tasks") {
+		t.Errorf("the refusal does not say what to fix: %s", domaindoctor.Line(check))
+	}
+}
+
+// TestAForeignProseDocumentIsNamedAndNotAWarning: a note in the folder of the plan
+// is in the wrong folder, and odachi says it does not read it without calling the
+// install unfinished -nothing was lost by skipping a document with no plan shape.
+func TestAForeignProseDocumentIsNamedAndNotAWarning(t *testing.T) {
+	files := configured().
+		put("proof/.gitignore", "*\n!.gitignore\n")
+	files.put("odd/tasks/notas.md", "# Notas\n\nlo que aprendimos esta semana\n")
 	files.put("odd/tasks/0001-a-real-feature.md", "# a-real-feature\n")
 
 	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 	if got.Code != CodeOK {
-		t.Fatalf("a foreign task doc must not fail the run, got %d:\n%s", got.Code, strings.Join(got.Lines, "\n"))
+		t.Fatalf("a foreign document must not fail the run, got %d:\n%s", got.Code, strings.Join(got.Lines, "\n"))
+	}
+	check := checkOf(t, got, domaindoctor.CheckTaskDocs)
+	if check.Status != domaindoctor.StatusOK {
+		t.Fatalf("prose is named, not warned about: %s", domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Detail, "notas.md") || !strings.Contains(check.Detail, "no plan shape") {
+		t.Errorf("the line does not say what it skipped and why: %s", domaindoctor.Line(check))
+	}
+	if strings.Contains(check.Detail, "a-real-feature") {
+		t.Errorf("the line counts a document odachi reads: %s", domaindoctor.Line(check))
+	}
+}
+
+// TestAForeignPlanIsAWarning: a document that carries a plan's shape and a name
+// odachi cannot read is a feature that would be silently ignored, and that is the
+// one case worth a warning. A note beside it is still named: a mixed folder is the
+// ordinary state, and the line must not hide what it skipped.
+func TestAForeignPlanIsAWarning(t *testing.T) {
+	files := configured().
+		put("proof/.gitignore", "*\n!.gitignore\n")
+	files.put("odd/tasks/qonta-einvoicing.md", "# qonta-einvoicing\nBase: abc1234\n\n- [ ] T1 · emitir facturas\n")
+	files.put("odd/tasks/notas.md", "# Notas\n\nlo que aprendimos esta semana\n")
+	files.put("odd/tasks/0001-a-real-feature.md", "# a-real-feature\n")
+
+	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	if got.Code != CodeOK {
+		t.Fatalf("a foreign plan must not fail the run, got %d:\n%s", got.Code, strings.Join(got.Lines, "\n"))
 	}
 	check := checkOf(t, got, domaindoctor.CheckTaskDocs)
 	if check.Status != domaindoctor.StatusWarning {
-		t.Fatalf("a foreign task doc is a warning: %s", domaindoctor.Line(check))
+		t.Fatalf("a plan odachi cannot read is a warning: %s", domaindoctor.Line(check))
 	}
-	if !strings.Contains(check.Detail, "1 document") || !strings.Contains(check.Detail, "qonta-einvoicing.md") {
-		t.Errorf("the line does not name the document: %s", domaindoctor.Line(check))
+	if !strings.Contains(check.Detail, "qonta-einvoicing.md") || !strings.Contains(check.Detail, "1 document") {
+		t.Errorf("the line does not name the plan: %s", domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Detail, "notas.md") {
+		t.Errorf("the warning hides the note beside the plan: %s", domaindoctor.Line(check))
 	}
 	if strings.Contains(check.Detail, "a-real-feature") {
 		t.Errorf("the line counts a document odachi reads: %s", domaindoctor.Line(check))
