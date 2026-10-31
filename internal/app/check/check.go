@@ -966,6 +966,13 @@ func (r *runner) requireReview(base string) *Result {
 				"why: the closing commit only carries the document; the verdict judges the diff the feature merges",
 			}
 		}
+		// A tree without a verdict may be a correction of one that has it: the
+		// store keeps the predecessor, this run knows the feature's base, and the
+		// command that pays for the delta is one line away instead of a hash the
+		// human has to go looking for.
+		if predecessor, ok := r.lastVerdictTree(r.feature); ok && predecessor != r.tree {
+			problem.Lines = append(problem.Lines, "or correct it: odachi review --since "+predecessor)
+		}
 		return &problem
 	}
 

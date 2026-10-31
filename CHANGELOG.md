@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The clone's store has a door, and the bench measures the paths it opened.
+
+- **`odachi review --all` lists every verdict the clone holds**, newest first, with the tree, the verdict, the
+  lenses, the findings, the date, the base and the reviewer, and marks the tree that stands. The store is keyed by
+  tree and nothing else listed it: a person who needs a hash -to correct a verdict, or to read what one judged- was
+  reading `.git/odachi/reviews/` by hand.
+- **`review --show` names the door** when this tree has no verdict and the store holds others, and **`check` names
+  `odachi review --since <tree>`** when the feature has a predecessor for the same base, so the correction is one line
+  away instead of a hash to find.
+- **A `--since` naming a tree the clone does not hold names `odachi review --all`** as its way out, which the bench
+  measures like every other block.
+- **The bench grows three journeys**: the door on an empty store, a correction naming a missing verdict, and a close
+  that names its debt; the corpus is eleven journeys and 29 steps, with no dead ends.
+
 ## v0.11.82 - 2026-10-31
 
 A correction cannot drop a blocker in silence, and the base it completes is the base it keeps.
