@@ -5,7 +5,7 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.77 - 2026-10-31
 
 A review whose prompt does not fit the project's limit is split, not stalled.
 
@@ -485,7 +485,7 @@ A Markdown the binary ships is code.
 A release note stops costing a suite.
 
 - **A tree that only rewrites documents after the close owes no new proof.** The
-  commit that renames `## Unreleased` to `## v0.11.50` is a new tree, and `check`
+  commit that renames `## v0.11.77 - 2026-10-31` to `## v0.11.50` is a new tree, and `check`
   answered "changed since the proof": every release of this project landed with
   `--no-verify`, which is the habit a gate should never teach. After a close, when
   everything that moved since the proof is paperwork, the gate is ready and says
