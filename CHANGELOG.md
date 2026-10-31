@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A fix after a verdict is reviewed as the delta, and a close names the debt it leaves.
+
+- **`odachi review --since <tree>` reviews only what moved** since the tree that verdict judged: the prompt is the
+  delta, and the stored verdict carries the predecessor's rows and base, so every path stays answered while the run
+  pays for the fix alone. A correction with nothing to judge is refused, naming the read that already holds the answer.
+- **The prompt says it is a correction**, so a reviewer handed a delta does not report the rest of the candidate as
+  missing.
+- **`odachi check` names the open rows of `docs/review-debt.md`** when a feature closes: the list a person reads before
+  choosing the next feature is read at the moment it matters, and a row still never blocks.
+- Why: 0139 needed five review rounds and each one re-sent a 64 KB candidate for a handful of lines, while the review
+  gate is local by construction -`proof/` is not versioned, and evidence about a tree cannot live inside it-. ADR 0042
+  records the cost and the boundary.
+
 ## v0.11.80 - 2026-10-31
 
 The block names the copy of the craft the project actually keeps.

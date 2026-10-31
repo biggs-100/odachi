@@ -1,12 +1,13 @@
-# this-repository-stops
+# a-fix-after
 
 ## What must exist
-- this repository stops carrying its own copy of the craft, and the doctor refuses a block that names the folder the store did not choose
+- a fix after a verdict is reviewed as the delta, and closing a feature names the review debt it leaves
 
 ## Done when
-- the project's copy and .opencode/ leave the tree and AGENTS.md names ~/.agents/skills/
-- odachi doctor refuses a block that names the folder the store did not choose, and names the command that fixes it
-- a project that chose the project's copy keeps it, and the doctor accepts its block
+- a fix after a verdict is reviewed as the delta, not as the whole candidate
+- the stored verdict still answers every changed path after a correction
+- closing a feature names the open rows of docs/review-debt.md
+- the ADR and the changelog say why the review gate lives in the clone
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
@@ -15,5 +16,5 @@
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
-- First usable version: today.
-- Wants to learn: por que la inferencia conservadora mantiene una copia que nadie eligio, y como se le da al doctor el dato que le faltaba.
+- First usable version: this week.
+- Wants to learn: por que la evidencia sobre un arbol no puede vivir dentro de el, y cuanto cuesta corregir sin maquina de estados.

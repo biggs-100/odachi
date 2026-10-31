@@ -9,12 +9,27 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0138, which pins the guard that decides what may merge.
+Last written: after 0140, which makes a correction the delta.
 
 ## Open
 
-Nothing, after 0138. The reviews of 0136 and 0137 left a row each and both are
-closed below.
+- **`internal/app/review/review.go:2672`** - the carve-out that lets a blocking
+  finding travel across a correction is untested: the only way a predecessor's row
+  about bytes the fix changed survives is `finding.Blocks()`, and every correction
+  fixture builds the predecessor from passes with no findings. A regression that
+  dropped it, or that carried a non-blocking finding, leaves the suite green. Found
+  by the review of 0140 (warning, no round earned: the rule is written and the code
+  does it). Closed when a test seals a predecessor with a causal BLOCKER about a path
+  the correction moved, and asserts the blocker still travels and still blocks.
+- **`internal/app/review/correction_test.go:67`** - the assertion that says the base
+  survives a correction cannot fail: the predecessor is sealed with base `HEAD`,
+  which is also the run's default, so any source of that value passes. Found by the
+  review of 0140 (warning). Closed when the predecessor is sealed with a base that is
+  not the default and the stored verdict is asserted to keep it.
+
+## Closed by feature 0140
+
+Nothing: the feature left two rows, both symbols of evidence rather than behaviour.
 
 ## Closed by feature 0138
 

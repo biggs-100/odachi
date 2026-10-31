@@ -38,6 +38,10 @@ type PromptInput struct {
 	// writing is, read before any lens. Empty means nothing was measured, and
 	// the prompt stays exactly the one printed before floors existed.
 	Floor Floor
+	// Correction is the tree a delta is measured from, when this prompt reviews a
+	// correction of a stored verdict. The header and the paragraph say so: a
+	// reviewer handed only what moved must not report the rest as missing.
+	Correction string
 	// Scope is what a person added on top of the evidence, when they did. The
 	// lenses section says the evidence chose the lenses, and that sentence stops
 	// being true the moment somebody adds one with --lens; nil means nobody did,
@@ -83,6 +87,9 @@ func Prompt(in PromptInput) string {
 	if in.Of > 1 {
 		out.WriteString(" · part " + strconv.Itoa(in.Part) + " of " + strconv.Itoa(in.Of))
 	}
+	if in.Correction != "" {
+		out.WriteString(" · correction of " + in.Correction)
+	}
 	out.WriteString("\n\n")
 	out.WriteString("You are the design reviewer of this candidate. You review design, not style:\n")
 	out.WriteString("a review with noise is ignored, and an ignored review protects nobody.\n\n")
@@ -90,6 +97,13 @@ func Prompt(in PromptInput) string {
 		out.WriteString("This is part " + strconv.Itoa(in.Part) + " of " + strconv.Itoa(in.Of) + " of one candidate: the diff and the paths below\n")
 		out.WriteString("are the ones this part carries, and another reviewer answers the rest of the tree.\n")
 		out.WriteString("Judge only these, and do not report what a part cannot see.\n\n")
+	}
+
+	if in.Correction != "" {
+		out.WriteString("This is a correction of the verdict for tree " + in.Correction + ": the diff and the\n")
+		out.WriteString("paths below are only what moved since those bytes, and every other path of the\n")
+		out.WriteString("tree is already answered by that verdict and carried into this one. Judge what\n")
+		out.WriteString("moved, and do not report the rest of the candidate as missing.\n\n")
 	}
 
 	out.WriteString("## The brief (what the human asked for)\n")

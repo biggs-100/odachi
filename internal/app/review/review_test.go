@@ -208,6 +208,9 @@ type fakeGit struct {
 
 	// candidateCalls counts the one read of the worktree this run asked for.
 	candidateCalls int
+
+	// corrections records the trees a correction measured its delta against.
+	corrections []string
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) {
@@ -229,6 +232,17 @@ func (g *fakeGit) Candidate(root, base string) (string, []string, string, error)
 		return "", nil, "", g.candidateErr
 	}
 	return g.tree, g.changed, g.diff, nil
+}
+
+// Correction answers the delta against the tree a correction names: the fake has
+// one candidate, so it reports the same bytes and records the tree it was asked
+// about, which is what a test asserts.
+func (g *fakeGit) Correction(root, tree string) ([]string, string, error) {
+	g.corrections = append(g.corrections, tree)
+	if g.err != nil {
+		return nil, "", g.err
+	}
+	return g.changed, g.diff, nil
 }
 
 func (g *fakeGit) Ignored(root, path string) (bool, error) {
@@ -2825,6 +2839,10 @@ func (g *flakyGit) Candidate(root, base string) (string, []string, string, error
 		g.sawEmptyTree = true
 	}
 	return g.inner.tree, g.inner.changed, g.inner.diff, nil
+}
+
+func (g *flakyGit) Correction(root, tree string) ([]string, string, error) {
+	return g.inner.Correction(root, tree)
 }
 
 func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ignored(root, path) }

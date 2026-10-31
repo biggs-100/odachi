@@ -190,3 +190,30 @@ func TestPromptWithLensesAsksTheLensPerFinding(t *testing.T) {
 		t.Error("a prompt without lenses must not ask for lens attribution or passes")
 	}
 }
+
+// TestACorrectionSaysItIsOnePlacedAtTheTop: the header names the tree it corrects
+// and a paragraph says the diff is only what moved, so a reviewer handed a delta
+// does not report the rest of the candidate as missing. Without the field the
+// prompt is the one it always printed.
+func TestACorrectionSaysItIsOnePlacedAtTheTop(t *testing.T) {
+	in := promptInput()
+	in.Correction = "1111111111111111111111111111111111111111"
+
+	prompt := review.Prompt(in)
+
+	if !strings.Contains(prompt, "correction of 1111111111111111111111111111111111111111") {
+		t.Error("the header does not name the tree this correction of")
+	}
+	for _, want := range []string{
+		"only what moved since those bytes",
+		"already answered by that verdict",
+		"do not report the rest of the candidate as missing",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("the prompt does not carry %q", want)
+		}
+	}
+	if strings.Contains(review.Prompt(promptInput()), "correction of ") {
+		t.Error("a review that is not a correction names one")
+	}
+}

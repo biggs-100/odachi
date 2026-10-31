@@ -479,6 +479,12 @@ same tree. A reviewer that edits the worktree stops the run - the answer stays
 filed under the tree it judged, and the bytes now in the tree ask for their own
 review - because a verdict that describes two trees describes neither.
 
+A fix after a blocker is a correction, not a second review: `odachi review --since
+<tree>` builds the prompt from what moved since that verdict and stores a verdict
+that carries its rows, so every path stays answered and the run pays for the fix
+alone. `odachi review --show` names the tree to pass, and a correction with nothing
+to judge is refused instead of paying a reviewer for the same bytes twice.
+
 Review is a human decision, not the agent's. By default it is off; the project
 switch lives in `odd/review.toml` and is written with
 `odachi review mode status|on|off`. With `on`, `odachi check` asks once per
@@ -501,7 +507,15 @@ with `odachi check --run "<command>"`.
 
 A local hook can be skipped, and a change can edit the fence it must obey. In CI,
 `check --fence-from <base>` reads the fence from that ref, not the worktree, and
-the proof names it. `--base <base>` is the other half: it compares the changed
+the proof names it.
+
+The review gate is not one of the things CI can enforce, and that is a fact about
+evidence rather than a promise left unkept: the verdict lives in the clone's store,
+the proof is not versioned, and evidence about a tree cannot live inside that tree
+-committing it would change the tree it names-. The review is a discipline held at
+the close, where the store is. Making CI check it needs a trusted job that runs the
+review itself, or a receipt signed outside the tree; neither exists today, and
+`docs/decisions/0042-a-correction-is-the-delta.md` says why. `--base <base>` is the other half: it compares the changed
 paths against the base, so the fence meets the change instead of the checkout's
 own HEAD. Build the gate from the base ref, not the candidate:
 

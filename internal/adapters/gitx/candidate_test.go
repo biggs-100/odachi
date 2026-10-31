@@ -100,3 +100,50 @@ func TestCandidateAgainstNothingSeesEveryFile(t *testing.T) {
 		}
 	}
 }
+
+// TestCorrectionIsTheDeltaAgainstOneTree: a correction reviews what moved since the
+// bytes a verdict judged, and the tree it measures from is a tree, not a branch: no
+// merge-base is asked, so a commit that never existed for those bytes cannot hide
+// the delta or invent one.
+func TestCorrectionIsTheDeltaAgainstOneTree(t *testing.T) {
+	t.Parallel()
+	root, base := newRepo(t)
+
+	judged, err := gitx.TreeHash(root)
+	if err != nil {
+		t.Fatalf("TreeHash: %v", err)
+	}
+
+	write(t, filepath.Join(root, "notes.txt"), "segunda línea\n")
+	write(t, filepath.Join(root, "nuevo.txt"), "algo\n")
+
+	paths, diff, err := gitx.Correction(root, judged)
+	if err != nil {
+		t.Fatalf("Correction: %v", err)
+	}
+
+	want := []string{"notes.txt", "nuevo.txt"}
+	if !slices.Equal(paths, want) {
+		t.Errorf("paths = %v, want the delta %v", paths, want)
+	}
+	for _, wantText := range []string{"+segunda línea", "+++ b/nuevo.txt"} {
+		if !strings.Contains(diff, wantText) {
+			t.Errorf("the delta does not carry %q:\n%s", wantText, diff)
+		}
+	}
+
+	// The bytes that did not move are not in the delta, and a commit made after the
+	// verdict does not change what the correction measures: the tree is the truth.
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "after the verdict")
+	paths, _, err = gitx.Correction(root, judged)
+	if err != nil {
+		t.Fatalf("Correction after a commit: %v", err)
+	}
+	if !slices.Equal(paths, want) {
+		t.Errorf("paths after a commit = %v, want the same delta %v", paths, want)
+	}
+	if base == "" {
+		t.Error("newRepo returned no base commit")
+	}
+}

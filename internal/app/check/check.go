@@ -1398,7 +1398,55 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	if _, closed, waived, known := featureReview(r.feature); known && closed && waived {
 		result.Lines = append(result.Lines, "review: waived by the human")
 	}
+	// The close names the debt it leaves. The rows are the list a person reads
+	// before choosing the next feature; a close that does not name them leaves the
+	// reading to memory, and memory is what the file exists to replace.
+	if note := r.debtNote(); note != "" {
+		result.Lines = append(result.Lines, note)
+	}
 	return result
+}
+
+// debtNote is the review debt this tree leaves, read from the file a person reads:
+// the open rows of docs/review-debt.md, never a second copy of the list. It is a
+// note and not a gate -a row never blocks, and a file that cannot be read says
+// nothing instead of failing a ready tree-.
+func (r *runner) debtNote() string {
+	data, err := r.files.Read(filepath.Join(r.opts.Dir, "docs", "review-debt.md"))
+	if err != nil {
+		return ""
+	}
+	rows := openDebtRows(string(data))
+	if len(rows) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("review debt: %d open row(s) in docs/review-debt.md: %s", len(rows), strings.Join(rows, "; "))
+}
+
+// openDebtRows reads the labels under "## Open" until the next section. The file
+// writes one row per "- **<label>**", and everything else in the section is the
+// prose that explains them.
+func openDebtRows(text string) []string {
+	var rows []string
+	open := false
+	for _, line := range strings.Split(text, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "## ") {
+			open = strings.EqualFold(trimmed, "## Open")
+			continue
+		}
+		if !open || !strings.HasPrefix(trimmed, "- **") {
+			continue
+		}
+		label := strings.TrimPrefix(trimmed, "- **")
+		if end := strings.Index(label, "**"); end >= 0 {
+			label = label[:end]
+		}
+		if label = strings.TrimSpace(label); label != "" {
+			rows = append(rows, label)
+		}
+	}
+	return rows
 }
 
 // proofPathFor names the proof of one feature: proof/NNNN-<slug>.txt, the same
