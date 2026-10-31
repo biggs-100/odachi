@@ -150,6 +150,14 @@ type Verdict struct {
 	Verdict    string      `json:"verdict"`
 }
 
+// Blocks reports whether this finding is the reason not to ship: causal, at
+// BLOCKER or CRITICAL, and not retired by the human. It is the one definition -
+// the floor asks it before judging earned blocking, and the store asks it to
+// decide which findings travel beyond the paths a candidate judged.
+func (f Finding) Blocks() bool {
+	return !IsDismissed(f) && f.Causal && f.Severity.Blocks()
+}
+
 // Missing reports which required lenses this verdict does not cover, in the order
 // they were required. It is the question both `--show` and the optional gate ask,
 // so it is answered in one place.
