@@ -7,6 +7,31 @@ tomorrow.
 
 ## Unreleased
 
+A failure at the destination the project lives in fails the run.
+
+- **`init --skills home`, an adopted project and `odachi setup` now exit 1 when the
+  home refuses the write**, instead of printing `pending:` and exiting 0. The block
+  naming `~/.agents/skills` is written before the skills half runs, so the old
+  behaviour left a green run that named a folder nothing had created.
+- **Fatality follows the scope the run asked for, not the folder that failed**: a
+  project-scope run that wrote its own copy keeps exit 0 when the home half fails,
+  and still says what is pending.
+- **The refusal names the verb that ran.** A failed `setup` used to say "run odachi
+  init again", and its closing line claimed the bootstrap skill was installed while
+  the write had failed.
+- The rule is ADR 0035.
+
+`odachi role` writes and reads where the project keeps its craft.
+
+- **A role's skill lands where the craft lives.** In a project whose store says `skills = home`,
+  or one that adopted odachi and keeps the crafts in the machine, `odachi role <slug>` writes
+  `~/.agents/skills/<slug>/SKILL.md` and nothing into the project; a project that carries its own
+  copy keeps getting `./.agents/skills/<slug>/SKILL.md`. Before, the skill went into the project
+  whatever the scope, and that one folder made the next plain `init` install the whole curriculum
+  in a project that keeps it in the machine.
+- **The listing reads the same folder**, so `odachi role` says `up to date` about the copy that
+  actually exists, and the scope is decided by one function that `init` and `role` share.
+
 A check odachi could not make no longer counts as a "no".
 
 - **`odachi init` stops instead of guessing the footprint.** The adoption inference reads two facts
@@ -20,17 +45,6 @@ A check odachi could not make no longer counts as a "no".
 - **`odachi role` refuses an `AGENTS.md` it cannot read** instead of writing the default block over
   a file nobody saw.
 - The rule is written once in ADR 0034: an error is never an absence.
-
-`odachi role` writes and reads where the project keeps its craft.
-
-- **A role's skill lands where the craft lives.** In a project whose store says `skills = home`,
-  or one that adopted odachi and keeps the crafts in the machine, `odachi role <slug>` writes
-  `~/.agents/skills/<slug>/SKILL.md` and nothing into the project; a project that carries its own
-  copy keeps getting `./.agents/skills/<slug>/SKILL.md`. Before, the skill went into the project
-  whatever the scope, and that one folder made the next plain `init` install the whole curriculum
-  in a project that keeps it in the machine.
-- **The listing reads the same folder**, so `odachi role` says `up to date` about the copy that
-  actually exists, and the scope is decided by one function that `init` and `role` share.
 
 ## v0.11.71 - 2026-10-30
 
