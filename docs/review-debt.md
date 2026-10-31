@@ -14,7 +14,16 @@ landed.
 
 ## Open
 
-Nothing, after 0137. The review of 0136 left one row and it is closed below.
+- **`internal/app/review/promptsize_test.go:51`** - the guard 0137 narrowed has no test
+  that tells the two keys apart. The second-run pin is refused by `exec` one layer up
+  before `storeIn` runs, and the split test passes whether the collision check reads
+  `landed` or the old `unit.of > 1`, so putting the candidate's shape back leaves every
+  test green. Found by the review of 0137 (warning, no round earned: the code asks the
+  right question). Closed when the collision decision is a predicate the package pins -a
+  run that landed the lens merges, a run that landed nothing is refused- so the wrong
+  key fails a test instead of passing all of them.
+
+The row the review of 0136 left is closed below.
 
 ## Closed by feature 0137
 
