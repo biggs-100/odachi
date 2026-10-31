@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A correction cannot drop a blocker in silence, and the base it completes is the base it keeps.
+
+- **A blocker about bytes the fix moved becomes a follow-up**: it stays in the verdict, where a reader finds it, and it
+  stops blocking. A blocker about bytes nobody can read any more cannot keep blocking -the correction exists to clear
+  it- and dropping it would let a fix launder a reason not to ship.
+- **The correction keeps the predecessor's base**, and the test that says so now fails when it does not: its fixture
+  used the default base, so the assertion could not tell where the value came from.
+- Why: the review of 0140 left two rows about what its tests did not prove, and the first one hid a rule rather than a
+  test -keeping the blocker blocking would make a correction unable to clear the case it exists for.
+
 ## v0.11.81 - 2026-10-31
 
 A fix after a verdict is reviewed as the delta, and a close names the debt it leaves.

@@ -9,23 +9,35 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0140, which makes a correction the delta.
+Last written: after 0141, which closes the two rows of 0140.
 
 ## Open
 
-- **`internal/app/review/review.go:2672`** - the carve-out that lets a blocking
-  finding travel across a correction is untested: the only way a predecessor's row
-  about bytes the fix changed survives is `finding.Blocks()`, and every correction
-  fixture builds the predecessor from passes with no findings. A regression that
-  dropped it, or that carried a non-blocking finding, leaves the suite green. Found
-  by the review of 0140 (warning, no round earned: the rule is written and the code
-  does it). Closed when a test seals a predecessor with a causal BLOCKER about a path
-  the correction moved, and asserts the blocker still travels and still blocks.
-- **`internal/app/review/correction_test.go:67`** - the assertion that says the base
-  survives a correction cannot fail: the predecessor is sealed with base `HEAD`,
-  which is also the run's default, so any source of that value passes. Found by the
-  review of 0140 (warning). Closed when the predecessor is sealed with a base that is
-  not the default and the stored verdict is asserted to keep it.
+Nothing, after 0141. The reviews of 0140 left two rows and both are closed below.
+
+## Closed by feature 0141
+
+### the carve-out that lets a blocker cross a correction
+
+Found by the review of 0140 (warning). The only way a predecessor's row about bytes
+the fix changed survived was `finding.Blocks()`, and no fixture carried a finding, so
+a regression there left the suite green.
+
+Closed: the rule is now explicit and tested -a blocker about bytes the fix moved
+travels as a follow-up, non-causal, because the correction exists to clear it and a
+blocker nobody can re-read is not a reason to ship; dropping it instead would let a
+fix launder what a reviewer called a reason not to ship-. The review of 0141 approved
+with no findings.
+
+### the base assertion that could not fail
+
+Found by the review of 0140 (warning). The predecessor was sealed with base `HEAD`,
+which is also the run's default, so the assertion that the base survives a correction
+passed from any source.
+
+Closed: the fixture seals the predecessor with `abc1234` and the stored verdict must
+keep it; with the base taken from the candidate instead of the merged verdict, the
+test fails. Observed red before the assertion was moved.
 
 ## Closed by feature 0140
 

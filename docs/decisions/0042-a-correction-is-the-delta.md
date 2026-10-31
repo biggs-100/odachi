@@ -50,6 +50,10 @@ not solve this either: it declares that review never authorises delivery.
 - **No state machine.** A correction is one more tree in the same store; there is no
   lineage, no revision, no acknowledgement, no burn. The predecessor is found by the
   tree the human names, and the honest failure is a refusal that says so.
+- **A blocker about bytes the fix moved does not keep blocking.** It stays in the
+  verdict as a follow-up and stops being causal: the correction exists to clear it, and
+  a blocker nobody can re-read is not a reason to ship. Dropping it instead would let a
+  fix launder what a reviewer called a reason not to ship, which is why it travels.
 - **No automatic correction.** The tool does not notice that a fix follows a
   blocker: the human runs `--since` with the tree `review --show` names.
 - **No change to the proof format**, and the fence keeps protecting it.

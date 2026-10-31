@@ -41,7 +41,7 @@ func TestACorrectionReviewsOnlyWhatMoved(t *testing.T) {
 	p.git.diff = "diff --git a/b.go b/b.go\n--- a/b.go\n+++ b/b.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
 	p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": gitBlob}
 	p.shell.output = `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`
-	p.files.files[storePath(correctedTree)] = []byte(verdictFor(t, correctedTree, "HEAD", []string{"reliability"},
+	p.files.files[storePath(correctedTree)] = []byte(verdictFor(t, correctedTree, "abc1234", []string{"reliability"},
 		domainreview.Pass{Path: "a.go", Lens: "reliability", Blob: gitBlob}))
 
 	result := p.run(review.Options{Exec: "revisor --model {model}", Since: correctedTree})
@@ -64,8 +64,8 @@ func TestACorrectionReviewsOnlyWhatMoved(t *testing.T) {
 	if !slices.Contains(stored.Lenses, "reliability") {
 		t.Errorf("lenses = %v, want the predecessor's lens carried", stored.Lenses)
 	}
-	if stored.Base != "HEAD" {
-		t.Errorf("base = %q, want the predecessor's base", stored.Base)
+	if stored.Base != "abc1234" {
+		t.Errorf("base = %q, want the predecessor's base abc1234", stored.Base)
 	}
 	for _, path := range []string{"a.go", "b.go"} {
 		answered := slices.ContainsFunc(stored.Passes, func(pass domainreview.Pass) bool {
@@ -165,5 +165,65 @@ func TestACorrectionDropsThePredecessorRowsAboutWhatMoved(t *testing.T) {
 		return pass.Path == "a.go" && pass.Blob == gitBlob
 	}) {
 		t.Errorf("the row about the path that did not move did not travel: %+v", stored.Passes)
+	}
+}
+
+// TestACorrectionTurnsABlockerAboutMovedBytesIntoAFollowUp: the correction exists to
+// clear a blocker. A finding that cites bytes the fix moved can neither keep blocking
+// -nobody can read those bytes again- nor vanish, because dropping it would let a fix
+// launder a reason not to ship. It travels as a follow-up: in the verdict, and not a
+// verdict of its own.
+func TestACorrectionTurnsABlockerAboutMovedBytesIntoAFollowUp(t *testing.T) {
+	const oldBlob, newBlob = "3333333333333333333333333333333333333333", "4444444444444444444444444444444444444444"
+
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.changed = []string{"b.go"}
+	p.git.diff = "diff --git a/b.go b/b.go\n--- a/b.go\n+++ b/b.go\n@@ -1 +1 @@\n-viejo\n+nuevo con el chequeo\n"
+	p.git.blobs = map[string]string{"b.go": newBlob}
+	p.shell.output = `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`
+
+	before, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "before",
+		Model:    "other/model",
+		Lenses:   []string{"reliability"},
+		Findings: []domainreview.Finding{{
+			Path:     "b.go",
+			Line:     3,
+			Severity: domainreview.Blocker,
+			Lens:     "reliability",
+			Causal:   true,
+			Why:      "the bytes dropped the error check",
+			Blob:     oldBlob,
+		}},
+	}, correctedTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the predecessor: %v", err)
+	}
+	p.files.files[storePath(correctedTree)] = []byte(domainreview.Render(before))
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Since: correctedTree})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if stored.Verdict != domainreview.Approved {
+		t.Errorf("verdict = %q, want %q: a blocker about bytes the fix moved still blocks", stored.Verdict, domainreview.Approved)
+	}
+	var kept *domainreview.Finding
+	for i, finding := range stored.Findings {
+		if finding.Path == "b.go" {
+			kept = &stored.Findings[i]
+		}
+	}
+	if kept == nil {
+		t.Fatalf("the blocker vanished instead of becoming a follow-up: %+v", stored.Findings)
+	}
+	if kept.Causal {
+		t.Errorf("the blocker still calls itself causal after the fix: %+v", *kept)
 	}
 }
