@@ -20,6 +20,7 @@
 package doctor
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -307,12 +308,20 @@ func (r *runner) agents() domaindoctor.Check {
 }
 
 // staleBlock reports whether the block AGENTS.md carries differs from the one this
-// binary writes for the project's voice. Presence is not currency: a project that
-// upgraded odachi keeps the rules it adopted with, and a rule that arrived later never
-// reaches its agent - the one about other folders, or the four hard rules when they
-// changed shape. It is a warning and not a blocker: the old block still works, it is
-// simply older. Line endings and trailing spaces are not a stale block, for the reason
-// 0031 already wrote for the brief: a Windows checkout is not an older rule.
+// binary writes for the project's voice and for the folder its craft lives in.
+// Presence is not currency: a project that upgraded odachi keeps the rules it adopted
+// with, and a rule that arrived later never reaches its agent - the one about other
+// folders, or the four hard rules when they changed shape. It is a warning and not a
+// blocker: the old block still works, it is simply older. Line endings and trailing
+// spaces are not a stale block, for the reason 0031 already wrote for the brief: a
+// Windows checkout is not an older rule.
+//
+// The folder is part of the comparison, because the block is what tells every agent
+// where the craft lives: a block naming a copy this project does not keep sends the
+// agent to a folder nothing refreshes -the state a deletion leaves behind-. The scope
+// is the one init resolves, asked through the package that owns the rule, so the two
+// verbs cannot disagree; and a question that could not be answered keeps both variants
+// current, because a failed read is not an absence.
 func (r *runner) staleBlock(content string) (string, bool) {
 	// The parser folds line endings once (rules.fold), so a CRLF checkout reads here too;
 	// what is left to ignore is what a text editor does: trailing spaces and the blank
@@ -327,18 +336,87 @@ func (r *runner) staleBlock(content string) (string, bool) {
 		// nothing to generate the block with. Check 7 owns that refusal.
 		return "", false
 	}
-	// The block may have been written for either scope and the doctor cannot know
-	// which without repeating the inference that wrote it: matching either variant
-	// is current, and the voice is what this comparison is about. sameBlock keeps
-	// what a checkout or an editor does to a file -trailing spaces, a final blank
-	// line- from reading as an older rule.
-	for _, scope := range []string{persona.SkillsProject, persona.SkillsHome} {
-		want, err := rules.BodyFor(name, scope)
-		if err == nil && sameBlock(body, want) {
-			return "", false
+	scope, known := r.blockScope()
+	if !known {
+		for _, candidate := range []string{persona.SkillsProject, persona.SkillsHome} {
+			want, err := rules.BodyFor(name, candidate)
+			if err == nil && sameBlock(body, want) {
+				return "", false
+			}
 		}
+		return olderBlock, true
 	}
-	return agentsFile + " carries an older block than this binary writes: the rules that arrived after this project adopted odachi are not in it (run odachi init)", true
+	if want, err := rules.BodyFor(name, scope); err == nil && sameBlock(body, want) {
+		return "", false
+	}
+	// The bytes are current for the other folder: the pointer is what is wrong, so the
+	// warning names the folder it names, the one this project keeps, and the command
+	// that rewrites the block.
+	other := otherScope(scope)
+	if want, err := rules.BodyFor(name, other); err == nil && sameBlock(body, want) {
+		return agentsFile + " names the craft in " + craftFolder(other) + " and this project keeps it in " +
+			craftFolder(scope) + ": run odachi init to rewrite the block", true
+	}
+	return olderBlock, true
+}
+
+// olderBlock is the warning for a block that is older than this binary writes.
+const olderBlock = agentsFile + " carries an older block than this binary writes: the rules that arrived after this project adopted odachi are not in it (run odachi init)"
+
+// errNoRepositoryPort is a doctor wired without the question the adoption is drawn
+// from. It is not "this folder does not live": no answer is no answer, and the block
+// check keeps both variants current instead of deciding on a fact nobody read.
+var errNoRepositoryPort = errors.New("the doctor has no repository port")
+
+// blockScope is the folder this project's craft lives in, decided the way init decides
+// it: the choice the store recorded, then the adoption of a repository that already
+// lives and carries no copy here. known is false when a fact the answer needs could not
+// be read, because a failed read is not an absence -check 2 already names a repository
+// git refuses, and this check does not guess over it.
+func (r *runner) blockScope() (scope string, known bool) {
+	facts, err := adoption.Read(adoption.Reader{
+		Lives: func() (bool, error) {
+			if r.opts.Git == nil {
+				return false, errNoRepositoryPort
+			}
+			if _, err := r.opts.Git.Head(r.opts.Dir); err != nil {
+				return false, err
+			}
+			return true, nil
+		},
+		CraftHere: func() (bool, error) { return r.exists(".agents/skills") },
+		// The agent is inferred separately and this question never asks it: a false
+		// answer that is never consulted is not a claim about the project.
+		AgentHere: func() (bool, error) { return false, nil },
+		Stored:    r.stored,
+	})
+	if err != nil {
+		return "", false
+	}
+	scope, _ = facts.Scope("")
+	// The scope comes from the store as written and the store is not validated here:
+	// a value that names neither folder is a question nobody answered, and answering
+	// it with "project" would warn about the wrong folder.
+	if scope != persona.SkillsProject && scope != persona.SkillsHome {
+		return "", false
+	}
+	return scope, true
+}
+
+// craftFolder is one of the two folders a block can name, in the words the block uses.
+func craftFolder(scope string) string {
+	if scope == persona.SkillsHome {
+		return "`~/.agents/skills/`"
+	}
+	return "`.agents/skills/`"
+}
+
+// otherScope is the folder the other copy lives in.
+func otherScope(scope string) string {
+	if scope == persona.SkillsHome {
+		return persona.SkillsProject
+	}
+	return persona.SkillsHome
 }
 
 // sameBlock compares two blocks the way a person reads them: line endings, trailing

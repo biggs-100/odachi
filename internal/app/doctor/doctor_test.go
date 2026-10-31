@@ -232,11 +232,12 @@ func cleanProfiles() *fakeProfiles {
 type fakeAgentSelection struct {
 	stored  string
 	project string
+	skills  string
 	err     error
 }
 
 func (s fakeAgentSelection) Written(string) (persona.Store, error) {
-	return persona.Store{Agents: s.stored, ProjectAgents: s.project}, s.err
+	return persona.Store{Agents: s.stored, ProjectAgents: s.project, Skills: s.skills}, s.err
 }
 
 // run is one doctor over the given world.
@@ -247,6 +248,13 @@ func run(files *fakeFiles, lookup *fakeLookup, profiles *fakeProfiles, exe strin
 // runSelected is the same run with a stored client selection.
 func runSelected(files *fakeFiles, lookup *fakeLookup, profiles *fakeProfiles, exe string, agents fakeAgentSelection) Result {
 	return Run(Options{Dir: root, Home: homeRoot, Version: "0.5.0", Exe: exe, Agents: agents}, files, lookup, profiles)
+}
+
+// runWithStore is the run with a store to read and a repository that answers: the two
+// facts a scope needs, so a test can make one of them the one that fails.
+func runWithStore(files *fakeFiles, agents fakeAgentSelection) Result {
+	return Run(Options{Dir: root, Home: homeRoot, Version: "0.5.0", Exe: "/home/ana/bin/odachi", Agents: agents, Git: fakeGit{}},
+		files, cleanLookup(), cleanProfiles())
 }
 
 // checkOf returns one check by number, failing when the report does not have it.
@@ -1383,12 +1391,12 @@ func TestTheBlockIsComparedWithoutAProfileFile(t *testing.T) {
 	}
 }
 
-// TestAHomeScopeBlockIsCurrent: an adopted project writes the block for the
-// machine's copy, and the doctor cannot know which scope the project chose without
-// repeating the inference that wrote it. A home block is current, and the check
-// says so instead of advising an init that would write the same bytes again.
-func TestAHomeScopeBlockIsCurrent(t *testing.T) {
-	files := configured()
+// TestAHomeScopeBlockIsCurrentWhenTheMachineKeepsTheCraft: a project that adopted
+// odachi writes the block for the machine's copy. The doctor now asks the same scope
+// init asks -the store, then the adoption- so this block is current for the same
+// reason init wrote it: the craft lives in ~/.agents/skills and the project keeps none.
+func TestAHomeScopeBlockIsCurrentWhenTheMachineKeepsTheCraft(t *testing.T) {
+	files := withTheDoor(adopted(t))
 	home, err := rules.BlockFor(persona.Novato, persona.SkillsHome)
 	if err != nil {
 		t.Fatalf("BlockFor(home): %v", err)
@@ -1398,9 +1406,126 @@ func TestAHomeScopeBlockIsCurrent(t *testing.T) {
 	}
 	files.put("AGENTS.md", home)
 
-	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := runInARepository(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi", fakeGit{})
 
 	if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusOK {
-		t.Fatalf("a home-scope block was called older: %s", check.Detail)
+		t.Fatalf("a home-scope block in an adopted project was called wrong: %s", check.Detail)
+	}
+}
+
+// TestABlockIsCurrentWhenTheScopeCannotBeRead: the scope needs a fact, and a fact that
+// could not be read leaves both variants current -the same rule 0125 wrote for the
+// footprint-. Three questions can fail -the repository port, git, the store- and each
+// has to leave both blocks current, whichever one the project carries: an unknown
+// answer that picked a folder would warn about a copy nobody chose.
+func TestABlockIsCurrentWhenTheScopeCannotBeRead(t *testing.T) {
+	project := blockOf(persona.Novato)
+	home, err := rules.BlockFor(persona.Novato, persona.SkillsHome)
+	if err != nil {
+		t.Fatalf("BlockFor(home): %v", err)
+	}
+
+	unknown := []struct {
+		name string
+		run  func(files *fakeFiles) Result
+	}{
+		{
+			name: "no repository port",
+			run: func(files *fakeFiles) Result {
+				return run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+			},
+		},
+		{
+			name: "a repository git refuses",
+			run: func(files *fakeFiles) Result {
+				return runInARepository(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+					fakeGit{headErr: errors.New("not a git repository")})
+			},
+		},
+		{
+			name: "a store that cannot be read",
+			run: func(files *fakeFiles) Result {
+				return runWithStore(files, fakeAgentSelection{err: errors.New("broken agents.toml")})
+			},
+		},
+		{
+			name: "a store naming no folder at all",
+			run: func(files *fakeFiles) Result {
+				return runWithStore(files, fakeAgentSelection{skills: "somewhere"})
+			},
+		},
+	}
+
+	for _, world := range unknown {
+		t.Run(world.name, func(t *testing.T) {
+			for variant, block := range map[string]string{"the project's block": project, "the machine's block": home} {
+				files := configured()
+				files.put("AGENTS.md", block)
+
+				got := world.run(files)
+
+				if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusOK {
+					t.Fatalf("%s was judged with the scope unknown: %s", variant, check.Detail)
+				}
+			}
+		})
+	}
+}
+
+// TestAProjectThatChoseTheProjectsCopyIsAccepted: the other direction of the same
+// rule. A project whose store says `project` -and one that carries the copy with
+// nothing recorded- keeps the craft in the tree, so the project's block is the one
+// this project keeps and the machine's is the one that lies. Both halves are asserted:
+// accepting the right block is what the warning would otherwise take away, and warning
+// on the wrong one is what makes the acceptance mean something.
+func TestAProjectThatChoseTheProjectsCopyIsAccepted(t *testing.T) {
+	home, err := rules.BlockFor(persona.Novato, persona.SkillsHome)
+	if err != nil {
+		t.Fatalf("BlockFor(home): %v", err)
+	}
+
+	worlds := []struct {
+		name   string
+		agents fakeAgentSelection
+	}{
+		{name: "the store chose the project's copy", agents: fakeAgentSelection{skills: persona.SkillsProject}},
+		{name: "the copy is here and nothing was chosen", agents: fakeAgentSelection{}},
+	}
+
+	for _, world := range worlds {
+		t.Run(world.name, func(t *testing.T) {
+			files := configured()
+			files.put(".agents/skills/acceptance/SKILL.md", skill.Template("acceptance"))
+
+			got := runWithStore(files, world.agents)
+			if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusOK {
+				t.Fatalf("the block for the copy this project keeps was refused: %s", check.Detail)
+			}
+
+			files.put("AGENTS.md", home)
+			got = runWithStore(files, world.agents)
+			if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusWarning {
+				t.Fatalf("the machine's block passed in a project that keeps the project's copy: %s %s", check.Status, check.Detail)
+			}
+		})
+	}
+}
+
+// TestTheStoredScopeWinsOverTheCopyInTheTree: a project that recorded where its craft
+// lives keeps that answer even when the other folder is also there -the store is the
+// choice, and the copy is a fact about the disk-. The block is judged by the choice.
+func TestTheStoredScopeWinsOverTheCopyInTheTree(t *testing.T) {
+	files := configured()
+	files.put(".agents/skills/acceptance/SKILL.md", skill.Template("acceptance"))
+	home, err := rules.BlockFor(persona.Novato, persona.SkillsHome)
+	if err != nil {
+		t.Fatalf("BlockFor(home): %v", err)
+	}
+	files.put("AGENTS.md", home)
+
+	got := runWithStore(files, fakeAgentSelection{skills: persona.SkillsHome})
+
+	if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusOK {
+		t.Fatalf("the block the store chose was called wrong: %s", check.Detail)
 	}
 }

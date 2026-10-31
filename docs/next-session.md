@@ -59,18 +59,23 @@ the state.
   the current feature.
 - **Every irreversible action names its target and waits for the human.**
 
-## The one decision waiting, not taken
+## The one decision that was waiting, and 0139 took
 
-This repository keeps the craft twice: `.agents/skills` (15 skills, 15 tracked files,
+This repository kept the craft twice: `.agents/skills` (15 skills, 15 tracked files,
 `bootstrap` deliberately absent) and `~/.agents/skills` (56, `bootstrap` included). The
-block in `AGENTS.md` names the project's copy because the copy exists, and `setup`
-reports the machine's because that is what it maintains. Nothing contradicts -the block
-names a copy that is current- but one of them is refreshed by hand.
+block named the project's copy because the copy existed, and `setup` reported the
+machine's because that is what it maintains: nothing contradicted, but one of the two
+was refreshed by hand.
 
-The choice is the human's, and it is a feature rather than a cleanup: either the
-project keeps its copy on purpose, or it leaves and the block names
-`~/.agents/skills/` while `doctor` refuses a block that names the folder the store did
-not choose.
+0139 deleted the copy and `.opencode/opencode.json`, and the block now names
+`~/.agents/skills/`, the copy the machine keeps. The doctor learned the fact it was
+missing -the scope `init` resolves- so a block that names the other folder is a warning
+naming both folders and `odachi init`; the state this repository was in cannot come back
+without one.
+
+The rule that stays: **a repository that already lives and carries no copy keeps the
+craft in the machine**; one that chose the project's copy keeps it, and the store's
+choice wins over the folder's presence.
 
 ## How to find the next real work
 
