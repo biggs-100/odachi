@@ -9,21 +9,29 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0137, which makes the split's repeat bypass ask what the run
-landed.
+Last written: after 0138, which pins the guard that decides what may merge.
 
 ## Open
 
-- **`internal/app/review/promptsize_test.go:51`** - the guard 0137 narrowed has no test
-  that tells the two keys apart. The second-run pin is refused by `exec` one layer up
-  before `storeIn` runs, and the split test passes whether the collision check reads
-  `landed` or the old `unit.of > 1`, so putting the candidate's shape back leaves every
-  test green. Found by the review of 0137 (warning, no round earned: the code asks the
-  right question). Closed when the collision decision is a predicate the package pins -a
-  run that landed the lens merges, a run that landed nothing is refused- so the wrong
-  key fails a test instead of passing all of them.
+Nothing, after 0138. The reviews of 0136 and 0137 left a row each and both are
+closed below.
 
-The row the review of 0136 left is closed below.
+## Closed by feature 0138
+
+### the guard had no test that told the two keys apart
+
+Found by the review of 0137 (warning, no round earned: the code asked the right
+question). The second-run pin was refused by `exec` one layer up before `storeIn`
+ran, and the split test passed whether the collision check read `landed` or the old
+`unit.of > 1`, so putting the candidate's shape back left every test green.
+
+Closed: the decision is one predicate, `collision`, which returns the first lens an
+answer shares with the stored verdict that this run did not land itself; `storeIn`
+asks it and the refusal names the lens. `TestCollisionAsksWhatTheRunLanded` pins six
+answers, and with the predicate ignoring `landed` the table and
+`TestAReviewOverTheLimitRunsOneReviewerPerPart` both fail on the same sentence -"this
+tree already has a verdict; saved 1 of 1 lenses"- so the wrong question now costs a
+red test instead of passing every one.
 
 ## Closed by feature 0137
 

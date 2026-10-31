@@ -5,6 +5,17 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The guard that decides whether an answer may merge into a stored verdict is one predicate, and a test pins it.
+
+- **`collision` is the one place that decides**: it returns the first lens an answer shares with the stored verdict that
+  this run did not land itself, and `storeIn` refuses exactly that case. The refusal names the lens already paid for.
+- **The wrong question now fails a test.** A table pins the rule, and the split test plus the table both go red when the
+  guard ignores what the run landed - the gap the review of 0137 found, where narrowing the guard left every test green.
+- Why: a rule no test can contradict is a comment, and the guard this feature pins is the one that stops a second run
+  from paying twice for the same lens.
+
 ## v0.11.78 - 2026-10-31
 
 The review's repeat bypass asks what the run has landed, not what shape the candidate has.
