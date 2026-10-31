@@ -10,9 +10,10 @@ R1 · "the voice styles the chat and never the artifacts, only the human changes
 - senior leads with the decision and names its cost, and a test holds it apart from novato
 
 ## Steps
-- [ ] T1 · both voices keep the chat and the artifacts apart, and only the human changes the language   R1
-- [ ] T2 · senior leads with the decision and names its cost, and a test holds it apart   R1
+- [x] T1 · both voices keep the chat and the artifacts apart, and only the human changes the language   R1
+- [x] T2 · senior leads with the decision and names its cost, and a test holds it apart   R1
 - [ ] T3 · this repository's block is regenerated with the new voices, and the docs say why   R1
 
 ## History
 L1 · "the voice styles the chat and never the artifacts, only the human changes the language, and senior says what it does instead of what it stops doing"
+L2 · OFICIO · "the voice carries the artifact scope and the language rule, copied from gentle-ai's Persona Scope" (porque a rule that says the artifacts are English without naming them is the rule a model forgets in a long file, and only the human's message may change the language; the rest is input)
