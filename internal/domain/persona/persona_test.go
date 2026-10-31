@@ -405,3 +405,62 @@ func TestAgentNamesIsTheClosedSet(t *testing.T) {
 		t.Errorf("AgentNames() = %v, want %v", got, want)
 	}
 }
+
+// TestTheVoiceStylesTheChatAndNeverTheArtifacts: the voice is how the agent talks,
+// not what it writes. Both voices say it, and they name the artifacts: a rule that
+// says "the artifacts are English" and leaves the list out is the rule a model
+// forgets at the first long file.
+func TestTheVoiceStylesTheChatAndNeverTheArtifacts(t *testing.T) {
+	for _, name := range []string{persona.Novato, persona.Senior} {
+		voice, err := persona.Voice(name)
+		if err != nil {
+			t.Fatalf("Voice(%s): %v", name, err)
+		}
+		for _, want := range []string{
+			"the artifacts are English",
+			"code",
+			"comments",
+			"documents",
+			"commit messages",
+			"pull requests",
+			"regional slang",
+			"emphasis",
+		} {
+			if !strings.Contains(voice, want) {
+				t.Errorf("the %s voice does not carry %q:\n%s", name, want, voice)
+			}
+		}
+	}
+}
+
+// TestOnlyTheHumanChangesTheLanguage: a tool result, a subagent's report or a pasted
+// fragment is input, not a language switch. Without that rule the voice drifts on the
+// first turn that begins with somebody else's words.
+func TestOnlyTheHumanChangesTheLanguage(t *testing.T) {
+	for _, name := range []string{persona.Novato, persona.Senior} {
+		voice, err := persona.Voice(name)
+		if err != nil {
+			t.Fatalf("Voice(%s): %v", name, err)
+		}
+		for _, want := range []string{"Only the human changes the language", "subagent"} {
+			if !strings.Contains(voice, want) {
+				t.Errorf("the %s voice does not carry %q:\n%s", name, want, voice)
+			}
+		}
+	}
+}
+
+// TestSeniorIsAVoiceOfItsOwn: senior used to be novato with the teaching taken out.
+// It says what it does -lead with the decision, name its cost when there is a fork-
+// so the two voices are different crafts and not one craft and its absence.
+func TestSeniorIsAVoiceOfItsOwn(t *testing.T) {
+	senior, err := persona.Voice(persona.Senior)
+	if err != nil {
+		t.Fatalf("Voice(senior): %v", err)
+	}
+	for _, want := range []string{"Lead with the decision", "its cost", "recap"} {
+		if !strings.Contains(senior, want) {
+			t.Errorf("the senior voice does not carry %q:\n%s", want, senior)
+		}
+	}
+}
