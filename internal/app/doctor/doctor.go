@@ -698,6 +698,11 @@ const noProfileFile = "without " + profileFile + " there is no profile to compar
 // fails the run: another shape of task document is a project decision, not a
 // broken install, and the line exists so the human hears what the tool skips
 // instead of wondering why summary counts one.
+//
+// A document that carries the shape of a plan and a name odachi cannot read is a
+// warning: that is a feature which would be silently ignored. A document with no
+// plan shape is prose -a note in the folder of the plan- and it is named in an ok
+// line: nothing was lost by not reading it.
 func (r *runner) taskDocs() domaindoctor.Check {
 	skipped, err := tasks.Skipped(r.files, r.opts.Dir)
 	if err != nil {
@@ -706,7 +711,15 @@ func (r *runner) taskDocs() domaindoctor.Check {
 	if len(skipped) == 0 {
 		return domaindoctor.OK(domaindoctor.CheckTaskDocs, "")
 	}
-	return domaindoctor.Warning(domaindoctor.CheckTaskDocs, tasks.SkippedLine(skipped)+"; the project keeps two memories")
+
+	planned, err := tasks.Planned(r.files, r.opts.Dir)
+	if err != nil {
+		return domaindoctor.Broken(domaindoctor.CheckTaskDocs, oneLine(err.Error()), "check the permissions of "+tasks.Dir)
+	}
+	if len(planned) > 0 {
+		return domaindoctor.Warning(domaindoctor.CheckTaskDocs, tasks.SkippedLine(planned)+"; the project keeps two memories")
+	}
+	return domaindoctor.OK(domaindoctor.CheckTaskDocs, tasks.SkippedLine(skipped)+"; no plan shape, so nothing is ignored")
 }
 
 func (r *runner) voice() domaindoctor.Check {

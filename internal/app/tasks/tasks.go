@@ -103,6 +103,41 @@ func Skipped(files Files, dir string) ([]string, error) {
 	return skipped, nil
 }
 
+// Planned is the documents odachi cannot read that carry the shape of a plan: the
+// ones a human meant as a feature and the tool will ignore. A document with none of
+// a plan's headers is prose -it was never meant to be read- and naming it is enough.
+//
+// The distinction matters because only the first is a loss: a misnamed feature is
+// invisible to `check`, and a note in the folder of the plan is just in the wrong
+// folder, which is the human's to tidy.
+func Planned(files Files, dir string) ([]string, error) {
+	skipped, err := Skipped(files, dir)
+	if err != nil {
+		return nil, err
+	}
+
+	planned := make([]string, 0, len(skipped))
+	for _, name := range skipped {
+		data, err := files.Read(filepath.Join(dir, Dir, name))
+		if err != nil {
+			return nil, fmt.Errorf("could not read %s/%s: %w", Dir, name, err)
+		}
+		if LooksLikeAPlan(string(data)) {
+			planned = append(planned, name)
+		}
+	}
+	return planned, nil
+}
+
+// LooksLikeAPlan says this text carries the shape a task document has: a base
+// commit, a requirement, a step or a history line. A name odachi cannot read plus
+// one of those is a feature that would be silently ignored; a name it cannot read
+// and none of them is prose.
+func LooksLikeAPlan(text string) bool {
+	doc := taskdoc.Parse(text)
+	return doc.Base != "" || len(doc.Requirements) > 0 || len(doc.Steps) > 0 || len(doc.History) > 0
+}
+
 // SkippedLine is the one sentence that names the documents odachi does not read,
 // or "" when the folder holds none: the tool says what it skips instead of
 // letting a project wonder why summary counts one.
