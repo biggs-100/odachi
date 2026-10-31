@@ -288,6 +288,13 @@ client does not decide where the craft goes. A project that already carries
 old way, and a folder with no history still gets the full install, because there
 the project is starting now.
 
+`odachi role` follows the same scope: a role's skill is written where the craft
+lives -`./.agents/skills` in a project that carries it, `~/.agents/skills` when the
+project keeps it in the machine- and `odachi role` reads the same folder when it
+says whether a role is up to date. Before, the skill landed in the project whatever
+the scope, and that one folder was what made the next `init` install the whole
+curriculum in a project that keeps it in the machine.
+
 Open the project with OpenCode and that is it: it reads `.agents/skills` as an
 external directory in addition to its own, so it sees the fifteen without
 `pack`. `pack` is for taking the skills to another client's native folder, or to

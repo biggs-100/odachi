@@ -1527,6 +1527,12 @@ machine (~/.agents/skills) and no project agent, and the run says so. --skills p
 them, and naming a client does not decide where the craft goes. A project that already carries
 .agents/ keeps it, and a folder with no history still gets the full install.
 
+role: a role's skill goes to the folder every client reads, in the scope the project has:
+  ./.agents/skills in a project that carries its craft, ~/.agents/skills in one that keeps it in
+  the machine. The role never decides the scope -the store and the adoption do, and a project
+  that never ran init keeps the project copy- so a role cannot hand the next init a folder it
+  wrote itself.
+
 setup flags:
   odachi setup    the global half only, from any folder: the bootstrap skill in
                   ~/.agents/skills, the door for the clients found in the home,

@@ -21,6 +21,17 @@ A check odachi could not make no longer counts as a "no".
   a file nobody saw.
 - The rule is written once in ADR 0034: an error is never an absence.
 
+`odachi role` writes and reads where the project keeps its craft.
+
+- **A role's skill lands where the craft lives.** In a project whose store says `skills = home`,
+  or one that adopted odachi and keeps the crafts in the machine, `odachi role <slug>` writes
+  `~/.agents/skills/<slug>/SKILL.md` and nothing into the project; a project that carries its own
+  copy keeps getting `./.agents/skills/<slug>/SKILL.md`. Before, the skill went into the project
+  whatever the scope, and that one folder made the next plain `init` install the whole curriculum
+  in a project that keeps it in the machine.
+- **The listing reads the same folder**, so `odachi role` says `up to date` about the copy that
+  actually exists, and the scope is decided by one function that `init` and `role` share.
+
 ## v0.11.71 - 2026-10-30
 
 Adopting odachi in a project that already lives stops scattering folders in it.

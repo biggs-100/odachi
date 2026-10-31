@@ -14,7 +14,7 @@ R1 · "odachi role <slug> writes .agents/skills/<slug>/SKILL.md in the project, 
 
 ## Steps
 - [x] T1 · the skills scope is decided by one function, and init asks it   R1 · tree:715906238526ace54ba674041c16bfb3a0438c93
-- [ ] T2 · a role's skill lands where the scope says, and the listing reads the same place   R1
+- [x] T2 · a role's skill lands where the scope says, and the listing reads the same place   R1 · tree:22a149a07d18e3ced43c61cd21c85b73d3ab8916
 - [ ] T3 · the help, the README and the changelog say what a role follows   R1
 
 ## History
