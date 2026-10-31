@@ -9,7 +9,7 @@ R1 · "the changelog, the README and the help say a repository gets the minimal 
 - a repository that keeps its notes in .agents/ and nothing else reads in those three texts as a repository without the craft
 
 ## Steps
-- [ ] T1 · the README, the help and the changelog say the copy, not the folder   R1
+- [x] T1 · the README, the help and the changelog say the copy, not the folder   R1 · tree:44fc2cfe06e4b375cf870df299776f5a7ae142c6
 
 ## History
 L1 · "the changelog, the README and the help say a repository gets the minimal footprint when it has no .agents/; the code tests .agents/skills, on purpose -another tool's .agents/ folder is not the craft. A repository with .agents/notes.md reads the notes and gets the other behaviour. Three lines to say the copy instead of the folder"
