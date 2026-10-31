@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestCleanReportsEveryClassAndRemovesNothing: the first half of the verb. A
@@ -109,6 +111,88 @@ func TestCleanJSONCarriesTheSameMap(t *testing.T) {
 		if class.Name == "old agent notes" && class.Files != 1 {
 			t.Errorf("old agent notes = %d files, want the one PR body", class.Files)
 		}
+	}
+}
+
+// TestCleanApplyKeepsTheNewestRecordsAndRemovesTheRest drives the lifetime
+// end to end: the run removes the old trees and leaves proof/, the plan and
+// git's files exactly as they were.
+func TestCleanApplyKeepsTheNewestRecordsAndRemovesTheRest(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	storeDir := filepath.Join(dir, ".git", "odachi")
+	writeFile(t, dir, "proof/0001-a-feature.txt", "the proof")
+	writeFile(t, dir, "odd/tasks/0001-a-feature.md", "the plan")
+	writeFile(t, dir, ".git/COMMIT_EDITMSG", "a commit")
+
+	for i := 0; i < 12; i++ {
+		at := filepath.Join(storeDir, "reviews", fmt.Sprintf("tree%02d.json", i))
+		writeFile(t, dir, filepath.ToSlash(filepath.Join(".git", "odachi", "reviews", fmt.Sprintf("tree%02d.json", i))), "verdict")
+		when := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, i)
+		if err := os.Chtimes(at, when, when); err != nil {
+			t.Fatalf("could not date %s: %v", at, err)
+		}
+	}
+
+	code, stdout, stderr := runDir(t, dir, []string{"clean", "--apply"}, "")
+	if code != 0 {
+		t.Fatalf("clean --apply: exit %d (stdout: %q, stderr: %q)", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "removed 2 files") {
+		t.Errorf("the report does not say what it removed:\n%s", stdout)
+	}
+
+	for _, gone := range []string{"tree00.json", "tree01.json"} {
+		if _, err := os.Stat(filepath.Join(storeDir, "reviews", gone)); !os.IsNotExist(err) {
+			t.Errorf("%s survived although it is one of the two oldest", gone)
+		}
+	}
+	for _, kept := range []string{
+		filepath.Join(storeDir, "reviews", "tree11.json"),
+		filepath.Join(dir, "proof", "0001-a-feature.txt"),
+		filepath.Join(dir, "odd", "tasks", "0001-a-feature.md"),
+		filepath.Join(dir, ".git", "COMMIT_EDITMSG"),
+	} {
+		if _, err := os.Stat(kept); err != nil {
+			t.Errorf("%s was removed: %v", kept, err)
+		}
+	}
+}
+
+// TestCleanApplyLegacyRemovesTheOldNotes: the notes an older agent left in the
+// git directory go only when both flags ask for them, and git's own files stay.
+func TestCleanApplyLegacyRemovesTheOldNotes(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	writeFile(t, dir, ".git/PR100.md", "a pull request body")
+	writeFile(t, dir, ".git/CLOSE99.txt", "a close message")
+	writeFile(t, dir, ".git/COMMIT_EDITMSG", "a commit")
+
+	if code, _, stderr := runDir(t, dir, []string{"clean", "--apply"}, ""); code != 0 {
+		t.Fatalf("clean --apply: exit %d: %s", code, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".git", "PR100.md")); err != nil {
+		t.Fatalf("a note was removed without --legacy: %v", err)
+	}
+
+	if code, _, stderr := runDir(t, dir, []string{"clean", "--legacy"}, ""); code != 1 {
+		t.Fatalf("clean --legacy alone: exit %d, want 1: %s", code, stderr)
+	}
+
+	if code, _, stderr := runDir(t, dir, []string{"clean", "--apply", "--legacy"}, ""); code != 0 {
+		t.Fatalf("clean --apply --legacy: exit %d: %s", code, stderr)
+	}
+	for _, gone := range []string{"PR100.md", "CLOSE99.txt"} {
+		if _, err := os.Stat(filepath.Join(dir, ".git", gone)); !os.IsNotExist(err) {
+			t.Errorf("%s survived --apply --legacy", gone)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".git", "COMMIT_EDITMSG")); err != nil {
+		t.Errorf("git's own file was removed: %v", err)
 	}
 }
 

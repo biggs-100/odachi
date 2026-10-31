@@ -682,6 +682,8 @@ func runClean(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON bool
 	)
 
+	flags.BoolVar(&opts.Apply, "apply", false, "remove what the report names, keeping the declared lifetimes")
+	flags.BoolVar(&opts.Legacy, "legacy", false, "with --apply, also remove the notes an older agent left in the git directory")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
@@ -699,7 +701,7 @@ func runClean(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	opts.Store = storeRoot(dir)
-	return reportClean(clean.Run(opts, disk(dir)), asJSON, stdout, stderr)
+	return reportClean(clean.Run(opts, disk(dir), &osLock{}), asJSON, stdout, stderr)
 }
 
 // reportClean prints the report: the map a human reads, or the same map as JSON
@@ -1495,7 +1497,7 @@ usage:
   odachi summary
   odachi progress
   odachi undo [--list | --collect] [--file brief]
-  odachi clean [--json]
+  odachi clean [--apply] [--legacy] [--json]
   odachi store move [--dry-run]
   odachi check [flags]
   odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
@@ -1559,7 +1561,12 @@ undo flags:
   --json          machine output
 
 clean flags:
-  it reads and reports; nothing is removed yet
+  (no flags)      what this clone accumulated, who owns each class and what it
+                  would do; it reads and removes nothing
+  --apply         remove what the report names, keeping the declared lifetimes:
+                  the newest 10 review records, the newest 5 versions of each
+                  file, and it empties the scratch folder
+  --legacy        with --apply, also remove the notes an older agent left in .git/
   --json          machine output, with the same map as data
 
 skills flags:

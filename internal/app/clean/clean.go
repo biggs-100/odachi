@@ -16,24 +16,28 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/biggs-100/odachi/internal/app/lock"
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/store"
+	"github.com/biggs-100/odachi/internal/domain/undo"
 )
 
 // Exit codes, the same shape as the other verbs.
 const (
-	// CodeOK means the report was printed, or the run cleaned what it named.
+	// CodeOK means the report was printed, or the run removed what it named.
 	CodeOK = 0
-	// CodeBlocked means a path could not be read, and this run will not act on
-	// what it cannot see.
+	// CodeBlocked means a path could not be read or removed, and this run will
+	// not guess about what it cannot see.
 	CodeBlocked = 1
 )
 
 // The lifetimes this version ships. They are the default shape of a clone whose
-// project has not decided otherwise: enough verdicts to answer a question about
-// the last week's work, and enough versions of one file to undo a mistake twice.
+// project has not decided otherwise: enough review records to answer a question
+// about the last week's work, and enough versions of one file to undo a mistake
+// twice.
 const (
 	// KeepRecords is how many review trees survive: a verdict, its prompt and
 	// the records beside them are one record, and a record is the unit.
@@ -41,6 +45,9 @@ const (
 	// KeepBackups is how many versions of one artifact survive.
 	KeepBackups = 5
 )
+
+// verbName is the lock owner.
+const verbName = "clean"
 
 // maxDepth bounds the walk of a class. A real store is four levels deep; anything
 // deeper is a symlink or a shape odachi does not write, and a report must not
@@ -56,14 +63,23 @@ type Options struct {
 	// An empty Store is a folder that is not a git repository, and there is
 	// nothing to clean there.
 	Store string
+
+	// Apply removes what the report names. Without it the run only reads.
+	Apply bool
+
+	// Legacy also removes the notes an older agent wrote into the git directory.
+	// It only means something with Apply, and it is never implied.
+	Legacy bool
 }
 
-// Files is the disk port: what the report reads, and nothing else.
+// Files is the disk port: what the report reads, and what --apply removes.
 type Files interface {
 	Exists(path string) (bool, error)
 	List(dir string) ([]string, error)
 	IsDir(path string) (bool, error)
 	Size(path string) (int64, error)
+	ModTime(path string) (time.Time, error)
+	Remove(path string) error
 }
 
 // Class is one kind of file a clone accumulates.
@@ -77,8 +93,11 @@ type Class struct {
 	// Files and Bytes are what this run could read.
 	Files int   `json:"files"`
 	Bytes int64 `json:"bytes"`
-	// Action is what `odachi clean --apply` would do to the class.
+	// Action is what `odachi clean --apply` does to the class.
 	Action string `json:"action"`
+	// Doomed is how many files --apply would remove, and Dead is their size.
+	Doomed int   `json:"doomed"`
+	Dead   int64 `json:"doomedBytes"`
 	// Cleanable marks the classes odachi wrote and this verb maintains. The
 	// totals count these; nothing else is ever removed.
 	Cleanable bool `json:"cleanable"`
@@ -95,6 +114,11 @@ type Report struct {
 	// TotalFiles and TotalBytes are odachi's own cleanable records.
 	TotalFiles int   `json:"totalFiles"`
 	TotalBytes int64 `json:"totalBytes"`
+	// DoomedFiles and DoomedBytes are what --apply removed, or would remove.
+	DoomedFiles int   `json:"doomedFiles"`
+	DoomedBytes int64 `json:"doomedBytes"`
+	// Applied is false for a report and true once the run removed the files.
+	Applied bool `json:"applied"`
 	// Problems is every unreadable path, in the order the classes found them.
 	Problems []string `json:"unreadable,omitempty"`
 	// Message is the one line the run answers with.
@@ -109,10 +133,11 @@ type Result struct {
 	Report  Report
 }
 
+// Lines is the block a human reads.
 func (r Report) Lines() []string {
 	lines := []string{"odachi clean · " + r.Store, ""}
 	for _, class := range r.Classes {
-		lines = append(lines, class.Line())
+		lines = append(lines, class.Line(r.Applied))
 	}
 	lines = append(lines, "", "  old agent notes are "+joinAnd(legacyPaths))
 	if len(r.Problems) > 0 {
@@ -125,28 +150,92 @@ func (r Report) Lines() []string {
 	return lines
 }
 
-// Line renders one class as the row a human reads.
-func (c Class) Line() string {
-	return fmt.Sprintf("  %-20s %-18s %4d %-6s %9s  %s",
+// Line renders one class as the row a human reads, with what the run would do or
+// did to it.
+func (c Class) Line(applied bool) string {
+	row := fmt.Sprintf("  %-20s %-18s %4d %-6s %9s  %s",
 		c.Name, c.Owner, c.Files, plural(c.Files), sizeText(c.Bytes), c.Action)
+	if c.Doomed == 0 {
+		return row
+	}
+	verb := "would go"
+	if applied {
+		verb = "removed"
+	}
+	return row + " · " + strconv.Itoa(c.Doomed) + " " + plural(c.Doomed) + " " + verb
 }
 
 // Run performs one `odachi clean`.
-func Run(opts Options, files Files) Result {
+func Run(opts Options, files Files, guard lock.Lock) Result {
 	if opts.Dir == "" {
 		opts.Dir = "."
 	}
 	if opts.Store == "" {
 		return blocked("odachi clean reads the clone's store, and this folder is not a git repository: run it inside one")
 	}
-
-	report := build(opts, files)
-	return Result{
-		Code:    CodeOK,
-		Message: report.Message,
-		Lines:   report.Lines(),
-		Report:  report,
+	if opts.Legacy && !opts.Apply {
+		return blocked("--legacy names what --apply removes, and this run only reads: add --apply to remove the old agent notes, or leave --legacy out")
 	}
+
+	if !opts.Apply {
+		report := scan(opts, files).report
+		return Result{Code: CodeOK, Message: report.Message, Lines: report.Lines(), Report: report}
+	}
+
+	// Removing many files takes the lock: two runs deleting at once would each
+	// count the other's work as their own.
+	held := lock.Take(guard, opts.Store, verbName)
+	if held.Refusal != "" {
+		return blocked(held.Refusal)
+	}
+	defer held.Release()
+
+	return withNotice(apply(opts, files), held.Notice)
+}
+
+// apply removes what the report named, and refuses before the first file when a
+// class it maintains could not be read: a run that cannot see does not delete.
+func apply(opts Options, files Files) Result {
+	found := scan(opts, files)
+	report := found.report
+
+	for _, class := range report.Classes {
+		if !class.Cleanable || len(class.Problems) == 0 {
+			continue
+		}
+		return blocked(fmt.Sprintf(
+			"clean removes nothing while it cannot read %s: %s; fix the permissions and run it again",
+			class.Name, class.Problems[0]))
+	}
+
+	removed := 0
+	freed := int64(0)
+	for _, at := range found.doomed {
+		if err := files.Remove(at); err != nil {
+			report.Applied = removed > 0
+			report.Message = fmt.Sprintf("removed %d of %d files before %s could not be removed: %s",
+				removed, len(found.doomed), label(opts.Dir, at), oneLine(err.Error()))
+			return Result{Code: CodeBlocked, Message: report.Message, Lines: report.Lines(), Report: report}
+		}
+		removed++
+		freed += found.sizes[at]
+	}
+
+	report.Applied = removed > 0
+	report.Message = summary(report.TotalBytes, report.TotalFiles)
+	if removed > 0 {
+		report.Message += fmt.Sprintf(" · removed %d %s, %s freed", removed, plural(removed), sizeText(freed))
+	} else {
+		report.Message += " · nothing to remove"
+	}
+	return Result{Code: CodeOK, Message: report.Message, Lines: report.Lines(), Report: report}
+}
+
+// found is what a run sees and what it would remove.
+type found struct {
+	report Report
+	doomed []string
+	sizes  map[string]int64
 }
 
 // The owners. They are words a human reads, so they are spelled once.
@@ -188,41 +277,38 @@ var legacyPatterns = []string{
 	"fence.generated",
 }
 
-// build reads every class and assembles the report.
-func build(opts Options, files Files) Report {
+// entry is one file a class holds.
+type entry struct {
+	rel  string // relative to the class root, forward slashes
+	size int64
+	at   time.Time
+}
+
+// scan reads every class, applies each lifetime and assembles the report.
+func scan(opts Options, files Files) found {
 	// The store hangs from the git common directory, so its parent is the
 	// directory git owns.
 	gitDir := filepath.Dir(opts.Store)
+	seen := found{sizes: map[string]int64{}}
 
-	report := Report{Store: label(opts.Dir, opts.Store)}
-	report.Classes = append(report.Classes,
-		scan(files, opts.Dir, Class{
-			Name:      "review records",
-			Owner:     ownerOdachi,
-			Action:    "keeps the newest " + strconv.Itoa(KeepRecords) + " trees",
-			Cleanable: true,
-		}, filepath.Join(opts.Store, store.Reviews), scanRule{}),
-		scan(files, opts.Dir, Class{
+	classes := []Class{
+		seen.records(files, opts),
+		seen.everything(files, opts, Class{
 			Name:      "review scaffolding",
 			Owner:     ownerOdachi,
 			Action:    "emptied by --apply",
 			Cleanable: true,
-		}, filepath.Join(opts.Store, review.AnswerDir), scanRule{}),
-		scan(files, opts.Dir, Class{
-			Name:      "undo backups",
-			Owner:     ownerOdachi,
-			Action:    "keeps the newest " + strconv.Itoa(KeepBackups) + " of each file",
-			Cleanable: true,
-		}, filepath.Join(opts.Store, store.Backups), scanRule{}),
-		scan(files, opts.Dir, Class{
+		}, filepath.Join(opts.Store, review.AnswerDir)),
+		seen.backups(files, opts),
+		seen.everything(files, opts, Class{
 			Name:      "agent scratch",
 			Owner:     ownerOdachi,
 			Action:    "emptied by --apply",
 			Cleanable: true,
-		}, filepath.Join(opts.Store, store.Scratch), scanRule{}),
-		legacy(files, opts.Dir, gitDir),
+		}, filepath.Join(opts.Store, store.Scratch)),
+		seen.legacy(files, opts, gitDir),
 		state(files, opts.Dir, opts.Store),
-		scan(files, opts.Dir, Class{
+		seen.read(files, opts.Dir, Class{
 			Name:   "the rest of .git/",
 			Owner:  ownerGit,
 			Action: "never touched",
@@ -232,69 +318,116 @@ func build(opts Options, files Files) Report {
 			dirs:  []string{store.DirName},
 			files: topLevelLegacy,
 		}),
-		scan(files, opts.Dir, Class{
+		seen.read(files, opts.Dir, Class{
 			Name:   "proof/",
 			Owner:  ownerGate,
 			Action: "never touched: the proof the gate reads",
 		}, filepath.Join(opts.Dir, "proof"), scanRule{}),
-		scan(files, opts.Dir, Class{
+		seen.read(files, opts.Dir, Class{
 			Name:   "odd/tasks",
 			Owner:  ownerTeam,
 			Action: "never touched: the plan",
 		}, filepath.Join(opts.Dir, filepath.FromSlash(layout.Tasks)), scanRule{}),
-	)
+	}
 
-	for _, class := range report.Classes {
+	seen.report = Report{Store: label(opts.Dir, opts.Store), Classes: classes}
+	for _, class := range classes {
 		if class.Cleanable {
-			report.TotalFiles += class.Files
-			report.TotalBytes += class.Bytes
+			seen.report.TotalFiles += class.Files
+			seen.report.TotalBytes += class.Bytes
 		}
-		report.Problems = append(report.Problems, class.Problems...)
+		seen.report.DoomedFiles += class.Doomed
+		seen.report.DoomedBytes += class.Dead
+		seen.report.Problems = append(seen.report.Problems, class.Problems...)
 	}
 
-	report.Message = fmt.Sprintf("odachi's records: %s in %d %s",
-		sizeText(report.TotalBytes), report.TotalFiles, plural(report.TotalFiles))
-	if len(report.Problems) > 0 {
-		report.Message += fmt.Sprintf("; %d %s it could not read",
-			len(report.Problems), plural2(len(report.Problems), "path"))
+	seen.report.Message = summary(seen.report.TotalBytes, seen.report.TotalFiles)
+	switch {
+	case seen.report.DoomedFiles > 0:
+		seen.report.Message += fmt.Sprintf(" · --apply would free %s in %d %s",
+			sizeText(seen.report.DoomedBytes), seen.report.DoomedFiles, plural(seen.report.DoomedFiles))
+	case len(seen.report.Problems) > 0:
+		seen.report.Message += fmt.Sprintf("; %d %s it could not read",
+			len(seen.report.Problems), plural2(len(seen.report.Problems), "path"))
 	}
-	return report
+	return seen
 }
 
-// scan builds a class from every file under root, leaving out what the rule
-// names.
-func scan(files Files, dir string, class Class, root string, rule scanRule) Class {
-	class.Path = label(dir, root)
-	names, problems := walk(files, dir, root, rule)
-	class.Problems = problems
-	for _, rel := range names {
-		size, err := files.Size(filepath.Join(root, filepath.FromSlash(rel)))
-		if err != nil {
-			class.Problems = append(class.Problems, label(dir, filepath.Join(root, filepath.FromSlash(rel)))+": "+oneLine(err.Error()))
+// records is the class with a lifetime counted in trees: a verdict, its prompt,
+// the dismissals and the scope record are one record, and the newest KeepRecords
+// survive.
+func (f *found) records(files Files, opts Options) Class {
+	root := filepath.Join(opts.Store, store.Reviews)
+	class, entries := gather(files, opts.Dir, Class{
+		Name:      "review records",
+		Owner:     ownerOdachi,
+		Action:    "keeps the newest " + strconv.Itoa(KeepRecords) + " trees",
+		Cleanable: true,
+	}, root, scanRule{})
+
+	byTree := map[string][]entry{}
+	for _, item := range entries {
+		tree := treeOf(item.rel)
+		byTree[tree] = append(byTree[tree], item)
+	}
+	return f.keepNewest(class, root, byTree, KeepRecords)
+}
+
+// backups is the class with a lifetime counted in artifacts: the newest
+// KeepBackups versions of each file survive, and a name that is not a version
+// odachi wrote never joins a group.
+func (f *found) backups(files Files, opts Options) Class {
+	root := filepath.Join(opts.Store, store.Backups)
+	class, entries := gather(files, opts.Dir, Class{
+		Name:      "undo backups",
+		Owner:     ownerOdachi,
+		Action:    "keeps the newest " + strconv.Itoa(KeepBackups) + " of each file",
+		Cleanable: true,
+	}, root, scanRule{})
+
+	byArtifact := map[string][]entry{}
+	for _, item := range entries {
+		artifact, ok := artifactOf(item.rel)
+		if !ok {
 			continue
 		}
-		class.Files++
-		class.Bytes += size
+		byArtifact[artifact] = append(byArtifact[artifact], item)
+	}
+	return f.keepVersions(class, root, byArtifact, KeepBackups)
+}
+
+// everything is a class with no lifetime at all: --apply empties it.
+func (f *found) everything(files Files, opts Options, class Class, root string) Class {
+	class, entries := gather(files, opts.Dir, class, root, scanRule{})
+	for _, item := range entries {
+		class = f.doom(class, root, item)
 	}
 	return class
 }
 
-// legacy builds the class of notes an agent wrote into the git directory before
-// the store had a folder for them. Only files are matched: a directory whose name
-// fits a pattern belongs to somebody else.
-func legacy(files Files, dir, gitDir string) Class {
+// read is a class nobody may remove: it is walked, measured and named, and no
+// file of it ever enters the plan.
+func (f *found) read(files Files, dir string, class Class, root string, rule scanRule) Class {
+	class, _ = gather(files, dir, class, root, rule)
+	return class
+}
+
+// legacy names the notes an older agent left in the git directory, and plans them
+// only when the run asked for them.
+func (f *found) legacy(files Files, opts Options, gitDir string) Class {
 	class := Class{
 		Name:   "old agent notes",
 		Owner:  ownerAgent,
-		Path:   label(dir, gitDir) + "/",
+		Path:   label(opts.Dir, gitDir) + "/",
 		Action: "removed only by --apply --legacy",
 	}
 	names, err := files.List(gitDir)
 	if err != nil {
-		class.Problems = append(class.Problems, label(dir, gitDir)+": "+oneLine(err.Error()))
+		class.Problems = append(class.Problems, label(opts.Dir, gitDir)+": "+oneLine(err.Error()))
 		return class
 	}
 	sort.Strings(names)
+
 	for _, name := range names {
 		if !matchesLegacy(name) {
 			continue
@@ -302,7 +435,7 @@ func legacy(files Files, dir, gitDir string) Class {
 		full := filepath.Join(gitDir, name)
 		isDir, err := files.IsDir(full)
 		if err != nil {
-			class.Problems = append(class.Problems, label(dir, full)+": "+oneLine(err.Error()))
+			class.Problems = append(class.Problems, label(opts.Dir, full)+": "+oneLine(err.Error()))
 			continue
 		}
 		if isDir {
@@ -310,13 +443,142 @@ func legacy(files Files, dir, gitDir string) Class {
 		}
 		size, err := files.Size(full)
 		if err != nil {
+			class.Problems = append(class.Problems, label(opts.Dir, full)+": "+oneLine(err.Error()))
+			continue
+		}
+		class.Files++
+		class.Bytes += size
+		if opts.Apply && opts.Legacy {
+			class = f.doom(class, gitDir, entry{rel: name, size: size})
+		}
+	}
+	return class
+}
+
+// keepNewest keeps the newest groups of a class and plans the rest. The newest
+// date of a group decides, and a tie breaks on the key, so the answer never
+// depends on the order the directory was listed in.
+func (f *found) keepNewest(class Class, root string, groups map[string][]entry, keep int) Class {
+	keys := make([]string, 0, len(groups))
+	for key := range groups {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		left, right := latest(groups[keys[i]]), latest(groups[keys[j]])
+		if !left.Equal(right) {
+			return left.After(right)
+		}
+		return keys[i] > keys[j]
+	})
+
+	for index, key := range keys {
+		if index < keep {
+			continue
+		}
+		for _, item := range groups[key] {
+			class = f.doom(class, root, item)
+		}
+	}
+	return class
+}
+
+// keepVersions keeps the newest files of every group: a backup is one version
+// of one artifact, and each artifact carries its own lifetime. A tie breaks on
+// the path, so the answer never depends on the order the directory was listed in.
+func (f *found) keepVersions(class Class, root string, groups map[string][]entry, keep int) Class {
+	keys := make([]string, 0, len(groups))
+	for key := range groups {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		items := append([]entry(nil), groups[key]...)
+		sort.Slice(items, func(i, j int) bool {
+			if !items[i].at.Equal(items[j].at) {
+				return items[i].at.After(items[j].at)
+			}
+			return items[i].rel > items[j].rel
+		})
+		for index, item := range items {
+			if index < keep {
+				continue
+			}
+			class = f.doom(class, root, item)
+		}
+	}
+	return class
+}
+
+// doom adds one file to the plan and to the class that owns it.
+func (f *found) doom(class Class, root string, item entry) Class {
+	full := filepath.Join(root, filepath.FromSlash(item.rel))
+	class.Doomed++
+	class.Dead += item.size
+	f.doomed = append(f.doomed, full)
+	f.sizes[full] = item.size
+	return class
+}
+
+// gather walks a class and returns the row with every file it read, and every
+// file it could not.
+func gather(files Files, dir string, class Class, root string, rule scanRule) (Class, []entry) {
+	class.Path = label(dir, root)
+	names, problems := walk(files, dir, root, rule)
+	class.Problems = problems
+
+	entries := make([]entry, 0, len(names))
+	for _, rel := range names {
+		full := filepath.Join(root, filepath.FromSlash(rel))
+		size, err := files.Size(full)
+		if err != nil {
+			class.Problems = append(class.Problems, label(dir, full)+": "+oneLine(err.Error()))
+			continue
+		}
+		// A date nobody could read is not "old": without it the file cannot be
+		// ordered, so it leaves the class's count and the run says why.
+		at, err := files.ModTime(full)
+		if err != nil {
 			class.Problems = append(class.Problems, label(dir, full)+": "+oneLine(err.Error()))
 			continue
 		}
 		class.Files++
 		class.Bytes += size
+		entries = append(entries, entry{rel: rel, size: size, at: at})
 	}
-	return class
+	return class, entries
+}
+
+// treeOf is the record a file in the reviews directory belongs to: the tree hash
+// every name starts with.
+func treeOf(rel string) string {
+	if at := strings.Index(rel, "."); at > 0 {
+		return rel[:at]
+	}
+	return rel
+}
+
+// artifactOf is the file a backup saves, or false when the name is not a version
+// odachi wrote. The guess is refused on purpose: deleting a file somebody else
+// named would be exactly the mistake this verb exists to avoid.
+func artifactOf(rel string) (string, bool) {
+	dir, name := path.Split(rel)
+	artifact, ok := undo.SplitBackup(name)
+	if !ok {
+		return "", false
+	}
+	return path.Join(dir, artifact), true
+}
+
+// latest is when the most recent file of a group was written.
+func latest(items []entry) time.Time {
+	newest := time.Time{}
+	for _, item := range items {
+		if item.at.After(newest) {
+			newest = item.at
+		}
+	}
+	return newest
 }
 
 // matchesLegacy reports whether a name in the git directory is one of the notes
@@ -348,7 +610,7 @@ func state(files Files, dir, storeRoot string) Class {
 		Path:   label(dir, storeRoot),
 		Action: "never touched: the client choice and the lock",
 	}
-	for _, name := range []string{store.Agents, "lock"} {
+	for _, name := range []string{store.Agents, lock.File} {
 		full := filepath.Join(storeRoot, name)
 		exists, err := files.Exists(full)
 		if err != nil {
@@ -376,8 +638,8 @@ type scanRule struct {
 	files func(rel string) bool
 }
 
-// leavesOut reports whether a name at the first level of the walk is not part of
-// this class.
+// leavesOutDir reports whether a name at the first level of the walk is not part
+// of this class.
 func (r scanRule) leavesOutDir(name string) bool {
 	for _, dir := range r.dirs {
 		if name == dir {
@@ -450,6 +712,11 @@ func label(dir, at string) string {
 	return filepath.ToSlash(at)
 }
 
+// summary is the one line about odachi's own records.
+func summary(bytes int64, files int) string {
+	return fmt.Sprintf("odachi's records: %s in %d %s", sizeText(bytes), files, plural(files))
+}
+
 // joinAnd lists names the way a sentence does: commas between them and "and"
 // before the last one.
 func joinAnd(items []string) string {
@@ -491,6 +758,16 @@ func sizeText(bytes int64) string {
 	default:
 		return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
 	}
+}
+
+// withNotice puts the lock's announcement in front of the run's own answer.
+func withNotice(result Result, notice string) Result {
+	if notice == "" {
+		return result
+	}
+	result.Lines = append([]string{notice}, result.Lines...)
+	result.Message = notice + " " + result.Message
+	return result
 }
 
 // blocked is a Result with exit code 1.
