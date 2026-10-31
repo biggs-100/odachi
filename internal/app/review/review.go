@@ -3125,6 +3125,16 @@ func (r *runner) list() Result {
 			line += " · this tree"
 		}
 		lines = append(lines, line)
+		// A finding's identity is its severity, its path and its lens: the index
+		// says enough for a person to decide whether the verdict is worth reading,
+		// and the verdict's own file keeps the evidence verbatim.
+		for _, finding := range row.v.Findings {
+			causal := "follow-up"
+			if finding.Causal {
+				causal = "causal"
+			}
+			lines = append(lines, fmt.Sprintf("    %s %s %s:%d · %s", finding.Severity, causal, finding.Path, finding.Line, finding.Lens))
+		}
 	}
 	lines = append(lines, notes...)
 

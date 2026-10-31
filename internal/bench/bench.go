@@ -65,6 +65,11 @@ type Step struct {
 	Want int
 	// Then is what the sandbox does after this step, before the next one.
 	Then []Action
+	// Contains is text the output must carry. The exit code says whether a verb
+	// worked; it cannot say whether the sentence a journey exists for is still
+	// there, and a journey about a message that passes on the exit code alone
+	// passes when the message is gone.
+	Contains []string
 }
 
 // Journey is one journey: a name, why it exists, the state it starts from, and
@@ -202,7 +207,7 @@ func Journeys() []Journey {
 			Setup: []Action{gitInit()},
 			Steps: []Step{
 				{Args: startArgs(), Want: 0},
-				{Args: []string{"review", "--since", strings.Repeat("0", 40)}, Want: 1},
+				{Args: []string{"review", "--since", strings.Repeat("0", 40)}, Want: 1, Contains: []string{"odachi review --all"}},
 			},
 		},
 		{
@@ -221,7 +226,7 @@ func Journeys() []Journey {
 					}},
 				},
 				{Args: []string{"check", "--run", "true"}, Want: 0},
-				{Args: []string{"check"}, Want: 0},
+				{Args: []string{"check"}, Want: 0, Contains: []string{"review debt: 1 open row"}},
 			},
 		},
 	}

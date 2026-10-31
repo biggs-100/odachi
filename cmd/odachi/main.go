@@ -563,14 +563,14 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	if forms > 1 {
-		fmt.Fprintln(stderr, `odachi: --exec, --attach, --show, --all and --refute do not go together: choose a single form (odachi review | odachi review --exec "<command>" | odachi review --attach <file> | odachi review --show | odachi review --refute <verdict>)`)
+		fmt.Fprintln(stderr, `odachi: --exec, --attach, --show, --all and --refute do not go together: choose a single form (odachi review | odachi review --exec "<command>" | odachi review --attach <file> | odachi review --show | odachi review --all | odachi review --refute <verdict>)`)
 		return start.CodeBlocked
 	}
 
 	// --since corrects a verdict, so it belongs to the forms that produce one: a
 	// correction of a read-only form would be a flag nobody reads.
 	if opts.Since != "" && (opts.Show || opts.All || opts.Refute != "" || opts.Dismiss != "") {
-		fmt.Fprintln(stderr, "odachi: --since corrects a verdict; it does not go with --show, --refute or --dismiss")
+		fmt.Fprintln(stderr, "odachi: --since corrects a verdict; it does not go with --show, --all, --refute or --dismiss")
 		return start.CodeBlocked
 	}
 	// The base of a correction is the one its predecessor judged: a --base beside

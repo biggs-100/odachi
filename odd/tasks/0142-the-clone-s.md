@@ -10,9 +10,9 @@ R1 · "the clone's store has a door: every verdict it holds can be listed, and t
 - the bench measures the correction and the debt line, and the docs say so
 
 ## Steps
-- [ ] T1 · review --all lists every verdict in the store with its tree, base, lenses, findings and date   R1
-- [ ] T2 · review --show names the door when this tree has no verdict, and check suggests --since   R1
-- [ ] T3 · the bench measures the correction and the debt line, and the docs say so   R1
+- [x] T1 · review --all lists every verdict in the store with its tree, base, lenses, findings and date   R1 · tree:43c60f3f027143c6027133ff173ed4ef782b29a4
+- [x] T2 · review --show names the door when this tree has no verdict, and check suggests --since   R1
+- [x] T3 · the bench measures the correction and the debt line, and the docs say so   R1
 
 ## History
 L1 · "the clone's store has a door: every verdict it holds can be listed, and the verb that needs a tree hash names where to find it"

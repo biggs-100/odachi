@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/app/review"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
@@ -18,11 +19,13 @@ const storeOtherTree = "2222222222222222222222222222222222222222"
 // five facts that make one recognizable, and marks the one this worktree answers.
 func TestTheStoreHasADoor(t *testing.T) {
 	p := newProject()
-	older := verdictFor(t, storeOtherTree, "abc1234", []string{"reliability"},
+	// Two instants, because "newest first" is the promise that makes the listing
+	// useful and a fixture where both share one cannot fail on it.
+	older := verdictAt(t, storeOtherTree, "abc1234", now.Add(-time.Hour), []string{"reliability"},
 		domainreview.Pass{Path: "a.go", Lens: "reliability", Blob: gitBlob})
-	// The listing reads the store, not the worktree: seeding the files is the fact.
+	newer := verdictAt(t, currentTree, "abc1234", now, []string{"risk", "reliability"})
 	p.files.files[storePath(storeOtherTree)] = []byte(older)
-	p.files.files[storePath(currentTree)] = []byte(verdictFor(t, currentTree, "abc1234", []string{"risk", "reliability"}))
+	p.files.files[storePath(currentTree)] = []byte(newer)
 
 	result := p.run(review.Options{All: true})
 	if result.Code != review.CodeOK {
@@ -36,9 +39,10 @@ func TestTheStoreHasADoor(t *testing.T) {
 	if !strings.Contains(lines[0], "2 verdict(s)") {
 		t.Errorf("the header does not count the store: %q", lines[0])
 	}
-	// Newest first: the two fixtures share `now`, so the order is the store's, and
-	// what the test can pin is that both trees and their lenses are there.
 	joined := strings.Join(lines, "\n")
+	if first, second := strings.Index(joined, currentTree), strings.Index(joined, storeOtherTree); first < 0 || second < 0 || first > second {
+		t.Errorf("the listing is not newest first:\n%s", joined)
+	}
 	for _, want := range []string{currentTree, storeOtherTree, "risk, reliability", "reliability", "base abc1234"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("the listing does not carry %q:\n%s", want, joined)
@@ -84,4 +88,19 @@ func TestShowNamesTheDoor(t *testing.T) {
 	if !strings.Contains(lines, "1 other verdict") {
 		t.Errorf("the refusal does not count the others:\n%s", lines)
 	}
+}
+
+// verdictAt seals one verdict at an instant, so a test can pin an order.
+func verdictAt(t *testing.T, tree, base string, at time.Time, lenses []string, passes ...domainreview.Pass) string {
+	t.Helper()
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "before",
+		Model:    "other/model",
+		Lenses:   lenses,
+		Passes:   passes,
+	}, tree, base, at)
+	if err != nil {
+		t.Fatalf("sealing %s: %v", tree, err)
+	}
+	return string(domainreview.Render(sealed))
 }
