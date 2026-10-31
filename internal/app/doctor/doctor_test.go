@@ -232,11 +232,12 @@ func cleanProfiles() *fakeProfiles {
 type fakeAgentSelection struct {
 	stored  string
 	project string
+	skills  string
 	err     error
 }
 
 func (s fakeAgentSelection) Written(string) (persona.Store, error) {
-	return persona.Store{Agents: s.stored, ProjectAgents: s.project}, s.err
+	return persona.Store{Agents: s.stored, ProjectAgents: s.project, Skills: s.skills}, s.err
 }
 
 // run is one doctor over the given world.
@@ -1383,12 +1384,12 @@ func TestTheBlockIsComparedWithoutAProfileFile(t *testing.T) {
 	}
 }
 
-// TestAHomeScopeBlockIsCurrent: an adopted project writes the block for the
-// machine's copy, and the doctor cannot know which scope the project chose without
-// repeating the inference that wrote it. A home block is current, and the check
-// says so instead of advising an init that would write the same bytes again.
-func TestAHomeScopeBlockIsCurrent(t *testing.T) {
-	files := configured()
+// TestAHomeScopeBlockIsCurrentWhenTheMachineKeepsTheCraft: a project that adopted
+// odachi writes the block for the machine's copy. The doctor now asks the same scope
+// init asks -the store, then the adoption- so this block is current for the same
+// reason init wrote it: the craft lives in ~/.agents/skills and the project keeps none.
+func TestAHomeScopeBlockIsCurrentWhenTheMachineKeepsTheCraft(t *testing.T) {
+	files := withTheDoor(adopted(t))
 	home, err := rules.BlockFor(persona.Novato, persona.SkillsHome)
 	if err != nil {
 		t.Fatalf("BlockFor(home): %v", err)
@@ -1398,9 +1399,29 @@ func TestAHomeScopeBlockIsCurrent(t *testing.T) {
 	}
 	files.put("AGENTS.md", home)
 
-	got := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := runInARepository(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi", fakeGit{})
 
 	if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusOK {
-		t.Fatalf("a home-scope block was called older: %s", check.Detail)
+		t.Fatalf("a home-scope block in an adopted project was called wrong: %s", check.Detail)
+	}
+}
+
+// TestTheStoredScopeWinsOverTheCopyInTheTree: a project that recorded where its craft
+// lives keeps that answer even when the other folder is also there -the store is the
+// choice, and the copy is a fact about the disk-. The block is judged by the choice.
+func TestTheStoredScopeWinsOverTheCopyInTheTree(t *testing.T) {
+	files := configured()
+	files.put(".agents/skills/acceptance/SKILL.md", skill.Template("acceptance"))
+	home, err := rules.BlockFor(persona.Novato, persona.SkillsHome)
+	if err != nil {
+		t.Fatalf("BlockFor(home): %v", err)
+	}
+	files.put("AGENTS.md", home)
+
+	got := runSelected(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+		fakeAgentSelection{skills: persona.SkillsHome})
+
+	if check := checkOf(t, got, domaindoctor.CheckAgents); check.Status != domaindoctor.StatusOK {
+		t.Fatalf("the block the store chose was called wrong: %s", check.Detail)
 	}
 }

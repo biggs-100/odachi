@@ -123,3 +123,25 @@ func TestARepositoryDoctorCannotReadIsNotCalledAdopted(t *testing.T) {
 		t.Errorf("the note claims an adoption it could not read: %q", got.Detail)
 	}
 }
+
+// TestTheBlockMustNameTheCopyTheProjectChose: the block tells every agent where the
+// craft lives, and a block naming the other folder points at a copy nothing refreshes.
+// The doctor asks the same scope init asks -the store, then the adoption- so a project
+// that keeps the craft in the machine is told when its block still names the project's
+// copy, and the warning names the command that rewrites it.
+func TestTheBlockMustNameTheCopyTheProjectChose(t *testing.T) {
+	files := withTheDoor(adopted(t))
+	files.put("AGENTS.md", blockOf(persona.Novato)) // the block for the project's own copy
+
+	result := runInARepository(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi", fakeGit{})
+
+	got := checkOf(t, result, domaindoctor.CheckAgents)
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a block naming the project's copy passed in a project that keeps the craft in the machine: %s %s", got.Status, got.Detail)
+	}
+	for _, want := range []string{"~/.agents/skills", "odachi init"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("the warning must say %q: %q", want, got.Detail)
+		}
+	}
+}
