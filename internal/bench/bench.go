@@ -65,6 +65,11 @@ type Step struct {
 	Want int
 	// Then is what the sandbox does after this step, before the next one.
 	Then []Action
+	// Contains is text the output must carry. The exit code says whether a verb
+	// worked; it cannot say whether the sentence a journey exists for is still
+	// there, and a journey about a message that passes on the exit code alone
+	// passes when the message is gone.
+	Contains []string
 }
 
 // Journey is one journey: a name, why it exists, the state it starts from, and
@@ -185,6 +190,43 @@ func Journeys() []Journey {
 			Setup: []Action{gitInit(), {Path: "notas.md", Content: "# notas\n"}},
 			Steps: []Step{
 				{Args: []string{"check"}, Want: 2},
+			},
+		},
+		{
+			Name:  "review-la-puerta",
+			Why:   "the person needs the tree a verdict is named after and the store is empty: the door answers instead of failing",
+			Setup: []Action{gitInit()},
+			Steps: []Step{
+				{Args: startArgs(), Want: 0},
+				{Args: []string{"review", "--all"}, Want: 0},
+			},
+		},
+		{
+			Name:  "review-since-sin-veredicto",
+			Why:   "a correction names a tree the clone does not hold: the refusal has to name the command that lists the real ones",
+			Setup: []Action{gitInit()},
+			Steps: []Step{
+				{Args: startArgs(), Want: 0},
+				{Args: []string{"review", "--since", strings.Repeat("0", 40)}, Want: 1, Contains: []string{"odachi review --all"}},
+			},
+		},
+		{
+			Name:  "deuda-al-cerrar",
+			Why:   "the tree that closes a feature names the review debt it leaves, and a row never blocks it",
+			Setup: []Action{gitInit()},
+			Steps: []Step{
+				{Args: startArgs(), Want: 0},
+				{Args: []string{"plan", "un paso", "--req", "R1"}, Want: 0},
+				{
+					Args: []string{"plan", "--done", "T1"},
+					Want: 0,
+					Then: []Action{{
+						Path:    "docs/review-debt.md",
+						Content: "# Review debt\n\n## Open\n\n- **a.go:1** - a row.\n",
+					}},
+				},
+				{Args: []string{"check", "--run", "true"}, Want: 0},
+				{Args: []string{"check"}, Want: 0, Contains: []string{"review debt: 1 open row"}},
 			},
 		},
 	}

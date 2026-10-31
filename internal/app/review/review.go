@@ -17,6 +17,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -105,6 +106,10 @@ type Options struct {
 	Attach string
 	// Show reads this tree's verdict instead of producing one.
 	Show bool
+	// All lists every verdict the clone's store holds, newest first. The store is
+	// keyed by tree and a person needs a tree to correct or to compare, so the verb
+	// that prints one is the door to the others.
+	All bool
 	// Lens is the raw --lens value: one name, a comma list, or `all`. Empty means
 	// the lenses the evidence of the diff asks for, and nothing else.
 	Lens string
@@ -236,6 +241,8 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses, host Ho
 	switch {
 	case opts.Show:
 		return r.show()
+	case opts.All:
+		return r.list()
 	case opts.Dismiss != "":
 		return r.retire()
 	case opts.Refute != "":
@@ -1367,12 +1374,12 @@ func (r *runner) show() Result {
 			// The candidate could not be read: the lenses it asks for are
 			// unknown, and guessing them would answer a question the tool did
 			// not measure.
-			return missing(tree, nil, "")
+			return r.withDoor(tree, missing(tree, nil, ""))
 		}
 		required := r.requiredLenses(work)
 		result := missing(tree, required, domain.Reason(work.paths, work.diff))
 		result.Lines = append(result.Lines, r.modelPlan(required)...)
-		return result
+		return r.withDoor(tree, result)
 	}
 
 	parsed, err := domain.Parse(data)
@@ -2278,6 +2285,9 @@ func (r *runner) potentRows(verdictTree string, paths []string) (findings []doma
 // verdictName is the tree a store file names, when the name has the verdict's
 // shape: one hash and the .json suffix. Refutations end differently and are
 // read through their own path; anything else is not ours.
+// verdictName reports whether a store file name is a verdict and answers the tree
+// it is named after. A refutation, a scope record, a dismissal or a refused answer
+// lives beside the verdicts and is not one.
 func verdictName(name string) (string, bool) {
 	if !strings.HasSuffix(name, ".json") || strings.HasSuffix(name, ".refuted.json") {
 		return "", false
@@ -2630,7 +2640,16 @@ func (r *runner) sinceVerdict() (domain.Verdict, *Result) {
 	}
 	data, err := r.files.Read(r.storePath(rel))
 	if err != nil {
-		problem := blocked("there is no verdict for the tree --since names (" + tree + "): a correction completes an answer this clone holds, and odachi review --show names the one this tree has")
+		// The way out is the listing: the tree a correction needs is one verb away,
+		// and a refusal that names no command leaves the human reading a directory.
+		problem := Result{
+			Code:    CodeBlocked,
+			Message: "there is no verdict for the tree --since names (" + tree + ")",
+			Lines: []string{
+				"there is no verdict for the tree --since names (" + tree + "): a correction completes an answer this clone holds",
+				"next: odachi review --all",
+			},
+		}
 		return domain.Verdict{}, &problem
 	}
 	parsed, err := domain.Parse(data)
@@ -3038,6 +3057,120 @@ func counts(refutation domain.Refutation) (stands, refuted int) {
 		stands++
 	}
 	return stands, refuted
+}
+
+// list prints every verdict the clone's store holds, newest first. The store is
+// keyed by tree and nothing else lists it: a person who needs the tree a verdict is
+// named after -to correct it, or to read what it judged- would otherwise have to
+// read the store's directory by hand, which is not a door.
+func (r *runner) list() Result {
+	names, err := r.files.List(r.storePath(domain.Dir))
+	if err != nil {
+		return blocked("could not read the store's verdicts: " + oneLine(err.Error()) + "; check the permissions and run odachi review --all again")
+	}
+
+	type row struct {
+		tree string
+		v    domain.Verdict
+	}
+	var rows []row
+	var notes []string
+	for _, name := range names {
+		tree, isVerdict := verdictName(name)
+		if !isVerdict {
+			continue
+		}
+		data, err := r.files.Read(r.storePath(domain.Dir + "/" + name))
+		if err != nil {
+			notes = append(notes, "could not read "+name+": "+oneLine(err.Error()))
+			continue
+		}
+		parsed, err := domain.Parse(data)
+		if err != nil {
+			notes = append(notes, name+" is not a verdict: "+oneLine(err.Error()))
+			continue
+		}
+		rows = append(rows, row{tree: tree, v: parsed})
+	}
+
+	if len(rows) == 0 {
+		return Result{
+			Code:    CodeOK,
+			Message: "the store holds no verdict",
+			Lines:   append([]string{"the store holds no verdict"}, notes...),
+		}
+	}
+
+	sort.SliceStable(rows, func(i, j int) bool { return rows[i].v.At > rows[j].v.At })
+
+	here := ""
+	if tree, problem := r.treeHash(); problem == nil {
+		here = tree
+	}
+
+	lines := []string{fmt.Sprintf("%d verdict(s) in %s", len(rows), r.storeLabel(domain.Dir))}
+	for _, row := range rows {
+		line := row.tree + " · " + row.v.Verdict + " · " + strings.Join(row.v.Lenses, ", ")
+		if findings := len(row.v.Findings); findings > 0 {
+			line += fmt.Sprintf(" · %d finding(s)", findings)
+		}
+		line += " · " + row.v.At
+		if base := strings.TrimSpace(row.v.Base); base != "" {
+			line += " · base " + base
+		}
+		if reviewer := strings.TrimSpace(row.v.Reviewer); reviewer != "" {
+			line += " · " + reviewer
+		}
+		if row.tree == here {
+			line += " · this tree"
+		}
+		lines = append(lines, line)
+		// A finding's identity is its severity, its path and its lens: the index
+		// says enough for a person to decide whether the verdict is worth reading,
+		// and the verdict's own file keeps the evidence verbatim.
+		for _, finding := range row.v.Findings {
+			causal := "follow-up"
+			if finding.Causal {
+				causal = "causal"
+			}
+			lines = append(lines, fmt.Sprintf("    %s %s %s:%d · %s", finding.Severity, causal, finding.Path, finding.Line, finding.Lens))
+		}
+	}
+	lines = append(lines, notes...)
+
+	return Result{
+		Code:    CodeOK,
+		Message: fmt.Sprintf("%d verdict(s) in the store", len(rows)),
+		Lines:   lines,
+	}
+}
+
+// withDoor appends the listing's pointer to a result about one tree: the verb that
+// needs a tree hash is only useful if the human can find one.
+func (r *runner) withDoor(tree string, result Result) Result {
+	if line := r.doorLine(tree); line != "" {
+		result.Lines = append(result.Lines, line)
+	}
+	return result
+}
+
+// doorLine names the other verdicts the store holds, or nothing when this tree's is
+// the only one.
+func (r *runner) doorLine(except string) string {
+	names, err := r.files.List(r.storePath(domain.Dir))
+	if err != nil {
+		return ""
+	}
+	others := 0
+	for _, name := range names {
+		if tree, ok := verdictName(name); ok && tree != except {
+			others++
+		}
+	}
+	if others == 0 {
+		return ""
+	}
+	return fmt.Sprintf("the store holds %d other verdict(s): odachi review --all", others)
 }
 
 // missing is the answer for a tree without a verdict. When the candidate could

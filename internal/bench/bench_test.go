@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-// TestJourneysAreTheCorpusContractXVAsksFor: eight journeys, each one a name,
+// TestJourneysAreTheCorpusContractXVAsksFor: the corpus, each journey a name,
 // a reason and at least one measured invocation. A journey with no step would
 // measure nothing and pass for the wrong reason.
 func TestJourneysAreTheCorpusContractXVAsksFor(t *testing.T) {
 	journeys := Journeys()
-	if len(journeys) != 8 {
-		t.Fatalf("Contract XV fixes eight journeys, got %d", len(journeys))
+	if len(journeys) != 11 {
+		t.Fatalf("the corpus has eleven journeys, got %d", len(journeys))
 	}
 
 	want := []string{
@@ -23,6 +23,9 @@ func TestJourneysAreTheCorpusContractXVAsksFor(t *testing.T) {
 		"plan-y-undo",
 		"review-solo-docs",
 		"repo-sin-commits",
+		"review-la-puerta",
+		"review-since-sin-veredicto",
+		"deuda-al-cerrar",
 	}
 
 	seen := map[string]bool{}
@@ -66,9 +69,9 @@ func TestNamedFilters(t *testing.T) {
 		t.Fatalf("a typo must be reported: selected %v, unknown %v", names(selected), unknown)
 	}
 
-	all8, unknown := Named(all, nil)
-	if len(all8) != 8 || len(unknown) != 0 {
-		t.Fatalf("no filter means every journey, got %d", len(all8))
+	every, unknown := Named(all, nil)
+	if len(every) != 11 || len(unknown) != 0 {
+		t.Fatalf("no filter means every journey, got %d", len(every))
 	}
 }
 

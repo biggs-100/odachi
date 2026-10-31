@@ -243,6 +243,14 @@ func (r *runner) execute(journey benchcore.Journey) (result outcome) {
 		if code != step.Want {
 			result.surprises = append(result.surprises, fmt.Sprintf("step %d exited %d and expected %d", i+1, code, step.Want))
 		}
+		// The exit code says whether the verb worked, never whether the sentence the
+		// journey exists for is still there. A step that names text fails when the
+		// text is gone, which is the only way a journey about a message can fail.
+		for _, want := range step.Contains {
+			if !strings.Contains(output, want) {
+				result.surprises = append(result.surprises, fmt.Sprintf("step %d does not say %q", i+1, want))
+			}
+		}
 		if code != 0 {
 			result.blocks = append(result.blocks, block{journey: journey.Name, output: output})
 		}
@@ -401,7 +409,7 @@ func (r *runner) report() Result {
 	}
 
 	if len(surprises) > 0 {
-		lines = append(lines, fmt.Sprintf("surprises: %d steps did not exit the way the journey expected", len(surprises)))
+		lines = append(lines, fmt.Sprintf("surprises: %d steps did not behave the way the journey says", len(surprises)))
 	}
 
 	result.Message = verdict(result.DeadEnd, unmeasured)
