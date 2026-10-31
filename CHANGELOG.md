@@ -5,7 +5,7 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.76 - 2026-10-31
 
 The two rows the review of 0134 left are paid, and this repository declares its retention.
 
