@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The block names the copy of the craft the project actually keeps.
+
+- **`odachi doctor` refuses a block that names the other folder**: it asks the same scope `init` asks -the store's
+  choice, then the adoption of a repository that already lives- and the warning names the folder the block names, the
+  one the project keeps, and `odachi init`. A question that could not be read keeps both variants current, because a
+  failed read is not an absence.
+- **This repository stops carrying its own copy**: `.agents/skills` (15 tracked files) and `.opencode/opencode.json`
+  leave the tree, and `AGENTS.md` names `~/.agents/skills/`, the copy `setup` refreshes once per machine.
+- Why: the block is what tells every agent where the craft lives, and one naming a copy nothing refreshes sends the
+  agent to a folder that goes stale in silence. Both variants used to be current because the doctor could not know
+  which one `init` had chosen; the catalogue adoption already answers that, so it asks it.
+
 ## v0.11.79 - 2026-10-31
 
 The guard that decides whether an answer may merge into a stored verdict is one predicate, and a test pins it.

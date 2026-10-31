@@ -5,7 +5,7 @@ odachi is a binary and four plain-text artifacts —brief, task doc, proof and
 profile—. The binary enforces the gate; the artifacts are the memory. The human
 decides the vision and what is non-negotiable; the agent executes with craft. If
 you are unsure where the context lives: `brief.md` for the vision, `odd/tasks/` for the plan,
-the skills for the craft: `.agents/skills/`, this project's copy.
+the skills for the craft: `~/.agents/skills/`, the copy this machine keeps.
 
 Four hard rules. They are not advice: `odachi check` enforces them.
 
@@ -32,7 +32,7 @@ request body, a plan— lives in `.git/odachi/scratch/`, never in the tree and n
 loose in the git directory: the tree must stay clean, and a file with no folder is
 one nobody can find or empty again. `odachi clean --apply` empties that folder.
 
-Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual.
+Skills: the ones in `~/.agents/skills/`, the copy this machine keeps; inside this project, load `drive` before acting: it is the manual.
 
 ## The six verbs
 
