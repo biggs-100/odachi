@@ -1,3 +1,5 @@
+# odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken
+schema = 3
 # odachi: the review is the human's decision; on requires it in check, off leaves it optional
 mode = "on"
 # the biggest prompt this project pays a reviewer for; a reviewer that stalls at a size does not answer late
@@ -5,6 +7,10 @@ mode = "on"
 # measured 2026-10-31: feature 0132's prompt is 113.7 KB -1869 new lines of clean.go and its tests- and
 # 96 KB refused it before the call; the human raised the limit to 120 KB for this one
 max_prompt_kb = 120
+# odachi clean --apply keeps this many review records -the newest trees- and this many prompts
+# a prompt is the question, not the evidence: it is the biggest file in the store and nothing reads it
+keep_verdicts = 10
+keep_prompts = 0
 
 [lenses]
 risk = "opencode-go/mimo-v2.6-flash"

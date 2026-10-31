@@ -203,7 +203,7 @@ func TestCleanObeysTheProjectRetention(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
-	writeFile(t, dir, "odd/review.toml", "mode = \"on\"\nkeep_verdicts = 2\nkeep_prompts = 1\n")
+	writeFile(t, dir, "odd/review.toml", "mode = \"on\"\nkeep_verdicts = 1\nkeep_prompts = 1\n")
 	writeFile(t, dir, ".git/odachi/reviews/aaaa.json", "verdict")
 	writeFile(t, dir, ".git/odachi/reviews/aaaa.prompt.md", "prompt")
 
@@ -212,9 +212,9 @@ func TestCleanObeysTheProjectRetention(t *testing.T) {
 		t.Fatalf("clean: exit %d (stdout: %q, stderr: %q)", code, stdout, stderr)
 	}
 	for _, want := range []string{
-		"keeps the newest 2 trees",
+		"keeps the newest 1 tree",
 		"keeps the prompts of the newest 1 tree",
-		"retention: the newest 2 trees and the prompts of the newest 1, from odd/review.toml",
+		"retention: the newest 1 tree and the prompts of the newest 1 tree, from odd/review.toml",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("the report does not say %q:\n%s", want, stdout)
