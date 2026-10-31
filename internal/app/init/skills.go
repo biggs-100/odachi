@@ -85,7 +85,15 @@ func (r *runner) installSkills() {
 		r.skillBlocked = report.Blocked
 		r.skillNext = report.Next
 		r.skillFatal = report.Fatal
-		r.lines = append(r.lines, "pending: "+report.Blocked)
+		// The destination the scope chose is the one that matters: a failure there
+		// is a failure of the run, not something left pending for the next one. The
+		// line says which of the two it is, because a green run that names a folder
+		// nothing created is the state 0123 removed.
+		prefix := "pending: "
+		if report.Fatal {
+			prefix = "failed: "
+		}
+		r.lines = append(r.lines, prefix+report.Blocked)
 	}
 }
 

@@ -949,7 +949,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		NoProjectAgents: global,
 		Skills:          skillsScope,
 		Existing:        existing,
-	}, disk(dir), &initSkills{dir: dir})
+	}, disk(dir), &initSkills{dir: dir, verb: "odachi init"})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
 		result.Lines = append([]string{line}, result.Lines...)
@@ -1001,7 +1001,7 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 		Agents:   agents,
 		Home:     osHome{},
 		DryRun:   dryRun,
-	}, setupFiles(dryRun), &initSkills{dir: "."})
+	}, setupFiles(dryRun), &initSkills{dir: ".", verb: "odachi setup"})
 	return reportInit(result, asJSON, stdout, stderr)
 }
 
@@ -1044,6 +1044,9 @@ func (f *dryRunFiles) MakeExecutable(string) error { return nil }
 // error strings and its destination table for a job that is not its own.
 type initSkills struct {
 	dir string
+	// verb is the command this run is: the refusal names it, because a failed
+	// `setup` that says `init` sends the human to a command this run already did.
+	verb string
 }
 
 // Install writes the skills job the scope asks for and turns what pack reports
@@ -1054,17 +1057,17 @@ func (s initSkills) Install(scope string, dryRun bool) initapp.SkillReport {
 	if _, ok := bundledskills.Bootstrap(); !ok {
 		return initapp.SkillReport{
 			Blocked: "this binary does not carry the " + bundledskills.BootstrapName + " skill: it is an incomplete installation; download odachi again",
-			Next:    "odachi init",
+			Next:    s.verb,
 		}
 	}
 
 	if scope == persona.SkillsHome {
 		all, err := bundledskills.All()
 		if err != nil {
-			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: "odachi init"}
+			return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: s.verb}
 		}
 		home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload(all), DryRun: dryRun}, disk(s.dir), osHome{})
-		report := s.report([]pack.Result{home})
+		report := s.report(scope, scopedResult{scope: string(agent.ScopeHome), result: home})
 		if standard, err := agent.Resolve(agent.Standard); err == nil {
 			exists, err := (osFiles{}).Exists(filepath.Join(s.dir, filepath.FromSlash(standard.Dest)))
 			if err == nil && exists {
@@ -1076,7 +1079,7 @@ func (s initSkills) Install(scope string, dryRun bool) initapp.SkillReport {
 
 	curriculum, err := bundledskills.Curriculum()
 	if err != nil {
-		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: "odachi init"}
+		return initapp.SkillReport{Blocked: oneLine(err.Error()) + "; download odachi again", Next: s.verb}
 	}
 	bootstrap, _ := bundledskills.Bootstrap()
 
@@ -1085,14 +1088,25 @@ func (s initSkills) Install(scope string, dryRun bool) initapp.SkillReport {
 	// before a project exists the home is the only place a skill can live.
 	project := pack.Run(pack.Options{Agents: agent.Standard, Dir: s.dir, Skills: payload(curriculum), DryRun: dryRun}, disk(s.dir), osHome{})
 	home := pack.Run(pack.Options{Agents: agent.Standard, Scope: string(agent.ScopeHome), Dir: s.dir, Skills: payload([]bundledskills.Skill{bootstrap}), DryRun: dryRun}, disk(s.dir), osHome{})
-	return s.report([]pack.Result{project, home})
+	return s.report(scope,
+		scopedResult{scope: string(agent.ScopeProject), result: project},
+		scopedResult{scope: string(agent.ScopeHome), result: home},
+	)
+}
+
+// scopedResult is one pack run and the scope it was asked for. The scope decides
+// whether a failure there leaves the project without the craft.
+type scopedResult struct {
+	scope  string
+	result pack.Result
 }
 
 // report turns the pack results into one SkillReport. It is shared by the two
 // scopes so the failure sentences and the fatal rule cannot drift.
-func (s initSkills) report(results []pack.Result) initapp.SkillReport {
+func (s initSkills) report(scope string, results ...scopedResult) initapp.SkillReport {
 	report := initapp.SkillReport{}
-	for _, result := range results {
+	for _, scoped := range results {
+		result := scoped.result
 		for _, dest := range result.Dests {
 			report.Dests = append(report.Dests, initapp.SkillDest{
 				Label:     dest.Dest,
@@ -1105,23 +1119,16 @@ func (s initSkills) report(results []pack.Result) initapp.SkillReport {
 		if result.Code == pack.CodeOK || report.Blocked != "" {
 			continue
 		}
-		report.Blocked = blockedSkills(result)
-		report.Next = "odachi init"
-		// A destination inside the project leaves the project unready; the home
-		// is the only half whose failure does not fail the run.
-		report.Fatal = destScope(result) == string(agent.ScopeProject)
+		report.Blocked = blockedSkills(result, s.verb)
+		report.Next = s.verb
+		// The rule is the scope the run chose, not the folder that failed: a
+		// destination that failed for the scope this project asked for leaves it
+		// without the craft -the project's own copy, or the machine that is now
+		// the only place it lives. Any other destination is pending.
+		report.Fatal = scoped.scope == scope
 	}
 	report.Notice = append(report.Notice, s.otherProjectCopy()...)
 	return report
-}
-
-// destScope is the scope pack resolved for a run: the project copy says so, the
-// home copy says `home`, and a run with no destination falls back to the project.
-func destScope(result pack.Result) string {
-	for _, dest := range result.Dests {
-		return dest.Scope
-	}
-	return string(agent.ScopeProject)
 }
 
 // otherProjectCopy acknowledges a second project location: somebody who ran
@@ -1149,13 +1156,15 @@ func (s initSkills) otherProjectCopy() []string {
 }
 
 // blockedSkills is the sentence for a destination that could not be written:
-// the file, the reason the adapter gave, and the command that retries it.
-func blockedSkills(result pack.Result) string {
+// the file, the reason the adapter gave, and the command that retries it -the
+// verb that ran, because a failed `setup` that says `init` sends the human to a
+// command this run already did.
+func blockedSkills(result pack.Result, verb string) string {
 	for _, dest := range result.Dests {
 		if dest.Failure == nil {
 			continue
 		}
-		return "could not write " + dest.Failure.Path + ": " + dest.Failure.Reason + "; check the permissions and run odachi init again"
+		return "could not write " + dest.Failure.Path + ": " + dest.Failure.Reason + "; check the permissions and run " + verb + " again"
 	}
 	return oneLine(result.Message)
 }

@@ -49,9 +49,14 @@ func RunSetup(opts Options, files Files, skills Skills) Result {
 
 	// "No client found" is a fact about the machine, and this run does not have
 	// it when a folder could not be read: telling the human to install a client
-	// that may already be there is the same mistake as calling it absent.
+	// that may already be there is the same mistake as calling it absent. The
+	// bootstrap skill is named as installed only when this run installed it.
 	if len(clients) == 0 && len(r.unchecked) == 0 {
-		r.lines = append(r.lines, "no agent client found in the home: the bootstrap skill is installed; install OpenCode and run odachi setup again")
+		if r.skillBlocked == "" {
+			r.lines = append(r.lines, "no agent client found in the home: the bootstrap skill is installed; install OpenCode and run odachi setup again")
+		} else {
+			r.lines = append(r.lines, "no agent client found in the home: install OpenCode and run odachi setup again")
+		}
 	}
 
 	result := r.result()
