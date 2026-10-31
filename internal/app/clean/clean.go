@@ -165,8 +165,9 @@ func (r Report) Lines() []string {
 	}
 	lines = append(lines, "", "  old agent notes are "+joinAnd(legacyPaths))
 	if r.LimitsFrom != "" {
-		lines = append(lines, "", "  retention: the newest "+strconv.Itoa(r.KeepVerdicts)+" trees and the prompts of the newest "+
-			strconv.Itoa(r.KeepPrompts)+", from "+r.LimitsFrom)
+		lines = append(lines, "", "  retention: the newest "+strconv.Itoa(r.KeepVerdicts)+" "+plural2(r.KeepVerdicts, "tree")+
+			" and the prompts of the newest "+strconv.Itoa(r.KeepPrompts)+" "+plural2(r.KeepPrompts, "tree")+
+			", from "+r.LimitsFrom)
 	}
 	if len(r.Problems) > 0 {
 		lines = append(lines, "")
