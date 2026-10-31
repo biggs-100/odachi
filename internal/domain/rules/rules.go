@@ -74,6 +74,11 @@ implemented: an answer is not a proposal, and work starts when the human asks fo
 approves one. An irreversible action —push, pull request, merge, tag or release, an
 install, another folder— names its exact target and waits for a yes. Ask at the gate,
 once: a question that would not change what you do next is noise.
+
+One more, about scratch. The note you write while you work —a commit message, a pull
+request body, a plan— lives in ` + "`.git/odachi/scratch/`" + `, never in the tree and never
+loose in the git directory: the tree must stay clean, and a file with no folder is
+one nobody can find or empty again. ` + "`odachi clean --apply`" + ` empties that folder.
 `
 	headTail = `
 ## The six verbs
