@@ -220,8 +220,9 @@ func Run(opts Options, files Files, skills Skills) Result {
 		return *problem
 	}
 	r.projectAgents = r.resolveProjectAgents(opts)
-	r.skillsScope = r.resolveSkillsScope(opts)
-	r.skillsSource = r.resolveSkillsSource(opts)
+	// Where the craft lives is one decision, and persona owns it: `role` weighs
+	// the same three facts, and the two verbs must not answer differently.
+	r.skillsScope, r.skillsSource = persona.SkillsScope{Stored: r.storedSkills, Flag: opts.Skills, Adopted: r.minimal}.Resolve()
 	// The store records decisions, never inferences. A flag names one, and only
 	// the flags are written when the footprint was inferred: otherwise the next
 	// plain init would read a choice nobody made.
@@ -432,46 +433,14 @@ func (r *runner) resolveProjectAgents(opts Options) string {
 	}
 }
 
-// resolveSkillsScope decides where the craft lives, by the same rule: --skills
-// wins and is recorded, the stored answer stands when the flag is silent, a
-// repository that already lives leaves the craft in the machine, and a project
-// that never chose keeps the project copy.
-func (r *runner) resolveSkillsScope(opts Options) string {
-	switch {
-	case strings.TrimSpace(opts.Skills) != "":
-		return strings.ToLower(strings.TrimSpace(opts.Skills))
-	case r.storedSkills != "":
-		return r.storedSkills
-	case r.minimal:
-		return persona.SkillsHome
-	default:
-		return persona.SkillsProject
-	}
-}
+// resolveSkillsScope decided where the craft lives. It is persona's decision now
+// (persona.SkillsScope), because `role` asks the same question about the same
+// project and a second copy of the rule would let the two disagree.
 
-// The five answers to "who decided where the craft goes", spelled once so the
-// output and the tests name the same thing.
-const (
-	skillsFromFlag     = "flag"
-	skillsFromStore    = "store"
-	skillsFromDefault  = "default"
-	skillsFromSetup    = "setup"
-	skillsFromAdoption = "adoption"
-)
-
-// resolveSkillsSource says who decided where the craft goes.
-func (r *runner) resolveSkillsSource(opts Options) string {
-	switch {
-	case strings.TrimSpace(opts.Skills) != "":
-		return skillsFromFlag
-	case r.storedSkills != "":
-		return skillsFromStore
-	case r.minimal:
-		return skillsFromAdoption
-	default:
-		return skillsFromDefault
-	}
-}
+// skillsFromSetup is the fifth answer to "who decided where the craft goes", and
+// the only one `setup` can give: before a project exists the home is the only
+// place a skill can live, so the verb does not weigh any facts.
+const skillsFromSetup = "setup"
 
 // writeAgentStore persists the choice only when someone made it: an explicit
 // flag, or a store that already exists. A project that never chose keeps no file
