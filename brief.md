@@ -1,13 +1,13 @@
-# odachi-clean-reports
+# a-verdict-carries
 
 ## What must exist
-- odachi clean reports every class of artifact in a clone with its owner, its size and what it would do, and applies retention only to the classes odachi itself wrote
+- a verdict carries the rows of the paths it judged and nothing else, so its size does not grow with the store
 
 ## Done when
-- odachi clean prints every class with its owner, its file count and its size, and names a path it could not read instead of counting it as empty
-- odachi clean --apply leaves the newest review records and the newest backups and deletes nothing outside the store: git's files, another tool's files, proof/ and odd/ stay byte-identical
-- odachi clean --apply --legacy removes the old agent scratch files in .git/ after naming them, and --apply without --legacy leaves them
-- the block says where an ad-hoc note goes, and odachi clean empties that folder
+- a review of a candidate carries at most one row per changed path per lens, so a verdict stops growing with the store
+- the gate still finds a current answer for every changed path, and an earlier verdict's row is still inherited when its path is in the candidate
+- the prompt still names the rows of the changed paths, and a store written by the previous release is read unchanged: no verdict is rewritten
+- three reviews in a row over one file leave three verdicts whose size does not grow
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
@@ -17,4 +17,4 @@
 - It is used from the phone and the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que borrar exige un dueno declarado y una vida util por clase.
+- Wants to learn: por que acotar por la pregunta que se hace sale mas barato que deduplicar.

@@ -55,20 +55,20 @@ func (v Verdict) InspectionCoverage(paths []string) (missing, foreign []string) 
 
 	declared := make(map[string]bool, len(v.Inspection.Paths))
 	for _, path := range v.Inspection.Paths {
-		declared[findingPath(path)] = true
+		declared[RowPath(path)] = true
 	}
 	changed := make(map[string]bool, len(paths))
 	for _, path := range paths {
-		changed[findingPath(path)] = true
+		changed[RowPath(path)] = true
 	}
 
 	for _, path := range paths {
-		if !declared[findingPath(path)] {
+		if !declared[RowPath(path)] {
 			missing = append(missing, path)
 		}
 	}
 	for _, path := range v.Inspection.Paths {
-		if !changed[findingPath(path)] {
+		if !changed[RowPath(path)] {
 			foreign = append(foreign, path)
 		}
 	}
@@ -110,7 +110,7 @@ func validateInspection(inspection *Inspection) error {
 		if strings.TrimSpace(path) == "" {
 			return fmt.Errorf(`the inspection names an empty path: list the changed paths as the candidate names them`)
 		}
-		canonical := findingPath(path)
+		canonical := RowPath(path)
 		if seen[canonical] {
 			return fmt.Errorf(`the inspection names %q twice: the list is a set, and a path counted twice says nothing`, path)
 		}
@@ -138,7 +138,7 @@ func MergeInspection(existing, incoming *Inspection) *Inspection {
 	merged := &Inspection{Status: InspectionCompleted}
 	seen := make(map[string]bool, len(existing.Paths)+len(incoming.Paths))
 	for _, path := range append(append([]string{}, existing.Paths...), incoming.Paths...) {
-		canonical := findingPath(path)
+		canonical := RowPath(path)
 		if seen[canonical] {
 			continue
 		}

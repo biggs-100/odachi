@@ -80,7 +80,7 @@ func rowCovered(v Verdict, path, lens, blob string) bool {
 // same specialist, and the same bytes. A receipt for other bytes is the potency
 // boundary — the answer is dead — and an absent receipt answers nothing.
 func sameRow(answerPath, answerLens, answerBlob, path, lens, blob string) bool {
-	if findingPath(answerPath) != findingPath(path) {
+	if RowPath(answerPath) != RowPath(path) {
 		return false
 	}
 	if !strings.EqualFold(strings.TrimSpace(answerLens), lens) {
@@ -89,9 +89,10 @@ func sameRow(answerPath, answerLens, answerBlob, path, lens, blob string) bool {
 	return strings.TrimSpace(answerBlob) != "" && strings.TrimSpace(answerBlob) == blob
 }
 
-// findingPath is one path in the spelling coverage compares: forward slashes
-// and lower case, so Windows and Linux name the same file the same way.
-func findingPath(path string) string {
+// RowPath is one path in the spelling coverage and the store compare: forward
+// slashes and lower case, so Windows and Linux name the same file the same way,
+// and two places that ask "is this the same path" cannot answer differently.
+func RowPath(path string) string {
 	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(path), "\\", "/"))
 }
 

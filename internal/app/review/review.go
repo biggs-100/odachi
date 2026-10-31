@@ -361,17 +361,14 @@ func (r *runner) promptFor(cand candidate, selected []string) (string, *Result) 
 	// The store's potent rows are part of the question: a reviewer that knows
 	// which findings are already carried files no duplicates, and a review fresh
 	// from scratch would re-litigate bytes nobody changed.
-	// The memory the prompt needs is the part this review can act on: every finding,
-	// because a known defect must not be re-raised as new, and the clean rows of the
-	// paths this candidate changed, because a clean row about an untouched path is
-	// evidence for a review that already happened. The store keeps every row and the
-	// verdict inherits them all; this cut is the prompt's alone, measured at ~40 % of
-	// its bytes in 0104.
-	known, cleanRows, _, problem := r.potentRows(cand.tree)
+	// The memory the prompt needs is the part this review can act on: the rows of
+	// the paths this candidate changed. potentRows bounds them there for the prompt
+	// and for the verdict alike, so the store is read once and the cut is one rule
+	// in one place.
+	known, cleanRows, _, problem := r.potentRows(cand.tree, cand.paths)
 	if problem != nil {
 		return "", problem
 	}
-	cleanRows = knownCleanRows(cleanRows, cand.paths)
 
 	// The prompt must not claim the evidence chose lenses somebody added: the
 	// lenses section states what the evidence asked for and what --lens added on
@@ -1448,7 +1445,7 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	var downgraded int
 	stamped.Findings, downgraded = domain.Earned(stamped.Findings, floor)
 
-	stamped, carried, notes, problem := r.inherit(stamped, tree)
+	stamped, carried, notes, problem := r.inherit(stamped, tree, work.paths)
 	if problem != nil {
 		return *problem
 	}
@@ -1920,8 +1917,8 @@ type carriedRows struct {
 // that verdict, and the answer is dead. A finding refuted with evidence dies
 // with its verdict — a refutation is index-based and answers about one
 // verdict's findings, so it never travels.
-func (r *runner) inherit(verdict domain.Verdict, tree string) (domain.Verdict, carriedRows, []string, *Result) {
-	knowFindings, knowPasses, notes, problem := r.potentRows(tree)
+func (r *runner) inherit(verdict domain.Verdict, tree string, paths []string) (domain.Verdict, carriedRows, []string, *Result) {
+	knowFindings, knowPasses, notes, problem := r.potentRows(tree, paths)
 	if problem != nil {
 		return domain.Verdict{}, carriedRows{}, nil, problem
 	}
@@ -2002,12 +1999,24 @@ func (r *runner) dismissedRows(tree string) (domain.Dismissals, string) {
 	return parsed, ""
 }
 
-// potentRows is what the store holds potent right now: rows of previous
-// verdicts whose receipts still describe what git measures, minus the findings
-// the refuter killed with evidence. `notes` reports neighbor files that could
-// not be read so neither — a broken neighbor never blocks a verdict, but
-// nobody is told it said nothing.
-func (r *runner) potentRows(verdictTree string) (findings []domain.Finding, passes []domain.Pass, notes []string, problem *Result) {
+// potentRows is what the store holds potent right now, bounded by what this
+// candidate can act on: the paths its diff changes. `notes` reports neighbor
+// files that could not be read so neither — a broken neighbor never blocks a
+// verdict, but nobody is told it said nothing.
+//
+// The bound is the whole reason a verdict's size follows the candidate and not
+// the store. The gate only asks about the changed paths, so a clean row about a
+// path the diff never touches is evidence for a review that already happened;
+// carrying it would make every verdict the size of the store -769 rows where 15
+// mattered, measured on 0132-. A finding is not that kind of row: a blocker still
+// stands about a path nobody touched this time, so it travels wherever it stands.
+func (r *runner) potentRows(verdictTree string, paths []string) (findings []domain.Finding, passes []domain.Pass, notes []string, problem *Result) {
+	touched := make(map[string]bool, len(paths))
+	for _, path := range paths {
+		touched[domain.RowPath(path)] = true
+	}
+	acts := func(path string) bool { return touched[domain.RowPath(path)] }
+
 	names, err := r.files.List(r.storePath(domain.Dir))
 	if err != nil {
 		problem := blocked(fmt.Sprintf("could not read the review store to weigh the potent rows: %s; I wrote nothing", oneLine(err.Error())))
@@ -2069,6 +2078,12 @@ func (r *runner) potentRows(verdictTree string) (findings []domain.Finding, pass
 			if !domain.IsLens(finding.Lens) || strings.TrimSpace(finding.Blob) == "" {
 				continue
 			}
+			// A finding travels when this candidate judged its path, or when it
+			// still blocks: a standing blocker is the reason not to ship, not an
+			// answer about bytes somebody already read.
+			if !acts(finding.Path) && !finding.Blocks() {
+				continue
+			}
 			if domain.IsDismissed(finding) {
 				if strings.TrimSpace(finding.Reason) == "" {
 					continue
@@ -2089,6 +2104,9 @@ func (r *runner) potentRows(verdictTree string) (findings []domain.Finding, pass
 
 		for _, pass := range origin.Passes {
 			if !domain.IsLens(pass.Lens) || strings.TrimSpace(pass.Blob) == "" {
+				continue
+			}
+			if !acts(pass.Path) {
 				continue
 			}
 			blob, err := measure(pass.Path)
@@ -2328,29 +2346,6 @@ func (r *runner) scopeLine(tree string) (string, bool) {
 // for the same scope write the same bytes.
 func inOrderLenses(lenses []string) []string {
 	return domain.Add(lenses, nil)
-}
-
-// knownCleanRows is the clean memory this candidate can use: the rows about a path it
-// changed. A pass says "this file was read and nothing was found", which matters when
-// the file is in the diff and is noise when it is not - 99.7 % of the carried passes
-// name a path the candidate never touched. The store is not touched: potentRows reads it
-// whole, and the verdict inherits every row.
-func knownCleanRows(passes []domain.Pass, paths []string) []domain.Pass {
-	if len(passes) == 0 {
-		return passes
-	}
-	changed := make(map[string]bool, len(paths))
-	for _, path := range paths {
-		changed[strings.TrimSpace(path)] = true
-	}
-
-	kept := make([]domain.Pass, 0, len(passes))
-	for _, pass := range passes {
-		if changed[strings.TrimSpace(pass.Path)] {
-			kept = append(kept, pass)
-		}
-	}
-	return kept
 }
 
 // lensBodies loads the prompts of the selected lenses through the port.

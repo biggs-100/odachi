@@ -2,6 +2,7 @@ package review_test
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -1781,6 +1782,157 @@ func TestTheStoreLendsItsPotentRows(t *testing.T) {
 		return strings.Contains(line, "carried from the store")
 	}) {
 		t.Errorf("lines %v do not say what the verdict carried", result.Lines)
+	}
+}
+
+// TestAVerdictCarriesThePathsOfItsCandidate: the store lends this candidate the
+// rows it can act on. A clean row about a path the diff never touches is evidence
+// for a review that already happened, and a warning about one is information
+// nobody can act on now; carrying them makes every verdict the size of the store
+// -769 rows where 15 mattered, measured on 0132-.
+func TestAVerdictCarriesThePathsOfItsCandidate(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob, "otro.go": gitBlob}
+	prev := domainreview.Verdict{
+		Reviewer: "claude",
+		Verdict:  domainreview.Approved,
+		Passes: []domainreview.Pass{
+			{Path: "a.go", Blob: gitBlob, Lens: "reliability"},
+			{Path: "otro.go", Blob: gitBlob, Lens: "readability"},
+		},
+		Findings: []domainreview.Finding{
+			{Path: "otro.go", Line: 9, Severity: domainreview.Warning, Causal: true, Why: "un aviso", Blob: gitBlob, Lens: "reliability"},
+		},
+	}
+	sealed, err := domainreview.Seal(prev, otherTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the previous verdict: %v", err)
+	}
+	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
+
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	for _, pass := range stored.Passes {
+		if pass.Path == "otro.go" {
+			t.Errorf("the verdict carries a clean row about otro.go, a path this candidate never touched")
+		}
+	}
+	if !slices.ContainsFunc(stored.Passes, func(pass domainreview.Pass) bool { return pass.Path == "a.go" }) {
+		t.Errorf("passes = %+v, want the row about the path the candidate judged", stored.Passes)
+	}
+	for _, finding := range stored.Findings {
+		if finding.Path == "otro.go" {
+			t.Errorf("the verdict carries a warning about otro.go, a path this candidate never touched: %+v", finding)
+		}
+	}
+}
+
+// TestABlockerTravelsWhereverItStands: a causal BLOCKER about a file this
+// candidate never touches still travels. It is not a row about bytes somebody
+// read; it is the reason not to ship, and dropping it would make the gate forget
+// a defect nobody fixed.
+func TestABlockerTravelsWhereverItStands(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob, "otro.go": gitBlob}
+	prev := domainreview.Verdict{
+		Reviewer: "claude",
+		Verdict:  domainreview.ChangesRequested,
+		Passes: []domainreview.Pass{
+			{Path: "a.go", Blob: gitBlob, Lens: "reliability"},
+		},
+		Findings: []domainreview.Finding{
+			{Path: "otro.go", Line: 4, Severity: domainreview.Critical, Causal: true, Why: "pierde el turno", Blob: gitBlob, Lens: "reliability"},
+		},
+	}
+	sealed, err := domainreview.Seal(prev, otherTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the previous verdict: %v", err)
+	}
+	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
+
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
+	if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if !slices.ContainsFunc(stored.Findings, func(finding domainreview.Finding) bool {
+		return finding.Path == "otro.go" && finding.Severity == domainreview.Critical
+	}) {
+		t.Errorf("findings = %+v, want the standing blocker carried", stored.Findings)
+	}
+}
+
+// TestThreeReviewsInARowLeaveVerdictsThatDoNotGrow: the bound is what turns the
+// store's growth from the square of the reviews into the size of each candidate.
+// The store starts with a verdict about two hundred files nobody will touch, and
+// three candidates change one file each: every verdict stays the size of its own
+// rows, and the gate answered every changed path -a run that stored is a run the
+// coverage check let through.
+func TestThreeReviewsInARowLeaveVerdictsThatDoNotGrow(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+
+	seed := domainreview.Verdict{Reviewer: "claude", Verdict: domainreview.Approved}
+	for i := 0; i < 200; i++ {
+		path := fmt.Sprintf("viejo/%03d.go", i)
+		p.git.blobs[path] = gitBlob
+		seed.Passes = append(seed.Passes, domainreview.Pass{Path: path, Blob: gitBlob, Lens: "readability"})
+	}
+	sealed, err := domainreview.Seal(seed, otherTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the seed verdict: %v", err)
+	}
+	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
+	if len(p.files.files[storePath(otherTree)]) < 20*1024 {
+		t.Fatalf("the seed verdict is %d bytes; the test needs a store that would have grown the old copy", len(p.files.files[storePath(otherTree)]))
+	}
+
+	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`
+
+	sizes := []int{}
+	trees := []string{strings.Repeat("a", 40), strings.Repeat("b", 40), strings.Repeat("c", 40)}
+	blobs := []string{strings.Repeat("1", 40), strings.Repeat("2", 40), strings.Repeat("3", 40)}
+	for i, tree := range trees {
+		p.git.tree = tree
+		p.git.blobs["a.go"] = blobs[i]
+		if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
+			t.Fatalf("review %d: code = %d, want 0 (%s)", i+1, result.Code, result.Message)
+		}
+		stored, ok := p.files.files[storePath(tree)]
+		if !ok {
+			t.Fatalf("review %d stored no verdict for %s", i+1, tree)
+		}
+		sizes = append(sizes, len(stored))
+
+		parsed, err := domainreview.Parse(stored)
+		if err != nil {
+			t.Fatalf("verdict %d does not parse: %v", i+1, err)
+		}
+		for _, pass := range parsed.Passes {
+			if strings.HasPrefix(pass.Path, "viejo/") {
+				t.Fatalf("verdict %d carries %s, a path its candidate never touched", i+1, pass.Path)
+			}
+		}
+	}
+
+	for i, size := range sizes {
+		if size >= 4096 {
+			t.Errorf("verdict %d is %d bytes; the bound keeps it the size of its own rows, not the store's", i+1, size)
+		}
+	}
+	if sizes[2] > sizes[0] {
+		t.Errorf("verdict sizes %v: the third grew over the first, so the store still copies itself forward", sizes)
 	}
 }
 
