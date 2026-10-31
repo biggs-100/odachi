@@ -1,13 +1,14 @@
-# the-two-rows
+# a-review-whose
 
 ## What must exist
-- the two rows the review of 0134 left are paid, and this repository's review.toml declares the retention it obeys
+- a review whose prompt does not fit the project's limit is split into parts that do, and one verdict answers the tree
 
 ## Done when
-- the retention line reads 'the newest 1 tree' and 'the prompts of the newest 1 tree', with the test that pins it
-- the doc comment of TestReviewModeOnMakesCheckRequireTheVerdict names its own function again
-- this repository's odd/review.toml says schema 3 and carries keep_verdicts and keep_prompts
-- both rows leave docs/review-debt.md, and the changelog says what changed
+- a candidate whose prompt exceeds max_prompt_kb is sent as parts under the limit, and the store holds one verdict for the tree
+- every changed path is answered by exactly one part, and the verdict's coverage is complete
+- a single file whose diff alone exceeds the limit is refused, naming the file
+- a candidate under the limit runs as before: one reviewer, one prompt, nothing extra written
+- the prompt says which part it is, and the changelog and the ADR say why
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
@@ -17,4 +18,4 @@
 - It is used from the phone and the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que una fila de deuda se paga con su test o no se paga.
+- Wants to learn: por que partir por el limite medido es mejor que pedirle al revisor que no se cuelgue.
