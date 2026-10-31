@@ -52,9 +52,12 @@ func presetFor(selection string) (preset, bool) {
 	return preset{}, false
 }
 
-// rulesFor turns the selected non-goals into fence rules, one per selection in
-// the order the human chose them. A preset brings its catalog paths and deps; a
-// free-text non-goal becomes "<slug>*".
+// rulesFor turns the selected non-goals into fence rules, one per selection that
+// carries paths, in the order the human chose them. A preset brings its catalog
+// paths and deps. A phrase brings nothing: a rule protects files, and a glob of the
+// phrase's own words matches files named like the phrase and protects nothing -the
+// fence's own header says so, and `renderFence` carries the phrase as a template
+// for the human to complete instead.
 func rulesFor(selections []string) []fence.Rule {
 	rules := []fence.Rule{}
 	seen := map[string]bool{}
@@ -65,32 +68,24 @@ func rulesFor(selections []string) []fence.Rule {
 			continue
 		}
 
-		if p, ok := presetFor(text); ok {
-			if seen[p.key] {
-				continue
-			}
-			seen[p.key] = true
-			rules = append(rules, fence.Rule{Not: p.key, Paths: p.paths, Deps: p.deps})
+		p, ok := presetFor(text)
+		if !ok {
 			continue
 		}
-
-		slug := slugify(text)
-		if slug == "" {
+		if seen[p.key] {
 			continue
 		}
-		if seen[slug] {
-			continue
-		}
-		seen[slug] = true
-		rules = append(rules, fence.Rule{Not: text, Paths: []string{slug + "*"}})
+		seen[p.key] = true
+		rules = append(rules, fence.Rule{Not: p.key, Paths: p.paths, Deps: p.deps})
 	}
 
 	return rules
 }
 
-// looseNonGoals is the non-goals that arrived as free text. Their rule is a glob of
-// the phrase's own words, and no repository names a file like that, so the fence
-// rule protects nothing until a person writes the paths or deps it meant.
+// looseNonGoals is the non-goals that arrived as free text. A rule protects files,
+// so a phrase becomes a commented template with the paths left to fill: writing it
+// as a glob of its own words would be a rule that protects nothing and passes for a
+// promise.
 func looseNonGoals(selections []string) []string {
 	var loose []string
 	for _, selection := range selections {
@@ -106,10 +101,11 @@ func looseNonGoals(selections []string) []string {
 	return loose
 }
 
-// renderFence writes the fence in the canonical TOML shape: one [[rule]] per
-// non-goal, one key per line.
-func renderFence(rules []fence.Rule) string {
-	if len(rules) == 0 {
+// renderFence writes the fence in the canonical TOML shape: one [[rule]] per rule,
+// one key per line, and, for every non-goal that arrived as a phrase, the commented
+// block that turns it into one when the human knows the paths.
+func renderFence(rules []fence.Rule, loose []string) string {
+	if len(rules) == 0 && len(loose) == 0 {
 		// An empty file teaches nothing. The fence is the mechanism that keeps
 		// scope small, so when the human chose no exclusion the file explains
 		// what it is for and what a rule looks like.
@@ -135,6 +131,23 @@ func renderFence(rules []fence.Rule) string {
 		fmt.Fprintf(&out, "%-5s = %s\n", "not", strconv.Quote(rule.Not))
 		fmt.Fprintf(&out, "%-5s = %s\n", "paths", quoteList(rule.Paths))
 		fmt.Fprintf(&out, "%-5s = %s\n", "deps", quoteList(rule.Deps))
+	}
+
+	for _, text := range loose {
+		if out.Len() > 0 {
+			out.WriteString("\n")
+		}
+		// A comment, not a rule: this fence holds only what somebody gave paths
+		// for, and the absence of a path is a question, not a policy.
+		out.WriteString("# This non-goal has no paths yet:\n")
+		out.WriteString("#   " + text + "\n")
+		out.WriteString("# A rule protects files: write what it must keep out of the tree, then\n")
+		out.WriteString("# remove the '#' in front of the four lines below.\n")
+		out.WriteString("#\n")
+		out.WriteString("# [[rule]]\n")
+		fmt.Fprintf(&out, "# %-5s = %s\n", "not", strconv.Quote(text))
+		out.WriteString("# paths = []\n")
+		out.WriteString("# deps  = []\n")
 	}
 
 	return out.String()
@@ -213,12 +226,13 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	if problem := r.refreshVoice(); problem != nil {
 		return *problem
 	}
-	// The fence is written from the non-goals, and a non-goal in free text becomes a
-	// glob of its own words: a rule that matches no real path. It protects nothing,
-	// and a fence nobody can trust is worse than no fence. The run says so, once per
-	// rule, instead of letting the file pass for a promise.
+	// The fence is written from the non-goals, and a non-goal that arrives as a
+	// phrase is not a rule: it protects no path, so the file carries it as a
+	// template and the run says what to write. A rule nobody can trust is worse
+	// than a rule that is still a question.
 	rules := rulesFor(in.nonGoals)
-	if problem := r.put(fenceFile, []byte(renderFence(rules))); problem != nil {
+	loose := looseNonGoals(in.nonGoals)
+	if problem := r.put(fenceFile, []byte(renderFence(rules, loose))); problem != nil {
 		return *problem
 	}
 
@@ -254,11 +268,10 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	if reused != "" {
 		lines = append(lines, reused)
 	}
-	loose := looseNonGoals(in.nonGoals)
 	for _, text := range loose {
 		lines = append(lines, fmt.Sprintf(
-			"the non-goal %q came as free text, so the fence wrote %q: a glob of its own words, which matches files named like that phrase and not the code you meant. Write what it has to protect in %s (paths = [...], deps = [...])",
-			text, slugify(text)+"*", filepath.ToSlash(fenceFile)))
+			"the non-goal %q came as free text: a rule protects files, and a phrase names none, so %s carries it as a template; write the paths it must keep out and remove the '#' in front of the block",
+			text, filepath.ToSlash(fenceFile)))
 	}
 	if len(loose) > 0 {
 		lines = append(lines, "to prove a rule works: touch a path it protects and run odachi check - it must refuse")
