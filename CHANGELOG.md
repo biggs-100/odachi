@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A verdict carries the rows of the paths it judged, so it stops growing with the store.
+
+- **The store stopped copying itself forward.** A verdict inherited every potent row in the store: 126 KB
+  and 769 clean rows, where 15 named a file the candidate changed. A review now inherits the rows of the
+  paths its diff touches -before hashing them, so it no longer pays a git call per untouched row- and the
+  prompt's own cut goes away: one rule, one place. The same verdict, bounded, is about 4.8 KB.
+- **A standing blocker still travels.** A causal `BLOCKER` or `CRITICAL` about a file the candidate never
+  touches is not a row about bytes somebody read; it is the reason not to ship, and it keeps blocking until
+  it is fixed or refuted. `Finding.Blocks` is now the one definition of that rule.
+- **Nothing old is rewritten.** A store from an earlier release keeps its copies; the bound applies to what
+  is written from now on, and `odachi clean`'s retention retires the old ones.
+
 ## v0.11.73 - 2026-10-31
 
 `odachi clean` names what a clone accumulates, and removes only what odachi wrote.
