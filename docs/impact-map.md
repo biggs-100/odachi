@@ -217,10 +217,13 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
   the guard must exist before the code it guards.
 - `internal/app/*` has no filesystem tests of its own: the `Files` port is an
   in-memory double, and `cmd/odachi` exercises the real adapter end to end.
-- `ask` and `summary` only recognise `NNNN-<slug>.md`. A hand-written document
-  such as this repository's own `odd/tasks/odachi-bootstrap.md` is deliberately
-  invisible to them, so their canonical render can never rewrite it. `plan`
-  resolves the current document the same way, so it inherits the same limit.
+- `ask` and `summary` only recognise `NNNN-<slug>.md`. A hand-written document in
+  `odd/tasks` is deliberately invisible to them, so their canonical render can never
+  rewrite it. `plan` resolves the current document the same way, so it inherits the
+  same limit. The folder is the plan's home, so a document that is not a plan lives
+  in `docs/` -this repository's own bootstrap history is `docs/odachi-bootstrap.md`-
+  and the doctor warns only about a document whose name it cannot read *and* whose
+  body has the shape of a plan: that one is a feature that would be silently ignored.
 
 ## Review lenses and the refuter (T21)
 
