@@ -332,6 +332,35 @@ func storedAgents(dir, verb string) (string, int, string) {
 	return stored.Agents, start.CodeOK, ""
 }
 
+// cleanLimits reads the lifetimes `odachi clean` obeys from the project's
+// odd/review.toml, and names where they came from. A missing file is the defaults
+// odachi ships; a file that cannot be read or parsed is a refusal that names it,
+// because the numbers are the project's decision and half of one is worse than an
+// answer nobody chose.
+func cleanLimits(dir string) (review.ProjectConfig, string, string) {
+	const defaults = "odachi's defaults"
+
+	path := filepath.Join(dir, filepath.FromSlash(layout.Review))
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return review.ProjectConfig{
+				KeepVerdicts: review.DefaultKeepVerdicts,
+				KeepPrompts:  review.DefaultKeepPrompts,
+			}, defaults, ""
+		}
+		return review.ProjectConfig{}, "", "could not read " + filepath.ToSlash(layout.Review) + ": " + oneLine(err.Error()) +
+			"; check the permissions, or remove the file to use the defaults"
+	}
+
+	config, err := reviewtoml.Decode(data)
+	if err != nil {
+		return review.ProjectConfig{}, "", filepath.ToSlash(layout.Review) + " " + oneLine(err.Error()) +
+			"; fix it, or remove it to use the defaults"
+	}
+	return config, filepath.ToSlash(layout.Review), ""
+}
+
 // reviewModeCodec is the format adapter for `odachi review mode`: the app owns
 // the actions and the disk port, this type owns TOML.
 type reviewModeCodec struct{}

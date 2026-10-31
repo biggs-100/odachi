@@ -11,10 +11,11 @@ R1 · "the project decides how much review evidence survives, in odd/review.toml
 - odachi review mode on rewrites the file and keeps the two numbers
 
 ## Steps
-- [ ] T1 · odd/review.toml carries keep_verdicts and keep_prompts, and the schema moves so an old binary says upgrade   R1
-- [ ] T2 · clean reads the numbers from the file, defaults when absent, refuses a file it cannot read, and says which it used   R1
+- [x] T1 · odd/review.toml carries keep_verdicts and keep_prompts, and the schema moves so an old binary says upgrade   R1 · tree:0df7135838c41235590fe037d19539041a1a05e5
+- [x] T2 · clean reads the numbers from the file, defaults when absent, refuses a file it cannot read, and says which it used   R1 · tree:0df7135838c41235590fe037d19539041a1a05e5
 - [ ] T3 · the changelog and the ADR say what the project decides, and review mode keeps the numbers   R1
 
 ## History
 L1 · "the project decides how much review evidence survives, in odd/review.toml"
 L2 · OFICIO · "the schema moves to 3 for two keys added to odd/review.toml" (porque one counter serves the three strict files, and 0094 accepted that cost: an older binary now refuses a verdict whose shape did not change, and says upgrade, which is still true)
+L3 · OFICIO · "this repository's own odd/review.toml stays at schema 2 until a release reads 3" (porque CI builds the gate from the base ref, and that binary reads schema 2: a candidate file that says 3 would be refused before the suite ran, so the file that carries the keys follows the release that understands them)

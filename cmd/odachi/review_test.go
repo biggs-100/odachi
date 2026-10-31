@@ -5,11 +5,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/adapters/hostmodel"
 	"github.com/biggs-100/odachi/internal/domain/layout"
+	"github.com/biggs-100/odachi/internal/domain/schema"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -399,6 +401,37 @@ func TestCheckRequireReviewInTheThreeSituations(t *testing.T) {
 
 // TestReviewModeOnMakesCheckRequireTheVerdict: the switch is a project file, so
 // a plain `check` reads it; the flags override it for one run.
+// TestReviewModeKeepsTheRetention: `review mode` rewrites the file, so it must
+// carry the project's numbers forward instead of quietly resetting them to the
+// defaults.
+func TestReviewModeKeepsTheRetention(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+	if err := os.MkdirAll(filepath.Join(dir, "odd"), 0o755); err != nil {
+		t.Fatalf("mkdir odd: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(layout.Review)),
+		[]byte("mode = \"on\"\nkeep_verdicts = 3\nkeep_prompts = 1\n"), 0o644); err != nil {
+		t.Fatalf("write review.toml: %v", err)
+	}
+
+	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "off"}, ""); code != 0 {
+		t.Fatalf("mode off: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(layout.Review)))
+	if err != nil {
+		t.Fatalf("read review.toml: %v", err)
+	}
+	for _, want := range []string{"keep_verdicts = 3", "keep_prompts = 1", "schema = " + strconv.Itoa(schema.Current)} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("review.toml does not carry %q:\n%s", want, data)
+		}
+	}
+}
+
+// TestReviewModeOnMakesCheckRequireTheVerdict: the switch the file carries is
+// what `check` obeys.
 func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)

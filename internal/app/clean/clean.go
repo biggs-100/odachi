@@ -34,17 +34,10 @@ const (
 	CodeBlocked = 1
 )
 
-// The lifetimes this version ships. They are the default shape of a clone whose
-// project has not decided otherwise: enough review records to answer a question
-// about the last week's work, and enough versions of one file to undo a mistake
-// twice.
-const (
-	// KeepRecords is how many review trees survive: a verdict, its prompt and
-	// the records beside them are one record, and a record is the unit.
-	KeepRecords = 10
-	// KeepBackups is how many versions of one artifact survive.
-	KeepBackups = 5
-)
+// KeepBackups is how many versions of one artifact survive. It is not a project
+// decision: a version is the way back from a mistake, and five of them are the
+// same answer in every project.
+const KeepBackups = 5
 
 // verbName is the lock owner.
 const verbName = "clean"
@@ -70,6 +63,32 @@ type Options struct {
 	// Legacy also removes the notes an older agent wrote into the git directory.
 	// It only means something with Apply, and it is never implied.
 	Legacy bool
+
+	// KeepVerdicts and KeepPrompts are the lifetimes the project decided, read
+	// from odd/review.toml by the caller. Zero means the default odachi ships, so
+	// a folder the caller could not read cleans the way it always did.
+	KeepVerdicts int
+	KeepPrompts  int
+	// LimitsFrom names where the numbers came from, in the words a human reads:
+	// "odd/review.toml" or "odachi's defaults". The report says it, so a number
+	// nobody remembers choosing is never a mystery.
+	LimitsFrom string
+}
+
+// keptVerdicts and keptPrompts are the numbers this run obeys: the project's when
+// it decided, the shipped default when it did not.
+func (o Options) keptVerdicts() int {
+	if o.KeepVerdicts > 0 {
+		return o.KeepVerdicts
+	}
+	return review.DefaultKeepVerdicts
+}
+
+func (o Options) keptPrompts() int {
+	if o.KeepPrompts > 0 {
+		return o.KeepPrompts
+	}
+	return review.DefaultKeepPrompts
 }
 
 // Files is the disk port: what the report reads, and what --apply removes.
@@ -119,6 +138,11 @@ type Report struct {
 	DoomedBytes int64 `json:"doomedBytes"`
 	// Applied is false for a report and true once the run removed the files.
 	Applied bool `json:"applied"`
+	// KeepVerdicts, KeepPrompts and LimitsFrom are the lifetimes this run obeyed
+	// and where they came from, so the report answers "why ten?".
+	KeepVerdicts int    `json:"keepVerdicts"`
+	KeepPrompts  int    `json:"keepPrompts"`
+	LimitsFrom   string `json:"limitsFrom,omitempty"`
 	// Problems is every unreadable path, in the order the classes found them.
 	Problems []string `json:"unreadable,omitempty"`
 	// Message is the one line the run answers with.
@@ -140,6 +164,10 @@ func (r Report) Lines() []string {
 		lines = append(lines, class.Line(r.Applied))
 	}
 	lines = append(lines, "", "  old agent notes are "+joinAnd(legacyPaths))
+	if r.LimitsFrom != "" {
+		lines = append(lines, "", "  retention: the newest "+strconv.Itoa(r.KeepVerdicts)+" trees and the prompts of the newest "+
+			strconv.Itoa(r.KeepPrompts)+", from "+r.LimitsFrom)
+	}
 	if len(r.Problems) > 0 {
 		lines = append(lines, "")
 		for _, problem := range r.Problems {
@@ -291,8 +319,10 @@ func scan(opts Options, files Files) found {
 	gitDir := filepath.Dir(opts.Store)
 	seen := found{sizes: map[string]int64{}}
 
+	records, prompts := seen.reviews(files, opts)
 	classes := []Class{
-		seen.records(files, opts),
+		records,
+		prompts,
 		seen.everything(files, opts, Class{
 			Name:      "review scaffolding",
 			Owner:     ownerOdachi,
@@ -330,7 +360,13 @@ func scan(opts Options, files Files) found {
 		}, filepath.Join(opts.Dir, filepath.FromSlash(layout.Tasks)), scanRule{}),
 	}
 
-	seen.report = Report{Store: label(opts.Dir, opts.Store), Classes: classes}
+	seen.report = Report{
+		Store:        label(opts.Dir, opts.Store),
+		Classes:      classes,
+		KeepVerdicts: opts.keptVerdicts(),
+		KeepPrompts:  opts.keptPrompts(),
+		LimitsFrom:   opts.LimitsFrom,
+	}
 	for _, class := range classes {
 		if class.Cleanable {
 			seen.report.TotalFiles += class.Files
@@ -353,24 +389,70 @@ func scan(opts Options, files Files) found {
 	return seen
 }
 
-// records is the class with a lifetime counted in trees: a verdict, its prompt,
-// the dismissals and the scope record are one record, and the newest KeepRecords
-// survive.
-func (f *found) records(files Files, opts Options) Class {
+// reviews reads the store's reviews directory once and parts it in two classes,
+// because the two kinds of file are two decisions: a record is the evidence the
+// gate reads, and a prompt is the question that was sent, which nothing reads.
+// The project decides how many of each survive, counted in trees.
+func (f *found) reviews(files Files, opts Options) (Class, Class) {
 	root := filepath.Join(opts.Store, store.Reviews)
-	class, entries := gather(files, opts.Dir, Class{
+	records := Class{
 		Name:      "review records",
 		Owner:     ownerOdachi,
-		Action:    "keeps the newest " + strconv.Itoa(KeepRecords) + " trees",
+		Path:      label(opts.Dir, root),
+		Action:    "keeps the newest " + strconv.Itoa(opts.keptVerdicts()) + " " + plural2(opts.keptVerdicts(), "tree"),
 		Cleanable: true,
-	}, root, scanRule{})
+	}
+	prompts := Class{
+		Name:      "review prompts",
+		Owner:     ownerOdachi,
+		Path:      label(opts.Dir, root),
+		Action:    "keeps the prompts of the newest " + strconv.Itoa(opts.keptPrompts()) + " " + plural2(opts.keptPrompts(), "tree"),
+		Cleanable: true,
+	}
+
+	class, entries := gather(files, opts.Dir, Class{}, root, scanRule{})
+	records.Problems = class.Problems
+	prompts.Problems = class.Problems
 
 	byTree := map[string][]entry{}
 	for _, item := range entries {
 		tree := treeOf(item.rel)
 		byTree[tree] = append(byTree[tree], item)
 	}
-	return f.keepNewest(class, root, byTree, KeepRecords)
+
+	// The trees are ordered once, by the newest file of each, and both lifetimes
+	// read that order: a prompt and a verdict about the same tree are the same
+	// day's evidence.
+	for index, tree := range treesNewestFirst(byTree) {
+		keepRecords := index < opts.keptVerdicts()
+		keepPrompt := index < opts.keptPrompts()
+		for _, item := range byTree[tree] {
+			isPromptFile := isPrompt(item.rel)
+			if isPromptFile {
+				prompts.Files++
+				prompts.Bytes += item.size
+				if keepPrompt {
+					continue
+				}
+				prompts = f.doom(prompts, root, item)
+				continue
+			}
+			records.Files++
+			records.Bytes += item.size
+			if keepRecords {
+				continue
+			}
+			records = f.doom(records, root, item)
+		}
+	}
+	return records, prompts
+}
+
+// isPrompt says whether a store file is the question that was sent for a tree:
+// `<tree>.prompt.md` or one per lens group, `<tree>.prompt-risk+readability.md`.
+func isPrompt(rel string) bool {
+	rest := strings.TrimPrefix(rel, treeOf(rel))
+	return strings.HasPrefix(rest, ".prompt")
 }
 
 // backups is the class with a lifetime counted in artifacts: the newest
@@ -455,10 +537,10 @@ func (f *found) legacy(files Files, opts Options, gitDir string) Class {
 	return class
 }
 
-// keepNewest keeps the newest groups of a class and plans the rest. The newest
-// date of a group decides, and a tie breaks on the key, so the answer never
-// depends on the order the directory was listed in.
-func (f *found) keepNewest(class Class, root string, groups map[string][]entry, keep int) Class {
+// treesNewestFirst orders the groups by the newest file of each, and breaks a tie
+// on the key, so the answer never depends on the order the directory was listed
+// in.
+func treesNewestFirst(groups map[string][]entry) []string {
 	keys := make([]string, 0, len(groups))
 	for key := range groups {
 		keys = append(keys, key)
@@ -470,16 +552,7 @@ func (f *found) keepNewest(class Class, root string, groups map[string][]entry, 
 		}
 		return keys[i] > keys[j]
 	})
-
-	for index, key := range keys {
-		if index < keep {
-			continue
-		}
-		for _, item := range groups[key] {
-			class = f.doom(class, root, item)
-		}
-	}
-	return class
+	return keys
 }
 
 // keepVersions keeps the newest files of every group: a backup is one version

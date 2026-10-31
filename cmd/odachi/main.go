@@ -701,6 +701,14 @@ func runClean(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	opts.Store = storeRoot(dir)
+	limits, from, problem := cleanLimits(dir)
+	if problem != "" {
+		fmt.Fprintln(stderr, "odachi: "+problem)
+		return start.CodeBlocked
+	}
+	opts.KeepVerdicts = limits.KeepVerdicts
+	opts.KeepPrompts = limits.KeepPrompts
+	opts.LimitsFrom = from
 	return reportClean(clean.Run(opts, disk(dir), &osLock{}), asJSON, stdout, stderr)
 }
 

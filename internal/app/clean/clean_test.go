@@ -184,7 +184,8 @@ func TestTheReportNamesEveryClassWithItsOwner(t *testing.T) {
 	want := []string{
 		"odachi clean · .git/odachi",
 		"",
-		"  review records       odachi                3 files      170 B  keeps the newest 10 trees",
+		"  review records       odachi                2 files      120 B  keeps the newest 10 trees",
+		"  review prompts       odachi                1 file        50 B  keeps the prompts of the newest 0 trees · 1 file would go",
 		"  review scaffolding   odachi                1 file        10 B  emptied by --apply · 1 file would go",
 		"  undo backups         odachi                2 files       27 B  keeps the newest 5 of each file",
 		"  agent scratch        odachi                1 file         5 B  emptied by --apply · 1 file would go",
@@ -196,7 +197,7 @@ func TestTheReportNamesEveryClassWithItsOwner(t *testing.T) {
 		"",
 		"  old agent notes are .git/PR*.md, .git/PLAN*.txt, .git/CLOSE*.txt, .git/REL*.txt, .git/*MSG.txt, .git/T[0-9]_*.txt, .git/ROWBASE.txt, .git/HOLE.txt and .git/fence.generated",
 		"",
-		"  odachi's records: 212 B in 7 files · --apply would free 15 B in 2 files",
+		"  odachi's records: 212 B in 7 files · --apply would free 65 B in 3 files",
 	}
 	got := strings.Join(result.Lines, "\n")
 	if got != strings.Join(want, "\n") {
@@ -269,8 +270,8 @@ func TestAnEmptyCloneReportsZeros(t *testing.T) {
 	if result.Code != clean.CodeOK {
 		t.Fatalf("code = %d, want %d: %s", result.Code, clean.CodeOK, result.Message)
 	}
-	if len(result.Report.Classes) != 9 {
-		t.Fatalf("classes = %d, want the nine the map names", len(result.Report.Classes))
+	if len(result.Report.Classes) != 10 {
+		t.Fatalf("classes = %d, want the ten the map names", len(result.Report.Classes))
 	}
 	if result.Report.TotalFiles != 0 || result.Report.TotalBytes != 0 {
 		t.Errorf("totals = %d files, %d bytes; want zero", result.Report.TotalFiles, result.Report.TotalBytes)
@@ -386,7 +387,7 @@ func TestApplyKeepsTheNewestRecordsAndRemovesTheRest(t *testing.T) {
 		f.put(".git/odachi/reviews/"+tree+".prompt.md", strings.Repeat("p", 5), day(i))
 	}
 
-	result := apply(f, clean.Options{Apply: true})
+	result := apply(f, clean.Options{Apply: true, KeepPrompts: 10})
 	if result.Code != clean.CodeOK {
 		t.Fatalf("code = %d, want %d: %s", result.Code, clean.CodeOK, result.Message)
 	}
@@ -406,6 +407,34 @@ func TestApplyKeepsTheNewestRecordsAndRemovesTheRest(t *testing.T) {
 	}
 	if !strings.Contains(result.Message, "removed 4 files, 30 B freed") {
 		t.Errorf("message = %q, want it to say what was freed", result.Message)
+	}
+}
+
+// TestApplyKeepsThePromptsOfTheNewestTrees: a prompt is the question, not the
+// evidence, so its lifetime is the project's own number. With keep_prompts = 1
+// the newest tree keeps its prompt, every older one loses it, and no record goes.
+func TestApplyKeepsThePromptsOfTheNewestTrees(t *testing.T) {
+	f := newFake(nil)
+	for i := 0; i < 4; i++ {
+		tree := fmt.Sprintf("tree%02d", i)
+		f.put(".git/odachi/reviews/"+tree+".json", strings.Repeat("v", 10), day(i))
+		f.put(".git/odachi/reviews/"+tree+".prompt.md", strings.Repeat("p", 5), day(i))
+	}
+
+	result := apply(f, clean.Options{Apply: true, KeepPrompts: 1})
+	if result.Code != clean.CodeOK {
+		t.Fatalf("code = %d, want %d: %s", result.Code, clean.CodeOK, result.Message)
+	}
+
+	for i := 0; i < 4; i++ {
+		tree := fmt.Sprintf("tree%02d", i)
+		if !f.has(".git/odachi/reviews/" + tree + ".json") {
+			t.Errorf("the verdict of %s was removed; the records' lifetime was not the one that ran", tree)
+		}
+		want := i == 3
+		if f.has(".git/odachi/reviews/"+tree+".prompt.md") != want {
+			t.Errorf("the prompt of %s survived = %v, want %v", tree, !want, want)
+		}
 	}
 }
 
