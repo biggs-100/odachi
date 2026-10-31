@@ -20,6 +20,7 @@
 package doctor
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -362,6 +363,11 @@ func (r *runner) staleBlock(content string) (string, bool) {
 // olderBlock is the warning for a block that is older than this binary writes.
 const olderBlock = agentsFile + " carries an older block than this binary writes: the rules that arrived after this project adopted odachi are not in it (run odachi init)"
 
+// errNoRepositoryPort is a doctor wired without the question the adoption is drawn
+// from. It is not "this folder does not live": no answer is no answer, and the block
+// check keeps both variants current instead of deciding on a fact nobody read.
+var errNoRepositoryPort = errors.New("the doctor has no repository port")
+
 // blockScope is the folder this project's craft lives in, decided the way init decides
 // it: the choice the store recorded, then the adoption of a repository that already
 // lives and carries no copy here. known is false when a fact the answer needs could not
@@ -371,7 +377,7 @@ func (r *runner) blockScope() (scope string, known bool) {
 	facts, err := adoption.Read(adoption.Reader{
 		Lives: func() (bool, error) {
 			if r.opts.Git == nil {
-				return false, nil
+				return false, errNoRepositoryPort
 			}
 			if _, err := r.opts.Git.Head(r.opts.Dir); err != nil {
 				return false, err
@@ -388,6 +394,12 @@ func (r *runner) blockScope() (scope string, known bool) {
 		return "", false
 	}
 	scope, _ = facts.Scope("")
+	// The scope comes from the store as written and the store is not validated here:
+	// a value that names neither folder is a question nobody answered, and answering
+	// it with "project" would warn about the wrong folder.
+	if scope != persona.SkillsProject && scope != persona.SkillsHome {
+		return "", false
+	}
 	return scope, true
 }
 
