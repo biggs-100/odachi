@@ -208,8 +208,10 @@ func TestProgressAndCheckAgreeAboutTheReview(t *testing.T) {
 	if !strings.Contains(out, "review: owed") || !strings.Contains(out, base) {
 		t.Fatalf("progress does not owe the verdict of the close:\n%s", out)
 	}
-	if code, _, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code == 0 {
-		t.Fatalf("check was ready at the close: %s", errOut)
+	// The close names the review it did not make and stays ready (ADR 0043): the
+	// two verbs agree about WHICH review is missing, not about an exit code.
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 || !strings.Contains(out, "review") || !strings.Contains(out, base) {
+		t.Fatalf("check did not name the review progress owes: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 
 	// The close lands and the release tail follows: documents only. The gate

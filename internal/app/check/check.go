@@ -193,6 +193,10 @@ type Result struct {
 	Lines   []string
 	Proof   string
 	Files   []string
+	// Note is what the run has to say and still be ready: the review a close did
+	// not make, or the debt it leaves. It is printed even under --quiet, because
+	// the hook is the only moment where a reminder is read.
+	Note string
 }
 
 // Run performs one `odachi check`.
@@ -397,6 +401,9 @@ type runner struct {
 	// paperworkNote says which tree the proof belongs to when it is not owed
 	// again: the documents that moved since are not the code the suite ran on.
 	paperworkNote string
+	// reviewNote is what the review has to say when it did not stop the close:
+	// the reminder the hook prints, and the line a ready report carries.
+	reviewNote string
 	// work is the one read of the candidate: tree, changed paths and diff. The
 	// fence, the lens class and the proof all describe these same bytes.
 	work *worktree
@@ -697,9 +704,30 @@ func (r *runner) reviewGate(feature *tasks.Document) *Result {
 		}
 	}
 	if known && closed {
-		return r.requireReview(base)
+		return r.softened(r.requireReview(base))
 	}
-	return r.requireReview("")
+	return r.softened(r.requireReview(""))
+}
+
+// softened turns a review refusal into a note unless the human asked to be refused.
+// The review does not authorise delivery (ADR 0043): with the project's switch on,
+// a close names what the review says and the commit proceeds. The one refusal that
+// survives is a finding the review made -a causal BLOCKER is the reason not to ship,
+// not a requirement that a review exists- and `--require-review` is the human asking
+// to be stopped.
+func (r *runner) softened(result *Result) *Result {
+	if result == nil || r.opts.RequireReview {
+		return result
+	}
+	if result.Reason == ReasonReviewChanges {
+		return result
+	}
+	note := result.Message
+	if next := strings.TrimSpace(result.Next); next != "" {
+		note += "; " + next
+	}
+	r.reviewNote = note
+	return nil
 }
 
 // theCloseOwes reports whether this tree is the one that closes the feature. Two
@@ -1410,6 +1438,13 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	// reading to memory, and memory is what the file exists to replace.
 	if note := r.debtNote(); note != "" {
 		result.Lines = append(result.Lines, note)
+	}
+	// What the review has to say and did not stop: the missing verdict of a close,
+	// or why the one on file does not count. A ready tree says it out loud -the hook
+	// is where a reminder is read- and keeps its exit code.
+	if r.reviewNote != "" {
+		result.Lines = append(result.Lines, r.reviewNote)
+		result.Note = r.reviewNote
 	}
 	return result
 }
