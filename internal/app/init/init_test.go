@@ -492,9 +492,9 @@ func TestInitRerunSaysTheSkillsWereAlreadyThere(t *testing.T) {
 	}
 }
 
-// A home that cannot be written does not fail the run that fixed the project:
-// the human reads which half is pending and the command that fixes it, and the
-// artifacts stay written.
+// A destination of another scope does not fail the run: the human reads which
+// half is pending and the command that fixes it, and the artifacts stay written.
+// With project scope that is the home, whose bootstrap skill is a convenience.
 func TestInitReportsABlockedHomeAndKeepsTheProject(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	skills := &fakeSkills{report: initapp.SkillReport{
@@ -512,8 +512,8 @@ func TestInitReportsABlockedHomeAndKeepsTheProject(t *testing.T) {
 		t.Errorf("AGENTS.md was not written; events: %v", files.events)
 	}
 	joined := strings.Join(got.Lines, "\n")
-	if !strings.Contains(joined, "~/.agents/skills: could not write the bootstrap skill") {
-		t.Errorf("the lines do not say what is pending: %q", got.Lines)
+	if !strings.Contains(joined, "pending: ~/.agents/skills: could not write the bootstrap skill") {
+		t.Errorf("the lines do not say what is pending, in the word for it: %q", got.Lines)
 	}
 	if got.Next != "odachi init" {
 		t.Errorf("Next = %q, want the command that fixes the block", got.Next)
@@ -524,14 +524,16 @@ func indexOfLine(lines []string, want string) int {
 	return slices.Index(lines, want)
 }
 
-// A block inside the project is a failed run: the artifacts are written, but the
-// agent would work without the skills it reads. The home's block is the only one
-// that never fails the run.
-func TestInitFailsWhenTheProjectSkillsCannotBeWritten(t *testing.T) {
+// A failure at the destination that matters is a failed run: the artifacts are
+// written, but the project is left without the skills the agent reads, whether
+// that destination is the project's own copy or the machine that is now the only
+// place the craft lives. The line says the run failed instead of calling it
+// pending.
+func TestInitFailsWhenTheDestinationThatMattersCannotBeWritten(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	skills := &fakeSkills{report: initapp.SkillReport{
-		Blocked: "./.agents/skills: could not write ./.agents/skills/acceptance/SKILL.md: permission denied",
-		Next:    "odachi init",
+		Blocked: "~/.agents/skills: could not write ~/.agents/skills/acceptance/SKILL.md: permission denied",
+		Next:    "odachi setup",
 		Fatal:   true,
 	}}
 
@@ -540,8 +542,15 @@ func TestInitFailsWhenTheProjectSkillsCannotBeWritten(t *testing.T) {
 	if got.Code != 1 {
 		t.Fatalf("Code = %d, want 1: the project was left without the skills the agent reads (lines %q)", got.Code, got.Lines)
 	}
-	if got.Next != "odachi init" {
-		t.Errorf("Next = %q, want the command that retries it", got.Next)
+	if got.Next != "odachi setup" {
+		t.Errorf("Next = %q, want the verb that ran, not one this run already did", got.Next)
+	}
+	joined := strings.Join(got.Lines, "\n")
+	if !strings.Contains(joined, "failed: ~/.agents/skills") {
+		t.Errorf("a run that failed does not say so: %q", got.Lines)
+	}
+	if strings.Contains(joined, "pending:") {
+		t.Errorf("a run that failed calls it pending: %q", got.Lines)
 	}
 	if _, ok := files.get("AGENTS.md"); !ok {
 		t.Errorf("AGENTS.md was not written; events: %v", files.events)
