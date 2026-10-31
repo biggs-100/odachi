@@ -10,7 +10,7 @@ R1 · "the review's repeat guard asks for the lenses this run already landed, ne
 - the bypass reads the run's landed lenses, and a part of the same run is still allowed to add its rows
 
 ## Steps
-- [ ] T1 · a test drives a second run over the same split candidate and sees it refused, with no reviewer started   R1
+- [x] T1 · a test drives a second run over the same split candidate and sees it refused, with no reviewer started   R1 · tree:21f42da32ba49835d63c0c45c4e3462a9b2c7ed7
 - [ ] T2 · storeIn asks the lenses this run landed, per lens, instead of a repeat flag keyed on the split   R1
 - [ ] T3 · the changelog and the review-debt row say what the guard asks now, and that a second run was already refused   R1
 
