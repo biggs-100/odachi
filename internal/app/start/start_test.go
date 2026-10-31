@@ -621,9 +621,12 @@ func TestTaskNumberIsOneMoreThanTheHighestExisting(t *testing.T) {
 	}
 }
 
-// TestFreeTextNonGoalBecomesItsOwnRule: a preset uses its catalog paths and
-// deps; free text earns a slug pattern of its own.
-func TestFreeTextNonGoalBecomesItsOwnRule(t *testing.T) {
+// TestAPhraseIsNotARule: a preset uses its catalog paths and deps; a non-goal that
+// arrived as free text is not a rule at all. A glob of the phrase's own words
+// matches files named like the phrase and protects nothing -the fence's own header
+// says so- so the file carries it as a template the human completes, and the fence
+// it parses to holds only the rules somebody gave paths for.
+func TestAPhraseIsNotARule(t *testing.T) {
 	opts := flagsCarryTheSameAnswers()
 	opts.Profile = novatoProfile(t)
 	opts.Machine = true
@@ -632,18 +635,31 @@ func TestFreeTextNonGoalBecomesItsOwnRule(t *testing.T) {
 	files := newFakeFiles(nil, nil)
 	start.Run(opts, nil, files, nil)
 
-	want := `[[rule]]
-not   = "pagos"
-paths = ["payment*", "**/payments/**"]
-deps  = ["stripe", "mercadopago"]
+	text := files.content(t, filepath.Join("odd", "fence.toml"))
+	if !strings.Contains(text, `not   = "pagos"`) || !strings.Contains(text, `paths = ["payment*", "**/payments/**"]`) {
+		t.Errorf("the preset lost its rule:\n%s", text)
+	}
+	if strings.Contains(text, `"datos-de-pacientes*"`) {
+		t.Errorf("a phrase became a glob of its own words:\n%s", text)
+	}
+	if !strings.Contains(text, "datos de pacientes") || !strings.Contains(text, "# paths = []") {
+		t.Errorf("the phrase is not carried as a template:\n%s", text)
+	}
 
-[[rule]]
-not   = "datos de pacientes"
-paths = ["datos-de-pacientes*"]
-deps  = []
-`
-	if got := files.content(t, filepath.Join("odd", "fence.toml")); got != want {
-		t.Errorf("fence.toml =\n%s\nwant\n%s", got, want)
+	// What the tool will obey is what is not commented out: a phrase in a template
+	// is a question for the human, not a rule.
+	active := 0
+	for _, line := range strings.Split(text, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if trimmed == "[[rule]]" {
+			active++
+		}
+	}
+	if active != 1 {
+		t.Errorf("the fence holds %d rules, want the one somebody gave paths for:\n%s", active, text)
 	}
 }
 
@@ -714,17 +730,34 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 	}
 
 	fenceText := files.content(t, filepath.Join("odd", "fence.toml"))
-	if strings.Count(fenceText, "[[rule]]") != 5 {
-		t.Errorf("fence.toml has %d rules, want one per non-goal:\n%s", strings.Count(fenceText, "[[rule]]"), fenceText)
+	// Every non-goal in this brief is a phrase, so the fence holds no rule and
+	// carries one template each: a rule protects files, and a phrase names none.
+	if active := activeRules(fenceText); active != 0 {
+		t.Errorf("fence.toml holds %d rules for a brief of phrases, want none:\n%s", active, fenceText)
+	}
+	if templates := strings.Count(fenceText, "# [[rule]]"); templates != 5 {
+		t.Errorf("fence.toml carries %d templates, want one per non-goal:\n%s", templates, fenceText)
 	}
 	for _, want := range []string{
-		`not   = "Historia clínica y recetas."`,
-		`paths = ["historia-clinica-y-recetas*"]`,
+		`# not   = "Historia clínica y recetas."`,
+		"# paths = []",
 	} {
 		if !strings.Contains(fenceText, want) {
 			t.Errorf("fence.toml is missing %q:\n%s", want, fenceText)
 		}
 	}
+}
+
+// activeRules counts the rules a fence will obey: the ones not commented out.
+func activeRules(fenceText string) int {
+	active := 0
+	for _, line := range strings.Split(fenceText, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[[rule]]" && !strings.HasPrefix(trimmed, "#") {
+			active++
+		}
+	}
+	return active
 }
 
 // TestMissingBriefFileIsBlocked: a path that does not exist costs one line, not
@@ -992,11 +1025,11 @@ func TestStartStopsWhenTheMatchingDocumentCannotBeRead(t *testing.T) {
 	}
 }
 
-// TestStartNamesANonGoalThatProtectsNothing: a non-goal in free text becomes a glob
-// of its own words, so the fence rule matches no path in any repository. Saying
-// nothing there is a fence that passes for a promise; the run names the rule, the
-// file to edit and how to prove the rule works. A keyed non-goal already carries real
-// paths and must stay silent.
+// TestStartNamesANonGoalThatProtectsNothing: a non-goal in free text is a phrase,
+// and a rule protects files. The run says what it did -the fence carries the phrase
+// as a template- names the file to edit, and tells how to prove a rule works. It
+// used to claim the fence wrote a glob of the phrase's own words. A keyed non-goal
+// already carries real paths and must stay silent.
 func TestStartNamesANonGoalThatProtectsNothing(t *testing.T) {
 	run := func(nonGoals []string) start.Result {
 		var events []string
@@ -1012,10 +1045,13 @@ func TestStartNamesANonGoalThatProtectsNothing(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", loose.Code, start.CodeOK, loose.Message)
 	}
 	lines := strings.Join(loose.Lines, "\n")
-	for _, want := range []string{"no tocar la base de datos", "no-tocar-la-base-de-datos*", "odd/fence.toml", "odachi check - it must refuse"} {
+	for _, want := range []string{"no tocar la base de datos", "template", "odd/fence.toml", "odachi check - it must refuse"} {
 		if !strings.Contains(lines, want) {
 			t.Errorf("the run does not carry %q:\n%s", want, lines)
 		}
+	}
+	if strings.Contains(lines, "no-tocar-la-base-de-datos*") {
+		t.Errorf("the run still claims a phrase became a glob:\n%s", lines)
 	}
 
 	keyed := run([]string{"pagos"})
