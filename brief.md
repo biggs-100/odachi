@@ -1,12 +1,12 @@
-# the-review-s
+# the-guard-that
 
 ## What must exist
-- the review's repeat guard asks for the lenses this run already landed, never for the shape of the candidate
+- the guard that decides whether an answer may merge into an existing verdict is a predicate the package pins, so asking the wrong question fails a test
 
 ## Done when
-- a second run over the same split candidate is refused and starts no reviewer
-- a split run still merges its parts into one verdict, one reviewer per part
-- the bypass reads the run's landed lenses, and a part of the same run is still allowed to add its rows
+- a run that landed the lens merges its rows into that lens
+- a run that landed nothing is refused, whatever shape the candidate has
+- making the guard ask the candidate's shape again fails a test
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
@@ -16,4 +16,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que una guarda que pregunta por la forma del candidato miente aunque hoy no se note.
+- Wants to learn: por que un predicado pequeno se puede pinnear y un booleano cableado no.
