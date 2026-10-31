@@ -13,19 +13,25 @@ Last written: after 0134, which makes the retention the project's decision.
 
 ## Open
 
-- **`cmd/odachi/review_test.go:404`** - the doc comment of
-  `TestReviewModeOnMakesCheckRequireTheVerdict` stayed above the test that was
-  inserted before it (`TestReviewModeKeepsTheRetention`), and a second, correct
-  copy sits above the function it describes. Found by the review of 0134
-  (suggestion, no round earned, the tree's behaviour is right). Closed when the
-  first comment is deleted and the second one stands where it belongs.
-- **`internal/app/clean/clean.go:167`** - the retention line the report prints
-  hardcodes "trees" after `keep_verdicts` and drops the noun after `keep_prompts`:
-  with one of either it reads "the newest 1 trees" and "the prompts of the newest
-  1". The class rows above it already use `plural2`, so the fix is that helper in
-  the summary line -and the expectation in `TestCleanObeysTheProjectRetention`,
-  which pins the missing noun today-. Found by the review of 0134 (suggestion, no
-  round earned: it is the wording of a line, not the lifetime).
+Nothing. The two rows the review of 0134 left are closed by 0135: the retention
+line now uses `plural2`, and the stale doc comment in `cmd/odachi/review_test.go`
+is gone.
+
+## Closed by feature 0135
+
+### the retention line drops its noun
+
+Found by the review of 0134 (suggestion). The line `clean` prints read "the newest
+1 trees" and "the prompts of the newest 1". Closed: the summary uses `plural2` like
+the class rows above it, and `TestCleanObeysTheProjectRetention` asks for the
+sentence a human reads.
+
+### the doc comment above the wrong test
+
+Found by the review of 0134 (suggestion). The comment of
+`TestReviewModeOnMakesCheckRequireTheVerdict` stayed above the test inserted before
+it, and a second copy sat above the function. Closed: the stale one is gone and the
+comment names its own function.
 
 ## Closed by feature 0129
 
