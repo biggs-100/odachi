@@ -1,0 +1,18 @@
+# the-guard-that
+Base: 5072eecccd7d3954809dcf7a773fee7aebf94746
+
+## Requirements (verbatim, from the user)
+R1 · "the guard that decides whether an answer may merge into an existing verdict is a predicate the package pins, so asking the wrong question fails a test"
+
+## Done when
+- a run that landed the lens merges its rows into that lens
+- a run that landed nothing is refused, whatever shape the candidate has
+- making the guard ask the candidate's shape again fails a test
+
+## Steps
+- [ ] T1 · a table test names the collision rule and fails until the predicate exists   R1
+- [ ] T2 · storeIn asks the predicate, and the split and second-run tests still pass   R1
+- [ ] T3 · the changelog and the review-debt row say the guard is pinned   R1
+
+## History
+L1 · "the guard that decides whether an answer may merge into an existing verdict is a predicate the package pins, so asking the wrong question fails a test"
