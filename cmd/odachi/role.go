@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -147,13 +149,20 @@ func reportRole(result roleapp.Result, asJSON bool, stdout, stderr io.Writer) in
 }
 
 // projectBlock is the block this project already carries, so a role written here
-// says what AGENTS.md says. A project with no block (or one the parser cannot
-// read) gets the block for its voice, which is what init would write there.
+// says what AGENTS.md says. A project with no AGENTS.md, or one whose block the
+// parser cannot find, gets the block for its voice, which is what init would
+// write there: those are states. A file that is there and cannot be read is not
+// the same fact, so it is refused instead of written over.
 func projectBlock(dir, voice string) (string, error) {
-	if data, err := os.ReadFile(filepath.Join(dir, "AGENTS.md")); err == nil {
-		if body, ok := rules.BodyIn(string(data)); ok {
-			return body, nil
+	data, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return rules.Body(voice)
 		}
+		return "", fmt.Errorf("could not read AGENTS.md: %s", oneLine(err.Error()))
+	}
+	if body, ok := rules.BodyIn(string(data)); ok {
+		return body, nil
 	}
 	return rules.Body(voice)
 }

@@ -13,7 +13,7 @@ R1 · "the footprint reads a failed check as not there: a stat that fails, an AG
 
 ## Steps
 - [x] T1 · init refuses a footprint decided from a failed check, naming the path, and the rule is said once   R1 · tree:c586a3431f34673ad02e4032a9f3ca698d5c2527
-- [ ] T2 · the CLI tells no commit apart from a repository git cannot read   R1
+- [x] T2 · the CLI tells no commit apart from a repository git cannot read   R1 · tree:131a535dd26f013d45c768f209c5a496a46b53dd
 - [ ] T3 · role refuses an AGENTS.md it cannot read instead of writing the default block   R1
 
 ## History
