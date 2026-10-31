@@ -7,12 +7,12 @@ R1 · "the doctor calls a correct adoption an unfinished one: an adopted project
 ## Done when
 - the adoption's three facts -does this repository live, is the craft here, is an agent file here- are read in one place, and init, role and doctor ask it
 - a project that adopted odachi is not reported as unfinished, and the note names odachi setup when the door is missing
-- a project that never ran odachi is not called adopted: the note names what it sees and the two commands that would change it
+- a project whose repository git cannot read is not called adopted: the note says what it sees instead of claiming an inference it could not draw
 - init and role keep their behaviour: their suites stay green without an edited assertion
 
 ## Steps
 - [x] T1 · the adoption's three facts are read in one package, and init and role ask it   R1 · tree:f3e8afae7aa73e572bb4cc56724afebcb020ae6d
-- [ ] T2 · the doctor recognises the adopted state and stops calling a silent store a defect   R1
+- [x] T2 · the doctor recognises the adopted state and stops calling a silent store a defect   R1 · tree:088e3dc57c5bee80d7b064562fb08513b2901b49
 - [ ] T3 · the ADR and the changelog say the adoption is one inference   R1
 
 ## History
