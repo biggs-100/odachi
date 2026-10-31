@@ -7,6 +7,26 @@ tomorrow.
 
 ## Unreleased
 
+`odachi clean` names what a clone accumulates, and removes only what odachi wrote.
+
+- **A clone grows four kinds of file and nothing said whose they were.** `odachi clean` prints a map:
+  the class -review records, review scaffolding, undo backups, the agent's scratch- with its owner,
+  its files, its bytes and what the run would do to it. It also names what it will never touch:
+  `proof/`, `odd/tasks`, the client choice, and the rest of `.git/`, which belongs to git and to
+  other tools.
+- **`--apply` gives each class odachi wrote a lifetime**: the newest ten review trees (a verdict, its
+  prompt and the records beside them are one record) and the newest five versions of each file an
+  undo backup saves. The scratch folder is emptied. Nothing else enters the plan.
+- **A class it cannot read stops the run before the first file**, because deleting on a partial view
+  is how a tool loses evidence; a name in the backups folder that is not a version odachi wrote never
+  joins a group, so somebody else's file is never counted as old.
+- **`--apply --legacy` removes the notes an older agent left loose in `.git/`** -`PR*.md`,
+  `PLAN*.txt`, `CLOSE*.txt`, `REL*.txt`, `*MSG.txt`, `T<n>_*.txt`, `ROWBASE.txt`, `HOLE.txt` and
+  `fence.generated`- after naming them. Without `--legacy` they are reported and left.
+- **The block says where an ad-hoc note goes**: `.git/odachi/scratch/`, never the tree and never
+  loose in the git directory, and `odachi clean --apply` empties that folder. The rule is in the
+  block because the block is the door every agent reads in every project.
+
 The doctor tells a note from a plan.
 
 - **A document in `odd/tasks` that is not a plan no longer makes the run unclean.** It carried no plan
