@@ -9,18 +9,10 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0127, which makes the destination the scope chose the one that
-must be written.
+Last written: after 0128, which gives the adoption one inference and stops the
+doctor calling it unfinished.
 
 ## Open
-
-### the doctor calls a correct adoption "an unfinished one"
-
-Found by the review of 0124 (suggestion). An adopted project has no agent file and no
-`project_agents` key -by design, because the inference is never stored- and check 11
-reports exactly that state as a gap, advising `odachi init --global` to record a
-choice. Either the note recognises the adopted state or the advice stops calling the
-missing key a defect.
 
 ### the notes name `.agents/`, the code tests `.agents/skills`
 
@@ -29,6 +21,22 @@ a repository gets the minimal footprint when it has no `.agents/`; the code test
 `.agents/skills`, on purpose -another tool's `.agents/` folder is not the craft. A
 repository with `.agents/notes.md` reads the notes and gets the other behaviour. Three
 lines to say the copy instead of the folder.
+
+## Closed by feature 0128
+
+### the doctor calls a correct adoption "an unfinished one"
+
+Found by the review of 0124 (suggestion). An adopted project has no agent file and no
+`project_agents` key -by design, because the inference is never stored- and check 11
+reported exactly that state as a gap, advising `odachi init --global` to record a
+choice.
+
+Closed: the adoption is one package that `init`, `role` and `doctor` ask, and the
+note recognises the shape -the rules and the hook here, the craft and the agent in
+the machine, nothing recorded because an inference is not a decision- and names
+`odachi setup` when the door is missing. Two app tests and one end-to-end test were
+observed red against the old sentence. ADR 0036. The family is paid: what is left
+open from 0124 is the one row below, about the notes.
 
 ## Closed by feature 0127
 

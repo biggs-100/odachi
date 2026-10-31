@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/adoption"
 	roleapp "github.com/biggs-100/odachi/internal/app/role"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/agent"
@@ -130,13 +131,13 @@ func roleContext(dir string) (roleInputs, int, string) {
 // the scope would hand the adoption inference a copy odachi wrote itself, and the
 // next plain init would install the whole curriculum there.
 func roleSkillDest(dir, stored string) (roleapp.SkillDest, int, string) {
-	adopted, code, message := adoptionHere(dir, stored)
+	facts, code, message := roleFacts(dir, stored)
 	if code != start.CodeOK {
 		return roleapp.SkillDest{}, code, message
 	}
-	// The same function init asks, so the two verbs cannot answer differently
-	// about the same project.
-	scope, _ := persona.SkillsScope{Stored: stored, Adopted: adopted}.Resolve()
+	// The package that owns the adoption answers it, so role, init and doctor
+	// cannot disagree about the same project.
+	scope, _ := facts.Scope("")
 
 	row, err := agent.Resolve(agent.Standard)
 	if err != nil {
@@ -159,38 +160,38 @@ func roleSkillDest(dir, stored string) (roleapp.SkillDest, int, string) {
 	return roleapp.SkillDest{Root: home, Base: in.Dest, Label: in.Display()}, start.CodeOK, ""
 }
 
-// adoptionHere is the inference `init` draws, asked by a verb that only reads: a
-// repository that already lives, no scope recorded, and no copy of the craft here.
-// A folder that is not a repository, or has nothing committed yet, is not an
-// adoption -that is a state- and a check that fails is refused, never read as an
-// absence (0125's rule).
-func adoptionHere(dir, stored string) (bool, int, string) {
-	if stored != "" {
-		return false, start.CodeOK, ""
+// roleFacts reads what the adoption asks of a verb that only writes a role: does
+// this repository live, and does it carry a copy of the craft. A folder that is not
+// a repository, or has nothing committed yet, is a state and not a failure; a read
+// that fails is refused by name (0125's rule).
+func roleFacts(dir, stored string) (adoption.Facts, int, string) {
+	facts, err := adoption.Read(adoption.Reader{
+		Lives: func() (bool, error) {
+			if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
+				if os.IsNotExist(err) {
+					return false, nil
+				}
+				return false, fmt.Errorf("could not check .git: %s", oneLine(err.Error()))
+			}
+			return repositoryLives(dir, false)
+		},
+		CraftHere: func() (bool, error) {
+			if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(".agents/skills"))); err != nil {
+				if os.IsNotExist(err) {
+					return false, nil
+				}
+				return false, fmt.Errorf("could not check .agents/skills: %s", oneLine(err.Error()))
+			}
+			return true, nil
+		},
+		Stored: func() (persona.Store, error) {
+			return persona.Store{Skills: stored}, nil
+		},
+	})
+	if err != nil {
+		return adoption.Facts{}, start.CodeBlocked, oneLine(err.Error()) + "; check the permissions and run odachi role again"
 	}
-	gitPath := filepath.Join(dir, ".git")
-	if _, err := os.Stat(gitPath); err != nil {
-		if os.IsNotExist(err) {
-			return false, start.CodeOK, ""
-		}
-		return false, start.CodeBlocked, "could not check .git: " + oneLine(err.Error()) + "; check the permissions and run odachi role again"
-	}
-	lives, err := repositoryLives(dir, false)
-	if err != nil || !lives {
-		if err != nil {
-			return false, start.CodeBlocked, oneLine(err.Error())
-		}
-		return false, start.CodeOK, ""
-	}
-	copyPath := filepath.Join(dir, filepath.FromSlash(".agents/skills"))
-	if _, err := os.Stat(copyPath); err != nil {
-		if os.IsNotExist(err) {
-			return true, start.CodeOK, ""
-		}
-		return false, start.CodeBlocked, "could not check .agents/skills: " + oneLine(err.Error()) + "; check the permissions and run odachi role again"
-	}
-	// The copy is here: the craft lives in this project, and the role writes here.
-	return false, start.CodeOK, ""
+	return facts, start.CodeOK, ""
 }
 
 // reportRole prints the result of `odachi role`.

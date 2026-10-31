@@ -45,6 +45,8 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 		Exe:     selfExe(),
 		Home:    home,
 		Agents:  agentSelection{},
+		// The adoption's one repository fact: doctor reads it and writes nothing.
+		Git: gitRepo{},
 	}, osFiles{}, osLookup{}, osProfiles{})
 
 	return reportDoctor(result, asJSON, stdout, stderr)

@@ -7,6 +7,20 @@ tomorrow.
 
 ## Unreleased
 
+The adoption is one inference, and `odachi doctor` stops calling it unfinished.
+
+- **A project that adopted odachi is reported as what it is**, not as a gap. Check 11 saw no agent file
+  and no `project_agents` key -the shape an adoption leaves, by design, because the inference is never
+  stored- and advised `odachi init --global`, which records a choice nobody made. The note now says the
+  rules and the hook live in the project and the craft and the agent live in the machine, and names
+  `odachi setup` when the door is missing.
+- **`init`, `role` and `doctor` ask one package** (`internal/app/adoption`) instead of keeping three
+  copies of the same rule, so they cannot answer differently about the same project. Each verb keeps its
+  own ports and its own refusal words; the answer is shared.
+- **A note that cannot tell does not claim**: a repository git cannot read is check 2's business, and the
+  adoption note says only what it sees.
+- The rule is ADR 0036.
+
 A failure at the destination the project lives in fails the run.
 
 - **`init --skills home`, an adopted project and `odachi setup` now exit 1 when the
