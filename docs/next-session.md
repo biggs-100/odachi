@@ -1,69 +1,69 @@
-# Next session: the store stops copying, and the numbers become the project's
+# Next session: the file bump, and finding the next real work
 
-Written at the close of 0132, by the human's request: the plan and the method live
+Written at the close of 0134, by the human's request: the plan and the method live
 here, because the chat is gone tomorrow.
 
-## What 0132 left, measured
+## The three features the human planned are shipped
 
-`odachi clean` names every class a clone accumulates and removes only the four
-odachi wrote, each with a declared lifetime (ADR 0038). Measured in this clone
-before the first `--apply`: 14.7 MB of review records (240 files), 792 KB of undo
-backups (751 files), 366 KB of proofs, and 82 notes an agent left loose in `.git/`,
-now named by `--apply --legacy` and prevented by the scratch folder the block
-teaches.
+- **0132 `odachi clean`** (v0.11.73): every class of file a clone accumulates, with
+  its owner, its size and what the run would do; `--apply` keeps a lifetime only on
+  the classes odachi wrote, `--legacy` names the notes an older agent left loose in
+  `.git/`. ADR 0038.
+- **0133 the store without copies** (v0.11.74): a verdict carries the rows of the
+  paths its candidate judged, plus a blocker that still stands, so it follows the
+  candidate and not the store. 126 KB became 2.4 KB on the feature's own review.
+  ADR 0039.
+- **0134 the project decides** (v0.11.75): `keep_verdicts` and `keep_prompts` in
+  `odd/review.toml`, prompts as their own class, the schema at 3. ADR 0040.
 
-Retention bounds the **count**, not the size, and the size is the bigger problem:
-60,246 pass rows are written across all verdicts while the newest verdict carries
-789, and a verdict went from 0.7 KB to 125 KB in eight days. Every verdict copies
-the whole inherited memory.
+## What 0134 left open, and it is one command
 
-## F1 (next number) - the store without copies
+This repository's own `odd/review.toml` still says `schema = 2` and carries no
+retention keys. CI builds the gate from the base ref, so a candidate file that says
+3 is refused by a base binary that reads 2 before the suite runs. Once v0.11.75 or
+later is installed:
 
-A verdict stops writing the inherited rows. One memory keyed by the blob, referenced
-by every verdict that judged it, turns the growth from O(n²) into O(n).
+```
+odachi review mode on
+```
 
-Acceptance, as it should be tested:
+That rewrites the file with `schema = 3`, `keep_verdicts = 10` and
+`keep_prompts = 0`, which are the numbers in force today, so nothing changes but
+the file telling the truth. Commit it in its own change; the fence does not protect
+it.
 
-- a new verdict's size does not grow with the number of earlier verdicts in the
-  store (make three reviews in a row over one file and compare the file sizes);
-- the gate answers the same questions: the coverage arithmetic, the carried rows
-  and the prompt still carry what 0085, 0104 and 0107 pinned, now read through the
-  memory instead of parsed from each verdict;
-- a store written by the previous release is read unchanged: the verdict's schema
-  is the way out, and an old verdict must not need a migration to be believed.
+## What is measured, so nobody re-measures it
 
-Design care already decided elsewhere: the store leaves the project (0078), the
-verdict's tree is its name (immutability by where it lives), and the scope record
-is written only when the verdict it explains is written (0099).
-
-## F2 (after F1) - the numbers belong to the project
-
-`keep_verdicts` and `keep_prompts` in `odd/review.toml`, with today's numbers as
-the default (10 records, no prompt kept by itself), so a project decides how much
-evidence it pays for. `odd/review.toml` is a strict file with a schema counter
-(0094): a new key is a release-bound change, and an older binary must say "upgrade"
-instead of naming an unknown key.
+- The store after the first real `clean --apply` on 2026-10-31: 15.6 MB and 1004
+  files became 2.2 MB and 557. Before it: 240 review records (14.7 MB), 751
+  versions (792 KB), 82 notes in `.git/` and 366 KB of proofs.
+- After 0133: a verdict is 2-16 KB instead of 126 KB. The ten old ones still weigh
+  1.1 MB and will age out through `keep_verdicts`.
+- Prompts: 597 KB in eleven files, the largest 114 KB. `keep_prompts = 0` empties
+  them; the report says so before it does.
+- `mimo-v2.6-flash` closes a 59 KB prompt in about a minute and does **not** close
+  114 KB in 600s. `odd/review.toml` carries both measurements.
 
 ## What is already true, so it is not re-decided
 
 - **Ownership is declared, never inferred** (ADR 0038). `proof/`, `odd/tasks`, the
   client choice and the rest of `.git/` are named and never removed.
 - **A failed read is not an absence.** `clean --apply` refuses before the first file
-  when a class it maintains cannot be read; a date it cannot read keeps the file out
-  of the class.
-- **The fence at 0132's close protects** `internal/domain/proof/**`, `proof/**` and
+  when a class it maintains cannot be read; the review refuses a store it cannot
+  read instead of borrowing the old answer.
+- **The bound lives in `potentRows`** (ADR 0039). A future lens that asks about an
+  untouched path moves the rule with it.
+- **The fence in force protects** `internal/domain/proof/**`, `proof/**` and
   `skills/**`. A feature that needs one of those lands the policy correction first,
   in its own change (0120).
 - **Numbers follow the landing order**, and `check` reads the highest task document
-  as the current feature. If a correction lands ahead of the feature that needed it,
-  renumber and move the recorded base.
-- **Every irreversible action names its target and waits for the human**: push, pull
-  request, merge, tag or release, an install, another folder.
+  as the current feature.
+- **Every irreversible action names its target and waits for the human.**
 
 ## How to find the next real work
 
 `docs/review-debt.md` holds the accepted rows; `odachi doctor` and `odachi bench`
-still find friction nobody has named, and the hygiene trio (`go vet`, `go mod tidy`,
-`gofmt -l .`) is cheap. Run `odachi clean` itself: a class that grew back is a
-lifetime that does not fit the way the project works, which is a feature, not a
+still find friction nobody has named; the hygiene trio (`go vet`, `go mod tidy`,
+`gofmt -l .`) is cheap. And run `odachi clean` itself: a class that grew back is a
+lifetime that does not fit the way the project works, which is a feature and not a
 cleanup.
