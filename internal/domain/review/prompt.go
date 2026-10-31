@@ -2,6 +2,7 @@ package review
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -42,6 +43,18 @@ type PromptInput struct {
 	// being true the moment somebody adds one with --lens; nil means nobody did,
 	// and the prompt stays exactly the one printed before scopes existed.
 	Scope *Scope
+	// Part and Of say which slice of one candidate this prompt is, when the
+	// candidate was too big for the limit and was split. Zero means the whole
+	// candidate, and the prompt is exactly the one printed before splitting
+	// existed.
+	Part int
+	Of   int
+}
+
+// PromptSizeKB is the size odachi compares against the project's limit: kilobytes
+// rounded up, the same number the refusal and the split agree on.
+func PromptSizeKB(text string) int {
+	return (len(text) + 1023) / 1024
 }
 
 // Lens is one specialist prompt: its name and its body.
@@ -67,9 +80,17 @@ func Prompt(in PromptInput) string {
 	if names := lensNames(in.Lenses); len(names) > 0 {
 		out.WriteString(" · lenses " + strings.Join(names, ", "))
 	}
+	if in.Of > 1 {
+		out.WriteString(" · part " + strconv.Itoa(in.Part) + " of " + strconv.Itoa(in.Of))
+	}
 	out.WriteString("\n\n")
 	out.WriteString("You are the design reviewer of this candidate. You review design, not style:\n")
 	out.WriteString("a review with noise is ignored, and an ignored review protects nobody.\n\n")
+	if in.Of > 1 {
+		out.WriteString("This is part " + strconv.Itoa(in.Part) + " of " + strconv.Itoa(in.Of) + " of one candidate: the diff and the paths below\n")
+		out.WriteString("are the ones this part carries, and another reviewer answers the rest of the tree.\n")
+		out.WriteString("Judge only these, and do not report what a part cannot see.\n\n")
+	}
 
 	out.WriteString("## The brief (what the human asked for)\n")
 	// The diff is written raw, without a fence: a diff of a Markdown file

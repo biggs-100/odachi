@@ -5,6 +5,20 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A review whose prompt does not fit the project's limit is split, not stalled.
+
+- **`odachi review --exec` sends a candidate over `max_prompt_kb` in parts**: each part carries its own
+  changed paths and their hunks, the group's lenses and model, and its number in the header, and the store
+  merges the answers into the tree's one verdict. A project that sets no limit is never split.
+- **Every changed path is answered by exactly one part**, and each part's inspection declaration is judged
+  against the paths it read -a part cannot vouch for bytes another part judged-.
+- **The one refusal left is a file that cannot fit by itself**: it names the file, the size it costs and the
+  limit. A reviewer handed half a file is not reviewing it.
+- Why: 0132's prompt measured 114.4 KB and the attempt before it stalled `mimo-v2.6-flash` for 600s, so the
+  biggest features were the ones the project's own reviewer could not take.
+
 ## v0.11.76 - 2026-10-31
 
 The two rows the review of 0134 left are paid, and this repository declares its retention.

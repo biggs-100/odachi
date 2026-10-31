@@ -13,9 +13,15 @@ Last written: after 0134, which makes the retention the project's decision.
 
 ## Open
 
-Nothing. The two rows the review of 0134 left are closed by 0135: the retention
-line now uses `plural2`, and the stale doc comment in `cmd/odachi/review_test.go`
-is gone.
+- **`internal/app/review/review.go:944`** - the split's `repeat` flag is keyed on
+  `unit.of > 1`, a property of the candidate, so a second attempt over the same
+  oversized candidate also skips the `alreadyStored` refusal and can pay twice for a
+  lens. Found by the review of 0136 (warning, no round earned: the answers are right
+  and the guard is too wide). Closed when the bypass asks what THIS run has already
+  stored -the lenses it landed, not the shape of the candidate- and a test drives a
+  second run over the same split candidate to see it refused.
+
+The two rows of 0134 are closed (see below).
 
 ## Closed by feature 0135
 

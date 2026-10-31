@@ -39,7 +39,7 @@ func TestTheReviewRefusesWhatTheProjectWillNotPayFor(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
 	}
-	for _, want := range []string{"max_prompt_kb", "no reviewer was started"} {
+	for _, want := range []string{"max_prompt_kb", "internal/app/turnos.go"} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("stderr %q does not carry %q", errOut, want)
 		}
