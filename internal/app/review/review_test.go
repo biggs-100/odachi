@@ -2,6 +2,7 @@ package review_test
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -1869,6 +1870,69 @@ func TestABlockerTravelsWhereverItStands(t *testing.T) {
 		return finding.Path == "otro.go" && finding.Severity == domainreview.Critical
 	}) {
 		t.Errorf("findings = %+v, want the standing blocker carried", stored.Findings)
+	}
+}
+
+// TestThreeReviewsInARowLeaveVerdictsThatDoNotGrow: the bound is what turns the
+// store's growth from the square of the reviews into the size of each candidate.
+// The store starts with a verdict about two hundred files nobody will touch, and
+// three candidates change one file each: every verdict stays the size of its own
+// rows, and the gate answered every changed path -a run that stored is a run the
+// coverage check let through.
+func TestThreeReviewsInARowLeaveVerdictsThatDoNotGrow(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+
+	seed := domainreview.Verdict{Reviewer: "claude", Verdict: domainreview.Approved}
+	for i := 0; i < 200; i++ {
+		path := fmt.Sprintf("viejo/%03d.go", i)
+		p.git.blobs[path] = gitBlob
+		seed.Passes = append(seed.Passes, domainreview.Pass{Path: path, Blob: gitBlob, Lens: "readability"})
+	}
+	sealed, err := domainreview.Seal(seed, otherTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the seed verdict: %v", err)
+	}
+	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
+	if len(p.files.files[storePath(otherTree)]) < 20*1024 {
+		t.Fatalf("the seed verdict is %d bytes; the test needs a store that would have grown the old copy", len(p.files.files[storePath(otherTree)]))
+	}
+
+	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`
+
+	sizes := []int{}
+	trees := []string{strings.Repeat("a", 40), strings.Repeat("b", 40), strings.Repeat("c", 40)}
+	blobs := []string{strings.Repeat("1", 40), strings.Repeat("2", 40), strings.Repeat("3", 40)}
+	for i, tree := range trees {
+		p.git.tree = tree
+		p.git.blobs["a.go"] = blobs[i]
+		if result := p.run(review.Options{Exec: "claude -p"}); result.Code != review.CodeOK {
+			t.Fatalf("review %d: code = %d, want 0 (%s)", i+1, result.Code, result.Message)
+		}
+		stored, ok := p.files.files[storePath(tree)]
+		if !ok {
+			t.Fatalf("review %d stored no verdict for %s", i+1, tree)
+		}
+		sizes = append(sizes, len(stored))
+
+		parsed, err := domainreview.Parse(stored)
+		if err != nil {
+			t.Fatalf("verdict %d does not parse: %v", i+1, err)
+		}
+		for _, pass := range parsed.Passes {
+			if strings.HasPrefix(pass.Path, "viejo/") {
+				t.Fatalf("verdict %d carries %s, a path its candidate never touched", i+1, pass.Path)
+			}
+		}
+	}
+
+	for i, size := range sizes {
+		if size >= 4096 {
+			t.Errorf("verdict %d is %d bytes; the bound keeps it the size of its own rows, not the store's", i+1, size)
+		}
+	}
+	if sizes[2] > sizes[0] {
+		t.Errorf("verdict sizes %v: the third grew over the first, so the store still copies itself forward", sizes)
 	}
 }
 
