@@ -143,6 +143,16 @@ func (osFiles) ModTime(path string) (time.Time, error) {
 	return info.ModTime(), nil
 }
 
+// Size is how many bytes a file holds. `odachi clean` adds them up, and a path
+// it cannot stat is an error there: a size nobody could read is not zero.
+func (osFiles) Size(path string) (int64, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return info.Size(), nil
+}
+
 // homeDir is where the Home adapter reads the human's home from. It is a
 // variable so a test can point it at a directory it owns: `pack` writes outside
 // the project, and no test may touch the real home of whoever runs the suite.

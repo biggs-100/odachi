@@ -37,6 +37,11 @@ const (
 	Backups = "backups"
 	// Lock is the write lock the multi-file verbs hold.
 	Lock = "lock"
+	// Scratch is where an agent keeps the note it is working with -the commit
+	// message, the pull request body- while it works. It lives here because the
+	// tree must stay clean and the git directory is not a place for a writer
+	// that nobody owns: a fixed folder is one `clean` knows how to empty.
+	Scratch = "scratch"
 	// Agents is the client selection: which clients receive the native agent.
 	// It is the person's choice, not the team's, so it does not travel.
 	Agents = "agents.toml"

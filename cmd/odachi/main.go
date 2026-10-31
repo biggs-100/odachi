@@ -15,6 +15,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/ask"
 	"github.com/biggs-100/odachi/internal/app/check"
+	"github.com/biggs-100/odachi/internal/app/clean"
 	initapp "github.com/biggs-100/odachi/internal/app/init"
 	"github.com/biggs-100/odachi/internal/app/level"
 	"github.com/biggs-100/odachi/internal/app/pack"
@@ -96,6 +97,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runUndo(dir, args[1:], stdout, stderr)
 	case "store":
 		return runStore(dir, args[1:], stdout, stderr)
+	case "clean":
+		return runClean(dir, args[1:], stdout, stderr)
 	case "check":
 		return runCheck(dir, args[1:], stdout, stderr)
 	case "init":
@@ -121,7 +124,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), undo (odachi undo), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -665,6 +668,63 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 	opts.Dir = dir
 	opts.Store = storeRoot(dir)
 	return reportUndo(undo.Run(opts, disk(dir), &osLock{}), asJSON, stdout, stderr)
+}
+
+// runClean parses the flags, resolves the clone's store and reports what it
+// accumulated. The report is the verb: it reads, names and measures, and writes
+// nothing.
+func runClean(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi clean", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		opts   clean.Options
+		asJSON bool
+	)
+
+	flags.BoolVar(&asJSON, "json", false, "machine output")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi clean -h to see the flags")
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi clean only takes flags (run odachi clean -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	opts.Dir = dir
+	opts.Store = storeRoot(dir)
+	return reportClean(clean.Run(opts, disk(dir)), asJSON, stdout, stderr)
+}
+
+// reportClean prints the report: the map a human reads, or the same map as JSON
+// for a machine.
+func reportClean(result clean.Result, asJSON bool, stdout, stderr io.Writer) int {
+	if asJSON {
+		payload := struct {
+			Code    int           `json:"code"`
+			Message string        `json:"message"`
+			Lines   []string      `json:"lines"`
+			Report  *clean.Report `json:"report,omitempty"`
+		}{Code: result.Code, Message: result.Message, Lines: result.Lines}
+		if result.Code == clean.CodeOK {
+			report := result.Report
+			payload.Report = &report
+		}
+		data, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		fmt.Fprintln(stdout, string(data))
+		return result.Code
+	}
+	return reportOutcome(outcome{Code: result.Code, Message: result.Message, Lines: result.Lines}, false, stdout, stderr)
 }
 
 // runStore parses the two words of `odachi store` and dispatches the one action
@@ -1435,6 +1495,7 @@ usage:
   odachi summary
   odachi progress
   odachi undo [--list | --collect] [--file brief]
+  odachi clean [--json]
   odachi store move [--dry-run]
   odachi check [flags]
   odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
@@ -1496,6 +1557,10 @@ undo flags:
   --collect       move old backups into the clone's store; it deletes no version
   --file s        only that artifact: brief | profile | fence | task
   --json          machine output
+
+clean flags:
+  it reads and reports; nothing is removed yet
+  --json          machine output, with the same map as data
 
 skills flags:
   --check         validate each skill and SKILLS.md; exits 1 when something does not comply
@@ -1625,6 +1690,8 @@ after start:
   odachi undo                                   restore the last thing odachi wrote (the current one is backed up)
   odachi undo --list                            what can be undone, with its date
   odachi undo --file brief                      only that one: brief | profile | fence | task
+  odachi clean                                  what this clone accumulated, who owns it, and
+                                                 what each class would do
   odachi check                                  is it ready? brief, fence, questions and proof
   odachi check --run "<command>"                run the proof and save it with its tree
   odachi review                                 the review prompt for this candidate, also saved
