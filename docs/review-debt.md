@@ -9,20 +9,10 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0125, which stops a footprint from being decided by a check
-that failed.
+Last written: after 0126, which makes a role write and read where the project
+keeps its craft.
 
 ## Open
-
-### `odachi role` scatters into `.agents/skills` and flips the adoption
-
-Found by the review of 0124 (tree `1795072d`). `odachi role <slug>` writes
-`.agents/skills/<slug>/SKILL.md` in the project, whatever the scope: in a project
-that just adopted odachi, that single skill makes `derivesMinimal` answer "this
-project carries the craft", so the next plain `init` installs the whole curriculum
-there and rewrites the block to the project's copy. The inference is right about what
-it sees; the bug is that odachi wrote the copy itself, outside any choice. Role
-should respect the scope the project has, which is a change of its own.
 
 ### when the machine is the only destination, a home failure is the whole job
 
@@ -48,6 +38,37 @@ a repository gets the minimal footprint when it has no `.agents/`; the code test
 `.agents/skills`, on purpose -another tool's `.agents/` folder is not the craft. A
 repository with `.agents/notes.md` reads the notes and gets the other behaviour. Three
 lines to say the copy instead of the folder.
+
+## Closed by feature 0126
+
+### `odachi role` scatters into `.agents/skills` and flips the adoption
+
+Found by the review of 0124 (tree `1795072d`). `odachi role <slug>` wrote
+`.agents/skills/<slug>/SKILL.md` in the project, whatever the scope: in a project
+that just adopted odachi, that single skill makes `derivesMinimal` answer "this
+project carries the craft", so the next plain `init` installs the whole curriculum
+there and rewrites the block to the project's copy. The inference was right about
+what it sees; the bug was that odachi wrote the copy itself, outside any choice.
+
+Closed: the scope is one function (`persona.SkillsScope.Resolve`) that `init` and
+`role` both ask, and role writes and reads the folder that scope names -
+`./.agents/skills` or `~/.agents/skills`. The two end-to-end tests were observed
+red against the previous behaviour, the second one on the row's own symptom: after
+one role, the next plain `init` installed the whole curriculum.
+
+### both verbs read the same fact, verified false
+
+Found by the review of 0126 (tree `651b543b`), as a causal WARNING: the reviewer
+read `init`'s adoption inference as testing the `.agents/` folder and `role`'s as
+testing the `.agents/skills` copy, so a repository that keeps notes there could be
+read two ways by the two verbs.
+
+Verified false in the code: `derivesMinimal` asks `skillsCopy`, which is
+`.agents/skills` (internal/app/init/init.go), and `adoptionHere` asks the same
+path. The row is closed as verified, not paid, and
+`TestAnAgentsFolderThatIsNotTheCraftDoesNotMoveTheRole` pins it end to end -a
+repository with `.agents/notes.md` and no copy keeps the craft in the machine and
+both verbs say so- so the claim cannot come back without a red test.
 
 ## Closed by feature 0125
 

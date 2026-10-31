@@ -102,6 +102,36 @@ func TestARoleDoesNotFlipTheAdoptionOfARepositoryThatAlreadyLives(t *testing.T) 
 	}
 }
 
+// TestAnAgentsFolderThatIsNotTheCraftDoesNotMoveTheRole: `.agents/` belongs to
+// other tools too. The fact init and role both read is the copy -`.agents/skills`-
+// so a repository that keeps its notes there and nothing else still keeps the
+// craft in the machine, and both verbs must say so about the same project.
+func TestAnAgentsFolderThatIsNotTheCraftDoesNotMoveTheRole(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	dir := t.TempDir()
+	initRepoWithCommit(t, dir)
+	writeFile(t, dir, ".agents/notes.md", "notas del proyecto\n")
+
+	if code, out, errOut := runDir(t, dir, []string{"init"}, ""); code != 0 {
+		t.Fatalf("init: exit %d (stdout %q, stderr %q)", code, out, errOut)
+	} else if !strings.Contains(out, "this repository already lives") {
+		t.Fatalf("a folder with notes is not a project that carries the craft:\n%s", out)
+	}
+	writeRole(t, dir)
+
+	code, out, errOut := runDir(t, dir, []string{"role", "marketing"}, "")
+	if code != 0 {
+		t.Fatalf("role marketing: exit %d (stdout %q, stderr %q)", code, out, errOut)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".agents", "skills", "marketing", "SKILL.md")); err != nil {
+		t.Errorf("the role did not follow the scope init drew from the same fact: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".agents", "skills")); err == nil {
+		t.Errorf("the role made the craft appear in a project that keeps it in the machine")
+	}
+}
+
 // TestARoleStaysInTheProjectThatKeepsItsCraft: the other way of the same rule.
 // Naming the project copy is a decision, and the role honours it.
 func TestARoleStaysInTheProjectThatKeepsItsCraft(t *testing.T) {
