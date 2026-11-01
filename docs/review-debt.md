@@ -13,7 +13,22 @@ Last written: after 0141, which closes the two rows of 0140.
 
 ## Open
 
-Nothing, after 0152. The review of 0151 left one row and it is closed below.
+Nothing, after 0156. The reviews of 0154 and 0155 left rows and they are closed below: the nine
+of 0154 were paid by 0155, and the last one -a test that asserted on a canvas it may have
+killed- is closed here.
+
+## Closed by feature 0156
+
+### the test that asked a canvas it may have stopped
+
+Found by the review of 0155 (warning, the last of three rounds). The origin test took its
+positive case on `/api/stop`, the route that closes the canvas, and then asserted the refusal
+on that same server: the assertion that pins the door ran against a canvas that may already
+have been gone.
+
+Closed: the positive case takes a comment, which leaves the canvas alive for the next
+question, and the refusal is asserted against a server that never listened (the unknown-address
+branch) as well as a live one.
 
 ## Closed by feature 0152
 

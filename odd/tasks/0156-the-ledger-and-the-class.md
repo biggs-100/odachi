@@ -10,7 +10,7 @@ R1 · "the ledger names what the reviews of 0154 and 0155 left and pays what it 
 
 ## Steps
 - [ ] T1 · the origin test asserts on a canvas that is alive, and its row is closed   R1
-- [ ] T2 · a change under design/ is documentation, and a test says so   R1
+- [x] T2 · a change under design/ is documentation, and a test says so   R1 · tree:878644d1e9992a719881712406958e738ef0c543
 
 ## History
 L1 · "the ledger names what the reviews of 0154 and 0155 left and pays what it can, and a mockup in design/ stops asking for a code review"
