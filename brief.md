@@ -10,7 +10,7 @@
 
 ## Not included (first version)
 - no scanner and no new doctor check: a tool that guesses is worse than a checklist a person runs
-- no rewrite of the review lens: risk already carries the twenty-one patterns a diff is read against
+- no rewrite of the review lens: risk already carries the eighteen patterns a diff is read against
 - no change to the seventeen skills that ship today; this feature adds one folder and the index
 
 ## Decisions taken
@@ -18,3 +18,4 @@
 - There is no sensitive data in the first version.
 - First usable version: today.
 - Wants to learn: why security is decided at trust boundaries and not in a list.
+
