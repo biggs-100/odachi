@@ -6,11 +6,17 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
+	"os/exec"
+	"os/signal"
+	"runtime"
 	"strings"
 	"time"
 
+	designserver "github.com/biggs-100/odachi/internal/adapters/designserver"
 	appdesign "github.com/biggs-100/odachi/internal/app/design"
 	"github.com/biggs-100/odachi/internal/app/start"
+	assetsdesign "github.com/biggs-100/odachi/internal/assets/design"
 )
 
 // runDesign prints the designs a project keeps and the comments a person left on
@@ -24,6 +30,12 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 
 	action := args[0]
 	rest := args[1:]
+
+	// The canvas takes its own flags -a port and a browser- so it is dispatched
+	// before the flags every other action shares.
+	if action == appdesign.ActionOpen || action == appdesign.ActionStop {
+		return runCanvas(action, dir, rest, stdout, stderr)
+	}
 
 	flags := flag.NewFlagSet("odachi design "+action, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -147,4 +159,110 @@ func commentCounts(d appdesign.Design) commentPayload {
 		counts.Resolved++
 	}
 	return counts
+}
+
+// runCanvas starts or stops the local surface a person clicks on: the artboards at
+// their size, and the comments written into the folder every agent reads. It is a
+// command and not a tool, so every client that can run a shell can open it.
+func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi design "+action, flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var port int
+	var noBrowser bool
+	flags.IntVar(&port, "port", 0, "loopback port; 0 lets the kernel choose")
+	flags.BoolVar(&noBrowser, "no-browser", false, "print the URL and do not open a browser")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			usage(stdout)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+
+	path := appdesign.CanvasPath(dir)
+
+	if action == appdesign.ActionStop {
+		canvas, ok := appdesign.ReadCanvas(path)
+		if !ok {
+			fmt.Fprintln(stdout, "no canvas is running for this clone")
+			return start.CodeOK
+		}
+		if err := appdesign.Stop(nil, path, canvas); err != nil {
+			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		fmt.Fprintln(stdout, "canvas stopped")
+		return start.CodeOK
+	}
+
+	if flags.NArg() > 1 {
+		fmt.Fprintln(stderr, "odachi: odachi design open takes at most one slug")
+		return start.CodeBlocked
+	}
+	slug := ""
+	if flags.NArg() == 1 {
+		slug = flags.Arg(0)
+	}
+
+	// A canvas already up is refreshed, never doubled: the address in the store is
+	// the page a person has open, and a second server would be a second truth.
+	if running, ok := appdesign.ReadCanvas(path); ok && appdesign.Running(nil, running) {
+		fmt.Fprintln(stdout, "canvas already at "+running.URL)
+		fmt.Fprintln(stdout, "odachi design stop closes it")
+		if !noBrowser {
+			openBrowser(running.URL)
+		}
+		return start.CodeOK
+	}
+
+	server := designserver.New(designserver.Options{Dir: dir, Slug: slug, Canvas: assetsdesign.Canvas()})
+	addr, url, err := server.Listen(port)
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: could not open the canvas: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+	_ = appdesign.WriteCanvas(path, appdesign.Canvas{
+		Addr:      addr,
+		URL:       url,
+		Slug:      slug,
+		PID:       os.Getpid(),
+		StartedAt: time.Now().UTC().Format(time.RFC3339),
+	})
+
+	fmt.Fprintln(stdout, "canvas at "+url)
+	fmt.Fprintln(stdout, "odachi design stop closes it; Ctrl-C quits here")
+	if !noBrowser {
+		openBrowser(url)
+	}
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	defer signal.Stop(stop)
+	select {
+	case <-server.Done():
+	case <-stop:
+	}
+
+	_ = server.Close()
+	_ = appdesign.ForgetCanvas(path)
+	fmt.Fprintln(stdout, "canvas stopped")
+	return start.CodeOK
+}
+
+// openBrowser is best effort: a machine with no browser is a machine where the URL
+// is the answer, and failing to open one must not fail the canvas.
+func openBrowser(url string) {
+	var command *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		command = exec.Command("cmd", "/c", "start", "", url)
+	case "darwin":
+		command = exec.Command("open", url)
+	default:
+		command = exec.Command("xdg-open", url)
+	}
+	_ = command.Start()
 }

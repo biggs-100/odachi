@@ -27,6 +27,8 @@ const (
 const (
 	ActionList     = "list"
 	ActionComments = "comments"
+	ActionOpen     = "open"
+	ActionStop     = "stop"
 )
 
 // Options is one `odachi design` invocation.
