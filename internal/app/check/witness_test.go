@@ -55,6 +55,52 @@ func TestAnArguedBlockerNeedsTwoWitnesses(t *testing.T) {
 	}
 }
 
+// witnessFile is one refuter's answer, sealed the way the store does it.
+func witnessFile(t *testing.T, tree string, findings []domainreview.Finding, judgments ...domainreview.Judgment) string {
+	t.Helper()
+	sealed, err := domainreview.SealRefutation(domainreview.Refutation{Refuter: "claude", Refutations: judgments}, findings, tree, reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the witness: %v", err)
+	}
+	return string(domainreview.RenderRefutation(sealed))
+}
+
+// TestTwoFindingsOnOneLineNameTheRightOne is the row the review of this feature
+// found: two findings on the same file and line, one lifted and one still
+// blocking. The report must count the votes of the row that blocks -naming the
+// first row by its place would say "2 of 2" about a finding nobody is looking at.
+func TestTwoFindingsOnOneLineNameTheRightOne(t *testing.T) {
+	first := arguedFinding()
+	first.Why = "the session is accepted without checking the signature"
+	second := arguedFinding()
+	second.Why = "the same line also logs the token"
+	findings := []domainreview.Finding{first, second}
+
+	files := newFakeFiles(readyFiles())
+	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), findings))
+	files.files[refutationFileFor(t, currentTree, 1)] = []byte(witnessFile(t, currentTree, findings,
+		domainreview.Judgment{ID: "F1", Verdict: domainreview.Refuted, Why: "line 12 shows it was already there"},
+		domainreview.Judgment{ID: "F2", Verdict: domainreview.Refuted, Why: "the log line is new but names no token"},
+	))
+	files.files[refutationFileFor(t, currentTree, 2)] = []byte(witnessFile(t, currentTree, findings,
+		domainreview.Judgment{ID: "F1", Verdict: domainreview.Refuted, Why: "the call site passes a signed token"},
+	))
+
+	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	result := run(t, files, git, check.Options{RequireReview: true})
+
+	if result.Code != 2 {
+		t.Fatalf("code = %d, want 2: F2 has one witness (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "F2 has 1 of the 2 cited refutations") {
+		t.Errorf("the report does not count the row that blocks:\n%s", lines)
+	}
+	if strings.Contains(lines, "F1 has 2 of the 2") {
+		t.Errorf("the report counts the row that was lifted:\n%s", lines)
+	}
+}
+
 // TestACitedBlockerFallsWithOneWitness: the reviewer that quoted the line earns
 // the short road. Making it pay for a second witness would punish the one that did
 // the work, and the counter-citation is checkable at a glance.

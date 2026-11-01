@@ -1293,19 +1293,17 @@ func (r *runner) refutations(verdict reviewdomain.Verdict) (reviewdomain.Answers
 // class needs. Empty when nobody answered: a block nobody voted on has nothing to
 // count, and saying "0 of 1" would read like a decision that was taken.
 func blockVote(findings []reviewdomain.Finding, answers reviewdomain.Answers, finding reviewdomain.Finding) string {
-	ids := reviewdomain.FindingIDs(findings)
-	for i := range findings {
-		if findings[i].Path != finding.Path || findings[i].Line != finding.Line || findings[i].Why != finding.Why {
-			continue
-		}
-		votes := answers.RefutedBy(ids[i])
-		if votes == 0 {
-			return ""
-		}
-		return fmt.Sprintf("%s has %d of the %d cited refutations it needs (%s finding)",
-			ids[i], votes, reviewdomain.RequiredWitnesses(finding), finding.EvidenceClass())
+	index := reviewdomain.IndexOf(findings, finding)
+	if index < 0 {
+		return ""
 	}
-	return ""
+	id := reviewdomain.FindingIDs(findings)[index]
+	votes := answers.RefutedBy(id)
+	if votes == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s has %d of the %d cited refutations it needs (%s finding)",
+		id, votes, reviewdomain.RequiredWitnesses(finding), finding.EvidenceClass())
 }
 
 // lensMissing is the block for a verdict that does not cover a required lens.

@@ -253,6 +253,19 @@ func (a Answers) Lifts(id string, f Finding) bool {
 	return a.RefutedBy(id) >= RequiredWitnesses(f)
 }
 
+// IndexOf names the position of one finding inside its verdict, which is the id a
+// refuter answers about. It compares every field that can be reported, not only
+// the place: two findings on the same line are two findings, and naming the wrong
+// one would count the votes of a row nobody is looking at.
+func IndexOf(findings []Finding, finding Finding) int {
+	for i := range findings {
+		if findings[i] == finding {
+			return i
+		}
+	}
+	return -1
+}
+
 // BlockingAfter returns the first finding that still blocks, in the verdict's
 // file order: causal, BLOCKER or CRITICAL, not dismissed with evidence, and not
 // lifted by the refutations filed for this tree.

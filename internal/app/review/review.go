@@ -1819,11 +1819,8 @@ func (r *runner) stillBlockingLine(tree string, findings []domain.Finding) strin
 		return ""
 	}
 	id := ""
-	for i := range findings {
-		if findings[i].Path == finding.Path && findings[i].Line == finding.Line {
-			id = domain.FindingIDs(findings)[i]
-			break
-		}
+	if index := domain.IndexOf(findings, finding); index >= 0 {
+		id = domain.FindingIDs(findings)[index]
 	}
 	return fmt.Sprintf("%s still blocks: %d of %d cited refutations (%s finding)",
 		id, answers.RefutedBy(id), domain.RequiredWitnesses(finding), finding.EvidenceClass())

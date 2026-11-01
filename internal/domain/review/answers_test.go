@@ -21,6 +21,29 @@ func refutedBy(why string) review.Refutation {
 	return review.Refutation{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: why}}}
 }
 
+// TestIndexOfNamesTheRowAndNotThePlace: two findings on the same line are two
+// rows, and the id a refuter answers about belongs to one of them. Matching by
+// path and line would count the votes of the row nobody is looking at.
+func TestIndexOfNamesTheRowAndNotThePlace(t *testing.T) {
+	first := review.Finding{Path: "a.go", Line: 12, Severity: review.Blocker, Causal: true, Why: "first"}
+	second := first
+	second.Why = "second"
+
+	findings := []review.Finding{first, second}
+	if got := review.IndexOf(findings, second); got != 1 {
+		t.Errorf("IndexOf(second) = %d, want 1", got)
+	}
+	if got := review.IndexOf(findings, first); got != 0 {
+		t.Errorf("IndexOf(first) = %d, want 0", got)
+	}
+
+	stranger := first
+	stranger.Why = "third"
+	if got := review.IndexOf(findings, stranger); got != -1 {
+		t.Errorf("IndexOf(a row that is not there) = %d, want -1", got)
+	}
+}
+
 // TestAnArguedBlockNeedsTwoCitedRefutations: the finding that argues needs two
 // witnesses, because the claim nobody can point at is the one a single reviewer
 // can remove by being confident. One citation is not enough, and a `stands` never
