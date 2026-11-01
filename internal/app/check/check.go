@@ -1058,11 +1058,17 @@ func (r *runner) requireReview(base string) *Result {
 	}
 
 	// Identity before coverage: a lens judged by the model that produced the proof
-	// is the tree approving itself. Both names are declarations, so this refuses
-	// what can be seen, not what cannot be proven.
+	// is the tree approving itself. Both names are declarations, and the comparison
+	// is of the model, not of its setting: the same name at another effort is the
+	// same judge.
 	if lenses := selfJudgedLenses(r.proofModel, verdict, required); len(lenses) > 0 {
-		message := fmt.Sprintf("the review of %s was written by the model that produced the proof (%s): a model does not judge its own tree",
-			strings.Join(lenses, ", "), strings.TrimSpace(r.proofModel))
+		proofShown := strings.TrimSpace(r.proofModel)
+		detail := "(" + proofShown + ")"
+		if verdictShown := verdictModelFor(verdict, lenses[0]); !strings.EqualFold(verdictShown, proofShown) {
+			detail = fmt.Sprintf("(the proof ran %s; the verdict names %s)", proofShown, verdictShown)
+		}
+		message := fmt.Sprintf("the review of %s was written by the model that produced the proof %s: a model does not judge its own tree",
+			strings.Join(lenses, ", "), detail)
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewSelf,
@@ -1343,6 +1349,15 @@ func lensMissing(missing []string, rel string) Result {
 	}
 }
 
+// verdictModelFor is the model a verdict names for one lens, with the same
+// precedence the identity gate uses: the lens entry, then the single model.
+func verdictModelFor(verdict reviewdomain.Verdict, lens string) string {
+	if model := strings.TrimSpace(verdict.Models[strings.ToLower(strings.TrimSpace(lens))]); model != "" {
+		return model
+	}
+	return strings.TrimSpace(verdict.Model)
+}
+
 // selfJudgedLenses is the required lenses this verdict judged with the model that
 // produced the proof, in the gate's order. A lens answers with its own model when
 // the project assigned one, and with the verdict's single model otherwise.
@@ -1350,7 +1365,8 @@ func lensMissing(missing []string, rel string) Result {
 // Two unknowns are not a match: an old proof, a verdict written by a human or a
 // lens the command did not name has no model, and calling that a self-review
 // would block every project that ran the gate before the field existed. The
-// comparison ignores case because the same identity is spelled both ways.
+// comparison is of the model, not of its setting: case and the #variant are both
+// spellings of the same judge, and a variant is an effort, not a second opinion.
 func selfJudgedLenses(proofModel string, verdict reviewdomain.Verdict, required []string) []string {
 	proofModel = strings.TrimSpace(proofModel)
 	if proofModel == "" {
@@ -1366,11 +1382,8 @@ func selfJudgedLenses(proofModel string, verdict reviewdomain.Verdict, required 
 		if !answered(verdict.Lenses, name) {
 			continue
 		}
-		model := strings.TrimSpace(verdict.Models[name])
-		if model == "" {
-			model = strings.TrimSpace(verdict.Model)
-		}
-		if model != "" && strings.EqualFold(model, proofModel) {
+		model := verdictModelFor(verdict, name)
+		if model != "" && reviewdomain.ModelIdentity(model) == reviewdomain.ModelIdentity(proofModel) {
 			lenses = append(lenses, name)
 		}
 	}

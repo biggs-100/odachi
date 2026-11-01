@@ -639,6 +639,14 @@ func TestRequireReviewRefusesASelfReview(t *testing.T) {
 			proof:   proofFileByModel(currentTree, "Provider/Model"),
 			verdict: verdictFileByModel(t, currentTree, "provider/model"),
 		},
+		{
+			// The variant is an effort of the same model, not another judge: a
+			// reviewer at #high reading a tree built by the same model is exactly the
+			// second reading this gate has to name.
+			name:    "the same model at another effort",
+			proof:   proofFileByModel(currentTree, "provider/model#high"),
+			verdict: verdictFileByModel(t, currentTree, "provider/model"),
+		},
 	}
 
 	for _, tc := range cases {

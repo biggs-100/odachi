@@ -102,6 +102,18 @@ func AllLenses() []string {
 	return out
 }
 
+// ModelIdentity is the model behind a model value: the provider and the name, with
+// any #variant cut off. A variant is an effort or a setting of the same model, so
+// two values that differ only there are the same judge -and calling them different
+// is how a review gets accepted as a second opinion it never was.
+func ModelIdentity(model string) string {
+	trimmed := strings.ToLower(strings.TrimSpace(model))
+	if cut, _, found := strings.Cut(trimmed, "#"); found {
+		return strings.TrimSpace(cut)
+	}
+	return trimmed
+}
+
 // NormalizeModel checks a model identity. The value replaces {model} inside a
 // reviewer command, so it is an identifier and not shell code: a space, a quote or
 // a semicolon would change the command, and a repository's review.toml must not be
