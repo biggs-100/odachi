@@ -25,7 +25,10 @@ it can say is what it did: quoted a line, or argued.
   invented class is refused by name, the way an invented severity is.
 - **The class decides the quorum.** A `cited` finding falls to one cited refutation. An
   `argued` finding needs two. A `stands` is never a vote to remove, and a `refuted` without a
-  citation is not a vote at all: the default is always that the finding stands.
+  citation is not a vote at all: the default is always that the finding stands. **The quorum
+  counts accounts, not files**: the refuter's name is the identity it has, a second answer from
+  one that already answered this tree is refused by name, and two answers signed alike are one
+  opinion written twice.
 - **Three is the ceiling.** A tree takes at most three refuters; the fourth answer has no file
   to live in. A block decided by a crowd is a block nobody can read, and the ceiling keeps the
   quorum from becoming a campaign.
