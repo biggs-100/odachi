@@ -1,11 +1,12 @@
-# the-boundary-test-names-the-boundary
+# the-readme-stops-naming-a-version
 
 ## What must exist
-- the test that pins the fence boundary rejects a rule over the package that writes proofs, and not every rule that names code
+- the README stops naming a version that ages, points at where the truth lives, and says what a proof is and who keeps it
 
 ## Done when
-- a rule over internal/domain/proof turns the test red, and a rule over another internal package does not
-- the row the review of 0151 left is closed in docs/review-debt.md
+- the release paragraph and the cosign example do not carry a version that the next release turns into a lie
+- the README says in one sentence that proof/ is generated, does not travel with the repository, and who keeps it
+- the changelog says so
 
 ## Not included (first version)
 - a stored proof is never rewritten, whatever the writer learns
@@ -15,4 +16,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que un test demasiado ancho culpa a quien no hizo nada.
+- Wants to learn: por que una cifra en la prosa es una afirmacion que nadie mide.

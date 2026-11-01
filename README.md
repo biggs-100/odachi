@@ -30,14 +30,16 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 odachi --version
 ```
 
-Those three lines work. The latest release is `v0.11.40`: six binaries (Linux,
-macOS and Windows, amd64 and arm64) and a `checksums.txt`. The installer resolves
-the latest version through the API, verifies the sha256 and only then writes; a
-checksum that does not match exits with an error and leaves **nothing** at the
-destination. The whole chain is tested against the real release, not a fixture: a
-test builds the `tar.gz` and the checksums the way goreleaser publishes them,
-runs `install.sh` offline through `file://`, and the installed binary answers its
-version.
+Those three lines work. Each release carries six binaries (Linux, macOS and Windows,
+amd64 and arm64), a `checksums.txt`, an SBOM and a provenance attestation. The
+releases page (https://github.com/biggs-100/odachi/releases) names the newest one, and the installer resolves it through the API
+instead of trusting a number written here -a version in prose is a claim nobody
+measures. The installer
+verifies the sha256 and only then writes; a checksum that does not match exits with
+an error and leaves **nothing** at the destination. The whole chain is tested
+against the real release, not a fixture: a test builds the `tar.gz` and the
+checksums the way goreleaser publishes them, runs `install.sh` offline through
+`file://`, and the installed binary answers its version.
 
 The installer also runs `odachi setup`: the bootstrap skill in
 `~/.agents/skills`, the home door for the agent clients it finds, and OpenCode's
@@ -64,9 +66,11 @@ without a key, with the identity of the workflow that pushed the tag. `v0.11.11`
 and later carry the bundle; use the version you downloaded.
 
 ```sh
+# replace <tag> with the tag you downloaded: the certificate names that tag,
+# so a signature copied from another release fails
 cosign verify-blob \
   --bundle checksums.txt.sigstore.json \
-  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.40' \
+  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/<tag>' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   checksums.txt
 ```
@@ -148,6 +152,12 @@ prove. It is a claim the agent writes, not evidence the command produced -the su
 does not know which requirement a test belongs to, and the gate treats it that way:
 a close whose proof does not declare a requirement says so and stays ready. Read it
 as a promise a reviewer can challenge, never as a certificate.
+
+The folder is generated evidence and does not travel with the repository: `/proof/` sits
+in the `.gitignore` `init` writes. It keeps one file per feature, and the next run of the
+same feature rewrites it. `odachi clean` reports it and never removes it, because the
+clone's store keeps the verdict -the claim, named after the tree- and this folder keeps
+the output that claim is about.
 
 `init` takes care of that for you, and of two things that are not artifacts: it
 leaves a marked block in the project's `.gitignore` (`/proof/` and `*.bak-*`,
@@ -593,8 +603,10 @@ Pure domain in `internal/domain/...` with an import guard, adapters in
 `skills`, `skill new`, `role`, `pack` and `--version`. 44 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
-Published: `v0.11.40`. What changed in each version is in
-[CHANGELOG.md](CHANGELOG.md). The one-line installation is tested against the
+Published releases and what changed in each one: [CHANGELOG.md](CHANGELOG.md) and the
+[releases page](https://github.com/biggs-100/odachi/releases). This file does not name the newest: a number here is a claim nobody
+measures. The one-line
+installation is tested against the
 real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP
 listener in CI.
