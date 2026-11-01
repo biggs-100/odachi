@@ -201,6 +201,14 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 			return start.CodeOK
 		}
 		if err := appdesign.Stop(nil, path, canvas); err != nil {
+			// A canvas that died with its terminal leaves an address behind. The
+			// command forgets it and says so: a dead server must not make `stop`
+			// fail forever.
+			if !appdesign.Running(nil, canvas) {
+				_ = appdesign.ForgetCanvas(path)
+				fmt.Fprintln(stdout, "no canvas is running at "+canvas.Addr+": the address is forgotten")
+				return start.CodeOK
+			}
 			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
@@ -234,13 +242,18 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 		fmt.Fprintln(stderr, "odachi: could not open the canvas: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
-	_ = appdesign.WriteCanvas(path, appdesign.Canvas{
+	if err := appdesign.WriteCanvas(path, appdesign.Canvas{
 		Addr:      addr,
 		URL:       url,
 		Slug:      slug,
 		PID:       os.Getpid(),
 		StartedAt: time.Now().UTC().Format(time.RFC3339),
-	})
+	}); err != nil {
+		_ = server.Close()
+		fmt.Fprintln(stderr, "odachi: the canvas started but its address could not be recorded in "+path+": "+oneLine(err.Error()))
+		fmt.Fprintln(stderr, "odachi: nothing is serving; fix the store and run odachi design open again")
+		return start.CodeBlocked
+	}
 
 	fmt.Fprintln(stdout, "canvas at "+url)
 	fmt.Fprintln(stdout, "odachi design stop closes it; Ctrl-C quits here")
