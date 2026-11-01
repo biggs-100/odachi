@@ -511,12 +511,15 @@ func (s *Server) ownPage(w http.ResponseWriter, r *http.Request) bool {
 	if origin == "" {
 		return true
 	}
-	parsed, err := url.Parse(origin)
-	own := s.host
-	if own == "" {
-		own = r.Host
+	// The address is the one this canvas listens on. When it is not known the
+	// request is refused: a control whose unknown state trusts the caller is not a
+	// control.
+	if s.host == "" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "the canvas does not know its own address: the request is refused"})
+		return false
 	}
-	if err != nil || parsed.Host != own {
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Host != s.host {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross-origin request refused: the canvas answers only its own page"})
 		return false
 	}

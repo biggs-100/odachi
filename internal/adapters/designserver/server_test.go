@@ -287,3 +287,42 @@ func TestTheWatcherAnnouncesEveryFileThatMoved(t *testing.T) {
 		t.Fatalf("moved = %v, want the two artboards", moved)
 	}
 }
+
+// The origin check is the door, so both halves are pinned: the canvas accepts its own
+// page and refuses a foreign one, and a canvas that does not know its address refuses
+// instead of trusting the header it was given.
+func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
+	root := project(t)
+	server := New(Options{Dir: root, Canvas: []byte("canvas")})
+	srv := httptest.NewServer(server.routes())
+	defer srv.Close()
+	server.host = srv.Listener.Addr().String()
+
+	request := func(origin string) int {
+		req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/stop", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		response, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		return response.StatusCode
+	}
+
+	if got := request("http://" + server.host); got != http.StatusOK {
+		t.Errorf("the canvas's own origin = %d, want 200", got)
+	}
+	if got := request("http://evil.example"); got != http.StatusForbidden {
+		t.Errorf("a foreign origin = %d, want 403", got)
+	}
+
+	server.host = ""
+	if got := request("http://" + srv.Listener.Addr().String()); got != http.StatusForbidden {
+		t.Errorf("a canvas that does not know its address = %d, want 403", got)
+	}
+}
