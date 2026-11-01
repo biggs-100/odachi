@@ -11,7 +11,7 @@ R1 · "the project's review names a model the provider serves today, and a revie
 
 ## Steps
 - [x] T1 · odd/review.toml names a model the provider serves, and the file says what to check when one is retired   R1 · tree:2c83f07e42475d4ebfdc407400133c262ce74691
-- [ ] T2 · a reviewer that cannot start names the model and the source it came from   R1
+- [x] T2 · a reviewer that cannot start names the model and the source it came from   R1 · tree:9ae5dc9040d7672da54e112f4f99204c7ea43438
 
 ## History
 L1 · "the project's review names a model the provider serves today, and a reviewer that cannot start says which model it tried and where that model came from, so a retirement is one line to fix instead of an investigation"
