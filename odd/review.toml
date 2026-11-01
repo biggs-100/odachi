@@ -13,7 +13,7 @@ keep_verdicts = 10
 keep_prompts = 0
 
 [lenses]
-risk = "opencode-go/mimo-v2.6-flash"
-readability = "opencode-go/mimo-v2.6-flash"
-reliability = "opencode-go/mimo-v2.6-flash"
-resilience = "opencode-go/mimo-v2.6-flash"
+risk = "opencode-go/mimo-v2.6-pro"
+readability = "opencode-go/mimo-v2.6-pro"
+reliability = "opencode-go/mimo-v2.6-pro"
+resilience = "opencode-go/mimo-v2.6-pro"

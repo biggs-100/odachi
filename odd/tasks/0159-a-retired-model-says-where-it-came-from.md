@@ -15,3 +15,4 @@ R1 · "the project's review names a model the provider serves today, and a revie
 
 ## History
 L1 · "the project's review names a model the provider serves today, and a reviewer that cannot start says which model it tried and where that model came from, so a retirement is one line to fix instead of an investigation"
+L2 · OFICIO · "the four lenses are judged by opencode-go/mimo-v2.6-pro" (porque measured 2026-11 against the provider's own list: mimo-v2.6-pro, mimo-v2.5 and mimo-v2.5-pro are served and mimo-v2.6-flash is retired; the pro is the newest of the family and the one that answered the reviews of 0157 and 0158)
