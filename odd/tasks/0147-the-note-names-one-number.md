@@ -10,8 +10,8 @@ R1 · "a next-session note that says a bare year must not be read as a feature: 
 - the row the review of 0146 left is closed in `docs/review-debt.md`
 
 ## Steps
-- [ ] T1 · the check asks one question, so a bare year is not a feature   R1
-- [ ] T2 · the row the review of 0146 left is closed in docs/review-debt.md   R1
+- [x] T1 · the check asks one question, so a bare year is not a feature   R1 · tree:fa41fa6da23e6d68e33fa13abe1ddb2f05cfc1a7
+- [x] T2 · the row the review of 0146 left is closed in docs/review-debt.md   R1
 
 ## History
 L1 · "a next-session note that says a bare year must not be read as a feature: the check only asks whether the note names the newest feature, and its warning names the number to write"

@@ -16,7 +16,8 @@ The block closes the session, and `doctor` says when the note went stale.
   that names the number missing, and it never refuses: a stale note is a note to rewrite. A project that keeps no
   such file stays clean, because the convention belongs to the project.
 - **The check asks one question**: does the note name the newest feature? It does not read the highest number the
-  note mentions, because a bare year is four digits too and would warn forever on a note that is right.- Why: `docs/next-session.md` is not one of the four artifacts, and nothing wrote it or read it, so it went stale
+  note mentions, because a bare year is four digits too and would warn forever on a note that is right.
+- Why: `docs/next-session.md` is not one of the four artifacts, and nothing wrote it or read it, so it went stale
   silently for two releases. A rule nobody looks at ages by itself.
 
 The CI gate stops asking to be excused from the review.

@@ -1,9 +1,9 @@
 # Next session: the block closes itself, and the one decision that waits
 
-Written at the close of 0146, on v0.11.85 plus one feature. The chat is gone
+Written at the close of 0147, on v0.11.85 plus two features. The chat is gone
 tomorrow; this file is the state.
 
-## What the last three features shipped
+## What the last four features shipped
 
 - **0144 (v0.11.85)**: the review never authorises delivery. With `mode = on`, a close
   without a verdict is ready and names the review it did not get; only a causal
@@ -16,6 +16,10 @@ tomorrow; this file is the state.
   to rewrite, what goes in it— and `doctor` gained a fourteenth check that warns when
   `docs/next-session.md` does not name the newest feature. This file is the first one
   that check reads.
+- **0147 (unreleased)**: the check asks one question —does the note name the newest
+  feature?— and stopped reading the highest number the note mentions. A bare year is four
+  digits too, and the review of 0146 found the warning that never cleared. The fix
+  deleted the reading instead of adding a second exception.
 
 ## What is open
 
