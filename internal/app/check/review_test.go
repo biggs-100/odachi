@@ -622,6 +622,27 @@ func TestAStaleProofWithoutAPathKeepsTheGenericMessage(t *testing.T) {
 	}
 }
 
+// TestASelfReviewIsNamedAndNotRefusedByDefault: with the project's mode on, the
+// gate says what the verdict is -the builder's own model, a second reading- and
+// lets the close through. Only --require-review turns that sentence into a wall.
+// A human who owns one model has a lane; a project that wants the guarantee asks
+// for it.
+func TestASelfReviewIsNamedAndNotRefusedByDefault(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[proofPath()] = []byte(proofFileByModel(currentTree, "provider/model#high"))
+	files.files[reviewPath(currentTree)] = []byte(verdictFileByModel(t, currentTree, "provider/model"))
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120, ReviewMode: true},
+		files, codeChange(), &fakeShell{})
+
+	if got.Code != 0 {
+		t.Fatalf("a self-review under the project's mode blocked the close: %d (%s)", got.Code, got.Message)
+	}
+	if !strings.Contains(got.Note, "model that produced the proof") {
+		t.Errorf("the ready run does not name the self-review; Note = %q (lines: %v)", got.Note, got.Lines)
+	}
+}
+
 // TestRequireReviewRefusesASelfReview: the proof and the verdict name the same
 // model, so the tree is approving itself. The gate names the identity and the
 // command that fixes it, because "find another reviewer" is not a next step.
@@ -637,6 +658,14 @@ func TestRequireReviewRefusesASelfReview(t *testing.T) {
 			// model ids are lowercase in the wild, and case is not a second model.
 			name:    "the same model in another case",
 			proof:   proofFileByModel(currentTree, "Provider/Model"),
+			verdict: verdictFileByModel(t, currentTree, "provider/model"),
+		},
+		{
+			// The variant is an effort of the same model, not another judge: a
+			// reviewer at #high reading a tree built by the same model is exactly the
+			// second reading this gate has to name.
+			name:    "the same model at another effort",
+			proof:   proofFileByModel(currentTree, "provider/model#high"),
 			verdict: verdictFileByModel(t, currentTree, "provider/model"),
 		},
 	}

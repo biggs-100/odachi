@@ -555,6 +555,9 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "mode" {
 		return runReviewMode(dir, args[1:], stdout, stderr)
 	}
+	if len(args) > 0 && args[0] == "waive" {
+		return runReviewWaive(dir, args[1:], stdout, stderr)
+	}
 
 	flags := flag.NewFlagSet("odachi review", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -647,6 +650,40 @@ func hasFlag(args []string, name string) bool {
 		}
 	}
 	return false
+}
+
+// runReviewWaive records the human's decision that the current feature lands without
+// a review verdict, with the reason the gate reads at the close. It is the lane a
+// project with one model needs, and it is a decision on the document rather than a
+// flag that dies with the shell.
+func runReviewWaive(dir string, args []string, stdout, stderr io.Writer) int {
+	const usageLine = `usage: odachi review waive --because "<why this feature lands without a verdict>" [--json]`
+
+	flags := flag.NewFlagSet("odachi review waive", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var (
+		because string
+		asJSON  bool
+	)
+	flags.StringVar(&because, "because", "", "why this feature lands without a review verdict")
+	flags.BoolVar(&asJSON, "json", false, "machine output")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fmt.Fprintln(stdout, usageLine)
+			return start.CodeOK
+		}
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; "+usageLine)
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; %s\n", flags.Arg(0), usageLine)
+		return start.CodeBlocked
+	}
+
+	result := reviewapp.Waive(reviewapp.WaiveOptions{Dir: dir, Because: because}, disk(dir))
+	return reportReview(result, asJSON, stdout, stderr)
 }
 
 // runReviewMode parses the small mode grammar by hand: the action is a word,
@@ -1582,6 +1619,7 @@ usage:
   odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
   odachi review [--lens <lens>]
   odachi review mode [status|on|off]
+  odachi review waive --because "<why>"
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]

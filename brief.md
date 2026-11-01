@@ -1,21 +1,22 @@
-# a-block-falls-by-evidence
+# a-second-reading-or-a-second-opinion
 
 ## What must exist
-- a finding says whether its evidence is cited from the diff or argued, and a blocking finding is lifted only by the evidence its class requires: one cited counter-argument for a cited claim, two for an argued one
+- the gate names when the verdict came from the model that wrote the proof instead of refusing it by default, refuses only when the run asks for another model, and a human who owns one model can record that decision on an open feature, with its reason
 
 ## Done when
-- a reviewer answer that says neither cited nor argued reads as argued, an unknown value is refused naming the two, and a verdict stored before the class existed keeps its meaning
-- two cited refutations lift an argued BLOCKER and one leaves it blocking, naming the vote it still needs; a cited BLOCKER falls with one -both observed in a test
-- each refuter's answer is stored once, the legacy `<tree>.refuted.json` keeps the meaning it has today, and a test reads one
-- an ADR says what a citation buys, why an argued claim needs two votes, and what the tool still cannot prove
+- a verdict by the proof's model leaves the tree ready and says what it is, and the same tree under --require-review is refused naming the model -both observed in a test
+- the comparison ignores the variant, so provider/name#high and provider/name are the same model, and the message names the effort each one ran with
+- odachi review waive --because "<why>" writes Review: waived into the open feature's task doc, keeps its history, and check reports the waiver instead of a missing verdict
+- an ADR says why the rule names instead of refusing, and what a second reading with the same model does and does not buy
 
 ## Not included (first version)
-- no change to the four lens prompts: the class is asked in the reviewer's answer, not in what a lens looks for
-- no network, no second reviewer run and no automatic retry: the extra refuters are asked by a human, the same way the first one is
-- no change to the severity vocabulary: cited or argued, BLOCKER means what it means today
+- no change to the quorum of 0160 or to the severity vocabulary: cited falls to one refutation, argued to two, three witnesses at most
+- no network and no provider query: the tool cannot discover which models exist, and a gate that calls out to answer is not a gate
+- the waiver does not skip the proof or the fence, and it is not a per-run flag: it is a decision on the document, taken by the human
+- the four lens prompts are not edited
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why a claim is worth what can be cited from it, and not how convincing it sounds.
+- Wants to learn: why a fresh session with the same model is a second reading and not a second opinion.
