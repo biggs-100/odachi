@@ -1,6 +1,7 @@
 package check_test
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -26,6 +27,33 @@ func arguedFinding() domainreview.Finding {
 	finding := blockingFinding()
 	finding.Evidence = domainreview.EvidenceArgued
 	return finding
+}
+
+// TestAWitnessThatCannotBeReadIsNotAnEmptyOne: an absent answer is the normal
+// state; a file that is there and cannot be read is not. Reading it as "nobody
+// answered" would let a permissions problem hide a witness the gate should count,
+// and the human would see a number that is wrong without a word about why.
+func TestAWitnessThatCannotBeReadIsNotAnEmptyOne(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{arguedFinding()}))
+	files.files[refutationFileFor(t, currentTree, 1)] = []byte(refutedFile(t, currentTree, "el diff de la línea 12 muestra que la firma ya se validaba"))
+	files.denyRead = func(path string) error {
+		if strings.Contains(filepath.ToSlash(path), ".refuted") {
+			return errors.New("permission denied")
+		}
+		return nil
+	}
+
+	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	result := run(t, files, git, check.Options{RequireReview: true})
+
+	if result.Code != 2 {
+		t.Fatalf("code = %d, want 2 (%s)", result.Code, result.Message)
+	}
+	joined := result.Message + "\n" + strings.Join(result.Lines, "\n")
+	if !strings.Contains(joined, "refuted.json") || !strings.Contains(joined, "permission denied") {
+		t.Errorf("the refusal does not name the file and the error:\n%s", joined)
+	}
 }
 
 // TestAnArguedBlockerNeedsTwoWitnesses is the rule this feature exists for. One

@@ -43,6 +43,9 @@ type fakeFiles struct {
 	// port healthy: a test can pin one write failing without a broken filesystem
 	// standing in for a permission problem.
 	denyWrite func(path string) error
+	// denyRead does the same for a read, so a witness that cannot be read is a
+	// permission problem and not a file that is simply not there.
+	denyRead func(path string) error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -70,6 +73,11 @@ func (f *fakeFiles) Exists(path string) (bool, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	if f.err != nil {
 		return nil, f.err
+	}
+	if f.denyRead != nil {
+		if err := f.denyRead(path); err != nil {
+			return nil, err
+		}
 	}
 	data, ok := f.files[path]
 	if !ok {

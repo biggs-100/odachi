@@ -1263,30 +1263,49 @@ func (r *runner) refutations(verdict reviewdomain.Verdict) (reviewdomain.Answers
 			break
 		}
 
+		// An absent answer is the normal state; a store that cannot answer is not.
+		// Reading a missing file as "nobody answered" would let a permissions
+		// problem hide a witness the gate should be counting.
+		exists, err := r.files.Exists(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
+		if err != nil {
+			return nil, unreadableRefutation(verdict, rel, "could not ask whether it exists: "+oneLine(err.Error()))
+		}
+		if !exists {
+			continue
+		}
+
 		data, err := r.files.Read(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
 		if err != nil {
-			continue
+			return nil, unreadableRefutation(verdict, rel, oneLine(err.Error()))
 		}
 
 		parsed, err := reviewdomain.ParseRefutation(data)
 		if err != nil {
-			detail := ""
-			if finding, blocking := reviewdomain.Blocking(verdict.Findings); blocking {
-				detail = "; the finding " + reviewFinding(finding) + " is still blocking"
-			}
-			message := fmt.Sprintf("this tree's refutation cannot be read (%s): %s%s", rel, oneLine(err.Error()), detail)
-			problem := Result{
-				Code:    int(gate.NeedsDecision),
-				Reason:  ReasonReviewRefutedUnreadable,
-				Message: message,
-				Next:    "odachi review --show",
-				Lines:   []string{message, "next: odachi review --show"},
-			}
-			return nil, &problem
+			return nil, unreadableRefutation(verdict, rel, oneLine(err.Error()))
 		}
 		answers = append(answers, parsed)
 	}
 	return answers, nil
+}
+
+// unreadableRefutation is the refusal for one witness the gate cannot read: the
+// file, the error, and the finding that keeps blocking while it is unread. A
+// refutation nobody can read never lifts a block, and silence about it would look
+// like an approval.
+func unreadableRefutation(verdict reviewdomain.Verdict, rel, detail string) *Result {
+	findingLine := ""
+	if finding, blocking := reviewdomain.Blocking(verdict.Findings); blocking {
+		findingLine = "; the finding " + reviewFinding(finding) + " is still blocking"
+	}
+	message := fmt.Sprintf("this tree's refutation cannot be read (%s): %s%s", rel, detail, findingLine)
+	problem := Result{
+		Code:    int(gate.NeedsDecision),
+		Reason:  ReasonReviewRefutedUnreadable,
+		Message: message,
+		Next:    "odachi review --show",
+		Lines:   []string{message, "next: odachi review --show"},
+	}
+	return &problem
 }
 
 // blockVote says how many witnesses the blocking finding has and how many its
