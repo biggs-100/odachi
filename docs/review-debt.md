@@ -13,7 +13,18 @@ Last written: after 0141, which closes the two rows of 0140.
 
 ## Open
 
-Nothing, after 0149. The review of 0148 left two rows and both are closed below.
+Nothing, after 0152. The review of 0151 left one row and it is closed below.
+
+## Closed by feature 0152
+
+### the test that blamed the wrong boundary
+
+Found by the review of 0151 (warning). The archtest that pins the fence boundary refused any
+rule whose path started with internal/, so a future non-goal about another package would have
+turned it red and blamed the proof boundary for a rule that has nothing to do with evidence.
+
+Closed: the rule names internal/domain/proof, and a case with internal/domain/gate/** pins the
+difference. Observed red by widening the prefix and back.
 
 ## Closed by feature 0149
 
