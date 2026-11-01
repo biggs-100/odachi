@@ -12,7 +12,7 @@ R1 · "a finding says whether its evidence is cited from the diff or argued, and
 
 ## Steps
 - [x] T1 · a finding declares cited or argued evidence, and an old verdict reads as argued   R1 · tree:057e6dfdd7d22791481104b64d9984f4644bf2b4
-- [ ] T2 · an argued blocker needs two cited refutations to fall, and a cited one needs one   R1
+- [x] T2 · an argued blocker needs two cited refutations to fall, and a cited one needs one   R1 · tree:242506513b55cb0705740432600a00295190ed0d
 - [ ] T3 · the ADR says what a citation buys and what the tool still cannot prove   R1
 
 ## History
