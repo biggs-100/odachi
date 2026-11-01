@@ -1960,7 +1960,7 @@ func refutedProject(t *testing.T) *project {
 		Reviewer: "claude",
 		Verdict:  domainreview.ChangesRequested,
 		Findings: []domainreview.Finding{
-			{Path: "a.go", Line: 3, Severity: domainreview.Critical, Causal: true, Why: "pierde el turno", Blob: gitBlob, Lens: "reliability"},
+			{Path: "a.go", Line: 3, Severity: domainreview.Critical, Causal: true, Why: "pierde el turno", Blob: gitBlob, Lens: "reliability", Evidence: domainreview.EvidenceCited},
 		},
 	}
 	sealed, err := domainreview.Seal(blocking, otherTree, "HEAD", now)
@@ -1977,7 +1977,7 @@ func refutedProject(t *testing.T) *project {
 	if err != nil {
 		t.Fatalf("sealing the refutation: %v", err)
 	}
-	refRel, err := domainreview.RefutationPath(otherTree)
+	refRel, err := domainreview.RefutationPath(otherTree, 1)
 	if err != nil {
 		t.Fatalf("the refutation path: %v", err)
 	}

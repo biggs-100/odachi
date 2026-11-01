@@ -1102,12 +1102,12 @@ func (r *runner) requireReview(base string) *Result {
 		problem := lensMissing(missing, r.storeFile(rel))
 		return &problem
 	}
-	refutation, problem := r.refutation(verdict)
+	answers, problem := r.refutations(verdict)
 	if problem != nil {
 		return problem
 	}
 
-	if finding, blocking := reviewdomain.BlockingAfter(verdict.Findings, refutation); blocking {
+	if finding, blocking := reviewdomain.BlockingAfter(verdict.Findings, answers); blocking {
 		message := "the review asks for changes: " + oneLine(reviewFinding(finding))
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
@@ -1118,6 +1118,9 @@ func (r *runner) requireReview(base string) *Result {
 				message,
 				"next: odachi review --show",
 			},
+		}
+		if votes := blockVote(verdict.Findings, answers, finding); votes != "" {
+			problem.Lines = append([]string{message, votes}, problem.Lines[1:]...)
 		}
 		return &problem
 	}
@@ -1248,39 +1251,61 @@ func coverageMissing(verdict reviewdomain.Verdict, gaps []reviewdomain.Gap, rel 
 	}
 }
 
-// refutation reads the refutation filed beside this tree's verdict. A tree with
-// no refutation is the normal case and is not an error; a file that cannot be
+// refutations reads every refuter's answer filed beside this tree's verdict. A
+// tree with none is the normal case and is not an error; a file that cannot be
 // read is, because silence would let a broken artifact look like an approval.
-func (r *runner) refutation(verdict reviewdomain.Verdict) (reviewdomain.Refutation, *Result) {
-	rel, err := reviewdomain.RefutationPath(r.tree)
-	if err != nil {
-		return reviewdomain.Refutation{}, nil
-	}
+func (r *runner) refutations(verdict reviewdomain.Verdict) (reviewdomain.Answers, *Result) {
+	var answers reviewdomain.Answers
 
-	data, err := r.files.Read(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
-	if err != nil {
-		return reviewdomain.Refutation{}, nil
-	}
-
-	parsed, err := reviewdomain.ParseRefutation(data)
-	if err != nil {
-		detail := ""
-		if finding, blocking := reviewdomain.Blocking(verdict.Findings); blocking {
-			detail = "; the finding " + reviewFinding(finding) + " is still blocking"
+	for _, round := range reviewdomain.Rounds() {
+		rel, err := reviewdomain.RefutationPath(r.tree, round)
+		if err != nil {
+			break
 		}
 
-		message := fmt.Sprintf("this tree's refutation cannot be read (%s): %s%s", rel, oneLine(err.Error()), detail)
-		problem := Result{
-			Code:    int(gate.NeedsDecision),
-			Reason:  ReasonReviewRefutedUnreadable,
-			Message: message,
-			Next:    "odachi review --show",
-			Lines:   []string{message, "next: odachi review --show"},
+		data, err := r.files.Read(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
+		if err != nil {
+			continue
 		}
-		return reviewdomain.Refutation{}, &problem
-	}
 
-	return parsed, nil
+		parsed, err := reviewdomain.ParseRefutation(data)
+		if err != nil {
+			detail := ""
+			if finding, blocking := reviewdomain.Blocking(verdict.Findings); blocking {
+				detail = "; the finding " + reviewFinding(finding) + " is still blocking"
+			}
+			message := fmt.Sprintf("this tree's refutation cannot be read (%s): %s%s", rel, oneLine(err.Error()), detail)
+			problem := Result{
+				Code:    int(gate.NeedsDecision),
+				Reason:  ReasonReviewRefutedUnreadable,
+				Message: message,
+				Next:    "odachi review --show",
+				Lines:   []string{message, "next: odachi review --show"},
+			}
+			return nil, &problem
+		}
+		answers = append(answers, parsed)
+	}
+	return answers, nil
+}
+
+// blockVote says how many witnesses the blocking finding has and how many its
+// class needs. Empty when nobody answered: a block nobody voted on has nothing to
+// count, and saying "0 of 1" would read like a decision that was taken.
+func blockVote(findings []reviewdomain.Finding, answers reviewdomain.Answers, finding reviewdomain.Finding) string {
+	ids := reviewdomain.FindingIDs(findings)
+	for i := range findings {
+		if findings[i].Path != finding.Path || findings[i].Line != finding.Line || findings[i].Why != finding.Why {
+			continue
+		}
+		votes := answers.RefutedBy(ids[i])
+		if votes == 0 {
+			return ""
+		}
+		return fmt.Sprintf("%s has %d of the %d cited refutations it needs (%s finding)",
+			ids[i], votes, reviewdomain.RequiredWitnesses(finding), finding.EvidenceClass())
+	}
+	return ""
 }
 
 // lensMissing is the block for a verdict that does not cover a required lens.

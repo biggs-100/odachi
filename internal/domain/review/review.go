@@ -204,14 +204,14 @@ func (v Verdict) Missing(required []string) []string {
 // changes, everything else approves. Style findings, non-causal findings and
 // suggestions are recorded, and never block.
 func Derive(findings []Finding) string {
-	return DeriveAfter(findings, Refutation{})
+	return DeriveAfter(findings, Answers{})
 }
 
 // Blocking returns the first finding that blocks: causal, and BLOCKER or
 // CRITICAL. "First" is the file order, so the message a human reads is the same
 // on every run of the same verdict.
 func Blocking(findings []Finding) (Finding, bool) {
-	return BlockingAfter(findings, Refutation{})
+	return BlockingAfter(findings, Answers{})
 }
 
 // Parse reads a verdict. It accepts exactly two shapes: the canonical empty

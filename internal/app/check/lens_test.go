@@ -36,6 +36,7 @@ func blockingFinding() domainreview.Finding {
 		Severity: domainreview.Blocker,
 		Causal:   true,
 		Why:      "la sesión se acepta sin verificar la firma",
+		Evidence: domainreview.EvidenceCited,
 	}
 }
 

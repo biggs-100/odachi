@@ -12,9 +12,9 @@ import (
 // critical, and one warning that must never reach the refuter.
 func blockingFindings() []review.Finding {
 	return []review.Finding{
-		{Path: "internal/auth/session.go", Line: 12, Severity: review.Blocker, Causal: true, Why: "una sesión se acepta sin verificar la firma"},
+		{Path: "internal/auth/session.go", Line: 12, Severity: review.Blocker, Causal: true, Why: "una sesión se acepta sin verificar la firma", Evidence: review.EvidenceCited},
 		{Path: "internal/gastos/x.go", Severity: review.Warning, Causal: true, Why: "el nombre miente"},
-		{Path: "internal/app/turnos.go", Line: 40, Severity: review.Critical, Causal: true, Why: "dos turnos en el mismo horario"},
+		{Path: "internal/app/turnos.go", Line: 40, Severity: review.Critical, Causal: true, Why: "dos turnos en el mismo horario", Evidence: review.EvidenceCited},
 	}
 }
 
@@ -94,7 +94,7 @@ func TestRefutationWithoutEvidenceDefaultsToStands(t *testing.T) {
 			t.Errorf("judgment %s = %q, want %q: no evidence means the finding stands", judgment.ID, judgment.Verdict, review.Stands)
 		}
 	}
-	if _, blocking := review.BlockingAfter(findings, sealed); !blocking {
+	if _, blocking := review.BlockingAfter(findings, review.Answers{sealed}); !blocking {
 		t.Fatal("a refutation with no evidence lifted the block")
 	}
 }
@@ -195,7 +195,7 @@ func TestRefutesNeedsAReason(t *testing.T) {
 // a standing one keeps blocking, and everything else approves as before.
 func TestDeriveAfterTakesRefutationsIntoAccount(t *testing.T) {
 	blockerOnly := []review.Finding{
-		{Path: "internal/auth/session.go", Severity: review.Blocker, Causal: true, Why: "sin verificar la firma"},
+		{Path: "internal/auth/session.go", Severity: review.Blocker, Causal: true, Why: "sin verificar la firma", Evidence: review.EvidenceCited},
 	}
 
 	cases := map[string]struct {
@@ -216,11 +216,11 @@ func TestDeriveAfterTakesRefutationsIntoAccount(t *testing.T) {
 				refutation.Refutations = []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "está en el diff, ya estaba"}}
 			}
 
-			if got := review.DeriveAfter(tc.findings, refutation); got != tc.want {
+			if got := review.DeriveAfter(tc.findings, review.Answers{refutation}); got != tc.want {
 				t.Errorf("DeriveAfter = %q, want %q", got, tc.want)
 			}
-			if got := review.Derive(tc.findings); got != review.DeriveAfter(tc.findings, review.Refutation{}) {
-				t.Errorf("Derive = %q and DeriveAfter with no refutation = %q: they must agree", got, review.DeriveAfter(tc.findings, review.Refutation{}))
+			if got := review.Derive(tc.findings); got != review.DeriveAfter(tc.findings, review.Answers{}) {
+				t.Errorf("Derive = %q and DeriveAfter with no refutation = %q: they must agree", got, review.DeriveAfter(tc.findings, review.Answers{}))
 			}
 		})
 	}
@@ -234,7 +234,7 @@ func TestBlockingAfterSkipsRefutedFindings(t *testing.T) {
 		{ID: "F1", Verdict: review.Refuted, Why: "el diff la línea 12 muestra que ya estaba"},
 	}}
 
-	finding, blocking := review.BlockingAfter(findings, refutation)
+	finding, blocking := review.BlockingAfter(findings, review.Answers{refutation})
 	if !blocking {
 		t.Fatal("the critical finding F3 stopped blocking")
 	}
@@ -246,7 +246,7 @@ func TestBlockingAfterSkipsRefutedFindings(t *testing.T) {
 // TestRefutationPathNamesTheTree: the refutation lives beside the verdict, named
 // after the same tree, so one tree has one verdict and one refutation.
 func TestRefutationPathNamesTheTree(t *testing.T) {
-	name, err := review.RefutationName(tree)
+	name, err := review.RefutationName(tree, 1)
 	if err != nil {
 		t.Fatalf("RefutationName = %v", err)
 	}
@@ -254,7 +254,7 @@ func TestRefutationPathNamesTheTree(t *testing.T) {
 		t.Errorf("name = %q", name)
 	}
 
-	path, err := review.RefutationPath(tree)
+	path, err := review.RefutationPath(tree, 1)
 	if err != nil {
 		t.Fatalf("RefutationPath = %v", err)
 	}
@@ -262,7 +262,7 @@ func TestRefutationPathNamesTheTree(t *testing.T) {
 		t.Errorf("path = %q", path)
 	}
 
-	if _, err := review.RefutationPath("no es un hash"); err == nil {
+	if _, err := review.RefutationPath("no es un hash", 1); err == nil {
 		t.Error("RefutationPath accepted a name that is not a tree")
 	}
 }

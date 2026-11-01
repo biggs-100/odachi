@@ -394,11 +394,25 @@ func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
 	}
 
 	second := p.run(review.Options{Attach: "refutacion.json"})
-	if second.Code != review.CodeBlocked {
-		t.Fatalf("second attach code = %d, want 1: the refutation is written once", second.Code)
+	if second.Code != review.CodeOK {
+		t.Fatalf("second attach code = %d, want 0: a second refuter is a second witness (%s)", second.Code, second.Message)
 	}
-	if !strings.Contains(second.Message, "already has a refutation") {
-		t.Errorf("second attach message = %q", second.Message)
+	secondPath := storeFile(domainreview.Dir + "/" + currentTree + ".refuted.2.json")
+	if _, ok := p.files.files[secondPath]; !ok {
+		t.Fatalf("the second answer was not stored as witness 2; writes = %v", p.files.written())
+	}
+
+	// The ceiling is three: a fourth answer has no file to live in, and the run
+	// says so instead of rewriting one that exists.
+	if third := p.run(review.Options{Attach: "refutacion.json"}); third.Code != review.CodeOK {
+		t.Fatalf("third attach code = %d, want 0 (%s)", third.Code, third.Message)
+	}
+	fourth := p.run(review.Options{Attach: "refutacion.json"})
+	if fourth.Code != review.CodeBlocked {
+		t.Fatalf("fourth attach code = %d, want 1: three is the ceiling", fourth.Code)
+	}
+	if !strings.Contains(fourth.Message, "ceiling") {
+		t.Errorf("fourth attach message = %q, want the ceiling named", fourth.Message)
 	}
 }
 
