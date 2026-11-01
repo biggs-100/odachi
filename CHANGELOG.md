@@ -5,6 +5,31 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.91 - 2026-11-01
+
+The gate runs before the push, and the craft has a trust boundary.
+
+- **`check --ci` judges the tree the way CI does.** It resolves the base from the clone's
+  remote -`origin/HEAD`, then `origin/main`, then `origin/master`- and reads both the fence
+  and the compared paths from that ref, so a branch that loosened its own copy of the policy
+  no longer passes locally and fails on the pull request. It takes no `--base` or
+  `--fence-from` beside it, and a clone with no origin blocks naming the fetch that creates
+  the ref. It never fetches: the run and the proof name the ref they read -`fence: <ref>` and
+  a `# fence <ref>` header- so a stale base is visible instead of guessed around (ADR 0045).
+- **The curriculum gains `security`.** One skill, loaded by situation -input from outside, a
+  permission, a secret, a dependency, a log, a failure- with thirteen rules and four
+  prohibitions in 39 lines, and every claim about an outside system carries its source and
+  version: OWASP Top 10:2025, ASVS v5.0.0 (2025-05-30), NIST SSDF 1.1 and `govulncheck`.
+- **ADR 0046 draws the line where enforcement stops.** The fence over paths, the proof over a
+  command the project chooses and the risk lens over the diff are the enforcement; the trust
+  boundary, the owner of an object and the life of a secret are judgement, and the skill says
+  them once. No scanner: a pattern list measures the pattern, not the decision.
+- **The impact map stopped counting skills by hand.** Its skills row had already lost `design`
+  and spelled the payload as a word; `internal/archtest/impactmap_test.go` now pins the row
+  against `skills.Names()`, so a new skill costs one line of the map.
+- Why: a local green that CI contradicts is the worst kind of green, and a checklist nobody
+  loads protects nobody.
+
 ## v0.11.90 - 2026-11-01
 
 The design surface: any agent can design, and the person clicks to comment.
@@ -1726,4 +1751,5 @@ Listo en un comando, y el agente sabe manejarlo.
 
 - Primera versión que se instala: `start`, `ask`, `level`, `summary`, `check`, `init`,
   `--version`, hook de pre-commit, instaladores `sh` y `ps1`, y seis binarios.
+
 
