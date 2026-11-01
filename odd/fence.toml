@@ -4,8 +4,8 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# "no change to the lens content itself" and "no new verb" are decisions about what
-# this policy lands, not files: the brief carries them and no glob can measure them.
+# "no fifth lens" and "no change to the quorum" are decisions about what the
+# feature does, not files: the brief carries them.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"
@@ -13,6 +13,6 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "the review's own question is not edited by the feature that improves a lens"
+not   = "the review's own question is not edited while its lenses grow"
 paths = ["internal/domain/review/prompt.go", "internal/domain/review/refute.go"]
 deps  = []
