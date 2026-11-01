@@ -385,13 +385,15 @@ func TestEveryRequirementPlannedCloses(t *testing.T) {
 }
 
 // TestAnOpenFeatureOwesNoStepForEveryRequirement: mid-feature the list is empty on
-// purpose. A requirement added by a change waits for its step, and blocking every
-// commit until then would stop the work the change asked for.
+// purpose. The fixture is the one that can tell: the feature declares R2 and no step
+// names it at all, and it is still open because T2 is not done. A gate that computed
+// the list for every feature would block here and stay green in a fixture that planned
+// every requirement anyway.
 func TestAnOpenFeatureOwesNoStepForEveryRequirement(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(twoRequirementDoc(
 		taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: "abc1234"},
-		taskdoc.Step{ID: "T2", Text: "cancelar un turno", Requirement: "R2"},
+		taskdoc.Step{ID: "T2", Text: "reservar dos turnos", Requirement: "R1"},
 	))
 
 	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
