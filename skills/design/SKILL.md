@@ -36,7 +36,7 @@ handoff is a step of its own.
 - **Design system first when it exists**: read `design/system.md` and use only its tokens and
   component rules. Before finishing any artboard, list the colours and font families it uses,
   compare them with the system, and fix every deviation.
-- **Capture the system by reading, never by writing**: the sources are CSS custom properties
+- **Capture the system by reading, never by writing** (odachi design sync does it from the stylesheets): the sources are CSS custom properties
   (`:root`, `@theme`, `[data-theme]`), the Tailwind config or v4 `@theme`, component folders,
   token files and the fonts they declare. Write `design/system.md` naming each entry's source
   path and `design/system.html` rendering the tokens. When there are no sources, say so and
@@ -49,7 +49,7 @@ handoff is a step of its own.
   Mark what you applied resolved with `odachi design comments <slug> --resolve <id...>`, or by
   setting `status` and `resolvedAt` when the command is not there. Never delete or reorder an
   entry, and leave what you did not apply open, saying why.
-- **The handoff is a decision, not a rewrite**: when an artboard is chosen, name it, name the
+- **The handoff is a decision, not a rewrite** (odachi design handoff <slug>/<artboard> prints it): when an artboard is chosen, name it, name the
   other artboards as the alternatives they were, and implement against the project's real
   stack. Report `in_progress` when you start and `implemented` when the app runs.
 

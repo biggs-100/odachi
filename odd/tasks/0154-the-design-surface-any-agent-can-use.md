@@ -15,10 +15,11 @@ R1 · "construye todo lo que tiene gentle-design, para que funcione igual en nue
 - [x] T2 · the design folder has a format, a manifest and comments, pinned by a versioned fixture   R1 · tree:df93fd53f06f4336e0703db397083eef9517d5b3
 - [x] T3 · an agent lists designs and comments with a command, and resolves them   R1 · tree:4594717825938c3be62b4cb99eb6d4e47418dc5f
 - [x] T4 · the design skill ships with odachi and travels to every client   R1 · tree:7a2073e50a0aa04a19384cbd1be493e901540f81
-- [ ] T5 · the canvas opens, serves the artboards and writes comments any agent can read   R1
+- [x] T5 · the canvas opens, serves the artboards and writes comments any agent can read   R1 · tree:7ba7c9292052617b1976d0ba7ba9a752f05275c5
 - [ ] T6 · the design system sync reads the project tokens and never edits them   R1
 - [ ] T7 · the handoff turns an artboard into the implementation instruction   R1
 
 ## History
 L1 · "construye todo lo que tiene gentle-design, para que funcione igual en nuestros agentes"
 L2 · OFICIO · "T1 landed in the plan commit: the fence and the brief changed before the first step was marked" (porque the policy correction has to exist before any file under skills/ is written, and the plan commit is the tree that carries it)
+L3 · OFICIO · "T6 and T7 land in one commit: the sync command and the handoff command" (porque both are the last two statements the skill already made in prose, they share the action dispatch, and splitting them would leave one command documented and the other missing in the same tree)

@@ -6,9 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -35,6 +37,9 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 	// before the flags every other action shares.
 	if action == appdesign.ActionOpen || action == appdesign.ActionStop {
 		return runCanvas(action, dir, rest, stdout, stderr)
+	}
+	if action == appdesign.ActionSync {
+		return runDesignSync(dir, stdout, stderr)
 	}
 
 	flags := flag.NewFlagSet("odachi design "+action, flag.ContinueOnError)
@@ -63,6 +68,11 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 	case appdesign.ActionComments:
 		if flags.NArg() != 1 {
 			fmt.Fprintln(stderr, "odachi: say which design: odachi design comments <slug> [--resolve id1,id2]")
+			return start.CodeBlocked
+		}
+	case appdesign.ActionHandoff:
+		if flags.NArg() != 1 {
+			fmt.Fprintln(stderr, "odachi: say which artboard: odachi design handoff <slug>/<artboard>")
 			return start.CodeBlocked
 		}
 	default:
@@ -265,4 +275,43 @@ func openBrowser(url string) {
 		command = exec.Command("xdg-open", url)
 	}
 	_ = command.Start()
+}
+
+// runDesignSync reads the project's stylesheets and writes the system the skill
+// follows. It reads every .css under the project -skipping the tool's own folders-
+// and never writes to one: a sync that edits its sources is a sync nobody trusts.
+func runDesignSync(dir string, stdout, stderr io.Writer) int {
+	sources := []appdesign.Source{}
+
+	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			switch entry.Name() {
+			case ".git", "node_modules", "dist", "vendor", ".next", "target":
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(strings.ToLower(entry.Name()), ".css") {
+			return nil
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			rel = path
+		}
+		sources = append(sources, appdesign.Source{Path: filepath.ToSlash(rel), Content: string(raw)})
+		return nil
+	})
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: could not read the project's stylesheets: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+
+	return reportDesign(appdesign.Sync(sources, osFiles{}, dir), false, stdout, stderr)
 }

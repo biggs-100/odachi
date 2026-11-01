@@ -1745,6 +1745,10 @@ after start:
   odachi summary                                what is done in each feature
   odachi design list [slug]                     the designs a project keeps, their artboards and open comments
   odachi design comments <slug> [--resolve ids]  what a person asked on the artboards, or mark it resolved
+  odachi design open [slug] [--port n] [--no-browser]  the canvas: every artboard, click to comment
+  odachi design stop                           close the canvas this clone opened
+  odachi design handoff <slug>/<artboard>      the chosen artboard, ready to implement
+  odachi design sync                           write design/system.md from the project's stylesheets
   odachi undo                                   restore the last thing odachi wrote (the current one is backed up)
   odachi undo --list                            what can be undone, with its date
   odachi undo --file brief                      only that one: brief | profile | fence | task

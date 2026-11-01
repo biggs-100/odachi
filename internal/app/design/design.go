@@ -29,6 +29,8 @@ const (
 	ActionComments = "comments"
 	ActionOpen     = "open"
 	ActionStop     = "stop"
+	ActionHandoff  = "handoff"
+	ActionSync     = "sync"
 )
 
 // Options is one `odachi design` invocation.
@@ -81,6 +83,8 @@ func Run(opts Options, files Files) Result {
 		return list(opts, files)
 	case ActionComments:
 		return comments(opts, files)
+	case ActionHandoff:
+		return handoff(opts, files)
 	default:
 		return blocked(`unknown action: say odachi design list or odachi design comments list|resolve <id...>`)
 	}
@@ -249,4 +253,64 @@ func plural(n int, one, many string) string {
 
 func oneLine(message string) string {
 	return strings.Join(strings.Fields(message), " ")
+}
+
+// handoff turns a chosen artboard into the instruction to implement it: the file,
+// what it traded, and the alternatives that were not chosen. It writes nothing and
+// starts nothing -the implementation is the agent's step, and the artboard is a
+// direction, not a proof.
+func handoff(opts Options, files Files) Result {
+	target := strings.TrimSpace(opts.Slug)
+	slug, file, ok := strings.Cut(target, "/")
+	if !ok || slug == "" || file == "" {
+		return blocked("say which artboard: odachi design handoff <slug>/<artboard>")
+	}
+
+	designs, problem := readDesigns(Options{Dir: opts.Dir, Slug: slug}, files)
+	if problem != nil {
+		return *problem
+	}
+	if len(designs) == 0 {
+		return blocked("there is no design " + slug + " in " + domain.Dir + "/")
+	}
+	d := designs[0]
+
+	chosen := -1
+	for i, artboard := range d.Manifest.Artboards {
+		if artboard.File == file {
+			chosen = i
+			break
+		}
+	}
+	if chosen < 0 {
+		names := make([]string, 0, len(d.Manifest.Artboards))
+		for _, artboard := range d.Manifest.Artboards {
+			names = append(names, artboard.File)
+		}
+		return blocked(file + " is not an artboard of " + slug + ": the artboards are " + strings.Join(names, ", "))
+	}
+
+	alternatives := []string{}
+	for i, artboard := range d.Manifest.Artboards {
+		if i == chosen {
+			continue
+		}
+		alternatives = append(alternatives, artboard.File+" · "+artboard.Title)
+	}
+
+	path := domain.Dir + "/" + slug + "/" + file
+	lines := []string{
+		path + " · " + d.Manifest.Artboards[chosen].Title + " · " + d.Manifest.Artboards[chosen].Tradeoff,
+		"brief: " + d.Manifest.Brief,
+	}
+	if d.Manifest.Feature != "" {
+		lines = append(lines, "feature: "+d.Manifest.Feature)
+	}
+	lines = append(lines, "implement this artboard in the project's real stack.")
+	if len(alternatives) > 0 {
+		lines = append(lines, "the alternatives it was chosen over: "+strings.Join(alternatives, "; "))
+	}
+	lines = append(lines, "the artboard is a direction; the code is the proof.")
+
+	return Result{Code: CodeOK, Message: "handoff " + path, Lines: lines, Designs: designs}
 }
