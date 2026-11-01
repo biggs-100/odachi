@@ -23,6 +23,7 @@ only a causal BLOCKER or CRITICAL stops the candidate.
 - A file that mixes layers: HTTP, SQL and business rules in the same place.
 - A test whose name does not say which behavior it pins.
 - A change so large it cannot be read in parts.
+- Behaviour the diff changes and the brief never asked for: the document says what this change is, and this is not it.
 - A TODO noted with no owner and no closing condition.
 - A local abbreviation in a name used from other packages.
 - An exported constant nobody uses outside the package.
