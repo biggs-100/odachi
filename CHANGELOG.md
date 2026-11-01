@@ -5,6 +5,25 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.94 - 2026-11-01
+
+A second reading is not a second opinion.
+
+- **The identity is the model, not its setting.** The gate compared the whole model string, so
+  `provider/name#high` and `provider/name` read as two judges and a review by the same model at
+  another effort passed as a second opinion it never was. Case and `#variant` are now ignored,
+  and the sentence a human reads names the effort each side ran with.
+- **A self-review is named by default.** It already was -every review refusal but a causal
+  finding is softened (ADR 0043)- and nothing pinned it; there is a test now, and the sentence
+  says what it is. `--require-review` still refuses, so a project that needs the strong
+  guarantee asks for it.
+- **A waiver is a decision on the document.** `odachi review waive --because "<why>"` writes
+  `Review: waived` into the current feature's task doc and the reason into its history. No
+  reason, no waiver; the proof and the fence stay, and a finding the review already made still
+  stops the ship. It is the lane for a project that owns one model (ADR 0048).
+- Why: a gate that only works for people who can afford two models is a gate that teaches
+  people to turn it off.
+
 ## v0.11.93 - 2026-11-01
 
 A block falls by evidence, and the quorum counts accounts.
@@ -1787,6 +1806,7 @@ Listo en un comando, y el agente sabe manejarlo.
 
 - Primera versión que se instala: `start`, `ask`, `level`, `summary`, `check`, `init`,
   `--version`, hook de pre-commit, instaladores `sh` y `ps1`, y seis binarios.
+
 
 
 
