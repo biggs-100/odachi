@@ -32,9 +32,9 @@ odachi --version
 
 Those three lines work. Each release carries six binaries (Linux, macOS and Windows,
 amd64 and arm64), a `checksums.txt`, an SBOM and a provenance attestation. The
-releases page names the newest one, and the installer resolves it through the API
+releases page (https://github.com/biggs-100/odachi/releases) names the newest one, and the installer resolves it through the API
 instead of trusting a number written here -a version in prose is a claim nobody
-measures, and this file had one that aged for forty-eight releases. The installer
+measures. The installer
 verifies the sha256 and only then writes; a checksum that does not match exits with
 an error and leaves **nothing** at the destination. The whole chain is tested
 against the real release, not a fixture: a test builds the `tar.gz` and the
@@ -153,11 +153,11 @@ does not know which requirement a test belongs to, and the gate treats it that w
 a close whose proof does not declare a requirement says so and stays ready. Read it
 as a promise a reviewer can challenge, never as a certificate.
 
-The folder keeps one file per feature and the next run of the same feature rewrites
-it, so it grows with the number of features and not with the number of runs.
-`odachi clean` reports it and never removes it: the store keeps the claim -a verdict
-names a tree- and this folder keeps what that tree said, which is the only local
-record of it.
+The folder is generated evidence and does not travel with the repository: `/proof/` sits
+in the `.gitignore` `init` writes. It keeps one file per feature, and the next run of the
+same feature rewrites it. `odachi clean` reports it and never removes it, because the
+clone's store keeps the verdict -the claim, named after the tree- and this folder keeps
+the output that claim is about.
 
 `init` takes care of that for you, and of two things that are not artifacts: it
 leaves a marked block in the project's `.gitignore` (`/proof/` and `*.bak-*`,
@@ -604,8 +604,8 @@ Pure domain in `internal/domain/...` with an import guard, adapters in
 Windows —ubuntu repeats the internal suite with the race detector—.
 
 Published releases and what changed in each one: [CHANGELOG.md](CHANGELOG.md) and the
-releases page. This file does not name the newest: a number here is a claim nobody
-measures, and it had one that aged for forty-eight releases. The one-line
+[releases page](https://github.com/biggs-100/odachi/releases). This file does not name the newest: a number here is a claim nobody
+measures. The one-line
 installation is tested against the
 real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP

@@ -1,6 +1,6 @@
 # Next session: the block closes itself, and the one decision that waits
 
-Written at the close of 0153, released as v0.11.88 plus one feature. The chat is gone
+Written at the close of 0153, on v0.11.88 plus one feature not yet released. The chat is gone
 tomorrow; this file is the state.
 
 ## What the last ten features shipped
