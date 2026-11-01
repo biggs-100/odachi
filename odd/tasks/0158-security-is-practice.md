@@ -10,9 +10,9 @@ R1 · "the curriculum teaches the security-relevant practice while the code is w
 - every rule in the skill that claims how an outside system behaves names its source and version, and the skill stays under the sixty-line ceiling
 
 ## Steps
-- [ ] T1 · the skill says when it loads and every claim about an outside system names its source, under sixty lines   R1
-- [ ] T2 · the ADR fixes the split: the fence, the proof and the lens are the enforcement, and judgement is taught   R1
-- [ ] T3 · the new skill reaches every client that installs the craft, and a test says so   R1
+- [x] T1 · the skill says when it loads and every claim about an outside system names its source, under sixty lines   R1 · tree:c5a1274f81f05e22fd4d4c6b1e626fc66a6e9565
+- [x] T2 · the ADR fixes the split: the fence, the proof and the lens are the enforcement, and judgement is taught   R1 · tree:676495d9b00bb1b276b531a51f3e1ca3f071524d
+- [x] T3 · the new skill reaches every client that installs the craft, and a test says so   R1 · tree:f5b21bdde69c335111592049aff870ce85707500
 
 ## History
 L1 · "the curriculum teaches the security-relevant practice while the code is written -what arrives from outside, who may do what, a secret, a dependency, a log line, a failure- in one skill a client loads by situation, and one ADR fixes the split: what the gate already enforces and what only a person or an agent can judge"
