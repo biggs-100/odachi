@@ -902,11 +902,11 @@ func (r *runner) exec() Result {
 		}
 		switch {
 		case err != nil:
-			return r.stoppedWithAnswer(command+" did not give a verdict: could not run the reviewer: "+oneLine(err.Error()), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error()), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		case timedOut:
-			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict: the review did not finish in %ds", command, ExecTimeoutSeconds), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		case exitCode != 0:
-			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict: the reviewer exited with code %d", command, exitCode), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		}
 
 		answer := stdout
@@ -1432,6 +1432,40 @@ func (r *runner) show() Result {
 		result.Lines = append(result.Lines, refutationLine(refutation, r.storeLabel(refRel), parsed.Findings))
 	}
 	return result
+}
+
+// judgeLine names who was asked and where that identity came from. A retired
+// model is a fact about the provider, and an offline tool cannot know it: what it
+// can do is say the model it used and the line that chose it, so the fix is one
+// edit instead of an investigation.
+func (r *runner) judgeLine(lenses []string, model string) string {
+	name := strings.Join(lenses, ", ")
+	model = strings.TrimSpace(model)
+	if model == "" {
+		return name
+	}
+	if source := r.modelSource(lenses); source != "" {
+		return name + " (" + model + ", from " + source + ")"
+	}
+	return name + " (" + model + ")"
+}
+
+// modelSource is where modelFor found the model, in the same order modelFor asks:
+// the flag for one run, the project's file per lens, then the session. Empty
+// means the reviewer command was left to decide, and the tool never names it.
+func (r *runner) modelSource(lenses []string) string {
+	if strings.TrimSpace(r.opts.Model) != "" {
+		return "--model"
+	}
+	for _, lens := range lenses {
+		if strings.TrimSpace(r.opts.LensModels[strings.ToLower(strings.TrimSpace(lens))]) != "" {
+			return domain.ModePath
+		}
+	}
+	if strings.Contains(r.opts.Exec, modelToken) {
+		return "the session"
+	}
+	return ""
 }
 
 // modelPlan is one line per required lens: which model will judge it. It is the
