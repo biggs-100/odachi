@@ -7,6 +7,20 @@ tomorrow.
 
 ## Unreleased
 
+A proof says what it claims to cover, and the close reads the claim as a claim.
+
+- **The proof header may carry `# covers R1 R2`.** `check --run` writes the requirements
+  the closing feature declares, and a proof written before the field existed keeps proving
+  its tree: `Parse` consumes the line only when the terminator follows, so an old proof's
+  quotation survives.
+- **The close names a requirement the proof does not declare**, and stays ready. The line is
+  written by the agent that ran the command -the suite does not know which requirement a test
+  belongs to- so blocking on it would give a claim the weight of a test. The README says so
+  in those words: a promise a reviewer can challenge, never a certificate.
+- Why: the gate knows a requirement has a step (0148); this is the half that says what the
+  evidence claims to prove. Making it real evidence needs a command per requirement, and
+  that is its own feature.
+
 The fence guards the evidence, not the writer.
 
 - **The rule named two promises and now names one.** *"No change to the proof format, and the

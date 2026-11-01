@@ -143,6 +143,12 @@ run removes a stale failed file: `proof/` never shows a failure beside the proof
 of the tree that passed. In CI the file rides along with `proof/`, which the
 workflow uploads even when the gate fails.
 
+The header may also carry `# covers R1 R2`: the requirements the run **claims** to
+prove. It is a claim the agent writes, not evidence the command produced -the suite
+does not know which requirement a test belongs to, and the gate treats it that way:
+a close whose proof does not declare a requirement says so and stays ready. Read it
+as a promise a reviewer can challenge, never as a certificate.
+
 `init` takes care of that for you, and of two things that are not artifacts: it
 leaves a marked block in the project's `.gitignore` (`/proof/` and `*.bak-*`,
 versioned, so it survives a clone) and a rules block in `AGENTS.md` —what the
