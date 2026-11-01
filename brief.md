@@ -4,7 +4,7 @@
 - a finding says whether its evidence is cited from the diff or argued, and a blocking finding is lifted only by the evidence its class requires: one cited counter-argument for a cited claim, two for an argued one
 
 ## Done when
-- a reviewer answer that does not say cited or argued is refused naming the field, and a verdict stored before the class existed reads as argued and keeps today's meaning
+- a reviewer answer that says neither cited nor argued reads as argued, an unknown value is refused naming the two, and a verdict stored before the class existed keeps its meaning
 - two cited refutations lift an argued BLOCKER and one leaves it blocking, naming the vote it still needs; a cited BLOCKER falls with one -both observed in a test
 - each refuter's answer is stored once, the legacy `<tree>.refuted.json` keeps the meaning it has today, and a test reads one
 - an ADR says what a citation buys, why an argued claim needs two votes, and what the tool still cannot prove

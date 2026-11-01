@@ -155,6 +155,9 @@ func Prompt(in PromptInput) string {
 	out.WriteString("The verdict is derived from the findings: if there is a finding with \"causal\": true and\n")
 	out.WriteString("severity BLOCKER or CRITICAL, the verdict is " + ChangesRequested + "; if not, it is " + Approved + ".\n")
 	out.WriteString("Do not decide it yourself: the rule decides it.\n")
+	out.WriteString("The \"evidence\" of a finding is what you did: " + EvidenceCited + " when the defect is quoted from the diff,\n")
+	out.WriteString(EvidenceArgued + " when you reasoned about the change without quoting it. It decides how many\n")
+	out.WriteString("refutations a blocking finding needs, so a citation is worth more than a good argument.\n")
 	if len(in.Lenses) > 0 {
 		out.WriteString("Each finding names the lens that found it (\"lens\"): a finding without it has no author.\n")
 		out.WriteString("In \"passes\", list every (file, lens) audited with no findings, one row per pair: that row\n")
@@ -361,6 +364,7 @@ func answerSchema(in PromptInput) string {
 		out.WriteString("      \"lens\": \"<the lens of this tree's list that found it>\",\n")
 	}
 	out.WriteString("      \"causal\": true,\n")
+	out.WriteString("      \"evidence\": \"" + EvidenceCited + " | " + EvidenceArgued + "\",\n")
 	out.WriteString("      \"why\": \"<the defect and the concrete evidence>\"\n")
 	out.WriteString("    }\n")
 	out.WriteString("  ],\n")

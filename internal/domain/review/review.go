@@ -76,6 +76,16 @@ const (
 	ChangesRequested = "changes_requested"
 )
 
+// The two classes a finding can declare about its own evidence. Cited means the
+// reviewer quoted the line of the diff that shows the defect; argued means it
+// reasoned about the change without one. A finding that declares neither reads as
+// argued: a verdict written before the field existed keeps the strict meaning, and
+// a claim nobody can point at does not get the benefit of a citation.
+const (
+	EvidenceCited  = "cited"
+	EvidenceArgued = "argued"
+)
+
 // Finding is one reported defect: where, how bad, whether this candidate caused
 // it, and the evidence. When the tool knows them, it also carries the content
 // receipt: the blob id of the bytes judged and the lens that produced it.
@@ -109,6 +119,19 @@ type Finding struct {
 	// candidate recognizes the same row instead of re-raising it. The tool
 	// computes it; it is stored so the verdict says what it discarded.
 	Fingerprint string `json:"fingerprint,omitempty"`
+	// Evidence is the reviewer's account of what it did: cited (it quoted the line
+	// of the diff) or argued (it reasoned without one). It is what decides how
+	// many refutations a blocking finding needs. Empty means argued, because a
+	// verdict written before the field existed is judged the strict way.
+	Evidence string `json:"evidence,omitempty"`
+}
+
+// EvidenceClass is the class the finding declared, with the conservative default.
+func (f Finding) EvidenceClass() string {
+	if strings.EqualFold(strings.TrimSpace(f.Evidence), EvidenceCited) {
+		return EvidenceCited
+	}
+	return EvidenceArgued
 }
 
 // Verdict is what a review concluded about one tree.
@@ -352,6 +375,11 @@ func (v Verdict) Validate() error {
 		if lens := strings.TrimSpace(finding.Lens); lens != "" && !IsLens(lens) {
 			return fmt.Errorf("finding %d (%s) says lens %q; the lenses are %s",
 				i+1, finding.Path, lens, strings.Join(order, ", "))
+		}
+		if evidence := strings.TrimSpace(finding.Evidence); evidence != "" &&
+			!strings.EqualFold(evidence, EvidenceCited) && !strings.EqualFold(evidence, EvidenceArgued) {
+			return fmt.Errorf("finding %d (%s) says evidence %q; the classes are %q and %q, and a finding that says neither is argued",
+				i+1, finding.Path, evidence, EvidenceCited, EvidenceArgued)
 		}
 
 		switch status := strings.ToLower(strings.TrimSpace(finding.Status)); status {
