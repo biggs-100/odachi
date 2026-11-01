@@ -1529,3 +1529,86 @@ func TestTheStoredScopeWinsOverTheCopyInTheTree(t *testing.T) {
 		t.Fatalf("the block the store chose was called wrong: %s", check.Detail)
 	}
 }
+
+// sessionDoc is a task document the parser reads, so the newest feature has a
+// number to compare the session file against.
+func sessionDoc(number, title string) string {
+	return "# " + title + "\nBase: 0be787b\n\n## Requirements (verbatim, from the user)\nR1 · \"a session closes by rewriting docs/next-session.md\"\n\n## History\nL1 · \"a session closes by rewriting docs/next-session.md\"\n"
+}
+
+// TestTheSessionFileThatNamesAnOlderFeatureIsAWarning: the check watches the file
+// the next session reads. It warns and never refuses: a stale note is a note to
+// rewrite, not a broken project, and doctor's exit code stays 0.
+func TestTheSessionFileThatNamesAnOlderFeatureIsAWarning(t *testing.T) {
+	files := configured().
+		put("odd/tasks/0146-the-block-closes.md", sessionDoc("0146", "the-block-closes")).
+		put("docs/next-session.md", "written at the close of 0143, on v0.11.84\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	if result.Code != CodeOK {
+		t.Fatalf("a stale session file must not fail the run, got %d:\n%s", result.Code, strings.Join(result.Lines, "\n"))
+	}
+	got := checkOf(t, result, domaindoctor.CheckNextSession)
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("check 14 must be a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{"0143", "0146"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
+		}
+	}
+}
+
+// TestTheSessionFileThatNamesTheNewestFeatureIsClean: the same project, the file
+// rewritten at the close of the feature it names.
+func TestTheSessionFileThatNamesTheNewestFeatureIsClean(t *testing.T) {
+	files := configured().
+		put("odd/tasks/0146-the-block-closes.md", sessionDoc("0146", "the-block-closes")).
+		put("docs/next-session.md", "written at the close of 0146, on v0.11.86\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckNextSession)
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("a current session file is ok: %s", domaindoctor.Line(got))
+	}
+	if !strings.Contains(got.Detail, "0146") {
+		t.Fatalf("the line must name the feature it read, got %q", got.Detail)
+	}
+}
+
+// TestAProjectWithoutTheSessionFileIsClean: keeping the file is the project's
+// convention, never something doctor imposes.
+func TestAProjectWithoutTheSessionFileIsClean(t *testing.T) {
+	files := configured().put("odd/tasks/0146-the-block-closes.md", sessionDoc("0146", "the-block-closes"))
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckNextSession)
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("no session file is not a problem: %s", domaindoctor.Line(got))
+	}
+	if !strings.Contains(got.Detail, "docs/next-session.md") {
+		t.Fatalf("the line names the file it looked for, got %q", got.Detail)
+	}
+}
+
+// TestAnUnreadableSessionFileIsAProblem: a file doctor cannot read is not a file
+// that is absent, and saying so is the same rule the other checks obey.
+func TestAnUnreadableSessionFileIsAProblem(t *testing.T) {
+	files := configured().
+		put("odd/tasks/0146-the-block-closes.md", sessionDoc("0146", "the-block-closes")).
+		put("docs/next-session.md", "written at the close of 0146\n")
+	files.errOn = at("docs/next-session.md")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckNextSession)
+	if got.Status != domaindoctor.StatusProblem {
+		t.Fatalf("an unreadable session file is a problem: %s", domaindoctor.Line(got))
+	}
+	if !strings.Contains(got.Fix, "check the permissions of docs") {
+		t.Fatalf("the refusal must say what to fix, got %q", got.Fix)
+	}
+}

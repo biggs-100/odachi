@@ -10,9 +10,10 @@ R1 · "a session closes by rewriting `docs/next-session.md`, the block says so w
 - the help and the changelog say fourteen
 
 ## Steps
-- [ ] T1 · the block closes the session: the phrase, the file and the check   R1
+- [x] T1 · the block closes the session: the phrase, the file and the check   R1 · tree:7dfe1bd4bfc5ae0e5d8dcfcaf696c8328d5e3fd2
 - [ ] T2 · doctor has a fourteenth check that warns when the next-session file names an older feature   R1
 - [ ] T3 · the help and the changelog say fourteen   R1
 
 ## History
 L1 · "a session closes by rewriting `docs/next-session.md`, the block says so where the agent reads it, and `doctor` names the file when it went stale"
+L2 · OFICIO · "T2 and T3 land in one commit: the check, the count, the usage sentence and the changelog" (porque the count, the usage string and the changelog are one fact, and splitting them ships a commit where the summary says fourteen while the help still says thirteen)

@@ -65,6 +65,9 @@ const (
 	installedSkillsDir = ".agents/skills"
 	proofDir           = "proof"
 	ignoreFile         = ".gitignore"
+	// sessionFile is the note a session leaves for the next one. The convention
+	// belongs to the project: doctor reads it when it exists and never writes it.
+	sessionFile = "docs/next-session.md"
 )
 
 // Options is one `odachi doctor` invocation.
@@ -177,6 +180,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.voice(),
 		r.taskDocs(),
 		r.legacyFolder(),
+		r.nextSession(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)
@@ -772,6 +776,7 @@ const noProfileFile = "without " + profileFile + " there is no profile to compar
 // block carries the voice `odachi init` wrote. The persona files v0.10.0 left
 // behind are reported in the same line as leftovers — ok, not a warning: nothing
 // reads them and nothing is broken.
+//
 // taskDocs names the documents in odd/tasks that odachi does not read. It never
 // fails the run: another shape of task document is a project decision, not a
 // broken install, and the line exists so the human hears what the tool skips
@@ -1559,6 +1564,29 @@ func (r *runner) regular(path string) (bool, error) {
 // path: a bare name is resolved through the PATH, a path is resolved by existing.
 func isBareName(name string) bool {
 	return !strings.ContainsAny(name, `/\`)
+}
+
+// nextSession answers check 14: does the note a session leaves name the newest
+// feature? The newest feature is the highest task document, and the note is read
+// only when it exists - the convention is the project's.
+func (r *runner) nextSession() domaindoctor.Check {
+	all, err := tasks.All(r.files, r.opts.Dir)
+	if err != nil {
+		// The unreadable folder is check 12's problem, and saying it twice is not a
+		// second opinion: this line only admits it has nothing to compare against.
+		return domaindoctor.OK(domaindoctor.CheckNextSession, "there is no feature to compare against: "+oneLine(err.Error())+", and check 12 says why")
+	}
+
+	newest := 0
+	if len(all) > 0 {
+		newest = all[len(all)-1].Number
+	}
+
+	content, exists, err := r.read(sessionFile)
+	if err != nil {
+		return domaindoctor.Broken(domaindoctor.CheckNextSession, oneLine(err.Error()), "check the permissions of docs")
+	}
+	return domaindoctor.NextSession(newest, content, exists)
 }
 
 // count is how an English sentence counts things.
