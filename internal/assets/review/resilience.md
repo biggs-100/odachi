@@ -23,6 +23,8 @@ only a causal BLOCKER or CRITICAL stops the candidate.
 - A human retry that duplicates the effect: two turns, two charges, two emails.
 - A queue or buffer with no limit: it grows until it eats the memory.
 - An error log without the data to reproduce it: id, path, instant.
+- A failure nobody compares with a threshold the project chose: without a number, "it is fine" is a guess.
+- An expected failure with nothing in production that would show it: no counter, no event, no alert.
 - A silent degradation: a default is used and nobody finds out.
 - A timeout shorter than the normal time of the operation it wraps.
 - A context that is not propagated to the call below: cancelling above does not cancel below.

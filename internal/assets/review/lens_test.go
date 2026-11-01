@@ -169,6 +169,55 @@ func TestLensesDoNotInventTheirOwnSeverityVocabulary(t *testing.T) {
 	}
 }
 
+// TestTheReliabilityLensNamesASuiteThatShrank: the comparison with gentle-ai's
+// lenses found two defects missing from this one. A focused or skipped test makes
+// CI pass by shrinking the suite, and a test that proves a function through a whole
+// flow costs more than the behaviour it proves. Both are cited, not adjectives.
+func TestTheReliabilityLensNamesASuiteThatShrank(t *testing.T) {
+	body, err := assets.Lens(domainreview.Reliability)
+	if err != nil {
+		t.Fatalf("Lens(%q) = %v", domainreview.Reliability, err)
+	}
+
+	for _, want := range []string{".only", "got smaller", "whole flow"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the reliability lens does not name %q:\n%s", want, body)
+		}
+	}
+}
+
+// TestTheResilienceLensAsksForAThresholdAndAVisibility: a failure nobody measures
+// and a failure nobody can see are the two halves of "it went down and we knew
+// later". A threshold is the project's number, never another project's.
+func TestTheResilienceLensAsksForAThresholdAndAVisibility(t *testing.T) {
+	body, err := assets.Lens(domainreview.Resilience)
+	if err != nil {
+		t.Fatalf("Lens(%q) = %v", domainreview.Resilience, err)
+	}
+
+	for _, want := range []string{"threshold the project chose", "nothing in production"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the resilience lens does not name %q:\n%s", want, body)
+		}
+	}
+}
+
+// TestTheReadabilityLensNamesBehaviourTheBriefDidNotAskFor: the fourth gap the
+// comparison left. A diff that changes what the project does and a document that
+// never asked for it is a defect a reader has to find with two artefacts in hand.
+func TestTheReadabilityLensNamesBehaviourTheBriefDidNotAskFor(t *testing.T) {
+	body, err := assets.Lens(domainreview.Readability)
+	if err != nil {
+		t.Fatalf("Lens(%q) = %v", domainreview.Readability, err)
+	}
+
+	for _, want := range []string{"the brief never asked for"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the readability lens does not name %q:\n%s", want, body)
+		}
+	}
+}
+
 // frontmatter returns the block between the two `---` lines.
 func frontmatter(t *testing.T, body string) string {
 	t.Helper()

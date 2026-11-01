@@ -1,23 +1,25 @@
-# Next session: a second reading is not a second opinion
+# Next session: the lenses name what they missed
 
-Written at the close of 0161, on v0.11.93. The chat is gone tomorrow; this file is
+Written at the close of 0162, on v0.11.94. The chat is gone tomorrow; this file is
 the state.
 
-## What 0161 shipped
+## What 0162 shipped
 
-- **The identity is the model, not its setting.** The gate compared the whole model string, so
-  `provider/name#high` and `provider/name` read as two judges -and a review by the same model at
-  another effort passed as a second opinion it never was. `ModelIdentity` cuts the variant and
-  the case, and the sentence a human reads names the effort each side ran with.
-- **A self-review is named, not refused, by default.** It already was -every review refusal but
-  a causal finding is softened (0043)- and nothing pinned it; there is a test now, and the
-  sentence says what it is: *a second reading, not a second opinion*. `--require-review` still
-  refuses.
-- **A waiver is a decision on the document.** `odachi review waive --because "<why>"` writes
-  `Review: waived` into the current feature's task doc and the reason into its history, through
-  the same write guard as the other verbs. No reason, no waiver; the proof and the fence stay.
-- ADR 0048 says why: the lane exists for a project that owns one model, and the strong guarantee
-  is something a project asks for instead of something the default decides.
+Four defects the comparison with gentle-ai's lenses found missing, in the prompts that look at
+a diff:
+
+- **reliability** now names a focused or skipped test -`.only`, a disabled sibling- that makes
+  CI pass by shrinking the suite, and a test that proves one function through a whole flow,
+  which costs more than the behaviour it proves.
+- **resilience** asks for a threshold the project chose -without a number, "it is fine" is a
+  guess- and for something in production that would show an expected failure: a counter, an
+  event, an alert.
+- **readability** names behaviour the diff changes and the brief never asked for: the two
+  artefacts a reader needs are the diff and the document, and the lens holds both.
+
+The four prompts stay within the format's bounds (twelve to twenty rules, each a line a reviewer
+can act on), no number was borrowed from another project, and the engine -the prompt builder and
+the refutation rule- was fenced out of the feature on purpose.
 
 ## What is open
 
@@ -26,7 +28,7 @@ the state.
 
 ## What is measured, so nobody re-measures it
 
-- `doctor` on this tree: fourteen checks, no problems. v0.11.93 is installed and one binary is
+- `doctor` on this tree: fourteen checks, no problems. v0.11.94 is installed and one binary is
   in the PATH (`%LOCALAPPDATA%\odachi\bin`).
 - `check --run` needs `--timeout 400` for this suite on this machine.
 - `opencode run` as `--exec` still stalls to the 600s timeout here: the review path that works
@@ -53,11 +55,6 @@ runs `odachi review` with its own model and key, or a receipt signed outside the
 
 ## Queued
 
-- **Four patterns the lenses are missing**, from the comparison with gentle-ai: `test.only` that
-  lets CI pass and misallocated coverage (`reliability`), operational thresholds and
-  observability for what can fail in production (`resilience`), and a PR that does not explain
-  what it touched when that makes it unsafe to review (`readability`). Four lines in existing
-  assets.
 - **the step declares its route.** inline or delegated, and which agent, recorded in the task
   doc. Cheap.
 - **bookkeeping nobody can put back.** `plan --done T2` records no tree when the worktree is not

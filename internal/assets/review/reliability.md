@@ -26,6 +26,8 @@ only a causal BLOCKER or CRITICAL stops the candidate.
 - An integration test that covers only the adapter's happy path.
 - A test that copies the implementation's formula and compares it to itself.
 - A skipped or pending test that reads as coverage.
+- A test left focused or skipped, like `.only` or a disabled sibling: CI passes because the suite got smaller.
+- A test that proves one function through a whole flow: it costs more than the behaviour it proves.
 
 ## What NOT to report
 
