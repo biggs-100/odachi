@@ -5,11 +5,16 @@ the state.
 
 ## What 0159 shipped
 
-- **The review names a model the provider still serves.** `odd/review.toml` assigned every
-  lens to `opencode-go/mimo-v2.6-flash`, which the provider retired; measured against its own
-  list on 2026-11 (`mimo-v2.6-pro`, `mimo-v2.5`, `mimo-v2.5-pro`), the four lenses moved to
-  `opencode-go/mimo-v2.6-pro`. The comment the file carries now says what to check when a
-  model goes, and an archtest says this repository names a judge for every lens.
+- **The review keeps the model it had, and a failed run says where the model came from.** The
+  first measurement hid `mimo-v2.6-flash` -the provider's list shows only the newest version of
+  each family- and this feature briefly moved the four lenses to the pro; the full list showed
+  the flash one **active at 0.14/0.28**, and the host deprecates `mimo-v2.5` in its favour, so
+  `odd/review.toml` keeps the value it already had. What ships is the comment that says what to
+  check when a model goes, an archtest that every lens has a judge, and a failure that names
+  the lens, the model and the line that chose it: `--model`, `odd/review.toml` or the session.
+- Lesson, and it cost a review finding: **a filtered list is not a measurement.** The provider's
+  list shows one version per family unless every version is asked for, and a missing model in
+  that answer is not a retirement.
 - **A reviewer that cannot start says who it asked and where that came from.** The three
   failure paths of `--exec` -could not run, timed out, non-zero exit- name the lens, the model
   and its source: `--model`, `odd/review.toml` or the session. An offline tool cannot know
