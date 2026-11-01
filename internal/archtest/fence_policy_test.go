@@ -75,7 +75,9 @@ func TestTheBoundaryIsTheProofPackageAndNotEveryNameOfCode(t *testing.T) {
 		want  string
 	}{
 		{name: "the package that writes proofs", paths: []string{"internal/domain/proof/**"}, want: "the proof package"},
+		{name: "the package itself", paths: []string{"internal/domain/proof"}, want: "the proof package"},
 		{name: "another internal package", paths: []string{"internal/domain/gate/**"}, want: ""},
+		{name: "a package whose name starts like it", paths: []string{"internal/domain/proofs/**"}, want: ""},
 		{name: "the stored proofs", paths: []string{"proof/**"}, want: ""},
 	}
 
@@ -101,10 +103,19 @@ func TestTheBoundaryIsTheProofPackageAndNotEveryNameOfCode(t *testing.T) {
 func boundaryProblem(rules []fence.Rule) string {
 	for _, rule := range rules {
 		for _, path := range rule.Paths {
-			if strings.HasPrefix(path, "internal/domain/proof") {
+			if overTheProofWriter(path) {
 				return "a fence rule is over the proof package again: " + path + " in " + rule.Not
 			}
 		}
 	}
 	return ""
+}
+
+// overTheProofWriter reports whether the path is inside the package that writes the
+// proofs. The prefix alone is not enough: internal/domain/proofs is another package
+// whose name only starts with the same letters, and refusing it would be the same
+// too-wide rule this test was written to remove.
+func overTheProofWriter(path string) bool {
+	const writer = "internal/domain/proof"
+	return path == writer || strings.HasPrefix(path, writer+"/")
 }
