@@ -147,3 +147,78 @@ func TestCommentsOnADesignThatDoesNotExistIsBlocked(t *testing.T) {
 		t.Errorf("the refusal does not name the design: %q", got.Message)
 	}
 }
+
+// A resolve that names no comment writes nothing: an agent that mistypes an id reads
+// a refusal, not exit 0 over a rewritten file.
+func TestResolveWithNoMatchingIDWritesNothing(t *testing.T) {
+	files := newFakeFiles().
+		put("design/pricing/design.json", manifest).
+		put("design/pricing/comments.json", comments)
+
+	got := appdesign.Run(appdesign.Options{
+		Dir:     "raiz",
+		Action:  appdesign.ActionComments,
+		Slug:    "pricing",
+		Resolve: []string{"nope"},
+		At:      "2026-11-01T00:00:00.000Z",
+	}, files)
+
+	if got.Code != appdesign.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked", got.Code)
+	}
+	if len(files.writes) != 0 || len(files.backups) != 0 {
+		t.Fatalf("a refusal wrote %v and backed up %v", files.writes, files.backups)
+	}
+	if !strings.Contains(got.Message, "nope") {
+		t.Errorf("the refusal does not name the id: %q", got.Message)
+	}
+}
+
+// racingFiles hands a different comments file on the read before the write: the
+// canvas appending a comment between the command's read and its write.
+type racingFiles struct {
+	*fakeFiles
+	reads int
+	next  string
+}
+
+func (f *racingFiles) Read(path string) ([]byte, error) {
+	if strings.HasSuffix(filepath.ToSlash(path), "comments.json") {
+		f.reads++
+		if f.reads > 1 {
+			return []byte(f.next), nil
+		}
+	}
+	return f.fakeFiles.Read(path)
+}
+
+// A comment another writer added between the read and the write is not lost: the
+// command notices the bytes moved and redoes the work on the fresh file.
+func TestResolveDoesNotSwallowACommentWrittenInBetween(t *testing.T) {
+	base := newFakeFiles().
+		put("design/pricing/design.json", manifest).
+		put("design/pricing/comments.json", comments)
+	files := &racingFiles{fakeFiles: base, next: `{"version":1,"comments":[
+		{"id":"c1","file":"01-a.html","selector":"h1","excerpt":"x","comment":"shorter","createdAt":"t","status":"open","sentAt":null,"resolvedAt":null},
+		{"id":"c2","file":"01-a.html","selector":"h2","excerpt":"y","comment":"from the canvas","createdAt":"t","status":"open","sentAt":null,"resolvedAt":null}
+	]}`}
+
+	got := appdesign.Run(appdesign.Options{
+		Dir:     "raiz",
+		Action:  appdesign.ActionComments,
+		Slug:    "pricing",
+		Resolve: []string{"c1"},
+		At:      "2026-11-01T00:00:00.000Z",
+	}, files)
+
+	if got.Code != appdesign.CodeOK {
+		t.Fatalf("Code = %d: %s", got.Code, got.Message)
+	}
+	written := files.files[filepath.Join("raiz", "design", "pricing", "comments.json")]
+	if !strings.Contains(written, `"id": "c2"`) {
+		t.Fatalf("the comment the canvas wrote was swallowed:\n%s", written)
+	}
+	if !strings.Contains(written, `"status": "resolved"`) {
+		t.Fatalf("the resolve did not land on the fresh file:\n%s", written)
+	}
+}
