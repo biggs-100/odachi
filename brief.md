@@ -1,18 +1,19 @@
-# the-ledger-and-the-class
+# check-ci-runs
 
 ## What must exist
-- the ledger names what the reviews of 0154 and 0155 left and pays what it can, and a mockup in design/ stops asking for a code review
+- check --ci runs the gate exactly as CI runs it: the fence read from the remote base and the base resolved from the remote, so the policy lands before the feature is verifiable before a push instead of after it
 
 ## Done when
-- the origin test asserts on a canvas that is alive, and the row it left is closed in docs/review-debt.md
-- a change under design/ is documentation: it asks for no lens, and a test says so
+- a candidate the base fence forbids passes --fence-from HEAD and is blocked by --ci, and both were observed
+- check --ci beside --base or --fence-from is refused, naming that --ci is what they are for
+- a clone with no remote base blocks and names the command that creates it
 
 ## Not included (first version)
-- a stored proof is never rewritten, whatever the writer learns
-- no change to the bundled skills that ship today
+- no fetch and no network: the gate stays offline and names the base it read
+- no change to .github/workflows/gate.yml
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que un mockup no es codigo hasta que alguien lo implementa.
+- Wants to learn: por que el gate debe leer su politica de una referencia que el candidato no puede editar.

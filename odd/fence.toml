@@ -3,15 +3,11 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
+#
+# "no fetch and no network" is a promise about how the gate behaves, not a file:
+# the git edge carries it in its documentation, and no glob can measure it.
 
 [[rule]]
-not   = "a stored proof is never rewritten, whatever the writer learns"
-paths = ["proof/**"]
-deps  = []
-
-[[rule]]
-not   = "the bundled skills that ship today are not edited; a new one is its own feature"
-paths = [
-"skills/acceptance/**", "skills/bootstrap/**", "skills/commits/**", "skills/data/**", "skills/drive/**", "skills/go-tests/**", "skills/pull-request/**", "skills/role-craft/**", "skills/shape/**", "skills/ship/**", "skills/skill-craft/**", "skills/skill-improve/**", "skills/slices/**", "skills/tests/**", "skills/triage/**", "skills/writing/**", "skills/design/**"
-]
+not   = "no change to .github/workflows/gate.yml"
+paths = [".github/workflows/gate.yml"]
 deps  = []
