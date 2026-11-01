@@ -43,12 +43,19 @@ func blockingFinding() domainreview.Finding {
 // refutedFile is a stored refutation for one finding, with evidence.
 func refutedFile(t *testing.T, tree string, reasons ...string) string {
 	t.Helper()
+	return refutedFileBy(t, "claude", tree, reasons...)
+}
+
+// refutedFileBy is the same answer signed by a named refuter: the quorum counts
+// accounts, so two witnesses are two names.
+func refutedFileBy(t *testing.T, refuter, tree string, reasons ...string) string {
+	t.Helper()
 	judgments := make([]domainreview.Judgment, 0, len(reasons))
 	for i, why := range reasons {
 		judgments = append(judgments, domainreview.Judgment{ID: "F" + string(rune('1'+i)), Verdict: domainreview.Refuted, Why: why})
 	}
 
-	sealed, err := domainreview.SealRefutation(domainreview.Refutation{Refuter: "claude", Refutations: judgments},
+	sealed, err := domainreview.SealRefutation(domainreview.Refutation{Refuter: refuter, Refutations: judgments},
 		[]domainreview.Finding{blockingFinding()}, tree, reviewInstant)
 	if err != nil {
 		t.Fatalf("sealing the seeded refutation: %v", err)

@@ -282,14 +282,24 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	}
 
 	// A second refuter is a second witness, in its own file: the first answer is
-	// never rewritten. The ceiling is three.
-	code, out, _ = runDir(t, dir, []string{"review", "--attach", refutation}, "")
+	// never rewritten, and the same account answering again is refused by name.
+	second := filepath.Join(t.TempDir(), "refutacion2.json")
+	writeAt(t, second, `{"refuter":"otro","refutations":[{"id":"F1","verdict":"refuted","why":"el call site ya pasa un token firmado"}]}`)
+	code, out, _ = runDir(t, dir, []string{"review", "--attach", second}, "")
 	if code != 0 {
 		t.Fatalf("second attach: code = %d (stdout: %q)", code, out)
 	}
-	second, err := filepath.Glob(filepath.Join(dir, ".git", "odachi", "reviews", "*.refuted.2.json"))
-	if err != nil || len(second) != 1 {
-		t.Fatalf("the second witness has no file of its own: %v (%v)", second, err)
+	witnesses, err := filepath.Glob(filepath.Join(dir, ".git", "odachi", "reviews", "*.refuted.2.json"))
+	if err != nil || len(witnesses) != 1 {
+		t.Fatalf("the second witness has no file of its own: %v (%v)", witnesses, err)
+	}
+
+	same := filepath.Join(t.TempDir(), "refutacion1-otra-vez.json")
+	writeAt(t, same, `{"refuter":"otro","refutations":[{"id":"F1","verdict":"refuted","why":"otra cita"}]}`)
+	if code, _, errOut := runDir(t, dir, []string{"review", "--attach", same}, ""); code != 1 {
+		t.Fatalf("the same account again: code = %d, want 1", code)
+	} else if !strings.Contains(errOut, "already answered") {
+		t.Errorf("the same account again: stderr %q does not name the account", errOut)
 	}
 }
 

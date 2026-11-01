@@ -235,16 +235,20 @@ func RequiredWitnesses(f Finding) int {
 // ceiling.
 type Answers []Refutation
 
-// RefutedBy is how many of these answers refute the finding with a citation. A
+// RefutedBy is how many different accounts refute the finding with a citation. A
 // `stands`, or a `refuted` without evidence, is not one: the default never lifts.
+// Counting accounts and not files is the whole promise -two answers from the same
+// refuter are one opinion written twice, and a retry would buy a quorum nobody
+// paid for.
 func (a Answers) RefutedBy(id string) int {
-	count := 0
+	seen := make(map[string]bool, len(a))
 	for _, answer := range a {
-		if answer.Refutes(id) {
-			count++
+		if !answer.Refutes(id) {
+			continue
 		}
+		seen[strings.ToLower(strings.TrimSpace(answer.Refuter))] = true
 	}
-	return count
+	return len(seen)
 }
 
 // Lifts reports whether the answers are enough to lift this finding, which is the

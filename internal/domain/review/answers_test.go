@@ -18,7 +18,13 @@ func arguedAndCited() (argued, cited review.Finding) {
 
 // refutedBy is one refuter's answer that kills F1 with a citation.
 func refutedBy(why string) review.Refutation {
-	return review.Refutation{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: why}}}
+	return refutedByAccount("claude", why)
+}
+
+// refutedByAccount is the same answer signed by a named refuter: the quorum counts
+// accounts, so a test that wants two witnesses needs two names.
+func refutedByAccount(refuter, why string) review.Refutation {
+	return review.Refutation{Refuter: refuter, Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: why}}}
 }
 
 // TestIndexOfNamesTheRowAndNotThePlace: two findings on the same line are two
@@ -44,6 +50,29 @@ func TestIndexOfNamesTheRowAndNotThePlace(t *testing.T) {
 	}
 }
 
+// TestOneAccountIsOneWitness: the quorum counts accounts, not files. The same
+// refuter answering twice -a retry, a second attach of the same answer- is one
+// opinion written twice, and counting it twice would buy a quorum nobody paid for.
+func TestOneAccountIsOneWitness(t *testing.T) {
+	argued, _ := arguedAndCited()
+	findings := []review.Finding{argued}
+
+	twice := review.Answers{refutedByAccount("claude", "first"), refutedByAccount(" CLAUDE ", "second")}
+	if got := review.DeriveAfter(findings, twice); got != review.ChangesRequested {
+		t.Errorf("one account lifted an argued block by answering twice: DeriveAfter = %q", got)
+	}
+
+	unnamed := review.Answers{refutedBy("first"), refutedBy("second")}
+	if got := review.DeriveAfter(findings, unnamed); got != review.ChangesRequested {
+		t.Errorf("two unnamed answers were counted as two accounts: DeriveAfter = %q", got)
+	}
+
+	two := review.Answers{refutedByAccount("claude", "x"), refutedByAccount("mimo", "y")}
+	if got := two.RefutedBy("F1"); got != 2 {
+		t.Errorf("RefutedBy = %d, want two different accounts", got)
+	}
+}
+
 // TestAnArguedBlockNeedsTwoCitedRefutations: the finding that argues needs two
 // witnesses, because the claim nobody can point at is the one a single reviewer
 // can remove by being confident. One citation is not enough, and a `stands` never
@@ -58,11 +87,11 @@ func TestAnArguedBlockNeedsTwoCitedRefutations(t *testing.T) {
 	}
 
 	stand := review.Refutation{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Stands, Why: "I could not cite it"}}}
-	if got := review.DeriveAfter(findings, review.Answers{refutedBy("x"), stand}); got != review.ChangesRequested {
+	if got := review.DeriveAfter(findings, review.Answers{refutedByAccount("claude", "x"), stand}); got != review.ChangesRequested {
 		t.Errorf("a second answer that stands lifted the block: DeriveAfter = %q", got)
 	}
 
-	two := review.Answers{refutedBy("line 12 already verifies the signature"), refutedBy("the call site passes a signed token")}
+	two := review.Answers{refutedByAccount("claude", "line 12 already verifies the signature"), refutedByAccount("mimo", "the call site passes a signed token")}
 	if got := review.DeriveAfter(findings, two); got != review.Approved {
 		t.Errorf("two citations did not lift an argued block: DeriveAfter = %q", got)
 	}
@@ -97,8 +126,8 @@ func TestAnswersCountPerFinding(t *testing.T) {
 	findings := []review.Finding{argued, second}
 
 	answers := review.Answers{
-		{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "line 12"}}},
-		{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "call site"}}},
+		{Refuter: "claude", Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "line 12"}}},
+		{Refuter: "mimo", Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "call site"}}},
 	}
 
 	finding, blocking := review.BlockingAfter(findings, answers)

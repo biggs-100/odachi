@@ -47,7 +47,7 @@ func TestAnArguedBlockerNeedsTwoWitnesses(t *testing.T) {
 		t.Errorf("the block does not say how many witnesses it has:\n%s", strings.Join(one.Lines, "\n"))
 	}
 
-	files.files[refutationFileFor(t, currentTree, 2)] = []byte(refutedFile(t, currentTree, "el call site ya pasa un token firmado"))
+	files.files[refutationFileFor(t, currentTree, 2)] = []byte(refutedFileBy(t, "mimo", currentTree, "el call site ya pasa un token firmado"))
 
 	two := run(t, files, git, check.Options{RequireReview: true})
 	if two.Code != 0 {
@@ -56,9 +56,9 @@ func TestAnArguedBlockerNeedsTwoWitnesses(t *testing.T) {
 }
 
 // witnessFile is one refuter's answer, sealed the way the store does it.
-func witnessFile(t *testing.T, tree string, findings []domainreview.Finding, judgments ...domainreview.Judgment) string {
+func witnessFile(t *testing.T, refuter, tree string, findings []domainreview.Finding, judgments ...domainreview.Judgment) string {
 	t.Helper()
-	sealed, err := domainreview.SealRefutation(domainreview.Refutation{Refuter: "claude", Refutations: judgments}, findings, tree, reviewInstant)
+	sealed, err := domainreview.SealRefutation(domainreview.Refutation{Refuter: refuter, Refutations: judgments}, findings, tree, reviewInstant)
 	if err != nil {
 		t.Fatalf("sealing the witness: %v", err)
 	}
@@ -78,11 +78,11 @@ func TestTwoFindingsOnOneLineNameTheRightOne(t *testing.T) {
 
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), findings))
-	files.files[refutationFileFor(t, currentTree, 1)] = []byte(witnessFile(t, currentTree, findings,
+	files.files[refutationFileFor(t, currentTree, 1)] = []byte(witnessFile(t, "claude", currentTree, findings,
 		domainreview.Judgment{ID: "F1", Verdict: domainreview.Refuted, Why: "line 12 shows it was already there"},
 		domainreview.Judgment{ID: "F2", Verdict: domainreview.Refuted, Why: "the log line is new but names no token"},
 	))
-	files.files[refutationFileFor(t, currentTree, 2)] = []byte(witnessFile(t, currentTree, findings,
+	files.files[refutationFileFor(t, currentTree, 2)] = []byte(witnessFile(t, "mimo", currentTree, findings,
 		domainreview.Judgment{ID: "F1", Verdict: domainreview.Refuted, Why: "the call site passes a signed token"},
 	))
 

@@ -1773,6 +1773,13 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
+	// The name is the only identity a refuter has, and the quorum counts accounts:
+	// a second answer from one that already answered is one opinion written twice.
+	if filed, _ := r.storedRefutations(tree); sameRefuter(filed, sealed.Refuter) {
+		return blocked(fmt.Sprintf("the refuter %q already answered this tree: a second answer from the same account is not a second witness",
+			sealed.Refuter))
+	}
+
 	round, refusal := r.nextRefutationRound(tree)
 	if refusal != "" {
 		return blocked(refusal + "; I wrote nothing")
@@ -1813,6 +1820,19 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		Lenses:     verdict.Lenses,
 		Files:      []string{rel},
 	}
+}
+
+// sameRefuter reports whether one of the filed answers carries this name. The name
+// is the only identity a refuter has, so it is compared trimmed and
+// case-insensitively, and an empty name is one anonymous account like any other.
+func sameRefuter(answers domain.Answers, name string) bool {
+	trimmed := strings.ToLower(strings.TrimSpace(name))
+	for _, answer := range answers {
+		if strings.ToLower(strings.TrimSpace(answer.Refuter)) == trimmed {
+			return true
+		}
+	}
+	return false
 }
 
 // stillBlockingLine says what the witnesses have not settled yet, so the human
@@ -2430,7 +2450,8 @@ func (r *runner) refutedFindings(tree string, findings []domain.Finding) (map[st
 
 // answersOf reads every witness of one tree and names the file it could not read,
 // the way storedRefutations does not: a correction that inherits rows must not
-// treat a broken artifact as an empty one.
+// treat a broken artifact as an empty one, and a read failure names the file the
+// human has to look at.
 func (r *runner) answersOf(tree string) (domain.Answers, string) {
 	var answers domain.Answers
 	for _, round := range domain.Rounds() {
@@ -2438,13 +2459,20 @@ func (r *runner) answersOf(tree string) (domain.Answers, string) {
 		if err != nil {
 			return nil, fmt.Sprintf("the refutation path of %s cannot be built: %s", tree, oneLine(err.Error()))
 		}
+		exists, err := r.files.Exists(r.storePath(rel))
+		if err != nil {
+			return nil, fmt.Sprintf("could not ask whether %s exists: %s", rel, oneLine(err.Error()))
+		}
+		if !exists {
+			continue
+		}
 		data, err := r.files.Read(r.storePath(rel))
 		if err != nil {
-			continue
+			return nil, fmt.Sprintf("the refutation %s cannot be read: %s; its verdict's rows are not carried", rel, oneLine(err.Error()))
 		}
 		parsed, err := domain.ParseRefutation(data)
 		if err != nil {
-			return nil, fmt.Sprintf("the refutation of %s cannot be read; its verdict's rows are not carried", tree)
+			return nil, fmt.Sprintf("the refutation %s cannot be read; its verdict's rows are not carried", rel)
 		}
 		answers = append(answers, parsed)
 	}
