@@ -581,9 +581,11 @@ func TestADesignFolderIsADocument(t *testing.T) {
 		t.Errorf("lenses = %v, want none", lenses)
 	}
 
-	// A folder that only shares the name is not the artifact: an ordinary page in a
-	// project that happens to call it designs/ stays in the candidate.
-	if got := review.Classify([]string{"designs/page.html"}); got == review.Passive {
-		t.Errorf("Classify(designs/page.html) = passive, want the file reviewed")
+	// The rule is the root folder, not the word: a package called design inside
+	// internal/ is code, and a folder that only shares the name is not the artifact.
+	for _, path := range []string{"designs/page.html", "internal/design/store.go", "cmd/design/main.go"} {
+		if got := review.Classify([]string{path}); got == review.Passive {
+			t.Errorf("Classify(%s) = passive, want the file reviewed", path)
+		}
 	}
 }

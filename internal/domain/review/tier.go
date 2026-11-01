@@ -419,10 +419,14 @@ func isDocumentation(path string) bool {
 		return true
 	}
 
+	// design/ is a document too, but only at the root: a package called design
+	// inside internal/ is code, and exempting it from every lens would be a hole in
+	// the gate rather than a mockup.
+	if len(segments) > 1 && segments[0] == "design" {
+		return true
+	}
 	for _, segment := range segments[:len(segments)-1] {
-		// design/ is a document too: a mockup is read, not run. The code that
-		// implements it is the change that gets reviewed.
-		if segment == "docs" || segment == "design" {
+		if segment == "docs" {
 			return true
 		}
 	}

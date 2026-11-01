@@ -327,7 +327,23 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 		t.Errorf("the canvas's own origin = %d, want 201", got)
 	}
 	if got := post("http://evil.example"); got != http.StatusForbidden {
-		t.Errorf("a foreign origin = %d, want 403", got)
+		t.Errorf("a foreign origin on the comments route = %d, want 403", got)
+	}
+
+	// The stop route is a door too, and it is asked last: it is the one that ends
+	// the canvas.
+	stop, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/stop", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stop.Header.Set("Origin", "http://evil.example")
+	stopped, err := http.DefaultClient.Do(stop)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stopped.Body.Close()
+	if stopped.StatusCode != http.StatusForbidden {
+		t.Errorf("a foreign origin on the stop route = %d, want 403", stopped.StatusCode)
 	}
 
 	// A canvas that never listened does not know its address: it refuses, with and
