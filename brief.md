@@ -1,19 +1,21 @@
-# the-evidence-is-immutable
+# a-proof-that-says-what-it-proves
 
 ## What must exist
-- the fence guards the bytes of a stored proof, not the code that writes them: the format may gain a versioned line, and no stored proof is ever rewritten
+- a proof may carry the requirements it claims to cover, a proof without that line stays valid, and the close names a requirement the proof does not cover
 
 ## Done when
-- `odd/fence.toml` protects `proof/**` and stops naming `internal/domain/proof/**`
-- `brief.md` says the same rule the fence carries, and it is a new non-goal, not a comment
-- `check --fence-from <base>` does not call the change a loosening, and the ADR says why the wallet and the hand may differ
+- the boundary 0150 opened is pinned by a test: a change under the stored proofs is blocked and one under the package that writes them is not
+- the proof header may carry a coverage line, and a proof written before the field existed still proves its tree
+- check --run writes the requirements the closing feature declares, and the close names the ones the proof does not claim
+- the documentation says the line is a claim by the agent, not evidence the suite produced
 
 ## Not included (first version)
 - a stored proof is never rewritten, whatever the writer learns
 - no change to the bundled skills
+- no per-requirement execution: a claim becomes evidence only when each requirement runs its own command, and that is another feature
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que una cerca debe proteger la evidencia y no al que la escribe.
+- Wants to learn: por que una afirmacion del agente no es lo mismo que evidencia de la maquina.

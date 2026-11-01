@@ -1,9 +1,9 @@
 # Next session: the block closes itself, and the one decision that waits
 
-Written at the close of 0150, on v0.11.87 plus one policy correction. The chat is gone
+Written at the close of 0151, on v0.11.87 plus two features. The chat is gone
 tomorrow; this file is the state.
 
-## What the last seven features shipped
+## What the last eight features shipped
 
 - **0144 (v0.11.85)**: the review never authorises delivery. With `mode = on`, a close
   without a verdict is ready and names the review it did not get; only a causal
@@ -30,6 +30,10 @@ tomorrow; this file is the state.
   protects `proof/**` with one promise -a stored proof is never rewritten- and
   `internal/domain/proof/**` left it, so the format may gain a versioned line. This is the
   licence the next feature needs: record in the proof which requirement it covers.
+- **0151 (unreleased)**: a proof says what it claims to cover and the close reads it as a
+  claim. `# covers` carries the requirements the feature declares; the close names one the
+  proof does not declare and stays ready, because the line is the agent's and not the
+  suite's. The README says it in those words.
 
 ## What is open
 

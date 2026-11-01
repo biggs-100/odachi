@@ -1,6 +1,7 @@
 package proof_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -34,6 +35,8 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 		{Tree: "4a1c9f", Command: "cat", Output: "\n\nleading and trailing blank lines\n\n"},
 		{Tree: "4a1c9f", Command: "go test ./...", Model: "provider/model#variant", Output: "ok\n"},
 		{Tree: "4a1c9f", Command: "go test ./...", Fence: "origin/main", Model: "provider/model", Output: "ok\n"},
+		{Tree: "4a1c9f", Command: "go test ./...", Model: "provider/model", Covers: []string{"R1", "R2"}, Output: "ok\n"},
+		{Tree: "4a1c9f", Command: "go test ./...", Covers: []string{"R1"}, Output: "ok\n"},
 	}
 
 	for _, want := range cases {
@@ -41,9 +44,48 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Parse(Render(%+v)): %v", want, err)
 		}
-		if got != want {
+		if got.Tree != want.Tree || got.Command != want.Command || got.Fence != want.Fence ||
+			got.Model != want.Model || got.Output != want.Output || !slices.Equal(got.Covers, want.Covers) {
 			t.Errorf("Parse(Render(x)) = %+v, want %+v", got, want)
 		}
+	}
+}
+
+// The guards that keep an old proof's quotation intact: a line that looks like a
+// header is consumed only when the one after it is a header the writer may put
+// there. Without this, a proof written before the field existed would lose its
+// first output line to the parser.
+func TestAHeaderLookingLineStaysInTheOutputWhenNoTerminatorFollows(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want string
+	}{
+		{
+			name: "covers without a terminator",
+			text: "# tree 4a1c9f\n# command go test ./...\n# covers R1\nnot a terminator\n",
+			want: "# covers R1\nnot a terminator\n",
+		},
+		{
+			name: "model without a terminator",
+			text: "# tree 4a1c9f\n# command go test ./...\n# model provider/model\nlooks like a header\n",
+			want: "# model provider/model\nlooks like a header\n",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := proof.Parse(c.text)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.Output != c.want {
+				t.Fatalf("Output = %q, want %q", got.Output, c.want)
+			}
+			if len(got.Covers) != 0 || got.Model != "" {
+				t.Fatalf("a line that is not a header was consumed: covers=%v model=%q", got.Covers, got.Model)
+			}
+		})
 	}
 }
 

@@ -293,6 +293,13 @@ func proofFile(tree, command, output string) string {
 	return proof.Render(proof.Proof{Tree: tree, Command: command, Output: output})
 }
 
+// proofOfFeature is the proof a green run writes for the fixture feature: the
+// command and its output, plus the requirements the run claims to cover -the one
+// R1 the fixture declares.
+func proofOfFeature(tree, command, output string) string {
+	return proof.Render(proof.Proof{Tree: tree, Command: command, Covers: []string{"R1"}, Output: output})
+}
+
 // readyFiles is the base every blocked case breaks in exactly one place.
 func readyFiles() map[string]string {
 	return map[string]string{
@@ -381,6 +388,83 @@ func TestEveryRequirementPlannedCloses(t *testing.T) {
 
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("Code = %d, want %d (message %q, next %q)", got.Code, gate.Ready, got.Message, got.Next)
+	}
+}
+
+// TestACloseThatJustRanTheCommandReadsTheProofItWrote: the note describes the proof
+// that stands, not the one this run replaced. A first close whose run writes covers
+// for every requirement says nothing, and a note computed from the empty proof it
+// replaced would contradict the file it just wrote.
+func TestACloseThatJustRanTheCommandReadsTheProofItWrote(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(twoRequirementDoc(
+		taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: "abc1234"},
+		taskdoc.Step{ID: "T2", Text: "cancelar un turno", Requirement: "R2", Done: true, Commit: "def5678"},
+	))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45},
+		files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a green run on the closing tree is ready, got %d: %s", got.Code, got.Message)
+	}
+	for _, line := range got.Lines {
+		if strings.Contains(line, "does not declare") {
+			t.Fatalf("the note contradicts the proof this run wrote: %v", got.Lines)
+		}
+	}
+}
+
+// TestACloseNamesTheRequirementItsProofDoesNotDeclare: the proof claims R1 and the
+// feature declares R1 and R2. The close says so and stays ready: the line is the
+// agent's claim, and giving a claim the weight of a test is the illusion this gate
+// refuses.
+func TestACloseNamesTheRequirementItsProofDoesNotDeclare(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(twoRequirementDoc(
+		taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: "abc1234"},
+		taskdoc.Step{ID: "T2", Text: "cancelar un turno", Requirement: "R2", Done: true, Commit: "def5678"},
+	))
+	files.files[filepath.Join(dir, "proof", "0007-turnos.txt")] = []byte(
+		proof.Render(proof.Proof{Tree: currentTree, Command: "go test ./...", Covers: []string{"R1"}, Output: "ok\n"}))
+
+	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a claim the proof omits does not block, got %d: %s", got.Code, got.Message)
+	}
+	found := ""
+	for _, line := range got.Lines {
+		if strings.Contains(line, "does not declare covering R2") {
+			found = line
+		}
+	}
+	if found == "" {
+		t.Fatalf("the close must name R2 as undeclared, got %v", got.Lines)
+	}
+	if !strings.Contains(found, "agent's claim") {
+		t.Errorf("the note must say the line is a claim, not evidence: %q", found)
+	}
+}
+
+// TestACloseWhoseProofDeclaresEveryRequirementIsQuiet: the same feature, with a
+// proof that claims both. No note, because there is nothing missing to say.
+func TestACloseWhoseProofDeclaresEveryRequirementIsQuiet(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(twoRequirementDoc(
+		taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: "abc1234"},
+		taskdoc.Step{ID: "T2", Text: "cancelar un turno", Requirement: "R2", Done: true, Commit: "def5678"},
+	))
+	files.files[filepath.Join(dir, "proof", "0007-turnos.txt")] = []byte(
+		proof.Render(proof.Proof{Tree: currentTree, Command: "go test ./...", Covers: []string{"R1", "R2"}, Output: "ok\n"}))
+
+	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
+
+	for _, line := range got.Lines {
+		if strings.Contains(line, "does not declare") {
+			t.Fatalf("a proof that declares both must say nothing: %v", got.Lines)
+		}
 	}
 }
 
@@ -632,7 +716,7 @@ func TestRunWritesTheProofOfTheCurrentFeature(t *testing.T) {
 		}
 	}
 
-	want := proofFile(currentTree, "go test ./...", "ok  github.com/biggs-100/odachi 0.02s\n")
+	want := proofOfFeature(currentTree, "go test ./...", "ok  github.com/biggs-100/odachi 0.02s\n")
 	if string(files.files[wantPath]) != want {
 		t.Errorf("proof =\n%q\nwant\n%q", files.files[wantPath], want)
 	}
@@ -655,7 +739,7 @@ func TestTheProofKeepsBothStreams(t *testing.T) {
 	}
 
 	wantPath := filepath.Join(dir, "proof", "0007-turnos.txt")
-	want := proofFile(currentTree, "go test ./...", "ok  github.com/biggs-100/odachi 0.02s\nwarning: one test was skipped\n")
+	want := proofOfFeature(currentTree, "go test ./...", "ok  github.com/biggs-100/odachi 0.02s\nwarning: one test was skipped\n")
 	if string(files.files[wantPath]) != want {
 		t.Errorf("proof =\n%q\nwant\n%q", files.files[wantPath], want)
 	}

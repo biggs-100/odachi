@@ -296,6 +296,19 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		state.ProofCommand = opts.Run
 		r.proofModel = opts.Model
 		haveProof = haveProof || (!ran.failed && !ran.timedOut)
+		// A run that passed just wrote the proof that now stands, and it is the one
+		// the close has to read: the copy read off disk describes the tree before it.
+		if !ran.failed && !ran.timedOut {
+			recorded.Covers = requirementIDs(feature)
+		}
+	}
+
+	// The close names what its proof does not declare to cover. The line is written
+	// by the agent that ran the command, so this is a note a reviewer can read, not
+	// a gate: blocking on it would give a claim the weight of a test. It reads the
+	// proof that stands now, never the one this run replaced.
+	if closedNow && feature != nil {
+		r.coverNote = coverageNote(feature.Doc, recorded.Covers)
 	}
 
 	// One read of what moved between the proof and this tree. The note a block
@@ -408,6 +421,10 @@ type runner struct {
 	// reviewNote is what the review has to say when it did not stop the close:
 	// the reminder the hook prints, and the line a ready report carries.
 	reviewNote string
+	// coverNote names the requirements the closing proof does not declare. It is a
+	// note and never a block: the line is a claim the agent wrote, not evidence the
+	// command produced.
+	coverNote string
 	// work is the one read of the candidate: tree, changed paths and diff. The
 	// fence, the lens class and the proof all describe these same bytes.
 	work *worktree
@@ -631,7 +648,7 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 	// just passed. Best effort: the green proof is the truth either way.
 	_ = r.files.Remove(failedFile(proofPath))
 
-	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Fence: r.opts.FenceFrom, Model: r.opts.Model, Output: output}
+	recorded := proof.Proof{Tree: r.tree, Command: r.opts.Run, Fence: r.opts.FenceFrom, Model: r.opts.Model, Covers: requirementIDs(r.feature), Output: output}
 	if err := r.files.Write(proofPath, []byte(proof.Render(recorded))); err != nil {
 		problem := blocked(fmt.Sprintf("could not write the proof %s: %s; check the permissions and run odachi check --run %q again",
 			r.proofRel, oneLine(err.Error()), r.opts.Run))
@@ -1409,6 +1426,41 @@ func unplannedRequirements(doc taskdoc.TaskDoc) []string {
 	return missing
 }
 
+// coverageNote names the requirements a closing proof does not declare. It is a
+// note and never a block: the line is written by the agent that ran the command,
+// so it is a claim a reviewer can read, not evidence the suite produced.
+func coverageNote(doc taskdoc.TaskDoc, covers []string) string {
+	claimed := make(map[string]bool, len(covers))
+	for _, id := range covers {
+		claimed[strings.ToUpper(strings.TrimSpace(id))] = true
+	}
+
+	missing := []string{}
+	for _, requirement := range doc.Requirements {
+		if !claimed[strings.ToUpper(strings.TrimSpace(requirement.ID))] {
+			missing = append(missing, requirement.ID)
+		}
+	}
+	if len(missing) == 0 {
+		return ""
+	}
+	return "the proof does not declare covering " + strings.Join(missing, ", ") + ": the line the proof carries is the agent's claim, not evidence the command produced"
+}
+
+// requirementIDs is what a run claims to cover: the requirements the current
+// feature declares, in the order the document lists them. A project with no task
+// document covers nothing, and the proof says so by leaving the line out.
+func requirementIDs(feature *tasks.Document) []string {
+	if feature == nil {
+		return nil
+	}
+	ids := make([]string, 0, len(feature.Doc.Requirements))
+	for _, requirement := range feature.Doc.Requirements {
+		ids = append(ids, requirement.ID)
+	}
+	return ids
+}
+
 func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	result := Result{
 		Code:    int(verdict.Code),
@@ -1450,6 +1502,11 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	// code, and a silent ready would be the kind of quiet this gate exists to avoid.
 	if r.paperworkNote != "" {
 		result.Lines = append(result.Lines, r.paperworkNote)
+	}
+	// A close whose proof does not declare a requirement says it out loud: the
+	// promise is what a reviewer reads, and a silence would read as coverage.
+	if r.coverNote != "" {
+		result.Lines = append(result.Lines, r.coverNote)
 	}
 	// A waived review is a decision, not a silence: the ready tree says so, or
 	// the next reader believes a verdict was made and lost.
