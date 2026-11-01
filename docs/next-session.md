@@ -63,7 +63,7 @@ the state.
 
 ## What is measured, so nobody re-measures it
 
-- `doctor` on this tree: fourteen checks, no problems. v0.11.87 is installed, and this
+- `doctor` on this tree: fourteen checks, no problems. v0.11.90 is installed, and this
   repository's own block follows the binary: the warning that named the old block is gone.
   It comes back on every release that changes a rule the agent must read, and odachi init clears it.
 - `opencode run` as `--exec` still stalls to the 600s timeout on this machine: the review
@@ -106,6 +106,19 @@ it starts.
   the floor `check` enforces.
 - **a step done without a commit is a step nobody can find.** `plan --done T2` records no tree
   when the worktree is not the commit and says so in passing; 0147's T2 closed that way.
+
+## What this session does first, in the order the human asked
+
+1. **`check --ci`**, the feature the day paid a red gate for. The gate must run exactly as CI
+   runs it -the fence read from the base ref, the base resolved from the remote- so "the policy
+   lands before the feature" is verifiable before a push, not after. Today `--fence-from HEAD`
+   passed while the base refused the tree.
+2. **Research: professional practice, and application security.** What a fullstack developer
+   must weigh before shipping -input handling, authz and authn, secrets, dependencies, logging
+   and personal data, migrations, backups, least privilege, failure modes- gathered from real
+   sources (OWASP at least) and turned into **a skill or an ADR**, never a document that rots.
+   The split it has to make explicit: what the gate can enforce (a fence over secrets, a proof
+   that runs the suite) and what is a checklist the skill teaches.
 
 ## How to find the next real work
 
