@@ -303,11 +303,15 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 	}
 	defer server.Close()
 
-	post := func(url, origin string) int {
-		request, err := http.NewRequest(http.MethodPost, url, nil)
+	// The positive case takes a comment, not the stop route: a canvas this test
+	// killed could not be asked the next question.
+	post := func(origin string) int {
+		request, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/design/pricing/comments",
+			strings.NewReader(`{"file":"01-a.html","comment":"from the canvas"}`))
 		if err != nil {
 			t.Fatal(err)
 		}
+		request.Header.Set("Content-Type", "application/json")
 		if origin != "" {
 			request.Header.Set("Origin", origin)
 		}
@@ -319,11 +323,27 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 		return response.StatusCode
 	}
 
-	if got := post("http://"+addr+"/api/stop", "http://"+addr); got != http.StatusOK {
-		t.Errorf("the canvas's own origin = %d, want 200", got)
+	if got := post("http://" + addr); got != http.StatusCreated {
+		t.Errorf("the canvas's own origin = %d, want 201", got)
 	}
-	if got := post("http://"+addr+"/api/stop", "http://evil.example"); got != http.StatusForbidden {
-		t.Errorf("a foreign origin = %d, want 403", got)
+	if got := post("http://evil.example"); got != http.StatusForbidden {
+		t.Errorf("a foreign origin on the comments route = %d, want 403", got)
+	}
+
+	// The stop route is a door too, and it is asked last: it is the one that ends
+	// the canvas.
+	stop, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/stop", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stop.Header.Set("Origin", "http://evil.example")
+	stopped, err := http.DefaultClient.Do(stop)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stopped.Body.Close()
+	if stopped.StatusCode != http.StatusForbidden {
+		t.Errorf("a foreign origin on the stop route = %d, want 403", stopped.StatusCode)
 	}
 
 	// A canvas that never listened does not know its address: it refuses, with and
