@@ -258,6 +258,10 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			state.ProofDeferred = true
 		} else {
 			closedNow = true
+			// The close ships the vision, so the plan has to name every requirement
+			// it promises: a requirement nobody planned is a requirement nobody
+			// built, and nothing else in this gate reads the requirements.
+			state.Unplanned = unplannedRequirements(feature.Doc)
 		}
 	}
 
@@ -1386,6 +1390,25 @@ func (r *runner) openQuestions(verdict gate.Result) []taskdoc.Question {
 
 // report is the block the human reads: the message, what moved, and the command
 // that unblocks it.
+// unplannedRequirements names the requirements no step names, in the order the
+// document declares them. A step that names an id the document does not declare is
+// a plan for nothing; that is not this question, and check 12 already owns what a
+// document says about itself.
+func unplannedRequirements(doc taskdoc.TaskDoc) []string {
+	planned := make(map[string]bool, len(doc.Steps))
+	for _, step := range doc.Steps {
+		planned[strings.ToUpper(strings.TrimSpace(step.Requirement))] = true
+	}
+
+	missing := []string{}
+	for _, requirement := range doc.Requirements {
+		if !planned[strings.ToUpper(strings.TrimSpace(requirement.ID))] {
+			missing = append(missing, requirement.ID)
+		}
+	}
+	return missing
+}
+
 func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	result := Result{
 		Code:    int(verdict.Code),

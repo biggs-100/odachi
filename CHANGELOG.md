@@ -5,6 +5,18 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A requirement nobody planned stops the close.
+
+- **The gate reads the requirements.** `check` never looked at them: a feature could declare `R2`,
+  plan a step for `R1` only, finish every step it had, and close green. At the close the
+  requirements no step names are now a `NeedsWork` that names them and prints
+  `odachi plan "<text>" --req R2`. Mid-feature the list is empty on purpose -a requirement a
+  change added waits for its step, and the steps are planned before the work.
+- Why: the gate joined "what you asked" (brief) to "what was proved" (proof) and skipped the middle
+  artifact, so the plan could promise less than the vision and nobody heard it.
+
 ## v0.11.86 - 2026-10-31
 
 The block closes the session, and `doctor` says when the note went stale.

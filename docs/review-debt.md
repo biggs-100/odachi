@@ -13,7 +13,27 @@ Last written: after 0141, which closes the two rows of 0140.
 
 ## Open
 
-Nothing, after 0147. The review of 0146 left one row and it is closed below.
+Nothing, after 0149. The review of 0148 left two rows and both are closed below.
+
+## Closed by feature 0149
+
+### the plural sentence nobody exercised
+
+Found by the review of 0148 (warning). The branch that says "and no step names them" had
+no test: the only unplanned state in the table carried one id, so the loop never left the
+singular.
+
+Closed: a row with `R2, R3` pins the count, the join and the word. Observed red by
+flipping the branch to `> 2` before the test landed and back after.
+
+### the fixture that could not fail
+
+Found by the review of 0148 (warning). `TestAnOpenFeatureOwesNoStepForEveryRequirement`
+gave every requirement a step, so the list it computes was empty whatever `check` did: a
+gate that blocked every open feature would have passed it.
+
+Closed: the fixture declares `R2` with no step at all and stays open through an unfinished
+step. Observed red by computing the list for every feature and back.
 
 ## Closed by feature 0147
 

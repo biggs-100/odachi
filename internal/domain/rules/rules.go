@@ -93,7 +93,7 @@ when it went stale.
 - ` + "`odachi ask \"<question>\"`" + ` — records an open question; with ` + "`--answer`" + ` it answers it.
 - ` + "`odachi level`" + ` — shows your facts and proposes senior when earned; with ` + "`--to <profile>`" + ` it applies the profile and this voice.
 - ` + "`odachi summary`" + ` — what is done in each feature.
-- ` + "`odachi check`" + ` — is it ready? brief, fence, open questions and proof; with ` + "`--run`" + ` it runs the proof.
+- ` + "`odachi check`" + ` — is it ready? brief, fence, open questions, planned requirements and proof; with ` + "`--run`" + ` it runs the proof.
 - ` + "`odachi init`" + ` — writes this block, the hook, the skills and the profile voice.
 
 ` + Section + `

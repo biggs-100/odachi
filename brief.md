@@ -1,19 +1,20 @@
-# the-note-names-one-number
+# the-rows-0148-left
 
 ## What must exist
-- the fourteenth check asks one question —does `docs/next-session.md` name the newest feature?— so a bare year in the note is never read as a feature and the warning names the number to write
+- the two rows the review of 0148 left are paid: the plural branch has a test that names two requirements, and the open lane is pinned by a requirement no step names
 
 ## Done when
-- `NextSession` answers with `NamesFeature`, and nothing in the package reads the highest number a note mentions
-- a note that says a bare year and names the newest feature is ok, and a note that names an older one warns with the number missing
-- the row the review of 0146 left is closed in `docs/review-debt.md`
+- a close whose feature declares two unplanned requirements prints both ids and "names them", and the test fails when either half is wrong
+- an open feature that declares a requirement no step names stays `Ready`, so the mid-feature lane is a test and not a coincidence
+- the rows leave `docs/review-debt.md` closed
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
 - no change to the bundled skills
+- no new behaviour: both steps add a test and, if one is red, the fix it proves
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que el arreglo correcto borra codigo en vez de agregarlo.
+- Wants to learn: por que un test que no puede fallar es peor que no tener test.
