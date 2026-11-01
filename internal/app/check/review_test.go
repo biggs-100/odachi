@@ -1308,13 +1308,18 @@ func TestAModeOnCloseStillStopsForABlocker(t *testing.T) {
 	files := readyFiles()
 	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
 	// The blocking verdict is about this tree and this base, with a current receipt.
-	blocking := filesWithVerdict(t, currentTree, []domainreview.Finding{{
-		Path: "internal/app/check/check.go", Line: 1, Severity: domainreview.Blocker,
-		Causal: true, Lens: domainreview.Reliability, Why: "pierde el turno", Blob: checkBlob,
-	}})
-	for path, data := range blocking.files {
-		files[path] = string(data)
+	blocking, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "claude",
+		Lenses:   []string{domainreview.Reliability},
+		Findings: []domainreview.Finding{{
+			Path: "internal/app/check/check.go", Line: 1, Severity: domainreview.Blocker,
+			Causal: true, Lens: domainreview.Reliability, Why: "pierde el turno", Blob: checkBlob,
+		}},
+	}, currentTree, base, reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the blocking verdict: %v", err)
 	}
+	files[filepath.ToSlash(reviewPath(currentTree))] = string(domainreview.Render(blocking))
 
 	got := run(t, newFakeFiles(files), &fakeGit{
 		tree:    currentTree,

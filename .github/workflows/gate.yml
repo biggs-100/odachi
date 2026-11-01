@@ -81,8 +81,8 @@ jobs:
           # changed paths against it. Without --base the worktree is compared to
           # its own HEAD, which on a clean checkout is nothing: the fence would be
           # applied to an empty list and the change would never meet it.
-          # The review is not checked here, and the run says so on every pull
-          # request: a verdict is evidence about one tree and lives in
+          # The review is not checked here, and the run says so when a close owes
+          # one: a verdict is evidence about one tree and lives in
           # .git/odachi/reviews/, inside the clone, so a clean checkout has none
           # (ADR 0043). The review never authorises delivery; the fence and the
           # proof do, and both are verified from the base ref.

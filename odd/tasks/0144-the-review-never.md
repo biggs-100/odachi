@@ -11,9 +11,9 @@ R1 · "the review never authorises delivery: with the project's switch on, check
 - the ADR says the review does not authorise delivery, and the help and the README say it
 
 ## Steps
-- [ ] T1 · with mode on, a close without a verdict is ready and names the missing review   R1
-- [ ] T2 · a causal blocker from a review that exists still blocks, and the hook prints the note   R1
-- [ ] T3 · CI stops passing --no-review, and the ADR, help and README say the review does not authorise delivery   R1
+- [x] T1 · with mode on, a close without a verdict is ready and names the missing review   R1 · tree:bf9a14799159a3f10eb02b24dc4aad9b2727bb0c
+- [x] T2 · a causal blocker from a review that exists still blocks, and the hook prints the note   R1
+- [x] T3 · CI stops passing --no-review, and the ADR, help and README say the review does not authorise delivery   R1
 
 ## History
 L1 · "the review never authorises delivery: with the project's switch on, check names what the review says and only a finding it made stops a ship"

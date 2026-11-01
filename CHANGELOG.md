@@ -14,7 +14,7 @@ The review never authorises delivery, and what it found still stops a ship.
   refuses, and it refuses for that run.
 - **What the review found still blocks.** A causal `BLOCKER` in the tree's verdict stops the ship until it is
   refuted, with or without the flag: the review saying no is not the review being absent.
-- **CI stops passing `--no-review`**, so every pull request carries the sentence that the review was not verified
+- **CI stops passing `--no-review`**, so a pull request that closes a feature carries the sentence that the review was not verified
   there -the verdict lives in the clone- instead of a flag that hid it.
 - Why: ADR 0042 proved the review cannot be verified from a clean checkout, and `mode = on` went on refusing commits
   locally, which was a promise larger than its mechanism. ADR 0043 decides the honest shape: the review is a

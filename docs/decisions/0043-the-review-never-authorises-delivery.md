@@ -34,8 +34,9 @@ it.
   saying no, not the review being absent. The line is between evidence that exists and
   evidence that does not.
 - **CI stops passing `--no-review`.** With the switch alone the run is ready and says
-  what it could not verify, so every pull request carries the sentence instead of a
-  flag that hid it.
+  what it could not verify, so a pull request that closes a feature carries the
+  sentence instead of a flag that hid it. An open feature owes only its proof, and
+  a documents-only change owes nothing, so those print nothing.
 - **The docs say it**: the README's review section, the `review mode` help, the switch's
   own comment, and this ADR. ADR 0042 keeps the analysis of locality and loses its
   claim of a gate.

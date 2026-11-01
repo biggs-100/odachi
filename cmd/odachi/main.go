@@ -1567,7 +1567,7 @@ check flags:
   --base ref      what to compare the fence against (default HEAD; empty: against nothing)
   --fence-from ref  read the fence from this git ref instead of the worktree (CI: the base branch)
   --timeout n     seconds --run may take (default 120)
-  --quiet         prints nothing when ready (for the hook)
+  --quiet         prints nothing when ready except the reminder the hook must read
   --require-review  refuses a commit without a verdict for this tree (default: the project mode, which names it and lets the commit through)
   --no-review     does not require review even when the project has it on
   --json          machine output
