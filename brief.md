@@ -1,19 +1,20 @@
-# a-requirement-nobody-planned
+# the-rows-0148-left
 
 ## What must exist
-- a requirement with no step that names it stops the close and the line names it, because a requirement nobody planned is a requirement nobody built
+- the two rows the review of 0148 left are paid: the plural branch has a test that names two requirements, and the open lane is pinned by a requirement no step names
 
 ## Done when
-- `check` refuses a close when a requirement has no step, and the refusal names the requirement and what to do
-- a feature whose steps cover every requirement still closes, and its proof is written exactly as before
-- the tests pin both sides: the uncovered requirement and the covered one
+- a close whose feature declares two unplanned requirements prints both ids and "names them", and the test fails when either half is wrong
+- an open feature that declares a requirement no step names stays `Ready`, so the mid-feature lane is a test and not a coincidence
+- the rows leave `docs/review-debt.md` closed
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
 - no change to the bundled skills
+- no new behaviour: both steps add a test and, if one is red, the fix it proves
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que una compuerta que no mira los requisitos deja pasar lo que nadie planeo.
+- Wants to learn: por que un test que no puede fallar es peor que no tener test.
