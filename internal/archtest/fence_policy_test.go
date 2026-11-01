@@ -75,7 +75,9 @@ func TestTheBoundaryIsTheProofPackageAndNotEveryNameOfCode(t *testing.T) {
 		want  string
 	}{
 		{name: "the package that writes proofs", paths: []string{"internal/domain/proof/**"}, want: "the proof package"},
-		{name: "the package itself", paths: []string{"internal/domain/proof"}, want: "the proof package"},
+		{name: "a path that names only the folder", paths: []string{"internal/domain/proof"}, want: ""},
+		{name: "a glob that spans everything internal", paths: []string{"internal/**"}, want: "the proof package"},
+		{name: "a glob that spans the domain", paths: []string{"internal/domain/**"}, want: "the proof package"},
 		{name: "another internal package", paths: []string{"internal/domain/gate/**"}, want: ""},
 		{name: "a package whose name starts like it", paths: []string{"internal/domain/proofs/**"}, want: ""},
 		{name: "the stored proofs", paths: []string{"proof/**"}, want: ""},
@@ -98,24 +100,14 @@ func TestTheBoundaryIsTheProofPackageAndNotEveryNameOfCode(t *testing.T) {
 }
 
 // boundaryProblem names the rule that reaches into the package that writes the
-// proofs, or returns "" when none does. It is a function and not a loop inside the
-// test so the test can ask about fences this repository does not have.
+// proofs, or returns "" when none does. It asks the fence's own matcher instead of
+// reimplementing glob semantics: a rule written as internal/** covers the writer
+// just as surely as one that spells it out, and a hand-rolled prefix misses it.
 func boundaryProblem(rules []fence.Rule) string {
 	for _, rule := range rules {
-		for _, path := range rule.Paths {
-			if overTheProofWriter(path) {
-				return "a fence rule is over the proof package again: " + path + " in " + rule.Not
-			}
+		if len(fence.Check([]fence.Rule{rule}, []string{"internal/domain/proof/proof.go"}, nil)) > 0 {
+			return "a fence rule is over the proof package again: " + strings.Join(rule.Paths, " ") + " in " + rule.Not
 		}
 	}
 	return ""
-}
-
-// overTheProofWriter reports whether the path is inside the package that writes the
-// proofs. The prefix alone is not enough: internal/domain/proofs is another package
-// whose name only starts with the same letters, and refusing it would be the same
-// too-wide rule this test was written to remove.
-func overTheProofWriter(path string) bool {
-	const writer = "internal/domain/proof"
-	return path == writer || strings.HasPrefix(path, writer+"/")
 }
