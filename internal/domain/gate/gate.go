@@ -28,9 +28,12 @@ const (
 	ReasonOutOfScope      = "out_of_scope"
 	ReasonFenceLoosened   = "fence_loosened"
 	ReasonOpenQuestion    = "open_question"
-	ReasonProofMissing    = "proof_missing"
-	ReasonProofStale      = "proof_stale"
-	ReasonProofFailed     = "proof_failed"
+	// ReasonUnplanned is a requirement the feature declares and no step names: the
+	// plan and the vision disagree, and only the agent can close the gap.
+	ReasonUnplanned    = "requirement_unplanned"
+	ReasonProofMissing = "proof_missing"
+	ReasonProofStale   = "proof_stale"
+	ReasonProofFailed  = "proof_failed"
 )
 
 // Commands that resolve a block. Every blocked result names one.
@@ -68,7 +71,13 @@ type State struct {
 	ProofTimeoutSeconds int
 
 	OpenQuestions int
-	Violations    []string
+	// Unplanned names the requirements the feature declares and no step names. It
+	// is gathered when the feature closes: at the close, a requirement nobody
+	// planned is a requirement nobody built, and the plan is the artifact that
+	// says so. Mid-feature the list is empty on purpose -a requirement added by a
+	// change waits for its step, and the steps are planned before the work.
+	Unplanned  []string
+	Violations []string
 	// ProofDeferred says the feature is still open, so the proof is not owed yet:
 	// it is owed by the tree that closes the feature, which is the one a pull
 	// request and CI judge. Absence and staleness stop blocking; a proof this run
@@ -115,6 +124,19 @@ func Evaluate(s State) Result {
 			nextAsk}
 	case s.OpenQuestions > 0:
 		return Result{NeedsDecision, ReasonOpenQuestion, openQuestions(s.OpenQuestions), nextAsk}
+	// The plan and the vision disagree: the feature declares a requirement and no
+	// step names it, so a close would ship a promise nobody worked on. It is
+	// NeedsWork and not a decision: the agent plans the step the human already
+	// asked for.
+	case len(s.Unplanned) > 0:
+		verb := "names it"
+		if len(s.Unplanned) > 1 {
+			verb = "names them"
+		}
+		return Result{NeedsWork, ReasonUnplanned,
+			"the feature declares " + strings.Join(s.Unplanned, ", ") + " and no step " + verb +
+				": a requirement nobody planned is a requirement nobody built",
+			nextPlan(s.Unplanned[0])}
 	// A proof exists as soon as it names the tree it came from. An empty body is
 	// still a proof: `go vet`, `tsc --noEmit` and `gofmt -l` all succeed while
 	// printing nothing, and telling a human "the proof is missing" right after
@@ -136,6 +158,13 @@ func Evaluate(s State) Result {
 		}
 		return Result{Ready, ReasonReady, "ready: there is proof for this tree", ""}
 	}
+}
+
+// nextPlan names the command that plans the requirement nobody planned: the
+// shape plan already documents, with the id the message named. A bare
+// `odachi plan` would print usage, which the bench calls a dead end.
+func nextPlan(requirement string) string {
+	return `odachi plan "<text>" --req ` + requirement
 }
 
 // proofLastLine says what the failing command last printed. A command that

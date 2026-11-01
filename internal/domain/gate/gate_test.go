@@ -37,6 +37,12 @@ func TestEvaluationOrder(t *testing.T) {
 	openQuestion := ready()
 	openQuestion.OpenQuestions = 1
 
+	// A requirement nobody planned outranks the proof: planning the step is what
+	// the agent can still do, and the proof is owed after it.
+	unplanned := ready()
+	unplanned.Unplanned = []string{"R2"}
+	unplanned.ProofTreeHash = ""
+
 	missingProof := ready()
 	missingProof.ProofTreeHash = ""
 	missingProof.ProofOutput = ""
@@ -96,6 +102,14 @@ func TestEvaluationOrder(t *testing.T) {
 			reason:  gate.ReasonOpenQuestion,
 			message: "1 unanswered question",
 			next:    "odachi ask \"<your decision>\"",
+		},
+		{
+			name:    "a requirement no step names",
+			state:   unplanned,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonUnplanned,
+			message: "the feature declares R2 and no step names it: a requirement nobody planned is a requirement nobody built",
+			next:    "odachi plan \"<text>\" --req R2",
 		}, {
 			name:    "proof missing",
 			state:   missingProof,

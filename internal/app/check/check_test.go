@@ -326,6 +326,81 @@ func run(t *testing.T, files *fakeFiles, git *fakeGit, opts check.Options) check
 	return check.Run(opts, files, git, &fakeShell{})
 }
 
+// twoRequirementDoc is a feature that declares two requirements, with the given
+// steps: the shape of a plan that promises more than it lists.
+func twoRequirementDoc(steps ...taskdoc.Step) string {
+	return taskdoc.TaskDoc{
+		Title: "turnos",
+		Requirements: []taskdoc.Requirement{
+			{ID: "R1", Text: "reservar turnos"},
+			{ID: "R2", Text: "cancelar turnos"},
+		},
+		DoneWhen: []string{"reservo un turno", "cancelo un turno"},
+		Steps:    steps,
+		History:  []string{`L1 · "reservar turnos y cancelar turnos"`},
+	}.Render()
+}
+
+// TestARequirementNoStepNamesBlocksTheClose: the feature closes when every step is
+// done, and a close ships the vision. A requirement the plan never named would ship
+// unbuilt, and nothing else in the gate reads the requirements.
+func TestARequirementNoStepNamesBlocksTheClose(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(twoRequirementDoc(
+		taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: "abc1234"},
+	))
+
+	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
+
+	if got.Code != int(gate.NeedsWork) {
+		t.Fatalf("Code = %d, want %d (message %q)", got.Code, gate.NeedsWork, got.Message)
+	}
+	if got.Reason != gate.ReasonUnplanned {
+		t.Fatalf("reason %q, want %q", got.Reason, gate.ReasonUnplanned)
+	}
+	for _, want := range []string{"R2", "no step names it"} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("the message does not say %q: %s", want, got.Message)
+		}
+	}
+	if !strings.Contains(got.Next, "--req R2") {
+		t.Errorf("next must name the plan command for R2, got %q", got.Next)
+	}
+}
+
+// TestEveryRequirementPlannedCloses: the same feature, with a step per
+// requirement, closes with the proof it has.
+func TestEveryRequirementPlannedCloses(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(twoRequirementDoc(
+		taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: "abc1234"},
+		taskdoc.Step{ID: "T2", Text: "cancelar un turno", Requirement: "R2", Done: true, Commit: "def5678"},
+	))
+
+	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("Code = %d, want %d (message %q, next %q)", got.Code, gate.Ready, got.Message, got.Next)
+	}
+}
+
+// TestAnOpenFeatureOwesNoStepForEveryRequirement: mid-feature the list is empty on
+// purpose. A requirement added by a change waits for its step, and blocking every
+// commit until then would stop the work the change asked for.
+func TestAnOpenFeatureOwesNoStepForEveryRequirement(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(twoRequirementDoc(
+		taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: "abc1234"},
+		taskdoc.Step{ID: "T2", Text: "cancelar un turno", Requirement: "R2"},
+	))
+
+	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("an open feature is ready for a step, got %d (message %q)", got.Code, got.Message)
+	}
+}
+
 // TestTheBlockNamesTheOpenQuestions: the gate counts them; the task doc knows the
 // words. A block that says "1 unanswered question" and hands a bare `ask` sends the
 // human to read the file to discover the question and to guess the command that
