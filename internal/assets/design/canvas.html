@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>odachi design</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fafafa; --ink:#1b1b1b; --muted:#6b6b6b; --line:#e3e3e3; --accent:#7c3aed; --panel:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141414; --ink:#ececec; --muted:#9a9a9a; --line:#2c2c2c; --panel:#1c1c1c; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.4 ui-sans-serif, system-ui, sans-serif; background:var(--bg); color:var(--ink); height:100vh; display:flex; flex-direction:column; }
+  header { display:flex; gap:12px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); flex:0 0 auto; }
+  header h1 { font-size:14px; margin:0 8px 0 0; font-weight:600; }
+  header .spacer { flex:1; }
+  button, select { font:inherit; color:inherit; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; }
+  button[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); }
+  main { flex:1; display:flex; min-height:0; }
+  #stage { flex:1; overflow:auto; position:relative; background: repeating-conic-gradient(from 0deg, transparent 0 20px, rgba(125,125,125,.04) 20px 40px); }
+  #boards { display:flex; gap:40px; padding:40px; align-items:flex-start; transform-origin: top left; }
+  .board { flex:0 0 auto; }
+  .board h2 { font-size:13px; margin:0 0 6px; display:flex; gap:8px; align-items:baseline; }
+  .board h2 small { color:var(--muted); font-weight:400; }
+  .board iframe { border:1px solid var(--line); background:#fff; display:block; }
+  aside { width:320px; border-left:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column; min-height:0; }
+  aside h3 { margin:0; padding:12px 14px; font-size:13px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; }
+  #comments { overflow:auto; padding:8px 10px; display:flex; flex-direction:column; gap:8px; }
+  .comment { border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13px; }
+  .comment[data-status="resolved"] { opacity:.55; }
+  .comment .meta { color:var(--muted); font-size:11px; font-family:ui-monospace, monospace; word-break:break-all; margin-bottom:4px; }
+  .comment .actions { margin-top:6px; display:flex; gap:6px; }
+  .comment .actions button { padding:2px 8px; font-size:12px; }
+  #popover { position:fixed; z-index:9; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; width:280px; box-shadow:0 10px 30px rgba(0,0,0,.15); display:none; }
+  #popover textarea { width:100%; min-height:64px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:6px; padding:6px; }
+  #popover .row { display:flex; gap:6px; justify-content:flex-end; margin-top:8px; }
+  #hint { padding:6px 14px; color:var(--muted); font-size:12px; border-bottom:1px solid var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <h1>odachi design</h1>
+  <select id="design" aria-label="design"></select>
+  <button id="mode" aria-pressed="false" title="Click an element in an artboard to leave a comment">Comment mode</button>
+  <button id="fit" title="Fit the artboards to the window">Fit</button>
+  <button id="zoom-out" aria-label="zoom out">&minus;</button>
+  <span id="zoom" style="min-width:48px;text-align:center">100%</span>
+  <button id="zoom-in" aria-label="zoom in">+</button>
+  <span class="spacer"></span>
+  <span id="state" style="color:var(--muted);font-size:12px"></span>
+</header>
+<div id="hint">Navigate: scroll or drag to pan, the wheel scrolls. Comment mode: click an element.</div>
+<main>
+  <div id="stage"><div id="boards"></div></div>
+  <aside>
+    <h3>Comments <span id="count" style="color:var(--muted);font-weight:400"></span></h3>
+    <div id="comments"></div>
+  </aside>
+</main>
+<div id="popover">
+  <div class="meta" id="target"></div>
+  <textarea id="text" placeholder="What should change here?"></textarea>
+  <div class="row">
+    <button id="cancel">Cancel</button>
+    <button id="save">Save comment</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var state = { designs: [], slug: "", zoom: 1, comment: false, pending: null };
+  var boards = document.getElementById("boards");
+  var stage = document.getElementById("stage");
+  var designSelect = document.getElementById("design");
+  var commentsBox = document.getElementById("comments");
+  var count = document.getElementById("count");
+  var stateLine = document.getElementById("state");
+  var popover = document.getElementById("popover");
+  var target = document.getElementById("target");
+  var text = document.getElementById("text");
+
+  function api(path, options) {
+    return fetch(path, options || {}).then(function (response) {
+      if (!response.ok) { return response.json().then(function (body) { throw new Error(body.error || response.statusText); }); }
+      return response.json();
+    });
+  }
+
+  function el(tag, props, children) {
+    var node = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (key) { node[key] = props[key]; });
+    (children || []).forEach(function (child) { node.appendChild(child); });
+    return node;
+  }
+
+  function current() {
+    for (var i = 0; i < state.designs.length; i++) { if (state.designs[i].slug === state.slug) { return state.designs[i]; } }
+    return null;
+  }
+
+  function render() {
+    designSelect.innerHTML = "";
+    state.designs.forEach(function (design) {
+      var option = el("option", { value: design.slug, textContent: design.slug + " - " + design.manifest.title });
+      option.selected = design.slug === state.slug;
+      designSelect.appendChild(option);
+    });
+
+    boards.innerHTML = "";
+    var design = current();
+    if (!design) {
+      stateLine.textContent = "no design in design/ yet";
+      return;
+    }
+
+    design.manifest.artboards.forEach(function (artboard) {
+      var frame = el("iframe", { title: artboard.title });
+      frame.width = artboard.width;
+      frame.height = artboard.height;
+      frame.dataset.file = artboard.file;
+      frame.dataset.slug = design.slug;
+      frame.src = design.urls[artboard.file];
+      frame.addEventListener("load", function () { hook(frame); });
+      var head = el("h2", { textContent: artboard.title }, [el("small", { textContent: artboard.tradeoff })]);
+      boards.appendChild(el("div", { className: "board" }, [head, frame]));
+    });
+
+    renderComments();
+    applyZoom();
+  }
+
+  function renderComments() {
+    var design = current();
+    commentsBox.innerHTML = "";
+    if (!design) { return; }
+    var open = 0;
+    design.comments.comments.forEach(function (comment) {
+      if (comment.status === "open") { open++; }
+      var meta = el("div", { className: "meta", textContent: comment.file + " - " + (comment.selector || "page") });
+      var body = el("div", { textContent: comment.comment });
+      var actions = el("div", { className: "actions" });
+      if (comment.status === "open") {
+        var resolve = el("button", { textContent: "Resolve" });
+        resolve.addEventListener("click", function () { resolve_(comment.id); });
+        actions.appendChild(resolve);
+      } else {
+        actions.appendChild(el("span", { className: "meta", textContent: "resolved" }));
+      }
+      var card = el("div", { className: "comment" }, [meta, body, actions]);
+      card.setAttribute("data-status", comment.status);
+      commentsBox.appendChild(card);
+    });
+    count.textContent = open + " open";
+    stateLine.textContent = design.slug + " - " + design.comments.comments.length + " comments";
+  }
+
+  function applyZoom() {
+    boards.style.transform = "scale(" + state.zoom + ")";
+    document.getElementById("zoom").textContent = Math.round(state.zoom * 100) + "%";
+  }
+
+  // hook runs inside each artboard once it loads: same origin, so the canvas can
+  // listen for a click and compute the selector the agent will read.
+  function hook(frame) {
+    var doc;
+    try { doc = frame.contentDocument; } catch (error) { return; }
+    if (!doc || doc.__odachiHooked) { return; }
+    doc.__odachiHooked = true;
+    doc.addEventListener("click", function (event) {
+      if (!state.comment) { return; }
+      event.preventDefault();
+      event.stopPropagation();
+      var selector = selectorFor(event.target);
+      state.pending = {
+        file: frame.dataset.file,
+        selector: selector,
+        excerpt: (event.target.textContent || "").trim().slice(0, 80)
+      };
+      target.textContent = frame.dataset.file + " - " + selector;
+      text.value = "";
+      var rect = frame.getBoundingClientRect();
+      popover.style.display = "block";
+      popover.style.left = Math.min(window.innerWidth - 300, rect.left + event.clientX * state.zoom) + "px";
+      popover.style.top = Math.min(window.innerHeight - 190, rect.top + event.clientY * state.zoom) + "px";
+      text.focus();
+    }, true);
+  }
+
+  function selectorFor(node) {
+    var parts = [];
+    while (node && node.nodeType === 1 && parts.length < 5) {
+      var part = node.tagName.toLowerCase();
+      if (node.id) { parts.unshift(part + "#" + node.id); break; }
+      var parent = node.parentElement;
+      if (parent) {
+        var index = 1;
+        for (var i = 0; i < parent.children.length; i++) {
+          if (parent.children[i] === node) { break; }
+          if (parent.children[i].tagName === node.tagName) { index++; }
+        }
+        part += ":nth-of-type(" + index + ")";
+      }
+      parts.unshift(part);
+      node = parent;
+    }
+    return parts.join(" > ");
+  }
+
+  function save() {
+    if (!state.pending || !text.value.trim()) { return; }
+    api("/api/design/" + state.slug + "/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        file: state.pending.file,
+        selector: state.pending.selector,
+        excerpt: state.pending.excerpt,
+        comment: text.value.trim()
+      })
+    }).then(function () {
+      popover.style.display = "none";
+      state.pending = null;
+      refresh();
+    }).catch(function (error) { stateLine.textContent = error.message; });
+  }
+
+  function resolve_(id) {
+    api("/api/design/" + state.slug + "/comments/" + id, { method: "POST" })
+      .then(refresh)
+      .catch(function (error) { stateLine.textContent = error.message; });
+  }
+
+  function refresh() {
+    return api("/api/designs").then(function (body) {
+      state.designs = body.designs || [];
+      if (!current() && state.designs.length) { state.slug = state.designs[0].slug; }
+      render();
+    }).catch(function (error) { stateLine.textContent = error.message; });
+  }
+
+  designSelect.addEventListener("change", function () {
+    state.slug = designSelect.value;
+    var url = new URL(window.location.href);
+    url.searchParams.set("design", state.slug);
+    window.history.replaceState(null, "", url);
+    refresh();
+  });
+
+  document.getElementById("mode").addEventListener("click", function (event) {
+    state.comment = !state.comment;
+    event.currentTarget.setAttribute("aria-pressed", String(state.comment));
+    document.getElementById("hint").textContent = state.comment
+      ? "Comment mode: click an element in an artboard. Clicks do not follow links."
+      : "Navigate: scroll or drag to pan, the wheel scrolls. Comment mode: click an element.";
+  });
+
+  document.getElementById("fit").addEventListener("click", function () {
+    var design = current();
+    if (!design) { return; }
+    var widest = 0;
+    design.manifest.artboards.forEach(function (artboard) { widest = Math.max(widest, artboard.width); });
+    state.zoom = Math.min(1, (stage.clientWidth - 100) / (widest + 80));
+    applyZoom();
+  });
+
+  document.getElementById("zoom-in").addEventListener("click", function () { state.zoom = Math.min(2, state.zoom + 0.1); applyZoom(); });
+  document.getElementById("zoom-out").addEventListener("click", function () { state.zoom = Math.max(0.2, state.zoom - 0.1); applyZoom(); });
+  document.getElementById("save").addEventListener("click", save);
+  document.getElementById("cancel").addEventListener("click", function () { popover.style.display = "none"; state.pending = null; });
+  document.addEventListener("keydown", function (event) { if (event.key === "Escape") { popover.style.display = "none"; state.pending = null; } });
+
+  // The stream tells the page what moved: comments reload the panel, an artboard
+  // reloads its frame. A canvas that is already open is refreshed instead of a new
+  // tab, which is why the URL is stable.
+  if (window.EventSource) {
+    var stream = new EventSource("/api/events");
+    stream.onmessage = function (message) {
+      var what = message.data;
+      if (what === "comments") { refresh(); return; }
+      var frames = boards.querySelectorAll("iframe");
+      for (var i = 0; i < frames.length; i++) {
+        var frame = frames[i];
+        if (what === frame.dataset.slug + "/" + frame.dataset.file || what === frame.dataset.slug + "/design.json") {
+          frame.contentWindow.location.reload();
+        }
+      }
+    };
+  }
+
+  var wanted = new URL(window.location.href).searchParams.get("design");
+  api("/api/designs").then(function (body) {
+    state.designs = body.designs || [];
+    state.slug = wanted && state.designs.some(function (d) { return d.slug === wanted; }) ? wanted : (state.designs[0] ? state.designs[0].slug : "");
+    render();
+  }).catch(function (error) { stateLine.textContent = error.message; });
+})();
+</script>
+</body>
+</html>

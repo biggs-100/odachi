@@ -1,7 +1,7 @@
-# Next session: the block closes itself, and the one decision that waits
+# Next session: the design surface is closed, and the canvas is one command
 
-Written at the close of 0153, on v0.11.88 plus one feature not yet released. The chat is gone
-tomorrow; this file is the state.
+Written at the close of 0154, on v0.11.89. The chat is gone tomorrow; this file is
+the state.
 
 ## What the last ten features shipped
 
@@ -46,8 +46,14 @@ tomorrow; this file is the state.
 
 ## What is open
 
+- **0154 is closed**: the design surface ships as a skill, a format and six commands -
+  `list`, `comments`, `open`, `stop`, `handoff`, `sync` - and the canvas writes the comments
+  file every agent reads. The branch carries its proof and its verdict; the PR is the next
+  step.
+- The queue in this file is unchanged: the step declares its route, a change resumable from
+  the diff needs no document, and a step done without a commit is a step nobody can find.
 - `docs/review-debt.md` has no open rows, and `odd/tasks` has no open questions.
-- Nothing: both features closed with their proof and their verdict.
+- The one decision that still waits, unchanged: CI cannot enforce the review (ADR 0042).
 
 ## What is measured, so nobody re-measures it
 
