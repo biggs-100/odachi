@@ -455,12 +455,14 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 		opts     check.Options
 		asJSON   bool
 		noReview bool
+		ci       bool
 	)
 
 	flags.StringVar(&opts.Run, "run", "", "run the command, capture the output and write proof/<NNNN>-<slug>.txt")
 	flags.StringVar(&opts.Proof, "proof", "", "use a proof that is already written (agents and CI)")
 	flags.StringVar(&opts.Base, "base", "HEAD", "what to compare the fence against (empty: against nothing, everything counts as new)")
 	flags.StringVar(&opts.FenceFrom, "fence-from", "", "read the fence from this git ref instead of the worktree (CI: the base branch)")
+	flags.BoolVar(&ci, "ci", false, "judge the tree the way CI does: the fence and the base come from the remote's default branch")
 	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "seconds --run may take")
 	flags.BoolVar(&opts.Quiet, "quiet", false, "prints nothing when ready (for the hook)")
 	flags.BoolVar(&opts.RequireReview, "require-review", false, "requires a review verdict for this tree (default: the project mode)")
@@ -492,6 +494,26 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "odachi: --require-review and --no-review do not go together: choose one; without flags the project mode decides")
 		return start.CodeBlocked
 	}
+	// --ci decides where the policy and the base come from. A --base or a
+	// --fence-from beside it would name a second answer, and precedence would
+	// pick one without saying so: the flag that exists to fix a green which
+	// lied must not be ambiguous itself.
+	if ci && (flagSet(flags, "base") || flagSet(flags, "fence-from")) {
+		fmt.Fprintln(stderr, "odachi: --ci reads the fence and the base from the remote's default branch, so --base and --fence-from beside it say it twice: drop that flag, or drop --ci and name the base yourself")
+		return start.CodeBlocked
+	}
+	// The ref is named, not resolved to a commit: CI reads the base branch as this
+	// clone sees it, and the proof records that ref, so a stale base is visible
+	// instead of guessed around.
+	if ci {
+		base, err := gitRepo{}.RemoteBase(dir)
+		if err != nil {
+			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		opts.Base = base
+		opts.FenceFrom = base
+	}
 
 	// The project owns the default; the flags are the exception for one run.
 	// A malformed switch blocks instead of quietly reading as off: a human who
@@ -514,6 +536,18 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 		opts.Model = hostModel{}.Model(dir)
 	}
 	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
+}
+
+// flagSet says whether the human typed this flag. The zero value cannot answer
+// it: --base defaults to HEAD, so "not named" and "named HEAD" would read alike.
+func flagSet(flags *flag.FlagSet, name string) bool {
+	set := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			set = true
+		}
+	})
+	return set
 }
 
 // runReview parses the flags, wires the four adapters and reports the verdict.
@@ -1568,6 +1602,9 @@ check flags:
   --proof path    use a proof that is already written (agents and CI)
   --base ref      what to compare the fence against (default HEAD; empty: against nothing)
   --fence-from ref  read the fence from this git ref instead of the worktree (CI: the base branch)
+  --ci            judge the tree the way CI does: the fence and the base come from the
+                  remote's default branch, so a policy that lands before the feature is
+                  verified before a push; it takes no --base or --fence-from beside it
   --timeout n     seconds --run may take (default 120)
   --quiet         prints nothing when ready except the reminder the hook must read
   --require-review  refuses a commit without a verdict for this tree (default: the project mode, which names it and lets the commit through)

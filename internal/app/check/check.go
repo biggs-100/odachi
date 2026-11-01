@@ -1471,6 +1471,9 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 
 	if verdict.Code != gate.Ready {
 		result.Lines = []string{verdict.Message}
+		if line := r.fenceLine(); line != "" {
+			result.Lines = append(result.Lines, line)
+		}
 		// The gate counts what blocks; the document knows the words. A block that
 		// only counts sends the human to read a file to discover what they are
 		// being asked, and to guess the command that answers it.
@@ -1494,6 +1497,9 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	}
 
 	result.Lines = []string{verdict.Message}
+	if line := r.fenceLine(); line != "" {
+		result.Lines = append(result.Lines, line)
+	}
 	if haveProof && r.proofRel != "" {
 		result.Proof = r.proofRel
 		result.Lines = append(result.Lines, "proof: "+r.proofRel)
@@ -1527,6 +1533,17 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 		result.Note = r.reviewNote
 	}
 	return result
+}
+
+// fenceLine names the ref the policy came from, when it is not the worktree's
+// own copy. A green against a ref and a green against the worktree are two
+// different claims, and the run that made the first one has to say where: the
+// ref is what a human compares with the base CI builds from.
+func (r *runner) fenceLine() string {
+	if ref := strings.TrimSpace(r.opts.FenceFrom); ref != "" {
+		return "fence: " + ref
+	}
+	return ""
 }
 
 // debtNote is the review debt this tree leaves, read from the file a person reads:

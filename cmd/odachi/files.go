@@ -490,6 +490,10 @@ type gitRepo struct{}
 func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root) }
 func (gitRepo) Head(root string) (string, error)     { return gitx.Head(root) }
 
+// RemoteBase is the ref CI builds its gate from: the remote's default branch as
+// this clone sees it. --ci is the only caller; nothing else may decide a base.
+func (gitRepo) RemoteBase(root string) (string, error) { return gitx.RemoteBase(root) }
+
 // CommonDir is where the clone's store hangs from: the directory every worktree
 // of this clone shares, which is what makes the store one per clone.
 func (gitRepo) CommonDir(root string) (string, error) { return gitx.CommonDir(root) }

@@ -9,13 +9,14 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0141, which closes the two rows of 0140.
+Last written: after 0157, whose verdict left no rows.
 
 ## Open
 
-Nothing, after 0156. The reviews of 0154 and 0155 left rows and they are closed below: the nine
+Nothing, after 0157. The reviews of 0154 and 0155 left rows and they are closed below: the nine
 of 0154 were paid by 0155, and the last one -a test that asserted on a canvas it may have
-killed- is closed here.
+killed- was closed by 0156. The verdict on 0157's tree `b184e6f0` approved the four lenses with
+no findings.
 
 ## Closed by feature 0156
 
