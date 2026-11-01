@@ -1,4 +1,4 @@
-// Package doctor owns the rules of `odachi doctor`: the thirteen health checks in
+// Package doctor owns the rules of `odachi doctor`: the fourteen health checks in
 // order, how the pre-commit hook and the AGENTS.md block written by
 // `odachi init` are read back, and the exact phrase that repairs each problem.
 //
@@ -66,11 +66,17 @@ const (
 	// are no longer read: a fence nobody enforces is worse than no fence, because
 	// the human believes it is there.
 	CheckLeftovers
+	// CheckNextSession asks whether the file a session leaves for the next one
+	// names the feature the project is on. It is appended, like every check
+	// before it, so no existing number moves. A project that keeps no such file
+	// says so in an ok line: the convention is the project's, and the check only
+	// watches the file once it exists.
+	CheckNextSession
 )
 
 // CheckCount is how many checks a complete report has. A test asserts it, so a
 // report can never quietly grow or shrink.
-const CheckCount = 13
+const CheckCount = 14
 
 // Status is what one check found.
 type Status int
@@ -224,6 +230,8 @@ func title(number int) string {
 		return "the task documents odachi reads"
 	case CheckLeftovers:
 		return "no folder from an older release"
+	case CheckNextSession:
+		return "the next session names the newest feature"
 	default:
 		return ""
 	}
@@ -287,6 +295,91 @@ func PathFix(exe string) string {
 		return `add the folder where you installed odachi to the PATH (in sh: export PATH="<folder>:$PATH")`
 	}
 	return `add that folder to the PATH (in sh: export PATH="` + filepath.ToSlash(dir) + `:$PATH")`
+}
+
+// NextSession is check 14: does the file a session leaves name the feature the
+// project is on? It asks one question and nothing else: a note that names the
+// newest feature is current, and a note that does not is stale. Reading the
+// highest number a note mentions answers a different question -a bare year is
+// four digits too- and a check that cannot tell 2026 from 0146 warns forever on
+// a note that is right.
+//
+// A project that keeps no such file is ok, never a warning: the convention is
+// the project's, and the check watches the file once it exists. So is a project
+// with no task document yet - there is nothing a session could name.
+func NextSession(feature int, content string, exists bool) Check {
+	if feature == 0 {
+		return OK(CheckNextSession, "there is no feature yet, so there is nothing docs/next-session.md has to name")
+	}
+	want := fmt.Sprintf("%04d", feature)
+	if !exists {
+		return OK(CheckNextSession, "there is no docs/next-session.md, and the newest feature is "+want+": a project keeps its session where it chooses")
+	}
+
+	if NamesFeature(content, feature) {
+		return OK(CheckNextSession, "docs/next-session.md names "+want+", the newest feature")
+	}
+	return Warning(CheckNextSession, "docs/next-session.md does not name "+want+", the newest feature")
+}
+
+// NamesFeature reports whether the text names one feature by its own number: a
+// number that is part of a longer one is a different document, and a number
+// glued to a hyphen or a dot is a date or a version, never a feature.
+func NamesFeature(text string, number int) bool {
+	for _, n := range featureNumbers(text) {
+		if n == number {
+			return true
+		}
+	}
+	return false
+}
+
+// featureNumbers reads the four-digit features a text names. A feature is four
+// digits bounded by anything that is not a digit; a run glued to a hyphen or a
+// dot on either side is a date or a version -`2026-10-31`, `0.11.85`- and it is
+// not a feature. Four digits is the shape the task documents use, and a project
+// that reaches 10000 features is a project that changed the shape on purpose.
+func featureNumbers(text string) []int {
+	var numbers []int
+
+	for i := 0; i < len(text); i++ {
+		if text[i] < '0' || text[i] > '9' {
+			continue
+		}
+		j := i
+		for j < len(text) && text[j] >= '0' && text[j] <= '9' {
+			j++
+		}
+
+		if j-i == 4 && !gluedToADate(text, i, j) {
+			value := 0
+			for _, digit := range text[i:j] {
+				value = value*10 + int(digit-'0')
+			}
+			numbers = append(numbers, value)
+		}
+		i = j - 1
+	}
+
+	return numbers
+}
+
+// gluedToADate asks whether the digits at text[i:j] belong to something else: a
+// hyphen or a dot on either side, or the `v` a version carries.
+func gluedToADate(text string, i, j int) bool {
+	if i > 0 {
+		switch text[i-1] {
+		case '-', '.', '/', 'v', 'V':
+			return true
+		}
+	}
+	if j < len(text) {
+		switch text[j] {
+		case '-', '.', '/':
+			return true
+		}
+	}
+	return false
 }
 
 // plural is how an English sentence counts things.

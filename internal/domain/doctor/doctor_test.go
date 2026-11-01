@@ -15,11 +15,106 @@ func TestEveryCheckHasATitle(t *testing.T) {
 			t.Errorf("check %d has no title", number)
 		}
 	}
-	if CheckLeftovers != CheckVersion+CheckCount-1 {
-		t.Fatalf("the thirteen checks are numbered %d..%d, got %d", CheckVersion, CheckLeftovers, CheckVersion+CheckCount-1)
+	if CheckNextSession != CheckVersion+CheckCount-1 {
+		t.Fatalf("the fourteen checks are numbered %d..%d, got %d", CheckVersion, CheckNextSession, CheckVersion+CheckCount-1)
 	}
-	if CheckCount != 13 {
-		t.Fatalf("ten from Contract XV plus the voice, the task docs and the leftovers one, got %d", CheckCount)
+	if CheckCount != 14 {
+		t.Fatalf("ten from Contract XV plus the voice, the task docs, the leftovers one and the session file, got %d", CheckCount)
+	}
+}
+
+// A file that names an older feature is a session that ended two releases ago:
+// the check says which number is missing, because that is the only thing the
+// human has to write.
+func TestTheNextSessionLineSaysTheFeatureThatIsMissing(t *testing.T) {
+	cases := []struct {
+		name    string
+		check   Check
+		status  Status
+		details []string
+	}{
+		{
+			name:    "the file names the newest feature",
+			check:   NextSession(146, "written at the close of 0146", true),
+			status:  StatusOK,
+			details: []string{"0146"},
+		},
+		{
+			name:    "the file names an older one",
+			check:   NextSession(146, "written at the close of 0143", true),
+			status:  StatusWarning,
+			details: []string{"0146"},
+		},
+		{
+			name:    "a bare year is not a feature",
+			check:   NextSession(146, "written in 2026, at the close of 0146", true),
+			status:  StatusOK,
+			details: []string{"0146"},
+		},
+		{
+			name:    "the note points at the next feature",
+			check:   NextSession(146, "close of 0143, next up: 0147", true),
+			status:  StatusWarning,
+			details: []string{"0146"},
+		},
+		{
+			name:    "the project keeps no file",
+			check:   NextSession(146, "", false),
+			status:  StatusOK,
+			details: []string{"docs/next-session.md"},
+		},
+		{
+			name:    "the file has no feature in it",
+			check:   NextSession(146, "nothing happened", true),
+			status:  StatusWarning,
+			details: []string{"0146"},
+		},
+		{
+			name:    "there is no feature yet",
+			check:   NextSession(0, "", false),
+			status:  StatusOK,
+			details: []string{"docs/next-session.md"},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if c.check.Status != c.status {
+				t.Fatalf("status %v, want %v: %s", c.check.Status, c.status, Line(c.check))
+			}
+			for _, want := range c.details {
+				if !strings.Contains(c.check.Detail, want) {
+					t.Errorf("the line does not say %q: %s", want, Line(c.check))
+				}
+			}
+			if c.check.Fix != "" {
+				t.Errorf("a session line never names a command, it names the number: %+v", c.check)
+			}
+		})
+	}
+}
+
+// The number has to be the feature, not a substring of something else: 0146
+// inside 01460 is a different document, and a date is not a feature.
+func TestAFeatureIsNamedByItsOwnNumber(t *testing.T) {
+	cases := []struct {
+		text   string
+		number int
+		want   bool
+	}{
+		{"close of 0146, on v0.11.85", 146, true},
+		{"**0146 (v0.11.86)**: the block closes", 146, true},
+		{"01460", 146, false},
+		{"010146", 146, false},
+		{"close of 0143", 146, false},
+		{"measured on 2026-10-31", 146, false},
+		{"", 146, false},
+	}
+
+	for _, c := range cases {
+		if got := NamesFeature(c.text, c.number); got != c.want {
+			t.Errorf("NamesFeature(%.20q, %d) = %v, want %v", c.text, c.number, got, c.want)
+		}
 	}
 }
 

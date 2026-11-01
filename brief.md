@@ -1,11 +1,12 @@
-# the-ci-gate
+# the-note-names-one-number
 
 ## What must exist
-- the CI gate stops asking to be excused from the review: the base ref it is built from names the review instead of refusing the tree
+- the fourteenth check asks one question —does `docs/next-session.md` name the newest feature?— so a bare year in the note is never read as a feature and the warning names the number to write
 
 ## Done when
-- the workflow runs check without --no-review, and a pull request that closes a feature says the review was not verified there
-- the changelog says the flag left once the base ref could read the new rule
+- `NextSession` answers with `NamesFeature`, and nothing in the package reads the highest number a note mentions
+- a note that says a bare year and names the newest feature is ok, and a note that names an older one warns with the number missing
+- the row the review of 0146 left is closed in `docs/review-debt.md`
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
@@ -15,4 +16,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que una regla de CI espera al release que la entiende.
+- Wants to learn: por que el arreglo correcto borra codigo en vez de agregarlo.

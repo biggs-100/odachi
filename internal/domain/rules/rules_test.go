@@ -54,6 +54,12 @@ func TestBlockForNovatoIsPinnedByteForByte(t *testing.T) {
 		"loose in the git directory: the tree must stay clean, and a file with no folder is",
 		"one nobody can find or empty again. `odachi clean --apply` empties that folder.",
 		"",
+		"One more, about closing. When the human says the session is over —\"cerramos sesión\",",
+		"\"seguimos mañana\"— a project that keeps `docs/next-session.md` rewrites that file before",
+		"the agent says it is closed: the newest feature, what was measured, and the decision that",
+		"waits. The chat is gone tomorrow, and the file is what the next session reads; `odachi doctor` says",
+		"when it went stale.",
+		"",
 		"Skills: the ones in `.agents/skills/`; inside this project, load `drive` before acting: it is the manual.",
 		"",
 		"## The six verbs",
@@ -209,6 +215,28 @@ func TestBlockSaysWhatOdachiIsAndWhereTheVoiceComesFrom(t *testing.T) {
 	// block's to publish.
 	if strings.Contains(block, "odd/profile.toml") {
 		t.Errorf("the block sends the agent to the profile file:\n%s", block)
+	}
+}
+
+// A session that ends without its file leaves the next one blind: the chat is
+// gone, and the block is the only text that arrives before the agent acts. It
+// names the trigger, the file and the check that says the file went stale, in
+// that order, because the order is what the agent runs.
+func TestTheBlockClosesTheSessionWithTheFileTheNextOneReads(t *testing.T) {
+	block, err := rules.Block(persona.Novato)
+	if err != nil {
+		t.Fatalf("Block(novato): %v", err)
+	}
+	flat := strings.Join(strings.Fields(block), " ")
+	for _, want := range []string{
+		"When the human says the session is over",
+		"`docs/next-session.md`",
+		"the newest feature, what was measured, and the decision that waits",
+		"`odachi doctor` says when it went stale",
+	} {
+		if !strings.Contains(flat, want) {
+			t.Errorf("the block does not say %q:\n%s", want, block)
+		}
 	}
 }
 
