@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A failed review says which model it asked and where that model came from.
+
+- **The failure names the source.** The three failure paths of `review --exec` -could not run,
+  timed out, non-zero exit- name the lens, the model and the line that chose it: `--model`,
+  `odd/review.toml` or the session. An offline tool cannot know what a provider still serves; it
+  can make a retirement one edit instead of an investigation.
+- **An archtest says this repository names a judge for every lens**, and the comment
+  `odd/review.toml` carries tells the next human what to check when a model goes.
+- Why: the run that cannot start is the one a person debugs, and a message that names only the
+  command sends them to read three files. The measurement behind this feature was wrong once
+  -a filtered list hid the active, cheapest model- and the review of the branch caught what the
+  error left behind, which is why the row is in `docs/review-debt.md` and not gone.
+
 ## v0.11.91 - 2026-11-01
 
 The gate runs before the push, and the craft has a trust boundary.
