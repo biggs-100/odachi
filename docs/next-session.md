@@ -1,9 +1,9 @@
 # Next session: the block closes itself, and the one decision that waits
 
-Written at the close of 0149, released as v0.11.87 and installed. The chat is gone
+Written at the close of 0150, on v0.11.87 plus one policy correction. The chat is gone
 tomorrow; this file is the state.
 
-## What the last six features shipped
+## What the last seven features shipped
 
 - **0144 (v0.11.85)**: the review never authorises delivery. With `mode = on`, a close
   without a verdict is ready and names the review it did not get; only a causal
@@ -26,6 +26,10 @@ tomorrow; this file is the state.
 - **0149 (v0.11.87)**: the two rows the review of 0148 left are closed. The plural
   sentence and the open lane are pinned, and both pins were observed red before they
   landed; `docs/review-debt.md` is empty again.
+- **0150 (unreleased, ADR 0044)**: the fence guards the evidence and not the writer. It
+  protects `proof/**` with one promise -a stored proof is never rewritten- and
+  `internal/domain/proof/**` left it, so the format may gain a versioned line. This is the
+  licence the next feature needs: record in the proof which requirement it covers.
 
 ## What is open
 
@@ -67,9 +71,9 @@ Read at the start of a session, not now: each one becomes a feature, with its ow
 it starts.
 
 - **the proof names what it proves.** `check --run` would record which requirements the closing
-  feature declared, so evidence maps to a requirement instead of to a whole tree. It needs the
-  fence correction first: `internal/domain/proof/**` and `proof/**` are protected by "no change
-  to the proof format", and that rule is the human's to change.
+  feature declared, so evidence maps to a requirement instead of to a whole tree. 0150 landed
+  the licence: `proof/**` is protected as evidence and the writer may change. This is the
+  next feature in the queue.
 - **the step declares its route.** inline or delegated, and which agent, recorded in the task
   doc. It is the one fact gentle-ai writes per task (`Route:`) that odachi does not. Cheap.
 - **a change resumable from the diff needs no document.** The light lane: no brief and no task

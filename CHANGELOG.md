@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The fence guards the evidence, not the writer.
+
+- **The rule named two promises and now names one.** *"No change to the proof format, and the
+  stored proof is never rewritten"* protected `internal/domain/proof/**` and `proof/**`: the
+  bytes a tree was certified with, and the code that writes them. It now protects `proof/**`
+  and one thing -a stored proof is never rewritten- so the format may gain a versioned line
+  while the evidence stays untouchable (ADR 0044).
+- Why: 0148 made the gate read the requirements, and recording in the proof which requirement
+  it covers needed a line the fence forbade. The correction is not a patch on the rule; it is
+  the decision the rule was standing in for.
+
 ## v0.11.87 - 2026-10-31
 
 A requirement nobody planned stops the close.
