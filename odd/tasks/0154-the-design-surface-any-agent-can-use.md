@@ -16,8 +16,8 @@ R1 · "construye todo lo que tiene gentle-design, para que funcione igual en nue
 - [x] T3 · an agent lists designs and comments with a command, and resolves them   R1 · tree:4594717825938c3be62b4cb99eb6d4e47418dc5f
 - [x] T4 · the design skill ships with odachi and travels to every client   R1 · tree:7a2073e50a0aa04a19384cbd1be493e901540f81
 - [x] T5 · the canvas opens, serves the artboards and writes comments any agent can read   R1 · tree:7ba7c9292052617b1976d0ba7ba9a752f05275c5
-- [ ] T6 · the design system sync reads the project tokens and never edits them   R1
-- [ ] T7 · the handoff turns an artboard into the implementation instruction   R1
+- [x] T6 · the design system sync reads the project tokens and never edits them   R1 · tree:e18d74fa90d7f12b9d85236c82ac7d6118b7863b
+- [x] T7 · the handoff turns an artboard into the implementation instruction   R1 · tree:e18d74fa90d7f12b9d85236c82ac7d6118b7863b
 
 ## History
 L1 · "construye todo lo que tiene gentle-design, para que funcione igual en nuestros agentes"

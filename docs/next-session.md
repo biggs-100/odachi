@@ -1,7 +1,7 @@
-# Next session: the design surface is open at the canvas
+# Next session: the design surface is closed, and the canvas is one command
 
-Written at the pause of 0154, on v0.11.89. The feature is open: four of seven steps.
-The chat is gone tomorrow; this file is the state.
+Written at the close of 0154, on v0.11.89. The chat is gone tomorrow; this file is
+the state.
 
 ## What the last ten features shipped
 
@@ -46,18 +46,12 @@ The chat is gone tomorrow; this file is the state.
 
 ## What is open
 
-- **0154 is open on `feat/the-design-surface`, four commits, unpushed.** T1 to T4 are done:
-  the fence names the sixteen skills so a new one is a feature; `internal/domain/design` holds
-  the manifest and the comments formats; `odachi design list` and `odachi design comments`
-  let any agent drive the folder from a shell; `skills/design/SKILL.md` ships in the binary
-  and travels through `pack` and `setup`.
-- **T5, the canvas, is the piece that is missing**: `odachi design open` serving the artboards
-  from a local server, writing `comments.json`, with the human clicking an element. It is the
-  first server the binary would carry -embedded assets, SSE, a lock in the clone's store- and
-  it deserves its own review.
-- **T6 and T7 are written as instructions in the skill**: the design system sync reads the
-  project sources and never edits them, and the handoff names the chosen artboard. What is
-  missing is the command that scans the sources.
+- **0154 is closed**: the design surface ships as a skill, a format and six commands -
+  `list`, `comments`, `open`, `stop`, `handoff`, `sync` - and the canvas writes the comments
+  file every agent reads. The branch carries its proof and its verdict; the PR is the next
+  step.
+- The queue in this file is unchanged: the step declares its route, a change resumable from
+  the diff needs no document, and a step done without a commit is a step nobody can find.
 - `docs/review-debt.md` has no open rows, and `odd/tasks` has no open questions.
 - The one decision that still waits, unchanged: CI cannot enforce the review (ADR 0042).
 
