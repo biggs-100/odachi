@@ -16,7 +16,7 @@ R1 · "the nine things the review of 0154 found are paid: the canvas refuses a f
 - [x] T2 · the fence names the design skill it shipped   R1 · tree:1c961ce8cd9fc3bdb68afa1c86fe17bf29f8f4ca
 - [x] T3 · resolve writes nothing when it found nothing, and loses no comment   R1 · tree:cc6f6b3e5210abd90ffdf2eb2694c6c30713b352
 - [x] T4 · the comments file round-trips what the writer emits   R1 · tree:a94e0d7d2b7a2c8eb3a05d61f2d2df447f1f2155
-- [ ] T5 · an address that cannot be recorded stops the canvas, and stop forgets a dead one   R1
+- [x] T5 · an address that cannot be recorded stops the canvas, and stop forgets a dead one   R1 · tree:335aeceeaa3f07ffe006ceca5cb464f7c23ceae9
 - [x] T6 · the watcher announces every file that moved   R1 · tree:e224ff062bc229711ac6a93055f412b60a6a8998
 
 ## History

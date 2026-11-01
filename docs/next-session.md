@@ -1,6 +1,6 @@
 # Next session: the design surface is closed, and the canvas is one command
 
-Written at the close of 0154, on v0.11.89. The chat is gone tomorrow; this file is
+Written at the close of 0155, on v0.11.89 plus the design surface. The chat is gone tomorrow; this file is
 the state.
 
 ## What the last ten features shipped
@@ -46,10 +46,13 @@ the state.
 
 ## What is open
 
-- **0154 is closed**: the design surface ships as a skill, a format and six commands -
-  `list`, `comments`, `open`, `stop`, `handoff`, `sync` - and the canvas writes the comments
-  file every agent reads. The branch carries its proof and its verdict; the PR is the next
-  step.
+- **0154 and 0155 are closed**: the design surface ships as a skill, a format and six
+  commands - `list`, `comments`, `open`, `stop`, `handoff`, `sync` - and the canvas writes the
+  comments file every agent reads. The seven findings that close left are paid in 0155: the
+  canvas refuses a foreign caller, the fence names the skill it shipped, resolve writes nothing
+  it did not find and loses no comment, an unset date is null, an address that cannot be
+  recorded stops the server, and the watcher names every file that moved. The branch carries
+  both proofs and both verdicts; the PR is the next step.
 - The queue in this file is unchanged: the step declares its route, a change resumable from
   the diff needs no document, and a step done without a commit is a step nobody can find.
 - `docs/review-debt.md` has no open rows, and `odd/tasks` has no open questions.
