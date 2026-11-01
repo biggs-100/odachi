@@ -566,7 +566,10 @@ func (r *runner) refute() Result {
 	if _, blocking := domain.BlockingAfter(verdict.Findings, existing); !blocking {
 		return nothingToRefute(tree)
 	}
-	witness := r.nextRefutationRound(tree)
+	witness, refusal := r.nextRefutationRound(tree)
+	if refusal != "" {
+		return blocked(refusal + "; the reviewer was not started")
+	}
 	if witness == 0 {
 		return blocked(fmt.Sprintf("this tree already has %d refutations and %d is the ceiling: the finding they did not lift needs a fix, not another witness",
 			domain.MaxWitnesses, domain.MaxWitnesses))
@@ -1770,7 +1773,10 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
-	round := r.nextRefutationRound(tree)
+	round, refusal := r.nextRefutationRound(tree)
+	if refusal != "" {
+		return blocked(refusal + "; I wrote nothing")
+	}
 	if round == 0 {
 		return blocked(fmt.Sprintf("this tree already has %d refutations and %d is the ceiling: a finding they did not lift needs a fix, not another witness",
 			domain.MaxWitnesses, domain.MaxWitnesses))
@@ -2705,21 +2711,25 @@ func (r *runner) storedRefutations(tree string) (domain.Answers, []string) {
 	return answers, files
 }
 
-// nextRefutationRound is the first round this tree has not used, or zero when the
-// ceiling is reached. It asks the files, not the count, so a deleted round is
-// reused instead of colliding with one that still exists.
-func (r *runner) nextRefutationRound(tree string) int {
+// nextRefutationRound is the first round this tree has not used: zero when the
+// ceiling is reached, and a refusal when the question could not be answered. An
+// unreadable store is not a full one, and reporting it as the ceiling would bury a
+// broken folder behind a sentence about witnesses.
+func (r *runner) nextRefutationRound(tree string) (int, string) {
 	for _, round := range domain.Rounds() {
 		rel, err := domain.RefutationPath(tree, round)
 		if err != nil {
-			return 0
+			return 0, oneLine(err.Error())
 		}
 		exists, err := r.files.Exists(r.storePath(rel))
-		if err == nil && !exists {
-			return round
+		if err != nil {
+			return 0, "could not ask whether " + rel + " exists: " + oneLine(err.Error()) + "; check the permissions and run the command again"
+		}
+		if !exists {
+			return round, ""
 		}
 	}
-	return 0
+	return 0, ""
 }
 
 // base is the ref the candidate is compared against. An empty --base means the

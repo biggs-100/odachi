@@ -416,6 +416,34 @@ func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
 	}
 }
 
+// TestAnUnreadableStoreIsNotAFullOne is the row the review of this feature found:
+// the round was decided by asking whether a file exists, and a failed question was
+// read as "that round is taken". A permissions problem then reached the human as
+// "three refutations is the ceiling", with the real error swallowed.
+func TestAnUnreadableStoreIsNotAFullOne(t *testing.T) {
+	p := newLensProject()
+	p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
+	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
+	p.files.failExists = func(path string) error {
+		if strings.Contains(path, ".refuted.") {
+			return errors.New("permission denied")
+		}
+		return nil
+	}
+
+	result := p.run(review.Options{Attach: "refutacion.json"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "permission denied") {
+		t.Errorf("the refusal %q does not name the real error", result.Message)
+	}
+	if strings.Contains(result.Message, "ceiling") {
+		t.Errorf("a failed question was reported as the ceiling: %q", result.Message)
+	}
+}
+
 // TestAttachRefusesARefutationAboutFindingsThatDoNotBlock: the refuter may only
 // judge what blocks, and anything else leaves no file behind.
 func TestAttachRefusesARefutationAboutFindingsThatDoNotBlock(t *testing.T) {
