@@ -1,6 +1,6 @@
 # Next session: the lenses name what they missed
 
-Written at the close of 0162, on v0.11.94. The chat is gone tomorrow; this file is
+Written at the close of 0162, on v0.11.95. The chat is gone tomorrow; this file is
 the state.
 
 ## What 0162 shipped
@@ -21,6 +21,26 @@ The four prompts stay within the format's bounds (twelve to twenty rules, each a
 can act on), no number was borrowed from another project, and the engine -the prompt builder and
 the refutation rule- was fenced out of the feature on purpose.
 
+## The policy that had to land first, and why
+
+The fence protected the four lens prompts because 0161 -a feature about who judges- wrote that
+rule there, and a fence rule lives in the tree until the next feature rewrites it. CI reads the
+fence from the **base ref**, so the feature that improves a lens was refused on all three
+platforms while the local gate passed: the worktree fence was already the new one.
+
+The repair is the landing order 0154 wrote down, done again (PR #248): a policy-only commit
+-brief and `odd/fence.toml`, no task doc- merged first, then the feature rebased and force-pushed.
+The fence now protects `proof/**` and the review's own question, and names no lens asset.
+
+Two facts for the next time, so they are not paid again:
+
+- **`odachi check --ci` answers this before the push.** It resolves the base from the remote and
+  reads the fence there; it was run after the rebase, when it said `fence: origin/main` and
+  `ready`. It belongs before the first push of any feature that touches a fenced path.
+- **`start` numbers a task doc from what the branch sees.** Creating a policy feature on `main`
+  while a feature branch holds the next number collides (two 0162s). The precedent commit
+  (138c783) lands a policy with no task doc, which also avoids the collision.
+
 ## What is open
 
 - `docs/review-debt.md` carries the rows this close's verdict leaves.
@@ -28,7 +48,7 @@ the refutation rule- was fenced out of the feature on purpose.
 
 ## What is measured, so nobody re-measures it
 
-- `doctor` on this tree: fourteen checks, no problems. v0.11.94 is installed and one binary is
+- `doctor` on this tree: fourteen checks, no problems. v0.11.95 is installed and one binary is
   in the PATH (`%LOCALAPPDATA%\odachi\bin`).
 - `check --run` needs `--timeout 400` for this suite on this machine.
 - `opencode run` as `--exec` still stalls to the 600s timeout here: the review path that works
