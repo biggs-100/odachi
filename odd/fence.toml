@@ -8,6 +8,11 @@
 # the git edge carries it in its documentation, and no glob can measure it.
 
 [[rule]]
+not   = "a stored proof is never rewritten, whatever the writer learns"
+paths = ["proof/**"]
+deps  = []
+
+[[rule]]
 not   = "no change to .github/workflows/gate.yml"
 paths = [".github/workflows/gate.yml"]
 deps  = []
