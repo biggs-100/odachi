@@ -1,21 +1,20 @@
-# security-is-practice
+# a-retired-model-says-where-it-came-from
 
 ## What must exist
-- the curriculum teaches the security-relevant practice while the code is written -what arrives from outside, who may do what, a secret, a dependency, a log line, a failure- in one skill a client loads by situation, and one ADR fixes the split: what the gate already enforces and what only a person or an agent can judge
+- the project's review names a model the provider serves today, and a reviewer that cannot start says which model it tried and where that model came from, so a retirement is one line to fix instead of an investigation
 
 ## Done when
-- a change that reads input from outside, decides who may do what, holds a secret, adds a dependency, writes a log or handles a failure loads the skill, and the binary ships it to every client that installs the craft
-- the ADR names in one place the enforceable halves -the fence over paths, the proof over a command the human chooses, the risk lens over the diff- and the half that is judgement
-- every rule in the skill that claims how an outside system behaves names its source and version, and the skill stays under the sixty-line ceiling
+- odd/review.toml assigns the four lenses a model the provider serves, measured on 2026-11, and a test pins that every entry is a provider/model the decoder accepts
+- a failed reviewer names the model, the lens and the source it came from -the flag, odd/review.toml or the session- beside the command it ran, observed with a shell that fails
+- the comment the file carries tells the next human what to check when a model is retired
 
 ## Not included (first version)
-- no scanner and no new doctor check: a tool that guesses is worse than a checklist a person runs
-- no rewrite of the review lens: risk already carries the eighteen patterns a diff is read against
-- no change to the seventeen skills that ship today; this feature adds one folder and the index
+- no network and no provider query: the binary cannot know what a provider serves, and a gate that calls out to answer is not a gate
+- no automatic retry with another model: a verdict from a model nobody chose is a review nobody asked for
+- the four lens prompts are not edited; this is the model that runs them, not what they ask
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why security is decided at trust boundaries and not in a list.
-
+- Wants to learn: why an offline tool cannot know which models exist and still owes an honest answer about the one it used.

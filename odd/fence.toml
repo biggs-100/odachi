@@ -4,8 +4,8 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# "no scanner and no new doctor check" is a decision about what the binary does,
-# not a file: the brief carries it and no glob can measure it.
+# "no network" and "no automatic retry" are decisions about what the binary does,
+# not files: the brief carries them and no glob can measure them.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"
@@ -13,13 +13,6 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "the skills that ship today are not edited; a new one is its own folder"
-paths = [
-"skills/acceptance/**", "skills/bootstrap/**", "skills/commits/**", "skills/data/**", "skills/design/**", "skills/drive/**", "skills/go-tests/**", "skills/pull-request/**", "skills/role-craft/**", "skills/shape/**", "skills/ship/**", "skills/skill-craft/**", "skills/skill-improve/**", "skills/slices/**", "skills/tests/**", "skills/triage/**", "skills/writing/**"
-]
-deps  = []
-
-[[rule]]
-not   = "the review lens is not rewritten by the feature that quotes it"
+not   = "the four lens prompts are not edited; this is the model that runs them"
 paths = ["internal/assets/review/**"]
 deps  = []
