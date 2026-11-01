@@ -1746,7 +1746,7 @@ after start:
   odachi undo --file brief                      only that one: brief | profile | fence | task
   odachi clean                                  what this clone accumulated, who owns it, and
                                                  what each class would do
-  odachi check                                  is it ready? brief, fence, questions and proof
+  odachi check                                  is it ready? brief, fence, questions, planned requirements and proof
   odachi check --run "<command>"                run the proof and save it with its tree
   odachi review                                 the review prompt for this candidate, also saved
                                                  in the clone's store and named on stderr
