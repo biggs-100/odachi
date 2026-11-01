@@ -5,6 +5,14 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The CI gate stops asking to be excused from the review.
+
+- **`gate.yml` runs `check` without `--no-review`.** The flag existed because the gate is built from the base ref and
+  the base still refused a close without a verdict; since v0.11.85 that base names the review and stays ready, so a
+  pull request that closes a feature carries the sentence instead of a flag that hid it.
+
 ## v0.11.85 - 2026-10-31
 
 The review never authorises delivery, and what it found still stops a ship.
