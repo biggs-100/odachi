@@ -13,7 +13,21 @@ Last written: after 0141, which closes the two rows of 0140.
 
 ## Open
 
-Nothing, after 0141. The reviews of 0140 left two rows and both are closed below.
+Nothing, after 0147. The review of 0146 left one row and it is closed below.
+
+## Closed by feature 0147
+
+### the year that read as a feature
+
+Found by the review of 0146 (warning). Check 14 answered through `NewestFeatureIn`,
+the highest four-digit number the note mentions, so a note that names its feature and
+also says a bare year -"written in 2026"- was read as naming 2026 and warned forever;
+no test carried a bare year.
+
+Closed: the check asks one question, `NamesFeature(content, feature)`, and the warning
+names the number to write. `NewestFeatureIn` is gone: the fix deleted the reading that
+could not tell a year from a feature instead of teaching it another exception. A test
+pins the bare year as ok and a note pointing at the next feature as stale.
 
 ## Closed by feature 0141
 
