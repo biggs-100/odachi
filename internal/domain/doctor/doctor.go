@@ -298,9 +298,11 @@ func PathFix(exe string) string {
 }
 
 // NextSession is check 14: does the file a session leaves name the feature the
-// project is on? A file that names an older feature is a session that ended two
-// releases ago, and the line says which number is missing because that is the
-// only thing somebody has to write.
+// project is on? It asks one question and nothing else: a note that names the
+// newest feature is current, and a note that does not is stale. Reading the
+// highest number a note mentions answers a different question -a bare year is
+// four digits too- and a check that cannot tell 2026 from 0146 warns forever on
+// a note that is right.
 //
 // A project that keeps no such file is ok, never a warning: the convention is
 // the project's, and the check watches the file once it exists. So is a project
@@ -314,15 +316,10 @@ func NextSession(feature int, content string, exists bool) Check {
 		return OK(CheckNextSession, "there is no docs/next-session.md, and the newest feature is "+want+": a project keeps its session where it chooses")
 	}
 
-	named := NewestFeatureIn(content)
-	switch {
-	case named == feature:
+	if NamesFeature(content, feature) {
 		return OK(CheckNextSession, "docs/next-session.md names "+want+", the newest feature")
-	case named == 0:
-		return Warning(CheckNextSession, "docs/next-session.md names no feature, and the newest is "+want)
-	default:
-		return Warning(CheckNextSession, "docs/next-session.md names "+fmt.Sprintf("%04d", named)+", and the newest feature is "+want)
 	}
+	return Warning(CheckNextSession, "docs/next-session.md does not name "+want+", the newest feature")
 }
 
 // NamesFeature reports whether the text names one feature by its own number: a
@@ -335,19 +332,6 @@ func NamesFeature(text string, number int) bool {
 		}
 	}
 	return false
-}
-
-// NewestFeatureIn is the highest feature the text names, or zero when it names
-// none. It reads the same tokens NamesFeature reads, so a file that names 0146
-// as its newest cannot be current for 0146 by accident of a longer number.
-func NewestFeatureIn(text string) int {
-	newest := 0
-	for _, n := range featureNumbers(text) {
-		if n > newest {
-			newest = n
-		}
-	}
-	return newest
 }
 
 // featureNumbers reads the four-digit features a text names. A feature is four

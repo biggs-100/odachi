@@ -1553,7 +1553,7 @@ func TestTheSessionFileThatNamesAnOlderFeatureIsAWarning(t *testing.T) {
 	if got.Status != domaindoctor.StatusWarning {
 		t.Fatalf("check 14 must be a warning: %s", domaindoctor.Line(got))
 	}
-	for _, want := range []string{"0143", "0146"} {
+	for _, want := range []string{"0146", "does not name"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the detail must say %q, got %q", want, got.Detail)
 		}

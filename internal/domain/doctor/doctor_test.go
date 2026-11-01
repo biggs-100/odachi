@@ -43,7 +43,19 @@ func TestTheNextSessionLineSaysTheFeatureThatIsMissing(t *testing.T) {
 			name:    "the file names an older one",
 			check:   NextSession(146, "written at the close of 0143", true),
 			status:  StatusWarning,
-			details: []string{"0146", "0143"},
+			details: []string{"0146"},
+		},
+		{
+			name:    "a bare year is not a feature",
+			check:   NextSession(146, "written in 2026, at the close of 0146", true),
+			status:  StatusOK,
+			details: []string{"0146"},
+		},
+		{
+			name:    "the note points at the next feature",
+			check:   NextSession(146, "close of 0143, next up: 0147", true),
+			status:  StatusWarning,
+			details: []string{"0146"},
 		},
 		{
 			name:    "the project keeps no file",
