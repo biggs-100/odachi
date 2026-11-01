@@ -5,6 +5,7 @@
 | bootstrap | when someone wants to start a project from scratch, asks what odachi is, or does not know where to begin. Do not load it inside a project that is already odachi. | skills/bootstrap/SKILL.md |
 | commits | when deciding what goes into a commit, how to split the work, or what the message and PR description say. | skills/commits/SKILL.md |
 | data | when data has to be saved, migrated, read or deleted. Decide owner, lifetime and backup before writing the first row. | skills/data/SKILL.md |
+| design | design a screen, mockup, landing page or UI directions; iterate artboards; what a person asked on one; design system sync. HTML under design/<slug>/. | skills/design/SKILL.md |
 | drive | when you work inside an odachi project: which verb goes at each moment, what each block means and how a feature closes. To start from zero, use bootstrap. | skills/drive/SKILL.md |
 | go-tests | when writing or reviewing Go tests, golden files or Bubbletea flows. Load `tests` for the discipline and this skill for the concrete pattern. | skills/go-tests/SKILL.md |
 | pull-request | when a change goes to a PR or the diff passes 400 lines. Split the delivery into reviewable work units and pick one chain strategy. | skills/pull-request/SKILL.md |

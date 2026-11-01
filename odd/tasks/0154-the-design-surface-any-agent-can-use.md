@@ -13,7 +13,7 @@ R1 · "construye todo lo que tiene gentle-design, para que funcione igual en nue
 ## Steps
 - [x] T1 · the fence names the sixteen skills, so a new one is a feature and not an edit   R1 · tree:5142543e219d597e2c5d0064088431ce32cb506e
 - [x] T2 · the design folder has a format, a manifest and comments, pinned by a versioned fixture   R1 · tree:df93fd53f06f4336e0703db397083eef9517d5b3
-- [ ] T3 · an agent lists designs and comments with a command, and resolves them   R1
+- [x] T3 · an agent lists designs and comments with a command, and resolves them   R1 · tree:4594717825938c3be62b4cb99eb6d4e47418dc5f
 - [ ] T4 · the design skill ships with odachi and travels to every client   R1
 - [ ] T5 · the canvas opens, serves the artboards and writes comments any agent can read   R1
 - [ ] T6 · the design system sync reads the project tokens and never edits them   R1
