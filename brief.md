@@ -1,12 +1,13 @@
-# the-voice-styles
+# the-review-never
 
 ## What must exist
-- the voice styles the chat and never the artifacts, only the human changes the language, and senior says what it does instead of what it stops doing
+- the review never authorises delivery: with the project's switch on, check names what the review says and only a finding it made stops a ship
 
 ## Done when
-- both voices say that code, comments, documents, commits and pull requests are English, with no slang and no emphasis
-- both voices say that only the human's message changes the conversation language
-- senior leads with the decision and names its cost, and a test holds it apart from novato
+- with mode on, a close without a verdict is ready and names the review that is missing
+- a causal BLOCKER from a review that exists still blocks until it is refuted
+- the hook prints the reminder on a quiet run, and CI stops passing --no-review
+- the ADR says the review does not authorise delivery, and the help and the README say it
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
@@ -16,4 +17,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que una persona es una voz y no un personaje, y por que el scope de artefactos hay que escribirlo.
+- Wants to learn: por que separar la existencia de una revision de lo que la revision encontro.

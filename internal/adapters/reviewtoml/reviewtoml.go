@@ -97,7 +97,7 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 	var out strings.Builder
 	out.WriteString("# odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken\n")
 	out.WriteString("schema = " + strconv.Itoa(schema.Current) + "\n")
-	out.WriteString("# odachi: the review is the human's decision; on requires it in check, off leaves it optional\n")
+	out.WriteString("# odachi: the review is the human's decision; on asks for it at the close and check says so, off leaves it silent, and --require-review refuses\n")
 	out.WriteString("mode = \"" + normalized + "\"\n")
 	limit, err := review.NormalizeMaxPromptKB(config.MaxPromptKB)
 	if err != nil {

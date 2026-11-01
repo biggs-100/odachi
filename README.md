@@ -488,14 +488,18 @@ to judge is refused instead of paying a reviewer for the same bytes twice.
 Review is a human decision, not the agent's. By default it is off; the project
 switch lives in `odd/review.toml` and is written with
 `odachi review mode status|on|off`. With `on`, `odachi check` asks once per
-feature: while a step is still open the tree owes only its proof, and the commit
-that closes the feature owes the verdict. That verdict has to judge the diff the
+feature: while a step is still open the tree owes only its proof, and the tree
+that closes the feature names the verdict it did not get and commits anyway -
+the review does not authorise delivery, and only `--require-review` refuses
+(ADR 0043). The verdict has to judge the diff the
 feature merges, not the closing document, so the task doc records the commit the
 feature started from (`Base:`) and the gate names the command:
 `odachi review --base <sha>`. After the close, documents do not reopen it: a
 release note, or a note added to the task doc, is ready with its proof, because
 the verdict already judged the same code. Code written after the close does owe
-a verdict: the gate never goes blind. A document with no steps, or one written
+a verdict: the gate never goes blind. What the review *found* still stops a ship:
+a causal `BLOCKER` in the tree's verdict blocks until it is refuted, because that
+is the review saying no, not the review being absent. A document with no steps, or one written
 before the base line existed, keeps the older rule: with the mode on, every tree
 asks. A passive change —documents only— asks for no verdict: there is no lens to
 answer, so there is no review to fabricate. `--require-review` asks for one tree

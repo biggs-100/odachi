@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+The review never authorises delivery, and what it found still stops a ship.
+
+- **A close without a verdict is ready and names it.** With `mode = on`, `odachi check` reports the review the feature
+  did not get and lets the commit through; the hook prints that reminder on a quiet run. Only `--require-review`
+  refuses, and it refuses for that run.
+- **What the review found still blocks.** A causal `BLOCKER` in the tree's verdict stops the ship until it is
+  refuted, with or without the flag: the review saying no is not the review being absent.
+- **CI stops passing `--no-review`**, so a pull request that closes a feature carries the sentence that the review was not verified
+  there -the verdict lives in the clone- instead of a flag that hid it.
+- Why: ADR 0042 proved the review cannot be verified from a clean checkout, and `mode = on` went on refusing commits
+  locally, which was a promise larger than its mechanism. ADR 0043 decides the honest shape: the review is a
+  discipline, and delivery is governed by the fence and the proof.
+
 ## v0.11.84 - 2026-10-31
 
 The voice styles the chat and never the artifacts, and senior says what it does.

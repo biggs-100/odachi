@@ -875,6 +875,11 @@ func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writ
 	}
 
 	if result.Code == start.CodeOK && quiet {
+		// A ready run is silent for the hook, except for what the run has to say and
+		// did not stop: a reminder nobody reads is not a reminder.
+		if result.Note != "" {
+			fmt.Fprintln(stderr, "odachi: "+result.Note)
+		}
 		return result.Code
 	}
 
@@ -1562,8 +1567,8 @@ check flags:
   --base ref      what to compare the fence against (default HEAD; empty: against nothing)
   --fence-from ref  read the fence from this git ref instead of the worktree (CI: the base branch)
   --timeout n     seconds --run may take (default 120)
-  --quiet         prints nothing when ready (for the hook)
-  --require-review  requires a review verdict for this tree (default: the project mode)
+  --quiet         prints nothing when ready except the reminder the hook must read
+  --require-review  refuses a commit without a verdict for this tree (default: the project mode, which names it and lets the commit through)
   --no-review     does not require review even when the project has it on
   --json          machine output
 
@@ -1586,7 +1591,7 @@ review flags:
 
 review mode:
   odachi review mode status   whether the project requires review (default: off)
-  odachi review mode on       check requires the verdict for this tree
+  odachi review mode on       a close names the verdict it did not get, and does not refuse
   odachi review mode off      check does not require it, even when the hook runs check
   the mode lives in odd/review.toml; --require-review and --no-review override it for one run
 
