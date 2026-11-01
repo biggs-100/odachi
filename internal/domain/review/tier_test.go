@@ -561,3 +561,29 @@ func TestShippedTextNamesWhatTheBinaryPacks(t *testing.T) {
 		t.Errorf("Classify(installed skill) = %q, want passive", got)
 	}
 }
+
+// TestADesignFolderIsADocument: a mockup is read, not run. A tree that only moves
+// artboards under design/ asks for no lens -the code that implements them is the
+// change that gets reviewed, and charging a four-lens review for a direction is how
+// a person stops asking for directions.
+func TestADesignFolderIsADocument(t *testing.T) {
+	designs := []string{
+		"design/pricing/design.json",
+		"design/pricing/01-comparison-table.html",
+		"design/pricing/comments.json",
+		"design/system.md",
+	}
+
+	if got := review.Classify(designs); got != review.Passive {
+		t.Errorf("Classify(design files) = %q, want passive", got)
+	}
+	if lenses := review.Lenses(review.Classify(designs)); len(lenses) != 0 {
+		t.Errorf("lenses = %v, want none", lenses)
+	}
+
+	// A folder that only shares the name is not the artifact: an ordinary page in a
+	// project that happens to call it designs/ stays in the candidate.
+	if got := review.Classify([]string{"designs/page.html"}); got == review.Passive {
+		t.Errorf("Classify(designs/page.html) = passive, want the file reviewed")
+	}
+}

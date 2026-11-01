@@ -420,7 +420,9 @@ func isDocumentation(path string) bool {
 	}
 
 	for _, segment := range segments[:len(segments)-1] {
-		if segment == "docs" {
+		// design/ is a document too: a mockup is read, not run. The code that
+		// implements it is the change that gets reviewed.
+		if segment == "docs" || segment == "design" {
 			return true
 		}
 	}
