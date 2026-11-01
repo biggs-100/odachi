@@ -55,6 +55,23 @@ runs `odachi review` with its own model and key, or a receipt signed outside the
 Both are features. Until one exists, the review is a discipline held at the close, where
 the store is — and the CI gate naming it is not the same as checking it.
 
+## Queued, in the order the comparison with gentle-ai's ODD argued
+
+Read at the start of a session, not now: each one becomes a feature, with its own brief, when
+it starts.
+
+- **the proof names what it proves.** `check --run` would record which requirements the closing
+  feature declared, so evidence maps to a requirement instead of to a whole tree. It needs the
+  fence correction first: `internal/domain/proof/**` and `proof/**` are protected by "no change
+  to the proof format", and that rule is the human's to change.
+- **the step declares its route.** inline or delegated, and which agent, recorded in the task
+  doc. It is the one fact gentle-ai writes per task (`Route:`) that odachi does not. Cheap.
+- **a change resumable from the diff needs no document.** The light lane: no brief and no task
+  doc when the work can be resumed from the diff alone. Expensive, because it changes rule 1 and
+  the floor `check` enforces.
+- **a step done without a commit is a step nobody can find.** `plan --done T2` records no tree
+  when the worktree is not the commit and says so in passing; 0147's T2 closed that way.
+
 ## How to find the next real work
 
 `docs/review-debt.md` names what a verdict left; `doctor` and `bench` find friction nobody
