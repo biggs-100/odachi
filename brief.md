@@ -1,20 +1,19 @@
-# the-block-closes
+# the-note-names-one-number
 
 ## What must exist
-- a session closes by rewriting `docs/next-session.md`, the block says so where the agent reads it, and `doctor` names the file when it went stale
+- the fourteenth check asks one question —does `docs/next-session.md` name the newest feature?— so a bare year in the note is never read as a feature and the warning names the number to write
 
 ## Done when
-- the block carries a closing paragraph: the phrase a human uses, the file to rewrite, and the check that says it is stale
-- `doctor` has a fourteenth check: a next-session file that names an older feature than the newest one is a warning, never a refusal
-- the help and the changelog say fourteen
+- `NextSession` answers with `NamesFeature`, and nothing in the package reads the highest number a note mentions
+- a note that says a bare year and names the newest feature is ok, and a note that names an older one warns with the number missing
+- the row the review of 0146 left is closed in `docs/review-debt.md`
 
 ## Not included (first version)
 - no change to the proof format, and the stored proof is never rewritten
 - no change to the bundled skills
-- no new verb: the close stays a habit the block and the check defend
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que una regla que nadie mira envejece sola.
+- Wants to learn: por que el arreglo correcto borra codigo en vez de agregarlo.
