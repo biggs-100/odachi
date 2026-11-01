@@ -507,16 +507,16 @@ func newID() string {
 // cross-origin POST, and a page from the web must not append a comment or stop the
 // canvas just because the port answers on loopback.
 func (s *Server) ownPage(w http.ResponseWriter, r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return true
-	}
 	// The address is the one this canvas listens on. When it is not known the
-	// request is refused: a control whose unknown state trusts the caller is not a
-	// control.
+	// request is refused, with or without an Origin: a control whose unknown state
+	// trusts the caller is not a control.
 	if s.host == "" {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "the canvas does not know its own address: the request is refused"})
 		return false
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
 	}
 	parsed, err := url.Parse(origin)
 	if err != nil || parsed.Host != s.host {

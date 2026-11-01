@@ -33,21 +33,24 @@ func project(t *testing.T) string {
 	return root
 }
 
-func canvas(t *testing.T, root string) *httptest.Server {
+func canvas(t *testing.T, root string) string {
 	t.Helper()
 	server := New(Options{Dir: root, Canvas: []byte("<!doctype html><title>canvas</title>")})
-	srv := httptest.NewServer(server.routes())
-	t.Cleanup(srv.Close)
-	return srv
+	addr, _, err := server.Listen(0)
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	t.Cleanup(func() { _ = server.Close() })
+	return "http://" + addr
 }
 
 func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
-	srv := canvas(t, project(t))
+	base := canvas(t, project(t))
 
 	var designs struct {
 		Designs []Design `json:"designs"`
 	}
-	get(t, srv.URL+"/api/designs", &designs)
+	get(t, base+"/api/designs", &designs)
 	if len(designs.Designs) != 1 || designs.Designs[0].Slug != "pricing" {
 		t.Fatalf("designs = %+v", designs.Designs)
 	}
@@ -55,7 +58,7 @@ func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
 		t.Errorf("the artboard has no address: %+v", designs.Designs[0].URL)
 	}
 
-	body := getText(t, srv.URL+"/artboard/pricing/01-a.html")
+	body := getText(t, base+"/artboard/pricing/01-a.html")
 	if !strings.Contains(body, "Ship faster") {
 		t.Fatalf("the artboard is not served: %q", body)
 	}
@@ -64,14 +67,14 @@ func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
 // The canvas is not a file browser: only a file the manifest lists is served, and a
 // path that tries to leave the folder is nothing at all.
 func TestTheCanvasServesOnlyWhatTheManifestLists(t *testing.T) {
-	srv := canvas(t, project(t))
+	base := canvas(t, project(t))
 
 	for _, path := range []string{
 		"/artboard/pricing/design.json",
 		"/artboard/pricing/..%2Fdesign.json",
 		"/artboard/pricing/nope.html",
 	} {
-		response, err := httpGet(srv.URL + path)
+		response, err := httpGet(base + path)
 		if err != nil {
 			t.Fatalf("GET %s: %v", path, err)
 		}
@@ -86,10 +89,10 @@ func TestTheCanvasServesOnlyWhatTheManifestLists(t *testing.T) {
 // and the state the page and the command agree on.
 func TestACommentIsWrittenWhereEveryAgentReadsIt(t *testing.T) {
 	root := project(t)
-	srv := canvas(t, root)
+	base := canvas(t, root)
 
 	body := strings.NewReader(`{"file":"01-a.html","selector":"h1","excerpt":"Ship faster","comment":"Shorter headline."}`)
-	response, err := http.Post(srv.URL+"/api/design/pricing/comments", "application/json", body)
+	response, err := http.Post(base+"/api/design/pricing/comments", "application/json", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,10 +124,10 @@ func TestACommentIsWrittenWhereEveryAgentReadsIt(t *testing.T) {
 // Resolving is a POST on the comment and it keeps the file valid.
 func TestResolvingACommentKeepsTheFileValid(t *testing.T) {
 	root := project(t)
-	srv := canvas(t, root)
+	base := canvas(t, root)
 
 	body := strings.NewReader(`{"file":"01-a.html","selector":"h1","comment":"Shorter."}`)
-	created, err := http.Post(srv.URL+"/api/design/pricing/comments", "application/json", body)
+	created, err := http.Post(base+"/api/design/pricing/comments", "application/json", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +139,7 @@ func TestResolvingACommentKeepsTheFileValid(t *testing.T) {
 	}
 	created.Body.Close()
 
-	response, err := http.Post(srv.URL+"/api/design/pricing/comments/"+comment.ID, "application/json", nil)
+	response, err := http.Post(base+"/api/design/pricing/comments/"+comment.ID, "application/json", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,10 +165,10 @@ func TestACanvasNeverOverwritesAFileItCannotParse(t *testing.T) {
 	if err := os.WriteFile(comments, []byte("{"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	srv := canvas(t, root)
+	base := canvas(t, root)
 
 	body := strings.NewReader(`{"file":"01-a.html","selector":"h1","comment":"Shorter."}`)
-	response, err := http.Post(srv.URL+"/api/design/pricing/comments", "application/json", body)
+	response, err := http.Post(base+"/api/design/pricing/comments", "application/json", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,9 +219,9 @@ func httpGet(url string) (*http.Response, error) {
 // The canvas answers its own page and nothing else: a page from the web must not
 // append a comment or stop the canvas just because the port answers on loopback.
 func TestACrossOriginRequestIsRefused(t *testing.T) {
-	srv := canvas(t, project(t))
+	base := canvas(t, project(t))
 
-	request, err := http.NewRequest(http.MethodPost, srv.URL+"/api/design/pricing/comments", strings.NewReader(`{"file":"01-a.html","comment":"x"}`))
+	request, err := http.NewRequest(http.MethodPost, base+"/api/design/pricing/comments", strings.NewReader(`{"file":"01-a.html","comment":"x"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +236,7 @@ func TestACrossOriginRequestIsRefused(t *testing.T) {
 		t.Fatalf("cross-origin POST = %d, want 403", response.StatusCode)
 	}
 
-	stop, err := http.NewRequest(http.MethodPost, srv.URL+"/api/stop", nil)
+	stop, err := http.NewRequest(http.MethodPost, base+"/api/stop", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,9 +254,9 @@ func TestACrossOriginRequestIsRefused(t *testing.T) {
 // A body that is not JSON is refused before it is read: a simple text/plain form
 // post needs no preflight, and that is the door the origin check cannot watch.
 func TestABodyThatIsNotJSONIsRefused(t *testing.T) {
-	srv := canvas(t, project(t))
+	base := canvas(t, project(t))
 
-	response, err := http.Post(srv.URL+"/api/design/pricing/comments", "text/plain", strings.NewReader(`{"file":"01-a.html","comment":"x"}`))
+	response, err := http.Post(base+"/api/design/pricing/comments", "text/plain", strings.NewReader(`{"file":"01-a.html","comment":"x"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,25 +291,27 @@ func TestTheWatcherAnnouncesEveryFileThatMoved(t *testing.T) {
 	}
 }
 
-// The origin check is the door, so both halves are pinned: the canvas accepts its own
-// page and refuses a foreign one, and a canvas that does not know its address refuses
-// instead of trusting the header it was given.
+// The origin check is the door, so both halves are pinned against a server that
+// really listened: the canvas accepts its own page and refuses a foreign one, and a
+// canvas that does not know its address refuses instead of trusting the header it was
+// given. The address is set by Listen, never by the test, so the run is race-free.
 func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
-	root := project(t)
-	server := New(Options{Dir: root, Canvas: []byte("canvas")})
-	srv := httptest.NewServer(server.routes())
-	defer srv.Close()
-	server.host = srv.Listener.Addr().String()
+	server := New(Options{Dir: project(t), Canvas: []byte("canvas")})
+	addr, _, err := server.Listen(0)
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer server.Close()
 
-	request := func(origin string) int {
-		req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/stop", nil)
+	post := func(url, origin string) int {
+		request, err := http.NewRequest(http.MethodPost, url, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if origin != "" {
-			req.Header.Set("Origin", origin)
+			request.Header.Set("Origin", origin)
 		}
-		response, err := http.DefaultClient.Do(req)
+		response, err := http.DefaultClient.Do(request)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -314,15 +319,28 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 		return response.StatusCode
 	}
 
-	if got := request("http://" + server.host); got != http.StatusOK {
+	if got := post("http://"+addr+"/api/stop", "http://"+addr); got != http.StatusOK {
 		t.Errorf("the canvas's own origin = %d, want 200", got)
 	}
-	if got := request("http://evil.example"); got != http.StatusForbidden {
+	if got := post("http://"+addr+"/api/stop", "http://evil.example"); got != http.StatusForbidden {
 		t.Errorf("a foreign origin = %d, want 403", got)
 	}
 
-	server.host = ""
-	if got := request("http://" + srv.Listener.Addr().String()); got != http.StatusForbidden {
-		t.Errorf("a canvas that does not know its address = %d, want 403", got)
+	// A canvas that never listened does not know its address: it refuses, with and
+	// without an Origin header, instead of trusting what the caller says.
+	blind := New(Options{Dir: project(t), Canvas: []byte("canvas")})
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/stop", nil)
+	blind.stop(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Errorf("a canvas that does not know its address = %d, want 403", response.Code)
+	}
+
+	response = httptest.NewRecorder()
+	request = httptest.NewRequest(http.MethodPost, "/api/stop", nil)
+	request.Header.Set("Origin", "http://whatever.example")
+	blind.stop(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Errorf("a canvas that does not know its address with an origin = %d, want 403", response.Code)
 	}
 }
