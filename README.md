@@ -153,6 +153,12 @@ does not know which requirement a test belongs to, and the gate treats it that w
 a close whose proof does not declare a requirement says so and stays ready. Read it
 as a promise a reviewer can challenge, never as a certificate.
 
+The folder keeps one file per feature and the next run of the same feature rewrites
+it, so it grows with the number of features and not with the number of runs.
+`odachi clean` reports it and never removes it: the store keeps the claim -a verdict
+names a tree- and this folder keeps what that tree said, which is the only local
+record of it.
+
 `init` takes care of that for you, and of two things that are not artifacts: it
 leaves a marked block in the project's `.gitignore` (`/proof/` and `*.bak-*`,
 versioned, so it survives a clone) and a rules block in `AGENTS.md` —what the
