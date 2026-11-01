@@ -27,7 +27,7 @@ const (
 	// than this one refuses a verdict whose shape did not change. The words are
 	// still true where it matters - the file on disk is newer than that binary -
 	// and the upgrade is the same command either way.
-	Current = 3
+	Current = 4
 )
 
 // Read answers which schema a file with this value was written with. A value this
