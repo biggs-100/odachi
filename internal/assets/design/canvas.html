@@ -274,12 +274,13 @@
   if (window.EventSource) {
     var stream = new EventSource("/api/events");
     stream.onmessage = function (message) {
-      var what = message.data;
-      if (what === "comments") { refresh(); return; }
+      var names = message.data.split(",");
+      if (names.indexOf("comments") >= 0) { refresh(); }
       var frames = boards.querySelectorAll("iframe");
       for (var i = 0; i < frames.length; i++) {
         var frame = frames[i];
-        if (what === frame.dataset.slug + "/" + frame.dataset.file || what === frame.dataset.slug + "/design.json") {
+        var key = frame.dataset.slug + "/" + frame.dataset.file;
+        if (names.indexOf(key) >= 0 || names.indexOf(frame.dataset.slug + "/design.json") >= 0) {
           frame.contentWindow.location.reload();
         }
       }

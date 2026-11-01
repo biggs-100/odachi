@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // project builds a design folder a canvas can serve.
@@ -210,4 +211,79 @@ func getText(t *testing.T, url string) string {
 
 func httpGet(url string) (*http.Response, error) {
 	return http.Get(url)
+}
+
+// The canvas answers its own page and nothing else: a page from the web must not
+// append a comment or stop the canvas just because the port answers on loopback.
+func TestACrossOriginRequestIsRefused(t *testing.T) {
+	srv := canvas(t, project(t))
+
+	request, err := http.NewRequest(http.MethodPost, srv.URL+"/api/design/pricing/comments", strings.NewReader(`{"file":"01-a.html","comment":"x"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Origin", "http://evil.example")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusForbidden {
+		t.Fatalf("cross-origin POST = %d, want 403", response.StatusCode)
+	}
+
+	stop, err := http.NewRequest(http.MethodPost, srv.URL+"/api/stop", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stop.Header.Set("Origin", "http://evil.example")
+	stopped, err := http.DefaultClient.Do(stop)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stopped.Body.Close()
+	if stopped.StatusCode != http.StatusForbidden {
+		t.Fatalf("cross-origin stop = %d, want 403", stopped.StatusCode)
+	}
+}
+
+// A body that is not JSON is refused before it is read: a simple text/plain form
+// post needs no preflight, and that is the door the origin check cannot watch.
+func TestABodyThatIsNotJSONIsRefused(t *testing.T) {
+	srv := canvas(t, project(t))
+
+	response, err := http.Post(srv.URL+"/api/design/pricing/comments", "text/plain", strings.NewReader(`{"file":"01-a.html","comment":"x"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusUnsupportedMediaType {
+		t.Fatalf("text/plain POST = %d, want 415", response.StatusCode)
+	}
+}
+
+// The watcher announces every file that moved in one poll: an agent applying two
+// comments writes two artboards, and the second must not swallow the first.
+func TestTheWatcherAnnouncesEveryFileThatMoved(t *testing.T) {
+	root := project(t)
+	dir := filepath.Join(root, "design", "pricing")
+	if err := os.WriteFile(filepath.Join(dir, "02-b.html"), []byte("<h1>b</h1>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	server := New(Options{Dir: root, Canvas: []byte("canvas")})
+	server.changed() // seed: the first look records what is already there
+
+	later := time.Now().Add(2 * time.Second)
+	for _, name := range []string{"01-a.html", "02-b.html"} {
+		path := filepath.Join(dir, name)
+		if err := os.Chtimes(path, later, later); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	moved := server.changed()
+	if len(moved) != 2 {
+		t.Fatalf("moved = %v, want the two artboards", moved)
+	}
 }

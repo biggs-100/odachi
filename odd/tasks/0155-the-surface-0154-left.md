@@ -15,7 +15,7 @@ R1 · "the nine things the review of 0154 found are paid: the canvas refuses a f
 - [ ] T1 · the canvas refuses a foreign caller and a body that is not JSON   R1
 - [ ] T2 · the fence names the design skill it shipped   R1
 - [ ] T3 · resolve writes nothing when it found nothing, and loses no comment   R1
-- [ ] T4 · the comments file round-trips what the writer emits   R1
+- [x] T4 · the comments file round-trips what the writer emits   R1 · tree:a94e0d7d2b7a2c8eb3a05d61f2d2df447f1f2155
 - [ ] T5 · an address that cannot be recorded stops the canvas, and stop forgets a dead one   R1
 - [ ] T6 · the watcher announces every file that moved   R1
 
