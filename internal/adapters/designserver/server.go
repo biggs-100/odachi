@@ -49,6 +49,9 @@ type Server struct {
 	writeMu sync.Mutex
 
 	http *http.Server
+	// host is the address the canvas listens on: the origin a request must carry
+	// to be its own. The Host header is the caller's, so it cannot decide.
+	host string
 	done chan struct{}
 	once sync.Once
 }
@@ -72,6 +75,7 @@ func (s *Server) Listen(port int) (addr, url string, err error) {
 
 	s.http = &http.Server{Handler: s.routes(), ReadHeaderTimeout: 5 * time.Second}
 	addr = listener.Addr().String()
+	s.host = addr
 	url = "http://" + addr + "/"
 	if slug := strings.TrimSpace(s.opts.Slug); slug != "" {
 		url += "?design=" + slug
@@ -508,7 +512,11 @@ func (s *Server) ownPage(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 	parsed, err := url.Parse(origin)
-	if err != nil || parsed.Host != r.Host {
+	own := s.host
+	if own == "" {
+		own = r.Host
+	}
+	if err != nil || parsed.Host != own {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross-origin request refused: the canvas answers only its own page"})
 		return false
 	}

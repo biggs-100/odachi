@@ -222,3 +222,42 @@ func TestResolveDoesNotSwallowACommentWrittenInBetween(t *testing.T) {
 		t.Fatalf("the resolve did not land on the fresh file:\n%s", written)
 	}
 }
+
+// A file that keeps moving spends the three attempts and the command refuses: the
+// alternative is writing over a change nobody saw.
+type movingFiles struct {
+	*fakeFiles
+	reads int
+}
+
+func (f *movingFiles) Read(path string) ([]byte, error) {
+	if strings.HasSuffix(filepath.ToSlash(path), "comments.json") {
+		f.reads++
+		if f.reads%2 == 0 {
+			return []byte(`{"version":1,"comments":[{"id":"c1","file":"01-a.html","selector":"h1","comment":"x","createdAt":"t","status":"open","sentAt":null,"resolvedAt":null},{"id":"c` + string(rune(48+f.reads)) + `","file":"01-a.html","selector":"h2","comment":"y","createdAt":"t","status":"open","sentAt":null,"resolvedAt":null}]}`), nil
+		}
+	}
+	return f.fakeFiles.Read(path)
+}
+
+func TestResolveRefusesWhenTheFileKeepsMoving(t *testing.T) {
+	base := newFakeFiles().
+		put("design/pricing/design.json", manifest).
+		put("design/pricing/comments.json", comments)
+	files := &movingFiles{fakeFiles: base}
+
+	got := appdesign.Run(appdesign.Options{
+		Dir:     "raiz",
+		Action:  appdesign.ActionComments,
+		Slug:    "pricing",
+		Resolve: []string{"c1"},
+		At:      "2026-11-01T00:00:00.000Z",
+	}, files)
+
+	if got.Code != appdesign.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked after three attempts", got.Code)
+	}
+	if len(files.writes) != 0 {
+		t.Fatalf("a refused resolve wrote %v", files.writes)
+	}
+}

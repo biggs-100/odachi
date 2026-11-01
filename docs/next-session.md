@@ -48,10 +48,10 @@ the state.
 
 - **0154 and 0155 are closed**: the design surface ships as a skill, a format and six
   commands - `list`, `comments`, `open`, `stop`, `handoff`, `sync` - and the canvas writes the
-  comments file every agent reads. The seven findings that close left are paid in 0155: the
+  comments file every agent reads. The nine findings that close left are paid in 0155: the
   canvas refuses a foreign caller, the fence names the skill it shipped, resolve writes nothing
   it did not find and loses no comment, an unset date is null, an address that cannot be
-  recorded stops the server, and the watcher names every file that moved. The branch carries
+  recorded stops the server, and the watcher names every file that moved, and a dead canvas is forgotten instead of blocking stop. The branch carries
   both proofs and both verdicts; the PR is the next step.
 - The queue in this file is unchanged: the step declares its route, a change resumable from
   the diff needs no document, and a step done without a commit is a step nobody can find.

@@ -205,7 +205,10 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 			// command forgets it and says so: a dead server must not make `stop`
 			// fail forever.
 			if !appdesign.Running(nil, canvas) {
-				_ = appdesign.ForgetCanvas(path)
+				if err := appdesign.ForgetCanvas(path); err != nil {
+					fmt.Fprintln(stderr, "odachi: the canvas at "+canvas.Addr+" is not running, and its address could not be forgotten: "+oneLine(err.Error()))
+					return start.CodeBlocked
+				}
 				fmt.Fprintln(stdout, "no canvas is running at "+canvas.Addr+": the address is forgotten")
 				return start.CodeOK
 			}
