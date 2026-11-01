@@ -1067,7 +1067,7 @@ func (r *runner) requireReview(base string) *Result {
 		if verdictShown := verdictModelFor(verdict, lenses[0]); !strings.EqualFold(verdictShown, proofShown) {
 			detail = fmt.Sprintf("(the proof ran %s; the verdict names %s)", proofShown, verdictShown)
 		}
-		message := fmt.Sprintf("the review of %s was written by the model that produced the proof %s: a model does not judge its own tree",
+		message := fmt.Sprintf("the review of %s was written by the model that produced the proof %s: a second reading, not a second opinion",
 			strings.Join(lenses, ", "), detail)
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
