@@ -9,7 +9,7 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0160, whose standing verdict left no rows.
+Last written: after 0161, whose standing verdict left no rows.
 
 ## Open
 
@@ -33,6 +33,12 @@ question was reported as the ceiling, and the gate swallowed a read error its ow
 an error. All four are paid in the branch, with the tests that were missing, and the tree that
 stands (`f8d6867`) approved with no findings. That is the ledger working in the other direction:
 the rows arrived before the close, not after it.
+
+0161's verdict approved on the first round with no findings. One thing it looked at and did not
+report, worth keeping because it is close to a row: the floor's `secrets` signal fired on the
+cost table this close wrote into `docs/next-session.md`, and a human reading it stopped there.
+The prices are public -a provider's list, not a credential- so it is not a row; if a future close
+writes something that *is* one into a document, this is where the example lives.
 
 ## Closed by feature 0156
 
