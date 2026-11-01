@@ -1,9 +1,9 @@
 # Next session: the block closes itself, and the one decision that waits
 
-Written at the close of 0148, on v0.11.86 plus one feature. The chat is gone
+Written at the close of 0149, on v0.11.86 plus two features. The chat is gone
 tomorrow; this file is the state.
 
-## What the last five features shipped
+## What the last six features shipped
 
 - **0144 (v0.11.85)**: the review never authorises delivery. With `mode = on`, a close
   without a verdict is ready and names the review it did not get; only a causal
@@ -23,6 +23,9 @@ tomorrow; this file is the state.
 - **0148 (unreleased)**: the gate reads the requirements. At the close, a requirement no
   step names is a `NeedsWork` that names it and prints the plan command; mid-feature the
   list stays empty on purpose, because a requirement a change added waits for its step.
+- **0149 (unreleased)**: the two rows the review of 0148 left are closed. The plural
+  sentence and the open lane are pinned, and both pins were observed red before they
+  landed; `docs/review-debt.md` is empty again.
 
 ## What is open
 
