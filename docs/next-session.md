@@ -1,6 +1,6 @@
 # Next session: the block closes itself, and the one decision that waits
 
-Written at the close of 0147, on v0.11.85 plus two features. The chat is gone
+Written at the close of 0147, released as v0.11.86 and installed. The chat is gone
 tomorrow; this file is the state.
 
 ## What the last four features shipped
@@ -12,11 +12,11 @@ tomorrow; this file is the state.
 - **0145 (v0.11.85 base)**: `.github/workflows/gate.yml` runs `check` without
   `--no-review`, because the base it is built from names the missing review instead of
   refusing the tree. The flag waited for the release that reads the new rule.
-- **0146 (unreleased)**: the block carries the close —the phrase a human uses, the file
+- **0146 (v0.11.86)**: the block carries the close —the phrase a human uses, the file
   to rewrite, what goes in it— and `doctor` gained a fourteenth check that warns when
   `docs/next-session.md` does not name the newest feature. This file is the first one
   that check reads.
-- **0147 (unreleased)**: the check asks one question —does the note name the newest
+- **0147 (v0.11.86)**: the check asks one question —does the note name the newest
   feature?— and stopped reading the highest number the note mentions. A bare year is four
   digits too, and the review of 0146 found the warning that never cleared. The fix
   deleted the reading instead of adding a second exception.
@@ -24,12 +24,13 @@ tomorrow; this file is the state.
 ## What is open
 
 - `docs/review-debt.md` has no open rows, and `odd/tasks` has no open questions.
-- The feature that closed today owes its proof and its review; both are named below.
+- Nothing: both features closed with their proof and their verdict.
 
 ## What is measured, so nobody re-measures it
 
-- `doctor` on this tree: fourteen checks. The binary on the PATH is v0.11.85 and still
-  says thirteen until the next release is installed — a fact, not a defect.
+- `doctor` on this tree: fourteen checks, no problems. v0.11.86 is installed, and this
+  repository's own block carries the closing paragraph, so the warning that named the old
+  block is gone.
 - `opencode run` as `--exec` still stalls to the 600s timeout on this machine: the review
   path that works is `review --base <sha>` into `.git/odachi/scratch/`, a subagent answers
   it, and `review --base <sha> --attach <answer.json>` files the verdict.
