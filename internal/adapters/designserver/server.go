@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -48,6 +49,9 @@ type Server struct {
 	writeMu sync.Mutex
 
 	http *http.Server
+	// host is the address the canvas listens on: the origin a request must carry
+	// to be its own. The Host header is the caller's, so it cannot decide.
+	host string
 	done chan struct{}
 	once sync.Once
 }
@@ -71,6 +75,7 @@ func (s *Server) Listen(port int) (addr, url string, err error) {
 
 	s.http = &http.Server{Handler: s.routes(), ReadHeaderTimeout: 5 * time.Second}
 	addr = listener.Addr().String()
+	s.host = addr
 	url = "http://" + addr + "/"
 	if slug := strings.TrimSpace(s.opts.Slug); slug != "" {
 		url += "?design=" + slug
@@ -121,6 +126,9 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST"})
+		return
+	}
+	if !s.ownPage(w, r) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "stopping"})
@@ -175,6 +183,10 @@ func (s *Server) design(w http.ResponseWriter, r *http.Request) {
 // one it cannot parse: a canvas that destroys a person's notes is worse than no
 // canvas.
 func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string) {
+	if !s.ownPage(w, r) || !s.jsonOnly(w, r) {
+		return
+	}
+
 	var in struct {
 		File       string `json:"file"`
 		Selector   string `json:"selector"`
@@ -314,8 +326,8 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "data: %s\n\n", what)
 			flusher.Flush()
 		case <-ticker.C:
-			if changed := s.changed(); changed != "" {
-				fmt.Fprintf(w, "data: %s\n\n", changed)
+			if changed := s.changed(); len(changed) > 0 {
+				fmt.Fprintf(w, "data: %s\n\n", strings.Join(changed, ","))
 				flusher.Flush()
 			}
 		}
@@ -324,17 +336,17 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 
 // changed reports what moved since the last look: one artboard, or the manifest and
 // comments of a design. It keeps the opinion to itself and tells the page the name.
-func (s *Server) changed() string {
+func (s *Server) changed() []string {
 	root := filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir))
 	designs, err := os.ReadDir(root)
 	if err != nil {
-		return ""
+		return nil
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	moved := ""
+	moved := []string{}
 	for _, entry := range designs {
 		if !entry.IsDir() || !isSlug(entry.Name()) {
 			continue
@@ -361,9 +373,9 @@ func (s *Server) changed() string {
 				// The comments file is the panel, not an artboard: the page reloads
 				// one or the other, and telling it "design.json" would reload a frame.
 				if file.Name() == domain.CommentsFile {
-					moved = "comments"
+					moved = append(moved, "comments")
 				} else {
-					moved = entry.Name() + "/" + file.Name()
+					moved = append(moved, entry.Name()+"/"+file.Name())
 				}
 			}
 		}
@@ -489,4 +501,38 @@ func newID() string {
 		return fmt.Sprintf("%08x", time.Now().UnixNano()&0xffffffff)
 	}
 	return hex.EncodeToString(buf)
+}
+
+// ownPage refuses a caller this canvas did not serve: a browser sends Origin on a
+// cross-origin POST, and a page from the web must not append a comment or stop the
+// canvas just because the port answers on loopback.
+func (s *Server) ownPage(w http.ResponseWriter, r *http.Request) bool {
+	// The address is the one this canvas listens on. When it is not known the
+	// request is refused, with or without an Origin: a control whose unknown state
+	// trusts the caller is not a control.
+	if s.host == "" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "the canvas does not know its own address: the request is refused"})
+		return false
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Host != s.host {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "cross-origin request refused: the canvas answers only its own page"})
+		return false
+	}
+	return true
+}
+
+// jsonOnly refuses a body that is not JSON: a simple text/plain form post needs no
+// preflight, and refusing it is what keeps a web page from writing through a canvas
+// it never opened.
+func (s *Server) jsonOnly(w http.ResponseWriter, r *http.Request) bool {
+	if !strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "application/json") {
+		writeJSON(w, http.StatusUnsupportedMediaType, map[string]string{"error": "the canvas reads application/json only"})
+		return false
+	}
+	return true
 }

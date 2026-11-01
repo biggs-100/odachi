@@ -149,13 +149,47 @@ func comments(opts Options, files Files) Result {
 		return result
 	}
 
-	grown, missing := d.Comments.Resolve(opts.Resolve, opts.At)
+	// Resolving is a read-modify-write over a file another writer may touch: the
+	// canvas appends a comment while the command resolves one. Reading again before
+	// writing, and redoing the work when the bytes moved, is what keeps a click from
+	// being swallowed by a shell command that read the same file a moment earlier.
 	path := filepath.Join(opts.Dir, filepath.FromSlash(domain.Dir), slug, domain.CommentsFile)
-	if _, err := files.Backup(path); err != nil {
-		return blocked("could not back up " + path + " before rewriting it: " + oneLine(err.Error()))
+	var grown domain.Comments
+	var missing []string
+	written := false
+	for attempt := 0; attempt < 3 && !written; attempt++ {
+		before, err := files.Read(path)
+		if err != nil {
+			return blocked("could not read " + path + ": " + oneLine(err.Error()))
+		}
+		current, err := domain.ParseComments(before)
+		if err != nil {
+			return blocked(slug + ": " + oneLine(err.Error()))
+		}
+
+		grown, missing = current.Resolve(opts.Resolve, opts.At)
+		if len(missing) == len(opts.Resolve) {
+			return blocked("no comment carries " + strings.Join(missing, ", ") + ": nothing was written")
+		}
+
+		now, err := files.Read(path)
+		if err != nil {
+			return blocked("could not read " + path + ": " + oneLine(err.Error()))
+		}
+		if string(now) != string(before) {
+			continue
+		}
+
+		if _, err := files.Backup(path); err != nil {
+			return blocked("could not back up " + path + " before rewriting it: " + oneLine(err.Error()))
+		}
+		if err := files.Write(path, domain.RenderComments(grown)); err != nil {
+			return blocked("could not write " + path + ": " + oneLine(err.Error()))
+		}
+		written = true
 	}
-	if err := files.Write(path, domain.RenderComments(grown)); err != nil {
-		return blocked("could not write " + path + ": " + oneLine(err.Error()))
+	if !written {
+		return blocked("the comments file kept changing while it was being written: nobody else is writing, run it again")
 	}
 
 	result := Result{
