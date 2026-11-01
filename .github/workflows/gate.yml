@@ -81,12 +81,12 @@ jobs:
           # changed paths against it. Without --base the worktree is compared to
           # its own HEAD, which on a clean checkout is nothing: the fence would be
           # applied to an empty list and the change would never meet it.
-          # The review is not checked here, and the run says so when a close owes
-          # one: a verdict is evidence about one tree and lives in
-          # .git/odachi/reviews/, inside the clone, so a clean checkout has none
-          # (ADR 0043). The review never authorises delivery; the fence and the
-          # proof do, and both are verified from the base ref.
-          "$ODACHI_GATE" check --fence-from "$BASE" --base "$BASE" --run "go test ./..." --timeout 900
+          # --no-review stays one release longer: the gate is built from the base
+          # ref, and the base of this change is v0.11.84, which still refuses a close
+          # without a verdict. The release that installs ADR 0043 removes the flag in
+          # the change after it, the way a schema key waits for the binary that reads
+          # it.
+          "$ODACHI_GATE" check --fence-from "$BASE" --base "$BASE" --no-review --run "go test ./..." --timeout 900
 
       - name: keep the proof
         # always: a green run still has a proof to keep when the gate blocks on
