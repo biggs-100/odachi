@@ -393,12 +393,85 @@ func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
 		t.Error("the result does not carry the refutation it stored")
 	}
 
-	second := p.run(review.Options{Attach: "refutacion.json"})
-	if second.Code != review.CodeBlocked {
-		t.Fatalf("second attach code = %d, want 1: the refutation is written once", second.Code)
+	// The same account answering twice is one opinion written twice: the store
+	// refuses it by name, and the vote it would buy is the vote ADR 0047 promises
+	// nobody gets.
+	same := p.run(review.Options{Attach: "refutacion.json"})
+	if same.Code != review.CodeBlocked {
+		t.Fatalf("same refuter again: code = %d, want 1 (%s)", same.Code, same.Message)
 	}
-	if !strings.Contains(second.Message, "already has a refutation") {
-		t.Errorf("second attach message = %q", second.Message)
+	if !strings.Contains(same.Message, "already answered") {
+		t.Errorf("same refuter again: message = %q, want it to name the account", same.Message)
+	}
+
+	// A different refuter is a second witness, in its own file, and three is the
+	// ceiling: a fourth distinct account has no file to live in.
+	for _, name := range []string{"otro", "tercero"} {
+		file := "refutacion-" + name + ".json"
+		p.files.files[fullPath(file)] = []byte(`{"refuter":"` + name + `","refutations":[{"id":"F1","verdict":"refuted","why":"cita de ` + name + `"}]}`)
+		if r := p.run(review.Options{Attach: file}); r.Code != review.CodeOK {
+			t.Fatalf("attach %s: code = %d (%s)", name, r.Code, r.Message)
+		}
+	}
+	secondPath := storeFile(domainreview.Dir + "/" + currentTree + ".refuted.2.json")
+	if _, ok := p.files.files[secondPath]; !ok {
+		t.Fatalf("the second witness was not stored as round 2; writes = %v", p.files.written())
+	}
+
+	p.files.files[fullPath("refutacion-cuarto.json")] = []byte(`{"refuter":"cuarto","refutations":[{"id":"F1","verdict":"refuted","why":"cuarta cita"}]}`)
+	fourth := p.run(review.Options{Attach: "refutacion-cuarto.json"})
+	if fourth.Code != review.CodeBlocked {
+		t.Fatalf("fourth attach code = %d, want 1: three is the ceiling", fourth.Code)
+	}
+	if !strings.Contains(fourth.Message, "ceiling") {
+		t.Errorf("fourth attach message = %q, want the ceiling named", fourth.Message)
+	}
+}
+
+// TestAttachSaysWhatTheBlockStillNeeds is the row the review of this feature
+// found: the attach message promised to name the votes a surviving block still
+// needs, and nothing pinned it. One witness on an argued finding leaves one.
+func TestAttachSaysWhatTheBlockStillNeeds(t *testing.T) {
+	p := newLensProject()
+	p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
+	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
+
+	result := p.run(review.Options{Attach: "refutacion.json"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	joined := strings.Join(result.Lines, "\n")
+	if !strings.Contains(joined, "F1 still blocks: 1 of 2 cited refutations (argued finding)") {
+		t.Errorf("the attach does not say what the block still needs:\n%s", joined)
+	}
+}
+
+// TestAnUnreadableStoreIsNotAFullOne is the row the review of this feature found:
+// the round was decided by asking whether a file exists, and a failed question was
+// read as "that round is taken". A permissions problem then reached the human as
+// "three refutations is the ceiling", with the real error swallowed.
+func TestAnUnreadableStoreIsNotAFullOne(t *testing.T) {
+	p := newLensProject()
+	p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
+	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
+	p.files.failExists = func(path string) error {
+		if strings.Contains(path, ".refuted.") {
+			return errors.New("permission denied")
+		}
+		return nil
+	}
+
+	result := p.run(review.Options{Attach: "refutacion.json"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "permission denied") {
+		t.Errorf("the refusal %q does not name the real error", result.Message)
+	}
+	if strings.Contains(result.Message, "ceiling") {
+		t.Errorf("a failed question was reported as the ceiling: %q", result.Message)
 	}
 }
 

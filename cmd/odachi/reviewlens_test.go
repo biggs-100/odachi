@@ -187,7 +187,7 @@ func TestRefutePrintsThePromptForTheStoredVerdict(t *testing.T) {
 	writeAt(t, verdict, `{
   "reviewer": "claude",
 `+declared(t, dir)+`  "findings": [
-    {"path": "internal/app/turnos.go", "line": 3, "severity": "BLOCKER", "causal": true, "why": "devuelve nuevo sin guardar el turno"}
+    {"path": "internal/app/turnos.go", "line": 3, "severity": "BLOCKER", "causal": true, "evidence": "cited", "why": "devuelve nuevo sin guardar el turno"}
   ]
 }`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
@@ -233,7 +233,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	writeAt(t, verdict, `{
   "reviewer": "claude",
 `+declared(t, dir)+`  "findings": [
-    {"path": "internal/app/turnos.go", "line": 3, "severity": "BLOCKER", "causal": true, "why": "devuelve nuevo sin guardar el turno"}
+    {"path": "internal/app/turnos.go", "line": 3, "severity": "BLOCKER", "causal": true, "evidence": "cited", "why": "devuelve nuevo sin guardar el turno"}
   ]
 }`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", verdict}, ""); code != 0 {
@@ -281,11 +281,25 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 		t.Errorf("--show does not report the refutation:\n%s", out)
 	}
 
-	// The refutation is written once.
-	if code, _, errOut := runDir(t, dir, []string{"review", "--attach", refutation}, ""); code != 1 {
-		t.Fatalf("second attach: code = %d, want 1", code)
-	} else if !strings.Contains(errOut, "already has a refutation") {
-		t.Errorf("second attach stderr %q does not say the refutation exists", errOut)
+	// A second refuter is a second witness, in its own file: the first answer is
+	// never rewritten, and the same account answering again is refused by name.
+	second := filepath.Join(t.TempDir(), "refutacion2.json")
+	writeAt(t, second, `{"refuter":"otro","refutations":[{"id":"F1","verdict":"refuted","why":"el call site ya pasa un token firmado"}]}`)
+	code, out, _ = runDir(t, dir, []string{"review", "--attach", second}, "")
+	if code != 0 {
+		t.Fatalf("second attach: code = %d (stdout: %q)", code, out)
+	}
+	witnesses, err := filepath.Glob(filepath.Join(dir, ".git", "odachi", "reviews", "*.refuted.2.json"))
+	if err != nil || len(witnesses) != 1 {
+		t.Fatalf("the second witness has no file of its own: %v (%v)", witnesses, err)
+	}
+
+	same := filepath.Join(t.TempDir(), "refutacion1-otra-vez.json")
+	writeAt(t, same, `{"refuter":"otro","refutations":[{"id":"F1","verdict":"refuted","why":"otra cita"}]}`)
+	if code, _, errOut := runDir(t, dir, []string{"review", "--attach", same}, ""); code != 1 {
+		t.Fatalf("the same account again: code = %d, want 1", code)
+	} else if !strings.Contains(errOut, "already answered") {
+		t.Errorf("the same account again: stderr %q does not name the account", errOut)
 	}
 }
 

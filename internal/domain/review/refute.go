@@ -215,10 +215,65 @@ func (r Refutation) Refutes(id string) bool {
 	return false
 }
 
+// MaxWitnesses is the most refuters one tree may answer with. A cited claim needs
+// one and an argued one two; three is the ceiling, because a block decided by a
+// crowd is a block nobody can read.
+const MaxWitnesses = 3
+
+// RequiredWitnesses is how many cited refutations lift this finding: one when the
+// reviewer quoted the line, two when it only argued. The class is the reviewer's
+// own account, and absence reads as argued.
+func RequiredWitnesses(f Finding) int {
+	if f.EvidenceClass() == EvidenceCited {
+		return 1
+	}
+	return 2
+}
+
+// Answers is every refuter's answer filed for one tree, in the order they landed.
+// One answer is the common case; two lift an argued finding, and three is the
+// ceiling.
+type Answers []Refutation
+
+// RefutedBy is how many different accounts refute the finding with a citation. A
+// `stands`, or a `refuted` without evidence, is not one: the default never lifts.
+// Counting accounts and not files is the whole promise -two answers from the same
+// refuter are one opinion written twice, and a retry would buy a quorum nobody
+// paid for.
+func (a Answers) RefutedBy(id string) int {
+	seen := make(map[string]bool, len(a))
+	for _, answer := range a {
+		if !answer.Refutes(id) {
+			continue
+		}
+		seen[strings.ToLower(strings.TrimSpace(answer.Refuter))] = true
+	}
+	return len(seen)
+}
+
+// Lifts reports whether the answers are enough to lift this finding, which is the
+// whole rule: the class decides how many, and a witness that stands is no witness.
+func (a Answers) Lifts(id string, f Finding) bool {
+	return a.RefutedBy(id) >= RequiredWitnesses(f)
+}
+
+// IndexOf names the position of one finding inside its verdict, which is the id a
+// refuter answers about. It compares every field that can be reported, not only
+// the place: two findings on the same line are two findings, and naming the wrong
+// one would count the votes of a row nobody is looking at.
+func IndexOf(findings []Finding, finding Finding) int {
+	for i := range findings {
+		if findings[i] == finding {
+			return i
+		}
+	}
+	return -1
+}
+
 // BlockingAfter returns the first finding that still blocks, in the verdict's
 // file order: causal, BLOCKER or CRITICAL, not dismissed with evidence, and not
-// refuted with evidence.
-func BlockingAfter(findings []Finding, r Refutation) (Finding, bool) {
+// lifted by the refutations filed for this tree.
+func BlockingAfter(findings []Finding, answers Answers) (Finding, bool) {
 	for i, finding := range findings {
 		if IsDismissed(finding) {
 			continue
@@ -226,7 +281,7 @@ func BlockingAfter(findings []Finding, r Refutation) (Finding, bool) {
 		if !finding.Causal || !finding.Severity.Blocks() {
 			continue
 		}
-		if r.Refutes(findingID(i)) {
+		if answers.Lifts(findingID(i), finding) {
 			continue
 		}
 		return finding, true
@@ -235,26 +290,44 @@ func BlockingAfter(findings []Finding, r Refutation) (Finding, bool) {
 }
 
 // DeriveAfter is the whole rule with refutations taken into account: a causal
-// finding at BLOCKER or CRITICAL that nobody refuted requests changes,
-// everything else approves.
-func DeriveAfter(findings []Finding, r Refutation) string {
-	if _, blocking := BlockingAfter(findings, r); blocking {
+// finding at BLOCKER or CRITICAL that nobody lifted requests changes, everything
+// else approves.
+func DeriveAfter(findings []Finding, answers Answers) string {
+	if _, blocking := BlockingAfter(findings, answers); blocking {
 		return ChangesRequested
 	}
 	return Approved
 }
 
-// RefutationName is the file a refutation for one tree lives in.
-func RefutationName(tree string) (string, error) {
+// Rounds is every refutation a tree may collect, in the order they land. The
+// readers loop over it so the store's shape is decided in one place.
+func Rounds() []int {
+	rounds := make([]int, 0, MaxWitnesses)
+	for round := 1; round <= MaxWitnesses; round++ {
+		rounds = append(rounds, round)
+	}
+	return rounds
+}
+
+// RefutationName is the file one refuter's answer for one tree lives in. The first
+// answer keeps the name a refutation always had, so a tree refuted before the
+// votes existed is still read; the next two are numbered, and a fourth has no name.
+func RefutationName(tree string, round int) (string, error) {
 	if !hashLike(tree) {
 		return "", fmt.Errorf("the tree %q cannot be the name of a refutation: it must be a hash", tree)
 	}
-	return tree + ".refuted.json", nil
+	if round < 1 || round > MaxWitnesses {
+		return "", fmt.Errorf("a tree takes between 1 and %d refutations and this is round %d: the ceiling is what keeps a block from being outvoted", MaxWitnesses, round)
+	}
+	if round == 1 {
+		return tree + ".refuted.json", nil
+	}
+	return tree + ".refuted." + strconv.Itoa(round) + ".json", nil
 }
 
 // RefutationPath is the refutation's path relative to the project root.
-func RefutationPath(tree string) (string, error) {
-	name, err := RefutationName(tree)
+func RefutationPath(tree string, round int) (string, error) {
+	name, err := RefutationName(tree, round)
 	if err != nil {
 		return "", err
 	}
@@ -290,6 +363,9 @@ type RefuteInput struct {
 	Reviewer string
 	Findings []Finding
 	Diff     string
+	// Witness is which of the at most MaxWitnesses answers this prompt asks for.
+	// Zero means the run did not say, and the prompt leaves the count out.
+	Witness int
 }
 
 // RefutePrompt renders the refuter's prompt. Content is fixed and pinned by
@@ -316,8 +392,15 @@ func RefutePrompt(in RefuteInput) string {
 		out.WriteString("(none: this verdict has no causal BLOCKER or CRITICAL, there is nothing to refute)\n")
 	}
 	for _, entry := range blocking {
-		out.WriteString("### " + entry.id + " · " + where(entry.finding) + " · " + string(entry.finding.Severity) + "\n")
+		out.WriteString("### " + entry.id + " · " + where(entry.finding) + " · " + string(entry.finding.Severity) + " · " + entry.finding.EvidenceClass() + "\n")
 		out.WriteString(entry.finding.Why + "\n\n")
+	}
+
+	if in.Witness > 0 {
+		out.WriteString("## Which witness you are\n")
+		out.WriteString("This is answer " + strconv.Itoa(in.Witness) + " of at most " + strconv.Itoa(MaxWitnesses) + " for this tree. A finding whose evidence is\n")
+		out.WriteString(EvidenceCited + " falls with one citation; one that is " + EvidenceArgued + " needs two. Your answer counts the same as\n")
+		out.WriteString("any other: it is a vote with a reason, not a verdict.\n\n")
 	}
 
 	out.WriteString("## The diff (the only evidence that counts)\n")

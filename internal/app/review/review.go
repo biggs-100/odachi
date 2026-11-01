@@ -562,12 +562,17 @@ func (r *runner) refute() Result {
 		return *problem
 	}
 
-	existing := domain.Refutation{}
-	if filed, _ := r.storedRefutation(tree); filed != nil {
-		existing = *filed
-	}
+	existing, _ := r.storedRefutations(tree)
 	if _, blocking := domain.BlockingAfter(verdict.Findings, existing); !blocking {
 		return nothingToRefute(tree)
+	}
+	witness, refusal := r.nextRefutationRound(tree)
+	if refusal != "" {
+		return blocked(refusal + "; the reviewer was not started")
+	}
+	if witness == 0 {
+		return blocked(fmt.Sprintf("this tree already has %d refutations and %d is the ceiling: the finding they did not lift needs a fix, not another witness",
+			domain.MaxWitnesses, domain.MaxWitnesses))
 	}
 
 	text := domain.RefutePrompt(domain.RefuteInput{
@@ -576,6 +581,7 @@ func (r *runner) refute() Result {
 		Reviewer: verdict.Reviewer,
 		Findings: verdict.Findings,
 		Diff:     cand.diff,
+		Witness:  witness,
 	})
 
 	return Result{
@@ -1426,10 +1432,9 @@ func (r *runner) show() Result {
 		Files:   []string{rel},
 	}
 
-	if refutation, refRel := r.storedRefutation(tree); refutation != nil {
-		result.Refutation = refutation
-		result.Files = append(result.Files, refRel)
-		result.Lines = append(result.Lines, refutationLine(refutation, r.storeLabel(refRel), parsed.Findings))
+	if answers, refFiles := r.storedRefutations(tree); len(refFiles) > 0 {
+		result.Files = append(result.Files, refFiles...)
+		result.Lines = append(result.Lines, refutationLine(answers, refFiles, parsed.Findings))
 	}
 	return result
 }
@@ -1768,7 +1773,23 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
-	rel, err := domain.RefutationPath(tree)
+	// The name is the only identity a refuter has, and the quorum counts accounts:
+	// a second answer from one that already answered is one opinion written twice.
+	if filed, _ := r.storedRefutations(tree); sameRefuter(filed, sealed.Refuter) {
+		return blocked(fmt.Sprintf("the refuter %q already answered this tree: a second answer from the same account is not a second witness",
+			sealed.Refuter))
+	}
+
+	round, refusal := r.nextRefutationRound(tree)
+	if refusal != "" {
+		return blocked(refusal + "; I wrote nothing")
+	}
+	if round == 0 {
+		return blocked(fmt.Sprintf("this tree already has %d refutations and %d is the ceiling: a finding they did not lift needs a fix, not another witness",
+			domain.MaxWitnesses, domain.MaxWitnesses))
+	}
+
+	rel, err := domain.RefutationPath(tree, round)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
@@ -1788,6 +1809,9 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 
 	stands, refuted := counts(sealed)
 	message := "refutation saved in " + r.storeLabel(rel) + " · " + domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
+	if still := r.stillBlockingLine(tree, verdict.Findings); still != "" {
+		message += "\n" + still
+	}
 	return Result{
 		Code:       CodeOK,
 		Message:    "refutation saved in " + r.storeLabel(rel),
@@ -1796,6 +1820,36 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		Lenses:     verdict.Lenses,
 		Files:      []string{rel},
 	}
+}
+
+// sameRefuter reports whether one of the filed answers carries this name. The name
+// is the only identity a refuter has, so it is compared trimmed and
+// case-insensitively, and an empty name is one anonymous account like any other.
+func sameRefuter(answers domain.Answers, name string) bool {
+	trimmed := strings.ToLower(strings.TrimSpace(name))
+	for _, answer := range answers {
+		if strings.ToLower(strings.TrimSpace(answer.Refuter)) == trimmed {
+			return true
+		}
+	}
+	return false
+}
+
+// stillBlockingLine says what the witnesses have not settled yet, so the human
+// knows whether the block is decided or how many answers it still needs. An empty
+// line means nothing blocks.
+func (r *runner) stillBlockingLine(tree string, findings []domain.Finding) string {
+	answers, _ := r.storedRefutations(tree)
+	finding, blocking := domain.BlockingAfter(findings, answers)
+	if !blocking {
+		return ""
+	}
+	id := ""
+	if index := domain.IndexOf(findings, finding); index >= 0 {
+		id = domain.FindingIDs(findings)[index]
+	}
+	return fmt.Sprintf("%s still blocks: %d of %d cited refutations (%s finding)",
+		id, answers.RefutedBy(id), domain.RequiredWitnesses(finding), finding.EvidenceClass())
 }
 
 // stampLenses records the lenses this candidate's class asks for, plus the ones
@@ -2248,7 +2302,7 @@ func (r *runner) potentRows(verdictTree string, paths []string) (findings []doma
 			continue
 		}
 
-		killed, note := r.refutedFindings(tree)
+		killed, note := r.refutedFindings(tree, origin.Findings)
 		if note != "" {
 			notes = append(notes, note)
 			continue
@@ -2366,31 +2420,63 @@ func (r *runner) storedNeighbor(tree string) (domain.Verdict, string) {
 	return parsed, ""
 }
 
-// refutedFindings is the ids the refuter killed with evidence, and the reason it
-// cited. A verdict with no refutation has nothing killed, which is the normal
-// case, not an error. A refutation whose entry has no evidence refutes nothing:
-// the default is always that the finding stands.
-func (r *runner) refutedFindings(tree string) (map[string]string, string) {
-	rel, err := domain.RefutationPath(tree)
-	if err != nil {
-		return nil, fmt.Sprintf("the refutation path of %s cannot be built: %s", tree, oneLine(err.Error()))
-	}
-	data, err := r.files.Read(r.storePath(rel))
-	if err != nil {
-		return nil, "" // no refutation stored: nothing was killed
-	}
-	parsed, err := domain.ParseRefutation(data)
-	if err != nil {
-		return nil, fmt.Sprintf("the refutation of %s cannot be read; its verdict's rows are not carried", tree)
+// refutedFindings is the ids the witnesses killed with evidence, and the reason
+// they cited. A finding with no answer has nothing killed, which is the normal
+// case, not an error. A finding whose class needs two witnesses and got one is not
+// killed: the default is always that the finding stands.
+func (r *runner) refutedFindings(tree string, findings []domain.Finding) (map[string]string, string) {
+	answers, note := r.answersOf(tree)
+	if note != "" || len(answers) == 0 {
+		return nil, note
 	}
 
-	killed := make(map[string]string, len(parsed.Refutations))
-	for _, judgment := range parsed.Refutations {
-		if judgment.Verdict == domain.Refuted && strings.TrimSpace(judgment.Why) != "" {
-			killed[judgment.ID] = strings.TrimSpace(judgment.Why)
+	killed := make(map[string]string, len(findings))
+	ids := domain.FindingIDs(findings)
+	for i, finding := range findings {
+		id := ids[i]
+		if !answers.Lifts(id, finding) {
+			continue
+		}
+		for _, answer := range answers {
+			for _, judgment := range answer.Refutations {
+				if judgment.ID == id && judgment.Verdict == domain.Refuted && strings.TrimSpace(judgment.Why) != "" {
+					killed[id] = strings.TrimSpace(judgment.Why)
+				}
+			}
 		}
 	}
 	return killed, ""
+}
+
+// answersOf reads every witness of one tree and names the file it could not read,
+// the way storedRefutations does not: a correction that inherits rows must not
+// treat a broken artifact as an empty one, and a read failure names the file the
+// human has to look at.
+func (r *runner) answersOf(tree string) (domain.Answers, string) {
+	var answers domain.Answers
+	for _, round := range domain.Rounds() {
+		rel, err := domain.RefutationPath(tree, round)
+		if err != nil {
+			return nil, fmt.Sprintf("the refutation path of %s cannot be built: %s", tree, oneLine(err.Error()))
+		}
+		exists, err := r.files.Exists(r.storePath(rel))
+		if err != nil {
+			return nil, fmt.Sprintf("could not ask whether %s exists: %s", rel, oneLine(err.Error()))
+		}
+		if !exists {
+			continue
+		}
+		data, err := r.files.Read(r.storePath(rel))
+		if err != nil {
+			return nil, fmt.Sprintf("the refutation %s cannot be read: %s; its verdict's rows are not carried", rel, oneLine(err.Error()))
+		}
+		parsed, err := domain.ParseRefutation(data)
+		if err != nil {
+			return nil, fmt.Sprintf("the refutation %s cannot be read; its verdict's rows are not carried", rel)
+		}
+		answers = append(answers, parsed)
+	}
+	return answers, ""
 }
 
 // findingKey is the identity a finding is filed under: the same file, bytes,
@@ -2627,24 +2713,51 @@ func (r *runner) namedVerdict(path, tree string) (domain.Verdict, *Result) {
 	return parsed, nil
 }
 
-// storedRefutation reads the refutation filed beside this tree's verdict, if
-// any. An absent one is not an error: it is the normal state of a reviewed tree.
-func (r *runner) storedRefutation(tree string) (*domain.Refutation, string) {
-	rel, err := domain.RefutationPath(tree)
-	if err != nil {
-		return nil, ""
+// storedRefutations reads every refuter's answer filed beside this tree's verdict
+// and names the files it found. An absent answer is not an error: it is the normal
+// state of a reviewed tree. A file that cannot be parsed keeps its name and lends
+// no answer, so a broken artifact never turns into a lifted block here.
+func (r *runner) storedRefutations(tree string) (domain.Answers, []string) {
+	var answers domain.Answers
+	var files []string
+	for _, round := range domain.Rounds() {
+		rel, err := domain.RefutationPath(tree, round)
+		if err != nil {
+			break
+		}
+		data, err := r.files.Read(r.storePath(rel))
+		if err != nil {
+			continue
+		}
+		files = append(files, rel)
+		parsed, err := domain.ParseRefutation(data)
+		if err != nil {
+			continue
+		}
+		answers = append(answers, parsed)
 	}
+	return answers, files
+}
 
-	data, err := r.files.Read(r.storePath(rel))
-	if err != nil {
-		return nil, ""
+// nextRefutationRound is the first round this tree has not used: zero when the
+// ceiling is reached, and a refusal when the question could not be answered. An
+// unreadable store is not a full one, and reporting it as the ceiling would bury a
+// broken folder behind a sentence about witnesses.
+func (r *runner) nextRefutationRound(tree string) (int, string) {
+	for _, round := range domain.Rounds() {
+		rel, err := domain.RefutationPath(tree, round)
+		if err != nil {
+			return 0, oneLine(err.Error())
+		}
+		exists, err := r.files.Exists(r.storePath(rel))
+		if err != nil {
+			return 0, "could not ask whether " + rel + " exists: " + oneLine(err.Error()) + "; check the permissions and run the command again"
+		}
+		if !exists {
+			return round, ""
+		}
 	}
-
-	parsed, err := domain.ParseRefutation(data)
-	if err != nil {
-		return nil, rel
-	}
-	return &parsed, rel
+	return 0, ""
 }
 
 // base is the ref the candidate is compared against. An empty --base means the
@@ -3061,21 +3174,23 @@ func lensLine(required []string, verdict domain.Verdict) string {
 	return "lenses: " + covered + " · required: " + needed
 }
 
-// refutationLine is the refutation as `--show` reports it: which file, and how
-// many findings survived it.
-func refutationLine(refutation *domain.Refutation, rel string, findings []domain.Finding) string {
+// refutationLine is the witnesses as `--show` reports them: which files answered,
+// how many stood and how many refuted, and whether the block survived them.
+func refutationLine(answers domain.Answers, files []string, findings []domain.Finding) string {
 	stands := 0
 	refuted := 0
-	for _, judgment := range refutation.Refutations {
-		if judgment.Verdict == domain.Refuted {
-			refuted++
-			continue
+	for _, answer := range answers {
+		for _, judgment := range answer.Refutations {
+			if judgment.Verdict == domain.Refuted {
+				refuted++
+				continue
+			}
+			stands++
 		}
-		stands++
 	}
 
-	line := fmt.Sprintf("refutation: %s · stands: %d · refuted: %d", rel, stands, refuted)
-	if _, blocking := domain.BlockingAfter(findings, *refutation); !blocking {
+	line := fmt.Sprintf("refutation: %s · stands: %d · refuted: %d", strings.Join(files, ", "), stands, refuted)
+	if _, blocking := domain.BlockingAfter(findings, answers); !blocking {
 		return line + " · no longer blocks anything"
 	}
 	return line + " · still blocking"
