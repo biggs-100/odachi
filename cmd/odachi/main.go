@@ -91,6 +91,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runLevel(dir, args[1:], stdin, stdout, stderr)
 	case "summary":
 		return runSummary(dir, args[1:], stdout, stderr)
+	case "design":
+		return runDesign(dir, args[1:], stdout, stderr)
 	case "progress":
 		return runProgress(dir, args[1:], stdout, stderr)
 	case "undo":
@@ -124,7 +126,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -1741,6 +1743,8 @@ after start:
   odachi level                                  see your facts; it proposes senior when earned
   odachi level --to <profile>                   apply a profile and its voice (both are backed up)
   odachi summary                                what is done in each feature
+  odachi design list [slug]                     the designs a project keeps, their artboards and open comments
+  odachi design comments <slug> [--resolve ids]  what a person asked on the artboards, or mark it resolved
   odachi undo                                   restore the last thing odachi wrote (the current one is backed up)
   odachi undo --list                            what can be undone, with its date
   odachi undo --file brief                      only that one: brief | profile | fence | task
