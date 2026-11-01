@@ -5,6 +5,32 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.90 - 2026-11-01
+
+The design surface: any agent can design, and the person clicks to comment.
+
+- **A `design` skill ships in the binary and travels to every client.** It carries the folder
+  layout (`design/<slug>/`), the manifest fields, the comments protocol as a versioned file,
+  the read-only design-system capture and the handoff, so a client with no tool of its own
+  follows the same protocol as one with a canvas open.
+- **Six commands, and no tool a single client owns.** `odachi design list`, `comments`, `open`,
+  `stop`, `handoff` and `sync` drive the folder from a shell: list the directions with their
+  tradeoff, read and resolve what a person asked, serve the artboards on loopback, print the
+  chosen one as an implementation instruction, and write `design/system.md` from the project's
+  own stylesheets without editing one.
+- **The canvas is a command, not an extension.** `odachi design open` serves the artboards at
+  their size, with a comment mode that computes a selector, a panel that resolves, and live
+  reload by polling the folder. It writes `comments.json` atomically and refuses a file it
+  cannot parse. It compares the request origin with the address it listens on -never the Host
+  header- and refuses when it does not know its own address.
+- **The fence learned to let a skill in.** It now names the sixteen skills that existed, so a
+  new one is a feature and editing a shipped one is still a correction. The policy landed
+  alone, before the feature: CI reads the fence from the base ref, and a candidate cannot
+  loosen the policy it must obey.
+- Why: gentle-design showed that a design direction is worth keeping as files a reviewer can
+  read, and that the capability belongs in a protocol every client can follow, not in one
+  editor's extension.
+
 ## v0.11.89 - 2026-10-31
 
 The README stops naming a version that ages.
