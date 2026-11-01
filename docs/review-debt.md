@@ -9,14 +9,21 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0158, whose verdict left no rows.
+Last written: after 0159, whose standing verdict left no rows.
 
 ## Open
 
-Nothing, after 0158. The reviews of 0154 and 0155 left rows and they are closed below: the nine
+Nothing, after 0159. The reviews of 0154 and 0155 left rows and they are closed below: the nine
 of 0154 were paid by 0155, and the last one -a test that asserted on a canvas it may have
 killed- was closed by 0156. The verdict on 0157's tree `b184e6f0` approved the four lenses with
 no findings, and so did the one on 0158's tree `5208b95d`.
+
+0159 has a row that never reached this list. Its first review -tree `9d0f029`, before the
+verdict landed- found one WARNING: `docs/next-session.md` counted a model move that the final
+bytes did not make, because the measurement that argued for the move was wrong. The bytes were
+rewritten before the verdict was attached, so the row was paid where it was found and the tree
+that stands (`a7f0e94`) approved with no findings. Kept here because a row that disappears
+without a trace is not the same as a row that was paid.
 
 ## Closed by feature 0156
 

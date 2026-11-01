@@ -119,6 +119,7 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 	out.WriteString("keep_verdicts = " + strconv.Itoa(verdicts) + "\n")
 	out.WriteString("keep_prompts = " + strconv.Itoa(prompts) + "\n")
 	if len(config.Lenses) > 0 {
+		out.WriteString("# odachi: the model that judges each lens; when a provider retires one, the run names the model and the lens it served, and this line is the fix\n")
 		out.WriteString("\n[lenses]\n")
 		for _, lens := range review.AllLenses() {
 			if model, ok := config.Lenses[lens]; ok {

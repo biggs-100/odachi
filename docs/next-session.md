@@ -1,37 +1,37 @@
-# Next session: the craft has a trust boundary
+# Next session: a retired model says the line that chose it
 
-Written at the close of 0158, on v0.11.90. The chat is gone tomorrow; this file is
+Written at the close of 0159, on v0.11.91. The chat is gone tomorrow; this file is
 the state.
 
-## What 0158 shipped
+## What 0159 shipped
 
-- **A skill, `security`, loaded by situation**: input from outside, a permission, a secret,
-  a dependency, a log line, a failure, before a release. Thirteen rules and four prohibitions
-  in 39 lines, and every claim about an outside system carries its source and version -OWASP
-  Top 10:2025, ASVS v5.0.0 (2025-05-30), NIST SSDF 1.1, `govulncheck`- because a security
-  claim ages like a dependency.
-- **ADR 0046 says which half the gate enforces.** The fence over paths, the proof over a
-  command the human chooses and the risk lens over the diff are the enforcement; the trust
-  boundary, the owner of an object, the life of a secret and what failing closed means are
-  judgement. No scanner, and the ADR says why: a pattern list measures the pattern.
-- **The impact map stopped counting skills by hand.** Its skills row had already lost
-  `design`; it now carries the whole payload and `internal/archtest/impactmap_test.go` pins it
-  against `skills.Names()`, so a new skill costs one line of the map instead of a claim nobody
-  measures.
-
-What this feature did not do, on purpose: it did not touch the review lens, it added no
-scanner and no doctor check, and it changed none of the seventeen skills that already shipped.
+- **The review keeps the model it had, and a failed run says where the model came from.** The
+  first measurement hid `mimo-v2.6-flash` -the provider's list shows only the newest version of
+  each family- and this feature briefly moved the four lenses to the pro; the full list showed
+  the flash one **active at 0.14/0.28**, and the host deprecates `mimo-v2.5` in its favour, so
+  `odd/review.toml` keeps the value it already had. What ships is the comment that says what to
+  check when a model goes, an archtest that every lens has a judge, and a failure that names
+  the lens, the model and the line that chose it: `--model`, `odd/review.toml` or the session.
+- Lesson, and it cost a review finding: **a filtered list is not a measurement.** The provider's
+  list shows one version per family unless every version is asked for, and a missing model in
+  that answer is not a retirement.
+- **A reviewer that cannot start says who it asked and where that came from.** The three
+  failure paths of `--exec` -could not run, timed out, non-zero exit- name the lens, the model
+  and its source: `--model`, `odd/review.toml` or the session. An offline tool cannot know
+  what a provider still serves; it can make a retirement one edit instead of an investigation.
+- What it did not do: no network, no provider query, no automatic retry with another model,
+  and the four lens prompts are untouched. A verdict from a model nobody chose is a review
+  nobody asked for.
 
 ## What is open
 
 - `docs/review-debt.md` carries the rows this close's verdict leaves.
-- The queue below, in the order the evidence argues for it.
+- The queue below.
 
 ## What is measured, so nobody re-measures it
 
-- `doctor` on this tree: fourteen checks, no problems; the home copy of the craft still
-  carries seventeen of the eighteen skills until the release installs it (`odachi init` does
-  it; the doctor compares what is installed, not what is missing).
+- `doctor` on this tree: fourteen checks, no problems. v0.11.91 is installed and one
+  binary is in the PATH (`%LOCALAPPDATA%\odachi\bin`); the stale copy in `~/bin` is gone.
 - `check --run` needs `--timeout 400` for this suite on this machine.
 - `opencode run` as `--exec` still stalls to the 600s timeout here: the review path that works
   is `review --base <sha>` into `.git/odachi/scratch/`, a subagent answers it with a model that
@@ -54,24 +54,23 @@ runs `odachi review` with its own model and key, or a receipt signed outside the
 
 ## Queued
 
-- **the review's configured model no longer exists.** `odd/review.toml` assigns the four
-  lenses to `opencode-go/mimo-v2.6-flash`, and the provider now serves `mimo-v2.6-pro`,
-  `mimo-v2.5` and `mimo-v2.5-pro`. The subagent path survives because the model is chosen by
-  hand at the close; `review --exec` would fail. A small feature: the file, a test that the
-  model resolves, and a refusal that names the models it can see.
+- **`evidence_class` and a 2-of-3 vote on refutations.** The comparison with gentle-ai's
+  lenses argued for it: a finding declares deterministic or inferential evidence, the
+  deterministic ones skip the refuter, and an inferential `BLOCKER`/`CRITICAL` needs two of
+  three to fall. An old refutation without votes keeps today's meaning, and the schema counter
+  moves (ADR). The comparison itself: odachi's lenses carry 18 concrete patterns each against
+  gentle-ai's 8-9 rules, but gentle-ai votes on refutations and sorts evidence by class.
+- **Four patterns the lenses are missing**: `test.only` that lets CI pass and misallocated
+  coverage (`reliability`), operational thresholds and observability for what can fail in
+  production (`resilience`), and a PR that does not explain what it touched when that makes it
+  unsafe to review (`readability`). Four lines in existing assets.
 - **the step declares its route.** inline or delegated, and which agent, recorded in the task
-  doc. The one fact gentle-ai writes per task (`Route:`) that odachi does not. Cheap.
+  doc. Cheap.
 - **bookkeeping nobody can put back.** `plan --done T2` records no tree when the worktree is
-  not the commit (0147's and 0157's T2 both), and `undo --file task` is a dead end when
-  several task documents have backups: it discovers all of them and then asks again with no
-  way to name one. Two symptoms, one family: a record the tool writes and cannot repair.
+  not the commit, and `undo --file task` is a dead end when several task documents have
+  backups.
 - **a change resumable from the diff needs no document.** The light lane: no brief and no task
   doc when the work can be resumed from the diff alone. Expensive, because it changes rule 1.
-
-## What this session does first
-
-The model the review configures, because it is the one item on this list that is already
-broken and turns a future `review --exec` into a dead end. Then the queue, in the order above.
 
 ## How to find the next real work
 
