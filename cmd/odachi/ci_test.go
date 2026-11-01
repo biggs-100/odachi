@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -116,5 +117,53 @@ func TestCIReadsTheFenceFromTheRemoteBase(t *testing.T) {
 	}
 	if !strings.Contains(errOut, "out of scope") || !strings.Contains(errOut, "pagos") {
 		t.Errorf("stderr %q does not say what the base fence forbids", errOut)
+	}
+}
+
+// TestCIWritesTheBaseIntoTheProof: the proof is the evidence a reviewer and CI
+// read, so the ref its policy came from travels with it. A blocked run still
+// writes the proof of the command it ran - that is what CI uploads - and a proof
+// without the header says it obeyed the worktree's own copy.
+func TestCIWritesTheBaseIntoTheProof(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	projectWithOrigin(t, dir)
+
+	code, _, errOut := runDir(t, dir, []string{"check", "--ci", "--run", "echo ok"}, "")
+	if code != 2 {
+		t.Fatalf("check --ci --run: code = %d, want 2 (stderr: %q)", code, errOut)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(dir, "proof"))
+	if err != nil {
+		t.Fatalf("the run did not prepare proof/: %v", err)
+	}
+	proofs := []string{}
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".txt") {
+			proofs = append(proofs, entry.Name())
+		}
+	}
+	if len(proofs) != 1 {
+		t.Fatalf("the run wrote %d proofs, want 1: %v", len(proofs), proofs)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "proof", proofs[0]))
+	if err != nil {
+		t.Fatalf("read the proof: %v", err)
+	}
+	if !strings.Contains(string(data), "# fence origin/main\n") {
+		t.Errorf("the proof does not name the base its policy came from:\n%s", data)
+	}
+
+	code, _, errOut = runDir(t, dir, []string{"check", "--run", "echo ok"}, "")
+	if code != 0 {
+		t.Fatalf("check --run: code = %d, want 0 (stderr: %q)", code, errOut)
+	}
+	data, err = os.ReadFile(filepath.Join(dir, "proof", proofs[0]))
+	if err != nil {
+		t.Fatalf("read the second proof: %v", err)
+	}
+	if strings.Contains(string(data), "# fence ") {
+		t.Errorf("a proof from the worktree's own fence names a ref:\n%s", data)
 	}
 }

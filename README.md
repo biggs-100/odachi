@@ -545,6 +545,15 @@ git worktree add ../gate "$base"
 /tmp/odachi check --fence-from "$base" --base "$base" --run "go test ./..."
 ```
 
+The same judgement from the machine that pushes is `check --ci`: it resolves the base once
+-`origin/HEAD`, then `origin/main`, then `origin/master`- and reads both the fence and the
+compared paths from it, so the answer before the push is the answer the workflow will give.
+It never fetches. The gate works offline on purpose, so the run and the proof name the ref
+they read: a stale `origin/main` is a green about an older base, and `git fetch origin` is
+what makes it current. It takes no `--base` or `--fence-from` beside it, and a clone with no
+origin blocks with the command that creates the ref
+(`docs/decisions/0045-the-local-run-reads-the-base-ci-reads.md`).
+
 The fence may also not be loosened behind the brief: with `--fence-from`, when the
 non-goals of the brief are the same in the base and the worktree, every base rule
 must survive with at least its paths and dependencies. A new list of non-goals may
