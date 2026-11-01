@@ -1,19 +1,21 @@
-# check-ci-runs
+# security-is-practice
 
 ## What must exist
-- check --ci runs the gate exactly as CI runs it: the fence read from the remote base and the base resolved from the remote, so the policy lands before the feature is verifiable before a push instead of after it
+- the curriculum teaches the security-relevant practice while the code is written -what arrives from outside, who may do what, a secret, a dependency, a log line, a failure- in one skill a client loads by situation, and one ADR fixes the split: what the gate already enforces and what only a person or an agent can judge
 
 ## Done when
-- a candidate the base fence forbids passes --fence-from HEAD and is blocked by --ci, and both were observed
-- check --ci beside --base or --fence-from is refused, naming that --ci is what they are for
-- a clone with no remote base blocks and names the command that creates it
+- a change that reads input from outside, decides who may do what, holds a secret, adds a dependency, writes a log or handles a failure loads the skill, and the binary ships it to every client that installs the craft
+- the ADR names in one place the enforceable halves -the fence over paths, the proof over a command the human chooses, the risk lens over the diff- and the half that is judgement
+- every rule in the skill that claims how an outside system behaves names its source and version, and the skill stays under the sixty-line ceiling
 
 ## Not included (first version)
-- no fetch and no network: the gate stays offline and names the base it read
-- no change to .github/workflows/gate.yml
+- no scanner and no new doctor check: a tool that guesses is worse than a checklist a person runs
+- no rewrite of the review lens: risk already carries the eighteen patterns a diff is read against
+- no change to the seventeen skills that ship today; this feature adds one folder and the index
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: por que el gate debe leer su politica de una referencia que el candidato no puede editar.
+- Wants to learn: why security is decided at trust boundaries and not in a list.
+
