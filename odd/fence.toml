@@ -5,8 +5,8 @@
 # wrong - never a reason restated as a package (0120).
 
 [[rule]]
-not   = "no change to the proof format, and the stored proof is never rewritten"
-paths = ["internal/domain/proof/**", "proof/**"]
+not   = "a stored proof is never rewritten, whatever the writer learns"
+paths = ["proof/**"]
 deps  = []
 
 [[rule]]
