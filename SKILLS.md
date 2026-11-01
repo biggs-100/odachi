@@ -10,6 +10,7 @@
 | go-tests | when writing or reviewing Go tests, golden files or Bubbletea flows. Load `tests` for the discipline and this skill for the concrete pattern. | skills/go-tests/SKILL.md |
 | pull-request | when a change goes to a PR or the diff passes 400 lines. Split the delivery into reviewable work units and pick one chain strategy. | skills/pull-request/SKILL.md |
 | role-craft | when a project needs a professional odachi does not have, or an existing role answers like a costume. Interview, research, and end in odachi role new. | skills/role-craft/SKILL.md |
+| security | when the change reads input from outside, decides who may do what, holds a secret, adds a dependency, writes a log or handles a failure. Name the trust boundary before the code. | skills/security/SKILL.md |
 | shape | when a request does not fit in one reading, or before the brief of a feature whose edges are not decided. Explore first, then declare. | skills/shape/SKILL.md |
 | ship | when something is ready for another person to use. Verify the installer's path, not the developer's. | skills/ship/SKILL.md |
 | skill-craft | when writing a new skill, fixing one that is not being used, or deciding whether something deserves a skill. | skills/skill-craft/SKILL.md |
