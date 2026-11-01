@@ -11,14 +11,12 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/fence"
 )
 
-// TestTheFenceGuardsTheEvidenceAndNotTheWriter pins the boundary 0150 opened: this
-// repository's own fence protects the stored proofs and lets the package that writes
-// them change. The review of 0150 found that nothing said so, and a policy nobody
-// asserts drifts back one commit at a time -invisibly, because a narrower fence still
-// reports green.
-func TestTheFenceGuardsTheEvidenceAndNotTheWriter(t *testing.T) {
-	root := filepath.Join("..", "..")
-	data, err := os.ReadFile(filepath.Join(root, "odd", "fence.toml"))
+// thisRepositoryFence reads odd/fence.toml the way the gate does: the file, the
+// rules, and nothing else.
+func thisRepositoryFence(t *testing.T) []fence.Rule {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join("..", "..", "odd", "fence.toml"))
 	if err != nil {
 		t.Fatalf("read odd/fence.toml: %v", err)
 	}
@@ -41,6 +39,16 @@ func TestTheFenceGuardsTheEvidenceAndNotTheWriter(t *testing.T) {
 	if len(rules) == 0 {
 		t.Fatal("odd/fence.toml has no rule: this repository protects nothing")
 	}
+	return rules
+}
+
+// TestTheFenceGuardsTheEvidenceAndNotTheWriter pins the boundary 0150 opened: this
+// repository's own fence protects the stored proofs and lets the package that writes
+// them change. The review of 0150 found that nothing said so, and a policy nobody
+// asserts drifts back one commit at a time -invisibly, because a narrower fence still
+// reports green.
+func TestTheFenceGuardsTheEvidenceAndNotTheWriter(t *testing.T) {
+	rules := thisRepositoryFence(t)
 
 	// The behaviour, both halves: a stored proof is protected, the writer is not.
 	if got := fence.Check(rules, []string{"proof/0001-x.txt"}, nil); len(got) == 0 {
@@ -50,12 +58,56 @@ func TestTheFenceGuardsTheEvidenceAndNotTheWriter(t *testing.T) {
 		t.Errorf("the fence protects the package that writes the proofs again: %+v", got)
 	}
 
-	// And the shape: no rule reaches into the code that writes the evidence.
-	for _, rule := range rules {
-		for _, path := range rule.Paths {
-			if strings.HasPrefix(path, "internal/") {
-				t.Errorf("a fence rule names code again: %q in %q", path, rule.Not)
+	// And the shape: no rule of this fence is over the package that writes proofs.
+	if problem := boundaryProblem(rules); problem != "" {
+		t.Errorf("%s", problem)
+	}
+}
+
+// TestTheBoundaryIsTheProofPackageAndNotEveryNameOfCode: the shape rule names one
+// package. A fence over another internal package is ordinary scoping, and a test
+// wide enough to refuse it would blame the proof boundary for a rule that has
+// nothing to do with evidence.
+func TestTheBoundaryIsTheProofPackageAndNotEveryNameOfCode(t *testing.T) {
+	cases := []struct {
+		name  string
+		paths []string
+		want  string
+	}{
+		{name: "the package that writes proofs", paths: []string{"internal/domain/proof/**"}, want: "the proof package"},
+		{name: "a path that names only the folder", paths: []string{"internal/domain/proof"}, want: ""},
+		{name: "a glob that spans everything internal", paths: []string{"internal/**"}, want: "the proof package"},
+		{name: "a glob that spans the domain", paths: []string{"internal/domain/**"}, want: "the proof package"},
+		{name: "another internal package", paths: []string{"internal/domain/gate/**"}, want: ""},
+		{name: "a package whose name starts like it", paths: []string{"internal/domain/proofs/**"}, want: ""},
+		{name: "the stored proofs", paths: []string{"proof/**"}, want: ""},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			problem := boundaryProblem([]fence.Rule{{Not: "a rule", Paths: c.paths}})
+			if c.want == "" {
+				if problem != "" {
+					t.Fatalf("a rule over %v was refused: %s", c.paths, problem)
+				}
+				return
 			}
+			if !strings.Contains(problem, c.want) {
+				t.Fatalf("a rule over %v was not refused with %q: %q", c.paths, c.want, problem)
+			}
+		})
+	}
+}
+
+// boundaryProblem names the rule that reaches into the package that writes the
+// proofs, or returns "" when none does. It asks the fence's own matcher instead of
+// reimplementing glob semantics: a rule written as internal/** covers the writer
+// just as surely as one that spells it out, and a hand-rolled prefix misses it.
+func boundaryProblem(rules []fence.Rule) string {
+	for _, rule := range rules {
+		if len(fence.Check([]fence.Rule{rule}, []string{"internal/domain/proof/proof.go"}, nil)) > 0 {
+			return "a fence rule is over the proof package again: " + strings.Join(rule.Paths, " ") + " in " + rule.Not
 		}
 	}
+	return ""
 }
