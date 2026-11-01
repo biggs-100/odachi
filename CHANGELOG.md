@@ -5,6 +5,27 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A block falls by evidence, and the quorum counts accounts.
+
+- **A finding declares its evidence.** `cited` when the reviewer quoted the line of the diff
+  that shows the defect, `argued` when it reasoned without one. The field is optional and
+  absence reads as argued, so every verdict written before this release keeps the strict
+  meaning, and an invented class is refused by name.
+- **The class decides the quorum.** A cited claim falls to one cited refutation; an argued one
+  needs two, and a `stands` or a `refuted` without a citation is never a vote to remove. Three
+  witnesses is the ceiling, because a block decided by a crowd is a block nobody can read.
+  **The quorum counts accounts, not files**: the store refuses a second answer from a refuter
+  that already answered this tree.
+- **Each answer keeps its own file.** The first is still `<tree>.refuted.json` and the next two
+  are numbered, so no stored answer is rewritten and a tree refuted before this release is read
+  as round 1. The gate names the votes a surviving block still needs, and the verdict schema
+  moved to 4.
+- Why: one refuter's citation lifted any block, and a claim nobody can point at was removed by
+  being confident. The review of this feature itself found a CRITICAL -the quorum counted files
+  instead of accounts- and three warnings, all paid before the close (ADR 0047).
+
 ## v0.11.92 - 2026-11-01
 
 A failed review says which model it asked and where that model came from.
