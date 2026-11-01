@@ -1,9 +1,9 @@
 # Next session: the block closes itself, and the one decision that waits
 
-Written at the close of 0151, on v0.11.87 plus two features. The chat is gone
+Written at the close of 0152, on v0.11.87 plus three features. The chat is gone
 tomorrow; this file is the state.
 
-## What the last eight features shipped
+## What the last nine features shipped
 
 - **0144 (v0.11.85)**: the review never authorises delivery. With `mode = on`, a close
   without a verdict is ready and names the review it did not get; only a causal
@@ -34,6 +34,9 @@ tomorrow; this file is the state.
   claim. `# covers` carries the requirements the feature declares; the close names one the
   proof does not declare and stays ready, because the line is the agent's and not the
   suite's. The README says it in those words.
+- **0152 (unreleased)**: the archtest that pins the fence boundary names the proof
+  package, not every rule over code, so a future non-goal about another package cannot
+  turn it red and blame the evidence. The debt of 0151 is closed.
 
 ## What is open
 
