@@ -1,25 +1,23 @@
-# Next session: a block falls by evidence
+# Next session: a second reading is not a second opinion
 
-Written at the close of 0160, on v0.11.92. The chat is gone tomorrow; this file is
+Written at the close of 0161, on v0.11.93. The chat is gone tomorrow; this file is
 the state.
 
-## What 0160 shipped
+## What 0161 shipped
 
-- **A finding declares its evidence: cited or argued.** `cited` means the reviewer quoted the
-  line of the diff that shows the defect; `argued` means it reasoned without one. The field is
-  optional and **absence reads as argued**, so every verdict written before this release keeps
-  the strict meaning, and an invented class is refused by name.
-- **The class decides the quorum.** A cited finding falls to one cited refutation; an argued one
-  needs two; a `stands` is never a vote to remove, and `refuted` without a citation is no vote
-  at all. Three witnesses is the ceiling, because a block decided by a crowd is a block nobody
-  can read.
-- **Each answer keeps its own file.** The first is still `<tree>.refuted.json`; the next two are
-  numbered. No stored answer is rewritten -0044's promise about evidence applies to refutations
-  too- and a tree refuted before the numbering is still read as round 1.
-- **The gate says how many it has**: the finding's id, the cited refutations it has and the ones
-  it needs. The verdict schema moved to 4, so an older binary says "upgrade" instead of "unknown
-  key". ADR 0047 names the rule and its limit: the class is the reviewer's account, and the tool
-  cannot verify that a citation quotes the line it names.
+- **The identity is the model, not its setting.** The gate compared the whole model string, so
+  `provider/name#high` and `provider/name` read as two judges -and a review by the same model at
+  another effort passed as a second opinion it never was. `ModelIdentity` cuts the variant and
+  the case, and the sentence a human reads names the effort each side ran with.
+- **A self-review is named, not refused, by default.** It already was -every review refusal but
+  a causal finding is softened (0043)- and nothing pinned it; there is a test now, and the
+  sentence says what it is: *a second reading, not a second opinion*. `--require-review` still
+  refuses.
+- **A waiver is a decision on the document.** `odachi review waive --because "<why>"` writes
+  `Review: waived` into the current feature's task doc and the reason into its history, through
+  the same write guard as the other verbs. No reason, no waiver; the proof and the fence stay.
+- ADR 0048 says why: the lane exists for a project that owns one model, and the strong guarantee
+  is something a project asks for instead of something the default decides.
 
 ## What is open
 
@@ -28,13 +26,16 @@ the state.
 
 ## What is measured, so nobody re-measures it
 
-- `doctor` on this tree: fourteen checks, no problems. v0.11.92 is installed and one binary is
+- `doctor` on this tree: fourteen checks, no problems. v0.11.93 is installed and one binary is
   in the PATH (`%LOCALAPPDATA%\odachi\bin`).
 - `check --run` needs `--timeout 400` for this suite on this machine.
 - `opencode run` as `--exec` still stalls to the 600s timeout here: the review path that works
   is `review --base <sha>` into `.git/odachi/scratch/`, a subagent answers it with a model that
   is not the proof's, and `review --base <sha> --attach <answer.json>` files the verdict.
 - `bench`: 11 journeys and 29 steps, no dead ends.
+- Cost, measured 2026-11 for the reviewer: `mimo-v2.6-flash` 0.14/0.28 per million tokens,
+  `deepseek-v4.1-flash` 0.15/0.60, `mimo-v2.6-pro` 0.435/0.87. The project configures the first
+  for the four lenses.
 
 ## What is already true, so it is not re-decided
 

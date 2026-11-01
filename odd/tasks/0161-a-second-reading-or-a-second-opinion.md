@@ -11,10 +11,10 @@ R1 · "the gate names when the verdict came from the model that wrote the proof 
 - an ADR says why the rule names instead of refusing, and what a second reading with the same model does and does not buy
 
 ## Steps
-- [ ] T1 · the comparison ignores the variant, so the same model at another effort is still the same model   R1
-- [ ] T2 · a verdict from the builder's model is named by default and refused only when another model is asked for   R1
-- [ ] T3 · a human can waive an open feature's review with its reason, and check says so   R1
-- [ ] T4 · the ADR says what a second reading buys and what it does not   R1
+- [x] T1 · the comparison ignores the variant, so the same model at another effort is still the same model   R1 · tree:3b317b26febbfcfdcbfaf8dcc4e5905088b78ec4
+- [x] T2 · a verdict from the builder's model is named by default and refused only when another model is asked for   R1 · tree:2e4da3a63a69269a0c50fb82c47a3121ef627f71
+- [x] T3 · a human can waive an open feature's review with its reason, and check says so   R1 · tree:1ce27292924defea06d63283211c068a146a2e3e
+- [x] T4 · the ADR says what a second reading buys and what it does not   R1 · tree:7d1a234548b09fc3d34cbdf24f96bce640377581
 
 ## History
 L1 · "the gate names when the verdict came from the model that wrote the proof instead of refusing it by default, refuses only when the run asks for another model, and a human who owns one model can record that decision on an open feature, with its reason"
