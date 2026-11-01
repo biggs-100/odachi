@@ -9,7 +9,7 @@ R1 · "the ledger names what the reviews of 0154 and 0155 left and pays what it 
 - a change under design/ is documentation: it asks for no lens, and a test says so
 
 ## Steps
-- [ ] T1 · the origin test asserts on a canvas that is alive, and its row is closed   R1
+- [x] T1 · the origin test asserts on a canvas that is alive, and its row is closed   R1 · tree:d81e95a652a88224ed3f386149832192ebb6ab68
 - [x] T2 · a change under design/ is documentation, and a test says so   R1 · tree:878644d1e9992a719881712406958e738ef0c543
 
 ## History

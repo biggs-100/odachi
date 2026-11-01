@@ -1,6 +1,6 @@
 # Next session: the design surface is closed, and the canvas is one command
 
-Written at the close of 0155, on v0.11.89 plus the design surface. The chat is gone tomorrow; this file is
+Written at the close of 0156, on v0.11.90. The chat is gone tomorrow; this file is
 the state.
 
 ## What the last ten features shipped
@@ -53,6 +53,9 @@ the state.
   it did not find and loses no comment, an unset date is null, an address that cannot be
   recorded stops the server, and the watcher names every file that moved, and a dead canvas is forgotten instead of blocking stop. The branch carries
   both proofs and both verdicts; the PR is the next step.
+- **0156 is closed**: a design folder is a document, so a mockup asks for no code review, and the
+  ledger names what the reviews of 0154 and 0155 left. The one row that survived -a test asking a
+  canvas it may have stopped- is closed with it.
 - The queue in this file is unchanged: the step declares its route, a change resumable from
   the diff needs no document, and a step done without a commit is a step nobody can find.
 - `docs/review-debt.md` has no open rows, and `odd/tasks` has no open questions.
