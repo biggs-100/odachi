@@ -9,8 +9,8 @@ R1 · "the CI gate stops asking to be excused from the review: the base ref it i
 - the changelog says the flag left once the base ref could read the new rule
 
 ## Steps
-- [ ] T1 · the workflow runs check without --no-review and every closing pull request says so   R1
-- [ ] T2 · the changelog says the flag left once the base ref could read the new rule   R1
+- [x] T1 · the workflow runs check without --no-review and every closing pull request says so   R1 · tree:dee4551a7bac92047cb59bbebf812b82be2af6bf
+- [x] T2 · the changelog says the flag left once the base ref could read the new rule   R1
 
 ## History
 L1 · "the CI gate stops asking to be excused from the review: the base ref it is built from names the review instead of refusing the tree"
