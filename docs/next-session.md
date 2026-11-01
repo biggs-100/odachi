@@ -1,9 +1,9 @@
 # Next session: the block closes itself, and the one decision that waits
 
-Written at the close of 0152, on v0.11.87 plus three features. The chat is gone
+Written at the close of 0153, released as v0.11.88 plus one feature. The chat is gone
 tomorrow; this file is the state.
 
-## What the last nine features shipped
+## What the last ten features shipped
 
 - **0144 (v0.11.85)**: the review never authorises delivery. With `mode = on`, a close
   without a verdict is ready and names the review it did not get; only a causal
@@ -37,6 +37,12 @@ tomorrow; this file is the state.
 - **0152 (unreleased)**: the archtest that pins the fence boundary names the proof
   package, not every rule over code, so a future non-goal about another package cannot
   turn it red and blame the evidence. The debt of 0151 is closed.
+- **0153 (unreleased)**: the README stops naming a version that ages and declares the
+  proof lifetime. Two paragraphs and the cosign example carried v0.11.40; they now point
+  at the releases page and at the tag you downloaded, because a number in prose is a
+  claim nobody measures.
+  This is the first close after the rule: the field in the proof says `# covers R1`, so the
+  note that used to name R1 is gone.
 
 ## What is open
 

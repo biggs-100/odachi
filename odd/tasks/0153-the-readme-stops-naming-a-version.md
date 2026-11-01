@@ -10,10 +10,10 @@ R1 · "the README stops naming a version that ages, points at where the truth li
 - the changelog says so
 
 ## Steps
-- [ ] T1 · the release paragraph points at where the version lives   R1
-- [ ] T2 · the cosign example does not pin a tag   R1
-- [ ] T3 · the README declares the proof lifetime   R1
-- [ ] T4 · the changelog says so   R1
+- [x] T1 · the release paragraph points at where the version lives   R1 · tree:98f4da0460a1e5c0582bc4dea762e2139a274baa
+- [x] T2 · the cosign example does not pin a tag   R1 · tree:feacc317ed15b463465b72bab56922a7f6027005
+- [x] T3 · the README declares the proof lifetime   R1 · tree:25188adc79ef65e78e6a96562e022bb6248062a5
+- [x] T4 · the changelog says so   R1 · tree:6e86870baa0140379640d7e98c999d02eab39a00
 
 ## History
 L1 · "the README stops naming a version that ages, points at where the truth lives, and says what a proof is and who keeps it"
