@@ -4,8 +4,8 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# "no network" and "no change to the severity vocabulary" are decisions about what
-# the binary does, not files: the brief carries them and no glob can measure them.
+# "no network" and "the waiver is not a per-run flag" are decisions about what the
+# binary does, not files: the brief carries them and no glob can measure them.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"
@@ -13,6 +13,6 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "the four lens prompts are not edited; the class is asked in the answer"
+not   = "the four lens prompts are not edited; this feature is about who judges"
 paths = ["internal/assets/review/**"]
 deps  = []
