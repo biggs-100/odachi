@@ -66,9 +66,11 @@ without a key, with the identity of the workflow that pushed the tag. `v0.11.11`
 and later carry the bundle; use the version you downloaded.
 
 ```sh
+# replace <tag> with the tag you downloaded: the certificate names that tag,
+# so a signature copied from another release fails
 cosign verify-blob \
   --bundle checksums.txt.sigstore.json \
-  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/v0.11.40' \
+  --certificate-identity 'https://github.com/biggs-100/odachi/.github/workflows/release.yml@refs/tags/<tag>' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   checksums.txt
 ```
