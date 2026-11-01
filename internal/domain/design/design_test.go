@@ -120,7 +120,7 @@ func TestResolveKeepsTheHistoryAndNamesWhatItDidNotFind(t *testing.T) {
 	if len(after.Comments) != 2 {
 		t.Fatalf("resolving dropped entries: %d", len(after.Comments))
 	}
-	if after.Comments[0].Status != design.StatusResolved || after.Comments[0].ResolvedAt == "" {
+	if after.Comments[0].Status != design.StatusResolved || after.Comments[0].ResolvedAt == nil || *after.Comments[0].ResolvedAt == "" {
 		t.Errorf("the comment was not resolved: %+v", after.Comments[0])
 	}
 	if after.Comments[1].Status != design.StatusOpen {
@@ -131,5 +131,40 @@ func TestResolveKeepsTheHistoryAndNamesWhatItDidNotFind(t *testing.T) {
 	}
 	if len(after.Open()) != 1 {
 		t.Errorf("open after resolve = %d, want 1", len(after.Open()))
+	}
+}
+
+// The file the writer emits parses back to what it wrote, and an unset date is null
+// -the shape the skill documents and the fixture carries- not an empty string.
+func TestTheCommentsFileRoundTrips(t *testing.T) {
+	got, err := design.ParseComments([]byte(commentsFixture))
+	if err != nil {
+		t.Fatalf("ParseComments: %v", err)
+	}
+
+	rendered := string(design.RenderComments(got))
+	if !strings.Contains(rendered, `"sentAt": null`) || !strings.Contains(rendered, `"resolvedAt": null`) {
+		t.Fatalf("an unset date is not null:\n%s", rendered)
+	}
+
+	again, err := design.ParseComments([]byte(rendered))
+	if err != nil {
+		t.Fatalf("ParseComments(Render): %v", err)
+	}
+	if len(again.Comments) != len(got.Comments) {
+		t.Fatalf("round trip lost comments: %d vs %d", len(again.Comments), len(got.Comments))
+	}
+	if again.Comments[0].ID != got.Comments[0].ID || again.Comments[0].Status != got.Comments[0].Status || again.Comments[0].Screenshot != got.Comments[0].Screenshot {
+		t.Fatalf("round trip changed a comment: %+v vs %+v", again.Comments[0], got.Comments[0])
+	}
+
+	// A resolved comment carries the moment, and survives the same trip.
+	resolved, _ := got.Resolve([]string{"k3x9p2ab"}, "2026-11-01T00:00:00.000Z")
+	back, err := design.ParseComments(design.RenderComments(resolved))
+	if err != nil {
+		t.Fatalf("ParseComments(Render(resolved)): %v", err)
+	}
+	if back.Comments[0].ResolvedAt == nil || *back.Comments[0].ResolvedAt != "2026-11-01T00:00:00.000Z" {
+		t.Fatalf("the resolution did not survive: %+v", back.Comments[0])
 	}
 }

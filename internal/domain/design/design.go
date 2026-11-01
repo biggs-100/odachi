@@ -58,8 +58,8 @@ type Comment struct {
 	Screenshot string `json:"screenshot,omitempty"`
 	CreatedAt  string `json:"createdAt"`
 	Status     string `json:"status"`
-	SentAt     string `json:"sentAt"`
-	ResolvedAt string `json:"resolvedAt"`
+	SentAt     *string `json:"sentAt"`
+	ResolvedAt *string `json:"resolvedAt"`
 }
 
 // Comments is design/<slug>/comments.json.
@@ -201,7 +201,8 @@ func (c Comments) Resolve(ids []string, at string) (Comments, []string) {
 		}
 		found[comment.ID] = true
 		out.Comments[i].Status = StatusResolved
-		out.Comments[i].ResolvedAt = at
+		resolved := at
+		out.Comments[i].ResolvedAt = &resolved
 	}
 
 	missing := make([]string, 0, len(wanted))
