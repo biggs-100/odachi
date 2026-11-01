@@ -10,6 +10,8 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the bundled skills"
-paths = ["skills/**"]
+not   = "the bundled skills that ship today are not edited; a new one is its own feature"
+paths = [
+"skills/acceptance/**", "skills/bootstrap/**", "skills/commits/**", "skills/data/**", "skills/drive/**", "skills/go-tests/**", "skills/pull-request/**", "skills/role-craft/**", "skills/shape/**", "skills/ship/**", "skills/skill-craft/**", "skills/skill-improve/**", "skills/slices/**", "skills/tests/**", "skills/triage/**", "skills/writing/**"
+]
 deps  = []
