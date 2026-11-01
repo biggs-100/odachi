@@ -5,7 +5,7 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.88 - 2026-10-31
 
 A proof says what it claims to cover, and the close reads the claim as a claim.
 
