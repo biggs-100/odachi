@@ -62,7 +62,10 @@ func TestOneAccountIsOneWitness(t *testing.T) {
 		t.Errorf("one account lifted an argued block by answering twice: DeriveAfter = %q", got)
 	}
 
-	unnamed := review.Answers{refutedBy("first"), refutedBy("second")}
+	unnamed := review.Answers{
+		{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "first"}}},
+		{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "second"}}},
+	}
 	if got := review.DeriveAfter(findings, unnamed); got != review.ChangesRequested {
 		t.Errorf("two unnamed answers were counted as two accounts: DeriveAfter = %q", got)
 	}
