@@ -1,7 +1,7 @@
-# Next session: the block closes itself, and the one decision that waits
+# Next session: the design surface is open at the canvas
 
-Written at the close of 0153, on v0.11.88 plus one feature not yet released. The chat is gone
-tomorrow; this file is the state.
+Written at the pause of 0154, on v0.11.89. The feature is open: four of seven steps.
+The chat is gone tomorrow; this file is the state.
 
 ## What the last ten features shipped
 
@@ -46,8 +46,20 @@ tomorrow; this file is the state.
 
 ## What is open
 
+- **0154 is open on `feat/the-design-surface`, four commits, unpushed.** T1 to T4 are done:
+  the fence names the sixteen skills so a new one is a feature; `internal/domain/design` holds
+  the manifest and the comments formats; `odachi design list` and `odachi design comments`
+  let any agent drive the folder from a shell; `skills/design/SKILL.md` ships in the binary
+  and travels through `pack` and `setup`.
+- **T5, the canvas, is the piece that is missing**: `odachi design open` serving the artboards
+  from a local server, writing `comments.json`, with the human clicking an element. It is the
+  first server the binary would carry -embedded assets, SSE, a lock in the clone's store- and
+  it deserves its own review.
+- **T6 and T7 are written as instructions in the skill**: the design system sync reads the
+  project sources and never edits them, and the handoff names the chosen artboard. What is
+  missing is the command that scans the sources.
 - `docs/review-debt.md` has no open rows, and `odd/tasks` has no open questions.
-- Nothing: both features closed with their proof and their verdict.
+- The one decision that still waits, unchanged: CI cannot enforce the review (ADR 0042).
 
 ## What is measured, so nobody re-measures it
 
