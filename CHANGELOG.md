@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## v0.11.95 - 2026-11-01
+
+The lenses name four defects they were missing.
+
+- **reliability** names a focused or skipped test -`.only`, a disabled sibling- that makes CI
+  pass by shrinking the suite, and a test that proves one function through a whole flow, which
+  costs more than the behaviour it proves.
+- **resilience** asks for a threshold the project chose -without a number, "it is fine" is a
+  guess- and for something in production that would show an expected failure.
+- **readability** names behaviour the diff changes and the brief never asked for.
+- Why: the comparison with gentle-ai's lenses found five defects in four prompts; each landed
+  with a test observed red first, no number was borrowed from another project, and the review's
+  own engine stayed fenced out of the change. The fence that used to protect the four prompts
+  now protects the engine, and it landed alone before the feature (policy PR #248) because CI
+  reads the fence from the base ref.
+
 ## v0.11.94 - 2026-11-01
 
 A second reading is not a second opinion.
@@ -1806,6 +1822,7 @@ Listo en un comando, y el agente sabe manejarlo.
 
 - Primera versión que se instala: `start`, `ask`, `level`, `summary`, `check`, `init`,
   `--version`, hook de pre-commit, instaladores `sh` y `ps1`, y seis binarios.
+
 
 
 
