@@ -15,7 +15,7 @@ type WaiveOptions struct {
 	Because string
 }
 
-// Waive records the human's decision that the open feature lands without a review
+// Waive records the human's decision that the current feature lands without a review
 // verdict: the preamble line the gate reads at the close, and a history line with
 // the reason.
 //

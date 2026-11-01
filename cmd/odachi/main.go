@@ -652,7 +652,7 @@ func hasFlag(args []string, name string) bool {
 	return false
 }
 
-// runReviewWaive records the human's decision that the open feature lands without
+// runReviewWaive records the human's decision that the current feature lands without
 // a review verdict, with the reason the gate reads at the close. It is the lane a
 // project with one model needs, and it is a decision on the document rather than a
 // flag that dies with the shell.
