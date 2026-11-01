@@ -11,11 +11,12 @@ R1 · "a proof may carry the requirements it claims to cover, a proof without th
 - the documentation says the line is a claim by the agent, not evidence the suite produced
 
 ## Steps
-- [ ] T1 · the boundary 0150 opened is pinned by a test   R1
-- [ ] T2 · a proof may carry a coverage line, and an old proof still proves its tree   R1
+- [x] T1 · the boundary 0150 opened is pinned by a test   R1 · tree:f16a2e42ae95a4da768fc4b017bc047484fdb229
+- [x] T2 · a proof may carry a coverage line, and an old proof still proves its tree   R1 · tree:984e0200accb67230030e2a2915350209b4e9eff
 - [ ] T3 · check --run writes the coverage of the feature it proves   R1
 - [ ] T4 · the close names a requirement the proof does not claim   R1
 - [ ] T5 · the docs say the line is a claim, not evidence   R1
 
 ## History
 L1 · "a proof may carry the requirements it claims to cover, a proof without that line stays valid, and the close names a requirement the proof does not cover"
+L2 · OFICIO · "T3 and T4 land in one commit: the line check --run writes and the close that reads it" (porque they are one behaviour seen from two sides, and splitting edits of the same file would leave the writer without its reader in the first commit)
