@@ -38,6 +38,12 @@ const (
 	// self-review visible: the verdict carries the model that judged, and the
 	// same name on both sides is one agent approving itself.
 	ModelHeader = "# model "
+	// CoversHeader names the requirements the run claims to prove. It is a claim
+	// by the agent that ran the command, not evidence the command produced: the
+	// suite does not know which requirement a test belongs to, and pretending it
+	// does would put a certificate on a guess. It is optional, and a proof written
+	// before it existed keeps proving its tree.
+	CoversHeader = "# covers "
 	// OutputHeader ends the headers. Everything after it is the command's
 	// output, so a first line that looks like a header stays in the quotation.
 	OutputHeader  = "# output"
@@ -62,7 +68,10 @@ type Proof struct {
 	Fence string
 	// Model is the model of the session that ran the command, empty when there
 	// was no agent to name (a human at a terminal, or CI).
-	Model  string
+	Model string
+	// Covers is what the run claims to prove: the requirements the closing
+	// feature declares. Empty is honest too, and an old proof reads as empty.
+	Covers []string
 	Output string
 }
 
@@ -78,6 +87,9 @@ func Render(p Proof) string {
 	}
 	if p.Model != "" {
 		out.WriteString(ModelHeader + p.Model + "\n")
+	}
+	if len(p.Covers) > 0 {
+		out.WriteString(CoversHeader + strings.Join(p.Covers, " ") + "\n")
 	}
 	out.WriteString(OutputHeader + "\n")
 	out.WriteString(p.Output)
@@ -142,13 +154,20 @@ func Parse(text string) (Proof, error) {
 	// proof a line that looks like one is part of the output — the old writer
 	// never wrote that header — and dropping it would corrupt the quotation.
 	model := ""
+	// The optional headers are consumed only when the next line is one the writer
+	// may follow them with: an old proof whose output begins with a header-looking
+	// line keeps its quotation, which is the reason the guard exists.
+	if line, rest, ok := cutLine(output); ok && strings.HasPrefix(line, ModelHeader) && modelLeadsToOutput(rest) {
+		model = strings.TrimSpace(strings.TrimPrefix(line, ModelHeader))
+		output = rest
+	}
+	covers := []string{}
+	if line, rest, ok := cutLine(output); ok && strings.HasPrefix(line, CoversHeader) && nextIsTheTerminator(rest) {
+		covers = strings.Fields(strings.TrimSpace(strings.TrimPrefix(line, CoversHeader)))
+		output = rest
+	}
 	if line, rest, ok := cutLine(output); ok && line == OutputHeader {
 		output = rest
-	} else if line, rest, ok := cutLine(output); ok && strings.HasPrefix(line, ModelHeader) {
-		if next, after, ok := cutLine(rest); ok && next == OutputHeader {
-			model = strings.TrimSpace(strings.TrimPrefix(line, ModelHeader))
-			output = after
-		}
 	}
 
 	return Proof{
@@ -156,8 +175,29 @@ func Parse(text string) (Proof, error) {
 		Command: strings.TrimSpace(strings.TrimPrefix(second, CommandHeader)),
 		Fence:   fence,
 		Model:   model,
+		Covers:  covers,
 		Output:  output,
 	}, nil
+}
+
+// nextIsTheTerminator answers whether the text starts with the line that ends the
+// headers: a coverage line is the last one the writer puts before it.
+func nextIsTheTerminator(text string) bool {
+	line, _, ok := cutLine(text)
+	return ok && line == OutputHeader
+}
+
+// modelLeadsToOutput answers whether the model line may be consumed: the writer
+// puts it before the coverage line or the terminator, and nothing else.
+func modelLeadsToOutput(text string) bool {
+	line, rest, ok := cutLine(text)
+	if !ok {
+		return false
+	}
+	if line == OutputHeader {
+		return true
+	}
+	return strings.HasPrefix(line, CoversHeader) && nextIsTheTerminator(rest)
 }
 
 // Matches reports whether the proof was produced from this exact tree. An empty

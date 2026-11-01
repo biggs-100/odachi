@@ -1,6 +1,7 @@
 package proof_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -34,6 +35,8 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 		{Tree: "4a1c9f", Command: "cat", Output: "\n\nleading and trailing blank lines\n\n"},
 		{Tree: "4a1c9f", Command: "go test ./...", Model: "provider/model#variant", Output: "ok\n"},
 		{Tree: "4a1c9f", Command: "go test ./...", Fence: "origin/main", Model: "provider/model", Output: "ok\n"},
+		{Tree: "4a1c9f", Command: "go test ./...", Model: "provider/model", Covers: []string{"R1", "R2"}, Output: "ok\n"},
+		{Tree: "4a1c9f", Command: "go test ./...", Covers: []string{"R1"}, Output: "ok\n"},
 	}
 
 	for _, want := range cases {
@@ -41,7 +44,8 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Parse(Render(%+v)): %v", want, err)
 		}
-		if got != want {
+		if got.Tree != want.Tree || got.Command != want.Command || got.Fence != want.Fence ||
+			got.Model != want.Model || got.Output != want.Output || !slices.Equal(got.Covers, want.Covers) {
 			t.Errorf("Parse(Render(x)) = %+v, want %+v", got, want)
 		}
 	}
