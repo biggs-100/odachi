@@ -79,6 +79,12 @@ One more, about scratch. The note you write while you work —a commit message, 
 request body, a plan— lives in ` + "`.git/odachi/scratch/`" + `, never in the tree and never
 loose in the git directory: the tree must stay clean, and a file with no folder is
 one nobody can find or empty again. ` + "`odachi clean --apply`" + ` empties that folder.
+
+One more, about closing. When the human says the session is over —"cerramos sesión",
+"seguimos mañana"— a project that keeps ` + "`docs/next-session.md`" + ` rewrites that file before
+the agent says it is closed: the newest feature, what was measured, and the decision that
+waits. The chat is gone tomorrow, and the file is what the next session reads; ` + "`odachi doctor`" + ` says
+when it went stale.
 `
 	headTail = `
 ## The six verbs
