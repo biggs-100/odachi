@@ -5,7 +5,7 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
-## Unreleased
+## v0.11.90 - 2026-11-01
 
 The design surface: any agent can design, and the person clicks to comment.
 
