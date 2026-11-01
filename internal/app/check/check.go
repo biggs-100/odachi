@@ -282,13 +282,6 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	// run stamps when it writes a new one.
 	r.proofModel = recorded.Model
 
-	// The close names what its proof does not declare to cover. The line is written
-	// by the agent that ran the command, so this is a note a reviewer can read, not
-	// a gate: blocking on it would give a claim the weight of a test.
-	if closedNow && feature != nil {
-		r.coverNote = coverageNote(feature.Doc, recorded.Covers)
-	}
-
 	if opts.Run != "" {
 		ran, problem := r.runProof(proofPath)
 		if problem != nil {
@@ -303,6 +296,19 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		state.ProofCommand = opts.Run
 		r.proofModel = opts.Model
 		haveProof = haveProof || (!ran.failed && !ran.timedOut)
+		// A run that passed just wrote the proof that now stands, and it is the one
+		// the close has to read: the copy read off disk describes the tree before it.
+		if !ran.failed && !ran.timedOut {
+			recorded.Covers = requirementIDs(feature)
+		}
+	}
+
+	// The close names what its proof does not declare to cover. The line is written
+	// by the agent that ran the command, so this is a note a reviewer can read, not
+	// a gate: blocking on it would give a claim the weight of a test. It reads the
+	// proof that stands now, never the one this run replaced.
+	if closedNow && feature != nil {
+		r.coverNote = coverageNote(feature.Doc, recorded.Covers)
 	}
 
 	// One read of what moved between the proof and this tree. The note a block

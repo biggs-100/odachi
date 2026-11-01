@@ -51,6 +51,44 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 	}
 }
 
+// The guards that keep an old proof's quotation intact: a line that looks like a
+// header is consumed only when the one after it is a header the writer may put
+// there. Without this, a proof written before the field existed would lose its
+// first output line to the parser.
+func TestAHeaderLookingLineStaysInTheOutputWhenNoTerminatorFollows(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want string
+	}{
+		{
+			name: "covers without a terminator",
+			text: "# tree 4a1c9f\n# command go test ./...\n# covers R1\nnot a terminator\n",
+			want: "# covers R1\nnot a terminator\n",
+		},
+		{
+			name: "model without a terminator",
+			text: "# tree 4a1c9f\n# command go test ./...\n# model provider/model\nlooks like a header\n",
+			want: "# model provider/model\nlooks like a header\n",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := proof.Parse(c.text)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.Output != c.want {
+				t.Fatalf("Output = %q, want %q", got.Output, c.want)
+			}
+			if len(got.Covers) != 0 || got.Model != "" {
+				t.Fatalf("a line that is not a header was consumed: covers=%v model=%q", got.Covers, got.Model)
+			}
+		})
+	}
+}
+
 // A command whose first line looks like a header keeps that line: the output
 // terminator is what makes the quotation verbatim.
 func TestAnOutputStartingWithAHeaderStaysInTheQuotation(t *testing.T) {

@@ -391,6 +391,31 @@ func TestEveryRequirementPlannedCloses(t *testing.T) {
 	}
 }
 
+// TestACloseThatJustRanTheCommandReadsTheProofItWrote: the note describes the proof
+// that stands, not the one this run replaced. A first close whose run writes covers
+// for every requirement says nothing, and a note computed from the empty proof it
+// replaced would contradict the file it just wrote.
+func TestACloseThatJustRanTheCommandReadsTheProofItWrote(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(twoRequirementDoc(
+		taskdoc.Step{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: "abc1234"},
+		taskdoc.Step{ID: "T2", Text: "cancelar un turno", Requirement: "R2", Done: true, Commit: "def5678"},
+	))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45},
+		files, &fakeGit{tree: currentTree}, &fakeShell{output: "ok\n"})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a green run on the closing tree is ready, got %d: %s", got.Code, got.Message)
+	}
+	for _, line := range got.Lines {
+		if strings.Contains(line, "does not declare") {
+			t.Fatalf("the note contradicts the proof this run wrote: %v", got.Lines)
+		}
+	}
+}
+
 // TestACloseNamesTheRequirementItsProofDoesNotDeclare: the proof claims R1 and the
 // feature declares R1 and R2. The close says so and stays ready: the line is the
 // agent's claim, and giving a claim the weight of a test is the illusion this gate
