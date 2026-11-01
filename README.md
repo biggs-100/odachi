@@ -30,14 +30,16 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 odachi --version
 ```
 
-Those three lines work. The latest release is `v0.11.40`: six binaries (Linux,
-macOS and Windows, amd64 and arm64) and a `checksums.txt`. The installer resolves
-the latest version through the API, verifies the sha256 and only then writes; a
-checksum that does not match exits with an error and leaves **nothing** at the
-destination. The whole chain is tested against the real release, not a fixture: a
-test builds the `tar.gz` and the checksums the way goreleaser publishes them,
-runs `install.sh` offline through `file://`, and the installed binary answers its
-version.
+Those three lines work. Each release carries six binaries (Linux, macOS and Windows,
+amd64 and arm64), a `checksums.txt`, an SBOM and a provenance attestation. The
+releases page names the newest one, and the installer resolves it through the API
+instead of trusting a number written here -a version in prose is a claim nobody
+measures, and this file had one that aged for forty-eight releases. The installer
+verifies the sha256 and only then writes; a checksum that does not match exits with
+an error and leaves **nothing** at the destination. The whole chain is tested
+against the real release, not a fixture: a test builds the `tar.gz` and the
+checksums the way goreleaser publishes them, runs `install.sh` offline through
+`file://`, and the installed binary answers its version.
 
 The installer also runs `odachi setup`: the bootstrap skill in
 `~/.agents/skills`, the home door for the agent clients it finds, and OpenCode's
@@ -593,8 +595,10 @@ Pure domain in `internal/domain/...` with an import guard, adapters in
 `skills`, `skill new`, `role`, `pack` and `--version`. 44 packages, green on Linux, macOS and
 Windows —ubuntu repeats the internal suite with the race detector—.
 
-Published: `v0.11.40`. What changed in each version is in
-[CHANGELOG.md](CHANGELOG.md). The one-line installation is tested against the
+Published releases and what changed in each one: [CHANGELOG.md](CHANGELOG.md) and the
+releases page. This file does not name the newest: a number here is a claim nobody
+measures, and it had one that aged for forty-eight releases. The one-line
+installation is tested against the
 real release, not a fixture. `install.ps1` was verified by hand on Windows with
 the published release: there is no automated test because it would need an HTTP
 listener in CI.
