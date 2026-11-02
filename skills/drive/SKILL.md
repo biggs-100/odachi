@@ -31,9 +31,7 @@ The feature cycle, in order:
 7. At the end, `odachi summary` and tell in three lines what the human decided.
 
 If the request does not fit in one reading -you cannot say what must exist or what it must not touch- load `shape` before `start`: it ends in `odachi start --brief`.
-Once the work is understood, load `slices` before splitting; its policy wins over other global skills: a writer only for real parallelism or a long session, never for size.
-
-A change that fits one line opens with `odachi start --light "<requirement>"`: one quoted requirement, one step with the same words, no brief, and the project's fence and voice untouched. The lane is for a change whose whole story is the diff. A second step, a vision decision, or anything the fence protects is the signal you left it: write a brief and open the feature again.
+Once the work is understood, load `slices` before splitting; its policy wins over other global skills: a writer only for real parallelism or a long session, never for size. A change that fits one line opens with `odachi start --light "<requirement>"`: one quoted requirement, one step with the same words, no brief, and the project's fence and voice untouched. The lane is for a change whose whole story is the diff. A second step, a vision decision, or anything the fence protects is the signal you left it: write a brief and open the feature again.
 
 ## Specs, test-first and risk
 
