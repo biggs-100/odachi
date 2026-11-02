@@ -62,6 +62,9 @@ type Options struct {
 	Collect bool
 	// File keeps one artifact: brief | profile | fence | task.
 	File string
+	// Artifact names one document: the path `--list` prints, or its bare file
+	// name. It is what makes a project with several task documents answerable.
+	Artifact string
 }
 
 // Files is the disk port: enough to find the backups, learn when they were
@@ -130,8 +133,8 @@ func Collect(project, store string, files Files) Result {
 // run does the work once the lock is held.
 func run(opts Options, files Files) Result {
 	if opts.Collect {
-		if opts.List || opts.File != "" {
-			return blocked("--collect moves every old backup at once: it does not go with --list or --file")
+		if opts.List || opts.File != "" || strings.TrimSpace(opts.Artifact) != "" {
+			return blocked("--collect moves every old backup at once: it does not go with --list, --file or --artifact")
 		}
 		if opts.Store == "" {
 			return blocked("--collect moves versions into the clone's store, and this folder is not a git repository; run it inside one")
@@ -142,6 +145,16 @@ func run(opts Options, files Files) Result {
 	kind, problem := parseFile(opts.File)
 	if problem != "" {
 		return blocked(problem)
+	}
+
+	artifact := normalizeArtifact(opts.Artifact)
+	// --file and --artifact are two ways of naming one document: asking for the
+	// brief and naming a task is a contradiction, not a filter that finds nothing.
+	if artifact != "" && kind != "" {
+		if named, ok := undodomain.KindOf(artifact); ok && named != kind {
+			return blocked(fmt.Sprintf("--artifact %s is a %s, and this run asked for %s: drop --file or name a %s",
+				artifact, named, kind, kind))
+		}
 	}
 
 	kinds := undodomain.Kinds()
@@ -158,10 +171,50 @@ func run(opts Options, files Files) Result {
 	if len(found) == 0 {
 		return blocked(nothingToUndo(kind))
 	}
+	if artifact != "" {
+		named := ofArtifact(found, artifact)
+		if len(named) == 0 {
+			return blocked(noVersionOf(artifact, found))
+		}
+		found = named
+	}
 	if opts.List {
 		return listing(found)
 	}
 	return restore(opts.Dir, found, files)
+}
+
+// normalizeArtifact reads --artifact the way a human writes it: a path relative
+// to the project, with either separator, or the bare file name.
+func normalizeArtifact(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	return path.Clean(filepath.ToSlash(value))
+}
+
+// ofArtifact keeps the backups of the one document the run names.
+func ofArtifact(found []undodomain.Backup, artifact string) []undodomain.Backup {
+	kept := make([]undodomain.Backup, 0, 1)
+	for _, candidate := range found {
+		if candidate.Artifact == artifact || path.Base(candidate.Artifact) == artifact {
+			kept = append(kept, candidate)
+		}
+	}
+	return kept
+}
+
+// noVersionOf names the documents that do have a backup, so naming the wrong one
+// is one editable line and not a mystery.
+func noVersionOf(artifact string, found []undodomain.Backup) string {
+	groups := undodomain.Groups(found)
+	named := make([]string, 0, len(groups))
+	for _, group := range groups {
+		named = append(named, group.Artifact)
+	}
+	return fmt.Sprintf("there is no backup of %s; the documents I can put back are %s",
+		artifact, joined(named))
 }
 
 // parseFile reads --file. An empty value means "any artifact"; a value outside

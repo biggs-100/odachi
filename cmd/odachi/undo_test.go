@@ -181,6 +181,34 @@ func TestUndoRestoresTheLastArtifactOdachiWrote(t *testing.T) {
 	}
 }
 
+// TestUndoArtifactRestoresTheDocumentItNames: a project with several task
+// documents is answerable when the run says which one, and the document comes
+// back exactly as odachi last wrote it.
+func TestUndoArtifactRestoresTheDocumentItNames(t *testing.T) {
+	t.Parallel()
+	dir, taskPath := startedProject(t)
+	initRepo(t, dir)
+	before := readRel(t, dir, taskPath)
+
+	if code, _, stderr := runDir(t, dir, []string{"plan", "un paso", "--req", "R1"}, ""); code != 0 {
+		t.Fatalf("plan: exit %d, stderr=%s", code, stderr)
+	}
+	if after := readRel(t, dir, taskPath); after == before {
+		t.Fatal("plan did not change the document, so there is nothing to undo")
+	}
+
+	code, stdout, stderr := runDir(t, dir, []string{"undo", "--artifact", taskPath}, "")
+	if code != 0 {
+		t.Fatalf("undo --artifact: exit %d, stderr=%s", code, stderr)
+	}
+	if !strings.Contains(stdout, taskPath) {
+		t.Errorf("stdout %q does not name the document it restored", stdout)
+	}
+	if got := readRel(t, dir, taskPath); got != before {
+		t.Errorf("the document was not restored:\n%s", got)
+	}
+}
+
 // TestUndoCollectMovesLegacyBackups: the migration command is the bridge for a
 // project that already has backups beside its artifacts.
 func TestUndoCollectMovesLegacyBackups(t *testing.T) {
