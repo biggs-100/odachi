@@ -1,6 +1,7 @@
 package review_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -75,5 +76,28 @@ R1 · "a change that fits one line is written as one line"
 	}
 	if strings.Contains(result.Prompt, "a change that fits one line is written as one line") {
 		t.Errorf("the prompt carries the task document instead of the brief:\n%s", result.Prompt)
+	}
+}
+
+// TestATaskDocumentThatCannotBeReadIsNamed: a failed read is not an absence. The
+// review says which document it could not read instead of falling back to a brief
+// it did not judge this feature against.
+func TestATaskDocumentThatCannotBeReadIsNamed(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0167-three-tests-pin.md")] = []byte(lightDocument)
+	p.files.failRead = func(path string) error {
+		if strings.HasSuffix(path, "0167-three-tests-pin.md") {
+			return errors.New("access denied")
+		}
+		return nil
+	}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want %d (%s)", result.Code, review.CodeBlocked, result.Message)
+	}
+	if !strings.Contains(result.Message, "0167-three-tests-pin.md") {
+		t.Errorf("message %q does not name the document that could not be read", result.Message)
 	}
 }

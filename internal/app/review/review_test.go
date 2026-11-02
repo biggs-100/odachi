@@ -64,6 +64,9 @@ type fakeFiles struct {
 	// failList counts and can fail a listing, so a test can reach the drop of the
 	// refused answers without breaking the read of the potent rows before it.
 	failList func(dir string) error
+	// failRead fails Read for one path only, so a test can reach a document that
+	// exists and cannot be read without breaking everything else the run reads.
+	failRead func(path string) error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -98,6 +101,11 @@ func (f *fakeFiles) Exists(path string) (bool, error) {
 func (f *fakeFiles) Read(path string) ([]byte, error) {
 	if f.err != nil {
 		return nil, f.err
+	}
+	if f.failRead != nil {
+		if err := f.failRead(path); err != nil {
+			return nil, err
+		}
 	}
 	data, ok := f.files[path]
 	if !ok {
