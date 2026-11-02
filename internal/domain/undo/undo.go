@@ -202,12 +202,25 @@ func OfKind(backups []Backup, kind Kind) []Backup {
 // KindOf reports which artifact a project-relative path is, when it is one. It
 // is how `--file brief --artifact odd/tasks/…` is refused as a contradiction
 // instead of quietly finding nothing.
+//
+// A bare name is also a name: it is what `--list` prints and what a human types,
+// so it is resolved against the four kinds when it carries no directory. A path
+// with a directory that is none of theirs is not an artifact, however it ends.
 func KindOf(artifact string) (Kind, bool) {
 	for _, kind := range Kinds() {
 		if path.Dir(artifact) != kind.Dir() {
 			continue
 		}
 		if _, ok := kind.Artifact(path.Base(artifact)); ok {
+			return kind, true
+		}
+	}
+
+	if strings.Contains(artifact, "/") {
+		return "", false
+	}
+	for _, kind := range Kinds() {
+		if _, ok := kind.Artifact(artifact); ok {
 			return kind, true
 		}
 	}
