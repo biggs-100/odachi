@@ -41,6 +41,7 @@ Once the work is understood, load `slices` before splitting; its policy wins ove
 - Close the commit with the `Risk:` line from `commits`: its table names the lens and the verifier, and a risk allows no waiver.
 
 The verbs: `start` interviews · `ask` asks or records a craft decision (`--craft`) · `plan` opens and closes steps · `check` gates and proof · `review` verdict per tree · `doctor` health without writing · `level` profile · `summary` state · `undo` undoes the last write · `init`, `skills`, `skill new` and `pack` are installation; `--version` touches nothing.
+`docs/releases.md`: a release is a tag for a person's change, never for a test alone.
 
 ## What a block means
 
