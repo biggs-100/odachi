@@ -37,6 +37,9 @@ type Options struct {
 	Requirement string
 	// Done is the T id to mark as done.
 	Done string
+	// Route is who runs the new step: inline, delegated, or empty when nobody
+	// declared it. Agent names the other agent, and only exists with delegated.
+	Route, Agent string
 	// Commit is the commit that closed the step; it only makes sense with Done.
 	Commit string
 	// Git answers the two trees the done form compares. It is optional: without
@@ -83,7 +86,7 @@ const (
 
 // usage is the one-line reminder of the two shapes, repeated in errors because
 // a blocked message must name the command that unblocks it.
-const usage = `odachi plan "<text>" [--req R1] · odachi plan --done T2 [--commit abc1234]`
+const usage = `odachi plan "<text>" [--req R1] [--route inline | --route delegated --agent <name>] · odachi plan --done T2 [--commit abc1234]`
 
 // Run performs one `odachi plan`.
 func Run(opts Options, files Files) Result {
@@ -114,10 +117,14 @@ func validate(opts Options) (string, string) {
 	done := strings.TrimSpace(opts.Done)
 	requirement := strings.TrimSpace(opts.Requirement)
 	commit := strings.TrimSpace(opts.Commit)
+	route := strings.TrimSpace(opts.Route)
+	agent := strings.TrimSpace(opts.Agent)
 
 	switch {
 	case done == "" && commit != "":
 		return "", `--commit only goes with a step you are marking: run odachi plan --done T2 --commit <sha>`
+	case done != "" && (route != "" || agent != ""):
+		return "", `--route and --agent describe a step you open, and this run closes one: run odachi plan "<text>" --route ` + routeAndAgent(route, agent)
 	case text != "" && done != "":
 		return "", "use one form of odachi plan at a time: " + usage
 	case done != "" && requirement != "":
@@ -130,10 +137,22 @@ func validate(opts Options) (string, string) {
 	return formAdd, ""
 }
 
+// routeAndAgent writes the pair an error repeats, so a message that refuses a
+// call still names the call that works.
+func routeAndAgent(route, agent string) string {
+	if route == "" {
+		route = "inline"
+	}
+	if agent == "" {
+		return route
+	}
+	return route + " --agent " + agent
+}
+
 // add appends the next step. The number and the link are decided by the domain,
 // and the write is canonical by construction.
 func add(current tasks.Document, files Files, opts Options) Result {
-	grown, err := current.Doc.AddStep(opts.Text, opts.Requirement)
+	grown, err := current.Doc.AddStepBy(opts.Text, opts.Requirement, taskdoc.Route{Kind: opts.Route, Agent: opts.Agent})
 	if err != nil {
 		return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
 	}

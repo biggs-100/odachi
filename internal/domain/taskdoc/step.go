@@ -26,6 +26,11 @@ func (d TaskDoc) NextStep() int {
 	return highest + 1
 }
 
+// Route says who runs a step: nobody declared it (empty Kind), the parent runs
+// it (RouteInline), or another agent does and Agent names that agent
+// (RouteDelegated).
+type Route struct{ Kind, Agent string }
+
 // AddStep appends a step with the next T number, optionally linked to a
 // requirement the document already declares. The text is normalized to one
 // canonical line (single spaces) before it is stored, so the rendered document
@@ -35,6 +40,14 @@ func (d TaskDoc) NextStep() int {
 // agent must not invent a link the user never asked for. A bad text is an error
 // too, and in both cases the receiver is returned untouched.
 func (d TaskDoc) AddStep(text, requirement string) (TaskDoc, error) {
+	return d.AddStepBy(text, requirement, Route{})
+}
+
+// AddStepBy is AddStep with the executor the step declares. The route and the
+// agent are decided before the document is written, because a step that names an
+// agent and one that names none produce different lines, and fixing the line
+// afterwards is how a declaration turns into a guess.
+func (d TaskDoc) AddStepBy(text, requirement string, route Route) (TaskDoc, error) {
 	normalized, err := canonicalStepText(text)
 	if err != nil {
 		return d, err
@@ -45,12 +58,42 @@ func (d TaskDoc) AddStep(text, requirement string) (TaskDoc, error) {
 		return d, fmt.Errorf("requirement %s is not in this task doc; the requirements are %s", link, requirementIDs(d.Requirements))
 	}
 
-	step := Step{ID: "T" + strconv.Itoa(d.NextStep()), Text: normalized, Requirement: link}
+	executor, err := canonicalRoute(route)
+	if err != nil {
+		return d, err
+	}
+
+	step := Step{ID: "T" + strconv.Itoa(d.NextStep()), Text: normalized, Requirement: link, Route: executor.Kind, Agent: executor.Agent}
 
 	steps := make([]Step, len(d.Steps), len(d.Steps)+1)
 	copy(steps, d.Steps)
 	d.Steps = append(steps, step)
 	return d, nil
+}
+
+// canonicalRoute validates the pair a step declares and returns it in the
+// spelling the document writes. The contradictions are refused here, where the
+// document is built, and not only at the flag: any writer gets the same rule.
+func canonicalRoute(route Route) (Route, error) {
+	kind := strings.ToLower(strings.TrimSpace(route.Kind))
+	agent := strings.TrimSpace(route.Agent)
+
+	switch {
+	case kind == "" && agent != "":
+		return Route{}, fmt.Errorf("an agent needs a route: say how the step runs with %s or %s", RouteInline, RouteDelegated)
+	case kind == "":
+		return Route{}, nil
+	case kind != RouteInline && kind != RouteDelegated:
+		return Route{}, fmt.Errorf("the route %q is not one I know: the routes are %s and %s", route.Kind, RouteInline, RouteDelegated)
+	case kind == RouteInline && agent != "":
+		return Route{}, fmt.Errorf("an %s step has no agent: the parent runs it, so drop the agent or say %s", RouteInline, RouteDelegated)
+	case kind == RouteDelegated && agent == "":
+		return Route{}, fmt.Errorf("a %s step names the agent that runs it: pass --agent <name>", RouteDelegated)
+	}
+	if strings.ContainsAny(agent, " /·\t\r\n") {
+		return Route{}, fmt.Errorf("the agent %q cannot be written in a step line: it has no spaces, no \"/\" and no \"·\"", agent)
+	}
+	return Route{Kind: kind, Agent: agent}, nil
 }
 
 // HasRequirement reports whether the document declares the id, ignoring case

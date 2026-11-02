@@ -125,6 +125,97 @@ func TestRenderKeepsTheRouteAndTheAgent(t *testing.T) {
 	}
 }
 
+// TestAddStepDeclaresTheRoute: the writer takes the executor with the text, so a
+// step is born saying who runs it instead of being patched afterwards.
+func TestAddStepDeclaresTheRoute(t *testing.T) {
+	doc, err := canonical(t).AddStepBy("escribir el parser", "R1", taskdoc.Route{
+		Kind:  taskdoc.RouteDelegated,
+		Agent: "odachi-worker",
+	})
+	if err != nil {
+		t.Fatalf("AddStepBy: %v", err)
+	}
+
+	step := doc.Steps[len(doc.Steps)-1]
+	if step.Route != taskdoc.RouteDelegated || step.Agent != "odachi-worker" {
+		t.Errorf("Route/Agent = %q/%q, want delegated/odachi-worker", step.Route, step.Agent)
+	}
+	again := taskdoc.Parse(doc.Render())
+	if last := again.Steps[len(again.Steps)-1]; last.Route != step.Route || last.Agent != step.Agent {
+		t.Errorf("the canonical form lost the route: %+v", last)
+	}
+}
+
+// TestAddStepKeepsAnUndeclaredRoute: the plain form still writes a step with no
+// executor, because a document written before the field existed says nothing.
+func TestAddStepKeepsAnUndeclaredRoute(t *testing.T) {
+	doc, err := canonical(t).AddStep("escribir el parser", "R1")
+	if err != nil {
+		t.Fatalf("AddStep: %v", err)
+	}
+	step := doc.Steps[len(doc.Steps)-1]
+	if step.Route != "" || step.Agent != "" {
+		t.Errorf("Route/Agent = %q/%q, want both empty", step.Route, step.Agent)
+	}
+}
+
+// TestAddStepRefusesARouteThatContradictsItsAgent: the pair is decided before the
+// document is written, and the message says what to add or drop.
+func TestAddStepRefusesARouteThatContradictsItsAgent(t *testing.T) {
+	cases := []struct {
+		name  string
+		route taskdoc.Route
+		want  string
+	}{
+		{
+			name:  "delegated without an agent",
+			route: taskdoc.Route{Kind: taskdoc.RouteDelegated},
+			want:  "agent",
+		},
+		{
+			name:  "inline with an agent",
+			route: taskdoc.Route{Kind: taskdoc.RouteInline, Agent: "odachi-worker"},
+			want:  "inline",
+		},
+		{
+			name:  "an agent with no route",
+			route: taskdoc.Route{Agent: "odachi-worker"},
+			want:  "route",
+		},
+		{
+			name:  "an unknown route",
+			route: taskdoc.Route{Kind: "quien-sea"},
+			want:  "delegated",
+		},
+		{
+			name:  "an agent the line cannot carry",
+			route: taskdoc.Route{Kind: taskdoc.RouteDelegated, Agent: "odachi/worker"},
+			want:  "agent",
+		},
+		{
+			name:  "an agent with a space",
+			route: taskdoc.Route{Kind: taskdoc.RouteDelegated, Agent: "odachi worker"},
+			want:  "agent",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			before := canonical(t)
+			after, err := before.AddStepBy("escribir el parser", "R1", c.route)
+			if err == nil {
+				t.Fatalf("AddStepBy(%+v) wrote a step it should have refused", c.route)
+			}
+			if !strings.Contains(err.Error(), c.want) {
+				t.Errorf("message %q does not name %q", err, c.want)
+			}
+			if len(after.Steps) != len(before.Steps) {
+				t.Errorf("a refused step changed the document: %d steps, want %d", len(after.Steps), len(before.Steps))
+			}
+		})
+	}
+}
+
 // TestAnUnknownRouteWordIsStillRead: Parse is total. A hand-written route the
 // tool does not know is kept, not thrown away as prose, so `plan` can say what
 // it accepts instead of rewriting the line silently.
