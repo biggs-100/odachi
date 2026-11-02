@@ -9,22 +9,35 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0170, which paid the two rows 0169 left.
+Last written: after 0171, which paid the last open row. Nothing is open.
 
 ## Open
 
+Nothing.
+
+## Closed by feature 0171
+
 ### the closed light feature no test judges
 
-Found by the review of 0168 (warning, `internal/app/review/vision_test.go:1`). The brief's done-when
-pins "a light document that is already closed still names its own line, so the closing tree is
-judged against it", and the three tests cover an open light document, a document without the lane
-and an unreadable one - never one whose steps are all checked. `lightVision` keys on the base and
-the lane and never on progress, so the closed case works today; the row is that nothing fails if
-`tasks.All` ever stops returning completed documents, which would bring back the exact defect 0168
-fixed, silently.
+Found by the review of 0168 (warning, `internal/app/review/vision_test.go:1`): the brief's done-when
+pins "a light document that is already closed still names its own line", and nothing exercised one
+whose steps are all checked.
 
-Paid when a feature touches `lightVision` or the task listing again: one test whose light document
-has every step checked.
+Closed: `TestAClosedLightFeatureIsStillJudgedAgainstItsLine` rewrites the fixture with its only step
+checked and asserts the prompt still carries the requirement instead of the previous brief. Observed
+red by skipping documents whose steps are all done: the prompt carried "reservar turnos".
+
+### the lookup that asks how much work is done would go unnoticed
+
+Found by the review of 0171 (warning, `internal/app/review/vision_test.go:57`): the test's comment
+says the lookup never asks how much of the work is done, and the reviewer read the three assertions
+as unable to notice a regression there.
+
+Verified false in the test, not paid. That regression is exactly how the row's own red was
+observed: a `if done == total { continue }` in `lightVision` skips the closed document, the lookup
+finds nothing with that base, and the prompt falls back to `brief.md` -which the fixture seeds with
+the previous feature's brief. Both assertions fail on it: the line is absent and "reservar turnos"
+is present. The test names the property and the fallback is what pins it.
 
 ## Closed by feature 0170
 
