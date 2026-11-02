@@ -52,6 +52,29 @@ func TestALightFeatureIsJudgedAgainstItsOwnLine(t *testing.T) {
 	}
 }
 
+// TestAClosedLightFeatureIsStillJudgedAgainstItsLine: a feature whose steps are
+// all checked still records the base it started from, and the review of that tree
+// must read its line instead of the previous brief. Nothing in the lookup may ask
+// how much of the work is done: closing a feature is what the gate judges, not
+// what the reviewer is told.
+func TestAClosedLightFeatureIsStillJudgedAgainstItsLine(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0167-three-tests-pin.md")] = []byte(
+		strings.Replace(lightDocument, "- [ ] T1", "- [x] T1", 1))
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "three tests pin the light lane's refusals") {
+		t.Errorf("the prompt does not carry the closed feature's own line:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "reservar turnos") {
+		t.Errorf("the prompt carries the previous feature's brief:\n%s", result.Prompt)
+	}
+}
+
 // TestANormalFeatureStillCarriesItsBrief: a feature with a brief is judged exactly
 // as before, whatever its task document says.
 func TestANormalFeatureStillCarriesItsBrief(t *testing.T) {
