@@ -19,6 +19,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/profile"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // Exit codes (Contract III).
@@ -94,6 +95,12 @@ type Options struct {
 	// is recorded in the task doc so the gate names it instead of hiding it.
 	WaiveReview bool
 
+	// Light opens a feature that fits one line: the requirement is quoted, one
+	// step carries the same words, and there is no brief. It writes the task doc
+	// and nothing else -the fence and the voice belong to the project, not to this
+	// change- and the feature owes the same proof at its close (0166).
+	Light bool
+
 	// Profile is the already-resolved profile loaded by the caller from
 	// odd/profile.toml. Nil means "infer it from what we can see".
 	Profile *profile.Profile
@@ -161,10 +168,63 @@ func (r *runner) run() Result {
 	}
 	r.answers = fromFlags
 
+	if r.opts.Light {
+		return r.runLight()
+	}
 	if r.opts.BriefPath != "" {
 		return r.runFromBrief()
 	}
 	return r.runFromInterview()
+}
+
+// runLight opens a one-line feature: it writes the task doc and touches nothing
+// else. The fence and the voice belong to the project -a light change does not
+// get to rewrite the rules it must obey- and there is no brief, because the line
+// is the vision.
+func (r *runner) runLight() Result {
+	outcome := strings.TrimSpace(r.opts.Outcome)
+	if outcome == "" {
+		return blocked(`a light feature is one line: write it with odachi start --light "<the requirement>"`)
+	}
+	if r.opts.BriefPath != "" {
+		return blocked("a light feature has no brief: drop --brief, or open a normal feature with one")
+	}
+
+	title := taskSlug(outcome)
+	path, existing, problem := r.taskPathFor(title)
+	if problem != nil {
+		return *problem
+	}
+	if existing {
+		return blocked("a feature named " + title + " is already open at " + filepath.ToSlash(path) +
+			"; finish it, or say what this change is in different words")
+	}
+
+	doc := taskdoc.TaskDoc{
+		Title:        title,
+		Base:         r.opts.Base,
+		Light:        true,
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: outcome}},
+		History:      []string{`L1 · "` + outcome + `"`},
+	}
+	// The plan of a one-line change is one line. Without a step the gate treats
+	// the feature as open forever and never asks for its proof.
+	grown, err := doc.AddStep(outcome, "R1")
+	if err != nil {
+		return blocked(oneLine(err.Error()))
+	}
+
+	if problem := r.put(path, []byte(grown.Render())); problem != nil {
+		return *problem
+	}
+
+	rel := filepath.ToSlash(path)
+	return Result{
+		Code:    CodeOK,
+		Message: "done: wrote " + rel + "; a light feature is one line, and it owes the same proof at its close",
+		Task:    rel,
+		Files:   []string{rel},
+	}
 }
 
 // withNotice puts the lock's announcement in front of the run's own answer: a
