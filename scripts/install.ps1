@@ -108,6 +108,7 @@ New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 try {
     $archive = Join-Path $tmp $asset
     $checksums = Join-Path $tmp 'checksums.txt'
+    $bundle = Join-Path $tmp 'checksums.txt.sigstore.json'
 
     # 4 · descarga y verificación, en un directorio temporal: el destino no se
     # toca hasta que el archivo demuestra ser el que la release publicó.
@@ -122,6 +123,25 @@ try {
     }
     catch {
         Fail "no pude descargar $base/checksums.txt; sin checksums no instalo nada"
+    }
+
+    try {
+        Invoke-WebRequest -Uri "$base/checksums.txt.sigstore.json" -OutFile $bundle -UseBasicParsing
+    }
+    catch {
+        Fail "no pude descargar $base/checksums.txt.sigstore.json; sin la firma, el checksum y el binario vendrían del mismo lugar y eso no prueba nada"
+    }
+
+    # La firma es lo que hace confiable al checksum: los dos bajan del mismo host, y
+    # sin verificarla la cadena termina en GitHub, no en la release. Se exige cosign:
+    # un chequeo que corre sólo a veces es una degradación silenciosa.
+    $cosign = if ($env:ODACHI_COSIGN) { $env:ODACHI_COSIGN } else { 'cosign' }
+    if (-not (Get-Command -Name $cosign -ErrorAction SilentlyContinue) -and -not (Test-Path -LiteralPath $cosign)) {
+        Fail "me falta cosign para verificar la firma de checksums.txt; instalalo desde https://docs.sigstore.dev/cosign/system_config/installation/ y volvé a correr esto"
+    }
+    & $cosign verify-blob --bundle $bundle --certificate-identity "https://github.com/$repo/.github/workflows/release.yml@refs/tags/v$version" --certificate-oidc-issuer "https://token.actions.githubusercontent.com" $checksums *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Fail "la firma de checksums.txt no verifica contra este workflow y esta versión: el archivo no es el que la release publicó, y no instalé nada"
     }
 
     $expected = $null

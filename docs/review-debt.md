@@ -9,19 +9,39 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0172, whose verdict approved with one row.
+Last written: after 0174, whose verdict approved with one warning and two suggestions.
 
 ## Open
 
+### the cosign-missing refusal on Windows has no test
+
+Found by the review of 0174 (warning, `scripts/install.ps1:140`). The branch that refuses when
+cosign is absent, and names the URL to get it, is the brief's own criterion; the bash side has a
+test, the PowerShell side has only the failing-cosign and the happy path, so the branch never runs.
+
+Paid by the next feature that touches `install.ps1` or its test: a case that runs it with
+`ODACHI_COSIGN` empty and no cosign on PATH, and asserts the message names the tool and where to
+get it.
+
+### the ones that came after the proof
+
+Two suggestions, both true when they were written: the README claimed the whole chain was tested
+against a real release while the signature step is fixture-tested with a shim -fixed as paperwork,
+it now says what the test measures-, and the fence header quotes "the checksum check stays", a
+decision the brief never took. The second one is the same defect 0172 left, in the fence 0174
+wrote: paid by the next `start`, or by the first feature that touches the header.
+
+## Closed by feature 0173
+
 ### the fence explains a rule it does not have
 
-Found by the review of 0172 (suggestion, `odd/fence.toml:7`). The header says '"no new verb" is a
-decision about what the feature does, not a file: the brief carries it', and no such non-goal exists
-in that brief or in the rules below it: the line describes a rule the file never had. A maintainer
-reading the fence gets a rationale for nothing.
+Found by the review of 0172 (suggestion, `odd/fence.toml:7`): the header quoted "no new verb" while
+no such non-goal existed in that brief.
 
-Paid by the next feature whose `start` rewrites the fence, or by the first one that touches its
-header: the sentence goes, or names a decision this feature actually took.
+Closed: 0173's `start` rewrote the fence, and its brief does carry "no new verb and no new folder
+outside skills/" as a non-goal, so the sentence became true. The defect came back in 0174's fence
+with another decision: it is the open row above, and the lesson is that the header is written by
+hand and is not derived from the brief.
 
 ## Closed by feature 0171
 

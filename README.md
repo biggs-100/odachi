@@ -17,7 +17,10 @@
 ## Installation
 
 If you do not have Go, the installer downloads the binary from a release, verifies
-its sha256 and leaves it ready. The three commands:
+the signature of the checksums and their sha256, and leaves it ready. It needs
+[cosign](https://docs.sigstore.dev/cosign/system_config/installation/) on the PATH:
+a checksum that travels in the same release as the binary proves nothing until the
+signature that names this repository's workflow and the tag verifies.
 
 ```sh
 # linux and macOS
@@ -35,11 +38,12 @@ amd64 and arm64), a `checksums.txt`, an SBOM and a provenance attestation. The
 releases page (https://github.com/biggs-100/odachi/releases) names the newest one, and the installer resolves it through the API
 instead of trusting a number written here -a version in prose is a claim nobody
 measures. The installer
-verifies the sha256 and only then writes; a checksum that does not match exits with
-an error and leaves **nothing** at the destination. The whole chain is tested
-against the real release, not a fixture: a test builds the `tar.gz` and the
-checksums the way goreleaser publishes them, runs `install.sh` offline through
-`file://`, and the installed binary answers its version.
+verifies the sigstore bundle against this repository's release workflow and the
+tag, then the sha256, and only then writes; a signature or a checksum that does
+not match exits with an error and leaves **nothing** at the destination. The
+install path is tested against a release the test builds itself -the tarball, the
+checksums and the bundle, served over `file://`- with a shim answering for cosign:
+what the test measures is the installer's decision, not sigstore's cryptography.
 
 The installer also runs `odachi setup`: the bootstrap skill in
 `~/.agents/skills`, the home door for the agent clients it finds, and OpenCode's
@@ -58,12 +62,11 @@ code.
 
 ### Verifying a release
 
-`sha256` is enough to install: the installer fails on a mismatch and leaves
-nothing behind. It does not tell you **who** published the file, because the
-checksums travel in the same release as the archives they describe. If you need
-that, the release also carries `checksums.txt.sigstore.json`: cosign signed it
-without a key, with the identity of the workflow that pushed the tag. `v0.11.11`
-and later carry the bundle; use the version you downloaded.
+The installer already does this, and it refuses to install when it cannot: the
+signature is not optional. If you downloaded the files by hand and want to check
+them yourself, the release carries `checksums.txt` and `checksums.txt.sigstore.json`
+-cosign signed it without a key, with the identity of the workflow that pushed the
+tag-. `v0.11.11` and later carry the bundle; use the version you downloaded.
 
 ```sh
 # replace <tag> with the tag you downloaded: the certificate names that tag,
