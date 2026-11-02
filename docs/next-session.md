@@ -1,8 +1,8 @@
-# Next session: four features on main, and a tag that waits
+# Next session: five features on main, and a tag that waits
 
-Written at the close of 0170, on a local build of `main` at `12e47c4` -not on a published release,
-because the publish is the decision that waits. `doctor` is green except check 14 until this file
-was rewritten; `main` is clean and in sync with `origin`.
+Written at the close of 0171, on `main` at `376e872` -not on a published release, because the
+publish is the decision that waits. `doctor` is green except check 14 until this file was rewritten;
+`main` is clean and in sync with `origin`.
 
 ## What 0167, 0168, 0169 and 0170 shipped
 
@@ -18,6 +18,9 @@ was rewritten; `main` is clean and in sync with `origin`.
 - **0170 - one test proves the stream arrives while the command runs.** Its child is the test binary
   re-run: it prints to both streams and blocks until the parent releases it, so the assertion lands
   while the run is still open.
+- **0171 - a closed light feature is judged against its line.** The last row of the debt: a test for
+  a light document whose steps are all checked. It left the fence narrower than 0169 wrote it, and
+  that narrowing had to land alone (below).
 
 ## What was measured today, so nobody re-measures it
 
@@ -43,13 +46,22 @@ was rewritten; `main` is clean and in sync with `origin`.
 - **A `Risk:` line of `contract` plus a diff that touches concurrency earns four lenses**
   (risk, readability, reliability, resilience). All four ran in one `--exec` call on
   `opencode-go/mimo-v2.6-flash`.
+- **A fence can be too wide for its own reason, and narrowing it needs a policy PR.** 0169 guarded
+  "how the reviewer runs" with a glob over `internal/app/review/**`, which also froze the tests that
+  pin the lane. CI reads the fence from the base ref, so the feature that needed the narrower path
+  was refused on all three platforms; `policy/0171` landed first, alone (PR #266), and the feature
+  rebased on top. A light feature cannot do this at all: the lane never rewrites the fence, and the
+  hook refuses its commit. That is the lane's own signal to leave it.
+- **The local hook needs a proof of the branch's own tree.** A policy-only commit on top of `main`
+  is refused until `check --run` runs there too: the proof directory belongs to the clone, and the
+  newest document of `main` is not the feature being built.
 
 ## What is open
 
-- `docs/review-debt.md` holds one row: no test judges a light document whose steps are all checked.
+- **The review debt is empty**: `docs/review-debt.md` has no open row, for the first time since 0154.
 - **The publish.** `v0.11.100` is a commit on `main` (`99a1f75`) whose tag was never pushed, and it
-  is what publishes 0167's changelog section. 0168, 0169 and 0170 wait under `## Unreleased` for the
-  next one. The human decides when.
+  is what publishes 0167's changelog section. 0168 to 0171 wait under `## Unreleased` for the next
+  one. The human decides when.
 - **The change that needs no document** is still only half built: the light lane is the cheap half,
   and the half without a task doc has never been measured.
 - **A proof that says what it is blocked on** was half paid by 0169: the output streams now, so a
@@ -75,7 +87,6 @@ was rewritten; `main` is clean and in sync with `origin`.
 
 ## Queued
 
-- **the last row, paid.** One test whose light document has every step checked.
 - **a change resumable from the diff needs no document.** Measure it before building it: `shape`
   first, and nothing is written until the shape says what the artifact would be.
 - **publish v0.11.101** (and v0.11.100 first, if its tag is worth pushing at all), then install from
