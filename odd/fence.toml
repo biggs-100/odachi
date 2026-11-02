@@ -4,8 +4,8 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# "no new verb" and "the craft travels as one skill" are decisions about what the
-# feature does, not files: the brief carries them.
+# "the checksum check stays" is a decision about what the feature does, not a
+# file: the brief carries it. The signature is added beside it, never instead.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"
@@ -13,6 +13,6 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the skill format: the sixty-line body and the checker stay as they are"
-paths = ["internal/domain/skill/**", "internal/app/skills/**"]
+not   = "the release workflow and the signing stay as they are: nobody re-signs by hand"
+paths = [".github/**", ".goreleaser.yaml"]
 deps  = []
