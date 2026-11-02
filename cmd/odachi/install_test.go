@@ -247,6 +247,13 @@ func cosignShim(t *testing.T, exitCode int) string {
 // runInstaller runs the real script against the local release with no network
 // available to it, and returns its exit code and its combined output.
 func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir, cosign string) (int, string) {
+	return runInstallerWith(t, bash, fixture, binDir, map[string]string{"ODACHI_COSIGN": cosign})
+}
+
+// runInstallerWith is runInstaller with the environment the caller needs to
+// change, so a test can leave ODACHI_COSIGN unset and reach the branch that
+// refuses when cosign is missing.
+func runInstallerWith(t *testing.T, bash string, fixture releaseFixture, binDir string, extra map[string]string) (int, string) {
 	t.Helper()
 
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
@@ -269,11 +276,10 @@ func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir, cos
 
 	command := exec.Command(bash, script)
 	command.Dir = workDir
-	command.Env = envWith(map[string]string{
+	env := map[string]string{
 		"ODACHI_VERSION":  installVersion,
 		"ODACHI_BASE_URL": fileBaseURL(fixture.dir),
 		"ODACHI_BIN_DIR":  binDir,
-		"ODACHI_COSIGN":   cosign,
 		// The target platform is passed explicitly instead of relying on the
 		// uname shim winning in PATH: on a Windows runner it does not, and the
 		// test would then be measuring the refusal path instead of the install.
@@ -281,7 +287,11 @@ func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir, cos
 		"ODACHI_ARCH": runtime.GOARCH,
 		"PATH":        shim + string(os.PathListSeparator) + os.Getenv("PATH"),
 		"HOME":        home,
-	})
+	}
+	for key, value := range extra {
+		env[key] = value
+	}
+	command.Env = envWith(env)
 	out, err := command.CombinedOutput()
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -367,6 +377,34 @@ func TestInstallScriptRefusesAModifiedChecksum(t *testing.T) {
 	}
 	if entries, err := os.ReadDir(binDir); err == nil && len(entries) > 0 {
 		t.Errorf("%s is not empty after a failed verification: %v", binDir, entries)
+	}
+}
+
+// TestInstallScriptRefusesWhenCosignIsMissing: the brief's own criterion -the
+// refusal names cosign and how to install it- and the rule that a check which
+// runs only sometimes is no check. A machine without cosign installs nothing.
+func TestInstallScriptRefusesWhenCosignIsMissing(t *testing.T) {
+	t.Parallel()
+	bash := requireBash(t)
+	if _, err := exec.LookPath("cosign"); err == nil {
+		t.Skip("cosign is installed on this machine: the missing-cosign branch cannot be reached")
+	}
+	fixture := buildRelease(t)
+
+	binDir := filepath.Join(t.TempDir(), "bin")
+	code, output := runInstallerWith(t, bash, fixture, binDir, map[string]string{"ODACHI_COSIGN": ""})
+
+	if code == 0 {
+		t.Fatalf("installer exit = 0 without cosign, want non-zero:\n%s", output)
+	}
+	if !strings.Contains(output, "cosign") {
+		t.Errorf("output does not name the tool that is missing:\n%s", output)
+	}
+	if !strings.Contains(output, "sigstore.dev") {
+		t.Errorf("output does not say how to get cosign:\n%s", output)
+	}
+	if entries, err := os.ReadDir(binDir); err == nil && len(entries) > 0 {
+		t.Errorf("%s is not empty without cosign: %v", binDir, entries)
 	}
 }
 
