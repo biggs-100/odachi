@@ -3,8 +3,9 @@
 What changed in each released version, in the order a person reads it.
 Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
-tomorrow. Only versions that were tagged are listed: a heading with no tag is not
-a release (`docs/releases.md`).
+tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
+not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
+not a version.
 
 ## Unreleased
 

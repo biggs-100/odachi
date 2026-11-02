@@ -7,7 +7,7 @@
 - skills/ui-craft/SKILL.md exists, passes odachi skills --check, and its body stays inside sixty lines
 - it carries the decision order, the tell and its replacement, the numbers, the motion rules, the read-back and the never list
 - it stands alone: it names no skill odachi does not ship, and says so in one line
-- SKILLS.md lists it and odachi init installs it beside the other seventeen
+- SKILLS.md lists it and odachi init installs it beside the others
 
 ## Not included (first version)
 - no change to the skill format: the sixty-line body and the checker stay as they are
