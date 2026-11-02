@@ -3,6 +3,7 @@ package check_test
 import (
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -264,12 +265,26 @@ type fakeShell struct {
 	command  string
 	timeout  int
 	wasAsked bool
+	// streamed records whether the run was given a writer, and it writes the
+	// same bytes it reports: the contract of RunStream is that what the command
+	// prints reaches the writer while it is captured.
+	streamed bool
 }
 
 func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string, int, bool, error) {
+	return s.RunStream(dir, command, timeoutSeconds, nil)
+}
+
+func (s *fakeShell) RunStream(dir, command string, timeoutSeconds int, w io.Writer) (string, string, int, bool, error) {
 	s.wasAsked = true
 	s.command = command
 	s.timeout = timeoutSeconds
+	s.streamed = w != nil
+	if w != nil {
+		if _, err := io.WriteString(w, s.output+s.stderr); err != nil {
+			return "", "", 0, false, err
+		}
+	}
 	return s.output, s.stderr, s.exitCode, s.timedOut, s.err
 }
 
@@ -750,6 +765,35 @@ func TestTheProofKeepsBothStreams(t *testing.T) {
 	want := proofOfFeature(currentTree, "go test ./...", "ok  github.com/biggs-100/odachi 0.02s\nwarning: one test was skipped\n")
 	if string(files.files[wantPath]) != want {
 		t.Errorf("proof =\n%q\nwant\n%q", files.files[wantPath], want)
+	}
+}
+
+// TestTheProofStreamsWhileItRunsAndKeepsOneCopy: the proof is written when the
+// command ends, so a human watching a lock sees nothing until it is too late. The
+// run writes what the command prints to the writer it was given, and the proof
+// carries the same bytes once - a stream is a window, not a second copy.
+func TestTheProofStreamsWhileItRunsAndKeepsOneCopy(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	git := &fakeGit{tree: currentTree}
+	shell := &fakeShell{output: "ok  github.com/biggs-100/odachi 0.02s\n"}
+	var streamed strings.Builder
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45, Out: &streamed}, files, git, shell)
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("Code = %d, want 0 (%s)", got.Code, got.Message)
+	}
+	if !shell.streamed {
+		t.Fatal("the run was given no writer: a proof run must be watchable")
+	}
+	if streamed.String() != shell.output {
+		t.Errorf("stream = %q, want the command's own output %q", streamed.String(), shell.output)
+	}
+
+	wantPath := filepath.Join(dir, "proof", "0007-turnos.txt")
+	want := proofOfFeature(currentTree, "go test ./...", shell.output)
+	if string(files.files[wantPath]) != want {
+		t.Errorf("proof =\n%q\nwant one copy of the output\n%q", files.files[wantPath], want)
 	}
 }
 

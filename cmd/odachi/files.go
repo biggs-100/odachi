@@ -560,6 +560,12 @@ func (osShell) Run(dir, command string, timeoutSeconds int) (string, string, int
 	return shellcmd.Run(dir, command, timeoutSeconds)
 }
 
+// RunStream is check's form: the proof command's output reaches the human while
+// it runs. The reviewer keeps Run and RunInput, which stay quiet until they answer.
+func (osShell) RunStream(dir, command string, timeoutSeconds int, w io.Writer) (string, string, int, bool, error) {
+	return shellcmd.RunStream(dir, command, timeoutSeconds, w)
+}
+
 // Quote is how this platform's shell spells one path, so a token the verb
 // substitutes is quoted exactly like {prompt}.
 func (osShell) Quote(path string) string { return shellcmd.Quote(path) }

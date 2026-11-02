@@ -91,6 +91,29 @@ func closeFeature(t *testing.T, dir string) {
 	}.Render())
 }
 
+// TestCheckRunStreamsToStderrAndKeepsTheJSONClean: the output of the proof
+// command reaches the human while it runs, on stderr, so a caller parsing --json
+// on stdout still gets one document and nothing else.
+func TestCheckRunStreamsToStderrAndKeepsTheJSONClean(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+	seedProject(t, dir)
+
+	code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo hola", "--json"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("stdout is not the JSON a caller parses: %v (%q)", err, out)
+	}
+	if !strings.Contains(errOut, "hola") {
+		t.Errorf("stderr %q does not carry what the command printed", errOut)
+	}
+}
+
 // TestCheckWithoutProofIsBlocked: no proof yet is the agent's work, exit 1, and
 // the block names the command that produces it - on the tree that closes the
 // feature, which is the one that owes it.

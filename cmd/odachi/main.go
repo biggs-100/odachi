@@ -547,6 +547,9 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	// check that judges an existing proof (the hook, CI) pays nothing.
 	if opts.Run != "" {
 		opts.Model = hostModel{}.Model(dir)
+		// The proof's output reaches the human while the command runs: a lock is a
+		// silence no report can explain after the fact.
+		opts.Out = stderr
 	}
 	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
 }

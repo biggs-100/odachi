@@ -7,7 +7,7 @@ tomorrow.
 
 ## Unreleased
 
-A one-line feature is reviewed against its own line.
+A one-line feature is reviewed against its own line, and a proof speaks while it runs.
 
 - **The review of a light feature carries that feature's requirement as the vision.** The prompt
   used to read `brief.md`, which a one-line change never writes, so the reviewer judged the
@@ -17,6 +17,13 @@ A one-line feature is reviewed against its own line.
   moves: the domain never learns about lanes, and a feature with a brief reads it exactly as
   before. A task document that cannot be read is refused by name instead of being taken for
   "there is no light feature here".
+- **`odachi check --run "<command>"` shows the command's output while it runs.** The proof is
+  written when the process ends, so a run blocked on a lock printed nothing for seventeen minutes
+  and read exactly like a slow suite. The bytes now reach the terminal as they arrive, and the
+  proof keeps the same copy it always carried (0169).
+- **Where it goes is the rule:** the stream is stderr, so `--json` keeps stdout as one document a
+  caller can parse. The reviewer's own run stays quiet: the stream is a window, not a second
+  answer.
 
 ## v0.11.100 - 2026-11-02
 

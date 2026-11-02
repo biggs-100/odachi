@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -46,7 +47,19 @@ var ErrUnsupported = errors.New("cannot run commands on this platform: there is 
 // caller decides what a failing proof means. err is reserved for "this could
 // not be run at all". A timeout returns timedOut true and a negative exit code.
 func Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error) {
-	return RunInput(dir, command, "", timeoutSeconds)
+	return run(dir, command, "", timeoutSeconds, nil)
+}
+
+// RunStream is Run with a mirror: everything the command prints reaches w while
+// it is being captured, so a human watching a proof sees the work instead of a
+// silent terminal until the process ends. A nil w is Run exactly.
+//
+// The mirror sees both streams, in whatever order they arrive: it is a window,
+// not the proof. The returned strings keep them apart, because a proof composes
+// them and a reviewer reads its answer from stdout only. Two goroutines copy the
+// streams, so w must be safe for concurrent use -the terminal is.
+func RunStream(dir, command string, timeoutSeconds int, w io.Writer) (stdout, stderr string, exitCode int, timedOut bool, err error) {
+	return run(dir, command, "", timeoutSeconds, w)
 }
 
 // RunInput is Run for a command that needs something to work on: the input is
@@ -58,6 +71,12 @@ func Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCo
 // that takes a file needs. A file, not a pipe, feeds stdin: a command that
 // ignores its input then cannot block the caller by leaving the buffer full.
 func RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error) {
+	return run(dir, command, input, timeoutSeconds, nil)
+}
+
+// run is the one implementation: the three entry points differ only in the input
+// they prepare and the mirror they write to.
+func run(dir, command, input string, timeoutSeconds int, mirror io.Writer) (stdout, stderr string, exitCode int, timedOut bool, err error) {
 	if strings.TrimSpace(command) == "" {
 		return "", "", 0, false, errors.New("there is no command to run: pass one with odachi check --run \"<command>\"")
 	}
@@ -81,10 +100,17 @@ func RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr st
 	cmd.Stdin = stdin
 
 	// Each stream in its own buffer: the proof composes both, the reviewer reads
-	// its answer from stdout, and neither has to guess what the other meant.
+	// its answer from stdout, and neither has to guess what the other meant. The
+	// mirror, when there is one, is the same bytes on their way to a human: it
+	// changes nothing about what is returned.
 	var outBuf, errBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &errBuf
+	if mirror == nil {
+		cmd.Stdout = &outBuf
+		cmd.Stderr = &errBuf
+	} else {
+		cmd.Stdout = io.MultiWriter(&outBuf, mirror)
+		cmd.Stderr = io.MultiWriter(&errBuf, mirror)
+	}
 	cmd.WaitDelay = waitDelay
 
 	runErr := cmd.Run()
