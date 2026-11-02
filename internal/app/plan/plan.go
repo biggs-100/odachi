@@ -140,6 +140,14 @@ func validate(opts Options) (string, string) {
 // add appends the next step. The number and the link are decided by the domain,
 // and the write is canonical by construction.
 func add(current tasks.Document, files Files, opts Options) Result {
+	// A light feature is one line, and its document says so. A second step would
+	// leave a document that still claims the lane while carrying a plan: the way
+	// out is a brief, not a quieter lie (0166).
+	if current.Doc.Light {
+		return blocked("this is a light feature: a second step is the signal to leave the lane; " +
+			"write a brief and run odachi start again")
+	}
+
 	grown, err := current.Doc.AddStepBy(opts.Text, opts.Requirement, taskdoc.Route{Kind: opts.Route, Agent: opts.Agent})
 	if err != nil {
 		return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
