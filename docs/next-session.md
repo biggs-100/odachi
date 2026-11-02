@@ -1,7 +1,8 @@
 # Next session: a lane that lands, and the machine that runs it
 
-Written at the close of 0166, on v0.11.98. The chat is gone tomorrow; this file is
-the state.
+Written at the close of 0166, on **v0.11.99** -released, installed and green on this machine:
+`doctor` 14 checks, no problems, and `main` clean and in sync with `origin`. The chat is gone
+tomorrow; this file is the state.
 
 ## What 0166 shipped
 
