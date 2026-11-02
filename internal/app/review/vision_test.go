@@ -50,3 +50,30 @@ func TestALightFeatureIsJudgedAgainstItsOwnLine(t *testing.T) {
 		t.Errorf("the prompt carries the previous feature's brief:\n%s", result.Prompt)
 	}
 }
+
+// TestANormalFeatureStillCarriesItsBrief: a feature with a brief is judged exactly
+// as before, whatever its task document says.
+func TestANormalFeatureStillCarriesItsBrief(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0166-a-line-that-can-close.md")] = []byte(`# a-line-that-can-close
+Base: ` + lightBase + `
+
+## Requirements (verbatim, from the user)
+R1 · "a change that fits one line is written as one line"
+
+## Steps
+- [ ] T1 · the lane   R1
+`)
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "reservar turnos") {
+		t.Errorf("the prompt does not carry brief.md:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "a change that fits one line is written as one line") {
+		t.Errorf("the prompt carries the task document instead of the brief:\n%s", result.Prompt)
+	}
+}
