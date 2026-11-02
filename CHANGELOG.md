@@ -5,6 +5,21 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A record can be repaired by naming it.
+
+- **A step that closed with no tree takes the mark afterwards.** `odachi plan --done T2 --commit
+  <sha>` on a step that is already done and carries no mark records it and says so; a step that
+  already carries a mark is still a no-op, and with no `--commit` the message names the flag.
+  Before, every already-done step was refused, so a mark lost to a dirty worktree could not be
+  written by any command.
+- **`undo` names the document it restores.** `--artifact odd/tasks/0163-....md`, or the bare file
+  name `--list` prints, restores that one and backs up what it replaces. `--file task` in a
+  project with several task documents used to demand `--file`, the flag the run already had.
+- Why: a close can leave a mark nobody can write and a backup nobody can name, and it is the same
+  defect twice -the record exists, and the verb cannot be pointed at it (0164).
+
 ## v0.11.96 - 2026-11-01
 
 A step declares who runs it.
