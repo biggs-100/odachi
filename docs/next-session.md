@@ -1,85 +1,85 @@
-# Next session: a lane that lands, and the machine that runs it
+# Next session: four features on main, and a tag that waits
 
-Written at the close of 0166, on **v0.11.99** -released, installed and green on this machine:
-`doctor` 14 checks, no problems, and `main` clean and in sync with `origin`. The chat is gone
-tomorrow; this file is the state.
+Written at the close of 0170, on a local build of `main` at `12e47c4` -not on a published release,
+because the publish is the decision that waits. `doctor` is green except check 14 until this file
+was rewritten; `main` is clean and in sync with `origin`.
 
-## What 0166 shipped
+## What 0167, 0168, 0169 and 0170 shipped
 
-A change that fits one line is written as one line:
+- **0167 - the light lane's refusals are pinned.** One test per refusal: `--light` with `--brief`,
+  a name that is already open, and a second positional argument.
+- **0168 - a light feature is reviewed against its own line.** The review prompt read `brief.md`,
+  which a one-line change never writes, so 0167 was judged against 0166's done-when. It now reads
+  the task document whose base is the candidate's, quotes the requirement it carries and names the
+  file. The domain is untouched: the lane still never chooses lenses.
+- **0169 - `check --run` shows the command's output while it runs.** The proof is written when the
+  process ends, so a run blocked on a lock printed nothing for seventeen minutes. The stream goes
+  to stderr; `--json` on stdout stays one document.
+- **0170 - one test proves the stream arrives while the command runs.** Its child is the test binary
+  re-run: it prints to both streams and blocks until the parent releases it, so the assertion lands
+  while the run is still open.
 
-- `odachi start --light "<requirement>"` opens a feature with a task doc that carries the
-  requirement quoted, one step with the same words and `Light: yes`, and nothing else: no brief,
-  and `odd/fence.toml` and `odd/profile.toml` stay exactly as they were.
-- `check` does not ask a light feature for a brief -the one line is the vision- and asks for the
-  fence, the open questions and the proof exactly as before. The lane closes like any feature,
-  because the one step is what the gate counts, and `plan` refuses a second step: a change that
-  needs one needs a brief.
-- `Light: yes` lives in the preamble, where `Base` and `Review: waived` already live, so the
-  artifact carries the shape and no command line has to remember it. The write guard now knows
-  all three preamble lines; before, a document with `Review: waived` could not be rewritten at
-  all, and 0166 paid that too.
+## What was measured today, so nobody re-measures it
 
-The review approved with one warning left in `docs/review-debt.md`: two of the lane's refusals
-have no test.
-
-## The landing order, paid again
-
-The fence on `main` protected `internal/app/check/**`, and this feature changes what `check`
-asks. CI reads the fence from the **base ref**, so the feature was refused on all three
-platforms while the local gate passed. The repair is the one 0154 wrote: a **policy-only** commit
--`brief.md` and `odd/fence.toml`, no task doc- landed first (PR #256), and the feature rebased on
-top. `check --ci` names it before the push, and it is worth running before the first push of any
-feature that touches a fenced path.
-
-## What is measured, so nobody re-measures it
-
-- **The whole suite takes ~360 s on this machine**, and `check --run` needs `--timeout` of 1500 to
-  be safe. The `cmd/odachi` package alone is ~94 s; the proof output's number is that package, not
-  the total.
-- `proof/` is gitignored, so the proof never moves the tree it certifies. The order that closes a
-  feature: write the closing documents, run `check --run` on that tree, then commit.
-- **Killing `odachi` mid-proof leaves `go test` running on Windows.** That orphan holds the Go
-  build cache lock, and every later `go test` waits on it without printing anything, so
-  `check --run` reports a timeout with empty output. Before blaming the suite, look for a stray
-  `go test` process and kill it.
-- The review path that works: `odachi review --base <sha>` writes the prompt into
-  `.git/odachi/scratch/`, a subagent reads that file and answers with the JSON, and
-  `odachi review --base <sha> --attach <answer.json>` files the verdict.
-- `doctor`: 14 checks, no problems. The four lenses run on `opencode-go/mimo-v2.6-flash`.
+- **The suite is ~300 s on this machine** (297 s and 301 s in two clean runs; ~94 s with
+  `-count=1` and a warm build cache). `check --run` still wants `--timeout 1500` to be safe.
+- **A killed command in Windows leaves children behind, and they poison the next suite.** Symptom:
+  `go test` prints nothing for minutes while nothing seems to be running; the tool then reports a
+  timeout with empty output. Look for stray `go`, `shellcmd.test` or `odachi` processes and kill
+  them before believing the suite is slow. 0170 bounded its own child so that this file's test can
+  no longer be the cause, but the generic friction is still open.
+- **The review runs in one command now:**
+  `odachi review --base <sha> --exec 'opencode run --agent odachi-reviewer --model {model} --file {prompt} "answer with the JSON only"'`.
+  `{model}` is required when a model is assigned, and PowerShell needs single quotes around the
+  whole command. No subagent, no pasted prompt.
+- **The coverage gate refuses a verdict that misses a row.** A finding on one path does not cover
+  another: every changed path needs a finding or a `passes` row under the lens.
+- **The order that survives the hook:** commit the step, then `odachi plan --done T1` writes the
+  tree while the worktree is clean. Marking a step done before committing closes the feature and the
+  hook demands a proof that does not exist yet; `odachi undo --artifact <doc>` puts the mark back.
+- **`start` rewrites `odd/fence.toml` from the non-goals; a light start writes only the task doc.**
+  The architecture test requires a rule over `proof/**` and refuses any rule over
+  `internal/domain/proof/**` (0150): the fence guards the evidence, never the writer.
+- **A `Risk:` line of `contract` plus a diff that touches concurrency earns four lenses**
+  (risk, readability, reliability, resilience). All four ran in one `--exec` call on
+  `opencode-go/mimo-v2.6-flash`.
 
 ## What is open
 
-- `docs/review-debt.md` carries one row: the light lane's untested refusals.
-- A friction this close found and nobody has named in the queue: **`check --run` reports a hung
-  command as a timeout with empty output**, and the human cannot tell "slow" from "blocked on a
-  lock". Naming the child process, or writing the output as it arrives, would turn a 17-minute
-  mystery into one line.
+- `docs/review-debt.md` holds one row: no test judges a light document whose steps are all checked.
+- **The publish.** `v0.11.100` is a commit on `main` (`99a1f75`) whose tag was never pushed, and it
+  is what publishes 0167's changelog section. 0168, 0169 and 0170 wait under `## Unreleased` for the
+  next one. The human decides when.
+- **The change that needs no document** is still only half built: the light lane is the cheap half,
+  and the half without a task doc has never been measured.
+- **A proof that says what it is blocked on** was half paid by 0169: the output streams now, so a
+  lock is visible, and nothing names the child process or the lock itself.
 
 ## What is already true, so it is not re-decided
 
-- **Ownership is declared, never inferred** (ADR 0038), and a failed read is not an absence.
-- **The review gate lives in the clone** (ADR 0042). CI cannot verify a review.
 - **Four artifacts are the memory**: brief, task doc, proof and profile.
-- **The changelog goes back to `## Unreleased`**; the release PR renames it and the tag publishes.
-- **Every irreversible action names its target and waits for the human.**
-- **A gate judges; it does not repair.** A record is repaired by the verb that made it.
+- **The review gate lives in the clone** (ADR 0042). CI cannot verify a review.
+- **Ownership is declared, never inferred** (ADR 0038), and a failed read is not an absence.
 - **What a parser cannot read, it refuses.** Tolerating a line is not the same as guessing it.
-- **A fence rule names a file the feature does not touch.** A policy that a feature needs lands
-  alone, before it.
+- **A fence rule names a file the feature does not touch**, and never the package that writes the
+  proofs (0150). A phrase is not a rule.
+- **Every irreversible action names its target and waits for the human.**
+- **A warning earns no review round**: it becomes a row in `docs/review-debt.md`, paid by the next
+  feature that touches those bytes. 0170 is that mechanism working end to end.
+- **A test-only change opens no changelog bullet.** It changes nothing a person can observe.
 
-## The one decision that waits, and is not a polish
+## The one decision that waits, and is not polish
 
 **CI cannot enforce the review.** ADR 0042 says what would change it: a trusted job that runs
 `odachi review` with its own model and key, or a receipt signed outside the tree.
 
 ## Queued
 
-- **the row, paid.** Three tests, one per refusal of the light lane.
-- **a proof that says why it is waiting.** `check --run` should name the command it launched and
-  what it is blocked on, or stream what arrives, so a lock is not read as a slow suite.
-- **a change resumable from the diff needs no document** is now partly built: the light lane is
-  the cheap half. What is left is the half without a task doc, and nothing has measured it.
+- **the last row, paid.** One test whose light document has every step checked.
+- **a change resumable from the diff needs no document.** Measure it before building it: `shape`
+  first, and nothing is written until the shape says what the artifact would be.
+- **publish v0.11.101** (and v0.11.100 first, if its tag is worth pushing at all), then install from
+  the signed bytes instead of a local build.
 
 ## How to find the next real work
 
