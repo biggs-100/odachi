@@ -1,23 +1,25 @@
-# a-name-that-says-what-it-is
+# a-line-that-can-close
 
 ## What must exist
-- the two names the last two reviews left reading as something else -a step tail with two commit parts, and a bare artifact name- are read for what they are, so neither a line is rewritten behind the reader nor a refusal states something false
+- a change that fits one line is written as one line: `odachi start --light "<requirement>"` opens a feature with a task doc that carries the quoted requirement and one step with the same words, no brief, and the project's fence and voice untouched
 
 ## Done when
-- a step line whose tail carries two commit parts stays text: it parses with no requirement and no commit, and render then parse returns the same line
-- `undo --file brief --artifact <a task's bare file name>` is refused as a contradiction and names both, instead of answering that there is no backup of a document the run hid
-- a bare name that is no artifact odachi keeps is refused naming the four paths it does keep
-- a bare name that is one keeps working: `--artifact 0002-otra-cosa.md` restores that document
-- both rows leave `docs/review-debt.md`, with the tests that pay them
+- `odachi start --light "<requirement>"` writes one task doc with the line `Light: yes`, R1 quoted and T1 named with the same words, and writes no brief
+- the same run does not rewrite `odd/fence.toml` or `odd/profile.toml`
+- `odachi check` on a light feature does not ask for a brief, and still refuses a fence violation, an open question and a missing or stale proof
+- a light feature closes like any other: one step done means the proof is owed and the review is asked for its tree
+- `odachi plan "<text>"` on a light feature is refused, saying that a second step is the signal to leave the lane
+- a document without `Light:` behaves exactly as today, and `Light: yes` outside the preamble is prose the gate never reads
+- `drive` and the changelog name the lane and say when not to use it
 
 ## Not included (first version)
-- no change to the canonical step grammar beyond refusing the ambiguous tail: one commit part reads as before
-- no new flag, no new backup location, and `--file` still filters; a contradiction is refused, never resolved by guessing
-- no repair of a document the old parser already rewrote: the row leaves by its bytes changing
-- no git, and no gate: `check` still only judges
+- no change to review, proof or fence semantics: a light feature owes the same evidence
+- no `--light` on `check`, `plan` or any other verb: the document carries the shape, the command line does not
+- no light lane for a document that already has steps or a brief, and no second shape of light document
+- no new verb and no change to how a normal feature is written
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why a parser that tolerates must also refuse.
+- Wants to learn: why a lane is a rule the artifact declares, not a flag the run carries.

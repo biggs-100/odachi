@@ -4,8 +4,8 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# "no new flag" and "no repair of an old document" are decisions about what the
-# feature does, not files: the brief carries them.
+# "no new verb" and "no second shape of light document" are decisions about what
+# the feature does, not files: the brief carries them.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"
@@ -13,11 +13,10 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "the review does not learn to read a step tail or an artifact name: it judges the four artifacts it already judges"
+not   = "the review does not learn about lanes: a light feature's tree is judged like any other"
 paths = ["internal/domain/review/**"]
 deps  = []
 
-[[rule]]
-not   = "the gate still judges and never repairs: the parser and undo are where a name is read"
-paths = ["internal/domain/gate/**", "internal/app/check/**"]
-deps  = []
+# the proof keeps its shape is a decision of the brief, not a fence rule: 0150
+# decided the fence guards the evidence (proof/**) and never the package that
+# writes it, because a rule over the writer blocks its own improvement.
