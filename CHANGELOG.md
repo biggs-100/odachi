@@ -5,6 +5,19 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A one-line feature is reviewed against its own line.
+
+- **The review of a light feature carries that feature's requirement as the vision.** The prompt
+  used to read `brief.md`, which a one-line change never writes, so the reviewer judged the
+  candidate against the previous feature's done-when. It now reads the task document whose base is
+  the candidate's, quotes the requirement it carries, and names the file it came from (0168).
+- **The lenses, the verdict and the store are unchanged.** Only the context the reviewer is handed
+  moves: the domain never learns about lanes, and a feature with a brief reads it exactly as
+  before. A task document that cannot be read is refused by name instead of being taken for
+  "there is no light feature here".
+
 ## v0.11.100 - 2026-11-02
 
 The light lane's refusals are pinned.

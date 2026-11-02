@@ -12,9 +12,9 @@ R1 · "the review of a light feature is judged against that feature's own line, 
 - no lens, verdict or store entry changes: the same tree still gets the same lenses and the same JSON
 
 ## Steps
-- [ ] T1 · a light feature's review carries its own line, found by the base the document records   R1 · route:inline
-- [ ] T2 · the prompt says where the vision came from, and a normal feature still carries brief.md   R1 · route:inline
-- [ ] T3 · a task document that cannot be read is named as such, never read as an absence   R1 · route:inline
+- [x] T1 · a light feature's review carries its own line, found by the base the document records   R1 · route:inline · tree:3f8da1b58b36d199e8b0afab48c602a2d990d45f
+- [x] T2 · the prompt says where the vision came from, and a normal feature still carries brief.md   R1 · route:inline · tree:54f622d31264c40e57fe951fb9f03a71af6b3634
+- [x] T3 · a task document that cannot be read is named as such, never read as an absence   R1 · route:inline · tree:5228404b514f4ca033bd2bfb5152e4b72d8d45a7
 
 ## History
 L1 · "the review of a light feature is judged against that feature's own line, not against the previous feature's brief"
