@@ -70,9 +70,10 @@ func Unaccounted(md string) []string {
 		case "history":
 			// The history is kept verbatim; nothing here is ever lost.
 		default:
-			// The base line is the one preamble line Parse reads; anything else
-			// outside the canonical sections is lost by a rewrite.
-			if preamble && strings.HasPrefix(line, basePrefix) {
+			// The preamble fields Parse reads are the ones Render carries over. A
+			// guard that flagged them would refuse every later write to a document
+			// that is canonical (0166 paid the waiver, which was already one).
+			if preamble && isPreambleField(line) {
 				continue
 			}
 			out = append(out, line)
@@ -80,6 +81,13 @@ func Unaccounted(md string) []string {
 	}
 
 	return out
+}
+
+// isPreambleField reports whether a line is one Parse reads between the title
+// and the first section. Render writes all of them back, so none is content a
+// canonical rewrite would destroy.
+func isPreambleField(line string) bool {
+	return strings.HasPrefix(line, basePrefix) || line == reviewWaivedLine || line == lightLine
 }
 
 // splitLines is the line walk Parse and Unaccounted share: trailing CRs gone,
