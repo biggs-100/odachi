@@ -1,20 +1,21 @@
-# the-release-doctrine
+# one-skill-gives
 
 ## What must exist
-- the release doctrine is written, drive points at it, and the changelog names only versions that were published
+- one skill gives an agent the craft rules and the anti-AI catalogue for any screen it builds
 
 ## Done when
-- docs/releases.md says what a release is, when to publish and when not, how to version while 0.x, how the tag is named and placed, and what the notes carry
-- the drive skill names the doctrine in one line and stays inside its sixty-line format
-- CHANGELOG.md no longer carries a version heading with no tag: the one that was never published stops existing, so every heading is a version a person could install
-- the next release is one that names the observable changes and nothing else
+- skills/ui-craft/SKILL.md exists, passes odachi skills --check, and its body stays inside sixty lines
+- it carries the decision order, the tell and its replacement, the numbers, the motion rules, the read-back and the never list
+- it stands alone: it names no skill odachi does not ship, and says so in one line
+- SKILLS.md lists it and odachi init installs it beside the other seventeen
 
 ## Not included (first version)
-- no change to how a release is built or published: the workflow, the signing and the installers stay as they are
+- no change to the skill format: the sixty-line body and the checker stay as they are
+- no new verb and no new folder outside skills/: the craft travels as one skill
 - a stored proof is never rewritten, whatever the writer learns
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why a release is a promise and not a milestone.
+- Wants to learn: why a rule changes a default and a manual does not.
