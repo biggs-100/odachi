@@ -4,8 +4,8 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# "no new artifact kind" and "no guessing when the worktree is dirty" are
-# decisions about what the feature does, not files: the brief carries them.
+# "no new flag" and "no repair of an old document" are decisions about what the
+# feature does, not files: the brief carries them.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"
@@ -13,11 +13,11 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "undo still never touches git: a repair names the commit, it does not run one"
-paths = ["internal/adapters/gitx/**"]
+not   = "the review does not learn to read a step tail or an artifact name: it judges the four artifacts it already judges"
+paths = ["internal/domain/review/**"]
 deps  = []
 
 [[rule]]
-not   = "the gate still judges and never writes: a record is repaired by the verb that made it"
-paths = ["internal/app/check/**", "internal/domain/gate/**"]
+not   = "the gate still judges and never repairs: the parser and undo are where a name is read"
+paths = ["internal/domain/gate/**", "internal/app/check/**"]
 deps  = []
