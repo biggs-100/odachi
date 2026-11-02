@@ -21,6 +21,33 @@ func twoTasks() *fakeFiles {
 		putStore(otherTaskRel, "la segunda, como estaba", at(21, 0, 0))
 }
 
+// TestUndoAsksWhichTaskInsteadOfNamingFile: with several documents of the same
+// kind, --file is the flag the run already has, so naming it is the dead end
+// 0164 exists to remove.
+func TestUndoAsksWhichTaskInsteadOfNamingFile(t *testing.T) {
+	files := twoTasks()
+
+	res := undo.Run(undo.Options{Dir: dir, Store: store, File: "task"}, files, nil)
+
+	if res.Code != undo.CodeBlocked {
+		t.Fatalf("Code = %d, want %d: it guessed which document (message: %s)", res.Code, undo.CodeBlocked, res.Message)
+	}
+	if !strings.Contains(res.Message, "--artifact") {
+		t.Errorf("message %q does not name --artifact, the flag that answers it", res.Message)
+	}
+	for _, want := range []string{taskRel, otherTaskRel} {
+		if !strings.Contains(res.Message, want) {
+			t.Errorf("message %q does not name %s", res.Message, want)
+		}
+	}
+	if strings.Contains(res.Message, "with --file") {
+		t.Errorf("message %q sends the reader back to the flag they already used", res.Message)
+	}
+	if len(files.wrote) != 0 {
+		t.Errorf("a refused undo wrote %v", files.wrote)
+	}
+}
+
 // TestUndoRestoresTheArtifactItIsTold: naming the document is the way out of a
 // project with several of them, and the restore backs up what it replaces.
 func TestUndoRestoresTheArtifactItIsTold(t *testing.T) {

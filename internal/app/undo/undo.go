@@ -205,6 +205,17 @@ func ofArtifact(found []undodomain.Backup, artifact string) []undodomain.Backup 
 	return kept
 }
 
+// sameKind reports whether every candidate group is the same artifact kind: a
+// project with several task documents is the case where --file cannot help.
+func sameKind(groups []undodomain.Group) bool {
+	for _, group := range groups[1:] {
+		if group.Kind != groups[0].Kind {
+			return false
+		}
+	}
+	return true
+}
+
 // noVersionOf names the documents that do have a backup, so naming the wrong one
 // is one editable line and not a mystery.
 func noVersionOf(artifact string, found []undodomain.Backup) string {
@@ -340,7 +351,11 @@ func restore(dir string, found []undodomain.Backup, files Files) Result {
 		for _, group := range groups {
 			names = append(names, group.Artifact)
 		}
-		return blocked(fmt.Sprintf("there are %d artifacts with backups (%s): tell me which one you want with --file brief|profile|fence|task",
+		if sameKind(groups) {
+			return blocked(fmt.Sprintf("there are %d %s documents with backups (%s): name one with --artifact <path>",
+				len(groups), groups[0].Kind, joined(names)))
+		}
+		return blocked(fmt.Sprintf("there are %d artifacts with backups (%s): name one with --artifact <path>, or keep one kind with --file brief|profile|fence|task",
 			len(groups), joined(names)))
 	}
 
