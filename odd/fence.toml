@@ -4,16 +4,15 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# 0171 narrows the path 0169 wrote: that rule was about how the reviewer runs, and
-# a glob over the whole package also froze its tests. The code is what must not
-# move; the test that pins the lane belongs here.
-
-[[rule]]
-not   = "no change to how the reviewer runs: the stream is for the proof, and review --exec keeps its buffered call"
-paths = ["internal/app/review/review.go", "internal/domain/review/**"]
-deps  = []
+# "no new verb" is a decision about what the feature does, not a file: the brief
+# carries it.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"
 paths = ["proof/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to how a release is built or published: the workflow, the signing and the installers stay as they are"
+paths = [".github/**", "scripts/**", ".goreleaser.yaml"]
 deps  = []
