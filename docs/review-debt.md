@@ -9,21 +9,30 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0166, whose standing verdict approved with one row.
+Last written: after 0167, which paid the one row 0166 left.
 
 ## Open
+
+Nothing.
+
+## Closed by feature 0167
 
 ### the refusals of the light lane that no test exercises
 
 Found by the review of 0166 (warning, `internal/app/start/start.go:189`; suggestion,
 `cmd/odachi/main.go:186`). `runLight` refuses `--light` with `--brief`, and refuses a name that is
-already open, and neither branch has a test. The CLI refuses two positional arguments for
-`--light` and that branch has none either. The light tests cover the happy path and the missing
-line, which is the path that stops before the duplicate check runs -so repeating a light run is
-the realistic flow nobody pins.
+already open, and neither branch had a test. The CLI refuses two positional arguments for
+`--light` and that branch had none either. The light tests covered the happy path and the missing
+line, which is the path that stops before the duplicate check runs -so repeating a light run was
+the realistic flow nobody pinned.
 
-Not paid in 0166, because the verdict approved that tree and a warning earns no round. It is paid
-when a feature touches `start` or the `--light` flags again: three tests, one per refusal.
+Closed: one test per refusal. `TestStartLightRefusesABrief` pins that the conflict is refused
+before anything is written and that the answer names the flag to drop;
+`TestStartLightRefusesANameThatIsAlreadyOpen` pins that a repeated line does not overwrite the
+open document and that the answer names it; `TestStartLightRefusesASecondLine` pins that the CLI
+refuses the second positional instead of keeping the first and dropping the rest. Each was
+observed red by disabling its branch: the brief guard wrote a document, the open-name guard
+overwrote the open one, and the widened argument guard kept `uno` and said nothing about `dos`.
 
 ## Closed by feature 0165
 

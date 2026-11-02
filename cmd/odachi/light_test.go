@@ -9,6 +9,25 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
+// TestStartLightRefusesASecondLine: the lane is one line, so the second positional
+// argument is refused before anything is read from disk, and the answer names the
+// line it dropped.
+func TestStartLightRefusesASecondLine(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	code, stdout, stderr := runDir(t, dir, []string{"start", "--light", "uno", "dos"}, "")
+	if code != 1 {
+		t.Fatalf("start --light with two lines: exit %d, want 1 (stdout=%s stderr=%s)", code, stdout, stderr)
+	}
+	if !strings.Contains(stderr, "extra argument: dos") {
+		t.Errorf("stderr %q does not name the second line", stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "odd")); err == nil {
+		t.Error("a refused run wrote odd/, want nothing")
+	}
+}
+
 // TestStartLightEndToEnd: one line in, one document out, and no brief beside it.
 func TestStartLightEndToEnd(t *testing.T) {
 	t.Parallel()
