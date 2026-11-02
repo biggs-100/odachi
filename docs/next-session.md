@@ -1,49 +1,59 @@
-# Next session: the ledger is empty, and what a name taught
+# Next session: a lane that lands, and the machine that runs it
 
-Written at the close of 0165, on v0.11.97. The chat is gone tomorrow; this file is
+Written at the close of 0166, on v0.11.98. The chat is gone tomorrow; this file is
 the state.
 
-## What 0165 shipped
+## What 0166 shipped
 
-The two rows 0163 and 0164 left, paid in the place where the name is read:
+A change that fits one line is written as one line:
 
-- **A step tail with two commit parts stays text.** `R1 · tree:abc · note` used to keep the last
-  part as the commit and lose the first on the next canonical write. Two parts in one slot are
-  ambiguous, so the parser reads no tail at all and the line round-trips unchanged.
-- **`--artifact` reads a bare name.** The name `--list` prints answers which kind it is, so
-  `--file brief --artifact 0002-x.md` is refused as the contradiction it is instead of claiming
-  there is no backup of a document the run itself hid. A name outside the four is refused with
-  the four paths odachi keeps, not with the versions this run happened to look at.
+- `odachi start --light "<requirement>"` opens a feature with a task doc that carries the
+  requirement quoted, one step with the same words and `Light: yes`, and nothing else: no brief,
+  and `odd/fence.toml` and `odd/profile.toml` stay exactly as they were.
+- `check` does not ask a light feature for a brief -the one line is the vision- and asks for the
+  fence, the open questions and the proof exactly as before. The lane closes like any feature,
+  because the one step is what the gate counts, and `plan` refuses a second step: a change that
+  needs one needs a brief.
+- `Light: yes` lives in the preamble, where `Base` and `Review: waived` already live, so the
+  artifact carries the shape and no command line has to remember it. The write guard now knows
+  all three preamble lines; before, a document with `Review: waived` could not be rewritten at
+  all, and 0166 paid that too.
 
-The review approved with no findings, on the first round, and `docs/review-debt.md` is empty.
+The review approved with one warning left in `docs/review-debt.md`: two of the lane's refusals
+have no test.
 
-## The lesson this feature paid for
+## The landing order, paid again
 
-A parser that tolerates must also **refuse** what it cannot read. Both rows were the same shape:
-a name that carried one meaning was read as another, and the tool answered with a statement that
-was false -a line rewritten, a document reported missing. The fix is not "guess better": it is to
-say which reading applies, and to answer with what the tool keeps when none does.
+The fence on `main` protected `internal/app/check/**`, and this feature changes what `check`
+asks. CI reads the fence from the **base ref**, so the feature was refused on all three
+platforms while the local gate passed. The repair is the one 0154 wrote: a **policy-only** commit
+-`brief.md` and `odd/fence.toml`, no task doc- landed first (PR #256), and the feature rebased on
+top. `check --ci` names it before the push, and it is worth running before the first push of any
+feature that touches a fenced path.
 
 ## What is measured, so nobody re-measures it
 
-- `go test ./...` is green on this tree; the `cmd` package alone takes ~100s, so `check --run`
-  wants `--timeout` of 400 or more here.
-- The order that closes a feature: write the closing documents first, run `check --run` on that
-  tree, then commit. The hook refuses a close whose proof belongs to an earlier tree. `proof/` is
-  gitignored, so it never moves the tree it certifies, and a release note written *after* the
-  close is paperwork: `check` stays ready and names the tree the proof belongs to.
+- **The whole suite takes ~360 s on this machine**, and `check --run` needs `--timeout` of 1500 to
+  be safe. The `cmd/odachi` package alone is ~94 s; the proof output's number is that package, not
+  the total.
+- `proof/` is gitignored, so the proof never moves the tree it certifies. The order that closes a
+  feature: write the closing documents, run `check --run` on that tree, then commit.
+- **Killing `odachi` mid-proof leaves `go test` running on Windows.** That orphan holds the Go
+  build cache lock, and every later `go test` waits on it without printing anything, so
+  `check --run` reports a timeout with empty output. Before blaming the suite, look for a stray
+  `go test` process and kill it.
 - The review path that works: `odachi review --base <sha>` writes the prompt into
   `.git/odachi/scratch/`, a subagent reads that file and answers with the JSON, and
-  `odachi review --base <sha> --attach <answer.json>` files the verdict. `--exec` with
-  `opencode run` still stalls.
-- `doctor` on this tree: 14 checks, no problems, on v0.11.97 installed. A copy of a skill in the
-  home only catches up with a binary built from the branch that changed it.
-- The four lenses run on `opencode-go/mimo-v2.6-flash`, 0.14/0.28 per million tokens.
+  `odachi review --base <sha> --attach <answer.json>` files the verdict.
+- `doctor`: 14 checks, no problems. The four lenses run on `opencode-go/mimo-v2.6-flash`.
 
 ## What is open
 
-- `docs/review-debt.md` is empty: the last two verdicts left nothing open.
-- The queue below, which is now one item.
+- `docs/review-debt.md` carries one row: the light lane's untested refusals.
+- A friction this close found and nobody has named in the queue: **`check --run` reports a hung
+  command as a timeout with empty output**, and the human cannot tell "slow" from "blocked on a
+  lock". Naming the child process, or writing the output as it arrives, would turn a 17-minute
+  mystery into one line.
 
 ## What is already true, so it is not re-decided
 
@@ -54,6 +64,8 @@ say which reading applies, and to answer with what the tool keeps when none does
 - **Every irreversible action names its target and waits for the human.**
 - **A gate judges; it does not repair.** A record is repaired by the verb that made it.
 - **What a parser cannot read, it refuses.** Tolerating a line is not the same as guessing it.
+- **A fence rule names a file the feature does not touch.** A policy that a feature needs lands
+  alone, before it.
 
 ## The one decision that waits, and is not a polish
 
@@ -62,12 +74,14 @@ say which reading applies, and to answer with what the tool keeps when none does
 
 ## Queued
 
-- **a change resumable from the diff needs no document.** The light lane: no brief and no task
-  doc when the work can be resumed from the diff alone. Expensive, because it changes rule 1, and
-  it is the only item left that nobody has measured.
+- **the row, paid.** Three tests, one per refusal of the light lane.
+- **a proof that says why it is waiting.** `check --run` should name the command it launched and
+  what it is blocked on, or stream what arrives, so a lock is not read as a slow suite.
+- **a change resumable from the diff needs no document** is now partly built: the light lane is
+  the cheap half. What is left is the half without a task doc, and nothing has measured it.
 
 ## How to find the next real work
 
-The ledger is empty, so the next work comes from measurement instead of a verdict: `doctor` and
-`bench` find friction nobody has named, the hygiene trio (`go vet`, `go mod tidy -diff`,
-`gofmt -l .`) is cheap, and `clean` says which class of file grew back.
+`docs/review-debt.md` names what a verdict left; `doctor` and `bench` find friction nobody has
+named; the hygiene trio (`go vet`, `go mod tidy -diff`, `gofmt -l .`) is cheap; and `clean` says
+which class of file grew back.
