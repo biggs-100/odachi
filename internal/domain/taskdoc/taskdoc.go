@@ -49,6 +49,10 @@ type TaskDoc struct {
 	// review verdict. The gate names it instead of hiding it; the proof and the
 	// fence still apply.
 	ReviewWaived bool
+	// Light says the feature was opened as one line: a quoted requirement and one
+	// step with the same words, no brief. The artifact carries the shape, so no
+	// command line has to remember it (0166).
+	Light        bool
 	Requirements []Requirement
 	DoneWhen     []string
 	Steps        []Step
@@ -69,6 +73,11 @@ const (
 	// review verdict. It lives in the preamble, where the gate reads it, and it
 	// is the only ceremony a small change may skip: the proof and the fence stay.
 	reviewWaivedLine = "Review: waived"
+
+	// lightLine says the feature was opened as one line: a quoted requirement and
+	// one step with the same words, no brief. It is a decision the artifact
+	// carries, read where the base and the waiver are read.
+	lightLine = "Light: yes"
 
 	headerRequirementsES = "## Requisitos (textual, del usuario)"
 	headerDoneWhenES     = "## Listo cuando"
@@ -168,6 +177,13 @@ func Parse(md string) TaskDoc {
 			continue
 		}
 
+		// The lane is a decision of the same kind, in the same place: a line in the
+		// history that says "Light: yes" is prose, not a shape the gate must obey.
+		if preamble && line == lightLine {
+			d.Light = true
+			continue
+		}
+
 		switch current {
 		case "requirements":
 			if r, ok := parseRequirement(line); ok {
@@ -243,6 +259,9 @@ func (d TaskDoc) Render() string {
 	}
 	if d.ReviewWaived {
 		b.WriteString(reviewWaivedLine + "\n")
+	}
+	if d.Light {
+		b.WriteString(lightLine + "\n")
 	}
 
 	b.WriteString("\n" + headerRequirements + "\n")

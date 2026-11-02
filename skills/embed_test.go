@@ -223,6 +223,7 @@ func TestDriveTeachesTheWorkflowDiscipline(t *testing.T) {
 		"Requirements quoted **verbatim**",
 		"observe RED",
 		"--route delegated",
+		"--light",
 		"Risk:",
 	} {
 		if !strings.Contains(byName["drive"], want) {

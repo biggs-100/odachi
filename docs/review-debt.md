@@ -9,12 +9,21 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0165, which paid the two rows 0163 and 0164 left.
+Last written: after 0166, whose standing verdict approved with one row.
 
 ## Open
 
-Nothing. The two rows that stood here were the same defect twice -a name read as something it is
-not- and 0165 paid both, each with the test that would have caught it.
+### the refusals of the light lane that no test exercises
+
+Found by the review of 0166 (warning, `internal/app/start/start.go:189`; suggestion,
+`cmd/odachi/main.go:186`). `runLight` refuses `--light` with `--brief`, and refuses a name that is
+already open, and neither branch has a test. The CLI refuses two positional arguments for
+`--light` and that branch has none either. The light tests cover the happy path and the missing
+line, which is the path that stops before the duplicate check runs -so repeating a light run is
+the realistic flow nobody pins.
+
+Not paid in 0166, because the verdict approved that tree and a warning earns no round. It is paid
+when a feature touches `start` or the `--light` flags again: three tests, one per refusal.
 
 ## Closed by feature 0165
 

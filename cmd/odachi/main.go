@@ -168,6 +168,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	flags.StringVar(&brief, "brief", "", "read an existing brief instead of asking")
 	flags.BoolVar(&force, "force", false, "rewrite an existing brief.md")
 	flags.BoolVar(&opts.WaiveReview, "waive-review", false, "record that this feature lands without a review verdict (the proof and the fence still apply)")
+	flags.BoolVar(&opts.Light, "light", false, "open a feature that fits one line: no brief, one step with the same words")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
@@ -178,7 +179,17 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi start -h to see the flags")
 		return start.CodeBlocked
 	}
-	if flags.NArg() > 0 {
+	// The lane is the line: with --light the one positional argument is the
+	// requirement, the way `plan` takes the text. Every other run takes flags
+	// only, because the interview is what asks.
+	if opts.Light {
+		if rest := flags.Args(); len(rest) > 1 {
+			fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi start --light takes one line in quotes\n", rest[1])
+			return start.CodeBlocked
+		} else if len(rest) == 1 && strings.TrimSpace(opts.Outcome) == "" {
+			opts.Outcome = rest[0]
+		}
+	} else if flags.NArg() > 0 {
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi start only takes flags (run odachi start -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
@@ -1606,6 +1617,7 @@ func usage(out io.Writer) {
 usage:
   odachi                      the same as odachi start
   odachi start [flags]
+  odachi start --light "<requirement>"
   odachi ask "<question>"
   odachi ask --answer "<answer>" [--for P1]
   odachi ask --craft "<decision>" --because "<reason>"
@@ -1814,6 +1826,8 @@ flags:
   --brief path    read an existing brief instead of asking
   --force         rewrite an existing brief.md (it is backed up first)
   --waive-review  record that this feature lands without a review verdict (the proof and the fence still apply)
+  --light         open a feature that fits one line: no brief, one step with the same words,
+                  and the fence and the voice untouched; the line is the requirement
   --json          machine output
 
 after start:
