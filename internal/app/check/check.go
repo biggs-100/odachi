@@ -248,6 +248,14 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		return *problem
 	}
 	r.feature = feature
+	// A light feature has no brief by design: its one line is the vision, and the
+	// artifact says so. The brief question is the only one the lane skips -the
+	// fence, the questions and the proof are asked exactly as before- and the
+	// document, not the command line, is what decides (0166).
+	if feature != nil && feature.Doc.Light {
+		state.HasBrief = true
+		state.BriefMissing = nil
+	}
 	closedNow := false
 	if feature != nil {
 		state.OpenQuestions = len(feature.Doc.OpenQuestions())
