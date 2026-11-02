@@ -1,23 +1,21 @@
-# the-review-of
+# odachi-check-run
 
 ## What must exist
-- the review of a light feature is judged against that feature's own line, not against the previous feature's brief
+- odachi check --run streams the command's output while it runs, so a lock is not read as a slow suite
 
 ## Done when
-- odachi review --base <sha> on a light feature writes a prompt whose vision section quotes that feature's requirement and names the task document it came from
-- a normal feature's prompt carries brief.md exactly as before
-- a light document that is already closed still names its own line, so the closing tree is judged against it
-- a task document that cannot be read is named as such: the review never falls back to a brief it did not read
-- no lens, verdict or store entry changes: the same tree still gets the same lenses and the same JSON
+- a command run with odachi check --run writes what it prints to stderr while it runs, before the command exits
+- the proof file carries the same output it carries today: one copy, the terminator, and the same tree and model headers
+- a command that prints nothing still changes nothing: no stream, the same report
+- with --json the stream goes to stderr and the JSON on stdout stays what a caller parses
+- the timeout report and its next line are unchanged
 
 ## Not included (first version)
-- no change to internal/domain/review/**: the lane never chooses lenses and never changes the shape of a verdict
-- no new flag on review: the feature is found, not named by hand
-- no change to start --light: the lane keeps writing one task doc and nothing else
-- no redefinition of brief.md for a normal feature
+- no change to how the reviewer runs: the stream is for the proof, and review --exec keeps its buffered call
+- the proof format does not change: the stream is not a second copy of the output
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why the context a prompt carries is part of its evidence.
+- Wants to learn: why a stream and a file can carry the same evidence.
