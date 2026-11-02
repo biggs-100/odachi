@@ -12,10 +12,11 @@ R1 · "the two names the last two reviews left reading as something else -a step
 - both rows leave `docs/review-debt.md`, with the tests that pay them
 
 ## Steps
-- [ ] T1 · a step tail with two commit parts stays text, not the last one   R1
-- [ ] T2 · a bare artifact name answers which kind it is   R1
-- [ ] T3 · a name that is no artifact is refused with the four odachi keeps   R1
-- [ ] T4 · the two rows leave the review debt with their tests   R1
+- [x] T1 · a step tail with two commit parts stays text, not the last one   R1 · tree:f7b41792ac2b57ff58cec7973634707d324c8526
+- [x] T2 · a bare artifact name answers which kind it is   R1 · tree:40785bb662de21dd51519457421c554a7ac7d5ca
+- [x] T3 · a name that is no artifact is refused with the four odachi keeps   R1 · tree:5c9e071e0a4a01585d4169bb374457952a62c9e6
+- [x] T4 · the two rows leave the review debt with their tests   R1 · tree:ed0347b0c67df9a2f7b979015a685fb9874ce69f
+- [x] T5 · the changelog names the two names that now say what they are   R1 · tree:353111955caad1e6e3e4ff3b0bfdfee2a06da3be
 
 ## History
 L1 · "the two names the last two reviews left reading as something else -a step tail with two commit parts, and a bare artifact name- are read for what they are, so neither a line is rewritten behind the reader nor a refusal states something false"
