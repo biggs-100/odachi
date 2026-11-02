@@ -9,11 +9,22 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0167, which paid the one row 0166 left.
+Last written: after 0168, whose verdict approved with one row.
 
 ## Open
 
-Nothing.
+### the closed light feature no test judges
+
+Found by the review of 0168 (warning, `internal/app/review/vision_test.go:1`). The brief's done-when
+pins "a light document that is already closed still names its own line, so the closing tree is
+judged against it", and the three tests cover an open light document, a document without the lane
+and an unreadable one - never one whose steps are all checked. `lightVision` keys on the base and
+the lane and never on progress, so the closed case works today; the row is that nothing fails if
+`tasks.All` ever stops returning completed documents, which would bring back the exact defect 0168
+fixed, silently.
+
+Paid when a feature touches `lightVision` or the task listing again: one test whose light document
+has every step checked.
 
 ## Closed by feature 0167
 

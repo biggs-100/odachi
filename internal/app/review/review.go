@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/biggs-100/odachi/internal/app/tasks"
 	domain "github.com/biggs-100/odachi/internal/domain/review"
 )
 
@@ -2931,14 +2932,9 @@ func (r *runner) afterReviewer() {
 	r.work = nil
 }
 
-// candidate gathers the brief and the worktree. Without a diff there is nothing
+// candidate gathers the vision and the worktree. Without a diff there is nothing
 // to review, and the run stops there - before any write.
 func (r *runner) candidate() (candidate, *Result) {
-	briefText, problem := r.brief()
-	if problem != nil {
-		return candidate{}, problem
-	}
-
 	work, problem := r.worktree()
 	if problem != nil {
 		return candidate{}, problem
@@ -2952,7 +2948,12 @@ func (r *runner) candidate() (candidate, *Result) {
 		return candidate{}, &problem
 	}
 
-	return candidate{brief: briefText, base: work.base, tree: work.tree, paths: work.paths, diff: work.diff}, nil
+	visionText, problem := r.vision(work.base)
+	if problem != nil {
+		return candidate{}, problem
+	}
+
+	return candidate{brief: visionText, base: work.base, tree: work.tree, paths: work.paths, diff: work.diff}, nil
 }
 
 // candidateForReview is candidate() plus the lens flag: a verdict is named by
@@ -2969,6 +2970,50 @@ func (r *runner) candidateForReview() (candidate, *Result) {
 	}
 
 	return cand, nil
+}
+
+// vision is what the prompt carries as what the human asked for. A light feature
+// writes no brief -the line is the vision- so the review reads the document whose
+// base is this candidate's and carries the requirement it quotes, naming the file
+// it came from. Everything else reads brief.md, as it always has.
+func (r *runner) vision(base string) (string, *Result) {
+	text, rel, problem := r.lightVision(base)
+	if problem != nil {
+		return "", problem
+	}
+	if text == "" {
+		return r.brief()
+	}
+	return "(this feature is one line: no brief was written, and the vision below is the " +
+		"requirement " + rel + " carries)\n\n" + text, nil
+}
+
+// lightVision answers the requirement of the light feature this candidate belongs
+// to: the document that records the same base, highest number first. A folder or a
+// document that cannot be read is refused, never read as "no document" (ADR 0038).
+func (r *runner) lightVision(base string) (text, rel string, problem *Result) {
+	docs, err := tasks.All(r.files, r.opts.Dir)
+	if err != nil {
+		p := blocked(oneLine(err.Error()) + "; check the permissions and run odachi review again")
+		return "", "", &p
+	}
+
+	for i := len(docs) - 1; i >= 0; i-- {
+		doc := docs[i]
+		if doc.Doc.Base != base {
+			continue
+		}
+		if !doc.Doc.Light {
+			return "", "", nil
+		}
+		if len(doc.Doc.Requirements) == 0 || strings.TrimSpace(doc.Doc.Requirements[0].Text) == "" {
+			p := blocked("the light feature at " + doc.Rel + " carries no requirement the review can read; open it with odachi start --light")
+			return "", "", &p
+		}
+		return doc.Doc.Requirements[0].Text, doc.Rel, nil
+	}
+
+	return "", "", nil
 }
 
 // brief reads brief.md. A missing brief is a state, not an error: the review is
