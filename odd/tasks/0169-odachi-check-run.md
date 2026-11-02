@@ -12,9 +12,9 @@ R1 · "odachi check --run streams the command's output while it runs, so a lock 
 - the timeout report and its next line are unchanged
 
 ## Steps
-- [ ] T1 · the shell edge mirrors the output to a writer while it captures it   R1 · route:inline
-- [ ] T2 · check gives the stream a writer and the proof keeps one copy   R1 · route:inline
-- [ ] T3 · the CLI sends the stream to stderr, and --json keeps stdout parseable   R1 · route:inline
+- [x] T1 · the shell edge mirrors the output to a writer while it captures it   R1 · route:inline · tree:e0cbd257ed227e3dd090226c4c0991468182bade
+- [x] T2 · check gives the stream a writer and the proof keeps one copy   R1 · route:inline · tree:421464c598ce32641ccfb326e79129085c07f3a7
+- [x] T3 · the CLI sends the stream to stderr, and --json keeps stdout parseable   R1 · route:inline · tree:a5eb11f86c034e581f12eb2504db8eaaf31e0dcb
 
 ## History
 L1 · "odachi check --run streams the command's output while it runs, so a lock is not read as a slow suite"

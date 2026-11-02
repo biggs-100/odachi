@@ -2,8 +2,8 @@ package check_test
 
 import (
 	"errors"
-	"io"
 	"fmt"
+	"io"
 	"path/filepath"
 	"slices"
 	"strings"

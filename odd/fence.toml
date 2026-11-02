@@ -4,15 +4,17 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# "no new flag" is a decision about what the feature does, not a file: the brief
-# carries it.
+# "no new flag" and "the proof format does not change" are decisions about what
+# the feature does, not files: the brief carries them. A rule over the package
+# that writes proofs is forbidden outright (0150): the fence guards the evidence,
+# never the writer, or it blocks its own improvement.
+
+[[rule]]
+not   = "a stored proof is never rewritten, whatever the writer learns"
+paths = ["proof/**"]
+deps  = []
 
 [[rule]]
 not   = "no change to how the reviewer runs: the stream is for the proof, and review --exec keeps its buffered call"
 paths = ["internal/app/review/**"]
-deps  = []
-
-[[rule]]
-not   = "the proof format does not change: the stream is not a second copy of the output"
-paths = ["internal/domain/proof/**"]
 deps  = []
