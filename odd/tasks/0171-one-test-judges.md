@@ -9,7 +9,7 @@ R1 · "one test judges a light feature whose steps are all checked"
 - the lookup never asks how much of the work is done
 
 ## Steps
-- [ ] T1 · a closed light document still names its own line in the review prompt   R1 · route:inline
+- [x] T1 · a closed light document still names its own line in the review prompt   R1 · route:inline · tree:a9d89126edd5fac908ea75e4d9706041f97f5d08
 
 ## History
 L1 · "one test judges a light feature whose steps are all checked"
