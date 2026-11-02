@@ -83,17 +83,25 @@ func TestRunStreamWritesWhileTheCommandRuns(t *testing.T) {
 		fmt.Fprintln(os.Stdout, "ready-out")
 		fmt.Fprintln(os.Stderr, "ready-err")
 		release := os.Getenv(releaseEnv)
-		for {
+		// The wait is bounded: a parent that dies leaves no spinner behind. The
+		// bound is never the assertion -the parent releases the child as soon as
+		// it sees both lines- it is what keeps a failed run from leaking a
+		// process that holds the build cache.
+		for waited := time.Duration(0); waited < 60*time.Second; waited += 5 * time.Millisecond {
 			if _, err := os.Stat(release); err == nil {
 				return
 			}
 			time.Sleep(5 * time.Millisecond)
 		}
+		return
 	}
 
 	release := filepath.Join(t.TempDir(), "release")
 	t.Setenv(helperEnv, "1")
 	t.Setenv(releaseEnv, release)
+	// Whatever happens below, the child hears the release: a test that fails must
+	// not leave the process it started waiting for a file nobody will write.
+	defer os.WriteFile(release, []byte("fail\n"), 0o600)
 
 	seen := newWatchBuffer()
 	type result struct {
