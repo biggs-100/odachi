@@ -199,6 +199,21 @@ func OfKind(backups []Backup, kind Kind) []Backup {
 	return kept
 }
 
+// KindOf reports which artifact a project-relative path is, when it is one. It
+// is how `--file brief --artifact odd/tasks/…` is refused as a contradiction
+// instead of quietly finding nothing.
+func KindOf(artifact string) (Kind, bool) {
+	for _, kind := range Kinds() {
+		if path.Dir(artifact) != kind.Dir() {
+			continue
+		}
+		if _, ok := kind.Artifact(path.Base(artifact)); ok {
+			return kind, true
+		}
+	}
+	return "", false
+}
+
 // Sorted returns the backups newest first. Two backups can share a timestamp on
 // a filesystem with coarse dates, so ties break on the path: the answer must
 // never depend on the order the directory happened to list.

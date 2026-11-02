@@ -752,6 +752,7 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&opts.List, "list", false, "what can be undone, with its date")
 	flags.BoolVar(&opts.Collect, "collect", false, "move old backups into the clone's store")
 	flags.StringVar(&opts.File, "file", "", "only that artifact: brief | profile | fence | task")
+	flags.StringVar(&opts.Artifact, "artifact", "", "the one document to restore: the path --list prints, or its file name")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
@@ -1614,7 +1615,7 @@ usage:
   odachi level [--to <profile>]
   odachi summary
   odachi progress
-  odachi undo [--list | --collect] [--file brief]
+  odachi undo [--list | --collect] [--file brief] [--artifact <path>]
   odachi clean [--apply] [--legacy] [--json]
   odachi store move [--dry-run]
   odachi check [flags]
@@ -1687,6 +1688,8 @@ undo flags:
   --list          what can be undone, with its date
   --collect       move old backups into the clone's store; it deletes no version
   --file s        only that artifact: brief | profile | fence | task
+  --artifact s    the one document to restore: the path --list prints, or its
+                  file name; it is the way out of a project with several tasks
   --json          machine output
 
 clean flags:
