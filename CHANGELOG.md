@@ -6,7 +6,7 @@ file yet, and a changelog that starts today erases the history of whoever arrive
 tomorrow. Only versions that were tagged are listed: a heading with no tag is not
 a release (`docs/releases.md`).
 
-## Unreleased
+## v0.11.101 - 2026-11-02
 
 A one-line feature is reviewed against its own line, and a proof speaks while it runs.
 
