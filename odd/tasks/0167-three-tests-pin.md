@@ -8,7 +8,7 @@ R1 · "three tests pin the light lane's three refusals: --light with --brief, an
 ## Done when
 
 ## Steps
-- [ ] T1 · three tests pin the light lane's three refusals: --light with --brief, an open name, an extra argument   R1
+- [x] T1 · three tests pin the light lane's three refusals: --light with --brief, an open name, an extra argument   R1 · tree:875de2b6a6a67bcb963e56c3642b0ce28351b29f
 
 ## History
 L1 · "three tests pin the light lane's three refusals: --light with --brief, an open name, an extra argument"
