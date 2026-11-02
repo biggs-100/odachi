@@ -11,6 +11,7 @@ package check
 import (
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 
@@ -110,6 +111,10 @@ type Options struct {
 	// Quiet changes nothing about the result: the printer decides whether a
 	// ready run says anything (the pre-commit hook depends on the silence).
 	Quiet bool
+	// Out is where the proof command's output is mirrored while it runs, so a
+	// human watching a lock sees the work instead of silence. Nil is quiet: the
+	// proof still carries the bytes when the run ends.
+	Out io.Writer
 	// Model is the model of the session that runs --run, as the host reports it.
 	// It travels into the proof so a verdict by the same model can be refused as
 	// a self-review. Empty means there is no agent to name.
@@ -180,6 +185,9 @@ type Git interface {
 // stdout only.
 type Shell interface {
 	Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
+	// RunStream is Run with a window: what the command prints reaches w while it
+	// is being captured. A nil w is Run exactly.
+	RunStream(dir, command string, timeoutSeconds int, w io.Writer) (stdout, stderr string, exitCode int, timedOut bool, err error)
 }
 
 // Result is what the CLI prints and exits with. It has the same shape as the
@@ -626,7 +634,7 @@ type ranProof struct {
 // the command succeeded: a failed command is not evidence. The exit code of the
 // command never becomes the exit code of `check`.
 func (r *runner) runProof(proofPath string) (ranProof, *Result) {
-	stdout, stderr, exitCode, timedOut, err := r.shell.Run(r.opts.Dir, r.opts.Run, r.opts.TimeoutSeconds)
+	stdout, stderr, exitCode, timedOut, err := r.shell.RunStream(r.opts.Dir, r.opts.Run, r.opts.TimeoutSeconds, r.opts.Out)
 	// The proof is what the command said, both streams: a failing test writes
 	// its verdict to stdout and its build errors to stderr, and hiding either
 	// would make the proof a partial quotation.
