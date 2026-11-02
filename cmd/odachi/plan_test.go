@@ -102,6 +102,46 @@ func TestPlanAppendsAndClosesStepsEndToEnd(t *testing.T) {
 	}
 }
 
+// TestPlanRouteFlagsEndToEnd: the two flags reach the document through the
+// command line, and a contradiction is refused with the flag to change.
+func TestPlanRouteFlagsEndToEnd(t *testing.T) {
+	t.Parallel()
+	dir, taskPath := startedProject(t)
+
+	code, _, stderr := runDir(t, dir, []string{"plan", "primer paso", "--req", "R1", "--route", "delegated", "--agent", "odachi-worker"}, "")
+	if code != 0 {
+		t.Fatalf("plan --route delegated: exit %d, stderr=%s", code, stderr)
+	}
+
+	code, _, stderr = runDir(t, dir, []string{"plan", "segundo paso", "--route", "inline"}, "")
+	if code != 0 {
+		t.Fatalf("plan --route inline: exit %d, stderr=%s", code, stderr)
+	}
+
+	doc := planDoc(t, dir, taskPath)
+	if len(doc.Steps) != 2 {
+		t.Fatalf("steps = %+v, want two", doc.Steps)
+	}
+	if doc.Steps[0].Route != "delegated" || doc.Steps[0].Agent != "odachi-worker" {
+		t.Errorf("T1 = %+v, want route delegated/odachi-worker", doc.Steps[0])
+	}
+	if doc.Steps[1].Route != "inline" || doc.Steps[1].Agent != "" {
+		t.Errorf("T2 = %+v, want route inline with no agent", doc.Steps[1])
+	}
+
+	// A delegated step with no agent is refused, names the flag, and writes nothing.
+	code, _, stderr = runDir(t, dir, []string{"plan", "tercer paso", "--route", "delegated"}, "")
+	if code != 1 {
+		t.Fatalf("plan --route delegated without --agent: exit %d, want 1", code)
+	}
+	if !strings.Contains(stderr, "--agent") {
+		t.Errorf("stderr %q does not name --agent", stderr)
+	}
+	if got := len(planDoc(t, dir, taskPath).Steps); got != 2 {
+		t.Errorf("the refused step was written: %d steps, want 2", got)
+	}
+}
+
 // TestPlanRejectsBadTextBeforeWriting: the text is checked before anything is
 // written, asserted on the filesystem.
 func TestPlanRejectsBadTextBeforeWriting(t *testing.T) {

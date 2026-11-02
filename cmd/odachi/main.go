@@ -278,6 +278,8 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.StringVar(&opts.Requirement, "req", "", "R<n> of the requirement the new step is tied to")
+	flags.StringVar(&opts.Route, "route", "", "who runs the new step: inline | delegated")
+	flags.StringVar(&opts.Agent, "agent", "", "agent that runs a delegated step (goes with --route delegated)")
 	flags.StringVar(&opts.Done, "done", "", "T<n> of the step that is marked done")
 	flags.StringVar(&opts.Commit, "commit", "", "commit that closed the step (goes with --done)")
 	flags.IntVar(&opts.Feature, "feature", 0, "the feature number to write to (default: the highest)")
@@ -1607,7 +1609,7 @@ usage:
   odachi ask --answer "<answer>" [--for P1]
   odachi ask --craft "<decision>" --because "<reason>"
   odachi ask --change "<words>" --req R1
-  odachi plan "<text>" [--req R1]
+  odachi plan "<text>" [--req R1] [--route inline | delegated --agent <name>]
   odachi plan --done T2 [--commit abc1234]
   odachi level [--to <profile>]
   odachi summary
@@ -1674,6 +1676,9 @@ review mode:
 
 plan flags:
   --req R<n>      requirement the new step is tied to
+  --route s       who runs the new step: inline (the parent) | delegated (another
+                  agent); a step with no route is not declared, never assumed inline
+  --agent s       agent that runs a delegated step; an inline step has none
   --done T<n>     step that is marked done
   --commit sha    commit that closed the step (goes with --done; its tree is recorded when git can read it)
   --json          machine output
@@ -1813,7 +1818,7 @@ after start:
   odachi ask --answer "<answer>" [--for P1]     record your answer
   odachi ask --craft "<decision>" --because "<reason>"  record a decision the agent took
   odachi ask --change "<words>" --req R1        record the requirement the human changed; its steps reopen
-  odachi plan "<text>" [--req R1]               add the next step to the task doc
+  odachi plan "<text>" [--req R1] [--route inline | delegated --agent <name>]   add the next step to the task doc
   odachi plan --done T2 [--commit abc1234]      mark a step done; the tree of its commit is recorded
   odachi level                                  see your facts; it proposes senior when earned
   odachi level --to <profile>                   apply a profile and its voice (both are backed up)

@@ -207,8 +207,8 @@ func TestDriveTeachesTheRequirementChangeRule(t *testing.T) {
 }
 
 // TestDriveTeachesTheWorkflowDiscipline: ODD-lite is content, and content
-// drifts. `drive` names the spec rule, the RED before GREEN rule, the delegation
-// record and the risk line; `commits` owns the risk vocabulary.
+// drifts. `drive` names the spec rule, the RED before GREEN rule, the route a
+// delegated step declares and the risk line; `commits` owns the risk vocabulary.
 func TestDriveTeachesTheWorkflowDiscipline(t *testing.T) {
 	all, err := skills.All()
 	if err != nil {
@@ -222,7 +222,7 @@ func TestDriveTeachesTheWorkflowDiscipline(t *testing.T) {
 	for _, want := range []string{
 		"Requirements quoted **verbatim**",
 		"observe RED",
-		"delegated step",
+		"--route delegated",
 		"Risk:",
 	} {
 		if !strings.Contains(byName["drive"], want) {

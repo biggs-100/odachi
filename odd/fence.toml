@@ -4,8 +4,9 @@
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120).
 #
-# "no fifth lens" and "no change to the quorum" are decisions about what the
-# feature does, not files: the brief carries them.
+# "no new verb" and "no route on a requirement" are decisions about what the
+# feature does, not files: the brief carries them, and main.go changes anyway
+# because the flag lives there.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"
@@ -13,6 +14,11 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "the review's own question is not edited while its lenses grow"
-paths = ["internal/domain/review/prompt.go", "internal/domain/review/refute.go"]
+not   = "the review does not learn to read a route: it judges the four artifacts it already judges"
+paths = ["internal/domain/review/**"]
+deps  = []
+
+[[rule]]
+not   = "the gate does not learn to judge a route, and a step that declares a route is not a new gate"
+paths = ["internal/domain/gate/**", "internal/app/check/**"]
 deps  = []

@@ -5,6 +5,23 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A step declares who runs it.
+
+- **The step line carries its route.** `odachi plan "<text>" --route inline` says the parent runs
+  the step; `--route delegated --agent odachi-worker` names the agent that does. The route lives
+  in the task doc beside the requirement and the tree, so the document says who did the work
+  instead of a chat nobody keeps.
+- **A contradiction is refused when the step is written.** A delegated step with no agent, an
+  inline step with one and an agent with no route are refused before the line exists, and the
+  message names the flag to change. A step written before this change reads as not declared,
+  never as inline.
+- Why: delegation used to be a craft note in the history -a sentence about the work, not the
+  step's own line- so the record of who ran a step lived where nothing reads it. Identity is
+  declared, never inferred (ADR 0038), and the tool records the declaration without checking it:
+  the gate and the review do not learn to read a route.
+
 ## v0.11.95 - 2026-11-01
 
 The lenses name four defects they were missing.

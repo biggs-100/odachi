@@ -23,7 +23,7 @@ The four pieces and who owns each one:
 The feature cycle, in order:
 
 1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`, or with `--brief` when `shape` drafted it.
-2. `odachi plan "<step>" --req R1`: one step per deliverable behavior.
+2. `odachi plan "<step>" --req R1 --route inline`: one step per deliverable behavior, and the step says who runs it: `--route inline`, or `--route delegated --agent <name>`.
 3. Commit what start wrote -brief, fence, profile and task doc, steps included- before you branch. If they do not land together, the next change is judged by the last feature's fence, or a reset loses them.
 4. Work the step. A vision decision: `odachi ask "<question>"` and wait. A requirement the human changes: `odachi ask --change "<words>" --req R1`: its steps reopen and `brief.md` does not move.
 5. `odachi check`: the gate. The proof is owed by the closing tree, not by every step.
@@ -37,7 +37,7 @@ Once the work is understood, load `slices` before splitting; its policy wins ove
 
 - Requirements quoted **verbatim** and "Done when" observable; if missing, `ask`.
 - Before a step, load `tests` and observe RED; `check --run` only with GREEN.
-- If you delegate a step, record it with `ask --craft "delegated step: ..." --because "..."`.
+- A delegated step declares it when it is written (`--route delegated --agent <name>`): the task doc keeps the route, and a chat is not the record.
 - Close the commit with the `Risk:` line from `commits`: its table names the lens and the verifier, and a risk allows no waiver.
 
 The verbs: `start` interviews · `ask` asks or records a craft decision (`--craft`) · `plan` opens and closes steps · `check` gates and proof · `review` verdict per tree · `doctor` health without writing · `level` profile · `summary` state · `undo` undoes the last write · `init`, `skills`, `skill new` and `pack` are installation; `--version` touches nothing.
