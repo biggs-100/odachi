@@ -7,6 +7,19 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+The installer verifies the signature before it installs.
+
+- **Both installers require cosign.** They download `checksums.txt.sigstore.json` and verify the
+  checksum file against this repository's release workflow and the tag before they read a hash, and
+  they refuse when cosign is missing instead of degrading: a check that runs only sometimes is no
+  check (0174).
+- **Why it matters:** the checksum and the archive came from the same host, so a compromised release
+  passed its own hash. The chain of trust now ends in the signature, not in GitHub.
+- **Breaking for installers:** cosign must be on the PATH. That is a documented workflow step, so the
+  next release is a `minor` and not a patch.
+
 ## v0.11.102 - 2026-11-02
 
 A craft skill for the screen an agent builds.
