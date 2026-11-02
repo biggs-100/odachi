@@ -11,7 +11,7 @@ R1 · "one skill gives an agent the craft rules and the anti-AI catalogue for an
 - SKILLS.md lists it and odachi init installs it beside the other seventeen
 
 ## Steps
-- [ ] T1 · the craft skill exists, validates, and the registry lists it   R1 · route:inline
+- [x] T1 · the craft skill exists, validates, and the registry lists it   R1 · route:inline · tree:7aa1bf90c3c4b755f7bed9a115b296a7de0555f1
 
 ## History
 L1 · "one skill gives an agent the craft rules and the anti-AI catalogue for any screen it builds"
