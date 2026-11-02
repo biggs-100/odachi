@@ -11,8 +11,8 @@ R1 · "the release doctrine is written, drive points at it, and the changelog na
 - the next release is one that names the observable changes and nothing else
 
 ## Steps
-- [ ] T1 · the doctrine exists as docs/releases.md and the drive skill points at it   R1 · route:inline
-- [ ] T2 · the changelog names only versions that were published   R1 · route:inline
+- [x] T1 · the doctrine exists as docs/releases.md and the drive skill points at it   R1 · route:inline · tree:2234f065853722a2fb3f0e3378e7114d552b8074
+- [x] T2 · the changelog names only versions that were published   R1 · route:inline · tree:e048db682b21b01ff0510009c03bd51305fa128b
 
 ## History
 L1 · "the release doctrine is written, drive points at it, and the changelog names only versions that were published"
