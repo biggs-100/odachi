@@ -5,6 +5,22 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A name says what it is.
+
+- **A step tail with two commit parts stays text.** A hand-written `R1 · tree:abc · note` used to
+  keep the last part as the commit and lose the first on the next canonical write. Two parts in
+  the same slot are ambiguous, so the line is kept as text, unchanged, instead of being rewritten
+  behind its reader.
+- **`--artifact` reads a bare name.** The name `--list` prints now answers which kind it is, so
+  `--file brief --artifact 0002-x.md` is refused as the contradiction it is, instead of saying
+  there is no backup of a document the run itself hid. A name outside the four is refused with
+  the four paths it does keep.
+- Why: the two rows 0163 and 0164 left were the same defect twice -a name read as something it is
+  not- and the lesson is the same both ways: a parser that tolerates must also refuse what it
+  cannot read (0165).
+
 ## v0.11.97 - 2026-11-01
 
 A record can be repaired by naming it.

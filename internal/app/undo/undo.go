@@ -150,8 +150,15 @@ func run(opts Options, files Files) Result {
 	artifact := normalizeArtifact(opts.Artifact)
 	// --file and --artifact are two ways of naming one document: asking for the
 	// brief and naming a task is a contradiction, not a filter that finds nothing.
-	if artifact != "" && kind != "" {
-		if named, ok := undodomain.KindOf(artifact); ok && named != kind {
+	// A name that is none of the four is answered with the four, because a filter
+	// that keeps nothing would read as "there is no backup" (0165).
+	if artifact != "" {
+		named, ok := undodomain.KindOf(artifact)
+		if !ok {
+			return blocked(fmt.Sprintf("--artifact %s is not an artifact odachi keeps: it keeps %s",
+				artifact, allowedTargets()))
+		}
+		if kind != "" && named != kind {
 			return blocked(fmt.Sprintf("--artifact %s is a %s, and this run asked for %s: drop --file or name a %s",
 				artifact, named, kind, kind))
 		}

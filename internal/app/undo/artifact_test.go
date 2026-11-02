@@ -48,6 +48,51 @@ func TestUndoAsksWhichTaskInsteadOfNamingFile(t *testing.T) {
 	}
 }
 
+// TestUndoRefusesABareNameOutsideTheKindItWasTold: the bare name `--list` prints
+// is a name too, so the contradiction is refused whatever form it arrives in
+// (0164's row: the message used to say there was no backup of a document the run
+// itself hid).
+func TestUndoRefusesABareNameOutsideTheKindItWasTold(t *testing.T) {
+	files := twoTasks()
+
+	res := undo.Run(undo.Options{Dir: dir, Store: store, File: "brief", Artifact: "0002-otra-cosa.md"}, files, nil)
+
+	if res.Code != undo.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
+	}
+	for _, want := range []string{"brief", "task"} {
+		if !strings.Contains(res.Message, want) {
+			t.Errorf("message %q does not name %s", res.Message, want)
+		}
+	}
+	if strings.Contains(res.Message, "there is no backup") {
+		t.Errorf("message %q states there is no backup of a document the run hid", res.Message)
+	}
+	if len(files.wrote) != 0 {
+		t.Errorf("a refused undo wrote %v", files.wrote)
+	}
+}
+
+// TestUndoRefusesANameThatIsNoArtifact: a name odachi keeps no version of is a
+// question about what it does keep, and the answer is the four paths.
+func TestUndoRefusesANameThatIsNoArtifact(t *testing.T) {
+	files := twoTasks()
+
+	res := undo.Run(undo.Options{Dir: dir, Store: store, Artifact: "notas.txt"}, files, nil)
+
+	if res.Code != undo.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, undo.CodeBlocked, res.Message)
+	}
+	for _, want := range []string{"brief.md", "odd/profile.toml", "odd/fence.toml", "odd/tasks/*.md"} {
+		if !strings.Contains(res.Message, want) {
+			t.Errorf("message %q does not name %s", res.Message, want)
+		}
+	}
+	if len(files.wrote) != 0 {
+		t.Errorf("a refused undo wrote %v", files.wrote)
+	}
+}
+
 // TestUndoRestoresTheArtifactItIsTold: naming the document is the way out of a
 // project with several of them, and the restore backs up what it replaces.
 func TestUndoRestoresTheArtifactItIsTold(t *testing.T) {

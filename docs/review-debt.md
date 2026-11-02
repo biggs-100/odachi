@@ -9,32 +9,37 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0164, whose standing verdict approved with one row.
+Last written: after 0165, which paid the two rows 0163 and 0164 left.
 
 ## Open
 
+Nothing. The two rows that stood here were the same defect twice -a name read as something it is
+not- and 0165 paid both, each with the test that would have caught it.
+
+## Closed by feature 0165
+
 ### the tail that keeps only the last commit part
 
-Found by the re-review of 0163 (warning, `internal/domain/taskdoc/taskdoc.go:416`), still open:
-0164 did not touch the tail parser. The step tail splits on the glyph and assigns every non-route
-part to the commit, so a hand-written `R1 · tree:abc · note` keeps `note` and loses `tree:abc`,
-and the next canonical write rewrites the line without it. Before 0163 that segment never parsed
-and stayed inside the step's text.
+Found by the re-review of 0163 (warning, `internal/domain/taskdoc/taskdoc.go:416`). The step tail
+assigned every non-route part to the commit, so a hand-written `R1 · tree:abc · note` kept `note`
+and lost `tree:abc`, and the next canonical write rewrote the line without it.
 
-Paid when a feature touches the tail parser again: the second non-route part should be refused
-the way an unknown tail is, so the line stays text instead of being rewritten.
+Closed: two parts in the same slot are ambiguous, so `parseTail` reads no tail at all and the line
+stays text, which round-trips unchanged. Pinned by `TestATailWithTwoCommitPartsStaysText` in
+`internal/domain/taskdoc/route_test.go` (`482c28b`).
 
 ### the bare name that skips the contradiction
 
 Found by the review of 0164 (warning, `internal/app/undo/undo.go:152`). `--artifact` accepts the
 bare file name `--list` prints, but the check that refuses `--file brief --artifact 0163-x.md`
-only recognizes a full project path, because it asks the domain which kind a path is. With a bare
-name the check is skipped, the run keeps the `--file` filter, finds nothing, and says there is no
-backup of that document -which is false, because the run hid the version itself.
+only recognized a full project path. With a bare name the check was skipped, the run kept the
+`--file` filter, found nothing, and said there was no backup of a document the run itself hid.
 
-Not paid in 0164, because the verdict approved that tree and a warning earns no round. It is paid
-when a feature touches `--artifact` again: a bare name should answer the kind question too, so the
-contradiction is refused with a message that is true.
+Closed: `KindOf` resolves a bare name against the four kinds and still refuses a path with a
+foreign directory, so the contradiction is refused whatever form the name arrives in. A name that
+is none of the four is refused with the four paths instead of falling through to the filter.
+Pinned by `TestKindOfReadsABareName`, `TestUndoRefusesABareNameOutsideTheKindItWasTold` and
+`TestUndoRefusesANameThatIsNoArtifact` (`4c2de50`, `4c09437`).
 
 ## Closed before 0164
 

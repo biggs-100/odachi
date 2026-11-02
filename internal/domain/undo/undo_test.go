@@ -240,3 +240,29 @@ func TestGroupsShowsOneEntryPerArtifactNewestFirst(t *testing.T) {
 		t.Errorf("Last() = %v, want the newest backup's date", groups[1].Last())
 	}
 }
+
+// TestKindOfReadsABareName is 0164's row: the name `--list` prints and a human
+// types carries no directory, and it still says which artifact it is.
+func TestKindOfReadsABareName(t *testing.T) {
+	cases := []struct {
+		artifact string
+		want     undo.Kind
+		ok       bool
+	}{
+		{"brief.md", undo.Brief, true},
+		{"profile.toml", undo.Profile, true},
+		{"fence.toml", undo.Fence, true},
+		{"odd/profile.toml", undo.Profile, true},
+		{"odd/tasks/0002-otra-cosa.md", undo.Task, true},
+		{"0002-otra-cosa.md", undo.Task, true},
+		{"otra/cosa.md", "", false},
+		{"notas.txt", "", false},
+	}
+
+	for _, c := range cases {
+		got, ok := undo.KindOf(c.artifact)
+		if ok != c.ok || got != c.want {
+			t.Errorf("KindOf(%q) = %q/%v, want %q/%v", c.artifact, got, ok, c.want, c.ok)
+		}
+	}
+}
