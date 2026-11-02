@@ -42,6 +42,10 @@ chat.
   `internal/domain/proof/**` (0150).
 - **The order that survives the hook:** commit the step, then `plan --done T1`. Marking a step done
   first closes the feature and the hook demands a proof; `undo --artifact <doc>` puts the mark back.
+- **`gate (macos-latest)` sometimes cancels at 15m02s** on a pull request, twice today on docs-only
+  trees, while the other two platforms pass and the same suite takes ~100 s there. A re-run passes in
+  ~1m20s: treat it as a runner flake, re-run before investigating, and only after a second failure in
+  the same PR go looking for the cause.
 
 ## What is open
 
