@@ -9,31 +9,9 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0169, whose verdict approved with one warning and one suggestion.
+Last written: after 0170, which paid the two rows 0169 left.
 
 ## Open
-
-### the stream that arrives at the end passes every test of the stream
-
-Found by the review of 0169 (warning, `internal/adapters/shellcmd/stream_test.go:39`). The brief's
-first done-when is timing: "writes what it prints to stderr while it runs, before the command
-exits". Every test the feature added reads the mirror after the command has finished, so an
-implementation that captured first and wrote everything to the writer when the process ended would
-pass all of them - and bring back the silence the feature exists to remove.
-
-Paid by the next feature that touches `RunStream` or its tests: one test whose child prints a line
-and then blocks, asserting the writer already holds the line while the run is still open. The
-helper-process pattern (`os.Args[0]` re-run with a flag) works on every platform without a clock.
-
-### the concurrency contract nobody exercises, and an assertion that cannot fire
-
-Found by the review of 0169 (suggestion, `internal/adapters/shellcmd/stream_test.go:49`).
-`syncBuffer` exists because two streams are copied by two goroutines, but the only run is
-`go version`, which writes to stdout alone: the lock is never contended. The assertion that stdout
-does not carry stderr is permanently false for that command, so it reads as coverage of the
-two-stream separation while proving nothing.
-
-Paid with the row above: one command that writes to both streams pins the lock and the separation.
 
 ### the closed light feature no test judges
 
@@ -47,6 +25,32 @@ fixed, silently.
 
 Paid when a feature touches `lightVision` or the task listing again: one test whose light document
 has every step checked.
+
+## Closed by feature 0170
+
+### the stream that arrives at the end passed every test of the stream
+
+Found by the review of 0169 (warning, `internal/adapters/shellcmd/stream_test.go:39`): the brief's
+first done-when is timing, and every test read the mirror after the command had finished, so a
+capture-then-write implementation passed all of them.
+
+Closed: `TestRunStreamWritesWhileTheCommandRuns` re-runs the test binary as its child, which prints
+to both streams and blocks until the parent writes a release file. The assertion that matters is
+after both lines arrive: the run must still be open. Observed red against the batch implementation
+("the lines arrived only once the run had ended"), green with the mirror restored.
+
+The row left one thing of its own: the child had no bound, so a parent that died left a spinner
+holding the build cache and the next suite looked hung. It now gives up after a minute on its own,
+and the test releases it on every path, including a failure.
+
+### the concurrency contract nobody exercises, and an assertion that cannot fire
+
+Found by the review of 0169 (suggestion, `internal/adapters/shellcmd/stream_test.go:49`): the only
+run wrote to stdout alone, so the lock was never contended and the separation assertion could never
+fire.
+
+Closed with the same test: its child writes to both streams, so two goroutines touch the mirror at
+once and the returned strings are checked against what each stream carried.
 
 ## Closed by feature 0167
 
