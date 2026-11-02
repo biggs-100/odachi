@@ -3,7 +3,8 @@
 What changed in each released version, in the order a person reads it.
 Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
-tomorrow.
+tomorrow. Only versions that were tagged are listed: a heading with no tag is not
+a release (`docs/releases.md`).
 
 ## Unreleased
 
@@ -24,14 +25,6 @@ A one-line feature is reviewed against its own line, and a proof speaks while it
 - **Where it goes is the rule:** the stream is stderr, so `--json` keeps stdout as one document a
   caller can parse. The reviewer's own run stays quiet: the stream is a window, not a second
   answer.
-
-## v0.11.100 - 2026-11-02
-
-The light lane's refusals are pinned.
-
-- **Three tests name the three refusals of `start --light`:** a run that also brings `--brief`, a
-  name that is already open, and a second positional argument. The review of 0166 found them
-  unexercised; the lane behaves exactly as it did before (0167).
 
 ## v0.11.99 - 2026-11-01
 

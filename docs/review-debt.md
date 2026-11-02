@@ -9,11 +9,19 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0171, which paid the last open row. Nothing is open.
+Last written: after 0172, whose verdict approved with one row.
 
 ## Open
 
-Nothing.
+### the fence explains a rule it does not have
+
+Found by the review of 0172 (suggestion, `odd/fence.toml:7`). The header says '"no new verb" is a
+decision about what the feature does, not a file: the brief carries it', and no such non-goal exists
+in that brief or in the rules below it: the line describes a rule the file never had. A maintainer
+reading the fence gets a rationale for nothing.
+
+Paid by the next feature whose `start` rewrites the fence, or by the first one that touches its
+header: the sentence goes, or names a decision this feature actually took.
 
 ## Closed by feature 0171
 
