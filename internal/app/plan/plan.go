@@ -171,18 +171,49 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 	// The document's own spelling wins: a hand-written `t2` stays `t2` when the
 	// tool marks it, because Record matches the id it has.
 	id = step.ID
+	given := strings.TrimSpace(opts.Commit)
+
+	// A step already done is the memory of work finished, and re-running the verb
+	// does not rewrite it. One exception: a step that closed with no mark can
+	// still be given the bytes it produced, because a record nobody can repair is
+	// a hole in the memory (0164).
 	if step.Done {
+		switch {
+		case step.Commit != "":
+			return Result{
+				Code:    CodeOK,
+				Message: fmt.Sprintf("step %s was already done", id),
+				Task:    current.Rel,
+			}
+		case given == "":
+			return Result{
+				Code: CodeOK,
+				Message: fmt.Sprintf("step %s was already done with no mark; pass --commit <sha> to record the tree it produced",
+					id),
+				Task: current.Rel,
+			}
+		}
+
+		mark := canonicalMark(opts, given)
+		grown, err := current.Doc.Record(id, mark)
+		if err != nil {
+			return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
+		}
+		if err := tasks.SaveWithBackup(files, current, grown); err != nil {
+			return blocked(err.Error())
+		}
 		return Result{
 			Code:    CodeOK,
-			Message: fmt.Sprintf("step %s was already done", id),
+			Message: fmt.Sprintf("step %s already done · recorded %s", id, shortMark(mark)),
 			Task:    current.Rel,
+			Files:   []string{current.Rel},
 		}
 	}
 
 	// A commit recorded on an open step is not thrown away when the caller does
 	// not pass one: plan records, it never erases.
 	mark := step.Commit
-	if given := strings.TrimSpace(opts.Commit); given != "" {
+	if given != "" {
 		// --commit names a commit; the document records its bytes, because a rebase
 		// rewrites the commit and keeps the tree.
 		mark = canonicalMark(opts, given)
