@@ -243,6 +243,30 @@ func TestACommitWithNoRequirementKeepsItsMark(t *testing.T) {
 	}
 }
 
+// TestATailWithTwoCommitPartsStaysText: a line a person wrote with two marks is
+// ambiguous, and choosing the last one rewrites the line behind its reader. The
+// tail stays text, which round-trips unchanged (0163's row).
+func TestATailWithTwoCommitPartsStaysText(t *testing.T) {
+	const md = "# demo\n\n## Steps\n- [ ] T1 · cerrar la puerta   R1 · tree:abc · note\n"
+
+	step := taskdoc.Parse(md).Steps[0]
+	if step.Requirement != "" {
+		t.Errorf("Requirement = %q, want empty: the ambiguous tail is not a link", step.Requirement)
+	}
+	if step.Commit != "" {
+		t.Errorf("Commit = %q, want empty: one of the two marks is not the commit", step.Commit)
+	}
+	if !strings.Contains(step.Text, "tree:abc") || !strings.Contains(step.Text, "note") {
+		t.Errorf("the tail was not kept as text: %q", step.Text)
+	}
+
+	doc := taskdoc.Parse(md)
+	if again := taskdoc.Parse(doc.Render()); !reflect.DeepEqual(again, doc) {
+		t.Fatalf("render then parse changed the document:\ngot  %+v\nwant %+v\nrendered:\n%s",
+			again, doc, doc.Render())
+	}
+}
+
 // TestAnUnknownRouteWordIsStillRead: Parse is total. A hand-written route the
 // tool does not know is kept, not thrown away as prose, so `plan` can say what
 // it accepts instead of rewriting the line silently.

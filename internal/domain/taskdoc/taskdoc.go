@@ -412,6 +412,12 @@ func parseTail(segment string) (tail, bool) {
 			parsed.route, parsed.agent = splitRoute(spec)
 			continue
 		}
+		if parsed.commit != "" {
+			// Two non-route parts: the tail says two things about the same slot,
+			// and keeping the last one would rewrite the line behind its reader.
+			// The line stays text, which round-trips unchanged (0165).
+			return tail{}, false
+		}
 		parsed.commit = part
 	}
 	return parsed, true
