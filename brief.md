@@ -1,21 +1,18 @@
-# odachi-check-run
+# one-test-judges
 
 ## What must exist
-- odachi check --run streams the command's output while it runs, so a lock is not read as a slow suite
+- one test judges a light feature whose steps are all checked
 
 ## Done when
-- a command run with odachi check --run writes what it prints to stderr while it runs, before the command exits
-- the proof file carries the same output it carries today: one copy, the terminator, and the same tree and model headers
-- a command that prints nothing still changes nothing: no stream, the same report
-- with --json the stream goes to stderr and the JSON on stdout stays what a caller parses
-- the timeout report and its next line are unchanged
+- a light document whose steps are all checked still names its own line in the review prompt
+- the lookup never asks how much of the work is done
 
 ## Not included (first version)
 - no change to how the reviewer runs: the stream is for the proof, and review --exec keeps its buffered call
-- the proof format does not change: the stream is not a second copy of the output
+- a stored proof is never rewritten, whatever the writer learns
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why a stream and a file can carry the same evidence.
+- Wants to learn: why a closed record is still the record.
