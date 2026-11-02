@@ -12,3 +12,4 @@ R1 · "three tests pin the light lane's three refusals: --light with --brief, an
 
 ## History
 L1 · "three tests pin the light lane's three refusals: --light with --brief, an open name, an extra argument"
+L2 · OFICIO · "a test-only change still opens the changelog's Unreleased section" (porque the release renames that section, and a release that publishes nothing leaves the reader without the one line that says what the version was for)
