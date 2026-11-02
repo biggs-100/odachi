@@ -9,14 +9,31 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0162, whose standing verdict left no rows.
+Last written: after 0163, whose standing verdict approved with one row.
 
 ## Open
 
-Nothing, after 0160. The reviews of 0154 and 0155 left rows and they are closed below: the nine
-of 0154 were paid by 0155, and the last one -a test that asserted on a canvas it may have
-killed- was closed by 0156. The verdict on 0157's tree `b184e6f0` approved the four lenses with
-no findings, and so did the one on 0158's tree `5208b95d`.
+### the tail that keeps only the last commit part
+
+Found by the re-review of 0163 (warning, `internal/domain/taskdoc/taskdoc.go:416`). The step
+tail now splits on the glyph and assigns every non-route part to the commit, so a hand-written
+`R1 · tree:abc · note` keeps `note` and loses `tree:abc`, and the next canonical write rewrites
+the line without it. Before 0163 that segment never parsed and stayed inside the step's text.
+
+Not paid in 0163, because the verdict approved that tree and a warning earns no round. It is
+paid when a feature touches the tail parser again: the second non-route part should be refused
+the way an unknown tail is, so the line stays text instead of being rewritten.
+
+## Closed before 0163
+
+Nothing was open after 0160. The reviews of 0154 and 0155 left rows and they are closed below:
+the nine of 0154 were paid by 0155, and the last one -a test that asserted on a canvas it may
+have killed- was closed by 0156. The verdict on 0157's tree `b184e6f0` approved the four lenses
+with no findings, and so did the ones on 0158's tree `5208b95d` and on 0162.
+
+0163's first review earned one correction: a commit-only step line whose sha looked like a
+requirement was read as one. The fix and its test landed in `d3bd1f6`, and the tree that stands
+(`3348e25`) approved with the row above.
 
 0159 has a row that never reached this list. Its first review -tree `9d0f029`, before the
 verdict landed- found one WARNING: `docs/next-session.md` counted a model move that the final
