@@ -1,22 +1,23 @@
-# the-lenses-name-what-they-missed
+# the-step-declares-its-route
 
 ## What must exist
-- the four lens prompts name the defects the comparison with gentle-ai found missing: a suite that got smaller, a test at the wrong level, a failure with no threshold and a failure nobody can see, and behaviour the brief does not explain
+- a step says who executes it -the parent inline, or a named agent delegated- and the task doc keeps that declaration on the step, so a reader knows who did the work without opening a chat
 
 ## Done when
-- reliability names a focused or skipped test that makes CI pass by shrinking the suite, and a test that proves a function through a whole flow
-- resilience names a failure with no threshold the project chose, and a failure with nothing in production that would show it
-- readability names behaviour the diff changes and the brief never asked for
-- every lens keeps between twelve and twenty rules of the length the format enforces, and the asset tests stay green
+- `odachi plan "<text>" --req R1 --route inline` adds a step whose line names the route, and `--route delegated --agent odachi-worker` names the agent too
+- a delegated route with no agent, and an inline route that names one, are refused with a message that says what to pass instead
+- a step written before this change parses unchanged: a missing route reads as not declared, never as inline
+- render then parse returns the same route and agent, and a done step keeps the route beside its tree
+- the drive skill sends a delegated step to the flag instead of a craft note, and the skill's pinned test follows the new sentence
 
 ## Not included (first version)
-- no change to the review engine, the prompt builder or the severity vocabulary: this feature edits four prompts and nothing else
-- no borrowed numbers: a threshold is what the project chose, and another project's figure is not a rule here
-- no fifth lens: the four stay, and each one grows by what it was missing
-- no change to the quorum or the refutation rule
+- no gate change: `check`, `review` and the fence neither read nor judge a route
+- the tool never checks that the named agent did the work: it records a declaration, like ownership (ADR 0038)
+- no new verb, no store entry, no `summary`/`progress` change: the route lives on the step line and nowhere else
+- no route on a requirement, and no second agent in the same field: one step, one executor
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why a lens is a list of defects and not a list of virtues.
+- Wants to learn: why a declaration nobody verifies is still worth writing down.
