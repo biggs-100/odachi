@@ -3,8 +3,19 @@
 What changed in each released version, in the order a person reads it.
 Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
-tomorrow. Only versions that were tagged are listed: a heading with no tag is not
-a release (`docs/releases.md`).
+tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
+not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
+not a version.
+
+## Unreleased
+
+A craft skill for the screen an agent builds.
+
+- **`ui-craft` ships with the curriculum.** One skill holds the decision order a designer
+  follows (content, hierarchy, layout, type, colour, detail, states, remove), nine tells of a
+  generic interface with the move that replaces each, the numbers that make a screen look
+  deliberate (scale, measure, contrast, targets, motion durations), and the read-back before
+  delivering. It stands alone: it depends on no skill this project does not ship (0173).
 
 ## v0.11.101 - 2026-11-02
 
