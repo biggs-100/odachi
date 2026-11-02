@@ -5,6 +5,23 @@ Versions before 0.10.0 were rebuilt from their tags: the repo did not have this
 file yet, and a changelog that starts today erases the history of whoever arrives
 tomorrow.
 
+## Unreleased
+
+A line is enough for a change that fits one.
+
+- **`odachi start --light "<requirement>"` opens a one-line feature.** The task doc carries the
+  requirement quoted, one step with the same words and `Light: yes`, and nothing else is written:
+  no brief, and the project's fence and voice stay exactly as they were. `check` no longer asks a
+  light feature for a brief -the one line is the vision- and asks it for the fence, the open
+  questions and the proof exactly as before.
+- **The lane closes like any feature.** The one step is what the gate counts, so the closing tree
+  owes its proof and its review, and `plan` refuses a second step: a change that needs one is a
+  change that needs a brief.
+- Why: the rule "without a written vision nothing is built" is the product, and the lane keeps it
+  by making the written vision one line. `Light: yes` lives in the preamble, where the base and
+  the waiver already live, so the artifact carries the shape and no command line has to remember
+  it (0166).
+
 ## v0.11.98 - 2026-11-01
 
 A name says what it is.
