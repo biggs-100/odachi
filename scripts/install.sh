@@ -103,6 +103,24 @@ trap 'rm -rf -- "$tmp"' EXIT
 # hasta que el archivo demuestra ser el que la release publicó.
 curl -fsSL -o "$tmp/$asset" "$base/$asset" || die "no pude descargar $base/$asset; revisá la versión y tu conexión"
 curl -fsSL -o "$tmp/checksums.txt" "$base/checksums.txt" || die "no pude descargar $base/checksums.txt; sin checksums no instalo nada"
+curl -fsSL -o "$tmp/checksums.txt.sigstore.json" "$base/checksums.txt.sigstore.json" || die "no pude descargar $base/checksums.txt.sigstore.json; sin la firma, el checksum y el binario vendrían del mismo lugar y eso no prueba nada"
+
+# La firma es lo que hace confiable al checksum: los dos bajan del mismo host, y
+# sin verificarla la cadena termina en GitHub, no en la release. Se exige cosign:
+# un chequeo que corre sólo a veces es una degradación silenciosa.
+if [ -n "${ODACHI_COSIGN:-}" ]; then
+	cosign_bin=$ODACHI_COSIGN
+else
+	command -v cosign >/dev/null 2>&1 ||
+		die "me falta cosign para verificar la firma de checksums.txt; instalalo desde https://docs.sigstore.dev/cosign/system_config/installation/ y volvé a correr esto"
+	cosign_bin=cosign
+fi
+"$cosign_bin" verify-blob \
+	--bundle "$tmp/checksums.txt.sigstore.json" \
+	--certificate-identity "https://github.com/$REPO/.github/workflows/release.yml@refs/tags/v$version" \
+	--certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+	"$tmp/checksums.txt" >/dev/null 2>&1 ||
+	die "la firma de checksums.txt no verifica contra este workflow y esta versión: el archivo no es el que la release publicó, y no instalé nada"
 
 expected=$(awk -v name="$asset" '($2 == name || $2 == "*" name) { print $1; exit }' "$tmp/checksums.txt")
 [ -n "$expected" ] || die "checksums.txt no trae el hash de $asset; no instalo algo que la release no certifica"

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"runtime"
 	"strings"
 	"testing"
@@ -139,6 +140,12 @@ func buildRelease(t *testing.T) releaseFixture {
 	if err := os.WriteFile(filepath.Join(releaseDir, "checksums.txt"), []byte(checksums), 0o644); err != nil {
 		t.Fatalf("write checksums.txt: %v", err)
 	}
+	// The bundle is what makes the checksum trustworthy. The fixture does not
+	// sign: the shim answers for cosign, so the installer's own logic is what the
+	// test measures. The bytes only have to be there.
+	if err := os.WriteFile(filepath.Join(releaseDir, "checksums.txt.sigstore.json"), []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle+json;version=0.3"}`), 0o644); err != nil {
+		t.Fatalf("write the bundle: %v", err)
+	}
 
 	return releaseFixture{dir: releaseDir, asset: asset}
 }
@@ -221,9 +228,25 @@ func lookupFold(keys map[string]string, name string) (string, bool) {
 	return "", false
 }
 
+// cosignShim answers for cosign: the test measures what the installer does with
+// a verification that passes and one that fails, not sigstore's cryptography.
+// The path is handed to the script as ODACHI_COSIGN so the lookup does not depend
+// on which `cosign` a runner happens to have.
+func cosignShim(t *testing.T, exitCode int) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	script := "#!/bin/sh\nexit " + strconv.Itoa(exitCode) + "\n"
+	path := filepath.Join(dir, "cosign")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write cosign shim: %v", err)
+	}
+	return path
+}
+
 // runInstaller runs the real script against the local release with no network
 // available to it, and returns its exit code and its combined output.
-func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir string) (int, string) {
+func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir, cosign string) (int, string) {
 	t.Helper()
 
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
@@ -250,6 +273,7 @@ func runInstaller(t *testing.T, bash string, fixture releaseFixture, binDir stri
 		"ODACHI_VERSION":  installVersion,
 		"ODACHI_BASE_URL": fileBaseURL(fixture.dir),
 		"ODACHI_BIN_DIR":  binDir,
+		"ODACHI_COSIGN":   cosign,
 		// The target platform is passed explicitly instead of relying on the
 		// uname shim winning in PATH: on a Windows runner it does not, and the
 		// test would then be measuring the refusal path instead of the install.
@@ -278,7 +302,7 @@ func TestInstallScriptInstallsTheVerifiedBinary(t *testing.T) {
 	fixture := buildRelease(t)
 	binDir := filepath.Join(t.TempDir(), "bin")
 
-	code, output := runInstaller(t, bash, fixture, binDir)
+	code, output := runInstaller(t, bash, fixture, binDir, cosignShim(t, 0))
 
 	if code != 0 {
 		t.Fatalf("installer exit = %d, want 0:\n%s", code, output)
@@ -330,7 +354,7 @@ func TestInstallScriptRefusesAModifiedChecksum(t *testing.T) {
 	}
 
 	binDir := filepath.Join(t.TempDir(), "bin")
-	code, output := runInstaller(t, bash, fixture, binDir)
+	code, output := runInstaller(t, bash, fixture, binDir, cosignShim(t, 0))
 
 	if code == 0 {
 		t.Fatalf("installer exit = 0 with a modified checksum, want non-zero:\n%s", output)
@@ -343,5 +367,31 @@ func TestInstallScriptRefusesAModifiedChecksum(t *testing.T) {
 	}
 	if entries, err := os.ReadDir(binDir); err == nil && len(entries) > 0 {
 		t.Errorf("%s is not empty after a failed verification: %v", binDir, entries)
+	}
+}
+
+// TestInstallScriptRefusesASignatureThatDoesNotVerify is the row this feature
+// paid: the checksum and the archive come from the same host, so without the
+// signature the chain ends there. A failing cosign must stop the install before
+// anything is written.
+func TestInstallScriptRefusesASignatureThatDoesNotVerify(t *testing.T) {
+	t.Parallel()
+	bash := requireBash(t)
+	fixture := buildRelease(t)
+
+	binDir := filepath.Join(t.TempDir(), "bin")
+	code, output := runInstaller(t, bash, fixture, binDir, cosignShim(t, 1))
+
+	if code == 0 {
+		t.Fatalf("installer exit = 0 with a signature that does not verify, want non-zero:\n%s", output)
+	}
+	if !strings.Contains(output, "firma") {
+		t.Errorf("output does not say the signature is what failed:\n%s", output)
+	}
+	if _, err := os.Stat(filepath.Join(binDir, "odachi")); err == nil {
+		t.Errorf("%s exists after a failed signature: nothing may be installed", filepath.Join(binDir, "odachi"))
+	}
+	if entries, err := os.ReadDir(binDir); err == nil && len(entries) > 0 {
+		t.Errorf("%s is not empty after a failed signature: %v", binDir, entries)
 	}
 }
