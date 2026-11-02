@@ -70,20 +70,42 @@ func TestPlanRefusesAContradictoryRoute(t *testing.T) {
 }
 
 // TestPlanKeepsTheRouteOutOfTheDoneForm: closing a step is not the moment to
-// declare who runs it; the route belongs to the step that is opened.
+// declare who runs it; the route belongs to the step that is opened. The
+// message names the two calls that work and never a contradiction of them.
 func TestPlanKeepsTheRouteOutOfTheDoneForm(t *testing.T) {
-	files := project()
-
-	message := assertBlocked(t, plan.Run(plan.Options{
-		Dir:   "raiz",
-		Done:  "T2",
-		Route: "inline",
-	}, files))
-
-	if !strings.Contains(message, "--route") {
-		t.Errorf("message %q does not name the flag", message)
+	cases := []struct {
+		name  string
+		route string
+		agent string
+	}{
+		{"inline with no agent", "inline", ""},
+		{"delegated with no agent", "delegated", ""},
+		{"an agent with no route", "", "odachi-worker"},
 	}
-	if len(files.wrote) != 0 {
-		t.Errorf("a blocked plan wrote %v", files.wrote)
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			files := project()
+
+			message := assertBlocked(t, plan.Run(plan.Options{
+				Dir:   "raiz",
+				Done:  "T2",
+				Route: c.route,
+				Agent: c.agent,
+			}, files))
+
+			if !strings.Contains(message, "--route") {
+				t.Errorf("message %q does not name the flag", message)
+			}
+			if !strings.Contains(message, "--route inline") {
+				t.Errorf("message %q does not name the call that works", message)
+			}
+			if !strings.Contains(message, "--route delegated --agent") {
+				t.Errorf("message %q does not name the delegated call that works", message)
+			}
+			if len(files.wrote) != 0 {
+				t.Errorf("a blocked plan wrote %v", files.wrote)
+			}
+		})
 	}
 }

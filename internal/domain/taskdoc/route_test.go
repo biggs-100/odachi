@@ -216,6 +216,33 @@ func TestAddStepRefusesARouteThatContradictsItsAgent(t *testing.T) {
 	}
 }
 
+// TestACommitWithNoRequirementKeepsItsMark: the commit-only tail is the old
+// spelling of a step closed without a link, and a sha whose letters run into
+// digits is not a requirement id. The mark must survive the round trip.
+func TestACommitWithNoRequirementKeepsItsMark(t *testing.T) {
+	md := `# demo
+
+## Steps
+- [x] T1 · cerrar la puerta   · cafe123
+`
+	step := taskdoc.Parse(md).Steps[0]
+	if step.Requirement != "" {
+		t.Errorf("Requirement = %q, want empty: the mark is not a requirement", step.Requirement)
+	}
+	if step.Commit != "cafe123" {
+		t.Errorf("Commit = %q, want cafe123", step.Commit)
+	}
+
+	doc := taskdoc.TaskDoc{
+		Title: "demo",
+		Steps: []taskdoc.Step{{ID: "T1", Text: "cerrar la puerta", Commit: "cafe123", Done: true}},
+	}
+	again := taskdoc.Parse(doc.Render())
+	if !reflect.DeepEqual(again, doc) {
+		t.Fatalf("render then parse changed the document:\ngot  %+v\nwant %+v\nrendered:\n%s", again, doc, doc.Render())
+	}
+}
+
 // TestAnUnknownRouteWordIsStillRead: Parse is total. A hand-written route the
 // tool does not know is kept, not thrown away as prose, so `plan` can say what
 // it accepts instead of rewriting the line silently.

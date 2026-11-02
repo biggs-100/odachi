@@ -394,14 +394,16 @@ func parseTail(segment string) (tail, bool) {
 	}
 
 	// A tail is either a requirement id or an old commit-only tail, which the
-	// canonical form writes after a single "·": "   · 4a1c9f".
+	// canonical form writes after a single "·": "   · 4a1c9f". The dot says the
+	// first part is not a requirement, even when it looks like one: a sha whose
+	// letters run into digits ("cafe123") is exactly what idPattern matches.
 	leadingDot := strings.HasPrefix(trimmed, "·")
 	if !leadingDot && !idPattern.MatchString(kept[0]) {
 		return tail{}, false
 	}
 
 	var parsed tail
-	if idPattern.MatchString(kept[0]) {
+	if !leadingDot && idPattern.MatchString(kept[0]) {
 		parsed.requirement = kept[0]
 		kept = kept[1:]
 	}

@@ -124,7 +124,7 @@ func validate(opts Options) (string, string) {
 	case done == "" && commit != "":
 		return "", `--commit only goes with a step you are marking: run odachi plan --done T2 --commit <sha>`
 	case done != "" && (route != "" || agent != ""):
-		return "", `--route and --agent describe a step you open, and this run closes one: run odachi plan "<text>" --route ` + routeAndAgent(route, agent)
+		return "", `--route and --agent describe a step you open, and this run closes one: run odachi plan "<text>" --route inline, or --route delegated --agent <name>`
 	case text != "" && done != "":
 		return "", "use one form of odachi plan at a time: " + usage
 	case done != "" && requirement != "":
@@ -135,18 +135,6 @@ func validate(opts Options) (string, string) {
 		return "", `missing the step: write odachi plan "<text>" to add one or odachi plan --done T2 to mark one done`
 	}
 	return formAdd, ""
-}
-
-// routeAndAgent writes the pair an error repeats, so a message that refuses a
-// call still names the call that works.
-func routeAndAgent(route, agent string) string {
-	if route == "" {
-		route = "inline"
-	}
-	if agent == "" {
-		return route
-	}
-	return route + " --agent " + agent
 }
 
 // add appends the next step. The number and the link are decided by the domain,
