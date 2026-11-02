@@ -60,6 +60,55 @@ func TestStartLightWritesOneLineAndTouchesNothingElse(t *testing.T) {
 	}
 }
 
+// TestStartLightRefusesABrief: a light feature has no brief, because the line is
+// the vision. A run that brings both is refused before it writes anything, and the
+// answer names the flag to drop.
+func TestStartLightRefusesABrief(t *testing.T) {
+	files := newFakeFiles(nil, nil)
+
+	got := start.Run(start.Options{
+		Light:     true,
+		Outcome:   lightOutcome,
+		BriefPath: "brief.md",
+	}, nil, files, nil)
+
+	if got.Code != start.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+	}
+	assertOneLine(t, got.Message)
+	if !strings.Contains(got.Message, "--brief") {
+		t.Errorf("message %q does not name the flag to drop", got.Message)
+	}
+	if paths := files.paths(); len(paths) != 0 {
+		t.Errorf("a refused run wrote %v, want nothing", paths)
+	}
+}
+
+// TestStartLightRefusesANameThatIsAlreadyOpen: repeating the same line is the
+// realistic way to arrive here, and it must not write a second document beside the
+// one that still carries the change. The answer names the document on disk.
+func TestStartLightRefusesANameThatIsAlreadyOpen(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		"odd/tasks/0001-el-saludo-dice.md": "# el-saludo-dice\n",
+	}, nil)
+
+	got := start.Run(start.Options{Light: true, Outcome: lightOutcome}, nil, files, nil)
+
+	if got.Code != start.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+	}
+	assertOneLine(t, got.Message)
+	if !strings.Contains(got.Message, "already open") {
+		t.Errorf("message %q does not say the feature is still open", got.Message)
+	}
+	if !strings.Contains(got.Message, "0001-el-saludo-dice.md") {
+		t.Errorf("message %q does not name the document that holds it", got.Message)
+	}
+	if paths := files.paths(); len(paths) != 1 {
+		t.Errorf("a refused run wrote %v, want only the document that was already there", paths)
+	}
+}
+
 // TestStartLightNeedsItsLine: the lane is the requirement; a run with no words to
 // write says so instead of opening an empty feature.
 func TestStartLightNeedsItsLine(t *testing.T) {
