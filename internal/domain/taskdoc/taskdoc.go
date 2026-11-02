@@ -17,10 +17,27 @@ type Requirement struct{ ID, Text string }
 
 // Step is one ordered unit of work. Requirement and Commit are empty when the
 // agent has not linked them yet.
+//
+// Route says who runs the step and Agent names the executor when it is not the
+// parent. Both are declarations: the tool never infers that a step without a
+// route was run inline, because a document written before the field existed
+// says nothing instead of saying the parent did it.
 type Step struct {
 	ID, Text, Requirement, Commit string
+	Route, Agent                  string
 	Done                          bool
 }
+
+// The two routes a step can declare.
+const (
+	// RouteInline is the parent that runs the step itself.
+	RouteInline = "inline"
+	// RouteDelegated is another agent that runs it, named in Agent.
+	RouteDelegated = "delegated"
+)
+
+// routePrefix opens the tail part that says who runs the step.
+const routePrefix = "route:"
 
 // TaskDoc is the parsed task document.
 type TaskDoc struct {
@@ -76,16 +93,14 @@ var (
 	idPattern = regexp.MustCompile(`^[A-Za-z]+\d+$`)
 
 	// gapPattern is the wide gap that separates step text from its
-	// requirement/commit tail. The canonical form uses three spaces so a
+	// requirement/route/commit tail. The canonical form uses three spaces so a
 	// " · " inside the text stays part of the text.
 	gapPattern = regexp.MustCompile(`[ \t]{2,}`)
 
-	// tailPattern is "R1" or "R1 · 4a1c9f".
-	tailPattern = regexp.MustCompile(`^([A-Za-z]+\d+)(?:\s*·\s*(\S+))?$`)
-
-	// commitOnlyPattern is the fallback for a step recorded with a commit
-	// but no requirement link: "· 4a1c9f".
-	commitOnlyPattern = regexp.MustCompile(`^·\s*(\S+)$`)
+	// tailSepPattern splits the tail into its parts: the requirement, the route
+	// and the commit, in that order. Tolerant of a hand-written line that has no
+	// spaces around the glyph, because a document is read by people first.
+	tailSepPattern = regexp.MustCompile(`\s*·\s*`)
 )
 
 // section names the task-doc part a header feeds, or "" for an unknown header.
@@ -255,27 +270,53 @@ func (d TaskDoc) Render() string {
 
 // renderStep writes one canonical step line:
 //
-//   - [x] T1 · text   R1 · 4a1c9f
-//   - [ ] T2 · text   R2
+//   - [x] T1 · text   R1 · tree:4a1c9f
+//   - [ ] T2 · text   R1 · route:delegated/odachi-worker
+//   - [ ] T3 · text   · route:inline
 //
-// A commit without a requirement link has no canonical slot, so it renders in
-// the tail as "· commit"; Parse reads it back into the same Step.
+// The tail is the requirement, then the route, then the commit, so a reader
+// finds who ran the step next to the bytes it produced. A commit or a route
+// without a requirement link has no first slot, so it renders after a lone "·"
+// and Parse reads it back into the same Step.
 func renderStep(s Step) string {
 	box := "[ ]"
 	if s.Done {
 		box = "[x]"
 	}
 	line := fmt.Sprintf("- %s %s%s%s", box, s.ID, sep, s.Text)
-	switch {
-	case s.Requirement != "":
-		line += "   " + s.Requirement
-		if s.Commit != "" {
-			line += sep + s.Commit
-		}
-	case s.Commit != "":
-		line += "   · " + s.Commit
+
+	tail := make([]string, 0, 3)
+	if s.Requirement != "" {
+		tail = append(tail, s.Requirement)
 	}
-	return line
+	if route := renderRoute(s); route != "" {
+		tail = append(tail, route)
+	}
+	if s.Commit != "" {
+		tail = append(tail, s.Commit)
+	}
+
+	switch {
+	case len(tail) == 0:
+		return line
+	case s.Requirement == "":
+		return line + "   · " + strings.Join(tail, sep)
+	default:
+		return line + "   " + strings.Join(tail, sep)
+	}
+}
+
+// renderRoute is the one spelling of a route: "route:inline", or
+// "route:delegated/<agent>" when another agent runs the step.
+func renderRoute(s Step) string {
+	switch {
+	case s.Route == "":
+		return ""
+	case s.Agent != "":
+		return routePrefix + s.Route + "/" + s.Agent
+	default:
+		return routePrefix + s.Route
+	}
 }
 
 // parseRequirement reads one `R1 · "text"` line. The quotes are the human's
@@ -294,8 +335,8 @@ func parseRequirement(line string) (Requirement, bool) {
 	return Requirement{ID: id, Text: strings.TrimSpace(text)}, true
 }
 
-// parseStep reads one `- [x] T1 · text   R1 · commit` line. The requirement
-// and commit tail is optional; the checkbox decides Done.
+// parseStep reads one `- [x] T1 · text   R1 · route:inline · tree:abc` line. The
+// requirement, route and commit tail is optional; the checkbox decides Done.
 func parseStep(line string) (Step, bool) {
 	if !strings.HasPrefix(line, checkboxPrefix) {
 		return Step{}, false
@@ -319,20 +360,65 @@ func parseStep(line string) (Step, bool) {
 	segments := gapPattern.Split(tail, -1)
 	if len(segments) > 1 {
 		last := segments[len(segments)-1]
-		if m := tailPattern.FindStringSubmatch(last); m != nil {
-			step.Requirement = m[1]
-			step.Commit = m[2]
-			step.Text = strings.Join(segments[:len(segments)-1], "  ")
-			return step, true
-		}
-		if m := commitOnlyPattern.FindStringSubmatch(last); m != nil {
-			step.Commit = m[1]
+		if parsed, ok := parseTail(last); ok {
+			step.Requirement, step.Route, step.Agent, step.Commit = parsed.requirement, parsed.route, parsed.agent, parsed.commit
 			step.Text = strings.Join(segments[:len(segments)-1], "  ")
 			return step, true
 		}
 	}
 	step.Text = tail
 	return step, true
+}
+
+// tail is the three facts a step line carries after its text, in order.
+type tail struct{ requirement, route, agent, commit string }
+
+// parseTail reads the last segment of a step line when it is the canonical tail
+// and reports false when it is not: a segment that is neither an id nor a tail
+// opened by a lone "·" is text, exactly as it was before routes existed.
+//
+// A route is "route:<word>" or "route:delegated/<agent>". A word the tool does
+// not know is kept as it was written, so the document is never rewritten with a
+// meaning its author did not give it.
+func parseTail(segment string) (tail, bool) {
+	trimmed := strings.TrimSpace(segment)
+	parts := tailSepPattern.Split(trimmed, -1)
+	kept := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			kept = append(kept, part)
+		}
+	}
+	if len(kept) == 0 {
+		return tail{}, false
+	}
+
+	// A tail is either a requirement id or an old commit-only tail, which the
+	// canonical form writes after a single "·": "   · 4a1c9f".
+	leadingDot := strings.HasPrefix(trimmed, "·")
+	if !leadingDot && !idPattern.MatchString(kept[0]) {
+		return tail{}, false
+	}
+
+	var parsed tail
+	if idPattern.MatchString(kept[0]) {
+		parsed.requirement = kept[0]
+		kept = kept[1:]
+	}
+	for _, part := range kept {
+		if spec, isRoute := strings.CutPrefix(part, routePrefix); isRoute {
+			parsed.route, parsed.agent = splitRoute(spec)
+			continue
+		}
+		parsed.commit = part
+	}
+	return parsed, true
+}
+
+// splitRoute reads "inline" or "delegated/odachi-worker" into its two halves.
+func splitRoute(spec string) (route, agent string) {
+	route, agent, _ = strings.Cut(spec, "/")
+	return strings.TrimSpace(route), strings.TrimSpace(agent)
 }
 
 // cut splits a line at the first id/text separator and trims the id.
