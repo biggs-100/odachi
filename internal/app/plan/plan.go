@@ -303,7 +303,7 @@ func committedTree(opts Options) (string, string) {
 		return "", ""
 	}
 	if worktree != head {
-		return "", "the tree was not recorded: the worktree is not the commit"
+		return "", "the tree was not recorded: the worktree is not the commit; pass --commit <sha> to record it"
 	}
 	return "tree:" + head, ""
 }
