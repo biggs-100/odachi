@@ -40,10 +40,10 @@ instead of trusting a number written here -a version in prose is a claim nobody
 measures. The installer
 verifies the sigstore bundle against this repository's release workflow and the
 tag, then the sha256, and only then writes; a signature or a checksum that does
-not match exits with an error and leaves **nothing** at the destination. The whole
-chain is tested against the real release, not a fixture: a test builds the
-`tar.gz` and the checksums the way goreleaser publishes them, runs `install.sh`
-offline through `file://`, and the installed binary answers its version.
+not match exits with an error and leaves **nothing** at the destination. The
+install path is tested against a release the test builds itself -the tarball, the
+checksums and the bundle, served over `file://`- with a shim answering for cosign:
+what the test measures is the installer's decision, not sigstore's cryptography.
 
 The installer also runs `odachi setup`: the bootstrap skill in
 `~/.agents/skills`, the home door for the agent clients it finds, and OpenCode's
