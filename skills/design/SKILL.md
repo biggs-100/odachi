@@ -33,22 +33,23 @@ handoff is a step of its own.
 - **The manifest is the truth**: `{"title", "brief", "feature"?, "artboards":[...]}` with `file`,
   `title`, `tradeoff`, `width`, `height` and `screenshot` per artboard, kept in sync on every
   change. `feature` is the task document it came from, empty for untracked work.
-- **Ask at most one clarifying question**, and only when the brief lacks the goal or the
-  content.
+- **Ask at most one clarifying question**, and only when the brief lacks the goal or the content.
 - **Iterating edits only the targeted artboard.** Never rewrite the others.
 - **Design system first when it exists**: read `design/system.md` and use only its tokens and
   component rules. Before finishing any artboard, list the colours and font families it uses,
   compare them with the system, and fix every deviation.
 - **Capture the system by reading, never by writing**: `odachi design sync` reads the tokens from
-  CSS custom properties (`:root`, `@theme`, `[data-theme]`), the Tailwind config, token files and
-  the fonts they declare, and writes `design/system.md` with each entry's source path and
-  `design/system.html` with the tokens. With no sources, say so; never invent project tokens.
+  CSS custom properties (`:root`, `@theme`, `[data-theme]`), the Tailwind config, component folders,
+  token files and the fonts they declare, and writes `design/system.md` with each entry's source path
+  and `design/system.html` with the tokens. With no sources, say so and propose a starter system;
+  never invent project tokens.
 - **Comments come from the folder, not from a tool**: `design/<slug>/comments.json` is a versioned
   file (`{"version": 1, "comments": [...]}`) with `id`, `file`, `selector`, `excerpt`, `comment`,
   optional `screenshot`, `createdAt`, `status` (`open` | `resolved`), `sentAt`, `resolvedAt`. Apply each open comment by
   editing only its artboard, using `selector` and `excerpt`; look at `screenshot` first. Resolve
   what you applied with `odachi design comments <slug> --resolve <id...>`, or by setting `status`
-  and `resolvedAt` without the command. Never delete an entry; leave what you did not apply open.
+  and `resolvedAt` without the command. Never delete or reorder an entry, and leave what you did
+  not apply open, saying why.
 - **The handoff is a decision, not a rewrite** (odachi design handoff <slug>/<artboard> prints it): when an artboard is chosen, name it, name the
   other artboards as the alternatives they were, and implement against the project's real
   stack. Report `in_progress` when you start and `implemented` when the app runs.
