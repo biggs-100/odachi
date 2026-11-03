@@ -13,6 +13,13 @@ not a version.
   changelog section for the tag and refuses a tag with no section, so the notes are the same text a
   person reads and nobody writes them twice by hand (0180).
 
+## Unreleased
+
+- **A change can name itself in its commit.** `Odachi-Change: <line>` in a commit of the branch is the
+  vision when no document is open: `check` measures the change from the merge-base, `review` judges
+  it against that line and says the diff is the record, and the proof is named after the line. A
+  trailer on the default branch, an empty one or two different ones are refused by name (0181).
+
 ## v0.13.1 - 2026-11-02
 
 - **The design skill says again what it knows.** The screenshot rule of 0176 fit by compressing two
