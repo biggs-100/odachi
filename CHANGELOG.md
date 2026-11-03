@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The store disposes of the question it no longer keeps.** A review filed its prompt beside the
+  verdict and left it there: 60 to 120 KB each, growing with every review, while `keep_prompts = 0`
+  already said the question was disposable. A stored verdict now removes the prompts its
+  `keep_prompts` stopped keeping, by the same rule `odachi clean` reports and counts in trees. A
+  review that gets no verdict keeps its prompt, and a store that cannot be read prunes nothing
+  (0187).
+
 ## v0.14.5 - 2026-11-03
 
 - **The run records the brief it read.** `odachi start --brief <draft>` read a draft and wrote no

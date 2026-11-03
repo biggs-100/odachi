@@ -657,6 +657,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 	opts.LensModels = config.Lenses
 	opts.MaxPromptKB = config.MaxPromptKB
+	opts.KeepPrompts = config.KeepPrompts
 	// The dismissal records whose word it is; the operating system already knows
 	// who is at the keyboard, and a single-user CLI needs nothing more.
 	opts.By = firstOf(os.Getenv("USERNAME"), os.Getenv("USER"))
