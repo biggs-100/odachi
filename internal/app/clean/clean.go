@@ -194,6 +194,70 @@ func (c Class) Line(applied bool) string {
 	return row + " · " + strconv.Itoa(c.Doomed) + " " + plural(c.Doomed) + " " + verb
 }
 
+// Growth is what a close names about the store: the size of the classes odachi
+// wrote and the share `odachi clean --apply` would free. It is a measurement, not
+// an order: removing anything stays the human's switch.
+type Growth struct {
+	Files       int
+	Bytes       int64
+	DoomedFiles int
+	DoomedBytes int64
+	// Unreadable is how many paths of the classes this verb maintains could not
+	// be read. A store it cannot see is not an empty store, and --apply refuses
+	// to remove anything while one of them is unread.
+	Unreadable int
+}
+
+// Line is the sentence a close prints: what the store holds, and what the
+// human's command would free. It names the command because the switch is the
+// human's, and it never says a cleanup was made.
+func (g Growth) Line() string {
+	line := sizeText(g.Bytes) + " in " + strconv.Itoa(g.Files) + " " + plural(g.Files)
+	switch {
+	case g.Unreadable > 0:
+		return line + fmt.Sprintf("; odachi clean --apply cannot free anything: %d %s could not be read",
+			g.Unreadable, plural2(g.Unreadable, "path"))
+	case g.DoomedFiles == 0:
+		return line + "; odachi clean --apply would free nothing"
+	default:
+		return line + fmt.Sprintf("; odachi clean --apply would free %s in %d %s",
+			sizeText(g.DoomedBytes), g.DoomedFiles, plural(g.DoomedFiles))
+	}
+}
+
+// Measure answers the growth of the classes this verb maintains, without writing
+// anything and without the report a human reads: it is the one answer a close
+// prints, so the numbers cannot drift from the report.
+func Measure(opts Options, files Files) (Growth, error) {
+	if opts.Store == "" {
+		return Growth{}, fmt.Errorf("this folder is not a git repository, so it has no store to measure")
+	}
+
+	found := scan(opts, files)
+	growth := Growth{
+		Files:       found.report.TotalFiles,
+		Bytes:       found.report.TotalBytes,
+		DoomedFiles: found.report.DoomedFiles,
+		DoomedBytes: found.report.DoomedBytes,
+	}
+	seen := map[string]bool{}
+	for _, class := range found.report.Classes {
+		if !class.Cleanable {
+			continue
+		}
+		for _, problem := range class.Problems {
+			// The two review classes share one walk, so the same unreadable path
+			// arrives twice: it is one path the run could not read.
+			if seen[problem] {
+				continue
+			}
+			seen[problem] = true
+			growth.Unreadable++
+		}
+	}
+	return growth, nil
+}
+
 // Run performs one `odachi clean`.
 func Run(opts Options, files Files, guard lock.Lock) Result {
 	if opts.Dir == "" {

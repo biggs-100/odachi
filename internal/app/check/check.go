@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/clean"
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/change"
@@ -85,6 +86,13 @@ const (
 // shows what a changes_requested verdict says.
 const nextReview = "odachi review"
 
+// Growth is the store's accounting, answered by the verb that owns the policy.
+// check never deletes: the switch is the human's, and a close only names what it
+// would free.
+type Growth interface {
+	Measure(store string) (clean.Growth, error)
+}
+
 // Options is one `odachi check` invocation.
 type Options struct {
 	Dir string
@@ -139,6 +147,11 @@ type Options struct {
 	// default branch, the same ref --ci uses. Empty means the lane is closed, and
 	// the run keeps the answer it always gave.
 	ChangeBase string
+
+	// Growth measures the clone's store as a close names it. It is a port so the
+	// verb that owns the policy answers, and nil means the caller wired none: the
+	// close then says nothing about the store.
+	Growth Growth
 }
 
 // Files is the disk port: enough to read the project and write one proof.
@@ -1727,7 +1740,28 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 		result.Lines = append(result.Lines, r.reviewNote)
 		result.Note = r.reviewNote
 	}
+	// A close names what the store grew and what cleaning it would free. The
+	// numbers come from the verb that owns the policy, the line removes nothing,
+	// and neither the answer nor the exit code depends on it.
+	if _, closed, _, known := featureReview(r.feature); known && closed {
+		if note := r.growthNote(); note != "" {
+			result.Lines = append(result.Lines, note)
+		}
+	}
 	return result
+}
+
+// growthNote is the store's growth as its owner measures it, or the reason it
+// could not be measured: a read that fails is not a store of zero bytes.
+func (r *runner) growthNote() string {
+	if r.opts.Growth == nil {
+		return ""
+	}
+	growth, err := r.opts.Growth.Measure(r.opts.Store)
+	if err != nil {
+		return "store: could not be measured: " + oneLine(err.Error())
+	}
+	return "store: " + growth.Line()
 }
 
 // fenceLine names the ref the policy came from, when it is not the worktree's

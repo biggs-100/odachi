@@ -15,6 +15,10 @@ not a version.
   `keep_prompts` stopped keeping, by the same rule `odachi clean` reports and counts in trees. A
   review that gets no verdict keeps its prompt, and a store that cannot be read prunes nothing
   (0187).
+- **A close names what the store grew.** A clone's store grows without anybody noticing: prompts,
+  records and scratch. The tree that closes a feature now prints one line with the store's size and
+  what `odachi clean --apply` would free - or that the switch is blocked by the paths it could not
+  read. The line removes nothing and changes no answer: the switch stays the human's (0187).
 
 ## v0.14.5 - 2026-11-03
 

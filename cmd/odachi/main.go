@@ -553,6 +553,9 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 
 	opts.Dir = dir
 	opts.Store = storeRoot(dir)
+	// A close names the store's growth, and the verb that owns the policy answers
+	// it: the retention is read once, and only the closing tree asks.
+	opts.Growth = storeGrowth{dir: dir}
 	// Only a run records who ran it. Resolving the model costs a process, so a
 	// check that judges an existing proof (the hook, CI) pays nothing.
 	if opts.Run != "" {
