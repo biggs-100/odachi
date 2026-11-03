@@ -214,9 +214,11 @@ func TestProgressAndCheckAgreeAboutTheReview(t *testing.T) {
 		t.Fatalf("check did not name the review progress owes: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 
-	// The close lands and the release tail follows: documents only. The gate
-	// exempts it, and the report has to say the same. With an empty base every
-	// file looks like code, which is the disagreement this test exists to catch.
+	// The close lands and the release tail follows: documents only, and still no
+	// verdict. The question is the feature's diff, not when the document was
+	// committed, so the verdict is still owed -a release note is paperwork only
+	// after a verdict judged the code (0185). Both verbs name it, and the report
+	// says the same.
 	commitAll(t, dir, "the close")
 	writeFile(t, dir, "CHANGELOG.md", "## v0.0.1\n\nThe first release.\n")
 	commitAll(t, dir, "release")
@@ -225,10 +227,10 @@ func TestProgressAndCheckAgreeAboutTheReview(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("progress after the release: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(out, "review: not due") {
-		t.Fatalf("progress owes a verdict on a documents-only tail:\n%s", out)
+	if !strings.Contains(out, "review: owed") || !strings.Contains(out, base) {
+		t.Fatalf("progress forgot the verdict a tail without one still owes:\n%s", out)
 	}
-	if code, _, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 {
-		t.Fatalf("check asked for the verdict on a documents-only tail (code %d): %s", code, errOut)
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 || !strings.Contains(out, "review") || !strings.Contains(out, base) {
+		t.Fatalf("check dropped the review progress owes on the tail: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 }

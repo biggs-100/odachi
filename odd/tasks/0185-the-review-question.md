@@ -11,7 +11,7 @@ R1 · "the review question anchors on the feature's diff: a close committed befo
 - an unreadable feature range blocks with the reason, and go test ./... is green
 
 ## Steps
-- [ ] T1 · the close owes its verdict from the diff, not from when the document was committed   R1 · route:inline
+- [x] T1 · the close owes its verdict from the diff, not from when the document was committed   R1 · route:inline · tree:2098fabc70b0d8162a3aa29663848be3c82b6c57
 
 ## History
 L1 · "the review question anchors on the feature's diff: a close committed before its verdict is named instead of read as answered"
