@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/change"
 	domain "github.com/biggs-100/odachi/internal/domain/review"
 )
 
@@ -161,6 +162,10 @@ type Git interface {
 	// (the candidate deleted it, or the reviewer invented the path); a real git
 	// failure is an err, not an empty receipt.
 	BlobHash(root, path string) (string, error)
+	// Messages answers the commit messages of the range: every commit reachable
+	// from HEAD and not from base. A change with no document names itself there,
+	// and that line is the vision the prompt carries.
+	Messages(root, base string) ([]string, error)
 }
 
 // Shell is the command port for --exec. A non-zero exit is the command's result,
@@ -2977,6 +2982,14 @@ func (r *runner) candidateForReview() (candidate, *Result) {
 // base is this candidate's and carries the requirement it quotes, naming the file
 // it came from. Everything else reads brief.md, as it always has.
 func (r *runner) vision(base string) (string, *Result) {
+	claimed, problem := r.trailerVision(base)
+	if problem != nil {
+		return "", problem
+	}
+	if claimed != "" {
+		return claimed, nil
+	}
+
 	text, rel, problem := r.lightVision(base)
 	if problem != nil {
 		return "", problem
@@ -2986,6 +2999,62 @@ func (r *runner) vision(base string) (string, *Result) {
 	}
 	return "(this feature is one line: no brief was written, and the vision below is the " +
 		"requirement " + rel + " carries)\n\n" + text, nil
+}
+
+// trailerVision reads the line a document-less change declared in its own
+// commits. The range is the candidate's: from the base it is judged against. A
+// trailer is the vision, and the prompt says the diff is the record; a trailer
+// that is empty or names two different changes is refused, never guessed.
+func (r *runner) trailerVision(base string) (string, *Result) {
+	if strings.TrimSpace(base) == "" {
+		return "", nil
+	}
+
+	// The lane is check's rule: a trailer names the change only when no document
+	// is open on this base. An open document is the vision, and a review judged
+	// against the trailer would disagree with the gate that asked for it.
+	open, problem := r.openDocumentAt(base)
+	if problem != nil {
+		return "", problem
+	}
+	if open {
+		return "", nil
+	}
+
+	messages, err := r.git.Messages(r.opts.Dir, base)
+	if err != nil {
+		p := blocked("could not read the commits since " + base + ": " + oneLine(err.Error()))
+		return "", &p
+	}
+	declared, ok, err := change.Parse(messages)
+	if err != nil {
+		p := blocked(oneLine(err.Error()))
+		return "", &p
+	}
+	if !ok {
+		return "", nil
+	}
+
+	return "(this change has no document: its line is the requirement below, and the diff is the record)\n\n" + declared.Line, nil
+}
+
+// openDocumentAt reports whether the highest document that starts at base still
+// has steps to do. check opens the trailer lane only when no document is open, so
+// the review asks the same question and the two verbs cannot answer differently.
+func (r *runner) openDocumentAt(base string) (bool, *Result) {
+	docs, err := tasks.All(r.files, r.opts.Dir)
+	if err != nil {
+		p := blocked(oneLine(err.Error()) + "; check the permissions and run odachi review again")
+		return false, &p
+	}
+	for i := len(docs) - 1; i >= 0; i-- {
+		if docs[i].Doc.Base != base {
+			continue
+		}
+		done, total := docs[i].Doc.Progress()
+		return total == 0 || done < total, nil
+	}
+	return false, nil
 }
 
 // lightVision answers the requirement of the light feature this candidate belongs

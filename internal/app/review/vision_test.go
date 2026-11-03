@@ -75,6 +75,99 @@ func TestAClosedLightFeatureIsStillJudgedAgainstItsLine(t *testing.T) {
 	}
 }
 
+// TestADocumentLessChangeIsJudgedAgainstItsTrailer: the change wrote no document,
+// and brief.md still carries the previous feature's vision. The review reads the
+// trailer from the commits of the range it judges, and says the diff is the record.
+func TestADocumentLessChangeIsJudgedAgainstItsTrailer(t *testing.T) {
+	p := newProject()
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "bring back the wait state on the pay button") {
+		t.Errorf("the prompt does not carry the change's own line:\n%s", result.Prompt)
+	}
+	if !strings.Contains(result.Prompt, "the diff is the record") {
+		t.Errorf("the prompt does not say the diff is the record:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "reservar turnos") {
+		t.Errorf("the prompt carries the previous feature's brief:\n%s", result.Prompt)
+	}
+}
+
+// A trailer that is empty or names two different changes is refused by name: a
+// review judged against a line the reader had to choose is a guess.
+func TestAnAmbiguousTrailerIsRefusedByTheReview(t *testing.T) {
+	p := newProject()
+	p.git.messages = []string{
+		"first\n\nOdachi-Change: one line\n",
+		"second\n\nOdachi-Change: another line\n",
+	}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want %d (%s)", result.Code, review.CodeBlocked, result.Message)
+	}
+	for _, want := range []string{"one line", "another line"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, result.Message)
+		}
+	}
+}
+
+// A trailer never stands in for a document that is still open: `check` judges the
+// document in that case, so the review must read the same vision or the two verbs
+// answer different questions about one tree.
+func TestATrailerDoesNotOverrideAnOpenDocument(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0167-three-tests-pin.md")] = []byte(lightDocument)
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "three tests pin the light lane's refusals") {
+		t.Errorf("the prompt does not carry the open document's line:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "bring back the wait state") {
+		t.Errorf("the trailer overrode an open document:\n%s", result.Prompt)
+	}
+}
+
+// A normal feature that is still open keeps its brief, whatever a commit in its
+// range says: a trailer is the vision only when there is no open document.
+func TestATrailerDoesNotOverrideAnOpenNormalFeature(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0166-a-line-that-can-close.md")] = []byte(`# a-line-that-can-close
+Base: ` + lightBase + `
+
+## Requirements (verbatim, from the user)
+R1 · "a change that fits one line is written as one line"
+
+## Steps
+- [ ] T1 · the lane   R1
+`)
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "reservar turnos") {
+		t.Errorf("the prompt does not carry brief.md:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "bring back the wait state") {
+		t.Errorf("the trailer overrode an open feature's brief:\n%s", result.Prompt)
+	}
+}
+
 // TestANormalFeatureStillCarriesItsBrief: a feature with a brief is judged exactly
 // as before, whatever its task document says.
 func TestANormalFeatureStillCarriesItsBrief(t *testing.T) {

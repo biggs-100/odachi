@@ -494,6 +494,15 @@ func (gitRepo) Head(root string) (string, error)     { return gitx.Head(root) }
 // this clone sees it. --ci is the only caller; nothing else may decide a base.
 func (gitRepo) RemoteBase(root string) (string, error) { return gitx.RemoteBase(root) }
 
+// Messages and MergeBase are what the trailer lane reads: the commits since a
+// base, and the fork point a change is measured from.
+func (gitRepo) Messages(root, base string) ([]string, error) { return gitx.Messages(root, base) }
+
+func (gitRepo) MergeBase(root, ref string) (string, error) { return gitx.MergeBase(root, ref) }
+
+// Branch is the branch this clone has checked out; a detached HEAD has none.
+func (gitRepo) Branch(root string) (string, error) { return gitx.Branch(root) }
+
 // CommonDir is where the clone's store hangs from: the directory every worktree
 // of this clone shares, which is what makes the store one per clone.
 func (gitRepo) CommonDir(root string) (string, error) { return gitx.CommonDir(root) }

@@ -182,6 +182,15 @@ type fakeGit struct {
 	// commits says which spellings name the same commit. A spelling that is not
 	// here resolves to itself, so a test declares only the pair it cares about.
 	commits map[string]string
+
+	// messages is the range a document-less change carries, and messagesErr is
+	// the repository failing to answer it.
+	messages    []string
+	messagesErr error
+	// mergeBase is the fork point the lane measures from; empty answers the
+	// current tree, so a test that does not care gets a stable base.
+	mergeBase    string
+	mergeBaseErr error
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
@@ -233,6 +242,26 @@ func (g *fakeGit) BlobHash(root, path string) (string, error) {
 }
 
 func (g *fakeGit) AddedDeps(root, base string) ([]string, error) { return g.deps, nil }
+
+// Messages answers the commits the range carries. The trailer lane is the only
+// question; a test that seeds nothing gets the project it always had.
+func (g *fakeGit) Messages(root, base string) ([]string, error) {
+	if g.messagesErr != nil {
+		return nil, g.messagesErr
+	}
+	return g.messages, nil
+}
+
+// MergeBase answers the fork point a document-less change is measured from.
+func (g *fakeGit) MergeBase(root, ref string) (string, error) {
+	if g.mergeBaseErr != nil {
+		return "", g.mergeBaseErr
+	}
+	if g.mergeBase != "" {
+		return g.mergeBase, nil
+	}
+	return g.tree, nil
+}
 
 // FileAt answers the fence of a ref, or the reason the ref could not be read.
 func (g *fakeGit) FileAt(root, rev, path string) ([]byte, bool, error) {

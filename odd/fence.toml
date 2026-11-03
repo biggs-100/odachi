@@ -3,9 +3,8 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: "the gate and the signing stay" is a promise about what
-# the step may change inside release.yml, and a rule over the file would forbid the
-# step the brief asks for.
+# path stays in the brief: "no new verb" and "the light lane stays" are promises
+# about behaviour, and no glob measures a promise.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"

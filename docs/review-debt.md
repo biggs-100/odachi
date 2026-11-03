@@ -9,11 +9,33 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0178, which closed the two rows 0174 left. Nothing is open.
+Last written: after 0181, whose verdict approved with two warnings.
 
 ## Open
 
-Nothing.
+### the review lane filters documents by base, the gate by the newest
+
+Found by the re-review of 0181 (warning, `internal/app/review/review.go:3050`). `openDocumentAt`
+asks whether a document *with this base* is open, while `check` opens the trailer lane on the
+newest document overall (`check.go`, `currentFeature` plus `documentClosed`). After a rebase onto a
+moved default branch, or with a second open document at another base, the two verbs judge one tree
+against different visions: the gate keeps the document, the review reads the trailer.
+
+Paid by the next feature that touches the review's vision: ask the same question `check` asks (the
+newest document, no base filter), and pin it with an open document whose base differs from the
+candidate's.
+
+### the detached HEAD lets a trailer on the default branch through
+
+Found by the re-review of 0181 (warning, `cmd/odachi/main.go:540`). `Branch()` fails on a detached
+HEAD, the CLI drops the error, and `claimedChange` refuses only when the branch is named. A trailer
+sitting on the default branch's commits is then judged instead of refused by name, although the
+brief asks for that refusal unconditionally. No test exercises the branch-unknown path, and `gitx`
+has none for `Branch` on a detached HEAD.
+
+Paid by the next feature that touches the lane: decide what "on the default branch" means without a
+branch name (the commits reachable from the base ref), pin the detached case in `gitx` and in the
+lane, and keep CI's detached checkout working.
 
 ## Closed by feature 0178
 
