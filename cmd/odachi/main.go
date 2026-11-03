@@ -165,7 +165,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	flags.StringVar(&opts.Sensitive, "sensitive", "", "answer 5: none | names | health | money")
 	flags.StringVar(&opts.Deadline, "deadline", "", "answer 6: today | week | relaxed")
 	flags.Var(&learn, "learn", "answer 7: what you want to learn (repeatable)")
-	flags.StringVar(&brief, "brief", "", "read an existing brief instead of asking")
+	flags.StringVar(&brief, "brief", "", "read the brief this path carries instead of asking, and record it as brief.md")
 	flags.BoolVar(&force, "force", false, "rewrite an existing brief.md")
 	flags.BoolVar(&opts.WaiveReview, "waive-review", false, "record that this feature lands without a review verdict (the proof and the fence still apply)")
 	flags.BoolVar(&opts.Light, "light", false, "open a feature that fits one line: no brief, one step with the same words")
@@ -1836,7 +1836,7 @@ flags:
   --sensitive s   answer 5: none | names | health | money
   --deadline s    answer 6: today | week | relaxed
   --learn s       answer 7 (repeatable): what you want to learn
-  --brief path    read an existing brief instead of asking
+  --brief path    read the brief this path carries instead of asking, and record it as brief.md
   --force         rewrite an existing brief.md (it is backed up first)
   --waive-review  record that this feature lands without a review verdict (the proof and the fence still apply)
   --light         open a feature that fits one line: no brief, one step with the same words,

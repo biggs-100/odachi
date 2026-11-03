@@ -23,9 +23,9 @@ is obvious: there `drive` is enough.
   recorded with `odachi ask`.
 - Do not write the brief for them. Draft it and hand it over: the human owns
   `brief.md` and the agent proposes.
-- End in `odachi start --brief <path>`. Exploration is not a verb and writes no
-  artifact; the first write records the brief, the fence and the task doc
-  together, and that is the moment the feature exists.
+- End in `odachi start --brief <path>`. The draft may live anywhere; the run
+  records it as `brief.md`, together with the fence and the task doc, and that is
+  the moment the feature exists. Exploration is not a verb and writes no artifact.
 - The fence is not shaped by convenience. What exploration found useful but out
   of scope stays out and goes to the "Not included" list.
 - If exploring does not end, stop and say what you learned: an exploration

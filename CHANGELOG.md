@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The run records the brief it read.** `odachi start --brief <draft>` read a draft and wrote no
+  `brief.md`, so a feature shaped by the `shape` skill landed without the vision the run had just
+  read and `check` asked for it. The run now records the draft as `brief.md` in the canonical shape
+  (the source is untouched), a draft that is already `brief.md` is never rewritten, and an existing
+  `brief.md` beside a draft elsewhere needs `--force` (0186).
+
 ## v0.14.4 - 2026-11-03
 
 - **A close owes its verdict whatever the commit order.** The review mode read a document that was

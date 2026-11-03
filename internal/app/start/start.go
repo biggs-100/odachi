@@ -281,14 +281,21 @@ func (r *runner) runFromInterview() Result {
 	})
 }
 
-// runFromBrief uses an existing brief instead of asking, and never rewrites it:
-// the human already wrote that file.
+// runFromBrief uses an existing brief instead of asking, and records it as
+// brief.md when the draft lives somewhere else: a run that read the vision is the
+// one that leaves it written. A draft that is already brief.md is the human's file
+// and is never rewritten, and a brief.md the run would replace needs --force.
 func (r *runner) runFromBrief() Result {
 	if r.hasAnswerFlags() {
 		return blocked("do not mix --brief with --outcome, --audience, --done, --exclude, --sensitive, --deadline or --learn; use one of the two (odachi start --brief <file>)")
 	}
 
 	loaded, problem := r.loadBrief()
+	if problem != nil {
+		return *problem
+	}
+
+	record, problem := r.recordBrief()
 	if problem != nil {
 		return *problem
 	}
@@ -308,8 +315,37 @@ func (r *runner) runFromBrief() Result {
 	return r.writeArtifacts(artifactInput{
 		title:      title,
 		nonGoals:   loaded.NonGoals,
-		writeBrief: false,
+		writeBrief: record,
+		briefDoc:   &loaded,
 	})
+}
+
+// recordBrief answers whether this run writes brief.md from the draft it read: a
+// draft that is already the artifact is never rewritten, whatever shape the human
+// wrote it in, and a brief.md it would replace is the human's and needs --force.
+// A draft that lives anywhere else is recorded, because the run that read the
+// vision is the one that leaves it written (0186).
+func (r *runner) recordBrief() (bool, *Result) {
+	if r.briefIsTheDraft() {
+		return false, nil
+	}
+	if r.briefExists() && !r.opts.Force {
+		problem := blocked(fmt.Sprintf(
+			"there is already %s and I do not want to overwrite it without permission; run odachi start --force again (or delete %s)",
+			briefFile, briefFile))
+		return false, &problem
+	}
+	return true, nil
+}
+
+// briefIsTheDraft reports whether --brief names brief.md itself: that file is the
+// human's and is never rewritten by a run that only reads it.
+func (r *runner) briefIsTheDraft() bool {
+	source := r.opts.BriefPath
+	if !filepath.IsAbs(source) {
+		source = filepath.Join(r.opts.Dir, source)
+	}
+	return filepath.Clean(source) == filepath.Clean(filepath.Join(r.opts.Dir, briefFile))
 }
 
 // resolveProfile loads the profile the caller supplied or infers it from what
