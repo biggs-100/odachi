@@ -167,6 +167,34 @@ func TestPowerShellInstallerRefusesASignatureThatDoesNotVerify(t *testing.T) {
 	}
 }
 
+// TestPowerShellInstallerRefusesWhenCosignIsMissing pins the brief's own criterion:
+// a check that runs only sometimes is a silent degradation, so the installer refuses
+// when the tool it needs is not there, and says which tool and where to get it.
+func TestPowerShellInstallerRefusesWhenCosignIsMissing(t *testing.T) {
+	powershell := requirePowerShell(t)
+	fixture := windowsRelease(t)
+	binDir := filepath.Join(t.TempDir(), "bin")
+	// A path that exists nowhere: Get-Command and Test-Path both miss it, so the
+	// installer faces the same absence a machine without cosign has. Naming the
+	// path is the seam the other cases already use, and it keeps this test from
+	// depending on whether cosign happens to be on the PATH of whoever runs it.
+	missing := filepath.Join(t.TempDir(), "no-cosign-here.exe")
+
+	code, output := runPowerShellInstaller(t, powershell, fixture, binDir, missing)
+
+	if code == 0 {
+		t.Fatalf("install.ps1 exit = 0 with no cosign, want non-zero:\n%s", output)
+	}
+	for _, want := range []string{"cosign", "https://docs.sigstore.dev/cosign"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("the refusal does not name %q:\n%s", want, output)
+		}
+	}
+	if entries, err := os.ReadDir(binDir); err == nil && len(entries) > 0 {
+		t.Errorf("%s is not empty after a missing cosign: %v", binDir, entries)
+	}
+}
+
 // TestPowerShellInstallerInstallsTheVerifiedBinary: someone without Go installs
 // it, and the binary says which version it is.
 func TestPowerShellInstallerInstallsTheVerifiedBinary(t *testing.T) {
