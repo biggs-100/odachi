@@ -12,7 +12,7 @@ R1 · "the run that reads a draft leaves the brief written: start --brief record
 - tests pin the three paths and go test ./... is green
 
 ## Steps
-- [ ] T1 · start --brief records the draft as brief.md: the three paths, the skill, and the tests   R1 · route:inline
+- [x] T1 · start --brief records the draft as brief.md: the three paths, the skill, and the tests   R1 · route:inline · tree:8a384aca2ec9d3669826936bbbc949241a6f230b
 
 ## History
 L1 · "the run that reads a draft leaves the brief written: start --brief records it as brief.md, and the shape skill stops promising a file the run never wrote"
