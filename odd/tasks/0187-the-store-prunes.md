@@ -20,3 +20,5 @@ R1 · "the store prunes what it can regenerate and names what it keeps: a stored
 
 ## History
 L1 · "the store prunes what it can regenerate and names what it keeps: a stored verdict disposes of the prompts and scaffolding its keep_prompts stopped keeping, a ready close names the store size and what clean --apply would free, and one ADR says which evidence odachi never bounds"
+L2 · OFICIO · "the prompt retention is one domain answer: the trees in order, the files that are questions, and the ones a keep forgets, and both clean and the store ask it" (porque the question was asked in two places the moment the write obeyed keep_prompts, and a question asked twice drifts)
+L3 · OFICIO · "the close asks the verb that owns the policy through a port, and can never delete" (porque check must name the store's growth without owning a second copy of the numbers, and the switch is the human's)
