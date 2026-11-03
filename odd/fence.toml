@@ -12,12 +12,12 @@ paths = ["proof/**"]
 deps  = []
 
 # This non-goal has no paths yet:
-#   no change to the proof lane: closedBefore keeps its meaning there
+#   no change to the interview path
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "no change to the proof lane: closedBefore keeps its meaning there"
+# not   = "no change to the interview path"
 # paths = []
 # deps  = []
 

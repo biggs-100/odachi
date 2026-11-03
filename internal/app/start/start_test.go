@@ -687,8 +687,10 @@ func TestPresetNonGoalIsMatchedCaseAndAccentInsensitively(t *testing.T) {
 	}
 }
 
-// TestBriefFlagReadsAnExistingBriefInsteadOfAsking covers the senior/ci path.
-func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
+// TestBriefFlagRecordsTheDraftAsTheArtifact covers the senior/ci path: the run
+// reads the draft instead of asking, and records it as brief.md -a run that leaves
+// no brief.md leaves the project without the vision it just read (0186).
+func TestBriefFlagRecordsTheDraftAsTheArtifact(t *testing.T) {
 	examplePath := filepath.Join("..", "..", "..", "testdata", "examples", "brief.md")
 	data, err := os.ReadFile(examplePath)
 	if err != nil {
@@ -704,10 +706,23 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
 	}
-	if _, ok := files.files["brief.md"]; ok {
-		t.Errorf("--brief must not rewrite the human's brief")
+	recorded, ok := files.files["brief.md"]
+	if !ok {
+		t.Fatalf("--brief left no brief.md: the run that read the vision must record it")
+	}
+	parsed := brief.Parse(string(recorded))
+	if parsed.Name != "turnos-consultorio" {
+		t.Errorf("brief.md names %q, want the draft's name", parsed.Name)
+	}
+	if len(parsed.Outcome) != 4 || len(parsed.DoneWhen) != 5 || len(parsed.NonGoals) != 5 {
+		t.Errorf("brief.md = %d outcomes, %d done-when, %d non-goals; want the draft's 4/5/5",
+			len(parsed.Outcome), len(parsed.DoneWhen), len(parsed.NonGoals))
+	}
+	if files.content(t, "my-brief.md") != string(data) {
+		t.Errorf("the draft was rewritten; the run records a copy and leaves the source alone")
 	}
 	wantFiles := []string{
+		"brief.md",
 		"odd/profile.toml",
 		"odd/fence.toml",
 		"odd/tasks/0001-turnos-consultorio.md",
@@ -745,6 +760,212 @@ func TestBriefFlagReadsAnExistingBriefInsteadOfAsking(t *testing.T) {
 		if !strings.Contains(fenceText, want) {
 			t.Errorf("fence.toml is missing %q:\n%s", want, fenceText)
 		}
+	}
+}
+
+// TestBriefFlagLeavesTheArtifactAlone: when --brief names brief.md itself, the
+// human's bytes are the artifact. The run reads them and writes no second version,
+// so a note the parser ignores survives (0186).
+func TestBriefFlagLeavesTheArtifactAlone(t *testing.T) {
+	const artifact = `# turnos
+
+## What must exist
+- reservar turnos
+
+## Done when
+- reservo un turno
+
+## Notes
+- this line is the human's and survives
+`
+
+	var events []string
+	files := newFakeFiles(map[string]string{"brief.md": artifact}, &events)
+
+	got := start.Run(start.Options{BriefPath: "brief.md", Machine: true}, nil, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	if files.content(t, "brief.md") != artifact {
+		t.Errorf("the run rewrote the artifact it was pointed at:\n%s", files.content(t, "brief.md"))
+	}
+	for _, written := range got.Files {
+		if written == "brief.md" {
+			t.Errorf("the run wrote brief.md over the human's file: %v", got.Files)
+		}
+	}
+}
+
+// TestBriefFlagRefusesToReplaceAnExistingBrief: a draft elsewhere beside a
+// brief.md the run would replace is a permission, not a default. The refusal names
+// the flag and writes nothing (0186).
+func TestBriefFlagRefusesToReplaceAnExistingBrief(t *testing.T) {
+	const previous = "# otra\n\n## What must exist\n- lo de antes\n"
+	draft := `# turnos
+
+## What must exist
+- reservar turnos
+
+## Done when
+- reservo un turno
+`
+
+	var events []string
+	files := newFakeFiles(map[string]string{"brief.md": previous, "draft.md": draft}, &events)
+
+	got := start.Run(start.Options{BriefPath: "draft.md", Machine: true}, nil, files, nil)
+
+	if got.Code != start.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+	}
+	for _, want := range []string{"brief.md", "--force", "--brief", "draft.md"} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, got.Message)
+		}
+	}
+	if files.content(t, "brief.md") != previous {
+		t.Errorf("the refusal replaced the previous brief:\n%s", files.content(t, "brief.md"))
+	}
+	if strings.Contains(strings.Join(got.Files, "|"), "odd/tasks") {
+		t.Errorf("the refusal wrote a task doc: %v", got.Files)
+	}
+}
+
+// TestBriefFlagWithForceReplacesTheBriefAfterBackingItUp: --force is the way out
+// the refusal itself names, and it replaces brief.md -the previous bytes are kept
+// first, so the human can undo it (0186).
+func TestBriefFlagWithForceReplacesTheBriefAfterBackingItUp(t *testing.T) {
+	const previous = "# otra\n\n## What must exist\n- lo de antes\n"
+	draft := `# turnos
+
+## What must exist
+- reservar turnos
+
+## Done when
+- reservo un turno
+`
+
+	var events []string
+	files := newFakeFiles(map[string]string{"brief.md": previous, "draft.md": draft}, &events)
+
+	got := start.Run(start.Options{BriefPath: "draft.md", Machine: true, Force: true}, nil, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	recorded := brief.Parse(files.content(t, "brief.md"))
+	if len(recorded.Outcome) != 1 || recorded.Outcome[0] != "reservar turnos" {
+		t.Errorf("brief.md was not replaced by the draft: %+v", recorded)
+	}
+	if backup, write := firstIndex(events, "backup brief.md"), firstIndex(events, "write brief.md"); backup < 0 || backup > write {
+		t.Errorf("brief.md was not backed up before it was written: %v", events)
+	}
+}
+
+// TestBriefFlagBlocksWhenTheTargetCannotBeChecked: a probe that fails is not
+// "there is no brief.md". The run blocks with the reason instead of writing over a
+// file it could not read (0125, 0186).
+func TestBriefFlagBlocksWhenTheTargetCannotBeChecked(t *testing.T) {
+	draft := `# turnos
+
+## What must exist
+- reservar turnos
+
+## Done when
+- reservo un turno
+`
+
+	var events []string
+	files := newFakeFiles(map[string]string{"draft.md": draft}, &events)
+	files.failExists = func(path string) error {
+		if strings.HasSuffix(path, "brief.md") {
+			return errors.New("access denied")
+		}
+		return nil
+	}
+
+	got := start.Run(start.Options{BriefPath: "draft.md", Machine: true}, nil, files, nil)
+
+	if got.Code != start.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+	}
+	for _, want := range []string{"brief.md", "access denied"} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, got.Message)
+		}
+	}
+	if _, written := files.files["brief.md"]; written {
+		t.Errorf("the run wrote a brief.md it could not check")
+	}
+}
+
+// TestBriefFlagAsksTheFilesystemWhetherTheDraftIsTheArtifact: on a
+// case-insensitive disk `Brief.md` names `brief.md`. A string comparison would
+// either refuse the run or rewrite the human's file; the port answers and the
+// artifact survives (0186).
+func TestBriefFlagAsksTheFilesystemWhetherTheDraftIsTheArtifact(t *testing.T) {
+	const artifact = `# turnos
+
+## What must exist
+- reservar turnos
+
+## Done when
+- reservo un turno
+
+## Notes
+- this line is the human's and survives
+`
+
+	var events []string
+	files := newFakeFiles(map[string]string{"brief.md": artifact, "Brief.md": artifact}, &events)
+	files.sameFile = func(a, b string) (bool, error) { return true, nil }
+
+	got := start.Run(start.Options{BriefPath: "Brief.md", Machine: true}, nil, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	if files.content(t, "brief.md") != artifact {
+		t.Errorf("the run rewrote brief.md through another spelling:\n%s", files.content(t, "brief.md"))
+	}
+	for _, written := range got.Files {
+		if written == "brief.md" {
+			t.Errorf("the run wrote brief.md over the human's file: %v", got.Files)
+		}
+	}
+}
+
+// TestBriefFlagBlocksWhenTheComparisonCannotBeMade: the filesystem answers
+// whether the draft is brief.md, and a comparison that fails is not "not the same
+// file": the run blocks instead of recording over a file it could not identify
+// (0125, 0186).
+func TestBriefFlagBlocksWhenTheComparisonCannotBeMade(t *testing.T) {
+	draft := `# turnos
+
+## What must exist
+- reservar turnos
+
+## Done when
+- reservo un turno
+`
+
+	var events []string
+	files := newFakeFiles(map[string]string{"draft.md": draft}, &events)
+	files.sameFile = func(a, b string) (bool, error) { return false, errors.New("access denied") }
+
+	got := start.Run(start.Options{BriefPath: "draft.md", Machine: true}, nil, files, nil)
+
+	if got.Code != start.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+	}
+	for _, want := range []string{"brief.md", "access denied", "--brief", "draft.md"} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, got.Message)
+		}
+	}
+	if _, written := files.files["brief.md"]; written {
+		t.Errorf("the run wrote a brief.md it could not compare")
 	}
 }
 

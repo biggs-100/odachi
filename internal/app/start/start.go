@@ -64,6 +64,10 @@ type Files interface {
 	List(dir string) ([]string, error)
 	Backup(path string) (string, error)
 	Write(path string, data []byte) error
+	// SameFile reports whether two paths name one file. The filesystem answers:
+	// case folding and links make a string comparison the wrong question, and a
+	// path that does not exist is "not the same file", never an error.
+	SameFile(a, b string) (bool, error)
 }
 
 // Options is one `odachi start` invocation. Every answer flag is optional: what
@@ -281,14 +285,21 @@ func (r *runner) runFromInterview() Result {
 	})
 }
 
-// runFromBrief uses an existing brief instead of asking, and never rewrites it:
-// the human already wrote that file.
+// runFromBrief uses an existing brief instead of asking, and records it as
+// brief.md when the draft lives somewhere else: a run that read the vision is the
+// one that leaves it written. A draft that is already brief.md is the human's file
+// and is never rewritten, and a brief.md the run would replace needs --force.
 func (r *runner) runFromBrief() Result {
 	if r.hasAnswerFlags() {
 		return blocked("do not mix --brief with --outcome, --audience, --done, --exclude, --sensitive, --deadline or --learn; use one of the two (odachi start --brief <file>)")
 	}
 
 	loaded, problem := r.loadBrief()
+	if problem != nil {
+		return *problem
+	}
+
+	record, problem := r.recordBrief()
 	if problem != nil {
 		return *problem
 	}
@@ -308,8 +319,60 @@ func (r *runner) runFromBrief() Result {
 	return r.writeArtifacts(artifactInput{
 		title:      title,
 		nonGoals:   loaded.NonGoals,
-		writeBrief: false,
+		writeBrief: record,
+		briefDoc:   &loaded,
 	})
+}
+
+// recordBrief answers whether this run writes brief.md from the draft it read: a
+// draft that is already the artifact is never rewritten, whatever shape the human
+// wrote it in, and a brief.md it would replace is the human's and needs --force.
+// A draft that lives anywhere else is recorded, because the run that read the
+// vision is the one that leaves it written (0186).
+func (r *runner) recordBrief() (bool, *Result) {
+	same, problem := r.briefIsTheDraft()
+	if problem != nil {
+		return false, problem
+	}
+	if same {
+		return false, nil
+	}
+
+	target := filepath.Join(r.opts.Dir, briefFile)
+	exists, err := r.files.Exists(target)
+	if err != nil {
+		problem := blocked(fmt.Sprintf(
+			"could not check %s: %s; check the permissions and run odachi start --brief %s again",
+			briefFile, oneLine(err.Error()), r.opts.BriefPath))
+		return false, &problem
+	}
+	if exists && !r.opts.Force {
+		problem := blocked(fmt.Sprintf(
+			"there is already %s and I do not want to overwrite it without permission; run odachi start --force --brief %s again (or delete %s)",
+			briefFile, r.opts.BriefPath, briefFile))
+		return false, &problem
+	}
+	return true, nil
+}
+
+// briefIsTheDraft reports whether --brief names brief.md itself: that file is the
+// human's and is never rewritten by a run that only reads it. The filesystem
+// answers, not a string: on Windows and macOS `Brief.md` names the same file, and
+// a comparison would rewrite the artifact it promises to leave alone (0186).
+func (r *runner) briefIsTheDraft() (bool, *Result) {
+	source := r.opts.BriefPath
+	if !filepath.IsAbs(source) {
+		source = filepath.Join(r.opts.Dir, source)
+	}
+
+	same, err := r.files.SameFile(source, filepath.Join(r.opts.Dir, briefFile))
+	if err != nil {
+		problem := blocked(fmt.Sprintf(
+			"could not compare the draft with %s: %s; check the path and run odachi start --brief %s again",
+			briefFile, oneLine(err.Error()), r.opts.BriefPath))
+		return false, &problem
+	}
+	return same, nil
 }
 
 // resolveProfile loads the profile the caller supplied or infers it from what

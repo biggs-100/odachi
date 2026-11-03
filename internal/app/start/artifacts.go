@@ -188,12 +188,16 @@ func RenderProfile(p profile.Profile) string {
 }
 
 // artifactInput is what changes between the interview path and the --brief
-// path: the project title, the non-goals to fence, and whether the human's
-// brief.md may be written.
+// path: the project title, the non-goals to fence, whether the human's brief.md
+// may be written, and -when --brief read a draft- the brief to record.
 type artifactInput struct {
 	title      string
 	nonGoals   []string
 	writeBrief bool
+	// briefDoc is the parsed brief a draft carried. When it is set, that is what
+	// brief.md holds: the run records the vision it read, not a second rendering
+	// of the answers. Nil means the interview built it from the answers.
+	briefDoc *brief.Brief
 }
 
 // writeArtifacts renders and writes the four artifacts, backing up any file it
@@ -211,6 +215,9 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 			DoneWhen:  r.answers.done,
 			NonGoals:  in.nonGoals,
 			Decisions: r.answers.decisions(),
+		}
+		if in.briefDoc != nil {
+			content = *in.briefDoc
 		}
 		if problem := r.put(briefFile, []byte(brief.Render(content))); problem != nil {
 			return *problem

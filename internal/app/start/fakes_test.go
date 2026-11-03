@@ -19,6 +19,12 @@ type fakeFiles struct {
 	// failRead fails Read for one path, so a test can reach a branch only a real
 	// disk produces: a file that exists and cannot be read.
 	failRead func(path string) error
+	// failExists fails the probe for one path: a stat that fails is not "not
+	// there", and the branch that decides a write must say so (0125, 0186).
+	failExists func(path string) error
+	// sameFile overrides the filesystem's answer for "these two paths are one
+	// file", which is how a test models a case-insensitive disk (0186).
+	sameFile func(a, b string) (bool, error)
 }
 
 func newFakeFiles(seed map[string]string, events *[]string) *fakeFiles {
@@ -41,9 +47,23 @@ func (f *fakeFiles) record(event string) {
 }
 
 func (f *fakeFiles) Exists(path string) (bool, error) {
+	if f.failExists != nil {
+		if err := f.failExists(path); err != nil {
+			return false, err
+		}
+	}
 	_, ok := f.files[f.key(path)]
 	f.record("exists " + path)
 	return ok, nil
+}
+
+// SameFile models the port: the filesystem answers whether two paths name one
+// file, and a test that needs a folded name says so with sameFile.
+func (f *fakeFiles) SameFile(a, b string) (bool, error) {
+	if f.sameFile != nil {
+		return f.sameFile(a, b)
+	}
+	return f.key(a) == f.key(b), nil
 }
 
 func (f *fakeFiles) Read(path string) ([]byte, error) {

@@ -66,6 +66,28 @@ func (f osFiles) Exists(path string) (bool, error) {
 	}
 }
 
+// SameFile asks the filesystem whether two paths name one file. Case folding,
+// symlinks and hard links make a string comparison the wrong question: on Windows
+// and macOS `--brief Brief.md` names the very brief.md it must not rewrite. Two
+// paths that do not both exist are not the same file, which is not an error.
+func (f osFiles) SameFile(a, b string) (bool, error) {
+	first, err := os.Stat(a)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	second, err := os.Stat(b)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return os.SameFile(first, second), nil
+}
+
 func (osFiles) IsDir(path string) (bool, error) {
 	info, err := os.Stat(path)
 	switch {
