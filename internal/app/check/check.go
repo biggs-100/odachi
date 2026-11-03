@@ -17,6 +17,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/brief"
+	"github.com/biggs-100/odachi/internal/domain/change"
 	"github.com/biggs-100/odachi/internal/domain/fence"
 	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/layout"
@@ -134,6 +135,15 @@ type Options struct {
 	// uses it to obey the policy of the base branch, which the candidate cannot
 	// loosen. Empty means the worktree's own fence.
 	FenceFrom string
+	// ChangeBase is the ref the trailer lane reads its commits from: the remote's
+	// default branch, the same ref --ci uses. Empty means the lane is closed, and
+	// the run keeps the answer it always gave.
+	ChangeBase string
+	// Branch is the branch this clone has checked out, as `git symbolic-ref`
+	// names it. The lane refuses a trailer that sits on the default branch: a
+	// change that names itself is still a change, and a change is merged from a
+	// branch.
+	Branch string
 }
 
 // Files is the disk port: enough to read the project and write one proof.
@@ -164,6 +174,13 @@ type Git interface {
 	// base branch the candidate cannot edit.
 	FileAt(root, rev, path string) ([]byte, bool, error)
 	AddedDeps(root, base string) ([]string, error)
+	// Messages answers the commit messages of a range: every commit reachable
+	// from HEAD and not from base, whole. The trailer lane reads them; nothing
+	// about what a trailer means belongs to the repository.
+	Messages(root, base string) ([]string, error)
+	// MergeBase is the fork point of HEAD and a ref: the commit a document-less
+	// change is measured from, and the base its review must name.
+	MergeBase(root, ref string) (string, error)
 	// BlobHash is the receipt of one worktree file: the blob id git already
 	// owns, measured now. The coverage answer compares a verdict's rows against
 	// exactly this, so a measurement is load-bearing; it answers "" for a file
@@ -254,6 +271,21 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	feature, problem := r.currentFeature()
 	if problem != nil {
 		return *problem
+	}
+	// A change that names itself in a commit trailer needs no document. When the
+	// newest document is closed -or there is none-, the trailer is the feature:
+	// its line is the vision, the merge-base is where it started, and the proof is
+	// named after the line. An explicit --feature is a selector, not a default, so
+	// it is never replaced. A project that never writes a trailer reaches the same
+	// answer it always did (0181).
+	if r.opts.Feature == 0 && (feature == nil || documentClosed(feature)) {
+		claimed, problem := r.claimedChange()
+		if problem != nil {
+			return *problem
+		}
+		if claimed != nil {
+			feature = claimed
+		}
 	}
 	r.feature = feature
 	// A light feature has no brief by design: its one line is the vision, and the
@@ -542,6 +574,90 @@ func (r *runner) fenceViolations() ([]string, *Result) {
 		messages = append(messages, violation.Rule+": "+violation.What)
 	}
 	return messages, nil
+}
+
+// documentClosed reports whether a document has started and finished its steps.
+// A document with no steps is open -the plan lands before the work-, and a
+// document-less change never overrides one.
+func documentClosed(feature *tasks.Document) bool {
+	done, total := feature.Doc.Progress()
+	return total > 0 && done == total
+}
+
+// claimedChange reads the trailer from the commits since the remote's default
+// branch. It answers nil when no commit names a change, and a refusal when the
+// trailer cannot be trusted: an empty line, two different lines, a change that
+// sits on the default branch, or a fork point git cannot find.
+func (r *runner) claimedChange() (*tasks.Document, *Result) {
+	base := strings.TrimSpace(r.opts.ChangeBase)
+	if base == "" {
+		return nil, nil
+	}
+
+	messages, err := r.git.Messages(r.opts.Dir, base)
+	if err != nil {
+		problem := blocked("could not read the commits since " + base + ": " + oneLine(err.Error()))
+		return nil, &problem
+	}
+	declared, ok, err := change.Parse(messages)
+	if err != nil {
+		problem := blocked(oneLine(err.Error()))
+		return nil, &problem
+	}
+	if !ok {
+		return nil, nil
+	}
+
+	branch := strings.TrimSpace(r.opts.Branch)
+	if branch != "" && branch == strings.TrimPrefix(base, "origin/") {
+		problem := blocked("a change that names itself in a trailer lives on a branch, not on " + branch + ": move the commits to a branch and run again")
+		return nil, &problem
+	}
+
+	start, err := r.git.MergeBase(r.opts.Dir, base)
+	if err != nil {
+		problem := blocked("could not find the merge-base with " + base + ": " + oneLine(err.Error()))
+		return nil, &problem
+	}
+
+	line := declared.Line
+	return &tasks.Document{
+		Number: 0,
+		Slug:   changeSlug(line),
+		Doc: taskdoc.TaskDoc{
+			Title:        line,
+			Base:         start,
+			Light:        true,
+			Requirements: []taskdoc.Requirement{{ID: "R1", Text: line}},
+			Steps:        []taskdoc.Step{{ID: "T1", Text: line, Requirement: "R1", Done: true}},
+		},
+	}, nil
+}
+
+// changeSlug names a document-less change's proof after its line: lowercase
+// words joined by dashes. A line with nothing to name it falls back to "change",
+// because the proof still needs a file.
+func changeSlug(line string) string {
+	var out strings.Builder
+	dash := false
+	for _, r := range strings.ToLower(strings.TrimSpace(line)) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r > 127:
+			out.WriteRune(r)
+			dash = false
+		case !dash && out.Len() > 0:
+			out.WriteByte('-')
+			dash = true
+		}
+		if out.Len() >= 48 {
+			break
+		}
+	}
+	slug := strings.Trim(out.String(), "-")
+	if slug == "" {
+		return "change"
+	}
+	return slug
 }
 
 // currentFeature is the feature this run judges: the one the caller selected, or
@@ -1670,6 +1786,11 @@ func proofPathFor(dir string, feature *tasks.Document) (path, rel string) {
 	}
 
 	name := fmt.Sprintf("%04d-%s.txt", number, slug)
+	// A document-less change has no number to borrow: its proof is named after
+	// the line it declared, so two changes cannot overwrite each other's evidence.
+	if feature != nil && number == 0 {
+		name = "change-" + slug + ".txt"
+	}
 	return filepath.Join(dir, proofDir, name), proofDir + "/" + name
 }
 

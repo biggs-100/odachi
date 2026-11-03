@@ -528,6 +528,19 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 		opts.FenceFrom = base
 	}
 
+	// The trailer lane reads the same default branch --ci reads, or the base the
+	// human named. A clone with no remote and no --base keeps the lane closed:
+	// there is no range to read, and a change nobody can measure is not one this
+	// gate can judge.
+	if b := strings.TrimSpace(opts.Base); b != "" && b != "HEAD" {
+		opts.ChangeBase = b
+	} else if b, err := (gitRepo{}).RemoteBase(dir); err == nil {
+		opts.ChangeBase = b
+	}
+	if branch, err := (gitRepo{}).Branch(dir); err == nil {
+		opts.Branch = branch
+	}
+
 	// The project owns the default; the flags are the exception for one run.
 	// A malformed switch blocks instead of quietly reading as off: a human who
 	// wrote `mode = "on"` must not get a gate that never opened.

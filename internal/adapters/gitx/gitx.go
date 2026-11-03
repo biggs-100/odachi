@@ -222,6 +222,24 @@ func Messages(root, base string) ([]string, error) {
 	return messages, nil
 }
 
+// MergeBase is the fork point of HEAD and a ref: the commit a document-less
+// change started from, and the base its review must name. It answers the same
+// fork point Candidate diffs against, so the proof and the review describe one
+// range.
+func MergeBase(root, ref string) (string, error) {
+	return compareBase(root, strings.TrimSpace(ref))
+}
+
+// Branch names the branch this clone has checked out. A detached HEAD has none,
+// and that is an answer: the trailer lane keeps the answer it had.
+func Branch(root string) (string, error) {
+	out, err := run(root, "symbolic-ref", "--short", "-q", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // Resolve names the commit a spelling points at, in full. A base is a commit, not
 // a text: `6aeb877` and its forty characters describe the same diff, and a gate
 // that compared the strings refused a verdict that judged exactly those bytes.
