@@ -11,32 +11,16 @@ not   = "a stored proof is never rewritten, whatever the writer learns"
 paths = ["proof/**"]
 deps  = []
 
-# This non-goal has no paths yet:
-#   no change to the interview path
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "no change to the interview path"
-# paths = []
-# deps  = []
+# The question a reviewer reads is the bytes it was paid for: the cleanup may
+# decide which prompt files survive, never what one says.
+[[rule]]
+not   = "no change to the bytes of a verdict or of a prompt"
+paths = ["internal/domain/review/prompt.go"]
+deps  = []
 
-# This non-goal has no paths yet:
-#   no new flag and no new verb
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "no new flag and no new verb"
-# paths = []
-# deps  = []
-
-# This non-goal has no paths yet:
-#   a stored proof is never rewritten, whatever the writer learns
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "a stored proof is never rewritten, whatever the writer learns"
-# paths = []
-# deps  = []
+# The lifetimes are the project's decisions, so the feature that obeys them must
+# not edit them: a number changed here would hide whether the code reads it.
+[[rule]]
+not   = "the retention is the project's decision, not this feature's"
+paths = ["odd/review.toml"]
+deps  = []
