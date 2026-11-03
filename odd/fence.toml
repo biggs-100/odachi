@@ -10,3 +10,33 @@
 not   = "a stored proof is never rewritten, whatever the writer learns"
 paths = ["proof/**"]
 deps  = []
+
+# This non-goal has no paths yet:
+#   no change to check's rule: the gate keeps judging the newest document
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no change to check's rule: the gate keeps judging the newest document"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no new flag and no new verb
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no new flag and no new verb"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the light lane keeps its shape: one requirement, one step
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the light lane keeps its shape: one requirement, one step"
+# paths = []
+# deps  = []
