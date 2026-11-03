@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.5 - 2026-11-03
 
 - **The run records the brief it read.** `odachi start --brief <draft>` read a draft and wrote no
   `brief.md`, so a feature shaped by the `shape` skill landed without the vision the run had just
