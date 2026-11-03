@@ -8,7 +8,7 @@ R1 · "the refusal without cosign is pinned: the message names the tool and wher
 ## Done when
 
 ## Steps
-- [ ] T1 · the refusal without cosign is pinned: the message names the tool and where to get it   R1
+- [x] T1 · the refusal without cosign is pinned: the message names the tool and where to get it   R1 · tree:a00930352ac385065e07a96fa95766c560525ed9
 
 ## History
 L1 · "the refusal without cosign is pinned: the message names the tool and where to get it"
