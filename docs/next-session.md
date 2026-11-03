@@ -49,6 +49,19 @@ in the ledger, and it is the same defect one level down.
    must come after the verdict, or `closedBefore` anchors on the document's base.
 4. **`start --brief` and the shape skill disagree**: the tool reads the draft and writes no brief;
    either it writes `brief.md` or the skill says to place the draft first.
+5. **the cleanup policy has two decisions and a nudge** (queued 2026-11-03, after comparing
+   gentle-ai and gentle-shell):
+   - prune the review prompts and scaffolding at the moment the verdict is stored. `keep_prompts =
+     0` already says they are disposable; today only `clean --apply` does it. gentle-shell does
+     exactly this at write time (`historyMaxTasks`, default 200) and gentle-ai prunes its backups
+     after every install (`Prune(root, 5)`, pinned never).
+   - a `doctor` check or a close line that names the store's growth, like gentle-ai's maintenance
+     loop, but without deleting: the human keeps the `--apply`.
+   - what stays manual forever: `proof/` and `odd/tasks`. Bounding them is a decision about which
+     evidence is forgotten, and that is an ADR, not a `clean` rule.
+   - measured 2026-11-03 on this clone: 21.7 MB in 1187 files, 20.8 MB recoverable, of which 18.3 MB
+     is the agent's scratch. That scratch holds the design experiment report and the lane smoke
+     clone; `clean --apply` would empty them, so anything to keep moves to `docs/` first.
 
 ## What is already true, so it is not re-decided
 
