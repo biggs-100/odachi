@@ -1,93 +1,66 @@
-# Next session: the craft skill, two releases, and the loop that catches what rules do not
+# Next session: the installer stops trusting the host, and the first minor the doctrine produced
 
-Written at the close of 0173, on **v0.11.102** -published, signed, attested and installed on this
-machine. `doctor` is green except check 14 until this file was rewritten; `main` is clean and in sync
-with `origin`.
+Written at the close of 0174. **v0.12.0 is published**, signed and attested; the binary installed on
+this machine is still **v0.11.102**, because v0.12.0 requires cosign to install and this machine does
+not have it yet. `doctor` is green except check 14 until this file was rewritten; `main` is clean and
+in sync with `origin`.
 
 ## What shipped
 
-- **0173 added `ui-craft`** to the curriculum: the decision order a designer follows, nine tells of a
-  generic interface with the move that replaces each, the numbers that make a screen look deliberate
-  (scale, measure, contrast, targets), the motion rules with their durations and easings, a read-back,
-  and the rule that a skill of this project stands alone.
-- **The skill was tested before it was published**: a landing for odachi, built with it and looked at
-  four times. It is not in the tree: it lives in `.git/odachi/scratch/design-test/` as evidence. If it
-  should exist, it is a design of its own under `design/<slug>/`.
-- **v0.11.102 is that feature**, released by the doctrine: one bullet, the tag on the merge, the notes
-  copied from the changelog, installed from the release.
+- **0174 made both installers verify the release signature before they read a hash.** They download
+  `checksums.txt.sigstore.json`, ask cosign to check the checksum file against this repository's
+  release workflow and the tag, and refuse when cosign is missing -a check that runs only sometimes
+  is no check, and this project already refuses instead of degrading.
+- **v0.12.0 is the first `minor` the release doctrine produced**, because installing now requires a
+  step it did not before: cosign on the PATH. The changelog says it, the release notes say it twice.
+- **The review caught a regression this branch introduced**: the edit that added the signature check
+  to `install.ps1` dropped the file's UTF-8 BOM, and Windows PowerShell 5.1 decodes a BOM-less script
+  with the ANSI code page, so every Spanish accent would have printed as mojibake. The BOM is back,
+  and nothing in the tests would have noticed without the reviewer.
 
-## The two decisions the research settled
+## What was measured, so nobody re-measures it
 
-**A release is a tag someone can install.** Publish when what a person can do or trust changed -never
-for tests, CI, docs or a refactor- with `minor` when the contract moves and `patch` otherwise while
-`0.x`. The whole rule is `docs/releases.md`; do not re-decide it in chat.
-
-**A skill ships complete.** `ui-craft` names no skill odachi does not carry: a user who installs the
-binary gets every rule. Where depth does not fit, the answer is another small skill of this project,
-never a pointer to something the machine happens to have.
-
-## What the design test measured
-
-- **The rules set the floor; the loop finds the rest.** Four rounds, four defects no rule would have
-  caught: auto-placement dropped the terminal 300px below the headline, the terminal's dim text sat
-  at ~3.5:1, control borders did not reach 3:1 against paper, and one empty grid row left a 90px hole.
-- **A screenshot is one command away.** `msedge --headless=new --hide-scrollbars --window-size=1440,1400 --screenshot=<png> file:///<page>`
-  works on this machine, with no dependency to install. Look at the image, not at the CSS.
-- **System fonts are the ceiling of an artboard.** Type read correctly at 1.2 scale, 17/1.55 and a
-  55-character measure, and still had no character: a real landing needs a chosen typeface, which the
-  artboard rule (self-contained, no remote assets) does not allow.
-
-## What was measured before, still true
-
-- **The suite is ~300-430 s on this machine.** `check --run` wants `--timeout 1500`.
-- **A killed command in Windows leaves children** (`go`, `shellcmd.test`) that hold the build cache;
-  the next suite prints nothing for minutes and reads as a hang. Look for stray processes first.
-- **The review runs in one command:**
-  `odachi review --base <sha> --exec 'opencode run --agent odachi-reviewer --model {model} --file {prompt} "answer with the JSON only"'`.
-- **A fence can be too wide for its own reason, and narrowing it needs a policy pull request.** CI
-  reads the fence from the base ref; a light feature cannot rewrite it at all.
-- **`gate (macos-latest)` sometimes cancels at 15m02s**; a re-run passes in ~1m20s. Runner flake.
-- **The order that survives the hook:** commit the step, then `plan --done T1`.
+- **`opencode run` stalls at ~40 KB on the installer diff.** Two runs hit the 600 s limit with no
+  answer, twice on the same prompt; a subagent reading the prompt file answered in seconds. When the
+  one-command review stalls, hand the prompt path to a subagent before believing the model is broken.
+- **A file's encoding is part of its bytes.** `install.ps1` is UTF-8 with BOM on purpose; an editor or
+  a scripted rewrite that drops the BOM breaks every accent on Windows PowerShell 5.1, and the tests
+  see nothing because they match ASCII.
+- **The pre-commit hook refuses a commit whose proof is stale.** The order that survives it: stage
+  the correction, run `check --run` on that tree, then commit.
+- **PowerShell 5.1 and `pwsh` are different shells** and the runner has both; the Windows installer
+  test prefers `powershell`, which is the one users have.
+- The suite is ~400 s with the new installer tests; `check --run` still wants `--timeout 1500`.
 
 ## What is open
 
-- `docs/review-debt.md` holds one row: the fence header explains a rule the file does not have.
-- **The installer verifies sha256, not the signature.** `checksums.txt` is signed and attested; the
-  script does not check the bundle with cosign.
-- **The release body is written by hand** with `gh release edit` after the tag, because goreleaser
-  generates notes from commits.
-- **The change that needs no document** is still only half built: the light lane is the cheap half.
-- **A proof that says what it is blocked on** was half paid by 0169: the stream exists, the child's
-  name and the lock do not.
+- **This machine cannot install v0.12.0 until cosign is installed.** `go install
+  github.com/sigstore/cosign/v2/cmd/cosign@latest` or the sigstore release binary; then
+  `ODACHI_VERSION=v0.12.0 scripts/install.ps1` proves the whole chain on the real release.
+- `docs/review-debt.md` holds two rows: the Windows branch that refuses without cosign has no test,
+  and the fence header quotes a decision the brief never took.
+- **The release body is still written by hand** with `gh release edit` after the tag.
+- **The change that needs no document** is still only half built.
+- **ADR 0042**: CI cannot enforce the review. A decision, not work.
 
 ## What is already true, so it is not re-decided
 
+- **A release is a tag someone can install** (`docs/releases.md`): publish when a person's experience
+  changed, `minor` when a documented workflow step or a stored shape moves.
+- **A skill of this project ships complete and stands alone.**
+- **The installer refuses bytes it cannot verify**, and now the trust ends in the signature.
 - **Four artifacts are the memory**: brief, task doc, proof and profile.
-- **The release doctrine lives in `docs/releases.md`** and `drive` names it in one line.
-- **A version heading with no tag is not a release**, so it may stop existing.
-- **A skill of this project ships complete and stands alone**; it may name a deeper skill as optional.
-- **The review gate lives in the clone** (ADR 0042). CI cannot verify a review.
-- **Ownership is declared, never inferred** (ADR 0038), and a failed read is not an absence.
-- **A fence rule names a file the feature does not touch**, never the package that writes the proofs.
+- **The review gate lives in the clone** (ADR 0042); **ownership is declared** (ADR 0038).
 - **Every irreversible action names its target and waits for the human.**
 - **A warning earns no review round**: it becomes a row in `docs/review-debt.md`.
 
-## The one decision that waits, and is not polish
-
-**CI cannot enforce the review.** ADR 0042 says what would change it: a trusted job that runs
-`odachi review` with its own model and key, or a receipt signed outside the tree.
-
 ## Queued
 
-- **the row, paid**: the fence header that describes a rule it does not have.
-- **the installer verifies the signature**: `cosign verify-blob` against `checksums.txt.sigstore.json`
-  before installing.
+- **install cosign and run v0.12.0's installer on this machine**, so the binary in use is the signed
+  release and the new check is exercised for real.
+- **the two rows, paid**: the Windows refusal without cosign, and the fence header.
 - **the release body comes from the changelog**, not from memory.
-- **a change resumable from the diff needs no document.** Measure it before building it: `shape`
-  first.
-- **the design loop as a practice**: the four defects the screenshot found are the argument for a
-  read-back step in every UI feature, and the artboard rule (system fonts only) is the thing to
-  revisit if a landing ever needs a real typeface.
+- **a change resumable from the diff needs no document**: `shape` it before building it.
 
 ## How to find the next real work
 
