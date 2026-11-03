@@ -13,7 +13,7 @@ R1 · "el primer commit lleva `Odachi-Change: <una línea>`; check y review la l
 - tests pin the read, the base, the refusals and the unchanged answer without a trailer
 
 ## Steps
-- [ ] T1 · the commits since the merge-base name the change: a trailer is read, and its refusals are named   R1 · route:inline
+- [x] T1 · the commits since the merge-base name the change: a trailer is read, and its refusals are named   R1 · route:inline · tree:333871c7054bc8f6834b5e9644404385adcf5b7a
 - [ ] T2 · the gate judges a document-less change against its trailer, with the proof it already owes   R1 · route:inline
 - [ ] T3 · the review's vision for a document-less change is the trailer line, and the prompt says the diff is the record   R1 · route:inline
 - [ ] T4 · the drive skill and the changelog name the lane, so an agent knows it exists   R1 · route:inline
