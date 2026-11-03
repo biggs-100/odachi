@@ -7,13 +7,11 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.0 - 2026-11-03
 
 - **A release note is the changelog, printed.** The workflow takes the body of a release from the
   changelog section for the tag and refuses a tag with no section, so the notes are the same text a
   person reads and nobody writes them twice by hand (0180).
-
-## Unreleased
 
 - **A change can name itself in its commit.** `Odachi-Change: <line>` in a commit of the branch is the
   vision when no document is open: `check` measures the change from the merge-base, `review` judges
