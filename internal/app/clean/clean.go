@@ -415,45 +415,39 @@ func (f *found) reviews(files Files, opts Options) (Class, Class) {
 	records.Problems = class.Problems
 	prompts.Problems = class.Problems
 
-	byTree := map[string][]entry{}
+	// The two lifetimes read the same order: a prompt and a verdict about the
+	// same tree are the same day's evidence. Which prompts go is one answer, and
+	// the store's own prune asks the same function, so the report and the write
+	// cannot disagree about keep_prompts.
+	storeFiles := make([]review.StoreFile, 0, len(entries))
 	for _, item := range entries {
-		tree := treeOf(item.rel)
-		byTree[tree] = append(byTree[tree], item)
+		storeFiles = append(storeFiles, review.StoreFile{Name: item.rel, At: item.at})
+	}
+	forget := review.PromptsToForget(storeFiles, opts.keptPrompts())
+
+	rank := map[string]int{}
+	for index, tree := range review.NewestTrees(storeFiles) {
+		rank[tree] = index
 	}
 
-	// The trees are ordered once, by the newest file of each, and both lifetimes
-	// read that order: a prompt and a verdict about the same tree are the same
-	// day's evidence.
-	for index, tree := range treesNewestFirst(byTree) {
-		keepRecords := index < opts.keptVerdicts()
-		keepPrompt := index < opts.keptPrompts()
-		for _, item := range byTree[tree] {
-			isPromptFile := isPrompt(item.rel)
-			if isPromptFile {
-				prompts.Files++
-				prompts.Bytes += item.size
-				if keepPrompt {
-					continue
-				}
-				prompts = f.doom(prompts, root, item)
+	for _, item := range entries {
+		if review.IsPrompt(item.rel) {
+			prompts.Files++
+			prompts.Bytes += item.size
+			if !forget[item.rel] {
 				continue
 			}
-			records.Files++
-			records.Bytes += item.size
-			if keepRecords {
-				continue
-			}
-			records = f.doom(records, root, item)
+			prompts = f.doom(prompts, root, item)
+			continue
 		}
+		records.Files++
+		records.Bytes += item.size
+		if rank[review.TreeOf(item.rel)] < opts.keptVerdicts() {
+			continue
+		}
+		records = f.doom(records, root, item)
 	}
 	return records, prompts
-}
-
-// isPrompt says whether a store file is the question that was sent for a tree:
-// `<tree>.prompt.md` or one per lens group, `<tree>.prompt-risk+readability.md`.
-func isPrompt(rel string) bool {
-	rest := strings.TrimPrefix(rel, treeOf(rel))
-	return strings.HasPrefix(rest, ".prompt")
 }
 
 // backups is the class with a lifetime counted in artifacts: the newest
@@ -538,24 +532,6 @@ func (f *found) legacy(files Files, opts Options, gitDir string) Class {
 	return class
 }
 
-// treesNewestFirst orders the groups by the newest file of each, and breaks a tie
-// on the key, so the answer never depends on the order the directory was listed
-// in.
-func treesNewestFirst(groups map[string][]entry) []string {
-	keys := make([]string, 0, len(groups))
-	for key := range groups {
-		keys = append(keys, key)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		left, right := latest(groups[keys[i]]), latest(groups[keys[j]])
-		if !left.Equal(right) {
-			return left.After(right)
-		}
-		return keys[i] > keys[j]
-	})
-	return keys
-}
-
 // keepVersions keeps the newest files of every group: a backup is one version
 // of one artifact, and each artifact carries its own lifetime. A tie breaks on
 // the path, so the answer never depends on the order the directory was listed in.
@@ -623,15 +599,6 @@ func gather(files Files, dir string, class Class, root string, rule scanRule) (C
 	return class, entries
 }
 
-// treeOf is the record a file in the reviews directory belongs to: the tree hash
-// every name starts with.
-func treeOf(rel string) string {
-	if at := strings.Index(rel, "."); at > 0 {
-		return rel[:at]
-	}
-	return rel
-}
-
 // artifactOf is the file a backup saves, or false when the name is not a version
 // odachi wrote. The guess is refused on purpose: deleting a file somebody else
 // named would be exactly the mistake this verb exists to avoid.
@@ -642,17 +609,6 @@ func artifactOf(rel string) (string, bool) {
 		return "", false
 	}
 	return path.Join(dir, artifact), true
-}
-
-// latest is when the most recent file of a group was written.
-func latest(items []entry) time.Time {
-	newest := time.Time{}
-	for _, item := range items {
-		if item.at.After(newest) {
-			newest = item.at
-		}
-	}
-	return newest
 }
 
 // matchesLegacy reports whether a name in the git directory is one of the notes
