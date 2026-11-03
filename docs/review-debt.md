@@ -9,27 +9,33 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0177, which paid the one row 0176 left. Both rows of 0174 are still open.
+Last written: after 0178, which closed the two rows 0174 left. Nothing is open.
 
 ## Open
+
+Nothing.
+
+## Closed by feature 0178
 
 ### the cosign-missing refusal on Windows has no test
 
 Found by the review of 0174 (warning, `scripts/install.ps1:140`). The branch that refuses when
-cosign is absent, and names the URL to get it, is the brief's own criterion; the bash side has a
-test, the PowerShell side has only the failing-cosign and the happy path, so the branch never runs.
+cosign is absent, and names the URL to get it, is the brief's own criterion; the bash side had a
+test, the PowerShell side had only the failing-cosign and the happy path, so the branch never ran.
 
-Paid by the next feature that touches `install.ps1` or its test: a case that runs it with
-`ODACHI_COSIGN` empty and no cosign on PATH, and asserts the message names the tool and where to
-get it.
+Closed: `TestPowerShellInstallerRefusesWhenCosignIsMissing` points `ODACHI_COSIGN` at a path that
+exists nowhere, asserts non-zero, the word cosign and the docs URL, and that the bin directory is
+still empty. Observed red by disabling the branch: the script died on the missing command instead
+of saying what it needs.
 
 ### the ones that came after the proof
 
-Two suggestions, both true when they were written: the README claimed the whole chain was tested
-against a real release while the signature step is fixture-tested with a shim -fixed as paperwork,
-it now says what the test measures-, and the fence header quotes "the checksum check stays", a
-decision the brief never took. The second one is the same defect 0172 left, in the fence 0174
-wrote: paid by the next `start`, or by the first feature that touches the header.
+Two suggestions from the review of 0174. The README claimed the whole chain was tested against a
+real release while the signature step is fixture-tested with a shim; it was fixed as paperwork at
+the time, and it now says what the test measures. The fence header quoted "the checksum check
+stays", a decision the brief never took: 0176's `start` rewrote the fence from a new brief and its
+header no longer names it. The second row was the same defect 0172 left, and it is gone with the
+bytes.
 
 ## Closed by feature 0177
 
