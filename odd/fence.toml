@@ -2,10 +2,9 @@
 # files named like the phrase and protects nothing.
 #
 # a rule protects a file the feature must not touch because touching it would be
-# wrong - never a reason restated as a package (0120).
-#
-# "the checksum check stays" is a decision about what the feature does, not a
-# file: the brief carries it. The signature is added beside it, never instead.
+# wrong - never a reason restated as a package (0120). A non-goal that names no
+# path stays in the brief: "no browser and no model call" is a promise about
+# behaviour, and no glob measures a promise.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"

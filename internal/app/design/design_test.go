@@ -90,6 +90,28 @@ func TestListReportsTheDesignsAndTheirOpenComments(t *testing.T) {
 	}
 }
 
+// design list names the artboard nobody read back: the screenshot beside the
+// manifest is not reported as a gap, and its absence is (0176).
+func TestListNamesTheArtboardsWithoutAScreenshot(t *testing.T) {
+	files := newFakeFiles().put("design/pricing/design.json", `{"title":"Pricing page","brief":"b","artboards":[
+		{"file":"01-a.html","title":"A","tradeoff":"dense","width":1440,"height":900,"screenshot":"01-a.png"},
+		{"file":"02-b.html","title":"B","tradeoff":"open","width":1440,"height":900}]}`)
+
+	got := appdesign.Run(appdesign.Options{Dir: "raiz", Action: appdesign.ActionList}, files)
+	if got.Code != appdesign.CodeOK {
+		t.Fatalf("Code = %d: %s", got.Code, got.Message)
+	}
+
+	for _, line := range got.Lines {
+		switch {
+		case strings.Contains(line, "01-a.html") && strings.Contains(line, "no screenshot"):
+			t.Errorf("an artboard with a screenshot is named as missing: %s", line)
+		case strings.Contains(line, "02-b.html") && !strings.Contains(line, "no screenshot"):
+			t.Errorf("an artboard without a screenshot is not named: %s", line)
+		}
+	}
+}
+
 // A design folder without a manifest is not a design: it is a folder the list
 // skips, and the command does not invent one.
 func TestAFolderWithoutAManifestIsNotADesign(t *testing.T) {

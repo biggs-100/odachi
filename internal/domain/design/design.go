@@ -31,12 +31,15 @@ const (
 )
 
 // Artboard is one direction: a self-contained HTML file with the tradeoff it makes.
+// Screenshot is the image the artboard was read against, a file beside it: the
+// read-back leaves an artifact, and an artboard without one is named as missing.
 type Artboard struct {
-	File     string `json:"file"`
-	Title    string `json:"title"`
-	Tradeoff string `json:"tradeoff"`
-	Width    int    `json:"width"`
-	Height   int    `json:"height"`
+	File       string `json:"file"`
+	Title      string `json:"title"`
+	Tradeoff   string `json:"tradeoff"`
+	Width      int    `json:"width"`
+	Height     int    `json:"height"`
+	Screenshot string `json:"screenshot,omitempty"`
 }
 
 // Manifest is design/<slug>/design.json: what the design is and which artboards it
@@ -111,6 +114,12 @@ func ParseManifest(raw []byte) (Manifest, error) {
 		}
 		seen[file] = true
 		m.Artboards[i].File = file
+
+		screenshot := strings.TrimSpace(artboard.Screenshot)
+		if screenshot != "" && (screenshot != path.Base(screenshot) || strings.Contains(screenshot, `\`)) {
+			return Manifest{}, fmt.Errorf("design: artboard %q names screenshot %q: a file inside the design folder has no path", file, screenshot)
+		}
+		m.Artboards[i].Screenshot = screenshot
 	}
 	return m, nil
 }

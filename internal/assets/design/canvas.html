@@ -20,6 +20,7 @@
   .board { flex:0 0 auto; }
   .board h2 { font-size:13px; margin:0 0 6px; display:flex; gap:8px; align-items:baseline; }
   .board h2 small { color:var(--muted); font-weight:400; }
+  .board h2 small.gap { color:var(--accent); border:1px solid currentColor; border-radius:4px; padding:0 5px; }
   .board iframe { border:1px solid var(--line); background:#fff; display:block; }
   aside { width:320px; border-left:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column; min-height:0; }
   aside h3 { margin:0; padding:12px 14px; font-size:13px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; }
@@ -120,7 +121,11 @@
       frame.dataset.slug = design.slug;
       frame.src = design.urls[artboard.file];
       frame.addEventListener("load", function () { hook(frame); });
-      var head = el("h2", { textContent: artboard.title }, [el("small", { textContent: artboard.tradeoff })]);
+      var notes = [el("small", { textContent: artboard.tradeoff })];
+      if (!artboard.screenshot) {
+        notes.push(el("small", { className: "gap", textContent: "no screenshot" }));
+      }
+      var head = el("h2", { textContent: artboard.title }, notes);
       boards.appendChild(el("div", { className: "board" }, [head, frame]));
     });
 

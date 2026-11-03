@@ -111,7 +111,11 @@ func list(opts Options, files Files) Result {
 		}
 		result.Lines = append(result.Lines, line)
 		for _, artboard := range d.Manifest.Artboards {
-			result.Lines = append(result.Lines, "  "+artboard.File+" · "+artboard.Title+" · "+artboard.Tradeoff)
+			board := "  " + artboard.File + " · " + artboard.Title + " · " + artboard.Tradeoff
+			if strings.TrimSpace(artboard.Screenshot) == "" {
+				board += " · no screenshot"
+			}
+			result.Lines = append(result.Lines, board)
 		}
 	}
 	result.Message = fmt.Sprintf("%d design%s", len(designs), plural(len(designs), "", "s"))
