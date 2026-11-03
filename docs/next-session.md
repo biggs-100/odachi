@@ -1,98 +1,65 @@
-# Next session: a release that broke, and the patch that proved the chain
+# Next session: T2 of the trailer, and a gate that must not guess
 
-Written at the close of 0175. **v0.12.1 is published**, signed and attested, and this machine runs
-**v0.12.0** -the same binary, installed by the fixed script against the real release. `doctor` is
-green except check 14 until this file was rewritten; `main` is clean and in sync with `origin`.
+Written at the close of a session that shipped five features and two releases. **v0.13.1 is
+published, signed and installed**; the worktree is on `feat/0181-the-diff-speaks`, the open
+feature, with its plan on local `main` and its first step on the branch.
 
 ## What shipped
 
-- **0175 fixed what v0.12.0 broke.** The PowerShell installer aborted exactly when the signature
-  verified: cosign prints `Verified OK` on stderr, and PowerShell 5.1 with `$ErrorActionPreference
-  'Stop'` turns a native program's stderr into a terminating error. Nobody with cosign could install
-  the release. The preference is now relaxed for the call and restored; the exit code is the answer.
-- **v0.12.1 is the patch**, and its notes say what happened. The install that proved it ran against
-  the real release: cosign verified, sha256 passed, the binary landed.
+- **0176, v0.13.0**: `design.json` names a screenshot per artboard, `design list` and the canvas
+  name the ones without it, and the design skill makes it part of done.
+- **0177, v0.13.1**: the design skill got back the four instructions 0176's compression lost.
+- **0178**: the installer's refusal without cosign has its test.
+- **0179**: the fence stopped protecting `.github/**`, so the next feature could touch the workflow.
+- **0180**: the release body is printed from the changelog by `scripts/release-notes.sh`, the
+  workflow edits the release with it, and a tag with no section is refused.
 
-## The lesson this pair of releases paid for
+## The lesson this session paid for
 
-**A test double that does not behave like the original proves nothing.** The shim answered "success"
-without writing a byte, so every test passed while the real installer failed on its own success
-message. The shim is now a `.cmd` -a native program for PowerShell- that prints to stderr like cosign
-does, and the red reproduces the production failure exactly.
-
-The rule that follows, and belongs beside "observe red": when the double stands in for a tool that
-talks, the double must talk on the same channel.
+**A skill that judges well still needs the read-back to leave an artifact.** The blind experiment
+preferred the good artboard twice (8 vs 3) and named 9 and 10 of the 12 tells with measured
+evidence, yet the earlier artboard had shipped with its panel flush to the edge because the
+read-back never ran. A rule nobody can see is not a step; the fix was the screenshot in the
+manifest, not another rule.
 
 ## What was measured, so nobody re-measures it
 
-- **The suite is ~410 s** with the installer tests; `check --run` wants `--timeout 1500`.
-- **`opencode run` stalls at ~40 KB on the installer diff**; a subagent that reads the prompt file
-  answers in seconds. Use that when the one-command review stalls.
-- **`install.ps1` is UTF-8 with BOM on purpose.** Windows PowerShell 5.1 decodes a BOM-less script
-  with the ANSI code page and every accent becomes mojibake; ASCII-only assertions do not notice.
-- **The pre-commit hook refuses a commit whose proof is stale:** stage the correction, `check --run`
-  on that tree, then commit.
-- **cosign is installed on this machine** (`~/go/bin/cosign.exe`, on PATH) and v0.12.0 verified
-  against its real bundle before installing.
-- **The agent's shell is pwsh 7.6.9, but a script that ships to Windows is proven on `powershell`
-  5.1**, which is what a user has: in 7 a native program's stderr is not a terminating error, so the
-  same installer passes there and fails on the machine that matters. And file rewrites belong to the
-  editor tool, never to `-replace` in a shell: a global replace ate the changelog header once.
+- **The screen test**: two artboards, same content, shuffled screenshots, three blind judges. 2/2
+  preferred the good one, 8/10 vs 3/10, 9/12 and 10/12 tells named. Report:
+  `.git/odachi/scratch/design-test/experiment/report.md`.
+- **`start --brief` writes no `brief.md`**: the code passes `writeBrief: false`, so the draft must
+  already be `brief.md` when the run starts, or the tree keeps the previous feature's brief next to
+  the new task doc. The shape skill says otherwise, and that sentence is wrong.
+- **The brief parser is line-based**: a wrapped bullet is cut at the first newline. One item per
+  line, however long.
+- **A bash test skips on this machine** (WSL bash) and runs in CI, like the installer's tests.
+- **`check --run` wants `--timeout 1500`** for a cold suite; the cached one closes in minutes.
 
-## What is open
+## What is open: 0181, the diff speaks for itself
 
-- `docs/review-debt.md` holds two rows: the Windows branch that refuses without cosign has no test,
-  and the fence header quotes a decision the brief never took.
-- **The release body is still written by hand** with `gh release edit` after the tag. Two releases
-  today, twice by hand.
-- **The change that needs no document** is still only half built.
-- **ADR 0042**: CI cannot enforce the review. A decision, not work.
-- The installed binary says `0.12.0` while the newest release is `0.12.1`; the bytes are the same,
-  and reinstalling is one command if the number matters.
+The plan is `odd/tasks/0181-the-diff-speaks.md`; T1 is done.
+
+- **T1 (done)**: `internal/domain/change` reads `Odachi-Change:` from commit messages and refuses
+  an empty trailer or two different lines; `gitx.Messages` answers the range since a base.
+- **T2 (next)**: the gate judges a document-less change. It needs the identity (a trailer with no
+  open document means this change is the feature), the base (the merge-base with the remote's
+  default branch, the same ref `check --ci` reads), and the proof name (a slug of the line). The
+  delicate part: a project with a closed document and no trailer must keep today's answer.
+- **T3**: `odachi review` builds the prompt with the trailer line where a light document's line
+  goes, and says the diff is the record.
+- **T4**: `skills/drive/SKILL.md` and the changelog name the lane.
+- Then the proof, the review and the PR. The plan commit is on local `main` and travels in the PR.
 
 ## What is already true, so it is not re-decided
 
-- **A release is a tag someone can install** (`docs/releases.md`); a fix someone suffered is a patch,
-  published as soon as it is green.
-- **A skill of this project ships complete and stands alone.**
-- **The installer refuses bytes it cannot verify**, and the trust ends in the signature.
-- **A test double must behave like what it replaces**, or the test measures the double.
-- **Four artifacts are the memory**: brief, task doc, proof and profile.
-- **The review gate lives in the clone** (ADR 0042); **ownership is declared** (ADR 0038).
-- **Every irreversible action names its target and waits for the human.**
-- **A warning earns no review round**: it becomes a row in `docs/review-debt.md`.
-
-## What the next session starts with: can the agent tell a good screen from a bad one?
-
-`ui-craft` gives rules; a rule is not a judgment. Before adding another one, measure whether the agent
-can **distinguish**. Three levels, and only two are verifiable:
-
-1. **Mechanical** -measured, no opinion: contrast 4.5:1, pointer sizes, measure 45-90 characters, a
-   coherent scale, the five states, no tell, focus visible. A checklist or a script answers this.
-2. **Structural** -a rubric: one winner per screen, hierarchy order, spacing rhythm, one accent, one
-   elevation, the worst content. Judged, not measured; a reviewer can apply it consistently.
-3. **Perceptual** -"does it feel right". Only a person, and even then it is taste. An agent that says
-   "this looks professional" without evidence is inventing.
-
-The experiment, before any new code:
-
-- Build two artboards with the **same content**: one deliberately bad (the twelve tells, one per
-  section) and one good.
-- Give the agent both screenshots **unlabelled** and ask which is better and why, naming the defects
-  in the skill's own vocabulary.
-- Then have it grade its earlier work (`.git/odachi/scratch/design-test/`) before and after the loop.
-- Pass: it names **8 of the 12** tells in the bad one and prefers the good one with reasons that match
-  the rubric. If it cannot, the skill is decoration and the feature to build is the **evaluation**.
-
-## Queued
-
-- **the two rows, paid**: the Windows refusal without cosign, and the fence header.
-- **the release body comes from the changelog**, not from memory: a step of the workflow, so nobody
-  writes it twice by hand.
-- **a change resumable from the diff needs no document**: `shape` it before building it.
+- **The fence protects `proof/**` only**; `.github/**` left the fence in 0179.
+- **The release body is the changelog**, printed by the workflow (0180).
+- **A release is a tag someone can install**, and a patch ships as soon as it is green.
+- **A stored proof is never rewritten.**
+- **`docs/review-debt.md` is empty.**
+- **The installed binary is 0.13.1.**
 
 ## How to find the next real work
 
-`docs/review-debt.md` names what a verdict left; `doctor` and `bench` find friction nobody has named;
-the hygiene trio (`go vet`, `go mod tidy -diff`, `gofmt -l .`) is cheap; and `clean` says which class
-of file grew back.
+`odachi summary` names 0181 and its steps, and the task doc names the next one. The ledger is empty,
+so the task doc is the map today.
