@@ -9,21 +9,9 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0181, whose verdict approved with two warnings.
+Last written: while paying the two rows 0181 left (0182).
 
 ## Open
-
-### the review lane filters documents by base, the gate by the newest
-
-Found by the re-review of 0181 (warning, `internal/app/review/review.go:3050`). `openDocumentAt`
-asks whether a document *with this base* is open, while `check` opens the trailer lane on the
-newest document overall (`check.go`, `currentFeature` plus `documentClosed`). After a rebase onto a
-moved default branch, or with a second open document at another base, the two verbs judge one tree
-against different visions: the gate keeps the document, the review reads the trailer.
-
-Paid by the next feature that touches the review's vision: ask the same question `check` asks (the
-newest document, no base filter), and pin it with an open document whose base differs from the
-candidate's.
 
 ### the detached HEAD lets a trailer on the default branch through
 
@@ -36,6 +24,26 @@ has none for `Branch` on a detached HEAD.
 Paid by the next feature that touches the lane: decide what "on the default branch" means without a
 branch name (the commits reachable from the base ref), pin the detached case in `gitx` and in the
 lane, and keep CI's detached checkout working.
+
+## Closed by feature 0182
+
+### the review lane filters documents by base, the gate by the newest
+
+Found by the re-review of 0181 (warning, `internal/app/review/review.go:3050`). `openDocumentAt`
+asked whether a document *with this base* was open, while `check` asks the newest document overall.
+The row named a rebase; the measurement found the default path: `odachi review` asks about `HEAD`
+and a document records a commit, so the filter matched no document at all and a trailer stood in for
+an open feature's vision. The same comparison made a light feature's vision "there is no brief.md
+yet" unless the human named its hash.
+
+Closed: both lookups ask one function, `gateDocument`, which takes the newest document -the one
+`check` takes- and keeps the base filter only for a correction, whose feature may not be the newest.
+Pinned by `TestATrailerDoesNotOverrideAnOpenDocumentAtAnotherBase`,
+`TestAClosedDocumentAtAnotherBaseStillLetsTheTrailerBeTheVision`,
+`TestACorrectionAsksTheDocumentItsPredecessorJudged` and
+`TestALightFeatureIsJudgedAgainstItsOwnLineOnTheDefaultBase`. The first and the last were observed
+red first; the light one was measured again with a binary built from the tree, on the same repository
+whose prompt had said "there is no brief.md yet".
 
 ## Closed by feature 0178
 

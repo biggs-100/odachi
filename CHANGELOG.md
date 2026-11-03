@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The review asks the document the gate asks.** `odachi review` asked whether a document's base
+  equaled the ref it judged: a document records a commit and the default base is `HEAD`, so the answer
+  was no and an `Odachi-Change:` trailer could stand in for an open feature's vision. It now asks the
+  newest document, the one `check` takes, so a light feature's line is its vision on the default base
+  instead of "there is no brief.md yet". A correction keeps asking the document its predecessor judged
+  against, because the newest one may belong to a later feature (0182).
+
 ## v0.14.0 - 2026-11-03
 
 - **A release note is the changelog, printed.** The workflow takes the body of a release from the
