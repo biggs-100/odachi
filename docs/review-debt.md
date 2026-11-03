@@ -9,21 +9,33 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while paying one of the two rows 0181 left (0182).
+Last written: while paying the last row 0181 left (0183).
 
 ## Open
 
+Nothing: both rows of 0181 are paid. The next review adds its own.
+
+## Closed by feature 0183
+
 ### the detached HEAD lets a trailer on the default branch through
 
-Found by the re-review of 0181 (warning, `cmd/odachi/main.go:540`). `Branch()` fails on a detached
-HEAD, the CLI drops the error, and `claimedChange` refuses only when the branch is named. A trailer
-sitting on the default branch's commits is then judged instead of refused by name, although the
-brief asks for that refusal unconditionally. No test exercises the branch-unknown path, and `gitx`
-has none for `Branch` on a detached HEAD.
+Found by the re-review of 0181 (warning, `cmd/odachi/main.go:540`). `Branch()` failed on a detached
+HEAD, the CLI dropped the error, and `claimedChange` refused only when the branch was named. A trailer
+sitting on the default branch's commits was then judged instead of refused by name, although the
+brief asked for that refusal unconditionally.
 
-Paid by the next feature that touches the lane: decide what "on the default branch" means without a
-branch name (the commits reachable from the base ref), pin the detached case in `gitx` and in the
-lane, and keep CI's detached checkout working.
+Closed: the gate asks the repository, `OnDefaultBranch`: the local branch the base names (`origin/main`
+names `main`), and whether HEAD is one of its commits. A detached HEAD is answered from the refs; a
+clone with no local default branch -CI's detached pull request- answers no, so the lane stays verifiable
+there; a repository git cannot read blocks the run with the reason instead of letting the trailer
+through. The first version treated any branch whose upstream was the base as the default one, and the
+review found it causal: `git checkout -b feat origin/main` gives the feature branch exactly that
+upstream, so the rule compares the name and pins the inherited case. Pinned by the six
+`TestOnDefaultBranch` tests in `gitx` -the detached answer, the inherited-upstream feature in both
+answers, the CI shape and the error- and by `TestATrailerOnTheDefaultBranchIsRefused` and
+`TestATrailerBlocksWhenTheDefaultBranchCannotBeAsked` in the lane. The detached answer was observed red
+with the refs branch disabled, the lane's two with both refusals disabled, and the inherited-upstream
+one with the name comparison widened to every branch.
 
 ## Closed by feature 0182
 

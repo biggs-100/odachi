@@ -230,14 +230,123 @@ func MergeBase(root, ref string) (string, error) {
 	return compareBase(root, strings.TrimSpace(ref))
 }
 
-// Branch names the branch this clone has checked out. A detached HEAD has none,
-// and that is an answer: the trailer lane keeps the answer it had.
-func Branch(root string) (string, error) {
-	out, err := run(root, "symbolic-ref", "--short", "-q", "HEAD")
-	if err != nil {
-		return "", err
+// OnDefaultBranch answers whether HEAD sits on the default branch of the clone
+// as base names it: origin/main names `main`, refs/remotes/origin/main names
+// `main` too, and a remote on `trunk` names `trunk`. A local branch is the
+// default one when it carries that name; its upstream is not the test, because
+// `git checkout -b feat origin/main` gives the feature branch exactly that
+// upstream (branch.autoSetupMerge), and a feature branch is not the default one.
+//
+// A detached HEAD has no name, so the refs answer: that branch's commits, and
+// whether HEAD is one of them. A clone with no such branch -CI checks a pull
+// request out detached and keeps no local default- answers no, which is what
+// keeps the trailer lane verifiable there.
+func OnDefaultBranch(root, base string) (branch string, on bool, err error) {
+	trimmed := strings.TrimSpace(base)
+	if trimmed == "" {
+		return "", false, fmt.Errorf("no base to follow: a default branch is named by the ref it tracks")
 	}
-	return strings.TrimSpace(out), nil
+
+	listing, err := run(root, "for-each-ref", "--format=%(refname:short)", "refs/heads")
+	if err != nil {
+		return "", false, err
+	}
+	candidates := defaultCandidates(listing, trimmed)
+	if len(candidates) == 0 {
+		return "", false, nil
+	}
+
+	name, detached, err := checkedOut(root)
+	if err != nil {
+		return "", false, err
+	}
+	if !detached {
+		for _, candidate := range candidates {
+			if candidate == name {
+				return candidate, true, nil
+			}
+		}
+		return "", false, nil
+	}
+
+	for _, candidate := range candidates {
+		inside, err := reachableFrom(root, candidate, "HEAD")
+		if err != nil {
+			return "", false, err
+		}
+		if inside {
+			return candidate, true, nil
+		}
+	}
+	return "", false, nil
+}
+
+// defaultCandidates reads the local branch a base ref names: the ref without its
+// remote. The listing is one branch name per line, and the comparison is the
+// whole name, so feat/main is not `main`.
+func defaultCandidates(listing, base string) []string {
+	short := localName(base)
+
+	names := []string{}
+	for _, line := range strings.Split(listing, "\n") {
+		if name := strings.TrimSpace(line); name == short {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+// localName is the local spelling a base ref would have: origin/main and
+// refs/remotes/origin/main both name `main`, and any other ref names itself.
+func localName(base string) string {
+	if rest, ok := strings.CutPrefix(base, "refs/remotes/"); ok {
+		if _, branch, found := strings.Cut(rest, "/"); found {
+			return branch
+		}
+		return rest
+	}
+	if rest, ok := strings.CutPrefix(base, "origin/"); ok {
+		return rest
+	}
+	return base
+}
+
+// checkedOut names the branch HEAD is on, or reports that it is detached. A
+// detached HEAD is an answer here, not an error: the exit code tells them apart,
+// because a repository git cannot read is a failure this lane must not swallow.
+func checkedOut(root string) (name string, detached bool, err error) {
+	cmd := execGit(root, "symbolic-ref", "--short", "-q", "HEAD")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+	if err == nil {
+		return strings.TrimSpace(stdout.String()), false, nil
+	}
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return "", true, nil
+	}
+	return "", false, fmt.Errorf("git symbolic-ref --short -q HEAD: %w: %s", err, strings.TrimSpace(stderr.String()))
+}
+
+// reachableFrom reports whether commit is reachable from ref: "this commit is on
+// that branch". Exit 1 is the answer "no", not an error.
+func reachableFrom(root, ref, commit string) (bool, error) {
+	cmd := execGit(root, "merge-base", "--is-ancestor", commit, ref)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err == nil {
+		return true, nil
+	}
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return false, nil
+	}
+	return false, fmt.Errorf("git merge-base --is-ancestor %s %s: %w: %s", commit, ref, err, strings.TrimSpace(stderr.String()))
 }
 
 // Resolve names the commit a spelling points at, in full. A base is a commit, not

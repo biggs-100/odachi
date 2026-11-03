@@ -537,9 +537,6 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	} else if b, err := (gitRepo{}).RemoteBase(dir); err == nil {
 		opts.ChangeBase = b
 	}
-	if branch, err := (gitRepo{}).Branch(dir); err == nil {
-		opts.Branch = branch
-	}
 
 	// The project owns the default; the flags are the exception for one run.
 	// A malformed switch blocks instead of quietly reading as off: a human who

@@ -191,6 +191,12 @@ type fakeGit struct {
 	// current tree, so a test that does not care gets a stable base.
 	mergeBase    string
 	mergeBaseErr error
+
+	// onDefault is the answer to "is HEAD on the default branch", defaultBranch
+	// is the name the refusal prints, and onDefaultErr is git failing to answer.
+	onDefault     bool
+	defaultBranch string
+	onDefaultErr  error
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
@@ -261,6 +267,16 @@ func (g *fakeGit) MergeBase(root, ref string) (string, error) {
 		return g.mergeBase, nil
 	}
 	return g.tree, nil
+}
+
+// OnDefaultBranch answers whether HEAD belongs to the branch that follows the
+// base. The fake is a branch unless a test says otherwise: the door is meant to
+// be the ordinary case, and a refusal is the case a test has to name.
+func (g *fakeGit) OnDefaultBranch(root, base string) (string, bool, error) {
+	if g.onDefaultErr != nil {
+		return "", false, g.onDefaultErr
+	}
+	return g.defaultBranch, g.onDefault, nil
 }
 
 // FileAt answers the fence of a ref, or the reason the ref could not be read.

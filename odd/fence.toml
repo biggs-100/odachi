@@ -12,12 +12,12 @@ paths = ["proof/**"]
 deps  = []
 
 # This non-goal has no paths yet:
-#   no change to check's rule: the gate keeps judging the newest document
+#   no change to the trailer's proofs, review or naming
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "no change to check's rule: the gate keeps judging the newest document"
+# not   = "no change to the trailer's proofs, review or naming"
 # paths = []
 # deps  = []
 
@@ -32,11 +32,11 @@ deps  = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   the light lane keeps its shape: one requirement, one step
+#   a stored proof is never rewritten, whatever the writer learns
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "the light lane keeps its shape: one requirement, one step"
+# not   = "a stored proof is never rewritten, whatever the writer learns"
 # paths = []
 # deps  = []
