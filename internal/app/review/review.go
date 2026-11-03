@@ -626,6 +626,13 @@ func (r *runner) attach() Result {
 	if err := parsed.Validate(); err != nil {
 		return refused(r.opts.Attach, err.Error())
 	}
+	// A model is an identifier: it replaces {model} inside a reviewer command, and
+	// a correction merges it into the lens table, which refuses a display name
+	// later -when the verdict is stored and nothing can be done about it-. The
+	// attach refuses it here, before the write (0184).
+	if _, err := domain.NormalizeModel(parsed.Model); err != nil {
+		return refused(r.opts.Attach, err.Error())
+	}
 
 	return r.store(parsed, r.base(), nil)
 }
