@@ -3010,6 +3010,17 @@ func (r *runner) trailerVision(base string) (string, *Result) {
 		return "", nil
 	}
 
+	// The lane is check's rule: a trailer names the change only when no document
+	// is open on this base. An open document is the vision, and a review judged
+	// against the trailer would disagree with the gate that asked for it.
+	open, problem := r.openDocumentAt(base)
+	if problem != nil {
+		return "", problem
+	}
+	if open {
+		return "", nil
+	}
+
 	messages, err := r.git.Messages(r.opts.Dir, base)
 	if err != nil {
 		p := blocked("could not read the commits since " + base + ": " + oneLine(err.Error()))
@@ -3025,6 +3036,25 @@ func (r *runner) trailerVision(base string) (string, *Result) {
 	}
 
 	return "(this change has no document: its line is the requirement below, and the diff is the record)\n\n" + declared.Line, nil
+}
+
+// openDocumentAt reports whether the highest document that starts at base still
+// has steps to do. check opens the trailer lane only when no document is open, so
+// the review asks the same question and the two verbs cannot answer differently.
+func (r *runner) openDocumentAt(base string) (bool, *Result) {
+	docs, err := tasks.All(r.files, r.opts.Dir)
+	if err != nil {
+		p := blocked(oneLine(err.Error()) + "; check the permissions and run odachi review again")
+		return false, &p
+	}
+	for i := len(docs) - 1; i >= 0; i-- {
+		if docs[i].Doc.Base != base {
+			continue
+		}
+		done, total := docs[i].Doc.Progress()
+		return total == 0 || done < total, nil
+	}
+	return false, nil
 }
 
 // lightVision answers the requirement of the light feature this candidate belongs

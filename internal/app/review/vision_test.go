@@ -119,6 +119,55 @@ func TestAnAmbiguousTrailerIsRefusedByTheReview(t *testing.T) {
 	}
 }
 
+// A trailer never stands in for a document that is still open: `check` judges the
+// document in that case, so the review must read the same vision or the two verbs
+// answer different questions about one tree.
+func TestATrailerDoesNotOverrideAnOpenDocument(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0167-three-tests-pin.md")] = []byte(lightDocument)
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "three tests pin the light lane's refusals") {
+		t.Errorf("the prompt does not carry the open document's line:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "bring back the wait state") {
+		t.Errorf("the trailer overrode an open document:\n%s", result.Prompt)
+	}
+}
+
+// A normal feature that is still open keeps its brief, whatever a commit in its
+// range says: a trailer is the vision only when there is no open document.
+func TestATrailerDoesNotOverrideAnOpenNormalFeature(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0166-a-line-that-can-close.md")] = []byte(`# a-line-that-can-close
+Base: ` + lightBase + `
+
+## Requirements (verbatim, from the user)
+R1 · "a change that fits one line is written as one line"
+
+## Steps
+- [ ] T1 · the lane   R1
+`)
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "reservar turnos") {
+		t.Errorf("the prompt does not carry brief.md:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "bring back the wait state") {
+		t.Errorf("the trailer overrode an open feature's brief:\n%s", result.Prompt)
+	}
+}
+
 // TestANormalFeatureStillCarriesItsBrief: a feature with a brief is judged exactly
 // as before, whatever its task document says.
 func TestANormalFeatureStillCarriesItsBrief(t *testing.T) {

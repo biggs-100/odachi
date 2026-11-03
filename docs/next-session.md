@@ -2,7 +2,7 @@
 
 Written at the close of a session that shipped five features and two releases. **v0.13.1 is
 published, signed and installed**; the worktree is on `feat/0181-the-diff-speaks`, the open
-feature, with its plan on local `main` and its first step on the branch.
+feature. Its four steps are done and the tree awaits its proof and verdict, then the PR.
 
 ## What shipped
 
@@ -37,18 +37,22 @@ manifest, not another rule.
 
 ## What is open: 0181, the diff speaks for itself
 
-The plan is `odd/tasks/0181-the-diff-speaks.md`; T1 is done.
+All four steps are done on `feat/0181-the-diff-speaks`; the tree awaits its proof and verdict, then
+the PR.
 
-- **T1 (done)**: `internal/domain/change` reads `Odachi-Change:` from commit messages and refuses
-  an empty trailer or two different lines; `gitx.Messages` answers the range since a base.
-- **T2 (next)**: the gate judges a document-less change. It needs the identity (a trailer with no
-  open document means this change is the feature), the base (the merge-base with the remote's
-  default branch, the same ref `check --ci` reads), and the proof name (a slug of the line). The
-  delicate part: a project with a closed document and no trailer must keep today's answer.
-- **T3**: `odachi review` builds the prompt with the trailer line where a light document's line
-  goes, and says the diff is the record.
+- **T1**: `internal/domain/change` reads `Odachi-Change:` from commit messages and refuses an empty
+  trailer or two different lines; `gitx.Messages` answers the range since a base.
+- **T2**: the gate opens the lane when the newest document is closed or there is none. The trailer
+  is the vision (no brief asked), the merge-base is the base the review must name, and the proof is
+  named after the line. A trailer on the default branch, an empty one, two different ones, or a
+  fork point git cannot find are refused by name; `--feature` is never replaced.
+- **T3**: `odachi review` reads the trailer from the range it judges, but only when no document is
+  open: an open document keeps the vision `check` judges it with.
 - **T4**: `skills/drive/SKILL.md` and the changelog name the lane.
-- Then the proof, the review and the PR. The plan commit is on local `main` and travels in the PR.
+- The lane was exercised end to end in a scratch clone (`.git/odachi/scratch/lane-smoke/`): no
+  document, no brief, `Odachi-Change:` in the commit, `check --run "echo ok"` ready with
+  `proof/change-bring-back-the-wait-state.txt`, and the same trailer on `main` refused by name.
+- Next: the proof, the verdict at base `5a5662c`, the close commit and the PR.
 
 ## What is already true, so it is not re-decided
 
