@@ -1,69 +1,78 @@
-# Next session: T2 of the trailer, and a gate that must not guess
+# Next session: the two rows the trailer lane left
 
-Written at the close of a session that shipped five features and two releases. **v0.13.1 is
-published, signed and installed**; the worktree is on `feat/0181-the-diff-speaks`, the open
-feature. Its four steps are done and the tree awaits its proof and verdict, then the PR.
+Written at the close of the session that shipped 0181 and v0.14.0. **v0.14.0 is published, signed and
+installed**; `main` is clean at `4580acf`; `doctor` is 14/14. The next work is the two rows the
+re-review of 0181 left, and two holes found while using the tool.
 
 ## What shipped
 
-- **0176, v0.13.0**: `design.json` names a screenshot per artboard, `design list` and the canvas
-  name the ones without it, and the design skill makes it part of done.
-- **0177, v0.13.1**: the design skill got back the four instructions 0176's compression lost.
-- **0178**: the installer's refusal without cosign has its test.
-- **0179**: the fence stopped protecting `.github/**`, so the next feature could touch the workflow.
-- **0180**: the release body is printed from the changelog by `scripts/release-notes.sh`, the
-  workflow edits the release with it, and a tag with no section is refused.
+- **0181, v0.14.0**: a change can name itself in its commit. `Odachi-Change: <line>` in a commit of
+  the branch is the vision when no document is open; `check` measures the change from the merge-base
+  with the default branch, names the proof after the line, and refuses a trailer on the default
+  branch, an empty one or two different ones; `review` judges the same line and says the diff is the
+  record. The light lane stays.
+- **The release body wrote itself.** v0.14.0 is the first release whose notes came from the workflow
+  step of 0180, printed from the changelog: the body is in the release and nobody edited it by hand.
 
 ## The lesson this session paid for
 
-**A skill that judges well still needs the read-back to leave an artifact.** The blind experiment
-preferred the good artboard twice (8 vs 3) and named 9 and 10 of the 12 tells with measured
-evidence, yet the earlier artboard had shipped with its panel flush to the edge because the
-read-back never ran. A rule nobody can see is not a step; the fix was the screenshot in the
-manifest, not another rule.
+**A lane that reads the diff must ask the same question the gate asks.** The first review found a
+CRITICAL: `review` read the trailer before it asked whether a document was open, so a documented
+feature could be judged against a line `check` ignored. The fix was one question, asked the same way
+in both verbs, with two tests. The re-review found the mirror case: the review filters documents by
+the candidate's base while the gate takes the newest document overall. That one is not paid; it is
+in the ledger, and it is the same defect one level down.
 
 ## What was measured, so nobody re-measures it
 
-- **The screen test**: two artboards, same content, shuffled screenshots, three blind judges. 2/2
-  preferred the good one, 8/10 vs 3/10, 9/12 and 10/12 tells named. Report:
-  `.git/odachi/scratch/design-test/experiment/report.md`.
-- **`start --brief` writes no `brief.md`**: the code passes `writeBrief: false`, so the draft must
-  already be `brief.md` when the run starts, or the tree keeps the previous feature's brief next to
-  the new task doc. The shape skill says otherwise, and that sentence is wrong.
-- **The brief parser is line-based**: a wrapped bullet is cut at the first newline. One item per
-  line, however long.
-- **A bash test skips on this machine** (WSL bash) and runs in CI, like the installer's tests.
-- **`check --run` wants `--timeout 1500`** for a cold suite; the cached one closes in minutes.
+- **The lane works end to end.** In `.git/odachi/scratch/lane-smoke/repo`: no document, no brief,
+  `Odachi-Change: bring back the wait state` in the commit, `check --run "echo ok"` ready with
+  `proof/change-bring-back-the-wait-state.txt`, and the same trailer on `main` refused by name. The
+  installed v0.14.0 answers the same.
+- **`check` without `--require-review` forgot the verdict.** The task doc was committed closed
+  before the verdict, so the mode's `closedBefore` read the close as done and stopped asking; the
+  flag caught it. The close commit belongs after the verdict, or the mode should anchor on the base.
+- **`start --brief` writes no `brief.md`** (`writeBrief: false`): the draft must already be that file.
+  The shape skill says otherwise. Still open.
+- **A proof must be run with the close documents staged**, or the pre-commit hook refuses it as
+  stale: stage, `check --run`, then commit.
 
-## What is open: 0181, the diff speaks for itself
+## Queued
 
-All four steps are done on `feat/0181-the-diff-speaks`; the tree awaits its proof and verdict, then
-the PR.
-
-- **T1**: `internal/domain/change` reads `Odachi-Change:` from commit messages and refuses an empty
-  trailer or two different lines; `gitx.Messages` answers the range since a base.
-- **T2**: the gate opens the lane when the newest document is closed or there is none. The trailer
-  is the vision (no brief asked), the merge-base is the base the review must name, and the proof is
-  named after the line. A trailer on the default branch, an empty one, two different ones, or a
-  fork point git cannot find are refused by name; `--feature` is never replaced.
-- **T3**: `odachi review` reads the trailer from the range it judges, but only when no document is
-  open: an open document keeps the vision `check` judges it with.
-- **T4**: `skills/drive/SKILL.md` and the changelog name the lane.
-- The lane was exercised end to end in a scratch clone (`.git/odachi/scratch/lane-smoke/`): no
-  document, no brief, `Odachi-Change:` in the commit, `check --run "echo ok"` ready with
-  `proof/change-bring-back-the-wait-state.txt`, and the same trailer on `main` refused by name.
-- Next: the proof, the verdict at base `5a5662c`, the close commit and the PR.
+1. **the review filters documents by base, the gate by the newest** (review-debt): a rebased branch
+   or a second open document lets the two verbs disagree. Fix: ask the newest document, no filter,
+   with a test at a different base.
+2. **the detached HEAD lets a trailer on the default branch through** (review-debt): `Branch()`
+   fails, the CLI drops the error, and the refusal needs a name. Decide what "on the default branch"
+   means without one, and keep CI's detached checkout working.
+3. **the gate mode forgets a verdict the close commit preceded**: decide whether the close commit
+   must come after the verdict, or `closedBefore` anchors on the document's base.
+4. **`start --brief` and the shape skill disagree**: the tool reads the draft and writes no brief;
+   either it writes `brief.md` or the skill says to place the draft first.
+5. **the cleanup policy has two decisions and a nudge** (queued 2026-11-03, after comparing
+   gentle-ai and gentle-shell):
+   - prune the review prompts and scaffolding at the moment the verdict is stored. `keep_prompts =
+     0` already says they are disposable; today only `clean --apply` does it. gentle-shell does
+     exactly this at write time (`historyMaxTasks`, default 200) and gentle-ai prunes its backups
+     after every install (`Prune(root, 5)`, pinned never).
+   - a `doctor` check or a close line that names the store's growth, like gentle-ai's maintenance
+     loop, but without deleting: the human keeps the `--apply`.
+   - what stays manual forever: `proof/` and `odd/tasks`. Bounding them is a decision about which
+     evidence is forgotten, and that is an ADR, not a `clean` rule.
+   - measured 2026-11-03 on this clone: 21.7 MB in 1187 files, 20.8 MB recoverable, of which 18.3 MB
+     is the agent's scratch. That scratch holds the design experiment report and the lane smoke
+     clone; `clean --apply` would empty them, so anything to keep moves to `docs/` first.
 
 ## What is already true, so it is not re-decided
 
 - **The fence protects `proof/**` only**; `.github/**` left the fence in 0179.
-- **The release body is the changelog**, printed by the workflow (0180).
-- **A release is a tag someone can install**, and a patch ships as soon as it is green.
+- **The release body is the changelog**, printed by the workflow (0180, proven on v0.14.0).
+- **A change with no document names itself in its commit** (0181); the light lane still writes one.
 - **A stored proof is never rewritten.**
-- **`docs/review-debt.md` is empty.**
-- **The installed binary is 0.13.1.**
+- **The installed binary is 0.14.0**, and the home carries the updated skills, `Odachi-Change`
+  included.
 
 ## How to find the next real work
 
-`odachi summary` names 0181 and its steps, and the task doc names the next one. The ledger is empty,
-so the task doc is the map today.
+`docs/review-debt.md` names the two rows; this note names the other two holes. `odachi summary` says
+0181 is closed and nothing newer exists, so the ledger is the map today.
