@@ -214,6 +214,11 @@ type fakeGit struct {
 	blobs   map[string]string
 	blobErr error
 
+	// messages is the range a document-less change carries, and messagesErr is
+	// the repository failing to answer it.
+	messages    []string
+	messagesErr error
+
 	// candidateCalls counts the one read of the worktree this run asked for.
 	candidateCalls int
 
@@ -268,6 +273,15 @@ func (g *fakeGit) BlobHash(root, path string) (string, error) {
 		return "", g.blobErr
 	}
 	return g.blobs[path], nil
+}
+
+// Messages answers the commits the candidate carries. The trailer lane is the
+// only caller; a project that seeds nothing keeps the vision it always had.
+func (g *fakeGit) Messages(root, base string) ([]string, error) {
+	if g.messagesErr != nil {
+		return nil, g.messagesErr
+	}
+	return g.messages, nil
 }
 
 // fakeHost is the Host port: the model the session says it is using, or none.
@@ -2856,6 +2870,8 @@ func (g *flakyGit) Correction(root, tree string) ([]string, string, error) {
 func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ignored(root, path) }
 
 func (g *flakyGit) BlobHash(root, path string) (string, error) { return g.inner.BlobHash(root, path) }
+
+func (g *flakyGit) Messages(root, base string) ([]string, error) { return g.inner.Messages(root, base) }
 
 // TestNothingOutsideTheStoreIsWritten: the whole surface of this verb is
 // the store's reviews/. A review that touched the brief or the code would be a

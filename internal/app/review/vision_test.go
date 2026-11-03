@@ -75,6 +75,50 @@ func TestAClosedLightFeatureIsStillJudgedAgainstItsLine(t *testing.T) {
 	}
 }
 
+// TestADocumentLessChangeIsJudgedAgainstItsTrailer: the change wrote no document,
+// and brief.md still carries the previous feature's vision. The review reads the
+// trailer from the commits of the range it judges, and says the diff is the record.
+func TestADocumentLessChangeIsJudgedAgainstItsTrailer(t *testing.T) {
+	p := newProject()
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "bring back the wait state on the pay button") {
+		t.Errorf("the prompt does not carry the change's own line:\n%s", result.Prompt)
+	}
+	if !strings.Contains(result.Prompt, "the diff is the record") {
+		t.Errorf("the prompt does not say the diff is the record:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "reservar turnos") {
+		t.Errorf("the prompt carries the previous feature's brief:\n%s", result.Prompt)
+	}
+}
+
+// A trailer that is empty or names two different changes is refused by name: a
+// review judged against a line the reader had to choose is a guess.
+func TestAnAmbiguousTrailerIsRefusedByTheReview(t *testing.T) {
+	p := newProject()
+	p.git.messages = []string{
+		"first\n\nOdachi-Change: one line\n",
+		"second\n\nOdachi-Change: another line\n",
+	}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want %d (%s)", result.Code, review.CodeBlocked, result.Message)
+	}
+	for _, want := range []string{"one line", "another line"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, result.Message)
+		}
+	}
+}
+
 // TestANormalFeatureStillCarriesItsBrief: a feature with a brief is judged exactly
 // as before, whatever its task document says.
 func TestANormalFeatureStillCarriesItsBrief(t *testing.T) {
