@@ -62,6 +62,28 @@ talks, the double must talk on the same channel.
 - **Every irreversible action names its target and waits for the human.**
 - **A warning earns no review round**: it becomes a row in `docs/review-debt.md`.
 
+## What the next session starts with: can the agent tell a good screen from a bad one?
+
+`ui-craft` gives rules; a rule is not a judgment. Before adding another one, measure whether the agent
+can **distinguish**. Three levels, and only two are verifiable:
+
+1. **Mechanical** -measured, no opinion: contrast 4.5:1, pointer sizes, measure 45-90 characters, a
+   coherent scale, the five states, no tell, focus visible. A checklist or a script answers this.
+2. **Structural** -a rubric: one winner per screen, hierarchy order, spacing rhythm, one accent, one
+   elevation, the worst content. Judged, not measured; a reviewer can apply it consistently.
+3. **Perceptual** -"does it feel right". Only a person, and even then it is taste. An agent that says
+   "this looks professional" without evidence is inventing.
+
+The experiment, before any new code:
+
+- Build two artboards with the **same content**: one deliberately bad (the twelve tells, one per
+  section) and one good.
+- Give the agent both screenshots **unlabelled** and ask which is better and why, naming the defects
+  in the skill's own vocabulary.
+- Then have it grade its earlier work (`.git/odachi/scratch/design-test/`) before and after the loop.
+- Pass: it names **8 of the 12** tells in the bad one and prefers the good one with reasons that match
+  the rubric. If it cannot, the skill is decoration and the feature to build is the **evaluation**.
+
 ## Queued
 
 - **the two rows, paid**: the Windows refusal without cosign, and the fence header.
