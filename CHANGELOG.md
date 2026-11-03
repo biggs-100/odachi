@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The default branch is a fact of the commits, not of a name.** `odachi check` refused an
+  `Odachi-Change:` trailer on the default branch by comparing the checked-out branch's name with the
+  base's; on a detached HEAD it had no name, the CLI dropped the error and the trailer was judged.
+  The gate now asks the repository for the local branch that follows the base, and whether HEAD is one
+  of its commits: a detached checkout is refused for the same reason a named one is, CI's detached
+  pull request keeps the lane working, and a repository git cannot read blocks with the reason (0183).
+
 ## v0.14.1 - 2026-11-03
 
 - **The review asks the document the gate asks.** `odachi review` asked whether a document's base
