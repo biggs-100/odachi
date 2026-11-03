@@ -12,7 +12,7 @@ R1 · "the default branch answers without a branch name: the local branch that f
 - tests pin the four cases in gitx and the refusal in the lane, and go test ./... is green
 
 ## Steps
-- [ ] T1 · gitx answers whether HEAD is on the branch that follows the base, from the commits, not from a name   R1 · route:inline
+- [x] T1 · gitx answers whether HEAD is on the branch that follows the base, from the commits, not from a name   R1 · route:inline · tree:69f551d13b41ac8373f3e69cdd64f34b65f12c0b
 - [ ] T2 · the gate asks that question and blocks when it cannot answer; the lane pins the detached refusal   R1 · route:inline
 - [ ] T3 · the ledger row closes and the changelog names the rule   R1 · route:inline
 
