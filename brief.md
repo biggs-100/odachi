@@ -1,22 +1,22 @@
-# the-review-asks
+# the-default-branch
 
 ## What must exist
-- the review's vision asks the newest task document, the same question check asks, so a trailer and a light feature are judged against what the gate judges
+- the default branch answers without a branch name: the local branch that follows the base, and whether HEAD is one of its commits, so a detached checkout is refused or judged for the same reason a named one is
 
 ## Done when
-- a review whose commits carry Odachi-Change refuses the trailer while the newest document has steps left, whatever base it is judged against
-- a review with the newest document closed still reads the trailer: the document-less lane keeps working
-- a light feature is judged against its own line with the review's default base, and a correction still asks the document its predecessor judged against
-- tests pin each side and go test ./... is green
+- a trailer whose HEAD is detached at a commit of the local default branch is refused by name, not judged
+- the CI-shaped checkout, with a detached HEAD and no local default branch, still reads the trailer: the document-less lane keeps working on a pull request
+- a detached HEAD on a feature branch keeps the trailer as the vision
+- when git cannot name the branch the base follows, the gate blocks with the reason instead of dropping the error
+- tests pin the four cases in gitx and the refusal in the lane, and go test ./... is green
 
 ## Not included (first version)
-- no change to check's rule: the gate keeps judging the newest document
+- no change to the trailer's proofs, review or naming
 - no new flag and no new verb
-- the light lane keeps its shape: one requirement, one step
 - a stored proof is never rewritten, whatever the writer learns
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why one question asked in two places drifts apart.
+- Wants to learn: por qué la rama por defecto es un hecho de los commits, no de una cadena.
