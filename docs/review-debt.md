@@ -9,9 +9,19 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0174, whose verdict approved with one warning and two suggestions.
+Last written: after 0176, whose verdict approved with one warning.
 
 ## Open
+
+### the design skill lost two instructions to fit sixty lines
+
+Found by the review of 0176 (warning, `skills/design/SKILL.md:51`). The feature's screenshot rule
+fit only by compressing two bullets nobody asked to change: the comments rule lost "or reorder"
+and the duty to say why a comment stays open, and the system rule lost "component folders" from
+its sources and "propose a starter system" when there are none.
+
+Paid by the next feature that touches the design skill: restore both instructions inside the
+sixty-line body, tightening the screenshot rule instead of the contract around it.
 
 ### the cosign-missing refusal on Windows has no test
 
