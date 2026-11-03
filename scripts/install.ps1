@@ -139,8 +139,17 @@ try {
     if (-not (Get-Command -Name $cosign -ErrorAction SilentlyContinue) -and -not (Test-Path -LiteralPath $cosign)) {
         Fail "me falta cosign para verificar la firma de checksums.txt; instalalo desde https://docs.sigstore.dev/cosign/system_config/installation/ y volvé a correr esto"
     }
-    & $cosign verify-blob --bundle $bundle --certificate-identity "https://github.com/$repo/.github/workflows/release.yml@refs/tags/v$version" --certificate-oidc-issuer "https://token.actions.githubusercontent.com" $checksums *> $null
-    if ($LASTEXITCODE -ne 0) {
+    # cosign is a native program and prints "Verified OK" on stderr. Under
+    # $ErrorActionPreference 'Stop' PowerShell 5.1 turns a native program's stderr
+    # into a terminating error, so the check aborted exactly when it succeeded.
+    # The preference is relaxed for the call and restored: the exit code is the
+    # answer, not the stream it wrote to.
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    & $cosign verify-blob --bundle $bundle --certificate-identity "https://github.com/$repo/.github/workflows/release.yml@refs/tags/v$version" --certificate-oidc-issuer "https://token.actions.githubusercontent.com" $checksums 2>&1 | Out-Null
+    $verified = $LASTEXITCODE
+    $ErrorActionPreference = $previous
+    if ($verified -ne 0) {
         Fail "la firma de checksums.txt no verifica contra este workflow y esta versión: el archivo no es el que la release publicó, y no instalé nada"
     }
 
