@@ -72,6 +72,38 @@ func TestAManifestTheCanvasCannotDrawIsRefusedByName(t *testing.T) {
 	}
 }
 
+// The manifest names the screenshot the artboard was judged by: the file sits
+// beside the artboard, and the canonical bytes keep it, so a client that has no
+// command reads the same name the next writer writes.
+func TestAManifestNamesTheScreenshotItWasJudgedBy(t *testing.T) {
+	raw := `{"title":"x","artboards":[{"file":"01-home.html","title":"Home","tradeoff":"x","width":1440,"height":1000,"screenshot":"01-home.png"}]}`
+
+	got, err := design.ParseManifest([]byte(raw))
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+	if out := string(design.RenderManifest(got)); !strings.Contains(out, `"screenshot": "01-home.png"`) {
+		t.Fatalf("the canonical manifest lost the screenshot:\n%s", out)
+	}
+}
+
+// A screenshot that is not a file inside the design folder is refused by name,
+// the way the artboard's own file is: a manifest names files, not paths.
+func TestAScreenshotOutsideTheFolderIsRefusedByName(t *testing.T) {
+	for _, shot := range []string{"../01-home.png", "shots/01-home.png", `shots\\01-home.png`} {
+		t.Run(shot, func(t *testing.T) {
+			raw := `{"title":"x","artboards":[{"file":"01-home.html","tradeoff":"x","width":1,"height":1,"screenshot":"` + shot + `"}]}`
+			_, err := design.ParseManifest([]byte(raw))
+			if err == nil {
+				t.Fatalf("a screenshot outside the folder parsed: %q", shot)
+			}
+			if !strings.Contains(err.Error(), "screenshot") {
+				t.Fatalf("error %q does not name the screenshot", err)
+			}
+		})
+	}
+}
+
 // commentsFixture is the sample the skill documents, verbatim: a client that has
 // no command reads this file, so its shape is part of the contract.
 const commentsFixture = `{

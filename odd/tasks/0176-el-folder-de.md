@@ -17,3 +17,4 @@ R1 · "el folder de diseño exige una captura por artboard; design list y el can
 
 ## History
 L1 · "el folder de diseño exige una captura por artboard; design list y el canvas nombran las que faltan"
+L2 · OFICIO · "design.json accepts an artboard without a screenshot, and the gap is named where a reader sees it" (porque a design written before the field keeps its bytes; the rule is enforced by the list and the canvas naming the gap, not by refusing the past (0094))
