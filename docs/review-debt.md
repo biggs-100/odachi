@@ -24,14 +24,18 @@ HEAD, the CLI dropped the error, and `claimedChange` refused only when the branc
 sitting on the default branch's commits was then judged instead of refused by name, although the
 brief asked for that refusal unconditionally.
 
-Closed: the gate asks the repository, `OnDefaultBranch`: the local branch whose upstream is the base
-(or the one named like it when the clone records no upstream), and whether HEAD is one of its commits.
-A detached HEAD is answered from the refs; a clone with no local default branch -CI's detached pull
-request- answers no, so the lane stays verifiable there. A repository git cannot read blocks the run
-with the reason instead of letting the trailer through. Pinned by the five `TestOnDefaultBranch`
-tests in `gitx`, `TestATrailerOnTheDefaultBranchIsRefused` and
-`TestATrailerBlocksWhenTheDefaultBranchCannotBeAsked` in the lane. The detached answer was observed
-red with the refs branch disabled, and the lane's two with both refusals disabled.
+Closed: the gate asks the repository, `OnDefaultBranch`: the local branch the base names (`origin/main`
+names `main`), and whether HEAD is one of its commits. A detached HEAD is answered from the refs; a
+clone with no local default branch -CI's detached pull request- answers no, so the lane stays verifiable
+there; a repository git cannot read blocks the run with the reason instead of letting the trailer
+through. The first version treated any branch whose upstream was the base as the default one, and the
+review found it causal: `git checkout -b feat origin/main` gives the feature branch exactly that
+upstream, so the rule compares the name and pins the inherited case. Pinned by the six
+`TestOnDefaultBranch` tests in `gitx` -the detached answer, the inherited-upstream feature in both
+answers, the CI shape and the error- and by `TestATrailerOnTheDefaultBranchIsRefused` and
+`TestATrailerBlocksWhenTheDefaultBranchCannotBeAsked` in the lane. The detached answer was observed red
+with the refs branch disabled, the lane's two with both refusals disabled, and the inherited-upstream
+one with the name comparison widened to every branch.
 
 ## Closed by feature 0182
 

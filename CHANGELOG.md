@@ -12,8 +12,9 @@ not a version.
 - **The default branch is a fact of the commits, not of a name.** `odachi check` refused an
   `Odachi-Change:` trailer on the default branch by comparing the checked-out branch's name with the
   base's; on a detached HEAD it had no name, the CLI dropped the error and the trailer was judged.
-  The gate now asks the repository for the local branch that follows the base, and whether HEAD is one
-  of its commits: a detached checkout is refused for the same reason a named one is, CI's detached
+  The gate now asks the repository for the local branch the base names -`origin/main` names `main`- and
+  whether HEAD is one of its commits: a detached checkout is refused for the same reason a named one is,
+  a feature branch that inherited `origin/main` as its upstream is still a feature branch, CI's detached
   pull request keeps the lane working, and a repository git cannot read blocks with the reason (0183).
 
 ## v0.14.1 - 2026-11-03

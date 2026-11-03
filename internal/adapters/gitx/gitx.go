@@ -230,27 +230,28 @@ func MergeBase(root, ref string) (string, error) {
 	return compareBase(root, strings.TrimSpace(ref))
 }
 
-// OnDefaultBranch answers whether HEAD sits on the branch this clone uses for
-// base: the local branch whose upstream is base, or -when the clone records no
-// upstream- the one named like base without its remote. A detached HEAD has no
-// name, so the refs answer: that branch's commits, and whether HEAD is one of
-// them. A clone with no such branch -CI checks a pull request out detached and
-// keeps no local default- answers no, which is what keeps the trailer lane
-// verifiable there.
+// OnDefaultBranch answers whether HEAD sits on the default branch of the clone
+// as base names it: origin/main names `main`, refs/remotes/origin/main names
+// `main` too, and a remote on `trunk` names `trunk`. A local branch is the
+// default one when it carries that name; its upstream is not the test, because
+// `git checkout -b feat origin/main` gives the feature branch exactly that
+// upstream (branch.autoSetupMerge), and a feature branch is not the default one.
 //
-// The comparison is a fact about commits, never a spelling: a remote on `trunk`
-// or a clone whose folder says something else answers the same way.
+// A detached HEAD has no name, so the refs answer: that branch's commits, and
+// whether HEAD is one of them. A clone with no such branch -CI checks a pull
+// request out detached and keeps no local default- answers no, which is what
+// keeps the trailer lane verifiable there.
 func OnDefaultBranch(root, base string) (branch string, on bool, err error) {
 	trimmed := strings.TrimSpace(base)
 	if trimmed == "" {
 		return "", false, fmt.Errorf("no base to follow: a default branch is named by the ref it tracks")
 	}
 
-	listing, err := run(root, "for-each-ref", "--format=%(refname:short)%00%(upstream:short)", "refs/heads")
+	listing, err := run(root, "for-each-ref", "--format=%(refname:short)", "refs/heads")
 	if err != nil {
 		return "", false, err
 	}
-	candidates := followBase(listing, trimmed)
+	candidates := defaultCandidates(listing, trimmed)
 	if len(candidates) == 0 {
 		return "", false, nil
 	}
@@ -280,25 +281,15 @@ func OnDefaultBranch(root, base string) (branch string, on bool, err error) {
 	return "", false, nil
 }
 
-// followBase reads the local branches a base ref stands for, from a
-// for-each-ref listing of name and upstream pairs. The upstream is the fact; the
-// name without its remote is the fallback for a clone that records none, and it
-// is the comparison this lane made before a detached HEAD could be asked.
-func followBase(listing, base string) []string {
+// defaultCandidates reads the local branch a base ref names: the ref without its
+// remote. The listing is one branch name per line, and the comparison is the
+// whole name, so feat/main is not `main`.
+func defaultCandidates(listing, base string) []string {
 	short := localName(base)
 
 	names := []string{}
 	for _, line := range strings.Split(listing, "\n") {
-		fields := strings.SplitN(line, "\x00", 2)
-		name := strings.TrimSpace(fields[0])
-		if name == "" {
-			continue
-		}
-		upstream := ""
-		if len(fields) == 2 {
-			upstream = strings.TrimSpace(fields[1])
-		}
-		if upstream == base || name == short {
+		if name := strings.TrimSpace(line); name == short {
 			names = append(names, name)
 		}
 	}

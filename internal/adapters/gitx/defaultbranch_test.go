@@ -7,10 +7,10 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/gitx"
 )
 
-// TestOnDefaultBranchNamesTheBranchThatFollowsTheBase: the answer does not spell
-// either name. A clone whose default branch is `trunk` answers `trunk`, and the
-// upstream is what says so.
-func TestOnDefaultBranchNamesTheBranchThatFollowsTheBase(t *testing.T) {
+// TestOnDefaultBranchNamesTheBranchTheBaseNames: the answer does not spell
+// either name. A clone whose default branch is `trunk` answers `trunk`, and
+// `origin/trunk` names it.
+func TestOnDefaultBranchNamesTheBranchTheBaseNames(t *testing.T) {
 	t.Parallel()
 	root := newClone(t, "trunk")
 
@@ -59,6 +59,36 @@ func TestOnDefaultBranchLetsADetachedFeatureTipPass(t *testing.T) {
 	}
 	if on {
 		t.Errorf("OnDefaultBranch = (%q, %v), want no: a feature tip is not the default branch", name, on)
+	}
+}
+
+// TestOnDefaultBranchLetsAFeatureBranchThatInheritsTheUpstreamPass: `git
+// checkout -b feat origin/main` records origin/main as feat's upstream, so the
+// upstream is not what makes a branch the default one; the name is. Both answers
+// are checked: attached, and detached at the feature's own tip.
+func TestOnDefaultBranchLetsAFeatureBranchThatInheritsTheUpstreamPass(t *testing.T) {
+	t.Parallel()
+	root := newClone(t, "trunk")
+	git(t, root, "checkout", "-b", "feat/wait", "origin/trunk")
+	write(t, root+"/notes.txt", "the wait state\n")
+	git(t, root, "commit", "-am", "the wait state")
+
+	name, on, err := gitx.OnDefaultBranch(root, "origin/trunk")
+	if err != nil {
+		t.Fatalf("OnDefaultBranch: %v", err)
+	}
+	if on {
+		t.Errorf("OnDefaultBranch = (%q, %v), want no: a feature branch inherits the base as upstream", name, on)
+	}
+
+	git(t, root, "checkout", "--detach", "HEAD")
+
+	name, on, err = gitx.OnDefaultBranch(root, "origin/trunk")
+	if err != nil {
+		t.Fatalf("OnDefaultBranch detached: %v", err)
+	}
+	if on {
+		t.Errorf("OnDefaultBranch = (%q, %v), want no: a detached feature tip is not the default branch", name, on)
 	}
 }
 
