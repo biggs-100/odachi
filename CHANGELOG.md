@@ -7,6 +7,12 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **An artboard names the screenshot it was read against.** `design.json` carries a `screenshot`
+  beside each artboard, the design skill makes it part of done, and `odachi design list` and the
+  canvas name the artboards still without one (0176).
+
 ## v0.12.1 - 2026-11-02
 
 The installer verifies, and then installs.

@@ -11,8 +11,8 @@ R1 · "el folder de diseño exige una captura por artboard; design list y el can
 - tests pin the present, the missing and the refused case
 
 ## Steps
-- [ ] T1 · the manifest names a screenshot per artboard and refuses a name outside the design folder   R1 · route:inline
-- [ ] T2 · design list and the canvas name the artboards without a screenshot   R1 · route:inline
+- [x] T1 · the manifest names a screenshot per artboard and refuses a name outside the design folder   R1 · route:inline · tree:d82ac66847bfced4fc411092b8b0b265739fb6e3
+- [x] T2 · design list and the canvas name the artboards without a screenshot   R1 · route:inline · tree:f5fa46a79f4f4d29b4e0f50af5ac73a12a3b2614
 - [ ] T3 · the design skill says an artboard is not done until its screenshot is beside the manifest   R1 · route:inline
 
 ## History
