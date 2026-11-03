@@ -168,6 +168,117 @@ R1 · "a change that fits one line is written as one line"
 	}
 }
 
+// otherBase is the commit a document records when the review is asked about a
+// different one: the gate never compares the two, and the review must not either.
+const otherBase = "9b1e6c2a7f4d8e0b3c5a7d9e1f2b4c6d8e0f1a3b"
+
+// TestATrailerDoesNotOverrideAnOpenDocumentAtAnotherBase: the candidate's base is
+// not the base the document records, and `check` still judges the open document.
+// The review asks the same question -the newest document, whatever its base- or a
+// trailer stands in for the vision the gate uses (0182).
+func TestATrailerDoesNotOverrideAnOpenDocumentAtAnotherBase(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0166-a-line-that-can-close.md")] = []byte(`# a-line-that-can-close
+Base: ` + otherBase + `
+
+## Requirements (verbatim, from the user)
+R1 · "a change that fits one line is written as one line"
+
+## Steps
+- [ ] T1 · the lane   R1
+`)
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "reservar turnos") {
+		t.Errorf("the prompt does not carry brief.md:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "bring back the wait state") {
+		t.Errorf("the trailer overrode an open document at another base:\n%s", result.Prompt)
+	}
+}
+
+// TestAClosedDocumentAtAnotherBaseStillLetsTheTrailerBeTheVision: the gate opens
+// the trailer lane when the newest document is closed, and the document's base is
+// not the question. A review that refused the trailer for every document present
+// would be the same defect pointing the other way.
+func TestAClosedDocumentAtAnotherBaseStillLetsTheTrailerBeTheVision(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0166-a-line-that-can-close.md")] = []byte(`# a-line-that-can-close
+Base: ` + otherBase + `
+
+## Requirements (verbatim, from the user)
+R1 · "a change that fits one line is written as one line"
+
+## Steps
+- [x] T1 · the lane   R1
+`)
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Base: lightBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "bring back the wait state") {
+		t.Errorf("the closed document at another base blocked the trailer:\n%s", result.Prompt)
+	}
+}
+
+// TestACorrectionAsksTheDocumentItsPredecessorJudged: a correction belongs to the
+// feature its verdict judged, and the newest document may be a later feature. The
+// vision comes from the predecessor's base, not from the newest document the gate
+// would take for a new run.
+func TestACorrectionAsksTheDocumentItsPredecessorJudged(t *testing.T) {
+	p := newProject()
+	p.files.files[storePath(correctedTree)] = []byte(verdictFor(t, correctedTree, otherBase, []string{"risk"}))
+	p.files.files[fullPath("odd/tasks/0166-a-line-that-can-close.md")] = []byte(`# a-line-that-can-close
+Base: ` + lightBase + `
+
+## Requirements (verbatim, from the user)
+R1 · "a change that fits one line is written as one line"
+
+## Steps
+- [ ] T1 · the lane   R1
+`)
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+
+	result := p.run(review.Options{Since: correctedTree})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "bring back the wait state") {
+		t.Errorf("a newer open document took the vision from the corrected change:\n%s", result.Prompt)
+	}
+}
+
+// TestALightFeatureIsJudgedAgainstItsOwnLineOnTheDefaultBase: `odachi review`
+// with no --base asks about HEAD, and the document records the commit its feature
+// started from. The two strings differ, so asking "is there a document at this
+// base" finds nothing; the newest document is the question the gate asks, and a
+// light feature's line is the vision (0182).
+func TestALightFeatureIsJudgedAgainstItsOwnLineOnTheDefaultBase(t *testing.T) {
+	p := newProject()
+	p.files.files[fullPath("odd/tasks/0167-three-tests-pin.md")] = []byte(lightDocument)
+
+	result := p.run(review.Options{Base: review.DefaultBase})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Prompt, "three tests pin the light lane's refusals") {
+		t.Errorf("the prompt does not carry the light feature's line on the default base:\n%s", result.Prompt)
+	}
+	if strings.Contains(result.Prompt, "reservar turnos") {
+		t.Errorf("the prompt carries the previous feature's brief:\n%s", result.Prompt)
+	}
+}
+
 // TestANormalFeatureStillCarriesItsBrief: a feature with a brief is judged exactly
 // as before, whatever its task document says.
 func TestANormalFeatureStillCarriesItsBrief(t *testing.T) {

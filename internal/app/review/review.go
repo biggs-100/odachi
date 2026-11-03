@@ -3011,8 +3011,9 @@ func (r *runner) trailerVision(base string) (string, *Result) {
 	}
 
 	// The lane is check's rule: a trailer names the change only when no document
-	// is open on this base. An open document is the vision, and a review judged
-	// against the trailer would disagree with the gate that asked for it.
+	// is open. An open document is the vision, and a review judged against the
+	// trailer would disagree with the gate that asked for it. The document is the
+	// one the gate takes, asked through the same function (0182).
 	open, problem := r.openDocumentAt(base)
 	if problem != nil {
 		return "", problem
@@ -3038,23 +3039,19 @@ func (r *runner) trailerVision(base string) (string, *Result) {
 	return "(this change has no document: its line is the requirement below, and the diff is the record)\n\n" + declared.Line, nil
 }
 
-// openDocumentAt reports whether the highest document that starts at base still
-// has steps to do. check opens the trailer lane only when no document is open, so
-// the review asks the same question and the two verbs cannot answer differently.
+// openDocumentAt reports whether the document this run asks about still has steps
+// to do. check opens the trailer lane only when no document is open, so the
+// review asks the same question and the two verbs cannot answer differently.
 func (r *runner) openDocumentAt(base string) (bool, *Result) {
-	docs, err := tasks.All(r.files, r.opts.Dir)
-	if err != nil {
-		p := blocked(oneLine(err.Error()) + "; check the permissions and run odachi review again")
-		return false, &p
+	doc, problem := r.gateDocument(base)
+	if problem != nil {
+		return false, problem
 	}
-	for i := len(docs) - 1; i >= 0; i-- {
-		if docs[i].Doc.Base != base {
-			continue
-		}
-		done, total := docs[i].Doc.Progress()
-		return total == 0 || done < total, nil
+	if doc == nil {
+		return false, nil
 	}
-	return false, nil
+	done, total := doc.Doc.Progress()
+	return total == 0 || done < total, nil
 }
 
 // lightVision answers the requirement of the light feature this candidate belongs
@@ -3083,6 +3080,34 @@ func (r *runner) lightVision(base string) (text, rel string, problem *Result) {
 	}
 
 	return "", "", nil
+}
+
+// gateDocument is the task document this run asks about: the one `check` takes,
+// so the two verbs cannot judge one tree against different visions. A new run
+// asks the newest document, whatever base it started from -a document records a
+// commit and the review is asked about a ref, and comparing the two found no
+// document at all on the default base (0182)-. A correction asks the document its
+// predecessor judged against, because the newest one may belong to a later
+// feature the correction has nothing to say about.
+func (r *runner) gateDocument(base string) (*tasks.Document, *Result) {
+	docs, err := tasks.All(r.files, r.opts.Dir)
+	if err != nil {
+		p := blocked(oneLine(err.Error()) + "; check the permissions and run odachi review again")
+		return nil, &p
+	}
+	if len(docs) == 0 {
+		return nil, nil
+	}
+
+	if strings.TrimSpace(r.opts.Since) == "" {
+		return &docs[len(docs)-1], nil
+	}
+	for i := len(docs) - 1; i >= 0; i-- {
+		if docs[i].Doc.Base == base {
+			return &docs[i], nil
+		}
+	}
+	return nil, nil
 }
 
 // brief reads brief.md. A missing brief is a state, not an error: the review is
