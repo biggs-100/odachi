@@ -936,11 +936,13 @@ func (r *runner) theCloseOwes(feature *tasks.Document) (bool, *Result) {
 		return reviewdomain.Classify(paths) != reviewdomain.Passive, nil
 	}
 
-	closed, problem := r.closedBefore(feature)
-	if problem != nil {
-		return false, problem
-	}
-	return !closed, nil
+	// No verdict judged this feature's diff, and the diff carries code: this tree
+	// owes the verdict. `closedBefore` answers when the document was committed, and
+	// that is not the question -a close committed before its verdict is the same
+	// close, and reading it as "already answered" is how a feature with code kept
+	// its tree unreviewed (0185). A tree after a close that judged the code is
+	// paperwork, and `lastVerdictTree` above is what says so.
+	return true, nil
 }
 
 // lastVerdictTree names the bytes this feature's review judged: the tree of the newest
