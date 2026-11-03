@@ -2978,9 +2978,9 @@ func (r *runner) candidateForReview() (candidate, *Result) {
 }
 
 // vision is what the prompt carries as what the human asked for. A light feature
-// writes no brief -the line is the vision- so the review reads the document whose
-// base is this candidate's and carries the requirement it quotes, naming the file
-// it came from. Everything else reads brief.md, as it always has.
+// writes no brief -the line is the vision- so the review reads the document the
+// gate would take and carries the requirement it quotes, naming the file it came
+// from. Everything else reads brief.md, as it always has.
 func (r *runner) vision(base string) (string, *Result) {
 	claimed, problem := r.trailerVision(base)
 	if problem != nil {
@@ -3054,32 +3054,24 @@ func (r *runner) openDocumentAt(base string) (bool, *Result) {
 	return total == 0 || done < total, nil
 }
 
-// lightVision answers the requirement of the light feature this candidate belongs
-// to: the document that records the same base, highest number first. A folder or a
-// document that cannot be read is refused, never read as "no document" (ADR 0038).
+// lightVision answers the requirement of the light feature this run belongs to:
+// the document the gate would take, whether its steps are done or not -closing a
+// feature is what the gate judges, and a closed light document still names its
+// line. A folder or a document that cannot be read is refused, never read as "no
+// document" (ADR 0038).
 func (r *runner) lightVision(base string) (text, rel string, problem *Result) {
-	docs, err := tasks.All(r.files, r.opts.Dir)
-	if err != nil {
-		p := blocked(oneLine(err.Error()) + "; check the permissions and run odachi review again")
+	doc, problem := r.gateDocument(base)
+	if problem != nil {
+		return "", "", problem
+	}
+	if doc == nil || !doc.Doc.Light {
+		return "", "", nil
+	}
+	if len(doc.Doc.Requirements) == 0 || strings.TrimSpace(doc.Doc.Requirements[0].Text) == "" {
+		p := blocked("the light feature at " + doc.Rel + " carries no requirement the review can read; open it with odachi start --light")
 		return "", "", &p
 	}
-
-	for i := len(docs) - 1; i >= 0; i-- {
-		doc := docs[i]
-		if doc.Doc.Base != base {
-			continue
-		}
-		if !doc.Doc.Light {
-			return "", "", nil
-		}
-		if len(doc.Doc.Requirements) == 0 || strings.TrimSpace(doc.Doc.Requirements[0].Text) == "" {
-			p := blocked("the light feature at " + doc.Rel + " carries no requirement the review can read; open it with odachi start --light")
-			return "", "", &p
-		}
-		return doc.Doc.Requirements[0].Text, doc.Rel, nil
-	}
-
-	return "", "", nil
+	return doc.Doc.Requirements[0].Text, doc.Rel, nil
 }
 
 // gateDocument is the task document this run asks about: the one `check` takes,

@@ -30,8 +30,8 @@ L1 · "three tests pin the light lane's refusals"
 
 // TestALightFeatureIsJudgedAgainstItsOwnLine: a light feature writes no brief, so
 // brief.md still carries the previous feature's vision. The review reads the
-// document whose base is this candidate's and carries the requirement it quotes,
-// naming the file it came from.
+// document the gate would take and carries the requirement it quotes, naming the
+// file it came from.
 func TestALightFeatureIsJudgedAgainstItsOwnLine(t *testing.T) {
 	p := newProject()
 	p.files.files[fullPath("odd/tasks/0167-three-tests-pin.md")] = []byte(lightDocument)
