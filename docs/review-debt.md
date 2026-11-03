@@ -9,11 +9,28 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while paying the last row 0181 left (0183).
+Last written: while paying the defect 0183 found by using the tool (0184).
 
 ## Open
 
-Nothing: both rows of 0181 are paid. The next review adds its own.
+Nothing: the rows of 0181 and the model defect 0183 found are paid. The next review adds its own.
+
+## Closed by feature 0184
+
+### an attached verdict's model is free text, and a correction cannot merge it
+
+Found while closing 0183, by using the tool. `review --attach` validated the verdict but not the model
+it named: an answer with `"model": "DeepSeek V4.1 Flash"` -a display name, with spaces- was sealed and
+stored. The next `review --attach <next> --since <that tree>` refused the correction with `the lens
+"reliability": model "DeepSeek V4.1 Flash" contains ' ': a model is an identifier`, because a
+correction merges the predecessor's rows into the lens table. The way out was a full review of the
+closing tree; the predecessor's file cannot be edited, because a verdict is not rewritten.
+
+Closed: attach asks `domain.NormalizeModel` before anything is written, so the refusal names the model
+and the shape (`provider/name#variant`) and no verdict lands. Pinned by
+`TestAnAttachedModelThatIsNotAnIdentifierIsRefused` -observed red first, when the verdict was stored
+and approved- and `TestAnAttachedModelThatIsAnIdentifierIsStored`. Verdicts already stored with a
+display name still read: the check belongs to the writer, not the reader.
 
 ## Closed by feature 0183
 

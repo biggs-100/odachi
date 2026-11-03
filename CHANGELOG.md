@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A model is an identifier, and attach says so.** `odachi review --attach` stored a verdict whose
+  `model` was a display name (`DeepSeek V4.1 Flash`); the next `--since` correction then refused it with
+  "a model is an identifier", when nothing could be done about the stored file. Attach now refuses the
+  model before anything is written, naming the shape (`provider/name#variant`); a verdict already
+  stored with a display name still reads (0184).
+
 ## v0.14.2 - 2026-11-03
 
 - **The default branch is a fact of the commits, not of a name.** `odachi check` refused an
