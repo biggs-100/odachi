@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.3 - 2026-11-03
 
 - **A model is an identifier, and attach says so.** `odachi review --attach` stored a verdict whose
   `model` was a display name (`DeepSeek V4.1 Flash`); the next `--since` correction then refused it with
