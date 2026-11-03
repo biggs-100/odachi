@@ -11,6 +11,10 @@ import (
 // newClone builds a real repository with an `origin` remote: a seed repo with the
 // named branch, cloned into a folder. The clone is what CI's base ref looks like
 // from the machine that pushes, and cloning a local path needs no network.
+//
+// The clone carries its own identity: `git clone` copies no local config, and a
+// fixture that commits inside it cannot depend on the machine's global user -CI
+// has none, so a suite that did passed here and failed there (0183).
 func newClone(t *testing.T, branch string) (root string) {
 	t.Helper()
 
@@ -20,6 +24,8 @@ func newClone(t *testing.T, branch string) (root string) {
 	parent := t.TempDir()
 	root = filepath.Join(parent, "clone")
 	git(t, parent, "clone", "--quiet", seed, root)
+	git(t, root, "config", "user.name", "odachi test")
+	git(t, root, "config", "user.email", "test@odachi.local")
 
 	return root
 }
