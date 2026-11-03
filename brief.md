@@ -1,21 +1,18 @@
-# el-folder-de
+# the-fence-stops
 
 ## What must exist
-- el folder de diseño exige una captura por artboard; design list y el canvas nombran las que faltan
+- the fence stops protecting the release workflow, so the feature after it takes the release body from the changelog
 
 ## Done when
-- design.json names a screenshot per artboard, and a screenshot that is not a file inside the design folder is refused by name
-- odachi design list names every artboard without a screenshot, and the canvas marks it
-- the design skill says a design is not done until each artboard has its screenshot
-- tests pin the present, the missing and the refused case
+- this feature closes with no code, and the fence in force no longer names .github
+- the proof rule stays, unchanged
+- the next feature can change .github/workflows/release.yml and CI reads a base fence that allows it
 
 ## Not included (first version)
-- no browser and no model call: odachi never captures or judges the artboard itself
 - a stored proof is never rewritten, whatever the writer learns
-- the release workflow and the signing stay as they are: nobody re-signs by hand
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why an artifact nobody produces is a step nobody takes.
+- Wants to learn: why the fence a pull request obeys is the one at its base, not the one it writes.
