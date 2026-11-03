@@ -96,6 +96,11 @@ type Options struct {
 	// from `odd/review.toml`. Zero means no limit: a project that never wrote the
 	// key reviews as it always did.
 	MaxPromptKB int
+	// KeepPrompts is how many trees keep the question their reviewer was asked,
+	// read from `odd/review.toml`. Zero keeps none: a prompt is the biggest file
+	// in the store and nothing in the gate reads it, so a stored verdict disposes
+	// of the ones the project stopped keeping. A negative number keeps none too.
+	KeepPrompts int
 	// Dismiss is the row the human retires, as `path:line`, and Because is the
 	// evidence. Both or neither: a dismissal without a reason is the silent edit
 	// the file beside the verdict exists to replace.
@@ -139,6 +144,10 @@ type Files interface {
 	List(dir string) ([]string, error)
 	// Remove deletes one file: the refused answers a sealed verdict supersedes.
 	Remove(path string) error
+	// ModTime answers when one store file was written. The retention counts the
+	// store's trees by the newest file of each, so a store whose dates cannot be
+	// read is never pruned on a guess.
+	ModTime(path string) (time.Time, error)
 }
 
 // Git is the repository port: which tree is here, what changed since the base,
@@ -1737,6 +1746,11 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 			rel, oneLine(err.Error())))
 	}
 	r.dropRefused(tree)
+	// The verdict is the evidence and the question is not: the moment it lands,
+	// the prompts the project stopped keeping go. The note, when there is one,
+	// says the store kept them -a failed read is never an empty store- and the
+	// verdict stays whatever the sweep could not do.
+	pruneNote := r.prunePrompts()
 
 	message := "verdict saved in " + r.storeLabel(rel) + ": " + sealed.Verdict
 	lines := []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At, lenses(sealed.Lenses)}
@@ -1750,6 +1764,9 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		lines = append(lines, fmt.Sprintf("kept dismissed: %d re-raised finding(s) discarded by fingerprint", carried.suppressed))
 	}
 	lines = append(lines, notes...)
+	if pruneNote != "" {
+		lines = append(lines, pruneNote)
+	}
 	return Result{
 		Code:    CodeOK,
 		Message: message,
@@ -2102,6 +2119,59 @@ func (r *runner) refuseInspection(sealed domain.Verdict, rel, message string, de
 		Message: message,
 		Lines:   lines,
 	}
+}
+
+// prunePrompts applies the project's keep_prompts the moment a verdict lands: a
+// prompt is the question, not the evidence, and the store keeps the ones the
+// project still wants. The rule is the one `odachi clean` reports, asked of the
+// same domain answer, so the verb and the write cannot disagree.
+//
+// A store this run cannot read or remove prunes nothing and says so. A prompt
+// left behind costs a file; a question removed on a guess costs a paid answer.
+func (r *runner) prunePrompts() string {
+	root := r.storePath(domain.Dir)
+	names, err := r.files.List(root)
+	if err != nil {
+		return "the prompts stayed: could not read " + r.storeLabel(domain.Dir) + ": " + oneLine(err.Error())
+	}
+
+	files := make([]domain.StoreFile, 0, len(names))
+	for _, name := range names {
+		at, err := r.files.ModTime(filepath.Join(root, name))
+		if err != nil {
+			return "the prompts stayed: could not read " + r.storeLabel(domain.Dir+"/"+name) + ": " + oneLine(err.Error())
+		}
+		files = append(files, domain.StoreFile{Name: name, At: at})
+	}
+
+	forget := domain.PromptsToForget(files, r.opts.KeepPrompts)
+	if len(forget) == 0 {
+		return ""
+	}
+	doomed := make([]string, 0, len(forget))
+	for name := range forget {
+		doomed = append(doomed, name)
+	}
+	sort.Strings(doomed)
+
+	removed := 0
+	for _, name := range doomed {
+		if err := r.files.Remove(filepath.Join(root, name)); err != nil {
+			return fmt.Sprintf("disposed of %d %s and kept %d: %s could not be removed: %s",
+				removed, pluralFiles(removed), len(doomed)-removed,
+				r.storeLabel(domain.Dir+"/"+name), oneLine(err.Error()))
+		}
+		removed++
+	}
+	return ""
+}
+
+// pluralFiles keeps the note's arithmetic readable: a count and its noun.
+func pluralFiles(n int) string {
+	if n == 1 {
+		return "prompt"
+	}
+	return "prompts"
 }
 
 // dropRefused removes the answers kept for this tree: the sealed verdict is the

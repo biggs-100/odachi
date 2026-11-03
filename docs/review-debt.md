@@ -9,11 +9,15 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while paying the defect 0183 found by using the tool (0184).
+Last written: while closing 0187, with the one suggestion its verdict left open.
 
 ## Open
 
-Nothing: the rows of 0181 and the model defect 0183 found are paid. The next review adds its own.
+- **internal/app/review/review.go:2159** - the two failure branches of `prunePrompts` are
+  unpinned: a `ModTime` that fails names the file and keeps every prompt, and a mid-sweep
+  `Remove` reports how many went and how many stayed. The fake's single `err` field gates `List`
+  and `Remove` together, so "the listing answers and the removal fails" cannot be expressed; the
+  next feature that touches the store's sweep pays it with a `failRemove` and the two tests.
 
 ## Closed by feature 0184
 

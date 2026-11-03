@@ -55,6 +55,13 @@ type fakeFiles struct {
 	err      error
 	existErr error
 	writeErr error
+	// times is when each file was written, for the ordering a retention counts.
+	// A file with no entry reads as the zero time, so a test that does not order
+	// files never has to say when they were written.
+	times map[string]time.Time
+	// clock is the instant every Write stamps, so a test can order what a run
+	// wrote against what it seeded.
+	clock time.Time
 	// failExists fails Exists for one path only, so a test can reach the refusal
 	// without breaking the store checks that run before it.
 	failExists func(path string) error
@@ -70,11 +77,20 @@ type fakeFiles struct {
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
-	f := &fakeFiles{files: map[string][]byte{}}
+	f := &fakeFiles{files: map[string][]byte{}, times: map[string]time.Time{}, clock: now}
 	for path, content := range seed {
 		f.files[fullPath(path)] = []byte(content)
 	}
 	return f
+}
+
+// seedStore puts a store file in the fake with the instant it was written: a
+// test that orders it against what the run writes needs a date, and the clock is
+// the same one the run stamps its own files with.
+func (f *fakeFiles) seedStore(rel, content string, at time.Time) {
+	path := storeFile(rel)
+	f.files[path] = []byte(content)
+	f.times[path] = at
 }
 
 // fullPath resolves a project-relative path the way the app does.
@@ -128,6 +144,7 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 	}
 	f.writes = append(f.writes, path)
 	f.files[path] = data
+	f.times[path] = f.clock
 	return nil
 }
 
@@ -172,7 +189,21 @@ func (f *fakeFiles) Remove(path string) error {
 		return f.err
 	}
 	delete(f.files, path)
+	delete(f.times, path)
 	return nil
+}
+
+// ModTime answers when one store file was written. A missing file is an error and
+// not the zero time: the retention orders what exists, and a silent zero would
+// make an unreadable file look like the oldest one.
+func (f *fakeFiles) ModTime(path string) (time.Time, error) {
+	if f.err != nil {
+		return time.Time{}, f.err
+	}
+	if _, ok := f.files[path]; !ok {
+		return time.Time{}, errors.New("missing file: " + path)
+	}
+	return f.times[path], nil
 }
 
 // written is every write as a project-relative path with forward slashes, in the
@@ -1301,8 +1332,11 @@ func TestAVerdictStillLandsWhenTheRefusedAnswersCannotBeDropped(t *testing.T) {
 	if _, ok := p.files.files[storeFile(keptRel)]; !ok {
 		t.Error("the refused answer was dropped even though the listing failed")
 	}
-	if calls != 2 {
-		t.Errorf("the store was listed %d time(s), want the potent rows and the drop", calls)
+	if calls != 3 {
+		t.Errorf("the store was listed %d time(s), want the potent rows, the drop and the prompt sweep", calls)
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "the prompts stayed") {
+		t.Errorf("the run does not say the prompt sweep could not read the store:\n%s", strings.Join(result.Lines, "\n"))
 	}
 }
 

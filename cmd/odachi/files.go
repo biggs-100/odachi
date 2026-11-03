@@ -17,6 +17,7 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
+	"github.com/biggs-100/odachi/internal/app/clean"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
@@ -381,6 +382,25 @@ func cleanLimits(dir string) (review.ProjectConfig, string, string) {
 			"; fix it, or remove it to use the defaults"
 	}
 	return config, filepath.ToSlash(layout.Review), ""
+}
+
+// storeGrowth is check's port to the verb that owns the store's policy: the
+// numbers a close names, read with the retention odd/review.toml declares, and
+// without removing anything.
+type storeGrowth struct{ dir string }
+
+func (g storeGrowth) Measure(store string) (clean.Growth, error) {
+	config, from, problem := cleanLimits(g.dir)
+	if problem != "" {
+		return clean.Growth{}, errors.New(problem)
+	}
+	return clean.Measure(clean.Options{
+		Dir:          g.dir,
+		Store:        store,
+		KeepVerdicts: config.KeepVerdicts,
+		KeepPrompts:  config.KeepPrompts,
+		LimitsFrom:   from,
+	}, disk(g.dir))
 }
 
 // reviewModeCodec is the format adapter for `odachi review mode`: the app owns

@@ -18,7 +18,7 @@ func TestExecFilesThePromptItSends(t *testing.T) {
 	p.host.model = "host/default"
 	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
-	if result := p.run(review.Options{Exec: "revisor --model {model}"}); result.Code != review.CodeOK {
+	if result := p.run(review.Options{Exec: "revisor --model {model}", KeepPrompts: 1}); result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
 
@@ -46,10 +46,11 @@ func TestASplitRunFilesOnePromptPerGroup(t *testing.T) {
 	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 
 	if result := p.run(review.Options{
-		Exec:       "revisor --model {model}",
-		Lens:       "reliability,risk",
-		Because:    "the test splits the run by model",
-		LensModels: map[string]string{"risk": "sharp/model"},
+		Exec:        "revisor --model {model}",
+		Lens:        "reliability,risk",
+		Because:     "the test splits the run by model",
+		LensModels:  map[string]string{"risk": "sharp/model"},
+		KeepPrompts: 1,
 	}); result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
