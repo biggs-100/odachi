@@ -1,48 +1,65 @@
-# Next session: the row the lane left, and the holes around it
+# Next session: the holes using the tool found
 
-Written at the close of the session that shipped 0182 and v0.14.1. **v0.14.1 is published, signed and
-installed**; `main` is clean; `doctor` is 13/14 until this note names 0182. The next work is the row
-0181 left in the ledger, and the three holes found while using the tool.
+Written at the close of the session that shipped 0182, 0183, v0.14.1 and v0.14.2. **v0.14.2 is
+published, signed and installed**; `main` is clean; `doctor` is 14/14 once this note lands. The review
+debt of 0181 is empty, and the next work is one defect found by using the tool and three decisions.
 
 ## What shipped
 
 - **0182, v0.14.1**: the review asks the document the gate asks. `odachi review` filtered documents by
   the base its candidate was judged against, and a document records a commit while the default base is
-  `HEAD`: the filter found nothing, so an `Odachi-Change:` trailer stood in for an open feature's
-  vision, and a light feature was judged against "there is no brief.md yet" unless the human named its
-  hash. Both lookups now read `gateDocument`: the newest document, the one `check` takes. A correction
-  keeps its predecessor's base.
-- **The docs commits rode the feature's PR.** `main` is protected by four required checks, so a plain
-  push is refused; the two commits the last close left travelled with 0182 (PR #291).
+  `HEAD`: an `Odachi-Change:` trailer stood in for an open feature's vision, and a light feature was
+  judged against "there is no brief.md yet". Both lookups ask `gateDocument`; a correction keeps its
+  predecessor's base.
+- **0183, v0.14.2**: the default branch answers without a branch name. The trailer's default-branch
+  refusal compared the checked-out branch's name with the base's; a detached HEAD has none, the CLI
+  dropped the error, and the trailer was judged. The gate asks the repository for the local branch the
+  base names (`origin/main` names `main`) and whether HEAD is one of its commits. CI's detached pull
+  request keeps the lane working; a repository git cannot read blocks with the reason.
+- **The two docs commits from 0181's close rode 0182's PR** (PR #291). `main` is protected by four
+  checks; nothing lands without a PR.
 
-## The lesson this session paid for
+## The lessons this session paid for
 
-**A question asked in two places drifts, even when both places quote the same rule.** 0181's fix made
-the review ask "is a document open" using the base its comment already promised; the gate asked the
-same question of the newest document. The row named a rebase. The measurement found the default path:
-the ref and the commit never match, so the review read the trailer on every branch and the light lane
-was never its own vision. The repair was one function both lookups call, not two corrections.
+**A question asked in two places drifts, even when both places quote the same rule.** 0182's row named
+a rebase; the measurement found the default path -a ref compared to a commit never matches-, which is
+why the light lane was broken for every `odachi review` without `--base`.
+
+**A proof that runs where the machine has a global git identity does not measure CI.** 0183's first CI
+run failed on all three platforms: the new fixtures commit inside a clone, `git clone` copies no local
+config, and this machine's global `user.name` made the suite pass. The clone now records its own
+identity, and the suite was run with `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` pointing at empty
+files -the CI shape- before the proof.
+- To repeat: create an empty file, set both variables to it, run `go test ./...`.
+
+**The review can find what CI cannot, and the other way round.** 0183's first verdict found a causal
+CRITICAL -any branch whose upstream was the base looked like the default one, and
+`git checkout -b feat origin/main` gives a feature branch exactly that upstream-. CI found the test
+fixture's dependence on the machine. Neither reader substitutes for the other.
 
 ## What was measured, so nobody re-measures it
 
-- **The light lane's vision was broken by default.** In `.git/odachi/scratch/light-base-probe`:
-  `odachi start --light "the pay button waits for the answer"`, a change, `odachi review` → the prompt
-  said "(there is no brief.md yet: run odachi start)". With `--base <the document's hash>` it carried
-  the line. After 0182's build, the same command carries the line. The probe repo is still there.
-- **A correction keeps its own base.** `--since` measures from the predecessor's tree; the newest
-  document may be a later feature, so the vision still comes from the predecessor's base. Pinned by
-  `TestACorrectionAsksTheDocumentItsPredecessorJudged`.
-- **`review --show` without `--base` says "documents only" about a closed feature.** It judges HEAD →
-  worktree; the gate judges the feature's range. The gate's own hint, `odachi review --base <doc
-  base>`, is the command that asks the same question.
-- **A docs edit after the proof makes the proof stale by tree.** `check` refused it, then the second
-  `check --run` was mostly cached. Run the proof with the close documents staged.
+- **`review --attach` accepts a model that is not an identifier, and the next correction dies.** The
+  first 0183 verdict named `DeepSeek V4.1 Flash`; attach sealed it, and
+  `odachi review --attach <corrected> --since <that tree>` refused with
+  `the lens "reliability": model "DeepSeek V4.1 Flash" contains ' ': a model is an identifier`.
+  The row below carries the reproduction. The way out for that correction was a full review of the
+  closing tree; the predecessor's `model` cannot be edited (a verdict is not rewritten).
+- **A correction of a tree whose verdict names a real identifier works.** 0183's test-only fix after CI
+  was corrected from `b97ad7c8` with a 9 KB delta prompt and approved.
+- **The light lane's vision on the default base was broken end to end**, measured in
+  `.git/odachi/scratch/light-base-probe` before and after 0182's build.
+- **`git checkout -b feat origin/main` records `origin/main` as the feature's upstream**
+  (`branch.autoSetupMerge`), verified with `for-each-ref`.
 
 ## Queued
 
-1. **the detached HEAD lets a trailer on the default branch through** (review-debt): `Branch()` fails,
-   the CLI drops the error, and the refusal needs a name. Decide what "on the default branch" means
-   without a branch name, and keep CI's detached checkout working.
+1. **an attached verdict's model is free text, and a correction cannot merge it**: validate `model` at
+   attach with the same `NormalizeModel` the lens table uses (refuse before writing, naming the shape),
+   or stop validating it when a correction merges the predecessor's rows. The first keeps `{model}`
+   substitutable; the prompt asks for "the model that judged", which is what a reviewer writes.
+   Reproduction: attach a verdict whose `model` is `DeepSeek V4.1 Flash`, then `review --attach <next>
+   --since <that tree>`.
 2. **the gate mode forgets a verdict the close commit preceded**: decide whether the close commit must
    come after the verdict, or `closedBefore` anchors on the document's base.
 3. **`start --brief` and the shape skill disagree**: the tool reads the draft and writes no brief;
@@ -58,22 +75,22 @@ was never its own vision. The repair was one function both lookups call, not two
    - what stays manual forever: `proof/` and `odd/tasks`. Bounding them is a decision about which
      evidence is forgotten, and that is an ADR, not a `clean` rule.
    - measured 2026-11-03 on this clone: 21.7 MB in 1187 files, 20.8 MB recoverable, of which 18.3 MB
-     is the agent's scratch. That scratch now also holds `light-base-probe` and the 0182 build; move
-     anything to keep to `docs/` before `clean --apply`.
+     is the agent's scratch. That scratch now also holds `light-base-probe`, `probe-upstream` and the
+     0182 build; move anything to keep to `docs/` before `clean --apply`.
 
 ## What is already true, so it is not re-decided
 
-- **The fence protects `proof/**` only**; `start` regenerates it from the brief, so a non-goal that
-  must survive has to be in the brief's list.
-- **The release body is the changelog**, printed by the workflow (proven again on v0.14.1).
-- **A change with no document names itself in its commit** (0181); the light lane still writes one, and
-  its line is now the vision on the default base (0182).
-- **A stored proof is never rewritten.**
+- **The fence protects `proof/**` only**; `start` regenerates it from the brief, so a rule that must
+  survive is written by hand before the plan commit.
+- **The release body is the changelog**, printed by the workflow (proven again on v0.14.2).
+- **A change with no document names itself in its commit** (0181).
 - **The review asks the newest document, whatever base it judges** (0182).
+- **The default branch is a fact of the commits** (0183): a detached checkout is refused or judged for
+  the same reason a named one is, and CI's detached checkout still reads the lane.
 - **`main` is protected**: four checks, everything through a PR.
-- **The installed binary is 0.14.1**, and the home carries the updated agents and skills.
+- **The installed binary is 0.14.2**, and the home carries the updated agents and skills.
 
 ## How to find the next real work
 
-`docs/review-debt.md` names the detached-HEAD row; this note names the other three. `odachi summary`
-says 0182 is closed and nothing newer exists, so the ledger is the map today.
+`docs/review-debt.md` has nothing open; the four items above are the map today. `odachi summary` says
+0183 is closed and nothing newer exists.
