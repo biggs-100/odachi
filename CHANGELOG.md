@@ -7,6 +7,12 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The design skill says again what it knows.** The screenshot rule of 0176 fit by compressing two
+  bullets nobody asked to change, and the review named the loss: "or reorder", "saying why",
+  "component folders" and "propose a starter system" are back inside sixty lines (0177).
+
 ## v0.13.0 - 2026-11-02
 
 - **An artboard names the screenshot it was read against.** `design.json` carries a `screenshot`
