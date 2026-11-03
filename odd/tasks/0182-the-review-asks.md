@@ -12,7 +12,7 @@ R1 · "the review's vision asks the newest task document, the same question chec
 
 ## Steps
 - [x] T1 · the trailer asks the newest document, and a correction keeps the base it corrects   R1 · route:inline · tree:eba59db6461ff6bedd557c4991688ecc49e9108e
-- [ ] T2 · a light feature's line is the vision with the review's default base   R1 · route:inline
+- [x] T2 · a light feature's line is the vision with the review's default base   R1 · route:inline · tree:a9432e11b5177128ef0dbe6640100d071cd798ce
 - [ ] T3 · the ledger row closes and the changelog names the rule   R1 · route:inline
 
 ## History
