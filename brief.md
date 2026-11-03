@@ -1,19 +1,23 @@
-# the-release-body
+# the-diff-speaks
 
 ## What must exist
-- the release body comes from the changelog, not from memory: a step of the workflow, so nobody writes it twice by hand
+- el primer commit lleva `Odachi-Change: <una línea>`; check y review la leen del rango desde el merge-base
 
 ## Done when
-- scripts/release-notes.sh prints the tag's changelog section verbatim and the install block for that tag, and refuses a tag with no section
-- the release workflow calls it after goreleaser and edits the release with that body
-- a test pins the section, the install block and the refusal
+- a branch whose commits carry `Odachi-Change: <line>` is judged against that line, with the base taken from the merge-base with the project's default branch, and no task document is written
+- the gate demands the proof for that change, and the review when the diff asks for one; a proof that does not cover the line is named as it is for a document
+- `odachi review` builds the same prompt for a document-less change, with the trailer line where a light document's line goes, and the prompt says the diff is the record
+- a change with no trailer and no open document keeps today's answer: the newest document is the feature, and a project that never writes a trailer sees nothing new
+- a trailer that is empty, appears twice with different lines, sits on the default branch, or cannot find its merge-base is refused by name
+- tests pin the read, the base, the refusals and the unchanged answer without a trailer
 
 ## Not included (first version)
-- the gate and the signing stay: the step only edits the body of a release that already exists
+- no new verb: the trailer is read by check and review, and nothing writes it
+- the light lane stays: a one-line change may still write a one-step document when a person wants the record
 - a stored proof is never rewritten, whatever the writer learns
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why a release note has one source and not a second text written for GitHub.
+- Wants to learn: why a change that can be read from its diff does not need a second text.
