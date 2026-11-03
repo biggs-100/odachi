@@ -8,7 +8,7 @@ R1 · "the installer verifies with cosign without aborting on the tool's own suc
 ## Done when
 
 ## Steps
-- [ ] T1 · the installer verifies with cosign without aborting on the tool's own success message   R1
+- [x] T1 · the installer verifies with cosign without aborting on the tool's own success message   R1 · tree:6979fd1ee1fc4e3b17bb71312016adc68390321a
 
 ## History
 L1 · "the installer verifies with cosign without aborting on the tool's own success message"
