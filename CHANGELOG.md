@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.1 - 2026-11-03
 
 - **The review asks the document the gate asks.** `odachi review` asked whether a document's base
   equaled the ref it judged: a document records a commit and the default base is `HEAD`, so the answer
