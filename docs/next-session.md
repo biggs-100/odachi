@@ -34,6 +34,10 @@ talks, the double must talk on the same channel.
   on that tree, then commit.
 - **cosign is installed on this machine** (`~/go/bin/cosign.exe`, on PATH) and v0.12.0 verified
   against its real bundle before installing.
+- **The agent's shell is pwsh 7.6.9, but a script that ships to Windows is proven on `powershell`
+  5.1**, which is what a user has: in 7 a native program's stderr is not a terminating error, so the
+  same installer passes there and fails on the machine that matters. And file rewrites belong to the
+  editor tool, never to `-replace` in a shell: a global replace ate the changelog header once.
 
 ## What is open
 
