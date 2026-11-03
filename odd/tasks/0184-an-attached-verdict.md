@@ -8,7 +8,7 @@ R1 · "an attached verdict whose model is not an identifier is refused, naming t
 ## Done when
 
 ## Steps
-- [ ] T1 · an attached verdict whose model is not an identifier is refused, naming the shape, so a later correction can merge it   R1
+- [x] T1 · an attached verdict whose model is not an identifier is refused, naming the shape, so a later correction can merge it   R1 · tree:cd1db3501342898731781aaf7738fa1d86f41b64
 
 ## History
 L1 · "an attached verdict whose model is not an identifier is refused, naming the shape, so a later correction can merge it"

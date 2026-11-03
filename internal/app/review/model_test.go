@@ -21,7 +21,7 @@ func TestAnAttachedModelThatIsNotAnIdentifierIsRefused(t *testing.T) {
 	if result.Code != review.CodeBlocked {
 		t.Fatalf("code = %d, want %d (%s)", result.Code, review.CodeBlocked, result.Message)
 	}
-	for _, want := range []string{"DeepSeek V4.1 Flash", "identifier"} {
+	for _, want := range []string{"DeepSeek V4.1 Flash", "identifier", "provider/name#variant"} {
 		if !strings.Contains(result.Message, want) {
 			t.Errorf("the refusal does not carry %q: %s", want, result.Message)
 		}
