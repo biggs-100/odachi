@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.2 - 2026-11-03
 
 - **The default branch is a fact of the commits, not of a name.** `odachi check` refused an
   `Odachi-Change:` trailer on the default branch by comparing the checked-out branch's name with the
