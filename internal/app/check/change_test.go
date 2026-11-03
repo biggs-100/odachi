@@ -40,7 +40,7 @@ func TestAClaimedChangeIsJudgedAgainstItsTrailer(t *testing.T) {
 	})
 	files := newFakeFiles(seed)
 
-	got := run(t, files, claimedGit(), check.Options{ChangeBase: "origin/main", Branch: "feat/wait"})
+	got := run(t, files, claimedGit(), check.Options{ChangeBase: "origin/main"})
 
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("Code = %d (%s): %s\n%s", got.Code, got.Reason, got.Message, strings.Join(got.Lines, "\n"))
@@ -55,7 +55,7 @@ func TestAClaimedChangeIsJudgedAgainstItsTrailer(t *testing.T) {
 func TestAClaimedChangeOwesItsOwnProof(t *testing.T) {
 	files := newFakeFiles(closedFiles())
 
-	got := run(t, files, claimedGit(), check.Options{ChangeBase: "origin/main", Branch: "feat/wait"})
+	got := run(t, files, claimedGit(), check.Options{ChangeBase: "origin/main"})
 
 	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofMissing {
 		t.Fatalf("Code = %d (%s): %s", got.Code, got.Reason, got.Message)
@@ -76,7 +76,6 @@ func TestAClaimedChangeOwesAVerdictAtItsMergeBase(t *testing.T) {
 
 	got := run(t, files, claimedGit(), check.Options{
 		ChangeBase:    "origin/main",
-		Branch:        "feat/wait",
 		ReviewMode:    true,
 		RequireReview: true,
 	})
@@ -95,7 +94,7 @@ func TestAClosedDocumentWithoutATrailerKeepsTheAnswer(t *testing.T) {
 	git := claimedGit()
 	git.messages = []string{"a plain commit, no trailer\n"}
 
-	got := run(t, newFakeFiles(closedFiles()), git, check.Options{ChangeBase: "origin/main", Branch: "feat/wait"})
+	got := run(t, newFakeFiles(closedFiles()), git, check.Options{ChangeBase: "origin/main"})
 
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("Code = %d (%s): %s", got.Code, got.Reason, got.Message)
@@ -103,9 +102,14 @@ func TestAClosedDocumentWithoutATrailerKeepsTheAnswer(t *testing.T) {
 }
 
 // A change that names itself still lives on a branch: committing straight to the
-// default branch is the one place a change is not a change.
+// default branch is the one place a change is not a change. The repository says
+// which branch that is; the gate no longer compares a name it was handed.
 func TestATrailerOnTheDefaultBranchIsRefused(t *testing.T) {
-	got := run(t, newFakeFiles(closedFiles()), claimedGit(), check.Options{ChangeBase: "origin/main", Branch: "main"})
+	git := claimedGit()
+	git.onDefault = true
+	git.defaultBranch = "main"
+
+	got := run(t, newFakeFiles(closedFiles()), git, check.Options{ChangeBase: "origin/main"})
 
 	if got.Code == int(gate.Ready) {
 		t.Fatalf("a trailer on the default branch was ready")
@@ -115,13 +119,29 @@ func TestATrailerOnTheDefaultBranchIsRefused(t *testing.T) {
 	}
 }
 
+// A repository that cannot say which branch is the default blocks instead of
+// judging the trailer: a check that runs only when git answers is a silent
+// degradation, and this lane has no second opinion (0174).
+func TestATrailerBlocksWhenTheDefaultBranchCannotBeAsked(t *testing.T) {
+	git := claimedGit()
+	git.onDefaultErr = errors.New("cannot read the refs")
+
+	got := run(t, newFakeFiles(closedFiles()), git, check.Options{ChangeBase: "origin/main"})
+
+	if got.Code == int(gate.Ready) {
+		t.Fatalf("a trailer was judged while the default branch was unknown")
+	}
+	if !strings.Contains(got.Message, "cannot read the refs") {
+		t.Fatalf("the refusal does not carry git's reason: %q", got.Message)
+	}
+}
+
 func TestANamedFeatureIsNotReplacedByATrailer(t *testing.T) {
 	// The lane's own proof is deliberately absent: if a trailer overrode an
 	// explicit --feature, this run would block for a proof the human did not ask
 	// about.
 	got := run(t, newFakeFiles(closedFiles()), claimedGit(), check.Options{
 		ChangeBase: "origin/main",
-		Branch:     "feat/wait",
 		Feature:    7,
 	})
 
@@ -139,7 +159,7 @@ func TestATrailerWithNoMergeBaseIsRefused(t *testing.T) {
 	git := claimedGit()
 	git.mergeBaseErr = errors.New("no merge base")
 
-	got := run(t, newFakeFiles(closedFiles()), git, check.Options{ChangeBase: "origin/main", Branch: "feat/wait"})
+	got := run(t, newFakeFiles(closedFiles()), git, check.Options{ChangeBase: "origin/main"})
 
 	if got.Code == int(gate.Ready) {
 		t.Fatalf("a trailer with no merge-base was ready")

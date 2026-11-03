@@ -139,11 +139,6 @@ type Options struct {
 	// default branch, the same ref --ci uses. Empty means the lane is closed, and
 	// the run keeps the answer it always gave.
 	ChangeBase string
-	// Branch is the branch this clone has checked out, as `git symbolic-ref`
-	// names it. The lane refuses a trailer that sits on the default branch: a
-	// change that names itself is still a change, and a change is merged from a
-	// branch.
-	Branch string
 }
 
 // Files is the disk port: enough to read the project and write one proof.
@@ -181,6 +176,12 @@ type Git interface {
 	// MergeBase is the fork point of HEAD and a ref: the commit a document-less
 	// change is measured from, and the base its review must name.
 	MergeBase(root, ref string) (string, error)
+	// OnDefaultBranch answers whether HEAD sits on the branch this clone follows
+	// for base, and names it. A detached HEAD has no name, so the repository
+	// answers from the commits; a clone with no local default answers no, which is
+	// the CI checkout the lane must keep working on. An error is the answer "git
+	// could not tell", never a silent no.
+	OnDefaultBranch(root, base string) (branch string, on bool, err error)
 	// BlobHash is the receipt of one worktree file: the blob id git already
 	// owns, measured now. The coverage answer compares a verdict's rows against
 	// exactly this, so a measurement is load-bearing; it answers "" for a file
@@ -608,8 +609,13 @@ func (r *runner) claimedChange() (*tasks.Document, *Result) {
 		return nil, nil
 	}
 
-	branch := strings.TrimSpace(r.opts.Branch)
-	if branch != "" && branch == strings.TrimPrefix(base, "origin/") {
+	branch, onDefault, err := r.git.OnDefaultBranch(r.opts.Dir, base)
+	if err != nil {
+		problem := blocked("could not tell whether this change sits on the default branch: " +
+			oneLine(err.Error()) + "; fix the repository and run odachi check again")
+		return nil, &problem
+	}
+	if onDefault {
 		problem := blocked("a change that names itself in a trailer lives on a branch, not on " + branch + ": move the commits to a branch and run again")
 		return nil, &problem
 	}

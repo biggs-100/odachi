@@ -500,8 +500,12 @@ func (gitRepo) Messages(root, base string) ([]string, error) { return gitx.Messa
 
 func (gitRepo) MergeBase(root, ref string) (string, error) { return gitx.MergeBase(root, ref) }
 
-// Branch is the branch this clone has checked out; a detached HEAD has none.
-func (gitRepo) Branch(root string) (string, error) { return gitx.Branch(root) }
+// OnDefaultBranch answers whether HEAD sits on the branch this clone follows for
+// a base, and names it: a detached HEAD has no name, so the answer comes from the
+// commits, and a clone with no local default branch answers no.
+func (gitRepo) OnDefaultBranch(root, base string) (string, bool, error) {
+	return gitx.OnDefaultBranch(root, base)
+}
 
 // CommonDir is where the clone's store hangs from: the directory every worktree
 // of this clone shares, which is what makes the store one per clone.

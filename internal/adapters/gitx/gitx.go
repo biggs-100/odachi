@@ -230,16 +230,6 @@ func MergeBase(root, ref string) (string, error) {
 	return compareBase(root, strings.TrimSpace(ref))
 }
 
-// Branch names the branch this clone has checked out. A detached HEAD has none,
-// and that is an answer: the trailer lane keeps the answer it had.
-func Branch(root string) (string, error) {
-	out, err := run(root, "symbolic-ref", "--short", "-q", "HEAD")
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(out), nil
-}
-
 // OnDefaultBranch answers whether HEAD sits on the branch this clone uses for
 // base: the local branch whose upstream is base, or -when the clone records no
 // upstream- the one named like base without its remote. A detached HEAD has no
