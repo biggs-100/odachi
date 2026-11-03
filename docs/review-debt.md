@@ -9,19 +9,9 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: after 0176, whose verdict approved with one warning.
+Last written: after 0177, which paid the one row 0176 left. Both rows of 0174 are still open.
 
 ## Open
-
-### the design skill lost two instructions to fit sixty lines
-
-Found by the review of 0176 (warning, `skills/design/SKILL.md:51`). The feature's screenshot rule
-fit only by compressing two bullets nobody asked to change: the comments rule lost "or reorder"
-and the duty to say why a comment stays open, and the system rule lost "component folders" from
-its sources and "propose a starter system" when there are none.
-
-Paid by the next feature that touches the design skill: restore both instructions inside the
-sixty-line body, tightening the screenshot rule instead of the contract around it.
 
 ### the cosign-missing refusal on Windows has no test
 
@@ -40,6 +30,19 @@ against a real release while the signature step is fixture-tested with a shim -f
 it now says what the test measures-, and the fence header quotes "the checksum check stays", a
 decision the brief never took. The second one is the same defect 0172 left, in the fence 0174
 wrote: paid by the next `start`, or by the first feature that touches the header.
+
+## Closed by feature 0177
+
+### the design skill lost two instructions to fit sixty lines
+
+Found by the review of 0176 (warning, `skills/design/SKILL.md:51`). The feature's screenshot rule
+fit only by compressing two bullets nobody asked to change: the comments rule lost "or reorder"
+and the duty to say why a comment stays open, and the system rule lost "component folders" from
+its sources and "propose a starter system" when there are none.
+
+Closed: the four are back and the body still reads as sixty lines; the clarifying-question bullet
+tightened to pay for the room, and `odachi skills --check` passes. The review of 0177 approved the
+tree with no findings.
 
 ## Closed by feature 0173
 
