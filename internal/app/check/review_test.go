@@ -197,6 +197,29 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	}
 }
 
+// TestTheModeNamesAVerdictWhoseCloseCameFirst: the close commit can land before
+// the verdict -the practice is the other way round, but nothing forces it-. The
+// mode asks about the diff the feature merges, not about when its document was
+// committed, so the missing verdict is named either way (0185).
+func TestTheModeNamesAVerdictWhoseCloseCameFirst(t *testing.T) {
+	const base = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"odd/tasks/0007-turnos.md"},
+		between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+	}
+
+	got := run(t, newFakeFiles(files), git, check.Options{ReviewMode: true})
+
+	if want := "odachi review --base " + base; !strings.Contains(reviewNote(got), want) {
+		t.Fatalf("a close committed before its verdict = %d/%q, want the review named with %q", got.Code, reviewNote(got), want)
+	}
+}
+
 // TestReviewOwedAsksAboutTheTreeThatStands: the question is about this worktree,
 // so a caller that names no base gets HEAD, the same default `odachi check` uses.
 // An empty base means "compare against nothing" for the fence, and here it would
@@ -268,18 +291,17 @@ func TestReviewOwedForcedAndItsErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("the document at HEAD cannot be read", func(t *testing.T) {
+	t.Run("the feature's range cannot be read", func(t *testing.T) {
 		closed := readyFiles()
 		closed["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
 		git := &fakeGit{
-			tree:      currentTree,
-			changed:   []string{"odd/tasks/0007-turnos.md"},
-			between:   []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
-			fileAtErr: errors.New("git roto"),
+			tree:       currentTree,
+			changed:    []string{"odd/tasks/0007-turnos.md"},
+			betweenErr: errors.New("git roto"),
 		}
 
 		if _, _, err := check.ReviewOwed(check.Options{Dir: dir, Store: store, ReviewMode: true}, newFakeFiles(closed), git); err == nil {
-			t.Error("an unreadable HEAD answered without an error")
+			t.Error("an unreadable range answered without an error")
 		}
 	})
 }
