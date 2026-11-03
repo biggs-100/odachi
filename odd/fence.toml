@@ -3,11 +3,9 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief.
-#
-# the release workflow left this fence in 0179: the body of a release is written by
-# a step of that workflow now, and a rule that stops the next feature from touching
-# the file where the work belongs is a wall, not a fence.
+# path stays in the brief: "the gate and the signing stay" is a promise about what
+# the step may change inside release.yml, and a rule over the file would forbid the
+# step the brief asks for.
 
 [[rule]]
 not   = "a stored proof is never rewritten, whatever the writer learns"

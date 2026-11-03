@@ -53,6 +53,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # The body is the changelog section for this tag, verbatim: one source, the
+      # same text a person reads. The script refuses a tag with no section, so a
+      # release cannot publish an empty note; gh edits the release goreleaser made.
+      - run: |
+          bash scripts/release-notes.sh "$GITHUB_REF_NAME" > release-notes.md
+          gh release edit "$GITHUB_REF_NAME" --notes-file release-notes.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # Provenance, after the release exists: every archive named in the signed
       # checksums gets an attestation that says which workflow, commit and tag
       # produced it. v4.2.2.

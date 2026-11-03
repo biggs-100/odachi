@@ -7,6 +7,12 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A release note is the changelog, printed.** The workflow takes the body of a release from the
+  changelog section for the tag and refuses a tag with no section, so the notes are the same text a
+  person reads and nobody writes them twice by hand (0180).
+
 ## v0.13.1 - 2026-11-02
 
 - **The design skill says again what it knows.** The screenshot rule of 0176 fit by compressing two
