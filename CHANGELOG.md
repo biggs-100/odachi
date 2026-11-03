@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.6 - 2026-11-03
 
 - **The store disposes of the question it no longer keeps.** A review filed its prompt beside the
   verdict and left it there: 60 to 120 KB each, growing with every review, while `keep_prompts = 0`
