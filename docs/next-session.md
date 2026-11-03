@@ -1,54 +1,58 @@
-# Next session: the installer stops trusting the host, and the first minor the doctrine produced
+# Next session: a release that broke, and the patch that proved the chain
 
-Written at the close of 0174. **v0.12.0 is published**, signed and attested; the binary installed on
-this machine is still **v0.11.102**, because v0.12.0 requires cosign to install and this machine does
-not have it yet. `doctor` is green except check 14 until this file was rewritten; `main` is clean and
-in sync with `origin`.
+Written at the close of 0175. **v0.12.1 is published**, signed and attested, and this machine runs
+**v0.12.0** -the same binary, installed by the fixed script against the real release. `doctor` is
+green except check 14 until this file was rewritten; `main` is clean and in sync with `origin`.
 
 ## What shipped
 
-- **0174 made both installers verify the release signature before they read a hash.** They download
-  `checksums.txt.sigstore.json`, ask cosign to check the checksum file against this repository's
-  release workflow and the tag, and refuse when cosign is missing -a check that runs only sometimes
-  is no check, and this project already refuses instead of degrading.
-- **v0.12.0 is the first `minor` the release doctrine produced**, because installing now requires a
-  step it did not before: cosign on the PATH. The changelog says it, the release notes say it twice.
-- **The review caught a regression this branch introduced**: the edit that added the signature check
-  to `install.ps1` dropped the file's UTF-8 BOM, and Windows PowerShell 5.1 decodes a BOM-less script
-  with the ANSI code page, so every Spanish accent would have printed as mojibake. The BOM is back,
-  and nothing in the tests would have noticed without the reviewer.
+- **0175 fixed what v0.12.0 broke.** The PowerShell installer aborted exactly when the signature
+  verified: cosign prints `Verified OK` on stderr, and PowerShell 5.1 with `$ErrorActionPreference
+  'Stop'` turns a native program's stderr into a terminating error. Nobody with cosign could install
+  the release. The preference is now relaxed for the call and restored; the exit code is the answer.
+- **v0.12.1 is the patch**, and its notes say what happened. The install that proved it ran against
+  the real release: cosign verified, sha256 passed, the binary landed.
+
+## The lesson this pair of releases paid for
+
+**A test double that does not behave like the original proves nothing.** The shim answered "success"
+without writing a byte, so every test passed while the real installer failed on its own success
+message. The shim is now a `.cmd` -a native program for PowerShell- that prints to stderr like cosign
+does, and the red reproduces the production failure exactly.
+
+The rule that follows, and belongs beside "observe red": when the double stands in for a tool that
+talks, the double must talk on the same channel.
 
 ## What was measured, so nobody re-measures it
 
-- **`opencode run` stalls at ~40 KB on the installer diff.** Two runs hit the 600 s limit with no
-  answer, twice on the same prompt; a subagent reading the prompt file answered in seconds. When the
-  one-command review stalls, hand the prompt path to a subagent before believing the model is broken.
-- **A file's encoding is part of its bytes.** `install.ps1` is UTF-8 with BOM on purpose; an editor or
-  a scripted rewrite that drops the BOM breaks every accent on Windows PowerShell 5.1, and the tests
-  see nothing because they match ASCII.
-- **The pre-commit hook refuses a commit whose proof is stale.** The order that survives it: stage
-  the correction, run `check --run` on that tree, then commit.
-- **PowerShell 5.1 and `pwsh` are different shells** and the runner has both; the Windows installer
-  test prefers `powershell`, which is the one users have.
-- The suite is ~400 s with the new installer tests; `check --run` still wants `--timeout 1500`.
+- **The suite is ~410 s** with the installer tests; `check --run` wants `--timeout 1500`.
+- **`opencode run` stalls at ~40 KB on the installer diff**; a subagent that reads the prompt file
+  answers in seconds. Use that when the one-command review stalls.
+- **`install.ps1` is UTF-8 with BOM on purpose.** Windows PowerShell 5.1 decodes a BOM-less script
+  with the ANSI code page and every accent becomes mojibake; ASCII-only assertions do not notice.
+- **The pre-commit hook refuses a commit whose proof is stale:** stage the correction, `check --run`
+  on that tree, then commit.
+- **cosign is installed on this machine** (`~/go/bin/cosign.exe`, on PATH) and v0.12.0 verified
+  against its real bundle before installing.
 
 ## What is open
 
-- **This machine cannot install v0.12.0 until cosign is installed.** `go install
-  github.com/sigstore/cosign/v2/cmd/cosign@latest` or the sigstore release binary; then
-  `ODACHI_VERSION=v0.12.0 scripts/install.ps1` proves the whole chain on the real release.
 - `docs/review-debt.md` holds two rows: the Windows branch that refuses without cosign has no test,
   and the fence header quotes a decision the brief never took.
-- **The release body is still written by hand** with `gh release edit` after the tag.
+- **The release body is still written by hand** with `gh release edit` after the tag. Two releases
+  today, twice by hand.
 - **The change that needs no document** is still only half built.
 - **ADR 0042**: CI cannot enforce the review. A decision, not work.
+- The installed binary says `0.12.0` while the newest release is `0.12.1`; the bytes are the same,
+  and reinstalling is one command if the number matters.
 
 ## What is already true, so it is not re-decided
 
-- **A release is a tag someone can install** (`docs/releases.md`): publish when a person's experience
-  changed, `minor` when a documented workflow step or a stored shape moves.
+- **A release is a tag someone can install** (`docs/releases.md`); a fix someone suffered is a patch,
+  published as soon as it is green.
 - **A skill of this project ships complete and stands alone.**
-- **The installer refuses bytes it cannot verify**, and now the trust ends in the signature.
+- **The installer refuses bytes it cannot verify**, and the trust ends in the signature.
+- **A test double must behave like what it replaces**, or the test measures the double.
 - **Four artifacts are the memory**: brief, task doc, proof and profile.
 - **The review gate lives in the clone** (ADR 0042); **ownership is declared** (ADR 0038).
 - **Every irreversible action names its target and waits for the human.**
@@ -56,10 +60,9 @@ in sync with `origin`.
 
 ## Queued
 
-- **install cosign and run v0.12.0's installer on this machine**, so the binary in use is the signed
-  release and the new check is exercised for real.
 - **the two rows, paid**: the Windows refusal without cosign, and the fence header.
-- **the release body comes from the changelog**, not from memory.
+- **the release body comes from the changelog**, not from memory: a step of the workflow, so nobody
+  writes it twice by hand.
 - **a change resumable from the diff needs no document**: `shape` it before building it.
 
 ## How to find the next real work
