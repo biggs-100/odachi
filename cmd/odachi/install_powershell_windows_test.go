@@ -94,12 +94,19 @@ func windowsRelease(t *testing.T) releaseFixture {
 }
 
 // powershellShim answers for cosign: what the test measures is the installer's
-// decision, not sigstore's cryptography.
+// decision, not sigstore's cryptography. It is a .cmd on purpose: cosign is a
+// native program and writes "Verified OK" to stderr, and PowerShell 5.1 turns a
+// native command's stderr into a terminating error under $ErrorActionPreference
+// 'Stop'. A PowerShell shim would not reproduce that; a batch file does.
 func powershellShim(t *testing.T, exitCode int) string {
 	t.Helper()
 
-	path := filepath.Join(t.TempDir(), "cosign.ps1")
-	script := "exit " + strconv.Itoa(exitCode) + "\n"
+	path := filepath.Join(t.TempDir(), "cosign.cmd")
+	message := "Verified OK"
+	if exitCode != 0 {
+		message = "signature verification failed"
+	}
+	script := "@echo " + message + " 1>&2\r\n@exit /b " + strconv.Itoa(exitCode) + "\r\n"
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write the cosign shim: %v", err)
 	}

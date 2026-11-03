@@ -7,6 +7,16 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+The installer verifies, and then installs.
+
+- **`v0.12.0`'s PowerShell installer aborted when the signature verified.** cosign prints
+  `Verified OK` on stderr, and PowerShell 5.1 with `$ErrorActionPreference 'Stop'` turns a native
+  program's stderr into a terminating error: the check failed exactly when it succeeded, so nobody
+  with cosign could install the release. The preference is relaxed for the call and restored, and the
+  test's shim is a native program that writes to stderr, which is what the fixture was missing (0175).
+
 ## v0.12.0 - 2026-11-02
 
 The installer verifies the signature before it installs.
