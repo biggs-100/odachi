@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.4 - 2026-11-03
 
 - **A close owes its verdict whatever the commit order.** The review mode read a document that was
   already closed at `HEAD` as "nothing to ask", so a close committed before its verdict was answered by
