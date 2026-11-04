@@ -8,7 +8,7 @@ R1 · "the review debt pays its two rows with tests: no silent taskkill, and eve
 ## Done when
 
 ## Steps
-- [ ] T1 · the review debt pays its two rows with tests: no silent taskkill, and every served model in the refusal   R1
+- [x] T1 · the review debt pays its two rows with tests: no silent taskkill, and every served model in the refusal   R1 · tree:d63cbc06a54889b88c315f4fb858384a510a7776
 
 ## History
 L1 · "the review debt pays its two rows with tests: no silent taskkill, and every served model in the refusal"
