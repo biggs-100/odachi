@@ -766,7 +766,9 @@ func (r *runner) notServedLine(lenses []string, model string) string {
 
 // optionsLine names what a human can do when a reviewer does not answer: the
 // session's model, the free names the host uses, and the three ways to switch.
-// It names them and chooses none. Empty when the tool knows nothing to offer.
+// It names them and chooses none. The ways to switch are known even when the
+// host says nothing - they are a flag, the project's file and a variable, not a
+// catalog entry -, so a failure with no host still has a way out.
 func (r *runner) optionsLine(model string) string {
 	var out strings.Builder
 
@@ -779,9 +781,6 @@ func (r *runner) optionsLine(model string) string {
 			out.WriteString("; free by the host's name: " + strings.Join(free, ", "))
 		}
 		out.WriteString("; the host lists " + strconv.Itoa(len(catalog)) + " models (opencode models)")
-	}
-	if out.Len() == 0 {
-		return ""
 	}
 
 	out.WriteString("; switch with --model, " + domain.ModePath + " or ODACHI_MODEL - the tool does not switch by itself")

@@ -167,6 +167,33 @@ func TestAFailedReviewerNamesTheOptions(t *testing.T) {
 	}
 }
 
+// TestAFailureWithNoHostStillNamesTheWaysToSwitch: the catalog is an extra
+// question, and a host that cannot answer must not take the way out with it. The
+// three ways to switch are a flag, the project's file and a variable, so they
+// are named even when the tool knows nothing else.
+func TestAFailureWithNoHostStillNamesTheWaysToSwitch(t *testing.T) {
+	p := newProject()
+	p.host.model = "opencode-go/deepseek-v4.1-flash#max"
+	p.host.known = false
+	p.shell.exitCode = 1
+
+	result := p.run(review.Options{
+		Exec:       "revisor --model {model}",
+		Lens:       "risk",
+		Because:    "the test pins the no-host failure",
+		LensModels: map[string]string{"risk": "opencode-go/retired-model"},
+	})
+
+	if result.Code == review.CodeOK {
+		t.Fatalf("a failed reviewer answered ready: %s", result.Message)
+	}
+	for _, want := range []string{"--model", "odd/review.toml", "ODACHI_MODEL", "does not switch by itself"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the failure does not carry %q:\n%s", want, result.Message)
+		}
+	}
+}
+
 // TestTheCatalogIsAskedOnce: a message that names the options must not pay a
 // probe per group, and two groups must see the same list.
 func TestTheCatalogIsAskedOnce(t *testing.T) {
