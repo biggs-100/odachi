@@ -28,7 +28,7 @@
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
           { "context": "gate (ubuntu-latest)" },
-          { "context": "gate (macos-latest)" },
+          { "context": "gate (macos-15-intel)" },
           { "context": "gate (windows-latest)" },
           { "context": "checks (linux)" }
         ]
