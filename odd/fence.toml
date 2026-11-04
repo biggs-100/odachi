@@ -3,16 +3,17 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: "no new verb" and "the light lane stays" are promises
-# about behaviour, and no glob measures a promise.
+# path stays in the brief: "no new verb" is a promise about behaviour, and no
+# glob measures a promise.
 
 [[rule]]
-not   = "a stored proof is never rewritten, whatever the writer learns"
+not   = "no change to what proof/ and odd/tasks are: never touched"
 paths = ["proof/**"]
 deps  = []
 
-# The retention is the project's decision and the survival rule is 0187's: this
-# feature changes how a class is removed, never which files survive.
+# The retention is the project's decision and the survival rule is 0188's: this
+# feature changes how a stream reaches a human and how a timeout ends a run,
+# never which files survive.
 [[rule]]
 not   = "no change to the retention numbers or which trees survive"
 paths = ["odd/review.toml", "internal/domain/review/cleanup.go"]

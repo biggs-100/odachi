@@ -3,6 +3,8 @@
 package shellcmd_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -52,6 +54,24 @@ func TestRunTimesOutInsteadOfHanging(t *testing.T) {
 	}
 	if elapsed > 4*time.Second {
 		t.Errorf("Run took %s, want it to stop near the 1s timeout", elapsed)
+	}
+}
+
+// TestRunATimeoutKillsTheWholeTree: the shell starts a child that would write
+// after the timeout and then waits. Killing only sh would let the child write,
+// and a timeout that leaves the work running is not a timeout.
+func TestRunATimeoutKillsTheWholeTree(t *testing.T) {
+	dir := t.TempDir()
+	_, _, _, timedOut, err := shellcmd.Run(dir, `(sleep 2; echo late > late.txt) & sleep 10`, 1)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !timedOut {
+		t.Fatal("Run did not report the timeout")
+	}
+	time.Sleep(3 * time.Second)
+	if _, err := os.Stat(filepath.Join(dir, "late.txt")); err == nil {
+		t.Fatal("the child outlived the timeout and wrote its file")
 	}
 }
 

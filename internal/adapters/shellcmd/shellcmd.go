@@ -97,6 +97,10 @@ func run(dir, command, input string, timeoutSeconds int, mirror io.Writer) (stdo
 	if err != nil {
 		return "", "", 0, false, err
 	}
+	// The context's default cancel ends the shell alone; the work is its
+	// children. A timeout that leaves a `go test` writing to a pipe nobody reads
+	// is not a timeout.
+	cmd.Cancel = func() error { return killTree(cmd) }
 	cmd.Stdin = stdin
 
 	// Each stream in its own buffer: the proof composes both, the reviewer reads

@@ -94,7 +94,7 @@ func closeFeature(t *testing.T, dir string) {
 // TestCheckRunStreamsToStderrAndKeepsTheJSONClean: the output of the proof
 // command reaches the human while it runs, on stderr, so a caller parsing --json
 // on stdout still gets one document and nothing else.
-func TestCheckRunStreamsToStderrAndKeepsTheJSONClean(t *testing.T) {
+func TestCheckRunKeepsTheJSONCleanAndTheProofWhole(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
@@ -109,8 +109,15 @@ func TestCheckRunStreamsToStderrAndKeepsTheJSONClean(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
 		t.Fatalf("stdout is not the JSON a caller parses: %v (%q)", err, out)
 	}
-	if !strings.Contains(errOut, "hola") {
-		t.Errorf("stderr %q does not carry what the command printed", errOut)
+	if strings.Contains(out, "hola") {
+		t.Errorf("stdout %q carries what the command printed: the JSON is not clean", out)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "proof", "0001-turnos.txt"))
+	if err != nil {
+		t.Fatalf("the proof was not written: %v", err)
+	}
+	if !strings.Contains(string(data), "hola") {
+		t.Errorf("proof %q does not carry what the command printed", data)
 	}
 }
 
