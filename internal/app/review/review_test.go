@@ -341,6 +341,7 @@ type fakeHost struct {
 	models  []string
 	known   bool
 	catalog bool
+	calls   int
 }
 
 func (h *fakeHost) Model(dir string) string {
@@ -351,6 +352,7 @@ func (h *fakeHost) Model(dir string) string {
 
 func (h *fakeHost) Models(dir string) ([]string, bool) {
 	h.catalog = true
+	h.calls++
 	h.dir = dir
 	return h.models, h.known
 }

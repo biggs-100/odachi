@@ -658,8 +658,11 @@ func (r *runner) attach() Result {
 // reviewerCommand is the command that actually runs for one model group: --exec
 // with {model} replaced by the identity this group is judged with. A command that
 // asks for a model odachi cannot name is refused instead of started, because a
-// verdict from another model is a review nobody asked for.
-func (r *runner) reviewerCommand(model string) (string, string, *Result) {
+// verdict from another model is a review nobody asked for. A model the host
+// serves a provider for but no longer lists is refused here too: the call is
+// paid for the moment it starts, and the catalog is a question the host answers
+// before the money.
+func (r *runner) reviewerCommand(model string, lenses []string) (string, string, *Result) {
 	asks := strings.Contains(r.opts.Exec, modelToken)
 
 	model = strings.TrimSpace(model)
@@ -684,7 +687,100 @@ func (r *runner) reviewerCommand(model string) (string, string, *Result) {
 		return "", "", &res
 	}
 
+	if asks && r.modelFromProject(lenses, model) {
+		if problem := r.modelNotServed(model, lenses); problem != nil {
+			return "", "", problem
+		}
+	}
+
 	return strings.ReplaceAll(r.opts.Exec, modelToken, model), model, nil
+}
+
+// modelFromProject answers whether this model is the one the project's lens table
+// chose. The preflight protects that automatic choice: --model is the human's
+// explicit override for one run and the session's model is the host's own, so
+// neither is refused because a catalog OpenCode wrote does not know it.
+func (r *runner) modelFromProject(lenses []string, model string) bool {
+	identity := domain.ModelIdentity(model)
+	for _, lens := range lenses {
+		if domain.ModelIdentity(r.opts.LensModels[strings.ToLower(strings.TrimSpace(lens))]) == identity {
+			return true
+		}
+	}
+	return false
+}
+
+// modelNotServed refuses a model the host serves a provider for but does not
+// list. A provider the host does not know is left to the command: the catalog is
+// OpenCode's, and another CLI may serve a model OpenCode never heard of. A host
+// that cannot list its models refuses nothing, because a failed probe is not a
+// retired model.
+func (r *runner) modelNotServed(model string, lenses []string) *Result {
+	catalog, known := r.hostModelsFor()
+	if !known {
+		return nil
+	}
+
+	identity := domain.ModelIdentity(model)
+	provider, _, found := strings.Cut(identity, "/")
+	if !found {
+		return nil
+	}
+
+	served, listed := false, false
+	for _, entry := range catalog {
+		other, _, ok := strings.Cut(domain.ModelIdentity(entry), "/")
+		if !ok || other != provider {
+			continue
+		}
+		served = true
+		if domain.ModelIdentity(entry) == identity {
+			listed = true
+			break
+		}
+	}
+	if !served || listed {
+		return nil
+	}
+
+	res := blocked(r.notServedLine(lenses, model, catalog))
+	return &res
+}
+
+// notServedLine names what a human needs to fix the line: the lens, the model,
+// the line that chose it, the session's model, the free models by the host's own
+// name, and the three ways to switch. It never switches by itself.
+func (r *runner) notServedLine(lenses []string, model string, catalog []string) string {
+	var out strings.Builder
+
+	out.WriteString("the review asks " + strings.Join(lenses, ", ") + " for " + model)
+	if source := r.modelSource(lenses); source != "" {
+		out.WriteString(" (from " + source + ")")
+	}
+	out.WriteString(", and the host does not list it")
+	if session := r.hostModelFor(); session != "" && domain.ModelIdentity(session) != domain.ModelIdentity(model) {
+		out.WriteString("; the session's model is " + session)
+	}
+	if free := freeModels(catalog); len(free) > 0 {
+		out.WriteString("; free by the host's name: " + strings.Join(free, ", "))
+	}
+	out.WriteString("; the host lists " + strconv.Itoa(len(catalog)) + " models (opencode models)")
+	out.WriteString("; switch with --model, " + domain.ModePath + " or ODACHI_MODEL - the tool does not switch by itself")
+	out.WriteString("; the reviewer was not started")
+
+	return out.String()
+}
+
+// freeModels is the host's free names. The suffix is a naming convention, not a
+// price: the tool repeats what the host calls them and claims nothing more.
+func freeModels(catalog []string) []string {
+	var free []string
+	for _, model := range catalog {
+		if strings.HasSuffix(domain.ModelIdentity(model), "-free") {
+			free = append(free, model)
+		}
+	}
+	return free
 }
 
 // validateCommand refuses a command that cannot run, before the store exists. The
@@ -853,7 +949,7 @@ func (r *runner) exec() Result {
 	commands := make([]string, len(groups))
 	resolved := make([]string, len(groups))
 	for i, group := range groups {
-		command, model, problem := r.reviewerCommand(group.model)
+		command, model, problem := r.reviewerCommand(group.model, group.lenses)
 		if problem != nil {
 			return *problem
 		}

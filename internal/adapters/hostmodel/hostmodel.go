@@ -57,9 +57,16 @@ func export(id, dir string) ([]byte, error) {
 
 // Models answers the identities the host serves, or false when it cannot say.
 // The catalog is the host's own list; a missing CLI or an empty answer is not a
-// host that serves nothing, and the caller must be able to tell them apart.
+// host that serves nothing, and the caller must be able to tell them apart. The
+// probe runs from the user's home, not from the project: the list is global, and
+// a host that keeps a background service would hold the project's folder open on
+// Windows and stop a caller from removing it.
 func Models(dir string) ([]string, bool) {
-	out, err := run(dir, "models")
+	probe := dir
+	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
+		probe = home
+	}
+	out, err := run(probe, "models")
 	if err != nil {
 		return nil, false
 	}
