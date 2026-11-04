@@ -81,9 +81,11 @@ func TestTheHostsModelsAreOneIdentityPerLine(t *testing.T) {
 	}
 }
 
-// TestAnEmptyCatalogIsNoCatalog: an empty answer is not a host that serves
-// nothing, and the caller must be able to tell the two apart.
-func TestAnEmptyCatalogIsNoCatalog(t *testing.T) {
+// TestNoOutputIsNoModel: ParseModels never invents a model from nothing. The
+// adapter's (nil, false) contract - an empty answer is no catalog, not a host
+// that serves nothing - is pinned in models_internal_test.go, where the probe
+// can be answered without a host.
+func TestNoOutputIsNoModel(t *testing.T) {
 	if got := hostmodel.ParseModels(nil); len(got) != 0 {
 		t.Fatalf("ParseModels = %v, want no model", got)
 	}

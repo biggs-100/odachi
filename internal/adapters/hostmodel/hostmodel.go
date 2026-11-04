@@ -66,7 +66,7 @@ func Models(dir string) ([]string, bool) {
 	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
 		probe = home
 	}
-	out, err := run(probe, "models")
+	out, err := list(probe)
 	if err != nil {
 		return nil, false
 	}
@@ -76,6 +76,11 @@ func Models(dir string) ([]string, bool) {
 	}
 	return models, true
 }
+
+// list is the command that prints the catalog, a variable so a test can answer
+// without a host. The production value is the same bounded probe the session
+// uses, with one argument.
+var list = func(dir string) ([]byte, error) { return run(dir, "models") }
 
 // run asks the host CLI one question with a bounded wait. Both the session and
 // the catalog are local reads; a CLI that does not answer in this window will
