@@ -8,7 +8,7 @@ R1 · "the macOS gate runs on a runner GitHub can assign: the matrix uses macos-
 ## Done when
 
 ## Steps
-- [ ] T1 · the macOS gate runs on a runner GitHub can assign: the matrix uses macos-15-intel and the required check follows   R1
+- [x] T1 · the macOS gate runs on a runner GitHub can assign: the matrix uses macos-15-intel and the required check follows   R1 · tree:4867361cd37d727bb953f742ad6efe38634b56d2
 
 ## History
 L1 · "the macOS gate runs on a runner GitHub can assign: the matrix uses macos-15-intel and the required check follows"
