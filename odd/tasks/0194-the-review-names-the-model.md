@@ -15,11 +15,12 @@ R1 · "the review names the model it can afford, refuses a model the host does n
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · the host answers which models it serves, and the review can ask   R1 · route:inline
-- [ ] T2 · the review refuses a model the host serves a provider for but does not list, before the reviewer starts   R1 · route:inline
-- [ ] T3 · a failed reviewer names the model, the lens and the options   R1 · route:inline
-- [ ] T4 · the project's four lenses name DeepSeek V4.1 Flash   R1 · route:inline
-- [ ] T5 · README says the self-review is named, not refused, and the preflight names the options   R1 · route:inline
+- [x] T1 · the host answers which models it serves, and the review can ask   R1 · route:inline · tree:e4da2b22f7d89a9aac71ac5cea0f929fab04255b
+- [x] T2 · the review refuses a model the host serves a provider for but does not list, before the reviewer starts   R1 · route:inline · tree:b6045b518ed0cb1b30ba44f21b5436c2d8f25a8e
+- [x] T3 · a failed reviewer names the model, the lens and the options   R1 · route:inline · tree:e0fd4aa87fb3d4364bb90c0002843e9d2c62b860
+- [x] T4 · the project's four lenses name DeepSeek V4.1 Flash   R1 · route:inline · tree:920ac910011bd55d8e6409829a07c5791562e112
+- [x] T5 · README says the self-review is named, not refused, and the preflight names the options   R1 · route:inline · tree:e4348a33324830c1bf7eb96b653b7762af32f4de
 
 ## History
 L1 · "the review names the model it can afford, refuses a model the host does not serve before spending the call, and never switches by itself"
+L2 · OFICIO · "a failure names the ways to switch even when the host says nothing" (porque the flag, the project's file and the variable do not depend on a catalog; a dead end is the one thing a failure must not be)
