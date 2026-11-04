@@ -124,6 +124,10 @@ type Class struct {
 	// empty directory, and a class that lies about its size is worse than a
 	// class that says it could not see.
 	Problems []string `json:"unreadable,omitempty"`
+	// Beyond is how many folders this class left out because they sit deeper than
+	// the walk looks. It is the class's shape and not a failure: a tree has no
+	// promise of an end, and a folder past the bottom does not stop `--apply`.
+	Beyond int `json:"beyond,omitempty"`
 }
 
 // Report is the map a human reads and a machine consumes.
@@ -184,14 +188,17 @@ func (r Report) Lines() []string {
 func (c Class) Line(applied bool) string {
 	row := fmt.Sprintf("  %-20s %-18s %4d %-6s %9s  %s",
 		c.Name, c.Owner, c.Files, plural(c.Files), sizeText(c.Bytes), c.Action)
-	if c.Doomed == 0 {
-		return row
+	if c.Doomed > 0 {
+		verb := "would go"
+		if applied {
+			verb = "removed"
+		}
+		row += " · " + strconv.Itoa(c.Doomed) + " " + plural(c.Doomed) + " " + verb
 	}
-	verb := "would go"
-	if applied {
-		verb = "removed"
+	if c.Beyond > 0 {
+		row += " · " + strconv.Itoa(c.Beyond) + " " + plural2(c.Beyond, "folder") + " beyond the shape"
 	}
-	return row + " · " + strconv.Itoa(c.Doomed) + " " + plural(c.Doomed) + " " + verb
+	return row
 }
 
 // Growth is what a close names about the store: the size of the classes odachi
@@ -638,8 +645,9 @@ func (f *found) doom(class Class, root string, item entry) Class {
 // file it could not.
 func gather(files Files, dir string, class Class, root string, rule scanRule) (Class, []entry) {
 	class.Path = label(dir, root)
-	names, problems := walk(files, dir, root, rule)
+	names, problems, beyond := walk(files, dir, root, rule)
 	class.Problems = problems
+	class.Beyond = beyond
 
 	entries := make([]entry, 0, len(names))
 	for _, rel := range names {
@@ -744,11 +752,14 @@ func (r scanRule) leavesOutDir(name string) bool {
 }
 
 // walk lists every file under root, relative to it and with forward slashes. A
-// directory that cannot be read is a problem, never an empty answer.
-func walk(files Files, dir, root string, rule scanRule) ([]string, []string) {
+// directory that cannot be read is a problem, never an empty answer; a directory
+// past the walk's bottom is beyond the shape, and the caller counts it instead of
+// calling it a failure.
+func walk(files Files, dir, root string, rule scanRule) ([]string, []string, int) {
 	var (
 		names    []string
 		problems []string
+		beyond   int
 	)
 
 	var visit func(rel string, depth int)
@@ -780,7 +791,10 @@ func walk(files Files, dir, root string, rule scanRule) ([]string, []string) {
 			}
 			if isDir {
 				if depth+1 >= maxDepth {
-					problems = append(problems, label(dir, full)+": deeper than "+strconv.Itoa(maxDepth)+" levels, not read")
+					// The depth is the class's shape, not a read failure: the walk
+					// promises a bottom, and a folder past it is counted, never
+					// mistaken for a directory that refused to open.
+					beyond++
 					continue
 				}
 				visit(child, depth+1)
@@ -793,7 +807,7 @@ func walk(files Files, dir, root string, rule scanRule) ([]string, []string) {
 		}
 	}
 	visit("", 0)
-	return names, problems
+	return names, problems, beyond
 }
 
 // label names a path the way the human reads it: relative to the project when it
