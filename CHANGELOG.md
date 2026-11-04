@@ -15,6 +15,17 @@ not a version.
   and then ran anyway. The file now opens with the directive, and a test pins the bytes so an editor
   cannot put the BOM back (0189).
 
+- **The review refuses a model the host no longer serves.** A project's lens table could name a
+  model the provider had retired, and the run waited for the whole timeout before saying only that
+  the command failed. `odachi review` now asks the host for its catalog (`opencode models`) before
+  starting a reviewer: a provider the host serves but a name it no longer lists is refused, and the
+  refusal names the lens, the model, the line that chose it, the session's model, the free names the
+  host uses and the three ways to switch. `--model` and the session's model are not refused; a
+  provider the host does not know is left to the command; a host that cannot answer refuses nothing.
+  A reviewer that fails after the preflight names the same options, and the tool never switches by
+  itself. This project's four lenses now name DeepSeek V4.1 Flash, which answered when the
+  configured model stalled twice (0194).
+
 ## v0.14.7 - 2026-11-03
 
 - **The cleanup switch is not wedged by the shape of a folder.** `odachi clean --apply` refused to

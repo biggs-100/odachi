@@ -642,3 +642,5 @@ func (osShell) RunInput(dir, command, input string, timeoutSeconds int) (string,
 type hostModel struct{}
 
 func (hostModel) Model(dir string) string { return hostmodel.Model(dir) }
+
+func (hostModel) Models(dir string) ([]string, bool) { return hostmodel.Models(dir) }

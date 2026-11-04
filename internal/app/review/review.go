@@ -203,9 +203,12 @@ type Lenses interface {
 // Host is the agent odachi runs under. The one thing only it can answer is
 // which model the session is using: that identity lives in the host, not in the
 // project, and inventing one would put a name in the receipt that never ran.
-// "" means the host cannot say, and the verb decides what that costs.
+// "" means the host cannot say, and the verb decides what that costs. Models is
+// the catalog the host serves; false means it cannot say, which is not the same
+// as a host that serves nothing.
 type Host interface {
 	Model(dir string) string
+	Models(dir string) ([]string, bool)
 }
 
 // Result is what the CLI prints and exits with. It has the same shape as the
@@ -288,6 +291,12 @@ type runner struct {
 	// run as one group.
 	hostModel string
 	hostAsked bool
+	// hostModels is the catalog the host serves, asked once for the same reason.
+	// known is false when the host cannot answer, and a run that cannot name the
+	// options still names the model, the lens and the source.
+	hostModels      []string
+	hostModelsKnown bool
+	modelsAsked     bool
 	// correction is the verdict --since names, read once: it is both the tree the
 	// delta is measured from and the answer the stored verdict completes.
 	correction *domain.Verdict
@@ -649,8 +658,11 @@ func (r *runner) attach() Result {
 // reviewerCommand is the command that actually runs for one model group: --exec
 // with {model} replaced by the identity this group is judged with. A command that
 // asks for a model odachi cannot name is refused instead of started, because a
-// verdict from another model is a review nobody asked for.
-func (r *runner) reviewerCommand(model string) (string, string, *Result) {
+// verdict from another model is a review nobody asked for. A model the host
+// serves a provider for but no longer lists is refused here too: the call is
+// paid for the moment it starts, and the catalog is a question the host answers
+// before the money.
+func (r *runner) reviewerCommand(model string, lenses []string) (string, string, *Result) {
 	asks := strings.Contains(r.opts.Exec, modelToken)
 
 	model = strings.TrimSpace(model)
@@ -675,7 +687,116 @@ func (r *runner) reviewerCommand(model string) (string, string, *Result) {
 		return "", "", &res
 	}
 
+	if asks && r.modelFromProject(lenses, model) {
+		if problem := r.modelNotServed(model, lenses); problem != nil {
+			return "", "", problem
+		}
+	}
+
 	return strings.ReplaceAll(r.opts.Exec, modelToken, model), model, nil
+}
+
+// modelFromProject answers whether this model is the one the project's lens table
+// chose. The preflight protects that automatic choice: --model is the human's
+// explicit override for one run and the session's model is the host's own, so
+// neither is refused because a catalog OpenCode wrote does not know it.
+func (r *runner) modelFromProject(lenses []string, model string) bool {
+	identity := domain.ModelIdentity(model)
+	for _, lens := range lenses {
+		if domain.ModelIdentity(r.opts.LensModels[strings.ToLower(strings.TrimSpace(lens))]) == identity {
+			return true
+		}
+	}
+	return false
+}
+
+// modelNotServed refuses a model the host serves a provider for but does not
+// list. A provider the host does not know is left to the command: the catalog is
+// OpenCode's, and another CLI may serve a model OpenCode never heard of. A host
+// that cannot list its models refuses nothing, because a failed probe is not a
+// retired model.
+func (r *runner) modelNotServed(model string, lenses []string) *Result {
+	catalog, known := r.hostModelsFor()
+	if !known {
+		return nil
+	}
+
+	identity := domain.ModelIdentity(model)
+	provider, _, found := strings.Cut(identity, "/")
+	if !found {
+		return nil
+	}
+
+	served, listed := false, false
+	for _, entry := range catalog {
+		other, _, ok := strings.Cut(domain.ModelIdentity(entry), "/")
+		if !ok || other != provider {
+			continue
+		}
+		served = true
+		if domain.ModelIdentity(entry) == identity {
+			listed = true
+			break
+		}
+	}
+	if !served || listed {
+		return nil
+	}
+
+	res := blocked(r.notServedLine(lenses, model))
+	return &res
+}
+
+// notServedLine names what a human needs to fix the line: the lens, the model,
+// the line that chose it, and the same options a failed reviewer names. It never
+// switches by itself.
+func (r *runner) notServedLine(lenses []string, model string) string {
+	var out strings.Builder
+
+	out.WriteString("the review asks " + strings.Join(lenses, ", ") + " for " + model)
+	if source := r.modelSource(lenses); source != "" {
+		out.WriteString(" (from " + source + ")")
+	}
+	out.WriteString(", and the host does not list it")
+	out.WriteString(r.optionsLine(model))
+	out.WriteString("; the reviewer was not started")
+
+	return out.String()
+}
+
+// optionsLine names what a human can do when a reviewer does not answer: the
+// session's model, the free names the host uses, and the three ways to switch.
+// It names them and chooses none. The ways to switch are known even when the
+// host says nothing - they are a flag, the project's file and a variable, not a
+// catalog entry -, so a failure with no host still has a way out.
+func (r *runner) optionsLine(model string) string {
+	var out strings.Builder
+
+	if session := r.hostModelFor(); session != "" && domain.ModelIdentity(session) != domain.ModelIdentity(model) {
+		out.WriteString("; the session's model is " + session)
+	}
+	catalog, known := r.hostModelsFor()
+	if known {
+		if free := freeModels(catalog); len(free) > 0 {
+			out.WriteString("; free by the host's name: " + strings.Join(free, ", "))
+		}
+		out.WriteString("; the host lists " + strconv.Itoa(len(catalog)) + " models (opencode models)")
+	}
+
+	out.WriteString("; switch with --model, " + domain.ModePath + " or ODACHI_MODEL - the tool does not switch by itself")
+	return out.String()
+}
+
+// freeModels is the host's free names. The suffix is a naming convention, not a
+// price: the tool repeats what the host calls them and claims nothing more.
+func freeModels(catalog []string) []string {
+	var free []string
+	for _, model := range catalog {
+		if strings.HasSuffix(domain.ModelIdentity(model), "-free") {
+			free = append(free, model)
+		}
+	}
+	return free
 }
 
 // validateCommand refuses a command that cannot run, before the store exists. The
@@ -735,6 +856,20 @@ func (r *runner) hostModelFor() string {
 		r.hostModel = strings.TrimSpace(r.host.Model(r.opts.Dir))
 	}
 	return r.hostModel
+}
+
+// hostModelsFor is the host's catalog, asked once: a message that names the
+// options must not pay a probe per lens, and two lenses on one model must see
+// the same list.
+func (r *runner) hostModelsFor() ([]string, bool) {
+	if r.modelsAsked {
+		return r.hostModels, r.hostModelsKnown
+	}
+	r.modelsAsked = true
+	if r.host != nil {
+		r.hostModels, r.hostModelsKnown = r.host.Models(r.opts.Dir)
+	}
+	return r.hostModels, r.hostModelsKnown
 }
 
 // lensGroup is the lenses one reviewer run covers: they share a model, so they
@@ -830,7 +965,7 @@ func (r *runner) exec() Result {
 	commands := make([]string, len(groups))
 	resolved := make([]string, len(groups))
 	for i, group := range groups {
-		command, model, problem := r.reviewerCommand(group.model)
+		command, model, problem := r.reviewerCommand(group.model, group.lenses)
 		if problem != nil {
 			return *problem
 		}
@@ -930,11 +1065,11 @@ func (r *runner) exec() Result {
 		}
 		switch {
 		case err != nil:
-			return r.stoppedWithAnswer(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error()), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error())+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		case timedOut:
-			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds)+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		case exitCode != 0:
-			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode)+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		}
 
 		answer := stdout

@@ -445,6 +445,15 @@ no model resolves, the review stops before starting the reviewer and names
 `--model`; it never picks a fallback. A command without `{model}` runs exactly as
 before, and the verdict records the command that really ran.
 
+A model the project's lens table chose is checked against the host's own list
+(`opencode models`) before the reviewer starts: a provider the host serves but a
+name it no longer lists is refused, and the refusal names the lens, the model,
+the line that chose it, the session's model, the free names the host uses and the
+three ways to switch. `--model` and the session's model are not refused - they
+are the human's and the host's own choices -, a provider the host does not know
+is left to the reviewer command, and a host that cannot answer refuses nothing.
+The tool names the options and never switches by itself.
+
 ### Choosing the model of each lens
 
 `odd/review.toml` names a model per lens, so the cheap model carries the
@@ -478,14 +487,14 @@ store under a name its own bytes decide, and the blockage names the file and
 `odachi review --attach <file>`. Repair it and attach it instead of paying for the
 same review twice.
 
-The verdict and the proof both name the model behind them. With the gate on, the
-lenses judged by the model that produced the proof are refused - `review_self`,
-a model does not judge its own tree - and the fix is `odachi review --model
-<another>`. That is **disclosure, not identity**: a model name is a declaration,
-and a declaration can be lied about. It stops the accidental self-review, which
-is the common one, and it does not replace a second person or a review app; a
-verdict with no model (a human, or one written before the field existed) is still
-valid.
+The verdict and the proof both name the model behind them. With the gate on, a
+verdict by the model that produced the proof is named as **a second reading, not
+a second opinion**: the close stays ready and says what it got. The refusal lives
+where somebody asks for it - `--require-review` refuses a self-review, and
+`odachi review waive --because "<why>"` records the human's decision that this
+feature lands without one. That is **disclosure, not identity**: a model name is
+a declaration, and a declaration can be lied about; a verdict with no model (a
+human, or one written before the field existed) is still valid.
 
 The verdict lives in the clone's store, `.git/odachi/reviews/<tree-hash>.json`, so approval cannot
 float: the file name *is* the state of the code that was approved. A causal

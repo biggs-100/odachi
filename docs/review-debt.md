@@ -9,7 +9,7 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0192, with the findings its verdict left open.
+Last written: while closing 0194, with the findings its verdict left open.
 
 ## Open
 
@@ -26,6 +26,12 @@ Last written: while closing 0192, with the findings its verdict left open.
 - **cmd/odachi/check_stream_test.go:68** - `TestTheGateStreamsOnlyToATerminal` asserts only the nil
   branch. If `streamTarget` returned nil for a terminal too, every human would lose the live copy
   and the test would stay green. The character-device branch needs a pin (0191).
+
+- **internal/app/review/review.go:783** - the preflight refusal names the free models and the size of
+  the host's catalog, not every model it serves; a human who wants the full list runs
+  `opencode models`. The brief's "the host's models" is wider than the free subset, and no test
+  asserts a listed, non-free name. The verdict approved the tree with this WARNING; the next feature
+  that touches the model message pays it (0194).
 
 ## Closed by feature 0190
 
