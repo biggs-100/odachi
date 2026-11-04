@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.7 - 2026-11-03
 
 - **The cleanup switch is not wedged by the shape of a folder.** `odachi clean --apply` refused to
   remove anything while a class it maintains held a path it could not read, and the walk's depth
