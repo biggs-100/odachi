@@ -146,6 +146,13 @@ func (osFiles) Remove(path string) error {
 	return os.Remove(path)
 }
 
+// RemoveTree empties a folder odachi wrote: the subtree goes whole, including the
+// files a report could not enumerate, which is what makes the switch work when a
+// nested repository lives inside the class.
+func (osFiles) RemoveTree(path string) error {
+	return os.RemoveAll(path)
+}
+
 // Rename moves a backup into the store without rewriting it: the file keeps its
 // bytes and its mtime, so `undo` still knows which version is the newest.
 func (osFiles) Rename(from, to string) error {

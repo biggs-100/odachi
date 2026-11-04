@@ -24,6 +24,8 @@ type fakeFiles struct {
 	broken  map[string]error
 	refuse  map[string]error
 	removed []string
+	// removedTrees is every class folder a run emptied, in order.
+	removedTrees []string
 }
 
 func newFake(seed map[string]string) *fakeFiles {
@@ -57,6 +59,12 @@ func (f *fakeFiles) brokenDir(at string, err error) *fakeFiles {
 
 // refuseRemove makes one file impossible to remove.
 func (f *fakeFiles) refuseRemove(at string, err error) *fakeFiles {
+	f.refuse[filepath.FromSlash(filepath.Join(dir, at))] = err
+	return f
+}
+
+// refuseTree makes one class folder impossible to empty.
+func (f *fakeFiles) refuseTree(at string, err error) *fakeFiles {
 	f.refuse[filepath.FromSlash(filepath.Join(dir, at))] = err
 	return f
 }
@@ -132,6 +140,23 @@ func (f *fakeFiles) Remove(path string) error {
 	}
 	delete(f.files, path)
 	f.removed = append(f.removed, path)
+	return nil
+}
+
+// RemoveTree empties a folder: every file under it goes, the ones the run never
+// enumerated included, as os.RemoveAll does.
+func (f *fakeFiles) RemoveTree(path string) error {
+	if err, ok := f.refuse[path]; ok {
+		return err
+	}
+	prefix := path + string(filepath.Separator)
+	for key := range f.files {
+		if key == path || strings.HasPrefix(key, prefix) {
+			delete(f.files, key)
+			delete(f.dates, key)
+		}
+	}
+	f.removedTrees = append(f.removedTrees, path)
 	return nil
 }
 
@@ -473,6 +498,8 @@ func TestApplyKeepsTheNewestFiveBackupsOfEachFile(t *testing.T) {
 }
 
 // The two classes with no lifetime are emptied, and the report says so.
+// TestApplyEmptiesScratchAndAnswers: a class with no lifetime is emptied as a
+// folder, and the files inside are its measured numbers.
 func TestApplyEmptiesScratchAndAnswers(t *testing.T) {
 	f := newFake(map[string]string{
 		".git/odachi/scratch/commit.md": strings.Repeat("s", 5),
@@ -484,10 +511,15 @@ func TestApplyEmptiesScratchAndAnswers(t *testing.T) {
 	if result.Code != clean.CodeOK {
 		t.Fatalf("code = %d, want %d: %s", result.Code, clean.CodeOK, result.Message)
 	}
-	if len(f.removed) != 3 {
-		t.Errorf("removed %d files, want the three of the two classes", len(f.removed))
+	if len(f.removedTrees) != 2 {
+		t.Errorf("emptied %v, want the scratch and the answers folders", f.removedTrees)
 	}
-	if !strings.Contains(result.Message, "removed 3 files") {
+	for _, gone := range []string{".git/odachi/scratch/commit.md", ".git/odachi/scratch/pr.md", ".git/odachi/answers/aaaa.json"} {
+		if f.has(gone) {
+			t.Errorf("%s survived the sweep", gone)
+		}
+	}
+	if !strings.Contains(result.Message, "emptied 2 folders and removed 3 files") {
 		t.Errorf("message = %q", result.Message)
 	}
 }
@@ -579,16 +611,18 @@ func TestApplyRefusesWhileAClassItMaintainsCannotBeRead(t *testing.T) {
 // A file that cannot be removed stops the run and names itself; the files removed
 // before it are reported as removed, because they are.
 func TestAFailedRemovalNamesTheFileAndKeepsTheCount(t *testing.T) {
-	f := newFake(map[string]string{
-		".git/odachi/scratch/commit.md": strings.Repeat("s", 5),
-		".git/odachi/scratch/pr.md":     strings.Repeat("p", 5),
-	}).refuseRemove(".git/odachi/scratch/pr.md", errors.New("access is denied"))
+	f := newFake(nil)
+	for i := 0; i < 3; i++ {
+		f.put(fmt.Sprintf(".git/odachi/reviews/tree%02d.json", i), strings.Repeat("v", 5), day(i))
+	}
+	second := ".git/odachi/reviews/tree01.json"
+	f.refuseRemove(second, errors.New("access is denied"))
 
-	result := apply(f, clean.Options{Apply: true})
+	result := apply(f, clean.Options{Apply: true, KeepVerdicts: 1})
 	if result.Code != clean.CodeBlocked {
 		t.Fatalf("code = %d, want %d", result.Code, clean.CodeBlocked)
 	}
-	if !strings.Contains(result.Message, ".git/odachi/scratch/pr.md") {
+	if !strings.Contains(result.Message, second) {
 		t.Errorf("message = %q, want it to name the file", result.Message)
 	}
 	if !strings.Contains(result.Message, "removed 1 of 2 files") {
