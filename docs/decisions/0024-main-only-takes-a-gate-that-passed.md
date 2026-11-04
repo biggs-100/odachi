@@ -68,6 +68,16 @@ owner or a hostile contributor with push access.
 - The owner can still edit the ruleset. The protection is a habit with a
   receipt, and the receipt is the JSON file.
 
+## Amendment - the macOS gate runs on an Intel image (0192, 2026-11-04)
+
+GitHub's hosted macOS arm64 pool could not acquire a runner: `gate (macos-latest)`
+was never assigned and was cancelled after 15 minutes on every attempt, so the
+required check never reported and every pull request stayed blocked. A check that
+never starts is not a gate. The macOS job now runs on `macos-15-intel`, a standard
+x64 image, and the required check is `gate (macos-15-intel)`. The workflow and
+`.github/main-ruleset.json` were renamed together, which is the rule this decision
+already carried; the four checks and the pull request requirement did not change.
+
 ## Sources
 
 - Feature 0026 and ADR 0023: the single workflow, the base ref and the four jobs.
