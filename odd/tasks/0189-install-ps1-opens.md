@@ -8,7 +8,7 @@ R1 · "install.ps1 opens with #Requires, not a byte-order mark: the documented i
 ## Done when
 
 ## Steps
-- [ ] T1 · install.ps1 opens with #Requires, not a byte-order mark: the documented irm | iex install prints no error   R1
+- [x] T1 · install.ps1 opens with #Requires, not a byte-order mark: the documented irm | iex install prints no error   R1 · tree:5222b4b765326a2c7c61d2baa35437ee3866cc47
 
 ## History
 L1 · "install.ps1 opens with #Requires, not a byte-order mark: the documented irm | iex install prints no error"
