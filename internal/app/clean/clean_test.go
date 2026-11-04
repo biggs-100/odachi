@@ -246,8 +246,8 @@ func TestAFailedReadIsNamedAndNotCountedAsEmpty(t *testing.T) {
 	if !strings.Contains(printed, ".git/odachi/backups: access is denied") {
 		t.Errorf("the report does not name the directory it could not read:\n%s", printed)
 	}
-	if !strings.Contains(result.Message, "1 path it could not read") {
-		t.Errorf("message = %q, want it to name the unreadable path", result.Message)
+	if !strings.Contains(result.Message, "cannot free anything: 1 path could not be read") {
+		t.Errorf("message = %q, want it to name the unreadable path and the blocked switch", result.Message)
 	}
 
 	for _, class := range result.Report.Classes {

@@ -249,21 +249,9 @@ func Measure(opts Options, files Files) (Growth, error) {
 		Bytes:       found.report.TotalBytes,
 		DoomedFiles: found.report.DoomedFiles,
 		DoomedBytes: found.report.DoomedBytes,
-	}
-	seen := map[string]bool{}
-	for _, class := range found.report.Classes {
-		if !class.Cleanable {
-			continue
-		}
-		for _, problem := range class.Problems {
-			// The two review classes share one walk, so the same unreadable path
-			// arrives twice: it is one path the run could not read.
-			if seen[problem] {
-				continue
-			}
-			seen[problem] = true
-			growth.Unreadable++
-		}
+		// The same list the report prints: one answer for both places, and a path
+		// the two review classes share is one path.
+		Unreadable: len(unreadable(found.report.Classes)),
 	}
 	return growth, nil
 }
@@ -484,15 +472,39 @@ func scan(opts Options, files Files) found {
 	}
 
 	seen.report.Message = summary(seen.report.TotalBytes, seen.report.TotalFiles)
-	switch {
+	// The one line says what the switch can do, not what it would do if it could:
+	// a class this verb maintains that cannot be read stops every removal, so a
+	// free promise beside it is a promise the run will refuse to keep.
+	switch blocked := unreadable(classes); {
+	case len(blocked) > 0:
+		seen.report.Message += fmt.Sprintf(" · --apply cannot free anything: %d %s could not be read",
+			len(blocked), plural2(len(blocked), "path"))
 	case seen.report.DoomedFiles > 0:
 		seen.report.Message += fmt.Sprintf(" · --apply would free %s in %d %s",
 			sizeText(seen.report.DoomedBytes), seen.report.DoomedFiles, plural(seen.report.DoomedFiles))
-	case len(seen.report.Problems) > 0:
-		seen.report.Message += fmt.Sprintf("; %d %s it could not read",
-			len(seen.report.Problems), plural2(len(seen.report.Problems), "path"))
 	}
 	return seen
+}
+
+// unreadable is every path a class this verb maintains could not read, once: the
+// two review classes share one walk, and the report and the close ask the same
+// list so they cannot disagree about the store.
+func unreadable(classes []Class) []string {
+	seen := map[string]bool{}
+	var paths []string
+	for _, class := range classes {
+		if !class.Cleanable {
+			continue
+		}
+		for _, problem := range class.Problems {
+			if seen[problem] {
+				continue
+			}
+			seen[problem] = true
+			paths = append(paths, problem)
+		}
+	}
+	return paths
 }
 
 // reviews reads the store's reviews directory once and parts it in two classes,

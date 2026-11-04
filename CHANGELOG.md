@@ -7,6 +7,16 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The cleanup switch is not wedged by the shape of a folder.** `odachi clean --apply` refused to
+  remove anything while a class it maintains held a path it could not read, and the walk's depth
+  bound counted as a read failure: a nested repository in the scratch folder made the switch
+  unusable while `clean` still said it would free 34 MB. A folder past the walk is now the class's
+  shape - counted and named, not a failure -, a class `--apply` empties is removed as a folder so
+  the subtree the walk never reached goes with it, and the report says the switch is blocked
+  instead of promising bytes. A real read failure still blocks and names the path (0188).
+
 ## v0.14.6 - 2026-11-03
 
 - **The store disposes of the question it no longer keeps.** A review filed its prompt beside the
