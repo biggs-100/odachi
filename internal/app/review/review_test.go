@@ -331,17 +331,28 @@ func (g *fakeGit) Messages(root, base string) ([]string, error) {
 	return g.messages, nil
 }
 
-// fakeHost is the Host port: the model the session says it is using, or none.
+// fakeHost is the Host port: the model the session says it is using, or none,
+// and the catalog it serves, or none.
 type fakeHost struct {
 	model string
 	asked bool
 	dir   string
+
+	models  []string
+	known   bool
+	catalog bool
 }
 
 func (h *fakeHost) Model(dir string) string {
 	h.asked = true
 	h.dir = dir
 	return h.model
+}
+
+func (h *fakeHost) Models(dir string) ([]string, bool) {
+	h.catalog = true
+	h.dir = dir
+	return h.models, h.known
 }
 
 // fakeShell is the Shell port for --exec.

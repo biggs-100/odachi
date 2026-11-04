@@ -56,6 +56,39 @@ func TestAnAnswerWithoutAModelIsNoModel(t *testing.T) {
 	}
 }
 
+// TestTheHostsModelsAreOneIdentityPerLine: `opencode models` prints one
+// provider/name per line, and a catalog is a set, not a transcript. Blanks, a
+// line without both halves and a duplicate are not models; the answer is sorted
+// so two runs say the same thing.
+func TestTheHostsModelsAreOneIdentityPerLine(t *testing.T) {
+	const printed = "opencode-go/beam-free\r\n" +
+		"  opencode-go/deepseek-v4.1-flash  \n" +
+		"\n" +
+		"not-a-model\n" +
+		"/no-provider\n" +
+		"no-name/\n" +
+		"opencode-go/beam-free\n"
+
+	got := hostmodel.ParseModels([]byte(printed))
+	want := []string{"opencode-go/beam-free", "opencode-go/deepseek-v4.1-flash"}
+	if len(got) != len(want) {
+		t.Fatalf("ParseModels = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("ParseModels = %v, want %v", got, want)
+		}
+	}
+}
+
+// TestAnEmptyCatalogIsNoCatalog: an empty answer is not a host that serves
+// nothing, and the caller must be able to tell the two apart.
+func TestAnEmptyCatalogIsNoCatalog(t *testing.T) {
+	if got := hostmodel.ParseModels(nil); len(got) != 0 {
+		t.Fatalf("ParseModels = %v, want no model", got)
+	}
+}
+
 // TestTheExportedModelWinsOverTheProbe: any host can set the variable, so the
 // contract is a name and not a vendor. With it set, odachi does not start a CLI.
 func TestTheExportedModelWinsOverTheProbe(t *testing.T) {

@@ -203,9 +203,12 @@ type Lenses interface {
 // Host is the agent odachi runs under. The one thing only it can answer is
 // which model the session is using: that identity lives in the host, not in the
 // project, and inventing one would put a name in the receipt that never ran.
-// "" means the host cannot say, and the verb decides what that costs.
+// "" means the host cannot say, and the verb decides what that costs. Models is
+// the catalog the host serves; false means it cannot say, which is not the same
+// as a host that serves nothing.
 type Host interface {
 	Model(dir string) string
+	Models(dir string) ([]string, bool)
 }
 
 // Result is what the CLI prints and exits with. It has the same shape as the
@@ -288,6 +291,12 @@ type runner struct {
 	// run as one group.
 	hostModel string
 	hostAsked bool
+	// hostModels is the catalog the host serves, asked once for the same reason.
+	// known is false when the host cannot answer, and a run that cannot name the
+	// options still names the model, the lens and the source.
+	hostModels      []string
+	hostModelsKnown bool
+	modelsAsked     bool
 	// correction is the verdict --since names, read once: it is both the tree the
 	// delta is measured from and the answer the stored verdict completes.
 	correction *domain.Verdict
@@ -735,6 +744,20 @@ func (r *runner) hostModelFor() string {
 		r.hostModel = strings.TrimSpace(r.host.Model(r.opts.Dir))
 	}
 	return r.hostModel
+}
+
+// hostModelsFor is the host's catalog, asked once: a message that names the
+// options must not pay a probe per lens, and two lenses on one model must see
+// the same list.
+func (r *runner) hostModelsFor() ([]string, bool) {
+	if r.modelsAsked {
+		return r.hostModels, r.hostModelsKnown
+	}
+	r.modelsAsked = true
+	if r.host != nil {
+		r.hostModels, r.hostModelsKnown = r.host.Models(r.opts.Dir)
+	}
+	return r.hostModels, r.hostModelsKnown
 }
 
 // lensGroup is the lenses one reviewer run covers: they share a model, so they
