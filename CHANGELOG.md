@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The documented PowerShell install prints no error.** `scripts/install.ps1` opened with a UTF-8
+  BOM, and PowerShell 5.1 reads that character as part of the first token when the file arrives
+  through `irm | iex`: `#Requires` became `?#Requires`, so the README's own command printed an error
+  and then ran anyway. The file now opens with the directive, and a test pins the bytes so an editor
+  cannot put the BOM back (0189).
+
 ## v0.14.7 - 2026-11-03
 
 - **The cleanup switch is not wedged by the shape of a folder.** `odachi clean --apply` refused to

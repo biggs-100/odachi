@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Instalador de odachi para Windows: baja el binario de una release, verifica su
@@ -17,6 +17,9 @@
     Equivalente Windows de scripts/install.sh. Los pasos son los mismos: detectar
     plataforma, resolver versión, bajar, verificar sha256, extraer, instalar y
     decir qué quedó y cómo llegar a él.
+
+    No lleva BOM: el archivo se sirve con `irm | iex`, y un BOM delante de
+    #Requires llega como `?#Requires`. El test lo fija.
 #>
 
 $ErrorActionPreference = 'Stop'
