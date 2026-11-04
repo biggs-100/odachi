@@ -12,3 +12,4 @@ R1 · "install.ps1 opens with #Requires, not a byte-order mark: the documented i
 
 ## History
 L1 · "install.ps1 opens with #Requires, not a byte-order mark: the documented irm | iex install prints no error"
+L2 · OFICIO · "install.ps1 is served without a BOM: the documented irm | iex path decodes UTF-8 and prints the messages right, and PowerShell 5.1 reading the file from disk pays with ANSI-decoded accents" (porque the command the README teaches is the one a user runs, and a first line that errors teaches them to ignore errors; the direct-file path is undocumented and still runs)
