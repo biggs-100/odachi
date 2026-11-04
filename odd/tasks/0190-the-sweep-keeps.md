@@ -8,7 +8,7 @@ R1 · "the sweep keeps every prompt when a ModTime fails, and names the count wh
 ## Done when
 
 ## Steps
-- [ ] T1 · the sweep keeps every prompt when a ModTime fails, and names the count when a Remove fails   R1
+- [x] T1 · the sweep keeps every prompt when a ModTime fails, and names the count when a Remove fails   R1 · tree:a5b07a8d2d11d01b7393ca4711e8ceb2b2297d80
 
 ## History
 L1 · "the sweep keeps every prompt when a ModTime fails, and names the count when a Remove fails"
