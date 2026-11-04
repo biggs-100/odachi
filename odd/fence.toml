@@ -11,10 +11,7 @@ not   = "no change to what proof/ and odd/tasks are: never touched"
 paths = ["proof/**"]
 deps  = []
 
-# The retention is the project's decision and the survival rule is 0188's: this
-# feature changes how a stream reaches a human and how a timeout ends a run,
-# never which files survive.
-[[rule]]
-not   = "no change to the retention numbers or which trees survive"
-paths = ["odd/review.toml", "internal/domain/review/cleanup.go"]
-deps  = []
+# The retention rule left with 0193. It protected odd/review.toml, where the
+# review's model policy lives, so it refused every change to [lenses]. A fence
+# protects files, not sections: retention cannot be fenced without fencing the
+# model with it.
