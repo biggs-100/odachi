@@ -99,6 +99,9 @@ type Files interface {
 	Size(path string) (int64, error)
 	ModTime(path string) (time.Time, error)
 	Remove(path string) error
+	// RemoveTree empties one folder odachi wrote, with the files the walk could
+	// not enumerate inside it. A class with no lifetime is a folder, not a list.
+	RemoveTree(path string) error
 }
 
 // Class is one kind of file a clone accumulates.
@@ -124,6 +127,10 @@ type Class struct {
 	// empty directory, and a class that lies about its size is worse than a
 	// class that says it could not see.
 	Problems []string `json:"unreadable,omitempty"`
+	// Beyond is how many folders this class left out because they sit deeper than
+	// the walk looks. It is the class's shape and not a failure: a tree has no
+	// promise of an end, and a folder past the bottom does not stop `--apply`.
+	Beyond int `json:"beyond,omitempty"`
 }
 
 // Report is the map a human reads and a machine consumes.
@@ -184,14 +191,17 @@ func (r Report) Lines() []string {
 func (c Class) Line(applied bool) string {
 	row := fmt.Sprintf("  %-20s %-18s %4d %-6s %9s  %s",
 		c.Name, c.Owner, c.Files, plural(c.Files), sizeText(c.Bytes), c.Action)
-	if c.Doomed == 0 {
-		return row
+	if c.Doomed > 0 {
+		verb := "would go"
+		if applied {
+			verb = "removed"
+		}
+		row += " · " + strconv.Itoa(c.Doomed) + " " + plural(c.Doomed) + " " + verb
 	}
-	verb := "would go"
-	if applied {
-		verb = "removed"
+	if c.Beyond > 0 {
+		row += " · " + strconv.Itoa(c.Beyond) + " " + plural2(c.Beyond, "folder") + " beyond the shape"
 	}
-	return row + " · " + strconv.Itoa(c.Doomed) + " " + plural(c.Doomed) + " " + verb
+	return row
 }
 
 // Growth is what a close names about the store: the size of the classes odachi
@@ -239,21 +249,9 @@ func Measure(opts Options, files Files) (Growth, error) {
 		Bytes:       found.report.TotalBytes,
 		DoomedFiles: found.report.DoomedFiles,
 		DoomedBytes: found.report.DoomedBytes,
-	}
-	seen := map[string]bool{}
-	for _, class := range found.report.Classes {
-		if !class.Cleanable {
-			continue
-		}
-		for _, problem := range class.Problems {
-			// The two review classes share one walk, so the same unreadable path
-			// arrives twice: it is one path the run could not read.
-			if seen[problem] {
-				continue
-			}
-			seen[problem] = true
-			growth.Unreadable++
-		}
+		// The same list the report prints: one answer for both places, and a path
+		// the two review classes share is one path.
+		Unreadable: len(unreadable(found.report.Classes)),
 	}
 	return growth, nil
 }
@@ -303,9 +301,21 @@ func apply(opts Options, files Files) Result {
 
 	removed := 0
 	freed := int64(0)
+	emptied := 0
+	for _, root := range found.trees {
+		if err := files.RemoveTree(root); err != nil {
+			report.Applied = emptied > 0 || removed > 0
+			report.Message = fmt.Sprintf("emptied %d %s and removed %d %s before %s could not be emptied: %s",
+				emptied, plural2(emptied, "folder"), removed, plural(removed),
+				label(opts.Dir, root), oneLine(err.Error()))
+			return Result{Code: CodeBlocked, Message: report.Message, Lines: report.Lines(), Report: report}
+		}
+		emptied++
+	}
+
 	for _, at := range found.doomed {
 		if err := files.Remove(at); err != nil {
-			report.Applied = removed > 0
+			report.Applied = emptied > 0 || removed > 0
 			report.Message = fmt.Sprintf("removed %d of %d files before %s could not be removed: %s",
 				removed, len(found.doomed), label(opts.Dir, at), oneLine(err.Error()))
 			return Result{Code: CodeBlocked, Message: report.Message, Lines: report.Lines(), Report: report}
@@ -313,13 +323,26 @@ func apply(opts Options, files Files) Result {
 		removed++
 		freed += found.sizes[at]
 	}
+	removed += found.treeFiles
+	freed += found.treeBytes
 
-	report.Applied = removed > 0
+	report.Applied = removed > 0 || emptied > 0
 	report.Message = summary(report.TotalBytes, report.TotalFiles)
-	if removed > 0 {
+	switch {
+	case emptied > 0 && removed > 0:
+		report.Message += fmt.Sprintf(" · emptied %d %s and removed %d %s, %s freed",
+			emptied, plural2(emptied, "folder"), removed, plural(removed), sizeText(freed))
+	case emptied > 0:
+		report.Message += fmt.Sprintf(" · emptied %d %s, %s freed",
+			emptied, plural2(emptied, "folder"), sizeText(freed))
+	case removed > 0:
 		report.Message += fmt.Sprintf(" · removed %d %s, %s freed", removed, plural(removed), sizeText(freed))
-	} else {
+	default:
 		report.Message += " · nothing to remove"
+	}
+	if emptied > 0 && found.treeBeyond > 0 {
+		report.Message += fmt.Sprintf(" · %d %s beyond the shape went with them",
+			found.treeBeyond, plural2(found.treeBeyond, "folder"))
 	}
 	return Result{Code: CodeOK, Message: report.Message, Lines: report.Lines(), Report: report}
 }
@@ -329,6 +352,12 @@ type found struct {
 	report Report
 	doomed []string
 	sizes  map[string]int64
+	// trees are the class folders --apply empties whole, and the measured numbers
+	// and shape edges that go with them.
+	trees      []string
+	treeFiles  int
+	treeBytes  int64
+	treeBeyond int
 }
 
 // The owners. They are words a human reads, so they are spelled once.
@@ -443,15 +472,39 @@ func scan(opts Options, files Files) found {
 	}
 
 	seen.report.Message = summary(seen.report.TotalBytes, seen.report.TotalFiles)
-	switch {
+	// The one line says what the switch can do, not what it would do if it could:
+	// a class this verb maintains that cannot be read stops every removal, so a
+	// free promise beside it is a promise the run will refuse to keep.
+	switch blocked := unreadable(classes); {
+	case len(blocked) > 0:
+		seen.report.Message += fmt.Sprintf(" · --apply cannot free anything: %d %s could not be read",
+			len(blocked), plural2(len(blocked), "path"))
 	case seen.report.DoomedFiles > 0:
 		seen.report.Message += fmt.Sprintf(" · --apply would free %s in %d %s",
 			sizeText(seen.report.DoomedBytes), seen.report.DoomedFiles, plural(seen.report.DoomedFiles))
-	case len(seen.report.Problems) > 0:
-		seen.report.Message += fmt.Sprintf("; %d %s it could not read",
-			len(seen.report.Problems), plural2(len(seen.report.Problems), "path"))
 	}
 	return seen
+}
+
+// unreadable is every path a class this verb maintains could not read, once: the
+// two review classes share one walk, and the report and the close ask the same
+// list so they cannot disagree about the store.
+func unreadable(classes []Class) []string {
+	seen := map[string]bool{}
+	var paths []string
+	for _, class := range classes {
+		if !class.Cleanable {
+			continue
+		}
+		for _, problem := range class.Problems {
+			if seen[problem] {
+				continue
+			}
+			seen[problem] = true
+			paths = append(paths, problem)
+		}
+	}
+	return paths
 }
 
 // reviews reads the store's reviews directory once and parts it in two classes,
@@ -537,11 +590,20 @@ func (f *found) backups(files Files, opts Options) Class {
 	return f.keepVersions(class, root, byArtifact, KeepBackups)
 }
 
-// everything is a class with no lifetime at all: --apply empties it.
+// everything is a class with no lifetime at all: --apply empties the folder, so
+// the measured files are its numbers and the subtree beyond the walk goes with
+// it. A folder that does not exist has nothing to empty and is not counted.
 func (f *found) everything(files Files, opts Options, class Class, root string) Class {
 	class, entries := gather(files, opts.Dir, class, root, scanRule{})
 	for _, item := range entries {
-		class = f.doom(class, root, item)
+		class.Doomed++
+		class.Dead += item.size
+		f.treeFiles++
+		f.treeBytes += item.size
+	}
+	if exists, err := files.Exists(root); err == nil && exists {
+		f.trees = append(f.trees, root)
+		f.treeBeyond += class.Beyond
 	}
 	return class
 }
@@ -638,8 +700,9 @@ func (f *found) doom(class Class, root string, item entry) Class {
 // file it could not.
 func gather(files Files, dir string, class Class, root string, rule scanRule) (Class, []entry) {
 	class.Path = label(dir, root)
-	names, problems := walk(files, dir, root, rule)
+	names, problems, beyond := walk(files, dir, root, rule)
 	class.Problems = problems
+	class.Beyond = beyond
 
 	entries := make([]entry, 0, len(names))
 	for _, rel := range names {
@@ -744,11 +807,14 @@ func (r scanRule) leavesOutDir(name string) bool {
 }
 
 // walk lists every file under root, relative to it and with forward slashes. A
-// directory that cannot be read is a problem, never an empty answer.
-func walk(files Files, dir, root string, rule scanRule) ([]string, []string) {
+// directory that cannot be read is a problem, never an empty answer; a directory
+// past the walk's bottom is beyond the shape, and the caller counts it instead of
+// calling it a failure.
+func walk(files Files, dir, root string, rule scanRule) ([]string, []string, int) {
 	var (
 		names    []string
 		problems []string
+		beyond   int
 	)
 
 	var visit func(rel string, depth int)
@@ -780,7 +846,10 @@ func walk(files Files, dir, root string, rule scanRule) ([]string, []string) {
 			}
 			if isDir {
 				if depth+1 >= maxDepth {
-					problems = append(problems, label(dir, full)+": deeper than "+strconv.Itoa(maxDepth)+" levels, not read")
+					// The depth is the class's shape, not a read failure: the walk
+					// promises a bottom, and a folder past it is counted, never
+					// mistaken for a directory that refused to open.
+					beyond++
 					continue
 				}
 				visit(child, depth+1)
@@ -793,7 +862,7 @@ func walk(files Files, dir, root string, rule scanRule) ([]string, []string) {
 		}
 	}
 	visit("", 0)
-	return names, problems
+	return names, problems, beyond
 }
 
 // label names a path the way the human reads it: relative to the project when it
