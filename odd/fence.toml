@@ -11,16 +11,9 @@ not   = "a stored proof is never rewritten, whatever the writer learns"
 paths = ["proof/**"]
 deps  = []
 
-# The question a reviewer reads is the bytes it was paid for: the cleanup may
-# decide which prompt files survive, never what one says.
+# The retention is the project's decision and the survival rule is 0187's: this
+# feature changes how a class is removed, never which files survive.
 [[rule]]
-not   = "no change to the bytes of a verdict or of a prompt"
-paths = ["internal/domain/review/prompt.go"]
-deps  = []
-
-# The lifetimes are the project's decisions, so the feature that obeys them must
-# not edit them: a number changed here would hide whether the code reads it.
-[[rule]]
-not   = "the retention is the project's decision, not this feature's"
-paths = ["odd/review.toml"]
+not   = "no change to the retention numbers or which trees survive"
+paths = ["odd/review.toml", "internal/domain/review/cleanup.go"]
 deps  = []

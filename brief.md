@@ -1,24 +1,25 @@
-# the-store-prunes
+# the-cleanup-switch
 
 ## What must exist
-- the store prunes what it can regenerate and names what it keeps: a stored verdict disposes of the prompts and scaffolding its keep_prompts stopped keeping, a ready close names the store size and what clean --apply would free, and one ADR says which evidence odachi never bounds
+- the cleanup switch cannot be wedged by the shape of a folder: a path beyond the walk names itself as outside the shape and does not block --apply, a class --apply empties is removed as a tree, and the report never promises bytes the switch refuses to free
 
 ## Done when
-- with keep_prompts = 0 a stored verdict leaves no prompt of its tree in the store, and the verdict is stored
-- with keep_prompts = 1 the newest tree keeps its prompt when its verdict is stored, and an older tree does not
-- a review that gets no verdict removes nothing, because there is nothing stored
-- a ready close prints one line with the store size and what clean --apply would free, and the gate answer and exit code do not change
-- an ADR records that proof/ and odd/tasks are never bounded by odachi, and clean keeps its owner lines
-- the suite pins every one of them and go test ./... is green
+- a folder deeper than the walk is counted as outside the shape, not as unreadable, and it does not block --apply
+- a real read failure still blocks every removal and names the path
+- apply empties scratch and scaffolding as folders, so a subtree the walk never enumerated goes with them
+- a lifetime class -records, prompts, backups- is still removed file by file
+- the clean report says the switch is blocked when it is, instead of promising bytes it will refuse to free
+- a close store line and the report agree: only a real read failure blocks
+- odachi clean --apply empties this clone store and frees the bytes it promised, and go test ./... is green
 
 ## Not included (first version)
-- no change to the bytes of a verdict or of a prompt
-- the close never deletes: clean --apply keeps the switch
-- no automatic bounding of proof/ or odd/tasks
+- no change to what proof/ and odd/tasks are: never touched
+- no change to the retention numbers or which trees survive
 - no new verb and no new flag
+- no deletion outside the classes odachi wrote
 
 ## Decisions taken
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: why an artifact a machine can regenerate is not evidence, and why the evidence is the one thing never bounded.
+- Wants to learn: why a safety rule that blocks the switch it protects has stopped being safe.
