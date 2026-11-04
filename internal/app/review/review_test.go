@@ -71,6 +71,12 @@ type fakeFiles struct {
 	// failList counts and can fail a listing, so a test can reach the drop of the
 	// refused answers without breaking the read of the potent rows before it.
 	failList func(dir string) error
+	// failModTime fails ModTime for one path only, so a test can reach the sweep's
+	// refusal to prune without breaking the listing before it.
+	failModTime func(path string) error
+	// failRemove fails Remove for one path only, so a test can stop the sweep in
+	// the middle and read what it says it did.
+	failRemove func(path string) error
 	// failRead fails Read for one path only, so a test can reach a document that
 	// exists and cannot be read without breaking everything else the run reads.
 	failRead func(path string) error
@@ -188,6 +194,11 @@ func (f *fakeFiles) Remove(path string) error {
 	if f.err != nil {
 		return f.err
 	}
+	if f.failRemove != nil {
+		if err := f.failRemove(path); err != nil {
+			return err
+		}
+	}
 	delete(f.files, path)
 	delete(f.times, path)
 	return nil
@@ -199,6 +210,11 @@ func (f *fakeFiles) Remove(path string) error {
 func (f *fakeFiles) ModTime(path string) (time.Time, error) {
 	if f.err != nil {
 		return time.Time{}, f.err
+	}
+	if f.failModTime != nil {
+		if err := f.failModTime(path); err != nil {
+			return time.Time{}, err
+		}
 	}
 	if _, ok := f.files[path]; !ok {
 		return time.Time{}, errors.New("missing file: " + path)

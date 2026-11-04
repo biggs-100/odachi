@@ -1,6 +1,7 @@
 package review_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -99,6 +100,82 @@ func TestAReviewThatGetsNoVerdictKeepsItsQuestion(t *testing.T) {
 	}
 	if prompts := storePrompts(p); len(prompts) != 1 {
 		t.Fatalf("the failed run kept %v, want its one question", prompts)
+	}
+}
+
+// TestTheSweepKeepsEveryPromptWhenASizeCannotBeRead: the retention orders what
+// it can read. When one ModTime fails the sweep prunes nothing and names the
+// file, because a question removed on a guess costs a paid answer while a prompt
+// left behind costs a file.
+func TestTheSweepKeepsEveryPromptWhenASizeCannotBeRead(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = verdictAnswer
+
+	oldTree := strings.Repeat("b", 40)
+	p.files.seedStore(domainreview.Dir+"/"+oldTree+".prompt.md", "the old question", now.Add(-48*time.Hour))
+	unreadable := storeFile(domainreview.Dir + "/" + oldTree + ".prompt.md")
+	p.files.failModTime = func(path string) error {
+		if path == unreadable {
+			return errors.New("permission denied")
+		}
+		return nil
+	}
+
+	result := p.run(review.Options{Exec: "revisor --model {model}"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("a size nobody could read blocked the verdict: code = %d (%s)", result.Code, result.Message)
+	}
+
+	joined := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"the prompts stayed", "could not read", oldTree + ".prompt.md", "permission denied"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the note does not name %q:\n%s", want, joined)
+		}
+	}
+	if _, ok := p.files.files[unreadable]; !ok {
+		t.Errorf("the prompt whose size nobody read was removed: a failed read is never a reason to delete a question")
+	}
+	if prompts := storePrompts(p); len(prompts) != 2 {
+		t.Errorf("prompts = %v, want the old question and this run's", prompts)
+	}
+}
+
+// TestAMidSweepRemovalNamesWhatWentAndWhatStayed: a removal that fails stops the
+// sweep and keeps the file. The verdict already landed, so the note is the only
+// place where a half-done sweep is visible, and it has to say the arithmetic
+// instead of promising a store it did not leave.
+func TestAMidSweepRemovalNamesWhatWentAndWhatStayed(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = verdictAnswer
+
+	oldTree := strings.Repeat("b", 40)
+	p.files.seedStore(domainreview.Dir+"/"+oldTree+".prompt.md", "the old question", now.Add(-48*time.Hour))
+	doomed := storeFile(domainreview.Dir + "/" + oldTree + ".prompt.md")
+	p.files.failRemove = func(path string) error {
+		if path == doomed {
+			return errors.New("permission denied")
+		}
+		return nil
+	}
+
+	result := p.run(review.Options{Exec: "revisor --model {model}"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("a failed removal blocked the verdict: code = %d (%s)", result.Code, result.Message)
+	}
+
+	joined := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"disposed of 1 prompt and kept 1", oldTree + ".prompt.md", "permission denied"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the note does not name %q:\n%s", want, joined)
+		}
+	}
+	if _, ok := p.files.files[doomed]; !ok {
+		t.Errorf("the prompt the sweep could not remove is gone")
+	}
+	if _, ok := p.files.files[storeFile(domainreview.Dir+"/"+currentTree+".prompt.md")]; ok {
+		t.Errorf("the first prompt the sweep removed is still there: the note says one went")
 	}
 }
 
