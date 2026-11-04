@@ -9,15 +9,9 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0191, with the findings its verdict left open.
+Last written: while closing 0192, with the findings its verdict left open.
 
 ## Open
-
-- **internal/app/review/review.go:2159** - the two failure branches of `prunePrompts` are
-  unpinned: a `ModTime` that fails names the file and keeps every prompt, and a mid-sweep
-  `Remove` reports how many went and how many stayed. The fake's single `err` field gates `List`
-  and `Remove` together, so "the listing answers and the removal fails" cannot be expressed; the
-  next feature that touches the store's sweep pays it with a `failRemove` and the two tests.
 
 - **internal/adapters/shellcmd/shellcmd_windows.go:35** - `killTree` discards taskkill's result and
   returns only `Process.Kill`. A missing or policy-blocked taskkill kills cmd.exe alone and leaves
@@ -32,6 +26,22 @@ Last written: while closing 0191, with the findings its verdict left open.
 - **cmd/odachi/check_stream_test.go:68** - `TestTheGateStreamsOnlyToATerminal` asserts only the nil
   branch. If `streamTarget` returned nil for a terminal too, every human would lose the live copy
   and the test would stay green. The character-device branch needs a pin (0191).
+
+## Closed by feature 0190
+
+### the two failure branches of the sweep had no test
+
+Found while closing 0187 (suggestion, `internal/app/review/review.go:2159`). `prunePrompts`
+keeps every prompt when a `ModTime` fails and reports what a mid-sweep `Remove` removed and
+kept, but no test exercised either branch, and the fake's single `err` field gated the listing
+and the removal together.
+
+Closed: `TestTheSweepKeepsEveryPromptWhenASizeCannotBeRead` and
+`TestAMidSweepRemovalNamesWhatWentAndWhatStayed`, with `failModTime` and `failRemove` on the
+fake. Both were observed red by disabling their branch: the first left only the unreadable
+prompt, the second left the file and said nothing. The verdict approved the tree with one
+WARNING about the first test; it was verified false with the same mutation, because the run's
+own prompt is the second, readable, prunable one.
 
 ## Closed by feature 0184
 
