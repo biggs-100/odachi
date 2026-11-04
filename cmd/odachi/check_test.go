@@ -91,9 +91,9 @@ func closeFeature(t *testing.T, dir string) {
 	}.Render())
 }
 
-// TestCheckRunStreamsToStderrAndKeepsTheJSONClean: the output of the proof
-// command reaches the human while it runs, on stderr, so a caller parsing --json
-// on stdout still gets one document and nothing else.
+// TestCheckRunKeepsTheJSONCleanAndTheProofWhole: the proof keeps the command's
+// output, and stdout stays clean for --json so a caller parsing it gets one
+// document and nothing else.
 func TestCheckRunKeepsTheJSONCleanAndTheProofWhole(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

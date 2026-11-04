@@ -765,7 +765,7 @@ func (r *runner) notServedLine(lenses []string, model string) string {
 }
 
 // optionsLine names what a human can do when a reviewer does not answer: the
-// session's model, the free names the host uses, and the three ways to switch.
+// session's model, the models the host serves, and the three ways to switch.
 // It names them and chooses none. The ways to switch are known even when the
 // host says nothing - they are a flag, the project's file and a variable, not a
 // catalog entry -, so a failure with no host still has a way out.
@@ -777,26 +777,13 @@ func (r *runner) optionsLine(model string) string {
 	}
 	catalog, known := r.hostModelsFor()
 	if known {
-		if free := freeModels(catalog); len(free) > 0 {
-			out.WriteString("; free by the host's name: " + strings.Join(free, ", "))
+		if len(catalog) > 0 {
+			out.WriteString("; the host serves: " + strings.Join(catalog, ", "))
 		}
-		out.WriteString("; the host lists " + strconv.Itoa(len(catalog)) + " models (opencode models)")
 	}
 
 	out.WriteString("; switch with --model, " + domain.ModePath + " or ODACHI_MODEL - the tool does not switch by itself")
 	return out.String()
-}
-
-// freeModels is the host's free names. The suffix is a naming convention, not a
-// price: the tool repeats what the host calls them and claims nothing more.
-func freeModels(catalog []string) []string {
-	var free []string
-	for _, model := range catalog {
-		if strings.HasSuffix(domain.ModelIdentity(model), "-free") {
-			free = append(free, model)
-		}
-	}
-	return free
 }
 
 // validateCommand refuses a command that cannot run, before the store exists. The
