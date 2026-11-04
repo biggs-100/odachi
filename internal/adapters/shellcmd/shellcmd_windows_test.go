@@ -49,6 +49,25 @@ func TestRunTimesOutInsteadOfHanging(t *testing.T) {
 	}
 }
 
+// TestRunATimeoutKillsTheWholeTree: `start /b` leaves a child that outlives a
+// kill of cmd.exe alone; it would write after the timeout. taskkill /T must end
+// the whole tree, not only the shell.
+func TestRunATimeoutKillsTheWholeTree(t *testing.T) {
+	dir := t.TempDir()
+	command := `start /b cmd /c "ping -n 3 127.0.0.1 >nul & echo late>late.txt" & ping -n 10 127.0.0.1 >nul`
+	_, _, _, timedOut, err := shellcmd.Run(dir, command, 1)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !timedOut {
+		t.Fatal("Run did not report the timeout")
+	}
+	time.Sleep(4 * time.Second)
+	if _, err := os.Stat(filepath.Join(dir, "late.txt")); err == nil {
+		t.Fatal("the grandchild outlived the timeout and wrote its file")
+	}
+}
+
 // The prompt reaches the reviewer as its stdin, because a reviewer that reads
 // stdin needs no quoting and no knowledge of the human's shell.
 func TestRunInputFeedsThePromptOnStdin(t *testing.T) {

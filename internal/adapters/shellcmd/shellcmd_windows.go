@@ -5,6 +5,7 @@ package shellcmd
 import (
 	"context"
 	"os/exec"
+	"strconv"
 	"syscall"
 )
 
@@ -22,6 +23,18 @@ func newCommand(ctx context.Context, dir, command string) (*exec.Cmd, error) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{CmdLine: `/s /c "` + command + `"`}
 	cmd.Dir = dir
 	return cmd, nil
+}
+
+// killTree ends cmd.exe and every process it started. Windows has no process
+// group to signal: taskkill /T walks the tree, and /F is because a timeout is not
+// a request. Killing cmd alone leaves the command's children writing to a pipe
+// nobody reads.
+func killTree(cmd *exec.Cmd) error {
+	if cmd.Process == nil {
+		return nil
+	}
+	_ = exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
+	return cmd.Process.Kill()
 }
 
 // quotePath makes one cmd argument out of a path. Double quotes are enough: a
