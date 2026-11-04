@@ -13,9 +13,11 @@ keep_verdicts = 10
 keep_prompts = 0
 
 [lenses]
-risk = "opencode-go/mimo-v2.6-flash"
-readability = "opencode-go/mimo-v2.6-flash"
-reliability = "opencode-go/mimo-v2.6-flash"
-resilience = "opencode-go/mimo-v2.6-flash"
+# measured 2026-11-04: mimo-v2.6-flash stalled twice (0190 and 0192) and DeepSeek
+# answered both in seconds; the identity is the model, the variant is the effort
+risk = "opencode-go/deepseek-v4.1-flash"
+readability = "opencode-go/deepseek-v4.1-flash"
+reliability = "opencode-go/deepseek-v4.1-flash"
+resilience = "opencode-go/deepseek-v4.1-flash"
 
 
