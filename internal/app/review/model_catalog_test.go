@@ -1,6 +1,7 @@
 package review_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -106,6 +107,63 @@ func TestAHostThatCannotListItsModelsDoesNotRefuse(t *testing.T) {
 	}
 	if !p.shell.asked {
 		t.Errorf("the reviewer never ran when the host could not list its models")
+	}
+}
+
+// TestAFailedReviewerNamesTheOptions: the preflight cannot see a model that is
+// listed and still does not answer. The three ways a reviewer fails after it
+// started -could not run, timeout, non-zero exit- name the same options the
+// refusal names, so the human does not have to read the store to find a way out.
+func TestAFailedReviewerNamesTheOptions(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(p *project)
+	}{
+		{name: "could not run", setup: func(p *project) { p.shell.err = errors.New("no such executable") }},
+		{name: "timeout", setup: func(p *project) { p.shell.timedOut = true }},
+		{name: "non-zero exit", setup: func(p *project) { p.shell.exitCode = 1; p.shell.stderr = "error: model not found" }},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := newProject()
+			p.host.model = "opencode-go/deepseek-v4.1-flash#max"
+			p.host.models = []string{
+				"opencode-go/beam-free",
+				"opencode-go/deepseek-v4.1-flash",
+				"opencode/deepseek-v4.1-flash-free",
+			}
+			p.host.known = true
+			c.setup(p)
+
+			result := p.run(review.Options{
+				Exec:       "revisor --model {model}",
+				Lens:       "risk",
+				Because:    "the test pins a failure after the preflight",
+				LensModels: map[string]string{"risk": "opencode-go/beam-free"},
+			})
+
+			if result.Code == review.CodeOK {
+				t.Fatalf("a failed reviewer answered ready: %s", result.Message)
+			}
+			if !p.shell.asked {
+				t.Fatalf("the reviewer never ran: the preflight refused a listed model")
+			}
+
+			joined := result.Message + "\n" + strings.Join(result.Lines, "\n")
+			for _, want := range []string{
+				"risk",
+				"opencode-go/beam-free",
+				"from odd/review.toml",
+				"the session's model is opencode-go/deepseek-v4.1-flash#max",
+				"opencode/deepseek-v4.1-flash-free",
+				"does not switch by itself",
+			} {
+				if !strings.Contains(joined, want) {
+					t.Errorf("the failure does not carry %q:\n%s", want, joined)
+				}
+			}
+		})
 	}
 }
 

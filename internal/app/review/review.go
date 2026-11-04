@@ -743,14 +743,14 @@ func (r *runner) modelNotServed(model string, lenses []string) *Result {
 		return nil
 	}
 
-	res := blocked(r.notServedLine(lenses, model, catalog))
+	res := blocked(r.notServedLine(lenses, model))
 	return &res
 }
 
 // notServedLine names what a human needs to fix the line: the lens, the model,
-// the line that chose it, the session's model, the free models by the host's own
-// name, and the three ways to switch. It never switches by itself.
-func (r *runner) notServedLine(lenses []string, model string, catalog []string) string {
+// the line that chose it, and the same options a failed reviewer names. It never
+// switches by itself.
+func (r *runner) notServedLine(lenses []string, model string) string {
 	var out strings.Builder
 
 	out.WriteString("the review asks " + strings.Join(lenses, ", ") + " for " + model)
@@ -758,16 +758,33 @@ func (r *runner) notServedLine(lenses []string, model string, catalog []string) 
 		out.WriteString(" (from " + source + ")")
 	}
 	out.WriteString(", and the host does not list it")
+	out.WriteString(r.optionsLine(model))
+	out.WriteString("; the reviewer was not started")
+
+	return out.String()
+}
+
+// optionsLine names what a human can do when a reviewer does not answer: the
+// session's model, the free names the host uses, and the three ways to switch.
+// It names them and chooses none. Empty when the tool knows nothing to offer.
+func (r *runner) optionsLine(model string) string {
+	var out strings.Builder
+
 	if session := r.hostModelFor(); session != "" && domain.ModelIdentity(session) != domain.ModelIdentity(model) {
 		out.WriteString("; the session's model is " + session)
 	}
-	if free := freeModels(catalog); len(free) > 0 {
-		out.WriteString("; free by the host's name: " + strings.Join(free, ", "))
+	catalog, known := r.hostModelsFor()
+	if known {
+		if free := freeModels(catalog); len(free) > 0 {
+			out.WriteString("; free by the host's name: " + strings.Join(free, ", "))
+		}
+		out.WriteString("; the host lists " + strconv.Itoa(len(catalog)) + " models (opencode models)")
 	}
-	out.WriteString("; the host lists " + strconv.Itoa(len(catalog)) + " models (opencode models)")
-	out.WriteString("; switch with --model, " + domain.ModePath + " or ODACHI_MODEL - the tool does not switch by itself")
-	out.WriteString("; the reviewer was not started")
+	if out.Len() == 0 {
+		return ""
+	}
 
+	out.WriteString("; switch with --model, " + domain.ModePath + " or ODACHI_MODEL - the tool does not switch by itself")
 	return out.String()
 }
 
@@ -1049,11 +1066,11 @@ func (r *runner) exec() Result {
 		}
 		switch {
 		case err != nil:
-			return r.stoppedWithAnswer(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error()), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error())+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		case timedOut:
-			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds)+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		case exitCode != 0:
-			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
+			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode)+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(covered), selected, todo, landed)
 		}
 
 		answer := stdout
