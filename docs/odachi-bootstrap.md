@@ -425,7 +425,7 @@ odachi version      lo mismo (el humano lo va a tipear)
 ### `.github/workflows/ci.yml`
 
 - `push` y `pull_request`.
-- `test`: matriz `ubuntu-latest`, `macos-latest`, `windows-latest` → `go test ./...`; en ubuntu además `go vet ./...` y `gofmt -l .` (falla si imprime algo).
+- `test`: matriz `ubuntu-latest`, `macos-15-intel`, `windows-latest` → `go test ./...`; en ubuntu además `go vet ./...` y `gofmt -l .` (falla si imprime algo).
 - `race`: ubuntu → `go test -race ./internal/...`.
 - `build`: `go build ./...`.
 - `release-check`: ubuntu → `goreleaser/goreleaser-action` con `args: check` (valida la config, no publica).
