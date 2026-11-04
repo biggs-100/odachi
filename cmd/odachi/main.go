@@ -561,8 +561,10 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	if opts.Run != "" {
 		opts.Model = hostModel{}.Model(dir)
 		// The proof's output reaches the human while the command runs: a lock is a
-		// silence no report can explain after the fact.
-		opts.Out = stderr
+		// silence no report can explain after the fact. Only a terminal can take
+		// that stream: a pipe nobody drains blocks the command writing to it, and
+		// the proof keeps every byte either way.
+		opts.Out = streamTarget(stderr)
 	}
 	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
 }
@@ -1917,6 +1919,25 @@ func isTerminal(in io.Reader) bool {
 		return false
 	}
 	return info.Mode()&os.ModeCharDevice != 0
+}
+
+// streamTarget is the writer a run streams to, or nil when the writer is not a
+// terminal. A pipe nobody drains fills and blocks the command writing to it; the
+// proof already keeps both streams, so the live copy is a courtesy a terminal
+// can accept and a pipe cannot.
+func streamTarget(w io.Writer) io.Writer {
+	file, ok := w.(*os.File)
+	if !ok {
+		return nil
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return nil
+	}
+	if info.Mode()&os.ModeCharDevice == 0 {
+		return nil
+	}
+	return w
 }
 
 // stringList is a repeatable string flag: --done a --done b.
