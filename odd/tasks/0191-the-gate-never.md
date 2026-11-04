@@ -12,8 +12,8 @@ R1 · "the gate never waits on a stream nobody reads, and a timeout leaves no pr
 - go test ./... is green
 
 ## Steps
-- [ ] T1 · the mirror only streams to a terminal, so a pipe nobody drains cannot block the run   R1 · route:inline
-- [ ] T2 · a timeout kills the whole process tree, so no child outlives the run   R1 · route:inline
+- [x] T1 · the mirror only streams to a terminal, so a pipe nobody drains cannot block the run   R1 · route:inline · tree:16084f5035bced328de979ec032d330b7cc4ea95
+- [x] T2 · a timeout kills the whole process tree, so no child outlives the run   R1 · route:inline · tree:519db77f257e20355979e80a764b1498bba23961
 
 ## History
 L1 · "the gate never waits on a stream nobody reads, and a timeout leaves no process behind"
