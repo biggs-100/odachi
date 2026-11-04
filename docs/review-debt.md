@@ -9,29 +9,37 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0194, with the findings its verdict left open.
+Last written: while closing 0196, which paid the rows 0191 and 0194 left open.
 
 ## Open
 
-- **internal/adapters/shellcmd/shellcmd_windows.go:35** - `killTree` discards taskkill's result and
-  returns only `Process.Kill`. A missing or policy-blocked taskkill kills cmd.exe alone and leaves
-  the grandchild alive, and the run reports a clean timeout: exactly the orphan this change exists
-  to prevent. The tree-walk failure has to be visible, and pinned by a test where taskkill cannot
-  run (0191).
+Nothing open: the rows 0191 and 0194 left are closed below.
 
-- **cmd/odachi/check_test.go:95** - the comment above the renamed JSON test still says the
-  command's output reaches the human on stderr; the test now asserts the proof keeps it and stdout
-  stays clean. The comment describes behaviour the gate no longer has for a piped stderr (0191).
+## Closed by feature 0196
 
-- **cmd/odachi/check_stream_test.go:68** - `TestTheGateStreamsOnlyToATerminal` asserts only the nil
-  branch. If `streamTarget` returned nil for a terminal too, every human would lose the live copy
-  and the test would stay green. The character-device branch needs a pin (0191).
+### the preflight refusal only named free models and the catalog size
 
-- **internal/app/review/review.go:783** - the preflight refusal names the free models and the size of
-  the host's catalog, not every model it serves; a human who wants the full list runs
-  `opencode models`. The brief's "the host's models" is wider than the free subset, and no test
-  asserts a listed, non-free name. The verdict approved the tree with this WARNING; the next feature
-  that touches the model message pays it (0194).
+Found while closing 0194 (warning, `internal/app/review/review.go:783`). The refusal listed free models by suffix and the count of listed models, not every model the host served; a human who wanted the full list ran `opencode models`. The brief's "the host's models" was wider than the free subset, and no test asserted a listed, non-free name.
+
+Closed: `optionsLine` now lists every model the host serves (`the host serves: ...`) and drops the free-only split and the count line. The refusal and post-failure messages carry the full served list when known. Pinned by updating the catalog tests to expect the full served list and a non-free name.
+
+### the taskkill that cannot run reports a clean timeout
+
+Found while closing 0191 (warning, `internal/adapters/shellcmd/shellcmd_windows.go:35`). `killTree` discarded taskkill's result and returned only `Process.Kill`. A missing or policy-blocked taskkill killed `cmd.exe` alone and left the grandchild alive, and the run reported a clean timeout: exactly the orphan 0191 exists to prevent.
+
+Closed: `killTree` returns the taskkill failure when `Process.Kill` succeeded, and the process kill's own error otherwise, so the tree-walk failure is visible. Pinned by `TestKillTreeReportsTaskkillFailure`, which points `taskkillCommand` at a command that does not exist and asserts the failure arrives.
+
+### the JSON test's comment named a stderr the gate no longer streams to
+
+Found while closing 0191 (warning, `cmd/odachi/check_test.go:95`). The comment above the renamed JSON test still said the command's output reaches the human on stderr, while the test asserts the proof keeps it and stdout stays clean; the comment described behaviour the gate no longer has for a piped stderr.
+
+Closed: the comment names what the test measures - the proof keeps the output and stdout stays clean for `--json`.
+
+### the stream test pinned only the nil branch
+
+Found while closing 0191 (warning, `cmd/odachi/check_stream_test.go:68`). `TestTheGateStreamsOnlyToATerminal` asserted only the nil branch, so a `streamTarget` that returned nil for a terminal too would lose every human's live copy and stay green.
+
+Closed: the test pins the character-device branch with `os.DevNull`, which must reach the writer.
 
 ## Closed by feature 0190
 

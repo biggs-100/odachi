@@ -9,6 +9,8 @@ import (
 	"syscall"
 )
 
+var taskkillCommand = "taskkill"
+
 // newCommand runs the human's command through cmd /c, so quoting and
 // redirection are the shell's business and the human's, not ours.
 //
@@ -33,8 +35,15 @@ func killTree(cmd *exec.Cmd) error {
 	if cmd.Process == nil {
 		return nil
 	}
-	_ = exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
-	return cmd.Process.Kill()
+	taskkillErr := exec.Command(taskkillCommand, "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
+	killErr := cmd.Process.Kill()
+	if taskkillErr != nil {
+		if killErr != nil {
+			return killErr
+		}
+		return taskkillErr
+	}
+	return killErr
 }
 
 // quotePath makes one cmd argument out of a path. Double quotes are enough: a
