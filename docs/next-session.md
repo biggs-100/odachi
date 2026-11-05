@@ -35,4 +35,8 @@ never invent the vision; the rest of the fixes close the path around it.
 
 - The two pull requests (#338 first, then the stacked #339) and the review of
   0203. The release renames `## Unreleased`.
+- The review of 0203 left two WARNING rows in `docs/review-debt.md`: the
+  `Messages` guard reads every `Head` failure as an empty history, and the
+  doctor's default note returns before the design plugin note. The next feature
+  that touches those paths pays them.
 - Nothing else is queued: the next feature is the human's call.
