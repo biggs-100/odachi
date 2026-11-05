@@ -18,10 +18,11 @@ R1 · "odachi design works like gentle-shell's canvas: a detached local canvas w
 - [x] T1 · odachi design open leaves the canvas running and returns, and a second open refreshes the page already open   R1 · route:inline · tree:9f2dc27004640d0261a7b7b56cf6afa8d045d005
 - [x] T2 · the canvas requires its token, refuses a foreign Host and a cross-origin POST, and sandboxes the artboards   R1 · route:inline · tree:f4d374ab3b7206632f2b9156e16d048229bb9d3a
 - [x] T3 · handoffs.json records sent, in_progress, implemented, chosen and previewUrl, and the canvas marks and compares   R1 · route:inline · tree:8ee18653a4122e2a305bcec5813f1c46ddc03bca
-- [ ] T4 · the canvas focuses an artboard at 100% with pointer capture, Shift+Esc returns, comments pin and Collect batches   R1 · route:inline
-- [ ] T5 · odachi init installs the OpenCode plugin, and the canvas queue delivers a comment to the session and marks it delivered   R1 · route:inline
-- [ ] T6 · the design skill opens the canvas, reads comments and updates the handoff, and the docs name the Claude difference   R1 · route:inline
-- [ ] T7 · the canvas shows the system board first when design/system.html exists   R1 · route:inline
+- [x] T4 · the canvas focuses an artboard at 100% with pointer capture, Shift+Esc returns, comments pin and Collect batches   R1 · route:inline · tree:c4d71b9b99ea43125dbc11631713034facc804db
+- [x] T5 · odachi init installs the OpenCode plugin, and the canvas queue delivers a comment to the session and marks it delivered   R1 · route:inline · tree:46c98cf1b922aafdc64861a19f5095c2ce41775f
+- [x] T6 · the design skill opens the canvas, reads comments and updates the handoff, and the docs name the Claude difference   R1 · route:inline · tree:5d26cbcb17180caa902ec026981ddf1e45321d33
+- [x] T7 · the canvas shows the system board first when design/system.html exists   R1 · route:inline · tree:0a605d346c19ebd94f5b9cef82ada3a812b87ff4
 
 ## History
 L1 · "odachi design works like gentle-shell's canvas: a detached local canvas with focus, compare, live handoff state, and comments that reach the OpenCode session through an installed plugin."
+L2 · OFICIO · "the fence keeps the kill path and the voice, and leaves the verb rule in the brief" (porque a fence protects paths a feature must not touch; 'no new flag or verb' is a promise about behaviour, and cmd/odachi/main.go changed only its help text (0120))
