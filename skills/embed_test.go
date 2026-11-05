@@ -49,6 +49,31 @@ func TestAllCarriesEveryStarterSkill(t *testing.T) {
 	}
 }
 
+// TestBootstrapIsTheFirstCycle: the entry point is the checklist a new project
+// follows, and it says the things the probe measured: init creates the repository,
+// the interview's answers are the human's, and the first proof closes the setup.
+func TestBootstrapIsTheFirstCycle(t *testing.T) {
+	bootstrap, ok := skills.Bootstrap()
+	if !ok {
+		t.Fatal("the binary has no bootstrap skill")
+	}
+
+	text := string(bootstrap.Content)
+	for _, want := range []string{
+		"creates the git repository",
+		"odachi start",
+		"--outcome",
+		"Never invent the interview's answers",
+		"odachi check --run",
+		"first proof",
+		"drive",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the bootstrap does not say %q", want)
+		}
+	}
+}
+
 // TestEmbeddedBytesAreTheFilesInTheRepo: the embed is the source, not a copy of
 // it. If a skill is edited on disk and the bytes here do not match, the binary
 // is shipping a version nobody reviewed.
@@ -412,7 +437,7 @@ func TestCurriculumIsEverySkillButTheEntryPoint(t *testing.T) {
 }
 
 // TestBootstrapSaysTheAgentRunsTheCommands: the human installs odachi and talks.
-// The skill is what the agent reads, so it says who runs the three commands.
+// The skill is what the agent reads, so it says who runs the cycle's commands.
 func TestBootstrapSaysTheAgentRunsTheCommands(t *testing.T) {
 	bootstrap, ok := skills.Bootstrap()
 	if !ok {
