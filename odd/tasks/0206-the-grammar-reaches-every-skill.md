@@ -1,0 +1,28 @@
+# the-grammar-reaches-every-skill
+Base: eac2079a2075e7a879bad670eed4994be98fc349
+
+## Requirements (verbatim, from the user)
+R1 · "every skill the curriculum ships says what it returns, and `odachi skills --check` refuses one that does not, so the contract ADR 0050 opened is enforced instead of half-applied"
+
+## Done when
+- `odachi skills --check` refuses a skill whose `## Output` is missing or empty, whether or not the skill declares references, and every one of the nineteen passes
+- `drive` and `slices` keep the depth that does not fit under `references/`, each declared in `## References`, and no other skill gains a reference
+- every skill body stays within the sixty-line cap, and no rule a skill teaches is lost to make room
+- `odachi skill new` leaves a template that `odachi skills --check` accepts unchanged: the scaffold says what the skill hands back
+- `odachi init` writes the new bytes in the machine copy, a second run writes nothing, and `odachi doctor` compares the nineteen skills with no drift
+- the changelog's Unreleased section says the output contract is required of every skill
+- `go test ./...` is green
+
+## Steps
+- [ ] T1 · slices states what it returns and moves the delegation policy to references/, so the body fits the cap again   R1 · route:inline
+- [ ] T2 · shape, triage, tests and go-tests state what they return   R1 · route:inline
+- [ ] T3 · commits, pull-request, writing and acceptance state what they return   R1 · route:inline
+- [ ] T4 · drive states what it returns and moves the review section to references/   R1 · route:inline
+- [ ] T5 · bootstrap, ship, data, security, role-craft and skill-improve state what they return   R1 · route:inline
+- [ ] T6 · the check asks every skill for ## Output, skill new writes one, and skill-craft teaches the rule   R1 · route:inline
+- [ ] T7 · the machine copy carries the new bytes, and the changelog and ADR 0050 record the stage   R1 · route:inline
+
+## History
+L1 · "every skill the curriculum ships says what it returns, and `odachi skills --check` refuses one that does not, so the contract ADR 0050 opened is enforced instead of half-applied"
+L2 · OFICIO · "T5 was inserted by hand and the plan renumbered before any step was done" (porque plan appends, refuses a line over 120 characters, and undo restores one backup, so a step written out of order cannot be moved by the verb (0205's lesson))
+L3 · OFICIO · "the fence carries the rules somebody gave paths, written by hand after start; the sixteen-skills rule is gone and the role rule is new" (porque start writes every non-goal as a template, and this feature rewrites exactly the files the old rule protected; a rule protects paths the feature must not touch, so it cannot survive the feature it forbade)

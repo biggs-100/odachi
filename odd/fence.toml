@@ -5,15 +5,23 @@
 # wrong - never a reason restated as a package (0120). A non-goal that names no
 # path stays in the brief: "no new verb" is a promise about behaviour, and no
 # glob measures a promise.
-
-[[rule]]
-not   = "no change to the design canvas, its token or the push plugin"
-paths = ["internal/adapters/designserver/**", "internal/assets/design/canvas.html", "internal/assets/design/plugin.ts"]
-deps  = []
+#
+# written by hand after start (0132): start carries every non-goal as a template,
+# and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
 not   = "no change to the voice or the interview's questions"
 paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
+deps  = []
+
+[[rule]]
+not   = "no change to `odachi role` or to the skill it renders"
+paths = ["internal/app/role/**", "internal/domain/role/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the design canvas, its token or the push plugin"
+paths = ["internal/adapters/designserver/**", "internal/assets/design/canvas.html", "internal/assets/design/plugin.ts"]
 deps  = []
 
 [[rule]]
@@ -29,9 +37,4 @@ deps  = []
 [[rule]]
 not   = "no change to the release workflow"
 paths = [".github/workflows/**"]
-deps  = []
-
-[[rule]]
-not   = "no rewrite of the other sixteen skills: their references, their gates and their Output are the follow-up"
-paths = ["skills/acceptance/**", "skills/bootstrap/**", "skills/commits/**", "skills/data/**", "skills/drive/**", "skills/go-tests/**", "skills/pull-request/**", "skills/role-craft/**", "skills/security/**", "skills/shape/**", "skills/ship/**", "skills/skill-improve/**", "skills/slices/**", "skills/tests/**", "skills/triage/**", "skills/writing/**"]
 deps  = []
