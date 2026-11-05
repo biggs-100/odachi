@@ -1,0 +1,28 @@
+# the-first-cycle
+Base: edb368ed843c66c12fb535c2e450cb3f2341e5a9
+
+## Requirements (verbatim, from the user)
+R1 · "a new project with the installed global agent reaches its first proof without a person correcting the path, and every fix travels through the installation"
+
+## Done when
+- the block and bootstrap name the first cycle and the proof: the agent asks the human the interview, never invents the vision, loads drive, plans a step, works test-first, closes with check --run and proof/
+- the bootstrap says init creates the repository and the skills live in the project copy or the machine copy, with doctor naming which
+- doctor names the next step in a new project and audits the home copies the binary installs
+- check --run warns when the proof has no output, and a .ps1 command runs with PowerShell or is refused naming the invocation
+- bench has a journey for the new-project flow, the review of a repo with no commits is not a dead end, and the journeys use a portable proof command
+- go test ./... is green
+
+## Steps
+- [ ] T1 · the block names PDD and the first cycle in one paragraph, and a test pins it   R1 · route:inline
+- [ ] T2 · doctor names the next step in a new project and audits the home copies the binary installs   R1 · route:inline
+- [ ] T3 · check --run warns when the proof has no output   R1 · route:inline
+- [ ] T4 · a .ps1 command runs with PowerShell or is refused naming the invocation on Windows   R1 · route:inline
+- [ ] T5 · review in a repository with no commits names the next step instead of a raw git error   R1 · route:inline
+- [ ] T6 · bench has a journey for the new-project flow and the runs use a portable proof command   R1 · route:inline
+- [ ] T7 · the bootstrap is the first-cycle checklist: answers, init, skills path and first proof   R1 · route:inline
+- [ ] T8 · the changelog, README and impact map name the change, and the feature closes with go test ./... green   R1 · route:inline
+
+## History
+L1 · "a new project with the installed global agent reaches its first proof without a person correcting the path, and every fix travels through the installation"
+L2 · OFICIO · "the fence paths translate the five path-bearing non-goals, and the no-verb phrase stays in the brief" (porque a rule protects files and the phrase names none; each path is the file its non-goal must keep out, and a promise about behaviour is measured by the review, not a glob)
+L3 · OFICIO · "the new fence drops the rules over check, review and shellcmd" (porque this feature changes those packages; the brief does not name them as non-goals, and a rule that protected them would block the fix)
