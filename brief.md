@@ -1,32 +1,30 @@
-# the-skill-contract
+# the-grammar-reaches-every-skill
 
 ## What must exist
-- a skill carries depth without growing its 60-line body: the depth lives in `references/` beside its `SKILL.md`, declared by path, installed with the skill, checked by the binary, and loaded only when the situation asks for it
+- every skill the curriculum ships says what it returns, and `odachi skills --check` refuses one that does not, so the contract ADR 0050 opened is enforced instead of half-applied
 
 ## Done when
-- `odachi skills --check` refuses a `references/` path the skill names and does not have, a file under `references/` the skill never names, and a reference that is not a `.md`; every line names the skill and the file
-- a skill with more than one reference has a `## Decision gates` table whose rows name every reference, and a skill with references declares `## Output` and `## References`
-- `odachi init` and `odachi pack` install a skill as its folder -`SKILL.md` and `references/`- with the binary's exact bytes, in the project copy and the home copy; a second run writes nothing, and a differing file is backed up before it is replaced
-- `odachi doctor` compares the installed folder with the binary: a missing or changed reference is drift, named by file, and the comparison counts skills, not files
-- the doctor row `docs/review-debt.md` leaves open is paid with its test: the opencode default note appends instead of returning, so the design plugin note is never skipped
-- the grammar is written where a person writing a skill reads it (`skill-craft`): `## Decision gates` when a skill routes, `## Output` what it returns, `## References` what it reads, and one ADR records the target grammar and the migration debt
-- `ui-craft` is the first router: its body keeps the order and the first move, four references carry the catalogue, the numbers, the motion and the final read, and each gate row names its reference
-- `design` declares what it returns and keeps its 60 lines: the slug, each artboard with its tradeoff, the files changed, the comments resolved and the canvas URL, with the on-disk format of a design folder moved to a reference
+- `odachi skills --check` refuses a skill whose `## Output` is missing or empty, whether or not the skill declares references, and every one of the nineteen passes
+- `drive` and `slices` keep the depth that does not fit under `references/`, each declared in `## References`, and no other skill gains a reference
+- every skill body stays within the sixty-line cap, and no rule a skill teaches is lost to make room
+- `odachi skill new` leaves a template that `odachi skills --check` accepts unchanged: the scaffold says what the skill hands back
+- `odachi init` writes the new bytes in the machine copy, a second run writes nothing, and `odachi doctor` compares the nineteen skills with no drift
+- the changelog's Unreleased section says the output contract is required of every skill
 - `go test ./...` is green
 
 ## Not included (first version)
-- no rewrite of the other sixteen skills: their references, their gates and their Output are the follow-up, and `--check` does not require a section a skill has not migrated to yet
+- no reference for a skill whose body fits the cap once its Output lands: the depth of the other fifteen stays inline
+- no rewrite of a rule a skill teaches: a section is added, or a block moves verbatim, so no instruction is lost to make room
+- no change to `odachi role` or to the skill it renders: the contract is enforced over `skills/`, and a role's skill keeps the grammar it has
+- no change to the stored proofs: never touched
 - no change to the voice or the interview's questions
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
-- no change to the stored proofs: never touched
 - no change to the release workflow
-- no new verb: references ride the verbs that already install skills
-- no adoption of gentle-shell's headings, frontmatter, license text, slash commands, tool names or aesthetic bans
+- no new verb, and no change to how a skill is installed or compared
 
 ## Decisions taken
-- The mechanism is adopted, not the prose: references, router and output contract are ours, in our grammar.
-- The depth stays local: a reference ships beside its skill and is never fetched.
-- The registry stays one row per skill; the references are the skill's own declaration, not a second index.
-- The grammar lands in stages: the check enforces coherence for what a skill declares today, and the ADR names what the migration owes.
-- gentle-shell is read-only: nothing of its files is copied into this repository.
+- the contract closes: `## Output` is required of every skill, not only of one that carries references
+- the cap decides depth: a body that would cross sixty lines moves one block to `references/`, and the block moves word for word
+- the wording belongs to each skill: a router returns the route it chose, a writer the file it leaves, a check its verdict
+- the check and the scaffold land together, so `odachi skill new` cannot create a skill the gate refuses
