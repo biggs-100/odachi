@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.16.2 - 2026-11-05
 
 - **The release publishes the installer it documents.** The release assets now carry `install.ps1`
   and `install.sh`, so the README's `releases/latest/download/install.ps1` answers; v0.16.1 and
