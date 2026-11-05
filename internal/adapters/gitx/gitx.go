@@ -207,8 +207,22 @@ func CommitWithTree(root, tree string) (string, error) {
 // Messages answers the commit messages of a range: every commit reachable from
 // HEAD and not from base, whole, so a reader can find a trailer a change wrote
 // about itself. Nothing here decides what a trailer is.
+//
+// A base with no commit behind it -the empty tree, or nothing- is a range from
+// the beginning: every commit HEAD carries. A repository with no commit has an
+// empty history, not a failure: the first change of a new project is reviewed
+// before it has a commit, and "git log 4b825..HEAD" would turn that into a dead
+// end.
 func Messages(root, base string) ([]string, error) {
-	out, err := run(root, "log", "--format=%B%x00", base+"..HEAD")
+	rangeSpec := base + "..HEAD"
+	if base == "" || base == EmptyTree {
+		if _, err := Head(root); err != nil {
+			return []string{}, nil
+		}
+		rangeSpec = "HEAD"
+	}
+
+	out, err := run(root, "log", "--format=%B%x00", rangeSpec)
 	if err != nil {
 		return nil, err
 	}

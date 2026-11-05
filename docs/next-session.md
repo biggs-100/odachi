@@ -1,67 +1,42 @@
 # Next session
 
-Written at the close of 0201 and v0.15.1, after a real new project exposed the
-onboarding gap. `main` is clean, the design parity is complete, and the installed
-binary and skills are the release.
+Written at the close of 0203, `the-first-cycle`, on `feat/first-cycle`. The
+feature is stacked on #338, the light installer-test fix; both wait for their
+pull requests.
 
 ## What shipped
 
-- **0201, PR #332**: the last design parity slice. `odachi design list` reports the
-  design sources and the ones newer than `design/system.md`; the skill syncs before the
-  first design and names a stale source. `odachi design handoff` on a design linked to
-  `odd/tasks/<feature>.md` appends one log entry naming the chosen artboard, refuses a
-  link outside `odd/tasks/`, and writes no document for untracked work. The skill loads
-  `ui-craft`. Review 4 of 4, no findings.
-- **v0.15.1, PR #334**: 14 signed assets, installed; `odachi --version` answers
-  `odachi 0.15.1`, and `odachi init` refreshed `~/.agents/skills` (the design skill
-  carries the new rules). The OpenCode push plugin is installed at
-  `~/.config/opencode/plugins/odachi-design/index.ts` and was verified live.
+- **0203, the first cycle.** The `AGENTS.md` block names Proof-Driven Development
+  and the first proof; the `bootstrap` skill is the first-cycle checklist: `init`
+  creates the repository, `start` asks the human and passes their words, `drive`
+  plans one step and `check --run` closes with the first proof. The doctor names
+  that cycle in an empty folder, compares the installed skills with the binary
+  when the project has no `skills/`, and audits the design plugin beside the
+  door. `check --run` warns when a proof has no output instead of calling it
+  evidence; a `.ps1` command is refused with the PowerShell invocation that runs
+  it; `review` reads a repository with no commits as an empty history instead of
+  a fatal git error. The bench has a journey from an empty folder to the first
+  proof and uses `echo ok`, which both shells run, instead of `true`.
+- **#338, the installer test.** The PowerShell installer test snapshots the user
+  PATH and restores it, so a suite run no longer leaves a dead temp entry behind.
+- **The measurement** is in `.git/odachi/scratch/probe-new-project.jsonl` and
+  `probe-new-project-2.jsonl`: a fresh folder, the installed 0.15.1 agent, and a
+  small expense app.
 
-## What the new project exposed
+## What the measurement changed
 
-An agent creating a new project with odachi did not know what PDD is, did not follow
-the full workflow, and never created `proof/`. A read-only audit of the installed
-door, `bootstrap`, `drive`, `doctor` and the block found nine candidates, not one
-discipline failure:
+The fresh agent completed the full cycle and created `proof/`; `odachi init`
+already creates the repository, so the audit's `git init` fix was unnecessary.
+The real gap was the invented interview answers in a non-interactive run: the
+harness cancelled the question and the agent assumed. The bootstrap now says
+never invent the vision; the rest of the fixes close the path around it.
 
-1. `bootstrap` says `init` leaves the skills in `.agents/skills`; in a home-scope
-   install (this machine) they are in `~/.agents/skills`. The agent looks in a folder
-   that does not exist.
-2. `bootstrap` is a setup checklist (`init`, `start`, `check`), not the first cycle; it
-   does not say to load `drive`, plan a step, work, `check --run`, commit.
-3. PDD (Proof-Driven Development, ADR 0031) is named only in the repo docs; the block,
-   `bootstrap` and `drive` never name it or define the cycle.
-4. `proof/` is created by `check --run`, not by `init`; the bootstrap does not say the
-   setup is not done until the first proof, so a project can look ready with no folder.
-5. `odachi start` from an agent shell is non-interactive: without `--outcome`,
-   `--audience`, `--done`... it exits 2 naming the flags. The bootstrap says run start
-   and ask the human, not how to pass the answers from a tool shell.
-6. `odachi init` refuses a folder without `.git`; the bootstrap omits `git init`.
-7. `doctor`'s preflight names `init` and `start` only; not `drive`, `check --run` or
-   "no proof yet".
-8. No `doctor` check compares the installed home copies (door, skills, plugin) with the
-   binary; a stale copy teaches old paths (candidate 1 is the example).
-9. Two product defects surfaced in the same run: `check --run` accepts an empty proof
-   and says `ready`; on Windows a `.ps1` command goes through `cmd /c` and is not run
-   by PowerShell.
+## The decision that waits
 
-## The plan
-
-**Every fix ships through the installation.** The correction lands in the binary and in what
-`odachi init` writes —the block, the embedded skills, the home door and skills, `doctor`— and never
-as a hand edit of a project's `AGENTS.md`, its `~/.agents/skills`, or the global agent. A project
-that upgrades and runs `odachi init` must receive the whole fix; nothing here is a one-machine patch.
-
-1. **Measure first**: a fresh folder with the installed global agent, asking for a small
-   app. Record where it stops: bootstrap loaded? `git init`? `start` with flags? `drive`?
-   `check --run`? `proof/`? This separates discipline from missing instructions.
-2. **Fix the content**: PDD in the always-read block (`rules.go`) with its pinned tests;
-   `bootstrap` as the first-cycle checklist with the home paths, the non-interactive
-   `start` and `git init`; `doctor` naming the next step and auditing the home copies.
-3. **Fix the two defects**: a warning (not a block) when a proof has no output, and a
-   `.ps1` command run with PowerShell (or refused naming the invocation).
-4. **Pin the path**: a `bench` journey for the new-project flow, so the next regression
-   is caught by the tool instead of by a person.
-
-Nothing else is queued. The feature order is the human's call; the measurement comes
-first, because it tells whether the fix is text, loading or discipline.
+- The two pull requests (#338 first, then the stacked #339) and the review of
+  0203. The release renames `## Unreleased`.
+- The review of 0203 left two WARNING rows in `docs/review-debt.md`: the
+  `Messages` guard reads every `Head` failure as an empty history, and the
+  doctor's default note returns before the design plugin note. The next feature
+  that touches those paths pays them.
+- Nothing else is queued: the next feature is the human's call.

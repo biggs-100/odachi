@@ -4,6 +4,7 @@ package shellcmd_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -169,5 +170,55 @@ func TestRunReachesAPathWithASpace(t *testing.T) {
 	}
 	if !strings.Contains(output, "contenido del archivo") {
 		t.Errorf("output = %q, want the file's content", output)
+	}
+}
+
+// cmd /c hands a .ps1 to the file association, not to PowerShell. The refusal
+// names the invocation that does run it, so the person can fix the proof command
+// in one step instead of guessing why the script opened an editor.
+func TestAPowerShellScriptIsRefusedWithTheInvocation(t *testing.T) {
+	_, _, _, _, err := shellcmd.Run(".", `.\script.ps1 -Name x`, 10)
+	if err == nil {
+		t.Fatal("a .ps1 command was run through cmd")
+	}
+	for _, want := range []string{
+		"powershell",
+		"-NoProfile",
+		"-ExecutionPolicy Bypass",
+		"-File",
+		`".\script.ps1"`,
+		"-Name x",
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal does not name %q: %v", want, err)
+		}
+	}
+}
+
+// A path with a space is one token even in the refusal: quoting it is the whole
+// point of the suggestion.
+func TestAPowerShellScriptWithSpacesIsQuotedInTheRefusal(t *testing.T) {
+	_, _, _, _, err := shellcmd.Run(".", `"C:\una carpeta\script.ps1" -Name x`, 10)
+	if err == nil {
+		t.Fatal("a .ps1 command was run through cmd")
+	}
+	if !strings.Contains(err.Error(), `-File "C:\una carpeta\script.ps1"`) {
+		t.Errorf("the refusal does not quote the script's path: %v", err)
+	}
+}
+
+// A command that names PowerShell itself is not the case the refusal exists for:
+// it already chose the interpreter.
+func TestPowerShellItselfIsNotRefused(t *testing.T) {
+	if _, err := exec.LookPath("powershell"); err != nil {
+		t.Skip("PowerShell is not available on this machine")
+	}
+
+	_, _, exitCode, _, err := shellcmd.Run(".", `powershell -NoProfile -Command "exit 0"`, 30)
+	if err != nil {
+		t.Fatalf("a command that names powershell was refused: %v", err)
+	}
+	if exitCode != 0 {
+		t.Errorf("exit code = %d, want 0", exitCode)
 	}
 }

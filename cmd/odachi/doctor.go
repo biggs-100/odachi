@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 
 	doctorapp "github.com/biggs-100/odachi/internal/app/doctor"
+	initapp "github.com/biggs-100/odachi/internal/app/init"
 	"github.com/biggs-100/odachi/internal/app/start"
+	assetsdesign "github.com/biggs-100/odachi/internal/assets/design"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 )
@@ -47,6 +49,9 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 		Agents:  agentSelection{},
 		// The adoption's one repository fact: doctor reads it and writes nothing.
 		Git: gitRepo{},
+		// The third home copy the binary installs: the doctor compares it with the
+		// same bytes init writes, through the owner of the path.
+		Plugin: &doctorapp.Plugin{RelPath: initapp.DesignPluginRel, Content: assetsdesign.Plugin()},
 	}, osFiles{}, osLookup{}, osProfiles{})
 
 	return reportDoctor(result, asJSON, stdout, stderr)

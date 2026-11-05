@@ -53,6 +53,43 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
+// TestMessagesOnARepositoryWithNoCommitsIsEmpty: the review of the first change
+// of a new project runs before there is a commit, and a range from nothing must
+// read as an empty history instead of "fatal: ambiguous argument".
+func TestMessagesOnARepositoryWithNoCommitsIsEmpty(t *testing.T) {
+	root := t.TempDir()
+	git(t, root, "init")
+	git(t, root, "config", "user.name", "odachi test")
+	git(t, root, "config", "user.email", "test@odachi.local")
+	write(t, filepath.Join(root, "notas.md"), "# notas\n")
+
+	got, err := gitx.Messages(root, gitx.EmptyTree)
+	if err != nil {
+		t.Fatalf("Messages: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("Messages = %v, want no commits", got)
+	}
+}
+
+// TestMessagesSinceNothingReadsEveryCommit: with a history, "since nothing" is
+// the whole history, not zero commits.
+func TestMessagesSinceNothingReadsEveryCommit(t *testing.T) {
+	root, _ := newRepo(t)
+	write(t, filepath.Join(root, "notas.md"), "# notas\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "add notes")
+
+	got, err := gitx.Messages(root, gitx.EmptyTree)
+	if err != nil {
+		t.Fatalf("Messages: %v", err)
+	}
+	want := []string{"add notes", "base"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("Messages = %v, want %v", got, want)
+	}
+}
+
 // TestBetweenNamesWhatMovedBetweenTwoTrees: the proof gate knows two hashes
 // differ; this is the answer that tells a human which file moved.
 func TestBetweenNamesWhatMovedBetweenTwoTrees(t *testing.T) {

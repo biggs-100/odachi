@@ -8,10 +8,11 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
-// designPluginRel is where OpenCode loads a local plugin once per machine. The
+// DesignPluginRel is where OpenCode loads a local plugin once per machine. The
 // plugin is a door too: it loads in every folder and watches the design queue of
-// the project the canvas was opened in.
-const designPluginRel = ".config/opencode/plugins/odachi-design/index.ts"
+// the project the canvas was opened in. The doctor reads the same path through
+// the Plugin option, so the two verbs cannot drift.
+const DesignPluginRel = ".config/opencode/plugins/odachi-design/index.ts"
 
 // installDesignPlugin writes the push half of the canvas: the plugin that reads the
 // queue `odachi design open` writes and delivers it to the session. It is the global
@@ -27,7 +28,7 @@ func (r *runner) installDesignPlugin() {
 		return
 	}
 
-	path := filepath.Join(home, filepath.FromSlash(designPluginRel))
+	path := filepath.Join(home, filepath.FromSlash(DesignPluginRel))
 	content := assetsdesign.Plugin()
 	exists, err := r.files.Exists(path)
 	if err != nil {

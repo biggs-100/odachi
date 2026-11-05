@@ -188,10 +188,11 @@ const (
 	// NotAProjectMessage says the folder was never started. It is a fact and not
 	// a verdict: nothing is broken here yet.
 	NotAProjectMessage = "this folder is not an odachi project yet"
-	// NotAProjectFix is the one step: the two commands in the order a person runs
-	// them, each saying what it leaves behind. In an empty folder the checks named
-	// three different commands, and that is what a beginner cannot use.
-	NotAProjectFix = "run odachi init (it leaves the rules the agent reads) and then odachi start (the interview)"
+	// NotAProjectFix is the one step: the commands in the order a person runs
+	// them, each saying what it leaves behind, and the cycle that ends the setup.
+	// In an empty folder the checks named three different commands, and that is
+	// what a beginner cannot use.
+	NotAProjectFix = "run odachi init (it leaves the rules the agent reads), then odachi start (the interview), then load drive and close the first feature with odachi check --run: the setup is not done until the first proof"
 )
 
 // NotAProject is that report: the situation, and the one step that follows it.

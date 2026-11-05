@@ -10,12 +10,13 @@ import (
 // measure nothing and pass for the wrong reason.
 func TestJourneysAreTheCorpusContractXVAsksFor(t *testing.T) {
 	journeys := Journeys()
-	if len(journeys) != 11 {
-		t.Fatalf("the corpus has eleven journeys, got %d", len(journeys))
+	if len(journeys) != 12 {
+		t.Fatalf("the corpus has twelve journeys, got %d", len(journeys))
 	}
 
 	want := []string{
 		"repo-nuevo-start",
+		"proyecto-nuevo-hasta-proof",
 		"start-dos-veces",
 		"check-sin-prueba",
 		"check-run-verde",
@@ -70,7 +71,7 @@ func TestNamedFilters(t *testing.T) {
 	}
 
 	every, unknown := Named(all, nil)
-	if len(every) != 11 || len(unknown) != 0 {
+	if len(every) != len(all) || len(unknown) != 0 {
 		t.Fatalf("no filter means every journey, got %d", len(every))
 	}
 }

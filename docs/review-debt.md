@@ -9,11 +9,17 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0196, which paid the rows 0191 and 0194 left open.
+Last written: while closing 0203, which leaves the two rows below open.
 
 ## Open
 
-Nothing open: the rows 0191 and 0194 left are closed below.
+### every Head failure is read as an empty history
+
+Found while closing 0203 (warning, `internal/adapters/gitx/gitx.go:220`). The `Messages` guard returns an empty history for any `Head` error, so a corrupt repository or a missing git binary is read as "no commits" and the trailers silently disappear. It should tell the no-HEAD case apart, or return the error.
+
+### the design plugin is skipped when the default note is the first text
+
+Found while closing 0203 (warning, `internal/app/doctor/doctor.go:1233`). The `opencodeDefaultNote` branch returns when `result` is empty, so the `designPluginNote` that follows never runs in that case, and a stale or missing design plugin is not named. The branch should append instead of returning, as the plugin note does.
 
 ## Closed by feature 0196
 

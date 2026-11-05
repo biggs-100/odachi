@@ -190,8 +190,8 @@ first file: deleting on a partial view is how a tool loses evidence.
 
 ## The skills, in your agent
 
-There are sixteen skills, and `odachi init` already leaves fifteen in the
-project and one in your home. `odachi pack` copies the sixteen to where your
+There are nineteen skills, and `odachi init` already leaves eighteen in the
+project and one in your home. `odachi pack` copies the nineteen to where your
 agent looks for them, for everything `init` does not do: another client, another
 folder, another scope. Each one is triggered by a situation, not by a command:
 
@@ -201,10 +201,12 @@ folder, another scope. Each one is triggered by a situation, not by a command:
 | `bootstrap` | starting a project from scratch, or explaining what odachi is |
 | `commits` | what goes into a commit, how to split it, what the message says |
 | `data` | saving, migrating, reading or deleting data: owner, lifetime and backup |
+| `design` | designing a screen, iterating artboards, syncing the design system |
 | `drive` | working inside an odachi project: which verb at each moment and how to close a feature |
 | `go-tests` | Go tests, golden files or Bubbletea flows |
 | `pull-request` | a change goes to a PR or the diff passes 400 lines |
 | `role-craft` | a new professional: interview, sources and a probe |
+| `security` | input, permissions, a secret, a dependency, a log or a failure |
 | `shape` | a request does not fit in one reading: explore before the brief |
 | `ship` | something is ready for another person to use |
 | `skill-craft` | writing a new skill or fixing one that is not used |
@@ -212,18 +214,21 @@ folder, another scope. Each one is triggered by a situation, not by a command:
 | `slices` | splitting a large request, or when the code no longer fits in one read |
 | `tests` | what a change tests: the failing test first, the code after |
 | `triage` | several bugs, a backlog or a report that repeats |
+| `ui-craft` | a screen, landing page, dashboard or component's craft and numbers |
 | `writing` | a message, a PR, a comment or documentation someone will read |
 
 `bootstrap` is the entry point, and it is the only one that lives in
 `~/.agents/skills` and not in the project: it teaches how to start in an empty
 folder, and in an empty folder there is no project to put it in yet. The other
-fifteen are the craft a project carries, and `init` copies them to
+eighteen are the craft a project carries, and `init` copies them to
 `./.agents/skills`. That folder is the convention the Agent Skills standard asks
 for, so clients odachi does not know can find it; it also travels with the
 repository, and that is why the content of somebody else's repo is untrusted
-input. `bootstrap` only explains the flow: it runs nothing.
+input. `bootstrap` teaches the first cycle -`init` creates the repository,
+`start` asks the human, `drive` plans a step and `check --run` closes with the
+first proof- and it only explains it: the agent runs the commands.
 
-`odachi init --skills home` leaves the sixteen in `~/.agents/skills` and writes
+`odachi init --skills home` leaves the nineteen in `~/.agents/skills` and writes
 no copy in the project; it is for one copy per machine. The flag is a decision and
 not a one-time order: it is kept in the clone's store, and a later plain `init`
 answers the same way. The default, for a project that never chose, is still
@@ -284,6 +289,10 @@ odachi start   # the interview: brief.md, fence and first task doc
 odachi check   # tells you what is missing and how to unblock it
 ```
 
+The setup is not done until the first proof exists: `odachi check --run
+"<command>"` runs the proof of the closing tree and writes its real output in
+`proof/`. `bootstrap` names the cycle; the proof is what closes it.
+
 `odachi check` answers as data when a script asks: `odachi check --json` prints one
 object -`code`, `reason`, `message`, `next`, `lines`, `proof` and `files`- and
 exits with the same code, so a hook or a panel reads the gate instead of parsing
@@ -291,7 +300,7 @@ English. The reason names are the contract and are pinned by literals in a test.
 
 `odachi init` leaves the project ready in one step: the git history if it was
 missing, the rules block the agent reads, the project agent (picked with Tab),
-the `.gitignore` block, the pre-commit hook, the fifteen skills in
+the `.gitignore` block, the pre-commit hook, the eighteen skills in
 `./.agents/skills`, the entry skill in `~/.agents/skills` and the profile voice
 in the `AGENTS.md` block. The home door -the agent that appears in any folder- is
 opt-in: `odachi init --global` installs it, and an init without the flag writes

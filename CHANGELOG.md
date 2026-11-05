@@ -7,6 +7,19 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A new project reaches its first proof, and the installed copies say what they are.** The
+  `AGENTS.md` block names Proof-Driven Development and the first proof; the `bootstrap` skill is the
+  first-cycle checklist: `odachi init` creates the repository when the folder has none, `odachi
+  start` asks the human and passes their words, and `drive` closes one step with `odachi check
+  --run`. The doctor names that cycle in an empty folder, compares the installed skills with the
+  binary, and audits the design plugin beside the door. `check --run` warns when a proof has no
+  output instead of calling it evidence; a `.ps1` command is refused with the PowerShell invocation
+  that runs it; and `review` reads a repository with no commits as an empty history instead of a
+  fatal git error. The bench has a journey from an empty folder to the first proof and uses `echo
+  ok`, which both shells run, instead of `true` (0203).
+
 ## v0.15.1 - 2026-11-05
 
 - **The design system says when it went stale, and a design writes back to its feature.** `odachi

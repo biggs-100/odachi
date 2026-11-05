@@ -11,6 +11,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/skill"
+	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
 // root is the fake project every test works on. It is not a temporary
@@ -201,8 +202,9 @@ func configured() *fakeFiles {
 		files.putHome(file.Path, file.Content)
 	}
 	// The default init leaves bootstrap in the home; it is the one skill every
-	// project gets there without a project copy.
-	files.putHome(".agents/skills/bootstrap/SKILL.md", skill.Template("bootstrap"))
+	// project gets there without a project copy, so the fixture carries the bytes
+	// the binary ships and not a template.
+	files.putHome(".agents/skills/bootstrap/SKILL.md", bootstrapContent())
 	files.put("brief.md", briefComplete)
 	files.put("odd/profile.toml", "name = \"novato\"\n")
 	files.put("skills/acceptance/SKILL.md", skill.Template("acceptance"))
@@ -219,6 +221,16 @@ func blockOf(voice string) string {
 		panic(err)
 	}
 	return block
+}
+
+// bootstrapContent is the entry-point skill the binary carries. A fixture that
+// invents its own bytes is a copy the doctor would rightly call stale.
+func bootstrapContent() string {
+	bootstrap, ok := bundledskills.Bootstrap()
+	if !ok {
+		panic("the binary has no bootstrap skill")
+	}
+	return string(bootstrap.Content)
 }
 
 func cleanLookup() *fakeLookup { return &fakeLookup{resolved: "/home/ana/bin/odachi"} }
@@ -590,19 +602,90 @@ func TestAForeignPlanIsAWarning(t *testing.T) {
 	}
 }
 
-// TestNoSkillsIsClean: a project without skills/ has nothing to drift.
+// TestNoSkillsIsClean: a project without skills/ compares the installed copy to
+// the binary, and a home that carries the binary's bootstrap is clean.
 func TestNoSkillsIsClean(t *testing.T) {
 	files := configured()
 	delete(files.files, at(skill.RegistryFile))
 	delete(files.files, at("skills/acceptance/SKILL.md"))
+	delete(files.dirs, at("skills"))
 
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 	if result.Code != CodeOK {
 		t.Fatalf("a project without skills must be clean:\n%s", strings.Join(result.Lines, "\n"))
 	}
 	got := checkOf(t, result, domaindoctor.CheckSkills)
-	if !strings.Contains(got.Detail, "skills/: none") {
-		t.Fatalf("check 9 must say the project has no skills of its own: %s", domaindoctor.Line(got))
+	for _, want := range []string{
+		"skills/: does not exist",
+		"~/.agents/skills: 1 installed",
+		"compared: 1 match in the binary",
+	} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("check 9 must say %q, got %q", want, got.Detail)
+		}
+	}
+}
+
+// TestAProjectWithoutSkillsWarnsWhenTheInstalledCopyDrifts: the binary is the
+// source, so a copy that differs is a stale install, not an empty project.
+func TestAProjectWithoutSkillsWarnsWhenTheInstalledCopyDrifts(t *testing.T) {
+	files := configured()
+	delete(files.files, at(skill.RegistryFile))
+	delete(files.files, at("skills/acceptance/SKILL.md"))
+	delete(files.dirs, at("skills"))
+	files.put(".agents/skills/drive/SKILL.md", "not the bytes the binary carries")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := checkOf(t, result, domaindoctor.CheckSkills)
+
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a stale installed copy is a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{
+		".agents/skills: 1 installed",
+		"do not match the binary",
+		".agents/skills/drive",
+		"run odachi init",
+	} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("check 9 must say %q, got %q", want, got.Detail)
+		}
+	}
+}
+
+// TestTheDesignPluginIsAudited: the plugin is the third home copy the binary
+// installs; a missing or stale copy is named where the door is named.
+func TestTheDesignPluginIsAudited(t *testing.T) {
+	const rel = ".config/opencode/plugins/odachi-design/index.ts"
+	content := []byte("the plugin the binary carries")
+
+	cases := []struct {
+		name      string
+		installed string
+		want      string
+	}{
+		{"missing", "", "the design plugin is not in ~/" + rel},
+		{"stale", "old bytes", "does not match this binary"},
+		{"current", string(content), "matches this binary"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			files := configured()
+			if c.installed != "" {
+				files.putHome(rel, c.installed)
+			}
+
+			result := Run(Options{
+				Dir: root, Home: homeRoot, Version: "0.5.0", Exe: "/home/ana/bin/odachi",
+				Agents: fakeAgentSelection{},
+				Plugin: &Plugin{RelPath: rel, Content: content},
+			}, files, cleanLookup(), cleanProfiles())
+
+			got := checkOf(t, result, domaindoctor.CheckVoice)
+			if !strings.Contains(got.Detail, c.want) {
+				t.Fatalf("check 11 must say %q, got %q", c.want, got.Detail)
+			}
+		})
 	}
 }
 

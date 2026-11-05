@@ -17,6 +17,11 @@ Four hard rules. They are not advice: `odachi check` enforces them.
    with the output saved in `proof/`. Without that, it is not done.
 4. Small pieces, one commit each. One task-doc step, one commit.
 
+The method has a name: Proof-Driven Development (ADR 0031). The proof is the
+atom: a green run of this tree, in `proof/`, named by the tree that produced it.
+The verdict is the judgment, and the fence is the human's line. A new project is
+not set up until the first proof exists.
+
 One more, about folders. This project is this repository. Another folder is another
 project —its own brief, its own fence, its own store, its own memory—, and odachi is
 never read or run there, and its files are never touched, unless the human asks for it.
