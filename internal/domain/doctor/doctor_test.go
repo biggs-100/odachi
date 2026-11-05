@@ -191,9 +191,9 @@ func TestNotAProjectNamesBothCommandsInOrder(t *testing.T) {
 	if init < 0 || start < 0 || init > start {
 		t.Fatalf("the fix must name odachi init before odachi start: %q", NotAProjectFix)
 	}
-	for _, want := range []string{"rules", "interview"} {
+	for _, want := range []string{"rules", "interview", "drive", "odachi check --run", "first proof"} {
 		if !strings.Contains(NotAProjectFix, want) {
-			t.Errorf("the fix must say what each command leaves behind, missing %q: %q", want, NotAProjectFix)
+			t.Errorf("the fix must say what each command leaves behind and how the setup closes, missing %q: %q", want, NotAProjectFix)
 		}
 	}
 }

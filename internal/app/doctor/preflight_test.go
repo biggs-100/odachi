@@ -10,8 +10,8 @@ import (
 
 // TestEmptyFolderGetsOneSituationInsteadOfTenChecks is the beginner case: a
 // folder where odachi was never started. Ten checks name three different
-// commands; one situation names the two that matter, in the order a person runs
-// them, and that is the whole point of the pre-flight.
+// commands; one situation names the cycle that starts and closes it, and that is
+// the whole point of the pre-flight.
 func TestEmptyFolderGetsOneSituationInsteadOfTenChecks(t *testing.T) {
 	result := run(newFakeFiles(), &fakeLookup{err: errors.New("not found")}, cleanProfiles(), "")
 
@@ -24,7 +24,7 @@ func TestEmptyFolderGetsOneSituationInsteadOfTenChecks(t *testing.T) {
 
 	want := []string{
 		"this folder is not an odachi project yet",
-		"run odachi init (it leaves the rules the agent reads) and then odachi start (the interview)",
+		"run odachi init (it leaves the rules the agent reads), then odachi start (the interview), then load drive and close the first feature with odachi check --run: the setup is not done until the first proof",
 	}
 	if len(result.Lines) != len(want) {
 		t.Fatalf("the beginner reads one situation and one step, got %d lines:\n%s", len(result.Lines), strings.Join(result.Lines, "\n"))

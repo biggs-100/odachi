@@ -36,6 +36,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/skill"
 	"github.com/biggs-100/odachi/internal/domain/store"
+	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
 // Exit codes, the same shape as the other verbs.
@@ -90,6 +91,17 @@ type Options struct {
 	// drawn from. nil answers nothing, and a note that cannot tell never claims an
 	// adoption.
 	Git Git
+	// Plugin is the home copy of the design plugin this binary installs, when the
+	// run has one. nil means there is nothing to audit: a run that does not install
+	// it is not a broken install.
+	Plugin *Plugin
+}
+
+// Plugin is one plugin the binary installs in the home: the path relative to the
+// home and the bytes it should carry. The doctor compares, never writes.
+type Plugin struct {
+	RelPath string
+	Content []byte
 }
 
 // Git is the repository port, one question wide. doctor reports; it never runs
@@ -207,6 +219,9 @@ type runner struct {
 	files    Files
 	lookup   Lookup
 	profiles Profiles
+	// bundled is the binary's own copy of the craft, read once for the skills
+	// check. It is the source a project without skills/ is compared against.
+	bundled map[string]string
 }
 
 // isProject answers the question the checks take for granted: is there anything
@@ -554,23 +569,28 @@ func (r *runner) skills() domaindoctor.Check {
 		return r.unreadable(domaindoctor.CheckSkills, skillsDir, err)
 	}
 
-	installed, compared, drift, err := r.installedSkills()
+	source, sourceLabel, err := r.skillSource()
+	if err != nil {
+		return r.unreadable(domaindoctor.CheckSkills, skillsDir+" or the binary", err)
+	}
+
+	installed, compared, drift, err := r.installedSkills(source)
 	if err != nil {
 		return r.unreadable(domaindoctor.CheckSkills, installedSkillsDir, err)
 	}
-	home, homeCompared, homeDrift, err := r.homeSkills()
+	home, homeCompared, homeDrift, err := r.homeSkills(source)
 	if err != nil {
 		return r.unreadable(domaindoctor.CheckSkills, "~/.agents/skills", err)
 	}
 
 	detail := registered + "; " + installedSkillsDir + ": " + installed
 	if compared > 0 && len(drift) == 0 {
-		detail += "; " + "compared: " + count(compared, "match", "matches") + " in " + skillsDir + "/"
+		detail += "; " + "compared: " + count(compared, "match", "matches") + " in " + sourceLabel
 	}
 	if home != "" {
 		detail += "; " + home
 		if homeCompared > 0 && len(homeDrift) == 0 {
-			detail += "; " + "compared: " + count(homeCompared, "match", "matches") + " in " + skillsDir + "/"
+			detail += "; " + "compared: " + count(homeCompared, "match", "matches") + " in " + sourceLabel
 		}
 	}
 	drift = append(drift, homeDrift...)
@@ -579,9 +599,54 @@ func (r *runner) skills() domaindoctor.Check {
 		return domaindoctor.Broken(domaindoctor.CheckSkills, detail, fix)
 	case len(drift) > 0:
 		return domaindoctor.Warning(domaindoctor.CheckSkills, detail+
-			"; do not match "+skillsDir+"/: "+strings.Join(drift, ", ")+"; run odachi init (or odachi init --skills home)")
+			"; do not match "+sourceLabel+": "+strings.Join(drift, ", ")+"; run odachi init (or odachi init --skills home)")
 	}
 	return domaindoctor.OK(domaindoctor.CheckSkills, detail)
+}
+
+// skillSource is where the installed copies are compared against: the project's
+// own skills/ when it carries one, and the binary's embedded payload when it does
+// not. The second case is a project that only installed odachi: it has no
+// source folder, and the copy the binary would write is the only truth it has.
+type skillSource func(name string) (content string, exists bool, err error)
+
+func (r *runner) skillSource() (skillSource, string, error) {
+	found, err := r.isDir(skillsDir)
+	if err != nil {
+		return nil, "", err
+	}
+	if found {
+		return func(name string) (string, bool, error) {
+			return r.read(filepath.Join(skillsDir, name, skillFile))
+		}, skillsDir + "/", nil
+	}
+
+	bundled, err := r.bundledSkills()
+	if err != nil {
+		return nil, "", err
+	}
+	return func(name string) (string, bool, error) {
+		content, ok := bundled[name]
+		return content, ok, nil
+	}, "the binary", nil
+}
+
+// bundledSkills is the craft the binary carries, keyed by name. It is loaded once
+// per run: the check compares every installed copy against it, and the embedded
+// filesystem answers the same bytes every time.
+func (r *runner) bundledSkills() (map[string]string, error) {
+	if r.bundled != nil {
+		return r.bundled, nil
+	}
+	all, err := bundledskills.All()
+	if err != nil {
+		return nil, err
+	}
+	r.bundled = make(map[string]string, len(all))
+	for _, s := range all {
+		r.bundled[s.Name] = string(s.Content)
+	}
+	return r.bundled, nil
 }
 
 // skillRegistry is the half that existed before: the project's own skills/ and
@@ -624,7 +689,7 @@ func (r *runner) skillRegistry() (detail, fix string, err error) {
 // names the ones whose bytes differ. A project without `skills/` has no source:
 // it gets the count and no comparison, because the installed copy is the only
 // copy it has.
-func (r *runner) installedSkills() (detail string, compared int, drift []string, err error) {
+func (r *runner) installedSkills(source skillSource) (detail string, compared int, drift []string, err error) {
 	found, err := r.isDir(installedSkillsDir)
 	if err != nil {
 		return "", 0, nil, err
@@ -660,12 +725,11 @@ func (r *runner) installedSkills() (detail string, compared int, drift []string,
 		}
 		installed++
 
-		sourcePath := filepath.Join(r.opts.Dir, skillsDir, name, skillFile)
-		sourceExists, err := r.files.Exists(sourcePath)
+		content, exists, err := source(name)
 		if err != nil {
 			return "", 0, nil, err
 		}
-		if !sourceExists {
+		if !exists {
 			continue
 		}
 		compared++
@@ -674,11 +738,7 @@ func (r *runner) installedSkills() (detail string, compared int, drift []string,
 		if err != nil {
 			return "", 0, nil, err
 		}
-		sourceData, err := r.files.Read(sourcePath)
-		if err != nil {
-			return "", 0, nil, err
-		}
-		if string(installedData) != string(sourceData) {
+		if string(installedData) != content {
 			drift = append(drift, installedSkillsDir+"/"+name)
 		}
 	}
@@ -693,7 +753,7 @@ func (r *runner) installedSkills() (detail string, compared int, drift []string,
 // installs the whole payload in ~/.agents/skills, so a doctor that only counted
 // the project copy would call that project empty. It compares the same way, when
 // the project has a source `skills/` to compare against.
-func (r *runner) homeSkills() (detail string, compared int, drift []string, err error) {
+func (r *runner) homeSkills(source skillSource) (detail string, compared int, drift []string, err error) {
 	if r.opts.Home == "" {
 		return "", 0, nil, nil
 	}
@@ -733,12 +793,11 @@ func (r *runner) homeSkills() (detail string, compared int, drift []string, err 
 		}
 		installed++
 
-		sourcePath := filepath.Join(r.opts.Dir, skillsDir, name, skillFile)
-		sourceExists, err := r.files.Exists(sourcePath)
+		content, exists, err := source(name)
 		if err != nil {
 			return "", 0, nil, err
 		}
-		if !sourceExists {
+		if !exists {
 			continue
 		}
 		compared++
@@ -747,11 +806,7 @@ func (r *runner) homeSkills() (detail string, compared int, drift []string, err 
 		if err != nil {
 			return "", 0, nil, err
 		}
-		sourceData, err := r.files.Read(sourcePath)
-		if err != nil {
-			return "", 0, nil, err
-		}
-		if string(installedData) != string(sourceData) {
+		if string(installedData) != content {
 			drift = append(drift, "~/.agents/skills/"+name)
 		}
 	}
@@ -1173,9 +1228,54 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 		if result == "" {
 			return extra
 		}
-		return result + "; " + extra
+		result += "; " + extra
+	}
+	if extra := r.designPluginNote(clients); extra != "" {
+		if result == "" {
+			return extra
+		}
+		result += "; " + extra
 	}
 	return result
+}
+
+// designPluginNote audits the third home copy the binary installs: the OpenCode
+// plugin that delivers canvas comments to the session. It is a note like the door
+// and the subagents -the project works without it, and the comments are still in
+// the folder- but a stale copy teaches an old protocol, so the line names it.
+func (r *runner) designPluginNote(clients []persona.Client) string {
+	if r.opts.Home == "" || r.opts.Plugin == nil {
+		return ""
+	}
+
+	opencode := false
+	for _, client := range clients {
+		if client.Agent == persona.SelectionOpenCode {
+			opencode = true
+			break
+		}
+	}
+	if !opencode {
+		return ""
+	}
+
+	display := "~/" + r.opts.Plugin.RelPath
+	path := filepath.Join(r.opts.Home, filepath.FromSlash(r.opts.Plugin.RelPath))
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		return "could not check the design plugin " + display + ": " + oneLine(err.Error()) + "; run odachi init"
+	}
+	if !exists {
+		return "the design plugin is not in " + display + "; it travels with the home door: run odachi init --global"
+	}
+	current, err := r.files.Read(path)
+	if err != nil {
+		return "could not read the design plugin " + display + ": " + oneLine(err.Error()) + "; run odachi init"
+	}
+	if string(current) != string(r.opts.Plugin.Content) {
+		return "the design plugin does not match this binary in " + display + "; run odachi init --global"
+	}
+	return "the design plugin matches this binary in " + display
 }
 
 // globalSubagentsNote compares the subagents in the home with the files this
