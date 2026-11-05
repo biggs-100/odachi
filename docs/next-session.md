@@ -33,13 +33,57 @@ The real gap was the invented interview answers in a non-interactive run: the
 harness cancelled the question and the agent assumed. The bootstrap now says
 never invent the vision.
 
+## The first move: study gentle-shell's skill system
+
+The human asked the next session to read gentle-shell's skill system **before**
+opening 0205. It is a read-only reference for this work: never modify it, never
+run odachi inside it, and never copy its files into this repository.
+
+Paths on this machine:
+
+- `C:\Users\USER\Desktop\herramientas\gentle-shell\skills\` — the whole tree:
+  every `SKILL.md`, every `references/` folder a skill ships, and whatever file
+  indexes them.
+- `...\skills\design\SKILL.md` — the flow skill: how it sequences a design job
+  and what it hands back.
+- `...\skills\gentle-ui-design\SKILL.md` — the router: which reference it names
+  for which situation, and how it decides.
+- `...\skills\gentle-ui-design\references\` — the depth: length, headings, first
+  and last line of each, and whether it repeats the router.
+- `...\skills\tui-design\SKILL.md` — the contrast case: a small skill that
+  carries its own depth.
+
+What to extract, and it is the mechanism, not the prose:
+
+1. How a reference is declared in the `SKILL.md`: section name, whether it
+   carries a condition ("read this when..."), a path, or a table.
+2. How the reference file is shaped: frontmatter or none, first line, headings,
+   length, and whether it restates the trigger.
+3. How the router decides: an explicit situation → reference table, or prose.
+4. How the output contract is written: what it names as the deliverable and in
+   what order.
+5. How two skills avoid overlapping: which one owns a rule and which one points
+   at the owner.
+6. What the installer ships: the folder with its references, or only the
+   `SKILL.md`.
+
+What not to bring back: its headings (`Activation Contract`, `Hard Rules`, ...),
+because `skills --check` requires `When`, `Rules` and `Never`; its license text,
+metadata fields, slash commands and runtime tool names, which belong to its
+packaging; and its aesthetic bans as universal truth, which contradict our
+anti-AI catalogue. The synthesis stays: if the project has a system, the system
+wins; these are the defaults.
+
+The deliverable of that reading is the brief of 0205, not code: it cites what
+gentle-shell does, what we adopt, what we reject and why.
+
 ## The decision that waits
 
 - **0205, the skill contract.** The references system (a skill's `references/`
   installed with it), the skill grammar (`Decision gates`, `Output`,
   `References`), `ui-craft` as the first router with four references, and
-  `design` with its output contract. The brief draft is the next session's first
-  move.
+  `design` with its output contract. The study above comes first; the brief is
+  written after it.
 - The two WARNING rows in `docs/review-debt.md` remain open: the `Messages` guard
   reads every `Head` failure as an empty history, and the doctor's default note
   returns before the design plugin note. The next feature that touches those
