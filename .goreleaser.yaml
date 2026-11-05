@@ -2,8 +2,10 @@
 #
 # What this file publishes, on purpose: six binaries (linux, macOS and windows,
 # amd64 and arm64) inside their archives, checksums.txt, one keyless signature
-# bundle for the checksums, and one SBOM per archive. The archives carry
-# README.md and the MIT LICENSE the repository has.
+# bundle for the checksums, one SBOM per archive, and the two installers the
+# README documents -install.ps1 and install.sh-, so latest/download/install.ps1
+# answers for every tag. The archives carry README.md and the MIT LICENSE the
+# repository has.
 #
 # What it does NOT carry, also on purpose:
 #
@@ -82,6 +84,13 @@ sboms:
 # A snapshot carries "dev" in its name so it is never mistaken for a release.
 snapshot:
   version_template: "{{ incpatch .Version }}-dev"
+
+# The installers travel with the release: the URL the README teaches must answer
+# for every tag, not only for the archives inside them.
+release:
+  extra_files:
+    - glob: scripts/install.ps1
+    - glob: scripts/install.sh
 
 changelog:
   sort: asc
