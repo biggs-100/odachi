@@ -31,6 +31,10 @@ lines, when it repeats another skill, or when a rule stopped being observable.
 - If the rule is one-off, it is not a skill: it goes to `brief.md`, the fence or
   a test.
 
+## Output
+
+The trigger rewritten as the situation, the rule that moved or died, and the lines before and after. It ends with `odachi skills --check` green and, when the trigger changed, the regenerated `SKILLS.md`.
+
 ## Never
 
 - Add rules "just in case".

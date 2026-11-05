@@ -23,6 +23,10 @@ is requested, or the question "where do we store this?" comes up.
 - Test data lives in small, readable fixtures; real data never lives in the
   repository.
 
+## Output
+
+Where the data lives and who owns it, how long it lives, the backup that was restored and the read that verifies it. A destructive change returns the way back before it returns the migration.
+
 ## Never
 
 - Run a destructive migration without a verified backup and a way back.

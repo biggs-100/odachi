@@ -23,6 +23,10 @@ who does not have your environment, or close a feature.
 - If the behavior of something that already existed changes, say it first and
   plainly.
 
+## Output
+
+The delivery: what was verified and how, the installer's path that ran, what was not verified and why, and the release note that says what changed for the human. A version returns the tag, the checksum and the proof it was published from.
+
 ## Never
 
 - Publish with red tests, without a version or without a checksum.

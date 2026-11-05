@@ -34,6 +34,10 @@ Not for the voice -novato or senior is `level`- and not for a feature.
 - A role whose rules do not fit in 60 lines is refused: cut the role, do not
   split the skill.
 
+## Output
+
+The role's source in the human's words -responsibility, questions, method, refusals, limits and how it knows- with its sources dated and the probe it must pass. It ends in the `odachi role new` command that writes it, after the human approved the words.
+
 ## Never
 
 - Adjectives -"world-class", "10 years"- instead of decisions.
