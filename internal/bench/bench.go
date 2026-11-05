@@ -118,6 +118,18 @@ func Journeys() []Journey {
 			},
 		},
 		{
+			Name: "proyecto-nuevo-hasta-proof",
+			Why:  "the first cycle of a new project: init creates the repository, start answers the interview, one step closes with check --run and the proof is ready",
+			Steps: []Step{
+				{Args: []string{"init"}, Want: 0},
+				{Args: startArgs(), Want: 0},
+				{Args: []string{"plan", "un paso", "--req", "R1"}, Want: 0},
+				{Args: []string{"plan", "--done", "T1"}, Want: 0},
+				{Args: []string{"check", "--run", "echo ok"}, Want: 0},
+				{Args: []string{"check"}, Want: 0, Contains: []string{"ready"}},
+			},
+		},
+		{
 			Name: "start-dos-veces",
 			Why:  "the person runs the interview again because they do not remember whether they ran it",
 			Steps: []Step{
@@ -145,7 +157,7 @@ func Journeys() []Journey {
 			Setup: []Action{gitInit()},
 			Steps: []Step{
 				{Args: startArgs(), Want: 0},
-				{Args: []string{"check", "--run", "true"}, Want: 0},
+				{Args: []string{"check", "--run", "echo ok"}, Want: 0},
 				{Args: []string{"check"}, Want: 0},
 			},
 		},
@@ -225,7 +237,7 @@ func Journeys() []Journey {
 						Content: "# Review debt\n\n## Open\n\n- **a.go:1** - a row.\n",
 					}},
 				},
-				{Args: []string{"check", "--run", "true"}, Want: 0},
+				{Args: []string{"check", "--run", "echo ok"}, Want: 0},
 				{Args: []string{"check"}, Want: 0, Contains: []string{"review debt: 1 open row"}},
 			},
 		},
