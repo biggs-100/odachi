@@ -113,10 +113,53 @@ func powershellShim(t *testing.T, exitCode int) string {
 	return path
 }
 
+// readUserPath reads the PATH the installer writes: the user's, from the
+// registry. os.Getenv would read this process's copy, which the installer
+// never touches.
+func readUserPath(t *testing.T, powershell string) string {
+	t.Helper()
+
+	command := exec.Command(powershell, "-NoProfile", "-NonInteractive", "-Command",
+		"[Environment]::GetEnvironmentVariable('Path','User')")
+	out, err := command.Output()
+	if err != nil {
+		t.Fatalf("read the user PATH: %v", err)
+	}
+	return strings.TrimRight(string(out), "\r\n")
+}
+
+// writeUserPath puts value back. It travels in the environment instead of the
+// command line: a PATH is long, and quoting it through PowerShell's own parser
+// is the failure this test exists to prevent.
+func writeUserPath(t *testing.T, powershell, value string) {
+	t.Helper()
+
+	command := exec.Command(powershell, "-NoProfile", "-NonInteractive", "-Command",
+		"[Environment]::SetEnvironmentVariable('Path', $env:ODACHI_TEST_USER_PATH, 'User')")
+	command.Env = append(os.Environ(), "ODACHI_TEST_USER_PATH="+value)
+	if out, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("restore the user PATH: %v\n%s", err, out)
+	}
+}
+
 // runPowerShellInstaller runs the real script against the local release, with no
-// network available to it, and returns its exit code and its output.
+// network available to it, and returns its exit code and its output. It puts the
+// user PATH back before returning: the installer writes the real variable, and a
+// test that left that write behind polluted the machine a little on every run
+// until cmd could no longer resolve its own commands.
 func runPowerShellInstaller(t *testing.T, powershell string, fixture releaseFixture, binDir, cosign string) (int, string) {
 	t.Helper()
+
+	before := readUserPath(t, powershell)
+	restored := false
+	restore := func() {
+		if restored {
+			return
+		}
+		restored = true
+		writeUserPath(t, powershell, before)
+	}
+	t.Cleanup(restore)
 
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
@@ -133,6 +176,7 @@ func runPowerShellInstaller(t *testing.T, powershell string, fixture releaseFixt
 		"ODACHI_COSIGN":   cosign,
 	})
 	out, err := command.CombinedOutput()
+	restore()
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
@@ -217,5 +261,23 @@ func TestPowerShellInstallerInstallsTheVerifiedBinary(t *testing.T) {
 	}
 	if got := strings.TrimSpace(string(versionOut)); got != "odachi "+installVersion {
 		t.Errorf("installed binary says %q, want %q", got, "odachi "+installVersion)
+	}
+}
+
+// TestPowerShellInstallerRestoresTheUserPath: the installer writes the user's
+// PATH, and the test puts it back. Without this, every suite run left a dead
+// temp entry behind, and after enough runs cmd stopped resolving its own tools.
+func TestPowerShellInstallerRestoresTheUserPath(t *testing.T) {
+	powershell := requirePowerShell(t)
+	fixture := windowsRelease(t)
+	binDir := filepath.Join(t.TempDir(), "bin")
+
+	before := readUserPath(t, powershell)
+	code, output := runPowerShellInstaller(t, powershell, fixture, binDir, powershellShim(t, 0))
+	if code != 0 {
+		t.Fatalf("install.ps1 exit = %d, want 0:\n%s", code, output)
+	}
+	if after := readUserPath(t, powershell); after != before {
+		t.Fatalf("the installer test did not restore the user PATH:\nbefore: %s\nafter:  %s", before, after)
 	}
 }
