@@ -140,6 +140,9 @@
   }
 
   function render() {
+    // A live update rebuilds every board: keeping a focus on a node that no longer
+    // exists would leave the canvas dimmed and inert, so the focus ends first.
+    if (state.focus) { exitFocus(); }
     designSelect.innerHTML = "";
     state.designs.forEach(function (design) {
       var option = el("option", { value: design.slug, textContent: design.slug + " - " + design.manifest.title });

@@ -324,18 +324,26 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		CreatedAt:  now,
 		Status:     domain.StatusOpen,
 	}
-	if in.Send {
-		// A comment with no session behind the canvas is still saved: the pull path
-		// (the agent reads the file) is the fallback, never a lost note.
-		if queued, err := s.enqueue(slug, comment); err == nil && queued {
-			comment.SentAt = &now
-		}
-	}
 	comments.Comments = append(comments.Comments, comment)
 	if err := s.writeComments(slug, comments); err != nil {
 		s.writeMu.Unlock()
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
+	}
+
+	if in.Send {
+		// Persist first, then queue: a message the plugin delivers for a comment the
+		// file never recorded is a comment nobody can apply or resolve.
+		if queued, err := s.enqueue(slug, comment); err == nil && queued {
+			comment.SentAt = &now
+			comments.Comments[len(comments.Comments)-1].SentAt = &now
+			if err := s.writeComments(slug, comments); err != nil {
+				// The comment is saved; the message goes too, so an unsent note is not
+				// delivered twice. A failed removal is the next session's queue.
+				s.dequeue(comment.ID)
+				comment.SentAt = nil
+			}
+		}
 	}
 	s.writeMu.Unlock()
 	s.broadcast("comments")
@@ -361,6 +369,7 @@ func (s *Server) sendComments(w http.ResponseWriter, r *http.Request, slug strin
 
 	now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	queued := 0
+	queuedIDs := []string{}
 	for i := range comments.Comments {
 		comment := &comments.Comments[i]
 		if comment.Status != domain.StatusOpen || comment.SentAt != nil {
@@ -368,17 +377,28 @@ func (s *Server) sendComments(w http.ResponseWriter, r *http.Request, slug strin
 		}
 		sent, err := s.enqueue(slug, *comment)
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "the comment was saved but not queued: " + err.Error()})
+			for _, id := range queuedIDs {
+				s.dequeue(id)
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "the comments were saved but not queued: " + err.Error()})
 			return
 		}
 		if sent {
 			comment.SentAt = &now
 			queued++
+			queuedIDs = append(queuedIDs, comment.ID)
 		}
 	}
-	if err := s.writeComments(slug, comments); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
+	if len(queuedIDs) > 0 {
+		if err := s.writeComments(slug, comments); err != nil {
+			// Nothing was marked sent, so nothing may be delivered: remove the
+			// messages this pass queued, and let the human send again.
+			for _, id := range queuedIDs {
+				s.dequeue(id)
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "the comments were not marked sent; nothing was delivered: " + err.Error()})
+			return
+		}
 	}
 	s.broadcast("comments")
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -445,6 +465,13 @@ func (s *Server) enqueue(slug string, comment domain.Comment) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// dequeue removes a message this pass queued but could not mark sent. It is best
+// effort: a file left behind is the next session's problem, not a duplicate note
+// the human did not ask for.
+func (s *Server) dequeue(id string) {
+	_ = os.Remove(filepath.Join(s.opts.Dir, ".git", "odachi", "design-queue", "queue-"+id+".json"))
 }
 
 func (s *Server) resolveComment(w http.ResponseWriter, r *http.Request, slug, id string) {
