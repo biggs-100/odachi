@@ -11,8 +11,8 @@ R1 · "the timeout and proof tests are deterministic under load"
 - go test ./... is green
 
 ## Steps
-- [ ] T1 · the timeout test's child announces that it started and the verdict stops depending on taskkill's speed   R1 · route:inline
-- [ ] T2 · the proof test clears ODACHI_MODEL and OPENCODE_SESSION_ID before its two runs   R1 · route:inline
+- [x] T1 · the timeout test's child announces that it started and the verdict stops depending on taskkill's speed   R1 · route:inline · tree:f3169fc21e5b11e365dd0450fbe222af8a08076b
+- [x] T2 · the proof test clears ODACHI_MODEL and OPENCODE_SESSION_ID before its two runs   R1 · route:inline · tree:5fa132daea2d4b5781304e33a5b1e1d5ce026420
 
 ## History
 L1 · "the timeout and proof tests are deterministic under load"
