@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A skill carries its depth beside it.** A skill folder may hold `references/*.md`: the body
+  names every one in `## References`, a router with more than one routes them in `## Decision
+  gates`, and a skill with references says what it returns in `## Output`. `odachi init` and
+  `odachi pack` install the folder, `doctor` compares it file by file, and `skills --check`
+  refuses a path nobody wrote, a file nobody named, and a reference that is not markdown.
+  `ui-craft` is the first router, with four references, and `design` declares its output (0205).
+
 ## v0.16.2 - 2026-11-05
 
 - **The release publishes the installer it documents.** The release assets now carry `install.ps1`
