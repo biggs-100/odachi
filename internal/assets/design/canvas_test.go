@@ -21,7 +21,7 @@ func TestTheCanvasNamesAnArtboardWithoutAScreenshot(t *testing.T) {
 // sandboxed, so the picker and the mode message are the only way in.
 func TestTheCanvasMovesOnAShowEvent(t *testing.T) {
 	page := string(Canvas())
-	for _, want := range []string{"show:", "searchParams.set(\"design\"", "sandbox", "allow-scripts", "odachi:pick", "odachi:comment-mode"} {
+	for _, want := range []string{"show:", "searchParams.set(\"design\"", "sandbox", "allow-scripts", "odachi:pick", "odachi:comment-mode", "Chosen", "Compare", "handoffs", "previewUrl"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the canvas does not carry %q", want)
 		}

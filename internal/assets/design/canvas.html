@@ -30,6 +30,14 @@
   .comment .meta { color:var(--muted); font-size:11px; font-family:ui-monospace, monospace; word-break:break-all; margin-bottom:4px; }
   .comment .actions { margin-top:6px; display:flex; gap:6px; }
   .comment .actions button { padding:2px 8px; font-size:12px; }
+  .badge { font-size:11px; color:var(--accent); border:1px solid currentColor; border-radius:4px; padding:0 5px; white-space:nowrap; }
+  .board.chosen { outline:2px solid var(--accent); outline-offset:8px; }
+  .board h2 .compare { font-size:12px; padding:1px 8px; }
+  #compare { position:fixed; inset:0; z-index:20; background:var(--bg); display:none; flex-direction:column; }
+  #compare .panes { flex:1; display:flex; gap:12px; padding:12px; min-height:0; }
+  #compare .panes > div { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #compare iframe { flex:1; width:100%; border:1px solid var(--line); background:#fff; }
+  #compare a { color:var(--accent); }
   #popover { position:fixed; z-index:9; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; width:280px; box-shadow:0 10px 30px rgba(0,0,0,.15); display:none; }
   #popover textarea { width:100%; min-height:64px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:6px; padding:6px; }
   #popover .row { display:flex; gap:6px; justify-content:flex-end; margin-top:8px; }
@@ -56,6 +64,17 @@
     <div id="comments"></div>
   </aside>
 </main>
+<div id="compare" role="dialog" aria-label="Compare the artboard with the running app">
+  <header>
+    <button id="compare-back">Back to canvas</button>
+    <span class="spacer"></span>
+    <a id="compare-open" target="_blank" rel="noreferrer">Open the app in a new tab</a>
+  </header>
+  <div class="panes">
+    <div><h3>Artboard</h3><iframe id="compare-artboard" sandbox="allow-scripts" title="Artboard"></iframe></div>
+    <div><h3>Running app</h3><iframe id="compare-app" title="Running app"></iframe></div>
+  </div>
+</div>
 <div id="popover">
   <div class="meta" id="target"></div>
   <textarea id="text" placeholder="What should change here?"></textarea>
@@ -78,6 +97,7 @@
   var popover = document.getElementById("popover");
   var target = document.getElementById("target");
   var text = document.getElementById("text");
+  var compareBox = document.getElementById("compare");
 
   function api(path, options) {
     return fetch(path, options || {}).then(function (response) {
@@ -114,6 +134,9 @@
     }
 
     design.manifest.artboards.forEach(function (artboard) {
+      var handoffs = design.handoffs || { handoffs: {} };
+      var entry = handoffs.handoffs && handoffs.handoffs[artboard.file];
+      var chosen = handoffs.chosen === artboard.file;
       var frame = el("iframe", { title: artboard.title });
       // The artboard runs in a sandbox without allow-same-origin: the canvas cannot
       // read it, so the injected picker names the element it was clicked on.
@@ -130,8 +153,21 @@
       if (!artboard.screenshot) {
         notes.push(el("small", { className: "gap", textContent: "no screenshot" }));
       }
+      if (chosen) {
+        notes.push(el("span", { className: "badge", textContent: "Chosen" }));
+      } else if (handoffs.chosen) {
+        notes.push(el("small", { className: "gap", textContent: "alternative" }));
+      }
+      if (entry) {
+        notes.push(el("span", { className: "badge", textContent: entry.status === "in_progress" ? "Implementing…" : entry.status }));
+      }
+      if (entry && entry.previewUrl) {
+        var compare = el("button", { className: "compare", textContent: "Compare" });
+        compare.addEventListener("click", function () { compareWith(design, artboard, entry.previewUrl); });
+        notes.push(compare);
+      }
       var head = el("h2", { textContent: artboard.title }, notes);
-      boards.appendChild(el("div", { className: "board" }, [head, frame]));
+      boards.appendChild(el("div", { className: chosen ? "board chosen" : "board" }, [head, frame]));
     });
 
     renderComments();
@@ -166,6 +202,16 @@
   function applyZoom() {
     boards.style.transform = "scale(" + state.zoom + ")";
     document.getElementById("zoom").textContent = Math.round(state.zoom * 100) + "%";
+  }
+
+  // Compare shows the direction beside what it became: the artboard on the left,
+  // the running app on the right, at the same size. The app may refuse to be framed,
+  // so the open-in-a-tab link is always there.
+  function compareWith(design, artboard, previewUrl) {
+    document.getElementById("compare-artboard").src = design.urls[artboard.file];
+    document.getElementById("compare-app").src = previewUrl;
+    document.getElementById("compare-open").href = previewUrl;
+    compareBox.style.display = "flex";
   }
 
   // A sandboxed artboard cannot be read by this page: it sends the element it was
@@ -258,7 +304,14 @@
   document.getElementById("zoom-out").addEventListener("click", function () { state.zoom = Math.max(0.2, state.zoom - 0.1); applyZoom(); });
   document.getElementById("save").addEventListener("click", save);
   document.getElementById("cancel").addEventListener("click", function () { popover.style.display = "none"; state.pending = null; });
-  document.addEventListener("keydown", function (event) { if (event.key === "Escape") { popover.style.display = "none"; state.pending = null; } });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      popover.style.display = "none";
+      state.pending = null;
+      compareBox.style.display = "none";
+    }
+  });
+  document.getElementById("compare-back").addEventListener("click", function () { compareBox.style.display = "none"; });
 
   // The stream tells the page what moved: comments reload the panel, an artboard
   // reloads its frame. A canvas that is already open is refreshed instead of a new
@@ -280,7 +333,7 @@
         return;
       }
       var names = message.data.split(",");
-      if (names.indexOf("comments") >= 0) { refresh(); }
+      if (names.indexOf("comments") >= 0 || names.indexOf("handoffs") >= 0) { refresh(); }
       var frames = boards.querySelectorAll("iframe");
       for (var i = 0; i < frames.length; i++) {
         var frame = frames[i];

@@ -448,14 +448,26 @@ func (s *Server) changed() []string {
 			key := entry.Name() + "/" + file.Name()
 			if before, seen := s.last[key]; !seen {
 				s.last[key] = info.ModTime()
+				// A panel that appears for the first time is a change too: the
+				// handoff file is created after the canvas is already open.
+				switch file.Name() {
+				case domain.CommentsFile:
+					moved = append(moved, "comments")
+				case domain.HandoffsFile:
+					moved = append(moved, "handoffs")
+				}
 				continue
 			} else if info.ModTime() != before {
 				s.last[key] = info.ModTime()
-				// The comments file is the panel, not an artboard: the page reloads
-				// one or the other, and telling it "design.json" would reload a frame.
-				if file.Name() == domain.CommentsFile {
+				// The comments and handoffs files are panels, not artboards: the
+				// page reloads one or the other, and telling it "design.json"
+				// would reload a frame.
+				switch file.Name() {
+				case domain.CommentsFile:
 					moved = append(moved, "comments")
-				} else {
+				case domain.HandoffsFile:
+					moved = append(moved, "handoffs")
+				default:
 					moved = append(moved, entry.Name()+"/"+file.Name())
 				}
 			}
@@ -475,11 +487,13 @@ func (s *Server) broadcast(what string) {
 	}
 }
 
-// Design is one design as the page reads it: the manifest and the comments file.
+// Design is one design as the page reads it: the manifest, the comments file and
+// what happened to each artboard after somebody chose it.
 type Design struct {
 	Slug     string            `json:"slug"`
 	Manifest domain.Manifest   `json:"manifest"`
 	Comments domain.Comments   `json:"comments"`
+	Handoffs domain.Handoffs   `json:"handoffs"`
 	URL      map[string]string `json:"urls"`
 }
 
@@ -516,11 +530,15 @@ func (s *Server) readDesigns(slug string) ([]Design, error) {
 		if err != nil {
 			return nil, err
 		}
+		handoffs, err := s.readHandoffs(name)
+		if err != nil {
+			return nil, err
+		}
 		urls := make(map[string]string, len(manifest.Artboards))
 		for _, artboard := range manifest.Artboards {
 			urls[artboard.File] = "/" + s.token + "/artboard/" + name + "/" + artboard.File
 		}
-		out = append(out, Design{Slug: name, Manifest: manifest, Comments: comments, URL: urls})
+		out = append(out, Design{Slug: name, Manifest: manifest, Comments: comments, Handoffs: handoffs, URL: urls})
 	}
 	return out, nil
 }
@@ -538,6 +556,23 @@ func (s *Server) readComments(slug string) (domain.Comments, error) {
 		return domain.Comments{Version: domain.Version, Comments: []domain.Comment{}}, nil
 	}
 	return domain.ParseComments(raw)
+}
+
+// readHandoffs reads the handoff state; a design that never chose an artboard has no
+// file and that is an empty state, not a broken one.
+func (s *Server) readHandoffs(slug string) (domain.Handoffs, error) {
+	path := filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), slug, domain.HandoffsFile)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return domain.Handoffs{Version: domain.Version, Handoffs: map[string]domain.Handoff{}}, nil
+		}
+		return domain.Handoffs{}, err
+	}
+	if len(strings.TrimSpace(string(raw))) == 0 {
+		return domain.Handoffs{Version: domain.Version, Handoffs: map[string]domain.Handoff{}}, nil
+	}
+	return domain.ParseHandoffs(raw)
 }
 
 // writeComments replaces the file atomically: a crash mid-write leaves the old one,

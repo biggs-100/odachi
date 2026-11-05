@@ -51,8 +51,14 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 
 	var asJSON bool
 	var resolve string
+	var status string
+	var preview string
+	var note string
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 	flags.StringVar(&resolve, "resolve", "", "comment ids to mark resolved, comma-separated")
+	flags.StringVar(&status, "status", "", "handoff state: sent | in_progress | implemented")
+	flags.StringVar(&preview, "preview", "", "the running app's loopback URL, for Compare")
+	flags.StringVar(&note, "note", "", "what to say about this handoff")
 
 	if err := flags.Parse(rest); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -101,6 +107,9 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 		Action:  action,
 		Slug:    slug,
 		Resolve: ids,
+		Status:  status,
+		Preview: preview,
+		Note:    note,
 		At:      time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 	}, osFiles{})
 

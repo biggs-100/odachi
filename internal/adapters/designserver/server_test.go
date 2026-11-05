@@ -183,6 +183,50 @@ func TestAnArtboardSymlinkCannotEscapeTheDesign(t *testing.T) {
 	}
 }
 
+// The canvas reads the handoff state from the folder: the chosen artboard and its
+// state are what it draws as a badge.
+func TestTheCanvasReportsTheHandoffState(t *testing.T) {
+	root := project(t)
+	state := `{"version":1,"chosen":"01-a.html","handoffs":{"01-a.html":{"status":"implemented","updatedAt":"t","previewUrl":"http://localhost:3000"}}}`
+	if err := os.WriteFile(filepath.Join(root, "design", "pricing", "handoffs.json"), []byte(state), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	base := canvas(t, root)
+	var payload struct {
+		Designs []Design `json:"designs"`
+	}
+	get(t, base+"/api/designs", &payload)
+	if len(payload.Designs) != 1 {
+		t.Fatalf("designs = %+v", payload.Designs)
+	}
+	handoffs := payload.Designs[0].Handoffs
+	if handoffs.Chosen != "01-a.html" || handoffs.Handoffs["01-a.html"].Status != "implemented" {
+		t.Errorf("handoffs = %+v", handoffs)
+	}
+	if handoffs.Handoffs["01-a.html"].PreviewURL != "http://localhost:3000" {
+		t.Errorf("the preview did not survive: %+v", handoffs.Handoffs["01-a.html"])
+	}
+}
+
+func TestTheWatcherAnnouncesAHandoffChange(t *testing.T) {
+	root := project(t)
+	server := New(Options{Dir: root, Canvas: []byte("canvas")})
+	if _, _, err := server.Listen(0); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	server.changed()
+	if err := os.WriteFile(filepath.Join(root, "design", "pricing", "handoffs.json"), []byte(`{"version":1,"chosen":"01-a.html","handoffs":{"01-a.html":{"status":"sent"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	moved := server.changed()
+	if !strings.Contains(strings.Join(moved, ","), "handoffs") {
+		t.Errorf("moved = %v, want the handoff change", moved)
+	}
+}
+
 func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
 	base := canvas(t, project(t))
 
