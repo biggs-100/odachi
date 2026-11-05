@@ -468,6 +468,9 @@ type runner struct {
 	// the report names them. The domain gate reads no files, so the words live here.
 	feature  *tasks.Document
 	proofRel string
+	// proofEmpty says the recorded proof carries no output: it is still this
+	// tree's evidence, and a proof that says nothing is a warning, not a block.
+	proofEmpty bool
 	// failedRel is the failed output written by this run, empty when the run
 	// passed or the output could not be kept.
 	failedRel string
@@ -755,6 +758,7 @@ func (r *runner) readProof(path, shown string) (proof.Proof, *Result) {
 		problem := refused(shown, oneLine(err.Error()))
 		return proof.Proof{}, &problem
 	}
+	r.proofEmpty = strings.TrimSpace(parsed.Output) == ""
 	return parsed, nil
 }
 
@@ -805,6 +809,7 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 			r.proofRel, oneLine(err.Error()), r.opts.Run))
 		return ranProof{}, &problem
 	}
+	r.proofEmpty = strings.TrimSpace(output) == ""
 	return ranProof{output: output}, nil
 }
 
@@ -1711,6 +1716,12 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	if haveProof && r.proofRel != "" {
 		result.Proof = r.proofRel
 		result.Lines = append(result.Lines, "proof: "+r.proofRel)
+	}
+	// An empty proof is evidence with nothing in it: the command exited 0 and
+	// proved nothing a reader can check. It is the tree's proof and the gate stays
+	// ready, but the line says what the bytes do not.
+	if haveProof && r.proofEmpty {
+		result.Lines = append(result.Lines, "warning: the proof produced no output: a proof that says nothing is weak evidence; run a command that prints what it proved")
 	}
 	// A ready tree the suite never ran on says so: the proof it keeps proved the
 	// code, and a silent ready would be the kind of quiet this gate exists to avoid.

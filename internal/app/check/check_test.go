@@ -793,8 +793,49 @@ func TestRunWritesTheProofOfTheCurrentFeature(t *testing.T) {
 	}
 }
 
+// TestAnEmptyProofIsReadyWithAWarning: a command that exits 0 and prints nothing
+// is the tree's proof, and the gate stays ready; the report says the evidence is
+// empty instead of hiding it behind a green line.
+func TestAnEmptyProofIsReadyWithAWarning(t *testing.T) {
+	proofPath := filepath.Join(dir, "proof", "0007-turnos.txt")
+
+	warned := func(t *testing.T, lines []string) {
+		t.Helper()
+		for _, line := range lines {
+			if strings.Contains(line, "warning: the proof produced no output") {
+				return
+			}
+		}
+		t.Fatalf("Lines = %q, want the empty-proof warning", lines)
+	}
+
+	t.Run("check --run", func(t *testing.T) {
+		files := newFakeFiles(readyFiles())
+		delete(files.files, proofPath)
+
+		got := check.Run(check.Options{Dir: dir, Store: store, Run: "exit 0", Base: "HEAD", TimeoutSeconds: 45},
+			files, &fakeGit{tree: currentTree}, &fakeShell{output: ""})
+		if got.Code != int(gate.Ready) {
+			t.Fatalf("Code = %d, want 0 (reason %q, message %q)", got.Code, got.Reason, got.Message)
+		}
+		warned(t, got.Lines)
+	})
+
+	t.Run("recorded proof", func(t *testing.T) {
+		files := newFakeFiles(readyFiles())
+		files.files[proofPath] = []byte(proofOfFeature(currentTree, "exit 0", ""))
+
+		got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 45},
+			files, &fakeGit{tree: currentTree}, &fakeShell{})
+		if got.Code != int(gate.Ready) {
+			t.Fatalf("Code = %d, want 0 (reason %q, message %q)", got.Code, got.Reason, got.Message)
+		}
+		warned(t, got.Lines)
+	})
+}
+
 // TestTheProofKeepsBothStreams: a proof is what the command said. The test
-// verdict goes to stdout and build errors go to stderr; hiding either would
+// verdict goes to stdout and build errors to stderr; hiding either would
 // make the proof a partial quotation.
 func TestTheProofKeepsBothStreams(t *testing.T) {
 	files := newFakeFiles(readyFiles())
