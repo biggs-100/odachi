@@ -53,22 +53,37 @@ func TestRunTimesOutInsteadOfHanging(t *testing.T) {
 // kill of cmd.exe alone; it would write after the timeout. taskkill /T must end
 // the whole tree, not only the shell.
 //
-// The timeout is three seconds, not one: under a full-suite load cmd can be slow
-// to reach `start`, and a child spawned between taskkill's snapshot and the death
-// of cmd survives a kill that was correct. Three seconds lets the spawn finish
-// before the timeout fires; the grandchild waits seven and the test watches for
-// eight, so a real survivor still lands inside the window.
+// The child announces that it started, and it writes late.txt only when the test
+// creates go.txt after the timeout: a survivor answers within a second, and a
+// killed tree never answers. The old version raced the child's birth against the
+// timeout and its write against taskkill, so a slow machine could fail a correct
+// kill; this one fails only when the tree really survived.
 func TestRunATimeoutKillsTheWholeTree(t *testing.T) {
 	dir := t.TempDir()
-	command := `start /b cmd /c "ping -n 8 127.0.0.1 >nul & echo late>late.txt" & ping -n 16 127.0.0.1 >nul`
-	_, _, _, timedOut, err := shellcmd.Run(dir, command, 3)
+	child := `Set-Content -Path started.txt -Value started
+while (-not (Test-Path go.txt)) { Start-Sleep -Milliseconds 100 }
+Set-Content -Path late.txt -Value late
+`
+	if err := os.WriteFile(filepath.Join(dir, "child.ps1"), []byte(child), 0o600); err != nil {
+		t.Fatalf("writing the child: %v", err)
+	}
+
+	command := `start /b powershell -NoProfile -ExecutionPolicy Bypass -File child.ps1 & ping -n 60 127.0.0.1 >nul`
+	_, _, _, timedOut, err := shellcmd.Run(dir, command, 5)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if !timedOut {
 		t.Fatal("Run did not report the timeout")
 	}
-	time.Sleep(8 * time.Second)
+	if _, err := os.Stat(filepath.Join(dir, "started.txt")); err != nil {
+		t.Fatalf("the child never started, so the kill had nothing to end: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "go.txt"), []byte("go"), 0o600); err != nil {
+		t.Fatalf("writing the signal: %v", err)
+	}
+	time.Sleep(1 * time.Second)
 	if _, err := os.Stat(filepath.Join(dir, "late.txt")); err == nil {
 		t.Fatal("the grandchild outlived the timeout and wrote its file")
 	}
