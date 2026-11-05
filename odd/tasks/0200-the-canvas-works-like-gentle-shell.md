@@ -15,12 +15,13 @@ R1 · "odachi design works like gentle-shell's canvas: a detached local canvas w
 - `go test ./...` is green; the queue contract and every canvas rule above are pinned by Go tests; the plugin's delivery is verified by hand in OpenCode and recorded in the proof.
 
 ## Steps
-- [ ] T1 · odachi design open leaves the canvas running and returns, and a second open refreshes the page already open   R1 · route:inline
-- [ ] T2 · the canvas requires its token, refuses a foreign Host and a cross-origin POST, and sandboxes the artboards   R1 · route:inline
+- [x] T1 · odachi design open leaves the canvas running and returns, and a second open refreshes the page already open   R1 · route:inline · tree:9f2dc27004640d0261a7b7b56cf6afa8d045d005
+- [x] T2 · the canvas requires its token, refuses a foreign Host and a cross-origin POST, and sandboxes the artboards   R1 · route:inline · tree:f4d374ab3b7206632f2b9156e16d048229bb9d3a
 - [ ] T3 · handoffs.json records sent, in_progress, implemented, chosen and previewUrl, and the canvas marks and compares   R1 · route:inline
 - [ ] T4 · the canvas focuses an artboard at 100% with pointer capture, Shift+Esc returns, comments pin and Collect batches   R1 · route:inline
 - [ ] T5 · odachi init installs the OpenCode plugin, and the canvas queue delivers a comment to the session and marks it delivered   R1 · route:inline
 - [ ] T6 · the design skill opens the canvas, reads comments and updates the handoff, and the docs name the Claude difference   R1 · route:inline
+- [ ] T7 · the canvas shows the system board first when design/system.html exists   R1 · route:inline
 
 ## History
 L1 · "odachi design works like gentle-shell's canvas: a detached local canvas with focus, compare, live handoff state, and comments that reach the OpenCode session through an installed plugin."
