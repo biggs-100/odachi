@@ -24,3 +24,11 @@ Feature 0205 studied gentle-shell's skill system -read-only, never copied- and f
 - The counts stay human: `pack` reports a skill once, `doctor` says how many skills it compared, and a drift names the file a person has to open.
 - The study of a foreign repository leaves a mechanism and an ADR, not a copy. What we adopt is the routing idea and the shipped folder; what we reject is its packaging.
 - The next feature owes the migration: sixteen skills, their `## Output`, and their references where the body exceeds the cap. Until then `--check` accepts a skill with no references, which is the honest state of the curriculum.
+
+## Amendment - the contract is required of every skill (0206, 2026-11-05)
+
+The stage this record named landed. The seventeen bodies that declared no `## Output` declare it
+now, `drive` and `slices` moved the block that no longer fit to `references/`, and
+`odachi skills --check` refuses a skill without the section whether or not it carries references.
+The scaffold `odachi skill new` writes it, so a new skill cannot be born without it. The sentence
+above that left the demand to "the next feature" is history, not the rule.
