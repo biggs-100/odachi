@@ -102,7 +102,7 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	result := appdesign.Run(appdesign.Options{
+	opts := appdesign.Options{
 		Dir:     dir,
 		Action:  action,
 		Slug:    slug,
@@ -111,7 +111,21 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 		Preview: preview,
 		Note:    note,
 		At:      time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
-	}, osFiles{})
+	}
+	if action == appdesign.ActionList {
+		sources, err := designSources(dir)
+		if err != nil {
+			fmt.Fprintln(stderr, "odachi: could not read the project's stylesheets: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		opts.Sources = sources
+		if info, err := os.Stat(filepath.Join(dir, "design", "system.md")); err == nil {
+			opts.SystemExists = true
+			opts.SystemModified = info.ModTime()
+		}
+	}
+
+	result := appdesign.Run(opts, osFiles{})
 
 	return reportDesign(result, asJSON, stdout, stderr)
 }
@@ -401,6 +415,20 @@ func openBrowser(url string) {
 // follows. It reads every .css under the project -skipping the tool's own folders-
 // and never writes to one: a sync that edits its sources is a sync nobody trusts.
 func runDesignSync(dir string, stdout, stderr io.Writer) int {
+	sources, err := designSources(dir)
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: could not read the project's stylesheets: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+
+	return reportDesign(appdesign.Sync(sources, osFiles{}, dir), false, stdout, stderr)
+}
+
+// designSources reads every .css under the project -skipping the tool's own
+// folders- with its modification time. It is the one walk both `design sync` and
+// `design list` use: the report of what is stale cannot see a different set of
+// sources than the sync that captured them.
+func designSources(dir string) ([]appdesign.Source, error) {
 	sources := []appdesign.Source{}
 
 	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
@@ -421,17 +449,16 @@ func runDesignSync(dir string, stdout, stderr io.Writer) int {
 		if err != nil {
 			return err
 		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
 		rel, err := filepath.Rel(dir, path)
 		if err != nil {
 			rel = path
 		}
-		sources = append(sources, appdesign.Source{Path: filepath.ToSlash(rel), Content: string(raw)})
+		sources = append(sources, appdesign.Source{Path: filepath.ToSlash(rel), Content: string(raw), Modified: info.ModTime()})
 		return nil
 	})
-	if err != nil {
-		fmt.Fprintln(stderr, "odachi: could not read the project's stylesheets: "+oneLine(err.Error()))
-		return start.CodeBlocked
-	}
-
-	return reportDesign(appdesign.Sync(sources, osFiles{}, dir), false, stdout, stderr)
+	return sources, err
 }
