@@ -26,3 +26,4 @@ R1 · "odachi design works like gentle-shell's canvas: a detached local canvas w
 ## History
 L1 · "odachi design works like gentle-shell's canvas: a detached local canvas with focus, compare, live handoff state, and comments that reach the OpenCode session through an installed plugin."
 L2 · OFICIO · "the fence keeps the kill path and the voice, and leaves the verb rule in the brief" (porque a fence protects paths a feature must not touch; 'no new flag or verb' is a promise about behaviour, and cmd/odachi/main.go changed only its help text (0120))
+L3 · OFICIO · "the help text waits for a docs feature" (porque the base fence protects cmd/odachi/main.go as a behaviour, and a two-line help correction is not this feature's outcome; changing it here would need a fence change on main first (0120))
