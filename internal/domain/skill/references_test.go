@@ -150,13 +150,11 @@ func TestASkillWithReferencesDeclaresItsOutput(t *testing.T) {
 	wants(t, s.Problems(), `"Output"`)
 }
 
-// TestASkillWithoutReferencesIsNotAskedForMore: the grammar grows with the
-// folder. A skill that carries its own depth keeps the three sections and no
-// migration debt.
-func TestASkillWithoutReferencesIsNotAskedForMore(t *testing.T) {
+// TestASkillWithoutReferencesStillOwesItsOutput: the contract belongs to every
+// skill, not only to one that carries depth. A reference is an addition; it is
+// never the reason the agent has to be told what it hands back (0206).
+func TestASkillWithoutReferencesStillOwesItsOutput(t *testing.T) {
 	s := router(nil)
 
-	if problems := s.Problems(); len(problems) != 0 {
-		t.Errorf("a skill without references has problems: %s", joined(problems))
-	}
+	wants(t, s.Problems(), `"Output"`)
 }

@@ -32,11 +32,15 @@ load it, or when you are unsure whether to write a skill, a test or a fence glob
 - A skill that grows depth gets `references/`: the body names every file in
   `## References`, and a router with more than one adds `## Decision gates`, one
   row per situation.
-- A skill with references says what it returns in `## Output`; `odachi skills
-  --check` refuses a named path that does not exist, a file nobody named, and a
-  reference that is not a `.md`.
+- Every skill says what it returns in `## Output`; `odachi skills --check`
+  refuses one without it, a named path that does not exist, a file nobody named,
+  and a reference that is not a `.md`.
 - To create one: `odachi skill new <slug>` leaves the template, and
   `odachi skills --check` says whether it is well formed.
+
+## Output
+
+The skill or the fix: the trigger as the human's situation, the rule that earned its line, and the `odachi skills --check` answer. A rule that should not be a skill returns the fence glob or the test that holds it instead.
 
 ## Never
 

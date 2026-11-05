@@ -149,19 +149,27 @@ func (s Skill) Problems() []Problem {
 // declaration, because it names no file.
 var referencePath = regexp.MustCompile("`(references/[A-Za-z0-9._/-]+\\.md)`")
 
-// referenceProblems applies the grammar of a skill that carries depth: what the
-// body names must exist, what the folder holds must be declared, and a router
-// must gate every file and say what it returns.
+// referenceProblems applies the grammar every skill carries: what it returns, and
+// -for a skill that carries depth- what the body names must exist, what the folder
+// holds must be declared, and a router must gate every file.
 func (s Skill) referenceProblems(body []string) []Problem {
 	problems := []Problem{}
 	add := func(format string, args ...any) {
 		problems = append(problems, Problem{File: s.Path, Reason: fmt.Sprintf(format, args...)})
 	}
 
+	// The output contract belongs to every skill, not only to one that carries
+	// depth: the agent has to know what it hands back whether or not a reference
+	// taught it (0206).
+	output, hasOutput := sectionContent(body, "Output")
+	if !hasOutput || output == "" {
+		add("every skill must say what it returns in %q: the agent has to know what to hand back", "Output")
+	}
+
 	named := referencedPaths(s.Body)
 	folder := s.References
 	if len(named) == 0 && len(folder) == 0 {
-		return nil
+		return problems
 	}
 
 	for _, reference := range named {
@@ -202,13 +210,6 @@ func (s Skill) referenceProblems(body []string) []Problem {
 					add("the reference %q is not a row of ## Decision gates: a reference nobody routes is unreachable", reference)
 				}
 			}
-		}
-	}
-
-	if len(folder) > 0 {
-		output, hasOutput := sectionContent(body, "Output")
-		if !hasOutput || output == "" {
-			add("a skill with references must say what it returns in %q: the agent has to know what to hand back", "Output")
 		}
 	}
 
@@ -311,13 +312,14 @@ func ValidSlug(slug string) bool {
 	return namePattern.MatchString(slug)
 }
 
-// Template renders the SKILL.md `skill new` starts from: the three sections with
+// Template renders the SKILL.md `skill new` starts from: the four sections with
 // a line to fill each, and a Trigger: the human completes. It is a valid skill
 // as it stands, so `skills --check` stays green while the human writes.
 func Template(name string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: (fill in when this skill is used)\n---\n\n" +
 		"## When\n\n(say when this skill must be loaded)\n\n" +
 		"## Rules\n\n(fill in the rules a senior would enforce)\n\n" +
+		"## Output\n\n(what this skill hands back)\n\n" +
 		"## Never\n\n(fill in what this skill never does)\n"
 }
 

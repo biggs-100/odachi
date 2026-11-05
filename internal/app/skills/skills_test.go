@@ -118,7 +118,7 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 // skillText is a complete skill in the canonical form.
 func skillText(name, trigger string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: " + trigger +
-		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"
+		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
 }
 
 // registryOf renders what --write must produce for the given skills.

@@ -23,6 +23,10 @@ there is no list of criteria anyone can verify without asking you.
 - Criteria are written before implementation and are not changed afterwards to
   make the implementation pass.
 
+## Output
+
+One observable criterion per behavior, under "Done when", each with the command or the real output that verifies it. A criterion that cannot be verified yet is named, with the proposal that would make it observable.
+
 ## Never
 
 - Accept "it works" or "I think it works" as done.

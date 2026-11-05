@@ -39,7 +39,7 @@ func repoRoot(t *testing.T) string {
 
 func skillFile(name, trigger string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: " + trigger +
-		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"
+		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
 }
 
 // TestSkillsCheckIsGreenInThisRepo: the bundled skills and the committed
@@ -156,6 +156,11 @@ func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
 			name:   "empty section",
 			seed:   map[string]string{"skills/vacia/SKILL.md": "---\nname: vacia\ndescription: Trigger: un hueco\n---\n\n## When\n\ncuando\n\n## Rules\n\n## Never\n\nnunca\n"},
 			reason: `"Rules" section is empty`,
+		},
+		{
+			name:   "no Output",
+			seed:   map[string]string{"skills/sin-salida/SKILL.md": strings.Replace(skillFile("sin-salida", "x"), "## Output\n\nlo que devuelve\n\n", "", 1)},
+			reason: `"Output"`,
 		},
 		{
 			name:   "repeated name",

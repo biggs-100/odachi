@@ -43,6 +43,10 @@ The project is not set up until the first proof exists:
   in a folder that is not a project yet, it names this cycle.
 - The human decides the vision. You execute and explain the why in one line.
 
+## Output
+
+The next command and why, in this order: `init`, `start`, `drive`, the proof. A folder that is not a project yet returns the cycle it needs and the state it is in, never a file nobody asked for.
+
 ## Never
 
 - Never invent the interview's answers, the exclusions or the done criteria: an

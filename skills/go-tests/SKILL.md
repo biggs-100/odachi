@@ -30,6 +30,10 @@ when to use `t.TempDir`, `testing.Short`, `teatest` or a golden file.
   with one package.
 - If the test fails, fix the cause. Do not adjust the test to make it pass.
 
+## Output
+
+The pattern the change needs -table, golden, `teatest`, temp dir, mock at the boundary- and the test it produced, with the edge it pins. It also says which packages ran, focal first and the full suite after.
+
 ## Never
 
 - A test that depends on order, time or the network.

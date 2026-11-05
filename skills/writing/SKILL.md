@@ -27,6 +27,10 @@ a PR, reproduce a bug, or run a command you wrote.
 - For a review, say what to look at first, what is out of scope, and which
   decision each section carries.
 
+## Output
+
+The text the reader acts on: the point in the title, the conclusion in the first line, examples with their numbers, and what was not covered. A PR description carries the problem, the test and what was left out, in three paragraphs.
+
 ## Never
 
 - "As you can see in the code...": if it has to be seen in the code, the text is

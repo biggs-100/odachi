@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **Every skill says what it returns.** `odachi skills --check` refuses a skill without
+  `## Output`, whether or not it carries references: the seventeen bodies that had none declare
+  it, the scaffold `odachi skill new` writes includes the section, and `drive` and `slices` keep
+  the depth that no longer fit under `references/` (0206).
+
 ## v0.17.0 - 2026-11-05
 
 - **A skill carries its depth beside it.** A skill folder may hold `references/*.md`: the body

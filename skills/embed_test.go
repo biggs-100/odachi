@@ -98,6 +98,10 @@ func TestEmbeddedBytesAreTheFilesInTheRepo(t *testing.T) {
 // subagent is used is content, and content drifts. `slices` owns the triggers and
 // the handoff; `drive` is what the block loads before acting, so it is the one
 // that has to send the agent to `slices` when the request does not fit.
+//
+// The test asks the folder, not the body: the policy moved to
+// references/delegation.md when the body met the cap, and a skill is its folder
+// (0205, 0206).
 func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 	all, err := skills.All()
 	if err != nil {
@@ -105,7 +109,11 @@ func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Main())
+		var folder strings.Builder
+		for _, file := range s.Files {
+			folder.Write(file.Content)
+		}
+		byName[s.Name] = folder.String()
 	}
 
 	for _, want := range []string{

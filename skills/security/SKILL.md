@@ -25,6 +25,10 @@ dependency is added or upgraded; when an error is answered; before a release.
 - The proof is where the measurable half runs -the suite plus `govulncheck ./...`- and the fence is where a file that must never be touched lives. The rest of this skill is judgement.
 - Before a release, read the diff once asking what it can leak, escalate or break; the `risk` lens asks a reviewer the same question.
 
+## Output
+
+The boundary, what crosses it and who may: the parse, the authorization, the secret's home, the dependency and its reason, and the failure that says no. A release returns the diff read for what it can leak, escalate or break.
+
 ## Never
 
 - Trust a check the client can skip: a hidden field, a frontend validation, a role the request names.
