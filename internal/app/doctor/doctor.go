@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/app/adoption"
@@ -220,8 +221,9 @@ type runner struct {
 	lookup   Lookup
 	profiles Profiles
 	// bundled is the binary's own copy of the craft, read once for the skills
-	// check. It is the source a project without skills/ is compared against.
-	bundled map[string]string
+	// check. It is the source a project without skills/ is compared against, and
+	// a skill is its folder: name -> path -> bytes.
+	bundled map[string]map[string]string
 }
 
 // isProject answers the question the checks take for granted: is there anything
@@ -606,9 +608,9 @@ func (r *runner) skills() domaindoctor.Check {
 
 // skillSource is where the installed copies are compared against: the project's
 // own skills/ when it carries one, and the binary's embedded payload when it does
-// not. The second case is a project that only installed odachi: it has no
-// source folder, and the copy the binary would write is the only truth it has.
-type skillSource func(name string) (content string, exists bool, err error)
+// not. A skill is its folder: name -> path -> bytes, so a reference that changed
+// is as visible as the SKILL.md that links it.
+type skillSource func(name string) (files map[string]string, exists bool, err error)
 
 func (r *runner) skillSource() (skillSource, string, error) {
 	found, err := r.isDir(skillsDir)
@@ -616,8 +618,8 @@ func (r *runner) skillSource() (skillSource, string, error) {
 		return nil, "", err
 	}
 	if found {
-		return func(name string) (string, bool, error) {
-			return r.read(filepath.Join(skillsDir, name, skillFile))
+		return func(name string) (map[string]string, bool, error) {
+			return r.readSkillFolder(filepath.Join(skillsDir, name))
 		}, skillsDir + "/", nil
 	}
 
@@ -625,16 +627,59 @@ func (r *runner) skillSource() (skillSource, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	return func(name string) (string, bool, error) {
-		content, ok := bundled[name]
-		return content, ok, nil
+	return func(name string) (map[string]string, bool, error) {
+		files, ok := bundled[name]
+		return files, ok, nil
 	}, "the binary", nil
+}
+
+// readSkillFolder reads one skill folder from the project: its SKILL.md and the
+// markdown under references/. A reference is a file, not a tree; the check
+// refuses a tree, so the comparison skips it instead of failing the run.
+func (r *runner) readSkillFolder(dir string) (map[string]string, bool, error) {
+	main, exists, err := r.read(filepath.Join(dir, skillFile))
+	if err != nil || !exists {
+		return nil, exists, err
+	}
+	files := map[string]string{skillFile: main}
+
+	refsDir := filepath.Join(r.opts.Dir, filepath.FromSlash(dir), "references")
+	found, err := r.files.IsDir(refsDir)
+	if err != nil {
+		return nil, false, err
+	}
+	if !found {
+		return files, true, nil
+	}
+	names, err := r.files.List(refsDir)
+	if err != nil {
+		return nil, false, err
+	}
+	for _, name := range names {
+		if !strings.HasSuffix(name, ".md") {
+			continue
+		}
+		entry := filepath.Join(refsDir, name)
+		isDir, err := r.files.IsDir(entry)
+		if err != nil {
+			return nil, false, err
+		}
+		if isDir {
+			continue
+		}
+		data, err := r.files.Read(entry)
+		if err != nil {
+			return nil, false, err
+		}
+		files["references/"+name] = string(data)
+	}
+	return files, true, nil
 }
 
 // bundledSkills is the craft the binary carries, keyed by name. It is loaded once
 // per run: the check compares every installed copy against it, and the embedded
 // filesystem answers the same bytes every time.
-func (r *runner) bundledSkills() (map[string]string, error) {
+func (r *runner) bundledSkills() (map[string]map[string]string, error) {
 	if r.bundled != nil {
 		return r.bundled, nil
 	}
@@ -642,9 +687,13 @@ func (r *runner) bundledSkills() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	r.bundled = make(map[string]string, len(all))
+	r.bundled = make(map[string]map[string]string, len(all))
 	for _, s := range all {
-		r.bundled[s.Name] = string(s.Main())
+		files := make(map[string]string, len(s.Files))
+		for _, file := range s.Files {
+			files[file.Path] = string(file.Content)
+		}
+		r.bundled[s.Name] = files
 	}
 	return r.bundled, nil
 }
@@ -725,7 +774,7 @@ func (r *runner) installedSkills(source skillSource) (detail string, compared in
 		}
 		installed++
 
-		content, exists, err := source(name)
+		sourceFiles, exists, err := source(name)
 		if err != nil {
 			return "", 0, nil, err
 		}
@@ -734,13 +783,11 @@ func (r *runner) installedSkills(source skillSource) (detail string, compared in
 		}
 		compared++
 
-		installedData, err := r.files.Read(installedPath)
+		moved, err := r.driftOf(entry, installedSkillsDir+"/"+name, sourceFiles)
 		if err != nil {
 			return "", 0, nil, err
 		}
-		if string(installedData) != content {
-			drift = append(drift, installedSkillsDir+"/"+name)
-		}
+		drift = append(drift, moved...)
 	}
 
 	if installed == 0 {
@@ -793,7 +840,7 @@ func (r *runner) homeSkills(source skillSource) (detail string, compared int, dr
 		}
 		installed++
 
-		content, exists, err := source(name)
+		sourceFiles, exists, err := source(name)
 		if err != nil {
 			return "", 0, nil, err
 		}
@@ -802,19 +849,49 @@ func (r *runner) homeSkills(source skillSource) (detail string, compared int, dr
 		}
 		compared++
 
-		installedData, err := r.files.Read(installedPath)
+		moved, err := r.driftOf(entry, "~/.agents/skills/"+name, sourceFiles)
 		if err != nil {
 			return "", 0, nil, err
 		}
-		if string(installedData) != content {
-			drift = append(drift, "~/.agents/skills/"+name)
-		}
+		drift = append(drift, moved...)
 	}
 
 	if installed == 0 {
 		return "~/.agents/skills: none", 0, nil, nil
 	}
 	return "~/.agents/skills: " + count(installed, "installed", "installed"), compared, drift, nil
+}
+
+// driftOf names every file of one installed skill that is missing or differs
+// from the source. The skill is one count; a drift is one file, because that is
+// what a human has to open and what the check has to name.
+func (r *runner) driftOf(dir, display string, want map[string]string) ([]string, error) {
+	paths := make([]string, 0, len(want))
+	for path := range want {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	drift := []string{}
+	for _, path := range paths {
+		target := filepath.Join(dir, filepath.FromSlash(path))
+		exists, err := r.files.Exists(target)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			drift = append(drift, display+"/"+path)
+			continue
+		}
+		data, err := r.files.Read(target)
+		if err != nil {
+			return nil, err
+		}
+		if string(data) != want[path] {
+			drift = append(drift, display+"/"+path)
+		}
+	}
+	return drift, nil
 }
 
 // noProfileFile is the second half of check 11 when there is nothing to compare:
@@ -1225,15 +1302,9 @@ func (r *runner) globalPersonaNote(clients []persona.Client) string {
 	}
 
 	if extra := r.opencodeDefaultNote(clients); extra != "" {
-		if result == "" {
-			return extra
-		}
 		result += "; " + extra
 	}
 	if extra := r.designPluginNote(clients); extra != "" {
-		if result == "" {
-			return extra
-		}
 		result += "; " + extra
 	}
 	return result
