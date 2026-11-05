@@ -20,7 +20,7 @@ R1 · "every skill the curriculum ships says what it returns, and `odachi skills
 - [x] T4 · drive states what it returns and moves the review section to references/   R1 · route:inline · tree:a3cb90cb81b1cd06340e36b0e691f92bc6e402fe
 - [x] T5 · bootstrap, ship, data, security, role-craft and skill-improve state what they return   R1 · route:inline · tree:561a2f547e33f2e52ed35574f6129bb6a4cb1fb1
 - [x] T6 · the check asks every skill for ## Output, skill new writes one, and skill-craft teaches the rule   R1 · route:inline · tree:983b1f1b8a623100629cb0d86d03f74ca0d67eca
-- [ ] T7 · the machine copy carries the new bytes, and the changelog and ADR 0050 record the stage   R1 · route:inline
+- [x] T7 · the machine copy carries the new bytes, and the changelog and ADR 0050 record the stage   R1 · route:inline · tree:e084d617e5d564c1c994fff72612a0f5a188bc97
 
 ## History
 L1 · "every skill the curriculum ships says what it returns, and `odachi skills --check` refuses one that does not, so the contract ADR 0050 opened is enforced instead of half-applied"
