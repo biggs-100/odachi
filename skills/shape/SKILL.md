@@ -31,6 +31,10 @@ is obvious: there `drive` is enough.
 - If exploring does not end, stop and say what you learned: an exploration
   without an end is a feature nobody planned.
 
+## Output
+
+The draft it hands over: the outcome in one sentence, the observable done-when, the non-goals with the path each one protects, and the decisions taken with their reason. The questions exploration opened that nobody answered, recorded with `odachi ask`, and the `start` command that records the brief.
+
 ## Never
 
 - Write code, a test or a plan step before `start` recorded the brief.

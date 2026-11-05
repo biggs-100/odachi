@@ -23,6 +23,10 @@ or when someone asks "is this tested?".
 - A failing test is fixed at the cause. If the test was badly written, say so in
   the report and explain why.
 
+## Output
+
+The failing test first, its name saying what breaks if it fails, and the edges the change covers; then the fix and the suites that were run. A test that cannot be written is named with the reason, and the report says which packages ran.
+
 ## Never
 
 - Adjust the test to make it pass without changing the cause of the failure.

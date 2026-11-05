@@ -29,6 +29,10 @@ something else.
 - If the report is outside the fence in `brief.md`, do not fix it: `odachi ask`.
 - If the fix touches several roots, one step per root; not one step per report.
 
+## Output
+
+One row per report with its root class and the evidence that decided it, the reports that became one fix, and the step each root earns. A report that could not be reproduced returns the message or the question it became, not a patch.
+
 ## Never
 
 - One patch per report when they share a root.
