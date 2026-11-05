@@ -20,7 +20,7 @@ R1 · "a skill carries depth without growing its 60-line body: the depth lives i
 - [ ] T2 · the binary carries a skill's folder: embed reads references/ and pack writes the tree byte for byte   R1 · route:inline
 - [x] T3 · init installs the folder and doctor compares it file by file; the design-plugin review-debt row is paid   R1 · route:inline · tree:6737d19ebec98f0ffc216549906505062b2534d1
 - [x] T4 · ui-craft becomes a router: four references carry the catalogue, the numbers, the motion and the final read   R1 · route:inline · tree:0cbe21377fefb5e06e9e6386d5156c3723a9bf7f
-- [ ] T5 · design declares its output and moves the on-disk format of a design folder to a reference   R1 · route:inline
+- [x] T5 · design declares its output and moves the on-disk format of a design folder to a reference   R1 · route:inline · tree:28e7867adb96c62311364b62180437a2cd187c3e
 - [ ] T6 · the grammar is written in skill-craft, ADR 0050 records the debt, and the changelog names it   R1 · route:inline
 
 ## History
