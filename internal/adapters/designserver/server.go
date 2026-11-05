@@ -237,6 +237,8 @@ func (s *Server) design(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, all[0])
 	case len(parts) == 2 && parts[1] == "comments" && r.Method == http.MethodPost:
 		s.addComment(w, r, slug)
+	case len(parts) == 2 && parts[1] == "send" && r.Method == http.MethodPost:
+		s.sendComments(w, r, slug)
 	case len(parts) == 3 && parts[1] == "comments" && r.Method == http.MethodPost:
 		s.resolveComment(w, r, slug, parts[2])
 	default:
@@ -258,6 +260,7 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		Excerpt    string `json:"excerpt"`
 		Comment    string `json:"comment"`
 		Screenshot string `json:"screenshot"`
+		Send       bool   `json:"send"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "the comment is not JSON: " + err.Error()})
@@ -281,6 +284,7 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		return
 	}
 
+	now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	comment := domain.Comment{
 		ID:         newID(),
 		File:       in.File,
@@ -288,8 +292,15 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		Excerpt:    in.Excerpt,
 		Comment:    in.Comment,
 		Screenshot: in.Screenshot,
-		CreatedAt:  time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+		CreatedAt:  now,
 		Status:     domain.StatusOpen,
+	}
+	if in.Send {
+		// A comment with no session behind the canvas is still saved: the pull path
+		// (the agent reads the file) is the fallback, never a lost note.
+		if queued, err := s.enqueue(slug, comment); err == nil && queued {
+			comment.SentAt = &now
+		}
 	}
 	comments.Comments = append(comments.Comments, comment)
 	if err := s.writeComments(slug, comments); err != nil {
@@ -300,6 +311,111 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 	s.writeMu.Unlock()
 	s.broadcast("comments")
 	writeJSON(w, http.StatusCreated, comment)
+}
+
+// sendComments queues every open comment nobody sent yet: the Collect mode saves
+// notes without waking the agent, and "Send all" sends the batch in one message per
+// comment. A canvas with no session behind it queues nothing and says so.
+func (s *Server) sendComments(w http.ResponseWriter, r *http.Request, slug string) {
+	if !s.ownPage(w, r) || !s.jsonOnly(w, r) {
+		return
+	}
+
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
+	comments, err := s.readComments(slug)
+	if err != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+
+	now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+	queued := 0
+	for i := range comments.Comments {
+		comment := &comments.Comments[i]
+		if comment.Status != domain.StatusOpen || comment.SentAt != nil {
+			continue
+		}
+		sent, err := s.enqueue(slug, *comment)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "the comment was saved but not queued: " + err.Error()})
+			return
+		}
+		if sent {
+			comment.SentAt = &now
+			queued++
+		}
+	}
+	if err := s.writeComments(slug, comments); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	s.broadcast("comments")
+	writeJSON(w, http.StatusOK, map[string]any{
+		"queued":  queued,
+		"session": strings.TrimSpace(os.Getenv("OPENCODE_SESSION_ID")) != "",
+	})
+}
+
+// enqueue writes one message a plugin can deliver: a file per message in the clone's
+// store, so the canvas and the plugin never write the same file. It reports false
+// when there is no session to deliver to: the comment stays saved, unsent.
+func (s *Server) enqueue(slug string, comment domain.Comment) (bool, error) {
+	session := strings.TrimSpace(os.Getenv("OPENCODE_SESSION_ID"))
+	if session == "" {
+		return false, nil
+	}
+	dir := filepath.Join(s.opts.Dir, ".git", "odachi", "design-queue")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return false, err
+	}
+
+	text := "Design comment on design/" + slug + "/" + comment.File
+	if comment.Selector != "" {
+		text += " (" + comment.Selector + ")"
+	}
+	text += ": " + comment.Comment
+	if comment.Screenshot != "" {
+		text += "\nScreenshot: design/" + slug + "/" + comment.Screenshot
+	}
+
+	message := struct {
+		ID        string `json:"id"`
+		SessionID string `json:"sessionID"`
+		Text      string `json:"text"`
+		CreatedAt string `json:"createdAt"`
+	}{
+		ID:        comment.ID,
+		SessionID: session,
+		Text:      text,
+		CreatedAt: comment.CreatedAt,
+	}
+	data, err := json.MarshalIndent(message, "", "  ")
+	if err != nil {
+		return false, err
+	}
+
+	temp, err := os.CreateTemp(dir, ".queue-*")
+	if err != nil {
+		return false, err
+	}
+	name := temp.Name()
+	if _, err := temp.Write(append(data, '\n')); err != nil {
+		temp.Close()
+		os.Remove(name)
+		return false, err
+	}
+	if err := temp.Close(); err != nil {
+		os.Remove(name)
+		return false, err
+	}
+	final := filepath.Join(dir, "queue-"+comment.ID+".json")
+	if err := os.Rename(name, final); err != nil {
+		os.Remove(name)
+		return false, err
+	}
+	return true, nil
 }
 
 func (s *Server) resolveComment(w http.ResponseWriter, r *http.Request, slug, id string) {
@@ -642,6 +758,21 @@ const inspector = `<script>(function () {
   var commenting = false;
   window.addEventListener("message", function (event) {
     if (event.data && event.data.type === "odachi:comment-mode") { commenting = !!event.data.on; }
+    if (event.data && event.data.type === "odachi:pins") {
+      var pins = [];
+      (event.data.pins || []).forEach(function (pin) {
+        var node = document.querySelector(pin.selector);
+        if (!node) { return; }
+        var rect = node.getBoundingClientRect();
+        pins.push({ id: pin.id, selector: pin.selector, status: pin.status, x: rect.left + window.scrollX + rect.width / 2, y: rect.top + window.scrollY });
+      });
+      window.parent.postMessage({ type: "odachi:pins", pins: pins }, "*");
+    }
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && event.shiftKey) {
+      window.parent.postMessage({ type: "odachi:blur" }, "*");
+    }
   });
   function selectorFor(node) {
     var parts = [];

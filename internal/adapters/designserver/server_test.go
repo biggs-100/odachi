@@ -129,12 +129,15 @@ func TestTheCanvasRefusesARouteWithoutItsToken(t *testing.T) {
 }
 
 // The artboard is served with the picker that names a clicked element: the canvas
-// cannot read a sandboxed page, so the page has to say what was clicked.
+// cannot read a sandboxed page, so the page has to say what was clicked, where its
+// comments are, and when Shift+Esc asks to leave focus.
 func TestTheArtboardCarriesTheSandboxedPicker(t *testing.T) {
 	base := canvas(t, project(t))
 	body := getText(t, base+"/artboard/pricing/01-a.html")
-	if !strings.Contains(body, "odachi:pick") {
-		t.Errorf("the artboard does not carry the picker: %q", body)
+	for _, want := range []string{"odachi:pick", "odachi:pins", "odachi:blur"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the artboard does not carry %q: %q", want, body)
+		}
 	}
 }
 
@@ -224,6 +227,110 @@ func TestTheWatcherAnnouncesAHandoffChange(t *testing.T) {
 	moved := server.changed()
 	if !strings.Contains(strings.Join(moved, ","), "handoffs") {
 		t.Errorf("moved = %v, want the handoff change", moved)
+	}
+}
+
+// A comment sent from the canvas becomes one message file for the session plugin: a
+// file per message means the canvas and the plugin never write the same file.
+func TestASentCommentIsQueuedForTheSession(t *testing.T) {
+	t.Setenv("OPENCODE_SESSION_ID", "s1")
+	root := project(t)
+	base := canvas(t, root)
+
+	response, err := http.Post(base+"/api/design/pricing/comments", "application/json",
+		strings.NewReader(`{"file":"01-a.html","selector":"h1","comment":"shorter","send":true}`))
+	if err != nil {
+		t.Fatalf("POST comment: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusCreated {
+		t.Fatalf("POST comment = %d, want 201", response.StatusCode)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(root, ".git", "odachi", "design-queue"))
+	if err != nil {
+		t.Fatalf("the queue was not written: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("queue files = %d, want 1", len(entries))
+	}
+	raw, err := os.ReadFile(filepath.Join(root, ".git", "odachi", "design-queue", entries[0].Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var message struct {
+		SessionID string `json:"sessionID"`
+		Text      string `json:"text"`
+	}
+	if err := json.Unmarshal(raw, &message); err != nil {
+		t.Fatalf("decode the message: %v\n%s", err, raw)
+	}
+	if message.SessionID != "s1" || !strings.Contains(message.Text, "shorter") {
+		t.Errorf("message = %+v", message)
+	}
+}
+
+// Collect saves without sending; Send all queues every unsent open comment in one
+// pass and marks them sent.
+func TestCollectedCommentsAreSentInABatch(t *testing.T) {
+	t.Setenv("OPENCODE_SESSION_ID", "s1")
+	root := project(t)
+	base := canvas(t, root)
+
+	for _, text := range []string{"first", "second"} {
+		response, err := http.Post(base+"/api/design/pricing/comments", "application/json",
+			strings.NewReader(`{"file":"01-a.html","selector":"h1","comment":"`+text+`"}`))
+		if err != nil {
+			t.Fatalf("POST comment: %v", err)
+		}
+		response.Body.Close()
+		if response.StatusCode != http.StatusCreated {
+			t.Fatalf("POST comment = %d, want 201", response.StatusCode)
+		}
+	}
+
+	response, err := http.Post(base+"/api/design/pricing/send", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatalf("POST send: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("POST send = %d, want 200", response.StatusCode)
+	}
+	var result struct {
+		Queued  int  `json:"queued"`
+		Session bool `json:"session"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Queued != 2 || !result.Session {
+		t.Errorf("result = %+v, want 2 queued with a session", result)
+	}
+	entries, err := os.ReadDir(filepath.Join(root, ".git", "odachi", "design-queue"))
+	if err != nil || len(entries) != 2 {
+		t.Errorf("queue files = %d (err %v), want 2", len(entries), err)
+	}
+}
+
+// Without a session the note is still saved: the pull path is the fallback, not a
+// lost comment.
+func TestACanvasWithoutASessionQueuesNothing(t *testing.T) {
+	t.Setenv("OPENCODE_SESSION_ID", "")
+	root := project(t)
+	base := canvas(t, root)
+
+	response, err := http.Post(base+"/api/design/pricing/comments", "application/json",
+		strings.NewReader(`{"file":"01-a.html","selector":"h1","comment":"shorter","send":true}`))
+	if err != nil {
+		t.Fatalf("POST comment: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusCreated {
+		t.Fatalf("POST comment = %d, want 201", response.StatusCode)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".git", "odachi", "design-queue")); !os.IsNotExist(err) {
+		t.Errorf("a canvas with no session wrote a queue: %v", err)
 	}
 }
 

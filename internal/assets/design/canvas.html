@@ -17,11 +17,27 @@
   main { flex:1; display:flex; min-height:0; }
   #stage { flex:1; overflow:auto; position:relative; background: repeating-conic-gradient(from 0deg, transparent 0 20px, rgba(125,125,125,.04) 20px 40px); }
   #boards { display:flex; gap:40px; padding:40px; align-items:flex-start; transform-origin: top left; }
-  .board { flex:0 0 auto; }
+  .board { flex:0 0 auto; position:relative; }
   .board h2 { font-size:13px; margin:0 0 6px; display:flex; gap:8px; align-items:baseline; }
   .board h2 small { color:var(--muted); font-weight:400; }
   .board h2 small.gap { color:var(--accent); border:1px solid currentColor; border-radius:4px; padding:0 5px; }
-  .board iframe { border:1px solid var(--line); background:#fff; display:block; }
+  .frame-wrap { position:relative; }
+  .frame-wrap iframe { border:1px solid var(--line); background:#fff; display:block; }
+  .shield { position:absolute; inset:0; z-index:2; cursor:grab; }
+  .shield:active { cursor:grabbing; }
+  #boards.has-focus .board:not(.focused) { opacity:.12; pointer-events:none; }
+  #boards.has-focus .board.focused .shield { display:none; }
+  body.commenting .shield { display:none; }
+  .pin { position:absolute; width:15px; height:15px; border-radius:50%; background:var(--accent); border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.4); transform:translate(-50%,-50%); z-index:3; cursor:pointer; }
+  .pins { position:absolute; inset:0; pointer-events:none; }
+  .pins .pin { pointer-events:auto; }
+  .pin[data-status="resolved"] { background:var(--muted); }
+  #back { display:none; }
+  body.has-focus #back { display:inline-block; }
+  #modes { display:flex; gap:10px; align-items:center; padding:8px 10px; border-bottom:1px solid var(--line); font-size:12px; }
+  #modes label { display:flex; gap:4px; align-items:center; }
+  #modes button { padding:1px 8px; font-size:12px; }
+  .comment.flash { outline:2px solid var(--accent); }
   aside { width:320px; border-left:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column; min-height:0; }
   aside h3 { margin:0; padding:12px 14px; font-size:13px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; }
   #comments { overflow:auto; padding:8px 10px; display:flex; flex-direction:column; gap:8px; }
@@ -48,6 +64,7 @@
 <header>
   <h1>odachi design</h1>
   <select id="design" aria-label="design"></select>
+  <button id="back" title="Leave focus and return to the canvas (Shift+Esc)">Back to canvas</button>
   <button id="mode" aria-pressed="false" title="Click an element in an artboard to leave a comment">Comment mode</button>
   <button id="fit" title="Fit the artboards to the window">Fit</button>
   <button id="zoom-out" aria-label="zoom out">&minus;</button>
@@ -61,6 +78,11 @@
   <div id="stage"><div id="boards"></div></div>
   <aside>
     <h3>Comments <span id="count" style="color:var(--muted);font-weight:400"></span></h3>
+    <div id="modes">
+      <label><input type="radio" name="send" value="now" checked> Send now</label>
+      <label><input type="radio" name="send" value="collect"> Collect</label>
+      <button id="send-all" title="Send every collected comment">Send all</button>
+    </div>
     <div id="comments"></div>
   </aside>
 </main>
@@ -87,7 +109,7 @@
 <script>
 (function () {
   "use strict";
-  var state = { designs: [], slug: "", zoom: 1, comment: false, pending: null };
+  var state = { designs: [], slug: "", zoom: 1, comment: false, pending: null, sendMode: "now", focus: null, restore: null, drag: null, dragMoved: false };
   var boards = document.getElementById("boards");
   var stage = document.getElementById("stage");
   var designSelect = document.getElementById("design");
@@ -98,7 +120,6 @@
   var target = document.getElementById("target");
   var text = document.getElementById("text");
   var compareBox = document.getElementById("compare");
-
   function api(path, options) {
     return fetch(path, options || {}).then(function (response) {
       if (!response.ok) { return response.json().then(function (body) { throw new Error(body.error || response.statusText); }); }
@@ -146,9 +167,18 @@
       frame.dataset.file = artboard.file;
       frame.dataset.slug = design.slug;
       frame.src = design.urls[artboard.file];
+
+      // In navigation the shield owns the pointer: the wheel zooms, the drag pans
+      // and a click focuses. In comment mode it goes away so the page receives the
+      // click and its own inspector names the element.
+      var shield = el("div", { className: "shield", title: "Click to focus; drag to pan; wheel to zoom" });
+      var pinBox = el("div", { className: "pins" });
+      var wrap = el("div", { className: "frame-wrap" }, [frame, shield, pinBox]);
       frame.addEventListener("load", function () {
         frame.contentWindow.postMessage({ type: "odachi:comment-mode", on: state.comment }, "*");
+        sendPins(design, frame, pinBox);
       });
+
       var notes = [el("small", { textContent: artboard.tradeoff })];
       if (!artboard.screenshot) {
         notes.push(el("small", { className: "gap", textContent: "no screenshot" }));
@@ -167,7 +197,15 @@
         notes.push(compare);
       }
       var head = el("h2", { textContent: artboard.title }, notes);
-      boards.appendChild(el("div", { className: chosen ? "board chosen" : "board" }, [head, frame]));
+      var board = el("div", { className: chosen ? "board chosen" : "board" }, [head, wrap]);
+      board.dataset.file = artboard.file;
+      board.dataset.slug = design.slug;
+      shield.addEventListener("click", function () {
+        if (!state.comment && !state.dragMoved) { enterFocus(board); }
+      });
+      shield.addEventListener("wheel", onWheel, { passive: false });
+      shield.addEventListener("mousedown", onDragStart);
+      boards.appendChild(board);
     });
 
     renderComments();
@@ -193,6 +231,7 @@
       }
       var card = el("div", { className: "comment" }, [meta, body, actions]);
       card.setAttribute("data-status", comment.status);
+      card.dataset.id = comment.id;
       commentsBox.appendChild(card);
     });
     count.textContent = open + " open";
@@ -214,10 +253,124 @@
     compareBox.style.display = "flex";
   }
 
+  // Navigation: the wheel zooms wherever the pointer is, the drag pans the stage,
+  // and a click on a shield focuses that artboard instead of interacting with it.
+  function onWheel(event) {
+    if (state.focus) { return; }
+    event.preventDefault();
+    state.zoom = Math.max(0.2, Math.min(2, state.zoom * (event.deltaY < 0 ? 1.1 : 0.9)));
+    applyZoom();
+  }
+
+  function onDragStart(event) {
+    if (state.focus || state.comment || event.button !== 0) { return; }
+    state.drag = { x: event.clientX, y: event.clientY, left: stage.scrollLeft, top: stage.scrollTop };
+    state.dragMoved = false;
+    document.addEventListener("mousemove", onDragMove);
+    document.addEventListener("mouseup", onDragEnd);
+  }
+
+  function onDragMove(event) {
+    if (!state.drag) { return; }
+    var dx = event.clientX - state.drag.x;
+    var dy = event.clientY - state.drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) { state.dragMoved = true; }
+    stage.scrollLeft = state.drag.left - dx;
+    stage.scrollTop = state.drag.top - dy;
+  }
+
+  function onDragEnd() {
+    document.removeEventListener("mousemove", onDragMove);
+    document.removeEventListener("mouseup", onDragEnd);
+    state.drag = null;
+    setTimeout(function () { state.dragMoved = false; }, 0);
+  }
+
+  // Focus is the artboard at exactly 100% with the pointer and the keyboard: the
+  // shield goes away, the rest dims, and the previous zoom and scroll come back.
+  function enterFocus(board) {
+    if (!board || state.focus) { return; }
+    state.restore = { zoom: state.zoom, left: stage.scrollLeft, top: stage.scrollTop };
+    state.focus = board;
+    state.zoom = 1;
+    applyZoom();
+    boards.classList.add("has-focus");
+    document.body.classList.add("has-focus");
+    var all = boards.querySelectorAll(".board");
+    for (var i = 0; i < all.length; i++) { all[i].classList.remove("focused"); }
+    board.classList.add("focused");
+    board.scrollIntoView({ block: "center", inline: "center" });
+    stateLine.textContent = "focused at 100%; Shift+Esc returns";
+  }
+
+  function exitFocus() {
+    if (!state.focus) { return; }
+    state.focus = null;
+    boards.classList.remove("has-focus");
+    document.body.classList.remove("has-focus");
+    var all = boards.querySelectorAll(".board");
+    for (var i = 0; i < all.length; i++) { all[i].classList.remove("focused"); }
+    if (state.restore) {
+      state.zoom = state.restore.zoom;
+      applyZoom();
+      stage.scrollLeft = state.restore.left;
+      stage.scrollTop = state.restore.top;
+    }
+    state.restore = null;
+    stateLine.textContent = "";
+  }
+
+  // Pins: the canvas asks the page where each commented element is; the page
+  // answers with its own coordinates, because the sandbox hides its DOM.
+  function sendPins(design, frame, pinBox) {
+    var pins = [];
+    design.comments.comments.forEach(function (comment) {
+      if (comment.file === frame.dataset.file && comment.selector) {
+        pins.push({ id: comment.id, selector: comment.selector, status: comment.status });
+      }
+    });
+    pinBox.innerHTML = "";
+    frame.contentWindow.postMessage({ type: "odachi:pins", pins: pins }, "*");
+  }
+
+  function drawPins(frame, pins) {
+    var box = frame.parentElement.querySelector(".pins");
+    if (!box) { return; }
+    box.innerHTML = "";
+    pins.forEach(function (pin) {
+      var node = el("button", { className: "pin", title: "Comment on " + pin.selector });
+      node.dataset.status = pin.status;
+      node.style.left = pin.x + "px";
+      node.style.top = pin.y + "px";
+      node.addEventListener("click", function () { flashComment(pin.id); });
+      box.appendChild(node);
+    });
+  }
+
+  function flashComment(id) {
+    var cards = commentsBox.querySelectorAll(".comment");
+    for (var i = 0; i < cards.length; i++) {
+      if (cards[i].dataset.id === id) {
+        cards[i].scrollIntoView({ block: "center" });
+        cards[i].classList.add("flash");
+        setTimeout(function () { cards[i].classList.remove("flash"); }, 1200);
+        return;
+      }
+    }
+  }
+
   // A sandboxed artboard cannot be read by this page: it sends the element it was
   // clicked on, and the canvas turns that into the same pending comment as before.
   window.addEventListener("message", function (event) {
     var data = event.data || {};
+    if (data.type === "odachi:pins") {
+      var frames = boards.querySelectorAll("iframe");
+      for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === event.source) { drawPins(frames[i], data.pins || []); return; }
+      }
+      return;
+    }
+    if (data.type === "odachi:blur") { exitFocus(); return; }
     if (data.type !== "odachi:pick" || !state.comment) { return; }
     var frames = boards.querySelectorAll("iframe");
     for (var i = 0; i < frames.length; i++) {
@@ -248,17 +401,21 @@
         file: state.pending.file,
         selector: state.pending.selector,
         excerpt: state.pending.excerpt,
-        comment: text.value.trim()
+        comment: text.value.trim(),
+        send: state.sendMode === "now"
       })
-    }).then(function () {
+    }).then(function (comment) {
       popover.style.display = "none";
       state.pending = null;
+      if (state.sendMode === "now" && (!comment || !comment.sentAt)) {
+        stateLine.textContent = "saved; this canvas has no session to send it to";
+      }
       refresh();
     }).catch(function (error) { stateLine.textContent = error.message; });
   }
 
   function resolve_(id) {
-    api("/api/design/" + state.slug + "/comments/" + id, { method: "POST" })
+    api("api/design/" + state.slug + "/comments/" + id, { method: "POST" })
       .then(refresh)
       .catch(function (error) { stateLine.textContent = error.message; });
   }
@@ -282,14 +439,38 @@
   document.getElementById("mode").addEventListener("click", function (event) {
     state.comment = !state.comment;
     event.currentTarget.setAttribute("aria-pressed", String(state.comment));
+    document.body.classList.toggle("commenting", state.comment);
     document.getElementById("hint").textContent = state.comment
       ? "Comment mode: click an element in an artboard. Clicks do not follow links."
-      : "Navigate: scroll or drag to pan, the wheel scrolls. Comment mode: click an element.";
+      : "Navigate: the wheel zooms, drag pans. Click an artboard to focus it at 100%.";
     var frames = boards.querySelectorAll("iframe");
     for (var i = 0; i < frames.length; i++) {
       frames[i].contentWindow.postMessage({ type: "odachi:comment-mode", on: state.comment }, "*");
     }
   });
+
+  var sendModes = document.querySelectorAll('input[name="send"]');
+  for (var m = 0; m < sendModes.length; m++) {
+    sendModes[m].addEventListener("change", function (event) {
+      state.sendMode = event.target.value;
+      updateSaveLabel();
+    });
+  }
+  function updateSaveLabel() {
+    document.getElementById("save").textContent = state.sendMode === "now" ? "Save & send" : "Collect";
+  }
+  document.getElementById("send-all").addEventListener("click", function () {
+    api("api/design/" + state.slug + "/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then(function (result) {
+        stateLine.textContent = result.session ? (result.queued + " comment(s) sent") : "saved; no session to send them to";
+        refresh();
+      })
+      .catch(function (error) { stateLine.textContent = error.message; });
+  });
+  document.getElementById("back").addEventListener("click", exitFocus);
+  stage.addEventListener("wheel", onWheel, { passive: false });
+  stage.addEventListener("mousedown", onDragStart);
+  updateSaveLabel();
 
   document.getElementById("fit").addEventListener("click", function () {
     var design = current();
@@ -305,6 +486,7 @@
   document.getElementById("save").addEventListener("click", save);
   document.getElementById("cancel").addEventListener("click", function () { popover.style.display = "none"; state.pending = null; });
   document.addEventListener("keydown", function (event) {
+    if (event.shiftKey && event.key === "Escape") { exitFocus(); return; }
     if (event.key === "Escape") {
       popover.style.display = "none";
       state.pending = null;
