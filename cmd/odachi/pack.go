@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/biggs-100/odachi/internal/app/pack"
 	skillsapp "github.com/biggs-100/odachi/internal/app/skills"
@@ -57,10 +58,7 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	payload := make([]pack.Skill, 0, len(embedded))
-	for _, s := range embedded {
-		payload = append(payload, pack.Skill{Name: s.Name, Content: s.Content})
-	}
+	bundled := payload(embedded)
 
 	// The project's own catalog: a skill created with `odachi skill new` lives
 	// in ./skills and the agent reads .agents/skills, so this is the join. A
@@ -81,11 +79,21 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 	project := make([]pack.Skill, 0, len(own.Skills))
+	files := disk(dir)
 	for _, s := range own.Skills {
-		project = append(project, pack.Skill{Name: s.Name, Content: s.Raw})
+		entry := pack.Skill{Name: s.Name, Files: []pack.File{{Path: pack.SkillFile, Content: s.Raw}}}
+		for _, reference := range s.References {
+			data, err := files.Read(filepath.Join(dir, skillsapp.Dir, s.Name, filepath.FromSlash(reference)))
+			if err != nil {
+				fmt.Fprintln(stderr, "odachi: could not read skills/"+s.Name+"/"+reference+": "+oneLine(err.Error())+"; fix the file and run odachi pack again")
+				return start.CodeBlocked
+			}
+			entry.Files = append(entry.Files, pack.File{Path: reference, Content: data})
+		}
+		project = append(project, entry)
 	}
 
-	return reportPack(pack.Run(pack.Options{Agents: agents, Scope: scope, Dest: dest, DryRun: dryRun, Dir: dir, Skills: payload, Project: project}, disk(dir), osHome{}), asJSON, stdout, stderr)
+	return reportPack(pack.Run(pack.Options{Agents: agents, Scope: scope, Dest: dest, DryRun: dryRun, Dir: dir, Skills: bundled, Project: project}, disk(dir), osHome{}), asJSON, stdout, stderr)
 }
 
 // packDest is one row of the machine report: the same numbers the summary line a

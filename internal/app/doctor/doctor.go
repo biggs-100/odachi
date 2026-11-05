@@ -644,7 +644,7 @@ func (r *runner) bundledSkills() (map[string]string, error) {
 	}
 	r.bundled = make(map[string]string, len(all))
 	for _, s := range all {
-		r.bundled[s.Name] = string(s.Content)
+		r.bundled[s.Name] = string(s.Main())
 	}
 	return r.bundled, nil
 }

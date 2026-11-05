@@ -27,6 +27,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -42,13 +43,23 @@ const (
 	CodeBlocked = 1
 )
 
-// SkillFile is the one file a skill is. The agents read exactly this name.
+// SkillFile is the one file every skill must carry. The agents read exactly this
+// name.
 const SkillFile = "SKILL.md"
 
-// Skill is one bundled skill: its name (its directory) and its exact bytes.
-type Skill struct {
-	Name    string
+// File is one file of a skill folder, at a path relative to it: "SKILL.md" or
+// "references/numbers.md", with forward slashes on every OS.
+type File struct {
+	Path    string
 	Content []byte
+}
+
+// Skill is one skill the human gets: its folder name and every file in it,
+// sorted by path. A skill is installed as a folder, never as a lone file: the
+// references travel with it or the skill links to nothing.
+type Skill struct {
+	Name  string
+	Files []File
 }
 
 // Options is one `odachi pack` invocation.
@@ -342,7 +353,8 @@ func destLabel(dest string) string {
 }
 
 // install puts every bundled skill where one destination expects them, and
-// reports what it found there besides its own files.
+// reports what it found there besides its own files. A skill is one line, no
+// matter how many references it carries: the summary counts skills, not files.
 func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 	result := DestResult{Names: t.names, Dest: t.label, Scope: t.scope}
 	// who is the prefix every line carries: one agent, or every agent that shares
@@ -352,62 +364,7 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 	seen := make(map[string]bool, len(skills))
 	for _, skill := range skills {
 		seen[skill.Name] = true
-		path := filepath.Join(t.dir, skill.Name, SkillFile)
-		label := t.label + "/" + skill.Name + "/" + SkillFile
-
-		exists, err := files.Exists(path)
-		if err != nil {
-			result.fail(who, label, err)
-			continue
-		}
-
-		if !exists {
-			if dryRun {
-				result.Installed++
-				result.Files = append(result.Files, label)
-				result.Lines = append(result.Lines, who+" · would install · "+label)
-				continue
-			}
-			if err := files.Write(path, skill.Content); err != nil {
-				result.fail(who, label, err)
-				continue
-			}
-			result.Installed++
-			result.Files = append(result.Files, label)
-			result.Lines = append(result.Lines, who+" · installed · "+label)
-			continue
-		}
-
-		current, err := files.Read(path)
-		if err != nil {
-			result.fail(who, label, err)
-			continue
-		}
-		if bytes.Equal(current, skill.Content) {
-			result.Unchanged++
-			result.Lines = append(result.Lines, who+" · unchanged · "+label)
-			continue
-		}
-
-		if dryRun {
-			result.BackedUp++
-			result.Files = append(result.Files, label)
-			result.Lines = append(result.Lines, who+" · would back up and write · "+label)
-			continue
-		}
-		// The human's bytes go aside before they go away: a backup that can be
-		// skipped is not a backup.
-		if _, err := files.Backup(path); err != nil {
-			result.fail(who, label, err)
-			continue
-		}
-		if err := files.Write(path, skill.Content); err != nil {
-			result.fail(who, label, err)
-			continue
-		}
-		result.BackedUp++
-		result.Files = append(result.Files, label)
-		result.Lines = append(result.Lines, who+" · backed up and written · "+label)
+		result.installSkill(t, who, skill, files, dryRun)
 	}
 
 	// A skill odachi did not write belongs to the human. It is reported, never
@@ -436,6 +393,78 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 		result.Lines = append(result.Lines, who+" · odachi did not write it, not touching it · "+label)
 	}
 	return result
+}
+
+// installSkill writes one skill folder, file by file, each one backed up before
+// it is replaced. The skill is reported once: installed when its SKILL.md was not
+// there, unchanged when every file matches, backed up and written when a skill
+// that already lived learned something new.
+func (r *DestResult) installSkill(t target, who string, skill Skill, files Files, dryRun bool) {
+	label := t.label + "/" + skill.Name + "/"
+	mainExisted := false
+	identical := true
+
+	for _, file := range skill.Files {
+		path := filepath.Join(t.dir, skill.Name, filepath.FromSlash(file.Path))
+		display := label + file.Path
+
+		exists, err := files.Exists(path)
+		if err != nil {
+			r.fail(who, display, err)
+			return
+		}
+		if file.Path == SkillFile {
+			mainExisted = exists
+		}
+		if exists {
+			current, err := files.Read(path)
+			if err != nil {
+				r.fail(who, display, err)
+				return
+			}
+			if bytes.Equal(current, file.Content) {
+				continue
+			}
+		}
+
+		identical = false
+		r.Files = append(r.Files, display)
+		if dryRun {
+			continue
+		}
+		// The human's bytes go aside before they go away: a backup that can be
+		// skipped is not a backup. A file that was not there needs none.
+		if exists {
+			if _, err := files.Backup(path); err != nil {
+				r.fail(who, display, err)
+				return
+			}
+		}
+		if err := files.Write(path, file.Content); err != nil {
+			r.fail(who, display, err)
+			return
+		}
+	}
+
+	switch {
+	case identical:
+		r.Unchanged++
+		r.Lines = append(r.Lines, who+" · unchanged · "+label)
+	case !mainExisted:
+		r.Installed++
+		verb := "installed"
+		if dryRun {
+			verb = "would install"
+		}
+		r.Lines = append(r.Lines, who+" · "+verb+" · "+label)
+	default:
+		r.BackedUp++
+		verb := "backed up and written"
+		if dryRun {
+			verb = "would back up and write"
+		}
+		r.Lines = append(r.Lines, who+" · "+verb+" · "+label)
+	}
 }
 
 // fail records one failed file and keeps going: one unreadable directory must
@@ -513,7 +542,9 @@ func normalize(skills []Skill) []Skill {
 			continue
 		}
 		seen[name] = true
-		out = append(out, Skill{Name: name, Content: skill.Content})
+		files := append([]File(nil), skill.Files...)
+		slices.SortStableFunc(files, func(a, b File) int { return strings.Compare(a.Path, b.Path) })
+		out = append(out, Skill{Name: name, Files: files})
 	}
 	slices.SortStableFunc(out, func(a, b Skill) int { return strings.Compare(a.Name, b.Name) })
 	return out
@@ -558,8 +589,35 @@ func validate(skills []Skill) error {
 		if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
 			return fmt.Errorf("invalid bundled skill: %q; the binary is built wrong, download odachi again", name)
 		}
+		if len(skill.Files) == 0 {
+			return fmt.Errorf("invalid bundled skill %q: it carries no files; the binary is built wrong, download odachi again", name)
+		}
+		main := false
+		for _, file := range skill.Files {
+			if file.Path == SkillFile {
+				main = true
+			}
+			if !validFilePath(file.Path) {
+				return fmt.Errorf("invalid bundled file %q in skill %q: a path must stay inside the folder; the binary is built wrong, download odachi again", file.Path, name)
+			}
+		}
+		if !main {
+			return fmt.Errorf("invalid bundled skill %q: it carries no %s; the binary is built wrong, download odachi again", name, SkillFile)
+		}
 	}
 	return nil
+}
+
+// validFilePath keeps every write inside the skill folder: a relative path with
+// forward slashes, SKILL.md or a markdown reference under references/.
+func validFilePath(rel string) bool {
+	if rel == "" || strings.Contains(rel, `\`) || strings.HasPrefix(rel, "/") {
+		return false
+	}
+	if path.Clean(rel) != rel || rel == "." || rel == ".." || strings.HasPrefix(rel, "../") {
+		return false
+	}
+	return rel == SkillFile || strings.HasPrefix(rel, "references/")
 }
 
 // firstFailure is the failure the one-line message quotes, so a blocked run

@@ -230,7 +230,7 @@ func bootstrapContent() string {
 	if !ok {
 		panic("the binary has no bootstrap skill")
 	}
-	return string(bootstrap.Content)
+	return string(bootstrap.Main())
 }
 
 func cleanLookup() *fakeLookup { return &fakeLookup{resolved: "/home/ana/bin/odachi"} }

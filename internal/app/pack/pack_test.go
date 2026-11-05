@@ -19,11 +19,25 @@ func bundled() []pack.Skill {
 	skills := make([]pack.Skill, 0, len(names))
 	for _, name := range names {
 		skills = append(skills, pack.Skill{
-			Name:    name,
-			Content: []byte("---\nname: " + name + "\ndescription: Trigger: " + name + "\n---\n\n## When\n\ncuando\n"),
+			Name: name,
+			Files: []pack.File{{
+				Path:    pack.SkillFile,
+				Content: []byte("---\nname: " + name + "\ndescription: Trigger: " + name + "\n---\n\n## When\n\ncuando\n"),
+			}},
 		})
 	}
 	return skills
+}
+
+// mainFile is the SKILL.md bytes of a test skill: the file every install writes
+// and every assertion compares.
+func mainFile(skill pack.Skill) []byte {
+	for _, file := range skill.Files {
+		if file.Path == pack.SkillFile {
+			return file.Content
+		}
+	}
+	return nil
 }
 
 // fakeFiles is the Files port in memory. It records writes and backups apart
@@ -179,8 +193,8 @@ func TestInstallsEverySkillOfThePayloadForOneAgent(t *testing.T) {
 			t.Errorf("%s was not written", skill.Name)
 			continue
 		}
-		if got != string(skill.Content) {
-			t.Errorf("%s content = %q, want %q", skill.Name, got, skill.Content)
+		if got != string(mainFile(skill)) {
+			t.Errorf("%s content = %q, want %q", skill.Name, got, mainFile(skill))
 		}
 	}
 	if len(files.writes) != len(bundled()) {
@@ -261,7 +275,7 @@ func TestDifferentLocalFileIsBackedUpBeforeTheOverwrite(t *testing.T) {
 		t.Errorf("the backup must come before the write, events: %v", files.events)
 	}
 	got, _ := files.content(edited)
-	if would := string(bundled()[0].Content); got != would {
+	if would := string(mainFile(bundled()[0])); got != would {
 		t.Errorf("the file was not replaced with the bundled bytes: %q", got)
 	}
 	if !slices.Contains(result.Lines, "claude · 4 installed · 1 backed up · ~/.claude/skills") {
@@ -380,8 +394,8 @@ func TestOpenCodeInstallsIntoTheProject(t *testing.T) {
 			t.Errorf("%s was not installed in the project", skill.Name)
 			continue
 		}
-		if got != string(skill.Content) {
-			t.Errorf("%s content = %q, want %q", skill.Name, got, skill.Content)
+		if got != string(mainFile(skill)) {
+			t.Errorf("%s content = %q, want %q", skill.Name, got, mainFile(skill))
 		}
 	}
 	if len(files.writes) != len(bundled()) {
@@ -515,7 +529,7 @@ func TestOpenCodeBacksUpAModifiedFile(t *testing.T) {
 	if backupAt < 0 || writeAt < 0 || backupAt > writeAt {
 		t.Errorf("the backup must come before the write, events: %v", files.events)
 	}
-	if got, _ := files.content(edited); got != string(bundled()[0].Content) {
+	if got, _ := files.content(edited); got != string(mainFile(bundled()[0])) {
 		t.Errorf("the file was not replaced with the bundled bytes: %q", got)
 	}
 	if !slices.Contains(result.Lines, "opencode · 4 installed · 1 backed up · ./.opencode/skills") {
@@ -797,8 +811,8 @@ func TestDestServesAClientTheTableDoesNotKnow(t *testing.T) {
 			t.Errorf("%s was not installed in --dest", skill.Name)
 			continue
 		}
-		if got != string(skill.Content) {
-			t.Errorf("%s content = %q, want %q", skill.Name, got, skill.Content)
+		if got != string(mainFile(skill)) {
+			t.Errorf("%s content = %q, want %q", skill.Name, got, mainFile(skill))
 		}
 	}
 	// One copy, not one per agent: both names share the folder.
@@ -1059,8 +1073,11 @@ func TestTheFirstFailedFileKeepsItsPathAndReason(t *testing.T) {
 // be confused with the bundled ones.
 func projectSkill(name string) pack.Skill {
 	return pack.Skill{
-		Name:    name,
-		Content: []byte("---\nname: " + name + "\ndescription: Trigger: the project's own " + name + "\n---\n\n## When\n\ncuando el proyecto lo pide\n"),
+		Name: name,
+		Files: []pack.File{{
+			Path:    pack.SkillFile,
+			Content: []byte("---\nname: " + name + "\ndescription: Trigger: the project's own " + name + "\n---\n\n## When\n\ncuando el proyecto lo pide\n"),
+		}},
 	}
 }
 
@@ -1079,7 +1096,7 @@ func TestTheProjectSkillsAreInstalledToo(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
 	}
 	path := target(root, "standard", "marketing")
-	if got := string(files.files[path]); got != string(projectSkill("marketing").Content) {
+	if got := string(files.files[path]); got != string(mainFile(projectSkill("marketing"))) {
 		t.Errorf("%s = %q, want the project's own bytes", path, got)
 	}
 	if !slices.ContainsFunc(result.Files, func(f string) bool {
@@ -1103,7 +1120,7 @@ func TestAProjectSkillReplacesABundledOne(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
 	}
 	path := target(root, "standard", "data")
-	if got := string(files.files[path]); got != string(own.Content) {
+	if got := string(files.files[path]); got != string(mainFile(own)) {
 		t.Errorf("%s = %q, want the project's own bytes", path, got)
 	}
 	if !slices.Contains(result.Lines, "project skill data replaces the bundled one") {
