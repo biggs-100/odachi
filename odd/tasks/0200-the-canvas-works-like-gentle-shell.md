@@ -17,7 +17,7 @@ R1 · "odachi design works like gentle-shell's canvas: a detached local canvas w
 ## Steps
 - [x] T1 · odachi design open leaves the canvas running and returns, and a second open refreshes the page already open   R1 · route:inline · tree:9f2dc27004640d0261a7b7b56cf6afa8d045d005
 - [x] T2 · the canvas requires its token, refuses a foreign Host and a cross-origin POST, and sandboxes the artboards   R1 · route:inline · tree:f4d374ab3b7206632f2b9156e16d048229bb9d3a
-- [ ] T3 · handoffs.json records sent, in_progress, implemented, chosen and previewUrl, and the canvas marks and compares   R1 · route:inline
+- [x] T3 · handoffs.json records sent, in_progress, implemented, chosen and previewUrl, and the canvas marks and compares   R1 · route:inline · tree:8ee18653a4122e2a305bcec5813f1c46ddc03bca
 - [ ] T4 · the canvas focuses an artboard at 100% with pointer capture, Shift+Esc returns, comments pin and Collect batches   R1 · route:inline
 - [ ] T5 · odachi init installs the OpenCode plugin, and the canvas queue delivers a comment to the session and marks it delivered   R1 · route:inline
 - [ ] T6 · the design skill opens the canvas, reads comments and updates the handoff, and the docs name the Claude difference   R1 · route:inline
