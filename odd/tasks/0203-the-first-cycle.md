@@ -13,7 +13,7 @@ R1 · "a new project with the installed global agent reaches its first proof wit
 - go test ./... is green
 
 ## Steps
-- [ ] T1 · the block names PDD and the first cycle in one paragraph, and a test pins it   R1 · route:inline
+- [x] T1 · the block names PDD and the first cycle in one paragraph, and a test pins it   R1 · route:inline · tree:060e4f75b8dd8329b4deaddc0ad34f291af7697e
 - [ ] T2 · doctor names the next step in a new project and audits the home copies the binary installs   R1 · route:inline
 - [ ] T3 · check --run warns when the proof has no output   R1 · route:inline
 - [ ] T4 · a .ps1 command runs with PowerShell or is refused naming the invocation on Windows   R1 · route:inline
