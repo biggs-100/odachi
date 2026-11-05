@@ -19,7 +19,7 @@ R1 · "every skill the curriculum ships says what it returns, and `odachi skills
 - [x] T3 · commits, pull-request, writing and acceptance state what they return   R1 · route:inline · tree:274cdbe86ffe1e609d200ee9d54232f1399eb39e
 - [x] T4 · drive states what it returns and moves the review section to references/   R1 · route:inline · tree:a3cb90cb81b1cd06340e36b0e691f92bc6e402fe
 - [x] T5 · bootstrap, ship, data, security, role-craft and skill-improve state what they return   R1 · route:inline · tree:561a2f547e33f2e52ed35574f6129bb6a4cb1fb1
-- [ ] T6 · the check asks every skill for ## Output, skill new writes one, and skill-craft teaches the rule   R1 · route:inline
+- [x] T6 · the check asks every skill for ## Output, skill new writes one, and skill-craft teaches the rule   R1 · route:inline · tree:983b1f1b8a623100629cb0d86d03f74ca0d67eca
 - [ ] T7 · the machine copy carries the new bytes, and the changelog and ADR 0050 record the stage   R1 · route:inline
 
 ## History
