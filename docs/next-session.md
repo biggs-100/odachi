@@ -47,6 +47,11 @@ discipline failure:
 
 ## The plan
 
+**Every fix ships through the installation.** The correction lands in the binary and in what
+`odachi init` writes —the block, the embedded skills, the home door and skills, `doctor`— and never
+as a hand edit of a project's `AGENTS.md`, its `~/.agents/skills`, or the global agent. A project
+that upgrades and runs `odachi init` must receive the whole fix; nothing here is a one-machine patch.
+
 1. **Measure first**: a fresh folder with the installed global agent, asking for a small
    app. Record where it stops: bootstrap loaded? `git init`? `start` with flags? `drive`?
    `check --run`? `proof/`? This separates discipline from missing instructions.
