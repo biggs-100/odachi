@@ -14,8 +14,10 @@ R1 · "the agent explains as it works: every decision and every question teaches
 - go test ./... is green
 
 ## Steps
-- [ ] T1 · the novato and senior voices explain in a short paragraph and define each concept the first time   R1 · route:inline
-- [ ] T2 · the interview asks each question with a why of 2 to 3 lines that says what the answer decides   R1 · route:inline
+- [x] T1 · the novato and senior voices explain in a short paragraph and define each concept the first time   R1 · route:inline · tree:3cfb7acb01e9af971764c941f76b412fde8cd147
+- [x] T2 · the interview asks each question with a why of 2 to 3 lines that says what the answer decides   R1 · route:inline · tree:c9168bfc588f1af6962adecbc06f9d5e37778cca
 
 ## History
 L1 · "the agent explains as it works: every decision and every question teaches the human the craft"
+L2 · OFICIO · "the timeout test widens the grandchild's window to five seconds and watches for seven" (porque under a full-suite load taskkill can be delayed past the old one-second margin, and a test that fails when the behaviour is right is a gate that cries wolf)
+L3 · OFICIO · "the timeout test moves the timeout to three seconds and the grandchild's write to seven" (porque the failure was a spawn race: under load cmd can reach start /b after taskkill took its snapshot, so the timeout must fire once the child certainly exists, not earlier)
