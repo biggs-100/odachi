@@ -7,8 +7,23 @@
 # glob measures a promise.
 
 [[rule]]
-not   = "no change to the gate or the review"
-paths = ["internal/app/check/**", "internal/domain/gate/**", "internal/app/review/**", "internal/domain/review/**"]
+not   = "no change to the production kill path"
+paths = ["internal/adapters/shellcmd/shellcmd.go", "internal/adapters/shellcmd/shellcmd_windows.go", "internal/adapters/shellcmd/shellcmd_unix.go", "internal/adapters/shellcmd/shellcmd_unsupported.go"]
+deps  = []
+
+[[rule]]
+not   = "no change to the proof format or the gate"
+paths = ["internal/app/check/**", "internal/domain/gate/**"]
+deps  = []
+
+[[rule]]
+not   = "no new flag and no new verb"
+paths = ["cmd/odachi/main.go"]
+deps  = []
+
+[[rule]]
+not   = "no change to the voice or the interview"
+paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
 deps  = []
 
 [[rule]]
