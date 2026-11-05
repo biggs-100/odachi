@@ -7,6 +7,17 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The agent teaches while it works.** `odachi init` writes a voice that explains every decision
+  in a short paragraph -what it chose, what it costs and what the other way would have cost-, names
+  and defines a concept the first time it appears, and says what an answer changes before asking a
+  question. Both profiles explain now: `novato` teaches step by step with the craft ceremony, and
+  `senior` leads with the decision and explains it in fewer lines instead of going to the point. The
+  anti-sermon guard stays in both: no repetition, no glossary, depth is not length. `odachi start`
+  prints a why of two lines per interview question, the second indented under the first. A project
+  receives the new voice when it runs `odachi init` or `odachi level --to`, never silently (0197).
+
 ## v0.14.8 - 2026-11-04
 
 - **The documented PowerShell install prints no error.** `scripts/install.ps1` opened with a UTF-8
