@@ -1,30 +1,29 @@
-# the-grammar-reaches-every-skill
+# the-ledger-of-0205-is-paid
 
 ## What must exist
-- every skill the curriculum ships says what it returns, and `odachi skills --check` refuses one that does not, so the contract ADR 0050 opened is enforced instead of half-applied
+- the four rows `docs/review-debt.md` left open are paid: the pack report counts a backup only when one ran, the gates check reads the table instead of searching it, the missing-reference drift has its test, and a git that cannot answer `Head` is an error instead of an empty history
 
 ## Done when
-- `odachi skills --check` refuses a skill whose `## Output` is missing or empty, whether or not the skill declares references, and every one of the nineteen passes
-- `drive` and `slices` keep the depth that does not fit under `references/`, each declared in `## References`, and no other skill gains a reference
-- every skill body stays within the sixty-line cap, and no rule a skill teaches is lost to make room
-- `odachi skill new` leaves a template that `odachi skills --check` accepts unchanged: the scaffold says what the skill hands back
-- `odachi init` writes the new bytes in the machine copy, a second run writes nothing, and `odachi doctor` compares the nineteen skills with no drift
-- the changelog's Unreleased section says the output contract is required of every skill
+- a skill whose `SKILL.md` is unchanged and whose only difference is a new reference is not reported as backed up, in a real run or a dry run
+- `## Decision gates` is read as a table and `## References` as a list, so a path named only in prose is refused with the sentence that says what a row is
+- the doctor's drift test carries the case where the source has a reference and the installed folder does not
+- `Messages` tells "this repository has no commit yet" apart from "git could not answer", and the second returns the error
+- each fix carries the test that would have caught it, observed red before the fix
+- the changelog's Unreleased section names the four fixes
 - `go test ./...` is green
 
 ## Not included (first version)
-- no reference for a skill whose body fits the cap once its Output lands: the depth of the other fifteen stays inline
-- no rewrite of a rule a skill teaches: a section is added, or a block moves verbatim, so no instruction is lost to make room
-- no change to `odachi role` or to the skill it renders: the contract is enforced over `skills/`, and a role's skill keeps the grammar it has
+- no change to the curriculum or the contract: no file under `skills/` moves, and `--check` keeps the rule it has
+- no change to the scaffold, the output contract or the documents the last feature wrote
 - no change to the stored proofs: never touched
 - no change to the voice or the interview's questions
+- no change to `odachi role` or to the skill it renders
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
 - no change to the release workflow
-- no new verb, and no change to how a skill is installed or compared
+- no new verb and no new flag
 
 ## Decisions taken
-- the contract closes: `## Output` is required of every skill, not only of one that carries references
-- the cap decides depth: a body that would cross sixty lines moves one block to `references/`, and the block moves word for word
-- the wording belongs to each skill: a router returns the route it chose, a writer the file it leaves, a check its verdict
-- the check and the scaffold land together, so `odachi skill new` cannot create a skill the gate refuses
+- each row is paid in the file it names, without a new abstraction
+- the grammar is parsed where it is owned: the skill package reads the table and the list, and its refusal says what shape it wanted
+- a test-only row lands with the others, so the ledger can close in one feature
