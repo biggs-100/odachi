@@ -205,8 +205,14 @@ func TestCheckRunWritesTheProof(t *testing.T) {
 }
 
 // Two runs in a row on the same tree leave the same proof bytes.
+//
+// The host's session variables are cleared first: inside OpenCode the model probe
+// can answer on one run and time out on the next, and the optional model header
+// would differ between two runs that should be byte-identical. CI has no session
+// env, which is why the test passed there and failed on a machine.
 func TestTwoCheckRunsProduceTheSameProofBytes(t *testing.T) {
-	t.Parallel()
+	t.Setenv("ODACHI_MODEL", "")
+	t.Setenv("OPENCODE_SESSION_ID", "")
 	dir := t.TempDir()
 	initRepo(t, dir)
 	seedProject(t, dir)
