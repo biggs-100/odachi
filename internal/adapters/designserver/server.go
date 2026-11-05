@@ -103,6 +103,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/designs", s.designs)
 	mux.HandleFunc("/api/design/", s.design)
 	mux.HandleFunc("/api/events", s.events)
+	mux.HandleFunc("/api/show", s.show)
 	mux.HandleFunc("/api/stop", s.stop)
 	mux.HandleFunc("/artboard/", s.artboard)
 	return mux
@@ -136,6 +137,45 @@ func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(100 * time.Millisecond)
 		_ = s.Close()
 	}()
+}
+
+// show switches the page to one design and tells every open canvas to re-render.
+// It is how a second `odachi design open <slug>` refreshes the tab a person
+// already has instead of opening another one: the server stays, the page moves.
+func (s *Server) show(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST"})
+		return
+	}
+	if !s.ownPage(w, r) || !s.jsonOnly(w, r) {
+		return
+	}
+
+	var in struct {
+		Slug string `json:"slug"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "the design is not JSON: " + err.Error()})
+		return
+	}
+	slug := strings.TrimSpace(in.Slug)
+	if slug != "" {
+		all, err := s.readDesigns(slug)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		if len(all) == 0 {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "no design " + slug})
+			return
+		}
+	}
+
+	s.mu.Lock()
+	s.opts.Slug = slug
+	s.mu.Unlock()
+	s.broadcast("show:" + slug)
+	writeJSON(w, http.StatusOK, map[string]string{"slug": slug})
 }
 
 // designs lists the designs the project keeps, with their artboards and comments.

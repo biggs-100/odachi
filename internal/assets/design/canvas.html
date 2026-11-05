@@ -279,6 +279,19 @@
   if (window.EventSource) {
     var stream = new EventSource("/api/events");
     stream.onmessage = function (message) {
+      // A second `odachi design open <slug>` asks the server to show that design
+      // on this tab: the page moves, the URL stays, and no second tab is opened.
+      if (message.data.indexOf("show:") === 0) {
+        var wanted = message.data.slice(5);
+        if (wanted) {
+          state.slug = wanted;
+          var url = new URL(window.location.href);
+          url.searchParams.set("design", wanted);
+          window.history.replaceState(null, "", url);
+          refresh();
+        }
+        return;
+      }
       var names = message.data.split(",");
       if (names.indexOf("comments") >= 0) { refresh(); }
       var frames = boards.querySelectorAll("iframe");

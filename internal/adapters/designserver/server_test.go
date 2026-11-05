@@ -44,6 +44,60 @@ func canvas(t *testing.T, root string) string {
 	return "http://" + addr
 }
 
+// A second `open` moves the tab a person already has: the server records the design
+// and tells every open page to re-render, instead of serving a second canvas.
+func TestShowMovesTheCanvasToAKnownDesign(t *testing.T) {
+	base := canvas(t, project(t))
+
+	response, err := http.Post(base+"/api/show", "application/json", strings.NewReader(`{"slug":"pricing"}`))
+	if err != nil {
+		t.Fatalf("POST show: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("POST show = %d, want 200", response.StatusCode)
+	}
+
+	response, err = http.Post(base+"/api/show", "application/json", strings.NewReader(`{"slug":"nope"}`))
+	if err != nil {
+		t.Fatalf("POST show unknown: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNotFound {
+		t.Errorf("POST show unknown = %d, want 404", response.StatusCode)
+	}
+}
+
+// The design a page shows is a control like the rest: a foreign origin cannot move
+// it, and a body that is not JSON cannot either.
+func TestShowRefusesAForeignOriginAndANonJSONBody(t *testing.T) {
+	base := canvas(t, project(t))
+
+	request, err := http.NewRequest(http.MethodPost, base+"/api/show", strings.NewReader(`{"slug":"pricing"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Origin", "http://evil.example")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatalf("POST show: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusForbidden {
+		t.Errorf("foreign origin = %d, want 403", response.StatusCode)
+	}
+
+	response, err = http.Post(base+"/api/show", "text/plain", strings.NewReader(`{"slug":"pricing"}`))
+	if err != nil {
+		t.Fatalf("POST show text: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusUnsupportedMediaType {
+		t.Errorf("text body = %d, want 415", response.StatusCode)
+	}
+}
+
 func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
 	base := canvas(t, project(t))
 

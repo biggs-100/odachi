@@ -1,8 +1,10 @@
 package design
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -76,6 +78,34 @@ func Running(client *http.Client, canvas Canvas) bool {
 	}
 	defer response.Body.Close()
 	return response.StatusCode == http.StatusOK
+}
+
+// Show asks a running canvas to move to one design and refresh the page a person
+// already has. It is the second half of `open`: a canvas that answers is refreshed,
+// never doubled.
+func Show(client *http.Client, canvas Canvas, slug string) error {
+	if client == nil {
+		client = &http.Client{Timeout: 2 * time.Second}
+	}
+	body, err := json.Marshal(map[string]string{"slug": slug})
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest(http.MethodPost, "http://"+canvas.Addr+"/api/show", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	response, err := client.Do(request)
+	if err != nil {
+		return fmt.Errorf("could not reach the canvas at %s: %w", canvas.Addr, err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		reason, _ := io.ReadAll(response.Body)
+		return fmt.Errorf("the canvas at %s answered %s: %s", canvas.Addr, response.Status, strings.TrimSpace(string(reason)))
+	}
+	return nil
 }
 
 // Stop asks the canvas to close, and forgets the address only when the server heard

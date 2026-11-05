@@ -31,6 +31,9 @@ const (
 	ActionStop     = "stop"
 	ActionHandoff  = "handoff"
 	ActionSync     = "sync"
+	// ActionServe is the detached half of open: the child process that owns the
+	// canvas after the command returns. It is internal and never printed in help.
+	ActionServe = "serve"
 )
 
 // Options is one `odachi design` invocation.
