@@ -30,6 +30,10 @@ in one sitting.
 - Close with `odachi check --run "<command>"` green and the saved output: the PR
   does not replace the tree's proof.
 
+## Output
+
+The cut: the work units and the one strategy that carries them, each with what it solves, how it is tested, what it leaves out and which PR it depends on. A diff over 400 changed lines returns the split, not an exception.
+
 ## Never
 
 - Open an 800-line PR "so the work is not split".

@@ -46,6 +46,10 @@ The lens is asked with `odachi review --lens <lens>` and is added to the floor's
 never instead. The verifier is `odachi-verify`, read-only: the whole task doc, a
 verdict per requirement with probes, never against your summary.
 
+## Output
+
+The commit and its message: what changed for the person using the project, why, and the `Risk:` line the change asks for. When the change does not fit one commit, the split that lets each one be reverted alone.
+
 ## Never
 
 - Commit with red tests "so the work is not lost".
