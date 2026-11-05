@@ -14,7 +14,7 @@ R1 · "a new project with the installed global agent reaches its first proof wit
 
 ## Steps
 - [x] T1 · the block names PDD and the first cycle in one paragraph, and a test pins it   R1 · route:inline · tree:060e4f75b8dd8329b4deaddc0ad34f291af7697e
-- [ ] T2 · doctor names the next step in a new project and audits the home copies the binary installs   R1 · route:inline
+- [x] T2 · doctor names the next step in a new project and audits the home copies the binary installs   R1 · route:inline · tree:eab7961ebd6ae9327f4f621332cba0d49bcf2350
 - [ ] T3 · check --run warns when the proof has no output   R1 · route:inline
 - [ ] T4 · a .ps1 command runs with PowerShell or is refused naming the invocation on Windows   R1 · route:inline
 - [ ] T5 · review in a repository with no commits names the next step instead of a raw git error   R1 · route:inline
