@@ -14,7 +14,7 @@ R1 · "every skill the curriculum ships says what it returns, and `odachi skills
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · slices states what it returns and moves the delegation policy to references/, so the body fits the cap again   R1 · route:inline
+- [x] T1 · slices states what it returns and moves the delegation policy to references/, so the body fits the cap again   R1 · route:inline · tree:59161f80858087176680545a1e0a971cd9d676b7
 - [ ] T2 · shape, triage, tests and go-tests state what they return   R1 · route:inline
 - [ ] T3 · commits, pull-request, writing and acceptance state what they return   R1 · route:inline
 - [ ] T4 · drive states what it returns and moves the review section to references/   R1 · route:inline
