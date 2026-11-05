@@ -344,9 +344,12 @@ Without a file, the default profile is `novato`. `start` does not raise it to
 repo. `senior` is earned with `odachi level --to`, or inferred from a brief the
 person already brought.
 
-The **voice** is how the agent talks: whether it explains the why of every
-decision or goes to the point. It lives in the last section of the `AGENTS.md`
-block, `## How you speak`, and in the native agent that mirrors that block.
+The **voice** is how deep the agent explains while it works: `novato` teaches
+the craft step by step, and `senior` leads with the decision and explains its why
+and its cost in fewer lines. Both name and define a concept the first time it
+appears and say what an answer changes before asking. It lives in the last
+section of the `AGENTS.md` block, `## How you speak`, and in the native agent that
+mirrors that block.
 `odachi init` writes the `novato` voice if there is no profile yet, and
 `odachi level --to <profile>` changes the profile, that section and the mirror
 together —and nothing else in the block—.

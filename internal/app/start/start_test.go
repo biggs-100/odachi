@@ -16,7 +16,8 @@ import (
 )
 
 // The seven questions and their why, verbatim from Contract III. They live in
-// the test on purpose: a reworded question would silently stop teaching.
+// the test on purpose: a reworded question would silently stop teaching. The why
+// is two or three lines: what the answer decides and what changes with it.
 var wantQuestions = []string{
 	"What do you want to exist when we finish? (one sentence, in your own words)",
 	"Who uses it, and from where? (1 phone · 2 computer · 3 both)",
@@ -28,13 +29,20 @@ var wantQuestions = []string{
 }
 
 var wantWhys = []string{
-	"without this there is nothing to build; and in your own words it is what you read later to know we are on track",
-	"it changes everything that comes after, and it is the most expensive decision to change late",
-	`this is called an acceptance criterion: it separates "it works" from "I think it works"`,
-	"it is what prevents 40 half-done things; a senior says no, and here the fence enforces it",
-	"it defines what cannot leave the project from day one",
-	"it defines how much we cut; a project that never finishes teaches nothing",
-	"the tutor needs to know what to explain more; this is what takes you past novice",
+	"this sentence is the project's north: without it there is nothing to build.\n" +
+		"in your own words it is what you reread later to know whether we are still on track.",
+	"it changes every later decision -where the data lives, how the screen is built, what testing means-.\n" +
+		"it is the most expensive answer to change late, so decide it now.",
+	"these are acceptance criteria: they separate \"it works\" from \"I think it works\".\n" +
+		"each one must be observable, because the gate will ask for a command that shows it.",
+	"this is the fence: what you name here the agent may not touch, even if it looks easy.\n" +
+		"it prevents 40 half-done things, and a senior says no before building.",
+	"it decides what cannot leave the project from day one.\n" +
+		"if there is any, the brief names it and every later decision respects it.",
+	"it decides how much we cut: a shorter deadline buys a smaller first version, not a faster whole one.\n" +
+		"a project that never finishes teaches nothing.",
+	"the tutor needs to know which concepts deserve a deeper explanation and which can stay a sentence.\n" +
+		"this is what takes you past novice: the work becomes the lesson.",
 }
 
 const outcome = "Quiero reservar turnos desde el teléfono"
@@ -231,6 +239,9 @@ func TestWhyTravelsWithTheQuestionAndNeverAlone(t *testing.T) {
 		}
 		if question.Why != wantWhys[i] {
 			t.Errorf("why %d = %q, want %q", i+1, question.Why, wantWhys[i])
+		}
+		if lines := strings.Split(question.Why, "\n"); len(lines) < 2 || len(lines) > 3 {
+			t.Errorf("why %d has %d lines, want 2 or 3: %q", i+1, len(lines), question.Why)
 		}
 	}
 	for _, line := range interview.said {

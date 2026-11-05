@@ -52,9 +52,14 @@ func TestRunTimesOutInsteadOfHanging(t *testing.T) {
 // TestRunATimeoutKillsTheWholeTree: `start /b` leaves a child that outlives a
 // kill of cmd.exe alone; it would write after the timeout. taskkill /T must end
 // the whole tree, not only the shell.
+//
+// The grandchild waits five seconds before writing and the test watches for seven:
+// under a full-suite load taskkill can be delayed past a one-second margin, and a
+// test that fails when the behaviour is right is a gate that cries wolf. A real
+// survivor still writes inside the window.
 func TestRunATimeoutKillsTheWholeTree(t *testing.T) {
 	dir := t.TempDir()
-	command := `start /b cmd /c "ping -n 3 127.0.0.1 >nul & echo late>late.txt" & ping -n 10 127.0.0.1 >nul`
+	command := `start /b cmd /c "ping -n 6 127.0.0.1 >nul & echo late>late.txt" & ping -n 12 127.0.0.1 >nul`
 	_, _, _, timedOut, err := shellcmd.Run(dir, command, 1)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
@@ -62,7 +67,7 @@ func TestRunATimeoutKillsTheWholeTree(t *testing.T) {
 	if !timedOut {
 		t.Fatal("Run did not report the timeout")
 	}
-	time.Sleep(4 * time.Second)
+	time.Sleep(7 * time.Second)
 	if _, err := os.Stat(filepath.Join(dir, "late.txt")); err == nil {
 		t.Fatal("the grandchild outlived the timeout and wrote its file")
 	}

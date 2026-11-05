@@ -336,7 +336,8 @@ func TestInvalidFlagIsBlockedInJSON(t *testing.T) {
 }
 
 // TestInterviewPrintsTheWhyInTheSameBlock pins the tutor rule at the adapter:
-// question, why and options are one block, and the why is one line.
+// question, why and options are one block, and the why's second line is indented
+// under the first instead of starting a new message.
 func TestInterviewPrintsTheWhyInTheSameBlock(t *testing.T) {
 	t.Parallel()
 	var out bytes.Buffer
@@ -346,8 +347,9 @@ func TestInterviewPrintsTheWhyInTheSameBlock(t *testing.T) {
 	}
 
 	answer, err := interview.Ask(start.Question{
-		Text:    "Who uses it, and from where? (1 phone · 2 computer · 3 both)",
-		Why:     "it changes everything that comes after, and it is the most expensive decision to change late",
+		Text: "Who uses it, and from where? (1 phone · 2 computer · 3 both)",
+		Why: "it changes every later decision -where the data lives, how the screen is built, what testing means-.\n" +
+			"it is the most expensive answer to change late, so decide it now.",
 		Options: []string{"phone", "cpu", "both"},
 	})
 	if err != nil {
@@ -358,20 +360,23 @@ func TestInterviewPrintsTheWhyInTheSameBlock(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.Trim(out.String(), "\n"), "\n")
-	if len(lines) != 4 {
-		t.Fatalf("the question block has %d lines, want 4:\n%s", len(lines), out.String())
+	if len(lines) != 5 {
+		t.Fatalf("the question block has %d lines, want 5:\n%s", len(lines), out.String())
 	}
 	if !strings.HasPrefix(lines[0], "? ") || !strings.Contains(lines[0], "Who uses it") {
 		t.Errorf("line 1 = %q, want the question", lines[0])
 	}
-	if !strings.HasPrefix(lines[1], "  why: ") || !strings.Contains(lines[1], "most expensive decision") {
-		t.Errorf("line 2 = %q, want the why on one line", lines[1])
+	if !strings.HasPrefix(lines[1], "  why: ") || !strings.Contains(lines[1], "what testing means") {
+		t.Errorf("line 2 = %q, want the why's first line", lines[1])
 	}
-	if !strings.HasPrefix(lines[2], "  options: ") {
-		t.Errorf("line 3 = %q, want the options", lines[2])
+	if !strings.HasPrefix(lines[2], "       ") || !strings.Contains(lines[2], "most expensive answer") {
+		t.Errorf("line 3 = %q, want the why's second line indented under the first", lines[2])
 	}
-	if lines[3] != "> " {
-		t.Errorf("line 4 = %q, want the prompt", lines[3])
+	if !strings.HasPrefix(lines[3], "  options: ") {
+		t.Errorf("line 4 = %q, want the options", lines[3])
+	}
+	if lines[4] != "> " {
+		t.Errorf("line 5 = %q, want the prompt", lines[4])
 	}
 
 	if err := interview.Say("one line"); err != nil {

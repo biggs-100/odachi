@@ -30,47 +30,54 @@ type questionSpec struct {
 	options []string
 }
 
-// The seven questions, verbatim from Contract III. The why is one line and is
-// shown with the question: it is the tutoring, not a lecture.
+// The seven questions, verbatim from Contract III. The why is two or three lines
+// and is shown with the question: it is the tutoring, not a lecture.
 var specs = []questionSpec{
 	{
 		field: fieldOutcome,
 		text:  "What do you want to exist when we finish? (one sentence, in your own words)",
-		why:   "without this there is nothing to build; and in your own words it is what you read later to know we are on track",
+		why: "this sentence is the project's north: without it there is nothing to build.\n" +
+			"in your own words it is what you reread later to know whether we are still on track.",
 	},
 	{
-		field:   fieldAudience,
-		text:    "Who uses it, and from where? (1 phone · 2 computer · 3 both)",
-		why:     "it changes everything that comes after, and it is the most expensive decision to change late",
+		field: fieldAudience,
+		text:  "Who uses it, and from where? (1 phone · 2 computer · 3 both)",
+		why: "it changes every later decision -where the data lives, how the screen is built, what testing means-.\n" +
+			"it is the most expensive answer to change late, so decide it now.",
 		options: []string{"phone", "cpu", "both"},
 	},
 	{
 		field: fieldDone,
 		text:  "How will you know it worked? (I propose three; you can write your own)",
-		why:   `this is called an acceptance criterion: it separates "it works" from "I think it works"`,
+		why: `these are acceptance criteria: they separate "it works" from "I think it works".` + "\n" +
+			"each one must be observable, because the gate will ask for a command that shows it.",
 	},
 	{
-		field:   fieldExclude,
-		text:    "What do you NOT want in this first version? (choose as many as you like)",
-		why:     "it is what prevents 40 half-done things; a senior says no, and here the fence enforces it",
+		field: fieldExclude,
+		text:  "What do you NOT want in this first version? (choose as many as you like)",
+		why: "this is the fence: what you name here the agent may not touch, even if it looks easy.\n" +
+			"it prevents 40 half-done things, and a senior says no before building.",
 		options: presetKeys(),
 	},
 	{
-		field:   fieldSensitive,
-		text:    "Is there sensitive data? (1 none · 2 names · 3 health · 4 money)",
-		why:     "it defines what cannot leave the project from day one",
+		field: fieldSensitive,
+		text:  "Is there sensitive data? (1 none · 2 names · 3 health · 4 money)",
+		why: "it decides what cannot leave the project from day one.\n" +
+			"if there is any, the brief names it and every later decision respects it.",
 		options: []string{"none", "names", "health", "money"},
 	},
 	{
-		field:   fieldDeadline,
-		text:    "How much time do you have for the first usable version? (1 today · 2 this week · 3 no rush)",
-		why:     "it defines how much we cut; a project that never finishes teaches nothing",
+		field: fieldDeadline,
+		text:  "How much time do you have for the first usable version? (1 today · 2 this week · 3 no rush)",
+		why: "it decides how much we cut: a shorter deadline buys a smaller first version, not a faster whole one.\n" +
+			"a project that never finishes teaches nothing.",
 		options: []string{"today", "week", "relaxed"},
 	},
 	{
 		field: fieldLearn,
 		text:  "What would you like to learn along the way? (choose one or two)",
-		why:   "the tutor needs to know what to explain more; this is what takes you past novice",
+		why: "the tutor needs to know which concepts deserve a deeper explanation and which can stay a sentence.\n" +
+			"this is what takes you past novice: the work becomes the lesson.",
 	},
 }
 
