@@ -52,18 +52,26 @@ type Server struct {
 	// host is the address the canvas listens on: the origin a request must carry
 	// to be its own. The Host header is the caller's, so it cannot decide.
 	host string
-	done chan struct{}
-	once sync.Once
+	// token is the one secret in the address: every route lives under it, so a
+	// web page that finds the loopback port still cannot comment, move or stop a
+	// canvas it never opened.
+	token string
+	done  chan struct{}
+	once  sync.Once
 }
 
 // New builds the canvas. It reads nothing until it is asked to.
 func New(opts Options) *Server {
-	return &Server{opts: opts, clients: map[chan string]bool{}, last: map[string]time.Time{}, done: make(chan struct{})}
+	return &Server{opts: opts, token: newToken(), clients: map[chan string]bool{}, last: map[string]time.Time{}, done: make(chan struct{})}
 }
 
 // Done is closed when the canvas stops, so `open` can block for as long as a person
 // is looking at it and return the moment somebody stops it.
 func (s *Server) Done() <-chan struct{} { return s.done }
+
+// Token is the secret every route lives under, for the process that records the
+// address a person clicks.
+func (s *Server) Token() string { return s.token }
 
 // Listen starts the server on a loopback port and returns the address and the URL
 // a person clicks. The port is the kernel's choice unless the caller names one.
@@ -76,7 +84,7 @@ func (s *Server) Listen(port int) (addr, url string, err error) {
 	s.http = &http.Server{Handler: s.routes(), ReadHeaderTimeout: 5 * time.Second}
 	addr = listener.Addr().String()
 	s.host = addr
-	url = "http://" + addr + "/"
+	url = "http://" + addr + "/" + s.token + "/"
 	if slug := strings.TrimSpace(s.opts.Slug); slug != "" {
 		url += "?design=" + slug
 	}
@@ -95,7 +103,8 @@ func (s *Server) Close() error {
 }
 
 // routes is the whole surface: the page, the artboards, the JSON the page reads and
-// the stream that tells it to reload.
+// the stream that tells it to reload. Every route lives under the server's token, and
+// a request that does not name this address is refused before it reaches the mux.
 func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.page)
@@ -103,9 +112,27 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/designs", s.designs)
 	mux.HandleFunc("/api/design/", s.design)
 	mux.HandleFunc("/api/events", s.events)
+	mux.HandleFunc("/api/show", s.show)
 	mux.HandleFunc("/api/stop", s.stop)
 	mux.HandleFunc("/artboard/", s.artboard)
-	return mux
+	mux.HandleFunc("/system", s.system)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Host != s.host {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "a canvas answers its own address only"})
+			return
+		}
+		prefix := "/" + s.token
+		if !strings.HasPrefix(r.URL.Path, prefix) {
+			http.NotFound(w, r)
+			return
+		}
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, prefix)
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
+		mux.ServeHTTP(w, r)
+	})
 }
 
 // page serves the canvas. It is one file with its script inline: no build, no CDN,
@@ -138,6 +165,45 @@ func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
+// show switches the page to one design and tells every open canvas to re-render.
+// It is how a second `odachi design open <slug>` refreshes the tab a person
+// already has instead of opening another one: the server stays, the page moves.
+func (s *Server) show(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST"})
+		return
+	}
+	if !s.ownPage(w, r) || !s.jsonOnly(w, r) {
+		return
+	}
+
+	var in struct {
+		Slug string `json:"slug"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "the design is not JSON: " + err.Error()})
+		return
+	}
+	slug := strings.TrimSpace(in.Slug)
+	if slug != "" {
+		all, err := s.readDesigns(slug)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		if len(all) == 0 {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "no design " + slug})
+			return
+		}
+	}
+
+	s.mu.Lock()
+	s.opts.Slug = slug
+	s.mu.Unlock()
+	s.broadcast("show:" + slug)
+	writeJSON(w, http.StatusOK, map[string]string{"slug": slug})
+}
+
 // designs lists the designs the project keeps, with their artboards and comments.
 func (s *Server) designs(w http.ResponseWriter, r *http.Request) {
 	all, err := s.readDesigns("")
@@ -145,7 +211,35 @@ func (s *Server) designs(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"designs": all})
+	system := ""
+	if _, err := os.Stat(filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), "system.html")); err == nil {
+		system = "/" + s.token + "/system"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"designs": all, "system": system})
+}
+
+// system serves design/system.html: the project's tokens as a board, shown first on
+// the canvas. It is not a design (it has no manifest); it is the system every
+// artboard follows.
+func (s *Server) system(w http.ResponseWriter, r *http.Request) {
+	path := filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), "system.html")
+	real, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	root, err := filepath.EvalSymlinks(filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir)))
+	if err != nil || !strings.HasPrefix(real, root+string(os.PathSeparator)) {
+		http.NotFound(w, r)
+		return
+	}
+	raw, err := os.ReadFile(real)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(raw)
 }
 
 // design returns one design, or adds and resolves its comments.
@@ -172,6 +266,8 @@ func (s *Server) design(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, all[0])
 	case len(parts) == 2 && parts[1] == "comments" && r.Method == http.MethodPost:
 		s.addComment(w, r, slug)
+	case len(parts) == 2 && parts[1] == "send" && r.Method == http.MethodPost:
+		s.sendComments(w, r, slug)
 	case len(parts) == 3 && parts[1] == "comments" && r.Method == http.MethodPost:
 		s.resolveComment(w, r, slug, parts[2])
 	default:
@@ -193,6 +289,7 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		Excerpt    string `json:"excerpt"`
 		Comment    string `json:"comment"`
 		Screenshot string `json:"screenshot"`
+		Send       bool   `json:"send"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "the comment is not JSON: " + err.Error()})
@@ -200,6 +297,10 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 	}
 	if strings.TrimSpace(in.Comment) == "" || strings.TrimSpace(in.File) == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "a comment needs its artboard and its text"})
+		return
+	}
+	if len(in.Comment) > maxCommentLength {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("a comment is at most %d bytes; this one is %d", maxCommentLength, len(in.Comment))})
 		return
 	}
 
@@ -212,6 +313,7 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		return
 	}
 
+	now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	comment := domain.Comment{
 		ID:         newID(),
 		File:       in.File,
@@ -219,7 +321,7 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		Excerpt:    in.Excerpt,
 		Comment:    in.Comment,
 		Screenshot: in.Screenshot,
-		CreatedAt:  time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+		CreatedAt:  now,
 		Status:     domain.StatusOpen,
 	}
 	comments.Comments = append(comments.Comments, comment)
@@ -228,9 +330,148 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
+
+	if in.Send {
+		// Persist first, then queue: a message the plugin delivers for a comment the
+		// file never recorded is a comment nobody can apply or resolve.
+		if queued, err := s.enqueue(slug, comment); err == nil && queued {
+			comment.SentAt = &now
+			comments.Comments[len(comments.Comments)-1].SentAt = &now
+			if err := s.writeComments(slug, comments); err != nil {
+				// The comment is saved; the message goes too, so an unsent note is not
+				// delivered twice. A failed removal is the next session's queue.
+				s.dequeue(comment.ID)
+				comment.SentAt = nil
+			}
+		}
+	}
 	s.writeMu.Unlock()
 	s.broadcast("comments")
 	writeJSON(w, http.StatusCreated, comment)
+}
+
+// sendComments queues every open comment nobody sent yet: the Collect mode saves
+// notes without waking the agent, and "Send all" sends the batch in one message per
+// comment. A canvas with no session behind it queues nothing and says so.
+func (s *Server) sendComments(w http.ResponseWriter, r *http.Request, slug string) {
+	if !s.ownPage(w, r) || !s.jsonOnly(w, r) {
+		return
+	}
+
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
+	comments, err := s.readComments(slug)
+	if err != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+
+	now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+	queued := 0
+	queuedIDs := []string{}
+	for i := range comments.Comments {
+		comment := &comments.Comments[i]
+		if comment.Status != domain.StatusOpen || comment.SentAt != nil {
+			continue
+		}
+		sent, err := s.enqueue(slug, *comment)
+		if err != nil {
+			for _, id := range queuedIDs {
+				s.dequeue(id)
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "the comments were saved but not queued: " + err.Error()})
+			return
+		}
+		if sent {
+			comment.SentAt = &now
+			queued++
+			queuedIDs = append(queuedIDs, comment.ID)
+		}
+	}
+	if len(queuedIDs) > 0 {
+		if err := s.writeComments(slug, comments); err != nil {
+			// Nothing was marked sent, so nothing may be delivered: remove the
+			// messages this pass queued, and let the human send again.
+			for _, id := range queuedIDs {
+				s.dequeue(id)
+			}
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "the comments were not marked sent; nothing was delivered: " + err.Error()})
+			return
+		}
+	}
+	s.broadcast("comments")
+	writeJSON(w, http.StatusOK, map[string]any{
+		"queued":  queued,
+		"session": strings.TrimSpace(os.Getenv("OPENCODE_SESSION_ID")) != "",
+	})
+}
+
+// enqueue writes one message a plugin can deliver: a file per message in the clone's
+// store, so the canvas and the plugin never write the same file. It reports false
+// when there is no session to deliver to: the comment stays saved, unsent.
+func (s *Server) enqueue(slug string, comment domain.Comment) (bool, error) {
+	session := strings.TrimSpace(os.Getenv("OPENCODE_SESSION_ID"))
+	if session == "" {
+		return false, nil
+	}
+	dir := filepath.Join(s.opts.Dir, ".git", "odachi", "design-queue")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return false, err
+	}
+
+	text := "Design comment on design/" + slug + "/" + comment.File
+	if comment.Selector != "" {
+		text += " (" + comment.Selector + ")"
+	}
+	text += ": " + comment.Comment
+	if comment.Screenshot != "" {
+		text += "\nScreenshot: design/" + slug + "/" + comment.Screenshot
+	}
+
+	message := struct {
+		ID        string `json:"id"`
+		SessionID string `json:"sessionID"`
+		Text      string `json:"text"`
+		CreatedAt string `json:"createdAt"`
+	}{
+		ID:        comment.ID,
+		SessionID: session,
+		Text:      text,
+		CreatedAt: comment.CreatedAt,
+	}
+	data, err := json.MarshalIndent(message, "", "  ")
+	if err != nil {
+		return false, err
+	}
+
+	temp, err := os.CreateTemp(dir, ".queue-*")
+	if err != nil {
+		return false, err
+	}
+	name := temp.Name()
+	if _, err := temp.Write(append(data, '\n')); err != nil {
+		temp.Close()
+		os.Remove(name)
+		return false, err
+	}
+	if err := temp.Close(); err != nil {
+		os.Remove(name)
+		return false, err
+	}
+	final := filepath.Join(dir, "queue-"+comment.ID+".json")
+	if err := os.Rename(name, final); err != nil {
+		os.Remove(name)
+		return false, err
+	}
+	return true, nil
+}
+
+// dequeue removes a message this pass queued but could not mark sent. It is best
+// effort: a file left behind is the next session's problem, not a duplicate note
+// the human did not ask for.
+func (s *Server) dequeue(id string) {
+	_ = os.Remove(filepath.Join(s.opts.Dir, ".git", "odachi", "design-queue", "queue-"+id+".json"))
 }
 
 func (s *Server) resolveComment(w http.ResponseWriter, r *http.Request, slug, id string) {
@@ -283,13 +524,25 @@ func (s *Server) artboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), parts[0], parts[1])
-	raw, err := os.ReadFile(path)
+	// A symlink inside the design folder can point anywhere: the served file must
+	// still resolve inside the design it belongs to, or it is not that artboard.
+	real, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	root, err := filepath.EvalSymlinks(filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), parts[0]))
+	if err != nil || !strings.HasPrefix(real, root+string(os.PathSeparator)) {
+		http.NotFound(w, r)
+		return
+	}
+	raw, err := os.ReadFile(real)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(raw)
+	_, _ = w.Write(injectInspector(raw))
 }
 
 // events is the live reload: one line per change, and the page decides what to
@@ -367,14 +620,26 @@ func (s *Server) changed() []string {
 			key := entry.Name() + "/" + file.Name()
 			if before, seen := s.last[key]; !seen {
 				s.last[key] = info.ModTime()
+				// A panel that appears for the first time is a change too: the
+				// handoff file is created after the canvas is already open.
+				switch file.Name() {
+				case domain.CommentsFile:
+					moved = append(moved, "comments")
+				case domain.HandoffsFile:
+					moved = append(moved, "handoffs")
+				}
 				continue
 			} else if info.ModTime() != before {
 				s.last[key] = info.ModTime()
-				// The comments file is the panel, not an artboard: the page reloads
-				// one or the other, and telling it "design.json" would reload a frame.
-				if file.Name() == domain.CommentsFile {
+				// The comments and handoffs files are panels, not artboards: the
+				// page reloads one or the other, and telling it "design.json"
+				// would reload a frame.
+				switch file.Name() {
+				case domain.CommentsFile:
 					moved = append(moved, "comments")
-				} else {
+				case domain.HandoffsFile:
+					moved = append(moved, "handoffs")
+				default:
 					moved = append(moved, entry.Name()+"/"+file.Name())
 				}
 			}
@@ -394,11 +659,13 @@ func (s *Server) broadcast(what string) {
 	}
 }
 
-// Design is one design as the page reads it: the manifest and the comments file.
+// Design is one design as the page reads it: the manifest, the comments file and
+// what happened to each artboard after somebody chose it.
 type Design struct {
 	Slug     string            `json:"slug"`
 	Manifest domain.Manifest   `json:"manifest"`
 	Comments domain.Comments   `json:"comments"`
+	Handoffs domain.Handoffs   `json:"handoffs"`
 	URL      map[string]string `json:"urls"`
 }
 
@@ -435,11 +702,15 @@ func (s *Server) readDesigns(slug string) ([]Design, error) {
 		if err != nil {
 			return nil, err
 		}
+		handoffs, err := s.readHandoffs(name)
+		if err != nil {
+			return nil, err
+		}
 		urls := make(map[string]string, len(manifest.Artboards))
 		for _, artboard := range manifest.Artboards {
-			urls[artboard.File] = "/artboard/" + name + "/" + artboard.File
+			urls[artboard.File] = "/" + s.token + "/artboard/" + name + "/" + artboard.File
 		}
-		out = append(out, Design{Slug: name, Manifest: manifest, Comments: comments, URL: urls})
+		out = append(out, Design{Slug: name, Manifest: manifest, Comments: comments, Handoffs: handoffs, URL: urls})
 	}
 	return out, nil
 }
@@ -457,6 +728,23 @@ func (s *Server) readComments(slug string) (domain.Comments, error) {
 		return domain.Comments{Version: domain.Version, Comments: []domain.Comment{}}, nil
 	}
 	return domain.ParseComments(raw)
+}
+
+// readHandoffs reads the handoff state; a design that never chose an artboard has no
+// file and that is an empty state, not a broken one.
+func (s *Server) readHandoffs(slug string) (domain.Handoffs, error) {
+	path := filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), slug, domain.HandoffsFile)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return domain.Handoffs{Version: domain.Version, Handoffs: map[string]domain.Handoff{}}, nil
+		}
+		return domain.Handoffs{}, err
+	}
+	if len(strings.TrimSpace(string(raw))) == 0 {
+		return domain.Handoffs{Version: domain.Version, Handoffs: map[string]domain.Handoff{}}, nil
+	}
+	return domain.ParseHandoffs(raw)
 }
 
 // writeComments replaces the file atomically: a crash mid-write leaves the old one,
@@ -501,6 +789,88 @@ func newID() string {
 		return fmt.Sprintf("%08x", time.Now().UnixNano()&0xffffffff)
 	}
 	return hex.EncodeToString(buf)
+}
+
+// maxCommentLength bounds what a page can write into the comments file: a comment is
+// a note to an agent, not a document.
+const maxCommentLength = 4000
+
+// newToken is the one secret in the canvas address: 128 random bits, so a page that
+// finds the loopback port cannot guess the path that reaches the routes.
+func newToken() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return newID() + newID() + newID() + newID()
+	}
+	return hex.EncodeToString(buf)
+}
+
+// inspector is the script every artboard receives: a sandboxed page cannot be read
+// by the canvas, so the page itself names the element a person click. It stays quiet
+// until the canvas says comment mode is on.
+const inspector = `<script>(function () {
+  "use strict";
+  if (window.parent === window) { return; }
+  var commenting = false;
+  window.addEventListener("message", function (event) {
+    if (event.data && event.data.type === "odachi:comment-mode") { commenting = !!event.data.on; }
+    if (event.data && event.data.type === "odachi:pins") {
+      var pins = [];
+      (event.data.pins || []).forEach(function (pin) {
+        var node = document.querySelector(pin.selector);
+        if (!node) { return; }
+        var rect = node.getBoundingClientRect();
+        pins.push({ id: pin.id, selector: pin.selector, status: pin.status, x: rect.left + window.scrollX + rect.width / 2, y: rect.top + window.scrollY });
+      });
+      window.parent.postMessage({ type: "odachi:pins", pins: pins }, "*");
+    }
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && event.shiftKey) {
+      window.parent.postMessage({ type: "odachi:blur" }, "*");
+    }
+  });
+  function selectorFor(node) {
+    var parts = [];
+    while (node && node.nodeType === 1 && parts.length < 5) {
+      var part = node.tagName.toLowerCase();
+      if (node.id) { parts.unshift(part + "#" + node.id); break; }
+      var parent = node.parentElement;
+      if (parent) {
+        var index = 1;
+        for (var i = 0; i < parent.children.length; i++) {
+          if (parent.children[i] === node) { break; }
+          if (parent.children[i].tagName === node.tagName) { index++; }
+        }
+        part += ":nth-of-type(" + index + ")";
+      }
+      parts.unshift(part);
+      node = parent;
+    }
+    return parts.join(" > ");
+  }
+  document.addEventListener("click", function (event) {
+    if (!commenting) { return; }
+    event.preventDefault();
+    event.stopPropagation();
+    window.parent.postMessage({
+      type: "odachi:pick",
+      selector: selectorFor(event.target),
+      excerpt: (event.target.textContent || "").trim().slice(0, 80),
+      x: event.clientX,
+      y: event.clientY
+    }, "*");
+  }, true);
+})();</script>`
+
+// injectInspector puts the picker before the closing body tag, or at the end of a
+// document that has none.
+func injectInspector(raw []byte) []byte {
+	page := string(raw)
+	if index := strings.LastIndex(strings.ToLower(page), "</body>"); index >= 0 {
+		return []byte(page[:index] + inspector + page[index:])
+	}
+	return []byte(page + inspector)
 }
 
 // ownPage refuses a caller this canvas did not serve: a browser sends Origin on a

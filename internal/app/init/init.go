@@ -282,6 +282,7 @@ func Run(opts Options, files Files, skills Skills) Result {
 	if opts.Global {
 		r.installGlobalPersonas()
 		r.installOpenCodeDefault()
+		r.installDesignPlugin()
 	} else {
 		r.lines = append(r.lines, "global door: I did not install it (it is opt-in); odachi init --global puts it in the home and odachi shows up in any folder")
 	}

@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,6 +36,9 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 
 	// The canvas takes its own flags -a port and a browser- so it is dispatched
 	// before the flags every other action shares.
+	if action == appdesign.ActionServe {
+		return runDesignServe(dir, rest, stdout, stderr)
+	}
 	if action == appdesign.ActionOpen || action == appdesign.ActionStop {
 		return runCanvas(action, dir, rest, stdout, stderr)
 	}
@@ -47,8 +51,14 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 
 	var asJSON bool
 	var resolve string
+	var status string
+	var preview string
+	var note string
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 	flags.StringVar(&resolve, "resolve", "", "comment ids to mark resolved, comma-separated")
+	flags.StringVar(&status, "status", "", "handoff state: sent | in_progress | implemented")
+	flags.StringVar(&preview, "preview", "", "the running app's loopback URL, for Compare")
+	flags.StringVar(&note, "note", "", "what to say about this handoff")
 
 	if err := flags.Parse(rest); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -97,6 +107,9 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 		Action:  action,
 		Slug:    slug,
 		Resolve: ids,
+		Status:  status,
+		Preview: preview,
+		Note:    note,
 		At:      time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 	}, osFiles{})
 
@@ -228,17 +241,58 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 		slug = flags.Arg(0)
 	}
 
-	// A canvas already up is refreshed, never doubled: the address in the store is
-	// the page a person has open, and a second server would be a second truth.
+	// A canvas that answers is refreshed, never doubled: the server stays and the
+	// page moves to the design that was asked for. The browser is not opened again,
+	// because the page it would open is already there.
 	if running, ok := appdesign.ReadCanvas(path); ok && appdesign.Running(nil, running) {
-		fmt.Fprintln(stdout, "canvas already at "+running.URL)
-		fmt.Fprintln(stdout, "odachi design stop closes it")
-		if !noBrowser {
-			openBrowser(running.URL)
+		if err := appdesign.Show(nil, running, slug); err != nil {
+			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			return start.CodeBlocked
 		}
+		fmt.Fprintln(stdout, "canvas at "+running.URL)
 		return start.CodeOK
 	}
 
+	// A detached child owns the canvas: the command returns, the page stays, and
+	// the agent can keep working with the canvas open.
+	if err := spawnCanvas(dir, slug, port); err != nil {
+		fmt.Fprintln(stderr, "odachi: could not open the canvas: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+	running, ok := waitCanvas(path, 5*time.Second)
+	if !ok {
+		fmt.Fprintln(stderr, "odachi: the canvas did not start; the log says:")
+		for _, line := range tailLines(filepath.Join(dir, ".git", "odachi", "design-canvas.log"), 8) {
+			fmt.Fprintln(stderr, "  "+line)
+		}
+		return start.CodeBlocked
+	}
+
+	fmt.Fprintln(stdout, "canvas at "+running.URL)
+	fmt.Fprintln(stdout, "odachi design stop closes it")
+	if !noBrowser {
+		openBrowser(running.URL)
+	}
+	return start.CodeOK
+}
+
+// runDesignServe is the child half of a detached open: it owns the canvas after the
+// command returns, records its address for the clone, and removes it when it stops.
+// It is not in the help: a person opens a canvas, they do not serve one.
+func runDesignServe(dir string, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("odachi design serve", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	var slug string
+	var port int
+	flags.StringVar(&slug, "slug", "", "design the page opens first")
+	flags.IntVar(&port, "port", 0, "loopback port; 0 lets the kernel choose")
+	if err := flags.Parse(args); err != nil {
+		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+
+	path := appdesign.CanvasPath(dir)
 	server := designserver.New(designserver.Options{Dir: dir, Slug: slug, Canvas: assetsdesign.Canvas()})
 	addr, url, err := server.Listen(port)
 	if err != nil {
@@ -249,21 +303,16 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 		Addr:      addr,
 		URL:       url,
 		Slug:      slug,
+		Token:     server.Token(),
 		PID:       os.Getpid(),
 		StartedAt: time.Now().UTC().Format(time.RFC3339),
 	}); err != nil {
 		_ = server.Close()
 		fmt.Fprintln(stderr, "odachi: the canvas started but its address could not be recorded in "+path+": "+oneLine(err.Error()))
-		fmt.Fprintln(stderr, "odachi: nothing is serving; fix the store and run odachi design open again")
 		return start.CodeBlocked
 	}
 
 	fmt.Fprintln(stdout, "canvas at "+url)
-	fmt.Fprintln(stdout, "odachi design stop closes it; Ctrl-C quits here")
-	if !noBrowser {
-		openBrowser(url)
-	}
-
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	defer signal.Stop(stop)
@@ -271,11 +320,66 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 	case <-server.Done():
 	case <-stop:
 	}
-
 	_ = server.Close()
 	_ = appdesign.ForgetCanvas(path)
-	fmt.Fprintln(stdout, "canvas stopped")
 	return start.CodeOK
+}
+
+// spawnCanvas starts the detached child that serves this clone's canvas. The child
+// is the same binary with the hidden serve action; it outlives the command, so the
+// agent can open the canvas and keep working.
+func spawnCanvas(dir, slug string, port int) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("could not find the odachi binary: %w", err)
+	}
+
+	logPath := filepath.Join(dir, ".git", "odachi", "design-canvas.log")
+	if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
+		return err
+	}
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return err
+	}
+	defer logFile.Close()
+
+	child := exec.Command(exe, "design", "serve", "--slug", slug, "--port", strconv.Itoa(port))
+	child.Dir = dir
+	child.Stdout = logFile
+	child.Stderr = logFile
+	child.SysProcAttr = detached()
+	if err := child.Start(); err != nil {
+		return err
+	}
+	return child.Process.Release()
+}
+
+// waitCanvas waits for the detached child to record an address that answers. It is
+// bounded: a child that cannot start is a failure with a log, not a hang.
+func waitCanvas(path string, timeout time.Duration) (appdesign.Canvas, bool) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if canvas, ok := appdesign.ReadCanvas(path); ok && appdesign.Running(nil, canvas) {
+			return canvas, true
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return appdesign.Canvas{}, false
+}
+
+// tailLines is the end of the canvas log, so a child that could not start says why
+// instead of leaving a bare refusal.
+func tailLines(path string, n int) []string {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return []string{"(no log at " + path + ")"}
+	}
+	lines := strings.Split(strings.TrimRight(string(raw), "\r\n"), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return lines
 }
 
 // openBrowser is best effort: a machine with no browser is a machine where the URL

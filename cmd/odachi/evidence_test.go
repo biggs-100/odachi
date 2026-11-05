@@ -108,7 +108,8 @@ func TestInitKeepsTheProofValidAcrossAReview(t *testing.T) {
 // never ran init still has its evidence out of the tree, through the interior
 // ignore file the verb writes once.
 func TestWithoutInitTheFallbackKeepsTheProofValid(t *testing.T) {
-	t.Parallel()
+	t.Setenv("ODACHI_MODEL", "")
+	t.Setenv("OPENCODE_SESSION_ID", "")
 	dir := changedProject(t)
 
 	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 {

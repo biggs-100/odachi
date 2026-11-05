@@ -46,7 +46,7 @@ func TestTheRecordedAddressRoundTripsAndABrokenOneIsNotTrusted(t *testing.T) {
 // address that answers nothing, and that is exactly what this call is for.
 func TestRunningAsksTheServer(t *testing.T) {
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/health" {
+		if r.URL.Path != "/t/api/health" {
 			http.NotFound(w, r)
 			return
 		}
@@ -54,7 +54,7 @@ func TestRunningAsksTheServer(t *testing.T) {
 	}))
 	defer up.Close()
 
-	alive := appdesign.Canvas{Addr: up.Listener.Addr().String()}
+	alive := appdesign.Canvas{Addr: up.Listener.Addr().String(), Token: "t"}
 	if !appdesign.Running(nil, alive) {
 		t.Fatalf("a server that answers health is not running")
 	}
@@ -62,7 +62,7 @@ func TestRunningAsksTheServer(t *testing.T) {
 	dead := httptest.NewServer(http.NotFoundHandler())
 	addr := dead.Listener.Addr().String()
 	dead.Close()
-	if appdesign.Running(nil, appdesign.Canvas{Addr: addr}) {
+	if appdesign.Running(nil, appdesign.Canvas{Addr: addr, Token: "t"}) {
 		t.Fatalf("a closed port reported as running")
 	}
 }
@@ -77,7 +77,7 @@ func TestStopForgetsOnlyWhatItReached(t *testing.T) {
 		stopped = true
 		w.WriteHeader(http.StatusOK)
 	}))
-	canvas := appdesign.Canvas{Addr: up.Listener.Addr().String()}
+	canvas := appdesign.Canvas{Addr: up.Listener.Addr().String(), Token: "t"}
 	if err := appdesign.WriteCanvas(path, canvas); err != nil {
 		t.Fatal(err)
 	}

@@ -36,12 +36,324 @@ func project(t *testing.T) string {
 func canvas(t *testing.T, root string) string {
 	t.Helper()
 	server := New(Options{Dir: root, Canvas: []byte("<!doctype html><title>canvas</title>")})
-	addr, _, err := server.Listen(0)
+	_, url, err := server.Listen(0)
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
 	t.Cleanup(func() { _ = server.Close() })
-	return "http://" + addr
+	return strings.TrimSuffix(url, "/")
+}
+
+// A second `open` moves the tab a person already has: the server records the design
+// and tells every open page to re-render, instead of serving a second canvas.
+func TestShowMovesTheCanvasToAKnownDesign(t *testing.T) {
+	base := canvas(t, project(t))
+
+	response, err := http.Post(base+"/api/show", "application/json", strings.NewReader(`{"slug":"pricing"}`))
+	if err != nil {
+		t.Fatalf("POST show: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("POST show = %d, want 200", response.StatusCode)
+	}
+
+	response, err = http.Post(base+"/api/show", "application/json", strings.NewReader(`{"slug":"nope"}`))
+	if err != nil {
+		t.Fatalf("POST show unknown: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNotFound {
+		t.Errorf("POST show unknown = %d, want 404", response.StatusCode)
+	}
+}
+
+// The design a page shows is a control like the rest: a foreign origin cannot move
+// it, and a body that is not JSON cannot either.
+func TestShowRefusesAForeignOriginAndANonJSONBody(t *testing.T) {
+	base := canvas(t, project(t))
+
+	request, err := http.NewRequest(http.MethodPost, base+"/api/show", strings.NewReader(`{"slug":"pricing"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Origin", "http://evil.example")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatalf("POST show: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusForbidden {
+		t.Errorf("foreign origin = %d, want 403", response.StatusCode)
+	}
+
+	response, err = http.Post(base+"/api/show", "text/plain", strings.NewReader(`{"slug":"pricing"}`))
+	if err != nil {
+		t.Fatalf("POST show text: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusUnsupportedMediaType {
+		t.Errorf("text body = %d, want 415", response.StatusCode)
+	}
+}
+
+// The canvas has one secret in its address: a route without the token does not
+// exist, and a request that names another host is refused before it reaches the mux.
+func TestTheCanvasRefusesARouteWithoutItsToken(t *testing.T) {
+	base := canvas(t, project(t))
+	host, _, _ := strings.Cut(strings.TrimPrefix(base, "http://"), "/")
+
+	response, err := http.Get("http://" + host + "/api/designs")
+	if err != nil {
+		t.Fatalf("GET without token: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNotFound {
+		t.Errorf("route without token = %d, want 404", response.StatusCode)
+	}
+
+	request, err := http.NewRequest(http.MethodGet, base+"/api/designs", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Host = "evil.example"
+	response, err = http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatalf("GET foreign host: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusForbidden {
+		t.Errorf("foreign host = %d, want 403", response.StatusCode)
+	}
+}
+
+// The artboard is served with the picker that names a clicked element: the canvas
+// cannot read a sandboxed page, so the page has to say what was clicked, where its
+// comments are, and when Shift+Esc asks to leave focus.
+func TestTheArtboardCarriesTheSandboxedPicker(t *testing.T) {
+	base := canvas(t, project(t))
+	body := getText(t, base+"/artboard/pricing/01-a.html")
+	for _, want := range []string{"odachi:pick", "odachi:pins", "odachi:blur"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the artboard does not carry %q: %q", want, body)
+		}
+	}
+}
+
+// A comment is a note to an agent, not a document: the server bounds it instead of
+// writing whatever a page sends.
+func TestACommentIsBounded(t *testing.T) {
+	base := canvas(t, project(t))
+	long := strings.Repeat("x", 4001)
+	response, err := http.Post(base+"/api/design/pricing/comments", "application/json",
+		strings.NewReader(`{"file":"01-a.html","comment":"`+long+`"}`))
+	if err != nil {
+		t.Fatalf("POST long comment: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusBadRequest {
+		t.Errorf("a 4001-byte comment = %d, want 400", response.StatusCode)
+	}
+}
+
+// A symlink inside the design folder can point outside it: the served file must
+// still resolve inside the design, or the canvas is a file browser with a token.
+func TestAnArtboardSymlinkCannotEscapeTheDesign(t *testing.T) {
+	root := project(t)
+	secret := filepath.Join(root, "secret.html")
+	if err := os.WriteFile(secret, []byte("<h1>secret</h1>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "design", "pricing", "02-link.html")
+	if err := os.Symlink(secret, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	manifest := filepath.Join(root, "design", "pricing", "design.json")
+	raw := `{"title":"Pricing page","brief":"b","artboards":[{"file":"01-a.html","title":"A","tradeoff":"dense","width":1440,"height":900},{"file":"02-link.html","title":"Link","tradeoff":"none","width":1440,"height":900}]}`
+	if err := os.WriteFile(manifest, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	base := canvas(t, root)
+	response, err := http.Get(base + "/artboard/pricing/02-link.html")
+	if err != nil {
+		t.Fatalf("GET the symlink: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNotFound {
+		t.Errorf("a symlink that leaves the design = %d, want 404", response.StatusCode)
+	}
+}
+
+// The system board is the first thing the canvas draws when the project has one:
+// the page reads its URL from the same payload as the designs.
+func TestTheCanvasServesTheSystemBoard(t *testing.T) {
+	root := project(t)
+	if err := os.WriteFile(filepath.Join(root, "design", "system.html"), []byte("<h1>tokens</h1>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	base := canvas(t, root)
+
+	var payload struct {
+		System string `json:"system"`
+	}
+	get(t, base+"/api/designs", &payload)
+	if !strings.HasSuffix(payload.System, "/system") {
+		t.Fatalf("system = %q, want the board's address", payload.System)
+	}
+	body := getText(t, base+"/system")
+	if !strings.Contains(body, "tokens") {
+		t.Errorf("the system board is not served: %q", body)
+	}
+}
+
+// The canvas reads the handoff state from the folder: the chosen artboard and its
+// state are what it draws as a badge.
+func TestTheCanvasReportsTheHandoffState(t *testing.T) {
+	root := project(t)
+	state := `{"version":1,"chosen":"01-a.html","handoffs":{"01-a.html":{"status":"implemented","updatedAt":"t","previewUrl":"http://localhost:3000"}}}`
+	if err := os.WriteFile(filepath.Join(root, "design", "pricing", "handoffs.json"), []byte(state), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	base := canvas(t, root)
+	var payload struct {
+		Designs []Design `json:"designs"`
+	}
+	get(t, base+"/api/designs", &payload)
+	if len(payload.Designs) != 1 {
+		t.Fatalf("designs = %+v", payload.Designs)
+	}
+	handoffs := payload.Designs[0].Handoffs
+	if handoffs.Chosen != "01-a.html" || handoffs.Handoffs["01-a.html"].Status != "implemented" {
+		t.Errorf("handoffs = %+v", handoffs)
+	}
+	if handoffs.Handoffs["01-a.html"].PreviewURL != "http://localhost:3000" {
+		t.Errorf("the preview did not survive: %+v", handoffs.Handoffs["01-a.html"])
+	}
+}
+
+func TestTheWatcherAnnouncesAHandoffChange(t *testing.T) {
+	root := project(t)
+	server := New(Options{Dir: root, Canvas: []byte("canvas")})
+	if _, _, err := server.Listen(0); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	server.changed()
+	if err := os.WriteFile(filepath.Join(root, "design", "pricing", "handoffs.json"), []byte(`{"version":1,"chosen":"01-a.html","handoffs":{"01-a.html":{"status":"sent"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	moved := server.changed()
+	if !strings.Contains(strings.Join(moved, ","), "handoffs") {
+		t.Errorf("moved = %v, want the handoff change", moved)
+	}
+}
+
+// A comment sent from the canvas becomes one message file for the session plugin: a
+// file per message means the canvas and the plugin never write the same file.
+func TestASentCommentIsQueuedForTheSession(t *testing.T) {
+	t.Setenv("OPENCODE_SESSION_ID", "s1")
+	root := project(t)
+	base := canvas(t, root)
+
+	response, err := http.Post(base+"/api/design/pricing/comments", "application/json",
+		strings.NewReader(`{"file":"01-a.html","selector":"h1","comment":"shorter","send":true}`))
+	if err != nil {
+		t.Fatalf("POST comment: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusCreated {
+		t.Fatalf("POST comment = %d, want 201", response.StatusCode)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(root, ".git", "odachi", "design-queue"))
+	if err != nil {
+		t.Fatalf("the queue was not written: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("queue files = %d, want 1", len(entries))
+	}
+	raw, err := os.ReadFile(filepath.Join(root, ".git", "odachi", "design-queue", entries[0].Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var message struct {
+		SessionID string `json:"sessionID"`
+		Text      string `json:"text"`
+	}
+	if err := json.Unmarshal(raw, &message); err != nil {
+		t.Fatalf("decode the message: %v\n%s", err, raw)
+	}
+	if message.SessionID != "s1" || !strings.Contains(message.Text, "shorter") {
+		t.Errorf("message = %+v", message)
+	}
+}
+
+// Collect saves without sending; Send all queues every unsent open comment in one
+// pass and marks them sent.
+func TestCollectedCommentsAreSentInABatch(t *testing.T) {
+	t.Setenv("OPENCODE_SESSION_ID", "s1")
+	root := project(t)
+	base := canvas(t, root)
+
+	for _, text := range []string{"first", "second"} {
+		response, err := http.Post(base+"/api/design/pricing/comments", "application/json",
+			strings.NewReader(`{"file":"01-a.html","selector":"h1","comment":"`+text+`"}`))
+		if err != nil {
+			t.Fatalf("POST comment: %v", err)
+		}
+		response.Body.Close()
+		if response.StatusCode != http.StatusCreated {
+			t.Fatalf("POST comment = %d, want 201", response.StatusCode)
+		}
+	}
+
+	response, err := http.Post(base+"/api/design/pricing/send", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatalf("POST send: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("POST send = %d, want 200", response.StatusCode)
+	}
+	var result struct {
+		Queued  int  `json:"queued"`
+		Session bool `json:"session"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Queued != 2 || !result.Session {
+		t.Errorf("result = %+v, want 2 queued with a session", result)
+	}
+	entries, err := os.ReadDir(filepath.Join(root, ".git", "odachi", "design-queue"))
+	if err != nil || len(entries) != 2 {
+		t.Errorf("queue files = %d (err %v), want 2", len(entries), err)
+	}
+}
+
+// Without a session the note is still saved: the pull path is the fallback, not a
+// lost comment.
+func TestACanvasWithoutASessionQueuesNothing(t *testing.T) {
+	t.Setenv("OPENCODE_SESSION_ID", "")
+	root := project(t)
+	base := canvas(t, root)
+
+	response, err := http.Post(base+"/api/design/pricing/comments", "application/json",
+		strings.NewReader(`{"file":"01-a.html","selector":"h1","comment":"shorter","send":true}`))
+	if err != nil {
+		t.Fatalf("POST comment: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusCreated {
+		t.Fatalf("POST comment = %d, want 201", response.StatusCode)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".git", "odachi", "design-queue")); !os.IsNotExist(err) {
+		t.Errorf("a canvas with no session wrote a queue: %v", err)
+	}
 }
 
 func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
@@ -54,8 +366,8 @@ func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
 	if len(designs.Designs) != 1 || designs.Designs[0].Slug != "pricing" {
 		t.Fatalf("designs = %+v", designs.Designs)
 	}
-	if designs.Designs[0].URL["01-a.html"] != "/artboard/pricing/01-a.html" {
-		t.Errorf("the artboard has no address: %+v", designs.Designs[0].URL)
+	if !strings.HasSuffix(designs.Designs[0].URL["01-a.html"], "/artboard/pricing/01-a.html") {
+		t.Errorf("the artboard has no address under the token: %+v", designs.Designs[0].URL)
 	}
 
 	body := getText(t, base+"/artboard/pricing/01-a.html")
@@ -306,7 +618,7 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 	// The positive case takes a comment, not the stop route: a canvas this test
 	// killed could not be asked the next question.
 	post := func(origin string) int {
-		request, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/design/pricing/comments",
+		request, err := http.NewRequest(http.MethodPost, "http://"+addr+"/"+server.Token()+"/api/design/pricing/comments",
 			strings.NewReader(`{"file":"01-a.html","comment":"from the canvas"}`))
 		if err != nil {
 			t.Fatal(err)
@@ -332,7 +644,7 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 
 	// The stop route is a door too, and it is asked last: it is the one that ends
 	// the canvas.
-	stop, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/stop", nil)
+	stop, err := http.NewRequest(http.MethodPost, "http://"+addr+"/"+server.Token()+"/api/stop", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

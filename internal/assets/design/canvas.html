@@ -17,11 +17,27 @@
   main { flex:1; display:flex; min-height:0; }
   #stage { flex:1; overflow:auto; position:relative; background: repeating-conic-gradient(from 0deg, transparent 0 20px, rgba(125,125,125,.04) 20px 40px); }
   #boards { display:flex; gap:40px; padding:40px; align-items:flex-start; transform-origin: top left; }
-  .board { flex:0 0 auto; }
+  .board { flex:0 0 auto; position:relative; }
   .board h2 { font-size:13px; margin:0 0 6px; display:flex; gap:8px; align-items:baseline; }
   .board h2 small { color:var(--muted); font-weight:400; }
   .board h2 small.gap { color:var(--accent); border:1px solid currentColor; border-radius:4px; padding:0 5px; }
-  .board iframe { border:1px solid var(--line); background:#fff; display:block; }
+  .frame-wrap { position:relative; }
+  .frame-wrap iframe { border:1px solid var(--line); background:#fff; display:block; }
+  .shield { position:absolute; inset:0; z-index:2; cursor:grab; }
+  .shield:active { cursor:grabbing; }
+  #boards.has-focus .board:not(.focused) { opacity:.12; pointer-events:none; }
+  #boards.has-focus .board.focused .shield { display:none; }
+  body.commenting .shield { display:none; }
+  .pin { position:absolute; width:15px; height:15px; border-radius:50%; background:var(--accent); border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.4); transform:translate(-50%,-50%); z-index:3; cursor:pointer; }
+  .pins { position:absolute; inset:0; pointer-events:none; }
+  .pins .pin { pointer-events:auto; }
+  .pin[data-status="resolved"] { background:var(--muted); }
+  #back { display:none; }
+  body.has-focus #back { display:inline-block; }
+  #modes { display:flex; gap:10px; align-items:center; padding:8px 10px; border-bottom:1px solid var(--line); font-size:12px; }
+  #modes label { display:flex; gap:4px; align-items:center; }
+  #modes button { padding:1px 8px; font-size:12px; }
+  .comment.flash { outline:2px solid var(--accent); }
   aside { width:320px; border-left:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column; min-height:0; }
   aside h3 { margin:0; padding:12px 14px; font-size:13px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; }
   #comments { overflow:auto; padding:8px 10px; display:flex; flex-direction:column; gap:8px; }
@@ -30,6 +46,14 @@
   .comment .meta { color:var(--muted); font-size:11px; font-family:ui-monospace, monospace; word-break:break-all; margin-bottom:4px; }
   .comment .actions { margin-top:6px; display:flex; gap:6px; }
   .comment .actions button { padding:2px 8px; font-size:12px; }
+  .badge { font-size:11px; color:var(--accent); border:1px solid currentColor; border-radius:4px; padding:0 5px; white-space:nowrap; }
+  .board.chosen { outline:2px solid var(--accent); outline-offset:8px; }
+  .board h2 .compare { font-size:12px; padding:1px 8px; }
+  #compare { position:fixed; inset:0; z-index:20; background:var(--bg); display:none; flex-direction:column; }
+  #compare .panes { flex:1; display:flex; gap:12px; padding:12px; min-height:0; }
+  #compare .panes > div { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #compare iframe { flex:1; width:100%; border:1px solid var(--line); background:#fff; }
+  #compare a { color:var(--accent); }
   #popover { position:fixed; z-index:9; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; width:280px; box-shadow:0 10px 30px rgba(0,0,0,.15); display:none; }
   #popover textarea { width:100%; min-height:64px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:6px; padding:6px; }
   #popover .row { display:flex; gap:6px; justify-content:flex-end; margin-top:8px; }
@@ -40,6 +64,7 @@
 <header>
   <h1>odachi design</h1>
   <select id="design" aria-label="design"></select>
+  <button id="back" title="Leave focus and return to the canvas (Shift+Esc)">Back to canvas</button>
   <button id="mode" aria-pressed="false" title="Click an element in an artboard to leave a comment">Comment mode</button>
   <button id="fit" title="Fit the artboards to the window">Fit</button>
   <button id="zoom-out" aria-label="zoom out">&minus;</button>
@@ -53,9 +78,25 @@
   <div id="stage"><div id="boards"></div></div>
   <aside>
     <h3>Comments <span id="count" style="color:var(--muted);font-weight:400"></span></h3>
+    <div id="modes">
+      <label><input type="radio" name="send" value="now" checked> Send now</label>
+      <label><input type="radio" name="send" value="collect"> Collect</label>
+      <button id="send-all" title="Send every collected comment">Send all</button>
+    </div>
     <div id="comments"></div>
   </aside>
 </main>
+<div id="compare" role="dialog" aria-label="Compare the artboard with the running app">
+  <header>
+    <button id="compare-back">Back to canvas</button>
+    <span class="spacer"></span>
+    <a id="compare-open" target="_blank" rel="noreferrer">Open the app in a new tab</a>
+  </header>
+  <div class="panes">
+    <div><h3>Artboard</h3><iframe id="compare-artboard" sandbox="allow-scripts" title="Artboard"></iframe></div>
+    <div><h3>Running app</h3><iframe id="compare-app" title="Running app"></iframe></div>
+  </div>
+</div>
 <div id="popover">
   <div class="meta" id="target"></div>
   <textarea id="text" placeholder="What should change here?"></textarea>
@@ -68,7 +109,7 @@
 <script>
 (function () {
   "use strict";
-  var state = { designs: [], slug: "", zoom: 1, comment: false, pending: null };
+  var state = { designs: [], slug: "", zoom: 1, comment: false, pending: null, sendMode: "now", focus: null, restore: null, drag: null, dragMoved: false, system: "" };
   var boards = document.getElementById("boards");
   var stage = document.getElementById("stage");
   var designSelect = document.getElementById("design");
@@ -78,7 +119,7 @@
   var popover = document.getElementById("popover");
   var target = document.getElementById("target");
   var text = document.getElementById("text");
-
+  var compareBox = document.getElementById("compare");
   function api(path, options) {
     return fetch(path, options || {}).then(function (response) {
       if (!response.ok) { return response.json().then(function (body) { throw new Error(body.error || response.statusText); }); }
@@ -99,6 +140,9 @@
   }
 
   function render() {
+    // A live update rebuilds every board: keeping a focus on a node that no longer
+    // exists would leave the canvas dimmed and inert, so the focus ends first.
+    if (state.focus) { exitFocus(); }
     designSelect.innerHTML = "";
     state.designs.forEach(function (design) {
       var option = el("option", { value: design.slug, textContent: design.slug + " - " + design.manifest.title });
@@ -107,26 +151,80 @@
     });
 
     boards.innerHTML = "";
+    if (state.system) {
+      var systemFrame = el("iframe", { title: "Design system" });
+      systemFrame.setAttribute("sandbox", "allow-scripts");
+      systemFrame.width = 1440;
+      systemFrame.height = 900;
+      systemFrame.src = state.system;
+      var systemShield = el("div", { className: "shield", title: "Click to focus" });
+      var systemBoard = el("div", { className: "board" }, [
+        el("h2", { textContent: "Design system" }, [el("small", { textContent: "the tokens every artboard follows" })]),
+        el("div", { className: "frame-wrap" }, [systemFrame, systemShield])
+      ]);
+      systemShield.addEventListener("click", function () { if (!state.comment && !state.dragMoved) { enterFocus(systemBoard); } });
+      boards.appendChild(systemBoard);
+    }
     var design = current();
     if (!design) {
-      stateLine.textContent = "no design in design/ yet";
+      if (!state.system) { stateLine.textContent = "no design in design/ yet"; }
+      renderComments();
+      applyZoom();
       return;
     }
 
     design.manifest.artboards.forEach(function (artboard) {
+      var handoffs = design.handoffs || { handoffs: {} };
+      var entry = handoffs.handoffs && handoffs.handoffs[artboard.file];
+      var chosen = handoffs.chosen === artboard.file;
       var frame = el("iframe", { title: artboard.title });
+      // The artboard runs in a sandbox without allow-same-origin: the canvas cannot
+      // read it, so the injected picker names the element it was clicked on.
+      frame.setAttribute("sandbox", "allow-scripts");
       frame.width = artboard.width;
       frame.height = artboard.height;
       frame.dataset.file = artboard.file;
       frame.dataset.slug = design.slug;
       frame.src = design.urls[artboard.file];
-      frame.addEventListener("load", function () { hook(frame); });
+
+      // In navigation the shield owns the pointer: the wheel zooms, the drag pans
+      // and a click focuses. In comment mode it goes away so the page receives the
+      // click and its own inspector names the element.
+      var shield = el("div", { className: "shield", title: "Click to focus; drag to pan; wheel to zoom" });
+      var pinBox = el("div", { className: "pins" });
+      var wrap = el("div", { className: "frame-wrap" }, [frame, shield, pinBox]);
+      frame.addEventListener("load", function () {
+        frame.contentWindow.postMessage({ type: "odachi:comment-mode", on: state.comment }, "*");
+        sendPins(design, frame, pinBox);
+      });
+
       var notes = [el("small", { textContent: artboard.tradeoff })];
       if (!artboard.screenshot) {
         notes.push(el("small", { className: "gap", textContent: "no screenshot" }));
       }
+      if (chosen) {
+        notes.push(el("span", { className: "badge", textContent: "Chosen" }));
+      } else if (handoffs.chosen) {
+        notes.push(el("small", { className: "gap", textContent: "alternative" }));
+      }
+      if (entry) {
+        notes.push(el("span", { className: "badge", textContent: entry.status === "in_progress" ? "Implementing…" : entry.status }));
+      }
+      if (entry && entry.previewUrl) {
+        var compare = el("button", { className: "compare", textContent: "Compare" });
+        compare.addEventListener("click", function () { compareWith(design, artboard, entry.previewUrl); });
+        notes.push(compare);
+      }
       var head = el("h2", { textContent: artboard.title }, notes);
-      boards.appendChild(el("div", { className: "board" }, [head, frame]));
+      var board = el("div", { className: chosen ? "board chosen" : "board" }, [head, wrap]);
+      board.dataset.file = artboard.file;
+      board.dataset.slug = design.slug;
+      shield.addEventListener("click", function () {
+        if (!state.comment && !state.dragMoved) { enterFocus(board); }
+      });
+      shield.addEventListener("wheel", onWheel, { passive: false });
+      shield.addEventListener("mousedown", onDragStart);
+      boards.appendChild(board);
     });
 
     renderComments();
@@ -152,6 +250,7 @@
       }
       var card = el("div", { className: "comment" }, [meta, body, actions]);
       card.setAttribute("data-status", comment.status);
+      card.dataset.id = comment.id;
       commentsBox.appendChild(card);
     });
     count.textContent = open + " open";
@@ -163,80 +262,187 @@
     document.getElementById("zoom").textContent = Math.round(state.zoom * 100) + "%";
   }
 
-  // hook runs inside each artboard once it loads: same origin, so the canvas can
-  // listen for a click and compute the selector the agent will read.
-  function hook(frame) {
-    var doc;
-    try { doc = frame.contentDocument; } catch (error) { return; }
-    if (!doc || doc.__odachiHooked) { return; }
-    doc.__odachiHooked = true;
-    doc.addEventListener("click", function (event) {
-      if (!state.comment) { return; }
-      event.preventDefault();
-      event.stopPropagation();
-      var selector = selectorFor(event.target);
+  // Compare shows the direction beside what it became: the artboard on the left,
+  // the running app on the right, at the same size. The app may refuse to be framed,
+  // so the open-in-a-tab link is always there.
+  function compareWith(design, artboard, previewUrl) {
+    document.getElementById("compare-artboard").src = design.urls[artboard.file];
+    document.getElementById("compare-app").src = previewUrl;
+    document.getElementById("compare-open").href = previewUrl;
+    compareBox.style.display = "flex";
+  }
+
+  // Navigation: the wheel zooms wherever the pointer is, the drag pans the stage,
+  // and a click on a shield focuses that artboard instead of interacting with it.
+  function onWheel(event) {
+    if (state.focus) { return; }
+    event.preventDefault();
+    state.zoom = Math.max(0.2, Math.min(2, state.zoom * (event.deltaY < 0 ? 1.1 : 0.9)));
+    applyZoom();
+  }
+
+  function onDragStart(event) {
+    if (state.focus || state.comment || event.button !== 0) { return; }
+    state.drag = { x: event.clientX, y: event.clientY, left: stage.scrollLeft, top: stage.scrollTop };
+    state.dragMoved = false;
+    document.addEventListener("mousemove", onDragMove);
+    document.addEventListener("mouseup", onDragEnd);
+  }
+
+  function onDragMove(event) {
+    if (!state.drag) { return; }
+    var dx = event.clientX - state.drag.x;
+    var dy = event.clientY - state.drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) { state.dragMoved = true; }
+    stage.scrollLeft = state.drag.left - dx;
+    stage.scrollTop = state.drag.top - dy;
+  }
+
+  function onDragEnd() {
+    document.removeEventListener("mousemove", onDragMove);
+    document.removeEventListener("mouseup", onDragEnd);
+    state.drag = null;
+    setTimeout(function () { state.dragMoved = false; }, 0);
+  }
+
+  // Focus is the artboard at exactly 100% with the pointer and the keyboard: the
+  // shield goes away, the rest dims, and the previous zoom and scroll come back.
+  function enterFocus(board) {
+    if (!board || state.focus) { return; }
+    state.restore = { zoom: state.zoom, left: stage.scrollLeft, top: stage.scrollTop };
+    state.focus = board;
+    state.zoom = 1;
+    applyZoom();
+    boards.classList.add("has-focus");
+    document.body.classList.add("has-focus");
+    var all = boards.querySelectorAll(".board");
+    for (var i = 0; i < all.length; i++) { all[i].classList.remove("focused"); }
+    board.classList.add("focused");
+    board.scrollIntoView({ block: "center", inline: "center" });
+    stateLine.textContent = "focused at 100%; Shift+Esc returns";
+  }
+
+  function exitFocus() {
+    if (!state.focus) { return; }
+    state.focus = null;
+    boards.classList.remove("has-focus");
+    document.body.classList.remove("has-focus");
+    var all = boards.querySelectorAll(".board");
+    for (var i = 0; i < all.length; i++) { all[i].classList.remove("focused"); }
+    if (state.restore) {
+      state.zoom = state.restore.zoom;
+      applyZoom();
+      stage.scrollLeft = state.restore.left;
+      stage.scrollTop = state.restore.top;
+    }
+    state.restore = null;
+    stateLine.textContent = "";
+  }
+
+  // Pins: the canvas asks the page where each commented element is; the page
+  // answers with its own coordinates, because the sandbox hides its DOM.
+  function sendPins(design, frame, pinBox) {
+    var pins = [];
+    design.comments.comments.forEach(function (comment) {
+      if (comment.file === frame.dataset.file && comment.selector) {
+        pins.push({ id: comment.id, selector: comment.selector, status: comment.status });
+      }
+    });
+    pinBox.innerHTML = "";
+    frame.contentWindow.postMessage({ type: "odachi:pins", pins: pins }, "*");
+  }
+
+  function drawPins(frame, pins) {
+    var box = frame.parentElement.querySelector(".pins");
+    if (!box) { return; }
+    box.innerHTML = "";
+    pins.forEach(function (pin) {
+      var node = el("button", { className: "pin", title: "Comment on " + pin.selector });
+      node.dataset.status = pin.status;
+      node.style.left = pin.x + "px";
+      node.style.top = pin.y + "px";
+      node.addEventListener("click", function () { flashComment(pin.id); });
+      box.appendChild(node);
+    });
+  }
+
+  function flashComment(id) {
+    var cards = commentsBox.querySelectorAll(".comment");
+    for (var i = 0; i < cards.length; i++) {
+      if (cards[i].dataset.id === id) {
+        cards[i].scrollIntoView({ block: "center" });
+        cards[i].classList.add("flash");
+        setTimeout(function () { cards[i].classList.remove("flash"); }, 1200);
+        return;
+      }
+    }
+  }
+
+  // A sandboxed artboard cannot be read by this page: it sends the element it was
+  // clicked on, and the canvas turns that into the same pending comment as before.
+  window.addEventListener("message", function (event) {
+    var data = event.data || {};
+    if (data.type === "odachi:pins") {
+      var frames = boards.querySelectorAll("iframe");
+      for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === event.source) { drawPins(frames[i], data.pins || []); return; }
+      }
+      return;
+    }
+    if (data.type === "odachi:blur") { exitFocus(); return; }
+    if (data.type !== "odachi:pick" || !state.comment) { return; }
+    var frames = boards.querySelectorAll("iframe");
+    for (var i = 0; i < frames.length; i++) {
+      var frame = frames[i];
+      if (frame.contentWindow !== event.source) { continue; }
       state.pending = {
         file: frame.dataset.file,
-        selector: selector,
-        excerpt: (event.target.textContent || "").trim().slice(0, 80)
+        selector: data.selector,
+        excerpt: data.excerpt
       };
-      target.textContent = frame.dataset.file + " - " + selector;
+      target.textContent = frame.dataset.file + " - " + data.selector;
       text.value = "";
       var rect = frame.getBoundingClientRect();
       popover.style.display = "block";
-      popover.style.left = Math.min(window.innerWidth - 300, rect.left + event.clientX * state.zoom) + "px";
-      popover.style.top = Math.min(window.innerHeight - 190, rect.top + event.clientY * state.zoom) + "px";
+      popover.style.left = Math.min(window.innerWidth - 300, rect.left + data.x * state.zoom) + "px";
+      popover.style.top = Math.min(window.innerHeight - 190, rect.top + data.y * state.zoom) + "px";
       text.focus();
-    }, true);
-  }
-
-  function selectorFor(node) {
-    var parts = [];
-    while (node && node.nodeType === 1 && parts.length < 5) {
-      var part = node.tagName.toLowerCase();
-      if (node.id) { parts.unshift(part + "#" + node.id); break; }
-      var parent = node.parentElement;
-      if (parent) {
-        var index = 1;
-        for (var i = 0; i < parent.children.length; i++) {
-          if (parent.children[i] === node) { break; }
-          if (parent.children[i].tagName === node.tagName) { index++; }
-        }
-        part += ":nth-of-type(" + index + ")";
-      }
-      parts.unshift(part);
-      node = parent;
+      return;
     }
-    return parts.join(" > ");
-  }
+  });
 
   function save() {
     if (!state.pending || !text.value.trim()) { return; }
-    api("/api/design/" + state.slug + "/comments", {
+    api("api/design/" + state.slug + "/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         file: state.pending.file,
         selector: state.pending.selector,
         excerpt: state.pending.excerpt,
-        comment: text.value.trim()
+        comment: text.value.trim(),
+        send: state.sendMode === "now"
       })
-    }).then(function () {
+    }).then(function (comment) {
       popover.style.display = "none";
       state.pending = null;
+      if (state.sendMode === "now" && (!comment || !comment.sentAt)) {
+        stateLine.textContent = "saved; this canvas has no session to send it to";
+      }
       refresh();
     }).catch(function (error) { stateLine.textContent = error.message; });
   }
 
   function resolve_(id) {
-    api("/api/design/" + state.slug + "/comments/" + id, { method: "POST" })
+    api("api/design/" + state.slug + "/comments/" + id, { method: "POST" })
       .then(refresh)
       .catch(function (error) { stateLine.textContent = error.message; });
   }
 
   function refresh() {
-    return api("/api/designs").then(function (body) {
+    return api("api/designs").then(function (body) {
       state.designs = body.designs || [];
+      state.system = body.system || "";
       if (!current() && state.designs.length) { state.slug = state.designs[0].slug; }
       render();
     }).catch(function (error) { stateLine.textContent = error.message; });
@@ -253,10 +459,38 @@
   document.getElementById("mode").addEventListener("click", function (event) {
     state.comment = !state.comment;
     event.currentTarget.setAttribute("aria-pressed", String(state.comment));
+    document.body.classList.toggle("commenting", state.comment);
     document.getElementById("hint").textContent = state.comment
       ? "Comment mode: click an element in an artboard. Clicks do not follow links."
-      : "Navigate: scroll or drag to pan, the wheel scrolls. Comment mode: click an element.";
+      : "Navigate: the wheel zooms, drag pans. Click an artboard to focus it at 100%.";
+    var frames = boards.querySelectorAll("iframe");
+    for (var i = 0; i < frames.length; i++) {
+      frames[i].contentWindow.postMessage({ type: "odachi:comment-mode", on: state.comment }, "*");
+    }
   });
+
+  var sendModes = document.querySelectorAll('input[name="send"]');
+  for (var m = 0; m < sendModes.length; m++) {
+    sendModes[m].addEventListener("change", function (event) {
+      state.sendMode = event.target.value;
+      updateSaveLabel();
+    });
+  }
+  function updateSaveLabel() {
+    document.getElementById("save").textContent = state.sendMode === "now" ? "Save & send" : "Collect";
+  }
+  document.getElementById("send-all").addEventListener("click", function () {
+    api("api/design/" + state.slug + "/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then(function (result) {
+        stateLine.textContent = result.session ? (result.queued + " comment(s) sent") : "saved; no session to send them to";
+        refresh();
+      })
+      .catch(function (error) { stateLine.textContent = error.message; });
+  });
+  document.getElementById("back").addEventListener("click", exitFocus);
+  stage.addEventListener("wheel", onWheel, { passive: false });
+  stage.addEventListener("mousedown", onDragStart);
+  updateSaveLabel();
 
   document.getElementById("fit").addEventListener("click", function () {
     var design = current();
@@ -271,16 +505,37 @@
   document.getElementById("zoom-out").addEventListener("click", function () { state.zoom = Math.max(0.2, state.zoom - 0.1); applyZoom(); });
   document.getElementById("save").addEventListener("click", save);
   document.getElementById("cancel").addEventListener("click", function () { popover.style.display = "none"; state.pending = null; });
-  document.addEventListener("keydown", function (event) { if (event.key === "Escape") { popover.style.display = "none"; state.pending = null; } });
+  document.addEventListener("keydown", function (event) {
+    if (event.shiftKey && event.key === "Escape") { exitFocus(); return; }
+    if (event.key === "Escape") {
+      popover.style.display = "none";
+      state.pending = null;
+      compareBox.style.display = "none";
+    }
+  });
+  document.getElementById("compare-back").addEventListener("click", function () { compareBox.style.display = "none"; });
 
   // The stream tells the page what moved: comments reload the panel, an artboard
   // reloads its frame. A canvas that is already open is refreshed instead of a new
   // tab, which is why the URL is stable.
   if (window.EventSource) {
-    var stream = new EventSource("/api/events");
+    var stream = new EventSource("api/events");
     stream.onmessage = function (message) {
+      // A second `odachi design open <slug>` asks the server to show that design
+      // on this tab: the page moves, the URL stays, and no second tab is opened.
+      if (message.data.indexOf("show:") === 0) {
+        var wanted = message.data.slice(5);
+        if (wanted) {
+          state.slug = wanted;
+          var url = new URL(window.location.href);
+          url.searchParams.set("design", wanted);
+          window.history.replaceState(null, "", url);
+          refresh();
+        }
+        return;
+      }
       var names = message.data.split(",");
-      if (names.indexOf("comments") >= 0) { refresh(); }
+      if (names.indexOf("comments") >= 0 || names.indexOf("handoffs") >= 0) { refresh(); }
       var frames = boards.querySelectorAll("iframe");
       for (var i = 0; i < frames.length; i++) {
         var frame = frames[i];
@@ -293,8 +548,9 @@
   }
 
   var wanted = new URL(window.location.href).searchParams.get("design");
-  api("/api/designs").then(function (body) {
+  api("api/designs").then(function (body) {
     state.designs = body.designs || [];
+    state.system = body.system || "";
     state.slug = wanted && state.designs.some(function (d) { return d.slug === wanted; }) ? wanted : (state.designs[0] ? state.designs[0].slug : "");
     render();
   }).catch(function (error) { stateLine.textContent = error.message; });

@@ -12,21 +12,20 @@ paths = ["internal/adapters/shellcmd/shellcmd.go", "internal/adapters/shellcmd/s
 deps  = []
 
 [[rule]]
-not   = "no change to the proof format or the gate"
-paths = ["internal/app/check/**", "internal/domain/gate/**"]
-deps  = []
-
-[[rule]]
-not   = "no new flag and no new verb"
-paths = ["cmd/odachi/main.go"]
-deps  = []
-
-[[rule]]
 not   = "no change to the voice or the interview"
 paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
+deps  = []
+
+[[rule]]
+not   = "no change to the gate, the review, the proof format or the artboard format"
+paths = ["internal/app/check/**", "internal/domain/gate/**", "internal/app/review/**", "internal/domain/review/**", "internal/domain/design/design.go"]
 deps  = []
 
 [[rule]]
 not   = "no change to the stored proofs: never touched"
 paths = ["proof/**"]
 deps  = []
+
+# "No new flag and no new verb" is a promise about behaviour, not a path: a rule
+# over cmd/odachi/main.go would refuse the help text this feature corrects, and the
+# doctrine keeps a behaviour in the brief (0120). The diff adds no flag and no verb.

@@ -31,6 +31,9 @@ const (
 	ActionStop     = "stop"
 	ActionHandoff  = "handoff"
 	ActionSync     = "sync"
+	// ActionServe is the detached half of open: the child process that owns the
+	// canvas after the command returns. It is internal and never printed in help.
+	ActionServe = "serve"
 )
 
 // Options is one `odachi design` invocation.
@@ -42,6 +45,13 @@ type Options struct {
 	Slug string
 	// Resolve carries the comment ids to mark resolved, with the comments action.
 	Resolve []string
+	// Status is the handoff state the human or the agent records: sent,
+	// in_progress or implemented. Empty means sent.
+	Status string
+	// Preview is the running app's loopback URL, for Compare.
+	Preview string
+	// Note is what the agent says about the handoff, optional.
+	Note string
 	// At is the ISO time a resolution records. The caller owns the clock.
 	At string
 }
@@ -70,6 +80,7 @@ type Design struct {
 	Manifest     domain.Manifest
 	Comments     domain.Comments
 	CommentsRead string
+	Handoffs     domain.Handoffs
 }
 
 // Run performs one `odachi design`.
@@ -262,6 +273,26 @@ func readDesigns(opts Options, files Files) ([]Design, *Result) {
 				d.Comments = parsed
 			}
 		}
+
+		d.Handoffs = domain.Handoffs{Version: domain.Version, Handoffs: map[string]domain.Handoff{}}
+		handoffsPath := filepath.Join(dir, domain.HandoffsFile)
+		hasHandoffs, err := files.Exists(handoffsPath)
+		if err != nil {
+			return nil, problem("could not read " + name + "/" + domain.HandoffsFile + ": " + oneLine(err.Error()))
+		}
+		if hasHandoffs {
+			raw, err := files.Read(handoffsPath)
+			if err != nil {
+				return nil, problem("could not read " + name + "/" + domain.HandoffsFile + ": " + oneLine(err.Error()))
+			}
+			if len(strings.TrimSpace(string(raw))) > 0 {
+				parsed, err := domain.ParseHandoffs(raw)
+				if err != nil {
+					return nil, problem(name + ": " + oneLine(err.Error()))
+				}
+				d.Handoffs = parsed
+			}
+		}
 		designs = append(designs, d)
 	}
 	return designs, nil
@@ -350,5 +381,56 @@ func handoff(opts Options, files Files) Result {
 	}
 	lines = append(lines, "the artboard is a direction; the code is the proof.")
 
-	return Result{Code: CodeOK, Message: "handoff " + path, Lines: lines, Designs: designs}
+	status := strings.TrimSpace(opts.Status)
+	if status == "" {
+		status = domain.HandoffSent
+	}
+	switch status {
+	case domain.HandoffSent, domain.HandoffInProgress, domain.HandoffImplemented:
+	default:
+		return blocked("a handoff is " + domain.HandoffSent + ", " + domain.HandoffInProgress + " or " + domain.HandoffImplemented + ": " + status + " is none of them")
+	}
+
+	preview := ""
+	if strings.TrimSpace(opts.Preview) != "" {
+		normalized, err := domain.LoopbackURL(opts.Preview)
+		if err != nil {
+			return blocked(err.Error())
+		}
+		preview = normalized
+	}
+
+	entry := d.Handoffs.Handoffs[file]
+	if entry.SentAt == "" {
+		entry.SentAt = opts.At
+	}
+	entry.Status = status
+	entry.UpdatedAt = opts.At
+	entry.Feature = d.Manifest.Feature
+	entry.Note = strings.TrimSpace(opts.Note)
+	if preview != "" {
+		entry.PreviewURL = preview
+	}
+	d.Handoffs.Version = domain.Version
+	d.Handoffs.Chosen = file
+	d.Handoffs.Handoffs[file] = entry
+
+	statePath := filepath.Join(opts.Dir, filepath.FromSlash(domain.Dir), slug, domain.HandoffsFile)
+	if exists, err := files.Exists(statePath); err != nil {
+		return blocked("could not read " + statePath + ": " + oneLine(err.Error()))
+	} else if exists {
+		if _, err := files.Backup(statePath); err != nil {
+			return blocked("could not back up " + statePath + " before rewriting it: " + oneLine(err.Error()))
+		}
+	}
+	if err := files.Write(statePath, domain.RenderHandoffs(d.Handoffs)); err != nil {
+		return blocked("could not write " + statePath + ": " + oneLine(err.Error()))
+	}
+
+	lines = append(lines, "state: "+status+" (chosen "+file+")")
+	if preview != "" {
+		lines = append(lines, "preview: "+preview+" (the canvas compares it)")
+	}
+
+	return Result{Code: CodeOK, Message: "handoff " + path, Lines: lines, Files: []string{filepath.ToSlash(statePath)}, Designs: designs}
 }
