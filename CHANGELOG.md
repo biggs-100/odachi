@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.16.0 - 2026-11-05
 
 - **A new project reaches its first proof, and the installed copies say what they are.** The
   `AGENTS.md` block names Proof-Driven Development and the first proof; the `bootstrap` skill is the
