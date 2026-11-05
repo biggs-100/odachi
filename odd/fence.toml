@@ -7,6 +7,11 @@
 # glob measures a promise.
 
 [[rule]]
+not   = "no change to the canvas, its token or the push plugin"
+paths = ["internal/adapters/designserver/**", "internal/assets/design/canvas.html", "internal/assets/design/plugin.ts"]
+deps  = []
+
+[[rule]]
 not   = "no change to the production kill path"
 paths = ["internal/adapters/shellcmd/shellcmd.go", "internal/adapters/shellcmd/shellcmd_windows.go", "internal/adapters/shellcmd/shellcmd_unix.go", "internal/adapters/shellcmd/shellcmd_unsupported.go"]
 deps  = []
@@ -17,15 +22,16 @@ paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/inte
 deps  = []
 
 [[rule]]
-not   = "no change to the gate, the review, the proof format or the artboard format"
-paths = ["internal/app/check/**", "internal/domain/gate/**", "internal/app/review/**", "internal/domain/review/**", "internal/domain/design/design.go"]
+not   = "no change to the gate, the review or the proof"
+paths = ["internal/app/check/**", "internal/domain/gate/**", "internal/app/review/**", "internal/domain/review/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the artboard format"
+paths = ["internal/domain/design/design.go"]
 deps  = []
 
 [[rule]]
 not   = "no change to the stored proofs: never touched"
 paths = ["proof/**"]
 deps  = []
-
-# "No new flag and no new verb" is a promise about behaviour, not a path: a rule
-# over cmd/odachi/main.go would refuse the help text this feature corrects, and the
-# doctrine keeps a behaviour in the brief (0120). The diff adds no flag and no verb.
