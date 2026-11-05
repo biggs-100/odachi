@@ -15,7 +15,7 @@ R1 · "every skill the curriculum ships says what it returns, and `odachi skills
 
 ## Steps
 - [x] T1 · slices states what it returns and moves the delegation policy to references/, so the body fits the cap again   R1 · route:inline · tree:59161f80858087176680545a1e0a971cd9d676b7
-- [ ] T2 · shape, triage, tests and go-tests state what they return   R1 · route:inline
+- [x] T2 · shape, triage, tests and go-tests state what they return   R1 · route:inline · tree:de1d467b2eef48c6d2f905a3f4e45a710c2ede92
 - [ ] T3 · commits, pull-request, writing and acceptance state what they return   R1 · route:inline
 - [ ] T4 · drive states what it returns and moves the review section to references/   R1 · route:inline
 - [ ] T5 · bootstrap, ship, data, security, role-craft and skill-improve state what they return   R1 · route:inline
