@@ -16,7 +16,7 @@ R1 · "a skill carries depth without growing its 60-line body: the depth lives i
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · the check reads a skill's references: each named path exists, each file is named and listed, and a router has gates   R1 · route:inline
+- [x] T1 · the check reads a skill's references: each named path exists, each file is named and listed, and a router has gates   R1 · route:inline · tree:8623cecda484f9987489871c6bafe2cd04e7b83e
 - [ ] T2 · the binary carries a skill's folder: embed reads references/ and pack writes the tree byte for byte   R1 · route:inline
 - [ ] T3 · init installs the folder and doctor compares it file by file; the design-plugin review-debt row is paid   R1 · route:inline
 - [ ] T4 · ui-craft becomes a router: four references carry the catalogue, the numbers, the motion and the final read   R1 · route:inline
