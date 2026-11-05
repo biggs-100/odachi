@@ -7,11 +7,26 @@
 # glob measures a promise.
 
 [[rule]]
-not   = "no change to what proof/ and odd/tasks are: never touched"
+not   = "no change to the four hard rules, the fence, the gate or the review"
+paths = ["internal/domain/rules/rules.go", "internal/app/check/**", "internal/domain/gate/**", "internal/app/review/**", "internal/domain/review/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the stored proofs: never touched"
 paths = ["proof/**"]
 deps  = []
 
-# The retention rule left with 0193. It protected odd/review.toml, where the
-# review's model policy lives, so it refused every change to [lenses]. A fence
-# protects files, not sections: retention cannot be fenced without fencing the
-# model with it.
+[[rule]]
+not   = "no new verb and no new flag"
+paths = ["cmd/odachi/main.go"]
+deps  = []
+
+[[rule]]
+not   = "no change to which profile is earned or inferred by odachi level"
+paths = ["internal/domain/profile/**", "internal/app/level/**"]
+deps  = []
+
+[[rule]]
+not   = "no retroactive rewrite of an existing block: a project receives the voice when it runs odachi init or level"
+paths = ["AGENTS.md"]
+deps  = []

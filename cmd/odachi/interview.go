@@ -10,18 +10,25 @@ import (
 )
 
 // terminalInterview is the Interview adapter: it prints one question block (the
-// question, its why on one line, and the options) and reads one answer line.
+// question, its why in two or three lines, and the options) and reads one answer
+// line.
 type terminalInterview struct {
 	in  *bufio.Reader
 	out io.Writer
 }
 
 // Ask shows the block and returns the raw line. The question and its why are
-// never split into two messages: the why is the teaching, not a follow-up.
+// never split into two messages: the why is the teaching, not a follow-up. The
+// lines after the first are indented under "why: " so the block still reads as
+// one piece.
 func (t *terminalInterview) Ask(q start.Question) (string, error) {
 	fmt.Fprintf(t.out, "\n? %s\n", q.Text)
 	if q.Why != "" {
-		fmt.Fprintf(t.out, "  why: %s\n", q.Why)
+		why := strings.Split(q.Why, "\n")
+		fmt.Fprintf(t.out, "  why: %s\n", why[0])
+		for _, line := range why[1:] {
+			fmt.Fprintf(t.out, "       %s\n", line)
+		}
 	}
 	if len(q.Options) > 0 {
 		fmt.Fprintf(t.out, "  options: %s\n", strings.Join(q.Options, ", "))

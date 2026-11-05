@@ -10,9 +10,10 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
-// TestNovatoTeachesAndSeniorGoesToThePoint: the two personas are two voices, not
-// two spellings of the same text.
-func TestNovatoTeachesAndSeniorGoesToThePoint(t *testing.T) {
+// TestNovatoTeachesAndSeniorLeads: the two personas are two voices, not two
+// spellings of the same text. Novato tutors with the craft ceremony; senior leads
+// with the decision and explains in fewer lines, without the ceremony.
+func TestNovatoTeachesAndSeniorLeads(t *testing.T) {
 	novato, err := persona.Voice(persona.Novato)
 	if err != nil {
 		t.Fatalf("Voice(novato): %v", err)
@@ -27,7 +28,7 @@ func TestNovatoTeachesAndSeniorGoesToThePoint(t *testing.T) {
 			t.Errorf("the novato voice does not contain %q:\n%s", want, novato)
 		}
 	}
-	for _, want := range []string{"unless asked", "short", "proof"} {
+	for _, want := range []string{"Lead with the decision", "two or three lines", "proof"} {
 		if !strings.Contains(senior, want) {
 			t.Errorf("the senior voice does not contain %q:\n%s", want, senior)
 		}
@@ -452,15 +453,17 @@ func TestOnlyTheHumanChangesTheLanguage(t *testing.T) {
 	}
 }
 
-// TestSeniorIsAVoiceOfItsOwn: senior used to be novato with the teaching taken out.
-// It says what it does -lead with the decision, name its cost when there is a fork-
-// so the two voices are different crafts and not one craft and its absence.
+// TestSeniorIsAVoiceOfItsOwn: senior is not novato with the teaching taken out.
+// It still leads with the decision and now explains its why and its cost, defines
+// a concept the first time it appears and says what a question decides, in fewer
+// lines than the tutor: the two voices are different crafts, not one craft and
+// its absence.
 func TestSeniorIsAVoiceOfItsOwn(t *testing.T) {
 	senior, err := persona.Voice(persona.Senior)
 	if err != nil {
 		t.Fatalf("Voice(senior): %v", err)
 	}
-	for _, want := range []string{"Lead with the decision", "its cost", "worth naming"} {
+	for _, want := range []string{"Lead with the decision", "its cost", "define it in one sentence", "what the answer changes"} {
 		if !strings.Contains(senior, want) {
 			t.Errorf("the senior voice does not carry %q:\n%s", want, senior)
 		}
