@@ -11,9 +11,9 @@ R1 · "the design skill keeps the system fresh, links the design to its ODD feat
 - go test ./... is green; the stale report and the handoff Log are pinned
 
 ## Steps
-- [ ] T1 · design list reports the sources and the ones newer than design/system.md   R1 · route:inline
-- [ ] T2 · design handoff appends one Log entry to the linked feature document and refuses a feature outside odd/tasks   R1 · route:inline
-- [ ] T3 · the design skill syncs first, offers a stale sync, appends the creation log and loads ui-craft   R1 · route:inline
+- [x] T1 · design list reports the sources and the ones newer than design/system.md   R1 · route:inline · tree:dcea3172d2ed0182b910900a7886c3f9b46298f1
+- [x] T2 · design handoff appends one Log entry to the linked feature document and refuses a feature outside odd/tasks   R1 · route:inline · tree:dcea3172d2ed0182b910900a7886c3f9b46298f1
+- [x] T3 · the design skill syncs first, offers a stale sync, appends the creation log and loads ui-craft   R1 · route:inline · tree:7785c1995ba50f1a7217438f8d098c3c0cf80aee
 
 ## History
 L1 · "the design skill keeps the system fresh, links the design to its ODD feature both ways, and pairs with ui-craft"
