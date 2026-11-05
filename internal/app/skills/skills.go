@@ -269,9 +269,69 @@ func load(root string, files Files) ([]skill.Skill, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not read %s: %s; check the permissions and run odachi skills again", rel, oneLine(err.Error()))
 		}
-		loaded = append(loaded, skill.Parse(name, rel, string(data)))
+
+		parsed := skill.Parse(name, rel, string(data))
+		references, problems, err := referencesOf(dirPath, rel, files)
+		if err != nil {
+			return nil, err
+		}
+		parsed.References = references
+		parsed.FolderProblems = problems
+		loaded = append(loaded, parsed)
 	}
 	return loaded, nil
+}
+
+// referencesOf reads what a skill folder holds under references/, as paths
+// relative to the folder. The folder is optional; when it is not a folder, that
+// is a problem of the skill, not a reason to refuse the run that lists it.
+func referencesOf(dir, rel string, files Files) ([]string, []skill.Problem, error) {
+	refDir := filepath.Join(dir, "references")
+	label := strings.TrimSuffix(rel, "/"+SkillFile) + "/references"
+
+	exists, err := files.Exists(refDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+	}
+	if !exists {
+		return nil, nil, nil
+	}
+
+	isDir, err := files.IsDir(refDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+	}
+	if !isDir {
+		return nil, []skill.Problem{{
+			File:   label,
+			Reason: "it is a file, not a folder: a reference is a .md file inside references/",
+		}}, nil
+	}
+
+	names, err := files.List(refDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not read %s/: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+	}
+
+	references := make([]string, 0, len(names))
+	problems := []skill.Problem{}
+	for _, name := range names {
+		entry := filepath.Join(refDir, name)
+		entryIsDir, err := files.IsDir(entry)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not check %s/%s: %s; check the permissions and run odachi skills again", label, name, oneLine(err.Error()))
+		}
+		if entryIsDir {
+			problems = append(problems, skill.Problem{
+				File:   label + "/" + name,
+				Reason: "it is a folder: a reference is a .md file, not a tree",
+			})
+			continue
+		}
+		references = append(references, "references/"+name)
+	}
+	slices.Sort(references)
+	return references, problems, nil
 }
 
 // noSkills is the starting point, not a failure: it says how to create the first

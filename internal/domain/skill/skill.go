@@ -8,6 +8,7 @@ package skill
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -51,6 +52,15 @@ type Skill struct {
 	// a copy that re-renders a skill would not be the skill.
 	Raw            []byte
 	HasFrontmatter bool
+	// References is what the skill folder holds under references/, as paths
+	// relative to the folder ("references/numbers.md"), sorted. The loader reads
+	// the disk; Parse cannot, so a skill parsed alone carries none and the
+	// reference rules have nothing to contradict.
+	References []string
+	// FolderProblems are the violations the loader found while reading the
+	// folder, such as a references entry that is not a file. They belong to the
+	// skill even though they are not in its text.
+	FolderProblems []Problem
 }
 
 // Problem is one violation, attributed to the file a human has to open.
@@ -128,7 +138,102 @@ func (s Skill) Problems() []Problem {
 		}
 	}
 
+	problems = append(problems, s.referenceProblems(body)...)
+	problems = append(problems, s.FolderProblems...)
+
 	return problems
+}
+
+// referencePath is a reference the body declares: a backticked path under
+// references/ that ends in .md. A phrase such as `references/<file>.md` is not a
+// declaration, because it names no file.
+var referencePath = regexp.MustCompile("`(references/[A-Za-z0-9._/-]+\\.md)`")
+
+// referenceProblems applies the grammar of a skill that carries depth: what the
+// body names must exist, what the folder holds must be declared, and a router
+// must gate every file and say what it returns.
+func (s Skill) referenceProblems(body []string) []Problem {
+	problems := []Problem{}
+	add := func(format string, args ...any) {
+		problems = append(problems, Problem{File: s.Path, Reason: fmt.Sprintf(format, args...)})
+	}
+
+	named := referencedPaths(s.Body)
+	folder := s.References
+	if len(named) == 0 && len(folder) == 0 {
+		return nil
+	}
+
+	for _, reference := range named {
+		if !slices.Contains(folder, reference) {
+			add("the reference %q does not exist: name the file the skill has, or write it", reference)
+		}
+	}
+
+	for _, reference := range folder {
+		if !strings.HasSuffix(reference, ".md") {
+			add("the reference %q is not a .md: references/ holds the text an agent reads, nothing else", reference)
+		}
+	}
+
+	references, hasReferences := sectionContent(body, "References")
+	if !hasReferences {
+		if len(folder) > 0 {
+			add("a skill with references needs a %q section listing each file", "References")
+		}
+	} else {
+		for _, reference := range folder {
+			if !namesPath(references, reference) {
+				add("the reference %q is not in ## References: every file under references/ is declared there", reference)
+			}
+		}
+	}
+
+	if len(folder) > 1 {
+		gates, hasGates := sectionContent(body, "Decision gates")
+		switch {
+		case !hasGates:
+			add("a skill with %d references needs a %q table: one row per situation, the path in backticks", len(folder), "Decision gates")
+		case gates == "":
+			add("the %q section is empty: give each reference the situation that loads it", "Decision gates")
+		default:
+			for _, reference := range folder {
+				if !namesPath(gates, reference) {
+					add("the reference %q is not a row of ## Decision gates: a reference nobody routes is unreachable", reference)
+				}
+			}
+		}
+	}
+
+	if len(folder) > 0 {
+		output, hasOutput := sectionContent(body, "Output")
+		if !hasOutput || output == "" {
+			add("a skill with references must say what it returns in %q: the agent has to know what to hand back", "Output")
+		}
+	}
+
+	return problems
+}
+
+// referencedPaths returns the references the body names, in the order they
+// appear and once each.
+func referencedPaths(body string) []string {
+	seen := map[string]bool{}
+	paths := []string{}
+	for _, match := range referencePath.FindAllStringSubmatch(body, -1) {
+		reference := match[1]
+		if seen[reference] {
+			continue
+		}
+		seen[reference] = true
+		paths = append(paths, reference)
+	}
+	return paths
+}
+
+// namesPath reports whether a section declares a reference by its exact path.
+func namesPath(section, reference string) bool {
+	return strings.Contains(section, "`"+reference+"`")
 }
 
 // Check validates a whole project: every file, unique names, and a registry that
