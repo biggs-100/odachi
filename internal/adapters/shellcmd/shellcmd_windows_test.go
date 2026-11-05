@@ -57,19 +57,18 @@ func TestRunTimesOutInsteadOfHanging(t *testing.T) {
 // creates go.txt after the timeout: a survivor answers within a second, and a
 // killed tree never answers. The old version raced the child's birth against the
 // timeout and its write against taskkill, so a slow machine could fail a correct
-// kill; this one fails only when the tree really survived.
+// kill; this one fails only when the tree really survived. The child is a batch
+// file, not a PowerShell script: the runner's cmd is the shell under test, and a
+// second interpreter adds a startup the test does not need.
 func TestRunATimeoutKillsTheWholeTree(t *testing.T) {
 	dir := t.TempDir()
-	child := `Set-Content -Path started.txt -Value started
-while (-not (Test-Path go.txt)) { Start-Sleep -Milliseconds 100 }
-Set-Content -Path late.txt -Value late
-`
-	if err := os.WriteFile(filepath.Join(dir, "child.ps1"), []byte(child), 0o600); err != nil {
+	child := "@echo off\r\necho started>started.txt\r\n:wait\r\nif exist go.txt (\r\n  echo late>late.txt\r\n  exit /b\r\n)\r\nping -n 2 127.0.0.1 >nul\r\ngoto wait\r\n"
+	if err := os.WriteFile(filepath.Join(dir, "child.bat"), []byte(child), 0o600); err != nil {
 		t.Fatalf("writing the child: %v", err)
 	}
 
-	command := `start /b powershell -NoProfile -ExecutionPolicy Bypass -File child.ps1 & ping -n 60 127.0.0.1 >nul`
-	_, _, _, timedOut, err := shellcmd.Run(dir, command, 5)
+	command := `start /b cmd /c child.bat & ping -n 120 127.0.0.1 >nul`
+	_, _, _, timedOut, err := shellcmd.Run(dir, command, 10)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -83,7 +82,7 @@ Set-Content -Path late.txt -Value late
 	if err := os.WriteFile(filepath.Join(dir, "go.txt"), []byte("go"), 0o600); err != nil {
 		t.Fatalf("writing the signal: %v", err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	if _, err := os.Stat(filepath.Join(dir, "late.txt")); err == nil {
 		t.Fatal("the grandchild outlived the timeout and wrote its file")
 	}
