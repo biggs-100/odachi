@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.15.0 - 2026-11-04
 
 - **The design canvas works like a product surface.** `odachi design open` now leaves a detached
   canvas running and returns, and a second `open` moves the page already open instead of opening a
