@@ -17,7 +17,7 @@ R1 · "a new project with the installed global agent reaches its first proof wit
 - [x] T2 · doctor names the next step in a new project and audits the home copies the binary installs   R1 · route:inline · tree:eab7961ebd6ae9327f4f621332cba0d49bcf2350
 - [x] T3 · check --run warns when the proof has no output   R1 · route:inline · tree:cfc17718ac7d5ffd44468edf4b2293c5166ec98e
 - [x] T4 · a .ps1 command runs with PowerShell or is refused naming the invocation on Windows   R1 · route:inline · tree:2fe899543003fea241895632f2def409316b7ea8
-- [ ] T5 · review in a repository with no commits names the next step instead of a raw git error   R1 · route:inline
+- [x] T5 · review in a repository with no commits names the next step instead of a raw git error   R1 · route:inline · tree:8d6c5a7c13e61d79ead47bd47ed3cfd94ae2866e
 - [ ] T6 · bench has a journey for the new-project flow and the runs use a portable proof command   R1 · route:inline
 - [ ] T7 · the bootstrap is the first-cycle checklist: answers, init, skills path and first proof   R1 · route:inline
 - [ ] T8 · the changelog, README and impact map name the change, and the feature closes with go test ./... green   R1 · route:inline
