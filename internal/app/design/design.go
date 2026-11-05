@@ -10,11 +10,14 @@ package design
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	domain "github.com/biggs-100/odachi/internal/domain/design"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // Exit codes follow the rest of the verbs.
@@ -52,6 +55,13 @@ type Options struct {
 	Preview string
 	// Note is what the agent says about the handoff, optional.
 	Note string
+	// Sources are the project's design sources, as the command found them: the
+	// report names the ones newer than the system it was captured in.
+	Sources []Source
+	// SystemExists says design/system.md is there; SystemModified is when it was
+	// last written, so a source can be compared with it.
+	SystemExists   bool
+	SystemModified time.Time
 	// At is the ISO time a resolution records. The caller owns the clock.
 	At string
 }
@@ -109,9 +119,10 @@ func list(opts Options, files Files) Result {
 	}
 
 	result := Result{Code: CodeOK, Designs: designs}
+	system := systemReport(opts)
 	if len(designs) == 0 {
 		result.Message = "no design in " + domain.Dir + "/: a design starts when an agent writes design/<slug>/"
-		result.Lines = []string{result.Message}
+		result.Lines = append([]string{result.Message}, system...)
 		return result
 	}
 
@@ -129,8 +140,33 @@ func list(opts Options, files Files) Result {
 			result.Lines = append(result.Lines, board)
 		}
 	}
+	result.Lines = append(result.Lines, system...)
 	result.Message = fmt.Sprintf("%d design%s", len(designs), plural(len(designs), "", "s"))
 	return result
+}
+
+// systemReport says whether the tokens a design follows are captured and fresh. A
+// stale system is a design that will follow values the project no longer has, so the
+// report names the sources that moved instead of staying quiet.
+func systemReport(opts Options) []string {
+	if len(opts.Sources) == 0 {
+		return []string{"design sources: none detected"}
+	}
+	lines := []string{fmt.Sprintf("design sources: %d", len(opts.Sources))}
+	if !opts.SystemExists {
+		return append(lines, "design system: no design/system.md yet; run odachi design sync before designing")
+	}
+	stale := []string{}
+	for _, source := range opts.Sources {
+		if source.Modified.After(opts.SystemModified) {
+			stale = append(stale, source.Path)
+		}
+	}
+	if len(stale) == 0 {
+		return append(lines, "design system: design/system.md is up to date")
+	}
+	sort.Strings(stale)
+	return append(lines, fmt.Sprintf("design system: design/system.md is older than %d source(s): %s; say so and offer a sync before designing", len(stale), strings.Join(stale, ", ")))
 }
 
 // comments reports the open comments of a design, or resolves the ids it was given.
@@ -298,6 +334,16 @@ func readDesigns(opts Options, files Files) ([]Design, *Result) {
 	return designs, nil
 }
 
+// validFeatureDoc is the one shape a design's feature link takes: a relative path
+// under odd/tasks/ ending in .md, with no traversal. The manifest may name a path;
+// the handoff is the one that writes to it, so it is the one that checks it.
+func validFeatureDoc(feature string) bool {
+	if !strings.HasPrefix(feature, "odd/tasks/") || !strings.HasSuffix(feature, ".md") {
+		return false
+	}
+	return path.Clean(feature) == feature && !strings.Contains(feature, "..")
+}
+
 // isSlug reports whether a folder name may be a design: the manifest names files,
 // not paths, and a design is a folder like 02-pricing-page.
 func isSlug(name string) bool {
@@ -357,6 +403,18 @@ func handoff(opts Options, files Files) Result {
 			names = append(names, artboard.File)
 		}
 		return blocked(file + " is not an artboard of " + slug + ": the artboards are " + strings.Join(names, ", "))
+	}
+
+	feature := strings.TrimSpace(d.Manifest.Feature)
+	featurePath := ""
+	if feature != "" {
+		if !validFeatureDoc(feature) {
+			return blocked("the design links " + feature + ": a feature is a task document under odd/tasks/, a relative .md path")
+		}
+		featurePath = filepath.Join(opts.Dir, filepath.FromSlash(feature))
+		if _, err := files.Read(featurePath); err != nil {
+			return blocked("the design links " + feature + ", and that document cannot be read: " + oneLine(err.Error()))
+		}
 	}
 
 	alternatives := []string{}
@@ -430,6 +488,33 @@ func handoff(opts Options, files Files) Result {
 	lines = append(lines, "state: "+status+" (chosen "+file+")")
 	if preview != "" {
 		lines = append(lines, "preview: "+preview+" (the canvas compares it)")
+	}
+	if feature != "" {
+		raw, err := files.Read(featurePath)
+		if err != nil {
+			return blocked("the handoff is recorded, and the feature document cannot be read: " + oneLine(err.Error()))
+		}
+		altFiles := []string{}
+		for i, artboard := range d.Manifest.Artboards {
+			if i != chosen {
+				altFiles = append(altFiles, artboard.File)
+			}
+		}
+		text := "design/" + slug + "/" + file + " chosen for this feature"
+		if len(altFiles) > 0 {
+			text += "; the alternatives are " + strings.Join(altFiles, ", ")
+		} else {
+			text += "; it is the only artboard"
+		}
+		doc := taskdoc.Parse(string(raw))
+		doc = doc.AppendHistory(fmt.Sprintf("L%d · %q", doc.NextLine(), text))
+		if _, err := files.Backup(featurePath); err != nil {
+			return blocked("the handoff is recorded, and the feature document could not be backed up: " + oneLine(err.Error()))
+		}
+		if err := files.Write(featurePath, []byte(doc.Render())); err != nil {
+			return blocked("the handoff is recorded, and the feature document could not be written: " + oneLine(err.Error()))
+		}
+		lines = append(lines, "logged in "+feature)
 	}
 
 	return Result{Code: CodeOK, Message: "handoff " + path, Lines: lines, Files: []string{filepath.ToSlash(statePath)}, Designs: designs}

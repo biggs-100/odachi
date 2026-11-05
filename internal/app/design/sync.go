@@ -6,16 +6,19 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	domain "github.com/biggs-100/odachi/internal/domain/design"
 )
 
 // Source is one file the project declares its design in: a stylesheet, a token
 // file, a theme. Sync reads them and writes nothing back: a tool that edits the
-// sources it learns from is a tool nobody can trust twice.
+// sources it learns from is a tool nobody can trust twice. Modified is the file's
+// time, for the staleness report; sync itself never reads it.
 type Source struct {
-	Path    string
-	Content string
+	Path     string
+	Content  string
+	Modified time.Time
 }
 
 // Token is one CSS custom property found in a source, with the file it came from.

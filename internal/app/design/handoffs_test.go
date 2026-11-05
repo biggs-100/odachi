@@ -15,7 +15,9 @@ const twoArtboards = `{"title":"Pricing","brief":"for students","feature":"odd/t
 // The handoff is a decision and a state: the chosen artboard is written down with
 // where the work stands, so the canvas and the next agent see the same thing.
 func TestAHandoffRecordsTheChosenArtboardAndItsState(t *testing.T) {
-	files := newFakeFiles().put("design/pricing/design.json", twoArtboards)
+	files := newFakeFiles().
+		put("design/pricing/design.json", twoArtboards).
+		put("odd/tasks/pricing.md", "# pricing\n\n## History\nL1 · \"start\"\n")
 
 	got := appdesign.Run(appdesign.Options{Dir: "raiz", Action: appdesign.ActionHandoff, Slug: "pricing/02-b.html", At: "t1"}, files)
 	if got.Code != appdesign.CodeOK {
@@ -46,8 +48,10 @@ func TestAHandoffRecordsTheChosenArtboardAndItsState(t *testing.T) {
 	if entry.SentAt != "t1" || entry.UpdatedAt != "t2" {
 		t.Errorf("the state lost its history: %+v", entry)
 	}
-	if len(files.backups) != 1 {
-		t.Errorf("backups = %v, want the second write to back up the first", files.backups)
+	// The second write backs up the state file and the linked feature document; the
+	// first handoff backed up the document before its log line landed.
+	if len(files.backups) != 3 {
+		t.Errorf("backups = %v, want the state and the feature document backed up", files.backups)
 	}
 }
 
@@ -81,6 +85,46 @@ func TestAHandoffWithABadStateOrPreviewIsBlocked(t *testing.T) {
 				t.Errorf("a refused handoff wrote %v", files.writes)
 			}
 		})
+	}
+}
+
+// A design that came from a tracked feature writes the chosen artboard back into
+// that document's log: the link goes both ways, and the decision is not only in the
+// canvas.
+func TestHandoffLogsTheChosenArtboardInItsFeature(t *testing.T) {
+	files := newFakeFiles().
+		put("design/pricing/design.json", twoArtboards).
+		put("odd/tasks/pricing.md", "# pricing\n\n## History\nL1 · \"start\"\n")
+
+	got := appdesign.Run(appdesign.Options{Dir: "raiz", Action: appdesign.ActionHandoff, Slug: "pricing/02-b.html", At: "t1"}, files)
+	if got.Code != appdesign.CodeOK {
+		t.Fatalf("Code = %d: %s", got.Code, got.Message)
+	}
+	doc := files.files[filepath.Join("raiz", "odd", "tasks", "pricing.md")]
+	want := `L2 · "design/pricing/02-b.html chosen for this feature; the alternatives are 01-a.html"`
+	if !strings.Contains(doc, want) {
+		t.Errorf("the feature document does not carry the log line:\n%s", doc)
+	}
+	if text := strings.Join(got.Lines, "\n"); !strings.Contains(text, "logged in odd/tasks/pricing.md") {
+		t.Errorf("the handoff does not say it logged: %s", text)
+	}
+}
+
+// A feature link outside odd/tasks/ is refused before anything is written: the link
+// is a promise about a document odachi owns, not a path a manifest can point at.
+func TestHandoffRefusesAFeatureOutsideOddTasks(t *testing.T) {
+	files := newFakeFiles().
+		put("design/pricing/design.json", `{"title":"Pricing","brief":"b","feature":"scripts/run.md","artboards":[{"file":"01-a.html","title":"A","tradeoff":"x","width":1,"height":1}]}`)
+
+	got := appdesign.Run(appdesign.Options{Dir: "raiz", Action: appdesign.ActionHandoff, Slug: "pricing/01-a.html"}, files)
+	if got.Code != appdesign.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked", got.Code)
+	}
+	if !strings.Contains(got.Message, "scripts/run.md") {
+		t.Errorf("the refusal does not name the link: %q", got.Message)
+	}
+	if len(files.writes) != 0 {
+		t.Errorf("a refused handoff wrote %v", files.writes)
 	}
 }
 
