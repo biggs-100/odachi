@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.14.9 - 2026-11-04
 
 - **The agent teaches while it works.** `odachi init` writes a voice that explains every decision
   in a short paragraph -what it chose, what it costs and what the other way would have cost-, names
