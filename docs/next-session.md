@@ -1,49 +1,44 @@
 # Next session
 
-Written at the close of 0198, after 0197 and v0.14.9. `main` is clean, the block
-in this repository carries the new voice, and the installed binary is the release.
+Written at the close of 0200 and v0.15.0. `main` is clean, the canvas is the one the
+release ships, and the OpenCode push plugin is installed on this machine.
 
 ## What shipped
 
-- **0197, PR #322**: the agent explains as it works. Novato explains every
-  decision in a two-to-four-line paragraph and defines a concept the first time
-  it appears; senior leads with the decision and explains it in two or three
-  lines; both say what an answer changes before asking. The interview's why is
-  two lines per question, the second indented under `why: `. Verdict approved
-  (tree `1f5a2f39`, lens `reliability`).
-- **v0.14.9, PR #324**: released with 14 signed assets and installed from the
-  release; `odachi --version` answers `odachi 0.14.9`.
-- **0198, this feature**: `odachi init` rewrote this repository's block with the
-  novato voice the release installs, and this file records the close.
+- **0200, PR #328**: the design canvas works like gentle-shell's. `design open` is a
+  detached child that returns; a second `open` moves the page already open. Every route
+  requires a per-server token, a foreign Host is refused, artboards render in sandboxed
+  iframes with an injected picker, and only manifest-listed files resolve inside the
+  design. `handoffs.json` records `chosen`, `sent`, `in_progress`, `implemented` and a
+  loopback `previewUrl`; the canvas marks the chosen artboard and compares it with the
+  running app. Focus at 100% with pointer capture, `Shift+Esc`, pins, Collect and Send
+  all. The system board comes first. Review approved 4 of 4 after four findings were
+  fixed (queue order, focus after a live render, plugin retry, fence rules).
+- **v0.15.0, PR #330**: released with 14 signed assets and installed from the release;
+  `odachi --version` answers `odachi 0.15.0`.
+- **`odachi init --global`**: wrote the push plugin at
+  `~/.config/opencode/plugins/odachi-design/index.ts`. The live check: a comment sent
+  with `send:true` wrote one queue file, the plugin consumed it, and the comment reached
+  the session.
 
 ## What was measured
 
-- `go test ./... -count=1` green, run several times because the proof is tied to
-  the exact tree; CI green (`checks (linux)` and the three `gate` jobs).
-- The timeout test's spawn race was paid inside 0197: under load `cmd` could
-  reach `start /b` after `taskkill` took its snapshot, so the timeout moved to
-  three seconds and the grandchild writes at seven. The fix held in the local
-  full suite and in CI's windows gate.
+- `go test ./... -count=1` green; CI green on `checks (linux)` and the three `gate`
+  jobs. The canvas JavaScript and the plugin were syntax-checked with `node --check`.
+- The push was verified by hand in OpenCode: the queue directory was empty after the
+  send and the comment's `sentAt` was recorded.
+- The base fence of 0199 protected `cmd/odachi/main.go` as "no new flag and no new verb",
+  so the two help-text lines that described the new canvas were reverted; they wait for
+  a docs feature that changes that rule on `main` first.
 
 ## What is already true
 
 - `docs/review-debt.md` has nothing open.
-- No release is owed: `## Unreleased` is gone from `CHANGELOG.md`; the next
-  feature writes it again.
-- `odd/review.toml` keeps all four lenses on `opencode-go/deepseek-v4.1-flash`.
-- The voice reaches a project only through `odachi init` or `odachi level --to`;
-  nothing rewrites an existing block silently.
-- Nothing is queued. The next feature is the human's call.
-
-## Known, measured this session
-
-- `TestRunATimeoutKillsTheWholeTree` is load-sensitive: the grandchild can be
-  spawned after `taskkill` takes its snapshot, and the test then reads a survivor
-  that is a race, not a broken kill. A deterministic handshake (the child names
-  itself, the timeout starts after it) is the fix worth a feature; widening the
-  window only moved the race.
-- `TestTwoCheckRunsProduceTheSameProofBytes` inherits `OPENCODE_SESSION_ID` when
-  the suite runs inside a host: the model probe answers on one run and times out
-  on the next, so the proof header differs. CI has no session env and does not
-  see it; the test should clear `ODACHI_MODEL` and `OPENCODE_SESSION_ID` itself.
-
+- No release is owed: `## Unreleased` is gone from `CHANGELOG.md`.
+- The canvas interaction (focus, pins, Collect) has no browser automation: it was built
+  against the documented behavior and needs a human look in the browser. The plugin's
+  delivery was verified live; Claude Code stays on the pull path (`comments.json`,
+  `handoffs.json`) and the skill says so.
+- The next parity slice is the one left out of 0200: automatic design-system sync with
+  stale-source detection, the two-way ODD Log link, and pairing the design skill with
+  `ui-craft`. Nothing is queued; the next feature is the human's call.
