@@ -7,6 +7,16 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The design system says when it went stale, and a design writes back to its feature.** `odachi
+  design list` reports the project's design sources and, when `design/system.md` exists, the sources
+  newer than it; the skill syncs before the first design and names a stale source before following
+  tokens the project no longer has. `odachi design handoff` on a design linked to
+  `odd/tasks/<feature>.md` appends one log entry to that document naming the chosen artboard and its
+  alternatives, refuses a link outside `odd/tasks/`, and writes no document for untracked work. The
+  skill loads `ui-craft` for the hierarchy and the numbers while it owns the delivery (0201).
+
 ## v0.15.0 - 2026-11-04
 
 - **The design canvas works like a product surface.** `odachi design open` now leaves a detached
