@@ -20,7 +20,7 @@ R1 · "a new project with the installed global agent reaches its first proof wit
 - [x] T5 · review in a repository with no commits names the next step instead of a raw git error   R1 · route:inline · tree:8d6c5a7c13e61d79ead47bd47ed3cfd94ae2866e
 - [x] T6 · bench has a journey for the new-project flow and the runs use a portable proof command   R1 · route:inline · tree:efa0bd07146b59113772cc46db53f8b48b3a7682
 - [x] T7 · the bootstrap is the first-cycle checklist: answers, init, skills path and first proof   R1 · route:inline · tree:365bb9e9c8ba20df34271cada2277d4d70595fb0
-- [ ] T8 · the changelog, README and impact map name the change, and the feature closes with go test ./... green   R1 · route:inline
+- [x] T8 · the changelog, README and impact map name the change, and the feature closes with go test ./... green   R1 · route:inline · tree:d1f3752babeb28bf3afd56c3b475eec7a09b87dd
 
 ## History
 L1 · "a new project with the installed global agent reaches its first proof without a person correcting the path, and every fix travels through the installation"
