@@ -32,6 +32,23 @@ func repoSkill(t *testing.T, name string) []byte {
 	return data
 }
 
+// repoSkillFiles counts every file the binary carries: a SKILL.md per skill and
+// the markdown references beside it. The summary counts skills; the JSON files
+// list counts files, and the two are not the same number anymore.
+func repoSkillFiles(t *testing.T) int {
+	t.Helper()
+	count := 0
+	for _, name := range bundled {
+		count++
+		references, err := filepath.Glob(filepath.Join(repoRoot(t), "skills", name, "references", "*.md"))
+		if err != nil {
+			t.Fatalf("glob skills/%s/references: %v", name, err)
+		}
+		count += len(references)
+	}
+	return count
+}
+
 // agentFile is where one agent reads one skill, joined the way the app joins it.
 func agentFile(t *testing.T, home, agentName, skill string) string {
 	t.Helper()
@@ -427,8 +444,8 @@ func TestPackJSON(t *testing.T) {
 	if payload.Dests[0].Installed != len(bundled) {
 		t.Errorf("JSON installed = %d, want %d", payload.Dests[0].Installed, len(bundled))
 	}
-	if len(payload.Files) != len(bundled) {
-		t.Errorf("JSON files = %d, want %d: %v", len(payload.Files), len(bundled), payload.Files)
+	if len(payload.Files) != repoSkillFiles(t) {
+		t.Errorf("JSON files = %d, want %d: %v", len(payload.Files), repoSkillFiles(t), payload.Files)
 	}
 }
 

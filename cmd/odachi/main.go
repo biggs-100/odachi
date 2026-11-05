@@ -1384,11 +1384,16 @@ func blockedSkills(result pack.Result, verb string) string {
 	return oneLine(result.Message)
 }
 
-// payload converts the embedded skills into the shape pack installs.
+// payload converts the embedded skills into the shape pack installs: the folder
+// travels whole, so a reference the SKILL.md links to is never left behind.
 func payload(skills []bundledskills.Skill) []pack.Skill {
 	out := make([]pack.Skill, 0, len(skills))
 	for _, s := range skills {
-		out = append(out, pack.Skill{Name: s.Name, Content: s.Content})
+		files := make([]pack.File, 0, len(s.Files))
+		for _, file := range s.Files {
+			files = append(files, pack.File{Path: file.Path, Content: file.Content})
+		}
+		out = append(out, pack.Skill{Name: s.Name, Files: files})
 	}
 	return out
 }

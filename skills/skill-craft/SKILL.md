@@ -29,6 +29,12 @@ load it, or when you are unsure whether to write a skill, a test or a fence glob
   goes in `brief.md` or the fence, not in a skill.
 - If the rule can be verified, prefer a fence glob or a test **before** a skill:
   the fence is enforced by the binary, the skill can be ignored by the model.
+- A skill that grows depth gets `references/`: the body names every file in
+  `## References`, and a router with more than one adds `## Decision gates`, one
+  row per situation.
+- A skill with references says what it returns in `## Output`; `odachi skills
+  --check` refuses a named path that does not exist, a file nobody named, and a
+  reference that is not a `.md`.
 - To create one: `odachi skill new <slug>` leaves the template, and
   `odachi skills --check` says whether it is well formed.
 
@@ -37,4 +43,5 @@ load it, or when you are unsure whether to write a skill, a test or a fence glob
 - Glossaries, encyclopedias or technology history.
 - Rules only someone who already knows can understand.
 - Copy a whole skill without adapting it to this project.
-- Pass 60 lines: if it does not fit, it is a document, not a skill.
+- Pass 60 lines: if it does not fit, the depth belongs in `references/`, not in
+  the body.

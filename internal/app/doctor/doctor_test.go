@@ -230,7 +230,7 @@ func bootstrapContent() string {
 	if !ok {
 		panic("the binary has no bootstrap skill")
 	}
-	return string(bootstrap.Content)
+	return string(bootstrap.Main())
 }
 
 func cleanLookup() *fakeLookup { return &fakeLookup{resolved: "/home/ana/bin/odachi"} }
@@ -686,6 +686,55 @@ func TestTheDesignPluginIsAudited(t *testing.T) {
 				t.Fatalf("check 11 must say %q, got %q", c.want, got.Detail)
 			}
 		})
+	}
+}
+
+// TestTheDoctorNamesAReferenceThatDrifted: a skill is its folder, so the
+// installed copy is compared file by file and the line names the reference, not
+// only the SKILL.md that links it.
+func TestTheDoctorNamesAReferenceThatDrifted(t *testing.T) {
+	files := configured().
+		put("skills/acceptance/references/numbers.md", "the scale\n").
+		put(".agents/skills/acceptance/SKILL.md", skill.Template("acceptance")).
+		put(".agents/skills/acceptance/references/numbers.md", "an older scale\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := checkOf(t, result, domaindoctor.CheckSkills)
+
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a drifted reference must be a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{
+		"do not match skills/",
+		".agents/skills/acceptance/references/numbers.md",
+		"odachi init",
+	} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("check 9 must say %q: %q", want, got.Detail)
+		}
+	}
+}
+
+// TestTheVoiceLineCarriesTheDefaultNoteAndThePluginNote: the door note always
+// writes a sentence, and the notes after it append to that sentence. Neither is
+// lost because the one before it was not empty.
+func TestTheVoiceLineCarriesTheDefaultNoteAndThePluginNote(t *testing.T) {
+	const rel = ".config/opencode/plugins/odachi-design/index.ts"
+
+	result := Run(Options{
+		Dir: root, Home: homeRoot, Version: "0.5.0", Exe: "/home/ana/bin/odachi",
+		Agents: fakeAgentSelection{},
+		Plugin: &Plugin{RelPath: rel, Content: []byte("the plugin the binary carries")},
+	}, configured(), cleanLookup(), cleanProfiles())
+
+	got := checkOf(t, result, domaindoctor.CheckVoice)
+	for _, want := range []string{
+		"the door is installed but",
+		"the design plugin is not in ~/" + rel,
+	} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("check 11 must say %q: %q", want, got.Detail)
+		}
 	}
 }
 

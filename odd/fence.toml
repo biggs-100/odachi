@@ -30,3 +30,8 @@ deps  = []
 not   = "no change to the release workflow"
 paths = [".github/workflows/**"]
 deps  = []
+
+[[rule]]
+not   = "no rewrite of the other sixteen skills: their references, their gates and their Output are the follow-up"
+paths = ["skills/acceptance/**", "skills/bootstrap/**", "skills/commits/**", "skills/data/**", "skills/drive/**", "skills/go-tests/**", "skills/pull-request/**", "skills/role-craft/**", "skills/security/**", "skills/shape/**", "skills/ship/**", "skills/skill-improve/**", "skills/slices/**", "skills/tests/**", "skills/triage/**", "skills/writing/**"]
+deps  = []

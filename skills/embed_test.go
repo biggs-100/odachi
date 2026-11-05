@@ -37,7 +37,7 @@ func TestAllCarriesEveryStarterSkill(t *testing.T) {
 	names := make([]string, 0, len(all))
 	for _, s := range all {
 		names = append(names, s.Name)
-		if len(s.Content) == 0 {
+		if len(s.Main()) == 0 {
 			t.Errorf("%s came back empty", s.Name)
 		}
 	}
@@ -58,7 +58,7 @@ func TestBootstrapIsTheFirstCycle(t *testing.T) {
 		t.Fatal("the binary has no bootstrap skill")
 	}
 
-	text := string(bootstrap.Content)
+	text := string(bootstrap.Main())
 	for _, want := range []string{
 		"creates the git repository",
 		"odachi start",
@@ -88,7 +88,7 @@ func TestEmbeddedBytesAreTheFilesInTheRepo(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read %s/SKILL.md: %v", s.Name, err)
 		}
-		if string(s.Content) != string(onDisk) {
+		if string(s.Main()) != string(onDisk) {
 			t.Errorf("%s: the embedded bytes differ from %s/SKILL.md", s.Name, s.Name)
 		}
 	}
@@ -105,7 +105,7 @@ func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	for _, want := range []string{
@@ -139,7 +139,7 @@ func TestShapeTeachesExplorationBeforeTheBrief(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	content, ok := byName["shape"]
@@ -173,7 +173,7 @@ func TestCommitsTeachesRiskByBlastRadius(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	content, ok := byName["commits"]
@@ -216,7 +216,7 @@ func TestDriveTeachesTheRequirementChangeRule(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	for _, want := range []string{
@@ -241,7 +241,7 @@ func TestDriveTeachesTheWorkflowDiscipline(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	for _, want := range []string{
@@ -275,7 +275,7 @@ func TestTriageSkillTeachesRootCause(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	content, ok := byName["triage"]
@@ -307,7 +307,7 @@ func TestPullRequestSkillTeachesReviewSlices(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	content, ok := byName["pull-request"]
@@ -338,7 +338,7 @@ func TestGoTestsSkillTeachesGoPatterns(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	content, ok := byName["go-tests"]
@@ -371,7 +371,7 @@ func TestSkillImproveTeachesTheAudit(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	content, ok := byName["skill-improve"]
@@ -405,7 +405,7 @@ func TestBootstrapIsTheEntryPoint(t *testing.T) {
 	if bootstrap.Name != skills.BootstrapName {
 		t.Errorf("Bootstrap() = %q, want %q", bootstrap.Name, skills.BootstrapName)
 	}
-	if len(bootstrap.Content) == 0 {
+	if len(bootstrap.Main()) == 0 {
 		t.Error("la skill de arranque vino vacía")
 	}
 }
@@ -443,8 +443,8 @@ func TestBootstrapSaysTheAgentRunsTheCommands(t *testing.T) {
 	if !ok {
 		t.Fatal("the payload has no bootstrap skill")
 	}
-	if !strings.Contains(string(bootstrap.Content), "You run them; the human never types them") {
-		t.Errorf("the bootstrap skill does not say the agent runs the commands:\n%s", bootstrap.Content)
+	if !strings.Contains(string(bootstrap.Main()), "You run them; the human never types them") {
+		t.Errorf("the bootstrap skill does not say the agent runs the commands:\n%s", bootstrap.Main())
 	}
 }
 
@@ -458,7 +458,7 @@ func TestRoleCraftTeachesTheInterviewAndTheResearch(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	content, ok := byName["role-craft"]
@@ -490,7 +490,7 @@ func TestSkillCraftTeachesExplorationAndResearch(t *testing.T) {
 	}
 	byName := map[string]string{}
 	for _, s := range all {
-		byName[s.Name] = string(s.Content)
+		byName[s.Name] = string(s.Main())
 	}
 
 	content, ok := byName["skill-craft"]

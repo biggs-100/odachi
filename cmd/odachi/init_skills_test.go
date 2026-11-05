@@ -134,7 +134,7 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 			t.Errorf("%s was not installed in .agents/skills: %v", skill.Name, err)
 			continue
 		}
-		if !bytes.Equal(got, skill.Content) {
+		if !bytes.Equal(got, skill.Main()) {
 			t.Errorf("%s difiere de skills/%s/SKILL.md", skill.Name, skill.Name)
 		}
 	}
@@ -160,7 +160,7 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the bootstrap skill did not reach the home: %v", err)
 	}
-	if !bytes.Equal(got, bootstrap.Content) {
+	if !bytes.Equal(got, bootstrap.Main()) {
 		t.Errorf("the home skill is not the binary's one")
 	}
 
@@ -193,7 +193,7 @@ func TestInitInstallsAllSkillsInTheHomeWhenAsked(t *testing.T) {
 			t.Errorf("%s did not reach the home: %v", skill.Name, err)
 			continue
 		}
-		if !bytes.Equal(got, skill.Content) {
+		if !bytes.Equal(got, skill.Main()) {
 			t.Errorf("%s differs from the payload", skill.Name)
 		}
 	}

@@ -9,7 +9,7 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0203, which leaves the two rows below open.
+Last written: while closing 0205, which leaves four rows open.
 
 ## Open
 
@@ -17,9 +17,25 @@ Last written: while closing 0203, which leaves the two rows below open.
 
 Found while closing 0203 (warning, `internal/adapters/gitx/gitx.go:220`). The `Messages` guard returns an empty history for any `Head` error, so a corrupt repository or a missing git binary is read as "no commits" and the trailers silently disappear. It should tell the no-HEAD case apart, or return the error.
 
+### the pack summary counts a new reference as a backup
+
+Found while closing 0205 (warning, `internal/app/pack/pack.go:461`). `installSkill` marks a file that does not exist as a change (`identical = false`, the path appended, no `Backup` because `exists` is false), and the default branch then increments `BackedUp` and prints `would back up and write` in a dry run. A skill whose `SKILL.md` is unchanged and whose only difference is a new reference is counted as backed up although `files.Backup` never ran for it. The replaced single-file code counted a backup only after a real one. The install is right; the report is wrong.
+
+### the router check does not parse the table
+
+Found while closing 0205 (suggestion, `internal/domain/skill/skill.go:202`). The gate rule is `namesPath(gates, reference)`, a `strings.Contains` over the whole `## Decision gates` section, so a prose sentence or a bullet names the paths and passes although the brief asks for a table whose rows name every reference. The refusal says the reference "is not a row of ## Decision gates", a row no code parses. The same containment-only test is used for `## References`.
+
+### the missing half of the reference drift has no test
+
+Found while closing 0205 (suggestion, `internal/app/doctor/doctor.go:882`). The `!exists` branch of `driftOf` — a reference the source has and the installed folder does not — is never exercised: the test writes a different reference and checks the changed branch only. The brief says "a missing or changed reference is drift", and only half of it is pinned.
+
+## Closed by feature 0205
+
 ### the design plugin is skipped when the default note is the first text
 
-Found while closing 0203 (warning, `internal/app/doctor/doctor.go:1233`). The `opencodeDefaultNote` branch returns when `result` is empty, so the `designPluginNote` that follows never runs in that case, and a stale or missing design plugin is not named. The branch should append instead of returning, as the plugin note does.
+Found while closing 0203 (warning, `internal/app/doctor/doctor.go:1233`). The `opencodeDefaultNote` branch returned when `result` was empty, so the `designPluginNote` that follows never ran in that case.
+
+Closed: the door note always writes a sentence, so the empty branch was unreachable; the dead check is gone. `TestTheVoiceLineCarriesTheDefaultNoteAndThePluginNote` pins that the default note and the plugin note share the line, not the removal: it would pass before the change too.
 
 ## Closed by feature 0196
 
