@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.18.0 - 2026-11-05
 
 - **Every skill says what it returns.** `odachi skills --check` refuses a skill without
   `## Output`, whether or not it carries references: the seventeen bodies that had none declare
