@@ -34,3 +34,16 @@ in this repository carries the new voice, and the installed binary is the releas
 - The voice reaches a project only through `odachi init` or `odachi level --to`;
   nothing rewrites an existing block silently.
 - Nothing is queued. The next feature is the human's call.
+
+## Known, measured this session
+
+- `TestRunATimeoutKillsTheWholeTree` is load-sensitive: the grandchild can be
+  spawned after `taskkill` takes its snapshot, and the test then reads a survivor
+  that is a race, not a broken kill. A deterministic handshake (the child names
+  itself, the timeout starts after it) is the fix worth a feature; widening the
+  window only moved the race.
+- `TestTwoCheckRunsProduceTheSameProofBytes` inherits `OPENCODE_SESSION_ID` when
+  the suite runs inside a host: the model probe answers on one run and times out
+  on the next, so the proof header differs. CI has no session env and does not
+  see it; the test should clear `ODACHI_MODEL` and `OPENCODE_SESSION_ID` itself.
+
