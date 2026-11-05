@@ -36,12 +36,12 @@ func project(t *testing.T) string {
 func canvas(t *testing.T, root string) string {
 	t.Helper()
 	server := New(Options{Dir: root, Canvas: []byte("<!doctype html><title>canvas</title>")})
-	addr, _, err := server.Listen(0)
+	_, url, err := server.Listen(0)
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
 	t.Cleanup(func() { _ = server.Close() })
-	return "http://" + addr
+	return strings.TrimSuffix(url, "/")
 }
 
 // A second `open` moves the tab a person already has: the server records the design
@@ -98,6 +98,91 @@ func TestShowRefusesAForeignOriginAndANonJSONBody(t *testing.T) {
 	}
 }
 
+// The canvas has one secret in its address: a route without the token does not
+// exist, and a request that names another host is refused before it reaches the mux.
+func TestTheCanvasRefusesARouteWithoutItsToken(t *testing.T) {
+	base := canvas(t, project(t))
+	host, _, _ := strings.Cut(strings.TrimPrefix(base, "http://"), "/")
+
+	response, err := http.Get("http://" + host + "/api/designs")
+	if err != nil {
+		t.Fatalf("GET without token: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNotFound {
+		t.Errorf("route without token = %d, want 404", response.StatusCode)
+	}
+
+	request, err := http.NewRequest(http.MethodGet, base+"/api/designs", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Host = "evil.example"
+	response, err = http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatalf("GET foreign host: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusForbidden {
+		t.Errorf("foreign host = %d, want 403", response.StatusCode)
+	}
+}
+
+// The artboard is served with the picker that names a clicked element: the canvas
+// cannot read a sandboxed page, so the page has to say what was clicked.
+func TestTheArtboardCarriesTheSandboxedPicker(t *testing.T) {
+	base := canvas(t, project(t))
+	body := getText(t, base+"/artboard/pricing/01-a.html")
+	if !strings.Contains(body, "odachi:pick") {
+		t.Errorf("the artboard does not carry the picker: %q", body)
+	}
+}
+
+// A comment is a note to an agent, not a document: the server bounds it instead of
+// writing whatever a page sends.
+func TestACommentIsBounded(t *testing.T) {
+	base := canvas(t, project(t))
+	long := strings.Repeat("x", 4001)
+	response, err := http.Post(base+"/api/design/pricing/comments", "application/json",
+		strings.NewReader(`{"file":"01-a.html","comment":"`+long+`"}`))
+	if err != nil {
+		t.Fatalf("POST long comment: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusBadRequest {
+		t.Errorf("a 4001-byte comment = %d, want 400", response.StatusCode)
+	}
+}
+
+// A symlink inside the design folder can point outside it: the served file must
+// still resolve inside the design, or the canvas is a file browser with a token.
+func TestAnArtboardSymlinkCannotEscapeTheDesign(t *testing.T) {
+	root := project(t)
+	secret := filepath.Join(root, "secret.html")
+	if err := os.WriteFile(secret, []byte("<h1>secret</h1>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "design", "pricing", "02-link.html")
+	if err := os.Symlink(secret, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	manifest := filepath.Join(root, "design", "pricing", "design.json")
+	raw := `{"title":"Pricing page","brief":"b","artboards":[{"file":"01-a.html","title":"A","tradeoff":"dense","width":1440,"height":900},{"file":"02-link.html","title":"Link","tradeoff":"none","width":1440,"height":900}]}`
+	if err := os.WriteFile(manifest, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	base := canvas(t, root)
+	response, err := http.Get(base + "/artboard/pricing/02-link.html")
+	if err != nil {
+		t.Fatalf("GET the symlink: %v", err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNotFound {
+		t.Errorf("a symlink that leaves the design = %d, want 404", response.StatusCode)
+	}
+}
+
 func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
 	base := canvas(t, project(t))
 
@@ -108,8 +193,8 @@ func TestTheCanvasServesTheDesignsAndTheirArtboards(t *testing.T) {
 	if len(designs.Designs) != 1 || designs.Designs[0].Slug != "pricing" {
 		t.Fatalf("designs = %+v", designs.Designs)
 	}
-	if designs.Designs[0].URL["01-a.html"] != "/artboard/pricing/01-a.html" {
-		t.Errorf("the artboard has no address: %+v", designs.Designs[0].URL)
+	if !strings.HasSuffix(designs.Designs[0].URL["01-a.html"], "/artboard/pricing/01-a.html") {
+		t.Errorf("the artboard has no address under the token: %+v", designs.Designs[0].URL)
 	}
 
 	body := getText(t, base+"/artboard/pricing/01-a.html")
@@ -360,7 +445,7 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 	// The positive case takes a comment, not the stop route: a canvas this test
 	// killed could not be asked the next question.
 	post := func(origin string) int {
-		request, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/design/pricing/comments",
+		request, err := http.NewRequest(http.MethodPost, "http://"+addr+"/"+server.Token()+"/api/design/pricing/comments",
 			strings.NewReader(`{"file":"01-a.html","comment":"from the canvas"}`))
 		if err != nil {
 			t.Fatal(err)
@@ -386,7 +471,7 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 
 	// The stop route is a door too, and it is asked last: it is the one that ends
 	// the canvas.
-	stop, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/stop", nil)
+	stop, err := http.NewRequest(http.MethodPost, "http://"+addr+"/"+server.Token()+"/api/stop", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

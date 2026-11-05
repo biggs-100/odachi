@@ -115,12 +115,17 @@
 
     design.manifest.artboards.forEach(function (artboard) {
       var frame = el("iframe", { title: artboard.title });
+      // The artboard runs in a sandbox without allow-same-origin: the canvas cannot
+      // read it, so the injected picker names the element it was clicked on.
+      frame.setAttribute("sandbox", "allow-scripts");
       frame.width = artboard.width;
       frame.height = artboard.height;
       frame.dataset.file = artboard.file;
       frame.dataset.slug = design.slug;
       frame.src = design.urls[artboard.file];
-      frame.addEventListener("load", function () { hook(frame); });
+      frame.addEventListener("load", function () {
+        frame.contentWindow.postMessage({ type: "odachi:comment-mode", on: state.comment }, "*");
+      });
       var notes = [el("small", { textContent: artboard.tradeoff })];
       if (!artboard.screenshot) {
         notes.push(el("small", { className: "gap", textContent: "no screenshot" }));
@@ -163,56 +168,34 @@
     document.getElementById("zoom").textContent = Math.round(state.zoom * 100) + "%";
   }
 
-  // hook runs inside each artboard once it loads: same origin, so the canvas can
-  // listen for a click and compute the selector the agent will read.
-  function hook(frame) {
-    var doc;
-    try { doc = frame.contentDocument; } catch (error) { return; }
-    if (!doc || doc.__odachiHooked) { return; }
-    doc.__odachiHooked = true;
-    doc.addEventListener("click", function (event) {
-      if (!state.comment) { return; }
-      event.preventDefault();
-      event.stopPropagation();
-      var selector = selectorFor(event.target);
+  // A sandboxed artboard cannot be read by this page: it sends the element it was
+  // clicked on, and the canvas turns that into the same pending comment as before.
+  window.addEventListener("message", function (event) {
+    var data = event.data || {};
+    if (data.type !== "odachi:pick" || !state.comment) { return; }
+    var frames = boards.querySelectorAll("iframe");
+    for (var i = 0; i < frames.length; i++) {
+      var frame = frames[i];
+      if (frame.contentWindow !== event.source) { continue; }
       state.pending = {
         file: frame.dataset.file,
-        selector: selector,
-        excerpt: (event.target.textContent || "").trim().slice(0, 80)
+        selector: data.selector,
+        excerpt: data.excerpt
       };
-      target.textContent = frame.dataset.file + " - " + selector;
+      target.textContent = frame.dataset.file + " - " + data.selector;
       text.value = "";
       var rect = frame.getBoundingClientRect();
       popover.style.display = "block";
-      popover.style.left = Math.min(window.innerWidth - 300, rect.left + event.clientX * state.zoom) + "px";
-      popover.style.top = Math.min(window.innerHeight - 190, rect.top + event.clientY * state.zoom) + "px";
+      popover.style.left = Math.min(window.innerWidth - 300, rect.left + data.x * state.zoom) + "px";
+      popover.style.top = Math.min(window.innerHeight - 190, rect.top + data.y * state.zoom) + "px";
       text.focus();
-    }, true);
-  }
-
-  function selectorFor(node) {
-    var parts = [];
-    while (node && node.nodeType === 1 && parts.length < 5) {
-      var part = node.tagName.toLowerCase();
-      if (node.id) { parts.unshift(part + "#" + node.id); break; }
-      var parent = node.parentElement;
-      if (parent) {
-        var index = 1;
-        for (var i = 0; i < parent.children.length; i++) {
-          if (parent.children[i] === node) { break; }
-          if (parent.children[i].tagName === node.tagName) { index++; }
-        }
-        part += ":nth-of-type(" + index + ")";
-      }
-      parts.unshift(part);
-      node = parent;
+      return;
     }
-    return parts.join(" > ");
-  }
+  });
 
   function save() {
     if (!state.pending || !text.value.trim()) { return; }
-    api("/api/design/" + state.slug + "/comments", {
+    api("api/design/" + state.slug + "/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -235,7 +218,7 @@
   }
 
   function refresh() {
-    return api("/api/designs").then(function (body) {
+    return api("api/designs").then(function (body) {
       state.designs = body.designs || [];
       if (!current() && state.designs.length) { state.slug = state.designs[0].slug; }
       render();
@@ -256,6 +239,10 @@
     document.getElementById("hint").textContent = state.comment
       ? "Comment mode: click an element in an artboard. Clicks do not follow links."
       : "Navigate: scroll or drag to pan, the wheel scrolls. Comment mode: click an element.";
+    var frames = boards.querySelectorAll("iframe");
+    for (var i = 0; i < frames.length; i++) {
+      frames[i].contentWindow.postMessage({ type: "odachi:comment-mode", on: state.comment }, "*");
+    }
   });
 
   document.getElementById("fit").addEventListener("click", function () {
@@ -277,7 +264,7 @@
   // reloads its frame. A canvas that is already open is refreshed instead of a new
   // tab, which is why the URL is stable.
   if (window.EventSource) {
-    var stream = new EventSource("/api/events");
+    var stream = new EventSource("api/events");
     stream.onmessage = function (message) {
       // A second `odachi design open <slug>` asks the server to show that design
       // on this tab: the page moves, the URL stays, and no second tab is opened.
@@ -306,7 +293,7 @@
   }
 
   var wanted = new URL(window.location.href).searchParams.get("design");
-  api("/api/designs").then(function (body) {
+  api("api/designs").then(function (body) {
     state.designs = body.designs || [];
     state.slug = wanted && state.designs.some(function (d) { return d.slug === wanted; }) ? wanted : (state.designs[0] ? state.designs[0].slug : "");
     render();

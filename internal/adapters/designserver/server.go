@@ -52,18 +52,26 @@ type Server struct {
 	// host is the address the canvas listens on: the origin a request must carry
 	// to be its own. The Host header is the caller's, so it cannot decide.
 	host string
-	done chan struct{}
-	once sync.Once
+	// token is the one secret in the address: every route lives under it, so a
+	// web page that finds the loopback port still cannot comment, move or stop a
+	// canvas it never opened.
+	token string
+	done  chan struct{}
+	once  sync.Once
 }
 
 // New builds the canvas. It reads nothing until it is asked to.
 func New(opts Options) *Server {
-	return &Server{opts: opts, clients: map[chan string]bool{}, last: map[string]time.Time{}, done: make(chan struct{})}
+	return &Server{opts: opts, token: newToken(), clients: map[chan string]bool{}, last: map[string]time.Time{}, done: make(chan struct{})}
 }
 
 // Done is closed when the canvas stops, so `open` can block for as long as a person
 // is looking at it and return the moment somebody stops it.
 func (s *Server) Done() <-chan struct{} { return s.done }
+
+// Token is the secret every route lives under, for the process that records the
+// address a person clicks.
+func (s *Server) Token() string { return s.token }
 
 // Listen starts the server on a loopback port and returns the address and the URL
 // a person clicks. The port is the kernel's choice unless the caller names one.
@@ -76,7 +84,7 @@ func (s *Server) Listen(port int) (addr, url string, err error) {
 	s.http = &http.Server{Handler: s.routes(), ReadHeaderTimeout: 5 * time.Second}
 	addr = listener.Addr().String()
 	s.host = addr
-	url = "http://" + addr + "/"
+	url = "http://" + addr + "/" + s.token + "/"
 	if slug := strings.TrimSpace(s.opts.Slug); slug != "" {
 		url += "?design=" + slug
 	}
@@ -95,7 +103,8 @@ func (s *Server) Close() error {
 }
 
 // routes is the whole surface: the page, the artboards, the JSON the page reads and
-// the stream that tells it to reload.
+// the stream that tells it to reload. Every route lives under the server's token, and
+// a request that does not name this address is refused before it reaches the mux.
 func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.page)
@@ -106,7 +115,23 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/show", s.show)
 	mux.HandleFunc("/api/stop", s.stop)
 	mux.HandleFunc("/artboard/", s.artboard)
-	return mux
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Host != s.host {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "a canvas answers its own address only"})
+			return
+		}
+		prefix := "/" + s.token
+		if !strings.HasPrefix(r.URL.Path, prefix) {
+			http.NotFound(w, r)
+			return
+		}
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, prefix)
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
+		mux.ServeHTTP(w, r)
+	})
 }
 
 // page serves the canvas. It is one file with its script inline: no build, no CDN,
@@ -242,6 +267,10 @@ func (s *Server) addComment(w http.ResponseWriter, r *http.Request, slug string)
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "a comment needs its artboard and its text"})
 		return
 	}
+	if len(in.Comment) > maxCommentLength {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("a comment is at most %d bytes; this one is %d", maxCommentLength, len(in.Comment))})
+		return
+	}
 
 	s.writeMu.Lock()
 
@@ -323,13 +352,25 @@ func (s *Server) artboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), parts[0], parts[1])
-	raw, err := os.ReadFile(path)
+	// A symlink inside the design folder can point anywhere: the served file must
+	// still resolve inside the design it belongs to, or it is not that artboard.
+	real, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	root, err := filepath.EvalSymlinks(filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), parts[0]))
+	if err != nil || !strings.HasPrefix(real, root+string(os.PathSeparator)) {
+		http.NotFound(w, r)
+		return
+	}
+	raw, err := os.ReadFile(real)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(raw)
+	_, _ = w.Write(injectInspector(raw))
 }
 
 // events is the live reload: one line per change, and the page decides what to
@@ -477,7 +518,7 @@ func (s *Server) readDesigns(slug string) ([]Design, error) {
 		}
 		urls := make(map[string]string, len(manifest.Artboards))
 		for _, artboard := range manifest.Artboards {
-			urls[artboard.File] = "/artboard/" + name + "/" + artboard.File
+			urls[artboard.File] = "/" + s.token + "/artboard/" + name + "/" + artboard.File
 		}
 		out = append(out, Design{Slug: name, Manifest: manifest, Comments: comments, URL: urls})
 	}
@@ -541,6 +582,73 @@ func newID() string {
 		return fmt.Sprintf("%08x", time.Now().UnixNano()&0xffffffff)
 	}
 	return hex.EncodeToString(buf)
+}
+
+// maxCommentLength bounds what a page can write into the comments file: a comment is
+// a note to an agent, not a document.
+const maxCommentLength = 4000
+
+// newToken is the one secret in the canvas address: 128 random bits, so a page that
+// finds the loopback port cannot guess the path that reaches the routes.
+func newToken() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return newID() + newID() + newID() + newID()
+	}
+	return hex.EncodeToString(buf)
+}
+
+// inspector is the script every artboard receives: a sandboxed page cannot be read
+// by the canvas, so the page itself names the element a person click. It stays quiet
+// until the canvas says comment mode is on.
+const inspector = `<script>(function () {
+  "use strict";
+  if (window.parent === window) { return; }
+  var commenting = false;
+  window.addEventListener("message", function (event) {
+    if (event.data && event.data.type === "odachi:comment-mode") { commenting = !!event.data.on; }
+  });
+  function selectorFor(node) {
+    var parts = [];
+    while (node && node.nodeType === 1 && parts.length < 5) {
+      var part = node.tagName.toLowerCase();
+      if (node.id) { parts.unshift(part + "#" + node.id); break; }
+      var parent = node.parentElement;
+      if (parent) {
+        var index = 1;
+        for (var i = 0; i < parent.children.length; i++) {
+          if (parent.children[i] === node) { break; }
+          if (parent.children[i].tagName === node.tagName) { index++; }
+        }
+        part += ":nth-of-type(" + index + ")";
+      }
+      parts.unshift(part);
+      node = parent;
+    }
+    return parts.join(" > ");
+  }
+  document.addEventListener("click", function (event) {
+    if (!commenting) { return; }
+    event.preventDefault();
+    event.stopPropagation();
+    window.parent.postMessage({
+      type: "odachi:pick",
+      selector: selectorFor(event.target),
+      excerpt: (event.target.textContent || "").trim().slice(0, 80),
+      x: event.clientX,
+      y: event.clientY
+    }, "*");
+  }, true);
+})();</script>`
+
+// injectInspector puts the picker before the closing body tag, or at the end of a
+// document that has none.
+func injectInspector(raw []byte) []byte {
+	page := string(raw)
+	if index := strings.LastIndex(strings.ToLower(page), "</body>"); index >= 0 {
+		return []byte(page[:index] + inspector + page[index:])
+	}
+	return []byte(page + inspector)
 }
 
 // ownPage refuses a caller this canvas did not serve: a browser sends Origin on a

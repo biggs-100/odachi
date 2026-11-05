@@ -19,6 +19,7 @@ type Canvas struct {
 	Addr      string `json:"addr"`
 	URL       string `json:"url"`
 	Slug      string `json:"slug"`
+	Token     string `json:"token"`
 	PID       int    `json:"pid"`
 	StartedAt string `json:"startedAt"`
 }
@@ -69,15 +70,24 @@ func ForgetCanvas(path string) error {
 // without cleaning up leaves a file, and trusting a file instead of asking it is how
 // a person gets a URL that answers nothing.
 func Running(client *http.Client, canvas Canvas) bool {
+	if strings.TrimSpace(canvas.Token) == "" {
+		return false
+	}
 	if client == nil {
 		client = &http.Client{Timeout: 800 * time.Millisecond}
 	}
-	response, err := client.Get("http://" + canvas.Addr + "/api/health")
+	response, err := client.Get(canvasURL(canvas, "/api/health"))
 	if err != nil {
 		return false
 	}
 	defer response.Body.Close()
 	return response.StatusCode == http.StatusOK
+}
+
+// canvasURL is the one place a route is spelled: every route lives under the token,
+// so a caller cannot forget it.
+func canvasURL(canvas Canvas, path string) string {
+	return "http://" + canvas.Addr + "/" + canvas.Token + path
 }
 
 // Show asks a running canvas to move to one design and refresh the page a person
@@ -91,7 +101,7 @@ func Show(client *http.Client, canvas Canvas, slug string) error {
 	if err != nil {
 		return err
 	}
-	request, err := http.NewRequest(http.MethodPost, "http://"+canvas.Addr+"/api/show", bytes.NewReader(body))
+	request, err := http.NewRequest(http.MethodPost, canvasURL(canvas, "/api/show"), bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -114,7 +124,7 @@ func Stop(client *http.Client, path string, canvas Canvas) error {
 	if client == nil {
 		client = &http.Client{Timeout: 2 * time.Second}
 	}
-	response, err := client.Post("http://"+canvas.Addr+"/api/stop", "application/json", nil)
+	response, err := client.Post(canvasURL(canvas, "/api/stop"), "application/json", nil)
 	if err != nil {
 		return fmt.Errorf("could not reach the canvas at %s: %w", canvas.Addr, err)
 	}

@@ -294,6 +294,7 @@ func runDesignServe(dir string, args []string, stdout, stderr io.Writer) int {
 		Addr:      addr,
 		URL:       url,
 		Slug:      slug,
+		Token:     server.Token(),
 		PID:       os.Getpid(),
 		StartedAt: time.Now().UTC().Format(time.RFC3339),
 	}); err != nil {

@@ -68,7 +68,8 @@ func TestDesignOpenReturnsWithADetachedCanvas(t *testing.T) {
 	statePath := filepath.Join(dir, ".git", "odachi", "design-canvas.json")
 	canvas := readCanvasState(t, statePath)
 	client := &http.Client{Timeout: time.Second}
-	response, err := client.Get("http://" + canvas.Addr + "/api/health")
+	health := "http://" + canvas.Addr + "/" + canvas.Token + "/api/health"
+	response, err := client.Get(health)
 	if err != nil {
 		t.Fatalf("the canvas does not answer after open: %v", err)
 	}
@@ -94,7 +95,7 @@ func TestDesignOpenReturnsWithADetachedCanvas(t *testing.T) {
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		if _, err := client.Get("http://" + canvas.Addr + "/api/health"); err != nil {
+		if _, err := client.Get(health); err != nil {
 			return
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -103,8 +104,9 @@ func TestDesignOpenReturnsWithADetachedCanvas(t *testing.T) {
 }
 
 func readCanvasState(t *testing.T, path string) struct {
-	Addr string `json:"addr"`
-	URL  string `json:"url"`
+	Addr  string `json:"addr"`
+	URL   string `json:"url"`
+	Token string `json:"token"`
 } {
 	t.Helper()
 	raw, err := os.ReadFile(path)
@@ -112,8 +114,9 @@ func readCanvasState(t *testing.T, path string) struct {
 		t.Fatalf("read the canvas state: %v", err)
 	}
 	var state struct {
-		Addr string `json:"addr"`
-		URL  string `json:"url"`
+		Addr  string `json:"addr"`
+		URL   string `json:"url"`
+		Token string `json:"token"`
 	}
 	if err := json.Unmarshal(raw, &state); err != nil {
 		t.Fatalf("decode the canvas state: %v", err)
