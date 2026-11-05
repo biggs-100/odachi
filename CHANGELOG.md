@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.15.1 - 2026-11-05
 
 - **The design system says when it went stale, and a design writes back to its feature.** `odachi
   design list` reports the project's design sources and, when `design/system.md` exists, the sources
