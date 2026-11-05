@@ -23,6 +23,10 @@ Cuando alguien dice "ya está" y no hay nada que lo pruebe.
 - Cada criterio se puede observar.
 - Un pedido vago vuelve con una pregunta.
 
+## Output
+
+Los criterios observables, cada uno con la salida que lo verifica.
+
 ## Never
 
 - Aceptar "funciona en mi máquina" como criterio.
@@ -31,7 +35,7 @@ Cuando alguien dice "ya está" y no hay nada que lo pruebe.
 // validSkill renders a minimal, valid skill under any name.
 func validSkill(name, trigger string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: " + trigger +
-		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"
+		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
 }
 
 func parse(dir, text string) skill.Skill {
@@ -297,7 +301,7 @@ func TestValidSlug(t *testing.T) {
 }
 
 // TestTemplateIsAValidStartingPoint: `skill new` must leave something --check
-// accepts, with the three sections ready to fill.
+// accepts, with the four sections ready to fill.
 func TestTemplateIsAValidStartingPoint(t *testing.T) {
 	text := skill.Template("ejemplo")
 
@@ -308,7 +312,7 @@ func TestTemplateIsAValidStartingPoint(t *testing.T) {
 	if got.Name != "ejemplo" {
 		t.Errorf("Name = %q, want ejemplo", got.Name)
 	}
-	for _, section := range []string{"## When", "## Rules", "## Never"} {
+	for _, section := range []string{"## When", "## Rules", "## Output", "## Never"} {
 		if !strings.Contains(text, section) {
 			t.Errorf("the template has no %q:\n%s", section, text)
 		}
