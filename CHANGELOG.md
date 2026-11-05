@@ -7,6 +7,19 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The design canvas works like a product surface.** `odachi design open` now leaves a detached
+  canvas running and returns, and a second `open` moves the page already open instead of opening a
+  tab. The canvas has navigation and focus: the wheel zooms, the drag pans, and a click focuses an
+  artboard at exactly 100% with its own scroll and clicks; `Shift+Esc` or Back to canvas returns.
+  Comments pin their element, can be sent now or collected and sent in a batch, and reach the
+  OpenCode session through a plugin `odachi init --global` installs (Claude Code reads the files).
+  A design records its chosen artboard and its handoff state (`sent`, `in_progress`, `implemented`,
+  a loopback preview) in `design/<slug>/handoffs.json`, and Compare shows the artboard beside the
+  running app. The canvas renders artboards in sandboxed iframes, serves only manifest-listed files
+  and requires a per-server token; the system board comes first when it exists (0200).
+
 ## v0.14.9 - 2026-11-04
 
 - **The agent teaches while it works.** `odachi init` writes a voice that explains every decision
