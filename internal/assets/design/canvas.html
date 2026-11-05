@@ -109,7 +109,7 @@
 <script>
 (function () {
   "use strict";
-  var state = { designs: [], slug: "", zoom: 1, comment: false, pending: null, sendMode: "now", focus: null, restore: null, drag: null, dragMoved: false };
+  var state = { designs: [], slug: "", zoom: 1, comment: false, pending: null, sendMode: "now", focus: null, restore: null, drag: null, dragMoved: false, system: "" };
   var boards = document.getElementById("boards");
   var stage = document.getElementById("stage");
   var designSelect = document.getElementById("design");
@@ -148,9 +148,25 @@
     });
 
     boards.innerHTML = "";
+    if (state.system) {
+      var systemFrame = el("iframe", { title: "Design system" });
+      systemFrame.setAttribute("sandbox", "allow-scripts");
+      systemFrame.width = 1440;
+      systemFrame.height = 900;
+      systemFrame.src = state.system;
+      var systemShield = el("div", { className: "shield", title: "Click to focus" });
+      var systemBoard = el("div", { className: "board" }, [
+        el("h2", { textContent: "Design system" }, [el("small", { textContent: "the tokens every artboard follows" })]),
+        el("div", { className: "frame-wrap" }, [systemFrame, systemShield])
+      ]);
+      systemShield.addEventListener("click", function () { if (!state.comment && !state.dragMoved) { enterFocus(systemBoard); } });
+      boards.appendChild(systemBoard);
+    }
     var design = current();
     if (!design) {
-      stateLine.textContent = "no design in design/ yet";
+      if (!state.system) { stateLine.textContent = "no design in design/ yet"; }
+      renderComments();
+      applyZoom();
       return;
     }
 
@@ -423,6 +439,7 @@
   function refresh() {
     return api("api/designs").then(function (body) {
       state.designs = body.designs || [];
+      state.system = body.system || "";
       if (!current() && state.designs.length) { state.slug = state.designs[0].slug; }
       render();
     }).catch(function (error) { stateLine.textContent = error.message; });
@@ -530,6 +547,7 @@
   var wanted = new URL(window.location.href).searchParams.get("design");
   api("api/designs").then(function (body) {
     state.designs = body.designs || [];
+    state.system = body.system || "";
     state.slug = wanted && state.designs.some(function (d) { return d.slug === wanted; }) ? wanted : (state.designs[0] ? state.designs[0].slug : "");
     render();
   }).catch(function (error) { stateLine.textContent = error.message; });

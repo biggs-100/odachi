@@ -186,6 +186,28 @@ func TestAnArtboardSymlinkCannotEscapeTheDesign(t *testing.T) {
 	}
 }
 
+// The system board is the first thing the canvas draws when the project has one:
+// the page reads its URL from the same payload as the designs.
+func TestTheCanvasServesTheSystemBoard(t *testing.T) {
+	root := project(t)
+	if err := os.WriteFile(filepath.Join(root, "design", "system.html"), []byte("<h1>tokens</h1>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	base := canvas(t, root)
+
+	var payload struct {
+		System string `json:"system"`
+	}
+	get(t, base+"/api/designs", &payload)
+	if !strings.HasSuffix(payload.System, "/system") {
+		t.Fatalf("system = %q, want the board's address", payload.System)
+	}
+	body := getText(t, base+"/system")
+	if !strings.Contains(body, "tokens") {
+		t.Errorf("the system board is not served: %q", body)
+	}
+}
+
 // The canvas reads the handoff state from the folder: the chosen artboard and its
 // state are what it draws as a badge.
 func TestTheCanvasReportsTheHandoffState(t *testing.T) {

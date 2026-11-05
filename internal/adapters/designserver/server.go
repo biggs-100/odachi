@@ -115,6 +115,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/show", s.show)
 	mux.HandleFunc("/api/stop", s.stop)
 	mux.HandleFunc("/artboard/", s.artboard)
+	mux.HandleFunc("/system", s.system)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Host != s.host {
@@ -210,7 +211,35 @@ func (s *Server) designs(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"designs": all})
+	system := ""
+	if _, err := os.Stat(filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), "system.html")); err == nil {
+		system = "/" + s.token + "/system"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"designs": all, "system": system})
+}
+
+// system serves design/system.html: the project's tokens as a board, shown first on
+// the canvas. It is not a design (it has no manifest); it is the system every
+// artboard follows.
+func (s *Server) system(w http.ResponseWriter, r *http.Request) {
+	path := filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir), "system.html")
+	real, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	root, err := filepath.EvalSymlinks(filepath.Join(s.opts.Dir, filepath.FromSlash(domain.Dir)))
+	if err != nil || !strings.HasPrefix(real, root+string(os.PathSeparator)) {
+		http.NotFound(w, r)
+		return
+	}
+	raw, err := os.ReadFile(real)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(raw)
 }
 
 // design returns one design, or adds and resolves its comments.
