@@ -10,5 +10,12 @@ import _ "embed"
 //go:embed canvas.html
 var canvas []byte
 
+//go:embed plugin.ts
+var plugin []byte
+
 // Canvas returns the page the server serves at /.
 func Canvas() []byte { return canvas }
+
+// Plugin returns the OpenCode plugin that delivers the canvas queue to the
+// session: one file per machine, watched per project.
+func Plugin() []byte { return plugin }

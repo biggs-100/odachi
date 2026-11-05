@@ -299,6 +299,7 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 		".claude/output-styles/odachi.md",
 		".config/opencode/agents/odachi.md",
 		".config/opencode/opencode.json",
+		".config/opencode/plugins/odachi-design/index.ts",
 	}
 	for _, client := range persona.Clients() {
 		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
