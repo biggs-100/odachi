@@ -10,8 +10,8 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the other eighteen skills"
-paths = ["skills/acceptance/**", "skills/bootstrap/**", "skills/commits/**", "skills/data/**", "skills/design/**", "skills/drive/**", "skills/go-tests/**", "skills/pull-request/**", "skills/role-craft/**", "skills/security/**", "skills/shape/**", "skills/ship/**", "skills/skill-craft/**", "skills/skill-improve/**", "skills/slices/**", "skills/tests/**", "skills/ui-craft/**", "skills/writing/**"]
+not   = "no change to the skill contract or the curriculum"
+paths = ["skills/**", "internal/domain/skill/**"]
 deps  = []
 
 [[rule]]
