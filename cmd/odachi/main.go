@@ -1682,7 +1682,7 @@ check flags:
   --ci            judge the tree the way CI does: the fence and the base come from the
                   remote's default branch, so a policy that lands before the feature is
                   verified before a push; it takes no --base or --fence-from beside it
-  --timeout n     seconds --run may take (default 120)
+  --timeout n     seconds --run may take (default 600)
   --quiet         prints nothing when ready except the reminder the hook must read
   --require-review  refuses a commit without a verdict for this tree (default: the project mode, which names it and lets the commit through)
   --no-review     does not require review even when the project has it on
