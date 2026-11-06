@@ -1,29 +1,30 @@
-# the-ledger-of-0205-is-paid
+# the-environment-a-command-inherits
 
 ## What must exist
-- the four rows `docs/review-debt.md` left open are paid: the pack report counts a backup only when one ran, the gates check reads the table instead of searching it, the missing-reference drift has its test, and a git that cannot answer `Head` is an error instead of an empty history
+- `odachi doctor` names the PATH this process hands to a command when it passes what Windows can pass to a child, with the length, the limit and the repair, so a proof that fails for an inherited environment is not read as a broken suite
 
 ## Done when
-- a skill whose `SKILL.md` is unchanged and whose only difference is a new reference is not reported as backed up, in a real run or a dry run
-- `## Decision gates` is read as a table and `## References` as a list, so a path named only in prose is refused with the sentence that says what a row is
-- the doctor's drift test carries the case where the source has a reference and the installed folder does not
-- `Messages` tells "this repository has no commit yet" apart from "git could not answer", and the second returns the error
-- each fix carries the test that would have caught it, observed red before the fix
-- the changelog's Unreleased section names the four fixes
+- check 15 exists, appended, `CheckCount` says 15, and the usage text and `docs/impact-map.md` say fifteen
+- on Windows with a PATH of 8192 characters or more the check is a warning that names the length, the 8191 limit and the repair; at 8191 or less it is ok
+- on a platform that does not cut the environment, the check is ok and says which platform it measured
+- nothing trims, rewrites or persists the human's PATH, and the command a proof runs receives the same environment it received before
 - `go test ./...` is green
+- the changelog's Unreleased section names the check
 
 ## Not included (first version)
-- no change to the curriculum or the contract: no file under `skills/` moves, and `--check` keeps the rule it has
-- no change to the scaffold, the output contract or the documents the last feature wrote
+- no change to how a command is spawned, or to the environment a child receives
+- no trimming, rewriting or persisting of the human's PATH
+- no new verb and no new flag
+- no change to the curriculum or the contract: no file under `skills/` moves
 - no change to the stored proofs: never touched
 - no change to the voice or the interview's questions
 - no change to `odachi role` or to the skill it renders
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
 - no change to the release workflow
-- no new verb and no new flag
 
 ## Decisions taken
-- each row is paid in the file it names, without a new abstraction
-- the grammar is parsed where it is owned: the skill package reads the table and the list, and its refusal says what shape it wanted
-- a test-only row lands with the others, so the ledger can close in one feature
+- it is a warning, not a problem: nothing is broken until the next command fails, and the doctor does not fail for an environment odachi does not own
+- the limit is 8191 characters, cmd's documented ceiling per variable; the session that opened this row measured 13,888 and the child saw an empty PATH
+- the measurement is the process PATH, because that is exactly what a child inherits
+- the platform is passed into the check, so both branches are tested on any machine
