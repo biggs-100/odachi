@@ -7,6 +7,12 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The gate waits ten minutes for a proof, not two.** `check --run`'s default timeout is 600
+  seconds, so a real suite is not killed by the default on a slow machine; `--timeout` still
+  tightens it (0209).
+
 ## v0.18.1 - 2026-11-05
 
 - **The four rows of the review ledger are paid.** `pack` counts a backup only when one ran and

@@ -28,8 +28,10 @@ import (
 )
 
 // DefaultTimeout is how long the proof command may take when --timeout is not
-// given, in seconds. A gate that can hang is a gate nobody trusts.
-const DefaultTimeout = 120
+// given, in seconds. A gate that can hang is a gate nobody trusts; a gate that
+// kills a real suite is a gate that lies. Ten minutes bounds the hang and fits a
+// suite that takes minutes, and --timeout tightens it (0209).
+const DefaultTimeout = 600
 
 // EmptyTree is git's well-known hash of the empty tree. Comparing against it is
 // what "no commits: everything uncommitted" means: every file is new because

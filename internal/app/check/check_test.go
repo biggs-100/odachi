@@ -1193,6 +1193,28 @@ func TestRunWithoutATaskDocumentStillWritesAProof(t *testing.T) {
 	}
 }
 
+// TestTheDefaultTimeoutFitsARealSuite: the suite this project calls its proof
+// takes minutes on a real machine, and a default that kills it is a gate that
+// lies about a slow host. Six hundred seconds still bounds a hang, and --timeout
+// tightens it (0209).
+func TestTheDefaultTimeoutFitsARealSuite(t *testing.T) {
+	if check.DefaultTimeout != 600 {
+		t.Fatalf("DefaultTimeout = %d, want 600", check.DefaultTimeout)
+	}
+
+	files := newFakeFiles(map[string]string{"brief.md": completeBrief})
+	shell := &fakeShell{output: "ok\n"}
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD"},
+		files, &fakeGit{tree: currentTree}, shell)
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("Code = %d, want 0 (reason %q, message %q)", got.Code, got.Reason, got.Message)
+	}
+	if !shell.wasAsked || shell.timeout != 600 {
+		t.Fatalf("the command got %d seconds, want the default 600", shell.timeout)
+	}
+}
+
 // --base "" must not fail: it means "compare against nothing", so every path in
 // the worktree counts as new and the fence is still checked.
 func TestEmptyBaseComparesAgainstTheEmptyTree(t *testing.T) {
