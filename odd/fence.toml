@@ -10,13 +10,18 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to `review.ExecTimeoutSeconds`"
-paths = ["internal/app/review/**"]
+not   = "no change to the verifier subagent, its permissions or its prompt"
+paths = ["internal/domain/persona/**", "internal/app/init/personas.go"]
+deps  = []
+
+[[rule]]
+not   = "no change to the gate or to its timeout"
+paths = ["internal/app/check/**"]
 deps  = []
 
 [[rule]]
 not   = "no change to the voice or the interview's questions"
-paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
+paths = ["internal/app/start/**", "cmd/odachi/interview.go"]
 deps  = []
 
 [[rule]]
@@ -45,6 +50,11 @@ paths = [".github/workflows/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the skills: none is part of this feature"
-paths = ["skills/**"]
+not   = "no change to the skills the feature does not touch: tests, drive, writing, pull-request, commits and triage"
+paths = ["skills/tests/**", "skills/drive/**", "skills/writing/**", "skills/pull-request/**", "skills/commits/**", "skills/triage/**"]
+deps  = []
+
+[[rule]]
+not   = "the `all:*` pin is another feature"
+paths = ["skills/embed.go"]
 deps  = []
