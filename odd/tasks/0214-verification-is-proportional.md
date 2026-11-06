@@ -16,8 +16,8 @@ R1 · "verification is proportional — a passive change is verified by reading 
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · tests teaches the three tiers and the two comparisons, and slices routes to it   R1 · route:inline
-- [ ] T2 · the changelog names the rule   R1 · route:inline
+- [x] T1 · tests teaches the three tiers and the two comparisons, and slices routes to it   R1 · route:inline · tree:0840904532d339a4bb2a088523332d64ce91ab6f
+- [x] T2 · the changelog names the rule   R1 · route:inline · tree:84e195629fca0cc2bf05d1db227abba6f6d47522
 
 ## History
 L1 · "verification is proportional — a passive change is verified by reading it, a medium one keeps the writer's own verification, and only a named risk adds an independent verifier — and a red is compared against the base and the environment before it is blamed on the change"
