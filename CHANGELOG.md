@@ -7,6 +7,12 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The artboard carries the tuning controls.** When the human tunes spacing, colour or type scale,
+  `design` adds sliders bound to the artboard's CSS custom properties and a `Copy as prompt` button
+  that copies the chosen values as text; the artboard stays self-contained (0220).
+
 ## v0.24.0 - 2026-11-06
 
 - **The design pair covers product UX.** `ui-craft` ships `browse-and-compare` (the representation,
