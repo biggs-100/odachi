@@ -1194,12 +1194,13 @@ func TestRunWithoutATaskDocumentStillWritesAProof(t *testing.T) {
 }
 
 // TestTheDefaultTimeoutFitsARealSuite: the suite this project calls its proof
-// takes minutes on a real machine, and a default that kills it is a gate that
-// lies about a slow host. Six hundred seconds still bounds a hang, and --timeout
+// takes about 700 seconds on a real machine -0217 measured 686 for cmd/odachi
+// under ./... and 207 alone- and a default that kills it is a gate that lies
+// about a slow host. Nine hundred seconds still bounds a hang, and --timeout
 // tightens it (0209).
 func TestTheDefaultTimeoutFitsARealSuite(t *testing.T) {
-	if check.DefaultTimeout != 600 {
-		t.Fatalf("DefaultTimeout = %d, want 600", check.DefaultTimeout)
+	if check.DefaultTimeout != 900 {
+		t.Fatalf("DefaultTimeout = %d, want 900", check.DefaultTimeout)
 	}
 
 	files := newFakeFiles(map[string]string{"brief.md": completeBrief})
@@ -1210,8 +1211,8 @@ func TestTheDefaultTimeoutFitsARealSuite(t *testing.T) {
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("Code = %d, want 0 (reason %q, message %q)", got.Code, got.Reason, got.Message)
 	}
-	if !shell.wasAsked || shell.timeout != 600 {
-		t.Fatalf("the command got %d seconds, want the default 600", shell.timeout)
+	if !shell.wasAsked || shell.timeout != 900 {
+		t.Fatalf("the command got %d seconds, want the default 900", shell.timeout)
 	}
 }
 

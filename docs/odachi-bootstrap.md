@@ -360,7 +360,7 @@ odachi check                             evalúa el estado actual
   --run "<comando>"                      corre el comando, captura la salida y escribe proof/<NNNN>-<slug>.txt
   --proof <archivo>                      usa una prueba ya escrita (agentes y CI)
   --base <ref>                           contra qué comparar el cerco (default HEAD; sin commits: todo lo no commiteado)
-  --timeout <segundos>                   default 600
+  --timeout <segundos>                   default 900
   --quiet                                no imprime nada si está listo (para el hook)
   --json
 ```

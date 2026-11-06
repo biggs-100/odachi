@@ -29,9 +29,12 @@ import (
 
 // DefaultTimeout is how long the proof command may take when --timeout is not
 // given, in seconds. A gate that can hang is a gate nobody trusts; a gate that
-// kills a real suite is a gate that lies. Ten minutes bounds the hang and fits a
-// suite that takes minutes, and --timeout tightens it (0209).
-const DefaultTimeout = 600
+// kills a real suite is a gate that lies. Nine hundred seconds bounds the hang
+// and fits the suite this project runs: measured on 2026-11-06, `go test ./...`
+// takes about 700 seconds on a real machine -cmd/odachi alone takes 207, but 686
+// under ./... because it competes with gitx and shellcmd- and --timeout still
+// tightens it (0209, 0217).
+const DefaultTimeout = 900
 
 // EmptyTree is git's well-known hash of the empty tree. Comparing against it is
 // what "no commits: everything uncommitted" means: every file is new because
