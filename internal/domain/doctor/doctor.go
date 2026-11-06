@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/biggs-100/odachi/internal/domain/rules"
 )
@@ -340,10 +341,14 @@ func NextSession(feature int, content string, exists bool) Check {
 // can pass: the command then fails, or a binary disappears, for a reason nobody
 // can see. It is a warning and not a problem: nothing is broken until the next
 // command fails, and the PATH belongs to the human, not to odachi (0210).
-func Environment(path string, windows bool) Check {
-	length := len(path)
-	if !windows {
-		return OK(CheckEnvironment, fmt.Sprintf("the PATH a command inherits has %d characters; this platform does not cut it", length))
+//
+// The length is counted in characters, not bytes: cmd's ceiling is a character
+// count, and a PATH with an accented folder name is longer in bytes than the
+// platform sees (0210's review).
+func Environment(path, goos string) Check {
+	length := utf8.RuneCountInString(path)
+	if goos != "windows" {
+		return OK(CheckEnvironment, fmt.Sprintf("the PATH a command inherits has %d characters; %s does not cut it", length, goos))
 	}
 	if length <= MaxChildPath {
 		return OK(CheckEnvironment, fmt.Sprintf("the PATH a command inherits has %d characters, under the %d cmd can pass", length, MaxChildPath))

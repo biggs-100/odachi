@@ -50,9 +50,9 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 		// What a command this run starts would inherit, and whether the platform
 		// cuts it: the check that explains a proof failing for an invisible
 		// reason (0210).
-		Path:    os.Getenv("PATH"),
-		Windows: runtime.GOOS == "windows",
-		Agents:  agentSelection{},
+		Path:   os.Getenv("PATH"),
+		GOOS:   runtime.GOOS,
+		Agents: agentSelection{},
 		// The adoption's one repository fact: doctor reads it and writes nothing.
 		Git: gitRepo{},
 		// The third home copy the binary installs: the doctor compares it with the
