@@ -1,48 +1,41 @@
 # Next session
 
-Written at the close of 0214, `verification-is-proportional`. The curriculum no longer asks every
-change for the same ceremony: the blast radius decides who verifies.
+Written at the close of 0215, `publishing-is-read-back`. A create command is not done at the URL
+it prints: the result is read back and compared with what was sent.
 
 ## What shipped
 
-- **Three tiers, one ladder.** `tests` names them: a passive change is verified by reading the diff,
-  a medium one keeps the writer's own verification, and only a change that names one of the six
-  risks in `commits` adds `odachi-verify`. `slices/references/delegation.md` keeps the verifier and
-  routes to the same ladder, so the delegation policy and the test discipline cannot disagree.
-- **Two comparisons a red owes.** Before a red is blamed on the change it is run on the base (a
-  test that already failed there is named as pre-existing, with its output), and a red that comes
-  from the machine is named with its condition, never reported as green and never silently skipped.
-- **The gate.** `skills/embed_test.go` pins the three tiers and both comparisons; it was red before
-  the text landed. Proof `proof/0214-verification-is-proportional.txt`; the review approved the tree
-  on the reliability lens with no findings. Released as v0.20.0 and installed.
+- **The readback.** `pull-request` reads a created PR back with
+  `gh pr view <url> --json title,body,baseRefName,headRefName` and compares it with the file that
+  was posted; an empty body, a wrong base or a title that lost its point is a publish failure,
+  fixed before the review is requested. `writing` says any published text, an issue included, is
+  compared with the file that was written, not with memory, and names `pull-request` as the owner
+  of the command.
+- **The gate.** `TestPublishingIsReadBack` pins both skills and was red before the text landed.
+  Proof `proof/0215-publishing-is-read-back.txt`; the review approved the tree on the reliability
+  lens with no findings. Released as v0.21.0 and installed.
 
 ## What was measured
 
-- **The plan must land first when the feature touches a fenced path.** PR #367 failed all three gate
-  jobs with `out of scope: no change to the skill contract or the curriculum: skills/...`: CI reads
-  the fence from `origin/main`, and 0213's fence still protected `skills/**`. The fix was the
-  established split: plan PR #368 (brief, fence, task doc) merged first, the feature branch rebased
-  onto it, force-pushed, and then the gate read the new fence.
-- **The review counts, and it is a second reading.** `check` says it when the verdict and the proof
-  name the same model (`opencode-go/deepseek-v4.1-flash`): the approval stands, the gate reads it,
-  and the tree is judged by it. Independence is a different question —a different model would add a
-  second opinion— and switching it is the human's call.
-- **A leftover gate held the binary.** The installer failed once with `odachi.exe is being used by
-  another process`: a `check --run` from an earlier run was still alive. It exited on its own and the
-  install went through. If it happens again, find the PID (`Get-Process odachi`) before installing.
+- **The plan-first flow held.** Plan PR #372 merged, the feature branch started from the new main
+  (#373), the release followed (#374). No gate read an old fence this time: the CI lesson from
+  0214 is now the routine, not a repair.
+- **The close is what turns doctor green.** Check 14 warned until this file named 0215; check 9
+  compared 19 skills with no drift because the tree's binary ran `init` before the gate.
+- **The install found the home equal.** The release installer reported 19 unchanged: the tree's
+  binary had already written the two skills, so the release only confirmed them.
 
 ## The next feature
 
-- **The readback after publishing.** From the same comparison: `gh pr create` and `gh issue create`
-  are never verified by reading the result back. A small rule in `pull-request` and `writing` would
-  close it; the fence has to let those two skills change.
-- **`assets/` in the skill contract**, only when a skill needs a template or a schema.
+- **`assets/` in the skill contract**, only when a skill needs a template or a schema. It is the
+  last gap from the comparison, and it touches `internal/domain/skill/**` (the contract) and its
+  tests; the fence has to let that path change.
 - One writer per worktree; one heavy gate per machine.
 
 ## The commands that work
 
 ```sh
-odachi review --base 6827dfd2b8c09792beac5c62c1b6b2ed25494d94 \
+odachi review --base 96ca86f8dc4e0ffb1fdcd3905a95695dfaeac3c5 \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
