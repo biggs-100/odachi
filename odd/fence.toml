@@ -10,6 +10,16 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
+not   = "no change to the curriculum or the contract"
+paths = ["skills/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the stored proofs: never touched"
+paths = ["proof/**"]
+deps  = []
+
+[[rule]]
 not   = "no change to the voice or the interview's questions"
 paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
 deps  = []
@@ -27,11 +37,6 @@ deps  = []
 [[rule]]
 not   = "no change to the artboard format"
 paths = ["internal/domain/design/design.go"]
-deps  = []
-
-[[rule]]
-not   = "no change to the stored proofs: never touched"
-paths = ["proof/**"]
 deps  = []
 
 [[rule]]
