@@ -14,9 +14,9 @@ R1 · "the design pair closes the UX gaps the comparison found: `ui-craft` carri
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · ui-craft ships browse-and-compare and routes it   R1 · route:inline
-- [ ] T2 · design checks every artboard, adds a direction, reads the comment screenshot   R1 · route:inline
-- [ ] T3 · the changelog names the rules   R1 · route:inline
+- [x] T1 · ui-craft ships browse-and-compare and routes it   R1 · route:inline · tree:3937561f48c449b6778c42dae9057bd7a242662c
+- [x] T2 · design checks every artboard, adds a direction, reads the comment screenshot   R1 · route:inline · tree:63a0341608a3e6f4d15d1896778fe3badbd16b2a
+- [x] T3 · the changelog names the rules   R1 · route:inline · tree:f542816010d5c62683d5d328498b76d59c0bc076
 
 ## History
 L1 · "the design pair closes the UX gaps the comparison found: `ui-craft` carries browse-and-compare (search, filters, pagination, navigation context), and `design` passes every artboard through the UX read, adds an artboard for another approach on the same brief, and looks at a comment's screenshot first"
