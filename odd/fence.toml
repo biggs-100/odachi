@@ -10,23 +10,18 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the canvas: a focused board already hides the shield and lets the artboard receive the pointer, and the button copies text in the page"
-paths = ["internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts"]
+not   = "no change to `the-comment.md`: its command belongs to `pull-request`, and the comment sends the reader there"
+paths = ["skills/writing/references/the-comment.md"]
 deps  = []
 
 [[rule]]
-not   = "no change to the design folder, the manifest, `comments.json` or the handoff"
-paths = ["skills/design/references/files.md", "internal/domain/design/**", "internal/app/design/**", "cmd/odachi/design.go"]
+not   = "no change to `assets/doc.md`: the shape already carries the checklist"
+paths = ["skills/writing/assets/doc.md"]
 deps  = []
 
 [[rule]]
-not   = "no change to the design verbs or the ODD link"
-paths = ["cmd/odachi/design.go", "internal/app/design/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to the other references of `ui-craft` or `design`"
-paths = ["skills/ui-craft/references/the-tells.md", "skills/ui-craft/references/the-numbers.md", "skills/ui-craft/references/motion.md", "skills/ui-craft/references/the-read.md", "skills/ui-craft/references/browse-and-compare.md"]
+not   = "no change to the skills the feature does not touch: tests, drive, slices, commits, triage, design and ui-craft"
+paths = ["skills/tests/**", "skills/drive/**", "skills/slices/**", "skills/commits/**", "skills/triage/**", "skills/design/**", "skills/ui-craft/**"]
 deps  = []
 
 [[rule]]
@@ -45,6 +40,11 @@ paths = ["internal/app/role/**", "internal/domain/role/**"]
 deps  = []
 
 [[rule]]
+not   = "no change to the design canvas, its token or the push plugin"
+paths = ["internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts"]
+deps  = []
+
+[[rule]]
 not   = "no change to the artboard format"
 paths = ["internal/domain/design/design.go"]
 deps  = []
@@ -52,9 +52,4 @@ deps  = []
 [[rule]]
 not   = "no change to the release workflow"
 paths = [".github/workflows/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to the skills the feature does not touch: tests, drive, writing, pull-request, commits and triage"
-paths = ["skills/tests/**", "skills/drive/**", "skills/writing/**", "skills/pull-request/**", "skills/commits/**", "skills/triage/**"]
 deps  = []
