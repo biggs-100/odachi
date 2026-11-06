@@ -209,14 +209,20 @@ func CommitWithTree(root, tree string) (string, error) {
 // about itself. Nothing here decides what a trailer is.
 //
 // A base with no commit behind it -the empty tree, or nothing- is a range from
-// the beginning: every commit HEAD carries. A repository with no commit has an
-// empty history, not a failure: the first change of a new project is reviewed
-// before it has a commit, and "git log 4b825..HEAD" would turn that into a dead
-// end.
+// the beginning: every commit HEAD carries. A repository whose HEAD is an unborn
+// branch has an empty history, not a failure: the first change of a new project is
+// reviewed before it has a commit, and "git log 4b825..HEAD" would turn that into
+// a dead end. A repository git cannot read keeps its error: reading it as "no
+// commits" hid the trailers of a tree that did have them (0207).
 func Messages(root, base string) ([]string, error) {
 	rangeSpec := base + "..HEAD"
 	if base == "" || base == EmptyTree {
 		if _, err := Head(root); err != nil {
+			// Only an unborn HEAD is an empty history. symbolic-ref answers
+			// whenever HEAD names a branch, with or without a commit behind it.
+			if _, unreadable := run(root, "symbolic-ref", "-q", "HEAD"); unreadable != nil {
+				return nil, err
+			}
 			return []string{}, nil
 		}
 		rangeSpec = "HEAD"
