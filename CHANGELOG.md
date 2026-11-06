@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The doctor names an environment that cuts a command.** Check 15 measures the PATH this
+  process hands to a child; above the 8191 characters cmd can pass it warns with the length,
+  the limit and the repair, and a platform that does not cut the environment says so. A proof
+  that fails because a binary disappeared now has a line that explains why (0210).
+
 ## v0.18.2 - 2026-11-05
 
 - **The gate waits ten minutes for a proof, not two.** `check --run`'s default timeout is 600
