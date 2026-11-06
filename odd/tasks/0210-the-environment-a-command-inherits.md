@@ -13,9 +13,9 @@ R1 · "`odachi doctor` names the PATH this process hands to a command when it pa
 - the changelog's Unreleased section names the check
 
 ## Steps
-- [ ] T1 · doctor measures the PATH a child inherits and warns above the Windows limit   R1 · route:inline
-- [ ] T2 · the report says fifteen, and the impact map names the new check   R1 · route:inline
-- [ ] T3 · the changelog names the check   R1 · route:inline
+- [x] T1 · doctor measures the PATH a child inherits and warns above the Windows limit   R1 · route:inline · tree:14df19e754680f9ff955bfbf1052c53281834c52
+- [x] T2 · the report says fifteen, and the impact map names the new check   R1 · route:inline · tree:2ea2efe4a05d5495cdf8fecad57304ce94c96cc5
+- [x] T3 · the changelog names the check   R1 · route:inline · tree:7b17db4b62de3c3655039bc5a2f800ceae5dde0a
 
 ## History
 L1 · "`odachi doctor` names the PATH this process hands to a command when it passes what Windows can pass to a child, with the length, the limit and the repair, so a proof that fails for an inherited environment is not read as a broken suite"

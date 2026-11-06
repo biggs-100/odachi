@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	doctorapp "github.com/biggs-100/odachi/internal/app/doctor"
 	initapp "github.com/biggs-100/odachi/internal/app/init"
@@ -46,7 +47,12 @@ func runDoctor(dir string, args []string, stdout, stderr io.Writer) int {
 		Version: version,
 		Exe:     selfExe(),
 		Home:    home,
-		Agents:  agentSelection{},
+		// What a command this run starts would inherit, and whether the platform
+		// cuts it: the check that explains a proof failing for an invisible
+		// reason (0210).
+		Path:   os.Getenv("PATH"),
+		GOOS:   runtime.GOOS,
+		Agents: agentSelection{},
 		// The adoption's one repository fact: doctor reads it and writes nothing.
 		Git: gitRepo{},
 		// The third home copy the binary installs: the doctor compares it with the
