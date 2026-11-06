@@ -23,9 +23,10 @@ change for the same ceremony: the blast radius decides who verifies.
   the fence from `origin/main`, and 0213's fence still protected `skills/**`. The fix was the
   established split: plan PR #368 (brief, fence, task doc) merged first, the feature branch rebased
   onto it, force-pushed, and then the gate read the new fence.
-- **The review is a second reading, not a second opinion.** `check` now says it when the verdict and
-  the proof name the same model (`opencode-go/deepseek-v4.1-flash`). It is a known limitation, not a
-  finding; switching the review model is the human's call.
+- **The review counts, and it is a second reading.** `check` says it when the verdict and the proof
+  name the same model (`opencode-go/deepseek-v4.1-flash`): the approval stands, the gate reads it,
+  and the tree is judged by it. Independence is a different question —a different model would add a
+  second opinion— and switching it is the human's call.
 - **A leftover gate held the binary.** The installer failed once with `odachi.exe is being used by
   another process`: a `check --run` from an earlier run was still alive. It exited on its own and the
   install went through. If it happens again, find the PID (`Get-Process odachi`) before installing.
