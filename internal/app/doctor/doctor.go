@@ -81,6 +81,11 @@ type Options struct {
 	// Exe is the running binary. It is only used to name the folder a human has
 	// to add to the PATH, and the message stays honest when it is empty.
 	Exe string
+	// Path is the PATH this process would hand to a command, and Windows says
+	// whether the platform cuts it. They travel as values so both branches are
+	// tested on any machine (0210).
+	Path    string
+	Windows bool
 	// Home is the human's home, where the global door lives. Empty means the
 	// caller could not resolve it; the check skips the door instead of guessing.
 	Home string
@@ -194,6 +199,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.taskDocs(),
 		r.legacyFolder(),
 		r.nextSession(),
+		r.environment(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)
@@ -1758,6 +1764,12 @@ func (r *runner) nextSession() domaindoctor.Check {
 		return domaindoctor.Broken(domaindoctor.CheckNextSession, oneLine(err.Error()), "check the permissions of docs")
 	}
 	return domaindoctor.NextSession(newest, content, exists)
+}
+
+// environment is the check that explains a proof failing for a reason nobody can
+// see: the PATH a command inherits when Windows cuts it (0210).
+func (r *runner) environment() domaindoctor.Check {
+	return domaindoctor.Environment(r.opts.Path, r.opts.Windows)
 }
 
 // count is how an English sentence counts things.

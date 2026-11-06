@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -13,6 +14,11 @@ import (
 // matters most ("can a shell run it?") is answerable without installing
 // anything. Both spellings are created because Windows resolves `odachi`
 // through PATHEXT and POSIX through the exact name.
+//
+// The PATH is short on purpose: the environment check reads what a child would
+// inherit, and a test that carried the machine's own PATH would warn or not
+// depending on where it runs (0210). git stays because the checks read a
+// repository with it.
 func withOdachiOnPath(t *testing.T) string {
 	t.Helper()
 
@@ -23,7 +29,11 @@ func withOdachiOnPath(t *testing.T) string {
 			t.Fatalf("write %s: %v", name, err)
 		}
 	}
-	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatalf("git is not on the PATH: %v", err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+filepath.Dir(gitPath))
 	return dir
 }
 
@@ -56,7 +66,8 @@ func configuredProject(t *testing.T) string {
 }
 
 // TestDoctorSaysAConfiguredProjectIsFine is the promise of the verb: a project
-// that went through init and start reports eleven lines, no problem, exit 0.
+// that went through init and start reports fifteen checks with no problem and
+// exit 0.
 func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	dir := configuredProject(t)
 
@@ -66,19 +77,19 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
-	if len(lines) != 15 {
-		t.Fatalf("fourteen checks and a summary, got %d lines:\n%s", len(lines), out)
+	if len(lines) != 16 {
+		t.Fatalf("fifteen checks and a summary, got %d lines:\n%s", len(lines), out)
 	}
-	for i, line := range lines[:14] {
+	for i, line := range lines[:15] {
 		if !strings.HasPrefix(line, "ok ") {
 			t.Fatalf("line %d is not ok in a configured project: %s", i+1, line)
 		}
 	}
-	if !strings.HasPrefix(lines[14], "all clear") {
-		t.Fatalf("the last line is the summary, got %q", lines[14])
+	if !strings.HasPrefix(lines[15], "all clear") {
+		t.Fatalf("the last line is the summary, got %q", lines[15])
 	}
-	if !strings.Contains(lines[14], "14 checks") {
-		t.Fatalf("the summary counts the fourteen checks, got %q", lines[14])
+	if !strings.Contains(lines[15], "15 checks") {
+		t.Fatalf("the summary counts the fifteen checks, got %q", lines[15])
 	}
 	// This is also the guard that init and doctor agree on the hook marker: if
 	// init renamed it, check 5 would stop recognising its own hook.
@@ -241,8 +252,8 @@ func TestDoctorJSONSaysTheSameThing(t *testing.T) {
 		t.Fatalf("--json must be valid JSON: %v\n%s", err, machine)
 	}
 
-	if len(payload.Checks) != 14 {
-		t.Fatalf("--json carries fourteen checks, got %d", len(payload.Checks))
+	if len(payload.Checks) != 15 {
+		t.Fatalf("--json carries fifteen checks, got %d", len(payload.Checks))
 	}
 	lines := strings.Split(strings.TrimRight(human, "\n"), "\n")
 	if payload.Message != lines[len(lines)-1] {

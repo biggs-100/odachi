@@ -72,11 +72,21 @@ const (
 	// says so in an ok line: the convention is the project's, and the check only
 	// watches the file once it exists.
 	CheckNextSession
+	// CheckEnvironment asks what this process hands to the commands it runs. A
+	// child inherits the parent's environment, and Windows cuts a variable longer
+	// than cmd can pass: the command then fails for a reason nobody can see. It is
+	// appended, like every check before it, so no existing number moves (0210).
+	CheckEnvironment
 )
 
 // CheckCount is how many checks a complete report has. A test asserts it, so a
 // report can never quietly grow or shrink.
-const CheckCount = 14
+const CheckCount = 15
+
+// MaxChildPath is the longest PATH cmd passes to a child, in characters. The
+// session that opened this check carried 13,888 and the child saw an empty PATH;
+// 8191 is cmd's documented ceiling for one variable (0210).
+const MaxChildPath = 8191
 
 // Status is what one check found.
 type Status int
@@ -233,6 +243,8 @@ func title(number int) string {
 		return "no folder from an older release"
 	case CheckNextSession:
 		return "the next session names the newest feature"
+	case CheckEnvironment:
+		return "the environment a command inherits"
 	default:
 		return ""
 	}
@@ -321,6 +333,22 @@ func NextSession(feature int, content string, exists bool) Check {
 		return OK(CheckNextSession, "docs/next-session.md names "+want+", the newest feature")
 	}
 	return Warning(CheckNextSession, "docs/next-session.md does not name "+want+", the newest feature")
+}
+
+// Environment answers what this process hands to the commands it runs. A child
+// inherits the parent's environment, and Windows cuts a variable longer than cmd
+// can pass: the command then fails, or a binary disappears, for a reason nobody
+// can see. It is a warning and not a problem: nothing is broken until the next
+// command fails, and the PATH belongs to the human, not to odachi (0210).
+func Environment(path string, windows bool) Check {
+	length := len(path)
+	if !windows {
+		return OK(CheckEnvironment, fmt.Sprintf("the PATH a command inherits has %d characters; this platform does not cut it", length))
+	}
+	if length <= MaxChildPath {
+		return OK(CheckEnvironment, fmt.Sprintf("the PATH a command inherits has %d characters, under the %d cmd can pass", length, MaxChildPath))
+	}
+	return Warning(CheckEnvironment, fmt.Sprintf("the PATH a command inherits has %d characters; cmd passes at most %d and a child sees it cut or empty: start the agent from a shell with a shorter PATH, and trim the rest", length, MaxChildPath))
 }
 
 // NamesFeature reports whether the text names one feature by its own number: a
