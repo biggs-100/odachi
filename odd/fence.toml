@@ -10,23 +10,23 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the canvas, its sliders or a copy-as-prompt control: that is the next feature"
+not   = "no change to the canvas: a focused board already hides the shield and lets the artboard receive the pointer, and the button copies text in the page"
 paths = ["internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts"]
 deps  = []
 
 [[rule]]
-not   = "no change to the design folder, the manifest or `comments.json`"
-paths = ["skills/design/references/files.md", "internal/domain/design/**"]
+not   = "no change to the design folder, the manifest, `comments.json` or the handoff"
+paths = ["skills/design/references/files.md", "internal/domain/design/**", "internal/app/design/**", "cmd/odachi/design.go"]
 deps  = []
 
 [[rule]]
-not   = "no change to the design verbs, the handoff or the ODD link"
+not   = "no change to the design verbs or the ODD link"
 paths = ["cmd/odachi/design.go", "internal/app/design/**"]
 deps  = []
 
 [[rule]]
 not   = "no change to the other references of `ui-craft` or `design`"
-paths = ["skills/ui-craft/references/the-tells.md", "skills/ui-craft/references/the-numbers.md", "skills/ui-craft/references/motion.md", "skills/ui-craft/references/the-read.md"]
+paths = ["skills/ui-craft/references/the-tells.md", "skills/ui-craft/references/the-numbers.md", "skills/ui-craft/references/motion.md", "skills/ui-craft/references/the-read.md", "skills/ui-craft/references/browse-and-compare.md"]
 deps  = []
 
 [[rule]]

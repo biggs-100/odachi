@@ -226,6 +226,36 @@ func TestDesignChecksEveryArtboard(t *testing.T) {
 	}
 }
 
+// TestDesignLetsTheHumanTune: a person tuning values in the canvas needs the
+// numbers back as text, not as a screenshot. The artboard carries the sliders and
+// the button, and the rule keeps it self-contained.
+func TestDesignLetsTheHumanTune(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		var folder strings.Builder
+		for _, file := range s.Files {
+			folder.Write(file.Content)
+		}
+		byName[s.Name] = folder.String()
+	}
+
+	for _, want := range []string{
+		"sliders",
+		"CSS custom properties",
+		"Copy as prompt",
+		"copies the chosen values",
+		"never calls a network",
+	} {
+		if !strings.Contains(byName["design"], want) {
+			t.Errorf("design no dice %q: los valores no vuelven como texto", want)
+		}
+	}
+}
+
 // TestVerificationIsProportional: the ceremony a change owes is decided by its
 // blast radius, not by habit. `tests` names the three tiers and the two
 // comparisons a red owes, and `slices` routes the delegation policy to the same
