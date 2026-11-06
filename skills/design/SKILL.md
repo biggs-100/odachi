@@ -28,6 +28,10 @@ The human asks for a screen, mockup, landing page or visual directions, iterates
 - **Ask at most one clarifying question**, and only when the brief lacks the goal or the content.
 - **Iterating edits only the targeted artboard.** Never rewrite the others.
 - **Another approach on the same brief is another artboard**: add the next `NN` and keep the others; a new slug is a new brief, never a new direction.
+- **When the human wants to tune values, put the controls in the artboard**:
+  sliders bound to its CSS custom properties for spacing, colour and type scale,
+  plus a `Copy as prompt` button that copies the chosen values as a prompt. The
+  button copies text; the artboard never calls a network.
 - **Design system first when it exists**: read `design/system.md` and use only its tokens and component rules; before finishing an artboard, compare its colours and families with it.
 - **Capture the system by reading, never by writing**: `odachi design sync` reads CSS custom properties, the Tailwind config, components, token files and fonts, and writes `design/system.md` and `design/system.html` with each entry's source. No sources: propose a starter, never invent.
 - **Comments come from the folder, not a tool**: apply each open entry of `design/<slug>/comments.json` to its artboard with `selector` and `excerpt`, and resolve it with `odachi design comments <slug> --resolve <id...>`; never delete or reorder, leave the rest open.
