@@ -25,6 +25,8 @@ a PR, reproduce a bug, or run a command you wrote.
   and the fields are `pull-request`'s.
 - For a long document: answer first, then the happy path, then details and edge
   cases. Use small sections, tables and checklists so the reader can scan.
+- Copy `assets/doc.md` for a long document: the skeleton carries the shape, and
+  `references/the-doc.md` says how to fill each part.
 - Say what you did **not** cover and did not verify. A result is worth what its
   stated scope is worth.
 - For a review, say what to look at first, what is out of scope, and which
@@ -45,6 +47,10 @@ The text the reader acts on: the point in the title, the conclusion in the first
 
 - `references/the-doc.md` — the long document: answer first, quick path, details, checklist, next step.
 - `references/the-comment.md` — the comment: the formula, the tone, the language of the thread.
+
+## Assets
+
+- `assets/doc.md` — the copyable skeleton of a long document: title, conclusion, quick path, details, checklist and next step.
 
 ## Never
 
