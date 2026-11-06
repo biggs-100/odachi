@@ -1,54 +1,50 @@
 # Next session
 
-Written at the close of 0216, `skills-carry-assets`. A skill folder can now carry the files it
-copies, not only the text it reads.
+Written at the close of 0217, `the-gate-fits-the-suite`. The gate's default bound now fits the
+suite this machine actually runs.
 
 ## What shipped
 
-- **`assets/` is part of the contract.** A skill folder may carry flat files under `assets/`, any
-  extension, declared in `## Assets`; the loader reads them, the embed carries them (`all:*`),
-  `pack` and the project catalog install them beside `SKILL.md` and `references/`. An orphaned
-  asset, a declaration that names no file and a tree under `assets/` are each refused with their
-  own line.
-- **`writing` ships the first consumer.** `skills/writing/assets/doc.md` is the copyable skeleton
-  of a long document, and the skill's rules send the writer to copy it.
-- **The gate.** Proof `proof/0216-skills-carry-assets.txt`; the review approved the tree on the
-  reliability lens with no findings. Released as v0.22.0 and installed.
+- **The default is 900 seconds.** Measured on 2026-11-06: `go test ./...` takes about 700 seconds;
+  `cmd/odachi` alone takes 207, but 686 under `./...` because it competes with `gitx` (113) and
+  `shellcmd` (26). The 600-second default killed a green suite. The constant, the test and the
+  comment name the measurement; the help text and `docs/odachi-bootstrap.md` say 900.
+- **The gate itself did not move.** Verdicts, reasons, exit codes, proof format and `--timeout`
+  semantics are untouched; only the default bound changed.
+- **The gate.** Proof `proof/0217-the-gate-fits-the-suite.txt`, written by the tree's binary with no
+  `--timeout`; the review approved the tree on the reliability lens with no findings. Released as
+  v0.22.1 and installed.
 
 ## What was measured
 
-- **The verifier earned its place.** The risk was `contract`, and `odachi-verify` found two paths
-  the writer missed: `cmd/odachi/pack.go` built a project skill from `SKILL.md` and references
-  only, and `//go:embed *` skips names starting with `.` or `_`. Both are fixed in T6, with a test
-  and a build probe. A risk with no verifier would have shipped a silent hole.
-- **The suite can exceed the gate's 600 s default.** On a cold cache after the embed change,
-  `check --run "go test ./..."` timed out at 600 s with no output; `--timeout 1200` was green. The
-  default is 0209's; whether the default or the suite is wrong is the next decision.
-- **A RED that lands with its fix cannot live in the commit.** The pinned test was red before the
-  asset existed, but test and asset share one commit, so the record cannot show it; the
-  observation is a craft note in the task doc.
-- **`all:*` is proven by a build probe, not by a repo test.** A regression to `*` would still pass
-  the suite for dotfiles. Pinning it needs a fixture the loader and the embed share.
+- **The suite is 3.3x slower under `./...` than alone.** `cmd/odachi` 207 s alone, 686 s under
+  `./...`, with `gitx` at 113 s and `shellcmd` at 26 s in parallel. The wall time is about 700 s.
+- **A timeout proof is empty for a reason.** `go test` prints a package only when it finishes; at
+  600 s none had, so the failed proof carried no output. It was not the adapter losing bytes.
+- **The number is the default, not a waiver.** `--timeout` still tightens the bound; the gate ran
+  green without it.
 
 ## The next feature
 
-- **The gate's timeout against a cold cache.** Either the default moves above the worst measured
-  suite or the gate learns to say why it was slow; the message already names `--timeout 1200`.
-- **Pin `all:*`** with a repo test, or record the build probe as the measurement it is.
+- **Make the suite faster.** The contention is the real cost: `cmd/odachi` spends 686 s under
+  `./...` against 207 alone. Test isolation, a shared harness, or `-p` are the candidates; the
+  measurement is in the constant's comment and this file.
+- **Pin `all:*`** with a repo test, still open from 0216: a regression to `*` would pass the suite
+  for dotfile assets.
 - One writer per worktree; one heavy gate per machine.
 
 ## The commands that work
 
 ```sh
-odachi review --base 71e370e9797d80b78fc8a96ceca2d54c4fcda726 \
+odachi review --base 1212e58f0ee1307a6b55e8ede06d1b33224db531 \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
 `--base` is the base the task doc names, not `main`.
 
 ```sh
-$env:PATH = "C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files\Go\bin;C:\Users\USER\go\bin;C:\Users\USER\AppData\Local\odachi\bin;C:\Users\USER\AppData\Roaming\npm"; odachi check --run "go test ./..." --timeout 1200
+$env:PATH = "C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files\Go\bin;C:\Users\USER\go\bin;C:\Users\USER\AppData\Local\odachi\bin;C:\Users\USER\AppData\Roaming\npm"; odachi check --run "go test ./..."
 ```
 
-The default fits a warm cache; a cold one needs 1200. A build goes to
+No `--timeout` is needed now; the default is 900. A build goes to
 `%TEMP%\opencode\odachi\<feature>\`, never to the clone.
