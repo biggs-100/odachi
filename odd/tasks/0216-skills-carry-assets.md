@@ -21,6 +21,7 @@ R1 · "a skill folder carries `assets/`: the files it copies or uses —a templa
 - [x] T3 · the changelog names the capability   R1 · route:inline · tree:763b8f81700f212f0e74295beb7ff62a0ac26762
 - [x] T4 · the impact map names the asset folder   R1 · route:inline · tree:fcd7fc336a7c4089039de85bd785daa8af6a4e5d
 - [x] T5 · the payload count knows assets   R1 · route:inline · tree:56dc7766b18b7b3b2ddff24e4dc7fdd14e4b3064
+- [x] T6 · the project catalog and the embed carry every asset   R1 · route:inline · tree:0ecebb5a46d8aa0c67be944eee65c22774e1f9f6
 
 ## History
 L1 · "a skill folder carries `assets/`: the files it copies or uses —a template, a schema— installed with the skill, declared in the body, and refused when a file is orphaned or a declaration names no file; `writing` ships the copyable document template as its first consumer"
