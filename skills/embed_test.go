@@ -177,6 +177,41 @@ func TestVerificationIsProportional(t *testing.T) {
 	}
 }
 
+// TestPublishingIsReadBack: a create command is not done at the URL it prints.
+// The delivery owns the command and the fields a PR has to match, the writing
+// owns the comparison of any published text, and the two cannot disagree.
+func TestPublishingIsReadBack(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Main())
+	}
+
+	for _, want := range []string{
+		"Read the result back",
+		"gh pr view",
+		"baseRefName",
+		"headRefName",
+		"before you ask for review",
+	} {
+		if !strings.Contains(byName["pull-request"], want) {
+			t.Errorf("pull-request no dice %q: el readback del PR se perdió", want)
+		}
+	}
+	for _, want := range []string{
+		"not a text that arrived",
+		"the file you wrote",
+		"pull-request",
+	} {
+		if !strings.Contains(byName["writing"], want) {
+			t.Errorf("writing no dice %q: la comparación del texto publicado se perdió", want)
+		}
+	}
+}
+
 // TestShapeTeachesExplorationBeforeTheBrief: the front of the cycle is a skill,
 // not a verb. It explores before the brief, ends in `start --brief`, keeps the
 // brief in the human's hands, and `drive` is what loads it when the request does

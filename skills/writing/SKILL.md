@@ -20,6 +20,9 @@ a PR, reproduce a bug, or run a command you wrote.
   costs the reader an afternoon.
 - In a PR: what problem it solves, how it is tested, and what was left out. Three
   paragraphs, not three pages.
+- A text that was sent is not a text that arrived: read the published copy back and
+  compare it with the file you wrote, not with your memory. For a PR, the command
+  and the fields are `pull-request`'s.
 - For a long document: answer first, then the happy path, then details and edge
   cases. Use small sections, tables and checklists so the reader can scan.
 - Say what you did **not** cover and did not verify. A result is worth what its
