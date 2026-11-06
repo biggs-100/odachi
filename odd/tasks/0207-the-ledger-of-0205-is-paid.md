@@ -17,7 +17,7 @@ R1 · "the four rows `docs/review-debt.md` left open are paid: the pack report c
 - [x] T1 · pack counts a backup only after one ran, and a new reference is not one   R1 · route:inline · tree:d5d6d1269b3d38774d7fe182bdc6198eb337ce63
 - [x] T2 · the gates table and the references list are parsed, so prose is refused   R1 · route:inline · tree:68709ef0c1e5f6c25162786909378b67e82d39ad
 - [x] T3 · the missing half of the reference drift has its test   R1 · route:inline · tree:b558375fac4041ba59158af497adfbd3d3ad33e7
-- [ ] T4 · a git that cannot answer Head is an error, not an empty history   R1 · route:inline
+- [x] T4 · a git that cannot answer Head is an error, not an empty history   R1 · route:inline · tree:f098f26c521b69eaf1d447f032e2a8014d07c5c6
 - [ ] T5 · the changelog and the ledger record the four rows as paid   R1 · route:inline
 
 ## History
