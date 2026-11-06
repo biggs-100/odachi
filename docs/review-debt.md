@@ -9,12 +9,27 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0207, which leaves nothing open.
+Last written: while closing 0207, which leaves one row open.
 
 ## Open
 
-Nothing is open: feature 0207 paid the four rows below, each with its test. The next row
-starts a new list.
+One row, opened by the review of 0207: the corrupt ref reads as an error by measurement, and
+no test pins it.
+
+### the corrupt ref has no test, and the warning was measured false
+
+Found by the review of 0207 (warning, `internal/adapters/gitx/gitx.go:223`). The reviewer
+argued that `symbolic-ref -q HEAD` answers for a corrupt ref, so `Messages` would still read
+it as an empty history: "the corrupt-repository half of the row this feature claims to pay".
+
+Verified false on this machine, git 2.52.0.windows.1. A ref file overwritten with `garbage`
+makes `git symbolic-ref -q HEAD` exit 128 ("No such ref: HEAD"), so the guard keeps the `Head`
+error. A ref file with a syntactically valid sha of a missing object makes `Head` succeed and
+`git log HEAD` fail ("bad object HEAD"), which is also an error. A corrupt `.git/packed-refs`
+makes `symbolic-ref` fail too.
+
+What is true: that shape has no test. The next feature that touches `gitx` writes one, so the
+claim cannot come back without a red.
 
 ## Closed by feature 0207
 

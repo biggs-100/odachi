@@ -1,65 +1,59 @@
 # Next session
 
-Written at the close of 0206, `the-grammar-reaches-every-skill`. Every skill the
-curriculum ships now says what it returns, and `odachi skills --check` refuses one
-that does not.
+Written at the close of 0207, `the-ledger-of-0205-is-paid`. The four rows the ledger carried
+are paid, each with the test that was missing; the review left one row open and it is named
+below.
 
 ## What shipped
 
-- **The contract belongs to every skill.** `internal/domain/skill/skill.go` asks for a
-  non-empty `## Output` before it looks at references, so a skill with no depth owes the
-  same section as a router. The refusal names the skill and the section. ADR 0050 carries
-  an amendment that says the staged migration landed.
-- **The seventeen bodies.** `acceptance`, `bootstrap`, `commits`, `data`, `drive`,
-  `go-tests`, `pull-request`, `role-craft`, `security`, `shape`, `ship`, `skill-craft`,
-  `skill-improve`, `slices`, `tests`, `triage` and `writing` declare what they hand back.
-  `drive` and `slices` were at the sixty-line cap, so each moved one block word for word:
-  `drive`'s block codes and review policy to `references/the-gate.md`, and `slices`'
-  delegation policy to `references/delegation.md`.
-- **The scaffold.** `odachi skill new` writes `## Output` with the other sections, so the
-  template passes `--check` unchanged, and `skill-craft` teaches the rule that now holds.
-- **The installation.** A binary built from this tree refreshed `~/.agents/skills`: 17
-  skills replaced, the second run wrote nothing, and doctor's check 9 compares 19 with no
-  drift.
-- **The gate.** The proof is `proof/0206-the-grammar-reaches-every-skill.txt`; the review
-  approved tree `a99ec3a` with no findings on the four lenses.
+- **`pack` counts what happened.** A skill that only gained a file is `written` (JSON
+  `written`), never "backed up and written": `installSkill` records whether `files.Backup`
+  ran. Two tests pin the real run and the dry run, both observed red first.
+- **`skills --check` reads the grammar.** `## Decision gates` is a data row and
+  `## References` is a bullet; the table header and the separator route nothing, and the
+  refusal says which shape it wanted. Three tests were red against the old `Contains`.
+- **The doctor's drift has both halves.** `TestTheDoctorNamesAReferenceTheInstalledCopyLacks`
+  seeds a source reference the installed copy lacks; observed red by disabling the branch.
+- **`gitx.Messages` keeps its errors.** Only an unborn HEAD is an empty history:
+  `symbolic-ref -q HEAD` tells the two apart, and the callers block with "could not read the
+  commits since `<base>`". The empty-repository test stayed green.
+- **The gate.** Proof `proof/0207-the-ledger-of-0205-is-paid.txt`; review approved tree
+  `bcfbc7d` on the reliability lens.
 
 ## What the review left
 
-Nothing. The four rows of 0205 are still open because this feature changed none of the
-behaviour they name: `internal/app/pack/pack.go:461` (a new reference counted as a backup),
-`internal/domain/skill/skill.go:202` (the gates check is a substring, not a parsed table),
-`internal/app/doctor/doctor.go:882` (the missing-reference drift branch has no test) and
-`internal/adapters/gitx/gitx.go:220` (any `Head` failure read as an empty history).
+One WARNING, recorded in `docs/review-debt.md`: it said `symbolic-ref` answers for a corrupt
+ref too, so the corrupt half of the last row was still swallowed. Measured false on git
+2.52.0.windows.1 -a corrupt ref makes `symbolic-ref` exit 128, and a valid sha of a missing
+object fails at `git log`- but the shape has no test. That is the one open row.
 
 ## The next feature
 
-- **The four debt rows above.** They are small, they live in code the last two features
-  touched, and the ledger has carried them long enough.
-- **The gate is slower than its default timeout.** `go test ./...` takes ~411s on this
-  machine, `check`'s default is 120s, and every proof here needs `--timeout 900`. A default
-  that fits the suite, or a suite split that keeps the gate honest: not a shorter command.
-- **One writer per worktree; one heavy gate per machine.** Two agents in one checkout race
-  the index and the tree a proof certifies. Parallel lines belong in separate clones.
-- **The PATH a session inherits.** This session's host process carried a 13.8 KB `PATH`
-  (the installer tests before 0202 left their temp dirs in it); Windows truncates a long
-  environment for children, so `findstr`, `ping` and `start` did not resolve and
-  `internal/adapters/shellcmd` failed for an environment reason, not a code one. The
-  machine's own PATH is clean (2.3 KB). If a gate fails that way, set a short `$env:PATH`
-  before `odachi check --run` and say so in the close.
+- **The corrupt-ref test.** One test in `gitx`, so the warning cannot return without a red. It
+  is the only row open.
+- **The gate is slower than its default timeout.** `go test ./...` takes ~411s on this machine,
+  `check`'s default is 120s, and every proof here needs `--timeout 900`. A default that fits
+  the suite, or a suite split that keeps the gate honest: not a shorter command.
+- **The PATH a session inherits.** This host carried a 13.8 KB `PATH`; Windows truncates it
+  for children, so `findstr`, `ping` and `start` did not resolve, `internal/adapters/shellcmd`
+  failed for an environment reason, and the v0.18.0 installer could not find `cosign` (it
+  lives in `C:\Users\USER\go\bin`). A doctor row that names the length and the repair would
+  have saved both diagnoses.
+- **One writer per worktree; one heavy gate per machine.** Parallel lines belong in separate
+  clones.
 
 ## The command that works
 
 ```sh
-odachi review --base eac2079a2075e7a879bad670eed4994be98fc349 \
+odachi review --base 132f51788ebc58f20b8ff149faea1006854eb37d \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
-`--base` is the base the task doc names, not `main`: with `main` the review judges a
-candidate that excludes the plan commit and says nothing changed.
+`--base` is the base the task doc names, not `main`: with `main` the review judges a candidate
+that excludes the plan commit and says nothing changed.
 
 ```sh
-$env:PATH = "C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files\Go\bin;C:\Users\USER\AppData\Local\odachi\bin;C:\Users\USER\AppData\Roaming\npm"; odachi check --run "go test ./..." --timeout 900
+$env:PATH = "C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files\Go\bin;C:\Users\USER\go\bin;C:\Users\USER\AppData\Local\odachi\bin;C:\Users\USER\AppData\Roaming\npm"; odachi check --run "go test ./..." --timeout 900
 ```
 
-The proof is the real suite; the short PATH only repairs what this session inherited.
+The proof is the real suite; the short PATH only repairs what the session inherits.
