@@ -88,6 +88,66 @@ func TestAChangedReferenceIsBackedUpAndWritten(t *testing.T) {
 	}
 }
 
+// TestANewReferenceIsWrittenAndNotBackedUp: a skill that already lived and gains
+// a file has nothing of the human's to set aside. The report says what happened,
+// not what the skill became (the row 0205 left at pack.go:461).
+func TestANewReferenceIsWrittenAndNotBackedUp(t *testing.T) {
+	root := home()
+	files := newFakeFiles(nil)
+	run(files, fakeHome{dir: root}, pack.Options{Agents: "claude", Skills: []pack.Skill{routerSkill()}})
+	files.writes = nil
+	files.backups = nil
+
+	grown := routerSkill()
+	grown.Files = append(grown.Files, pack.File{Path: "references/extra.md", Content: []byte("more\n")})
+
+	result := run(files, fakeHome{dir: root}, pack.Options{Agents: "claude", Skills: []pack.Skill{grown}})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if len(files.backups) != 0 {
+		t.Errorf("backups = %v, want none: nothing of the human's was replaced", files.backups)
+	}
+	if got := result.Dests[0].BackedUp; got != 0 {
+		t.Errorf("BackedUp = %d, want 0: no backup ran", got)
+	}
+	if got := result.Dests[0].Written; got != 1 {
+		t.Errorf("Written = %d, want 1", got)
+	}
+	if !slices.Contains(result.Lines, "claude · 1 written · ~/.claude/skills") {
+		t.Errorf("the summary does not say written, lines: %v", result.Lines)
+	}
+}
+
+// TestANewReferenceInADryRunSaysWriteAndNeverBackUp: the rehearsal names what the
+// real run would do, and a backup that cannot happen is not printed.
+func TestANewReferenceInADryRunSaysWriteAndNeverBackUp(t *testing.T) {
+	root := home()
+	files := newFakeFiles(nil)
+	run(files, fakeHome{dir: root}, pack.Options{Agents: "claude", Skills: []pack.Skill{routerSkill()}})
+	files.writes = nil
+	files.backups = nil
+
+	grown := routerSkill()
+	grown.Files = append(grown.Files, pack.File{Path: "references/extra.md", Content: []byte("more\n")})
+
+	result := run(files, fakeHome{dir: root}, pack.Options{Agents: "claude", Skills: []pack.Skill{grown}, DryRun: true})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if len(files.writes) != 0 || len(files.backups) != 0 {
+		t.Errorf("a dry run wrote %v and backed up %v, want nothing", files.writes, files.backups)
+	}
+	if got := result.Dests[0].Written; got != 1 {
+		t.Errorf("Written = %d, want 1: the rehearsal names what it would write", got)
+	}
+	if !slices.Contains(result.Lines, "claude · 1 to write · ~/.claude/skills") {
+		t.Errorf("the dry run does not say to write, lines: %v", result.Lines)
+	}
+}
+
 // TestASkillFolderWithAPathOutsideIsRefused: the payload is fixed at build time,
 // and a path that would leave the agent's directory is a broken build, not a
 // write.

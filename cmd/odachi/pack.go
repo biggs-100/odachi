@@ -105,6 +105,7 @@ type packDest struct {
 	Scope     string   `json:"scope"`
 	Installed int      `json:"installed"`
 	BackedUp  int      `json:"backed_up"`
+	Written   int      `json:"written"`
 	Unchanged int      `json:"unchanged"`
 	Foreign   int      `json:"foreign"`
 	Failed    int      `json:"failed"`
@@ -132,6 +133,7 @@ func reportPack(result pack.Result, asJSON bool, stdout, stderr io.Writer) int {
 				Scope:     d.Scope,
 				Installed: d.Installed,
 				BackedUp:  d.BackedUp,
+				Written:   d.Written,
 				Unchanged: d.Unchanged,
 				Foreign:   d.Foreign,
 				Failed:    d.Failed,
