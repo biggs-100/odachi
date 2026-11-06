@@ -136,6 +136,36 @@ func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 	}
 }
 
+// TestTheVerifierRunsFocusedCommands: the handoff names which commands the
+// verifier receives. A second full suite beside the gate competes for the machine
+// and makes the gate's own measurement wrong (0217), so the request names the
+// focused package, not the world.
+func TestTheVerifierRunsFocusedCommands(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		var folder strings.Builder
+		for _, file := range s.Files {
+			folder.Write(file.Content)
+		}
+		byName[s.Name] = folder.String()
+	}
+
+	for _, want := range []string{
+		"focused package",
+		"never a second",
+		"go test ./...",
+		"measurement",
+	} {
+		if !strings.Contains(byName["slices"], want) {
+			t.Errorf("slices no dice %q: el verificador puede volver a correr la suite entera", want)
+		}
+	}
+}
+
 // TestVerificationIsProportional: the ceremony a change owes is decided by its
 // blast radius, not by habit. `tests` names the three tiers and the two
 // comparisons a red owes, and `slices` routes the delegation policy to the same

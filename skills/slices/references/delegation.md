@@ -15,7 +15,9 @@ A subagent starts without cache: **it does not save tokens, it protects your con
   final check. If you delegate the writing, delegate the reading that prepares it.
 - The request carries the **task doc path and the step**, not a summary; also the
   **edit surfaces**, the **verification commands** and the **exact skill paths**
-  (`## Skills to load before work`).
+  (`## Skills to load before work`). The commands are the **focused package** the
+  change touches, never a second `go test ./...`: a full suite beside the gate
+  competes for the machine and makes the gate's own measurement wrong (0217).
 - To write, use **`odachi-worker`**; to verify, **`odachi-verify`** (read-only).
   The worker does not commit or delegate; the parent keeps git and the gate.
 - Verification is proportional (see `tests`): a passive change is read, a medium
