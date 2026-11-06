@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The design pair covers product UX.** `ui-craft` ships `browse-and-compare` (the representation,
+  search scope, filters, the loading pattern, the return to the place), and `design` sends every
+  artboard through `the-read` (and `adaptive-interfaces` when it has states), treats another
+  approach as another artboard, and reads a comment's screenshot first (0219).
+
 ## v0.23.0 - 2026-11-06
 
 - **The verifier runs the focused package, not a second gate.** The delegation request names the
