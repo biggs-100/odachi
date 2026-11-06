@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The four rows of the review ledger are paid.** `pack` counts a backup only when one ran and
+  reports a skill that only gained a file as `written`; `skills --check` reads the gates table and
+  the references list instead of searching the section; the doctor's drift test covers a
+  reference the installed copy lacks; and a git that cannot answer `Head` is an error instead of
+  an empty history (0207).
+
 ## v0.18.0 - 2026-11-05
 
 - **Every skill says what it returns.** `odachi skills --check` refuses a skill without

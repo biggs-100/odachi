@@ -9,25 +9,52 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0206, which leaves the four rows of 0205 open.
+Last written: while closing 0207, which leaves nothing open.
 
 ## Open
+
+Nothing is open: feature 0207 paid the four rows below, each with its test. The next row
+starts a new list.
+
+## Closed by feature 0207
 
 ### every Head failure is read as an empty history
 
 Found while closing 0203 (warning, `internal/adapters/gitx/gitx.go:220`). The `Messages` guard returns an empty history for any `Head` error, so a corrupt repository or a missing git binary is read as "no commits" and the trailers silently disappear. It should tell the no-HEAD case apart, or return the error.
 
+Closed: `Messages` asks `symbolic-ref -q HEAD` when `Head` fails. An unborn branch is a
+repository with no commit yet, and reads as an empty history; anything else keeps the error,
+and the callers block with "could not read the commits since <base>". Pinned by
+`TestMessagesRefusesARepositoryGitCannotRead` -observed red first: the folder read as `[]`-
+and by the empty-repository test that had to stay green.
+
 ### the pack summary counts a new reference as a backup
 
 Found while closing 0205 (warning, `internal/app/pack/pack.go:461`). `installSkill` marks a file that does not exist as a change (`identical = false`, the path appended, no `Backup` because `exists` is false), and the default branch then increments `BackedUp` and prints `would back up and write` in a dry run. A skill whose `SKILL.md` is unchanged and whose only difference is a new reference is counted as backed up although `files.Backup` never ran for it. The replaced single-file code counted a backup only after a real one. The install is right; the report is wrong.
+
+Closed: `installSkill` records whether a backup ran, and a skill gains a `written` state
+(JSON `written`) for the case where it only gained a file. Pinned by
+`TestANewReferenceIsWrittenAndNotBackedUp` and `TestANewReferenceInADryRunSaysWriteAndNeverBackUp`,
+both observed red first: `BackedUp = 1` while `files.backups` was empty, and the dry run
+promising a backup that could not happen.
 
 ### the router check does not parse the table
 
 Found while closing 0205 (suggestion, `internal/domain/skill/skill.go:202`). The gate rule is `namesPath(gates, reference)`, a `strings.Contains` over the whole `## Decision gates` section, so a prose sentence or a bullet names the paths and passes although the brief asks for a table whose rows name every reference. The refusal says the reference "is not a row of ## Decision gates", a row no code parses. The same containment-only test is used for `## References`.
 
+Closed: `## Decision gates` is read as a data row and `## References` as a bullet; the header
+and the separator route nothing, and the refusal says which shape it wanted. Pinned by three
+tests observed red first -prose in the inventory, prose in a router, and a path that only the
+table header names- because the old `Contains` passed all three.
+
 ### the missing half of the reference drift has no test
 
 Found while closing 0205 (suggestion, `internal/app/doctor/doctor.go:882`). The `!exists` branch of `driftOf` — a reference the source has and the installed folder does not — is never exercised: the test writes a different reference and checks the changed branch only. The brief says "a missing or changed reference is drift", and only half of it is pinned.
+
+Closed: `TestTheDoctorNamesAReferenceTheInstalledCopyLacks` seeds a source reference the
+installed copy lacks and asserts check 9 names the file and the command. Observed red by
+disabling the `!exists` branch, when the doctor turned the absence into a read error instead
+of a drift.
 
 ## Closed by feature 0205
 
