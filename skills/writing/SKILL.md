@@ -6,7 +6,8 @@ description: Trigger: when writing a message, a PR description, an issue comment
 ## When
 
 When the text has to make another person **act**: understand what changed, review
-a PR, reproduce a bug, or run a command you wrote.
+a PR, reproduce a bug, or run a command you wrote. Also when a document feels
+long, dense or hard to scan.
 
 ## Rules
 
