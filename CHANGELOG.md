@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **Verification is proportional to the blast radius.** A passive change is verified by reading
+  the diff, a medium one keeps the writer's own verification, and only a change that names one
+  of the six risks adds `odachi-verify`; a red is run on the base first, and a red that comes
+  from the machine is named instead of hidden (0214).
+
 ## v0.19.0 - 2026-11-05
 
 - **The block keeps notes, not builds.** `.git/odachi/scratch/` is for a note a later turn has
