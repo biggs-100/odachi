@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A published text is read back.** A PR is compared with the file that was posted
+  (`gh pr view <url> --json title,body,baseRefName,headRefName`), and any published text,
+  an issue included, with the file that was written; a mismatch is fixed before the review
+  is requested (0215).
+
 ## v0.20.0 - 2026-11-06
 
 - **Verification is proportional to the blast radius.** A passive change is verified by reading
