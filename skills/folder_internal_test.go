@@ -13,6 +13,7 @@ func TestFolderCarriesTheAssets(t *testing.T) {
 		"router/SKILL.md":           {Data: []byte("main")},
 		"router/assets/doc.md":      {Data: []byte("template")},
 		"router/assets/schema.json": {Data: []byte("{}")},
+		"router/assets/.hidden":     {Data: []byte("dot")},
 	}
 
 	files, err := folder(fsys, "router")
@@ -22,6 +23,7 @@ func TestFolderCarriesTheAssets(t *testing.T) {
 
 	want := []File{
 		{Path: "SKILL.md", Content: []byte("main")},
+		{Path: "assets/.hidden", Content: []byte("dot")},
 		{Path: "assets/doc.md", Content: []byte("template")},
 		{Path: "assets/schema.json", Content: []byte("{}")},
 	}

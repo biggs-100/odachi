@@ -90,6 +90,14 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 			}
 			entry.Files = append(entry.Files, pack.File{Path: reference, Content: data})
 		}
+		for _, asset := range s.Assets {
+			data, err := files.Read(filepath.Join(dir, skillsapp.Dir, s.Name, filepath.FromSlash(asset)))
+			if err != nil {
+				fmt.Fprintln(stderr, "odachi: could not read skills/"+s.Name+"/"+asset+": "+oneLine(err.Error())+"; fix the file and run odachi pack again")
+				return start.CodeBlocked
+			}
+			entry.Files = append(entry.Files, pack.File{Path: asset, Content: data})
+		}
 		project = append(project, entry)
 	}
 

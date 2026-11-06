@@ -17,12 +17,14 @@ import (
 	"strings"
 )
 
-// skillPattern embeds every file of this directory, recursively. All reads only
+// skillPattern embeds every file of this directory, recursively, including the
+// ones whose name starts with '.' or '_': the loader lists them, so the embed
+// must carry them or a check-green tree would install unequal. All reads only
 // the skill folders, so the Go files that live here never reach a destination:
 // the pattern is wide because a build must not fail for a skill that ships no
 // references yet.
 //
-//go:embed *
+//go:embed all:*
 var bundled embed.FS
 
 // BootstrapName is the one skill that explains how a project starts. It is a

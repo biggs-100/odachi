@@ -490,6 +490,42 @@ func TestPackDoesNotTouchTheProject(t *testing.T) {
 	}
 }
 
+// TestAProjectSkillCarriesItsAsset: the project's catalog is installed whole. A
+// skill created with `odachi skill new` that declares an asset ships it, the
+// same way it ships a reference.
+func TestAProjectSkillCarriesItsAsset(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	project := t.TempDir()
+	seed := map[string]string{
+		"skills/router/SKILL.md":      "---\nname: router\ndescription: Trigger: cuando hay que copiar\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## Assets\n\n- `assets/doc.md` — the template.\n",
+		"skills/router/assets/doc.md": "# template\n",
+		"SKILLS.md":                   "# generated\n",
+	}
+	for path, content := range seed {
+		full := filepath.Join(project, filepath.FromSlash(path))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+
+	code, out, errOut := runDir(t, project, []string{"pack", "--agents", "claude", "--dest", "./out"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d (stdout %q, stderr %q)", code, out, errOut)
+	}
+
+	got, err := os.ReadFile(filepath.Join(project, "out", "router", "assets", "doc.md"))
+	if err != nil {
+		t.Fatalf("the project skill's asset was not installed: %v", err)
+	}
+	if string(got) != "# template\n" {
+		t.Errorf("asset = %q, want the project's bytes", got)
+	}
+}
+
 // TestPackDetectsAnAgentOrSaysHowToName: with no flag, an empty home is a
 // starting point that names --agents; an installed agent is served.
 func TestPackDetectsAnAgentOrSaysHowToName(t *testing.T) {
