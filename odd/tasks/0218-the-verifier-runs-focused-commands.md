@@ -13,8 +13,8 @@ R1 · "the delegation policy names the verifier's commands: the focused package 
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · delegation names the focused package, never a second full gate   R1 · route:inline
-- [ ] T2 · the changelog names the rule   R1 · route:inline
+- [x] T1 · delegation names the focused package, never a second full gate   R1 · route:inline · tree:925673303d0a2aea9a639d69354cad62062a1dcd
+- [x] T2 · the changelog names the rule   R1 · route:inline · tree:b27ef202921184f1d32c772c99cdc6ec4277a496
 
 ## History
 L1 · "the delegation policy names the verifier's commands: the focused package the change touches, never a second full gate, because a full suite beside the gate competes for the machine and makes the measurement wrong"
