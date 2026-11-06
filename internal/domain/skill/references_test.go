@@ -99,7 +99,7 @@ func TestAFileUnderReferencesMustBeListed(t *testing.T) {
 		"## References\n\n- something else.",
 	)
 
-	wants(t, s.Problems(), "is not in ## References")
+	wants(t, s.Problems(), "is not a bullet of ## References")
 }
 
 // TestAReferenceMustBeAMarkdown: references are the text an agent reads, not a
@@ -148,6 +148,43 @@ func TestASkillWithReferencesDeclaresItsOutput(t *testing.T) {
 	)
 
 	wants(t, s.Problems(), `"Output"`)
+}
+
+// TestAProseSentenceIsNotAReferenceBullet: the inventory is a list, one line per
+// file; a sentence that names the path declares nothing (0207).
+func TestAProseSentenceIsNotAReferenceBullet(t *testing.T) {
+	s := router(
+		[]string{"references/numbers.md"},
+		"## References\n\nThe scale lives in `references/numbers.md`, read it first.",
+		outputSection,
+	)
+
+	wants(t, s.Problems(), "is not a bullet")
+}
+
+// TestAProseSentenceIsNotAGateRow: the router table is a table; a path named in a
+// sentence routes nothing (0207).
+func TestAProseSentenceIsNotAGateRow(t *testing.T) {
+	s := router(
+		[]string{"references/motion.md", "references/numbers.md"},
+		"## Decision gates\n\nLoad `references/motion.md` for motion and `references/numbers.md` for numbers.",
+		outputSection,
+		referencesSection("references/motion.md", "references/numbers.md"),
+	)
+
+	wants(t, s.Problems(), "is not a row of ## Decision gates")
+}
+
+// TestAReferenceInTheHeaderIsNotARow: the header names the columns, not a route.
+func TestAReferenceInTheHeaderIsNotARow(t *testing.T) {
+	s := router(
+		[]string{"references/motion.md", "references/numbers.md"},
+		"## Decision gates\n\n| Situation | Load `references/motion.md` |\n| --- | --- |\n| the numbers | `references/numbers.md` |",
+		outputSection,
+		referencesSection("references/motion.md", "references/numbers.md"),
+	)
+
+	wants(t, s.Problems(), "is not a row of ## Decision gates")
 }
 
 // TestASkillWithoutReferencesStillOwesItsOutput: the contract belongs to every
