@@ -12,7 +12,7 @@ R1 · "a build artifact and a one-use transport are not notes: the block sends t
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · the block names the two classes: a note kept, a transport that dies in the run   R1 · route:inline
+- [x] T1 · the block names the two classes: a note kept, a transport that dies in the run   R1 · route:inline · tree:b5acbee5afaf2c30ac244d5cdd0a36e30856d0d3
 - [ ] T2 · this project's block and the changelog carry the rule   R1 · route:inline
 
 ## History
