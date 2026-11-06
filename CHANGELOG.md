@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The gate waits fifteen minutes for a suite that takes eleven.** `check --run`'s default timeout
+  moves from 600 to 900 seconds: measured on this machine, `go test ./...` takes about 700 seconds
+  (686 for `cmd/odachi` under `./...`, 207 alone), so the old default killed a green suite and the
+  failed proof was empty. `--timeout` still tightens it (0217).
+
 ## v0.22.0 - 2026-11-06
 
 - **A skill folder carries the assets it copies.** `assets/` holds a template or a schema the skill
