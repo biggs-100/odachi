@@ -715,6 +715,31 @@ func TestTheDoctorNamesAReferenceThatDrifted(t *testing.T) {
 	}
 }
 
+// TestTheDoctorNamesAReferenceTheInstalledCopyLacks: the other half of the drift
+// is absence. A source reference the installed folder never got leaves a skill
+// with half its depth, and nobody read that branch until now (0207).
+func TestTheDoctorNamesAReferenceTheInstalledCopyLacks(t *testing.T) {
+	files := configured().
+		put("skills/acceptance/references/numbers.md", "the scale\n").
+		put(".agents/skills/acceptance/SKILL.md", skill.Template("acceptance"))
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+	got := checkOf(t, result, domaindoctor.CheckSkills)
+
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a missing reference must be a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{
+		"do not match skills/",
+		".agents/skills/acceptance/references/numbers.md",
+		"odachi init",
+	} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("check 9 must say %q: %q", want, got.Detail)
+		}
+	}
+}
+
 // TestTheVoiceLineCarriesTheDefaultNoteAndThePluginNote: the door note always
 // writes a sentence, and the notes after it append to that sentence. Neither is
 // lost because the one before it was not empty.
