@@ -10,13 +10,8 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to `odachi check` or to `odachi review` behavior"
-paths = ["internal/app/check/**", "internal/app/review/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to the six risks in `commits` or to their table"
-paths = ["skills/commits/**"]
+not   = "no change to `review.ExecTimeoutSeconds`"
+paths = ["internal/app/review/**"]
 deps  = []
 
 [[rule]]
@@ -50,6 +45,6 @@ paths = [".github/workflows/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the skills the feature does not touch: drive, tests, slices, pull-request, commits and triage"
-paths = ["skills/drive/**", "skills/tests/**", "skills/slices/**", "skills/pull-request/**", "skills/triage/**"]
+not   = "no change to the skills: none is part of this feature"
+paths = ["skills/**"]
 deps  = []
