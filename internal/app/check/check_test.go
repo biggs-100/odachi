@@ -1194,10 +1194,10 @@ func TestRunWithoutATaskDocumentStillWritesAProof(t *testing.T) {
 }
 
 // TestTheDefaultTimeoutFitsARealSuite: the suite this project calls its proof
-// takes about 700 seconds on a real machine -0217 measured 686 for cmd/odachi
-// under ./... and 207 alone- and a default that kills it is a gate that lies
-// about a slow host. Nine hundred seconds still bounds a hang, and --timeout
-// tightens it (0209).
+// takes minutes on a real machine -cmd/odachi alone took 207 seconds on
+// 2026-11-06- and a default that kills it is a gate that lies about a slow host.
+// Nine hundred seconds bounds a hang and leaves room for a machine shared with
+// another heavy run, and --timeout tightens it (0209, 0217).
 func TestTheDefaultTimeoutFitsARealSuite(t *testing.T) {
 	if check.DefaultTimeout != 900 {
 		t.Fatalf("DefaultTimeout = %d, want 900", check.DefaultTimeout)

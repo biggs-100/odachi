@@ -17,21 +17,28 @@ suite this machine actually runs.
 
 ## What was measured
 
-- **The suite is 3.3x slower under `./...` than alone.** `cmd/odachi` 207 s alone, 686 s under
-  `./...`, with `gitx` at 113 s and `shellcmd` at 26 s in parallel. The wall time is about 700 s.
+- **The 686-second reading was contaminated, and the correction is the lesson.** `cmd/odachi` alone
+  took 207 s on 2026-11-06 (the `-v` run); the 686 s came from a run where another heavy suite was
+  alive — its per-test times were *faster*, which only external load explains. Another project's
+  `odachi check --run "... go test ./... -count=1"` was found running on this machine. The default
+  stays 900 as a bound for a shared machine; the v0.22.1 note's 700 s is the contended number, not
+  the suite's. The released note is not edited: the tag already published it.
+- **The 600 s timeout in 0216 was the same mistake.** The gate ran while the verifier's own full
+  suite was alive: one heavy gate per machine is a measurement rule, not a preference.
+- **A verifier runs the focused commands, not a second full gate.** The prompt handed
+  `go test ./...` to `odachi-verify`; the delegation reference says the request carries the
+  verification commands, and the request should name the package, not the world.
 - **A timeout proof is empty for a reason.** `go test` prints a package only when it finishes; at
   600 s none had, so the failed proof carried no output. It was not the adapter losing bytes.
-- **The number is the default, not a waiver.** `--timeout` still tightens the bound; the gate ran
-  green without it.
 
 ## The next feature
 
-- **Make the suite faster.** The contention is the real cost: `cmd/odachi` spends 686 s under
-  `./...` against 207 alone. Test isolation, a shared harness, or `-p` are the candidates; the
-  measurement is in the constant's comment and this file.
+- **The verifier's commands are focused.** `slices/references/delegation.md` says the request
+  carries the verification commands; make it say the focused package, never a second full gate, and
+  pin it in `skills/embed_test.go`.
 - **Pin `all:*`** with a repo test, still open from 0216: a regression to `*` would pass the suite
   for dotfile assets.
-- One writer per worktree; one heavy gate per machine.
+- One writer per worktree; one heavy gate per machine — now measured, not a note.
 
 ## The commands that work
 
