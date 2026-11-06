@@ -1,35 +1,31 @@
-# skills-carry-assets
+# the-gate-fits-the-suite
 
 ## What must exist
-- a skill folder carries `assets/`: the files it copies or uses —a template, a schema— installed with the skill, declared in the body, and refused when a file is orphaned or a declaration names no file; `writing` ships the copyable document template as its first consumer
+- the gate's default bound fits the suite it actually runs: `go test ./...` takes about 700 seconds on this machine (686 for cmd/odachi under contention, 207 alone), so 600 kills a green suite and the default moves to 900
 
 ## Done when
-- `internal/domain/skill` accepts `assets/<file>` and refuses an undeclared asset, a declaration that names no file, and a tree under `assets/`, each with its own line
-- the loader reads `assets/`, the embed carries it, and `odachi pack` installs it beside `SKILL.md` and `references/`
-- `skills/writing/assets/doc.md` exists, `writing` declares it under `## Assets`, and its rules send the writer to copy it
-- a test in `skills/embed_test.go` pins the template and the route, observed red before the asset lands
-- `odachi skills --check` is green with the asset, and a fixture skill with an orphaned asset is refused
-- `odachi init` leaves the installed copy equal to the tree, asset included
-- `docs/impact-map.md` names `assets/` in the skill format
-- the changelog's Unreleased section names the capability
+- `check.DefaultTimeout` is 900, and `TestTheDefaultTimeoutFitsARealSuite` pins it and the seconds the shell receives
+- the comment names the measurement that decided 900, and the help text and `docs/odachi-bootstrap.md` say 900
+- the changelog's Unreleased section names the bound
+- `odachi check --run "go test ./..."` is green with no `--timeout` on this machine
 - `go test ./...` is green
 
 ## Not included (first version)
-- no nested trees under `assets/`: one file, flat, because a template is a file and a tree needs a walk nobody asked for
+- no change to the gate's verdicts, reasons, exit codes or the proof format
+- no change to `--timeout` semantics: it still tightens the bound
+- no change to `review.ExecTimeoutSeconds`
 - no new verb and no new flag
-- no change to `odachi check` or to `odachi review` behavior
-- no change to the six risks in `commits` or to their table
+- no change to the suite's speed, its `-p` or its isolation: the contention is recorded, not fixed
 - no change to the voice or the interview's questions
 - no change to the stored proofs: never touched
 - no change to `odachi role` or to the skill it renders
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
 - no change to the release workflow
-- no change to the skills the feature does not touch: drive, tests, slices, pull-request, commits and triage
+- no change to the skills: none is part of this feature
 
 ## Decisions taken
-- an asset is a file, not a tree: a template or a schema is one file, and a tree needs a walk and path rules nobody asked for
-- every asset is declared in `## Assets` the same way a reference is declared in `## References`: a file nobody routes is a file nobody reads
-- any extension is allowed: the contract does not guess what a template is made of
-- `writing` is the consumer because its document shape is prose today and a copyable skeleton is the artifact it lacks
-- it is a contract change: `Risk: contract`, and the release is minor
+- 900, not 1200: 686 seconds measured plus about a third of margin; a real hang still fails inside fifteen minutes
+- the number lives in the constant, the test and the comment, so the next measurement has one place to land
+- the contention (686 seconds under ./... against 207 alone) is recorded in the next session, not fixed here: making the suite faster is another feature
+- the gate itself is unchanged: only the default bound moves, and `--timeout` still wins
