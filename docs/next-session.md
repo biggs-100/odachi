@@ -1,51 +1,50 @@
 # Next session
 
-Written at the close of 0210, `the-environment-a-command-inherits`. The doctor's fifteenth
-check names the PATH a command inherits, so a proof that fails because a binary disappeared has
-a line that explains why.
+Written at the close of 0211, `writing-carries-the-doc-and-the-comment`. The curriculum learned
+the two texts the comparison with gentle-ai found missing, and both travel as references beside
+`writing` instead of growing its body.
 
 ## What shipped
 
-- **0210, the environment.** `odachi doctor` gained check 15: it measures the PATH this process
-  hands to a child, warns above the 8191 characters cmd can pass (counted in characters, not
-  bytes), and on a platform that does not cut the environment it says which one it measured.
-  `CheckCount`, the usage and `docs/impact-map.md` say fifteen. The configured-project fixture
-  sets a short PATH so the check does not read the machine's own.
-- **0207-0209, earlier in the session.** The four review-debt rows paid (pack's report, the
-  gates table, the doctor's missing drift, gitx's Head); the corrupt ref pinned; and the gate's
-  default timeout at 600 seconds.
-- **The gates.** `proof/0210-the-environment-a-command-inherits.txt`; the review of the first
-  tree found the platform not named and bytes counted instead of characters, both paid in the
-  branch, and the correction's verdict refuted a false BLOCKER (the `strconv` import was in the
-  tree, not in the delta).
+- **`writing` routes two texts.** `references/the-doc.md` carries the shape a guide, an RFC or
+  an onboarding page needs: answer first, quick path, details, checklist, next step, and what a
+  reviewer reads first. `references/the-comment.md` carries the comment's formula (observation,
+  why, next action), its tone (warm and direct, no pile-ons, the language of the thread, no em
+  dashes) and three examples.
+- **The body stayed under the cap.** It gained a `## Decision gates` table and `## References`;
+  its eight rules are the same ones it had.
+- **The installation is equal.** A binary built on the tree left `~/.agents/skills` with 19
+  matched skills and no drift (`doctor` check 9).
+- **The gate.** Proof `proof/0211-writing-carries-the-doc-and-the-comment.txt`; the review
+  approved the tree on the reliability lens with no findings.
 
 ## What the review left
 
-Nothing open. The two findings of 0210 were paid before the close, the blocker was refuted with
-the file and the proof, and `docs/review-debt.md` has no open rows.
+Nothing. `docs/review-debt.md` has no open rows.
 
 ## The next feature
 
-- **One writer per worktree; one heavy gate per machine.** Parallel lines belong in separate
-  clones, and two gates on one machine fight for the Go cache.
-- **The store is 79 MB.** `odachi clean --apply` would free 77.9 MB, and the lifetimes in
-  `odd/review.toml` are the switch: `keep_prompts = 0` already, `keep_verdicts = 10`. The
-  decision to run it is the human's (0187).
-- Nothing else is named: the ledger is empty and the last session's candidates are closed.
+- **`assets/` in the skill contract**, only if a skill needs a template or a schema: today
+  `--check` accepts `.md` under `references/` and nothing else. It is a contract change (ADR
+  0050) and it should wait for the need, not anticipate it.
+- **Two rules `triage` still lacks**, both from the comparison: a test written against the
+  report's mechanism that passes on the untouched tree means the report is right and the
+  diagnosis is not; and a thread with two failure modes closes neither.
+- **One writer per worktree; one heavy gate per machine**, as before.
+- The store is 14 MB after the cleanup; the lifetimes in `odd/review.toml` still own it.
 
 ## The command that works
 
 ```sh
-odachi review --base fd32dc1d539ad7c0d69efeb2e68024c98acccbae \
+odachi review --base 7d9645d86371f5869fa8aaa91685b35b3479e3bf \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
-`--base` is the base the task doc names, not `main`: with `main` the review judges a candidate
-that excludes the plan commit and says nothing changed.
+`--base` is the base the task doc names, not `main`.
 
 ```sh
 $env:PATH = "C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files\Go\bin;C:\Users\USER\go\bin;C:\Users\USER\AppData\Local\odachi\bin;C:\Users\USER\AppData\Roaming\npm"; odachi check --run "go test ./..."
 ```
 
-The default now fits the suite; the short PATH only repairs what the session inherits, and the
+The default fits the suite; the short PATH only repairs what the session inherits, and the
 doctor's check 15 says so when it does not.
