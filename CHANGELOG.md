@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.24.0 - 2026-11-06
 
 - **The design pair covers product UX.** `ui-craft` ships `browse-and-compare` (the representation,
   search scope, filters, the loading pattern, the return to the place), and `design` sends every
