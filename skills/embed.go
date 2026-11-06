@@ -2,9 +2,9 @@
 // repository compiled into the binary with //go:embed.
 //
 // The source of truth is the directory that holds this file — skills/<name>/
-// SKILL.md and the references beside it — not a copy. `odachi pack` reads them
-// from the binary, so it needs no network and no repository, and `odachi skills
-// --check` still validates the same files on disk.
+// SKILL.md, the references and the assets beside it — not a copy. `odachi pack`
+// reads them from the binary, so it needs no network and no repository, and
+// `odachi skills --check` still validates the same files on disk.
 package skills
 
 import (
@@ -83,9 +83,9 @@ func All() ([]Skill, error) {
 	return all, nil
 }
 
-// folder reads one skill folder: the SKILL.md every skill carries, and the
-// references it adds. The glob is the shape `odachi skills --check` enforces, so
-// a file the check refuses never ships.
+// folder reads one skill folder: the SKILL.md every skill carries, the
+// references it adds, and the assets it copies. The globs are the shape
+// `odachi skills --check` enforces, so a file the check refuses never ships.
 func folder(fsys fs.FS, name string) ([]File, error) {
 	paths := []string{name + "/" + SkillFile}
 	references, err := fs.Glob(fsys, name+"/references/*.md")
@@ -93,6 +93,11 @@ func folder(fsys fs.FS, name string) ([]File, error) {
 		return nil, fmt.Errorf("no pude leer %s/references: %w", name, err)
 	}
 	paths = append(paths, references...)
+	assets, err := fs.Glob(fsys, name+"/assets/*")
+	if err != nil {
+		return nil, fmt.Errorf("no pude leer %s/assets: %w", name, err)
+	}
+	paths = append(paths, assets...)
 
 	files := make([]File, 0, len(paths))
 	for _, file := range paths {

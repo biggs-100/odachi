@@ -170,3 +170,53 @@ func TestASkillFolderWithAPathOutsideIsRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestAnAssetTravelsWhole: a template is installed beside the SKILL.md that
+// copies it, in the same run and reported as one folder.
+func TestAnAssetTravelsWhole(t *testing.T) {
+	root := home()
+	files := newFakeFiles(nil)
+	main := "---\nname: router\ndescription: Trigger: cuando hay que copiar\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## Assets\n\n- `assets/doc.md` — the template.\n"
+
+	result := run(files, fakeHome{dir: root}, pack.Options{Agents: "claude", Skills: []pack.Skill{{
+		Name: "router",
+		Files: []pack.File{
+			{Path: pack.SkillFile, Content: []byte(main)},
+			{Path: "assets/doc.md", Content: []byte("# template\n")},
+		},
+	}}})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q, lines %v)", result.Code, result.Message, result.Lines)
+	}
+	got, ok := files.content(installedPath(root, "router", "assets/doc.md"))
+	if !ok {
+		t.Fatal("the asset was not installed")
+	}
+	if got != "# template\n" {
+		t.Errorf("asset = %q, want the bundled bytes", got)
+	}
+	if got := result.Dests[0].Installed; got != 1 {
+		t.Errorf("Installed = %d, want 1: the summary counts skills, not files", got)
+	}
+}
+
+// TestAnAssetIsAFileNotATree: a folder under assets/ is not a template, and the
+// payload is refused before anything is written.
+func TestAnAssetIsAFileNotATree(t *testing.T) {
+	files := newFakeFiles(nil)
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "claude", Skills: []pack.Skill{{
+		Name: "router",
+		Files: []pack.File{
+			{Path: pack.SkillFile, Content: []byte("x")},
+			{Path: "assets/nested/doc.md", Content: []byte("x")},
+		},
+	}}})
+
+	if result.Code != pack.CodeBlocked {
+		t.Fatalf("code = %d, want blocked", result.Code)
+	}
+	if len(files.writes) != 0 {
+		t.Errorf("wrote %v, want nothing", files.writes)
+	}
+}
