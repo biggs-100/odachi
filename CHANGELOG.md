@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The writing pair measures the review path.** `the-doc` names the changed-markdown command and
+  the review checklist (first, out of scope, previous and next PR, one decision per section,
+  acceptance), `pull-request` measures the 400-line budget with `gh pr view`, and `writing` loads
+  when a document feels long, dense or hard to scan (0221).
+
 ## v0.25.0 - 2026-11-06
 
 - **The artboard carries the tuning controls.** When the human tunes spacing, colour or type scale,
