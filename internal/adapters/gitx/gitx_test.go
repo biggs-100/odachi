@@ -85,6 +85,20 @@ func TestMessagesRefusesARepositoryGitCannotRead(t *testing.T) {
 	}
 }
 
+// TestMessagesRefusesACorruptRef: 0207's review named this shape and the
+// measurement said it was an error; this is the test that keeps the measurement
+// from becoming prose (0208).
+func TestMessagesRefusesACorruptRef(t *testing.T) {
+	root, _ := newRepo(t)
+	branch := git(t, root, "symbolic-ref", "--short", "HEAD")
+	write(t, filepath.Join(root, ".git", "refs", "heads", filepath.FromSlash(branch)), "garbage\n")
+
+	got, err := gitx.Messages(root, gitx.EmptyTree)
+	if err == nil {
+		t.Fatalf("Messages = %v, want the error of a corrupt ref", got)
+	}
+}
+
 // TestMessagesSinceNothingReadsEveryCommit: with a history, "since nothing" is
 // the whole history, not zero commits.
 func TestMessagesSinceNothingReadsEveryCommit(t *testing.T) {

@@ -9,12 +9,14 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0207, which leaves one row open.
+Last written: while closing 0208, which leaves nothing open.
 
 ## Open
 
-One row, opened by the review of 0207: the corrupt ref reads as an error by measurement, and
-no test pins it.
+Nothing is open: 0208 closed the last row with the test it was missing. The next row starts a
+new list.
+
+## Closed by feature 0208
 
 ### the corrupt ref has no test, and the warning was measured false
 
@@ -28,8 +30,9 @@ error. A ref file with a syntactically valid sha of a missing object makes `Head
 `git log HEAD` fail ("bad object HEAD"), which is also an error. A corrupt `.git/packed-refs`
 makes `symbolic-ref` fail too.
 
-What is true: that shape has no test. The next feature that touches `gitx` writes one, so the
-claim cannot come back without a red.
+Closed: `TestMessagesRefusesACorruptRef` seeds the corrupted ref and asserts the error, observed
+red by restoring the old swallow in `Messages`. The measurement is now a red the next change
+cannot skip.
 
 ## Closed by feature 0207
 

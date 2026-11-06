@@ -1,8 +1,8 @@
 # Next session
 
-Written at the close of 0207, `the-ledger-of-0205-is-paid`. The four rows the ledger carried
-are paid, each with the test that was missing; the review left one row open and it is named
-below.
+Written at the close of 0207, `the-ledger-of-0205-is-paid`; 0208, `the-corrupt-ref`, closed the
+last row with one test. The ledger is empty, and the next candidates are the gate's default
+timeout and the PATH a session inherits.
 
 ## What shipped
 
@@ -22,10 +22,11 @@ below.
 
 ## What the review left
 
-One WARNING, recorded in `docs/review-debt.md`: it said `symbolic-ref` answers for a corrupt
+One WARNING was recorded in `docs/review-debt.md`: it said `symbolic-ref` answers for a corrupt
 ref too, so the corrupt half of the last row was still swallowed. Measured false on git
 2.52.0.windows.1 -a corrupt ref makes `symbolic-ref` exit 128, and a valid sha of a missing
-object fails at `git log`- but the shape has no test. That is the one open row.
+object fails at `git log`- and 0208 pinned the shape with `TestMessagesRefusesACorruptRef`,
+observed red by restoring the old swallow. The ledger is empty.
 
 ## The next feature
 
