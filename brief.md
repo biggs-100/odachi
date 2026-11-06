@@ -1,30 +1,30 @@
-# the-environment-a-command-inherits
+# writing-carries-the-doc-and-the-comment
 
 ## What must exist
-- `odachi doctor` names the PATH this process hands to a command when it passes what Windows can pass to a child, with the length, the limit and the repair, so a proof that fails for an inherited environment is not read as a broken suite
+- `writing` teaches the long document and the collaboration comment without growing its body: the shapes and the tone live in `references/`, and the body routes them
 
 ## Done when
-- check 15 exists, appended, `CheckCount` says 15, and the usage text and `docs/impact-map.md` say fifteen
-- on Windows with a PATH of 8192 characters or more the check is a warning that names the length, the 8191 limit and the repair; at 8191 or less it is ok
-- on a platform that does not cut the environment, the check is ok and says which platform it measured
-- nothing trims, rewrites or persists the human's PATH, and the command a proof runs receives the same environment it received before
+- `writing` declares `## Output`, a `## Decision gates` table with one row per reference, and `## References` naming both files
+- `references/the-doc.md` carries the document's shape (answer first, quick path, details, checklist, next step) and how a reviewer reads it
+- `references/the-comment.md` carries the comment's tone and formula, including the language of the thread and no em dashes
+- the body stays within sixty lines and every rule it has today survives
+- `odachi skills --check` is green, and `odachi init` leaves the installed copy equal to the tree
+- the changelog's Unreleased section names the two texts
 - `go test ./...` is green
-- the changelog's Unreleased section names the check
 
 ## Not included (first version)
-- no change to how a command is spawned, or to the environment a child receives
-- no trimming, rewriting or persisting of the human's PATH
-- no new verb and no new flag
-- no change to the curriculum or the contract: no file under `skills/` moves
+- no change to the other eighteen skills
+- no change to the grammar: references stay `.md` under `references/`, and `--check` keeps the rule it has
+- no new skill, verb or flag
+- no change to the voice or the interview's questions: an artifact stays English, and a comment follows the thread's language -the reference says so
 - no change to the stored proofs: never touched
-- no change to the voice or the interview's questions
 - no change to `odachi role` or to the skill it renders
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
 - no change to the release workflow
+- no adoption of gentle-ai's frontmatter, its section names or its license text
 
 ## Decisions taken
-- it is a warning, not a problem: nothing is broken until the next command fails, and the doctor does not fail for an environment odachi does not own
-- the limit is 8191 characters, cmd's documented ceiling per variable; the session that opened this row measured 13,888 and the child saw an empty PATH
-- the measurement is the process PATH, because that is exactly what a child inherits
-- the platform is passed into the check, so both branches are tested on any machine
+- the depth goes to two references, not the body: a document and a comment are two shapes, and two shapes justify a router
+- the rules that live in the body today stay there; the references add the shape and the examples
+- a comment follows the language of the thread; an artifact stays English
