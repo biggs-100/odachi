@@ -27,9 +27,21 @@ a PR, reproduce a bug, or run a command you wrote.
 - For a review, say what to look at first, what is out of scope, and which
   decision each section carries.
 
+## Decision gates
+
+| Situation | Load |
+|---|---|
+| a guide, an RFC, a README or an onboarding page someone reads to act | `references/the-doc.md` |
+| a comment, a review reply or an async update | `references/the-comment.md` |
+
 ## Output
 
 The text the reader acts on: the point in the title, the conclusion in the first line, examples with their numbers, and what was not covered. A PR description carries the problem, the test and what was left out, in three paragraphs.
+
+## References
+
+- `references/the-doc.md` — the long document: answer first, quick path, details, checklist, next step.
+- `references/the-comment.md` — the comment: the formula, the tone, the language of the thread.
 
 ## Never
 
