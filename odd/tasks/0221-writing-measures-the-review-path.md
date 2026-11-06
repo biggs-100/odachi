@@ -15,8 +15,8 @@ R1 · "the writing pair gives the reviewer a path and the commands that measure 
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · the writing pair measures the review path   R1 · route:inline
-- [ ] T2 · the changelog names the rule   R1 · route:inline
+- [x] T1 · the writing pair measures the review path   R1 · route:inline · tree:a6e703f52487e8d9a23657424d77481e9eaf4ff2
+- [x] T2 · the changelog names the rule   R1 · route:inline · tree:76f0aa3ad19bd0f4454805863fc3c372a36447e4
 
 ## History
 L1 · "the writing pair gives the reviewer a path and the commands that measure it: what to review first, what is out of scope, the previous and next PR, the acceptance checklist, the changed-markdown command and the PR-size command, and a document that feels dense triggers the skill"

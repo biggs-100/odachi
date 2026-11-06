@@ -28,6 +28,20 @@ context.
 - Review empathy: a document that goes to a reviewer says what to read first,
   what is out of scope, and which decision each section carries.
 
+## The review path
+
+When the document goes to a reviewer:
+
+- Say what to review first and what is intentionally out of scope.
+- Link the previous and the next PR when the work is chained.
+- One decision per section, and a checklist for the acceptance criteria.
+
+## Commands
+
+```sh
+git diff --name-only -- '*.md'
+```
+
 ## Never
 
 - A wall of prose with the point in the third paragraph.

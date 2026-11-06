@@ -15,6 +15,7 @@ in one sitting.
   reverted alone. If the title needs "and", they are two PRs.
 - Budget: **400 changed lines** (additions + deletions). If you pass it, split
   before opening; do not ask for an exception without saying why.
+- Measure it, do not guess: `gh pr view <PR> --json additions,deletions,changedFiles`.
 - Pick **one** strategy and do not mix them: stacked to main if each slice can
   land alone; feature branch chain with a tracker PR if the feature has to
   integrate before main.

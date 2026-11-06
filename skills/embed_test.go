@@ -256,6 +256,57 @@ func TestDesignLetsTheHumanTune(t *testing.T) {
 	}
 }
 
+// TestWritingCoversTheReviewPath: the document gives the reviewer a path and a
+// command that measures what moved, and the skill loads when a doc feels dense.
+func TestWritingCoversTheReviewPath(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		var folder strings.Builder
+		for _, file := range s.Files {
+			folder.Write(file.Content)
+		}
+		byName[s.Name] = folder.String()
+	}
+
+	for _, want := range []string{
+		"git diff --name-only",
+		"out of scope",
+		"previous and the next",
+		"acceptance criteria",
+		"hard to scan",
+	} {
+		if !strings.Contains(byName["writing"], want) {
+			t.Errorf("writing no dice %q: el camino de review se perdió", want)
+		}
+	}
+}
+
+// TestPullRequestMeasuresTheBudget: the 400-line budget is measured with a
+// command, not estimated by eye.
+func TestPullRequestMeasuresTheBudget(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Main())
+	}
+
+	for _, want := range []string{
+		"gh pr view",
+		"additions,deletions,changedFiles",
+	} {
+		if !strings.Contains(byName["pull-request"], want) {
+			t.Errorf("pull-request no dice %q: el presupuesto se estima a ojo", want)
+		}
+	}
+}
+
 // TestVerificationIsProportional: the ceremony a change owes is decided by its
 // blast radius, not by habit. `tests` names the three tiers and the two
 // comparisons a red owes, and `slices` routes the delegation policy to the same
