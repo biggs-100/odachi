@@ -25,3 +25,5 @@ R1 · "a skill folder carries `assets/`: the files it copies or uses —a templa
 
 ## History
 L1 · "a skill folder carries `assets/`: the files it copies or uses —a template, a schema— installed with the skill, declared in the body, and refused when a file is orphaned or a declaration names no file; `writing` ships the copyable document template as its first consumer"
+L2 · OFICIO · "the pinned test was red before the asset landed: writing carried no assets/doc.md" (porque the RED is the proof the test guards the asset; test and asset landed in one commit, so the record cannot show it)
+L3 · OFICIO · "the embed uses all:* and a build probe listed data/.hidden, data/_under and data/doc.md" (porque the loader lists dot and underscore names, and the old * would have let a check-green tree install unequal)
