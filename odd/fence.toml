@@ -15,11 +15,6 @@ paths = ["internal/app/check/**", "internal/app/review/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the skill contract or its format: only the text of two skills and one pinned test"
-paths = ["internal/domain/skill/**", "internal/app/skills/**"]
-deps  = []
-
-[[rule]]
 not   = "no change to the six risks in `commits` or to their table"
 paths = ["skills/commits/**"]
 deps  = []
@@ -52,4 +47,9 @@ deps  = []
 [[rule]]
 not   = "no change to the release workflow"
 paths = [".github/workflows/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the skills the feature does not touch: drive, tests, slices, pull-request, commits and triage"
+paths = ["skills/drive/**", "skills/tests/**", "skills/slices/**", "skills/pull-request/**", "skills/triage/**"]
 deps  = []
