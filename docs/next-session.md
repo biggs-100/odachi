@@ -1,46 +1,43 @@
 # Next session
 
-Written at the close of 0219, `the-design-pair-covers-product-ux`. The design pair now covers
-collections and checks every artboard before it is reported.
+Written at the close of 0220, `design-lets-the-human-tune`. The design comparison with gentle-shell
+is paid: the four skill gaps and the tuning rule are in the curriculum.
 
 ## What shipped
 
-- **`ui-craft` carries `browse-and-compare`.** The representation, the search scope, the filters,
-  pagination/load more/virtualization/infinite scroll, and the return with page, scroll and focus
-  restored. The body routes it in `## Decision gates`.
-- **`design` checks every artboard.** Each finished artboard goes through `ui-craft`'s `the-read`
-  (and `adaptive-interfaces` when it has states); another approach on the same brief is the next
-  `NN` artboard, never a new slug; and a comment's `screenshot` is read first, because it shows the
-  transient state the static file cannot.
-- **The gate.** `TestUICraftTeachesBrowseAndCompare` and `TestDesignChecksEveryArtboard` were red
-  before the text landed. Proof `proof/0219-the-design-pair-covers-product-ux.txt`; the review
-  approved the tree on the reliability lens with no findings. Released as v0.24.0 and installed.
+- **The artboard carries the tuning controls.** When the human tunes spacing, colour or type scale,
+  `design` adds sliders bound to the artboard's CSS custom properties and a `Copy as prompt` button
+  that copies the chosen values as text. The button copies text and never calls a network, so the
+  artboard stays self-contained.
+- **The canvas did not need a change.** A focused board hides the shield and receives the pointer;
+  the rule was the whole gap. The comparison had called this a canvas feature; exploration showed
+  gentle-shell implements it as a skill rule and odachi's canvas already allows it.
+- **The gate.** `TestDesignLetsTheHumanTune` was red before the text landed. Proof
+  `proof/0220-design-lets-the-human-tune.txt`; the review approved the tree on the reliability lens
+  with no findings. Released as v0.25.0 and installed.
 
 ## What was measured
 
-- **The payload golden list catches a new file, not just a new skill.** `skills/router_test.go` pins
-  the exact file list of `ui-craft`; the new reference broke it after the focused test was green.
-  The T1 commit was made before the full package ran; it was reset locally and re-recorded with the
-  green tree. Run the whole package before committing a new file, not only the focused test.
-- **The plan can ride the feature PR when the fence allows it.** The 0218 fence did not protect
-  `design` or `ui-craft`, so the plan commit and the feature shared PR #389; the two-PR split is for
-  a path the base fence protects, not a ritual.
-- **The install was clean this time.** No gate held the binary; the release installer replaced two
-  skills and left 19 matched.
+- **The comparison is closed.** Design delivery, product UX, per-artboard read, another approach,
+  comment screenshots and tuning are all in the pair now; nothing else from gentle-shell's design
+  skills is missing.
+- **The plan rode the feature PR again.** The fence did not protect `skills/design/SKILL.md`, so the
+  plan and the feature shared PR #392; the two-PR split remains for a path the base fence protects.
+- **The install was clean.** The release installer replaced one skill and left 19 matched.
 
 ## The next feature
 
-- **The canvas tuning.** Sliders for spacing, colour and type scale, plus a "Copy as prompt" control,
-  so a person can tune values in the artboard and hand the chosen numbers back as text. It is code
-  (`internal/assets/design/canvas.html` and its tests), so the fence has to let the canvas change.
-- **The installer names the process that holds the binary**, still open from 0218.
-- **Pin `all:*`** with a repo test, still open from 0216.
+- **The installer names the process that holds the binary**, open from 0218: when `odachi.exe` is in
+  use, say which process and what to do, instead of a `Copy-Item` IOException. Two installs were
+  blocked by another project's gate; the message is the defect.
+- **Pin `all:*`** with a repo test, open from 0216: a regression to `*` would pass the suite for
+  dotfile assets.
 - One writer per worktree; one heavy gate per machine.
 
 ## The commands that work
 
 ```sh
-odachi review --base ab82e8b66afb51a1221cf49cdf77d3fe71f79a1d \
+odachi review --base 1f1709fad33c6cef3f67f31f1d630f87e475517d \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
