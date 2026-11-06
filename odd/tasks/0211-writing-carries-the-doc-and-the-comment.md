@@ -15,7 +15,7 @@ R1 · "`writing` teaches the long document and the collaboration comment without
 
 ## Steps
 - [x] T1 · writing routes the long document and the comment, with the depth beside it   R1 · route:inline · tree:dd59d01c3bdac5d758b03b4210cd44d766fab437
-- [ ] T2 · the changelog names the two texts   R1 · route:inline
+- [x] T2 · the changelog names the two texts   R1 · route:inline · tree:daf869d979f7bc662977f57d5d32d338f630528a
 
 ## History
 L1 · "`writing` teaches the long document and the collaboration comment without growing its body: the shapes and the tone live in `references/`, and the body routes them"
