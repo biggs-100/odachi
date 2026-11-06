@@ -212,6 +212,49 @@ func TestPublishingIsReadBack(t *testing.T) {
 	}
 }
 
+// TestWritingShipsTheDocumentTemplate: the document shape was prose; the asset is
+// the copyable skeleton that makes it an artifact. The body declares it under
+// ## Assets and sends the writer to copy it.
+func TestWritingShipsTheDocumentTemplate(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+
+	var writing skills.Skill
+	for _, s := range all {
+		if s.Name == "writing" {
+			writing = s
+			break
+		}
+	}
+	if writing.Name == "" {
+		t.Fatal("the payload has no writing skill")
+	}
+
+	var template []byte
+	for _, file := range writing.Files {
+		if file.Path == "assets/doc.md" {
+			template = file.Content
+		}
+	}
+	if len(template) == 0 {
+		t.Fatal("writing carries no assets/doc.md: the copyable skeleton is missing")
+	}
+	for _, want := range []string{"## Quick path", "## Details", "## Checklist", "## Next step"} {
+		if !strings.Contains(string(template), want) {
+			t.Errorf("the template does not have %q", want)
+		}
+	}
+
+	body := string(writing.Main())
+	for _, want := range []string{"## Assets", "`assets/doc.md`", "copy"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("writing does not say %q: the asset has no route", want)
+		}
+	}
+}
+
 // TestShapeTeachesExplorationBeforeTheBrief: the front of the cycle is a skill,
 // not a verb. It explores before the brief, ends in `start --brief`, keeps the
 // brief in the human's hands, and `drive` is what loads it when the request does

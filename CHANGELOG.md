@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A skill folder carries the assets it copies.** `assets/` holds a template or a schema the skill
+  uses, declared under `## Assets` and installed beside `SKILL.md` and `references/`; an orphaned
+  file or a tree under `assets/` is refused. `writing` ships `assets/doc.md`, the copyable skeleton
+  of a long document (0216).
+
 ## v0.21.0 - 2026-11-06
 
 - **A published text is read back.** A PR is compared with the file that was posted

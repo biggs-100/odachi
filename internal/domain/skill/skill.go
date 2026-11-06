@@ -57,6 +57,10 @@ type Skill struct {
 	// the disk; Parse cannot, so a skill parsed alone carries none and the
 	// reference rules have nothing to contradict.
 	References []string
+	// Assets is what the skill folder holds under assets/, as paths relative to
+	// the folder ("assets/doc.md"), sorted. An asset is a file the skill copies
+	// or uses -a template, a schema-, not text the agent reads as instructions.
+	Assets []string
 	// FolderProblems are the violations the loader found while reading the
 	// folder, such as a references entry that is not a file. They belong to the
 	// skill even though they are not in its text.
@@ -139,6 +143,7 @@ func (s Skill) Problems() []Problem {
 	}
 
 	problems = append(problems, s.referenceProblems(body)...)
+	problems = append(problems, s.assetProblems(body)...)
 	problems = append(problems, s.FolderProblems...)
 
 	return problems
@@ -148,6 +153,11 @@ func (s Skill) Problems() []Problem {
 // references/ that ends in .md. A phrase such as `references/<file>.md` is not a
 // declaration, because it names no file.
 var referencePath = regexp.MustCompile("`(references/[A-Za-z0-9._/-]+\\.md)`")
+
+// assetPath is an asset the body declares: a backticked path under assets/ that
+// names one file. Any extension is allowed; a tree under assets/ is refused by
+// the loader, so the pattern names no slash after the folder.
+var assetPath = regexp.MustCompile("`(assets/[A-Za-z0-9._-]+)`")
 
 // referenceProblems applies the grammar every skill carries: what it returns, and
 // -for a skill that carries depth- what the body names must exist, what the folder
@@ -191,7 +201,7 @@ func (s Skill) referenceProblems(body []string) []Problem {
 		}
 	} else {
 		for _, reference := range folder {
-			if !referenceListed(references, reference) {
+			if !listedInSection(references, reference) {
 				add("the reference %q is not a bullet of ## References: every file under references/ is one line of that list", reference)
 			}
 		}
@@ -216,6 +226,60 @@ func (s Skill) referenceProblems(body []string) []Problem {
 	return problems
 }
 
+// assetProblems applies the grammar assets carry: a file the skill names must
+// exist, a file the folder holds must be declared, and the inventory is a list,
+// one line per file -the same shape references use, one folder later.
+func (s Skill) assetProblems(body []string) []Problem {
+	problems := []Problem{}
+	add := func(format string, args ...any) {
+		problems = append(problems, Problem{File: s.Path, Reason: fmt.Sprintf(format, args...)})
+	}
+
+	named := referencedAssets(s.Body)
+	folder := s.Assets
+	if len(named) == 0 && len(folder) == 0 {
+		return problems
+	}
+
+	for _, asset := range named {
+		if !slices.Contains(folder, asset) {
+			add("the asset %q does not exist: name the file the skill has, or write it", asset)
+		}
+	}
+
+	assets, hasAssets := sectionContent(body, "Assets")
+	if !hasAssets {
+		if len(folder) > 0 {
+			add("a skill with assets needs a %q section listing each file", "Assets")
+		}
+		return problems
+	}
+
+	for _, asset := range folder {
+		if !listedInSection(assets, asset) {
+			add("the asset %q is not a bullet of ## Assets: every file under assets/ is one line of that list", asset)
+		}
+	}
+
+	return problems
+}
+
+// referencedAssets returns the assets the body names, in the order they appear
+// and once each.
+func referencedAssets(body string) []string {
+	seen := map[string]bool{}
+	paths := []string{}
+	for _, match := range assetPath.FindAllStringSubmatch(body, -1) {
+		asset := match[1]
+		if seen[asset] {
+			continue
+		}
+		seen[asset] = true
+		paths = append(paths, asset)
+	}
+	return paths
+}
+
 // referencedPaths returns the references the body names, in the order they
 // appear and once each.
 func referencedPaths(body string) []string {
@@ -232,11 +296,10 @@ func referencedPaths(body string) []string {
 	return paths
 }
 
-// namesPath reports whether a section declares a reference by its exact path.
-// referenceListed reports whether the inventory declares the path in a bullet:
-// ## References is a list, one line per file, and a sentence that names the path
-// declares nothing (0207).
-func referenceListed(section, reference string) bool {
+// listedInSection reports whether an inventory section declares the path in a
+// bullet: ## References and ## Assets are lists, one line per file, and a
+// sentence that names the path declares nothing (0207).
+func listedInSection(section, reference string) bool {
 	needle := "`" + reference + "`"
 	for _, line := range strings.Split(section, "\n") {
 		trimmed := strings.TrimSpace(line)

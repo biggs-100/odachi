@@ -275,8 +275,13 @@ func load(root string, files Files) ([]skill.Skill, error) {
 		if err != nil {
 			return nil, err
 		}
+		assets, assetProblems, err := assetsOf(dirPath, rel, files)
+		if err != nil {
+			return nil, err
+		}
 		parsed.References = references
-		parsed.FolderProblems = problems
+		parsed.Assets = assets
+		parsed.FolderProblems = append(problems, assetProblems...)
 		loaded = append(loaded, parsed)
 	}
 	return loaded, nil
@@ -332,6 +337,58 @@ func referencesOf(dir, rel string, files Files) ([]string, []skill.Problem, erro
 	}
 	slices.Sort(references)
 	return references, problems, nil
+}
+
+// assetsOf reads what a skill folder holds under assets/, as paths relative to
+// the folder. An asset is a file the skill copies or uses -a template, a schema-
+// so any extension is allowed and a tree is refused: a folder is not a file.
+func assetsOf(dir, rel string, files Files) ([]string, []skill.Problem, error) {
+	assetDir := filepath.Join(dir, "assets")
+	label := strings.TrimSuffix(rel, "/"+SkillFile) + "/assets"
+
+	exists, err := files.Exists(assetDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+	}
+	if !exists {
+		return nil, nil, nil
+	}
+
+	isDir, err := files.IsDir(assetDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+	}
+	if !isDir {
+		return nil, []skill.Problem{{
+			File:   label,
+			Reason: "it is a file, not a folder: an asset is a file inside assets/",
+		}}, nil
+	}
+
+	names, err := files.List(assetDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not read %s/: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+	}
+
+	assets := make([]string, 0, len(names))
+	problems := []skill.Problem{}
+	for _, name := range names {
+		entry := filepath.Join(assetDir, name)
+		entryIsDir, err := files.IsDir(entry)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not check %s/%s: %s; check the permissions and run odachi skills again", label, name, oneLine(err.Error()))
+		}
+		if entryIsDir {
+			problems = append(problems, skill.Problem{
+				File:   label + "/" + name,
+				Reason: "it is a folder: an asset is a file, not a tree",
+			})
+			continue
+		}
+		assets = append(assets, "assets/"+name)
+	}
+	slices.Sort(assets)
+	return assets, problems, nil
 }
 
 // noSkills is the starting point, not a failure: it says how to create the first

@@ -16,9 +16,14 @@ R1 · "a skill folder carries `assets/`: the files it copies or uses —a templa
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · the contract accepts assets: declared, loaded, embedded and installed   R1 · route:inline
-- [ ] T2 · writing ships the document template and routes it   R1 · route:inline
-- [ ] T3 · the changelog names the capability   R1 · route:inline
+- [x] T1 · the contract accepts assets: declared, loaded, embedded and installed   R1 · route:inline · tree:f7a56e8e877507168e8c2fc9ebac3c0107f50c6d
+- [x] T2 · writing ships the document template and routes it   R1 · route:inline · tree:c781cab3e809900cece57184ee5f89978d3e8754
+- [x] T3 · the changelog names the capability   R1 · route:inline · tree:763b8f81700f212f0e74295beb7ff62a0ac26762
+- [x] T4 · the impact map names the asset folder   R1 · route:inline · tree:fcd7fc336a7c4089039de85bd785daa8af6a4e5d
+- [x] T5 · the payload count knows assets   R1 · route:inline · tree:56dc7766b18b7b3b2ddff24e4dc7fdd14e4b3064
+- [x] T6 · the project catalog and the embed carry every asset   R1 · route:inline · tree:0ecebb5a46d8aa0c67be944eee65c22774e1f9f6
 
 ## History
 L1 · "a skill folder carries `assets/`: the files it copies or uses —a template, a schema— installed with the skill, declared in the body, and refused when a file is orphaned or a declaration names no file; `writing` ships the copyable document template as its first consumer"
+L2 · OFICIO · "the pinned test was red before the asset landed: writing carried no assets/doc.md" (porque the RED is the proof the test guards the asset; test and asset landed in one commit, so the record cannot show it)
+L3 · OFICIO · "the embed uses all:* and a build probe listed data/.hidden, data/_under and data/doc.md" (porque the loader lists dot and underscore names, and the old * would have let a check-green tree install unequal)

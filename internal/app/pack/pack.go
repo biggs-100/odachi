@@ -629,7 +629,8 @@ func validate(skills []Skill) error {
 }
 
 // validFilePath keeps every write inside the skill folder: a relative path with
-// forward slashes, SKILL.md or a markdown reference under references/.
+// forward slashes, SKILL.md, a markdown reference under references/, or a flat
+// file under assets/.
 func validFilePath(rel string) bool {
 	if rel == "" || strings.Contains(rel, `\`) || strings.HasPrefix(rel, "/") {
 		return false
@@ -637,7 +638,10 @@ func validFilePath(rel string) bool {
 	if path.Clean(rel) != rel || rel == "." || rel == ".." || strings.HasPrefix(rel, "../") {
 		return false
 	}
-	return rel == SkillFile || strings.HasPrefix(rel, "references/")
+	if rel == SkillFile || strings.HasPrefix(rel, "references/") {
+		return true
+	}
+	return strings.HasPrefix(rel, "assets/") && !strings.Contains(strings.TrimPrefix(rel, "assets/"), "/")
 }
 
 // firstFailure is the failure the one-line message quotes, so a blocked run
