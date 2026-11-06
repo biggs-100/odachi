@@ -10,18 +10,28 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the verifier subagent, its permissions or its prompt"
-paths = ["internal/domain/persona/**", "internal/app/init/personas.go"]
+not   = "no change to the canvas, its sliders or a copy-as-prompt control: that is the next feature"
+paths = ["internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts"]
 deps  = []
 
 [[rule]]
-not   = "no change to the gate or to its timeout"
-paths = ["internal/app/check/**"]
+not   = "no change to the design folder, the manifest or `comments.json`"
+paths = ["skills/design/references/files.md", "internal/domain/design/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the design verbs, the handoff or the ODD link"
+paths = ["cmd/odachi/design.go", "internal/app/design/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the other references of `ui-craft` or `design`"
+paths = ["skills/ui-craft/references/the-tells.md", "skills/ui-craft/references/the-numbers.md", "skills/ui-craft/references/motion.md", "skills/ui-craft/references/the-read.md"]
 deps  = []
 
 [[rule]]
 not   = "no change to the voice or the interview's questions"
-paths = ["internal/app/start/**", "cmd/odachi/interview.go"]
+paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
 deps  = []
 
 [[rule]]
@@ -32,11 +42,6 @@ deps  = []
 [[rule]]
 not   = "no change to `odachi role` or to the skill it renders"
 paths = ["internal/app/role/**", "internal/domain/role/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to the design canvas, its token or the push plugin"
-paths = ["internal/adapters/designserver/**", "internal/assets/design/canvas.html", "internal/assets/design/plugin.ts"]
 deps  = []
 
 [[rule]]
@@ -52,9 +57,4 @@ deps  = []
 [[rule]]
 not   = "no change to the skills the feature does not touch: tests, drive, writing, pull-request, commits and triage"
 paths = ["skills/tests/**", "skills/drive/**", "skills/writing/**", "skills/pull-request/**", "skills/commits/**", "skills/triage/**"]
-deps  = []
-
-[[rule]]
-not   = "the `all:*` pin is another feature"
-paths = ["skills/embed.go"]
 deps  = []
