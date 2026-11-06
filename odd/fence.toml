@@ -10,18 +10,28 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the skill contract or the curriculum"
-paths = ["skills/**", "internal/domain/skill/**"]
+not   = "no change to the six risks in `commits` or to their table: they are the named high-risk items already"
+paths = ["skills/commits/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the stored proofs: never touched"
-paths = ["proof/**"]
+not   = "no change to `odachi check` or to `odachi review` behavior"
+paths = ["internal/app/check/**", "internal/app/review/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the skill contract or its format: only the text of two skills and one pinned test"
+paths = ["internal/domain/skill/**", "internal/app/skills/**"]
 deps  = []
 
 [[rule]]
 not   = "no change to the voice or the interview's questions"
 paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
+deps  = []
+
+[[rule]]
+not   = "no change to the stored proofs: never touched"
+paths = ["proof/**"]
 deps  = []
 
 [[rule]]
@@ -42,4 +52,9 @@ deps  = []
 [[rule]]
 not   = "no change to the release workflow"
 paths = [".github/workflows/**"]
+deps  = []
+
+[[rule]]
+not   = "no readback after publishing, and no `assets/` in the skill contract: each is another feature"
+paths = ["skills/pull-request/**", "skills/writing/**"]
 deps  = []
