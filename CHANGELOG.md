@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.23.0 - 2026-11-06
 
 - **The verifier runs the focused package, not a second gate.** The delegation request names the
   package the change touches, never a second `go test ./...`: a full suite beside the gate competes
