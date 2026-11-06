@@ -13,7 +13,7 @@ R1 · "`odachi doctor` names the PATH this process hands to a command when it pa
 - the changelog's Unreleased section names the check
 
 ## Steps
-- [ ] T1 · doctor measures the PATH a child inherits and warns above the Windows limit   R1 · route:inline
+- [x] T1 · doctor measures the PATH a child inherits and warns above the Windows limit   R1 · route:inline · tree:14df19e754680f9ff955bfbf1052c53281834c52
 - [ ] T2 · the report says fifteen, and the impact map names the new check   R1 · route:inline
 - [ ] T3 · the changelog names the check   R1 · route:inline
 
