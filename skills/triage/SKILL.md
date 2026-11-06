@@ -20,12 +20,19 @@ something else.
 - Reproduce the symptom before accepting the diagnosis. The mechanism the report
   names is a hypothesis; the symptom is the evidence. Load `tests` and write the
   failing test.
+- A test written against the mechanism the report names that passes on the
+  untouched tree is a diagnosis that failed, not a report that cannot be
+  reproduced: the report is right and the line is not. Test the surface the
+  symptom really touches, and say so in the thread.
 - The fix goes where the cause is, not where it hurts. If the fix adds a state, a
   flag or a verb, ask what you can delete or relax first.
 - A report that cannot be reproduced becomes a message that diagnoses itself or a
   question with the exact input; not a blind patch.
 - Close with the test that reproduces the report and turns green. Without that
   test, the report stays open, even if the code "should work now".
+- A thread that carries two failure modes closes neither: comment naming both,
+  what shipped for which, and what each still waits on. Closing one strands the
+  reporters of the other.
 - If the report is outside the fence in `brief.md`, do not fix it: `odachi ask`.
 - If the fix touches several roots, one step per root; not one step per report.
 
