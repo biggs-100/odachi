@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.18.5 - 2026-11-05
 
 - **`triage` learns two lessons from its reports.** A test written against the mechanism a report
   names that passes on the untouched tree accuses the diagnosis, not the report, so the test goes
