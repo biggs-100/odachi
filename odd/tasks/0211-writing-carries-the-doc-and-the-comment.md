@@ -14,7 +14,7 @@ R1 · "`writing` teaches the long document and the collaboration comment without
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · writing routes the long document and the comment, with the depth beside it   R1 · route:inline
+- [x] T1 · writing routes the long document and the comment, with the depth beside it   R1 · route:inline · tree:dd59d01c3bdac5d758b03b4210cd44d766fab437
 - [ ] T2 · the changelog names the two texts   R1 · route:inline
 
 ## History
