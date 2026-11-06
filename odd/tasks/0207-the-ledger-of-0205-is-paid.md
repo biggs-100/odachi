@@ -14,7 +14,7 @@ R1 · "the four rows `docs/review-debt.md` left open are paid: the pack report c
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · pack counts a backup only after one ran, and a new reference is not one   R1 · route:inline
+- [x] T1 · pack counts a backup only after one ran, and a new reference is not one   R1 · route:inline · tree:d5d6d1269b3d38774d7fe182bdc6198eb337ce63
 - [ ] T2 · the gates table and the references list are parsed, so prose is refused   R1 · route:inline
 - [ ] T3 · the missing half of the reference drift has its test   R1 · route:inline
 - [ ] T4 · a git that cannot answer Head is an error, not an empty history   R1 · route:inline
