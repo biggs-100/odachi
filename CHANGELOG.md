@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **`triage` learns two lessons from its reports.** A test written against the mechanism a report
+  names that passes on the untouched tree accuses the diagnosis, not the report, so the test goes
+  to the surface the symptom touches; and a thread that carries two failure modes closes neither,
+  with a comment that names both and what each waits on (0212).
+
 ## v0.18.4 - 2026-11-05
 
 - **`writing` carries the document and the comment.** The skill routes two new references:
