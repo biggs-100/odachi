@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.18.3 - 2026-11-05
 
 - **The doctor names an environment that cuts a command.** Check 15 measures the PATH this
   process hands to a child; above the 8191 characters cmd can pass it warns with the length,
