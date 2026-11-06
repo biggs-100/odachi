@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.18.1 - 2026-11-05
 
 - **The four rows of the review ledger are paid.** `pack` counts a backup only when one ran and
   reports a skill that only gained a file as `written`; `skills --check` reads the gates table and
