@@ -136,6 +136,47 @@ func TestDelegationPolicyLivesInSlicesAndDrive(t *testing.T) {
 	}
 }
 
+// TestVerificationIsProportional: the ceremony a change owes is decided by its
+// blast radius, not by habit. `tests` names the three tiers and the two
+// comparisons a red owes, and `slices` routes the delegation policy to the same
+// ladder: a curriculum that says "always verify" is ignored, and one that says
+// "never verify" is dangerous.
+func TestVerificationIsProportional(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		var folder strings.Builder
+		for _, file := range s.Files {
+			folder.Write(file.Content)
+		}
+		byName[s.Name] = folder.String()
+	}
+
+	for _, want := range []string{
+		"A passive change",
+		"A medium change",
+		"A high change",
+		"writer's own",
+		"odachi-verify",
+		"on the base",
+		"already failed",
+		"comes from the machine",
+		"never reported as green",
+	} {
+		if !strings.Contains(byName["tests"], want) {
+			t.Errorf("tests no dice %q: la verificación proporcional se perdió", want)
+		}
+	}
+	for _, want := range []string{"proportional", "passive change", "odachi-verify", "six risks"} {
+		if !strings.Contains(byName["slices"], want) {
+			t.Errorf("slices no dice %q: la escalera no llega a la política de delegación", want)
+		}
+	}
+}
+
 // TestShapeTeachesExplorationBeforeTheBrief: the front of the cycle is a skill,
 // not a verb. It explores before the brief, ends in `start --brief`, keeps the
 // brief in the human's hands, and `drive` is what loads it when the request does
