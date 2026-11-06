@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The block keeps notes, not builds.** `.git/odachi/scratch/` is for a note a later turn has
+  to read (a plan, a draft) and `clean` empties it; a build artifact and a one-use transport (a
+  binary, a pull request body, a prompt answer) live in the temp folder and die with the run
+  (0213).
+
 ## v0.18.5 - 2026-11-05
 
 - **`triage` learns two lessons from its reports.** A test written against the mechanism a report
