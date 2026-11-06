@@ -12,7 +12,7 @@ R1 · "`triage` teaches the two lessons the comparison with gentle-ai found: a t
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · triage teaches the two lessons: the passing test and the two-failure thread   R1 · route:inline
+- [x] T1 · triage teaches the two lessons: the passing test and the two-failure thread   R1 · route:inline · tree:47497f3a6cf00b51a87ae0a6a3567f04cf08ccd1
 - [ ] T2 · the changelog names the two rules   R1 · route:inline
 
 ## History
