@@ -18,9 +18,10 @@ A subagent starts without cache: **it does not save tokens, it protects your con
   (`## Skills to load before work`).
 - To write, use **`odachi-worker`**; to verify, **`odachi-verify`** (read-only).
   The worker does not commit or delegate; the parent keeps git and the gate.
-- A change that names one of the six risks in `commits` gets a verifier even when
-  you wrote it inline: `odachi-verify` reads the task doc and answers per
-  requirement.
+- Verification is proportional (see `tests`): a passive change is read, a medium
+  one keeps the writer's own verification, and only a change that names one of the
+  six risks in `commits` gets a verifier even when you wrote it inline:
+  `odachi-verify` reads the whole task doc and answers per requirement.
 - The return is bounded: **=2k tokens**, `path:line` evidence and the list of files
   read; the rest stays inside.
 - Ask it to record with `odachi plan` and not to say "done" without
