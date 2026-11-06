@@ -17,3 +17,4 @@ R1 · "the gate's default bound fits the suite it actually runs: `go test ./...`
 
 ## History
 L1 · "the gate's default bound fits the suite it actually runs: `go test ./...` takes about 700 seconds on this machine (686 for cmd/odachi under contention, 207 alone), so 600 kills a green suite and the default moves to 900"
+L2 · OFICIO · "the 686-second measurement was contaminated: cmd/odachi alone took 207 seconds, and the long run had another heavy suite alive (its tests were faster, which only external load explains)" (porque the default stays 900 as a bound for a machine shared with another heavy run, and the released note's 700 seconds is the contended number, not the suite's)
