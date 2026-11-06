@@ -11,7 +11,7 @@
 
 [[rule]]
 not   = "no change to the other eighteen skills"
-paths = ["skills/acceptance/**", "skills/bootstrap/**", "skills/commits/**", "skills/data/**", "skills/design/**", "skills/drive/**", "skills/go-tests/**", "skills/pull-request/**", "skills/role-craft/**", "skills/security/**", "skills/shape/**", "skills/ship/**", "skills/skill-craft/**", "skills/skill-improve/**", "skills/slices/**", "skills/tests/**", "skills/triage/**", "skills/ui-craft/**"]
+paths = ["skills/acceptance/**", "skills/bootstrap/**", "skills/commits/**", "skills/data/**", "skills/design/**", "skills/drive/**", "skills/go-tests/**", "skills/pull-request/**", "skills/role-craft/**", "skills/security/**", "skills/shape/**", "skills/ship/**", "skills/skill-craft/**", "skills/skill-improve/**", "skills/slices/**", "skills/tests/**", "skills/ui-craft/**", "skills/writing/**"]
 deps  = []
 
 [[rule]]
