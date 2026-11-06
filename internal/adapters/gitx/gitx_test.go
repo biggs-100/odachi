@@ -72,6 +72,19 @@ func TestMessagesOnARepositoryWithNoCommitsIsEmpty(t *testing.T) {
 	}
 }
 
+// TestMessagesRefusesARepositoryGitCannotRead: only an unborn HEAD is an empty
+// history. A folder git cannot read is an error, and swallowing it made the
+// trailers disappear as if the change had never claimed anything (0207).
+func TestMessagesRefusesARepositoryGitCannotRead(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, "notas.md"), "# notas\n")
+
+	got, err := gitx.Messages(root, gitx.EmptyTree)
+	if err == nil {
+		t.Fatalf("Messages = %v, want the error of a folder git cannot read", got)
+	}
+}
+
 // TestMessagesSinceNothingReadsEveryCommit: with a history, "since nothing" is
 // the whole history, not zero commits.
 func TestMessagesSinceNothingReadsEveryCommit(t *testing.T) {

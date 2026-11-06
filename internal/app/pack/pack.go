@@ -122,6 +122,7 @@ type DestResult struct {
 	Scope     string
 	Installed int
 	BackedUp  int
+	Written   int
 	Unchanged int
 	Foreign   int
 	Failed    int
@@ -397,12 +398,13 @@ func install(t target, skills []Skill, files Files, dryRun bool) DestResult {
 
 // installSkill writes one skill folder, file by file, each one backed up before
 // it is replaced. The skill is reported once: installed when its SKILL.md was not
-// there, unchanged when every file matches, backed up and written when a skill
-// that already lived learned something new.
+// there, unchanged when every file matches, backed up and written when a file the
+// human had is replaced, written when the skill only gained a file.
 func (r *DestResult) installSkill(t target, who string, skill Skill, files Files, dryRun bool) {
 	label := t.label + "/" + skill.Name + "/"
 	mainExisted := false
 	identical := true
+	backedUp := false
 
 	for _, file := range skill.Files {
 		path := filepath.Join(t.dir, skill.Name, filepath.FromSlash(file.Path))
@@ -429,16 +431,20 @@ func (r *DestResult) installSkill(t target, who string, skill Skill, files Files
 
 		identical = false
 		r.Files = append(r.Files, display)
+		// The human's bytes go aside before they go away: a backup that can be
+		// skipped is not a backup. A file that was not there needs none, and a
+		// skill that only gained one is never reported as backed up (0207).
+		if exists {
+			backedUp = true
+			if !dryRun {
+				if _, err := files.Backup(path); err != nil {
+					r.fail(who, display, err)
+					return
+				}
+			}
+		}
 		if dryRun {
 			continue
-		}
-		// The human's bytes go aside before they go away: a backup that can be
-		// skipped is not a backup. A file that was not there needs none.
-		if exists {
-			if _, err := files.Backup(path); err != nil {
-				r.fail(who, display, err)
-				return
-			}
 		}
 		if err := files.Write(path, file.Content); err != nil {
 			r.fail(who, display, err)
@@ -457,11 +463,18 @@ func (r *DestResult) installSkill(t target, who string, skill Skill, files Files
 			verb = "would install"
 		}
 		r.Lines = append(r.Lines, who+" · "+verb+" · "+label)
-	default:
+	case backedUp:
 		r.BackedUp++
 		verb := "backed up and written"
 		if dryRun {
 			verb = "would back up and write"
+		}
+		r.Lines = append(r.Lines, who+" · "+verb+" · "+label)
+	default:
+		r.Written++
+		verb := "written"
+		if dryRun {
+			verb = "would write"
 		}
 		r.Lines = append(r.Lines, who+" · "+verb+" · "+label)
 	}
@@ -503,6 +516,13 @@ func (r DestResult) summary(dryRun bool) string {
 		parts = append(parts, fmt.Sprintf("%d to back up", r.BackedUp))
 	default:
 		add(r.BackedUp, "backed up", "backed up")
+	}
+
+	switch {
+	case dryRun && r.Written > 0:
+		parts = append(parts, fmt.Sprintf("%d to write", r.Written))
+	default:
+		add(r.Written, "written", "written")
 	}
 
 	add(r.Unchanged, "unchanged", "unchanged")

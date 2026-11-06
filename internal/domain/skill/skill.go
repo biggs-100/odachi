@@ -191,8 +191,8 @@ func (s Skill) referenceProblems(body []string) []Problem {
 		}
 	} else {
 		for _, reference := range folder {
-			if !namesPath(references, reference) {
-				add("the reference %q is not in ## References: every file under references/ is declared there", reference)
+			if !referenceListed(references, reference) {
+				add("the reference %q is not a bullet of ## References: every file under references/ is one line of that list", reference)
 			}
 		}
 	}
@@ -206,7 +206,7 @@ func (s Skill) referenceProblems(body []string) []Problem {
 			add("the %q section is empty: give each reference the situation that loads it", "Decision gates")
 		default:
 			for _, reference := range folder {
-				if !namesPath(gates, reference) {
+				if !gateRow(gates, reference) {
 					add("the reference %q is not a row of ## Decision gates: a reference nobody routes is unreachable", reference)
 				}
 			}
@@ -233,8 +233,55 @@ func referencedPaths(body string) []string {
 }
 
 // namesPath reports whether a section declares a reference by its exact path.
-func namesPath(section, reference string) bool {
-	return strings.Contains(section, "`"+reference+"`")
+// referenceListed reports whether the inventory declares the path in a bullet:
+// ## References is a list, one line per file, and a sentence that names the path
+// declares nothing (0207).
+func referenceListed(section, reference string) bool {
+	needle := "`" + reference + "`"
+	for _, line := range strings.Split(section, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "- ") && !strings.HasPrefix(trimmed, "* ") {
+			continue
+		}
+		if strings.Contains(trimmed, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+// gateRow reports whether the table routes the path in a data row. The header
+// names the columns and the separator names nothing, so neither routes (0207).
+func gateRow(section, reference string) bool {
+	needle := "`" + reference + "`"
+	header := false
+	for _, line := range strings.Split(section, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "|") {
+			continue
+		}
+		if separatorRow(trimmed) {
+			continue
+		}
+		if !header {
+			header = true
+			continue
+		}
+		if strings.Contains(trimmed, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+// separatorRow is the | --- | --- | line under a table's header.
+func separatorRow(row string) bool {
+	for _, r := range row {
+		if r != '|' && r != '-' && r != ':' && r != ' ' && r != '\t' {
+			return false
+		}
+	}
+	return true
 }
 
 // Check validates a whole project: every file, unique names, and a registry that
