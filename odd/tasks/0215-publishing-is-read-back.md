@@ -14,8 +14,8 @@ R1 · "a published PR or issue is read back and compared with what was sent: the
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · pull-request and writing read the published text back   R1 · route:inline
-- [ ] T2 · the changelog names the rule   R1 · route:inline
+- [x] T1 · pull-request and writing read the published text back   R1 · route:inline · tree:61c5b3ab41f9052620741cbadf0ebb71b00aaaf2
+- [x] T2 · the changelog names the rule   R1 · route:inline · tree:fef9a0ee3b8ad2fb91eb9e4bd23c1b803af82d39
 
 ## History
 L1 · "a published PR or issue is read back and compared with what was sent: the title, the body, the base and the head are the ones that were posted, because a text that was sent is not a text that arrived"
