@@ -45,6 +45,11 @@ func repoSkillFiles(t *testing.T) int {
 			t.Fatalf("glob skills/%s/references: %v", name, err)
 		}
 		count += len(references)
+		assets, err := filepath.Glob(filepath.Join(repoRoot(t), "skills", name, "assets", "*"))
+		if err != nil {
+			t.Fatalf("glob skills/%s/assets: %v", name, err)
+		}
+		count += len(assets)
 	}
 	return count
 }
