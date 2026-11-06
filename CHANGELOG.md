@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.18.4 - 2026-11-05
 
 - **`writing` carries the document and the comment.** The skill routes two new references:
   `the-doc.md`, the shape a guide, an RFC or an onboarding page needs (answer first, quick
