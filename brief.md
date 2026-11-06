@@ -1,30 +1,27 @@
-# writing-carries-the-doc-and-the-comment
+# triage-learns-the-two-lessons
 
 ## What must exist
-- `writing` teaches the long document and the collaboration comment without growing its body: the shapes and the tone live in `references/`, and the body routes them
+- `triage` teaches the two lessons the comparison with gentle-ai found: a test written against the mechanism a report names that passes on the untouched tree accuses the diagnosis, not the report; and a thread that carries two failure modes closes neither
 
 ## Done when
-- `writing` declares `## Output`, a `## Decision gates` table with one row per reference, and `## References` naming both files
-- `references/the-doc.md` carries the document's shape (answer first, quick path, details, checklist, next step) and how a reviewer reads it
-- `references/the-comment.md` carries the comment's tone and formula, including the language of the thread and no em dashes
-- the body stays within sixty lines and every rule it has today survives
-- `odachi skills --check` is green, and `odachi init` leaves the installed copy equal to the tree
-- the changelog's Unreleased section names the two texts
+- the two rules are lines of `triage` under `## Rules`, and the eight it has today survive
+- the body stays within the sixty-line cap and `odachi skills --check` is green
+- `odachi init` leaves the installed copy equal to the tree
+- the changelog's Unreleased section names the two rules
 - `go test ./...` is green
 
 ## Not included (first version)
 - no change to the other eighteen skills
-- no change to the grammar: references stay `.md` under `references/`, and `--check` keeps the rule it has
+- no change to the grammar or the contract: no new reference, no new section
 - no new skill, verb or flag
-- no change to the voice or the interview's questions: an artifact stays English, and a comment follows the thread's language -the reference says so
+- no change to the voice or the interview's questions
 - no change to the stored proofs: never touched
 - no change to `odachi role` or to the skill it renders
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
 - no change to the release workflow
-- no adoption of gentle-ai's frontmatter, its section names or its license text
 
 ## Decisions taken
-- the depth goes to two references, not the body: a document and a comment are two shapes, and two shapes justify a router
-- the rules that live in the body today stay there; the references add the shape and the examples
-- a comment follows the language of the thread; an artifact stays English
+- the two rules go in the body: each is one line, and the skill has room under the cap
+- the first keeps the symptom as the evidence and turns a passing test into a diagnosis: it is what stops a fix on the wrong line
+- the second names what to comment, not only that the thread stays open
