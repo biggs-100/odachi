@@ -26,6 +26,10 @@ in one sitting.
   a check is required, the PR is not ready.
 - If the repo uses issues, reference the approved issue with
   `Closes/Fixes/Resolves #N`; otherwise use `Refs #N`. Do not invent an approval.
+- A create command is not done at the URL. Read the result back with
+  `gh pr view <url> --json title,body,baseRefName,headRefName` and compare it with
+  the file you posted: an empty body, a wrong base or a title that lost its point
+  is a publish failure, fixed before you ask for review.
 - `commits` decides the message; this skill decides the cut. The PR reads in order.
 - Close with `odachi check --run "<command>"` green and the saved output: the PR
   does not replace the tree's proof.
