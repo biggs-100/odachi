@@ -22,17 +22,20 @@ The human asks for a screen, mockup, landing page or visual directions, iterates
 - **Link a tracked feature both ways**: when the design comes from `odd/tasks/<feature>.md`, set `feature` in the manifest and append one `L` entry to that document's log naming `design/<slug>/` and its artboards; untracked work leaves `feature` out.
 - **Directions differ in strategy, not in colour.** Three by default, each with the tradeoff it makes; three that make the same tradeoff are one option painted three times.
 - **Pair with `ui-craft` before choosing directions**: it owns the hierarchy, the numbers and the tells; this skill owns the delivery. Read only the parts the brief needs.
+- **Before reporting an artboard, read it with `ui-craft`**: `the-read` for every artboard, and `adaptive-interfaces` when it has states; fix every gap before saying it is done.
 - **The manifest is the truth**: `design.json` names every artboard and its screenshot, and it is kept in sync with the folder on every change.
 - **Real content and accessible markup**: the audience's copy, no lorem ipsum; landmarks, WCAG AA, visible focus, `prefers-reduced-motion`.
 - **Ask at most one clarifying question**, and only when the brief lacks the goal or the content.
 - **Iterating edits only the targeted artboard.** Never rewrite the others.
+- **Another approach on the same brief is another artboard**: add the next `NN` and keep the others; a new slug is a new brief, never a new direction.
 - **Design system first when it exists**: read `design/system.md` and use only its tokens and component rules; before finishing an artboard, compare its colours and families with it.
 - **Capture the system by reading, never by writing**: `odachi design sync` reads CSS custom properties, the Tailwind config, components, token files and fonts, and writes `design/system.md` and `design/system.html` with each entry's source. No sources: propose a starter, never invent.
 - **Comments come from the folder, not a tool**: apply each open entry of `design/<slug>/comments.json` to its artboard with `selector` and `excerpt`, and resolve it with `odachi design comments <slug> --resolve <id...>`; never delete or reorder, leave the rest open.
+- **A comment's screenshot is read first**: when the entry carries `screenshot`, it shows the transient state the static artboard does not.
 
 ## Output
 
-The slug, each artboard with its tradeoff, the files changed in this turn, the comments resolved, and any open question. The canvas URL when it was opened, and the chosen artboard when it was handed off.
+The slug, each artboard with its tradeoff and the read it survived, the files changed in this turn, the comments resolved, and any open question. The canvas URL when it was opened, and the chosen artboard when it was handed off.
 
 ## References
 

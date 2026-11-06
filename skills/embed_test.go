@@ -196,6 +196,36 @@ func TestUICraftTeachesBrowseAndCompare(t *testing.T) {
 	}
 }
 
+// TestDesignChecksEveryArtboard: the delivery skill sends every artboard through
+// the UX read before reporting it, treats another approach as another artboard,
+// and looks at a comment's screenshot before the element.
+func TestDesignChecksEveryArtboard(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		var folder strings.Builder
+		for _, file := range s.Files {
+			folder.Write(file.Content)
+		}
+		byName[s.Name] = folder.String()
+	}
+
+	for _, want := range []string{
+		"the-read",
+		"adaptive-interfaces",
+		"next `NN`",
+		"screenshot",
+		"transient state",
+	} {
+		if !strings.Contains(byName["design"], want) {
+			t.Errorf("design no dice %q: el artboard puede reportarse sin leerlo", want)
+		}
+	}
+}
+
 // TestVerificationIsProportional: the ceremony a change owes is decided by its
 // blast radius, not by habit. `tests` names the three tiers and the two
 // comparisons a red owes, and `slices` routes the delegation policy to the same
