@@ -14,8 +14,8 @@ R1 · "before the code, the change names what it reuses, what it adds and what i
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · shape asks for the smallest change and the PR carries it   R1 · route:inline
-- [ ] T2 · the changelog names the rules   R1 · route:inline
+- [x] T1 · shape asks for the smallest change and the PR carries it   R1 · route:inline · tree:294be064f5a690e7622f2ee94cf7188a8b71e40d
+- [x] T2 · the changelog names the rules   R1 · route:inline · tree:e65df4bdcd4481fe69072712681d50e79134eb3d
 
 ## History
 L1 · "before the code, the change names what it reuses, what it adds and what it deletes, and the PR carries the same list to the reviewer: an abstraction needs a second caller, a pattern waits for three uses for the same reason, and a wrong abstraction is inlined back before it is extracted again"
