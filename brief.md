@@ -1,31 +1,30 @@
-# the-declared-risk-meets-the-diff
+# a-non-goal-says-when-it-comes-back
 
 ## What must exist
-- a full-tier change cannot pass as harmless in silence: when the review classifies the change as full -it touches a path the classifier names- and no commit declares a risk of its own, `check` names the contrast in one line of the ready output and names the paths, so the reviewer reads what the change claims against what it touches; a named risk stays silent, and the exit code and the verdict never move
+- a non-goal says when it comes back: every entry in a brief's "Not included" names the condition that reopens it -a measurement, a second caller, a version-, and `shape` asks for that condition when it drafts the brief, so the list of what waits does not become a list nobody can date
 
 ## Done when
-- the ready output names the contrast on a full-tier change whose commits say `Risk: none`, and on one whose commits carry no `Risk:` line at all; the line names the paths the classifier saw, capped
-- a named risk, a focused change and a passive change keep the ready output silent about risk
-- the line never changes the exit code, the reason or the proof
-- a test seeds a full path and commits with `Risk: none` and asserts the line; another seeds the same path and `Risk: data` and asserts silence; another seeds a focused path and asserts silence
-- the parser's tests cover `none`, a named risk, prose after the name, a missing line and an empty line refused
-- `odachi check --run "go test ./..."` is green
-- the changelog's Unreleased section names the line
+- `shape` says every non-goal names the condition that reopens it, with the three shapes (a measurement, a second caller, a version) and one example
+- `shape`'s Output names the non-goals with the path each one protects and the condition that reopens it
+- tests in `skills/embed_test.go` pin the text, observed red before it lands
+- `odachi skills --check` is green and the body stays under the sixty-line cap
+- `odachi init` leaves the installed copy equal to the tree
+- the changelog's Unreleased section names the convention
 - `go test ./...` is green
+- `odachi check --run "go test ./..."` is green
 
 ## Not included (first version)
-- no change to the review or to the doctor
-- no change to the classifier: `internal/domain/review` is read, not edited
-- no new verb and no new flag: the line rides the ready output of `check`
-- no change to the exit code or to the verdict reasons: it is a note, never a block
+- no change to the brief's format: the headers, the parse and the render stay as they are
+- no change to the interview or to `start`: the convention is asked where an agent drafts a brief, and the flags carry one answer per non-goal
+- no new verb and no new flag
+- no change to the review, the doctor or the classifier
 - no change to the stored proofs: never touched
-- no change to the skills or to the voice
+- no change to the skills other than `shape`, and none to the voice
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
 - no change to the release workflow
 
 ## Decisions taken
-- the note names the contrast, never a block: the gate measures paths and reads words, and it cannot call a risk; a full change with a named risk is the reviewer's question, not the gate's
-- a missing `Risk:` line counts as `none`: silence and "none" are the same claim of harmlessness, and treating an absent line as a declaration would leave the failure the feature exists to see
-- the tier comes from `Classify(paths)`, the same function the gate already asks whether a change owes a review, so the note and the gate cannot disagree and the note needs no diff and no new port method
-- the note fires on the feature's own range -the base in the task doc, or the merge-base in the document-less lane- because a note about paths must measure the diff the review will judge
+- the convention lives in `shape`, not in the brief's renderer: a brief is free text, and a line the tool injects is a reminder; a skill asks the question at the moment somebody can answer it
+- the interview keeps one answer per non-goal: a second question per entry needs a new flag, and the fence presets already need the first word
+- the condition is a sentence, not a date: a measurement or a second caller can be checked; a date passes without the reason
