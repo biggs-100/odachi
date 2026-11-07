@@ -1,40 +1,39 @@
 # Next session
 
-Written at the close of 0228, `the-newest-verdict-is-the-store-s-newest` (unreleased, after v0.28.1).
-The gate now reads the verdict the store wrote last; the last open item, the `all:*` pin, is next.
+Written at the close of 0229, `the-skills-embed-is-measured` (unreleased, after v0.28.1). The embed
+that ships the skills is measured; the backlog the earlier sessions were carrying is empty.
 
 ## Where the project is
 
-- `main` at the merge of #420 (`d62fdf2`), `odachi 0.28.1` installed, `doctor` 15/15, no open feature,
+- `main` at the merge of #423 (`ba17cfe`), `odachi 0.28.1` installed, `doctor` 15/15, no open feature,
   no open questions.
-- 226 features and 569 steps closed; `docs/review-debt.md` has no open rows.
-- 0225, 0226, 0227 and 0228 are in the changelog's Unreleased section: the release is not cut yet.
+- 227 features and 571 steps closed; `docs/review-debt.md` has no open rows.
+- 0225, 0226, 0227, 0228 and 0229 are in the changelog's Unreleased section: the release is not cut.
 
 ## What this session measured
 
-- **A gate that reads the reviewer's clock reads the wrong tree.** `lastVerdictTree` ordered verdicts
-  by the `at` the answer declares. 0227's correction said a date where its predecessors said a time,
-  lost to the tree it corrected, and `check` named an existing verdict as missing. The fix asks the
-  file's modification time —the fact `clean` and `review.NewestTrees` already order the store by— and
-  the false line is gone from `main`.
-- **The fixture needed the port, not a workaround.** The fake store gained `ModTime`, and it has to
-  answer the slashed and the OS spelling the `Read` already accepted; without that it refused a file
-  the read had just found, and a test failed for the fixture's reason, not the code's.
-- **The red was observed on the right symptom.** With the old comparison the test printed
-  `the feature is closed and its tree has no verdict` about a tree the store had judged; with the
-  file time the note vanished and the gate stayed ready.
-- **A review can find the same defect twice, and CI has its own.** 0227 earned three rounds —the
-  spelling of a path and the untested branch— and a red from the Windows runner's short names.
+- **An embed directive is invisible without a file that a regression makes disappear.** The first
+  fixture carried only hidden files; with `*` the directory had nothing embeddable and the *build*
+  failed, which kept the assertion from ever running. A plain control file keeps the directory
+  embeddable with either pattern and moves the red into the test, where it names each missing file.
+- **`*` still walks a dot directory; what it skips are the files whose names begin with `.` or `_`.**
+  The fixture proved it: with `*`, `.embed-fixture/_under.txt` and `.embed-fixture/.hidden.txt` vanish
+  while the plain file stays.
+- **Two test helpers counted every directory as a skill.** The fixture exposed the gap: the loader and
+  `skills --check` skip a directory without a `SKILL.md`, and the expectations did not. Both now stat
+  the file first.
+- **A closed feature's commit and its record travel together.** The hook refused the helper fix alone:
+  the proof judges the worktree, and the record must be in the tree the proof names. The fix and the
+  T1/T2 record landed in one commit.
 
 ## Next
 
-The last open item, then the documental pair:
+The backlog is empty; what is left is documentation and a release:
 
-- **0216: pin `all:*` with a repo test.** A regression to `*` would pass the suite for dotfile assets;
-  today only a build probe covers it. `skills/**` is protected by the current fence, so the plan PR
-  lands before the test.
-- **The verdict/proof binding in `docs/releases.md`** and **the harness cost in `doctor`** can ride the
-  close of whichever lands next.
+- **The verdict/proof binding in `docs/releases.md`** and **the harness cost in `doctor`**: the two
+  documental pieces that have ridden every close for several sessions.
+- **The release**: 0225 to 0229 are in Unreleased; a `v0.29.0` tag with its note is the natural close
+  of this stretch.
 - The behavioural evaluation of the core skills stays deferred.
 - One writer per worktree; one heavy gate per machine.
 
@@ -45,10 +44,9 @@ The last open item, then the documental pair:
   machine needs the bound; with the installer tests it ran about six minutes on this machine.
 - A feature that touches a path the base fence protects needs the plan PR merged first; when the
   fence allows the path, the plan rides the feature PR.
-- A store's "newest" is the file time, not the time the record declares: a reviewer can write a date
-  where a clock was expected.
-- A test that compares a path compares what Windows reports: ask `GetLongPathName`, not the folder's
-  spelling.
+- A test that pins an embed needs a file a regression makes disappear, and a plain file beside it so
+  the package still builds and the red lands in the test.
+- A store's "newest" is the file time, not the time the record declares.
 - The ruleset refuses a direct push to `main`: every landing, documents included, goes through a PR.
 
 ## The commands that work
