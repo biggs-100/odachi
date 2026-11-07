@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+- **The skills embed is measured.** A hidden fixture beside the skills is read through the bundled payload,
+  so a regression from `all:*` to `*` fails the suite instead of shipping a folder with files missing (0229).
 - **The gate reads the newest verdict by the store's write time.** A correction that declares a date
   where its predecessors declared a time no longer loses to them: `check` asks the file's modification
   time, the fact `clean` already orders the store by, so an existing verdict is never named as
