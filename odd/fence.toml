@@ -3,9 +3,9 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: "no new skill" is a promise about behaviour, and no
-# glob measures a promise. `skills/**` is deliberately absent: the fixture and
-# the test this feature adds live there.
+# path stays in the brief: "no change to the release workflow or to the tag" is a
+# promise about behaviour, and no glob measures a promise. `internal/app/check`
+# and `docs/` are deliberately absent: the line and the document live there.
 #
 # written by hand after start (0132): start carries every non-goal as a template,
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
@@ -26,8 +26,8 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the voice"
-paths = ["internal/domain/persona/**"]
+not   = "no change to the skills or to the voice"
+paths = ["skills/**", "internal/domain/persona/**"]
 deps  = []
 
 [[rule]]

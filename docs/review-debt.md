@@ -9,12 +9,25 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0229, which leaves nothing open.
+Last written: while closing 0230, which leaves nothing open.
 
 ## Open
 
-Nothing is open: 0227 closed the last row with the test it was missing. The next row starts a
+Nothing is open: 0230 closed the last row with the test it was missing. The next row starts a
 new list.
+
+## Closed by feature 0230
+
+### the verdict line could reach a blocked report, and nothing pinned the absence
+
+Found by the review of 0230 (warning, `internal/app/check/check.go:1680`). The reviewer read
+`verdictNote` as printing for any outcome, contradicting the brief's decision that the line prints
+only on a ready close, and noted that neither test exercised the blocked path.
+
+Verified false in the caller: the `verdictNote()` call sits after `if verdict.Code != gate.Ready { …
+return result }`, so a blocked report never reaches it. The second half was paid:
+`TestABlockedCloseSaysNothingAboutTheVerdict` seeds a verdict and a close without a proof and asserts
+the line is absent, so a refactor that moved the call above the gate now costs a red.
 
 ## Closed by feature 0227
 

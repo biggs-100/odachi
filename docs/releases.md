@@ -56,6 +56,15 @@ Annotated, `vX.Y.Z`, on the merge commit of the release pull request. The releas
 suite before goreleaser builds, so the tag names a tree that passed. Never a branch name, never a moved
 tag, never a deleted one: the checksum and the attestation are bound to those bytes.
 
+## The bytes the tag names
+
+The tag names the merge commit of the release pull request; the verdict names the feature's closing
+tree. They are different trees on purpose: the steps after a close move only documents, and the
+verdict judges the code the feature merges. The binding is stated, not implied: `check` prints the
+verdict's tree beside the proof at the close, and the release workflow runs the suite before
+goreleaser, so the tag names a tree that passed. A release is a promise about the tagged bytes; "the
+tag itself was reviewed" is not one of them.
+
 ## The notes
 
 The body of the release is the changelog section, verbatim. One source: a second text written for

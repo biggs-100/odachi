@@ -1673,6 +1673,25 @@ func (r *runner) addedNote() string {
 	return strings.Join(parts, "; ") + "; name the reason in the PR"
 }
 
+// verdictNote names the tree the verdict judged, beside the proof. At a close the
+// proof is for one tree and the verdict for another on purpose -the trees after
+// the close only move documents-, and a reader who cannot tell them apart believes
+// the tag itself was reviewed. It says nothing for an open feature or a close with
+// no verdict: a silence here is not a claim.
+func (r *runner) verdictNote() string {
+	if r.feature == nil {
+		return ""
+	}
+	if _, closed, _, known := featureReview(r.feature); !known || !closed {
+		return ""
+	}
+	tree, ok := r.lastVerdictTree(r.feature)
+	if !ok {
+		return ""
+	}
+	return "verdict: " + tree
+}
+
 // riskNote contrasts what the review measures with what the commits declare: a
 // change the classifier calls full and no commit names a risk for is the silence a
 // reviewer must read. It is a note, never a block -the gate measures paths and
@@ -1880,6 +1899,12 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	// ready, but the line says what the bytes do not.
 	if haveProof && r.proofEmpty {
 		result.Lines = append(result.Lines, "warning: the proof produced no output: a proof that says nothing is weak evidence; run a command that prints what it proved")
+	}
+	// The proof names one tree and the verdict judged another: at the close both
+	// are printed, so a reader can tell which bytes were reviewed and which were
+	// published instead of believing the tag itself was reviewed.
+	if note := r.verdictNote(); note != "" {
+		result.Lines = append(result.Lines, note)
 	}
 	// What the diff adds, for the reviewer: new files and dependency files, in
 	// one line and without moving the verdict. The gate cannot know the

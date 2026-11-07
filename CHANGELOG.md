@@ -9,6 +9,9 @@ not a version.
 
 ## Unreleased
 
+- **A release says which bytes were judged.** `docs/releases.md` states that the tag carries the verdict
+  of the feature's closing tree and that the steps after the close move only documents, and `check`
+  prints that tree beside the proof (0230).
 - **The skills embed is measured.** A hidden fixture beside the skills is read through the bundled payload,
   so a regression from `all:*` to `*` fails the suite instead of shipping a folder with files missing (0229).
 - **The gate reads the newest verdict by the store's write time.** A correction that declares a date
