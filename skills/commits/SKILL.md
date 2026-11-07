@@ -12,6 +12,9 @@ in one sitting, or when the history no longer reads in order.
 
 - A commit is one task-doc step and one thing that can be reverted alone. If the
   message needs "and", they are two commits.
+- Every commit says what a revert would take with it: the files or the behavior
+  that cannot be removed alone. A commit nobody can revert alone is a slice of the
+  next one.
 - The message says what changed **for the person using the project**, in one
   line, in the imperative. The how and why go in the body, not in the title.
 - The tests and documentation of the change travel in the same commit. There is

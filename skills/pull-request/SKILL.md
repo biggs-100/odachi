@@ -13,6 +13,9 @@ in one sitting.
 
 - A PR is **one work unit**: a behavior, a fix or a migration that can be
   reverted alone. If the title needs "and", they are two PRs.
+- A branch is named for what it delivers, lowercase and dashes: `feat/`, `fix/`,
+  `docs/`, `chore/` and `refactor/`, plus the project's own lanes (`plan/`,
+  `release/`). The prefix and the slug read as the PR title will.
 - Budget: **400 changed lines** (additions + deletions). If you pass it, split
   before opening; do not ask for an exception without saying why.
 - Measure it, do not guess: `gh pr view <PR> --json additions,deletions,changedFiles`.
@@ -34,6 +37,14 @@ in one sitting.
 - `commits` decides the message; this skill decides the cut. The PR reads in order.
 - Close with `odachi check --run "<command>"` green and the saved output: the PR
   does not replace the tree's proof.
+
+## A chain says where it stands
+
+A child PR names the chain: the tracker PR, its position, the base and what it
+depends on, the next PR and what it leaves out. A feature-branch chain opens its
+tracker as a draft and merges it last. The body carries a small diagram with `📍`
+on this PR. A diff that shows another PR's work is a branching bug: retarget or
+rebase until only this unit shows.
 
 ## Output
 
