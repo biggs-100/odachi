@@ -9,6 +9,10 @@ not a version.
 
 ## Unreleased
 
+- **A non-goal says when it comes back.** `shape` asks for the condition that reopens each entry of a
+  brief's "Not included" —a measurement, a second caller, a version— and its output returns that
+  condition beside the path each one protects, so the list of what waits keeps the date it was
+  postponed to (0226).
 - **The declared `Risk:` meets the diff.** When the review classifies a change as full —it touches a
   path the classifier names— and the commits declare `Risk: none` or carry no line at all, `check`
   names the contrast and the paths in the ready output; a named risk stays silent, and the exit code

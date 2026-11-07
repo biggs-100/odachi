@@ -39,12 +39,16 @@ is obvious: there `drive` is enough.
   the moment the feature exists. Exploration is not a verb and writes no artifact.
 - The fence is not shaped by convenience. What exploration found useful but out
   of scope stays out and goes to the "Not included" list.
+- **A non-goal says when it comes back.** Every entry in the brief's "Not
+  included" names the condition that reopens it, not only what stays out:
+  a measurement, a second caller, a version. "Payments" waits forever;
+  "payments, when a second tenant pays" has an answer somebody can check.
 - If exploring does not end, stop and say what you learned: an exploration
   without an end is a feature nobody planned.
 
 ## Output
 
-The draft it hands over: the outcome in one sentence, the observable done-when, the non-goals with the path each one protects, and the decisions taken with their reason. The questions exploration opened that nobody answered, recorded with `odachi ask`, and the `start` command that records the brief.
+The draft it hands over: the outcome in one sentence, the observable done-when, the non-goals with the path each one protects and the condition that reopens it, and the decisions taken with their reason. The questions exploration opened that nobody answered, recorded with `odachi ask`, and the `start` command that records the brief.
 
 ## Never
 
