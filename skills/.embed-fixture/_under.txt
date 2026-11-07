@@ -1,0 +1,1 @@
+the underscore in the file name is what `*` skips, recursively: only `all:*` carries it
