@@ -9,6 +9,10 @@ not a version.
 
 ## Unreleased
 
+- **The gate reads the newest verdict by the store's write time.** A correction that declares a date
+  where its predecessors declared a time no longer loses to them: `check` asks the file's modification
+  time, the fact `clean` already orders the store by, so an existing verdict is never named as
+  missing (0228).
 - **The installer names the process that holds the binary.** Windows refuses to replace a running
   `odachi.exe`; the installer now answers with the holding process's PID and the way out —close that
   terminal or the other project's gate, or install with `ODACHI_BIN_DIR`— and installs nothing (0227).

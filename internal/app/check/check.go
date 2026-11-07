@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/app/clean"
 	"github.com/biggs-100/odachi/internal/app/tasks"
@@ -165,6 +166,10 @@ type Files interface {
 	Read(path string) ([]byte, error)
 	List(dir string) ([]string, error)
 	Write(path string, data []byte) error
+	// ModTime is when the store wrote a file. The newest verdict is the one
+	// written last, not the one whose answer declares the latest clock: the
+	// reviewer's `at` is its opinion, and `clean` orders the store by this fact.
+	ModTime(path string) (time.Time, error)
 	// Remove deletes one file. A missing file may be an error; the caller that
 	// only needs the state ignores it.
 	Remove(path string) error
@@ -968,10 +973,18 @@ func (r *runner) theCloseOwes(feature *tasks.Document) (bool, *Result) {
 	return true, nil
 }
 
-// lastVerdictTree names the bytes this feature's review judged: the tree of the newest
-// verdict whose base is the document's base. A feature's verdicts share that base, so
-// the newest one is the furthest the review has looked, and the store is the tool's own
-// evidence - asking it beats guessing the close commit out of the document's history.
+// lastVerdictTree names the bytes this feature's review judged: the tree of the
+// newest verdict whose base is the document's base. A feature's verdicts share
+// that base, so the newest one is the furthest the review has looked, and the
+// store is the tool's own evidence - asking it beats guessing the close commit
+// out of the document's history.
+//
+// "Newest" is when the store wrote the file, the same fact `clean` and
+// `NewestTrees` order the store by. It is not the `at` the answer declares: a
+// reviewer that writes a date where a time was expected once beat the correction
+// it had just produced, and the gate went back to a tree it already judged. Two
+// files written in the same instant tie-break on the tree, so the answer never
+// depends on the order the directory was listed in.
 func (r *runner) lastVerdictTree(feature *tasks.Document) (string, bool) {
 	base, _, _, known := featureReview(feature)
 	if !known || base == "" {
@@ -983,12 +996,20 @@ func (r *runner) lastVerdictTree(feature *tasks.Document) (string, bool) {
 		return "", false
 	}
 
-	best, bestAt := "", ""
+	best := ""
+	var bestAt time.Time
 	for _, name := range names {
 		if !strings.HasSuffix(name, ".json") {
 			continue
 		}
-		data, err := r.files.Read(r.storeFile(reviewdomain.Dir + "/" + name))
+		rel := r.storeFile(reviewdomain.Dir + "/" + name)
+		// A file the store cannot date is skipped, the way one it cannot parse is:
+		// an unreadable record is not evidence of when the answer arrived.
+		at, err := r.files.ModTime(rel)
+		if err != nil {
+			continue
+		}
+		data, err := r.files.Read(rel)
 		if err != nil {
 			continue
 		}
@@ -1001,8 +1022,8 @@ func (r *runner) lastVerdictTree(feature *tasks.Document) (string, bool) {
 		if !sameCommit(r.git, r.opts.Dir, verdict.Base, base) {
 			continue
 		}
-		if verdict.At > bestAt {
-			best, bestAt = verdict.Tree, verdict.At
+		if best == "" || at.After(bestAt) || (at.Equal(bestAt) && verdict.Tree > best) {
+			best, bestAt = verdict.Tree, at
 		}
 	}
 	return best, best != ""
