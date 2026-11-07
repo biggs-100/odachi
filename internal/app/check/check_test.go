@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/app/check"
 	"github.com/biggs-100/odachi/internal/domain/gate"
@@ -39,6 +40,10 @@ type fakeFiles struct {
 	removes []string
 	backups []string
 	err     error
+
+	// modTimes is when the fake store wrote each file, keyed like files. A file
+	// the test did not stamp reads as the zero time: the oldest answer there is.
+	modTimes map[string]time.Time
 
 	// denyWrite refuses the writes its predicate names, leaving the rest of the
 	// port healthy: a test can pin one write failing without a broken filesystem
@@ -105,6 +110,32 @@ func (f *fakeFiles) List(path string) ([]string, error) {
 	}
 	slices.Sort(names)
 	return names, nil
+}
+
+// ModTime is when the store wrote the file: the order the newest verdict is read
+// by. A file the test did not stamp reads as the zero time; a path nobody seeded
+// is the missing file a real disk would refuse.
+func (f *fakeFiles) ModTime(path string) (time.Time, error) {
+	if f.err != nil {
+		return time.Time{}, f.err
+	}
+	if at, ok := f.modTimes[path]; ok {
+		return at, nil
+	}
+	for seeded, at := range f.modTimes {
+		if filepath.ToSlash(seeded) == filepath.ToSlash(path) {
+			return at, nil
+		}
+	}
+	if _, ok := f.files[path]; ok {
+		return time.Time{}, nil
+	}
+	// The same slashed/OS spelling the read accepts: a real filesystem answers
+	// both, and the fake must not refuse the file the read just found.
+	if _, ok := f.files[filepath.FromSlash(filepath.ToSlash(path))]; ok {
+		return time.Time{}, nil
+	}
+	return time.Time{}, errors.New("missing file: " + path)
 }
 
 func (f *fakeFiles) Remove(path string) error {
