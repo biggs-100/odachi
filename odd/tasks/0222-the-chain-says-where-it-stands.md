@@ -14,8 +14,8 @@ R1 · "a chained PR says where it stands and a commit says what it can be revert
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · the chain says where it stands and the commit says its rollback   R1 · route:inline
-- [ ] T2 · the changelog names the rules   R1 · route:inline
+- [x] T1 · the chain says where it stands and the commit says its rollback   R1 · route:inline · tree:4a71cab2a6fa7c924f338f1482c141e0c1b64a0c
+- [x] T2 · the changelog names the rules   R1 · route:inline · tree:ee2fd4549f4f769e3889bcaa1813e8285cac2a8e
 
 ## History
 L1 · "a chained PR says where it stands and a commit says what it can be reverted without: the chain's tracker, position, base, dependency and next PR, the `📍` in its diagram, a diff that shows only its unit, a branch named for what it delivers, and a rollback boundary per commit"
