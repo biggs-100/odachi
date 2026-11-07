@@ -15,8 +15,8 @@ R1 · "a non-goal says when it comes back: every entry in a brief's "Not include
 - `odachi check --run "go test ./..."` is green
 
 ## Steps
-- [ ] T1 · shape asks when a non-goal comes back   R1 · route:inline
-- [ ] T2 · the changelog names the convention   R1 · route:inline
+- [x] T1 · shape asks when a non-goal comes back   R1 · route:inline · tree:07733eff4a8b648144b10a30fe7feb84f975a728
+- [x] T2 · the changelog names the convention   R1 · route:inline · tree:5ec281c1e5a50090cca8d620ce15141ccac1c44c
 
 ## History
 L1 · "a non-goal says when it comes back: every entry in a brief's "Not included" names the condition that reopens it -a measurement, a second caller, a version-, and `shape` asks for that condition when it drafts the brief, so the list of what waits does not become a list nobody can date"
