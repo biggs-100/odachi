@@ -94,7 +94,7 @@ func TestPowerShellInstallerSaysWhatToDoWhenNothingHoldsTheFile(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("install.ps1 exit = %d with an unshareable target, want 1:\n%s", code, output)
 	}
-	for _, want := range []string{target, "no pude reemplazar"} {
+	for _, want := range []string{canonicalPath(t, target), "no pude reemplazar"} {
 		if !strings.Contains(output, want) {
 			t.Errorf("the refusal does not name %q:\n%s", want, output)
 		}
@@ -106,6 +106,28 @@ func TestPowerShellInstallerSaysWhatToDoWhenNothingHoldsTheFile(t *testing.T) {
 	if string(after) != string(placeholder) {
 		t.Errorf("the target changed after a failed install: the placeholder was replaced")
 	}
+}
+
+// canonicalPath is the name Windows reports for path. The installer compares and
+// prints the canonical form, so a runner whose temp folder is short-named
+// (RUNNER~1) must not make the test blame the message for its spelling: that is
+// the same defect the script had, and the script is the one being fixed.
+func canonicalPath(t *testing.T, path string) string {
+	t.Helper()
+
+	name, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		t.Fatalf("encode %s: %v", path, err)
+	}
+	buf := make([]uint16, 32768)
+	n, err := syscall.GetLongPathName(name, &buf[0], uint32(len(buf)))
+	if err != nil {
+		t.Fatalf("canonicalize %s: %v", path, err)
+	}
+	if n == 0 || int(n) >= len(buf) {
+		t.Fatalf("canonicalize %s: the name does not fit its buffer", path)
+	}
+	return syscall.UTF16ToString(buf[:n])
 }
 
 // holdWithoutSharing opens path with no sharing at all, which is what an indexer
