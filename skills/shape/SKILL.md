@@ -18,6 +18,17 @@ is obvious: there `drive` is enough.
 - Explore before you declare. Read the code the request names, run the command
   that fails, look at the data. Three reads that end in "now I know what to
   build" are cheaper than a brief that has to be rewritten.
+- **The smallest change that satisfies the requirement.** Before you declare,
+  name what the change reuses, what it adds (files, dependencies, abstractions)
+  and what it deletes. A file or an abstraction needs a reason; an abstraction
+  needs a second caller, not a guess about the future.
+- **Wait for three.** Copy until the same pattern appears three times for the
+  same reason -one decision would change every copy at once- and extract then. A
+  wrong abstraction costs more than the duplication it replaced; if it is already
+  wrong, inline it back first.
+- **The props test.** If the props describe the situation (mode, variant,
+  isSpecial), you merged similar things; if they describe what is rendered, the
+  abstraction is probably sound.
 - Ask the human the question the exploration opened, not the seven questions of
   the interview. One question per real fork; what cannot be answered now is
   recorded with `odachi ask`.

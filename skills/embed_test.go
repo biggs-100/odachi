@@ -358,6 +358,60 @@ func TestCommitsNameTheRollback(t *testing.T) {
 	}
 }
 
+// TestShapeAsksForTheSmallestChange: before the brief, the change names what it
+// reuses, what it adds and what it deletes; an abstraction waits for a second
+// caller and a pattern for three uses for the same reason.
+func TestShapeAsksForTheSmallestChange(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Main())
+	}
+
+	for _, want := range []string{
+		"smallest change",
+		"what the change reuses",
+		"what it deletes",
+		"second caller",
+		"Wait for three",
+		"same reason",
+		"props test",
+		"inline it back",
+	} {
+		if !strings.Contains(byName["shape"], want) {
+			t.Errorf("shape no dice %q: el cambio más chico no se nombra", want)
+		}
+	}
+}
+
+// TestPullRequestNamesWhatItAdds: the reviewer cannot reconstruct intent from the
+// diff, so the PR names what is new and what is reused, and asks the three
+// questions.
+func TestPullRequestNamesWhatItAdds(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Main())
+	}
+
+	for _, want := range []string{
+		"what it reuses",
+		"new files",
+		"what to delete",
+		"which requirement",
+	} {
+		if !strings.Contains(byName["pull-request"], want) {
+			t.Errorf("pull-request no dice %q: el PR no declara lo que agrega", want)
+		}
+	}
+}
+
 // TestVerificationIsProportional: the ceremony a change owes is decided by its
 // blast radius, not by habit. `tests` names the three tiers and the two
 // comparisons a red owes, and `slices` routes the delegation policy to the same

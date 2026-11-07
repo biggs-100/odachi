@@ -24,6 +24,10 @@ in one sitting.
   integrate before main.
 - Every PR says what problem it solves, how it is tested, what was left out and
   which PR it depends on. The first one in a chain depends on nobody.
+- Every PR names what it adds and what it reuses: the new files, the dependencies
+  and the abstractions, each with its reason, and the existing code it extends. A
+  reviewer asks what to delete, what was reused and which requirement each line
+  serves.
 - Tests and docs travel in the PR of the behavior they verify; there is no later
   "tests" or "docs" PR.
 - Required checks are read from the repo, not guessed: if you do not know whether
