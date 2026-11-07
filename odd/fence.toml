@@ -3,8 +3,8 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: "no new verb" is a promise about behaviour, and no
-# glob measures a promise.
+# path stays in the brief: "no new verb and no new flag" is a promise about
+# behaviour, and no glob measures a promise.
 #
 # written by hand after start (0132): start carries every non-goal as a template,
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
@@ -15,8 +15,8 @@ paths = ["internal/app/review/**", "internal/app/doctor/**", "internal/domain/do
 deps  = []
 
 [[rule]]
-not   = "no change to the skills or to the voice"
-paths = ["skills/**", "internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
+not   = "no change to the classifier: `internal/domain/review` is read, not edited"
+paths = ["internal/domain/review/**"]
 deps  = []
 
 [[rule]]
@@ -25,8 +25,8 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to `odachi role` or to the skill it renders"
-paths = ["internal/app/role/**", "internal/domain/role/**"]
+not   = "no change to the skills or to the voice"
+paths = ["skills/**", "internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
 deps  = []
 
 [[rule]]
