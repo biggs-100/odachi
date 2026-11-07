@@ -1,45 +1,41 @@
 # Next session
 
-Written at the close of 0224, `the-gate-names-what-the-change-adds` (v0.28.1). The overengineering
-investigation is closed in its two halves; the rsc-harness analysis is documented and its first
-improvement waits for the next session.
+Written at the close of 0225, `the-declared-risk-meets-the-diff` (unreleased, after v0.28.1). The
+declared `Risk:` now meets the diff; the next feature gives a non-goal the condition that reopens it.
 
 ## Where the project is
 
-- `main` at the merge of the 0224 close, `odachi 0.28.1` installed, `doctor` 15/15, no open feature,
+- `main` at the merge of #412 (`8b94bd7`), `odachi 0.28.1` installed, `doctor` 15/15, no open feature,
   no open questions.
-- 222 features and 560 steps closed; `docs/review-debt.md` has no open rows.
-- The design, cognitive and PR-system comparisons with gentle-shell and gentle-ai are paid.
-- The overengineering investigation is paid: the rule in `shape`, the review questions in
-  `pull-request`, the measurement in `check` (v0.28.0 and v0.28.1).
+- 223 features and 563 steps closed; `docs/review-debt.md` has no open rows.
+- 0225 shipped in two stacked PRs (#411 the parser, #412 the note) and is in the changelog's Unreleased
+  section: the release is not cut yet.
 
 ## What this session measured
 
-- **The rsc-harness analysis.** Read-only, 274 skills, 162 tests, v4.0.5. The full analysis and the
-  four improvements live in `docs/learning-from-rsc-harness.md`; the short version is below.
-- **A note that always fires is noise.** The gate's new line first named the task doc in every
-  feature; the filter for `odd/` and `proof/` is what makes it mean "scaffolding".
-- **The gate test was written after the code.** The RED was observed by switching the line off; it is
-  weaker than test-first, and the next gate feature starts with the test.
-- **The skill bodies are near the cap.** `pull-request` is at 59 lines; the next rule for it goes to
-  a reference.
+- **The close commit needs the proof before it exists.** The hook refused the task-doc commit with
+  "the proof for this change is missing": `check --run` judges the worktree, so the proof is written
+  with the close change uncommitted and the commit then carries exactly that tree.
+- **A 408-line feature is two PRs.** 0225 was 387 + / 21 -; the parser and the note split at 219 and
+  197 changed lines. The price: `ParseRisk` lands on `main` with tests and no consumer until #412; the
+  stack accepts an intermediate state one PR would hide.
+- **The verdict took seconds** with the documented command and `deepseek-v4.1-flash`: approved on the
+  reliability lens, no findings, no re-review.
+- **The note is silent for our own feature.** 0225 touches `internal/app/check` and
+  `internal/domain/change`, which the classifier calls focused, so the new line never appears in this
+  feature's own ready output; its five tests are the only witness.
 
 ## The next feature
 
-**0225: the declared `Risk:` meets the diff.** Odachi classifies a diff with
-`internal/domain/review/tier.go` (auth, money, contracts, concurrency, delivery), but the `Risk:`
-line in the commit body is the agent's word and nothing contrasts it. The check already reads the
-commit messages for the `Odachi-Change:` trailer; it can read `Risk:` too.
+**0226: a non-goal says when to revisit it.** A brief's "Not included" is a promise with no date, and
+the list grows until nobody knows which entry still holds. The convention: each non-goal names the
+condition that reopens it (a measurement, a second caller, a version), and `shape` asks for it.
 
-- A parser for `Risk:` in `internal/domain/change`, next to the trailer, with its refusals.
-- A note in the ready output, never a block: "the review classifies this change as full (it touches
-  <paths>), and the commits declare Risk: none: name the risk or say why it is none."
-- Tests: a full-tier diff with `Risk: none` warns; a full-tier diff with a named risk does not; a
-  passive diff stays silent; the verdict never moves.
+- the brief's non-goal section carries the convention, and `shape` asks the question when it drafts one
+- a test pins the skill's text, observed red before the text lands
+- the changelog's Unreleased section names the convention
 
-Then **0226: a non-goal says when to revisit it** (a convention in the brief and `shape`, pinned).
-
-The two documental pieces (the verdict/proof binding in `docs/releases.md`, the harness cost in
+Then the two documental pieces (the verdict/proof binding in `docs/releases.md`, the harness cost in
 `doctor`) can ride the next close. The behavioural evaluation of the core skills stays deferred.
 
 ## Still open from earlier sessions
@@ -58,11 +54,13 @@ The two documental pieces (the verdict/proof binding in `docs/releases.md`, the 
   machine needs the bound.
 - A feature that touches a path the base fence protects needs the plan PR merged first; when the
   fence allows the path, the plan rides the feature PR.
+- A stacked PR retargeted to `main` keeps its green: the head commit did not move, and the gate had
+  already run against the same bytes.
 
 ## The commands that work
 
 ```sh
-odachi review --base 9a211be952e250bfc7adc0acdbe496c88143ff1f \
+odachi review --base <the base the task doc names> \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
