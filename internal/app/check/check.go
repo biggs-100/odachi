@@ -1652,6 +1652,49 @@ func (r *runner) addedNote() string {
 	return strings.Join(parts, "; ") + "; name the reason in the PR"
 }
 
+// riskNote contrasts what the review measures with what the commits declare: a
+// change the classifier calls full and no commit names a risk for is the silence a
+// reviewer must read. It is a note, never a block -the gate measures paths and
+// reads words, and a full change with a named risk is the reviewer's question- and
+// it asks nothing of a tree whose documents predate the base the note needs.
+func (r *runner) riskNote() string {
+	if r.feature == nil {
+		return ""
+	}
+	base, _, _, known := featureReview(r.feature)
+	if !known || base == "" {
+		return ""
+	}
+	work, problem := r.worktree()
+	if problem != nil {
+		return ""
+	}
+	// The same paths and the same classifier the gate already asks whether this
+	// change owes a review: the note and the gate cannot disagree about the class.
+	paths, err := r.git.Between(r.opts.Dir, base, work.tree)
+	if err != nil || reviewdomain.Classify(paths) != reviewdomain.Full {
+		return ""
+	}
+
+	messages, err := r.git.Messages(r.opts.Dir, base)
+	if err != nil {
+		return ""
+	}
+	contrast := "the review classifies this change as full (it touches " + pathNote(paths) + ")"
+	risk, err := change.ParseRisk(messages)
+	switch {
+	// A declaration with no name answered nothing: silence about it would be the
+	// same quiet the note exists to break.
+	case err != nil:
+		return contrast + ", and the commits' " + change.RiskKey + " line cannot be read (" + oneLine(err.Error()) + ")"
+	case len(risk.Named) > 0:
+		return ""
+	case risk.Declared:
+		return contrast + ", and the commits declare " + change.RiskKey + " none: name the risk or say why it is none"
+	}
+	return contrast + ", and no commit declares a " + change.RiskKey + " line: name the risk or say why it is none"
+}
+
 // newFiles reads the paths the diff adds: a file is new when its only side in
 // the patch is `--- /dev/null`, followed by the `+++ b/<path>` line. The diff is
 // the one the candidate read already produced, so the gate asks git once.
@@ -1821,6 +1864,11 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	// one line and without moving the verdict. The gate cannot know the
 	// requirement, so it names the scaffolding and leaves the reason to the PR.
 	if note := r.addedNote(); note != "" {
+		result.Lines = append(result.Lines, note)
+	}
+	// What the commits claim against what the paths measure: the reviewer reads
+	// the contrast at the close, and the note never moves the verdict.
+	if note := r.riskNote(); note != "" {
 		result.Lines = append(result.Lines, note)
 	}
 	// A ready tree the suite never ran on says so: the proof it keeps proved the
