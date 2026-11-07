@@ -13,8 +13,8 @@ R1 · "when the feature closes, `check` names what the diff adds —the new file
 - `go test ./...` is green
 
 ## Steps
-- [ ] T1 · check names the new files and the dependency files   R1 · route:inline
-- [ ] T2 · the changelog names the line   R1 · route:inline
+- [x] T1 · check names the new files and the dependency files   R1 · route:inline · tree:106b0086bb4bcf7183bc9963d5aab99bde81a163
+- [x] T2 · the changelog names the line   R1 · route:inline · tree:0a569d98ebe5f8d35a9b6ca3b5d6a68d11d817bf
 
 ## History
 L1 · "when the feature closes, `check` names what the diff adds —the new files and the dependency files— in one line of the ready output, so the reviewer sees the scaffolding before reading the code; the exit code and the verdict do not change"

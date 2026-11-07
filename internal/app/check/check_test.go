@@ -1216,6 +1216,75 @@ func TestTheDefaultTimeoutFitsARealSuite(t *testing.T) {
 	}
 }
 
+// TestTheReadyOutputNamesWhatTheChangeAdds: the reviewer sees the scaffolding
+// without reading the diff, and the verdict does not move.
+func TestTheReadyOutputNamesWhatTheChangeAdds(t *testing.T) {
+	files := newFakeFiles(map[string]string{"brief.md": completeBrief})
+	shell := &fakeShell{output: "ok\n"}
+	diff := "diff --git a/internal/new.go b/internal/new.go\n" +
+		"new file mode 100644\n" +
+		"index 0000000..e69de29\n" +
+		"--- /dev/null\n" +
+		"+++ b/internal/new.go\n" +
+		"@@ -0,0 +1 @@\n" +
+		"+package x\n" +
+		"diff --git a/odd/tasks/0224-the-gate.md b/odd/tasks/0224-the-gate.md\n" +
+		"new file mode 100644\n" +
+		"index 0000000..e69de29\n" +
+		"--- /dev/null\n" +
+		"+++ b/odd/tasks/0224-the-gate.md\n" +
+		"@@ -0,0 +1 @@\n" +
+		"+# the gate\n"
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD"},
+		files, &fakeGit{tree: currentTree, changed: []string{"internal/new.go", "go.mod", "odd/tasks/0224-the-gate.md"}, diff: diff}, shell)
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("Code = %d, want ready (message %q, lines %q)", got.Code, got.Message, got.Lines)
+	}
+	joined := strings.Join(got.Lines, "\n")
+	for _, want := range []string{
+		"adds 1 new file",
+		"internal/new.go",
+		"dependency files changed",
+		"go.mod",
+		"name the reason in the PR",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the ready output does not say %q:\n%s", want, joined)
+		}
+	}
+	if strings.Contains(joined, "odd/tasks/0224-the-gate.md") {
+		t.Errorf("the ready output names the task doc as scaffolding:\n%s", joined)
+	}
+}
+
+// TestTheReadyOutputIsSilentWhenTheChangeAddsNothing: a modified file is not a
+// new one, and a diff with no addition and no lockfile says nothing.
+func TestTheReadyOutputIsSilentWhenTheChangeAddsNothing(t *testing.T) {
+	files := newFakeFiles(map[string]string{"brief.md": completeBrief})
+	shell := &fakeShell{output: "ok\n"}
+	diff := "diff --git a/internal/old.go b/internal/old.go\n" +
+		"--- a/internal/old.go\n" +
+		"+++ b/internal/old.go\n" +
+		"@@ -1 +1 @@\n" +
+		"-a\n" +
+		"+b\n"
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "echo ok", Base: "HEAD"},
+		files, &fakeGit{tree: currentTree, changed: []string{"internal/old.go"}, diff: diff}, shell)
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("Code = %d, want ready (message %q)", got.Code, got.Message)
+	}
+	joined := strings.Join(got.Lines, "\n")
+	for _, not := range []string{"adds ", "dependency files changed"} {
+		if strings.Contains(joined, not) {
+			t.Errorf("the ready output says %q with nothing added:\n%s", not, joined)
+		}
+	}
+}
+
 // --base "" must not fail: it means "compare against nothing", so every path in
 // the worktree counts as new and the fence is still checked.
 func TestEmptyBaseComparesAgainstTheEmptyTree(t *testing.T) {
