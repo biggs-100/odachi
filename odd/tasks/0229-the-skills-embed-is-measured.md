@@ -12,8 +12,8 @@ R1 · "a regression from `all:*` to `*` in the skills embed fails a repo test, n
 - the changelog's Unreleased section names the pin
 
 ## Steps
-- [ ] T1 · the embed carries a hidden fixture   R1 · route:inline
-- [ ] T2 · the changelog names the pin   R1 · route:inline
+- [x] T1 · the embed carries a hidden fixture   R1 · route:inline · tree:1f2d3894d495dd9596ac1a17f90d7700d6f3a1fe
+- [x] T2 · the changelog names the pin   R1 · route:inline · tree:b6d08915c611468b1ea641d48922f2cb919e0b55
 
 ## History
 L1 · "a regression from `all:*` to `*` in the skills embed fails a repo test, not a release: the suite reads a hidden fixture through the bundled payload, so the build that carries every skill is measured where it is compiled"
