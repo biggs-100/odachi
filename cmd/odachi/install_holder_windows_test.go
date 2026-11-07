@@ -43,10 +43,16 @@ func TestPowerShellInstallerNamesTheProcessThatHoldsTheBinary(t *testing.T) {
 	// The wait only gives the scheduler the moment it needs on a busy machine.
 	time.Sleep(150 * time.Millisecond)
 
-	code, output := runPowerShellInstaller(t, powershell, fixture, binDir, powershellShim(t, 0))
+	// A human can write ODACHI_BIN_DIR with forward slashes, and Windows reports
+	// the process's image with backslashes. The comparison has to canonicalize, or
+	// the PID disappears exactly when it is needed.
+	installDir := strings.ReplaceAll(binDir, `\`, "/")
+	code, output := runPowerShellInstaller(t, powershell, fixture, installDir, powershellShim(t, 0))
 
-	if code == 0 {
-		t.Fatalf("install.ps1 exit = 0 while %s is running, want non-zero:\n%s", target, output)
+	// The brief promises exit 1, not "anything but zero": a different code would
+	// mean the script failed somewhere else and still printed a message.
+	if code != 1 {
+		t.Fatalf("install.ps1 exit = %d while %s is running, want 1:\n%s", code, target, output)
 	}
 	for _, want := range []string{"PID " + strconv.Itoa(holder.Process.Pid), "ODACHI_BIN_DIR"} {
 		if !strings.Contains(output, want) {

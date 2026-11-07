@@ -79,7 +79,7 @@ function Get-Holders([string] $path) {
     $holders = @()
     foreach ($process in @(Get-Process -ErrorAction SilentlyContinue)) {
         try {
-            if ($process.Path -and ($process.Path -ieq $path)) {
+            if ($process.Path -and ([System.IO.Path]::GetFullPath($process.Path) -ieq $path)) {
                 $holders += $process
             }
         }
@@ -206,7 +206,11 @@ try {
         $binDir = Join-Path $env:LOCALAPPDATA 'odachi\bin'
     }
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null
-    $target = Join-Path $binDir 'odachi.exe'
+    # La ruta se compara contra la que Windows reporta para el proceso, que llega
+    # canónica: barras invertidas y sin segmentos relativos. Sin esto, un
+    # ODACHI_BIN_DIR con barras normales o un "." no encuentra al que retiene el
+    # archivo y el mensaje pierde el PID, que es lo único que esta rama aporta.
+    $target = [System.IO.Path]::GetFullPath((Join-Path $binDir 'odachi.exe'))
     try {
         Copy-Item -LiteralPath $source -Destination $target -Force
     }
