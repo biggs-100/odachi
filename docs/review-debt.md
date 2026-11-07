@@ -9,12 +9,31 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0226, which leaves nothing open.
+Last written: while closing 0227, which leaves nothing open.
 
 ## Open
 
-Nothing is open: 0208 closed the last row with the test it was missing. The next row starts a
+Nothing is open: 0227 closed the last row with the test it was missing. The next row starts a
 new list.
+
+## Closed by feature 0227
+
+### the installer's sentence for a failure with no holder had no test
+
+Found by the review of 0227 (warning, `scripts/install.ps1:225`). The catch has two messages, and
+the Windows test parked a process on the target, so it always reached the holders branch: the
+generic sentence -the path and the action when odachi cannot name a holder- is the brief's own
+done-when clause and nothing exercised it.
+
+Closed: `TestPowerShellInstallerSaysWhatToDoWhenNothingHoldsTheFile` holds the target with a handle
+opened without sharing, from a process whose image is not the target -the case an indexer or an
+antivirus makes- and asserts exit 1, the failing path in the answer and the placeholder untouched.
+The verdict that followed carries the row because the fix is a test and the script's bytes did not
+move; this list is where it leaves.
+
+The first round's warning did change the script: the holder search compared two spellings, so
+`ODACHI_BIN_DIR=C:/tools/odachi` missed the process and lost the PID. Both sides go through
+`GetFullPath` now, and the Windows test uses a slashy folder.
 
 ## Closed by feature 0208
 
