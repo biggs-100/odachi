@@ -30,8 +30,16 @@ item, the `all:*` pin, is next.
 
 ## Next
 
-The last open item, then the documental pair:
+One defect found by using the tool at this close, then the last open item and the documental pair:
 
+- **A correction stamped with a date is read as older than the verdict it corrects.** `lastVerdictTree`
+  (`internal/app/check/check.go`) picks the newest verdict by the reviewer's `at`, so 0227's
+  correction —whose answer said `2026-11-07T00:00:00Z` while its predecessors said `12:00`— lost
+  against the tree it corrected. `check` then said "the feature is closed and its tree has no verdict"
+  about a verdict that exists, and read the test fix as code nobody reviewed. It does not block, and
+  it disappears when the next document opens. The order the gate should trust is the store's own
+  write time, or the ancestry of the trees: a verdict whose tree the current tree carries is older
+  than one that carries it.
 - **0216: pin `all:*` with a repo test.** A regression to `*` would pass the suite for dotfile assets;
   today only a build probe covers it.
 - **The verdict/proof binding in `docs/releases.md`** and **the harness cost in `doctor`** can ride the
