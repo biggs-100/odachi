@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.29.0 - 2026-11-07
 
 - **A release says which bytes were judged.** `docs/releases.md` states that the tag carries the verdict
   of the feature's closing tree and that the steps after the close move only documents, and `check`
