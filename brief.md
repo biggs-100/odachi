@@ -1,31 +1,30 @@
-# the-smallest-change
+# the-gate-names-what-the-change-adds
 
 ## What must exist
-- before the code, the change names what it reuses, what it adds and what it deletes, and the PR carries the same list to the reviewer: an abstraction needs a second caller, a pattern waits for three uses for the same reason, and a wrong abstraction is inlined back before it is extracted again
+- when the feature closes, `check` names what the diff adds —the new files and the dependency files— in one line of the ready output, so the reviewer sees the scaffolding before reading the code; the exit code and the verdict do not change
 
 ## Done when
-- `shape` names the smallest change (reuse, add, delete; an abstraction needs a second caller), the rule of three for the same reason, the props test, and the inline-first recovery
-- `pull-request` says every PR names its new files, dependencies and abstractions with their reason and the code it reuses, and the reviewer asks what to delete, what was reused and which requirement each line serves
-- tests in `skills/embed_test.go` pin both, observed red before the text lands
-- `odachi skills --check` is green and the bodies stay under the sixty-line cap
-- `odachi init` leaves the installed copy equal to the tree
-- the changelog's Unreleased section names the rules
+- the ready output names the new files (capped) and the dependency files the diff adds, and stays silent when there are none
+- the line never changes the exit code, the reason or the proof
+- a test seeds a diff with an added file and a `go.mod` change and asserts the line; another asserts silence on a diff with neither
+- `odachi check --run "go test ./..."` is green
+- the changelog's Unreleased section names the line
 - `go test ./...` is green
 
 ## Not included (first version)
-- no gate that counts new files or dependencies: that is the next feature
-- no change to `commits`, `tests`, `triage` or `slices`: `triage` keeps its deletion rule for bugs
 - no new verb and no new flag
-- no change to the voice or the interview's questions
+- no change to the fence, the proof or the verdict reasons
+- no parsing of abstractions: they are not machine-detectable; the line names files and dependency files only
+- no change to the review or to the doctor
+- no change to the skills or to the voice
 - no change to the stored proofs: never touched
 - no change to `odachi role` or to the skill it renders
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
 - no change to the release workflow
-- no change to the skills the feature does not touch: commits, tests, triage, slices, writing, design and ui-craft
 
 ## Decisions taken
-- the rule lives in `shape` because the decision is taken before the brief; `triage` keeps its deletion rule for bugs
-- "same reason" is the test, not the count: three copies that one decision would change at once
-- the PR carries the list because a reviewer cannot reconstruct intent from the diff
-- the recovery is inline-first, because a wrong abstraction costs more than the duplication it replaced
+- the line lives in the ready output, not in the hook's `Note`: the reviewer reads it at the close, not at every commit
+- new files come from the diff already read (`--- /dev/null` then `+++ b/<path>`), not from a second git call
+- dependency files are a named list of manifests and lockfiles; the list is data, easy to extend
+- it is a note, never a block: the gate cannot know the requirement, only report what was added

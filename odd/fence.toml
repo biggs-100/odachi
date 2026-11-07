@@ -10,18 +10,13 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no gate that counts new files or dependencies: that is the next feature"
-paths = ["internal/app/check/**"]
+not   = "no change to the review or to the doctor"
+paths = ["internal/app/review/**", "internal/app/doctor/**", "internal/domain/doctor/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the skills the feature does not touch: commits, tests, triage, slices, writing, design and ui-craft"
-paths = ["skills/commits/**", "skills/tests/**", "skills/triage/**", "skills/slices/**", "skills/writing/**", "skills/design/**", "skills/ui-craft/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to the voice or the interview's questions"
-paths = ["internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
+not   = "no change to the skills or to the voice"
+paths = ["skills/**", "internal/domain/persona/**", "internal/app/start/**", "cmd/odachi/interview.go"]
 deps  = []
 
 [[rule]]
