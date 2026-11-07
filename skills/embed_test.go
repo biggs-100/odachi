@@ -2,6 +2,7 @@ package skills_test
 
 import (
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -18,9 +19,16 @@ var bundled = func() []string {
 	}
 	names := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if entry.IsDir() {
-			names = append(names, entry.Name())
+		if !entry.IsDir() {
+			continue
 		}
+		// A directory without a SKILL.md is not a skill: the loader skips it and
+		// `skills --check` skips it, so the expectation must skip it too. The
+		// embed fixture under a dot name is the case that makes the difference.
+		if _, err := os.Stat(filepath.Join(entry.Name(), "SKILL.md")); err != nil {
+			continue
+		}
+		names = append(names, entry.Name())
 	}
 	slices.Sort(names)
 	return names
