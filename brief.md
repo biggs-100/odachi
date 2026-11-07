@@ -1,29 +1,31 @@
-# a-release-says-which-bytes-were-judged
+# the-harness-says-what-it-costs
 
 ## What must exist
-- a release says which bytes were judged: `docs/releases.md` states that the tag carries the verdict of the feature's closing tree and that the release commit moves only documents, and `check` names the verdict's tree at the close next to the proof, so a reader stops believing the tag itself was reviewed
+- the harness says what it costs: `doctor` reports the bytes of the always-on block and the bytes of `SKILLS.md` beside the installed skill count it already names, so the context a project pays on every turn is a number and not an estimate
 
 ## Done when
-- `docs/releases.md` states the binding: the tag carries the verdict of the feature's closing tree, and the release commit moves only documents
-- `check`'s ready output at a close names the verdict's tree next to the proof when a verdict exists, and says nothing when none does
-- a test seeds a verdict and asserts the line; another asserts the silence without one; the exit code stays ready in both
+- the doctor's skills line names the bytes of the odachi block in `AGENTS.md` and the bytes of `SKILLS.md`, in the detail it already prints, in KB with one decimal or B under a KB
+- it still names the registry state, the installed count and the drift it named before
+- a block or a registry that cannot be read keeps the check's own problem instead of a made-up zero: a size nobody could read is not a small one
+- `--json` carries the same detail, which it already mirrors from the line
+- a test in a configured project asserts both sizes; the JSON test and the drift tests stay green
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
-- the changelog's Unreleased section names the line
+- the changelog's Unreleased section names the measurement
 
 ## Not included (first version)
-- no change to the release workflow or to the tag: the binding is a statement and a line, not a new gate
-- no change to the review or to the verdict's shape
-- no change to the exit code or to the verdict reasons
-- no change to the brief's format or to `start`
-- no change to the doctor or to the classifier
+- no sixteenth check and no change to the "fifteen" the usage, the summary and the JSON name
+- no change to what the check verifies: it is a measurement, not a gate
+- no change to the block, its markers or the voice
+- no change to the registry's shape or to the skills' text
+- no change to the review or to the classifier
 - no change to the stored proofs: never touched
-- no change to the skills or to the voice
 - no change to the design canvas, its token or the push plugin
 - no change to the artboard format
-- no change to the installers
+- no change to the release workflow or to the installers
+- no change to the brief's format or to `start`
 
 ## Decisions taken
-- the line names the tree only: the findings and the coverage are the review's to say, and a line that repeated them would be a second verdict
-- it prints on a ready close and never on a block: the block is the thing to fix, and the evidence is read when there is nothing left to fix
-- a close with no verdict prints nothing: the silence is not a claim, and the review note already says a verdict is missing
-- the document says what the line measures and what it does not: the tag names the merge of the release pull request, and the verdict judged the feature's closing tree, which is a different tree on purpose
+- the cost goes into the skills line, not a sixteenth check: the line already names the count and the registry, and a new check would change the number the usage, the summary and four tests name for one measurement
+- the block is measured as the odachi block inside `AGENTS.md`, not the whole file: that is what `init` writes and what every agent reads on every turn
+- a failed read is the check's problem, never 0 B: the doctor already refuses to turn an unreadable file into a clean answer
+- the size is formatted once, with the same units a human reads in `clean`: bytes under a kilobyte, kilobytes with one decimal above it

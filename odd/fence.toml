@@ -3,9 +3,9 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: "no change to the release workflow or to the tag" is a
-# promise about behaviour, and no glob measures a promise. `internal/app/check`
-# and `docs/` are deliberately absent: the line and the document live there.
+# path stays in the brief: "no change to what the check verifies" is a promise
+# about behaviour, and no glob measures a promise. `internal/app/doctor` is
+# deliberately absent: the line this feature adds lives there.
 #
 # written by hand after start (0132): start carries every non-goal as a template,
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
@@ -16,8 +16,13 @@ paths = ["internal/domain/brief/**", "internal/app/start/**", "cmd/odachi/interv
 deps  = []
 
 [[rule]]
-not   = "no change to the review, the doctor or the classifier"
-paths = ["internal/app/review/**", "internal/app/doctor/**", "internal/domain/doctor/**", "internal/domain/review/**"]
+not   = "no change to the review or to the classifier"
+paths = ["internal/app/review/**", "internal/domain/review/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the judging half of the doctor"
+paths = ["internal/domain/doctor/**"]
 deps  = []
 
 [[rule]]
@@ -41,11 +46,6 @@ paths = ["internal/domain/design/design.go"]
 deps  = []
 
 [[rule]]
-not   = "no change to the release workflow"
-paths = [".github/workflows/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to the installers"
-paths = ["scripts/install.ps1", "scripts/install.sh"]
+not   = "no change to the release workflow or to the installers"
+paths = [".github/workflows/**", "scripts/install.ps1", "scripts/install.sh"]
 deps  = []
