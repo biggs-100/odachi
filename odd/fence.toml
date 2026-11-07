@@ -10,18 +10,13 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to `the-comment.md`: its command belongs to `pull-request`, and the comment sends the reader there"
-paths = ["skills/writing/references/the-comment.md"]
+not   = "no PR template with E2E, CodeRabbit or a contributor checklist"
+paths = [".github/PULL_REQUEST_TEMPLATE.md"]
 deps  = []
 
 [[rule]]
-not   = "no change to `assets/doc.md`: the shape already carries the checklist"
-paths = ["skills/writing/assets/doc.md"]
-deps  = []
-
-[[rule]]
-not   = "no change to the skills the feature does not touch: tests, drive, slices, commits, triage, design and ui-craft"
-paths = ["skills/tests/**", "skills/drive/**", "skills/slices/**", "skills/commits/**", "skills/triage/**", "skills/design/**", "skills/ui-craft/**"]
+not   = "no change to the skills the feature does not touch: tests, drive, slices, triage, writing, design and ui-craft"
+paths = ["skills/tests/**", "skills/drive/**", "skills/slices/**", "skills/triage/**", "skills/writing/**", "skills/design/**", "skills/ui-craft/**"]
 deps  = []
 
 [[rule]]
