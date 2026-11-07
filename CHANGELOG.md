@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.28.0 - 2026-11-06
 
 - **The smallest change, named before it is written.** `shape` asks what the change reuses, adds and
   deletes, waits for three uses for the same reason, checks what the props describe, and inlines a
