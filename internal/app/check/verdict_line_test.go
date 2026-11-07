@@ -60,3 +60,29 @@ func TestACloseWithoutAVerdictSaysNothing(t *testing.T) {
 		t.Fatalf("the ready output names a verdict that does not exist:\n%s", joined)
 	}
 }
+
+// TestABlockedCloseSaysNothingAboutTheVerdict: the block is the thing to fix, and
+// the evidence is read when there is nothing left to fix. The line is printed after
+// the ready gate's early return; this test keeps a refactor from moving it above.
+func TestABlockedCloseSaysNothingAboutTheVerdict(t *testing.T) {
+	const base = "9a211be952e250bfc7adc0acdbe496c88143ff1f"
+	const judged = "cccccccccccccccccccccccccccccccccccccccc"
+
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, filepath.FromSlash("odd/tasks/0007-turnos.md"))] = []byte(reviewableDoc(base, true))
+	files.files[reviewPath(judged)] = []byte(verdictAtInstant(t, judged, base, time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)))
+	files.modTimes = map[string]time.Time{
+		reviewPath(judged): time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC),
+	}
+	// The close has no proof, so the gate blocks before the evidence is printed.
+	delete(files.files, proofPath())
+
+	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
+
+	if got.Code == int(gate.Ready) {
+		t.Fatalf("the gate is ready without a proof")
+	}
+	if joined := strings.Join(got.Lines, "\n"); strings.Contains(joined, "verdict:") {
+		t.Fatalf("a blocked close names the verdict's tree:\n%s", joined)
+	}
+}
