@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.28.1 - 2026-11-06
 
 - **The gate names what the change adds.** The ready output lists the new files and the dependency
   files the diff adds (`go.mod`, `go.sum`, `package.json` and the other manifests and lockfiles), in
