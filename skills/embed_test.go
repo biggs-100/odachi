@@ -307,6 +307,57 @@ func TestPullRequestMeasuresTheBudget(t *testing.T) {
 	}
 }
 
+// TestPullRequestCarriesTheChain: a chained PR names where it stands and its
+// diff carries only its own unit.
+func TestPullRequestCarriesTheChain(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		var folder strings.Builder
+		for _, file := range s.Files {
+			folder.Write(file.Content)
+		}
+		byName[s.Name] = folder.String()
+	}
+
+	for _, want := range []string{
+		"lowercase and dashes",
+		"the tracker PR",
+		"depends on",
+		"the next PR",
+		"📍",
+		"retarget",
+	} {
+		if !strings.Contains(byName["pull-request"], want) {
+			t.Errorf("pull-request no dice %q: la cadena no dice dónde está", want)
+		}
+	}
+}
+
+// TestCommitsNameTheRollback: a commit says what a revert would take with it.
+func TestCommitsNameTheRollback(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Main())
+	}
+
+	for _, want := range []string{
+		"what a revert would take",
+		"revert alone",
+	} {
+		if !strings.Contains(byName["commits"], want) {
+			t.Errorf("commits no dice %q: un commit no se puede revertir solo", want)
+		}
+	}
+}
+
 // TestVerificationIsProportional: the ceremony a change owes is decided by its
 // blast radius, not by habit. `tests` names the three tiers and the two
 // comparisons a red owes, and `slices` routes the delegation policy to the same
