@@ -1,51 +1,45 @@
 # Next session
 
-Written at the close of 0223, `the-smallest-change`. The overengineering investigation became two
-rules: one before the brief, one in the PR.
+Written at the close of 0224, `the-gate-names-what-the-change-adds`. The overengineering
+investigation is closed: the rule lives in `shape`, the review questions in `pull-request`, and the
+gate names what a change adds.
 
 ## What shipped
 
-- **`shape` asks for the smallest change.** Before declaring, the change names what it reuses, what
-  it adds (files, dependencies, abstractions) and what it deletes; an abstraction needs a second
-  caller; a pattern waits for three uses for the same reason; the props describe what is rendered,
-  not the situation; a wrong abstraction is inlined back first.
-- **`pull-request` carries the list.** Every PR names its new files, dependencies and abstractions
-  with their reason and the code it reuses, and the reviewer asks what to delete, what was reused
-  and which requirement each line serves.
-- **The gate.** `TestShapeAsksForTheSmallestChange` and `TestPullRequestNamesWhatItAdds` were red
-  before the text landed. Proof `proof/0223-the-smallest-change.txt`; the review approved the tree on
-  the reliability lens with no findings. Released as v0.28.0 and installed.
+- **The gate names the scaffolding.** The ready output lists the new files (capped) and the
+  dependency files the diff adds, in one line and without moving the verdict. The new files come
+  from the diff the candidate already read; the dependency files from a named list of manifests and
+  lockfiles. The plan and the proof are filtered out: every feature adds its task doc, and a note
+  that always fires is a note nobody reads.
+- **What it does not do.** It does not parse abstractions (not machine-detectable), and it never
+  blocks: the gate reports, the PR names the reason, the reviewer asks the three questions.
+- **The gate.** `TestTheReadyOutputNamesWhatTheChangeAdds` and
+  `TestTheReadyOutputIsSilentWhenTheChangeAddsNothing` cover it; the first was observed red by
+  switching the line off. Proof `proof/0224-the-gate-names-what-the-change-adds.txt`; the review
+  approved the tree on the reliability lens with no findings. Released as v0.28.1 and installed.
 
-## What the investigation measured
+## What was measured
 
-- **The shape is duplication and reinvention, not volume.** Block duplication +81% (40.3 → 73.0 per
-  million changed lines, 2023–2026), moved/refactored code 21% → 3.8%, function connectivity −35%
-  (GitClear, 623M changes); 40% of developers say AI produces unnecessary or duplicative code and
-  96% doubt its reliability (Sonar, 1,100 devs); 66% spend more time fixing "almost right" code
-  (Stack Overflow, 49k devs).
-- **The fix is instruction, not tooling.** An ACL ARR 2026 submission ("Don't Over-Engineer It")
-  measures agents adding unrequested tests and documentation on SWE-bench and reports a single
-  instruction reverses it. The paper is not peer-reviewed yet and its PDF is behind OpenReview's
-  browser check; the abstract is what we have.
-- **The rule of three has a test.** Same reason means one decision would change every copy at once;
-  the props smell test separates a sound abstraction from a merged situation; the recovery is
-  inline-first (Stack Overflow, November 2026).
-- **`pull-request` is at 59 lines.** The next rule for it moves depth to a reference; `shape` is at
-  49.
+- **A note that always fires is noise.** The first cut would have named the task doc in every
+  feature; the filter for `odd/` and `proof/` is what makes the line mean "scaffolding".
+- **The diff already had the answer.** New files are `--- /dev/null` followed by `+++ b/<path>` in
+  the patch the candidate read; a second git call would have been the overengineering the feature
+  warns about.
+- **The tests were written after the code.** The RED was observed by switching the line off, which
+  is weaker than writing the test first; the next gate feature starts with the test.
 
 ## The next feature
 
-- **The gate names what the change adds.** `check` reports the new files, dependencies and
-  abstractions in the diff as a warning, not a blocker, so the reviewer sees the scaffolding before
-  reading the code. It is a code feature in `internal/app/check`, with its own test.
-- **The installer names the process that holds the binary**, open from 0218.
-- **Pin `all:*`** with a repo test, open from 0216.
+- **The installer names the process that holds the binary**, open from 0218: when `odachi.exe` is in
+  use, say which process and what to do, instead of a `Copy-Item` IOException.
+- **Pin `all:*`** with a repo test, open from 0216: a regression to `*` would pass the suite for
+  dotfile assets.
 - One writer per worktree; one heavy gate per machine.
 
 ## The commands that work
 
 ```sh
-odachi review --base da3353df799a470576a65b267c7c35871899b432 \
+odachi review --base 9a211be952e250bfc7adc0acdbe496c88143ff1f \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
