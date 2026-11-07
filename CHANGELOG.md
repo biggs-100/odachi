@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.27.0 - 2026-11-06
 
 - **The chain says where it stands.** A child PR names its tracker, position, base, dependency,
   next PR and what it leaves out, marks itself in the diagram, and retargets a diff that shows
