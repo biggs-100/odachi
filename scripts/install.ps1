@@ -69,6 +69,26 @@ function Get-Sha256([string] $path) {
     Fail "certutil no devolvió un sha256 legible para $path; sin hash no verifico el archivo y no instalé nada"
 }
 
+# Quién tiene abierto el destino: el proceso que corre desde esa ruta, no un
+# odachi cualquiera. Windows no deja reemplazar un binario en uso, y el proceso
+# que lo retiene es justo el que el humano necesita cerrar. Se lee sólo cuando la
+# copia ya falló: preguntar antes es una carrera con el proceso que arranca un
+# segundo después. Un proceso de otro usuario o del sistema no deja leer su ruta
+# -y no es el que corre este binario-, así que se salta en vez de adivinar.
+function Get-Holders([string] $path) {
+    $holders = @()
+    foreach ($process in @(Get-Process -ErrorAction SilentlyContinue)) {
+        try {
+            if ($process.Path -and ([System.IO.Path]::GetFullPath($process.Path) -ieq $path)) {
+                $holders += $process
+            }
+        }
+        catch {
+        }
+    }
+    return $holders
+}
+
 # 1 · plataforma. Lo que no está acá se dice, no se adivina.
 $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     'AMD64' { 'amd64' }
@@ -186,8 +206,25 @@ try {
         $binDir = Join-Path $env:LOCALAPPDATA 'odachi\bin'
     }
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null
-    $target = Join-Path $binDir 'odachi.exe'
-    Copy-Item -LiteralPath $source -Destination $target -Force
+    # La ruta se compara contra la que Windows reporta para el proceso, que llega
+    # canónica: barras invertidas y sin segmentos relativos. Sin esto, un
+    # ODACHI_BIN_DIR con barras normales o un "." no encuentra al que retiene el
+    # archivo y el mensaje pierde el PID, que es lo único que esta rama aporta.
+    $target = [System.IO.Path]::GetFullPath((Join-Path $binDir 'odachi.exe'))
+    try {
+        Copy-Item -LiteralPath $source -Destination $target -Force
+    }
+    catch {
+        # El caso real que abrió esto: otro proyecto cuyo hook de pre-commit corre
+        # odachi.exe. Decir "el proceso no puede obtener acceso al archivo" no le
+        # sirve a nadie; el PID y la salida, sí.
+        $holders = @(Get-Holders $target)
+        if ($holders.Count -gt 0) {
+            $who = ($holders | ForEach-Object { "PID $($_.Id)" }) -join ', '
+            Fail "no pude reemplazar $target porque el binario está en uso ($who): cerrá esa terminal o ese commit -el hook de otro proyecto corre odachi.exe- y volvé a correr el instalador, o instalá en otra carpeta con ODACHI_BIN_DIR=<ruta>. No instalé nada."
+        }
+        Fail "no pude reemplazar $target ($($_.Exception.Message)); cerrá cualquier odachi que esté corriendo y volvé a correr el instalador. No instalé nada."
+    }
 
     # 6 · qué quedó instalado, y el PATH del usuario si falta esa carpeta.
     Write-Host "odachi $version instalado en $target"
