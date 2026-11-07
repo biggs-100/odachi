@@ -3,12 +3,22 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: "no change to what the check verifies" is a promise
-# about behaviour, and no glob measures a promise. `internal/app/doctor` is
-# deliberately absent: the line this feature adds lives there.
+# path stays in the brief: "no CI and no test that runs an agent" is a promise
+# about behaviour, and no glob measures a promise. `docs/` is deliberately
+# absent: the measurement this feature writes lives there.
 #
 # written by hand after start (0132): start carries every non-goal as a template,
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
+
+[[rule]]
+not   = "no change to the skills: the probe measures `tests` as it is"
+paths = ["skills/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to `odachi bench` and no new verb"
+paths = ["internal/app/bench/**", "internal/bench/**", "internal/domain/bench/**", "cmd/odachi/bench.go"]
+deps  = []
 
 [[rule]]
 not   = "no change to the brief's format or to `start`"
@@ -16,13 +26,8 @@ paths = ["internal/domain/brief/**", "internal/app/start/**", "cmd/odachi/interv
 deps  = []
 
 [[rule]]
-not   = "no change to the review or to the classifier"
-paths = ["internal/app/review/**", "internal/domain/review/**"]
-deps  = []
-
-[[rule]]
-not   = "no change to the judging half of the doctor"
-paths = ["internal/domain/doctor/**"]
+not   = "no change to the review, the doctor or the classifier"
+paths = ["internal/app/review/**", "internal/app/doctor/**", "internal/domain/doctor/**", "internal/domain/review/**"]
 deps  = []
 
 [[rule]]
@@ -31,21 +36,16 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the skills or to the voice"
-paths = ["skills/**", "internal/domain/persona/**"]
+not   = "no change to the voice"
+paths = ["internal/domain/persona/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the design canvas, its token or the push plugin"
-paths = ["internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts"]
+not   = "no change to the design canvas, its token or the installers"
+paths = ["internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts", "scripts/install.ps1", "scripts/install.sh"]
 deps  = []
 
 [[rule]]
-not   = "no change to the artboard format"
-paths = ["internal/domain/design/design.go"]
-deps  = []
-
-[[rule]]
-not   = "no change to the release workflow or to the installers"
-paths = [".github/workflows/**", "scripts/install.ps1", "scripts/install.sh"]
+not   = "no change to the release workflow"
+paths = [".github/workflows/**"]
 deps  = []
