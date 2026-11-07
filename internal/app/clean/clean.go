@@ -23,6 +23,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/store"
 	"github.com/biggs-100/odachi/internal/domain/undo"
+	"github.com/biggs-100/odachi/internal/domain/units"
 )
 
 // Exit codes, the same shape as the other verbs.
@@ -908,19 +909,10 @@ func plural2(n int, word string) string {
 	return word + "s"
 }
 
-// sizeText is how a human reads a size: bytes below a kilobyte, one decimal
-// below ten of them, whole kilobytes below a megabyte, one decimal above it.
+// sizeText is how a human reads a size: the one format this verb and the doctor
+// share, so the store's bytes and the harness's bytes are comparable.
 func sizeText(bytes int64) string {
-	switch {
-	case bytes < 1024:
-		return fmt.Sprintf("%d B", bytes)
-	case bytes < 10*1024:
-		return fmt.Sprintf("%.1f KB", float64(bytes)/1024)
-	case bytes < 1024*1024:
-		return fmt.Sprintf("%.0f KB", float64(bytes)/1024)
-	default:
-		return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
-	}
+	return units.Bytes(bytes)
 }
 
 // withNotice puts the lock's announcement in front of the run's own answer.

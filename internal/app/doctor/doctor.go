@@ -37,6 +37,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/rules"
 	"github.com/biggs-100/odachi/internal/domain/skill"
 	"github.com/biggs-100/odachi/internal/domain/store"
+	"github.com/biggs-100/odachi/internal/domain/units"
 	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
@@ -590,8 +591,16 @@ func (r *runner) skills() domaindoctor.Check {
 	if err != nil {
 		return r.unreadable(domaindoctor.CheckSkills, "~/.agents/skills", err)
 	}
+	block, err := r.blockBytes()
+	if err != nil {
+		return r.unreadable(domaindoctor.CheckSkills, agentsFile, err)
+	}
 
-	detail := registered + "; " + installedSkillsDir + ": " + installed
+	detail := registered
+	if block != "" {
+		detail += ", the block is " + block
+	}
+	detail += "; " + installedSkillsDir + ": " + installed
 	if compared > 0 && len(drift) == 0 {
 		detail += "; " + "compared: " + count(compared, "match", "matches") + " in " + sourceLabel
 	}
@@ -732,7 +741,22 @@ func (r *runner) skillRegistry() (detail, fix string, err error) {
 	if !exists || content != want {
 		return skillsDir + "/: " + registry + " is not up to date: the catalogue drifted", "run odachi skills --write", nil
 	}
-	return skillsDir + "/: " + count(len(loaded), "skill", "skills") + ", " + registry + " up to date", "", nil
+	return skillsDir + "/: " + count(len(loaded), "skill", "skills") + ", " + registry + " up to date (" + units.Bytes(int64(len(content))) + ")", "", nil
+}
+
+// blockBytes is the odachi block's size: the part of AGENTS.md an agent reads on
+// every turn, not the whole file. A file without the block has no cost to name;
+// check 4 is what says it is missing, and a read that fails is its own problem.
+func (r *runner) blockBytes() (string, error) {
+	content, exists, err := r.read(agentsFile)
+	if err != nil || !exists {
+		return "", err
+	}
+	body, ok := rules.BodyIn(content)
+	if !ok {
+		return "", nil
+	}
+	return units.Bytes(int64(len(body))), nil
 }
 
 // installedSkills counts the directories that hold a SKILL.md under the folder
