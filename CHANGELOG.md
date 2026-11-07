@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The declared `Risk:` meets the diff.** When the review classifies a change as full —it touches a
+  path the classifier names— and the commits declare `Risk: none` or carry no line at all, `check`
+  names the contrast and the paths in the ready output; a named risk stays silent, and the exit code
+  and the verdict do not move (0225).
+
 ## v0.28.1 - 2026-11-06
 
 - **The gate names what the change adds.** The ready output lists the new files and the dependency
