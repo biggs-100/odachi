@@ -7,6 +7,12 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The harness says what it costs.** `doctor`'s skills check names the bytes of the odachi block in
+  `AGENTS.md` and the bytes of `SKILLS.md` beside the count it already prints, so the context an agent
+  reads on every turn is a number (0231).
+
 ## v0.29.0 - 2026-11-07
 
 - **A release says which bytes were judged.** `docs/releases.md` states that the tag carries the verdict
