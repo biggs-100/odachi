@@ -387,6 +387,30 @@ func TestShapeAsksForTheSmallestChange(t *testing.T) {
 	}
 }
 
+// TestShapeDatesEveryNonGoal: a non-goal that names no condition waits forever,
+// and the list stops being a decision. shape asks for the condition, with the
+// three shapes somebody can check later.
+func TestShapeDatesEveryNonGoal(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Main())
+	}
+
+	for _, want := range []string{
+		"A non-goal says when it comes back",
+		"a measurement, a second caller, a version",
+		"the condition that reopens it",
+	} {
+		if !strings.Contains(byName["shape"], want) {
+			t.Errorf("shape no dice %q: el non-goal no tiene fecha", want)
+		}
+	}
+}
+
 // TestPullRequestNamesWhatItAdds: the reviewer cannot reconstruct intent from the
 // diff, so the PR names what is new and what is reused, and asks the three
 // questions.
