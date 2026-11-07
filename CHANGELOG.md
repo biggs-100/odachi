@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The chain says where it stands.** A child PR names its tracker, position, base, dependency,
+  next PR and what it leaves out, marks itself in the diagram, and retargets a diff that shows
+  another unit; a branch is named for what it delivers, and a commit says what a revert would take
+  with it (0222).
+
 ## v0.26.0 - 2026-11-06
 
 - **The writing pair measures the review path.** `the-doc` names the changed-markdown command and
