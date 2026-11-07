@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -1612,6 +1613,95 @@ func pathNote(paths []string) string {
 	return strings.Join(paths, ", ")
 }
 
+// addedNote names what the diff adds and still keeps the gate ready: the new
+// files, capped, and the dependency files that changed. It is a note, never a
+// block: the gate cannot know the requirement, only report the scaffolding.
+func (r *runner) addedNote() string {
+	if r.work == nil {
+		return ""
+	}
+	files := newFiles(r.work.diff)
+	deps := dependencyPaths(r.work.paths)
+	if len(files) == 0 && len(deps) == 0 {
+		return ""
+	}
+	// The plan and the evidence are paperwork, not scaffolding: every feature adds
+	// its task doc, and a note that always fires is a note nobody reads.
+	scaffolding := make([]string, 0, len(files))
+	for _, file := range files {
+		if !paperworkPath(file) {
+			scaffolding = append(scaffolding, file)
+		}
+	}
+	files = scaffolding
+	if len(files) == 0 && len(deps) == 0 {
+		return ""
+	}
+
+	parts := make([]string, 0, 2)
+	if len(files) > 0 {
+		word := "files"
+		if len(files) == 1 {
+			word = "file"
+		}
+		parts = append(parts, fmt.Sprintf("adds %d new %s: %s", len(files), word, pathNote(files)))
+	}
+	if len(deps) > 0 {
+		parts = append(parts, "dependency files changed: "+pathNote(deps))
+	}
+	return strings.Join(parts, "; ") + "; name the reason in the PR"
+}
+
+// newFiles reads the paths the diff adds: a file is new when its only side in
+// the patch is `--- /dev/null`, followed by the `+++ b/<path>` line. The diff is
+// the one the candidate read already produced, so the gate asks git once.
+func newFiles(diff string) []string {
+	added := []string{}
+	previous := ""
+	for _, line := range strings.Split(diff, "\n") {
+		if strings.HasPrefix(line, "+++ b/") && previous == "--- /dev/null" {
+			added = append(added, strings.TrimPrefix(line, "+++ b/"))
+		}
+		previous = line
+	}
+	return added
+}
+
+// dependencyFiles is the data: a manifest or lockfile whose change means a
+// dependency moved. A project that uses another ecosystem adds its file here.
+var dependencyFiles = map[string]bool{
+	"go.mod":            true,
+	"go.sum":            true,
+	"package.json":      true,
+	"package-lock.json": true,
+	"pnpm-lock.yaml":    true,
+	"yarn.lock":         true,
+	"Cargo.toml":        true,
+	"Cargo.lock":        true,
+	"requirements.txt":  true,
+	"pyproject.toml":    true,
+	"poetry.lock":       true,
+	"Gemfile":           true,
+	"Gemfile.lock":      true,
+}
+
+// dependencyPaths filters the changed paths to the files in the list above.
+func dependencyPaths(paths []string) []string {
+	out := []string{}
+	for _, changed := range paths {
+		if dependencyFiles[path.Base(changed)] {
+			out = append(out, changed)
+		}
+	}
+	return out
+}
+
+// paperworkPath reports the paths the feature writes for itself: the plan and
+// the proof. They are not the scaffolding the reviewer came to see.
+func paperworkPath(changed string) bool {
+	return strings.HasPrefix(changed, "odd/") || strings.HasPrefix(changed, "proof/")
+}
+
 // report turns the gate's verdict into the verb's result.
 // openQuestions is what the gate only counts: the words the human is being asked.
 // It answers nothing and writes nothing; it only makes the block readable.
@@ -1726,6 +1816,12 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	// ready, but the line says what the bytes do not.
 	if haveProof && r.proofEmpty {
 		result.Lines = append(result.Lines, "warning: the proof produced no output: a proof that says nothing is weak evidence; run a command that prints what it proved")
+	}
+	// What the diff adds, for the reviewer: new files and dependency files, in
+	// one line and without moving the verdict. The gate cannot know the
+	// requirement, so it names the scaffolding and leaves the reason to the PR.
+	if note := r.addedNote(); note != "" {
+		result.Lines = append(result.Lines, note)
 	}
 	// A ready tree the suite never ran on says so: the proof it keeps proved the
 	// code, and a silent ready would be the kind of quiet this gate exists to avoid.
