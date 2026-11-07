@@ -3,16 +3,20 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: "no new verb and no new flag" is a promise about
-# behaviour, and no glob measures a promise. "No change to the skills other than
-# `shape`" is the same kind of promise: the fence matches what a glob names, and
-# it cannot name "every skill but one".
+# path stays in the brief: "no change to the binary, its verbs or the gate" is a
+# promise about behaviour, and the Windows test that pins this feature lives in
+# cmd/odachi/ too, so no glob separates the test from the binary.
 #
 # written by hand after start (0132): start carries every non-goal as a template,
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the brief's format: the headers, the parse and the render stay as they are"
+not   = "no change to `install.sh`: on Linux and macOS a running binary is replaced by rename"
+paths = ["scripts/install.sh"]
+deps  = []
+
+[[rule]]
+not   = "no change to the brief's format or to `start`"
 paths = ["internal/domain/brief/**", "internal/app/start/**", "cmd/odachi/interview.go"]
 deps  = []
 
@@ -27,8 +31,13 @@ paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the voice"
-paths = ["internal/domain/persona/**"]
+not   = "no change to the skills or to the voice"
+paths = ["skills/**", "internal/domain/persona/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the release workflow or to the assets the release publishes"
+paths = [".github/workflows/**", ".goreleaser.yaml"]
 deps  = []
 
 [[rule]]
@@ -39,9 +48,4 @@ deps  = []
 [[rule]]
 not   = "no change to the artboard format"
 paths = ["internal/domain/design/design.go"]
-deps  = []
-
-[[rule]]
-not   = "no change to the release workflow"
-paths = [".github/workflows/**"]
 deps  = []
