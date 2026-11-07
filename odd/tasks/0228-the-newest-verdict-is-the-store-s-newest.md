@@ -13,8 +13,8 @@ R1 · "the gate reads the newest verdict by when the store wrote it, not by the 
 - the changelog's Unreleased section names the order
 
 ## Steps
-- [ ] T1 · the gate reads the newest verdict by the store's write time   R1 · route:inline
-- [ ] T2 · the changelog names the order   R1 · route:inline
+- [x] T1 · the gate reads the newest verdict by the store's write time   R1 · route:inline · tree:12744088211d82ac1505f9d0c0919a71c29e8171
+- [x] T2 · the changelog names the order   R1 · route:inline · tree:b078f0fe30998b6ca7210ee06d3a1b301c424533
 
 ## History
 L1 · "the gate reads the newest verdict by when the store wrote it, not by the clock the reviewer declared: a correction written after the verdict it corrects is the one that judged the furthest bytes, even when its `at` says an earlier time, so `check` never names an existing verdict as missing"
