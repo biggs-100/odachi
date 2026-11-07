@@ -10,13 +10,13 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no PR template with E2E, CodeRabbit or a contributor checklist"
-paths = [".github/PULL_REQUEST_TEMPLATE.md"]
+not   = "no gate that counts new files or dependencies: that is the next feature"
+paths = ["internal/app/check/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the skills the feature does not touch: tests, drive, slices, triage, writing, design and ui-craft"
-paths = ["skills/tests/**", "skills/drive/**", "skills/slices/**", "skills/triage/**", "skills/writing/**", "skills/design/**", "skills/ui-craft/**"]
+not   = "no change to the skills the feature does not touch: commits, tests, triage, slices, writing, design and ui-craft"
+paths = ["skills/commits/**", "skills/tests/**", "skills/triage/**", "skills/slices/**", "skills/writing/**", "skills/design/**", "skills/ui-craft/**"]
 deps  = []
 
 [[rule]]
