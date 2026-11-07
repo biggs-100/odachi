@@ -14,8 +14,8 @@ R1 · "the harness says what it costs: `doctor` reports the bytes of the always-
 - the changelog's Unreleased section names the measurement
 
 ## Steps
-- [ ] T1 · the doctor names the block and the registry bytes   R1 · route:inline
-- [ ] T2 · the changelog names the measurement   R1 · route:inline
+- [x] T1 · the doctor names the block and the registry bytes   R1 · route:inline · tree:cca9cd4c4bf4a9a991fbf9a5b12f8e2ade89da16
+- [x] T2 · the changelog names the measurement   R1 · route:inline · tree:1fcd0976da05a8a54eebe0a82de0bca2e1674449
 
 ## History
 L1 · "the harness says what it costs: `doctor` reports the bytes of the always-on block and the bytes of `SKILLS.md` beside the installed skill count it already names, so the context a project pays on every turn is a number and not an estimate"
