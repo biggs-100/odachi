@@ -1,36 +1,35 @@
 # Next session
 
-Written at the close of 0230, `a-release-says-which-bytes-were-judged`, with `v0.29.0` published and
-installed. The backlog of earlier sessions is empty; the harness cost is the next feature.
+Written at the close of 0231, `the-harness-says-what-it-costs`, after `v0.29.0`. The backlog is
+empty; the behavioural evaluation of the skills is the one thing still deferred.
 
 ## Where the project is
 
-- `main` at the release merge of #426 (`1a18088`), `odachi 0.29.0` installed from the published
-  release, `doctor` 15/15, no open feature, no open questions.
-- 228 features and 573 steps closed; `docs/review-debt.md` has no open rows.
-- `v0.29.0` carries 0225 to 0230 and is the tag a person installs; `Unreleased` is empty until the
-  next feature writes under it.
+- `main` at the merge of #429 (`c04db37`), `odachi 0.29.0` installed, `doctor` 15/15, no open
+  feature, no open questions.
+- 229 features and 575 steps closed; `docs/review-debt.md` has no open rows.
+- `v0.29.0` is the tag a person installs. `Unreleased` carries one entry, 0231 (the harness cost), so
+  the installed binary does not print the new `doctor` line until the next release. The project's own
+  rule says to cap at two or three entries before publishing, so it can wait for the next feature.
 
 ## What this session measured
 
-- **The gate judges with the installed binary, not with the tree's code.** At 0230's close the local
-  `check` still printed the false "no verdict" line after two releases' worth of source fixes: the
-  binary on the PATH was 0.28.1. A binary built from the tree printed `verdict: f120eb1c` and no
-  note. A change to `check` is not observable on this machine until a release, or a build.
-- **A review finding can be half false and half true.** 0230's WARNING read the line as reaching a
-  blocked report; the call sits after the ready gate's early return, so it cannot. The missing test
-  was real, and `TestABlockedCloseSaysNothingAboutTheVerdict` now pins the absence.
-- **The release is the installed gate's update path.** `v0.29.0` was cut on the merge of #426, the
-  workflow ran the suite, built and signed, and the notes came from the changelog section verbatim.
-  The published assets and the body were read back before installing.
+- **The always-on cost is a number now.** `doctor`'s skills line names the bytes of the odachi block in
+  `AGENTS.md` and the bytes of `SKILLS.md`, beside the installed count it already printed. It is the
+  first measurement of what an agent reads on every turn, and it needed no sixteenth check.
+- **A formatter with two callers belongs to neither verb.** `clean` and `doctor` both print sizes, so
+  the format moved to `internal/domain/units`: two verbs cannot print the same number two ways.
+- **The review found the branches the brief promised and no test covered**: the unreadable block and
+  the file with no block. Both were paid with tests, and the debt list records the row as closed.
+- **The installed binary lags `main` until a release.** A live `doctor` on this branch still prints the
+  old line; the built binary and the tests print the new one. 0230 wrote the limit, and this session
+  met it again from the other side.
 
 ## Next
 
-- **The harness cost in `doctor`.** rsc has a `context-budget`; odachi does not say what its always-on
-  costs. `doctor` can report the bytes of the block plus `SKILLS.md` and the installed skill count,
-  the way it already reports the store. `internal/app/doctor/**` is protected by the current fence, so
-  the plan PR lands before the line.
-- The behavioural evaluation of the core skills stays deferred.
+- **The behavioural evaluation of the core skills** —does an agent do what a skill says—, deferred
+  since the rsc-harness analysis. It is a different kind of work: a probe per skill, not a unit test.
+- **A release** when another entry lands in `Unreleased`; one entry is under the project's own cap.
 - One writer per worktree; one heavy gate per machine.
 
 ## The limits to remember
@@ -40,8 +39,8 @@ installed. The backlog of earlier sessions is empty; the harness cost is the nex
   machine needs the bound; with the installer tests it ran about six minutes on this machine.
 - A feature that touches a path the base fence protects needs the plan PR merged first; when the
   fence allows the path, the plan rides the feature PR.
-- The installed binary is the gate: a change to `check` is invisible on this machine until a release
-  or a local build, and CI builds the gate from the PR's base ref, not from the change.
+- The installed binary is the gate: a change to `check` or `doctor` is invisible on this machine until
+  a release or a local build, and CI builds the gate from the PR's base ref, not from the change.
 - A store's "newest" is the file time, not the time the record declares.
 - A test that pins an embed needs a file a regression makes disappear, and a plain file beside it so
   the package still builds and the red lands in the test.
