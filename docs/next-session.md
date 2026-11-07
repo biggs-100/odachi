@@ -1,50 +1,42 @@
 # Next session
 
-Written at the close of 0225, `the-declared-risk-meets-the-diff` (unreleased, after v0.28.1). The
-declared `Risk:` now meets the diff; the next feature gives a non-goal the condition that reopens it.
+Written at the close of 0226, `a-non-goal-says-when-it-comes-back` (unreleased, after v0.28.1). The
+non-goal now carries the condition that reopens it; the two open items from earlier sessions are next.
 
 ## Where the project is
 
-- `main` at the merge of #412 (`8b94bd7`), `odachi 0.28.1` installed, `doctor` 15/15, no open feature,
+- `main` at the merge of #415 (`cdd1765`), `odachi 0.28.1` installed, `doctor` 15/15, no open feature,
   no open questions.
-- 223 features and 563 steps closed; `docs/review-debt.md` has no open rows.
-- 0225 shipped in two stacked PRs (#411 the parser, #412 the note) and is in the changelog's Unreleased
-  section: the release is not cut yet.
+- 224 features and 565 steps closed; `docs/review-debt.md` has no open rows.
+- 0225 and 0226 are both in the changelog's Unreleased section: the release is not cut yet.
 
 ## What this session measured
 
-- **The close commit needs the proof before it exists.** The hook refused the task-doc commit with
-  "the proof for this change is missing": `check --run` judges the worktree, so the proof is written
-  with the close change uncommitted and the commit then carries exactly that tree.
-- **A 408-line feature is two PRs.** 0225 was 387 + / 21 -; the parser and the note split at 219 and
-  197 changed lines. The price: `ParseRisk` lands on `main` with tests and no consumer until #412; the
-  stack accepts an intermediate state one PR would hide.
-- **The verdict took seconds** with the documented command and `deepseek-v4.1-flash`: approved on the
-  reliability lens, no findings, no re-review.
-- **The note is silent for our own feature.** 0225 touches `internal/app/check` and
-  `internal/domain/change`, which the classifier calls focused, so the new line never appears in this
-  feature's own ready output; its five tests are the only witness.
+- **The plan lands before the code when the base fence protects the target.** 0225's fence protected
+  `skills/**`, so 0226 needed #414 merged before #415 could pass CI: the gate reads the fence from the
+  PR's base, not from the change.
+- **The ruleset refuses a direct push to `main`.** The close commit of 0225 was declined by a
+  repository rule, not by the hook: every landing, documents included, goes through a PR.
+- **The pin was red on three strings and green after the text.** `TestShapeDatesEveryNonGoal` failed
+  with `shape no dice "A non-goal says when it comes back"`: the test names the rule, the three shapes
+  and the Output line, so a later edit cannot quietly drop it.
+- **The implementation was 40 changed lines**; the plan was 107 against its base.
+- **The interview keeps one answer per non-goal.** A second question per entry would need a new flag,
+  and the fence presets already need the first word; the convention lives where an agent drafts the
+  brief.
 
-## The next feature
+## Next
 
-**0226: a non-goal says when to revisit it.** A brief's "Not included" is a promise with no date, and
-the list grows until nobody knows which entry still holds. The convention: each non-goal names the
-condition that reopens it (a measurement, a second caller, a version), and `shape` asks for it.
-
-- the brief's non-goal section carries the convention, and `shape` asks the question when it drafts one
-- a test pins the skill's text, observed red before the text lands
-- the changelog's Unreleased section names the convention
-
-Then the two documental pieces (the verdict/proof binding in `docs/releases.md`, the harness cost in
-`doctor`) can ride the next close. The behavioural evaluation of the core skills stays deferred.
-
-## Still open from earlier sessions
+The two items still open from earlier sessions, then the documental pair:
 
 - **0218: the installer names the process that holds the binary.** When `odachi.exe` is in use, say
   which process and what to do, instead of a `Copy-Item` IOException. Two installs were blocked by
   another project's gate.
-- **0216: pin `all:*` with a repo test.** A regression to `*` would pass the suite for dotfile
-  assets; today only a build probe covers it.
+- **0216: pin `all:*` with a repo test.** A regression to `*` would pass the suite for dotfile assets;
+  today only a build probe covers it.
+- **The verdict/proof binding in `docs/releases.md`** and **the harness cost in `doctor`** can ride the
+  close of whichever lands next.
+- The behavioural evaluation of the core skills stays deferred.
 - One writer per worktree; one heavy gate per machine.
 
 ## The limits to remember
