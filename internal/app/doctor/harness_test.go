@@ -34,6 +34,35 @@ func TestCheckNineSaysWhatTheHarnessCosts(t *testing.T) {
 	}
 }
 
+// TestCheckNineTakesTheProblemOfAnUnreadableBlock: a size nobody could read is not
+// zero; the check takes the read's problem and names the file.
+func TestCheckNineTakesTheProblemOfAnUnreadableBlock(t *testing.T) {
+	files := configured()
+	files.errOn = at("AGENTS.md")
+
+	check := checkOf(t, run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi"), domaindoctor.CheckSkills)
+
+	if check.Status != domaindoctor.StatusProblem {
+		t.Fatalf("check 9 is %v with an unreadable block, want a problem: %s", check.Status, domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Detail, "could not read AGENTS.md") {
+		t.Errorf("the problem does not name the file: %s", check.Detail)
+	}
+}
+
+// TestCheckNineSaysNoSizeWithoutABlock: a file with no odachi block has no cost to
+// name; check 4 is what says the block is missing, and this line never invents one.
+func TestCheckNineSaysNoSizeWithoutABlock(t *testing.T) {
+	files := configured()
+	files.put("AGENTS.md", "# notes\n\nno block here\n")
+
+	check := checkOf(t, run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi"), domaindoctor.CheckSkills)
+
+	if strings.Contains(check.Detail, "the block is") {
+		t.Errorf("check 9 names a block the file does not carry: %s", check.Detail)
+	}
+}
+
 // humanSize is the format a person reads, asserted here so a change to the
 // numbers is a red test and not a silently different line.
 func humanSize(n int) string {

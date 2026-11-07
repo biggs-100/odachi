@@ -13,8 +13,21 @@ Last written: while closing 0231, which leaves nothing open.
 
 ## Open
 
-Nothing is open: 0230 closed the last row with the test it was missing. The next row starts a
+Nothing is open: 0231 closed the last row with the test it was missing. The next row starts a
 new list.
+
+## Closed by feature 0231
+
+### the unreadable block and the block nobody wrote had no test
+
+Found by the review of 0231 (warning, `internal/app/doctor/doctor.go:595`). The new `blockBytes`
+error path turns the whole skills check unreadable, and the two no-size branches —the file is not
+there, the file has no block— were unpinned, while the brief promises the check keeps its own problem
+instead of a made-up zero.
+
+Closed: `TestCheckNineTakesTheProblemOfAnUnreadableBlock` fails the read of `AGENTS.md` and asserts a
+problem that names the file; `TestCheckNineSaysNoSizeWithoutABlock` seeds a file with no block and
+asserts no size is invented.
 
 ## Closed by feature 0230
 
