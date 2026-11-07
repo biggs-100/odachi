@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -66,6 +67,61 @@ func TestPowerShellInstallerNamesTheProcessThatHoldsTheBinary(t *testing.T) {
 	if string(before) != string(after) {
 		t.Errorf("the target changed after a failed install: the running binary was replaced or truncated")
 	}
+}
+
+// TestPowerShellInstallerSaysWhatToDoWhenNothingHoldsTheFile: a sharing violation
+// can come from a handle odachi cannot name -an indexer, an antivirus-, and the
+// brief still owes the path and the action. The test holds the target with no
+// sharing from its own process, whose image is not the target, so the holder
+// search comes back empty and the generic sentence is the one under test.
+func TestPowerShellInstallerSaysWhatToDoWhenNothingHoldsTheFile(t *testing.T) {
+	powershell := requirePowerShell(t)
+	fixture := windowsRelease(t)
+	binDir := filepath.Join(t.TempDir(), "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("create %s: %v", binDir, err)
+	}
+	target := filepath.Join(binDir, "odachi.exe")
+	placeholder := []byte("a file the installer cannot replace")
+	if err := os.WriteFile(target, placeholder, 0o755); err != nil {
+		t.Fatalf("write the placeholder: %v", err)
+	}
+
+	handle := holdWithoutSharing(t, target)
+	code, output := runPowerShellInstaller(t, powershell, fixture, binDir, powershellShim(t, 0))
+	syscall.CloseHandle(handle)
+
+	if code != 1 {
+		t.Fatalf("install.ps1 exit = %d with an unshareable target, want 1:\n%s", code, output)
+	}
+	for _, want := range []string{target, "no pude reemplazar"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("the refusal does not name %q:\n%s", want, output)
+		}
+	}
+	after, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read the target after the failed install: %v", err)
+	}
+	if string(after) != string(placeholder) {
+		t.Errorf("the target changed after a failed install: the placeholder was replaced")
+	}
+}
+
+// holdWithoutSharing opens path with no sharing at all, which is what an indexer
+// or an antivirus does and what makes a copy fail with no process to name.
+func holdWithoutSharing(t *testing.T, path string) syscall.Handle {
+	t.Helper()
+
+	name, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		t.Fatalf("encode %s: %v", path, err)
+	}
+	handle, err := syscall.CreateFile(name, syscall.GENERIC_READ, 0, nil, syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
+	if err != nil {
+		t.Fatalf("open %s without sharing: %v", path, err)
+	}
+	return handle
 }
 
 // buildSleeper writes the smallest program that stays alive and builds it at
