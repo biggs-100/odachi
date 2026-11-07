@@ -15,8 +15,8 @@ R1 · "the Windows installer never answers a running binary with a Copy-Item IOE
 - the changelog's Unreleased section names the message
 
 ## Steps
-- [ ] T1 · the installer names the process that holds the binary   R1 · route:inline
-- [ ] T2 · the changelog names the message   R1 · route:inline
+- [x] T1 · the installer names the process that holds the binary   R1 · route:inline · tree:5b3f5d3b5266c0cc9d32030bde32a4a85fef8b64
+- [x] T2 · the changelog names the message   R1 · route:inline · tree:edc9f5eeb638ce301749f912176bb82f9da25458
 
 ## History
 L1 · "the Windows installer never answers a running binary with a Copy-Item IOException: when `odachi.exe` cannot be replaced because a process holds it, it names the process, says what to do -close that terminal or the other project's gate, or install with `ODACHI_BIN_DIR`- and installs nothing, so the human sees the cause instead of a sharing violation"
