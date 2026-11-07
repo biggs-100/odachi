@@ -1,40 +1,63 @@
 # Next session
 
-Written at the close of 0224, `the-gate-names-what-the-change-adds`. The overengineering
-investigation is closed: the rule lives in `shape`, the review questions in `pull-request`, and the
-gate names what a change adds.
+Written at the close of 0224, `the-gate-names-what-the-change-adds` (v0.28.1). The overengineering
+investigation is closed in its two halves; the rsc-harness analysis is documented and its first
+improvement waits for the next session.
 
-## What shipped
+## Where the project is
 
-- **The gate names the scaffolding.** The ready output lists the new files (capped) and the
-  dependency files the diff adds, in one line and without moving the verdict. The new files come
-  from the diff the candidate already read; the dependency files from a named list of manifests and
-  lockfiles. The plan and the proof are filtered out: every feature adds its task doc, and a note
-  that always fires is a note nobody reads.
-- **What it does not do.** It does not parse abstractions (not machine-detectable), and it never
-  blocks: the gate reports, the PR names the reason, the reviewer asks the three questions.
-- **The gate.** `TestTheReadyOutputNamesWhatTheChangeAdds` and
-  `TestTheReadyOutputIsSilentWhenTheChangeAddsNothing` cover it; the first was observed red by
-  switching the line off. Proof `proof/0224-the-gate-names-what-the-change-adds.txt`; the review
-  approved the tree on the reliability lens with no findings. Released as v0.28.1 and installed.
+- `main` at the merge of the 0224 close, `odachi 0.28.1` installed, `doctor` 15/15, no open feature,
+  no open questions.
+- 222 features and 560 steps closed; `docs/review-debt.md` has no open rows.
+- The design, cognitive and PR-system comparisons with gentle-shell and gentle-ai are paid.
+- The overengineering investigation is paid: the rule in `shape`, the review questions in
+  `pull-request`, the measurement in `check` (v0.28.0 and v0.28.1).
 
-## What was measured
+## What this session measured
 
-- **A note that always fires is noise.** The first cut would have named the task doc in every
-  feature; the filter for `odd/` and `proof/` is what makes the line mean "scaffolding".
-- **The diff already had the answer.** New files are `--- /dev/null` followed by `+++ b/<path>` in
-  the patch the candidate read; a second git call would have been the overengineering the feature
-  warns about.
-- **The tests were written after the code.** The RED was observed by switching the line off, which
-  is weaker than writing the test first; the next gate feature starts with the test.
+- **The rsc-harness analysis.** Read-only, 274 skills, 162 tests, v4.0.5. The full analysis and the
+  four improvements live in `docs/learning-from-rsc-harness.md`; the short version is below.
+- **A note that always fires is noise.** The gate's new line first named the task doc in every
+  feature; the filter for `odd/` and `proof/` is what makes it mean "scaffolding".
+- **The gate test was written after the code.** The RED was observed by switching the line off; it is
+  weaker than test-first, and the next gate feature starts with the test.
+- **The skill bodies are near the cap.** `pull-request` is at 59 lines; the next rule for it goes to
+  a reference.
 
 ## The next feature
 
-- **The installer names the process that holds the binary**, open from 0218: when `odachi.exe` is in
-  use, say which process and what to do, instead of a `Copy-Item` IOException.
-- **Pin `all:*`** with a repo test, open from 0216: a regression to `*` would pass the suite for
-  dotfile assets.
+**0225: the declared `Risk:` meets the diff.** Odachi classifies a diff with
+`internal/domain/review/tier.go` (auth, money, contracts, concurrency, delivery), but the `Risk:`
+line in the commit body is the agent's word and nothing contrasts it. The check already reads the
+commit messages for the `Odachi-Change:` trailer; it can read `Risk:` too.
+
+- A parser for `Risk:` in `internal/domain/change`, next to the trailer, with its refusals.
+- A note in the ready output, never a block: "the review classifies this change as full (it touches
+  <paths>), and the commits declare Risk: none: name the risk or say why it is none."
+- Tests: a full-tier diff with `Risk: none` warns; a full-tier diff with a named risk does not; a
+  passive diff stays silent; the verdict never moves.
+
+Then **0226: a non-goal says when to revisit it** (a convention in the brief and `shape`, pinned).
+
+The two documental pieces (the verdict/proof binding in `docs/releases.md`, the harness cost in
+`doctor`) can ride the next close. The behavioural evaluation of the core skills stays deferred.
+
+## Still open from earlier sessions
+
+- **0218: the installer names the process that holds the binary.** When `odachi.exe` is in use, say
+  which process and what to do, instead of a `Copy-Item` IOException. Two installs were blocked by
+  another project's gate.
+- **0216: pin `all:*` with a repo test.** A regression to `*` would pass the suite for dotfile
+  assets; today only a build probe covers it.
 - One writer per worktree; one heavy gate per machine.
+
+## The limits to remember
+
+- The review counts even when it is the same model: it is a second reading, and the gate reads it.
+- The gate's default timeout is 900 seconds; the suite alone takes about 250, and a cold or shared
+  machine needs the bound.
+- A feature that touches a path the base fence protects needs the plan PR merged first; when the
+  fence allows the path, the plan rides the feature PR.
 
 ## The commands that work
 
