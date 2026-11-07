@@ -9,6 +9,9 @@ not a version.
 
 ## Unreleased
 
+- **The installer names the process that holds the binary.** Windows refuses to replace a running
+  `odachi.exe`; the installer now answers with the holding process's PID and the way out —close that
+  terminal or the other project's gate, or install with `ODACHI_BIN_DIR`— and installs nothing (0227).
 - **A non-goal says when it comes back.** `shape` asks for the condition that reopens each entry of a
   brief's "Not included" —a measurement, a second caller, a version— and its output returns that
   condition beside the path each one protects, so the list of what waits keeps the date it was
