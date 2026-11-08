@@ -8,7 +8,7 @@ R1 · "the third probe measures the shipped chain: the block loads drive, and dr
 ## Done when
 
 ## Steps
-- [ ] T1 · the third probe measures the shipped chain: the block loads drive, and drive loads tests, on a step where a test is owed   R1
+- [x] T1 · the third probe measures the shipped chain: the block loads drive, and drive loads tests, on a step where a test is owed   R1 · tree:206095915eb54c3d9dce0807ad79e5ec184773a6
 
 ## History
 L1 · "the third probe measures the shipped chain: the block loads drive, and drive loads tests, on a step where a test is owed"
