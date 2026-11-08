@@ -305,6 +305,10 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 // it here would make two commands own the same artifact. A profile with no voice
 // of its own (a custom name that extends another) changes nothing about how the
 // agent talks, so it is not an error here.
+//
+// The native agent lives in the home since 0242: a project file with that name is
+// a leftover an older release wrote, and start does not refresh it. Level learned
+// the same rule; a profile change only rewrites the block.
 func (r *runner) refreshVoice() *Result {
 	voice, err := persona.VoiceName(r.profile.Name)
 	if err != nil {
@@ -331,44 +335,6 @@ func (r *runner) refreshVoice() *Result {
 	}
 	if changed {
 		if problem := r.put(rules.File, []byte(updated)); problem != nil {
-			return problem
-		}
-		return r.refreshPersonas(updated)
-	}
-	return r.refreshPersonas(string(data))
-}
-
-// refreshPersonas keeps the native agent in step with the block this run just
-// wrote. Only files that already exist are refreshed: installing them is
-// `odachi init`'s job, and a project started without init still gets its four
-// artifacts.
-func (r *runner) refreshPersonas(agents string) *Result {
-	body, ok := rules.BodyIn(agents)
-	if !ok {
-		return nil
-	}
-	selected, err := persona.FilesForSelection(body, r.opts.Agents)
-	if err != nil {
-		return failure(blocked("could not resolve the client selection: " + oneLine(err.Error()) + "; run odachi init --agents both and run odachi start again"))
-	}
-	for _, file := range selected {
-		path := filepath.Join(r.opts.Dir, filepath.FromSlash(file.Path))
-
-		exists, err := r.files.Exists(path)
-		if err != nil {
-			return failure(blocked("could not check " + file.Path + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
-		}
-		if !exists {
-			continue
-		}
-		current, err := r.files.Read(path)
-		if err != nil {
-			return failure(blocked("could not read " + file.Path + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
-		}
-		if string(current) == file.Content {
-			continue
-		}
-		if problem := r.put(file.Path, []byte(file.Content)); problem != nil {
 			return problem
 		}
 	}
