@@ -8,7 +8,7 @@ R1 · "the delegated probe measures whether the worker loads the paths the paren
 ## Done when
 
 ## Steps
-- [ ] T1 · the delegated probe measures whether the worker loads the paths the parent passes: three runs with, three without   R1
+- [x] T1 · the delegated probe measures whether the worker loads the paths the parent passes: three runs with, three without   R1 · tree:8d1e6603e25d4dbea3afd5e1311f4bb27645d5ae
 
 ## History
 L1 · "the delegated probe measures whether the worker loads the paths the parent passes: three runs with, three without"
