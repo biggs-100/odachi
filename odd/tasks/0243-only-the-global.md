@@ -12,7 +12,7 @@ R1 · "the agent lives only in the home: no command writes or refreshes a projec
 - Unreleased names the change: a contract change, minor
 
 ## Steps
-- [ ] T1 · start rewrites the voice of the block and leaves a project agent leftover alone   R1 · route:inline
+- [x] T1 · start rewrites the voice of the block and leaves a project agent leftover alone   R1 · route:inline · tree:799e361026d6df6554484e59089b78c03843c87b
 
 ## History
 L1 · "the agent lives only in the home: no command writes or refreshes a project agent file; `start` and `level` rewrite only the voice of the block, and a file an older release left is named and left alone"
