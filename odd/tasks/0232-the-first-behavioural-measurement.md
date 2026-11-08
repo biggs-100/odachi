@@ -13,7 +13,7 @@ R1 · "a skill's effect is measured once and the method can be repeated: `docs/s
 - no changelog entry: nothing a person installs changed
 
 ## Steps
-- [ ] T1 · the first measurement of tests is recorded   R1 · route:inline
+- [x] T1 · the first measurement of tests is recorded   R1 · route:inline · tree:3e0a72e794ff8aaa0d519306e226602d43cb0816
 
 ## History
 L1 · "a skill's effect is measured once and the method can be repeated: `docs/skill-evaluation.md` records a task, an agent run with the `tests` skill and one without it, an observable rubric read from both transcripts, and the result, so the library's first claim -that the text changes the work- is evidence instead of belief"
