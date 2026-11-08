@@ -1,31 +1,31 @@
-# the-harness-says-what-it-costs
+# the-first-behavioural-measurement
 
 ## What must exist
-- the harness says what it costs: `doctor` reports the bytes of the always-on block and the bytes of `SKILLS.md` beside the installed skill count it already names, so the context a project pays on every turn is a number and not an estimate
+- a skill's effect is measured once and the method can be repeated: `docs/skill-evaluation.md` records a task, an agent run with the `tests` skill and one without it, an observable rubric read from both transcripts, and the result, so the library's first claim -that the text changes the work- is evidence instead of belief
 
 ## Done when
-- the doctor's skills line names the bytes of the odachi block in `AGENTS.md` and the bytes of `SKILLS.md`, in the detail it already prints, in KB with one decimal or B under a KB
-- it still names the registry state, the installed count and the drift it named before
-- a block or a registry that cannot be read keeps the check's own problem instead of a made-up zero: a size nobody could read is not a small one
-- `--json` carries the same detail, which it already mirrors from the line
-- a test in a configured project asserts both sizes; the JSON test and the drift tests stay green
+- the document carries the task, the commands of both arms, the rubric and the result table, with three runs per arm
+- the rubric's four checks are readable from the transcript: the test before the code, the red observed, the name saying what breaks, the fix at the cause with the suite green
+- the without arm hides the home copy of `tests` for its runs and the document proves the restore: `odachi doctor` names the installed count again
+- the document names what the result does and does not prove: one model, three runs, one task
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
-- the changelog's Unreleased section names the measurement
+- no changelog entry: nothing a person installs changed
 
 ## Not included (first version)
-- no sixteenth check and no change to the "fifteen" the usage, the summary and the JSON name
-- no change to what the check verifies: it is a measurement, not a gate
-- no change to the block, its markers or the voice
-- no change to the registry's shape or to the skills' text
-- no change to the review or to the classifier
-- no change to the stored proofs: never touched
-- no change to the design canvas, its token or the push plugin
-- no change to the artboard format
-- no change to the release workflow or to the installers
+- no change to `odachi bench` and no new verb: it cannot run an agent by contract; it reopens when the measurement is repeated often enough to automate
+- no change to the skills: the probe measures `tests` as it is; it reopens when the result asks for an edit
+- no CI and no test that runs an agent: it spends tokens and is not deterministic; it reopens when a model judge replaces the person reading
+- no change to the person's home beyond the temporary move, restored and checked; it reopens if a run leaves it moved
 - no change to the brief's format or to `start`
+- no change to the review, the doctor or the classifier
+- no change to the stored proofs: never touched
+- no change to the design canvas, its token or the installers
+- no change to the release workflow
 
 ## Decisions taken
-- the cost goes into the skills line, not a sixteenth check: the line already names the count and the registry, and a new check would change the number the usage, the summary and four tests name for one measurement
-- the block is measured as the odachi block inside `AGENTS.md`, not the whole file: that is what `init` writes and what every agent reads on every turn
-- a failed read is the check's problem, never 0 B: the doctor already refuses to turn an unreadable file into a clean answer
-- the size is formatted once, with the same units a human reads in `clean`: bytes under a kilobyte, kilobytes with one decimal above it
+- the baseline is a neutral agent (`build`) with and without the skill: the odachi agent already carries the method, and that run would measure the marginal effect instead of the teaching
+- the task is a Go program with one defect and a neutral request: enough for a test to be the natural first move, small enough for the fix to fit one line
+- the rubric is read from the `--format json` transcript: it shows the skill call, the file writes and the commands in order, which is the evidence a string test cannot be
+- three runs per arm: one run is the model's mood, not the skill's effect
+- the home copy is moved out and back for the without arm: a temporary home breaks the model auth (measured), and the move is reversible with a restore check
+- the document keeps the decisive events quoted, not the whole transcripts: the commands reproduce them, and the clone keeps evidence, not dumps
