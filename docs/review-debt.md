@@ -9,17 +9,25 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0242.
+Last written: while closing 0244.
 
 ## Open
+
+Nothing open as of this writing.
+
+## Closed by feature 0244
 
 ### the registry repair of an existing user skill is unpinned
 
 Found by the review of 0242 (one warning, `internal/app/skills/skills_test.go:414`). `skill new` now
 repairs the folder registry when the skill already exists, but the only test that reaches the branch
-accepts any event that is not the skill file: it never asserts the registry row or the repair
-sentence, so a regression would pass. The fix is a test that seeds the skill, runs the command and
-reads the regenerated `SKILLS.md`.
+accepted any event that was not the skill file: it never asserted the registry row or the repair
+sentence, so a regression would pass.
+
+Closed: `TestNewRepairsTheRegistryWhenTheSlugExists` seeds the skill with the registry missing and with
+it stale, runs the command, and reads the regenerated `SKILLS.md` and the sentence it prints. The red
+was observed by skipping `syncRegistry` on the exists branch: the test named the absent file, the stale
+bytes and the missing sentence.
 
 ## Closed by feature 0232
 
