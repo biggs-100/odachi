@@ -8,7 +8,7 @@ R1 · "the refusal makes the parent pass the paths: three runs of the door with 
 ## Done when
 
 ## Steps
-- [ ] T1 · the refusal makes the parent pass the paths: three runs of the door with the installed worker   R1
+- [x] T1 · the refusal makes the parent pass the paths: three runs of the door with the installed worker   R1 · tree:7a3f344e5a1fbfecc8eac26266c3befe720cb399
 
 ## History
 L1 · "the refusal makes the parent pass the paths: three runs of the door with the installed worker"
