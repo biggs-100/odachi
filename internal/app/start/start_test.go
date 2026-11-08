@@ -1052,42 +1052,11 @@ func TestStartPutsTheVoiceOfTheProfileItWrote(t *testing.T) {
 	}
 }
 
-// TestStartRefreshesTheNativeAgentItFinds: the selector mirrors the block, and
-// this run just changed the block's voice. Leaving the old mirror behind would
-// make the agent a human picks read a voice the project no longer promises.
-func TestStartRefreshesTheNativeAgentItFinds(t *testing.T) {
-	var events []string
-	interview := newScriptedInterview(&events, interviewAnswers()...)
-
-	seed := map[string]string{"AGENTS.md": blockText(t, persona.Senior)}
-	oldBody, err := rules.Body(persona.Senior)
-	if err != nil {
-		t.Fatalf("rules.Body(senior): %v", err)
-	}
-	for _, file := range persona.Files(oldBody) {
-		seed[file.Path] = file.Content
-	}
-	files := newFakeFiles(seed, &events)
-
-	got := start.Run(start.Options{}, interview, files, nil)
-
-	if got.Code != start.CodeOK {
-		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
-	}
-	newBody, err := rules.Body(persona.Novato)
-	if err != nil {
-		t.Fatalf("rules.Body(novato): %v", err)
-	}
-	for _, file := range persona.Files(newBody) {
-		if got := files.content(t, file.Path); got != file.Content {
-			t.Errorf("%s did not get the new voice:\n%q\nvs\n%q", file.Path, got, file.Content)
-		}
-	}
-}
-
-// TestStartRefreshesOnlyTheChosenClient: the stored choice also governs what a
-// later start refreshes. A client that was not chosen keeps its old file.
-func TestStartRefreshesOnlyTheChosenClient(t *testing.T) {
+// TestStartLeavesAProjectAgentLeftoverAlone: since 0242 the native agent lives in
+// the home. A project file with that name is a leftover an older release wrote;
+// start changes the block's voice and never touches the file, so the tool cannot
+// keep alive what doctor calls unread.
+func TestStartLeavesAProjectAgentLeftoverAlone(t *testing.T) {
 	var events []string
 	interview := newScriptedInterview(&events, interviewAnswers()...)
 
@@ -1106,17 +1075,18 @@ func TestStartRefreshesOnlyTheChosenClient(t *testing.T) {
 	if got.Code != start.CodeOK {
 		t.Fatalf("Code = %d, want %d (%s)", got.Code, start.CodeOK, got.Message)
 	}
-	newBody, err := rules.Body(persona.Novato)
-	if err != nil {
-		t.Fatalf("rules.Body(novato): %v", err)
+	for _, file := range persona.Files(oldBody) {
+		if current := files.content(t, file.Path); current != file.Content {
+			t.Errorf("%s was refreshed:\n%q\nvs\n%q", file.Path, current, file.Content)
+		}
+		for _, event := range *files.events {
+			if strings.Contains(event, file.Path) {
+				t.Errorf("start touched %s: %s", file.Path, event)
+			}
+		}
 	}
-	chosen, _ := persona.FilesFor(persona.SelectionOpenCode, newBody)
-	if got := files.content(t, chosen.Path); got != chosen.Content {
-		t.Errorf("%s did not get the new voice:\n%q\nvs\n%q", chosen.Path, got, chosen.Content)
-	}
-	other, _ := persona.FilesFor(persona.SelectionClaude, oldBody)
-	if got := files.content(t, other.Path); got != other.Content {
-		t.Errorf("%s was refreshed although it was not the chosen client:\n%q\nvs\n%q", other.Path, got, other.Content)
+	if current := files.content(t, "AGENTS.md"); current == blockText(t, persona.Senior) {
+		t.Error("the block did not follow the profile")
 	}
 }
 
@@ -1203,8 +1173,8 @@ func blockText(t *testing.T, voice string) string {
 	return content
 }
 
-// TestStartDoesNotInstallTheAgentsItDoesNotFind: the mirror is refreshed, never
-// installed. A project that keeps its agents in the home stays without them.
+// TestStartDoesNotInstallTheAgentsItDoesNotFind: the home door belongs to init.
+// start installs no agent file, in the project or in the home.
 func TestStartDoesNotInstallTheAgentsItDoesNotFind(t *testing.T) {
 	var events []string
 	interview := newScriptedInterview(&events, interviewAnswers()...)
@@ -1221,7 +1191,7 @@ func TestStartDoesNotInstallTheAgentsItDoesNotFind(t *testing.T) {
 	}
 	for _, file := range persona.Files(body) {
 		if _, ok := files.files[files.key(file.Path)]; ok {
-			t.Errorf("%s was installed by start; the mirror is refreshed, never installed", file.Path)
+			t.Errorf("%s was installed by start; start installs no agent file", file.Path)
 		}
 	}
 }
