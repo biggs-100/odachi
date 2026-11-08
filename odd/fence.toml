@@ -26,11 +26,6 @@ paths = ["internal/app/bench/**", "internal/bench/**", "internal/domain/bench/**
 deps  = []
 
 [[rule]]
-not   = "no change to the brief format or to start"
-paths = ["internal/domain/brief/**", "internal/app/start/**", "cmd/odachi/interview.go"]
-deps  = []
-
-[[rule]]
 not   = "no change to the stored proofs: never touched"
 paths = ["proof/**"]
 deps  = []

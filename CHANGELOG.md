@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **No command refreshes a project agent any more.** `odachi start` rewrites the voice of the block
+  and leaves a project agent file an older release wrote untouched, the same rule `level` follows.
+  With `init` writing none, the tool never keeps alive a file `doctor` names as a leftover (0243).
+  A contract change, minor.
+
 ## v0.32.0 - 2026-11-08
 
 - **Upgrade note: the agent lives only in the home.** A script that ran `odachi init --agents <client>`
