@@ -12,7 +12,7 @@ R1 · "the worker never starts a delegated step without `## Skills to load befor
 - Unreleased names the worker refusal: the installed text changes
 
 ## Steps
-- [ ] T1 · the worker refuses a delegation without the skills section, and a test pins the sentence   R1 · route:inline
+- [x] T1 · the worker refuses a delegation without the skills section, and a test pins the sentence   R1 · route:inline · tree:1b43216ecb7b102b195d876db9e116368fa6561c
 
 ## History
 L1 · "the worker never starts a delegated step without `## Skills to load before work`: it returns `status: blocked`, names the missing section, and proceeds when the section says there are none"
