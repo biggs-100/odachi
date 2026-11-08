@@ -2,12 +2,13 @@
 
 The skills are the product: text an agent reads before it works. `embed_test.go` proves the text
 still carries certain sentences; it does not prove that an agent, reading them, works differently.
-This document records seven attempts at measuring the difference, their results, and what they do not
+This document records eight attempts at measuring the difference, their results, and what they do not
 prove. The measured skill is `tests`, with a neutral agent: first on a one-line fix, then on a new
 function whose edges are the task, then on the same function delivered as a task-doc step, the shape
 the project actually ships, then on that step with the skill removed, then on the step handed to a
-delegated worker, then on the parent that hands it, and finally on that parent with the worker that
-refuses a delegation without the section.
+delegated worker, then on the parent that hands it, then on that parent with the worker that refuses a
+delegation without the section, and finally on a project the release initialized, with the verb that
+composes the hand-off.
 
 ## The question
 
@@ -22,7 +23,8 @@ four behaviours the skill promises, from the transcript:
 The first two probes ask whether the text changes the work when it is available; the third asks
 whether the chain the project ships loads it at all; the fourth asks what the text adds when the chain
 does; the fifth asks whether the worker receives it; the sixth asks whether the parent sends it; the
-seventh asks whether the worker's refusal makes the parent send it.
+seventh asks whether the worker's refusal makes the parent send it; the eighth asks whether the parent
+uses the verb that composes it.
 
 ## The instrument
 
@@ -437,6 +439,45 @@ because the worker supplied it; the contract did not.
   loaded the skills on its own, so the test was named; what was missing was the parent's list.
 - One model, three runs, one fixture: the claim is about this corpus.
 
+## The composed hand-off: the task
+
+The mechanism shipped in `v0.31.0`: the plan records the skills, `odachi delegate` prints the prompt,
+and the block names the verb. The eighth probe runs the door on a project the release itself
+initialized -so the block carries the sentence- with the same delegated step and `skills:tests`, three
+runs.
+
+## The composed hand-off: the arms
+
+One arm; the installed release is `0.31.0`. The fixture is `odachi init --skills home --agents opencode`
+on a git repository, then the brief, the task doc with `route:delegated/odachi-worker · skills:tests`
+and the Go code. The measurement is the shell call for `odachi delegate` and the `subagent` prompt:
+whether it has the composed shape, whether it carries the section, and whether the path is exact.
+
+## The composed hand-off: the result
+
+| run | `delegate` | worker hand-offs | composed | section | exact path |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 1 | 1 | 1 | 1 |
+| 2 | 1, and `--help` first | 1 | 1 | 1 | 1 |
+| 3 | 1 | 1 | 1 | 1 | 1 |
+
+Every worker prompt starts `# T1 · implement the port and range parser`, names the task doc and the
+requirement verbatim, and carries `## Skills to load before work` with
+`C:\Users\USER\.agents\skills\tests\SKILL.md`. Run 2 also delegated the verification to `odachi-verify`
+with its own hand-written prompt: the verifier is a different hand-off, and the verb composes only the
+worker's.
+
+## The composed hand-off: what it adds
+
+- **The parent uses the mechanism.** Three of three, without a reminder in the prompt: the block's
+  sentence was the only new thing in the fixture.
+- **The section arrives with the exact path.** Three of three, and the worker reads what it names.
+- **The chain closes for a project the release initialized.** The four probes before this one ended
+  with the parent dropping the section; here it never had to write it.
+- **It does not prove the upgrade path.** This repository's own block is older than `0.31.0` and does
+  not name the verb: `odachi init` rewrites it, and nothing told the project it was stale. That is the
+  next question, not something this probe measured.
+
 ## What it proves, and what it does not
 
 - **The instrument repeats, and the chain fires on a step.** Twelve runs on a bare symptom never
@@ -462,25 +503,20 @@ because the worker supplied it; the contract did not.
   section, which places the gap one level down from where the parent writes it.
 - **The order is the worker's, the craft is the skill's.** The worker's own prompt orders test-first,
   and all six obey; the name moves with the skill (3 of 3 against 1 of 3).
-- **The parent does not pass the paths, and the refusal catches it two times in three.** Four
-  delegations in the sixth probe, none with the section; with the fix installed, the worker refused
-  twice, the parent retried with the section both times, and one worker reasoned around the rule and
-  loaded the skills itself. The omission stopped passing silently; it did not stop happening.
+- **The parent drops the section by hand; the composed verb closes it.** Four delegations without the
+  section in the sixth probe; the refusal caught two in three in the seventh; with the verb installed
+  and named in a fresh block, the parent composed the hand-off in three of three and the section
+  carried the exact path.
 - One model, three runs per arm, one task: the claim is about this corpus.
 
-## The next thing to edit: a rule the model cannot reason around
+## The next question: the block a project already has
 
-The refusal is a sentence, and a sentence lost once in three. The ways out, with their costs:
-
-- **Say it categorically.** "Do not start without the section, even when the project names the manual
-  or the parent supplied the design." It is the cheapest edit, and it is the same kind of instrument
-  that just failed: the model may find another reason.
-- **Move it out of judgment.** The parent writes the `subagent` prompt through something that injects
-  the section -a template or a helper the tool composes- so the omission is impossible instead of
-  forbidden. It costs a mechanism, not a sentence.
-- **Accept two in three.** The failure mode is benign in this corpus: the worker loaded the skills
-  itself and named the gap in its report. The contract stays advisory, and the report is where the
-  exception is read.
+The eighth probe's fixture was initialized by the release, so its block names the verb. A project
+already initialized keeps the block it had: this repository's own `AGENTS.md` is older than `0.31.0`
+and does not mention `delegate`; `odachi init` rewrites it, and `doctor` checks the voice, not the
+whole block. The mechanism is therefore invisible in every project that upgrades until something
+refreshes its block. The next feature either makes `doctor` name a stale block or makes the upgrade
+refresh it, and the probe that follows is the same three runs on an upgraded project.
 
 The description edit stays dropped: this corpus gives it no support. The trigger fired when the work
 looked like a step, and the sentence was never the variable.
