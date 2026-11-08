@@ -423,6 +423,54 @@ func TestNewRefusesAnExistingSlug(t *testing.T) {
 	}
 }
 
+// TestNewRepairsTheRegistryWhenTheSlugExists: the skill is the human's and a
+// refused run never rewrites it, but SKILLS.md is generated, so the same run
+// regenerates it from the skills on disk and says so. This is the way out of a
+// run whose registry write failed after the skill landed; without this pin a
+// regression that skips syncRegistry on the exists branch would still pass the
+// test above, which only watches the skill file.
+func TestNewRepairsTheRegistryWhenTheSlugExists(t *testing.T) {
+	cases := []struct {
+		name     string
+		registry string
+	}{
+		{name: "missing", registry: ""},
+		{name: "stale", registry: "<!-- a registry an older run left -->\n"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			seed := map[string]string{
+				".agents/skills/ship/SKILL.md": skillText("ship", "trigger de ship"),
+			}
+			if tc.registry != "" {
+				seed[".agents/skills/SKILLS.md"] = tc.registry
+			}
+			files := newFakeFiles(seed)
+
+			got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "ship", Scope: persona.SkillsProject}, files)
+
+			if got.Code != 1 {
+				t.Fatalf("Code = %d, want 1 (message %q)", got.Code, got.Message)
+			}
+			registry, ok := files.get(".agents/skills/SKILLS.md")
+			if !ok {
+				t.Fatalf("the refused run left no registry; events %v", files.events)
+			}
+			if !strings.Contains(registry, "| ship |") || !strings.Contains(registry, ".agents/skills/ship/SKILL.md") {
+				t.Errorf("the run did not regenerate the registry:\n%s", registry)
+			}
+			if tc.registry != "" && registry == tc.registry {
+				t.Errorf("the stale registry kept its bytes:\n%s", registry)
+			}
+			for _, want := range []string{"already exists", ".agents/skills/ship/SKILL.md", "updated with 1 skill"} {
+				if !strings.Contains(got.Message, want) {
+					t.Errorf("Message = %q, want it to name %q", got.Message, want)
+				}
+			}
+		})
+	}
+}
+
 // A slug that could never be a valid name is rejected before any write.
 func TestNewRejectsABadSlugBeforeWriting(t *testing.T) {
 	files := seededProject()
