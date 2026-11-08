@@ -186,13 +186,18 @@ file and no red. The contract holds in all six, verified afterwards.
 
 ## The next thing to edit: the trigger
 
-The description reads `Trigger: when writing, fixing or deciding what a change tests`. The work in
-the second probe was "implement this function", and the word `tests` never described it, so the
-selection never matched. The candidate edit names the moment instead: *when writing or changing code,
-and deciding what a change tests*. `skills/**` is fenced for this probe —it measures `tests` as it
-is— so the edit is its own feature, and it reopens the question with the same two arms and the same
-rubric.
+The description is `Trigger: when writing, fixing or deciding what a change tests`. Its frame is a
+test decision: `fixing` and `deciding what a change tests` carry it, and `writing` reads as one more
+verb of the same list. Six transcripts cannot say whether that frame failed to match the task or
+whether the model never considered a skill on work this narrow —both predict no load— so the edit
+varies the one thing the document can name: it removes the testing frame from the trigger and leaves
+the craft in the body.
 
-If the load still does not happen after the description changes, the finding moves out of the text:
-it is about how the client selects a skill at all, and the next probe measures that instead. A model
-judge replaces the person reading only if it agrees with the person on this corpus first.
+> Trigger: when writing or changing code, before the first edit.
+
+`skills/**` is fenced for this probe —it measures `tests` as it is— so the edit is its own feature,
+and it reopens the question with the same two arms and the same rubric. A load under the new line
+confirms the frame as the cause; no load under it says the description was not the lever, and the
+finding moves out of the text: it is about how the client selects a skill at all, and the next probe
+measures that instead. A model judge replaces the person reading only if it agrees with the person
+on this corpus first.
