@@ -23,9 +23,16 @@ the skill load, the file writes and the commands. That order is the evidence a s
 
 Before measuring `tests`, the instrument was validated with a canary: a throwaway skill that orders
 the agent to answer `BANANA` when asked to reply, placed first in the project and then in
-`~/.agents/skills`. The transcript showed the `skill` call with the canary's id and the answer
-`BANANA` in both places. Two things were learned there: the transcript shows a load, so a missing
-load is meaningful; and OpenCode reads the home copy, `~/.agents/skills`, not only the project's.
+`~/.agents/skills`. The transcript showed the load and the answer in both places:
+
+```
+TOOL skill  {"id":"canary"}
+TEXT        BANANA
+```
+
+Two things were learned there: the transcript shows a load, so a missing load is meaningful; and
+OpenCode reads the home copy, `~/.agents/skills`, not only the project's. The canary was removed
+after the check and the home was verified at its baseline count (see the arms below).
 
 ## The task
 
@@ -45,35 +52,57 @@ debería imprimir 5 para 2+3. Arreglalo."*
 Both run the same task, the same model (`opencode-go/deepseek-v4.1-flash`) and the neutral agent
 (`--agent build`), in a fresh copy of the fixture, three times each.
 
-- **With the skill**: the home copy `~/.agents/skills/tests` is in place.
-- **Without it**: the folder is moved out for the duration, and moved back after. A temporary home
-  was tried first and did not work: the model stops resolving (`provider.no-route`), so the auth
-  cannot be carried into an isolated home. The move is reversible, and the restore is checked:
-  `odachi doctor` reports `~/.agents/skills: 59 installed` afterwards.
-
 ```sh
+# each arm, in a fresh copy of the fixture
 opencode run --format json --agent build --model opencode-go/deepseek-v4.1-flash \
   "El programa imprime -1 cuando debería imprimir 5 para 2+3. Arreglalo."
 ```
 
-The event stream is kept in the machine's temp folder; the clone keeps the result, not the dumps.
+- **With the skill**: the home copy is in place.
+- **Without it**: the folder is moved out for the duration and moved back after. A temporary home was
+  tried first and did not work: the model stops resolving (`provider.no-route`), so the auth cannot be
+  carried into an isolated home. The move is reversible and it was measured at both ends:
+
+```sh
+Move-Item ~/.agents/skills/tests $TEMP/opencode/odachi/0232/tests-off   # before the runs
+odachi doctor        # ~/.agents/skills: 58 installed; compared: 18 matches in skills/
+Move-Item $TEMP/opencode/odachi/0232/tests-off ~/.agents/skills/tests   # after the runs
+odachi doctor        # ~/.agents/skills: 59 installed; compared: 19 matches in skills/
+```
+
+The baseline before the move is the same 59. An interrupted repeat has the destination written here,
+and `odachi doctor` is the check that says it came back.
+
+The event stream is kept in the machine's temp folder; the clone keeps the result and the decisive
+events, not the dumps.
 
 ## The result
 
-Six runs, three per arm. `skill` is whether the transcript shows the agent loading `tests`; checks
-are the rubric's four, read from the tool order and the commands.
+The decisive events of one run per arm, in order. Neither shows a `skill` load, and neither writes a
+test file: the only write is the edit of `calc/sum.go`.
 
-| run | arm | loaded `tests` | test before code | red observed | name says what breaks | fix at cause | score |
+```
+with-2     shell "Get-ChildItem -Force" · read main.go · read go.mod · read calc/sum.go
+           edit calc/sum.go "return a - b" -> "return a + b" · shell "go run ."
+without-2  shell "ls -Force" · read main.go · read go.mod · read calc/sum.go
+           edit calc/sum.go "return a - b" -> "return a + b" · shell "go run ."
+```
+
+Six runs, three per arm. Each check is 1 when the transcript shows it and 0 when it does not; `-` is
+not applicable because the run wrote no test.
+
+| run | arm | loaded `tests` | 1 test before code | 2 red observed | 3 name says what breaks | 4 fix + suite | score |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | with | no | no | no | - | yes (`a + b`, `go run .` prints 5) | 0/4 |
-| 2 | with | no | no | no | - | yes | 0/4 |
-| 3 | with | no | no | no | - | yes | 0/4 |
-| 1 | without | - | no | no | - | yes | 0/4 |
-| 2 | without | - | no | no | - | yes | 0/4 |
-| 3 | without | - | no | no | - | yes | 0/4 |
+| 1 | with | 0 | 0 | 0 | - | 0 | 0/4 |
+| 2 | with | 0 | 0 | 0 | - | 0 | 0/4 |
+| 3 | with | 0 | 0 | 0 | - | 0 | 0/4 |
+| 1 | without | - | 0 | 0 | - | 0 | 0/4 |
+| 2 | without | - | 0 | 0 | - | 0 | 0/4 |
+| 3 | without | - | 0 | 0 | - | 0 | 0/4 |
 
-Every run did the same thing: list the files, read `main.go` and `calc/sum.go`, edit `a - b` to
-`a + b`, run `go run .`, and report the change. None loaded the skill; none wrote a test.
+All six fixed the cause (`a + b`, and `go run .` prints 5), but none ran `go test`: the fourth check
+asks for the cause and the suite, and only half was observed, so it scores 0. The table and the score
+say the same thing: no check was exercised.
 
 ## What it proves, and what it does not
 
