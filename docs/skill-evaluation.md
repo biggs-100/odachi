@@ -238,9 +238,10 @@ orders the test in both; the question is what the `tests` text adds to that orde
 Three runs per arm, same model, same agent, a fresh copy per run in its own isolated folder. The with
 arm runs at the baseline, 59 installed; the without arm moves the home copy out, 58, and restores it
 after, 59, measured at both ends with `odachi doctor`. The rubric is the third probe's, with one
-reading fixed: check 3 looks at the test's own names, the top-level test and its subtests. The craft
-the skill promises is read from the test file: whether the five rejected shapes appear and whether
-the error message is pinned.
+reading fixed: check 3 looks at the test's own names, the top-level test and its subtests. Check 2 is
+1 only when the failure is observed before the production code; a failure seen after it is not a red
+for the check, the way the skill reads "the test first". The craft the skill promises is read from the
+test file: whether the five rejected shapes appear and whether the error message is pinned.
 
 ## The marginal probe: the result
 
@@ -250,7 +251,7 @@ The decisive events of every run, in order.
 with-1     skill drive · skill tests · write config_test.go · go test (RED) · write config.go · green
 with-2     skill drive · skill tests · skill commits · write test · go test (RED) · write config.go · green
 with-3     skill drive · skill tests · skill commits · write test · go test (RED) · write config.go · green
-without-1  skill drive · skill commits · write config.go · write test · go test (FAIL) · fix · green
+without-1  skill drive · skill commits · write config.go · write test · go test (FAIL, after the code) · fix · green
 without-2  skill drive · skill go-tests · write test · go test (RED) · write config.go · green
 without-3  no skill · write config.go · write test · go test (green, it never failed)
 ```
@@ -270,6 +271,11 @@ a test that passed the first time it ran -the case the skill names: a test that 
 nothing- and one did it the right way after loading `go-tests`, whose description says to load
 `tests` for the discipline. The edge coverage and the pinned message are the same in both arms: the
 requirement names the five shapes, so the test covers them whether or not the skill is read.
+
+The first two checks agree in every row, and that is a property of this corpus: they can differ only
+when a test is written before the code and not run until after it, and no run did that. The second
+column is not a second measurement of the same act; it catches the case the first cannot, a test
+written first that still never fails before the code.
 
 ## The marginal probe: what it adds
 
