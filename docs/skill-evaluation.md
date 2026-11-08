@@ -368,9 +368,12 @@ parent-3  read the task doc · skill drive · skill tests · skill commits · su
 
 | run | delegations | to `odachi-worker` | section | paths | the parent loaded |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 1 | 1 | 0 | 0 | `tests` |
-| 2 | 2 | 2 | 0 | 0 | `drive`, `tests` |
-| 3 | 1 | 1 | 0 | 0 | `drive`, `tests`, `commits` |
+| 1 | 1 | 1 | 0 | 0 | `drive` (read), `tests` (skill) |
+| 2 | 2 | 2 | 0 | 0 | `drive` (skill), `tests` (skill) |
+| 3 | 1 | 1 | 0 | 0 | `drive` (skill), `tests` (skill), `commits` (skill) |
+
+The column counts both ways a parent can have the text: the `skill` call and a read of the skill's
+`SKILL.md`.
 
 Every delegation goes to the right worker, and none carries the section or a single `SKILL.md` path,
 though the parent had loaded `drive` and `tests` itself in all three -by the `skill` call or by reading
