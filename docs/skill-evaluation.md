@@ -2,10 +2,10 @@
 
 The skills are the product: text an agent reads before it works. `embed_test.go` proves the text
 still carries certain sentences; it does not prove that an agent, reading them, works differently.
-This document records three attempts at measuring the difference, their results, and what they do not
+This document records four attempts at measuring the difference, their results, and what they do not
 prove. The measured skill is `tests`, with a neutral agent: first on a one-line fix, then on a new
 function whose edges are the task, then on the same function delivered as a task-doc step, the shape
-the project actually ships.
+the project actually ships, and finally on that step with the skill removed.
 
 ## The question
 
@@ -18,7 +18,8 @@ four behaviours the skill promises, from the transcript:
 4. the fix is at the cause and the suite is green.
 
 The first two probes ask whether the text changes the work when it is available; the third asks
-whether the chain the project ships loads it at all.
+whether the chain the project ships loads it at all; the fourth asks what the text adds when the chain
+does.
 
 ## The instrument
 
@@ -225,21 +226,79 @@ The block made no difference. The three runs without `AGENTS.md` loaded the same
 same order, and the block arm did not follow the block's order either: it read the task doc first and
 loaded `drive` after. What all six share is the step.
 
+## The marginal probe: the task
+
+The third probe had the skill in both arms, so it proved the chain loads, not that the text adds
+anything. The fourth keeps the step and varies the one thing the third held fixed: the home copy of
+`tests`. Both arms keep the block, the brief, the task doc and the same prompt, so `drive` still
+orders the test in both; the question is what the `tests` text adds to that order.
+
+## The marginal probe: the arms
+
+Three runs per arm, same model, same agent, a fresh copy per run in its own isolated folder. The with
+arm runs at the baseline, 59 installed; the without arm moves the home copy out, 58, and restores it
+after, 59, measured at both ends with `odachi doctor`. The rubric is the third probe's, with one
+reading fixed: check 3 looks at the test's own names, the top-level test and its subtests. The craft
+the skill promises is read from the test file: whether the five rejected shapes appear and whether
+the error message is pinned.
+
+## The marginal probe: the result
+
+The decisive events of every run, in order.
+
+```
+with-1     skill drive · skill tests · write config_test.go · go test (RED) · write config.go · green
+with-2     skill drive · skill tests · skill commits · write test · go test (RED) · write config.go · green
+with-3     skill drive · skill tests · skill commits · write test · go test (RED) · write config.go · green
+without-1  skill drive · skill commits · write config.go · write test · go test (FAIL) · fix · green
+without-2  skill drive · skill go-tests · write test · go test (RED) · write config.go · green
+without-3  no skill · write config.go · write test · go test (green, it never failed)
+```
+
+| run | arm | `tests` | 1 test before code | 2 red observed | 3 name says what breaks | 4 suite + contract | score |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | with | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 2 | with | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 3 | with | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 1 | without | 0 | 0 | 0 | 0 | 1 | 1/4 |
+| 2 | without | 0 | 1 | 1 | 1 | 1 | 4/4 |
+| 3 | without | 0 | 0 | 0 | 0 | 1 | 1/4 |
+
+The with arm scores 12/12 and the without arm 6/12. Every with run wrote the test first and watched it
+fail. One without run wrote the test after the implementation and only then saw the failure; one wrote
+a test that passed the first time it ran -the case the skill names: a test that never failed proves
+nothing- and one did it the right way after loading `go-tests`, whose description says to load
+`tests` for the discipline. The edge coverage and the pinned message are the same in both arms: the
+requirement names the five shapes, so the test covers them whether or not the skill is read.
+
+## The marginal probe: what it adds
+
+- **The text has a marginal effect on this corpus.** Same step, same requirement, same model: the
+  checks the skill names -the test first, the red observed, the name- move from 1/3 to 3/3 when the
+  skill is installed. That is the first evidence the library's text changes the work, not only that
+  it is read.
+- **The effect is on the order and the naming, not on the edge coverage.** The prompt already names
+  the five rejected shapes, and both arms test them. A task that did not name them would be the next
+  place to look for that difference.
+- **The chain without the skill is not deterministic.** One run loaded no skill at all, one
+  substituted `go-tests`, one did it by hand. Three runs show the spread, not its distribution.
+
 ## What it proves, and what it does not
 
 - **The instrument repeats, and the chain fires on a step.** Twelve runs on a bare symptom never
-  loaded anything (six with the skill installed, six without). Six runs on a task-doc step always
-  loaded `drive` and `tests`, and the work follows the rubric. The absence in the first two probes was
-  real, and it was about the task, not the text.
+  loaded anything (six with the skill installed, six without). Twelve runs on a task-doc step loaded
+  `tests` in every run where it was installed, 9 of 9, and `drive` in 11 of 12; the one run that
+  loaded nothing had no `tests` either. The absence in the first two probes was real, and it was
+  about the task, not the text.
 - **The block is not the lever.** The control arm has no `AGENTS.md` and behaves the same. The block's
   instruction to load `drive` was not even the order the block arm followed.
-- **The task's shape is the lever the corpus names.** What the six share is the brief, the task doc
-  and a prompt that names the step; what the twelve lack is all three at once.
+- **The task's shape is the lever the corpus names.** What the step runs share is the brief, the task
+  doc and a prompt that names the step; what the twelve bare runs lack is all three at once.
 - **It does not isolate the ingredient.** The step, the brief, the task doc and the word *plan* arrive
   together; which one matched is not measured.
-- **It does not prove the skill improves the code.** It proves the skill is read and the work follows
-  the rubric. Whether the test written under the skill is better than the one the model would have
-  written on its own is a different question, and both arms had the skill.
+- **It does not prove the test is better code.** The marginal probe shows the artifact arriving in the
+  order the skill names; whether that test finds a defect the other would miss is a different
+  question, and no run measured a defect found.
 - One model, three runs per arm, one task: the claim is about this corpus.
 
 ## The next question: the delegated worker
