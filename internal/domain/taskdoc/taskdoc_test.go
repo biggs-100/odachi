@@ -107,7 +107,7 @@ func TestParseCanonicalTaskDoc(t *testing.T) {
 		Commit:      "4a1c9f",
 		Done:        true,
 	}
-	if got.Steps[0] != wantFirstStep {
+	if !reflect.DeepEqual(got.Steps[0], wantFirstStep) {
 		t.Errorf("Steps[0] = %+v, want %+v", got.Steps[0], wantFirstStep)
 	}
 	if got.Steps[1].Done {
@@ -280,7 +280,7 @@ func TestParseAcceptsCRLF(t *testing.T) {
 		t.Fatalf("len(Steps) = %d, want 1", len(got.Steps))
 	}
 	want := taskdoc.Step{ID: "T1", Text: "uno", Requirement: "R1", Commit: "abc123", Done: true}
-	if got.Steps[0] != want {
+	if !reflect.DeepEqual(got.Steps[0], want) {
 		t.Errorf("Steps[0] = %+v, want %+v", got.Steps[0], want)
 	}
 	if len(got.History) != 1 || got.History[0] != `L1 · "nota"` {

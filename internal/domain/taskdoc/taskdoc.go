@@ -25,7 +25,12 @@ type Requirement struct{ ID, Text string }
 type Step struct {
 	ID, Text, Requirement, Commit string
 	Route, Agent                  string
-	Done                          bool
+	// Skills are the craft a delegated step owes, by name: the plan records
+	// them, and `odachi delegate` resolves them to the exact paths the worker
+	// reads. An empty list says the step owes none, which the delegation writes
+	// as an explicit "none" rather than an absent section.
+	Skills []string
+	Done   bool
 }
 
 // The two routes a step can declare.
@@ -38,6 +43,9 @@ const (
 
 // routePrefix opens the tail part that says who runs the step.
 const routePrefix = "route:"
+
+// skillsPrefix opens the tail part that names the craft a delegated step owes.
+const skillsPrefix = "skills:"
 
 // TaskDoc is the parsed task document.
 type TaskDoc struct {
@@ -304,12 +312,15 @@ func renderStep(s Step) string {
 	}
 	line := fmt.Sprintf("- %s %s%s%s", box, s.ID, sep, s.Text)
 
-	tail := make([]string, 0, 3)
+	tail := make([]string, 0, 4)
 	if s.Requirement != "" {
 		tail = append(tail, s.Requirement)
 	}
 	if route := renderRoute(s); route != "" {
 		tail = append(tail, route)
+	}
+	if skills := renderSkills(s); skills != "" {
+		tail = append(tail, skills)
 	}
 	if s.Commit != "" {
 		tail = append(tail, s.Commit)
@@ -336,6 +347,16 @@ func renderRoute(s Step) string {
 	default:
 		return routePrefix + s.Route
 	}
+}
+
+// renderSkills is the one spelling of a delegated step's craft: "skills:tests",
+// or "skills:drive,tests". Empty when the step declares none, so a step that
+// wrote no field says nothing instead of saying "none".
+func renderSkills(s Step) string {
+	if len(s.Skills) == 0 {
+		return ""
+	}
+	return skillsPrefix + strings.Join(s.Skills, ",")
 }
 
 // parseRequirement reads one `R1 · "text"` line. The quotes are the human's
@@ -381,6 +402,7 @@ func parseStep(line string) (Step, bool) {
 		last := segments[len(segments)-1]
 		if parsed, ok := parseTail(last); ok {
 			step.Requirement, step.Route, step.Agent, step.Commit = parsed.requirement, parsed.route, parsed.agent, parsed.commit
+			step.Skills = parsed.skills
 			step.Text = strings.Join(segments[:len(segments)-1], "  ")
 			return step, true
 		}
@@ -389,8 +411,11 @@ func parseStep(line string) (Step, bool) {
 	return step, true
 }
 
-// tail is the three facts a step line carries after its text, in order.
-type tail struct{ requirement, route, agent, commit string }
+// tail is the facts a step line carries after its text, in order.
+type tail struct {
+	requirement, route, agent, commit string
+	skills                            []string
+}
 
 // parseTail reads the last segment of a step line when it is the canonical tail
 // and reports false when it is not: a segment that is neither an id nor a tail
@@ -429,6 +454,14 @@ func parseTail(segment string) (tail, bool) {
 	for _, part := range kept {
 		if spec, isRoute := strings.CutPrefix(part, routePrefix); isRoute {
 			parsed.route, parsed.agent = splitRoute(spec)
+			continue
+		}
+		if spec, isSkills := strings.CutPrefix(part, skillsPrefix); isSkills {
+			for _, name := range strings.Split(spec, ",") {
+				if name = strings.TrimSpace(name); name != "" {
+					parsed.skills = append(parsed.skills, name)
+				}
+			}
 			continue
 		}
 		if parsed.commit != "" {
