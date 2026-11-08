@@ -13,6 +13,10 @@ R1 · "a change that names itself in its commit can be committed: the hook that 
 - Unreleased names the change: a contract change, minor
 
 ## Steps
+- [ ] T1 · init writes the gate at commit-msg, retires odachi's pre-commit, and doctor names the gate hook   R1 · route:inline
+- [ ] T2 · the gate reads the trailer from the message file, defers the proof before the commit, and keeps the refusals   R1 · route:inline
+- [ ] T3 · a real first commit on a branch passes and the proof is owed after it   R1 · route:inline
+- [ ] T4 · Unreleased names the change as a contract change, minor   R1 · route:inline
 
 ## History
 L1 · "a change that names itself in its commit can be committed: the hook that sees the message judges it, and the proof is owed after the commit exists"
