@@ -43,7 +43,9 @@ func TestTheScopeIsDecidedByTheFlagThenTheStoreThenTheAdoption(t *testing.T) {
 		{"the store is the second answer", persona.SkillsScope{Stored: persona.SkillsHome}, persona.SkillsHome, persona.SkillsFromStore},
 		{"a store that chose the project is not moved by the adoption", persona.SkillsScope{Stored: persona.SkillsProject, Adopted: true}, persona.SkillsProject, persona.SkillsFromStore},
 		{"the adoption answers when nobody chose", persona.SkillsScope{Adopted: true}, persona.SkillsHome, persona.SkillsFromAdoption},
-		{"a project that never chose keeps the project", persona.SkillsScope{}, persona.SkillsProject, persona.SkillsFromDefault},
+		{"a project that never chose reads the craft from the machine", persona.SkillsScope{}, persona.SkillsHome, persona.SkillsFromDefault},
+		{"a project that already carries the copy keeps it", persona.SkillsScope{CraftHere: true}, persona.SkillsProject, persona.SkillsFromCopy},
+		{"a copy here is not moved by the adoption", persona.SkillsScope{CraftHere: true, Adopted: true}, persona.SkillsProject, persona.SkillsFromCopy},
 	}
 	for _, c := range cases {
 		scope, source := c.facts.Resolve()

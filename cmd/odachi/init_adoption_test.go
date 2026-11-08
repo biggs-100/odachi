@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
 // initRepoWithCommit is a repository that already lives: the case the human
@@ -75,7 +77,8 @@ func TestAdoptingAnExistingRepoKeepsTheMinimalFootprint(t *testing.T) {
 }
 
 // TestAFreshRepoKeepsTheFullInstall: a folder with no history is a project
-// starting now, and there the craft travels with the repository.
+// starting now. It keeps the rules, the ignore and the hook here; the agent and
+// the craft are installed once per machine.
 func TestAFreshRepoKeepsTheFullInstall(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -86,11 +89,21 @@ func TestAFreshRepoKeepsTheFullInstall(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".agents", "skills", "acceptance", "SKILL.md")); err != nil {
-		t.Errorf("a fresh project did not get the craft: %v", err)
+	for _, rel := range []string{"AGENTS.md", ".gitignore", ".git/hooks/pre-commit"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+			t.Errorf("%s was not written in a project starting now: %v", rel, err)
+		}
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err != nil {
-		t.Errorf("a fresh project did not get the native agent: %v", err)
+	for _, rel := range []string{".agents", ".opencode", ".claude"} {
+		if _, err := os.Stat(filepath.Join(dir, rel)); err == nil {
+			t.Errorf("%s was written in the project: the agent and the craft live in the home", rel)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".agents/skills/acceptance/SKILL.md"))); err != nil {
+		t.Errorf("a fresh project did not get the craft in the machine: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".config/opencode/agents/odachi.md"))); err != nil {
+		t.Errorf("a fresh project did not get the door in the machine: %v", err)
 	}
 	if strings.Contains(out+errOut, "this repository already lives") {
 		t.Errorf("a folder with no history was called a project that lives:\n%s%s", out, errOut)
@@ -139,8 +152,9 @@ func TestAProjectThatAlreadyCarriesTheCraftIsNotMoved(t *testing.T) {
 	}
 }
 
-// TestTheFlagsAskForTheCopiesAndAreStored: the way out of the minimal footprint
-// is naming the choice, and the choice outlives the run.
+// TestTheFlagsAskForTheCopiesAndAreStored: `--skills project` is the explicit pin
+// for the craft, and the store keeps it; `--agents` names the clients of the door
+// in the home. A plain init afterwards honours both answers.
 func TestTheFlagsAskForTheCopiesAndAreStored(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -154,26 +168,29 @@ func TestTheFlagsAskForTheCopiesAndAreStored(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, ".agents", "skills", "acceptance", "SKILL.md")); err != nil {
 		t.Errorf("--skills project did not put the craft here: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err != nil {
-		t.Errorf("--agents did not put the native agent here: %v", err)
+	door, _ := persona.GlobalFilesFor(persona.SelectionOpenCode)
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(door.Path))); err != nil {
+		t.Errorf("--agents did not put the OpenCode door in the home: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err == nil {
+		t.Error("--agents put the native agent in the project: the agent lives in the home")
 	}
 	store, err := os.ReadFile(storePath(dir))
 	if err != nil {
 		t.Fatalf("the choice was not stored: %v", err)
 	}
-	if !strings.Contains(string(store), `skills = "project"`) {
-		t.Errorf("the store does not keep the choice:\n%s", store)
+	for _, want := range []string{`skills = "project"`, `agents = "opencode"`} {
+		if !strings.Contains(string(store), want) {
+			t.Errorf("the store does not keep %q:\n%s", want, store)
+		}
 	}
 
-	// A plain init afterwards honours them instead of going back to the minimal
-	// footprint. The project's copies are removed first, so the run can only bring
-	// them back from the store: with them in place the inference would explain the
-	// work and the store branch would never be exercised.
+	// A plain init afterwards honours them instead of going back to the defaults.
+	// The project's copy is removed first, so the run can only bring it back from
+	// the store: with it in place the inference would explain the work and the
+	// store branch would never be exercised.
 	if err := os.RemoveAll(filepath.Join(dir, ".agents")); err != nil {
 		t.Fatalf("removing the project copy: %v", err)
-	}
-	if err := os.RemoveAll(filepath.Join(dir, ".opencode")); err != nil {
-		t.Fatalf("removing the project agent: %v", err)
 	}
 
 	code, out, errOut = runDir(t, dir, []string{"init"}, "")
@@ -182,9 +199,6 @@ func TestTheFlagsAskForTheCopiesAndAreStored(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".agents", "skills", "acceptance", "SKILL.md")); err != nil {
 		t.Errorf("the store did not bring the craft back: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err != nil {
-		t.Errorf("the store did not bring the native agent back: %v", err)
 	}
 	if !strings.Contains(out+errOut, "from the store") {
 		t.Errorf("the run does not say the store decided:\n%s%s", out, errOut)
@@ -195,9 +209,9 @@ func TestTheFlagsAskForTheCopiesAndAreStored(t *testing.T) {
 }
 
 // TestNamingAClientDoesNotDecideWhereTheCraftGoes: the two choices are separate.
-// --agents says which clients get the native agent and asks for the project's
-// copies of it; it says nothing about the craft, so the store must not record a
-// scope for it and the next plain init still leaves the craft in the machine.
+// --agents says which clients receive the door in the home; it says nothing about
+// the craft, so the store must not record a scope for it and the next plain init
+// still leaves the craft in the machine.
 func TestNamingAClientDoesNotDecideWhereTheCraftGoes(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -208,8 +222,9 @@ func TestNamingAClientDoesNotDecideWhereTheCraftGoes(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err != nil {
-		t.Errorf("--agents did not put the native agent here: %v", err)
+	door, _ := persona.GlobalFilesFor(persona.SelectionOpenCode)
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(door.Path))); err != nil {
+		t.Errorf("--agents did not put the OpenCode door in the home: %v", err)
 	}
 	store, err := os.ReadFile(storePath(dir))
 	if err != nil {
@@ -237,11 +252,11 @@ func TestNamingAClientDoesNotDecideWhereTheCraftGoes(t *testing.T) {
 	}
 }
 
-// TestAProjectWithOnlyItsAgentKeepsIt: an old `--skills home` install can leave
-// the native agent in the project and the craft in the machine. The craft's
-// inference must not decide the agent: the file is there and the client reads it,
-// so the run refreshes it instead of saying the home door is the one that runs.
-func TestAProjectWithOnlyItsAgentKeepsIt(t *testing.T) {
+// TestAProjectWithOnlyItsAgentKeepsItAndTheRunNamesTheLeftover: an old install
+// can leave the native agent in the project and the craft in the machine. This
+// version writes no project agent and deletes nothing: the file keeps its bytes,
+// and the run names the folder so the human decides.
+func TestAProjectWithOnlyItsAgentKeepsItAndTheRunNamesTheLeftover(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	dir := t.TempDir()
@@ -252,15 +267,24 @@ func TestAProjectWithOnlyItsAgentKeepsIt(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if strings.Contains(out+errOut, "project agents: not written") {
-		t.Errorf("a project that carries its agent was told the home door runs:\n%s%s", out, errOut)
+	report := out + errOut
+	if !strings.Contains(report, "the agent lives only in the home") {
+		t.Errorf("the run does not say where the agent lives:\n%s", report)
+	}
+	if !strings.Contains(report, "left from an older release") || !strings.Contains(report, ".opencode/agents/odachi.md") {
+		t.Errorf("the run does not name the leftover file:\n%s", report)
+	}
+	// The folder holds a role's agent too; the line may not offer the folder for
+	// deletion, only the file odachi wrote.
+	if strings.Contains(report, "left from an older release: .opencode/agents;") {
+		t.Errorf("the run names the folder instead of the file:\n%s", report)
 	}
 	got, err := os.ReadFile(filepath.Join(dir, ".opencode", "agents", "odachi.md"))
 	if err != nil {
 		t.Fatalf("the project agent is gone: %v", err)
 	}
-	if string(got) == "a door from an earlier release\n" {
-		t.Errorf("the project agent was not refreshed")
+	if string(got) != "a door from an earlier release\n" {
+		t.Errorf("the project agent was rewritten: %q", got)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".agents")); err == nil {
 		t.Errorf("the craft came into the project because the agent was there")
@@ -315,11 +339,11 @@ func TestAnotherToolsFolderIsNotTheCraft(t *testing.T) {
 	}
 }
 
-// TestTheAgentInferenceIsNotStored: a project that chose where the craft goes has
-// not chosen anything about its agent, so the next plain init must not record the
-// inference as a decision -the store is the authority afterwards, and a project
-// that never asked for the mirrors would be stuck with their absence.
-func TestTheAgentInferenceIsNotStored(t *testing.T) {
+// TestTheHomeOnlyAgentIsRecordedEvenWhenOnlyTheCraftWasNamed: a project that chose
+// where the craft goes has not named a client, but it still gets the agent from the
+// home. The CLI records that answer every run, so the next command cannot rebuild a
+// mirror nobody asked for.
+func TestTheHomeOnlyAgentIsRecordedEvenWhenOnlyTheCraftWasNamed(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	dir := t.TempDir()
@@ -336,8 +360,8 @@ func TestTheAgentInferenceIsNotStored(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the store: %v", err)
 	}
-	if strings.Contains(string(store), "project_agents") {
-		t.Errorf("the run recorded an inference as a choice:\n%s", store)
+	if !strings.Contains(string(store), `project_agents = "none"`) {
+		t.Errorf("the store does not keep the home-only agent:\n%s", store)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err == nil {
 		t.Errorf("the mirrors came into the project without a flag asking for them")

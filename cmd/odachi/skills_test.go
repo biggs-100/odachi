@@ -290,17 +290,39 @@ func TestSkillsHandEditedRegistryFailsAndWriteRestores(t *testing.T) {
 	}
 }
 
-// TestSkillNewCreatesThenRefuses: the creator writes once, updates the registry
-// and never clobbers what exists.
-func TestSkillNewCreatesThenRefuses(t *testing.T) {
+// TestSkillNewAsksForTheScope: where a user skill lives is the human's decision.
+// Without --scope nothing is written, and the refusal names the two answers.
+func TestSkillNewAsksForTheScope(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	code, out, errOut := runDir(t, dir, []string{"skill", "new", "ejemplo"}, "")
+	code, _, errOut := runDir(t, dir, []string{"skill", "new", "ejemplo"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stderr %q)", code, errOut)
+	}
+	for _, want := range []string{"--scope", "project", "home"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("stderr %q does not name %q", errOut, want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".agents")); !os.IsNotExist(err) {
+		t.Errorf("a run without a scope wrote .agents/: %v", err)
+	}
+}
+
+// TestSkillNewProjectWritesTheUserFolder: the project scope writes where the
+// agent reads, .agents/skills, with its registry beside it; the curriculum
+// (skills/ and the root SKILLS.md) is not a user location and is not touched.
+func TestSkillNewProjectWritesTheUserFolder(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	code, out, errOut := runDir(t, dir, []string{"skill", "new", "ejemplo", "--scope", "project"}, "")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stderr %q)", code, errOut)
 	}
-	path := filepath.Join(dir, "skills", "ejemplo", "SKILL.md")
+	path := filepath.Join(dir, ".agents", "skills", "ejemplo", "SKILL.md")
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("the skill was not created: %v", err)
@@ -308,18 +330,23 @@ func TestSkillNewCreatesThenRefuses(t *testing.T) {
 	if !strings.Contains(string(content), "name: ejemplo") {
 		t.Errorf("SKILL.md does not declare its name:\n%s", content)
 	}
-	if !strings.Contains(out, "skills/ejemplo/SKILL.md") || !strings.Contains(out, "SKILLS.md") {
+	if !strings.Contains(out, ".agents/skills/ejemplo/SKILL.md") || !strings.Contains(out, ".agents/skills/SKILLS.md") {
 		t.Errorf("stdout %q does not report the skill and the registry", out)
 	}
-	registry, err := os.ReadFile(filepath.Join(dir, "SKILLS.md"))
+	registry, err := os.ReadFile(filepath.Join(dir, ".agents", "skills", "SKILLS.md"))
 	if err != nil {
 		t.Fatalf("the registry was not generated: %v", err)
 	}
 	if !strings.Contains(string(registry), "| ejemplo |") {
 		t.Errorf("SKILLS.md does not list ejemplo:\n%s", registry)
 	}
+	for _, untouched := range []string{"skills", "SKILLS.md"} {
+		if _, err := os.Stat(filepath.Join(dir, untouched)); !os.IsNotExist(err) {
+			t.Errorf("the run wrote %s: the curriculum is not a user location", untouched)
+		}
+	}
 
-	code, _, errOut = runDir(t, dir, []string{"skill", "new", "ejemplo"}, "")
+	code, _, errOut = runDir(t, dir, []string{"skill", "new", "ejemplo", "--scope", "project"}, "")
 	if code != 1 {
 		t.Fatalf("second create code = %d, want 1", code)
 	}
@@ -335,13 +362,63 @@ func TestSkillNewCreatesThenRefuses(t *testing.T) {
 	}
 }
 
+// TestSkillNewHomeWritesTheMachineFolder: the home scope writes once per machine
+// and leaves the project alone.
+func TestSkillNewHomeWritesTheMachineFolder(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	dir := t.TempDir()
+
+	code, out, errOut := runDir(t, dir, []string{"skill", "new", "ejemplo", "--scope", "home"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (stderr %q)", code, errOut)
+	}
+	path := filepath.Join(home, ".agents", "skills", "ejemplo", "SKILL.md")
+	if _, err := os.ReadFile(path); err != nil {
+		t.Fatalf("the skill was not created in the home: %v", err)
+	}
+	registry, err := os.ReadFile(filepath.Join(home, ".agents", "skills", "SKILLS.md"))
+	if err != nil {
+		t.Fatalf("the home registry was not generated: %v", err)
+	}
+	if !strings.Contains(string(registry), "| ejemplo |") {
+		t.Errorf("the home registry does not list ejemplo:\n%s", registry)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".agents")); !os.IsNotExist(err) {
+		t.Errorf("the project received a copy: %v", err)
+	}
+	if !strings.Contains(out, "~/.agents/skills/ejemplo/SKILL.md") {
+		t.Errorf("stdout %q does not name the home path a human reads", out)
+	}
+}
+
+// TestSkillNewRefusesAnUnknownScope: a typo is refused before any write.
+func TestSkillNewRefusesAnUnknownScope(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	code, _, errOut := runDir(t, dir, []string{"skill", "new", "ejemplo", "--scope", "fuera"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stderr %q)", code, errOut)
+	}
+	for _, want := range []string{"project", "home", "fuera"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("stderr %q does not name %q", errOut, want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".agents")); !os.IsNotExist(err) {
+		t.Errorf("an invalid scope wrote .agents/: %v", err)
+	}
+}
+
 // TestSkillNewRejectsABadSlugBeforeWriting: the regex is checked first, so a bad
 // slug leaves no directory behind.
 func TestSkillNewRejectsABadSlugBeforeWriting(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	code, _, errOut := runDir(t, dir, []string{"skill", "new", "Slug Invalido"}, "")
+	code, _, errOut := runDir(t, dir, []string{"skill", "new", "Slug Invalido", "--scope", "project"}, "")
 
 	if code != 1 {
 		t.Fatalf("code = %d, want 1", code)
@@ -349,8 +426,8 @@ func TestSkillNewRejectsABadSlugBeforeWriting(t *testing.T) {
 	if !strings.Contains(errOut, "^[a-z][a-z0-9-]{2,40}$") {
 		t.Errorf("stderr %q does not state the slug shape", errOut)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "skills")); !os.IsNotExist(err) {
-		t.Errorf("a rejected slug created skills/: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, ".agents")); !os.IsNotExist(err) {
+		t.Errorf("a rejected slug created .agents/: %v", err)
 	}
 }
 

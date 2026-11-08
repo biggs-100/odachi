@@ -78,8 +78,36 @@ func TestSetupHonoursNoSetup(t *testing.T) {
 	}
 }
 
-// TestInitGlobalHonoursNoSetup: the same switch protects a script that calls
-// init --global by mistake.
+// TestPlainInitHonoursNoSetup: a plain init now writes the home too, so the switch
+// protects a script that calls it without any flag. It stops before the first byte.
+func TestPlainInitHonoursNoSetup(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	t.Setenv("ODACHI_NO_SETUP", "1")
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	code, _, errOut := runDir(t, dir, []string{"init"}, "")
+	if code == 0 {
+		t.Fatal("a plain init ran with ODACHI_NO_SETUP=1")
+	}
+	if !strings.Contains(errOut, "ODACHI_NO_SETUP") {
+		t.Errorf("stderr = %q, want the variable named", errOut)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); err == nil {
+		t.Error("AGENTS.md was written with ODACHI_NO_SETUP=1")
+	}
+	entries, err := os.ReadDir(home)
+	if err != nil {
+		t.Fatalf("reading the home: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("a plain init wrote in the home with ODACHI_NO_SETUP=1: %v", entries)
+	}
+}
+
+// TestInitGlobalHonoursNoSetup: the same switch protects a script that still
+// calls init --global, which is accepted and means what a plain init does.
 func TestInitGlobalHonoursNoSetup(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)

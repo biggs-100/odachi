@@ -5,18 +5,18 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/biggs-100/odachi/internal/domain/skill"
 )
 
 // TestPackInstallsTheProjectSkillEndToEnd is the CLI contract for the join: a
-// skill created with `odachi skill new` lives in skills/ and the agent reads
-// .agents/skills, so pack is what puts it there, next to the bundled ones.
+// skill the project authors in skills/ is packed into .agents/skills, where the
+// agent reads it, next to the bundled ones. `skill new` writes a user skill
+// directly there; the curriculum is the catalog pack ships.
 func TestPackInstallsTheProjectSkillEndToEnd(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-
-	if code, _, stderr := runDir(t, dir, []string{"skill", "new", "marketing"}, ""); code != 0 {
-		t.Fatalf("skill new: exit %d, stderr=%s", code, stderr)
-	}
+	writeFile(t, dir, "skills/marketing/SKILL.md", skill.Template("marketing"))
 
 	code, stdout, stderr := runDir(t, dir, []string{"pack", "--agents", "standard"}, "")
 	if code != 0 {

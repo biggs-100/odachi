@@ -36,7 +36,8 @@ func TestInitRefusesARepositoryGitCannotRead(t *testing.T) {
 
 // TestInitTreatsAFirstDayAsAFirstDay: a repository the human created with no
 // commit yet is a state, not a failure. It keeps the full install -it is a
-// project starting now- and the refusal above must not swallow it.
+// project starting now- and the refusal above must not swallow it. The agent and
+// the craft live in the home, so the project keeps the rules and the hook.
 func TestInitTreatsAFirstDayAsAFirstDay(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -48,9 +49,20 @@ func TestInitTreatsAFirstDayAsAFirstDay(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	for _, rel := range []string{"AGENTS.md", ".agents/skills", ".opencode/agents/odachi.md"} {
+	for _, rel := range []string{"AGENTS.md", ".gitignore", ".git/hooks/pre-commit"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
 			t.Errorf("%s was not written in a project starting now: %v", rel, err)
 		}
+	}
+	for _, rel := range []string{".agents/skills", ".opencode/agents/odachi.md"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err == nil {
+			t.Errorf("%s was written in the project: the agent and the craft live in the home", rel)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".agents/skills/acceptance/SKILL.md"))); err != nil {
+		t.Errorf("the craft did not go to the machine: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".config/opencode/agents/odachi.md"))); err != nil {
+		t.Errorf("the door did not go to the home: %v", err)
 	}
 }

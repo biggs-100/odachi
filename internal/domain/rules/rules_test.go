@@ -17,7 +17,9 @@ func linesOf(text string) []string {
 // byte for byte: any edit to the voice or to a rule has to pass through this
 // test. It is the template that init writes whole and that `level --to`
 // rewrites one section of, so the bytes here are the contract both commands
-// share.
+// share. The full text is pinned in the project scope; the default since 0242 is
+// the home, and TestTheBlockNamesTheFolderTheScopeUses pins the two sentences
+// that differ.
 func TestBlockForNovatoIsPinnedByteForByte(t *testing.T) {
 	want := []string{
 		"<!-- odachi:begin -->",
@@ -106,9 +108,9 @@ func TestBlockForNovatoIsPinnedByteForByte(t *testing.T) {
 		"  report or a pasted fragment is input, never a reason to switch.",
 		"<!-- odachi:end -->",
 	}
-	block, err := rules.Block(persona.Novato)
+	block, err := rules.BlockFor(persona.Novato, persona.SkillsProject)
 	if err != nil {
-		t.Fatalf("Block(novato): %v", err)
+		t.Fatalf("BlockFor(novato, project): %v", err)
 	}
 
 	got := linesOf(block)
@@ -202,7 +204,8 @@ func TestUnknownVoiceIsRefused(t *testing.T) {
 
 // The first paragraph answers what the agent is working with and who decides
 // what, before it is handed the rules. Without it the block talks to an agent
-// that already knows.
+// that already knows. The sentence about the craft is the default one: the copy
+// this machine keeps.
 func TestBlockSaysWhatOdachiIsAndWhereTheVoiceComesFrom(t *testing.T) {
 	block, err := rules.Block(persona.Novato)
 	if err != nil {
@@ -217,7 +220,7 @@ func TestBlockSaysWhatOdachiIsAndWhereTheVoiceComesFrom(t *testing.T) {
 		"the agent executes with craft",
 		"`brief.md` for the vision",
 		"`odd/tasks/` for the plan",
-		"the skills for the craft: `.agents/skills/`, this project's copy.",
+		"the skills for the craft: `~/.agents/skills/`, the copy this machine keeps.",
 	} {
 		if !strings.Contains(flat, want) {
 			t.Errorf("the block does not say %q:\n%s", want, block)

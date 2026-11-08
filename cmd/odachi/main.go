@@ -128,7 +128,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug> --scope project|home), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -1112,9 +1112,13 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		global      bool
 	)
 	flags.BoolVar(&asJSON, "json", false, "machine output")
-	flags.StringVar(&skillsScope, "skills", "", "where to install the skills: project | home (default: the stored choice, or project)")
-	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
-	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, make it OpenCode's default agent, and leave the project's agent files alone")
+	flags.StringVar(&skillsScope, "skills", "", "where to install the skills: home | project (default: the stored choice, the copy already here, or home)")
+	flags.StringVar(&agents, "agents", "", "which clients receive the home door: opencode | claude | both")
+	// --global was the only way to install the door until 0242 and it is now what
+	// every run does. It stays accepted, and hidden from the help, so a script
+	// written for an older version keeps working; a flag that cannot change the
+	// outcome is not offered as a choice.
+	flags.BoolVar(&global, "global", false, "the default since 0242: init always installs the home door; kept so an older script does not break")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -1159,8 +1163,12 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	if global && os.Getenv("ODACHI_NO_SETUP") != "" {
-		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: the home is not touched; run init without --global or unset the variable")
+	// Since 0242 init always installs the door in the home: an agent lives only
+	// there, and the project keeps the rules, the plan and the hook. A machine
+	// that says it may not be touched cannot run the job, so the refusal names the
+	// variable instead of writing half of it.
+	if os.Getenv("ODACHI_NO_SETUP") != "" {
+		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: init writes the door in the home and the home is not touched; unset the variable to run init")
 		return start.CodeBlocked
 	}
 
@@ -1172,8 +1180,8 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		Agents:          agents,
 		AgentSelection:  agentSelection{},
 		Home:            osHome{},
-		Global:          global,
-		NoProjectAgents: global,
+		Global:          true,
+		NoProjectAgents: true,
 		Skills:          skillsScope,
 		Existing:        existing,
 	}, disk(dir), &initSkills{dir: dir, verb: "odachi init"})
@@ -1678,12 +1686,12 @@ usage:
   odachi review waive --because "<why>"
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
-  odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]
+  odachi init [--skills home|project] [--agents opencode|claude|both] [--json]
   odachi setup [--agents opencode|claude|both] [--dry-run] [--json]
   odachi skills [--check | --write]
   odachi role new <slug>
   odachi role [<slug>]
-  odachi skill new <slug>
+  odachi skill new <slug> --scope project|home
   odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <folder>] [--dry-run]
   odachi --version
   odachi version
@@ -1919,14 +1927,17 @@ after start:
   odachi check --require-review                 requires review for this tree and its lenses
   odachi doctor                                 fifteen health checks, read-only
   odachi bench                                  measures how a person gets stuck (in-band / dead-end)
-  odachi init                                   AGENTS.md (with the profile voice) + the project
-                                                 agent and the home door (chosen with Tab)
-                                                 + hook + the project skills in .agents/skills,
-                                                 and the bootstrap one in ~/.agents/skills
+  odachi init                                   AGENTS.md (with the profile voice) + the hook
+                                                 + the agent door in the home, the one that runs in
+                                                 every folder, + the craft in ~/.agents/skills
+                                                 (odachi init --skills project keeps a copy here)
+  odachi setup                                  the home half alone: the door, the subagents and the
+                                                 craft; writes nothing in the current folder
   odachi skills                                 the project's skills and their trigger
   odachi skills --check                         validate (CI runs it); exit 1 when something does not comply
   odachi skills --write                         regenerate SKILLS.md from the frontmatter
-  odachi skill new <slug>                       create skills/<slug>/SKILL.md and update the registry
+  odachi skill new <slug> --scope project           create .agents/skills/<slug>/SKILL.md and its SKILLS.md
+  odachi skill new <slug> --scope home              the same, once per machine in ~/.agents/skills
   odachi pack --agents claude,codex             install the bundled skills into each agent
   odachi pack --agents standard                 in ./.agents/skills, the folder every client reads
   odachi pack --agents standard --scope home    in ~/.agents/skills: one copy for every project

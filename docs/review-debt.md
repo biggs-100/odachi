@@ -9,12 +9,17 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0232, which leaves nothing open.
+Last written: while closing 0242.
 
 ## Open
 
-Nothing is open: 0232 closed the last rows with the document they asked for. The next row starts a
-new list.
+### the registry repair of an existing user skill is unpinned
+
+Found by the review of 0242 (one warning, `internal/app/skills/skills_test.go:414`). `skill new` now
+repairs the folder registry when the skill already exists, but the only test that reaches the branch
+accepts any event that is not the skill file: it never asserts the registry row or the repair
+sentence, so a regression would pass. The fix is a test that seeds the skill, runs the command and
+reads the regenerated `SKILLS.md`.
 
 ## Closed by feature 0232
 

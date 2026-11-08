@@ -41,7 +41,6 @@ func findIgnores(t *testing.T, dir string) []string {
 // The verdict is attached from OUTSIDE the worktree, so the only thing that can
 // move the tree is what the tool writes.
 func TestInitKeepsTheProofValidAcrossAReview(t *testing.T) {
-	t.Parallel()
 	dir := changedProject(t)
 
 	if code, out, errOut := runDir(t, dir, []string{"init"}, ""); code != 0 {

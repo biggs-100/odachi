@@ -6,9 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	skillsapp "github.com/biggs-100/odachi/internal/app/skills"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
 // runSkills parses the flags and wires the Files adapter: listing, --check and
@@ -47,25 +49,52 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 	return reportSkills(skillsapp.Run(skillsapp.Options{Dir: dir, Check: check, Write: write}, disk(dir)), asJSON, stdout, stderr)
 }
 
-// runSkill parses `odachi skill new <slug>`. `skill` has one subcommand on
-// purpose: creating one skill and touching nothing else.
+// runSkill parses `odachi skill new <slug> --scope project|home`. `skill` has one
+// subcommand on purpose: creating one skill and touching nothing else.
 func runSkill(dir string, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "odachi: missing the subcommand: the only one is odachi skill new <slug>")
+		fmt.Fprintln(stderr, "odachi: missing the subcommand: the only one is odachi skill new <slug> --scope project|home")
 		return start.CodeBlocked
 	}
 	if args[0] != "new" {
-		fmt.Fprintf(stderr, "odachi: unknown subcommand: %s; the only one is odachi skill new <slug>\n", args[0])
+		fmt.Fprintf(stderr, "odachi: unknown subcommand: %s; the only one is odachi skill new <slug> --scope project|home\n", args[0])
 		return start.CodeBlocked
 	}
 
 	flags := flag.NewFlagSet("odachi skill new", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
-	var asJSON bool
+	var (
+		asJSON bool
+		scope  string
+	)
 	flags.BoolVar(&asJSON, "json", false, "machine output")
+	flags.StringVar(&scope, "scope", "", "where the skill lives: project (./.agents/skills) | home (~/.agents/skills)")
 
-	if err := flags.Parse(args[1:]); err != nil {
+	// Go's flag package stops at the first positional, and the slug comes first:
+	// split the words myself so `skill new ejemplo --scope home` and
+	// `skill new --scope home ejemplo` both work.
+	rest := args[1:]
+	var flagArgs, positionals []string
+	for i := 0; i < len(rest); i++ {
+		arg := rest[i]
+		switch {
+		case arg == "--scope" || arg == "-scope":
+			flagArgs = append(flagArgs, arg)
+			if i+1 < len(rest) {
+				i++
+				flagArgs = append(flagArgs, rest[i])
+			}
+		case strings.HasPrefix(arg, "--scope=") || strings.HasPrefix(arg, "-scope="):
+			flagArgs = append(flagArgs, arg)
+		case strings.HasPrefix(arg, "-") && arg != "-":
+			flagArgs = append(flagArgs, arg)
+		default:
+			positionals = append(positionals, arg)
+		}
+	}
+
+	if err := flags.Parse(flagArgs); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			usage(stdout)
 			return start.CodeOK
@@ -73,16 +102,40 @@ func runSkill(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi skill new -h to see the flags")
 		return start.CodeBlocked
 	}
-	if flags.NArg() == 0 {
-		fmt.Fprintln(stderr, "odachi: missing the slug: odachi skill new <slug>")
+	if len(positionals) == 0 {
+		fmt.Fprintln(stderr, "odachi: missing the slug: odachi skill new <slug> --scope project|home")
 		return start.CodeBlocked
 	}
-	if flags.NArg() > 1 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi skill new takes a single slug\n", flags.Arg(1))
+	if len(positionals) > 1 {
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi skill new takes a single slug\n", positionals[1])
 		return start.CodeBlocked
+	}
+	slug := positionals[0]
+	if scope != "" {
+		if _, err := persona.NormalizeSkills(scope); err != nil {
+			fmt.Fprintf(stderr, "odachi: --scope has to be \"project\" or \"home\", not %q; project writes .agents/skills/<slug>, home writes ~/.agents/skills/<slug>\n", scope)
+			return start.CodeBlocked
+		}
+		scope = strings.ToLower(strings.TrimSpace(scope))
 	}
 
-	return reportSkills(skillsapp.New(skillsapp.Options{Dir: dir, Slug: flags.Arg(0)}, disk(dir)), asJSON, stdout, stderr)
+	// The home is the CLI's to resolve: the app never touches os. A home that
+	// cannot be found is refused before the skill is written.
+	home := ""
+	if scope == persona.SkillsHome {
+		resolved, err := homeDir()
+		if err != nil || strings.TrimSpace(resolved) == "" {
+			reason := "the system reported no home"
+			if err != nil {
+				reason = oneLine(err.Error())
+			}
+			fmt.Fprintln(stderr, "odachi: could not find your home to write ~/.agents/skills/<slug>: "+reason+"; run odachi skill new <slug> --scope project, or set a home and run it again")
+			return start.CodeBlocked
+		}
+		home = resolved
+	}
+
+	return reportSkills(skillsapp.New(skillsapp.Options{Dir: dir, Slug: slug, Scope: scope, Home: home}, disk(dir)), asJSON, stdout, stderr)
 }
 
 // skillEntry is one row of the machine listing.

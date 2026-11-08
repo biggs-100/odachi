@@ -103,17 +103,19 @@ type Options struct {
 	// this run does not install the global half (tests that only care about the
 	// project); the binary always passes an adapter.
 	Home Home
-	// Global says this run installs the door of the home. It is opt-in: an init
-	// without the flag does not write the home, because a primary agent in every
-	// folder is the human's decision and not an effect of initializing a project.
+	// Global says this run installs the door of the home. The CLI always asks for
+	// it since 0242: an agent lives only in the home, and the project keeps the
+	// rules and the plan. The field stays because a caller that wires no home -the
+	// tests that only care about the project- must still be able to say so.
 	Global bool
-	// NoProjectAgents skips the project's native agent files, so a project that
-	// keeps its agents in the home carries only the rules and the plan. It needs
-	// Global: skipping both halves would leave no agent at all.
+	// NoProjectAgents skips the project's native agent files. The CLI always asks
+	// for it since 0242; the field stays for the same reason as Global, and
+	// skipping both halves would leave no agent at all.
 	NoProjectAgents bool
 	// Skills is where this run was asked to put the craft. Empty means "the
-	// stored one, or the project": a plain init after `--skills home` must not
-	// rebuild the project copy (the same rule 0081 gave the agent choice).
+	// stored one, the copy already here, or the machine": a plain init keeps the
+	// choice the project recorded, and a project with no copy and no choice gets
+	// one copy per machine.
 	Skills string
 	// DryRun is the rehearsal: the run reads the machine and reports every file
 	// it would write, and writes none. Only `setup` sets it -the verb a machine
@@ -268,7 +270,7 @@ func Run(opts Options, files Files, skills Skills) Result {
 		return *problem
 	}
 	if r.projectAgents == persona.ProjectAgentsNone {
-		r.skipProjectPersonas(opts.NoProjectAgents)
+		r.skipProjectPersonas()
 	} else if problem := r.writePersonas(); problem != nil {
 		// The hook and the rules block are already in place: report how much of
 		// the job is done instead of pretending nothing happened.
@@ -342,10 +344,10 @@ func effectiveProject(store persona.Store) persona.Store {
 }
 
 // effectiveSkills is the same rule for the other half of the store: an absent
-// scope is the project, which is the answer the tool always gave.
+// scope is the machine, the answer this tool installs since 0242.
 func effectiveSkills(store persona.Store) persona.Store {
 	if store.Skills == "" {
-		store.Skills = persona.SkillsProject
+		store.Skills = persona.SkillsHome
 	}
 	return store
 }
@@ -813,19 +815,49 @@ func oneLine(message string) string {
 // skipProjectPersonas is the clean mode: the project keeps the rules and the
 // plan, and the agents it would have written stay in the home, where the door
 // and its subagents are the ones that run.
-func (r *runner) skipProjectPersonas(byFlag bool) {
-	reason := "the store says the agent lives in the home"
-	if byFlag {
-		reason = "--no-project-agents"
-	}
+func (r *runner) skipProjectPersonas() {
+	reason := "the agent lives only in the home"
 	if r.adoptAgent {
 		reason = "this repository already lives, so the agent stays in the machine"
 	}
-	r.lines = append(r.lines, "project agents: not written ("+reason+"); the door in the home is the one that runs, and --agents "+r.selection+" puts the mirrors back")
+	r.lines = append(r.lines, "project agents: not written ("+reason+"); the door in the home is the one that runs, and odachi init writes no agent file here")
 	// The minimal footprint skips both halves here, so the machine is the only
 	// place the agent can come from. Saying it is not advice: without setup the
 	// project has no agent at all.
 	if r.adoptAgent {
 		r.lines = append(r.lines, "if this machine never ran odachi setup, do it once: it installs the door the agent comes from")
 	}
+	// An agent an older release wrote here still works, and odachi does not delete
+	// a file it did not write in this version: the human is the one who decides.
+	// The line names the exact files, never their folders: `.opencode/agents` and
+	// `.claude/output-styles` also hold a role's agent and the human's own styles,
+	// and a folder is the wrong unit to offer for deletion.
+	if left, err := r.projectAgentFiles(); err != nil {
+		r.lines = append(r.lines, err.Error()+"; check the permissions and run odachi init again")
+	} else if len(left) > 0 {
+		r.lines = append(r.lines, "project agents left from an older release: "+humanList(left)+"; I did not delete them: delete them if you want")
+	}
+}
+
+// projectAgentFiles names the files under the project that this version does not
+// write but an older release did. Only the names odachi generated: a role's agent
+// and the human's own styles live in the same folders and are not ours to offer.
+func (r *runner) projectAgentFiles() ([]string, error) {
+	var files []string
+	for _, client := range persona.Clients() {
+		owned := persona.SubagentFilesFor(client.Agent)
+		if primary, ok := persona.FilesFor(client.Agent, ""); ok && primary.Path != "" {
+			owned = append([]persona.File{primary}, owned...)
+		}
+		for _, file := range owned {
+			exists, err := r.files.Exists(filepath.Join(r.dir, filepath.FromSlash(file.Path)))
+			if err != nil {
+				return nil, fmt.Errorf("could not check %s: %s", file.Path, oneLine(err.Error()))
+			}
+			if exists {
+				files = append(files, file.Path)
+			}
+		}
+	}
+	return files, nil
 }

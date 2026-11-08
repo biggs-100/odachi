@@ -211,10 +211,11 @@ func apply(opts Options, target string, files Files) Result {
 	}
 
 	// The voice: the last section of the rules block, the only part of it this
-	// command owns, and the native agent that mirrors the block.
+	// command owns. The native agent lives in the home since 0242: a project file
+	// with that name is a leftover an older release wrote, and refreshing it would
+	// keep alive a file nobody reads. Level does not touch it.
 	voiceName, voiceErr := persona.VoiceName(to.Name)
 	voiced := false
-	personaFiles := []string{}
 	switch {
 	case voiceErr != nil:
 		// A profile name odachi has no voice for. The ceremony is still the
@@ -238,23 +239,6 @@ func apply(opts Options, target string, files Files) Result {
 		if line != "" {
 			lines = append(lines, line)
 		}
-
-		// The native agent mirrors the block the human already has, so the
-		// selector and AGENTS.md cannot disagree after a profile change. A
-		// missing file is init's to install, not level's: this command refreshes
-		// what is there.
-		refreshed, personaLine, problem := refreshPersonas(opts.Dir, files, opts.Agents)
-		if problem != nil {
-			problem.Message = "applied the " + to.Name + " profile in " + profileFile + "; " + problem.Message
-			problem.Lines = lines
-			problem.Files = append(append([]string{}, written...), refreshed...)
-			return *problem
-		}
-		personaFiles = refreshed
-		if personaLine != "" {
-			lines = append(lines, personaLine)
-		}
-		written = append(written, refreshed...)
 	}
 
 	// One line, and it says what happened to every surface of the same choice.
@@ -270,13 +254,8 @@ func apply(opts Options, target string, files Files) Result {
 		message = fmt.Sprintf("done: applied the %s profile in %s; the block voice was already %s", to.Name, profileFile, voiceName)
 	case voiced:
 		message = fmt.Sprintf("done: the profile was already %s; I updated the block voice to %s", to.Name, voiceName)
-	case len(personaFiles) > 0:
-		message = fmt.Sprintf("done: the profile was already %s and the block voice is also %s; I updated the native agent", to.Name, voiceName)
 	default:
 		message = fmt.Sprintf("the profile was already %s and the block voice is also %s; I wrote nothing", to.Name, voiceName)
-	}
-	if len(personaFiles) > 0 && (applied || voiced) {
-		message += "; I updated the native agent (" + strings.Join(personaFiles, ", ") + ")"
 	}
 
 	// The message goes first, because the printer prints Lines and not the
@@ -349,84 +328,6 @@ func rewriteVoice(dir, voiceName string, files Files) (line string, wrote bool, 
 	}
 
 	return "AGENTS.md: voice " + voiceName + " in the block (the previous one is at " + relative(dir, backup) + ")", true, nil
-}
-
-// refreshPersonas keeps the native agent in step with the block the human
-// already has. It mirrors the block's own bytes, not a freshly rendered copy, so
-// a human who edited the rules by hand gets the edit in the selector too.
-//
-// Only files that already exist are refreshed: installing them is `odachi init`'s
-// job, and a level run on a project without them still applies the profile. A
-// project without a block has nothing to mirror and is left alone.
-func refreshPersonas(dir string, files Files, selection string) (changed []string, line string, problem *Result) {
-	agentsPath := filepath.Join(dir, agentsFile)
-	exists, err := files.Exists(agentsPath)
-	if err != nil {
-		failure := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi level --to <profile> again",
-			agentsFile, oneLine(err.Error())))
-		return nil, "", &failure
-	}
-	if !exists {
-		return nil, "", nil
-	}
-
-	data, err := files.Read(agentsPath)
-	if err != nil {
-		failure := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi level --to <profile> again",
-			agentsFile, oneLine(err.Error())))
-		return nil, "", &failure
-	}
-	body, ok := rules.BodyIn(string(data))
-	if !ok {
-		return nil, "", nil
-	}
-
-	selected, err := persona.FilesForSelection(body, selection)
-	if err != nil {
-		failure := blocked(fmt.Sprintf("could not resolve the client selection: %s; run odachi init --agents both and run odachi level --to <profile> again",
-			oneLine(err.Error())))
-		return changed, "", &failure
-	}
-	for _, file := range selected {
-		path := filepath.Join(dir, filepath.FromSlash(file.Path))
-
-		exists, err := files.Exists(path)
-		if err != nil {
-			failure := blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi level --to <profile> again",
-				file.Path, oneLine(err.Error())))
-			return changed, "", &failure
-		}
-		if !exists {
-			continue
-		}
-
-		current, err := files.Read(path)
-		if err != nil {
-			failure := blocked(fmt.Sprintf("could not read %s: %s; check the permissions and run odachi level --to <profile> again",
-				file.Path, oneLine(err.Error())))
-			return changed, "", &failure
-		}
-		if string(current) == file.Content {
-			continue
-		}
-
-		if _, err := files.Backup(path); err != nil {
-			failure := blocked(fmt.Sprintf("could not back up %s before rewriting it: %s; check the permissions and run odachi level --to <profile> again",
-				file.Path, oneLine(err.Error())))
-			return changed, "", &failure
-		}
-		if err := files.Write(path, []byte(file.Content)); err != nil {
-			failure := blocked(fmt.Sprintf("could not write %s: %s; check the permissions and run odachi level --to <profile> again",
-				file.Path, oneLine(err.Error())))
-			return changed, "", &failure
-		}
-		changed = append(changed, file.Path)
-	}
-
-	if len(changed) == 0 {
-		return nil, "", nil
-	}
-	return changed, "the native agent is up to date: " + strings.Join(changed, ", "), nil
 }
 
 // shown renders an empty field value the way the human sees it in the file.

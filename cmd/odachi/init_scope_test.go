@@ -42,10 +42,10 @@ func TestGlobalInitLeavesTheProjectAgentsAlone(t *testing.T) {
 	}
 }
 
-// TestAPlainInitWritesTheProjectAgents: the run without --global is the one that
-// means "this project", and it writes the project's own copies. The home stays as it
-// was found: the door is opt-in.
-func TestAPlainInitWritesTheProjectAgents(t *testing.T) {
+// TestAPlainInitWritesTheHomeDoorAndNoProjectAgent: a plain init is the whole
+// job since 0242 -the rules and the hook here, the agent and the craft in the
+// machine- and the store records both answers so the next run answers the same.
+func TestAPlainInitWritesTheHomeDoorAndNoProjectAgent(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	dir := t.TempDir()
@@ -56,13 +56,75 @@ func TestAPlainInitWritesTheProjectAgents(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err != nil {
-		t.Errorf("a plain init wrote no project agent: %v", err)
+	for _, rel := range []string{".opencode", ".claude"} {
+		if _, err := os.Stat(filepath.Join(dir, rel)); err == nil {
+			t.Errorf("a plain init wrote %s in the project: the agent lives in the home", rel)
+		}
 	}
 	for _, file := range persona.GlobalFiles() {
-		if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(file.Path))); err == nil {
-			t.Errorf("%s was installed in the home without --global", file.Path)
+		if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(file.Path))); err != nil {
+			t.Errorf("%s was not installed in the home: %v", file.Path, err)
 		}
+	}
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".agents/skills/acceptance/SKILL.md"))); err != nil {
+		t.Errorf("the craft was not installed in the home: %v", err)
+	}
+	agents, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("AGENTS.md: %v", err)
+	}
+	if !strings.Contains(string(agents), "`~/.agents/skills/`") {
+		t.Errorf("the block does not name the machine's copy:\n%s", agents)
+	}
+
+	store, err := os.ReadFile(filepath.Join(dir, ".git", "odachi", "agents.toml"))
+	if err != nil {
+		t.Fatalf("the choice was not stored: %v", err)
+	}
+	for _, want := range []string{`project_agents = "none"`, `skills = "home"`} {
+		if !strings.Contains(string(store), want) {
+			t.Errorf("the store does not keep %q:\n%s", want, store)
+		}
+	}
+}
+
+// TestAgentsSelectsTheClientsOfTheDoor: --agents names which clients receive the
+// door in the home. It says nothing about the project, which never carries an
+// agent file in this version.
+func TestAgentsSelectsTheClientsOfTheDoor(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	if code, _, errOut := runDir(t, dir, []string{"init", "--agents", "opencode"}, ""); code != 0 {
+		t.Fatalf("init --agents failed: %s", errOut)
+	}
+
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".config/opencode/agents/odachi.md"))); err != nil {
+		t.Errorf("the OpenCode door was not installed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".claude/output-styles/odachi.md"))); err == nil {
+		t.Error("the run installed the Claude door although the choice was opencode")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err == nil {
+		t.Error("--agents put an agent back in the project")
+	}
+	store, err := os.ReadFile(filepath.Join(dir, ".git", "odachi", "agents.toml"))
+	if err != nil {
+		t.Fatalf("the client choice was not stored: %v", err)
+	}
+	if !strings.Contains(string(store), `agents = "opencode"`) {
+		t.Errorf("the store does not keep the client choice:\n%s", store)
+	}
+
+	// A plain init keeps the stored choice instead of bringing Claude back.
+	code, out, errOut := runDir(t, dir, []string{"init"}, "")
+	if code != 0 {
+		t.Fatalf("the plain init failed: %s", errOut)
+	}
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".claude/output-styles/odachi.md"))); err == nil {
+		t.Errorf("the Claude door came back on a plain init:\n%s", out)
 	}
 }
 
@@ -81,32 +143,5 @@ func TestTheFlagThatAskedForTheDefaultIsGone(t *testing.T) {
 	}
 	if !strings.Contains(errOut, "no-project-agents") {
 		t.Errorf("the refusal does not name the flag:\n%s", errOut)
-	}
-}
-
-// TestAgentsAsksForTheMirrorsBack: the store remembers the home-only choice, so a
-// plain init honors it; naming the clients is the run that puts the project's copies
-// back (0081's rule, kept by this change).
-func TestAgentsAsksForTheMirrorsBack(t *testing.T) {
-	home := t.TempDir()
-	withHome(t, home)
-	dir := t.TempDir()
-	initRepo(t, dir)
-
-	if code, _, errOut := runDir(t, dir, []string{"init", "--global"}, ""); code != 0 {
-		t.Fatalf("the global install failed: %s", errOut)
-	}
-	if code, _, errOut := runDir(t, dir, []string{"init"}, ""); code != 0 {
-		t.Fatalf("the plain init failed: %s", errOut)
-	}
-	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err == nil {
-		t.Error("a plain init rebuilt the mirrors over the stored home-only choice")
-	}
-
-	if code, _, errOut := runDir(t, dir, []string{"init", "--agents", "opencode"}, ""); code != 0 {
-		t.Fatalf("init --agents failed: %s", errOut)
-	}
-	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err != nil {
-		t.Errorf("--agents did not put the mirrors back: %v", err)
 	}
 }
