@@ -9,6 +9,9 @@ not a version.
 
 ## Unreleased
 
+- **The worker refuses a delegation without the skill paths.** When the parent omits
+  `## Skills to load before work`, `odachi-worker` returns `status: blocked` and names the missing
+  section instead of starting; a section that says there are none lets it proceed (0238).
 - **The harness says what it costs.** `doctor`'s skills check names the bytes of the odachi block in
   `AGENTS.md` and the bytes of `SKILLS.md` beside the count it already prints, so the context an agent
   reads on every turn is a number (0231).

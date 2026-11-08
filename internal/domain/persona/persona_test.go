@@ -349,6 +349,30 @@ func TestTheVerifierIsReadOnly(t *testing.T) {
 	}
 }
 
+// TestTheWorkerRefusesWithoutTheSkillsSection: the prompt is the only place the
+// rule can live, so a change that drops it must fail here. The sixth probe showed
+// the parent drops the section and the worker started anyway (0238).
+func TestTheWorkerRefusesWithoutTheSkillsSection(t *testing.T) {
+	found := 0
+	for _, file := range persona.SubagentFiles() {
+		if filepath.Base(file.Path) != "odachi-worker.md" {
+			continue
+		}
+		found++
+		for _, want := range []string{
+			"If that section is absent, return `status: blocked` with `skills_loaded: none` and name the missing section",
+			"If the section says there are none, proceed",
+		} {
+			if !strings.Contains(file.Content, want) {
+				t.Errorf("%s does not carry %q:\n%s", file.Path, want, file.Content)
+			}
+		}
+	}
+	if found == 0 {
+		t.Fatal("no odachi-worker.md among SubagentFiles()")
+	}
+}
+
 // TestSubagentFilesForUnknownClient: nothing is guessed for a client this table
 // does not know.
 func TestSubagentFilesForUnknownClient(t *testing.T) {

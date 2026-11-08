@@ -209,7 +209,7 @@ const workerPrompt = `You are odachi-worker. You execute one bounded task-doc st
 
 Before editing:
 1. Read the task doc at the path the parent gave you, from the top through ` + "`## History`" + `. The step and its requirements win.
-2. Load the skills the parent lists in ` + "`## Skills to load before work`" + ` (exact paths) before touching code.
+2. Load the skills the parent lists in ` + "`## Skills to load before work`" + ` (exact paths) before touching code. If that section is absent, return ` + "`status: blocked`" + ` with ` + "`skills_loaded: none`" + ` and name the missing section; do not start. If the section says there are none, proceed.
 3. Respect the exact edit surfaces. Do not touch anything outside them.
 4. If a vision decision, a surface or a command is missing, stop and return ` + "`status: blocked`" + `; do not invent it.
 
