@@ -1,63 +1,57 @@
 # Next session
 
-Written while closing 0242, `an-agent-lives-only-in-the-home`, after `v0.31.0`. The feature is
-closed: `init`, `skill new` and `doctor` agree that the agent lives only in the home, and the
-capability is not in the installed binary until a release.
+Written while closing 0243, `se-va-a` (the human's sentence: "se va a eliminar de los repos y solo se
+usara el global"), after `v0.32.0` was published. The tool no longer keeps a project agent file alive:
+`init` writes none, and neither `start` nor `level` refreshes one.
 
 ## Where the project is
 
-- `main` at `c49408f` (the review correction). The feature's closing tree is `449dbb9e`; its proof is
-  `proof/0242-an-agent-lives-only-in-the-home.txt` and its verdict is stored for that tree
-  (approved, four lenses).
-- `odachi 0.31.0` is installed. The installed binary is the gate: the new `init`, `skill new` and
-  `doctor` behavior is invisible until a release installs it.
-- 240 features, 589 of 589 steps, no open questions in the plan.
-- `Unreleased` names the change as a contract change, minor (0242).
+- `main` has `v0.32.0` published (tag on `9dab0ed`); the release workflow ran the suite, goreleaser
+  signed and attested, and the release has its assets.
+- The feature branch `feat/0243-start-leaves-the-leftover` has one commit (`58e2663`), the task doc,
+  its proof (`proof/0243-se-va-a.txt`) and an approved reliability verdict for tree `3be1b26`.
+- `Unreleased` names 0243 as a contract change, minor: the release owed is `v0.33.0`.
+- The installed binary on this machine is still `0.31.0`; the release is what a person installs.
 
 ## What this session did
 
-- **T1, init.** `odachi init` writes no agent file in the project. It installs or refreshes the home
-  door of every chosen client, its subagents and OpenCode's default; the craft defaults to
-  `~/.agents/skills`, `--skills project` is the explicit pin, and a project that already carries
-  `.agents/skills` keeps it. `--global` is accepted and changes nothing; `ODACHI_NO_SETUP=1` refuses
-  the run; a project agent an older release left is named by file, never deleted.
-- **T2, skill new.** `odachi skill new <slug>` refuses without `--scope`; `--scope project` writes
-  `.agents/skills/<slug>/SKILL.md` and `--scope home` writes `~/.agents/skills/<slug>/SKILL.md`,
-  each with that folder's `SKILLS.md`. The curriculum (`skills/`) is untouched.
-- **T3, doctor.** Any odachi agent file in the project is a leftover, whatever its content: check 11
-  names each path and turns the line into a warning. The check count stays at fifteen.
-- **The review caught one real defect**: `level --to` still refreshed a project agent file the doctor
-  called unread. Level now rewrites only the voice section and never touches a leftover.
-- Two review rounds on the feature and one on the correction. The correction is approved; one
-  warning stays in `docs/review-debt.md` (the registry repair is unpinned by a test).
+- **0242, an agent lives only in the home**: `init` home-only, `skill new --scope`, `doctor` names a
+  leftover as a warning; `level` stopped refreshing a project mirror (the review found it).
+- **`v0.32.0`**: merged #449 and pushed the annotated tag; the workflow published.
+- **0243, only the global**: `start` rewrites the voice of the block and leaves a project agent file
+  alone, like `level`. The fence dropped 0242's non-goal about `start`, which the requirement
+  superseded. Approved with no findings.
 
-## Next: release v0.32.0
+## Next: release v0.33.0
 
-- Cut a minor release: `docs/releases.md` says the tag carries the verdict of the feature's closing
-  tree, and the last three steps moved only documents. The installer is what puts the new behavior
-  on a machine.
-- The changelog entry is already written under `Unreleased`; the release is a heading and a tag.
+- The same flow as `v0.32.0`: a release PR that renames `Unreleased`, a merge, an annotated tag on the
+  merge commit, and the workflow publishes. The release is the human's call; the notes already carry
+  the upgrade line.
+- Install the release afterwards: the installed binary is the gate, and the new behavior is invisible
+  until `0.32.0`/`0.33.0` is installed.
 
 ## The questions that wait
 
 - **The block a project already has.** This repository's `AGENTS.md` predates `0.31.0`, and nothing
   tells a project its block is old: `doctor` names agent files, not a stale block. Decide: `doctor`
   names a stale block, or the upgrade refreshes it. Warning 4 is the evidence.
-- **`start` still refreshes a project agent file it finds.** 0242 excluded `start`; the same
-  incoherence the review found in `level` remains there. Decide whether it stops.
-- **A second opinion.** The closing review used the same model that wrote the code, and `check`
-  names it: a second reading, not a second opinion. Running the reviewer on another model is the
-  way the store gets one.
+- **The registry repair of an existing user skill is unpinned** (`docs/review-debt.md`): the branch of
+  `skill new` that repairs `SKILLS.md` when the skill exists has no test that reads the rewritten row.
+- **A second opinion.** The reviews used the model that wrote the code; `check` names it. Another model
+  is the way the store gets one.
+- **The app's project-write path has no CLI caller.** `internal/app/init` can still write project
+  agents when a library caller asks (`NoProjectAgents: false`); no CLI path does. Deleting it is a
+  cleanup, not a behavior change.
 
 ## The limits to remember
 
-- The fence protects `skills/**` and the review and the classifier. Doctor was released for 0242.
+- The fence now protects `skills/**`, the review and the classifier, bench, the proofs, the design
+  canvas and the installers, and the release workflow. `start` is no longer protected.
 - The cmd package's `TestMain` isolates the home. Any test that runs `init` writes the home, so those
   tests are not `t.Parallel`.
 - One heavy gate per machine; `go test ./...` takes about 700 s.
-- `odachi review --exec` gives the reviewer 600 s. A prompt over roughly 100 KB does not fit: run the
-  reviewer directly with the OpenCode CLI and `odachi review --attach <file>`; for a delta, attach
-  with `--since <tree>` through `odachi review --since <tree> --exec ...`, which merges the rows.
+- `odachi review --exec` gives the reviewer 600 s; a prompt over roughly 100 KB does not fit (run the
+  reviewer directly and `--attach`, or use `--since` for a delta).
 - `odachi check --run` writes `proof/` (ignored); the proof and the verdict name the worktree tree.
 
 ## The commands that work
@@ -67,6 +61,6 @@ $env:PATH = "C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem;C:\Program 
 ```
 
 ```sh
-odachi review --base d79d4226061a9e62fd1ba19c5b9b0ce37a68ba9d \
+odachi review --base 9dab0ed3ba17f8ed34eac99f0a03603b100df186 \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
