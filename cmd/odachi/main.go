@@ -87,6 +87,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runAsk(dir, args[1:], stdout, stderr)
 	case "plan":
 		return runPlan(dir, args[1:], stdout, stderr)
+	case "delegate":
+		return runDelegate(dir, args[1:], stdout, stderr)
 	case "level":
 		return runLevel(dir, args[1:], stdin, stdout, stderr)
 	case "summary":
@@ -1662,6 +1664,7 @@ usage:
   odachi ask --change "<words>" --req R1
   odachi plan "<text>" [--req R1] [--route inline | delegated --agent <name> --skill <name>]
   odachi plan --done T2 [--commit abc1234]
+  odachi delegate <taskdoc> --step T1 [--surface <path>] [--command <cmd>]
   odachi level [--to <profile>]
   odachi summary
   odachi progress
@@ -1869,6 +1872,13 @@ flags:
   --light         open a feature that fits one line: no brief, one step with the same words,
                   and the fence and the voice untouched; the line is the requirement
   --json          machine output
+
+delegate:
+  odachi delegate <taskdoc> --step T1 [--surface <path>] [--command <cmd>]
+      prints the prompt a parent hands a delegated worker: the task doc, the
+      step, its requirement, the surfaces, the commands and the skills the plan
+      recorded. The skills section is always present; a step that owes none says
+      so, because an absent section is what the worker refuses.
 
 after start:
   odachi ask "<question>"                       record an open question
