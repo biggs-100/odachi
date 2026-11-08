@@ -1,23 +1,25 @@
-# a-delegated-step-is-handed-with-delegate
+# an-agent-lives-only-in-the-home
 
 ## What must exist
-- a delegated step is handed with `odachi delegate`, which composes the prompt from the task doc: the step records its skills at plan time, and the prompt always carries `## Skills to load before work` with their exact paths or an explicit none
+- an agent lives only in the home: init writes no project agent and refreshes the door the machine keeps, doctor names a project agent an older release left behind, the bundled craft defaults to the home, and `odachi skill new` asks where a user skill lives
 
 ## Done when
-- `odachi plan --route delegated --agent odachi-worker --skill drive --skill tests` records the two skills in the step and validates each name against the installed skills
-- `odachi delegate <taskdoc> --step T1 --surface <path> --command <cmd>` prints the task doc path, the step, its requirement verbatim, the surfaces, the commands and the skills section with exact paths
-- a delegated step with no skills prints the section with an explicit none, and an unknown skill fails naming it and the known ones
-- the generated block names the verb, and the other skills are untouched
+- `odachi init` writes no agent file inside the project and installs or refreshes the home door for the clients `--agents` names
+- `odachi init --skills` defaults to home; `--skills project` is the explicit pin, and the block names the folder it uses
+- `odachi skill new <slug>` without `--scope` fails asking for the decision; with `--scope project|home` it writes the skill under `.agents/skills` or `~/.agents/skills` and updates that root registry
+- `doctor` names a project agent an older release left as a warning, and keeps its 15 checks
+- nothing init wrote is deleted in silence: the removal is named and stays the human call
 - go test ./... is green and odachi check --run "go test ./..." is green
-- Unreleased names the verb and the task-doc field: a contract change, minor
+- Unreleased names the change: a contract change, minor
 
 ## Not included (first version)
-- no change to the skills: drive and slices keep their text, and the block names the verb
-- no change to the worker refusal or the door: their prompts stay as they are
-- no auto-delegation: the verb prints the prompt, and the parent still calls the tool
-- no change to odachi bench and no new verb beyond delegate
+- no change to the bundled skill texts: the 19 keep their words
+- no change to the review or the classifier
+- the doctor keeps its 15 checks: it gains a warning that names a project agent an older release left, and loses none
+- no deletion of an older project agent files: init stops writing and doctor names them
+- no change to the worker refusal or the door text
+- no change to odachi bench and no new verb
 - no change to the brief format or to start
-- no change to the review, the doctor or the classifier
 - no change to the stored proofs: never touched
 - no change to the design canvas, its token or the installers
 - no change to the release workflow
@@ -26,4 +28,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
-- Wants to learn: whether a composed delegation makes the parent pass the skills, measured with the same three runs.
+- Wants to learn: whether a single global agent removes the per-project refresh, read from what a fresh init writes.

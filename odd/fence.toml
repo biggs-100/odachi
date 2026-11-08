@@ -3,32 +3,31 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: the worker's refusal and the door are promises about
-# text, and no auto-delegation is a promise about behaviour. `internal/domain/persona/**`
-# is deliberately absent: this feature reads nothing there, and the promises live
-# in the brief.
+# path stays in the brief: the doctor keeps its 15 checks as a promise about
+# behaviour, and `internal/app/doctor/**` is deliberately absent because this
+# feature adds one warning there.
 #
 # written by hand after start (0132): start carries every non-goal as a template,
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the skills: drive and slices keep their text, and the block names the verb"
+not   = "no change to the bundled skill texts: the 19 keep their words"
 paths = ["skills/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to odachi bench and no new verb beyond delegate"
+not   = "no change to the review or the classifier"
+paths = ["internal/app/review/**", "internal/domain/review/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to odachi bench and no new verb"
 paths = ["internal/app/bench/**", "internal/bench/**", "internal/domain/bench/**", "cmd/odachi/bench.go"]
 deps  = []
 
 [[rule]]
 not   = "no change to the brief format or to start"
 paths = ["internal/domain/brief/**", "internal/app/start/**", "cmd/odachi/interview.go"]
-deps  = []
-
-[[rule]]
-not   = "no change to the review, the doctor or the classifier"
-paths = ["internal/app/review/**", "internal/app/doctor/**", "internal/domain/doctor/**", "internal/domain/review/**"]
 deps  = []
 
 [[rule]]
