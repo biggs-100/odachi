@@ -2,9 +2,10 @@
 
 The skills are the product: text an agent reads before it works. `embed_test.go` proves the text
 still carries certain sentences; it does not prove that an agent, reading them, works differently.
-This document records two attempts at measuring the difference, their results, and what they do not
+This document records three attempts at measuring the difference, their results, and what they do not
 prove. The measured skill is `tests`, with a neutral agent: first on a one-line fix, then on a new
-function whose edges are the task.
+function whose edges are the task, then on the same function delivered as a task-doc step, the shape
+the project actually ships.
 
 ## The question
 
@@ -15,6 +16,9 @@ four behaviours the skill promises, from the transcript:
 2. a red was observed before the fix;
 3. the test's name says what breaks if it fails;
 4. the fix is at the cause and the suite is green.
+
+The first two probes ask whether the text changes the work when it is available; the third asks
+whether the chain the project ships loads it at all.
 
 ## The instrument
 
@@ -168,36 +172,83 @@ shapes by hand, build. The loop covers every shape the prompt names, in every ru
 the skill asks for is present —the edges are exercised— while its artifact is not: there is no test
 file and no red. The contract holds in all six, verified afterwards.
 
+## The third probe: the task
+
+The first two probes ran in a bare Go folder: no block, no plan, a symptom and a request. That is not
+the shape odachi ships. The third runs the same function, inside a minimal odachi project: the block
+in `AGENTS.md`, a `brief.md`, one task doc with one step, and the same Go code with its empty
+`Parse`. The prompt is the parent's sentence, not the symptom:
+
+> Trabajá el paso T1 del plan.
+
+## The third probe: the arms
+
+Both arms keep every skill installed and differ in one file: the with arm carries the block in
+`AGENTS.md`, the control carries the same project without it. Three runs each, same model, same
+agent, a fresh copy per run in its own isolated folder. The first run is both the pilot that
+validated the fixture and run 1: nothing in the fixture changed after it.
+
+The rubric is the second probe's, plus one column: whether `drive` and then `tests` were loaded, in
+that order, read from the transcript's `skill` calls.
+
+## The third probe: the result
+
+The decisive events of one run per arm, in order.
+
+```
+block-1    list · read brief · read the task doc, main.go, config.go, go.mod
+           skill drive · skill tests · write config_test.go · go test (RED)
+           write config.go · go test (green) · the seven shapes · odachi check · close T1
+control-1  glob plan · dir · read brief · read main.go, go.mod, config.go, the task doc
+           skill drive · skill tests · write config_test.go · go test (RED)
+           write config.go · go test (green) · the seven shapes
+```
+
+| run | arm | `drive` → `tests` | 1 test before code | 2 red observed | 3 name says what breaks | 4 suite + contract | score |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | block | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 2 | block | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 3 | block | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 1 | control | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 2 | control | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 3 | control | 1 | 1 | 1 | 1 | 1 | 4/4 |
+
+All six load `drive` and then `tests`, write the test before the implementation, watch it fail on the
+empty function, and leave a suite that is green and a contract that holds -verified afterwards by
+building each copy and passing it the seven shapes. The names state the behaviour, for example
+`TestParseRejectsEveryOtherShapeAndNamesWhatItRead` and `TestParseRangeIsClosedInterval`. Run 1 went
+further than the rest and closed T1 through the gate: `git init`, commits, the proof and
+`plan --done`. That closure is recorded, not scored: the four checks are read from the transcript the
+same way in every run.
+
+The block made no difference. The three runs without `AGENTS.md` loaded the same two skills in the
+same order, and the block arm did not follow the block's order either: it read the task doc first and
+loaded `drive` after. What all six share is the step.
+
 ## What it proves, and what it does not
 
-- **The instrument repeats.** The canary already showed that a load is visible; in these twelve runs
-  no load is visible, and the absence is a fact read from the transcript, not a gap.
-- **The null is not the one-line fix.** The second task is new code with a contract on the edge, which
-  is the moment `tests` names first, and the skill is not consulted either. On these two tasks the
-  text cannot change the work because it is never read.
-- **It does not prove the skill is useless, or that its rules are wrong.** A skill that is not loaded
-  cannot be judged by the work. The finding is upstream of the rules: the trigger.
-- **It does not prove which trigger would match.** The description is the only line an agent sees
-  before it loads; the `When` section, which here says "when you are about to write new code", is
-  invisible until after the load. That the model would load the skill under a different sentence is a
-  hypothesis this corpus cannot test yet.
-- Three runs per arm, one model, one task each: the claim is about this corpus, and a probe that runs
-  an agent is evidence, not a proof.
+- **The instrument repeats, and the chain fires on a step.** Twelve runs on a bare symptom never
+  loaded anything (six with the skill installed, six without). Six runs on a task-doc step always
+  loaded `drive` and `tests`, and the work follows the rubric. The absence in the first two probes was
+  real, and it was about the task, not the text.
+- **The block is not the lever.** The control arm has no `AGENTS.md` and behaves the same. The block's
+  instruction to load `drive` was not even the order the block arm followed.
+- **The task's shape is the lever the corpus names.** What the six share is the brief, the task doc
+  and a prompt that names the step; what the twelve lack is all three at once.
+- **It does not isolate the ingredient.** The step, the brief, the task doc and the word *plan* arrive
+  together; which one matched is not measured.
+- **It does not prove the skill improves the code.** It proves the skill is read and the work follows
+  the rubric. Whether the test written under the skill is better than the one the model would have
+  written on its own is a different question, and both arms had the skill.
+- One model, three runs per arm, one task: the claim is about this corpus.
 
-## The next thing to edit: the trigger
+## The next question: the delegated worker
 
-The description is `Trigger: when writing, fixing or deciding what a change tests`. Its frame is a
-test decision: `fixing` and `deciding what a change tests` carry it, and `writing` reads as one more
-verb of the same list. Six transcripts cannot say whether that frame failed to match the task or
-whether the model never considered a skill on work this narrow —both predict no load— so the edit
-varies the one thing the document can name: it removes the testing frame from the trigger and leaves
-the craft in the body.
+The parent is told to hand a worker the task doc, the step, the surfaces, the commands and the exact
+skill paths (`slices/references/delegation.md`). Whether a worker loads those paths is not measured:
+the worker starts with the step and whatever the parent passes, not with the parent's loaded skills.
+The next probe hands the same step to a worker with the paths and without them and reads the
+transcript for the `skill` call —the same rubric, a different hand.
 
-> Trigger: when writing or changing code, before the first edit.
-
-`skills/**` is fenced for this probe —it measures `tests` as it is— so the edit is its own feature,
-and it reopens the question with the same two arms and the same rubric. A load under the new line
-confirms the frame as the cause; no load under it says the description was not the lever, and the
-finding moves out of the text: it is about how the client selects a skill at all, and the next probe
-measures that instead. A model judge replaces the person reading only if it agrees with the person
-on this corpus first.
+The description edit is dropped: this corpus gives it no support. The trigger fired when the work
+looked like a step, and the sentence was never the variable.
