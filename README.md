@@ -299,33 +299,35 @@ exits with the same code, so a hook or a panel reads the gate instead of parsing
 English. The reason names are the contract and are pinned by literals in a test.
 
 `odachi init` leaves the project ready in one step: the git history if it was
-missing, the rules block the agent reads, the project agent (picked with Tab),
-the `.gitignore` block, the pre-commit hook, the eighteen skills in
-`./.agents/skills`, the entry skill in `~/.agents/skills` and the profile voice
-in the `AGENTS.md` block. The home door -the agent that appears in any folder- is
-opt-in: `odachi init --global` installs it, and an init without the flag writes
-nothing in your home. With the door, OpenCode also gets `default_agent` in
+missing, the rules block the agent reads, the `.gitignore` block, the pre-commit
+hook and the profile voice in the `AGENTS.md` block. The agent lives in your
+home -one door that appears in any folder- and so does the craft: `init`
+installs or refreshes the door of every chosen client in `~/.config/opencode` and
+`~/.claude`, its worker, verifier and reviewer, the bundled skills in
+`~/.agents/skills`, and, for OpenCode, `default_agent` in
 `~/.config/opencode/opencode.json` (or the `.jsonc` you already have), so a new
 session starts as odachi; a default you picked before is named, never replaced.
+The project keeps no agent file: a copy an older release wrote there is named by
+`init` and by `doctor`, and deleting it stays your call.
 
-If you do not use Claude Code, `odachi init --agents opencode` writes only the
-OpenCode agent and stores the choice in the clone's store
-(`.git/odachi/agents.toml`); `init`, `start`,
-`level` and `doctor` respect it, and `--agents claude` does the same the other
-way. The files of the client you do not choose are not deleted: they simply stop
-being written. Without a file, the default is still both.
+A project that carries its own copy of the craft keeps it: `odachi init --skills
+project` is the explicit pin, stored in the clone's store
+(`.git/odachi/agents.toml`), and a bare `.agents/` is not it -that folder belongs
+to other tools too-. The default is one copy per machine in `~/.agents/skills`,
+which is also what a folder with no history gets: the rules here, the agent and
+the craft where every folder reads them.
 
-Adopting odachi in a repository that already lives is a different job. A project
-with a commit and no copy of the craft at `.agents/skills` gets the **minimal
-footprint**: `AGENTS.md`, the `.gitignore` block and the hook in the tree, the craft
-refreshed in the machine (`~/.agents/skills`, a no-op when `odachi setup` already put
-it there) and no project agent -the run says so. `--skills project` and `--agents`
-bring the copies into the project and are stored, so a later plain `init` honours
-them; naming a client does not decide where the craft goes. A project that already
-carries that copy keeps it -`./.agents/skills`, and a bare `.agents/` is not it:
-that folder belongs to other tools too- so the inference never moves a project that
-adopted odachi the old way, and a folder with no history still gets the full install,
-because there the project is starting now.
+`--agents opencode` installs the door only for OpenCode and stores the choice;
+`init`, `start`, `level` and `doctor` respect it, and the files of the client you
+do not choose are not deleted: they simply stop being written. Without a file,
+the default is both.
+
+Adopting odachi in a repository that already lives is the same job as starting
+one: `AGENTS.md`, the `.gitignore` block and the hook in the tree, the craft and
+the agent in the machine. `--skills project` brings the craft into the project and
+is stored, so a later plain `init` honours it. A project that already carries that
+copy keeps it -`./.agents/skills`- so the inference never moves a project that
+adopted odachi the old way.
 
 `odachi role` follows the same scope: a role's skill is written where the craft
 lives -`./.agents/skills` in a project that carries it, `~/.agents/skills` when the
@@ -363,32 +365,21 @@ mirrors that block.
 `odachi level --to <profile>` changes the profile, that section and the mirror
 together —and nothing else in the block—.
 
-The native agent has one copy per chosen client (`both` is the default). The
-**project** one is the same block in the folder where your client already picks
-agents: `.opencode/agents/odachi.md` (Tab in OpenCode) and
-`.claude/output-styles/odachi.md` (`/config` in Claude Code). It is generated: if
-you edit it by hand, `odachi init` backs it up before rewriting it and `doctor`
-tells you it stopped matching. Measured on OpenCode 2.1.3: a project with `.git`
-lists the file as a primary agent; a folder without `.git` lists none.
+The native agent has one copy per chosen client, in the home. The **door** is
+`~/.config/opencode/agents/odachi.md` and `~/.claude/output-styles/odachi.md`,
+with the worker, the verifier and the reviewer beside it: one per chosen client,
+and the one that runs in any folder, not only the one that ran `init`. If the
+folder has the `odachi` block it reads it and adopts its voice; if not, it loads
+the entry skill and guides you to start a project. It is short on purpose: it does
+not repeat the rules, it only says where they are. `doctor` tells you if it is
+missing or stopped matching, and the command is `odachi init`.
 
-The **home** copy is the door: `~/.config/opencode/agents/odachi.md` and
-`~/.claude/output-styles/odachi.md`, one per chosen client. It is opt-in:
-`odachi init --global` installs it, because a primary agent that appears in
-**any** folder and can replace the one you chose is your decision, not an effect
-of initializing a project. The same command writes the subagents next to it
-(`~/.config/opencode/agents/odachi-worker.md` and friends), so a project without
-`.opencode/` keeps the worker, the verifier and the reviewer. Once installed it appears in any folder, not only the
-one that ran `init`. If the folder has the `odachi` block, it reads it and adopts
-its voice; if not, it loads the entry skill and guides you to start a project. It
-is short on purpose: it does not repeat the rules, it only says where they are.
-`doctor` tells you if it is missing or stopped matching, and for both the command
-is `odachi init --global`. A global install leaves the project alone: the door and
-its subagents in the home are the ones that run, the project gets no agent files at
-all, and `doctor` calls that the clean mode instead of reporting missing files. That
-choice is remembered in `agents.toml`, next to the client selection, so a later
-plain `odachi init` keeps the agent in the home instead of rebuilding the files
-nobody wrote; `--agents both` (or the client you use) is how you ask for the
-project's own copies.
+The **project** copy -`.opencode/agents/odachi.md` and
+`.claude/output-styles/odachi.md` in the tree- is what releases before 0.32
+wrote. This version writes no agent file in the project and never deletes one:
+`init` and `doctor` name the folders an older release left, so deleting them is
+your decision. `--agents` selects the clients of the door; it does not put a copy
+back in the project.
 per-profile personas from v0.10.0 remain as
 leftovers: `init` names them and does not delete them, they are yours.
 

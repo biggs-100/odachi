@@ -302,11 +302,10 @@ func TestInitNoProjectAgentsIsStored(t *testing.T) {
 	}
 }
 
-// TestInitNamesTheStoredSelectionAsTheWayBack: the way out of home-only is the
-// client selection the project already has, not a verbatim "opencode". Naming a
-// fixed client would rewrite a store that says both, which is the choice the store
-// exists to protect.
-func TestInitNamesTheStoredSelectionAsTheWayBack(t *testing.T) {
+// TestInitKeepsTheStoredClientsForTheDoor: the client selection the store already
+// has is the one the door is installed for. Naming a fixed client would rewrite a
+// store that says both, which is the choice the store exists to protect.
+func TestInitKeepsTheStoredClientsForTheDoor(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	store := &fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone}
 
@@ -316,11 +315,11 @@ func TestInitNamesTheStoredSelectionAsTheWayBack(t *testing.T) {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
 	joined := strings.Join(got.Lines, "\n")
-	if !strings.Contains(joined, "--agents "+persona.SelectionBoth) {
-		t.Errorf("the lines do not name the stored selection:\n%s", joined)
+	if !strings.Contains(joined, "the agent lives only in the home") {
+		t.Errorf("the lines do not say where the agent lives:\n%s", joined)
 	}
-	if strings.Contains(joined, "--agents "+persona.SelectionOpenCode) {
-		t.Errorf("the lines name one client for a project that chose both:\n%s", joined)
+	if strings.Contains(joined, "--agents "+persona.SelectionBoth) {
+		t.Errorf("the lines offer a flag that no longer puts the mirrors back:\n%s", joined)
 	}
 }
 
@@ -346,10 +345,8 @@ func TestInitHonorsTheStoredProjectChoice(t *testing.T) {
 		}
 	}
 	joined := strings.Join(got.Lines, "\n")
-	for _, want := range []string{"home", "--agents opencode"} {
-		if !strings.Contains(joined, want) {
-			t.Errorf("the lines do not name %q:\n%s", want, joined)
-		}
+	if !strings.Contains(joined, "the agent lives only in the home") {
+		t.Errorf("the lines do not say where the agent lives:\n%s", joined)
 	}
 }
 

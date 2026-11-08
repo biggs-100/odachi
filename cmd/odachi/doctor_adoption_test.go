@@ -9,9 +9,9 @@ import (
 
 // TestTheDoctorRecognisesAnAdoptedProject is the row end to end: a repository that
 // already lives, adopted with a plain init, keeps the rules here and the craft and
-// the agent in the machine. No agent file and no store key is the shape, not a gap,
-// and the doctor used to send the human to `init --global` to record a choice
-// nobody made.
+// the agent in the machine. The store records where the agent lives, so the
+// absence of the mirrors is a choice and not a gap; and a store an older release
+// left silent is still the adoption, not a defect.
 func TestTheDoctorRecognisesAnAdoptedProject(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -34,8 +34,23 @@ func TestTheDoctorRecognisesAnAdoptedProject(t *testing.T) {
 	_, out, errOut := runDir(t, dir, []string{"doctor"}, "")
 
 	report := out + errOut
+	if !strings.Contains(report, "the project has no agent files, and the store says so") {
+		t.Errorf("the doctor does not read the recorded home-only shape:\n%s", report)
+	}
+	if strings.Contains(report, "does not say so") {
+		t.Errorf("the doctor calls the recorded shape a defect:\n%s", report)
+	}
+
+	// A project adopted by an older release carries no store at all. That silence
+	// is the inference, and the doctor answers it without sending the human to
+	// record a choice nobody made.
+	if err := os.Remove(storePath(dir)); err != nil {
+		t.Fatalf("removing the store: %v", err)
+	}
+	_, out, errOut = runDir(t, dir, []string{"doctor"}, "")
+	report = out + errOut
 	if !strings.Contains(report, "adopted odachi") {
-		t.Errorf("the doctor does not recognise the adoption:\n%s", report)
+		t.Errorf("the doctor does not recognise the silent adoption:\n%s", report)
 	}
 	if !strings.Contains(report, "nothing to run") {
 		t.Errorf("the doctor does not say the adoption needs nothing:\n%s", report)

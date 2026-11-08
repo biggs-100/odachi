@@ -72,9 +72,10 @@ func TestTheSkillsFlagPutsTheProjectCopyBack(t *testing.T) {
 	}
 }
 
-// TestAProjectThatNeverChoseKeepsTheProject: absence is not a third value. The
-// run answers what the tool always answered and writes no store to say it.
-func TestAProjectThatNeverChoseKeepsTheProject(t *testing.T) {
+// TestAProjectThatNeverChoseReadsTheCraftFromTheMachine: absence of a choice is
+// the default since 0242 -one copy per machine- and the run records it, because
+// the CLI names the home every time. The project carries no copy.
+func TestAProjectThatNeverChoseReadsTheCraftFromTheMachine(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	dir := t.TempDir()
@@ -84,14 +85,21 @@ func TestAProjectThatNeverChoseKeepsTheProject(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d (stdout %q, stderr %q)", code, out, errOut)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".agents", "skills", "acceptance", "SKILL.md")); err != nil {
-		t.Errorf("a plain init wrote no project copy: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, ".agents", "skills")); err == nil {
+		t.Errorf("a plain init wrote a project copy: the default is the machine")
 	}
-	if !strings.Contains(out, "skills: project (the default)") {
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".agents/skills/acceptance/SKILL.md"))); err != nil {
+		t.Errorf("the craft did not go to the machine: %v", err)
+	}
+	if !strings.Contains(out, "skills: home (the default)") {
 		t.Errorf("the output does not name the default:\n%s", out)
 	}
-	if _, err := os.Stat(storePath(dir)); err == nil {
-		t.Errorf("a project that never chose gained a store")
+	store, err := os.ReadFile(storePath(dir))
+	if err != nil {
+		t.Fatalf("the run did not record the answers: %v", err)
+	}
+	if !strings.Contains(string(store), `skills = "home"`) {
+		t.Errorf("the store does not keep the scope:\n%s", store)
 	}
 }
 

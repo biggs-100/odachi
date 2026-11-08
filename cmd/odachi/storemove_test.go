@@ -12,7 +12,6 @@ import (
 // clone's store, byte for byte, and the rules are named for git — the tool never
 // moves a tracked file.
 func TestStoreMoveAdoptsTheEvidenceAndNamesTheGitMoves(t *testing.T) {
-	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -71,7 +70,6 @@ func TestStoreMoveAdoptsTheEvidenceAndNamesTheGitMoves(t *testing.T) {
 // not a git repository and saves its versions beside the artifacts. Undo has to
 // read exactly those: refusing would strand a project the tool itself created.
 func TestUndoWorksOutsideARepository(t *testing.T) {
-	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "brief.md", "brief nuevo\n")
 	writeFile(t, dir, "brief.md.bak-00000000", "brief viejo\n")
@@ -89,7 +87,6 @@ func TestUndoWorksOutsideARepository(t *testing.T) {
 // TestStoreMoveWithoutARepositoryNamesTheFix: there is no store outside git, and
 // the refusal says so instead of inventing a location.
 func TestStoreMoveWithoutARepositoryNamesTheFix(t *testing.T) {
-	t.Parallel()
 	dir := t.TempDir()
 
 	code, _, stderr := runDir(t, dir, []string{"store", "move"}, "")

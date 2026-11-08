@@ -1112,9 +1112,13 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		global      bool
 	)
 	flags.BoolVar(&asJSON, "json", false, "machine output")
-	flags.StringVar(&skillsScope, "skills", "", "where to install the skills: project | home (default: the stored choice, or project)")
-	flags.StringVar(&agents, "agents", "", "which clients receive the native agent: opencode | claude | both")
-	flags.BoolVar(&global, "global", false, "install the home door, the one that shows up in any folder, make it OpenCode's default agent, and leave the project's agent files alone")
+	flags.StringVar(&skillsScope, "skills", "", "where to install the skills: home | project (default: the stored choice, the copy already here, or home)")
+	flags.StringVar(&agents, "agents", "", "which clients receive the home door: opencode | claude | both")
+	// --global was the only way to install the door until 0242 and it is now what
+	// every run does. It stays accepted, and hidden from the help, so a script
+	// written for an older version keeps working; a flag that cannot change the
+	// outcome is not offered as a choice.
+	flags.BoolVar(&global, "global", false, "the default since 0242: init always installs the home door; kept so an older script does not break")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -1159,8 +1163,12 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	if global && os.Getenv("ODACHI_NO_SETUP") != "" {
-		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: the home is not touched; run init without --global or unset the variable")
+	// Since 0242 init always installs the door in the home: an agent lives only
+	// there, and the project keeps the rules, the plan and the hook. A machine
+	// that says it may not be touched cannot run the job, so the refusal names the
+	// variable instead of writing half of it.
+	if os.Getenv("ODACHI_NO_SETUP") != "" {
+		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: init writes the door in the home and the home is not touched; unset the variable to run init")
 		return start.CodeBlocked
 	}
 
@@ -1172,8 +1180,8 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		Agents:          agents,
 		AgentSelection:  agentSelection{},
 		Home:            osHome{},
-		Global:          global,
-		NoProjectAgents: global,
+		Global:          true,
+		NoProjectAgents: true,
 		Skills:          skillsScope,
 		Existing:        existing,
 	}, disk(dir), &initSkills{dir: dir, verb: "odachi init"})
@@ -1678,7 +1686,7 @@ usage:
   odachi review waive --because "<why>"
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
-  odachi init [--skills project|home] [--agents opencode|claude|both] [--global] [--json]
+  odachi init [--skills home|project] [--agents opencode|claude|both] [--json]
   odachi setup [--agents opencode|claude|both] [--dry-run] [--json]
   odachi skills [--check | --write]
   odachi role new <slug>
@@ -1919,10 +1927,12 @@ after start:
   odachi check --require-review                 requires review for this tree and its lenses
   odachi doctor                                 fifteen health checks, read-only
   odachi bench                                  measures how a person gets stuck (in-band / dead-end)
-  odachi init                                   AGENTS.md (with the profile voice) + the project
-                                                 agent and the home door (chosen with Tab)
-                                                 + hook + the project skills in .agents/skills,
-                                                 and the bootstrap one in ~/.agents/skills
+  odachi init                                   AGENTS.md (with the profile voice) + the hook
+                                                 + the agent door in the home, the one that runs in
+                                                 every folder, + the craft in ~/.agents/skills
+                                                 (odachi init --skills project keeps a copy here)
+  odachi setup                                  the home half alone: the door, the subagents and the
+                                                 craft; writes nothing in the current folder
   odachi skills                                 the project's skills and their trigger
   odachi skills --check                         validate (CI runs it); exit 1 when something does not comply
   odachi skills --write                         regenerate SKILLS.md from the frontmatter

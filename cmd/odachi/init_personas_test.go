@@ -34,7 +34,11 @@ func readAgents(t *testing.T, dir string) string {
 
 // TestInitWritesTheVoiceIntoTheBlock: one command leaves the voice where every
 // client reads it, with no per-client file to select and no keystroke to learn.
+// The native agent mirrors the same block in the home: that is the agent that
+// runs in every folder.
 func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -54,33 +58,26 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 		t.Errorf("the output does not say which voice the block was written with:\n%s", out)
 	}
 
-	// The native agent mirrors the same block, so the human can pick odachi with
-	// the client's own selector. The v0.10.0 files are not rewritten under their
-	// old names.
-	block, err := rules.Body(persona.Novato)
-	if err != nil {
-		t.Fatalf("rules.Body(novato): %v", err)
-	}
 	for _, client := range persona.Clients() {
-		file, ok := persona.FilesFor(client.Agent, block)
+		file, ok := persona.GlobalFilesFor(client.Agent)
 		if !ok {
-			t.Fatalf("persona.FilesFor(%q) does not exist", client.Agent)
+			t.Fatalf("persona.GlobalFilesFor(%q) does not exist", client.Agent)
 		}
-		got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(file.Path)))
+		got, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(file.Path)))
 		if err != nil {
-			t.Errorf("%s was not written: %v", file.Path, err)
+			t.Errorf("%s was not written in the home: %v", file.Path, err)
 			continue
 		}
 		if string(got) != file.Content {
-			t.Errorf("%s is not the block mirror:\n%q\nvs\n%q", file.Path, got, file.Content)
+			t.Errorf("%s is not the generated door:\n%q\nvs\n%q", file.Path, got, file.Content)
 		}
 	}
 
 	// The worker and the verifier are native subagents: generated with the same
 	// command, read only when the parent invokes them.
 	for _, client := range persona.Clients() {
-		for _, file := range persona.SubagentFilesFor(client.Agent) {
-			got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(file.Path)))
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			got, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(file.Path)))
 			if err != nil {
 				t.Errorf("%s was not written: %v", file.Path, err)
 				continue
@@ -100,40 +97,35 @@ func TestInitWritesTheVoiceIntoTheBlock(t *testing.T) {
 			t.Errorf("init wrote %s: this version's agent is %s", legacy, persona.FileName)
 		}
 	}
-
-	// The door in the home is opt-in and belongs to --global, which now leaves the
-	// project's own files alone: TestGlobalInitLeavesTheProjectAgentsAlone drives
-	// both halves, and TestInitWithoutGlobalDoesNotWriteTheDoor drives the silence.
 }
 
-// TestInitWithoutGlobalDoesNotWriteTheDoor: an init without the flag leaves the
-// home exactly as it found it. The door is an agent primary in every folder, so
-// installing it is a decision the human takes out loud.
-func TestInitWithoutGlobalDoesNotWriteTheDoor(t *testing.T) {
+// TestGlobalIsAcceptedAndChangesNothing: --global was the only way to install the
+// door until 0242. It stays accepted so a script written for an older version
+// does not break, and it does what every run now does.
+func TestGlobalIsAcceptedAndChangesNothing(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	dir := t.TempDir()
 	initRepo(t, dir)
 
-	code, out, errOut := runDir(t, dir, []string{"init"}, "")
+	code, out, errOut := runDir(t, dir, []string{"init", "--global"}, "")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
 
 	for _, file := range persona.GlobalFiles() {
-		if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(file.Path))); err == nil {
-			t.Errorf("%s was installed without --global", file.Path)
+		if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(file.Path))); err != nil {
+			t.Errorf("%s was not installed in the home: %v", file.Path, err)
 		}
 	}
-	if !strings.Contains(out, "--global") {
-		t.Errorf("the output does not name the flag that installs the door:\n%s", out)
+	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents")); err == nil {
+		t.Errorf("init --global wrote the project's agent files:\n%s", out)
 	}
 }
 
 // TestInitUsesTheProfileTheHumanWroteDown: init cannot know the person, so the
 // only thing that can say the voice is a profile already on disk.
 func TestInitUsesTheProfileTheHumanWroteDown(t *testing.T) {
-	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	writeFile(t, dir, "odd/profile.toml", "name = \"senior\"\n")
@@ -186,7 +178,6 @@ func TestInitRerunWritesNothing(t *testing.T) {
 // init names them in one line, says they are leftovers, and writes nothing near
 // them.
 func TestInitReportsAndKeepsTheLegacyPersonaFiles(t *testing.T) {
-	t.Parallel()
 	dir := t.TempDir()
 	initRepo(t, dir)
 	legacy := ".opencode/agents/odachi-senior.md"
@@ -220,7 +211,10 @@ func TestInitReportsAndKeepsTheLegacyPersonaFiles(t *testing.T) {
 
 // TestInitJSONCarriesTheNativeAgent: the machine report says where the agent
 // landed and what this run did there, the same two facts the human line carries.
+// The destinations are in the home, the one place the agent lives.
 func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
+	home := t.TempDir()
+	withHome(t, home)
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -246,21 +240,15 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
 		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
 	}
-	// One row per destination, and a plain init is the run that writes the project's
-	// own: OpenCode shares the primary and subagent folder, Claude Code reads the
-	// primary from output-styles and the subagents from agents. The home is untouched
-	// without --global (its rows are the next test's).
+	// One row per client, in the home: the door is the agent every folder reads.
 	want := map[string]int{
-		"project|.opencode/agents":      4,
-		"project|.claude/output-styles": 1,
-		"project|.claude/agents":        3,
+		"home|~/.config/opencode/agents": 1,
+		"home|~/.claude/output-styles":   1,
 	}
 	if len(payload.Personas) != len(want) {
 		t.Fatalf("personas = %+v, want %d destination rows", payload.Personas, len(want))
 	}
-	scopes := map[string]bool{}
 	for _, row := range payload.Personas {
-		scopes[row.Scope] = true
 		key := row.Scope + "|" + row.Dir
 		count, ok := want[key]
 		if !ok {
@@ -277,48 +265,8 @@ func TestInitJSONCarriesTheNativeAgent(t *testing.T) {
 			}
 		}
 	}
-	for _, scope := range []string{"project"} {
-		if !scopes[scope] {
-			t.Errorf("the report does not carry the %q scope row: %+v", scope, payload.Personas)
-		}
-	}
-	if scopes["home"] {
-		t.Errorf("a plain init wrote the home: %+v", payload.Personas)
-	}
-
-	// The global run is the one that carries the home rows, and it leaves the
-	// project's files alone: the door runs in every folder and the project keeps
-	// only the rules and the plan.
-	code, out, errOut = runDir(t, dir, []string{"init", "--json", "--global"}, "")
-	if code != 0 {
-		t.Fatalf("init --global --json: code = %d (stderr %q)", code, errOut)
-	}
-	plainFiles := payload.Files
-	payload.Personas = nil
-	payload.Files = nil
-	if err := json.Unmarshal([]byte(out), &payload); err != nil {
-		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
-	}
-	homeRows := map[string]int{
-		"home|~/.config/opencode/agents": 1,
-		"home|~/.claude/output-styles":   1,
-	}
-	if len(payload.Personas) != len(homeRows) {
-		t.Fatalf("--global personas = %+v, want only the home rows", payload.Personas)
-	}
-	for _, row := range payload.Personas {
-		key := row.Scope + "|" + row.Dir
-		count, ok := homeRows[key]
-		if !ok {
-			t.Errorf("unexpected row %s = %+v", key, row)
-			continue
-		}
-		if row.Written+row.Unchanged != count || len(row.Files) != count {
-			t.Errorf("row %s = %+v, want %d files owned", key, row, count)
-		}
-	}
-	if !slicesContains(plainFiles, "AGENTS.md") {
-		t.Errorf("files = %v, want it to name AGENTS.md", plainFiles)
+	if !slicesContains(payload.Files, "AGENTS.md") {
+		t.Errorf("files = %v, want it to name AGENTS.md", payload.Files)
 	}
 	if len(payload.Skills) == 0 {
 		t.Errorf("the report lost the skills: %s", out)

@@ -67,13 +67,21 @@ func TestRoleRendersFromTheSourceEndToEnd(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("role marketing: exit %d, stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, ".agents/skills/marketing/SKILL.md") {
+	if !strings.Contains(stdout, "~/.agents/skills/marketing/SKILL.md") {
 		t.Errorf("stdout %q does not name the skill", stdout)
 	}
 
+	// The role's agent lives in the project, because a role is a file this project
+	// asked for; its skill is the craft, and the craft lives in the machine.
+	home, err := homeDir()
+	if err != nil {
+		t.Fatalf("homeDir: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(".agents/skills/marketing/SKILL.md"))); err != nil {
+		t.Errorf("the role's skill was not rendered in the home: %v", err)
+	}
 	files := tree(t, dir)
 	for _, path := range []string{
-		".agents/skills/marketing/SKILL.md",
 		".opencode/agents/marketing.md",
 		".claude/output-styles/marketing.md",
 	} {

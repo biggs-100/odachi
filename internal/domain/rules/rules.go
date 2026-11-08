@@ -137,9 +137,10 @@ func skillsPlace(scope string) string {
 // words as the block, and the markers only exist so AGENTS.md can be edited in
 // place.
 //
-// Body is the block for a voice in the default scope: the project's own copy.
-// BodyFor is the same text for the scope the run resolved.
-func Body(voice string) (string, error) { return BodyFor(voice, persona.SkillsProject) }
+// Body is the block for a voice in the default scope: the machine's copy, the
+// answer this tool installs since 0242. BodyFor is the same text for the scope
+// the run resolved.
+func Body(voice string) (string, error) { return BodyFor(voice, persona.SkillsHome) }
 
 // BodyFor is Body with the scope the craft lives in: persona.SkillsHome names the
 // machine's copy, and anything else -including a project that never chose- names
@@ -153,7 +154,7 @@ func BodyFor(voice, scope string) (string, error) {
 }
 
 // Block is the whole block in the default scope; BlockFor names the scope.
-func Block(voice string) (string, error) { return BlockFor(voice, persona.SkillsProject) }
+func Block(voice string) (string, error) { return BlockFor(voice, persona.SkillsHome) }
 
 // BlockFor returns the whole block for one voice and one scope, trailing newline
 // included, with the markers that let WithBlock replace it in place.
@@ -199,7 +200,7 @@ func BodyIn(content string) (string, bool) {
 // block: it is replaced from the marker to the end instead of gaining a second
 // one.
 func WithBlock(content, voice string) (string, error) {
-	return WithBlockFor(content, voice, persona.SkillsProject)
+	return WithBlockFor(content, voice, persona.SkillsHome)
 }
 
 // WithBlockFor is WithBlock for the scope the run resolved.

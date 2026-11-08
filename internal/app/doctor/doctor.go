@@ -1167,29 +1167,28 @@ func (r *runner) personaNote(content, selection string, clients []persona.Client
 			"none): the door in the home is the one that runs"
 	case len(missing) > 0 && choice == persona.ProjectAgentsNone:
 		return "the project has no agent files because the store keeps the agent in the home (" + store +
-			"none), and the home does not carry the door: run odachi init --global"
+			"none), and the home does not carry the door: run odachi init"
 	case len(missing) > 0 && choice == persona.ProjectAgentsWrite:
-		// A recorded write is a decision too: the mirror is what is wrong, and
-		// the home carrying the door does not turn that decision into silence.
+		// The store says write, and this version writes no project agent. The
+		// answer is stale, not the files: init records the home-only shape.
 		return "the store says this project writes its agents (" + store +
-			"write), and they are missing in " + strings.Join(missing, ", ") + ": run odachi init"
+			"write), and they are missing in " + strings.Join(missing, ", ") + "; this version keeps the agent in the home: run odachi init to record it"
 	case len(missing) > 0 && home:
-		// The home explains the absence, and nothing recorded the choice: a
-		// teammate who clones this project would not know where its agent lives.
-		// The advice has to be a command this binary still has: --global records
-		// the home-only choice, and --agents puts the copies in the project.
+		// The store is silent and the door is up. init records the answer every
+		// run, so the command that fixes a silent store is the plain one.
 		return "the project has no agent files: the door in the home is the one that runs, and " + persona.SelectionPath +
-			" does not say so; run odachi init --global to record it, or odachi init --agents " + selection + " to keep the agent here"
+			" does not say so; run odachi init to record it"
 	case len(missing) > 0:
 		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") +
-			"; run odachi init --global to install the door, or odachi init --agents " + selection + " to put them in this project"
+			"; this version writes no agent file in the project: run odachi init to install the door in the home"
 	case len(stale) > 0 && choice == persona.ProjectAgentsNone:
 		// The store keeps the agent in the home, so init skips these files: the
-		// advice has to be something that actually resolves them.
+		// only answer is the human's, because odachi never deletes what it did not
+		// write in this version.
 		return "the store keeps the agent in the home (" + store + "none), and " +
-			strings.Join(stale, ", ") + " in the project are leftovers nobody reads; odachi does not delete them: remove them, or run odachi init --agents " + selection + " to put them back in use"
+			strings.Join(stale, ", ") + " in the project are leftovers nobody reads; odachi does not delete them: remove them"
 	case len(stale) > 0:
-		return "the native agent or its subagents do not match what was generated in " + strings.Join(stale, ", ") + "; run odachi init"
+		return "the native agent or its subagents do not match what was generated in " + strings.Join(stale, ", ") + "; this version keeps the agent in the home: run odachi init to record it, or remove them"
 	case choice == persona.ProjectAgentsNone:
 		return "the native agent matches the block in " + strings.Join(dirs, " and ") +
 			"; the subagents match in " + strings.Join(subDirs, " and ") +

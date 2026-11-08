@@ -105,10 +105,9 @@ func skillPath(root, name string) string {
 	return filepath.Join(root, ".agents", "skills", name, "SKILL.md")
 }
 
-// TestInitInstallsTheSkillsInOneCommand: `odachi init` leaves the project ready.
-// Every curriculum skill goes to the cross-client project location and the
-// bootstrap skill goes to the home, so an agent learns how to start a project
-// before a project exists. One command, not two.
+// TestInitInstallsTheSkillsInOneCommand: `odachi init` leaves the machine ready.
+// Since 0242 the craft is one copy per machine, so every bundled skill goes to
+// ~/.agents/skills and the project carries no copy.
 func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -121,17 +120,17 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
 
-	curriculum, err := bundledskills.Curriculum()
+	all, err := bundledskills.All()
 	if err != nil {
-		t.Fatalf("Curriculum(): %v", err)
+		t.Fatalf("All(): %v", err)
 	}
-	if len(curriculum) == 0 {
-		t.Fatalf("the curriculum came back empty: the project would receive no skill")
+	if len(all) == 0 {
+		t.Fatalf("the payload came back empty: the machine would receive no skill")
 	}
-	for _, skill := range curriculum {
-		got, err := os.ReadFile(skillPath(dir, skill.Name))
+	for _, skill := range all {
+		got, err := os.ReadFile(skillPath(home, skill.Name))
 		if err != nil {
-			t.Errorf("%s was not installed in .agents/skills: %v", skill.Name, err)
+			t.Errorf("%s was not installed in ~/.agents/skills: %v", skill.Name, err)
 			continue
 		}
 		if !bytes.Equal(got, skill.Main()) {
@@ -139,33 +138,21 @@ func TestInitInstallsTheSkillsInOneCommand(t *testing.T) {
 		}
 	}
 
-	// The project has one skills location, and the bootstrap skill is not part
-	// of the craft a project carries.
-	if _, err := os.Stat(skillPath(dir, bundledskills.BootstrapName)); err == nil {
-		t.Errorf("the project received the bootstrap skill: that one lives in the home")
+	// The project carries no copy: the machine is the one place the craft lives.
+	if _, err := os.Stat(filepath.Join(dir, ".agents")); err == nil {
+		t.Errorf("a plain init wrote .agents/ in the project")
 	}
-	// The client directories hold the native agent, never a second copy of the
-	// skills: the project's one location is the cross-client folder.
 	for _, rel := range []string{".opencode/skills", ".opencode/skill", ".claude/skills"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err == nil {
-			t.Errorf("init installed skills in %s: the project uses a single folder", rel)
+			t.Errorf("init installed skills in %s: the project uses no folder", rel)
 		}
 	}
 
-	bootstrap, ok := bundledskills.Bootstrap()
-	if !ok {
-		t.Fatalf("the binary does not carry the %q skill", bundledskills.BootstrapName)
+	if !strings.Contains(out, "~/.agents/skills") {
+		t.Errorf("the output does not name the destination:\n%s", out)
 	}
-	got, err := os.ReadFile(skillPath(home, bootstrap.Name))
-	if err != nil {
-		t.Fatalf("the bootstrap skill did not reach the home: %v", err)
-	}
-	if !bytes.Equal(got, bootstrap.Main()) {
-		t.Errorf("the home skill is not the binary's one")
-	}
-
-	if !strings.Contains(out, "./.agents/skills") || !strings.Contains(out, "~/.agents/skills") {
-		t.Errorf("the output does not name both destinations:\n%s", out)
+	if !strings.Contains(out, "skills: home (the default)") {
+		t.Errorf("the output does not say where the default lives:\n%s", out)
 	}
 }
 
@@ -266,9 +253,9 @@ func TestInitRefusesAnUnknownSkillsScope(t *testing.T) {
 }
 
 // TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome is the fence in test
-// form: init writes outside the project now, so the home it touches has to be
-// exactly the bootstrap skill, and nothing else. The door of the home is opt-in,
-// so a plain init never lands there.
+// form: init writes outside the project, so the home it touches has to be
+// exactly the payload, the door of each chosen client, the subagents, the
+// OpenCode config and the design plugin, and nothing else.
 func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -280,35 +267,28 @@ func TestInitWritesOnlyTheExpectedThingsIntoAnIsolatedHome(t *testing.T) {
 	}
 
 	want := []string{
-		".agents/skills/bootstrap/SKILL.md",
-	}
-	if got := homeTree(t, home); !slices.Equal(got, want) {
-		t.Fatalf("the home has %v, want exactly %v", got, want)
-	}
-
-	// The same fence with the flag: --global is what adds the two doors, one per
-	// chosen client, the OpenCode config that makes one of them the default, and
-	// the subagents each door invokes.
-	withGlobal := t.TempDir()
-	withHome(t, withGlobal)
-	if code, out, errOut := runDir(t, dir, []string{"init", "--global"}, ""); code != 0 {
-		t.Fatalf("--global: code = %d (stdout %q, stderr %q)", code, out, errOut)
-	}
-	wantGlobal := []string{
-		".agents/skills/bootstrap/SKILL.md",
 		".claude/output-styles/odachi.md",
 		".config/opencode/agents/odachi.md",
 		".config/opencode/opencode.json",
 		".config/opencode/plugins/odachi-design/index.ts",
 	}
-	for _, client := range persona.Clients() {
-		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
-			wantGlobal = append(wantGlobal, file.Path)
+	all, err := bundledskills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	for _, skill := range all {
+		for _, file := range skill.Files {
+			want = append(want, ".agents/skills/"+skill.Name+"/"+file.Path)
 		}
 	}
-	slices.Sort(wantGlobal)
-	if got := homeTree(t, withGlobal); !slices.Equal(got, wantGlobal) {
-		t.Fatalf("the home with --global has %v, want exactly %v", got, wantGlobal)
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			want = append(want, file.Path)
+		}
+	}
+	slices.Sort(want)
+	if got := homeTree(t, home); !slices.Equal(got, want) {
+		t.Fatalf("the home has %v, want exactly %v", got, want)
 	}
 }
 
@@ -381,16 +361,16 @@ func TestInitJSONCarriesTheSkillDestinations(t *testing.T) {
 	if payload.Code != 0 {
 		t.Errorf("JSON code = %d, want 0", payload.Code)
 	}
-	if len(payload.Skills) != 2 {
-		t.Fatalf("JSON skills = %+v, want two destinations", payload.Skills)
+	if len(payload.Skills) != 1 {
+		t.Fatalf("JSON skills = %+v, want one destination: the machine", payload.Skills)
 	}
 
-	curriculum, err := bundledskills.Curriculum()
+	all, err := bundledskills.All()
 	if err != nil {
-		t.Fatalf("Curriculum(): %v", err)
+		t.Fatalf("All(): %v", err)
 	}
-	want := []string{"./.agents/skills", "~/.agents/skills"}
-	installed := []int{len(curriculum), 1}
+	want := []string{"~/.agents/skills"}
+	installed := []int{len(all)}
 	for i, dest := range payload.Skills {
 		if dest.Dest != want[i] {
 			t.Errorf("skills[%d].dest = %q, want %q", i, dest.Dest, want[i])
@@ -401,7 +381,7 @@ func TestInitJSONCarriesTheSkillDestinations(t *testing.T) {
 	}
 
 	joined := strings.Join(payload.Files, " ")
-	for _, path := range []string{".agents/skills/acceptance/SKILL.md", "~/.agents/skills/bootstrap/SKILL.md"} {
+	for _, path := range []string{"~/.agents/skills/acceptance/SKILL.md", "~/.agents/skills/bootstrap/SKILL.md"} {
 		if !strings.Contains(joined, path) {
 			t.Errorf("JSON files do not list %s: %v", path, payload.Files)
 		}
@@ -433,16 +413,19 @@ func TestInitAcknowledgesTheOpenCodeCopy(t *testing.T) {
 		t.Errorf("the output does not say where that copy came from:\n%s", out)
 	}
 	// The copy that was already there is not touched and not duplicated: init
-	// still installs the project under .agents/skills only.
-	if _, err := os.Stat(skillPath(dir, "acceptance")); err != nil {
-		t.Errorf("init did not install the curriculum in .agents/skills: %v", err)
+	// installs the craft in the machine, and never in the project.
+	if _, err := os.Stat(skillPath(home, "acceptance")); err != nil {
+		t.Errorf("init did not install the curriculum in ~/.agents/skills: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".agents")); err == nil {
+		t.Errorf("init installed the curriculum in the project")
 	}
 }
 
-// TestInitKeepsTheProjectWhenTheHomeIsNotWritable: the home is the only part of
-// the job outside the project, and a home that cannot be written must not cost
-// the human the project. The line names the block and the command that fixes it.
-func TestInitKeepsTheProjectWhenTheHomeIsNotWritable(t *testing.T) {
+// TestInitKeepsTheProjectArtifactsWhenTheHomeIsNotWritable: the home is where the
+// agent and the craft live, so a home that cannot be written is a failed run. The
+// rules and the hook are already on disk, and the line names both facts.
+func TestInitKeepsTheProjectArtifactsWhenTheHomeIsNotWritable(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 
@@ -454,18 +437,18 @@ func TestInitKeepsTheProjectWhenTheHomeIsNotWritable(t *testing.T) {
 
 	code, out, errOut := runDir(t, dir, []string{"init"}, "")
 
-	if code != 0 {
-		t.Fatalf("code = %d, want 0: the project half was done (stdout %q, stderr %q)", code, out, errOut)
+	if code == 0 {
+		t.Fatalf("code = 0, want a refusal: the only place the agent lives could not be written")
 	}
-	for _, rel := range []string{"AGENTS.md", ".gitignore", ".agents/skills/acceptance/SKILL.md"} {
+	for _, rel := range []string{"AGENTS.md", ".gitignore", ".git/hooks/pre-commit"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
 			t.Errorf("%s was not written: %v", rel, err)
 		}
 	}
-	if !strings.Contains(out, "~/.agents/skills") {
-		t.Errorf("the output does not say what is still pending:\n%s", out)
+	if !strings.Contains(out+errOut, "~/.agents/skills") {
+		t.Errorf("the output does not say what is still pending:\n%s", out+errOut)
 	}
-	if !strings.Contains(out, "odachi init") {
-		t.Errorf("the output does not name the command that unblocks it:\n%s", out)
+	if !strings.Contains(out+errOut, "odachi init") {
+		t.Errorf("the output does not name the command that unblocks it:\n%s", out+errOut)
 	}
 }

@@ -20,3 +20,9 @@ R1 · "an agent lives only in the home: init writes no project agent and refresh
 
 ## History
 L1 · "an agent lives only in the home: init writes no project agent and refreshes the door the machine keeps, doctor names a project agent an older release left behind, the bundled craft defaults to the home, and `odachi skill new` asks where a user skill lives"
+L2 · OFICIO · "The default craft scope is the machine, unless the project already carries .agents/skills" (porque a copy the human already has is a fact: the new default may not move a project that adopted odachi the old way, and a bare .agents/ belongs to other tools)
+L3 · OFICIO · "init keeps --global accepted but out of the help" (porque an older script must not break, and offering a flag that changes nothing would be a lie, the rule 0106 used for --no-project-agents)
+L4 · OFICIO · "The app keeps its Global and NoProjectAgents defaults; the CLI forces both" (porque library callers keep the meaning they had, and the product still has one behavior: an agent in the home)
+L5 · OFICIO · "init names the folders an older release left and deletes nothing" (porque odachi never deletes a file it did not write in this version; the removal stays the human's call)
+L6 · OFICIO · "doctor's advice stops offering --agents as the way back to a project mirror" (porque the flag no longer writes a project agent, and an advice must name a command that works)
+L7 · OFICIO · "The leftover line names the files odachi generated, never their folders" (porque .opencode/agents and .claude/output-styles also hold a role's agent and the human's own styles; a folder is the wrong unit to offer for deletion)

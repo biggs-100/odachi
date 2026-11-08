@@ -186,8 +186,10 @@ func configured() *fakeFiles {
 	files.mkdir(".git")
 	files.put(".git/hooks/pre-commit", hookOf("odachi"))
 	// The block `odachi init` writes, with the voice of the profile in the file:
-	// check 11 compares the two, so a configured project has to carry both.
-	files.put("AGENTS.md", blockOf(persona.Novato))
+	// check 11 compares the two, so a configured project has to carry both. Since
+	// 0242 that block names the machine's copy; the project mirrors are what an
+	// older release left, and they mirror the same text.
+	files.put("AGENTS.md", blockOfScope(persona.Novato, persona.SkillsHome))
 	body, err := rules.Body(persona.Novato)
 	if err != nil {
 		panic(err)
@@ -214,9 +216,16 @@ func configured() *fakeFiles {
 	return files
 }
 
-// blockOf is the rules block for one voice.
+// blockOf is the rules block for one voice in the project's scope: the fixtures
+// that carry a copy in the tree. The default since 0242 is the machine, and the
+// tests that want that variant ask BlockFor(home) by name.
 func blockOf(voice string) string {
-	block, err := rules.Block(voice)
+	return blockOfScope(voice, persona.SkillsProject)
+}
+
+// blockOfScope is the rules block for one voice and one scope.
+func blockOfScope(voice, scope string) string {
+	block, err := rules.BlockFor(voice, scope)
 	if err != nil {
 		panic(err)
 	}
@@ -1327,7 +1336,8 @@ func TestDoctorDoesNotOverwriteARecordedWrite(t *testing.T) {
 
 // TestDoctorNamesLeftoverMirrorsTheStoreTurnedOff: the store says the agent lives
 // in the home, and an older mirror is still in the tree. "run odachi init" is a
-// no-op that skips those files, so the line names what actually resolves it.
+// no-op that skips those files, so the line names what actually resolves it: the
+// human, who is the only one who may delete them.
 func TestDoctorNamesLeftoverMirrorsTheStoreTurnedOff(t *testing.T) {
 	files := configured()
 	files.files[at(".opencode/agents/odachi.md")] = "an old voice\n"
@@ -1336,20 +1346,20 @@ func TestDoctorNamesLeftoverMirrorsTheStoreTurnedOff(t *testing.T) {
 		fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone})
 
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"leftover", "--agents " + persona.SelectionBoth} {
+	for _, want := range []string{"leftover", "remove them"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}
 	}
-	if strings.Contains(got.Detail, "run odachi init\"") {
-		t.Errorf("the line sends the human to a command that skips these files: %q", got.Detail)
+	if strings.Contains(got.Detail, "--agents") {
+		t.Errorf("the line offers a flag that no longer puts the mirrors back: %q", got.Detail)
 	}
 }
 
-// TestDoctorNamesTheStoredSelectionAsTheWayBack: the leftover line points at the
-// client selection the store already has. "opencode" written into the message
-// would rewrite a project that chose both.
-func TestDoctorNamesTheStoredSelectionAsTheWayBack(t *testing.T) {
+// TestTheLeftoverLineNamesNoClient: the leftover line does not point at a client
+// selection, because naming clients no longer writes a project agent. Offering it
+// would send the human to a flag that cannot resolve what the line names.
+func TestTheLeftoverLineNamesNoClient(t *testing.T) {
 	files := configured()
 	files.files[at(".opencode/agents/odachi.md")] = "an old voice\n"
 
@@ -1357,11 +1367,10 @@ func TestDoctorNamesTheStoredSelectionAsTheWayBack(t *testing.T) {
 		fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone})
 
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	if !strings.Contains(got.Detail, "--agents "+persona.SelectionBoth) {
-		t.Fatalf("the line does not name the stored selection: %q", got.Detail)
-	}
-	if strings.Contains(got.Detail, "--agents "+persona.SelectionOpenCode) {
-		t.Errorf("the line names one client for a project that chose both: %q", got.Detail)
+	for _, no := range []string{"--agents " + persona.SelectionBoth, "--agents " + persona.SelectionOpenCode} {
+		if strings.Contains(got.Detail, no) {
+			t.Errorf("the line names %q: %q", no, got.Detail)
+		}
 	}
 }
 
@@ -1425,10 +1434,13 @@ func TestDoctorNamesAProjectWhoseStoreSaysNothing(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{persona.SelectionPath, "odachi init --global to record it", "odachi init --agents"} {
+	for _, want := range []string{persona.SelectionPath, "run odachi init to record it"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}
+	}
+	if strings.Contains(got.Detail, "--agents") {
+		t.Errorf("the line offers a flag that no longer writes a project agent: %q", got.Detail)
 	}
 	// The advice has to be a command this binary registers: --no-project-agents
 	// was removed with the global install, and a human following it got an
@@ -1652,6 +1664,7 @@ func TestAProjectThatChoseTheProjectsCopyIsAccepted(t *testing.T) {
 	for _, world := range worlds {
 		t.Run(world.name, func(t *testing.T) {
 			files := configured()
+			files.put("AGENTS.md", blockOf(persona.Novato))
 			files.put(".agents/skills/acceptance/SKILL.md", skill.Template("acceptance"))
 
 			got := runWithStore(files, world.agents)

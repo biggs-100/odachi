@@ -38,24 +38,26 @@ func TestAPlainInitAsksForTheStoredScope(t *testing.T) {
 	}
 }
 
-// TestTheSkillsFlagIsTheChoiceTheStoreKeeps: naming the scope both installs it
-// and records it, so the next plain init answers the same way.
+// TestTheSkillsFlagIsTheChoiceTheStoreKeeps: naming a scope the store's silence
+// does not already say installs it and records it, so the next plain init answers
+// the same way. The flag here is the project's own copy: home is what an absent
+// key means, and a file gains nothing by saying it aloud.
 func TestTheSkillsFlagIsTheChoiceTheStoreKeeps(t *testing.T) {
 	files, store, skills := storedSkills("")
 
-	got := initapp.Run(initapp.Options{Dir: dir, AgentSelection: store, Skills: persona.SkillsHome}, files, skills)
+	got := initapp.Run(initapp.Options{Dir: dir, AgentSelection: store, Skills: persona.SkillsProject}, files, skills)
 
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
-	if skills.scope != persona.SkillsHome {
-		t.Errorf("the skills half was asked for %q, want %q", skills.scope, persona.SkillsHome)
+	if skills.scope != persona.SkillsProject {
+		t.Errorf("the skills half was asked for %q, want %q", skills.scope, persona.SkillsProject)
 	}
 	content, ok := files.get("agents.toml")
 	if !ok {
 		t.Fatal("the choice was not stored")
 	}
-	if !strings.Contains(content, `skills = "`+persona.SkillsHome+`"`) {
+	if !strings.Contains(content, `skills = "`+persona.SkillsProject+`"`) {
 		t.Errorf("the store does not keep the scope:\n%s", content)
 	}
 	if !strings.Contains(strings.Join(got.Lines, "\n"), "--skills") {
@@ -63,9 +65,10 @@ func TestTheSkillsFlagIsTheChoiceTheStoreKeeps(t *testing.T) {
 	}
 }
 
-// TestAProjectThatNeverChoseKeepsTheProject: absence is not a third value. The
-// run answers what the tool always answered, and writes no store only to say it.
-func TestAProjectThatNeverChoseKeepsTheProject(t *testing.T) {
+// TestAProjectThatNeverChoseReadsTheCraftFromTheMachine: absence is not a third
+// value. The run answers the tool's default since 0242 -one copy per machine- and
+// writes no store only to say what the silence already says.
+func TestAProjectThatNeverChoseReadsTheCraftFromTheMachine(t *testing.T) {
 	files, store, skills := storedSkills("")
 
 	got := initapp.Run(initapp.Options{Dir: dir, AgentSelection: store}, files, skills)
@@ -73,8 +76,8 @@ func TestAProjectThatNeverChoseKeepsTheProject(t *testing.T) {
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
-	if skills.scope != persona.SkillsProject {
-		t.Errorf("the skills half was asked for %q, want %q", skills.scope, persona.SkillsProject)
+	if skills.scope != persona.SkillsHome {
+		t.Errorf("the skills half was asked for %q, want %q", skills.scope, persona.SkillsHome)
 	}
 	if content, ok := files.get("agents.toml"); ok {
 		t.Errorf("a project that never chose gained a store:\n%s", content)

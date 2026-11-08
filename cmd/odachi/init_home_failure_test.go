@@ -41,8 +41,11 @@ func TestInitFailsWhenTheScopeItChoseCannotBeWritten(t *testing.T) {
 	if !strings.Contains(report, "odachi init") {
 		t.Errorf("the refusal does not name the command that retries it:\n%s", report)
 	}
-	if strings.Contains(report, "pending") {
-		t.Errorf("a run that failed calls it pending:\n%s", report)
+	if !strings.Contains(report, "failed: could not write ~/.agents/skills") {
+		t.Errorf("the run does not call the chosen scope's failure what it is:\n%s", report)
+	}
+	if strings.Contains(report, "pending: could not write ~/.agents/skills") {
+		t.Errorf("a run that failed the scope calls it pending:\n%s", report)
 	}
 }
 

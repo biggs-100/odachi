@@ -101,13 +101,15 @@ func checkLine(t *testing.T, report string, number int) string {
 	return ""
 }
 
-// A project that just ran `odachi init` has the skills in .agents/skills and no
-// registry of its own, and check 9 used to say only "none: there is no skills/":
-// the human read that there was nothing when init had installed its own. They are
-// two different questions —the project registry and what is installed where the
-// client reads it— and the line answers both without mixing them.
+// A project that carries its own copy of the craft answers two questions —the
+// project registry and what is installed where the client reads it— and the line
+// says both without mixing them. `--skills project` is the explicit pin since
+// 0242: the default is the machine.
 func TestDoctorCheckNineSaysBothSkillFacts(t *testing.T) {
 	dir := configuredProject(t)
+	if code, out, errOut := runDir(t, dir, []string{"init", "--skills", "project"}, ""); code != 0 {
+		t.Fatalf("init --skills project: exit %d (stdout %q, stderr %q)", code, out, errOut)
+	}
 
 	out, _ := output(t, dir, []string{"doctor"})
 	line := checkLine(t, out, 9)

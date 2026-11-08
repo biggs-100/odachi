@@ -48,7 +48,7 @@ func (f Facts) Agent() bool {
 // given. It defers to persona: the four answers weigh the same there as they do in
 // every message that names them.
 func (f Facts) Scope(flag string) (scope, source string) {
-	return persona.SkillsScope{Stored: f.Stored.Skills, Flag: flag, Adopted: f.Craft()}.Resolve()
+	return persona.SkillsScope{Stored: f.Stored.Skills, Flag: flag, CraftHere: f.CraftHere, Adopted: f.Craft()}.Resolve()
 }
 
 // Reader is the facts as questions a verb answers with its own ports. A verb wires
