@@ -3,21 +3,21 @@
 #
 # a rule protects a file the feature must not touch because touching it would be
 # wrong - never a reason restated as a package (0120). A non-goal that names no
-# path stays in the brief: `internal/domain/persona/**` is deliberately absent,
-# because this feature changes the worker's prompt there and promises, in the
-# brief, that the voice text stays as it is. No glob separates the two promises
-# inside one file.
+# path stays in the brief: the worker's refusal and the door are promises about
+# text, and no auto-delegation is a promise about behaviour. `internal/domain/persona/**`
+# is deliberately absent: this feature reads nothing there, and the promises live
+# in the brief.
 #
 # written by hand after start (0132): start carries every non-goal as a template,
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the skills"
+not   = "no change to the skills: drive and slices keep their text, and the block names the verb"
 paths = ["skills/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to odachi bench and no new verb"
+not   = "no change to odachi bench and no new verb beyond delegate"
 paths = ["internal/app/bench/**", "internal/bench/**", "internal/domain/bench/**", "cmd/odachi/bench.go"]
 deps  = []
 

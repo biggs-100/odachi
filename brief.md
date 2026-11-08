@@ -1,21 +1,21 @@
-# the-worker-never-starts-without-the-section
+# a-delegated-step-is-handed-with-delegate
 
 ## What must exist
-- the worker never starts a delegated step without `## Skills to load before work`: it returns `status: blocked`, names the missing section, and proceeds when the section says there are none
+- a delegated step is handed with `odachi delegate`, which composes the prompt from the task doc: the step records its skills at plan time, and the prompt always carries `## Skills to load before work` with their exact paths or an explicit none
 
 ## Done when
-- the worker prompt returns `status: blocked` and names the missing section when `## Skills to load before work` is absent
-- a test pins the sentence in the generated prompt, and the suite is green
-- the voice text, the verifier, the reviewer and the door are unchanged
+- `odachi plan --route delegated --agent odachi-worker --skill drive --skill tests` records the two skills in the step and validates each name against the installed skills
+- `odachi delegate <taskdoc> --step T1 --surface <path> --command <cmd>` prints the task doc path, the step, its requirement verbatim, the surfaces, the commands and the skills section with exact paths
+- a delegated step with no skills prints the section with an explicit none, and an unknown skill fails naming it and the known ones
+- the generated block names the verb, and the other skills are untouched
 - go test ./... is green and odachi check --run "go test ./..." is green
-- Unreleased names the worker refusal: the installed text changes
+- Unreleased names the verb and the task-doc field: a contract change, minor
 
 ## Not included (first version)
-- no change to the voice text: the How you speak section and the profile wording stay as they are
-- no change to the verifier, the reviewer or the door: only the worker prompt moves
-- no re-run of the probe here: the installed binary is the gate, and it reopens after the release installs the new worker
-- no change to the skills
-- no change to odachi bench and no new verb
+- no change to the skills: drive and slices keep their text, and the block names the verb
+- no change to the worker refusal or the door: their prompts stay as they are
+- no auto-delegation: the verb prints the prompt, and the parent still calls the tool
+- no change to odachi bench and no new verb beyond delegate
 - no change to the brief format or to start
 - no change to the review, the doctor or the classifier
 - no change to the stored proofs: never touched
@@ -26,4 +26,4 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
-- Wants to learn: whether the worker refusal makes the parent pass the paths, measured after the release installs it.
+- Wants to learn: whether a composed delegation makes the parent pass the skills, measured with the same three runs.
