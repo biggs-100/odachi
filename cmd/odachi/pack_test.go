@@ -491,8 +491,8 @@ func TestPackDoesNotTouchTheProject(t *testing.T) {
 }
 
 // TestAProjectSkillCarriesItsAsset: the project's catalog is installed whole. A
-// skill created with `odachi skill new` that declares an asset ships it, the
-// same way it ships a reference.
+// skill the project authors in skills/ that declares an asset ships it, the same
+// way it ships a reference.
 func TestAProjectSkillCarriesItsAsset(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)

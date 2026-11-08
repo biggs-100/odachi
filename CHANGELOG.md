@@ -12,9 +12,10 @@ not a version.
 - **An agent lives only in the home.** `odachi init` writes no agent file in the project and installs
   or refreshes the door of the clients `--agents` names; the craft defaults to `~/.agents/skills` and
   `--skills project` is the explicit pin. A project copy an older release left is named by `init` and
-  never deleted. The contract change is minor: `--agents` now selects the clients of the door,
-  `--global` is what every run already does, and `ODACHI_NO_SETUP=1` now refuses a plain `init` as it
-  refuses `setup` (0242).
+  never deleted. `odachi skill new` now asks `--scope project|home` and writes the user skill in
+  `.agents/skills` or `~/.agents/skills`, with that folder's `SKILLS.md`. The contract change is minor:
+  `--agents` now selects the clients of the door, `--global` is what every run already does, and
+  `ODACHI_NO_SETUP=1` now refuses a plain `init` as it refuses `setup` (0242).
 
 ## v0.31.0 - 2026-11-08
 

@@ -128,7 +128,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug>), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug> --scope project|home), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -1691,7 +1691,7 @@ usage:
   odachi skills [--check | --write]
   odachi role new <slug>
   odachi role [<slug>]
-  odachi skill new <slug>
+  odachi skill new <slug> --scope project|home
   odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <folder>] [--dry-run]
   odachi --version
   odachi version
@@ -1936,7 +1936,8 @@ after start:
   odachi skills                                 the project's skills and their trigger
   odachi skills --check                         validate (CI runs it); exit 1 when something does not comply
   odachi skills --write                         regenerate SKILLS.md from the frontmatter
-  odachi skill new <slug>                       create skills/<slug>/SKILL.md and update the registry
+  odachi skill new <slug> --scope project           create .agents/skills/<slug>/SKILL.md and its SKILLS.md
+  odachi skill new <slug> --scope home              the same, once per machine in ~/.agents/skills
   odachi pack --agents claude,codex             install the bundled skills into each agent
   odachi pack --agents standard                 in ./.agents/skills, the folder every client reads
   odachi pack --agents standard --scope home    in ~/.agents/skills: one copy for every project

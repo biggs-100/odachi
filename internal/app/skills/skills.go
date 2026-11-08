@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/skill"
 )
 
@@ -26,6 +27,11 @@ const (
 	Dir       = "skills"
 	SkillFile = "SKILL.md"
 	Registry  = skill.RegistryFile
+	// UserDir is the cross-client folder a user's skill lives in, inside the
+	// project or inside the home. The project's curriculum (skills/) is a
+	// different thing: the skills odachi ships and packs, not where a human's own
+	// skill goes.
+	UserDir = ".agents/skills"
 )
 
 // Options is one `odachi skills` or `odachi skill new` invocation.
@@ -34,6 +40,69 @@ type Options struct {
 	Check bool
 	Write bool
 	Slug  string
+	// Scope is where `skill new` writes a user skill: persona.SkillsProject puts
+	// it in .agents/skills of the project and persona.SkillsHome in
+	// ~/.agents/skills of Home. Empty is refused: the curriculum layout was never
+	// a place a user skill lives, and a default would hide the decision.
+	Scope string
+	// Home is the human's home, resolved by the CLI. Only the home scope uses it;
+	// the app never touches os.
+	Home string
+}
+
+// layout is where one run reads and writes: the folder that holds the skill
+// directories, the folder that holds SKILLS.md, and how a human reads each one.
+// The curriculum keeps its registry at the project root; a user's skill keeps it
+// beside the skills, so the folder a human opens is the whole thing.
+type layout struct {
+	skillsDir     string
+	registryDir   string
+	label         string
+	registryLabel string
+	retry         string
+}
+
+// curriculumLayout is the project's own catalog: skills/ here, SKILLS.md at the
+// root. It is what `skills` and `skills --check/--write` read.
+func curriculumLayout(opts Options) layout {
+	root := rootOf(opts)
+	return layout{
+		skillsDir:     filepath.Join(root, Dir),
+		registryDir:   root,
+		label:         Dir,
+		registryLabel: Registry,
+		retry:         "odachi skills",
+	}
+}
+
+// userLayout is where `skill new` writes: the cross-client folder of the project
+// or of the home. The second return is the refusal, empty when the scope answers.
+func userLayout(opts Options) (layout, string) {
+	base := filepath.Join(rootOf(opts), filepath.FromSlash(UserDir))
+	switch opts.Scope {
+	case persona.SkillsProject:
+		return layout{
+			skillsDir:     base,
+			registryDir:   base,
+			label:         UserDir,
+			registryLabel: UserDir + "/" + Registry,
+			retry:         "odachi skill new",
+		}, ""
+	case persona.SkillsHome:
+		if strings.TrimSpace(opts.Home) == "" {
+			return layout{}, "could not find your home to write ~/" + UserDir + "/<slug>: run odachi skill new <slug> --scope project, or set a home and run it again"
+		}
+		base = filepath.Join(opts.Home, filepath.FromSlash(UserDir))
+		return layout{
+			skillsDir:     base,
+			registryDir:   base,
+			label:         "~/" + UserDir,
+			registryLabel: "~/" + UserDir + "/" + Registry,
+			retry:         "odachi skill new",
+		}, ""
+	default:
+		return layout{}, "odachi skill new needs --scope: --scope project writes " + UserDir + "/<slug> in this project, and --scope home writes ~/" + UserDir + "/<slug>"
+	}
 }
 
 // Files is the disk port: enough to read every skill and replace the registry.
@@ -60,11 +129,12 @@ type Result struct {
 	Skills  []skill.Skill
 }
 
-// Run performs one `odachi skills`: list, --check or --write.
+// Run performs one `odachi skills`: list, --check or --write. It reads the
+// project's curriculum, the folder odachi ships, never the user's skill folder.
 func Run(opts Options, files Files) Result {
-	root := rootOf(opts)
+	lay := curriculumLayout(opts)
 
-	loaded, err := load(root, files)
+	loaded, err := load(lay, files)
 	if err != nil {
 		return failed(err.Error())
 	}
@@ -74,47 +144,51 @@ func Run(opts Options, files Files) Result {
 
 	switch {
 	case opts.Write:
-		return writeRegistry(root, files, loaded)
+		return writeRegistry(lay, files, loaded)
 	case opts.Check:
-		return check(root, files, loaded)
+		return check(lay, files, loaded)
 	default:
 		return list(loaded)
 	}
 }
 
-// New performs one `odachi skill new <slug>`: it validates the slug before it
-// touches anything, refuses an existing skill, writes the template and brings
-// the registry up to date.
+// New performs one `odachi skill new <slug> --scope project|home`: it validates
+// the scope and the slug before it touches anything, refuses an existing skill,
+// writes the template where the scope says and brings that folder's registry up
+// to date.
 func New(opts Options, files Files) Result {
-	root := rootOf(opts)
+	lay, problem := userLayout(opts)
+	if problem != "" {
+		return failed(problem)
+	}
 	slug := opts.Slug
 
 	if !skill.ValidSlug(slug) {
 		return failed(fmt.Sprintf(
-			"the slug %q does not work: it must match %s (lowercase letters, numbers and dashes, starting with a letter); choose one and run odachi skill new <slug> again",
-			slug, skill.NamePattern))
+			"the slug %q does not work: it must match %s (lowercase letters, numbers and dashes, starting with a letter); choose one and run odachi skill new <slug> --scope %s again",
+			slug, skill.NamePattern, opts.Scope))
 	}
 
-	rel := Dir + "/" + slug + "/" + SkillFile
-	path := filepath.Join(root, Dir, slug, SkillFile)
+	rel := lay.label + "/" + slug + "/" + SkillFile
+	path := filepath.Join(lay.skillsDir, slug, SkillFile)
 
 	exists, err := files.Exists(path)
 	if err != nil {
-		return failed("could not check " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run odachi skill new <slug> again")
+		return failed("could not check " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run " + lay.retry + " again")
 	}
 	if exists {
-		return failed("already exists " + rel + ": not touching it; choose another slug, or edit the one that is there and run odachi skills --check")
+		return failed("already exists " + rel + ": not touching it; choose another slug, or edit the one that is there")
 	}
 
 	if err := files.Write(path, []byte(skill.Template(slug))); err != nil {
-		return failed("could not write " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run odachi skill new <slug> again")
+		return failed("could not write " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run " + lay.retry + " again")
 	}
 
-	loaded, err := load(root, files)
+	loaded, err := load(lay, files)
 	if err != nil {
 		return failed(err.Error())
 	}
-	registryLine, _, err := syncRegistry(root, files, loaded)
+	registryLine, _, err := syncRegistry(lay, files, loaded)
 	if err != nil {
 		return failed(err.Error())
 	}
@@ -122,13 +196,13 @@ func New(opts Options, files Files) Result {
 	lines := []string{
 		rel + ": created",
 		registryLine,
-		"next: complete the Trigger and the three sections, and run odachi skills --check",
+		"next: complete the Trigger and the three sections; the file is the source",
 	}
 	return Result{
 		Code:    CodeOK,
-		Message: "ready: " + rel + " created and SKILLS.md up to date",
+		Message: "ready: " + rel + " created and " + lay.registryLabel + " up to date",
 		Lines:   lines,
-		Files:   []string{rel, Registry},
+		Files:   []string{rel, lay.registryLabel},
 		Skills:  loaded,
 	}
 }
@@ -153,8 +227,8 @@ func list(loaded []skill.Skill) Result {
 
 // check reports every violation, one English line each, and the one command that
 // resolves them.
-func check(root string, files Files, loaded []skill.Skill) Result {
-	current, hasRegistry, err := readRegistry(root, files)
+func check(lay layout, files Files, loaded []skill.Skill) Result {
+	current, hasRegistry, err := readRegistry(lay, files)
 	if err != nil {
 		return failed(err.Error())
 	}
@@ -182,15 +256,15 @@ func check(root string, files Files, loaded []skill.Skill) Result {
 
 // writeRegistry regenerates SKILLS.md. Identical bytes mean no write at all, so
 // the command is idempotent in bytes and in what it reports.
-func writeRegistry(root string, files Files, loaded []skill.Skill) Result {
-	line, written, err := syncRegistry(root, files, loaded)
+func writeRegistry(lay layout, files Files, loaded []skill.Skill) Result {
+	line, written, err := syncRegistry(lay, files, loaded)
 	if err != nil {
 		return failed(err.Error())
 	}
 
 	result := Result{Code: CodeOK, Message: line, Lines: []string{line}, Skills: loaded}
 	if written {
-		result.Files = []string{Registry}
+		result.Files = []string{lay.registryLabel}
 	}
 	return result
 }
@@ -198,68 +272,69 @@ func writeRegistry(root string, files Files, loaded []skill.Skill) Result {
 // syncRegistry writes the generated registry when its bytes differ, and reports
 // the one line a human reads plus whether it wrote. It is the single writer both
 // --write and `skill new` use, so the two can never disagree.
-func syncRegistry(root string, files Files, loaded []skill.Skill) (line string, written bool, err error) {
-	path := filepath.Join(root, Registry)
+func syncRegistry(lay layout, files Files, loaded []skill.Skill) (line string, written bool, err error) {
+	path := filepath.Join(lay.registryDir, Registry)
 	want := skill.Registry(loaded)
 
-	current, exists, err := readRegistry(root, files)
+	current, exists, err := readRegistry(lay, files)
 	if err != nil {
 		return "", false, err
 	}
 	if exists && current == want {
-		return Registry + ": unchanged", false, nil
+		return lay.registryLabel + ": unchanged", false, nil
 	}
 	if err := files.Write(path, []byte(want)); err != nil {
-		return "", false, fmt.Errorf("could not write %s: %s; check the permissions and run odachi skills --write again", Registry, oneLine(err.Error()))
+		return "", false, fmt.Errorf("could not write %s: %s; check the permissions and run %s again", lay.registryLabel, oneLine(err.Error()), lay.retry)
 	}
-	return fmt.Sprintf("%s: updated with %s", Registry, count(len(loaded), "skill", "skills")), true, nil
+	return fmt.Sprintf("%s: updated with %s", lay.registryLabel, count(len(loaded), "skill", "skills")), true, nil
 }
 
 // readRegistry reads SKILLS.md when it exists. exists is false when the file is
 // missing, which is a violation with its own reason, not an error.
-func readRegistry(root string, files Files) (content string, exists bool, err error) {
-	path := filepath.Join(root, Registry)
+func readRegistry(lay layout, files Files) (content string, exists bool, err error) {
+	path := filepath.Join(lay.registryDir, Registry)
 	exists, err = files.Exists(path)
 	if err != nil {
-		return "", false, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills --check again", Registry, oneLine(err.Error()))
+		return "", false, fmt.Errorf("could not check %s: %s; check the permissions and run %s again", lay.registryLabel, oneLine(err.Error()), lay.retry)
 	}
 	if !exists {
 		return "", false, nil
 	}
 	data, err := files.Read(path)
 	if err != nil {
-		return "", true, fmt.Errorf("could not read %s: %s; check the permissions and run odachi skills --check again", Registry, oneLine(err.Error()))
+		return "", true, fmt.Errorf("could not read %s: %s; check the permissions and run %s again", lay.registryLabel, oneLine(err.Error()), lay.retry)
 	}
 	return string(data), true, nil
 }
 
-// load reads every skills/<dir>/SKILL.md. A directory without a SKILL.md is not
-// a skill, so it is skipped instead of reported.
-func load(root string, files Files) ([]skill.Skill, error) {
-	names, err := files.List(filepath.Join(root, Dir))
+// load reads every <slug>/SKILL.md under the layout's skills folder. A directory
+// without a SKILL.md is not a skill, so it is skipped instead of reported.
+func load(lay layout, files Files) ([]skill.Skill, error) {
+	names, err := files.List(lay.skillsDir)
 	if err != nil {
-		return nil, fmt.Errorf("could not read %s/: %s; check the permissions and run odachi skills again", Dir, oneLine(err.Error()))
+		return nil, fmt.Errorf("could not read %s/: %s; check the permissions and run %s again", lay.label, oneLine(err.Error()), lay.retry)
 	}
 
 	loaded := make([]skill.Skill, 0, len(names))
 	for _, name := range names {
-		rel := Dir + "/" + name + "/" + SkillFile
-		dirPath := filepath.Join(root, Dir, name)
+		rel := lay.label + "/" + name + "/" + SkillFile
+		dirPath := filepath.Join(lay.skillsDir, name)
 
 		isDir, err := files.IsDir(dirPath)
 		if err != nil {
-			return nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", rel, oneLine(err.Error()))
+			return nil, fmt.Errorf("could not check %s: %s; check the permissions and run %s again", rel, oneLine(err.Error()), lay.retry)
 		}
 		if !isDir {
 			// A file here is not a skill and not an error: skills/embed.go lives
-			// next to the skill directories on purpose.
+			// next to the skill directories on purpose, and the registry itself is
+			// a file in the user folder.
 			continue
 		}
 
-		path := filepath.Join(root, Dir, name, SkillFile)
+		path := filepath.Join(dirPath, SkillFile)
 		exists, err := files.Exists(path)
 		if err != nil {
-			return nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", rel, oneLine(err.Error()))
+			return nil, fmt.Errorf("could not check %s: %s; check the permissions and run %s again", rel, oneLine(err.Error()), lay.retry)
 		}
 		if !exists {
 			continue
@@ -267,15 +342,15 @@ func load(root string, files Files) ([]skill.Skill, error) {
 
 		data, err := files.Read(path)
 		if err != nil {
-			return nil, fmt.Errorf("could not read %s: %s; check the permissions and run odachi skills again", rel, oneLine(err.Error()))
+			return nil, fmt.Errorf("could not read %s: %s; check the permissions and run %s again", rel, oneLine(err.Error()), lay.retry)
 		}
 
 		parsed := skill.Parse(name, rel, string(data))
-		references, problems, err := referencesOf(dirPath, rel, files)
+		references, problems, err := referencesOf(dirPath, rel, lay.retry, files)
 		if err != nil {
 			return nil, err
 		}
-		assets, assetProblems, err := assetsOf(dirPath, rel, files)
+		assets, assetProblems, err := assetsOf(dirPath, rel, lay.retry, files)
 		if err != nil {
 			return nil, err
 		}
@@ -290,13 +365,13 @@ func load(root string, files Files) ([]skill.Skill, error) {
 // referencesOf reads what a skill folder holds under references/, as paths
 // relative to the folder. The folder is optional; when it is not a folder, that
 // is a problem of the skill, not a reason to refuse the run that lists it.
-func referencesOf(dir, rel string, files Files) ([]string, []skill.Problem, error) {
+func referencesOf(dir, rel, retry string, files Files) ([]string, []skill.Problem, error) {
 	refDir := filepath.Join(dir, "references")
 	label := strings.TrimSuffix(rel, "/"+SkillFile) + "/references"
 
 	exists, err := files.Exists(refDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run %s again", label, oneLine(err.Error()), retry)
 	}
 	if !exists {
 		return nil, nil, nil
@@ -304,7 +379,7 @@ func referencesOf(dir, rel string, files Files) ([]string, []skill.Problem, erro
 
 	isDir, err := files.IsDir(refDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run %s again", label, oneLine(err.Error()), retry)
 	}
 	if !isDir {
 		return nil, []skill.Problem{{
@@ -315,7 +390,7 @@ func referencesOf(dir, rel string, files Files) ([]string, []skill.Problem, erro
 
 	names, err := files.List(refDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not read %s/: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+		return nil, nil, fmt.Errorf("could not read %s/: %s; check the permissions and run %s again", label, oneLine(err.Error()), retry)
 	}
 
 	references := make([]string, 0, len(names))
@@ -324,7 +399,7 @@ func referencesOf(dir, rel string, files Files) ([]string, []skill.Problem, erro
 		entry := filepath.Join(refDir, name)
 		entryIsDir, err := files.IsDir(entry)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not check %s/%s: %s; check the permissions and run odachi skills again", label, name, oneLine(err.Error()))
+			return nil, nil, fmt.Errorf("could not check %s/%s: %s; check the permissions and run %s again", label, name, oneLine(err.Error()), retry)
 		}
 		if entryIsDir {
 			problems = append(problems, skill.Problem{
@@ -342,13 +417,13 @@ func referencesOf(dir, rel string, files Files) ([]string, []skill.Problem, erro
 // assetsOf reads what a skill folder holds under assets/, as paths relative to
 // the folder. An asset is a file the skill copies or uses -a template, a schema-
 // so any extension is allowed and a tree is refused: a folder is not a file.
-func assetsOf(dir, rel string, files Files) ([]string, []skill.Problem, error) {
+func assetsOf(dir, rel, retry string, files Files) ([]string, []skill.Problem, error) {
 	assetDir := filepath.Join(dir, "assets")
 	label := strings.TrimSuffix(rel, "/"+SkillFile) + "/assets"
 
 	exists, err := files.Exists(assetDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run %s again", label, oneLine(err.Error()), retry)
 	}
 	if !exists {
 		return nil, nil, nil
@@ -356,7 +431,7 @@ func assetsOf(dir, rel string, files Files) ([]string, []skill.Problem, error) {
 
 	isDir, err := files.IsDir(assetDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+		return nil, nil, fmt.Errorf("could not check %s: %s; check the permissions and run %s again", label, oneLine(err.Error()), retry)
 	}
 	if !isDir {
 		return nil, []skill.Problem{{
@@ -367,7 +442,7 @@ func assetsOf(dir, rel string, files Files) ([]string, []skill.Problem, error) {
 
 	names, err := files.List(assetDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not read %s/: %s; check the permissions and run odachi skills again", label, oneLine(err.Error()))
+		return nil, nil, fmt.Errorf("could not read %s/: %s; check the permissions and run %s again", label, oneLine(err.Error()), retry)
 	}
 
 	assets := make([]string, 0, len(names))
@@ -376,7 +451,7 @@ func assetsOf(dir, rel string, files Files) ([]string, []skill.Problem, error) {
 		entry := filepath.Join(assetDir, name)
 		entryIsDir, err := files.IsDir(entry)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not check %s/%s: %s; check the permissions and run odachi skills again", label, name, oneLine(err.Error()))
+			return nil, nil, fmt.Errorf("could not check %s/%s: %s; check the permissions and run %s again", label, name, oneLine(err.Error()), retry)
 		}
 		if entryIsDir {
 			problems = append(problems, skill.Problem{
@@ -394,7 +469,7 @@ func assetsOf(dir, rel string, files Files) ([]string, []skill.Problem, error) {
 // noSkills is the starting point, not a failure: it says how to create the first
 // skill.
 func noSkills() Result {
-	message := "there are no skills in " + Dir + "/ yet: create the first one with odachi skill new <slug>"
+	message := "there are no skills in " + Dir + "/ yet: create a user skill with odachi skill new <slug> --scope project|home"
 	return Result{Code: CodeOK, Message: message, Lines: []string{message}}
 }
 

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	skillsapp "github.com/biggs-100/odachi/internal/app/skills"
+	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
 const dir = "/proyecto"
@@ -314,47 +315,98 @@ func TestWriteRestoresAHandEditedRegistry(t *testing.T) {
 	}
 }
 
-// `skill new` creates the file, brings the registry up to date, and tells the
-// human what is missing.
-func TestNewCreatesTheSkillAndUpdatesTheRegistry(t *testing.T) {
+// TestNewAsksWhereTheSkillLives: the scope is the human's decision, and the old
+// curriculum layout is not a place a user skill lives. Without the flag nothing
+// is written and the refusal names both answers.
+func TestNewAsksWhereTheSkillLives(t *testing.T) {
 	files := seededProject()
+	files.events = nil
 
 	got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "ejemplo"}, files)
+
+	if got.Code != 1 {
+		t.Fatalf("Code = %d, want 1 (message %q)", got.Code, got.Message)
+	}
+	for _, want := range []string{"--scope", "project", "home"} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("Message = %q, want it to name %q", got.Message, want)
+		}
+	}
+	if len(files.events) != 0 {
+		t.Errorf("a run without a scope wrote %v, want nothing", files.events)
+	}
+}
+
+// TestNewProjectWritesTheCrossClientFolder: --scope project writes the skill
+// where the agent reads it, .agents/skills, and its registry beside it. The
+// curriculum (skills/ and the root SKILLS.md) is not touched.
+func TestNewProjectWritesTheCrossClientFolder(t *testing.T) {
+	files := seededProject()
+
+	got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "ejemplo", Scope: persona.SkillsProject}, files)
 
 	if got.Code != 0 {
 		t.Fatalf("Code = %d (message %q)", got.Code, got.Message)
 	}
-	content, ok := files.get("skills/ejemplo/SKILL.md")
+	content, ok := files.get(".agents/skills/ejemplo/SKILL.md")
 	if !ok {
 		t.Fatalf("the skill was not written; events %v", files.events)
 	}
 	if !strings.Contains(content, "name: ejemplo") {
 		t.Errorf("SKILL.md does not declare its name:\n%s", content)
 	}
-	registry, _ := files.get("SKILLS.md")
+	registry, _ := files.get(".agents/skills/SKILLS.md")
 	if !strings.Contains(registry, "| ejemplo |") {
-		t.Errorf("SKILLS.md does not list the new skill:\n%s", registry)
+		t.Errorf("the registry does not list the new skill:\n%s", registry)
+	}
+	for _, untouched := range []string{"skills/ejemplo/SKILL.md"} {
+		if _, ok := files.get(untouched); ok {
+			t.Errorf("the run wrote %s: the curriculum is not a user location", untouched)
+		}
 	}
 	joined := strings.Join(got.Lines, "\n")
-	if !strings.Contains(joined, "skills/ejemplo/SKILL.md") || !strings.Contains(joined, "SKILLS.md") {
+	if !strings.Contains(joined, ".agents/skills/ejemplo/SKILL.md") || !strings.Contains(joined, ".agents/skills/SKILLS.md") {
 		t.Errorf("Lines = %q, want the skill path and the registry", joined)
-	}
-	if !strings.Contains(joined, "odachi skills --check") {
-		t.Errorf("Lines = %q, want the next command", joined)
 	}
 	if len(got.Files) != 2 {
 		t.Errorf("Files = %v, want the skill and the registry", got.Files)
 	}
 }
 
+// TestNewHomeWritesTheMachineFolder: --scope home writes once per machine and
+// leaves the project alone.
+func TestNewHomeWritesTheMachineFolder(t *testing.T) {
+	files := seededProject()
+
+	got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "ejemplo", Scope: persona.SkillsHome, Home: dir + "/hogar"}, files)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d (message %q)", got.Code, got.Message)
+	}
+	if _, ok := files.get("hogar/.agents/skills/ejemplo/SKILL.md"); !ok {
+		t.Fatalf("the skill was not written in the home; events %v", files.events)
+	}
+	registry, _ := files.get("hogar/.agents/skills/SKILLS.md")
+	if !strings.Contains(registry, "| ejemplo |") {
+		t.Errorf("the home registry does not list the new skill:\n%s", registry)
+	}
+	if _, ok := files.get(".agents/skills/ejemplo/SKILL.md"); ok {
+		t.Error("the project received a copy")
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "~/.agents/skills/ejemplo/SKILL.md") {
+		t.Errorf("Lines = %q, want the home path a human reads", strings.Join(got.Lines, "\n"))
+	}
+}
+
 // An existing slug is refused with exit 1 and nothing is touched.
 func TestNewRefusesAnExistingSlug(t *testing.T) {
-	files := seededProject()
-	before, _ := files.get("skills/ship/SKILL.md")
-	registryBefore, _ := files.get("SKILLS.md")
+	files := newFakeFiles(map[string]string{
+		".agents/skills/ship/SKILL.md": "---\nname: ship\n---\n\n## Who it is\n\nold\n",
+	})
+	before, _ := files.get(".agents/skills/ship/SKILL.md")
 	files.events = nil
 
-	got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "ship"}, files)
+	got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "ship", Scope: persona.SkillsProject}, files)
 
 	if got.Code != 1 {
 		t.Fatalf("Code = %d, want 1 (message %q)", got.Code, got.Message)
@@ -362,11 +414,8 @@ func TestNewRefusesAnExistingSlug(t *testing.T) {
 	if len(files.events) != 0 {
 		t.Errorf("a refused slug wrote %v, want nothing", files.events)
 	}
-	if after, _ := files.get("skills/ship/SKILL.md"); after != before {
+	if after, _ := files.get(".agents/skills/ship/SKILL.md"); after != before {
 		t.Errorf("the existing skill changed:\n%s\nvs\n%s", after, before)
-	}
-	if after, _ := files.get("SKILLS.md"); after != registryBefore {
-		t.Errorf("the registry changed on a refused slug:\n%s\nvs\n%s", after, registryBefore)
 	}
 }
 
@@ -375,7 +424,7 @@ func TestNewRejectsABadSlugBeforeWriting(t *testing.T) {
 	files := seededProject()
 	files.events = nil
 
-	got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "Slug Invalido"}, files)
+	got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "Slug Invalido", Scope: persona.SkillsProject}, files)
 
 	if got.Code != 1 {
 		t.Fatalf("Code = %d, want 1 (message %q)", got.Code, got.Message)
@@ -385,5 +434,24 @@ func TestNewRejectsABadSlugBeforeWriting(t *testing.T) {
 	}
 	if !strings.Contains(got.Message, "^[a-z][a-z0-9-]{2,40}$") {
 		t.Errorf("Message = %q, want the slug shape", got.Message)
+	}
+}
+
+// TestNewRefusesAHomeItWasNotGiven: the CLI resolves the home; an app run
+// without one refuses instead of writing in a guessed folder.
+func TestNewRefusesAHomeItWasNotGiven(t *testing.T) {
+	files := seededProject()
+	files.events = nil
+
+	got := skillsapp.New(skillsapp.Options{Dir: dir, Slug: "ejemplo", Scope: persona.SkillsHome}, files)
+
+	if got.Code != 1 {
+		t.Fatalf("Code = %d, want 1 (message %q)", got.Code, got.Message)
+	}
+	if !strings.Contains(got.Message, "home") {
+		t.Errorf("Message = %q, want it to name the home", got.Message)
+	}
+	if len(files.events) != 0 {
+		t.Errorf("a run without a home wrote %v, want nothing", files.events)
 	}
 }

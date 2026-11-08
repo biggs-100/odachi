@@ -336,10 +336,14 @@ says whether a role is up to date. Before, the skill landed in the project whate
 the scope, and that one folder was what made the next `init` install the whole
 curriculum in a project that keeps it in the machine.
 
-Open the project with OpenCode and that is it: it reads `.agents/skills` as an
-external directory in addition to its own, so it sees the fifteen without
-`pack`. `pack` is for taking the skills to another client's native folder, or to
-wherever you say.
+Open the project with OpenCode and that is it: the block names `~/.agents/skills`
+and the agent loads the skill it needs from there. `pack` is for taking the
+skills to another client's native folder, or to wherever you say.
+
+Your own skill goes where the scope says: `odachi skill new <slug> --scope project`
+writes `.agents/skills/<slug>/SKILL.md` in this project, and `--scope home` writes
+`~/.agents/skills/<slug>/SKILL.md` once per machine. The `SKILLS.md` of that folder
+is updated with it, and the curriculum odachi ships is not touched.
 
 ## Ceremony and voice
 

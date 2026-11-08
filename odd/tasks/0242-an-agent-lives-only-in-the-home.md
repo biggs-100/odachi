@@ -26,3 +26,7 @@ L4 · OFICIO · "The app keeps its Global and NoProjectAgents defaults; the CLI 
 L5 · OFICIO · "init names the folders an older release left and deletes nothing" (porque odachi never deletes a file it did not write in this version; the removal stays the human's call)
 L6 · OFICIO · "doctor's advice stops offering --agents as the way back to a project mirror" (porque the flag no longer writes a project agent, and an advice must name a command that works)
 L7 · OFICIO · "The leftover line names the files odachi generated, never their folders" (porque .opencode/agents and .claude/output-styles also hold a role's agent and the human's own styles; a folder is the wrong unit to offer for deletion)
+L8 · OFICIO · "skill new writes .agents/skills, never the curriculum" (porque skills/ is what odachi ships and pack installs; a user's skill lives where the agent reads it)
+L9 · OFICIO · "A user skill's registry lives inside its skills folder" (porque the folder a human opens is the whole thing; the curriculum keeps SKILLS.md at the project root for its own layout)
+L10 · OFICIO · "skill new refuses a run without --scope" (porque a default would hide a decision the human has to make, and the old default was the wrong place)
+L11 · OFICIO · "The CLI splits the slug from the flags itself" (porque Go's flag package stops at the first positional, and the documented form has the slug first)
