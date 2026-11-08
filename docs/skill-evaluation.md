@@ -2,11 +2,11 @@
 
 The skills are the product: text an agent reads before it works. `embed_test.go` proves the text
 still carries certain sentences; it does not prove that an agent, reading them, works differently.
-This document records five attempts at measuring the difference, their results, and what they do not
+This document records six attempts at measuring the difference, their results, and what they do not
 prove. The measured skill is `tests`, with a neutral agent: first on a one-line fix, then on a new
 function whose edges are the task, then on the same function delivered as a task-doc step, the shape
-the project actually ships, then on that step with the skill removed, and finally on the step handed
-to a delegated worker.
+the project actually ships, then on that step with the skill removed, then on the step handed to a
+delegated worker, and finally on the parent that hands it.
 
 ## The question
 
@@ -20,7 +20,7 @@ four behaviours the skill promises, from the transcript:
 
 The first two probes ask whether the text changes the work when it is available; the third asks
 whether the chain the project ships loads it at all; the fourth asks what the text adds when the chain
-does; the fifth asks whether the worker receives it.
+does; the fifth asks whether the worker receives it; the sixth asks whether the parent sends it.
 
 ## The instrument
 
@@ -345,6 +345,52 @@ and watched it fail. What moves is the name: the with arm names the behaviour
 `TestParseReject`, with one exception. The report is truthful in all six; in the without arm it says
 "none", and places the missing section in the task doc, not in the parent's prompt.
 
+## The parent-side probe: the task
+
+The fifth probe proved the worker obeys the list; it did not prove the list is written. The sixth runs
+the door -`--agent odachi`- on the same step, in the same project, with the step declared
+`route:delegated` and `agent:odachi-worker`, and reads the call the parent makes.
+
+## The parent-side probe: the arms
+
+There is one arm. Three runs, same model, a fresh copy each, its own isolated folder; the prompt is
+the parent's sentence: *Trabajá el paso T1 del plan.* The measurement is the `subagent` call in the
+parent's transcript: which agent it names, whether the prompt carries `## Skills to load before work`,
+and which paths it contains.
+
+## The parent-side probe: the result
+
+```
+parent-1  read the task doc · read drive from the shell · skill tests · subagent odachi-worker: no section
+parent-2  read the task doc · skill drive · skill tests · subagent ×2: neither carries the section
+parent-3  read the task doc · skill drive · skill tests · skill commits · subagent: no section
+```
+
+| run | delegations | to `odachi-worker` | section | paths | the parent loaded |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 1 | 0 | 0 | `drive` (read), `tests` (skill) |
+| 2 | 2 | 2 | 0 | 0 | `drive` (skill), `tests` (skill) |
+| 3 | 1 | 1 | 0 | 0 | `drive` (skill), `tests` (skill), `commits` (skill) |
+
+The column counts both ways a parent can have the text: the `skill` call and a read of the skill's
+`SKILL.md`.
+
+Every delegation goes to the right worker, and none carries the section or a single `SKILL.md` path,
+though the parent had loaded `drive` and `tests` itself in all three -by the `skill` call or by reading
+the file. The rest of the policy's cargo is there: the task doc path, the requirement verbatim, the
+surfaces and the method, down to the shape of the test to write.
+
+## The parent-side probe: what it adds
+
+- **The chain breaks at the parent.** The worker obeys the list, 3 of 3; the parent does not write it,
+  none of 4 delegations, even after reading `drive`, which says to pass the skill paths.
+- **The cost lands on the craft, not the order.** The worker's own prompt still orders test-first, so
+  without the paths it writes the test and loses the naming (the fifth probe's 1 of 3).
+- **The instructions are not missing.** `drive` and `slices/references/delegation.md` both say to pass
+  the exact paths; the gap is between the text and the moment the `subagent` call is composed.
+- One model, three runs, one fixture: the claim is about this corpus; a different step or model may
+  behave differently.
+
 ## What it proves, and what it does not
 
 - **The instrument repeats, and the chain fires on a step.** Twelve runs on a bare symptom never
@@ -370,18 +416,24 @@ and watched it fail. What moves is the name: the with arm names the behaviour
   section, which places the gap one level down from where the parent writes it.
 - **The order is the worker's, the craft is the skill's.** The worker's own prompt orders test-first,
   and all six obey; the name moves with the skill (3 of 3 against 1 of 3).
-- **It does not prove the parent passes the paths.** Both prompts were written by hand; the parent's
-  side is the next probe.
+- **The parent does not pass the paths.** Four delegations to the right worker in three runs, none with
+  the section or a path, though the parent had loaded `drive` and `tests` itself. The instruction is in
+  the text; it does not survive into the call.
 - One model, three runs per arm, one task: the claim is about this corpus.
 
-## The next question: the parent's side
+## The next thing to edit: the moment of delegation
 
-The worker obeys the list it is given. Whether the parent writes the list is not measured: the fifth
-probe's prompts were written by hand, with the section in place. The delegation policy
-(`slices/references/delegation.md`) tells the parent to pass the task doc, the step, the surfaces, the
-commands and the exact skill paths, and nothing in the corpus shows a parent doing it. The next probe
-reads a real delegation's prompt -the `task` call in the parent's transcript- for the section, on
-three steps, and counts how often it is there and which paths it names.
+The instruction exists in `drive` and in the delegation policy, and the parent read it. What fails is
+the moment the `subagent` call is written: the prompt is composed from the step, and the skills
+section is dropped. Two candidates, and the human decides:
 
-The description edit is dropped: this corpus gives it no support. The trigger fired when the work
-looked like a step, and the sentence was never the variable.
+- **The worker makes the omission visible.** It returns `status: blocked` when the section is absent
+  and names it; the parent then either passes the paths or writes a section that says there are none.
+  It closes the gap in the same turn, and it adds a line to every delegation that owes no skill.
+- **The door carries the section.** A line in the parent's own prompt makes the section part of every
+  `subagent` call. It costs the worker nothing and repeats an instruction the parent already ignored
+  once.
+
+Either one reopens this probe with the same three runs. The description edit is dropped: this corpus
+gives it no support. The trigger fired when the work looked like a step, and the sentence was never
+the variable.
