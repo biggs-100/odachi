@@ -8,7 +8,7 @@ R1 · "the second probe measures `tests` where a test is owed, and `docs/skill-e
 ## Done when
 
 ## Steps
-- [ ] T1 · the second probe measures `tests` where a test is owed, and `docs/skill-evaluation.md` records the result   R1
+- [x] T1 · the second probe measures `tests` where a test is owed, and `docs/skill-evaluation.md` records the result   R1 · tree:857af0c100a4717f5ab9296ec725c4d2921b2749
 
 ## History
 L1 · "the second probe measures `tests` where a test is owed, and `docs/skill-evaluation.md` records the result"
