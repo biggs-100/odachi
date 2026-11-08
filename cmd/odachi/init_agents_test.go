@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/domain/persona"
-	"github.com/biggs-100/odachi/internal/domain/rules"
 )
 
 // TestInitAgentsOpenCodeLeavesClaudeAlone: the real command, on a real tree. The
@@ -108,23 +107,17 @@ func TestInitAgentsRefusesAnUnknownClient(t *testing.T) {
 	}
 }
 
-// TestLevelKeepsTheUnchosenClient: the stored choice also governs the refresh a
-// profile change does on a project mirror an older release left. A stale file
-// from the other client keeps its bytes, and level never creates a mirror that is
-// not already there.
-func TestLevelKeepsTheUnchosenClient(t *testing.T) {
+// TestLevelLeavesTheProjectAgentLeftoversAlone: since 0242 no project carries an
+// agent file. A profile change updates the block and leaves a file an older
+// release wrote alone, so level cannot keep alive a file doctor calls unread.
+func TestLevelLeavesTheProjectAgentLeftoversAlone(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	dir, _ := startedProject(t)
 	if code, _, errOut := runDir(t, dir, []string{"init", "--agents", "opencode"}, ""); code != 0 {
 		t.Fatalf("init: exit %d, stderr=%s", code, errOut)
 	}
-	block, err := rules.Body(persona.Novato)
-	if err != nil {
-		t.Fatalf("rules.Body(novato): %v", err)
-	}
-	chosen, _ := persona.FilesFor(persona.SelectionOpenCode, block)
-	writeFile(t, dir, chosen.Path, chosen.Content)
+	writeFile(t, dir, ".opencode/agents/odachi.md", "an older agent\n")
 	writeFile(t, dir, ".claude/output-styles/odachi.md", "viejo\n")
 
 	code, _, errOut := runDir(t, dir, []string{"level", "--to", "senior"}, "")
@@ -132,24 +125,17 @@ func TestLevelKeepsTheUnchosenClient(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("level: exit %d, stderr=%s", code, errOut)
 	}
-	got, err := os.ReadFile(filepath.Join(dir, ".claude", "output-styles", persona.FileName))
-	if err != nil {
-		t.Fatalf("read the Claude agent: %v", err)
-	}
-	if string(got) != "viejo\n" {
-		t.Errorf("level refreshed the unchosen client: %q", got)
-	}
-	body, err := rules.Body(persona.Senior)
-	if err != nil {
-		t.Fatalf("rules.Body(senior): %v", err)
-	}
-	chosen, _ = persona.FilesFor(persona.SelectionOpenCode, body)
-	opencode, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(chosen.Path)))
-	if err != nil {
-		t.Fatalf("read the OpenCode agent: %v", err)
-	}
-	if string(opencode) != chosen.Content {
-		t.Errorf("the OpenCode agent did not follow the new voice")
+	for path, want := range map[string]string{
+		".opencode/agents/odachi.md":      "an older agent\n",
+		".claude/output-styles/odachi.md": "viejo\n",
+	} {
+		got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(path)))
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		if string(got) != want {
+			t.Errorf("level rewrote %s: %q", path, got)
+		}
 	}
 }
 

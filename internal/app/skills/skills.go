@@ -168,6 +168,9 @@ func New(opts Options, files Files) Result {
 			"the slug %q does not work: it must match %s (lowercase letters, numbers and dashes, starting with a letter); choose one and run odachi skill new <slug> --scope %s again",
 			slug, skill.NamePattern, opts.Scope))
 	}
+	// Every failure names the command that retries with the same words, so the
+	// advice cannot be refused by the same verb it names.
+	lay.retry = "odachi skill new " + slug + " --scope " + opts.Scope
 
 	rel := lay.label + "/" + slug + "/" + SkillFile
 	path := filepath.Join(lay.skillsDir, slug, SkillFile)
@@ -177,7 +180,18 @@ func New(opts Options, files Files) Result {
 		return failed("could not check " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run " + lay.retry + " again")
 	}
 	if exists {
-		return failed("already exists " + rel + ": not touching it; choose another slug, or edit the one that is there")
+		// The skill is the human's now; the registry is generated. A run that
+		// finds the file repairs the registry and says so, which is the way out of
+		// a run whose registry write failed after the skill landed.
+		loaded, err := load(lay, files)
+		if err != nil {
+			return failed(err.Error())
+		}
+		registryLine, _, err := syncRegistry(lay, files, loaded)
+		if err != nil {
+			return failed(err.Error())
+		}
+		return failed("already exists " + rel + ": not touching it; " + registryLine)
 	}
 
 	if err := files.Write(path, []byte(skill.Template(slug))); err != nil {

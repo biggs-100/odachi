@@ -411,8 +411,12 @@ func TestNewRefusesAnExistingSlug(t *testing.T) {
 	if got.Code != 1 {
 		t.Fatalf("Code = %d, want 1 (message %q)", got.Code, got.Message)
 	}
-	if len(files.events) != 0 {
-		t.Errorf("a refused slug wrote %v, want nothing", files.events)
+	// The registry is generated and a refused run repairs it; the skill is the
+	// human's and is never rewritten.
+	for _, event := range files.events {
+		if strings.Contains(event, "ship/SKILL.md") {
+			t.Errorf("the refused run rewrote the skill: %v", files.events)
+		}
 	}
 	if after, _ := files.get(".agents/skills/ship/SKILL.md"); after != before {
 		t.Errorf("the existing skill changed:\n%s\nvs\n%s", after, before)
