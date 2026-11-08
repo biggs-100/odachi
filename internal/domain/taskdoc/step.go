@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/biggs-100/odachi/internal/domain/skill"
 )
 
 // MaxStepText is the longest text a new step may carry, in characters. A step
@@ -48,6 +50,15 @@ func (d TaskDoc) AddStep(text, requirement string) (TaskDoc, error) {
 // agent and one that names none produce different lines, and fixing the line
 // afterwards is how a declaration turns into a guess.
 func (d TaskDoc) AddStepBy(text, requirement string, route Route) (TaskDoc, error) {
+	return d.AddStepBySkills(text, requirement, route, nil)
+}
+
+// AddStepBySkills is AddStepBy with the craft a delegated step owes: the names
+// `odachi delegate` resolves to the exact paths the worker reads. The list is
+// stored in the step line, so a later reader knows what the step was handed
+// without opening a chat. A skill belongs to a delegated step, and canonical
+// spelling is refused here where every writer meets it.
+func (d TaskDoc) AddStepBySkills(text, requirement string, route Route, skills []string) (TaskDoc, error) {
 	normalized, err := canonicalStepText(text)
 	if err != nil {
 		return d, err
@@ -63,12 +74,45 @@ func (d TaskDoc) AddStepBy(text, requirement string, route Route) (TaskDoc, erro
 		return d, err
 	}
 
-	step := Step{ID: "T" + strconv.Itoa(d.NextStep()), Text: normalized, Requirement: link, Route: executor.Kind, Agent: executor.Agent}
+	craft, err := canonicalSkills(skills)
+	if err != nil {
+		return d, err
+	}
+	if len(craft) > 0 && executor.Kind != RouteDelegated {
+		return d, fmt.Errorf("a skill belongs to a delegated step: say --route delegated --agent <name>, or drop --skill")
+	}
+
+	step := Step{ID: "T" + strconv.Itoa(d.NextStep()), Text: normalized, Requirement: link, Route: executor.Kind, Agent: executor.Agent, Skills: craft}
 
 	steps := make([]Step, len(d.Steps), len(d.Steps)+1)
 	copy(steps, d.Steps)
 	d.Steps = append(steps, step)
 	return d, nil
+}
+
+// canonicalSkills validates and normalizes the names a step declares: lowercase
+// slug, no duplicates, in the order the parent wrote them. An empty name is a
+// mistake; a step that owes no skill simply passes none.
+func canonicalSkills(names []string) ([]string, error) {
+	seen := make(map[string]bool, len(names))
+	kept := make([]string, 0, len(names))
+	for _, raw := range names {
+		name := strings.ToLower(strings.TrimSpace(raw))
+		switch {
+		case name == "":
+			return nil, fmt.Errorf("a skill name is empty: write the name of the skill the step owes, or drop --skill")
+		case !skill.ValidSlug(name):
+			return nil, fmt.Errorf("the skill %q is not a name: use lowercase letters, digits and hyphens", raw)
+		case seen[name]:
+			continue
+		}
+		seen[name] = true
+		kept = append(kept, name)
+	}
+	if len(kept) == 0 {
+		return nil, nil
+	}
+	return kept, nil
 }
 
 // canonicalRoute validates the pair a step declares and returns it in the

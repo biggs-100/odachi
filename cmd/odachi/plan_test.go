@@ -337,3 +337,50 @@ func TestPlanFlagRulesAtTheCLI(t *testing.T) {
 		t.Errorf("a blocked plan left files: before %v, after %v", before, after)
 	}
 }
+
+// TestPlanRecordsTheCraftOfADelegatedStep: the skill a step owes is resolved
+// where the agent reads it, and recorded in the step line, so the delegation
+// knows what the step was handed.
+func TestPlanRecordsTheCraftOfADelegatedStep(t *testing.T) {
+	t.Parallel()
+	dir, taskPath := startedProject(t)
+	craft := filepath.Join(dir, ".agents", "skills", "tests")
+	if err := os.MkdirAll(craft, 0o755); err != nil {
+		t.Fatalf("mkdir craft: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(craft, "SKILL.md"), []byte("---\nname: tests\ndescription: x\n---\n"), 0o644); err != nil {
+		t.Fatalf("write skill: %v", err)
+	}
+
+	code, stdout, stderr := runDir(t, dir, []string{"plan", "implementar", "--req", "R1", "--route", "delegated", "--agent", "odachi-worker", "--skill", "tests"}, "")
+	if code != 0 {
+		t.Fatalf("plan with a skill: exit %d, stderr=%s stdout=%s", code, stderr, stdout)
+	}
+
+	doc := planDoc(t, dir, taskPath)
+	if len(doc.Steps) != 1 {
+		t.Fatalf("steps = %+v, want one", doc.Steps)
+	}
+	step := doc.Steps[0]
+	if len(step.Skills) != 1 || step.Skills[0] != "tests" {
+		t.Errorf("Skills = %v, want [tests]", step.Skills)
+	}
+	if step.Route != taskdoc.RouteDelegated || step.Agent != "odachi-worker" {
+		t.Errorf("route = %s/%s, want delegated/odachi-worker", step.Route, step.Agent)
+	}
+}
+
+// TestPlanRefusesAnUnknownSkill: a name the delegation cannot resolve is refused
+// when the plan is written, not when the parent is mid-hand-off.
+func TestPlanRefusesAnUnknownSkill(t *testing.T) {
+	t.Parallel()
+	dir, _ := startedProject(t)
+
+	code, _, stderr := runDir(t, dir, []string{"plan", "implementar", "--route", "delegated", "--agent", "odachi-worker", "--skill", "nope-nope"}, "")
+	if code == 0 {
+		t.Fatal("plan accepted a skill that is not installed")
+	}
+	if !strings.Contains(stderr, "nope-nope") {
+		t.Errorf("stderr %q does not name the refused skill", stderr)
+	}
+}

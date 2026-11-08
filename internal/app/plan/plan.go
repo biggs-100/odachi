@@ -40,6 +40,9 @@ type Options struct {
 	// Route is who runs the new step: inline, delegated, or empty when nobody
 	// declared it. Agent names the other agent, and only exists with delegated.
 	Route, Agent string
+	// Skills are the craft a delegated step owes, by name: the plan records them
+	// and `odachi delegate` resolves them to the exact paths the worker reads.
+	Skills []string
 	// Commit is the commit that closed the step; it only makes sense with Done.
 	Commit string
 	// Git answers the two trees the done form compares. It is optional: without
@@ -86,7 +89,7 @@ const (
 
 // usage is the one-line reminder of the two shapes, repeated in errors because
 // a blocked message must name the command that unblocks it.
-const usage = `odachi plan "<text>" [--req R1] [--route inline | --route delegated --agent <name>] · odachi plan --done T2 [--commit abc1234]`
+const usage = `odachi plan "<text>" [--req R1] [--route inline | --route delegated --agent <name> --skill <name>] · odachi plan --done T2 [--commit abc1234]`
 
 // Run performs one `odachi plan`.
 func Run(opts Options, files Files) Result {
@@ -123,8 +126,8 @@ func validate(opts Options) (string, string) {
 	switch {
 	case done == "" && commit != "":
 		return "", `--commit only goes with a step you are marking: run odachi plan --done T2 --commit <sha>`
-	case done != "" && (route != "" || agent != ""):
-		return "", `--route and --agent describe a step you open, and this run closes one: run odachi plan "<text>" --route inline, or --route delegated --agent <name>`
+	case done != "" && (route != "" || agent != "" || len(opts.Skills) > 0):
+		return "", `--route, --agent and --skill describe a step you open, and this run closes one: run odachi plan "<text>" --route inline, or --route delegated --agent <name> --skill <name>`
 	case text != "" && done != "":
 		return "", "use one form of odachi plan at a time: " + usage
 	case done != "" && requirement != "":
@@ -148,7 +151,7 @@ func add(current tasks.Document, files Files, opts Options) Result {
 			"write a brief and run odachi start again")
 	}
 
-	grown, err := current.Doc.AddStepBy(opts.Text, opts.Requirement, taskdoc.Route{Kind: opts.Route, Agent: opts.Agent})
+	grown, err := current.Doc.AddStepBySkills(opts.Text, opts.Requirement, taskdoc.Route{Kind: opts.Route, Agent: opts.Agent}, opts.Skills)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
 	}

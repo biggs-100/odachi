@@ -291,6 +291,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.Requirement, "req", "", "R<n> of the requirement the new step is tied to")
 	flags.StringVar(&opts.Route, "route", "", "who runs the new step: inline | delegated")
 	flags.StringVar(&opts.Agent, "agent", "", "agent that runs a delegated step (goes with --route delegated)")
+	flags.Var((*stringList)(&opts.Skills), "skill", "skill a delegated step owes (repeatable)")
 	flags.StringVar(&opts.Done, "done", "", "T<n> of the step that is marked done")
 	flags.StringVar(&opts.Commit, "commit", "", "commit that closed the step (goes with --done)")
 	flags.IntVar(&opts.Feature, "feature", 0, "the feature number to write to (default: the highest)")
@@ -321,6 +322,19 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 	if len(rest) > 0 {
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi plan takes a single text in quotes\n", rest[0])
 		return start.CodeBlocked
+	}
+
+	// A skill the plan records is one the delegation can resolve: refusing the
+	// name here is what keeps `odachi delegate` from failing later, when the
+	// step is already written and the parent is mid-hand-off.
+	if len(opts.Skills) > 0 && strings.TrimSpace(opts.Done) == "" {
+		for _, raw := range opts.Skills {
+			name := strings.ToLower(strings.TrimSpace(raw))
+			if _, ok := craftPath(dir, name); !ok {
+				fmt.Fprintf(stderr, "odachi: the skill %q is not installed; the ones I know are %s\n", raw, craftList(craftNames(dir)))
+				return start.CodeBlocked
+			}
+		}
 	}
 
 	opts.Dir = dir
@@ -1646,7 +1660,7 @@ usage:
   odachi ask --answer "<answer>" [--for P1]
   odachi ask --craft "<decision>" --because "<reason>"
   odachi ask --change "<words>" --req R1
-  odachi plan "<text>" [--req R1] [--route inline | delegated --agent <name>]
+  odachi plan "<text>" [--req R1] [--route inline | delegated --agent <name> --skill <name>]
   odachi plan --done T2 [--commit abc1234]
   odachi level [--to <profile>]
   odachi summary
@@ -1716,6 +1730,8 @@ plan flags:
   --route s       who runs the new step: inline (the parent) | delegated (another
                   agent); a step with no route is not declared, never assumed inline
   --agent s       agent that runs a delegated step; an inline step has none
+  --skill s       skill a delegated step owes (repeatable); the plan records it
+                  and odachi delegate resolves it to the exact path
   --done T<n>     step that is marked done
   --commit sha    commit that closed the step (goes with --done; its tree is recorded when git can read it)
   --json          machine output
@@ -1859,7 +1875,7 @@ after start:
   odachi ask --answer "<answer>" [--for P1]     record your answer
   odachi ask --craft "<decision>" --because "<reason>"  record a decision the agent took
   odachi ask --change "<words>" --req R1        record the requirement the human changed; its steps reopen
-  odachi plan "<text>" [--req R1] [--route inline | delegated --agent <name>]   add the next step to the task doc
+  odachi plan "<text>" [--req R1] [--route inline | delegated --agent <name> --skill <name>]   add the next step to the task doc
   odachi plan --done T2 [--commit abc1234]      mark a step done; the tree of its commit is recorded
   odachi level                                  see your facts; it proposes senior when earned
   odachi level --to <profile>                   apply a profile and its voice (both are backed up)
