@@ -2,10 +2,11 @@
 
 The skills are the product: text an agent reads before it works. `embed_test.go` proves the text
 still carries certain sentences; it does not prove that an agent, reading them, works differently.
-This document records four attempts at measuring the difference, their results, and what they do not
+This document records five attempts at measuring the difference, their results, and what they do not
 prove. The measured skill is `tests`, with a neutral agent: first on a one-line fix, then on a new
 function whose edges are the task, then on the same function delivered as a task-doc step, the shape
-the project actually ships, and finally on that step with the skill removed.
+the project actually ships, then on that step with the skill removed, and finally on the step handed
+to a delegated worker.
 
 ## The question
 
@@ -19,7 +20,7 @@ four behaviours the skill promises, from the transcript:
 
 The first two probes ask whether the text changes the work when it is available; the third asks
 whether the chain the project ships loads it at all; the fourth asks what the text adds when the chain
-does.
+does; the fifth asks whether the worker receives it.
 
 ## The instrument
 
@@ -289,6 +290,61 @@ written first that still never fails before the code.
 - **The chain without the skill is not deterministic.** One run loaded no skill at all, one
   substituted `go-tests`, one did it by hand. Three runs show the spread, not its distribution.
 
+## The delegated probe: the task
+
+The worker's own prompt says two things this probe can measure: load the skills the parent lists in
+`## Skills to load before work`, by exact path, before touching code, and report `skills_loaded` when
+it returns. The fifth probe hands it the same step as the fourth, in the same minimal project, with
+and without that section. The parent's prompt is the only thing that changes.
+
+## The delegated probe: the arms
+
+`--agent odachi-worker`, same model, three runs per arm, a fresh copy per run in its own isolated
+folder. The with arm's prompt carries:
+
+```
+## Skills to load before work
+
+Read these exact files before reading, writing or testing:
+
+- C:\Users\USER\.agents\skills\drive\SKILL.md
+- C:\Users\USER\.agents\skills\tests\SKILL.md
+```
+
+The control is the same prompt without the section. Every skill stays installed in both arms. A load
+is counted either way the worker can do it: the `skill` call or a `read` of the `SKILL.md` path, and
+the transcript decides, not the report.
+
+## The delegated probe: the result
+
+The decisive events of one run per arm, in order.
+
+```
+with-1     read drive/SKILL.md · read tests/SKILL.md · read the task doc
+           write config_test.go · go test (RED) · write config.go · green · skills_loaded: both paths
+without-1  read the task doc · write config_test.go · go test (RED) · write config.go · green
+           skills_loaded: none (the task doc has no section)
+```
+
+| run | arm | paths read | before the first edit | 1 test before code | 2 red observed | 3 name says what breaks | 4 suite + contract | report matches | score |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | with | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 2 | with | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 3 | with | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 1 | without | 0 | - | 1 | 1 | 0 | 1 | 1 | 3/4 |
+| 2 | without | 0 | - | 1 | 1 | 0 | 1 | 1 | 3/4 |
+| 3 | without | 0 | - | 1 | 1 | 1 | 1 | 1 | 4/4 |
+
+The contract holds on the worker's side: with the section, the worker read both paths before its first
+edit in 3 of 3; without it, it read no `SKILL.md` at all in 3 of 3, though every skill was installed
+and listed. It loads by the parent's paths, not by the client's list.
+
+The order does not move: the worker's own prompt says "test-first", and all six wrote the test first
+and watched it fail. What moves is the name: the with arm names the behaviour
+(`TestParseRejectsShapesAndNamesTheInput`), the without arm keeps `TestParseAccept` and
+`TestParseReject`, with one exception. The report is truthful in all six; in the without arm it says
+"none", and places the missing section in the task doc, not in the parent's prompt.
+
 ## What it proves, and what it does not
 
 - **The instrument repeats, and the chain fires on a step.** Twelve runs on a bare symptom never
@@ -305,15 +361,27 @@ written first that still never fails before the code.
 - **It does not prove the test is better code.** The marginal probe shows the artifact arriving in the
   order the skill names; whether that test finds a defect the other would miss is a different
   question, and no run measured a defect found.
+- **The worker honors the contract it is given.** With the section, the two paths were read before
+  the first edit in 3 of 3; without it, no `SKILL.md` was read in 3 of 3, though every skill was
+  installed and listed. The parent's list is the door; the client's list is not consulted by the
+  worker.
+- **The report matches the transcript.** `skills_loaded` names the two paths when they are read and
+  `none` when they are not, in all six. When the section is missing it says the task doc has no such
+  section, which places the gap one level down from where the parent writes it.
+- **The order is the worker's, the craft is the skill's.** The worker's own prompt orders test-first,
+  and all six obey; the name moves with the skill (3 of 3 against 1 of 3).
+- **It does not prove the parent passes the paths.** Both prompts were written by hand; the parent's
+  side is the next probe.
 - One model, three runs per arm, one task: the claim is about this corpus.
 
-## The next question: the delegated worker
+## The next question: the parent's side
 
-The parent is told to hand a worker the task doc, the step, the surfaces, the commands and the exact
-skill paths (`slices/references/delegation.md`). Whether a worker loads those paths is not measured:
-the worker starts with the step and whatever the parent passes, not with the parent's loaded skills.
-The next probe hands the same step to a worker with the paths and without them and reads the
-transcript for the `skill` call —the same rubric, a different hand.
+The worker obeys the list it is given. Whether the parent writes the list is not measured: the fifth
+probe's prompts were written by hand, with the section in place. The delegation policy
+(`slices/references/delegation.md`) tells the parent to pass the task doc, the step, the surfaces, the
+commands and the exact skill paths, and nothing in the corpus shows a parent doing it. The next probe
+reads a real delegation's prompt -the `task` call in the parent's transcript- for the section, on
+three steps, and counts how often it is there and which paths it names.
 
 The description edit is dropped: this corpus gives it no support. The trigger fired when the work
 looked like a step, and the sentence was never the variable.
