@@ -13,7 +13,7 @@ R1 · "se va a eliminar de los repos y solo se usara el global"
 - Unreleased names the change: contract, minor
 
 ## Steps
-- [ ] T1 · se va a eliminar de los repos y solo se usara el global   R1
+- [x] T1 · se va a eliminar de los repos y solo se usara el global   R1 · tree:3be1b26b2ec53675ded4703e99579319c31ed6f7
 
 ## History
 L1 · "se va a eliminar de los repos y solo se usara el global"
