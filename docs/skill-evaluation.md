@@ -2,11 +2,12 @@
 
 The skills are the product: text an agent reads before it works. `embed_test.go` proves the text
 still carries certain sentences; it does not prove that an agent, reading them, works differently.
-This document records six attempts at measuring the difference, their results, and what they do not
+This document records seven attempts at measuring the difference, their results, and what they do not
 prove. The measured skill is `tests`, with a neutral agent: first on a one-line fix, then on a new
 function whose edges are the task, then on the same function delivered as a task-doc step, the shape
 the project actually ships, then on that step with the skill removed, then on the step handed to a
-delegated worker, and finally on the parent that hands it.
+delegated worker, then on the parent that hands it, and finally on that parent with the worker that
+refuses a delegation without the section.
 
 ## The question
 
@@ -20,7 +21,8 @@ four behaviours the skill promises, from the transcript:
 
 The first two probes ask whether the text changes the work when it is available; the third asks
 whether the chain the project ships loads it at all; the fourth asks what the text adds when the chain
-does; the fifth asks whether the worker receives it; the sixth asks whether the parent sends it.
+does; the fifth asks whether the worker receives it; the sixth asks whether the parent sends it; the
+seventh asks whether the worker's refusal makes the parent send it.
 
 ## The instrument
 
@@ -391,6 +393,50 @@ surfaces and the method, down to the shape of the test to write.
 - One model, three runs, one fixture: the claim is about this corpus; a different step or model may
   behave differently.
 
+## The refusal at work: the task
+
+The sixth probe led to a fix, and the fix is installed: `odachi-worker` 0.30.0 returns
+`status: blocked` when the parent omits `## Skills to load before work`. The seventh probe repeats the
+parent-side run on the release, not on the old worker: same fixture, same delegated step, same prompt,
+three runs of the door.
+
+## The refusal at work: the arms
+
+There is one arm, and everything is the installed release: the binary says `0.30.0`, and
+`~/.config/opencode/agents/odachi-worker.md` carries the refusal sentence. The measurement is each
+`subagent` call -its prompt for the section, and the worker's report for `blocked` and
+`skills_loaded`- plus whether the step completes.
+
+## The refusal at work: the result
+
+```
+after-1  1 subagent · no section · worker did not block, loaded drive, tests, go-tests · step done
+after-2  2 subagents · no section → blocked · retry with the section, 2 paths · loaded tests, go-tests
+after-3  2 subagents · no section → blocked · retry with the section, 1 path · loaded tests
+```
+
+| run | delegations | first one blocked | retries | section on the retry | paths it named | step |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 0 | 0 | - | - | done |
+| 2 | 2 | 1 | 1 | 1 | 2 | done |
+| 3 | 2 | 1 | 1 | 1 | 1 | done |
+
+The refusal fires in two runs of three. When it fires, the parent writes the section on the retry, two
+of two, and the worker loads what it names. The third run did not block: the worker saw the missing
+section and said so in its report -"the project's `AGENTS.md` names the manual and the parent supplied
+the full design"- then loaded `drive`, `tests` and `go-tests` itself and finished. The craft survived
+because the worker supplied it; the contract did not.
+
+## The refusal at work: what it adds
+
+- **The refusal is advisory.** A prompt sentence is not a mechanism: one model in three reasoned around
+  it and started, with its reason written down.
+- **When it fires, it works as designed.** The parent retried with the section in both runs, and the
+  paths reached the worker; the omission stopped passing silently.
+- **The exception cost the contract, not the craft.** In the run that overrode the rule the worker
+  loaded the skills on its own, so the test was named; what was missing was the parent's list.
+- One model, three runs, one fixture: the claim is about this corpus.
+
 ## What it proves, and what it does not
 
 - **The instrument repeats, and the chain fires on a step.** Twelve runs on a bare symptom never
@@ -416,24 +462,25 @@ surfaces and the method, down to the shape of the test to write.
   section, which places the gap one level down from where the parent writes it.
 - **The order is the worker's, the craft is the skill's.** The worker's own prompt orders test-first,
   and all six obey; the name moves with the skill (3 of 3 against 1 of 3).
-- **The parent does not pass the paths.** Four delegations to the right worker in three runs, none with
-  the section or a path, though the parent had loaded `drive` and `tests` itself. The instruction is in
-  the text; it does not survive into the call.
+- **The parent does not pass the paths, and the refusal catches it two times in three.** Four
+  delegations in the sixth probe, none with the section; with the fix installed, the worker refused
+  twice, the parent retried with the section both times, and one worker reasoned around the rule and
+  loaded the skills itself. The omission stopped passing silently; it did not stop happening.
 - One model, three runs per arm, one task: the claim is about this corpus.
 
-## The next thing to edit: the moment of delegation
+## The next thing to edit: a rule the model cannot reason around
 
-The instruction exists in `drive` and in the delegation policy, and the parent read it. What fails is
-the moment the `subagent` call is written: the prompt is composed from the step, and the skills
-section is dropped. Two candidates, and the human decides:
+The refusal is a sentence, and a sentence lost once in three. The ways out, with their costs:
 
-- **The worker makes the omission visible.** It returns `status: blocked` when the section is absent
-  and names it; the parent then either passes the paths or writes a section that says there are none.
-  It closes the gap in the same turn, and it adds a line to every delegation that owes no skill.
-- **The door carries the section.** A line in the parent's own prompt makes the section part of every
-  `subagent` call. It costs the worker nothing and repeats an instruction the parent already ignored
-  once.
+- **Say it categorically.** "Do not start without the section, even when the project names the manual
+  or the parent supplied the design." It is the cheapest edit, and it is the same kind of instrument
+  that just failed: the model may find another reason.
+- **Move it out of judgment.** The parent writes the `subagent` prompt through something that injects
+  the section -a template or a helper the tool composes- so the omission is impossible instead of
+  forbidden. It costs a mechanism, not a sentence.
+- **Accept two in three.** The failure mode is benign in this corpus: the worker loaded the skills
+  itself and named the gap in its report. The contract stays advisory, and the report is where the
+  exception is read.
 
-Either one reopens this probe with the same three runs. The description edit is dropped: this corpus
-gives it no support. The trigger fired when the work looked like a step, and the sentence was never
-the variable.
+The description edit stays dropped: this corpus gives it no support. The trigger fired when the work
+looked like a step, and the sentence was never the variable.
