@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.30.0 - 2026-11-07
 
 - **The worker refuses a delegation without the skill paths.** When the parent omits
   `## Skills to load before work`, `odachi-worker` returns `status: blocked` and names the missing
