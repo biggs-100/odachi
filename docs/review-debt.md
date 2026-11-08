@@ -9,12 +9,27 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0231, which leaves nothing open.
+Last written: while closing 0232, which leaves nothing open.
 
 ## Open
 
-Nothing is open: 0231 closed the last row with the test it was missing. The next row starts a
+Nothing is open: 0232 closed the last rows with the document they asked for. The next row starts a
 new list.
+
+## Closed by feature 0232
+
+### the measurement document did not answer its own questions
+
+Found by the review of 0232 (three warnings, `docs/skill-evaluation.md`). The table's fourth column
+said yes while the score was 0/4 and the runs never ran `go test`; no transcript event was quoted, so
+the six rows could not be checked by a reader; and the home move had no commands, no destination and
+only a post-hoc count, so nobody could tell whether the canary was still installed or whether the
+"without" runs really ran without `tests`.
+
+Closed: the table scores each of the four checks with `-` where a run wrote no test and the fourth is
+0 because only the cause half was observed; one run per arm is quoted in tool order, showing no
+`skill` load and no test write; and the move records its command, its destination and 59 → 58 → 59
+with `odachi doctor` at both ends.
 
 ## Closed by feature 0231
 
