@@ -7,12 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.33.0 - 2026-11-08
 
 - **No command refreshes a project agent any more.** `odachi start` rewrites the voice of the block
   and leaves a project agent file an older release wrote untouched, the same rule `level` follows.
   With `init` writing none, the tool never keeps alive a file `doctor` names as a leftover (0243).
   A contract change, minor.
+- **Install:** `curl -fsSL https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.sh | bash`
+  or, on Windows, `irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 | iex`.
 
 ## v0.32.0 - 2026-11-08
 
