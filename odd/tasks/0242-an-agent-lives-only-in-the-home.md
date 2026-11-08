@@ -16,7 +16,7 @@ R1 · "an agent lives only in the home: init writes no project agent and refresh
 ## Steps
 - [x] T1 · init writes no project agent and the craft defaults to the home   R1 · route:inline · tree:249a4570551aecc6cb8ff6209473a2ee0c7b1a81
 - [x] T2 · skill new asks the scope and writes the skill where it belongs   R1 · route:inline · tree:d8e4fc7134d2b8493f569e71c35e2e7447748d6e
-- [ ] T3 · doctor names a project agent an older release left   R1 · route:inline
+- [x] T3 · doctor names a project agent an older release left   R1 · route:inline · tree:54990d3db1576fb94e7656286c5b3e99e3837b3c
 
 ## History
 L1 · "an agent lives only in the home: init writes no project agent and refreshes the door the machine keeps, doctor names a project agent an older release left behind, the bundled craft defaults to the home, and `odachi skill new` asks where a user skill lives"
