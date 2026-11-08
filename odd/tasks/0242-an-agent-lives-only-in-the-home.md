@@ -30,3 +30,5 @@ L8 · OFICIO · "skill new writes .agents/skills, never the curriculum" (porque 
 L9 · OFICIO · "A user skill's registry lives inside its skills folder" (porque the folder a human opens is the whole thing; the curriculum keeps SKILLS.md at the project root for its own layout)
 L10 · OFICIO · "skill new refuses a run without --scope" (porque a default would hide a decision the human has to make, and the old default was the wrong place)
 L11 · OFICIO · "The CLI splits the slug from the flags itself" (porque Go's flag package stops at the first positional, and the documented form has the slug first)
+L12 · OFICIO · "Any odachi project agent file is a leftover, whatever its content" (porque this version writes none, so there is nothing to compare: the file is read by nobody and the warning names it)
+L13 · OFICIO · "The leftover is a warning inside check 11, not a new check" (porque the feature keeps its fifteen checks, and a warning never changes the exit code)

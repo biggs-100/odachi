@@ -1031,17 +1031,21 @@ func (r *runner) voice() domaindoctor.Check {
 		"the block voice is "+name+", the same one "+profileFile+" says"), content)
 }
 
-// voiceCheck appends the native agent mirror, the global door and the leftovers
-// of v0.10.0 to a line about the voice. None changes the status: the block is the
-// invariant, the agents are a convenience, and odachi does not delete files it
-// did not write in this version.
+// voiceCheck appends the native agent files, the global door and the leftovers of
+// v0.10.0 to a line about the voice. The leftovers of an older project agent are
+// the one thing that turns the line into a warning: since 0242 no project carries
+// an agent file, so a file with our name is read by nobody and the human is the
+// one who deletes it. A broken or missing block still keeps its own status.
 func (r *runner) voiceCheck(check domaindoctor.Check, content string) domaindoctor.Check {
 	notes := make([]string, 0, 4)
-	selection, clients, selectionNote, readable := r.clientSelection()
+	leftover := false
+	_, clients, selectionNote, readable := r.clientSelection()
 	if readable {
-		if note := r.personaNote(content, selection, clients); note != "" {
+		note, left := r.personaNote(clients)
+		if note != "" {
 			notes = append(notes, note)
 		}
+		leftover = left
 		if note := r.globalPersonaNote(clients); note != "" {
 			notes = append(notes, note)
 		}
@@ -1056,15 +1060,17 @@ func (r *runner) voiceCheck(check domaindoctor.Check, content string) domaindoct
 	if note != "" {
 		notes = append(notes, note)
 	}
-	if len(notes) == 0 {
-		return check
+	if len(notes) > 0 {
+		detail := strings.Join(notes, "; ")
+		switch {
+		case check.Detail == "":
+			check.Detail = detail
+		default:
+			check.Detail += "; " + detail
+		}
 	}
-	detail := strings.Join(notes, "; ")
-	switch {
-	case check.Detail == "":
-		check.Detail = detail
-	default:
-		check.Detail += "; " + detail
+	if leftover && check.Status == domaindoctor.StatusOK {
+		check.Status = domaindoctor.StatusWarning
 	}
 	return check
 }
@@ -1095,55 +1101,42 @@ func (r *runner) clientSelection() (string, []persona.Client, string, bool) {
 	return name, clients, note, true
 }
 
-// personaNote compares the native agent files with the block the human has. A
-// file that is missing or different is the one thing a selector cannot explain:
-// the agent a human picks would read a voice the project no longer promises. It
-// is a note and not a Problem because the block still works without a selector;
-// the fix is the same command that installs the mirror.
-func (r *runner) personaNote(content, selection string, clients []persona.Client) string {
-	body, ok := rules.BodyIn(content)
-	if !ok {
-		return ""
-	}
-
-	missing, stale := []string{}, []string{}
+// personaNote compares the project's agent files with the store and the home.
+// Since 0242 there is no project agent: any file with our name that exists is a
+// leftover the human may delete, whatever its content, so it is named with its
+// path and the caller turns it into a warning. With no file, the question left is
+// whether the home has the door. A file the run could not read is named, not
+// guessed.
+func (r *runner) personaNote(clients []persona.Client) (string, bool) {
+	present, missing := []string{}, []string{}
 	for _, client := range clients {
-		file, ok := persona.FilesFor(client.Agent, body)
-		if !ok {
-			continue
+		owned := persona.SubagentFilesFor(client.Agent)
+		if primary, ok := persona.FilesFor(client.Agent, ""); ok && primary.Path != "" {
+			owned = append([]persona.File{primary}, owned...)
 		}
-		current, exists, err := r.read(file.Path)
-		switch {
-		case err != nil:
-			return "could not read " + file.Path + ": " + oneLine(err.Error()) + "; run odachi init"
-		case !exists:
-			missing = append(missing, file.Path)
-		case current != file.Content:
-			stale = append(stale, file.Path)
-		}
-		for _, sub := range persona.SubagentFilesFor(client.Agent) {
-			current, exists, err := r.read(sub.Path)
+		for _, file := range owned {
+			_, exists, err := r.read(file.Path)
 			switch {
 			case err != nil:
-				return "could not read " + sub.Path + ": " + oneLine(err.Error()) + "; run odachi init"
-			case !exists:
-				missing = append(missing, sub.Path)
-			case current != sub.Content:
-				stale = append(stale, sub.Path)
+				return "could not read " + file.Path + ": " + oneLine(err.Error()) + "; run odachi init", false
+			case exists:
+				present = append(present, file.Path)
+			default:
+				missing = append(missing, file.Path)
 			}
 		}
 	}
 
-	dirs := make([]string, 0, len(clients))
-	subDirs := make([]string, 0, len(clients))
-	for _, client := range clients {
-		dirs = append(dirs, client.Dir)
-		subDirs = append(subDirs, client.SubagentDir)
+	if len(present) > 0 {
+		return "left from an older release: " + strings.Join(present, ", ") +
+			"; this version keeps the agent in the home, so nobody reads them: remove them", true
 	}
 
 	choice := r.storedProjectChoice()
 	home := r.homeCarriesTheAgents(clients)
-	adopted := r.adoptedHere(len(missing) == 0)
+	// No project file was found above, so the adoption question is asked with
+	// agentHere false: the file is what the inference looks for.
+	adopted := r.adoptedHere(false)
 	store := persona.SelectionPath + ": project_agents = "
 
 	switch {
@@ -1153,49 +1146,32 @@ func (r *runner) personaNote(content, selection string, clients []persona.Client
 		// keeps no choice because an inference is not a decision, and a note that
 		// called that gap would send the human to record one nobody made.
 		return "this project adopted odachi: the rules and the hook live here, and the craft and the agent live in the machine -the door is installed-; " +
-			persona.SelectionPath + " keeps no choice because the adoption is inferred, not decided: nothing to run"
+			persona.SelectionPath + " keeps no choice because the adoption is inferred, not decided: nothing to run", false
 	case len(missing) > 0 && adopted:
 		// The adoption, without the door: the machine is the only place the agent
 		// comes from, and `setup` installs it once per machine without recording a
 		// choice in the project's store.
 		return "this project adopted odachi: the rules and the hook live here, and the craft and the agent live in the machine; " +
-			"the door is not installed, and it is what the agent comes from: run odachi setup once"
-	case len(missing) > 0 && choice == persona.ProjectAgentsNone && home:
-		// The store is the authority: the absence of the mirrors is the answer it
-		// already recorded, not a gap the home happens to explain.
+			"the door is not installed, and it is what the agent comes from: run odachi setup once", false
+	case choice == persona.ProjectAgentsNone && home:
 		return "the project has no agent files, and the store says so (" + store +
-			"none): the door in the home is the one that runs"
-	case len(missing) > 0 && choice == persona.ProjectAgentsNone:
+			"none): the door in the home is the one that runs", false
+	case choice == persona.ProjectAgentsNone:
 		return "the project has no agent files because the store keeps the agent in the home (" + store +
-			"none), and the home does not carry the door: run odachi init"
-	case len(missing) > 0 && choice == persona.ProjectAgentsWrite:
+			"none), and the home does not carry the door: run odachi init", false
+	case choice == persona.ProjectAgentsWrite:
 		// The store says write, and this version writes no project agent. The
 		// answer is stale, not the files: init records the home-only shape.
 		return "the store says this project writes its agents (" + store +
-			"write), and they are missing in " + strings.Join(missing, ", ") + "; this version keeps the agent in the home: run odachi init to record it"
-	case len(missing) > 0 && home:
+			"write), and they are missing: this version keeps the agent in the home: run odachi init to record it", false
+	case home:
 		// The store is silent and the door is up. init records the answer every
 		// run, so the command that fixes a silent store is the plain one.
 		return "the project has no agent files: the door in the home is the one that runs, and " + persona.SelectionPath +
-			" does not say so; run odachi init to record it"
-	case len(missing) > 0:
-		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") +
-			"; this version writes no agent file in the project: run odachi init to install the door in the home"
-	case len(stale) > 0 && choice == persona.ProjectAgentsNone:
-		// The store keeps the agent in the home, so init skips these files: the
-		// only answer is the human's, because odachi never deletes what it did not
-		// write in this version.
-		return "the store keeps the agent in the home (" + store + "none), and " +
-			strings.Join(stale, ", ") + " in the project are leftovers nobody reads; odachi does not delete them: remove them"
-	case len(stale) > 0:
-		return "the native agent or its subagents do not match what was generated in " + strings.Join(stale, ", ") + "; this version keeps the agent in the home: run odachi init to record it, or remove them"
-	case choice == persona.ProjectAgentsNone:
-		return "the native agent matches the block in " + strings.Join(dirs, " and ") +
-			"; the subagents match in " + strings.Join(subDirs, " and ") +
-			"; the store keeps the agent in the home (" + store + "none), so these files are leftovers nobody reads"
+			" does not say so; run odachi init to record it", false
 	default:
-		return "the native agent matches the block in " + strings.Join(dirs, " and ") +
-			"; the subagents match in " + strings.Join(subDirs, " and ")
+		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") +
+			"; this version keeps the agent in the home: run odachi init", false
 	}
 }
 

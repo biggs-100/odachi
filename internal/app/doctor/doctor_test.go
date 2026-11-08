@@ -187,21 +187,16 @@ func configured() *fakeFiles {
 	files.put(".git/hooks/pre-commit", hookOf("odachi"))
 	// The block `odachi init` writes, with the voice of the profile in the file:
 	// check 11 compares the two, so a configured project has to carry both. Since
-	// 0242 that block names the machine's copy; the project mirrors are what an
-	// older release left, and they mirror the same text.
+	// 0242 the project carries no agent file: the door lives in the home, and the
+	// tests that want a leftover put it there by name.
 	files.put("AGENTS.md", blockOfScope(persona.Novato, persona.SkillsHome))
-	body, err := rules.Body(persona.Novato)
-	if err != nil {
-		panic(err)
-	}
-	for _, file := range persona.Files(body) {
-		files.put(file.Path, file.Content)
-	}
-	for _, file := range persona.SubagentFiles() {
-		files.put(file.Path, file.Content)
-	}
 	for _, file := range persona.GlobalFiles() {
 		files.putHome(file.Path, file.Content)
+	}
+	for _, client := range persona.Clients() {
+		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
+			files.putHome(file.Path, file.Content)
+		}
 	}
 	// The default init leaves bootstrap in the home; it is the one skill every
 	// project gets there without a project copy, so the fixture carries the bytes
@@ -966,79 +961,45 @@ func TestLeftoverPersonaFilesAreNotAProblem(t *testing.T) {
 	}
 }
 
-// TestAMissingSubagentIsSaid: a project can have the primary agent and lose the
-// worker or the verifier. The parent cannot delegate to a file that is not
-// there; check 11 names it and the command that installs it.
-func TestAMissingSubagentIsSaid(t *testing.T) {
+// TestAProjectAgentLeftoverIsAWarning: since 0242 no project carries an agent
+// file. One an older release left is named with its path and the check is a
+// warning: nothing is broken, and deleting it is the human's call.
+func TestAProjectAgentLeftoverIsAWarning(t *testing.T) {
 	files := configured()
-	delete(files.files, at(".opencode/agents/odachi-worker.md"))
+	for _, client := range persona.Clients() {
+		if primary, ok := persona.FilesFor(client.Agent, ""); ok && primary.Path != "" {
+			files.put(primary.Path, "an older agent\n")
+		}
+	}
 
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	if result.Code != CodeOK {
-		t.Fatalf("a missing subagent does not break the project: %s", strings.Join(result.Lines, " / "))
+		t.Fatalf("a leftover does not break the project: %s", strings.Join(result.Lines, " / "))
 	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"are missing in", "odachi-worker", "odachi init"} {
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a project agent an older release left is a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{"left from an older release", ".opencode/agents/odachi.md", "remove them"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("the line must say %q: %q", want, got.Detail)
 		}
 	}
 }
 
-// TestAStaleSubagentIsSaid: the worker and the verifier are generated too; a
-// hand edit is a drift, not a new contract.
-func TestAStaleSubagentIsSaid(t *testing.T) {
-	files := configured().put(".opencode/agents/odachi-verify.md", "viejo\n")
+// TestAProjectWithNoAgentFilesIsANote: the clean shape. The store says the agent
+// lives in the home, so the absence is a choice and the check stays ok.
+func TestAProjectWithNoAgentFilesIsANote(t *testing.T) {
+	result := runSelected(configured(), cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
+		fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone})
 
-	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
-
-	if result.Code != CodeOK {
-		t.Fatalf("an edited subagent does not break the project: %s", strings.Join(result.Lines, " / "))
-	}
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"do not match what was generated", "odachi-verify", "odachi init"} {
-		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("the line must say %q: %q", want, got.Detail)
-		}
+	if got.Status != domaindoctor.StatusOK {
+		t.Fatalf("a recorded home-only shape is not a defect: %s", domaindoctor.Line(got))
 	}
-}
-
-// TestAStaleNativeAgentIsSaidAndNotAFailure: the mirror is generated, so a hand
-// edit is lost work — but the block still works. The line names the file and the
-// command that regenerates it, and the run does not fail.
-func TestAStaleNativeAgentIsSaidAndNotAFailure(t *testing.T) {
-	files := configured().put(".opencode/agents/odachi.md", "editado a mano\n")
-
-	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
-
-	if result.Code != CodeOK {
-		t.Fatalf("an edited mirror does not break the project: %s", strings.Join(result.Lines, " / "))
-	}
-	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"do not match what was generated", ".opencode/agents/odachi.md", "odachi init"} {
-		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("the line must say %q: %q", want, got.Detail)
-		}
-	}
-}
-
-// TestAMissingNativeAgentIsSaidAndNotAFailure: a project that never ran the new
-// init still has the block; the selector is what is missing. One note, exit 0.
-func TestAMissingNativeAgentIsSaidAndNotAFailure(t *testing.T) {
-	files := configured()
-	delete(files.files, at(".opencode/agents/odachi.md"))
-
-	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
-
-	if result.Code != CodeOK {
-		t.Fatalf("a missing agent does not break the project: %s", strings.Join(result.Lines, " / "))
-	}
-	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"are missing in", ".opencode/agents/odachi.md", "odachi init"} {
-		if !strings.Contains(got.Detail, want) {
-			t.Fatalf("the line must say %q: %q", want, got.Detail)
-		}
+	if !strings.Contains(got.Detail, "the project has no agent files, and the store says so") {
+		t.Fatalf("the line does not name the store: %q", got.Detail)
 	}
 }
 
@@ -1107,29 +1068,6 @@ func TestDoctorOnlyChecksTheChosenClient(t *testing.T) {
 		t.Fatalf("check 11 must be ok with the chosen client complete: %s", domaindoctor.Line(got))
 	}
 	for _, want := range []string{"I only check opencode", persona.SelectionPath} {
-		if !strings.Contains(got.Detail, want) {
-			t.Errorf("the line must say %q: %q", want, got.Detail)
-		}
-	}
-	if strings.Contains(got.Detail, ".claude") {
-		t.Errorf("the line names .claude although it was not the chosen client: %q", got.Detail)
-	}
-}
-
-// TestDoctorNamesTheChosenClientWhenMissing: the filter is not a way to hide a
-// missing file: the client that was chosen is still checked and named.
-func TestDoctorNamesTheChosenClientWhenMissing(t *testing.T) {
-	files := configured()
-	delete(files.files, at(".opencode/agents/odachi.md"))
-
-	result := runSelected(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi",
-		fakeAgentSelection{stored: persona.SelectionOpenCode})
-
-	if result.Code != CodeOK {
-		t.Fatalf("a missing agent does not break the project: %s", strings.Join(result.Lines, " / "))
-	}
-	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"are missing in", ".opencode/agents/odachi.md", "odachi init"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}
@@ -1346,7 +1284,10 @@ func TestDoctorNamesLeftoverMirrorsTheStoreTurnedOff(t *testing.T) {
 		fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone})
 
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"leftover", "remove them"} {
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a leftover the store does not want is a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{"left from an older release", "remove them"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}
@@ -1486,6 +1427,9 @@ func TestDoctorPointsToTheDoorWhenTheStoreIsHomeOnly(t *testing.T) {
 func TestDoctorSaysTheMirrorsAreLeftoversWhenTheStoreIsHomeOnly(t *testing.T) {
 	files := configured()
 	for _, client := range persona.Clients() {
+		if primary, ok := persona.FilesFor(client.Agent, ""); ok && primary.Path != "" {
+			files.put(primary.Path, "an older agent\n")
+		}
 		for _, file := range persona.GlobalSubagentFilesFor(client.Agent) {
 			files.putHome(file.Path, file.Content)
 		}
@@ -1495,7 +1439,10 @@ func TestDoctorSaysTheMirrorsAreLeftoversWhenTheStoreIsHomeOnly(t *testing.T) {
 		fakeAgentSelection{stored: persona.SelectionBoth, project: persona.ProjectAgentsNone})
 
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{"matches the block", "project_agents = none", "leftovers nobody reads"} {
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a leftover the store does not want is a warning: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{"left from an older release", "remove them"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Errorf("the line must say %q: %q", want, got.Detail)
 		}

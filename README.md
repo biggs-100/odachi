@@ -381,7 +381,7 @@ missing or stopped matching, and the command is `odachi init`.
 The **project** copy -`.opencode/agents/odachi.md` and
 `.claude/output-styles/odachi.md` in the tree- is what releases before 0.32
 wrote. This version writes no agent file in the project and never deletes one:
-`init` and `doctor` name the folders an older release left, so deleting them is
+`init` and `doctor` name the files an older release left, so deleting them is
 your decision. `--agents` selects the clients of the door; it does not put a copy
 back in the project.
 per-profile personas from v0.10.0 remain as
