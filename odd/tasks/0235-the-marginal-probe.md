@@ -8,7 +8,7 @@ R1 · "the marginal probe measures what `tests` adds to a step: three runs with 
 ## Done when
 
 ## Steps
-- [ ] T1 · the marginal probe measures what `tests` adds to a step: three runs with the skill, three without   R1
+- [x] T1 · the marginal probe measures what `tests` adds to a step: three runs with the skill, three without   R1 · tree:1a55d7b155e091bbed59e796e3b6729df0187eea
 
 ## History
 L1 · "the marginal probe measures what `tests` adds to a step: three runs with the skill, three without"
