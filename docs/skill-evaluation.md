@@ -185,11 +185,11 @@ in `AGENTS.md`, a `brief.md`, one task doc with one step, and the same Go code w
 
 Both arms keep every skill installed and differ in one file: the with arm carries the block in
 `AGENTS.md`, the control carries the same project without it. Three runs each, same model, same
-agent, a fresh copy per run in its own isolated folder. The first run validated the fixture and is
-run 1: nothing in the fixture changed after it.
+agent, a fresh copy per run in its own isolated folder. The first run is both the pilot that
+validated the fixture and run 1: nothing in the fixture changed after it.
 
-The rubric is the second probe's, plus one column: whether `drive` was loaded before `tests`. Both are
-read from the transcript's `skill` calls.
+The rubric is the second probe's, plus one column: whether `drive` and then `tests` were loaded, in
+that order, read from the transcript's `skill` calls.
 
 ## The third probe: the result
 
@@ -204,20 +204,22 @@ control-1  glob plan · dir · read brief · read main.go, go.mod, config.go, th
            write config.go · go test (green) · the seven shapes
 ```
 
-| run | arm | `drive` | `tests` | 1 test before code | 2 red observed | 3 name says what breaks | 4 suite + contract | score |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | block | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
-| 2 | block | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
-| 3 | block | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
-| 1 | control | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
-| 2 | control | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
-| 3 | control | 1 | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| run | arm | `drive` → `tests` | 1 test before code | 2 red observed | 3 name says what breaks | 4 suite + contract | score |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | block | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 2 | block | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 3 | block | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 1 | control | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 2 | control | 1 | 1 | 1 | 1 | 1 | 4/4 |
+| 3 | control | 1 | 1 | 1 | 1 | 1 | 4/4 |
 
 All six load `drive` and then `tests`, write the test before the implementation, watch it fail on the
 empty function, and leave a suite that is green and a contract that holds -verified afterwards by
 building each copy and passing it the seven shapes. The names state the behaviour, for example
-`TestParseRejectsEveryOtherShapeAndNamesWhatItRead` and `TestParseRangeIsClosedInterval`. The pilot
-went further and closed T1 through the gate: `git init`, commits, the proof and `plan --done`.
+`TestParseRejectsEveryOtherShapeAndNamesWhatItRead` and `TestParseRangeIsClosedInterval`. Run 1 went
+further than the rest and closed T1 through the gate: `git init`, commits, the proof and
+`plan --done`. That closure is recorded, not scored: the four checks are read from the transcript the
+same way in every run.
 
 The block made no difference. The three runs without `AGENTS.md` loaded the same two skills in the
 same order, and the block arm did not follow the block's order either: it read the task doc first and
