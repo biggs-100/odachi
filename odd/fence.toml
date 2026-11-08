@@ -9,31 +9,31 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to the bundled skill texts: the 19 keep their words"
+not   = "no change to the bundled skill texts: the 19 keep their words - back when the lane needs a sentence they do not already say; 0245 needs none"
 paths = ["skills/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the review or the classifier"
+not   = "no change to the review or the classifier - back when a verdict has to read something the diff cannot show"
 paths = ["internal/app/review/**", "internal/domain/review/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to odachi bench and no new verb"
+not   = "no change to odachi bench and no new verb - back when a bench journey crosses a commit, or a human asks for a verb"
 paths = ["internal/app/bench/**", "internal/bench/**", "internal/domain/bench/**", "cmd/odachi/bench.go"]
 deps  = []
 
 [[rule]]
-not   = "no change to the stored proofs: never touched"
+not   = "no change to the stored proofs: never touched - never; they are the evidence"
 paths = ["proof/**"]
 deps  = []
 
 [[rule]]
-not   = "no change to the design canvas, its token or the installers"
+not   = "no change to the design canvas, its token or the installers - back when an install path changes; the hook 0245 adds is written by `init`, not by the installers"
 paths = ["internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts", "scripts/install.ps1", "scripts/install.sh"]
 deps  = []
 
 [[rule]]
-not   = "no change to the release workflow"
+not   = "no change to the release workflow - back when a release must run a command the workflow does not run today"
 paths = [".github/workflows/**"]
 deps  = []
