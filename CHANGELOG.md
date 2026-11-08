@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.31.0 - 2026-11-08
 
 - **A delegated step is handed with `odachi delegate`.** The plan records the skills a delegated step
   owes, and the verb prints the prompt with the step, its requirement, the surfaces, the commands and
