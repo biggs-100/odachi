@@ -13,7 +13,7 @@ R1 · "a skill that designs, critiques and refines a terminal UI from a captured
 - Unreleased names the change: a new capability, patch (0252)
 
 ## Steps
-- [ ] T1 · the body and the floor: terminal-craft.md   R1 · route:inline
+- [x] T1 · the body and the floor: terminal-craft.md   R1 · route:inline · tree:66a82c8a643232910e2b4e2f594c66aea18add6c
 - [ ] T2 · the eyes: visual-loop.md and critique.md   R1 · route:inline
 - [ ] T3 · the plays: commands.md and design-doc.md   R1 · route:inline
 - [ ] T4 · NOTICE, the bundled list, the registry, the map and Unreleased   R1 · route:inline
