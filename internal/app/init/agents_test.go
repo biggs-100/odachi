@@ -143,9 +143,9 @@ func TestInitAgentsRefusesAnInvalidFlag(t *testing.T) {
 // TestInitNoProjectAgentsIsStored was the flag's test: the option is gone with
 // the project half, and the store's key is pinned by the test below as inert.
 
-// A stored project_agents from an older release is read and left alone: init
-// writes no project agent and does not rewrite the key. The file keeps its bytes
-// and the report says the project gets no agent.
+// A stored project_agents from an older release survives the one branch that
+// could drop it: a run that rewrites the store. The explicit scope makes the run
+// write, and the key must come back with it.
 func TestInitLeavesAStoredProjectAgentsKeyAlone(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	store := &fakeAgentSelection{stored: persona.SelectionOpenCode, project: persona.ProjectAgentsWrite}
@@ -154,14 +154,24 @@ func TestInitLeavesAStoredProjectAgentsKeyAlone(t *testing.T) {
 		Dir:            dir,
 		AgentSelection: store,
 		Global:         true,
+		Skills:         persona.SkillsProject,
 	}, files, &fakeSkills{})
 
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
 	}
 	content, ok := files.get(persona.SelectionPath)
-	if ok && !strings.Contains(content, `project_agents = "write"`) {
-		t.Errorf("%s = %q, want the stored key untouched", persona.SelectionPath, content)
+	if !ok {
+		t.Fatalf("the run did not write the store: events %v", files.events)
+	}
+	if !strings.Contains(content, `project_agents = "write"`) {
+		t.Errorf("%s = %q, want the stored key carried through the rewrite", persona.SelectionPath, content)
+	}
+	if !strings.Contains(content, `skills = "project"`) {
+		t.Errorf("%s = %q, want the scope the run was asked for", persona.SelectionPath, content)
+	}
+	if _, ok := files.get(".opencode/agents/odachi.md"); ok {
+		t.Errorf("init wrote a project agent file")
 	}
 	if !strings.Contains(strings.Join(got.Lines, "\n"), "not written") {
 		t.Errorf("the report does not say the project gets no agent:\n%s", strings.Join(got.Lines, "\n"))
