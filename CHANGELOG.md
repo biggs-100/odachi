@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.35.0 - 2026-11-08
 
 - **The app writes no project agent at all.** The project half of `odachi init` is deleted: the
   `NoProjectAgents` option, the resolver that honoured it and the writers that mirrored the block in
@@ -16,6 +16,8 @@ not a version.
   project agent file a release left is still named by `doctor`, with its path. A plain `init` records
   no decision now that none is forced: the store gains no `project_agents` key, and a flag still
   records what it named. A contract change, minor (0246).
+- **Install:** `curl -fsSL https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.sh | bash`
+  or, on Windows, `irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 | iex`.
 
 ## v0.34.0 - 2026-11-08
 
