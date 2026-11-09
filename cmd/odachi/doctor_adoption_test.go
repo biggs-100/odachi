@@ -34,19 +34,16 @@ func TestTheDoctorRecognisesAnAdoptedProject(t *testing.T) {
 	_, out, errOut := runDir(t, dir, []string{"doctor"}, "")
 
 	report := out + errOut
-	if !strings.Contains(report, "the project has no agent files, and the store says so") {
-		t.Errorf("the doctor does not read the recorded home-only shape:\n%s", report)
+	if !strings.Contains(report, "agents.toml keeps no choice") {
+		t.Errorf("the doctor does not read the home-only shape:\n%s", report)
 	}
 	if strings.Contains(report, "does not say so") {
-		t.Errorf("the doctor calls the recorded shape a defect:\n%s", report)
+		t.Errorf("the doctor calls the shape a defect:\n%s", report)
 	}
 
-	// A project adopted by an older release carries no store at all. That silence
-	// is the inference, and the doctor answers it without sending the human to
-	// record a choice nobody made.
-	if err := os.Remove(storePath(dir)); err != nil {
-		t.Fatalf("removing the store: %v", err)
-	}
+	// A project adopted with no store at all: with no command choosing a project
+	// agent, the silence is the shape, and the doctor answers it without sending
+	// the human to record a choice nobody made.
 	_, out, errOut = runDir(t, dir, []string{"doctor"}, "")
 	report = out + errOut
 	if !strings.Contains(report, "adopted odachi") {
@@ -55,7 +52,7 @@ func TestTheDoctorRecognisesAnAdoptedProject(t *testing.T) {
 	if !strings.Contains(report, "nothing to run") {
 		t.Errorf("the doctor does not say the adoption needs nothing:\n%s", report)
 	}
-	if strings.Contains(report, "does not say so") {
-		t.Errorf("the doctor calls the silent store a defect:\n%s", report)
+	if strings.Contains(report, "run odachi init to record it") {
+		t.Errorf("the doctor sends the human to record a key init no longer writes:\n%s", report)
 	}
 }

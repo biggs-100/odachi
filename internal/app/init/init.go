@@ -112,10 +112,6 @@ type Options struct {
 	// rules and the plan. The field stays because a caller that wires no home -the
 	// tests that only care about the project- must still be able to say so.
 	Global bool
-	// NoProjectAgents skips the project's native agent files. The CLI always asks
-	// for it since 0242; the field stays for the same reason as Global, and
-	// skipping both halves would leave no agent at all.
-	NoProjectAgents bool
 	// Skills is where this run was asked to put the craft. Empty means "the
 	// stored one, the copy already here, or the machine": a plain init keeps the
 	// choice the project recorded, and a project with no copy and no choice gets
@@ -201,9 +197,6 @@ func Run(opts Options, files Files, skills Skills) Result {
 	if r.dir == "" {
 		r.dir = "."
 	}
-	if opts.NoProjectAgents && !opts.Global {
-		return blocked("skipping the project's agent files needs the home door: without it there would be no agent at all; run odachi init --global")
-	}
 
 	hasGit, err := r.files.Exists(filepath.Join(r.dir, gitDir))
 	if err != nil {
@@ -230,24 +223,17 @@ func Run(opts Options, files Files, skills Skills) Result {
 	}
 	r.minimal = facts.Craft()
 	r.adoptAgent = facts.Agent()
-	r.projectAgents = r.resolveProjectAgents(opts)
 	// Where the craft lives is one decision, and the package that owns the adoption
 	// answers it: `role` and `doctor` ask the same question about the same project.
 	r.skillsScope, r.skillsSource = facts.Scope(opts.Skills)
 	// The store records decisions, never inferences. A flag names one, and only
 	// the flags are written when the footprint was inferred: otherwise the next
 	// plain init would read a choice nobody made.
-	r.persistProject = r.projectAgents
 	r.persistSkills = r.skillsScope
 	if r.minimal {
 		if strings.TrimSpace(opts.Skills) == "" {
 			r.persistSkills = r.storedSkills
 		}
-	}
-	// The agent half has its own inference, and an inference is never written:
-	// only --agents or --global make the absence of the mirrors a decision.
-	if r.adoptAgent && strings.TrimSpace(opts.Agents) == "" && !opts.NoProjectAgents {
-		r.persistProject = r.storedProject
 	}
 
 	if problem := r.writeAgents(); problem != nil {
@@ -268,24 +254,16 @@ func Run(opts Options, files Files, skills Skills) Result {
 		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
-	if problem := r.writeAgentStore(opts.Agents != "" || opts.NoProjectAgents || opts.Skills != ""); problem != nil {
+	if problem := r.writeAgentStore(opts.Agents != "" || opts.Skills != ""); problem != nil {
 		// The hook and the rules block are already in place: report how much of
 		// the job is done instead of pretending nothing happened.
 		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
-	if r.projectAgents == persona.ProjectAgentsNone {
-		r.skipProjectPersonas()
-	} else if problem := r.writePersonas(); problem != nil {
-		// The hook and the rules block are already in place: report how much of
-		// the job is done instead of pretending nothing happened.
-		problem.Files = append(append([]string{}, r.changed...), r.personaFiles...)
-		problem.PersonaDests = r.personaDests
-		return *problem
-	}
-	// The project has its mirror; the home gets the door that appears in every
-	// other folder, and only when the human asked for it with --global. A home
-	// that cannot be written is pending, never a failed project.
+	r.skipProjectPersonas()
+	// The home gets the door that appears in every other folder, and only when the
+	// human asked for it with --global. A home that cannot be written is pending,
+	// never a failed project.
 	if opts.Global {
 		r.installGlobalPersonas()
 		r.installOpenCodeDefault()
@@ -335,17 +313,6 @@ func (r *runner) resolveAgents(requested string) (string, []persona.Client, *Res
 		return "", nil, &problem
 	}
 	return selection, clients, nil
-}
-
-// effectiveProject is what a store asks for: the absent key is the mirror in the
-// tree, the answer every project had before the key existed. Comparing the
-// effective answers keeps a plain run from rewriting an old store only to add a
-// line that says what its silence already said.
-func effectiveProject(store persona.Store) persona.Store {
-	if store.ProjectAgents == "" {
-		store.ProjectAgents = persona.ProjectAgentsWrite
-	}
-	return store
 }
 
 // effectiveSkills is the same rule for the other half of the store: an absent
@@ -407,25 +374,6 @@ func (r *runner) agentFileHere() (bool, error) {
 	return false, nil
 }
 
-// an explicit --agents asks for the project's own copy, which is the only way out
-// of the home-only choice and needs no second flag; otherwise the stored answer
-// stands, a repository that already lives keeps them in the machine, and a
-// project that never chose keeps the mirror in the tree.
-func (r *runner) resolveProjectAgents(opts Options) string {
-	switch {
-	case opts.NoProjectAgents:
-		return persona.ProjectAgentsNone
-	case strings.TrimSpace(opts.Agents) != "":
-		return persona.ProjectAgentsWrite
-	case r.storedProject != "":
-		return r.storedProject
-	case r.adoptAgent:
-		return persona.ProjectAgentsNone
-	default:
-		return persona.ProjectAgentsWrite
-	}
-}
-
 // resolveSkillsScope decided where the craft lives. It is persona's decision now
 // (persona.SkillsScope), because `role` asks the same question about the same
 // project and a second copy of the rule would let the two disagree.
@@ -442,14 +390,19 @@ func (r *runner) writeAgentStore(explicit bool) *Result {
 	// decided is what may be written; want is the same answer with the absent
 	// keys read as their defaults, which is how two stores are compared without
 	// rewarding a file for saying aloud what its silence already says.
-	decided := persona.Store{Agents: r.selection, ProjectAgents: r.persistProject, Skills: r.persistSkills}
-	want := effectiveSkills(effectiveProject(decided))
-	stored := effectiveSkills(effectiveProject(persona.Store{Agents: r.storedSelection, ProjectAgents: r.storedProject, Skills: r.storedSkills}))
+	decided := persona.Store{Agents: r.selection, ProjectAgents: r.storedProject, Skills: r.persistSkills}
+	want := effectiveSkills(decided)
+	stored := effectiveSkills(persona.Store{Agents: r.storedSelection, ProjectAgents: r.storedProject, Skills: r.storedSkills})
 	if !explicit && r.storedSelection == "" {
 		return nil
 	}
 	if stored == want {
-		r.lines = append(r.lines, persona.SelectionPath+": "+r.selection+", "+want.ProjectAgents+", "+want.Skills+", unchanged")
+		parts := []string{r.selection}
+		if want.ProjectAgents != "" {
+			parts = append(parts, want.ProjectAgents)
+		}
+		parts = append(parts, want.Skills)
+		r.lines = append(r.lines, persona.SelectionPath+": "+strings.Join(parts, ", ")+", unchanged")
 		return nil
 	}
 	if r.agentSelection == nil {
@@ -524,12 +477,10 @@ type runner struct {
 	storedSelection string
 	selection       string
 	clients         []persona.Client
-	// storedProject is where the project said its agent lives, and projectAgents
-	// is what this run decided: the flag wins, an explicit client choice asks for
-	// the mirror, and otherwise the stored answer stands. Empty means the project
-	// never chose, which keeps the mirror in the tree.
+	// storedProject is the key an older release wrote; it is carried through so a
+	// run never rewrites a file to drop it. Nothing reads it to decide what to
+	// write: the project gets no agent file any more.
 	storedProject string
-	projectAgents string
 	// storedSkills and skillsScope are the same pair for the craft: where the
 	// store said the skills live and what this run decided. skillsSource says who
 	// decided, so the output names where the answer came from.
@@ -550,10 +501,9 @@ type runner struct {
 	// not read the craft's answer, because a project that keeps its copy is not
 	// a project that asked for the mirrors.
 	adoptAgent bool
-	// persistProject and persistSkills are what a store may record: the resolved
-	// answer, except under an inference, where only a flag counts.
-	persistProject string
-	persistSkills  string
+	// persistSkills is what a store may record: the resolved answer, except under
+	// an inference, where only a flag counts.
+	persistSkills string
 	// absent is what detection did not find: a client whose config folder is not
 	// in this home. It is reported, because an installer that stays quiet about a
 	// client looks like it forgot one.

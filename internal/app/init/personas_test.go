@@ -25,80 +25,6 @@ func runProfiled(files *fakeFiles, profiles fakeProfiles) initapp.Result {
 	return initapp.Run(initapp.Options{Dir: dir, Profiles: profiles}, files, &fakeSkills{})
 }
 
-// TestInitWritesTheNativeAgent: one file per client, the same block the agent
-// reads in AGENTS.md, and the report says how the human picks it. The old
-// v0.10.0 files are not rewritten under their old names.
-func TestInitWritesTheNativeAgent(t *testing.T) {
-	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
-
-	got := run(files)
-
-	if got.Code != 0 {
-		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
-	}
-
-	block, err := rules.Body(persona.Novato)
-	if err != nil {
-		t.Fatalf("rules.Body(novato): %v", err)
-	}
-	for _, client := range persona.Clients() {
-		file, ok := persona.FilesFor(client.Agent, block)
-		if !ok {
-			t.Fatalf("persona.FilesFor(%q) does not exist", client.Agent)
-		}
-		content, ok := files.get(file.Path)
-		if !ok {
-			t.Errorf("%s was not written", file.Path)
-			continue
-		}
-		if content != file.Content {
-			t.Errorf("%s is not the mirror of the block:\n%q\nvs\n%q", file.Path, content, file.Content)
-		}
-		if !strings.Contains(strings.Join(got.Lines, "\n"), client.Dir) {
-			t.Errorf("the lines do not name %s:\n%s", client.Dir, strings.Join(got.Lines, "\n"))
-		}
-	}
-	for _, file := range persona.Deprecated() {
-		if _, ok := files.get(file); ok {
-			t.Errorf("%s was written again: the agent of this version is %s", file, persona.FileName)
-		}
-	}
-}
-
-// TestInitBacksUpAHandEditedAgent: the file is generated, so a human edit is
-// lost work. init keeps it in a .bak before replacing it and says it wrote.
-func TestInitBacksUpAHandEditedAgent(t *testing.T) {
-	path := ".opencode/agents/odachi.md"
-	files := newFakeFiles(map[string]string{
-		".git/HEAD": "ref: refs/heads/main\n",
-		path:        "editado a mano\n",
-	})
-
-	got := run(files)
-
-	if got.Code != 0 {
-		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
-	}
-	backup, wrote := -1, -1
-	for i, event := range files.events {
-		switch {
-		case event == "backup "+path:
-			backup = i
-		case event == "write "+path:
-			wrote = i
-		}
-	}
-	if backup < 0 || wrote < 0 || backup > wrote {
-		t.Fatalf("the backup must come before the write: %v", files.events)
-	}
-	if content, _ := files.get(path); content == "editado a mano\n" {
-		t.Errorf("the agent kept the hand edit instead of the mirror")
-	}
-	if !strings.Contains(strings.Join(got.Lines, "\n"), persona.FileName) {
-		t.Errorf("the lines do not say which agent was written:\n%s", strings.Join(got.Lines, "\n"))
-	}
-}
-
 // fakeHome is the Home port: where the human lives, or the reason there is no
 // answer. init must not reach os to find it.
 type fakeHome struct {
@@ -173,30 +99,6 @@ func TestInitGlobalInstallsTheGlobalDoor(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(again.Lines, "\n"), "unchanged") {
 		t.Errorf("the second run does not say the door was already there:\n%s", strings.Join(again.Lines, "\n"))
-	}
-}
-
-// TestInitKeepsTheProjectWhenTheHomeIsNotWritable: the project half is done and
-// the home half is pending. Exit 0, because the project is ready; the line names
-// the command that retries it.
-func TestInitKeepsTheProjectWhenTheHomeIsNotWritable(t *testing.T) {
-	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
-
-	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{err: errors.New("no home")}, Global: true}, files, &fakeSkills{})
-
-	if got.Code != 0 {
-		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
-	}
-	for _, path := range []string{"AGENTS.md", ".opencode/agents/odachi.md", ".claude/output-styles/odachi.md"} {
-		if _, ok := files.get(path); !ok {
-			t.Errorf("%s was not written: the project was left half done", path)
-		}
-	}
-	joined := strings.Join(got.Lines, "\n")
-	for _, want := range []string{"pending:", "home", "odachi init"} {
-		if !strings.Contains(joined, want) {
-			t.Errorf("the lines do not say %q:\n%s", want, joined)
-		}
 	}
 }
 
@@ -368,13 +270,13 @@ func TestInitGlobalInstallsTheGlobalSubagents(t *testing.T) {
 	}
 }
 
-// TestInitNoProjectAgentsWritesTheHomeOnly: the clean mode. The project keeps
-// the rules and the plan; the door and its subagents live in the home.
-func TestInitNoProjectAgentsWritesTheHomeOnly(t *testing.T) {
+// TestInitWritesTheHomeOnly: the project keeps the rules and the plan; the door
+// and its subagents live in the home, and nothing writes a project agent file.
+func TestInitWritesTheHomeOnly(t *testing.T) {
 	home := "hogar"
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
-	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}, Global: true, NoProjectAgents: true}, files, &fakeSkills{})
+	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: home}, Global: true}, files, &fakeSkills{})
 
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0 (message %q)", got.Code, got.Message)
@@ -402,21 +304,6 @@ func TestInitNoProjectAgentsWritesTheHomeOnly(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(got.Lines, "\n"), "not written") {
 		t.Errorf("the report does not say the project agents were skipped:\n%s", strings.Join(got.Lines, "\n"))
-	}
-}
-
-// TestInitNoProjectAgentsNeedsGlobal: skipping both halves would leave no agent
-// at all, so the flag names what it needs.
-func TestInitNoProjectAgentsNeedsGlobal(t *testing.T) {
-	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
-
-	got := initapp.Run(initapp.Options{Dir: dir, Home: fakeHome{dir: "hogar"}, NoProjectAgents: true}, files, &fakeSkills{})
-
-	if got.Code == 0 {
-		t.Fatal("init accepted --no-project-agents without --global")
-	}
-	if !strings.Contains(got.Message, "--global") {
-		t.Errorf("the refusal does not name --global: %q", got.Message)
 	}
 }
 

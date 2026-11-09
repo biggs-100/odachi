@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/domain/persona"
-	"github.com/biggs-100/odachi/internal/domain/rules"
 )
 
 // PersonaDest is one client's native agent directory and what this run did
@@ -29,100 +28,8 @@ type PersonaDest struct {
 	Files []string
 }
 
-// The two scopes a native agent has.
-const (
-	ScopeProject = "project"
-	ScopeHome    = "home"
-)
-
-// writePersonas writes the native agent every client that has a selector gets:
-// the primary mirror of the block, plus the bounded worker and the read-only
-// verifier the parent invokes as subagents. The primary mirrors the block; the
-// subagents carry the handoff contract.
-//
-// Generated, therefore idempotent: an identical file is not rewritten and a
-// differing one is backed up before the rewrite, because the human reads that the
-// file is generated on its first line and a hand edit is lost work either way.
-func (r *runner) writePersonas() *Result {
-	block, err := rules.BodyFor(r.voiceName, r.skillsScope)
-	if err != nil {
-		return personaBlocked("could not build the native agent", err)
-	}
-
-	for _, client := range r.clients {
-		primary, hasPrimary := persona.FilesFor(client.Agent, block)
-		subs := persona.SubagentFilesFor(client.Agent)
-
-		// A client can read the primary and its subagents from the same folder
-		// (OpenCode) or from two (Claude Code). Grouping by folder keeps the
-		// report honest: one line per destination, never a file named under the
-		// wrong folder.
-		if hasPrimary && client.Dir == client.SubagentDir {
-			files := append([]persona.File{primary}, subs...)
-			if problem := r.writePersonaGroup(client, client.Dir, files, client.Switch, len(subs) > 0); problem != nil {
-				return problem
-			}
-			continue
-		}
-
-		if hasPrimary {
-			if problem := r.writePersonaGroup(client, client.Dir, []persona.File{primary}, client.Switch, false); problem != nil {
-				return problem
-			}
-		}
-		if len(subs) > 0 {
-			if problem := r.writePersonaGroup(client, client.SubagentDir, subs, "the subagents are invoked by the agent", false); problem != nil {
-				return problem
-			}
-		}
-	}
-	return nil
-}
-
-// writePersonaGroup writes every generated file of one directory, reports one
-// row for that directory, and one line for the human.
-func (r *runner) writePersonaGroup(client persona.Client, dir string, files []persona.File, switchText string, subagents bool) *Result {
-	dest := PersonaDest{Client: client.Agent, Scope: ScopeProject, Dir: dir}
-	var written, kept []string
-
-	for _, file := range files {
-		path := filepath.Join(r.dir, filepath.FromSlash(file.Path))
-		name := filepath.Base(path)
-
-		exists, err := r.files.Exists(path)
-		if err != nil {
-			return personaBlocked("could not check "+file.Path, err)
-		}
-		if exists {
-			current, err := r.files.Read(path)
-			if err != nil {
-				return personaBlocked("could not read "+file.Path, err)
-			}
-			if string(current) == file.Content {
-				dest.Kept++
-				dest.Files = append(dest.Files, file.Path)
-				kept = append(kept, name)
-				continue
-			}
-			if _, err := r.files.Backup(path); err != nil {
-				return personaBlocked("could not back up "+file.Path+" before rewriting it", err)
-			}
-		}
-
-		if err := r.files.Write(path, []byte(file.Content)); err != nil {
-			return personaBlocked("could not write "+file.Path, err)
-		}
-		dest.Written++
-		dest.Files = append(dest.Files, file.Path)
-		r.personaFiles = append(r.personaFiles, file.Path)
-		written = append(written, name)
-	}
-
-	r.personaDests = append(r.personaDests, dest)
-	r.personaLabels = append(r.personaLabels, dir)
-	r.lines = append(r.lines, personaLine(dir, switchText, written, kept, subagents, r.dryRun))
-	return nil
-}
+// The scope a native agent has.
+const ScopeHome = "home"
 
 // installGlobalPersonas writes the door in the human's home: the agent that
 // appears in every folder, not only in the project that ran init. A home that

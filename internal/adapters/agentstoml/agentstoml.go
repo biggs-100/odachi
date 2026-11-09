@@ -89,7 +89,7 @@ func Render(store persona.Store) ([]byte, error) {
 		"# odachi: which clients receive the native agent; changing the choice does not delete it, it only stops writing it\n" +
 		"agents = \"" + normalized + "\"\n"
 	if projectAgents != "" {
-		text += "# odachi: project_agents = none keeps the agent in the home; write puts the project's own copy back\n" +
+		text += "# odachi: project_agents is what an older release recorded; this version writes no project agent, so the key does nothing\n" +
 			"project_agents = \"" + projectAgents + "\"\n"
 	}
 	if skills != "" {

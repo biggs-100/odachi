@@ -1174,17 +1174,16 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	result := initapp.Run(initapp.Options{
-		Dir:             dir,
-		Exe:             hookExe(),
-		PathMissing:     pathMissing(),
-		Profiles:        writtenProfile{},
-		Agents:          agents,
-		AgentSelection:  agentSelection{},
-		Home:            osHome{},
-		Global:          true,
-		NoProjectAgents: true,
-		Skills:          skillsScope,
-		Existing:        existing,
+		Dir:            dir,
+		Exe:            hookExe(),
+		PathMissing:    pathMissing(),
+		Profiles:       writtenProfile{},
+		Agents:         agents,
+		AgentSelection: agentSelection{},
+		Home:           osHome{},
+		Global:         true,
+		Skills:         skillsScope,
+		Existing:       existing,
 	}, disk(dir), &initSkills{dir: dir, verb: "odachi init"})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
@@ -1831,15 +1830,14 @@ setup flags:
                   the bytes exactly as they were
   --json          machine output
 
-what init leaves written, in one command (--skills project and --agents both, the defaults):
+what init leaves written, in one command (~/.agents/skills is the default; --skills project puts the craft here):
   AGENTS.md              the rules block the agent reads, with the voice at the end
-  .opencode/agents       odachi.md (chosen with Tab) + odachi-worker.md and odachi-verify.md (subagents)
-  .claude/output-styles  odachi.md: the same block, to choose it with /config in this project
-  .claude/agents         odachi-worker.md and odachi-verify.md: the Claude Code subagents
   .gitignore             /proof/, /.odachi/reviews/ and *.bak-* do not dirty the tree
   .git/hooks/commit-msg  no commit without odachi check --message green
-  .agents/skills         the project's skills: the folder every client reads
-  ~/.agents/skills       the bootstrap skill: how to start a project from scratch
+  .agents/skills         with --skills project: this project's own copy of the craft
+  ~/.agents/skills       the default: one copy of the craft per machine
+
+no command writes an agent file in the project: the agent is the door in the home.
 
 the home door -the agent that shows up in any folder- is opt-in: an init without
 --global does not write it. With --global it goes to ~/.config/opencode/agents and

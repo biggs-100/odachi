@@ -11,8 +11,7 @@ import (
 
 // TestGlobalInitLeavesTheProjectAgentsAlone: a global install is a machine decision,
 // not a project one. The door lives in the home and runs in every folder, so the
-// project keeps only the rules and the plan - and the choice is remembered, so a
-// later plain init in the same clone honors it instead of rebuilding the mirrors.
+// project keeps only the rules and the plan, and no project agent file appears.
 func TestGlobalInitLeavesTheProjectAgentsAlone(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -31,14 +30,6 @@ func TestGlobalInitLeavesTheProjectAgentsAlone(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(home, filepath.FromSlash(file.Path))); err != nil {
 			t.Errorf("%s was not installed in the home: %v", file.Path, err)
 		}
-	}
-
-	store, err := os.ReadFile(filepath.Join(dir, ".git", "odachi", "agents.toml"))
-	if err != nil {
-		t.Fatalf("the choice was not stored: %v", err)
-	}
-	if !strings.Contains(string(store), `project_agents = "none"`) {
-		t.Errorf("the store does not remember the home-only choice:\n%s", store)
 	}
 }
 
@@ -77,13 +68,11 @@ func TestAPlainInitWritesTheHomeDoorAndNoProjectAgent(t *testing.T) {
 		t.Errorf("the block does not name the machine's copy:\n%s", agents)
 	}
 
-	store, err := os.ReadFile(filepath.Join(dir, ".git", "odachi", "agents.toml"))
-	if err != nil {
-		t.Fatalf("the choice was not stored: %v", err)
-	}
-	for _, want := range []string{`project_agents = "none"`, `skills = "home"`} {
-		if !strings.Contains(string(store), want) {
-			t.Errorf("the store does not keep %q:\n%s", want, store)
+	// A plain init records no decision: nothing was chosen, and the next run infers
+	// the same answers. In particular no `project_agents` key appears.
+	if store, err := os.ReadFile(filepath.Join(dir, ".git", "odachi", "agents.toml")); err == nil {
+		if strings.Contains(string(store), "project_agents") {
+			t.Errorf("a plain init wrote the project_agents key:\n%s", store)
 		}
 	}
 }

@@ -7,6 +7,16 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The app writes no project agent at all.** The project half of `odachi init` is deleted: the
+  `NoProjectAgents` option, the resolver that honoured it and the writers that mirrored the block in
+  `.opencode/agents` and `.claude/output-styles` are gone, with the tests that pinned them. A stored
+  `project_agents` key from an older release is still read, does nothing, and is never rewritten; a
+  project agent file a release left is still named by `doctor`, with its path. A plain `init` records
+  no decision now that none is forced: the store gains no `project_agents` key, and a flag still
+  records what it named. A contract change, minor (0246).
+
 ## v0.34.0 - 2026-11-08
 
 - **The gate sees the message.** `odachi init` installs the gate at `.git/hooks/commit-msg`, the one
