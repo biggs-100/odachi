@@ -371,9 +371,46 @@ func load(lay layout, files Files) ([]skill.Skill, error) {
 		parsed.References = references
 		parsed.Assets = assets
 		parsed.FolderProblems = append(problems, assetProblems...)
+		strayProblems, err := straysOf(dirPath, rel, lay.retry, files)
+		if err != nil {
+			return nil, err
+		}
+		parsed.FolderProblems = append(parsed.FolderProblems, strayProblems...)
 		loaded = append(loaded, parsed)
 	}
 	return loaded, nil
+}
+
+// straysOf reports a file at the skill's root that the installer would drop.
+// `odachi pack` writes SKILL.md, references/ and assets/, so anything else in the
+// folder is embedded in the binary and never reaches a project: a body that names
+// one points at a file the installed copy does not have (0252 shipped a NOTICE.md
+// that way).
+func straysOf(dir, rel, retry string, files Files) ([]skill.Problem, error) {
+	names, err := files.List(dir)
+	if err != nil {
+		return nil, fmt.Errorf("could not read %s: %s; check the permissions and run %s again", strings.TrimSuffix(rel, "/"+SkillFile), oneLine(err.Error()), retry)
+	}
+
+	problems := []skill.Problem{}
+	for _, name := range names {
+		if name == SkillFile {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		isDir, err := files.IsDir(path)
+		if err != nil {
+			return nil, fmt.Errorf("could not check %s/%s: %s; check the permissions and run %s again", strings.TrimSuffix(rel, "/"+SkillFile), name, oneLine(err.Error()), retry)
+		}
+		if isDir {
+			continue
+		}
+		problems = append(problems, skill.Problem{
+			File:   strings.TrimSuffix(rel, "/"+SkillFile) + "/" + name,
+			Reason: "it is at the skill's root, and the installer copies SKILL.md, references/ and assets/ only: a project would never see it",
+		})
+	}
+	return problems, nil
 }
 
 // referencesOf reads what a skill folder holds under references/, as paths

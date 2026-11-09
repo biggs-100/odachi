@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The attribution travels with the skill, and a file that cannot travel is refused.** `odachi skills
+  --check` now names every file at a skill's root besides `SKILL.md`: the installer copies `SKILL.md`,
+  `references/` and `assets/` only, so such a file is embedded in the binary and never reaches a
+  project. 0252 shipped a `NOTICE.md` that way, and the installed skill pointed at it. `tui-design`
+  carries its attribution in the body instead. A fix, patch (0253).
+
 ## v0.36.4 - 2026-11-09
 
 - **A terminal is read before it is judged.** `tui-design` designs, critiques and refines a terminal

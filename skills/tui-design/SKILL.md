@@ -55,4 +55,8 @@ open, and the checks that ran.
 
 ## Attribution
 
-The method comes from `gentle-shell`'s `tui-design` (Apache-2.0); `NOTICE.md` names it. The text is ours.
+The method is adapted from `gentle-shell`'s `tui-design` (Apache-2.0,
+github.com/gentleman-programming/gentle-shell), which credits `impeccable` by Paul Bakaus (Apache-2.0)
+for the command methodology. The text here is original, and no file from either project is
+redistributed. It lives in this body because the installer copies `SKILL.md`, `references/` and
+`assets/` only: a file beside them would never reach a project.
