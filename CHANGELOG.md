@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The voice speaks neutral Spanish.** Both voices say it where the rule lives: no regional slang,
+  no voseo and no local expressions -neutral Spanish, the same for every region- while the artifacts
+  stay English. Every project reads the sentence in the block `init` writes, so its next `init`
+  refreshes it. A contract change, minor (0248).
+
 ## v0.35.0 - 2026-11-08
 
 - **The app writes no project agent at all.** The project half of `odachi init` is deleted: the
