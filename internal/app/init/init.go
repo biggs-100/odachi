@@ -659,6 +659,19 @@ func (r *runner) retireOldHook() *Result {
 		r.lines = append(r.lines, hookPathOld+": left alone, it is not odachi's")
 		return nil
 	}
+	// The marker travels with the snippet init tells a human to paste inside their
+	// own hook, so a match is not ownership: a line odachi never writes keeps the
+	// file. Only the hook odachi wrote, line by line, is retired.
+	if !ownGate(string(data)) {
+		r.lines = append(r.lines, hookPathOld+": left alone, it has lines odachi did not write")
+		return nil
+	}
+	// The old hook is not versioned and may carry a human's own checks; the copy
+	// is the difference between a move and a loss.
+	if _, err := r.files.Backup(path); err != nil {
+		problem := blocked("could not back up " + hookPathOld + " before removing it: " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+		return &problem
+	}
 
 	if err := r.files.Remove(path); err != nil {
 		problem := blocked("could not remove " + hookPathOld + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
@@ -667,6 +680,25 @@ func (r *runner) retireOldHook() *Result {
 	r.changed = append(r.changed, hookPathOld)
 	r.lines = append(r.lines, hookPathOld+": removed, the gate lives in "+hookPath)
 	return nil
+}
+
+// ownGate reports whether every line of a hook is one odachi writes. A human's
+// hook that pasted odachi's snippet inside it carries the marker but keeps its
+// own lines, and one of those is enough to make the file the human's.
+func ownGate(content string) bool {
+	for _, raw := range strings.Split(content, "\n") {
+		line := strings.TrimSpace(raw)
+		switch {
+		case line == "", line == "#!/bin/sh":
+		case line == hookMarker, line == hookMarkerOld, line == hookMarkerES:
+		case strings.HasPrefix(line, "ODACHI="):
+		case line == `[ -x "$ODACHI" ] || ODACHI=odachi`:
+		case strings.HasPrefix(line, `"$ODACHI" check`):
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // foreignHook is the refusal: the three lines to paste, and nothing touched.

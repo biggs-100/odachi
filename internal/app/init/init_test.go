@@ -406,8 +406,41 @@ func TestRetiresItsOwnPreCommitHook(t *testing.T) {
 	if !slices.Contains(files.events, "remove .git/hooks/pre-commit") {
 		t.Errorf("events = %v, want the old hook removed", files.events)
 	}
+	if !slices.Contains(files.events, "backup .git/hooks/pre-commit") {
+		t.Errorf("events = %v, want a backup before the removal", files.events)
+	}
 	if !strings.Contains(strings.Join(got.Lines, "\n"), ".git/hooks/pre-commit") {
 		t.Errorf("Lines = %q, want the retirement named", strings.Join(got.Lines, "\n"))
+	}
+}
+
+// A human's hook that pasted odachi's snippet inside it carries the marker and
+// is still the human's: the lines odachi never writes keep the file, byte for
+// byte, and the retirement names it instead of deleting it.
+func TestLeavesAHookThatPastedOdachisSnippet(t *testing.T) {
+	pasted := "#!/bin/sh\nnpm test\n# odachi: no commit with the gate red\n" +
+		"ODACHI='odachi'\n[ -x \"$ODACHI\" ] || ODACHI=odachi\n\"$ODACHI\" check --quiet || exit 1\n"
+	files := newFakeFiles(map[string]string{
+		".git/HEAD":             "ref: refs/heads/main\n",
+		".git/hooks/pre-commit": pasted,
+	})
+
+	got := run(files)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d (message %q)", got.Code, got.Message)
+	}
+	if after, _ := files.get(".git/hooks/pre-commit"); after != pasted {
+		t.Errorf("a pasted hook was touched:\n%q", after)
+	}
+	if slices.Contains(files.events, "remove .git/hooks/pre-commit") {
+		t.Errorf("events = %v, want no removal of a hook odachi did not write alone", files.events)
+	}
+	if slices.Contains(files.events, "backup .git/hooks/pre-commit") {
+		t.Errorf("events = %v, want no backup of a file init does not touch", files.events)
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "lines odachi did not write") {
+		t.Errorf("Lines = %q, want the reason named", strings.Join(got.Lines, "\n"))
 	}
 }
 
