@@ -9,11 +9,11 @@
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
 
 [[rule]]
-not   = "no change to `ui-craft` or `design`: a terminal is not a screen - back when one rule must hold for both"
-paths = ["skills/ui-craft/**", "skills/design/**"]
+not   = "no change to what `review mode` means or writes - back when the switch has to mean something else"
+paths = ["internal/adapters/reviewtoml/**", "internal/app/review/**"]
 deps  = []
 
 [[rule]]
-not   = "no runtime, installer, workflow, canvas or proof change - back when one of those paths changes"
-paths = ["internal/app/bench/**", "internal/bench/**", "internal/domain/bench/**", "cmd/odachi/bench.go", "cmd/odachi/main.go", "scripts/install.ps1", "scripts/install.sh", ".github/workflows/**", "internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts", "proof/**"]
+not   = "no change to the installer, the workflow, the canvas or the proofs - back when one of those paths changes"
+paths = ["internal/app/bench/**", "internal/bench/**", "internal/domain/bench/**", "cmd/odachi/bench.go", "scripts/install.ps1", "scripts/install.sh", ".github/workflows/**", "internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts", "proof/**"]
 deps  = []
