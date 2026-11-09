@@ -200,11 +200,11 @@ func TestTheFlagsAskForTheCopiesAndAreStored(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, ".agents", "skills", "acceptance", "SKILL.md")); err != nil {
 		t.Errorf("the store did not bring the craft back: %v", err)
 	}
-	if !strings.Contains(out+errOut, "from the store") {
+	if !strings.Contains(out+errOut, "skills: project, from the store") {
 		t.Errorf("the run does not say the store decided:\n%s%s", out, errOut)
 	}
-	if strings.Contains(out+errOut, "this repository already lives") {
-		t.Errorf("the plain init ignored the stored choice:\n%s%s", out, errOut)
+	if strings.Contains(out+errOut, "skills: home") {
+		t.Errorf("the plain init ignored the stored scope:\n%s%s", out, errOut)
 	}
 }
 
@@ -339,11 +339,10 @@ func TestAnotherToolsFolderIsNotTheCraft(t *testing.T) {
 	}
 }
 
-// TestTheHomeOnlyAgentIsRecordedEvenWhenOnlyTheCraftWasNamed: a project that chose
-// where the craft goes has not named a client, but it still gets the agent from the
-// home. The CLI records that answer every run, so the next command cannot rebuild a
-// mirror nobody asked for.
-func TestTheHomeOnlyAgentIsRecordedEvenWhenOnlyTheCraftWasNamed(t *testing.T) {
+// TestTheHomeOnlyAgentNeedsNoRecord: a project that named only the craft gets no
+// project agent, and the store keeps the scope it chose without inventing a
+// project_agents key for a decision nobody made.
+func TestTheHomeOnlyAgentNeedsNoRecord(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	dir := t.TempDir()
@@ -360,8 +359,11 @@ func TestTheHomeOnlyAgentIsRecordedEvenWhenOnlyTheCraftWasNamed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the store: %v", err)
 	}
-	if !strings.Contains(string(store), `project_agents = "none"`) {
-		t.Errorf("the store does not keep the home-only agent:\n%s", store)
+	if !strings.Contains(string(store), `skills = "home"`) {
+		t.Errorf("the store does not keep the scope that was chosen:\n%s", store)
+	}
+	if strings.Contains(string(store), "project_agents") {
+		t.Errorf("the store invented a project_agents key:\n%s", store)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".opencode", "agents", "odachi.md")); err == nil {
 		t.Errorf("the mirrors came into the project without a flag asking for them")

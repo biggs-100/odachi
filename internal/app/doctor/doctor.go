@@ -1160,15 +1160,14 @@ func (r *runner) personaNote(clients []persona.Client) (string, bool) {
 		return "the project has no agent files because the store keeps the agent in the home (" + store +
 			"none), and the home does not carry the door: run odachi init", false
 	case choice == persona.ProjectAgentsWrite:
-		// The store says write, and this version writes no project agent. The
-		// answer is stale, not the files: init records the home-only shape.
+		// The store says write, and this version writes no project agent: the key is
+		// inert, not an instruction. A file it wrote is the leftover check's business.
 		return "the store says this project writes its agents (" + store +
-			"write), and they are missing: this version keeps the agent in the home: run odachi init to record it", false
+			"write); this version writes none, so the key does nothing: no command is owed", false
 	case home:
-		// The store is silent and the door is up. init records the answer every
-		// run, so the command that fixes a silent store is the plain one.
-		return "the project has no agent files: the door in the home is the one that runs, and " + persona.SelectionPath +
-			" does not say so; run odachi init to record it", false
+		// The store is silent and the door is up: nothing is missing and there is
+		// nothing to record, because no command chooses a project agent any more.
+		return "the project has no agent files: the door in the home is the one that runs; nothing to record", false
 	default:
 		return "the native agent or its subagents are missing in " + strings.Join(missing, ", ") +
 			"; this version keeps the agent in the home: run odachi init", false

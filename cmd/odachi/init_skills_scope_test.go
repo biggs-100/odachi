@@ -73,8 +73,8 @@ func TestTheSkillsFlagPutsTheProjectCopyBack(t *testing.T) {
 }
 
 // TestAProjectThatNeverChoseReadsTheCraftFromTheMachine: absence of a choice is
-// the default since 0242 -one copy per machine- and the run records it, because
-// the CLI names the home every time. The project carries no copy.
+// the default -one copy per machine- and the project carries no copy. A run that
+// chose nothing records nothing: the store is for decisions, not inferences.
 func TestAProjectThatNeverChoseReadsTheCraftFromTheMachine(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -94,12 +94,8 @@ func TestAProjectThatNeverChoseReadsTheCraftFromTheMachine(t *testing.T) {
 	if !strings.Contains(out, "skills: home (the default)") {
 		t.Errorf("the output does not name the default:\n%s", out)
 	}
-	store, err := os.ReadFile(storePath(dir))
-	if err != nil {
-		t.Fatalf("the run did not record the answers: %v", err)
-	}
-	if !strings.Contains(string(store), `skills = "home"`) {
-		t.Errorf("the store does not keep the scope:\n%s", store)
+	if store, err := os.ReadFile(storePath(dir)); err == nil && strings.Contains(string(store), "project_agents") {
+		t.Errorf("a plain init recorded a project_agents key:\n%s", store)
 	}
 }
 

@@ -12,9 +12,9 @@ R1 · "no path writes a project agent file: the app's project half is deleted, a
 - Unreleased names the change: a contract change, minor
 
 ## Steps
-- [ ] T1 · delete the project half: the option, the resolver and the writers, with their tests   R1 · route:inline
-- [ ] T2 · a stored project_agents stays readable and inert, and doctor keeps naming a project agent file a release left   R1 · route:inline
-- [ ] T3 · Unreleased and the impact map name the deletion as a contract change, minor   R1 · route:inline
+- [x] T1 · delete the project half: the option, the resolver and the writers, with their tests   R1 · route:inline
+- [x] T2 · a stored project_agents stays readable and inert, and doctor keeps naming a project agent file a release left   R1 · route:inline
+- [x] T3 · Unreleased and the impact map name the deletion as a contract change, minor   R1 · route:inline
 
 ## History
 L1 · "no path writes a project agent file: the app's project half is deleted, and a stored `project_agents` value only names what an older release did"

@@ -1351,9 +1351,10 @@ func TestDoctorCallsTheCleanModeADecision(t *testing.T) {
 	}
 }
 
-// TestDoctorNamesAProjectWhoseStoreSaysNothing: the mirrors are gone and nothing
-// recorded where they went. The clean mode is not a decision the tool can assume:
-// the line names the command that records it, instead of blessing the absence.
+// TestDoctorNamesAProjectWhoseStoreSaysNothing: the project agent files are gone
+// and the store says nothing. Since 0246 that silence is the shape, not a gap:
+// the line names the door and owes no command, because no command records a
+// project agent any more.
 func TestDoctorNamesAProjectWhoseStoreSaysNothing(t *testing.T) {
 	files := configured()
 	body, err := rules.Body(persona.Novato)
@@ -1375,10 +1376,11 @@ func TestDoctorNamesAProjectWhoseStoreSaysNothing(t *testing.T) {
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
 	got := checkOf(t, result, domaindoctor.CheckVoice)
-	for _, want := range []string{persona.SelectionPath, "run odachi init to record it"} {
-		if !strings.Contains(got.Detail, want) {
-			t.Errorf("the line must say %q: %q", want, got.Detail)
-		}
+	if !strings.Contains(got.Detail, "the door in the home is the one that runs") {
+		t.Errorf("the line must name the door: %q", got.Detail)
+	}
+	if !strings.Contains(got.Detail, "nothing to record") {
+		t.Errorf("the line must say there is nothing to record: %q", got.Detail)
 	}
 	if strings.Contains(got.Detail, "--agents") {
 		t.Errorf("the line offers a flag that no longer writes a project agent: %q", got.Detail)

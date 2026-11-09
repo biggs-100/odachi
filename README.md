@@ -363,10 +363,10 @@ The **voice** is how deep the agent explains while it works: `novato` teaches
 the craft step by step, and `senior` leads with the decision and explains its why
 and its cost in fewer lines. Both name and define a concept the first time it
 appears and say what an answer changes before asking. It lives in the last
-section of the `AGENTS.md` block, `## How you speak`, and in the native agent that
-mirrors that block.
+section of the `AGENTS.md` block, `## How you speak`, and in the native agent
+the door in the home hands over to.
 `odachi init` writes the `novato` voice if there is no profile yet, and
-`odachi level --to <profile>` changes the profile, that section and the mirror
+`odachi level --to <profile>` changes the profile and that section
 together —and nothing else in the block—.
 
 The native agent has one copy per chosen client, in the home. The **door** is

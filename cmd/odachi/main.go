@@ -1174,17 +1174,16 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	result := initapp.Run(initapp.Options{
-		Dir:             dir,
-		Exe:             hookExe(),
-		PathMissing:     pathMissing(),
-		Profiles:        writtenProfile{},
-		Agents:          agents,
-		AgentSelection:  agentSelection{},
-		Home:            osHome{},
-		Global:          true,
-		NoProjectAgents: true,
-		Skills:          skillsScope,
-		Existing:        existing,
+		Dir:            dir,
+		Exe:            hookExe(),
+		PathMissing:    pathMissing(),
+		Profiles:       writtenProfile{},
+		Agents:         agents,
+		AgentSelection: agentSelection{},
+		Home:           osHome{},
+		Global:         true,
+		Skills:         skillsScope,
+		Existing:       existing,
 	}, disk(dir), &initSkills{dir: dir, verb: "odachi init"})
 	if created {
 		line := "project history: I created it in this folder (git init); it is what lets me prove that a proof belongs to this state of the code"
