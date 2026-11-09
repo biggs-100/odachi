@@ -5,8 +5,9 @@
 
 ## Done when
 - `odachi init` installs the gate at `commit-msg`, the hook that sees the message, idempotent, that leaves a foreign `commit-msg` alone and names it, and retires odachi's own `pre-commit` hook while leaving one a project wrote untouched; `odachi doctor` names a missing or foreign gate hook
-- a branch whose commit message carries `Odachi-Change: <line>` passes `git commit`: the gate reads the line from the message file, checks the fence against what is staged, and defers the proof, which is owed by the tree that carries the commit
-- the lane's refusals keep working from the message file: an empty line, two different lines, a trailer on the default branch, and a fork point git cannot find
+- a branch whose commit message carries `Odachi-Change: <line>` passes `git commit`: the gate reads the line from the message file, checks the fence against the worktree, the candidate the gate always reads, and defers the proof, which is owed by the tree that carries the commit
+- the lane's refusals keep working from the message file: an empty line, two different lines, and a trailer on the default branch; the fork point is checked once the commit exists, in the commit lane
+- a repository with no remote keeps the lane closed, the same rule the commit lane already follows
 - a message with no trailer keeps today's answer: the gate refuses a commit whose tree has no proof, exactly as the `pre-commit` hook did
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
 - Unreleased names the change: a contract change, minor
