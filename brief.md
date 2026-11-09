@@ -1,27 +1,27 @@
-# tui-design
+# review-on-by-default
 
 ## What must exist
-- a skill that designs, critiques and refines a terminal UI from a captured frame, with the floor and the eyes
+- a new project is born with the review on: `init` writes `odd/review.toml` with `mode = "on"` and never replaces one
 
 ## Done when
-- `skills/tui-design/SKILL.md` loads on a terminal UI request, routes with gates and stays under 60 lines
-- five references: terminal-craft, critique, commands, visual-loop and design-doc
-- `NOTICE.md` names the source: gentle-shell's tui-design, Apache-2.0, and impeccable behind it
-- `skills/embed_test.go` names it in `bundled`, `SKILLS.md` regenerates, the impact map counts it, doctor says 21
+- `odachi init` writes `odd/review.toml` with `mode = "on"` when the project has none, through the writer `review mode on` uses
+- a project that already has the file keeps it byte for byte, and the run says it kept it
+- `init --json` reports the file it wrote or kept
+- `odachi check` on a project with that file asks for the verdict the mode owes
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
-- Unreleased names the change: a new capability, patch (0252)
+- Unreleased names the change: a contract change, minor (0254)
 
 ## Not included (first version)
-- no harness of its own: the loop uses the project's test or snapshot flag - back when a project cannot capture
-- no change to `ui-craft` or `design`: a terminal is not a screen - back when one rule must hold for both
-- no runtime, installer, workflow, canvas or proof change - back when one of those paths changes
-- no verbatim port of their text: the method is adopted, the words are ours - back when both must stay in step
+- no change to a project without the file: absence keeps meaning optional there - back when the human asks for a global default
+- no model pinned by init: the reviewer uses the session's model - back when a project needs [lenses] at birth
+- no change to the installer, the workflow, the canvas or the proofs - back when one of those paths changes
+- no change to what `review mode` means or writes - back when the switch has to mean something else
 
 ## Decisions taken
-- The eyes are a text frame at 80x24, 140 and 180x50; a PNG is optional and named when it exists.
-- The design context lives in `design/system.md` with a terminal section, not in a second file.
-- The method is Apache-2.0 and this project is MIT: original text and a NOTICE, the way they credited impeccable.
-- The floor is implementation-agnostic; the loop is concrete for Go and gives a way out for other stacks.
+- The default is a file, not an absence: a project that never wrote one keeps the behaviour it had.
+- `init` never overwrites the file: an existing one is the human's decision.
+- A new project with no reachable model closes by configuring one or by `review waive`; the gate names both.
+- It is a contract change: the step a new project follows at a close now includes a verdict.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: whether a scored critique read from a text frame finds the same defects a screenshot does.
+- Wants to learn: whether the review on from the first commit catches what a project only learns later.
