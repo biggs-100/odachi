@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **ui-craft starts from the job.** The skill now carries the five jobs a surface serves —find, compare,
+  act, read, decide— with the content it may use, the label that predicts its outcome, and the six states
+  with the sentence each one says. The accessibility figures cite WCAG 2.2 and say that a ratio is not
+  conformance. The three gaps the comparison with gentle-ui-design found in this project. A capability of
+  the skill, patch (0251).
+
 ## v0.36.2 - 2026-11-09
 
 - **Motion graphics is a skill.** A request for a title card, a stat, a logo sting or a short video for
