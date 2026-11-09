@@ -1,28 +1,28 @@
-# a-project-writes-nothing
+# motion-graphics
 
 ## What must exist
-- no path writes a project agent file: the app's project half is deleted, and a stored `project_agents` value only names what an older release did
+- a skill that turns a request for a motion graphic or a YouTube or Reels video into a piece that reads senior
 
 ## Done when
-- neither `odachi init` nor the app's `Run` carries an option or a branch that writes a project agent file: `NoProjectAgents`, `resolveProjectAgents` and `writePersonas` with its helpers are gone
-- a stored `project_agents = "write"` is still read, does nothing, and is not rewritten; `doctor` keeps naming a project agent file an older release left, with its path
-- the tests that pinned the project mirror are deleted and the ones that pin the home door still pass
+- `skills/motion-graphics/SKILL.md` has a human trigger, rules, gates, references and output, under 60 lines
+- six references: the-piece, motion-principles, the-ai-look, type-in-motion, formats, the-render
+- `assets/scene-plan.md` is the template a piece is written on before a frame is animated
+- `odachi skills --check` is green, `skills --write` regenerates SKILLS.md, doctor counts 20 skills
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
-- Unreleased names the change: a contract change, minor
+- Unreleased names the change: a new capability, patch (0250)
 
 ## Not included (first version)
-- no change to the bundled skill texts: the 19 keep their words - back when the lane needs a sentence they do not already say
-- no change to the review or the classifier - back when a verdict has to read something the diff cannot show
-- no change to odachi bench and no new verb - back when a bench journey crosses a commit, or a human asks for a verb
-- no change to the stored proofs: never touched - never; they are the evidence
-- no change to the design canvas, its token or the installers - back when an install path changes
-- no change to the release workflow - back when a release must run a command the workflow does not run today
-- no deletion of an agent file a project already has - back when a human asks for a migration verb; the file is named, never removed
-- no change to `setup`, which already writes the home only - back when the home half moves
+- no renderer or dependency shipped: the skill names HyperFrames and stops when missing - back when odachi must render
+- no sourcing, narration, avatars, b-roll or footage editing: media-use and hyperframes own it - back when a piece needs them
+- no change to ui-craft's motion reference: screen motion is not video motion - back when one rule must hold for both
+- no caption timing or transcript alignment - back when captions must be generated from audio, not written
+- no bench, verb, installer, workflow, canvas or proof change - back when the bench must judge a skill
 
 ## Decisions taken
-- It is used from the computer, by a person maintaining the tool.
+- It is used from the computer, by a person who asks for a video or a motion graphic for YouTube or Reels.
+- HyperFrames is the default renderer and Remotion the named alternative; the skill claims no frame it did not render.
+- Scope: motion-led pieces up to about 60 s, narrated or not, where the movement carries the message.
+- Depth lives in references/ and the body stays under 60 lines (ADR 0050).
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: whether deleting the last project writer leaves the store's key harmless.
-- A stored `project_agents = "write"` stays readable and inert; the clon's file is not rewritten by init.
+- Wants to learn: whether naming the machine-made tells in one place makes a piece read senior on the first render.
