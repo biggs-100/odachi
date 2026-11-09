@@ -153,6 +153,121 @@ func TestANamedFeatureIsNotReplacedByATrailer(t *testing.T) {
 	}
 }
 
+// commitMessage is the file git hands the commit-msg hook: the message, before
+// it is a commit.
+const commitMessage = ".git/COMMIT_EDITMSG"
+
+// withMessage seeds a project with the message git hands the commit-msg hook.
+func withMessage(seed map[string]string, message string) *fakeFiles {
+	seed[commitMessage] = message
+	return newFakeFiles(seed)
+}
+
+// messageGit is a branch that is not the default one: the lane lives on a branch.
+func messageGit() *fakeGit {
+	return &fakeGit{
+		tree:          currentTree,
+		changed:       []string{"cmd/odachi/main.go"},
+		mergeBase:     otherTree,
+		defaultBranch: "main",
+	}
+}
+
+// The hook that sees the message judges the change before the commit exists and
+// defers its proof: no commit carries the tree yet, so the proof is owed by the
+// one that will.
+func TestAMessageThatNamesAChangeDefersItsProof(t *testing.T) {
+	files := withMessage(closedFiles(), "the wait state\n\nOdachi-Change: "+changeLine+"\n")
+
+	got := run(t, files, messageGit(), check.Options{ChangeBase: "origin/main", Message: commitMessage})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("Code = %d (%s): %s\n%s", got.Code, got.Reason, got.Message, strings.Join(got.Lines, "\n"))
+	}
+	if !strings.Contains(got.Message, "proof is owed") {
+		t.Errorf("Message = %q, want the proof named as owed after the commit", got.Message)
+	}
+}
+
+// A message with no trailer keeps the answer the pre-commit hook always gave:
+// the newest document is the feature and its proof is the one that counts.
+func TestAMessageWithNoTrailerKeepsTheAnswer(t *testing.T) {
+	files := withMessage(closedFiles(), "a plain commit, no trailer\n")
+
+	got := run(t, files, messageGit(), check.Options{ChangeBase: "origin/main", Message: commitMessage})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("Code = %d (%s): %s", got.Code, got.Reason, got.Message)
+	}
+}
+
+// The lane lives on a branch, and the message is where that is decided before the
+// commit exists.
+func TestAMessageOnTheDefaultBranchIsRefused(t *testing.T) {
+	files := withMessage(closedFiles(), "the wait state\n\nOdachi-Change: "+changeLine+"\n")
+	git := messageGit()
+	git.onDefault = true
+
+	got := run(t, files, git, check.Options{ChangeBase: "origin/main", Message: commitMessage})
+
+	if got.Code == int(gate.Ready) {
+		t.Fatalf("a trailer on the default branch was ready")
+	}
+	if !strings.Contains(got.Message, "branch") || !strings.Contains(got.Message, "main") {
+		t.Fatalf("the refusal does not name the branch: %q", got.Message)
+	}
+}
+
+// The message is read by the same parser as the commits, so its refusals are the
+// same refusals.
+func TestAMessageRefusalIsNamed(t *testing.T) {
+	cases := []struct {
+		name    string
+		message string
+		want    string
+	}{
+		{name: "empty line", message: "x\n\nOdachi-Change:   \n", want: "Odachi-Change"},
+		{
+			name:    "two lines",
+			message: "x\n\nOdachi-Change: one line\nOdachi-Change: another line\n",
+			want:    "different",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			files := withMessage(closedFiles(), tc.message)
+
+			got := run(t, files, messageGit(), check.Options{ChangeBase: "origin/main", Message: commitMessage})
+
+			if got.Code == int(gate.Ready) {
+				t.Fatalf("a refused message was ready")
+			}
+			if !strings.Contains(got.Message, tc.want) {
+				t.Errorf("Message = %q, want it to name %q", got.Message, tc.want)
+			}
+		})
+	}
+}
+
+// A message lane never runs the suite: the proof is the tree's business once the
+// commit exists. Asking for both is a mistake that would run twice for nothing.
+func TestMessageAndRunDoNotGoTogether(t *testing.T) {
+	files := withMessage(closedFiles(), "x\n\nOdachi-Change: "+changeLine+"\n")
+
+	got := run(t, files, messageGit(), check.Options{
+		ChangeBase: "origin/main",
+		Message:    commitMessage,
+		Run:        "go test ./...",
+	})
+
+	if got.Code == int(gate.Ready) {
+		t.Fatalf("--message and --run together were ready")
+	}
+	if !strings.Contains(got.Message, "--message") || !strings.Contains(got.Message, "--run") {
+		t.Errorf("Message = %q, want both flags named", got.Message)
+	}
+}
+
 // A trailer whose fork point cannot be found is refused by name: a change that
 // cannot say where it started cannot be reviewed against anything.
 func TestATrailerWithNoMergeBaseIsRefused(t *testing.T) {

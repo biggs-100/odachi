@@ -83,6 +83,13 @@ func (f *fakeFiles) Backup(path string) (string, error) {
 	return path + ".bak-test", nil
 }
 
+func (f *fakeFiles) Remove(path string) error {
+	f.events = append(f.events, "remove "+slashed(dir, path))
+	delete(f.files, path)
+	delete(f.modes, path)
+	return nil
+}
+
 func (f *fakeFiles) MakeExecutable(path string) error {
 	if f.modeErr != nil {
 		return f.modeErr
@@ -191,7 +198,7 @@ func TestRerunIsIdempotent(t *testing.T) {
 		t.Fatalf("first run code = %d", code)
 	}
 	first, _ := files.get("AGENTS.md")
-	hookFirst, _ := files.get(".git/hooks/pre-commit")
+	hookFirst, _ := files.get(".git/hooks/commit-msg")
 
 	files.events = nil
 	got := run(files)
@@ -205,7 +212,7 @@ func TestRerunIsIdempotent(t *testing.T) {
 	if second, _ := files.get("AGENTS.md"); second != first {
 		t.Errorf("AGENTS.md changed on a rerun:\n%q\nvs\n%q", second, first)
 	}
-	if second, _ := files.get(".git/hooks/pre-commit"); second != hookFirst {
+	if second, _ := files.get(".git/hooks/commit-msg"); second != hookFirst {
 		t.Errorf("the hook changed on a rerun:\n%q\nvs\n%q", second, hookFirst)
 	}
 	if !strings.Contains(got.Message, "unchanged") {
@@ -279,7 +286,7 @@ func TestInstallsTheHook(t *testing.T) {
 	if got.Code != 0 {
 		t.Fatalf("Code = %d (message %q)", got.Code, got.Message)
 	}
-	hook, ok := files.get(".git/hooks/pre-commit")
+	hook, ok := files.get(".git/hooks/commit-msg")
 	if !ok {
 		t.Fatalf("the hook was not written; events: %v", files.events)
 	}
@@ -289,13 +296,13 @@ func TestInstallsTheHook(t *testing.T) {
 	if !strings.Contains(hook, "# odachi") {
 		t.Errorf("hook has no marker comment:\n%s", hook)
 	}
-	if !strings.Contains(hook, "check --quiet || exit 1") {
-		t.Errorf("hook does not run the gate:\n%s", hook)
+	if !strings.Contains(hook, `check --message "$1" --quiet || exit 1`) {
+		t.Errorf("hook does not run the gate on the message it was given:\n%s", hook)
 	}
-	if !slices.Contains(files.events, "chmod .git/hooks/pre-commit") {
+	if !slices.Contains(files.events, "chmod .git/hooks/commit-msg") {
 		t.Errorf("events = %v, want the hook made executable", files.events)
 	}
-	if !slices.Contains(got.Files, ".git/hooks/pre-commit") {
+	if !slices.Contains(got.Files, ".git/hooks/commit-msg") {
 		t.Errorf("Files = %v, want it to list the hook", got.Files)
 	}
 }
@@ -306,7 +313,7 @@ func TestForeignHookIsNotClobbered(t *testing.T) {
 	foreign := "#!/bin/sh\necho hello\n"
 	files := newFakeFiles(map[string]string{
 		".git/HEAD":             "ref: refs/heads/main\n",
-		".git/hooks/pre-commit": foreign,
+		".git/hooks/commit-msg": foreign,
 	})
 
 	got := run(files)
@@ -314,18 +321,18 @@ func TestForeignHookIsNotClobbered(t *testing.T) {
 	if got.Code != 1 {
 		t.Fatalf("Code = %d, want 1 (message %q)", got.Code, got.Message)
 	}
-	if !strings.Contains(got.Message, ".git/hooks/pre-commit") {
+	if !strings.Contains(got.Message, ".git/hooks/commit-msg") {
 		t.Errorf("Message = %q, want it to name the file", got.Message)
 	}
-	if after, _ := files.get(".git/hooks/pre-commit"); after != foreign {
+	if after, _ := files.get(".git/hooks/commit-msg"); after != foreign {
 		t.Errorf("the foreign hook was modified:\n%q", after)
 	}
-	if slices.Contains(files.events, "chmod .git/hooks/pre-commit") {
+	if slices.Contains(files.events, "chmod .git/hooks/commit-msg") {
 		t.Errorf("events = %v, want no chmod of a foreign hook", files.events)
 	}
 
 	printed := strings.Join(got.Lines, "\n")
-	for _, want := range []string{"#!/bin/sh", "# odachi", "check --quiet || exit 1"} {
+	for _, want := range []string{"#!/bin/sh", "# odachi", `check --message "$1" --quiet || exit 1`} {
 		if !strings.Contains(printed, want) {
 			t.Errorf("Lines = %q, want the three lines to paste (missing %q)", printed, want)
 		}
@@ -344,7 +351,7 @@ func TestOurHookIsNotRefused(t *testing.T) {
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0: our own hook is not foreign (message %q)", got.Code, got.Message)
 	}
-	if slices.Contains(files.events, "backup .git/hooks/pre-commit") {
+	if slices.Contains(files.events, "backup .git/hooks/commit-msg") {
 		t.Errorf("events = %v, want no backup of an unchanged hook", files.events)
 	}
 }
@@ -357,7 +364,7 @@ func TestTheSpanishHookMarkerIsStillOurs(t *testing.T) {
 		"ODACHI='odachi'\n[ -x \"$ODACHI\" ] || ODACHI=odachi\n\"$ODACHI\" check --quiet || exit 1\n"
 	files := newFakeFiles(map[string]string{
 		".git/HEAD":             "ref: refs/heads/main\n",
-		".git/hooks/pre-commit": old,
+		".git/hooks/commit-msg": old,
 	})
 
 	got := run(files)
@@ -365,15 +372,67 @@ func TestTheSpanishHookMarkerIsStillOurs(t *testing.T) {
 	if got.Code != 0 {
 		t.Fatalf("Code = %d, want 0: the old marker is still odachi's (message %q)", got.Code, got.Message)
 	}
-	after, _ := files.get(".git/hooks/pre-commit")
+	after, _ := files.get(".git/hooks/commit-msg")
 	if strings.Contains(after, "no se commitea") {
 		t.Errorf("the hook kept the old marker:\n%q", after)
 	}
 	if !strings.Contains(after, "# odachi: no commit with the gate red") {
 		t.Errorf("the hook was not rewritten in English:\n%q", after)
 	}
-	if !slices.Contains(files.events, "backup .git/hooks/pre-commit") {
+	if !slices.Contains(files.events, "backup .git/hooks/commit-msg") {
 		t.Errorf("events = %v, want a backup before rewriting the hook", files.events)
+	}
+}
+
+// An older release wrote the gate at pre-commit. The message is only visible at
+// commit-msg, so init moves the gate there and removes its own old hook: two
+// gates would block every commit the new one is meant to let through.
+func TestRetiresItsOwnPreCommitHook(t *testing.T) {
+	old := "#!/bin/sh\n# odachi: no commit with the gate red\n" +
+		"ODACHI='odachi'\n[ -x \"$ODACHI\" ] || ODACHI=odachi\n\"$ODACHI\" check --quiet || exit 1\n"
+	files := newFakeFiles(map[string]string{
+		".git/HEAD":             "ref: refs/heads/main\n",
+		".git/hooks/pre-commit": old,
+	})
+
+	got := run(files)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d (message %q)", got.Code, got.Message)
+	}
+	if _, ok := files.get(".git/hooks/pre-commit"); ok {
+		t.Errorf("odachi's old gate is still there; events %v", files.events)
+	}
+	if !slices.Contains(files.events, "remove .git/hooks/pre-commit") {
+		t.Errorf("events = %v, want the old hook removed", files.events)
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), ".git/hooks/pre-commit") {
+		t.Errorf("Lines = %q, want the retirement named", strings.Join(got.Lines, "\n"))
+	}
+}
+
+// A pre-commit hook somebody else wrote is not odachi's to remove: init names it
+// as a leftover and lets the human decide.
+func TestLeavesAForeignPreCommitHookAndSaysSo(t *testing.T) {
+	foreign := "#!/bin/sh\nnpm test\n"
+	files := newFakeFiles(map[string]string{
+		".git/HEAD":             "ref: refs/heads/main\n",
+		".git/hooks/pre-commit": foreign,
+	})
+
+	got := run(files)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d (message %q)", got.Code, got.Message)
+	}
+	if after, _ := files.get(".git/hooks/pre-commit"); after != foreign {
+		t.Errorf("a foreign hook was touched:\n%q", after)
+	}
+	if slices.Contains(files.events, "remove .git/hooks/pre-commit") {
+		t.Errorf("events = %v, want no removal of a foreign hook", files.events)
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), ".git/hooks/pre-commit") {
+		t.Errorf("Lines = %q, want the leftover named", strings.Join(got.Lines, "\n"))
 	}
 }
 

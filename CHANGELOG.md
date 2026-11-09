@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The gate sees the message.** `odachi init` installs the gate at `.git/hooks/commit-msg`, the one
+  hook git hands the message, and retires odachi's own `.git/hooks/pre-commit` while leaving a hook a
+  project wrote alone. A commit whose message carries `Odachi-Change: <line>` now passes: the gate
+  reads the line before the commit exists, measures the fence against what is staged, and defers the
+  proof to the tree the commit carries. `odachi check --message <path>` is what the hook runs, and a
+  message with no trailer keeps today's answer. A contract change, minor (0245).
+
 ## v0.33.0 - 2026-11-08
 
 - **No command refreshes a project agent any more.** `odachi start` rewrites the voice of the block

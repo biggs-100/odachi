@@ -1,5 +1,5 @@
 // Package doctor owns the rules of `odachi doctor`: the fourteen health checks in
-// order, how the pre-commit hook and the AGENTS.md block written by
+// order, how the commit-msg hook and the AGENTS.md block written by
 // `odachi init` are read back, and the exact phrase that repairs each problem.
 //
 // It is pure: no filesystem, no os, no network. The app layer gathers the facts
@@ -32,7 +32,7 @@ const (
 	CheckGit
 	// CheckAgents asks whether the rules block is in AGENTS.md.
 	CheckAgents
-	// CheckHook asks whether the pre-commit hook exists and is odachi's.
+	// CheckHook asks whether the commit-msg hook exists and is odachi's.
 	CheckHook
 	// CheckHookExe asks whether the binary the hook names is still there.
 	CheckHookExe
@@ -225,7 +225,7 @@ func title(number int) string {
 	case CheckAgents:
 		return "the odachi block is in AGENTS.md"
 	case CheckHook:
-		return "the pre-commit hook is odachi's"
+		return "the commit-msg hook is odachi's"
 	case CheckHookExe:
 		return "the binary the hook names exists"
 	case CheckProfile:
@@ -251,7 +251,7 @@ func title(number int) string {
 	}
 }
 
-// HookMarker starts the line that names a pre-commit hook as odachi's.
+// HookMarker starts the line that names a commit-msg hook as odachi's.
 // `odachi init` writes it right after the shebang and never replaces a hook
 // without it; doctor reads the same string the writer writes, and the CLI test
 // asserts the two agree by running `init` and then `doctor`.

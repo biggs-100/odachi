@@ -308,7 +308,7 @@ func TestCheckProofUsesAGivenProof(t *testing.T) {
 	}
 }
 
-// --quiet is what the pre-commit hook depends on: nothing when ready...
+// --quiet is what the commit-msg hook depends on: nothing when ready...
 func TestQuietPrintsNothingWhenReady(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

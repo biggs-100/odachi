@@ -386,7 +386,7 @@ odachi init [--json]
 ```
 
 1. Escribe en `AGENTS.md` el bloque de reglas (~40 líneas) entre `<!-- odachi:begin -->` y `<!-- odachi:end -->`, con backup previo y escritura atómica. Idempotente: re-correr reemplaza el bloque y conserva todo lo demás del archivo. Si no existe `AGENTS.md`, lo crea. Contenido del bloque (fijo, pineado por test): las cuatro reglas duras — brief antes de código, nada fuera del cerco (`ask`), no decir "listo" sin `check --run`, pedazos chicos con un commit — y los seis verbos con su uso en una línea.
-2. Instala `.git/hooks/pre-commit` con `#!/bin/sh` + `odachi check --quiet || exit 1` y un comentario marcador. Si ya existe un hook distinto, **no lo pisa**: imprime las tres líneas para pegarlo a mano y sale con `1` nombrando el archivo. Re-correr sobre un hook propio es idempotente.
+2. Instala `.git/hooks/commit-msg` con `#!/bin/sh` + `odachi check --message "$1" --quiet || exit 1` y un comentario marcador. Si ya existe un hook distinto, **no lo pisa**: imprime las tres líneas para pegarlo a mano y sale con `1` nombrando el archivo. Re-correr sobre un hook propio es idempotente. Si un release anterior escribió el gate en `pre-commit`, lo retira cuando es de odachi; el que escribió otra persona se nombra y se deja.
 
 ### Tests
 
@@ -854,7 +854,7 @@ Diez chequeos, **de solo lectura**, cada uno con una línea en español y, si al
 | 2 | `odachi` resuelve desde un shell | el agente no puede ejecutar las reglas |
 | 3 | hay `.git` | no hay hook posible |
 | 4 | el bloque de odachi está en `AGENTS.md` (marcadores) | el agente no lee las reglas |
-| 5 | el hook de pre-commit existe y es nuestro | no hay gate local |
+| 5 | el hook de commit-msg existe y es nuestro | no hay gate local |
 | 6 | el binario que nombra el hook existe | el hook falla en cada commit |
 | 7 | `.odachi/profile.toml` resuelve a un perfil válido | ceremonia rota |
 | 8 | `brief.md` existe y no le falta nada | sin visión no hay nada que construir |

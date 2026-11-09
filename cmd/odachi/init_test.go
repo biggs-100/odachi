@@ -18,7 +18,7 @@ func TestInitWritesBothArtifacts(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(out, "AGENTS.md") || !strings.Contains(out, ".git/hooks/pre-commit") {
+	if !strings.Contains(out, "AGENTS.md") || !strings.Contains(out, ".git/hooks/commit-msg") {
 		t.Errorf("stdout %q does not report both artifacts", out)
 	}
 
@@ -30,14 +30,14 @@ func TestInitWritesBothArtifacts(t *testing.T) {
 		t.Errorf("AGENTS.md has no odachi block:\n%s", agents)
 	}
 
-	hook, err := os.ReadFile(filepath.Join(dir, ".git", "hooks", "pre-commit"))
+	hook, err := os.ReadFile(filepath.Join(dir, ".git", "hooks", "commit-msg"))
 	if err != nil {
 		t.Fatalf("the hook was not written: %v", err)
 	}
 	if !strings.HasPrefix(string(hook), "#!/bin/sh\n") {
 		t.Errorf("hook starts with %q, want the shebang", hook)
 	}
-	if !strings.Contains(string(hook), "check --quiet || exit 1") {
+	if !strings.Contains(string(hook), "check --message \"$1\" --quiet || exit 1") {
 		t.Errorf("hook does not run the gate:\n%s", hook)
 	}
 }
@@ -53,7 +53,7 @@ func TestInitRerunChangesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read AGENTS.md: %v", err)
 	}
-	hookBefore, err := os.ReadFile(filepath.Join(dir, ".git", "hooks", "pre-commit"))
+	hookBefore, err := os.ReadFile(filepath.Join(dir, ".git", "hooks", "commit-msg"))
 	if err != nil {
 		t.Fatalf("read hook: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestInitRerunChangesNothing(t *testing.T) {
 	if string(agentsAfter) != string(agentsBefore) {
 		t.Errorf("AGENTS.md changed on a rerun:\n%q\nvs\n%q", agentsAfter, agentsBefore)
 	}
-	hookAfter, _ := os.ReadFile(filepath.Join(dir, ".git", "hooks", "pre-commit"))
+	hookAfter, _ := os.ReadFile(filepath.Join(dir, ".git", "hooks", "commit-msg"))
 	if string(hookAfter) != string(hookBefore) {
 		t.Errorf("the hook changed on a rerun:\n%q\nvs\n%q", hookAfter, hookBefore)
 	}
@@ -82,23 +82,23 @@ func TestInitRefusesAForeignHook(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
 	foreign := "#!/bin/sh\necho hello\n"
-	writeFile(t, dir, ".git/hooks/pre-commit", foreign)
+	writeFile(t, dir, ".git/hooks/commit-msg", foreign)
 
 	code, _, errOut := runDir(t, dir, []string{"init"}, "")
 
 	if code != 1 {
 		t.Fatalf("code = %d, want 1 (stderr: %q)", code, errOut)
 	}
-	if !strings.Contains(errOut, ".git/hooks/pre-commit") {
+	if !strings.Contains(errOut, ".git/hooks/commit-msg") {
 		t.Errorf("stderr %q does not name the file", errOut)
 	}
-	for _, want := range []string{"#!/bin/sh", "# odachi", "check --quiet || exit 1"} {
+	for _, want := range []string{"#!/bin/sh", "# odachi", "check --message \"$1\" --quiet || exit 1"} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("stderr %q does not print the line %q to paste", errOut, want)
 		}
 	}
 
-	after, err := os.ReadFile(filepath.Join(dir, ".git", "hooks", "pre-commit"))
+	after, err := os.ReadFile(filepath.Join(dir, ".git", "hooks", "commit-msg"))
 	if err != nil {
 		t.Fatalf("read hook: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestInitJSONListsTheFiles(t *testing.T) {
 		t.Errorf("JSON code = %d, want 0", payload.Code)
 	}
 	joined := strings.Join(payload.Files, " ")
-	if !strings.Contains(joined, "AGENTS.md") || !strings.Contains(joined, ".git/hooks/pre-commit") {
+	if !strings.Contains(joined, "AGENTS.md") || !strings.Contains(joined, ".git/hooks/commit-msg") {
 		t.Errorf("JSON files = %v, want both artifacts", payload.Files)
 	}
 }

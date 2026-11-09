@@ -49,7 +49,7 @@ func TestInitTreatsAFirstDayAsAFirstDay(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	for _, rel := range []string{"AGENTS.md", ".gitignore", ".git/hooks/pre-commit"} {
+	for _, rel := range []string{"AGENTS.md", ".gitignore", ".git/hooks/commit-msg"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
 			t.Errorf("%s was not written in a project starting now: %v", rel, err)
 		}

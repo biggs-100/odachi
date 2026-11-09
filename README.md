@@ -165,8 +165,8 @@ the output that claim is about.
 `init` takes care of that for you, and of two things that are not artifacts: it
 leaves a marked block in the project's `.gitignore` (`/proof/` and `*.bak-*`,
 versioned, so it survives a clone) and a rules block in `AGENTS.md` —what the
-agent reads before touching anything— plus the pre-commit hook that runs
-`odachi check --quiet` on this tree's proof. In a project without `init`, the
+agent reads before touching anything— plus the commit-msg hook that runs
+`odachi check --message` on this tree's proof. In a project without `init`, the
 proof protects itself with its own `proof/.gitignore`. The verdicts need no rule:
 they are not in the worktree.
 
@@ -299,7 +299,7 @@ exits with the same code, so a hook or a panel reads the gate instead of parsing
 English. The reason names are the contract and are pinned by literals in a test.
 
 `odachi init` leaves the project ready in one step: the git history if it was
-missing, the rules block the agent reads, the `.gitignore` block, the pre-commit
+missing, the rules block the agent reads, the `.gitignore` block, the commit-msg
 hook and the profile voice in the `AGENTS.md` block. The agent lives in your
 home -one door that appears in any folder- and so does the craft: `init`
 installs or refreshes the door of every chosen client in `~/.config/opencode` and

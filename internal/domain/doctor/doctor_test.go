@@ -141,8 +141,8 @@ func TestLineIsOneEnglishLine(t *testing.T) {
 		},
 		{
 			name:  "problem names the command that fixes it",
-			check: Broken(CheckHook, "there is no pre-commit hook: there is no local gate", "run odachi init"),
-			want:  "bad 5 · the pre-commit hook is odachi's: there is no pre-commit hook: there is no local gate; run odachi init",
+			check: Broken(CheckHook, "there is no commit-msg hook: there is no local gate", "run odachi init"),
+			want:  "bad 5 · the commit-msg hook is odachi's: there is no commit-msg hook: there is no local gate; run odachi init",
 		},
 		{
 			name:  "warning is said and never carries a fix",

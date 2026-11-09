@@ -54,7 +54,7 @@ const (
 // doctor owns none of them and writes none of them.
 const (
 	gitDir      = ".git"
-	hookRel     = ".git/hooks/pre-commit"
+	hookRel     = ".git/hooks/commit-msg"
 	agentsFile  = "AGENTS.md"
 	profileFile = layout.Profile
 	briefFile   = "brief.md"

@@ -246,7 +246,7 @@ func repositoryLives(dir string, created bool) (bool, error) {
 	return false, nil
 }
 
-// hookExe is how the pre-commit hook will reach this binary: the name when it is
+// hookExe is how the commit-msg hook will reach this binary: the name when it is
 // on PATH, otherwise the absolute path of the running executable. A downloaded
 // binary is the normal case for a beginner, and a hook that cannot find it
 // blocks every commit without explaining why.
@@ -270,7 +270,7 @@ func pathMissing() bool {
 	return err != nil
 }
 
-// MakeExecutable is what the pre-commit hook needs: git only runs a hook that
+// MakeExecutable is what the commit-msg hook needs: git only runs a hook that
 // is executable, and WriteAtomic writes 0644 on purpose.
 func (osFiles) MakeExecutable(path string) error {
 	return os.Chmod(path, 0o755)
