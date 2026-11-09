@@ -1,0 +1,14 @@
+# the-inert-key
+Base: 82e2fed3db9021d1218a54df412f5fc9239ced89
+Light: yes
+
+## Requirements (verbatim, from the user)
+R1 · "the inert-key test rewrites the store, and the impact map says what doctor does now"
+
+## Done when
+
+## Steps
+- [ ] T1 · the inert-key test rewrites the store, and the impact map says what doctor does now   R1
+
+## History
+L1 · "the inert-key test rewrites the store, and the impact map says what doctor does now"
