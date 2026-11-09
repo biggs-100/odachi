@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A terminal is read before it is judged.** `tui-design` designs, critiques and refines a terminal
+  interface from a captured frame: the floor (the cell, the roles, the glyph family, the refusals), a
+  critique that scores ten heuristics with P0-P3 severities, twelve playbooks, the capture loop at three
+  widths, and the terminal tokens in the `design/system.md` the project already keeps. The method is
+  adapted from `gentle-shell`'s `tui-design` (Apache-2.0) with original text and a `NOTICE`. A new
+  capability, patch (0252).
+
 ## v0.36.3 - 2026-11-09
 
 - **ui-craft starts from the job.** The skill now carries the five jobs a surface serves —find, compare,
