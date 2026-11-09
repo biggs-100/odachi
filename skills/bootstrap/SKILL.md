@@ -15,33 +15,19 @@ be decided.
 
 ## Rules
 
-One cycle, in this order. **You run them; the human never types them.**
-The project is not set up until the first proof exists:
-
-1. `odachi init` - leaves the project ready: the rules block the agent reads, the
-   hook that stops a commit without proof, the `.gitignore`, and the skills. It
-   creates the git repository when the folder has none. The skills live in
-   `.agents/skills` (this project's copy, the default) or `~/.agents/skills` (one
-   copy for the machine, the `--skills home` choice); `odachi doctor` says which,
-   and the block names it.
-2. `odachi start` - the interview that writes `brief.md` (the vision and what is
-   NOT included), the fence and the first task doc. The answers are the human's:
-   ask them in chat, then pass their own words with `--outcome`, `--audience`,
-   `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn` (or a draft
-   with `--brief`). A tool shell has no terminal, so `start` exits 2 naming the
-   missing flags; that is the prompt to ask, not a reason to invent the vision.
-3. Load `drive` - the day-to-day manual: plan one step, work test-first, commit
-   one step at a time.
-4. Close with `odachi check --run "<command>"` - the gate runs the proof and
-   writes the real output in `proof/`. `odachi check` is the gate; a green proof
-   belongs to the tree it ran on.
-
-- A project is already odachi if there is `brief.md`, an odachi block in
-  `AGENTS.md`, or `odd/tasks/`. If there is one, do not start over: read that
-  block and follow its rules.
-- If you do not know the state, `odachi doctor` says it without writing anything;
-  in a folder that is not a project yet, it names this cycle.
-- The human decides the vision. You execute and explain the why in one line.
+- **You run them; the human never types them.** A project is not set up until the first proof exists.
+- `odachi init` leaves the project ready: the rules block the agent reads, the hook that stops a commit without proof, the `.gitignore`, and the skills.
+- It creates the git repository when the folder has none.
+- The skills live in `.agents/skills` (this project's copy, the default) or `~/.agents/skills` (`--skills home`); `odachi doctor` says which, and the block names it.
+- `odachi start` is the interview that writes `brief.md` (the vision and what is NOT included), the fence and the first task doc.
+- The answers are the human's: ask them in chat, then pass their own words with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`, or a draft with `--brief`.
+- A tool shell has no terminal: `start` exits 2 naming the missing flags, and that is the prompt to ask, not a reason to invent the vision.
+- Load `drive` next: the day-to-day manual, one step planned, test-first, one commit at a time.
+- Close with `odachi check --run "<command>"`: the gate runs the proof and writes the real output in `proof/`.
+- A green proof belongs to the tree it ran on.
+- A project is already odachi if there is `brief.md`, an odachi block in `AGENTS.md`, or `odd/tasks/`: read that block and follow its rules.
+- If you do not know the state, `odachi doctor` says it without writing anything; in a folder that is not a project yet, it names this cycle.
+- The human decides the vision; you execute and explain the why in one line.
 
 ## Output
 

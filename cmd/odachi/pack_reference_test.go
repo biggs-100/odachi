@@ -9,7 +9,7 @@ import (
 
 // routerProjectMain is a project skill with one reference, in the shape the
 // check accepts: the output contract and the inventory.
-const routerProjectMain = "---\nname: router\ndescription: Trigger: cuando hay que enrutar\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## References\n\n- `references/numbers.md` — the scale.\n"
+const routerProjectMain = "---\nname: router\ndescription: Trigger: cuando hay que enrutar\n---\n\n## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## References\n\n- `references/numbers.md` — the scale.\n"
 
 // TestPackInstallsAProjectSkillWithItsReferences: the project's own catalog is a
 // folder too, so the join from ./skills to the agent's directory carries the

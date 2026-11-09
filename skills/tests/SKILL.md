@@ -24,9 +24,10 @@ or when someone asks "is this tested?".
   the report and explain why.
 - Verification is proportional to the blast radius. A passive change -a comment, a
   document, a rename with no call site- is verified by reading the diff: it owes no
-  test. A medium change alters behavior and carries its test: the writer's own
-  verification, the RED observed and the suite green, is enough. A high change names
-  one of the six risks in `commits` and adds an independent verifier:
+  test.
+- A medium change alters behavior and carries its test: the writer's own
+  verification, the RED observed and the suite green, is enough.
+- A high change names one of the six risks in `commits` and adds an independent verifier:
   `odachi-verify` reads the whole task doc and answers per requirement.
 - Before a red is blamed on the change, run the same test on the base: stash the
   work or check out the base tree. A test that already failed there is named as
