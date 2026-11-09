@@ -360,6 +360,44 @@ func TestWithVoiceRewritesOnlyTheSection(t *testing.T) {
 	}
 }
 
+// A block written before the language migration names its heading in Spanish.
+// The heading is the language the block speaks, so the rewrite renames it: a
+// Spanish heading over an English voice reads as a section nobody meant.
+func TestWithVoiceRenamesTheSpanishHeading(t *testing.T) {
+	novato, err := rules.Block(persona.Novato)
+	if err != nil {
+		t.Fatalf("Block(novato): %v", err)
+	}
+	old := strings.Replace(novato, rules.Section, rules.SectionES, 1)
+
+	got, changed, err := rules.WithVoice(old, persona.Senior)
+	if err != nil {
+		t.Fatalf("WithVoice: %v", err)
+	}
+	if !changed {
+		t.Fatalf("WithVoice said nothing changed")
+	}
+	senior, err := rules.Block(persona.Senior)
+	if err != nil {
+		t.Fatalf("Block(senior): %v", err)
+	}
+	if got != senior {
+		t.Errorf("the heading was not renamed to the English one:\n got %q\nwant %q", got, senior)
+	}
+	if strings.Contains(got, rules.SectionES) {
+		t.Errorf("the block still says the Spanish heading")
+	}
+
+	// A second run is again a no-op: the renamed heading is the one it reads.
+	again, changed, err := rules.WithVoice(got, persona.Senior)
+	if err != nil {
+		t.Fatalf("WithVoice: %v", err)
+	}
+	if changed || again != got {
+		t.Errorf("WithVoice rewrote an identical voice")
+	}
+}
+
 // A block written before the voice moved into it has no voice section. It gains
 // one as the last section, and every byte that was already there stays.
 func TestWithVoiceAddsTheSectionToAnOldBlock(t *testing.T) {

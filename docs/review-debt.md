@@ -9,9 +9,13 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0248.
+Last written: while paying 0249.
 
 ## Open
+
+Nothing: 0249 paid the heading row.
+
+## Closed by feature 0249
 
 ### the legacy heading still says Cómo hablás
 
@@ -22,9 +26,11 @@ runs `odachi level` keeps that heading after the voice says neutral Spanish. `in
 fresh block with the English heading, so the path is `level` on an old block, and no test exercises
 the alias.
 
-Reopens when the block a project already has is refreshed by `level`: the same moment the stale-block
-warning is in play. The fix is a heading comparison that recognises the alias and writes the English
-one, with a test that starts from a Spanish block and runs `level`.
+Closed: `locateVoice` now returns the heading it matched, `sectionHeading` reports how long that
+spelling is, and `WithVoice` writes `## How you speak` over either one instead of replacing only the
+body under it. Pinned by `TestWithVoiceRenamesTheSpanishHeading`, observed red first against the old
+writer: the block came back with `## Cómo hablás` intact under the new voice, and a second run is
+still a no-op because the renamed heading is the one it reads.
 
 ## Closed by feature 0244
 
