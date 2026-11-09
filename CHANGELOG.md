@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **Motion graphics is a skill.** A request for a title card, a stat, a logo sting or a short video for
+  YouTube, Shorts or Reels loads `motion-graphics`: one idea and a beat sheet before a frame, the craft
+  of easing and weight, the tells a generated piece repeats and the fix for each, type read at arm's
+  length, the destination's frame and safe zone, and a deterministic render through HyperFrames with
+  Remotion as the named alternative. A new capability, patch (0250).
+
 ## v0.36.1 - 2026-11-09
 
 - **The heading speaks the block's language.** `odachi level --to` renames a block's `## Cómo hablás`

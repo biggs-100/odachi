@@ -8,6 +8,7 @@
 | design | design a screen, mockup, landing page or UI directions; iterate artboards; what a person asked on one; design system sync. HTML under design/<slug>/. | skills/design/SKILL.md |
 | drive | when you work inside an odachi project: which verb goes at each moment, what each block means and how a feature closes. To start from zero, use bootstrap. | skills/drive/SKILL.md |
 | go-tests | when writing or reviewing Go tests, golden files or Bubbletea flows. Load `tests` for the discipline and this skill for the concrete pattern. | skills/go-tests/SKILL.md |
+| motion-graphics | a title card, a stat, a chart, a logo sting, kinetic type, or a short video for YouTube, Shorts or Reels where the movement carries the message. | skills/motion-graphics/SKILL.md |
 | pull-request | when a change goes to a PR or the diff passes 400 lines. Split the delivery into reviewable work units and pick one chain strategy. | skills/pull-request/SKILL.md |
 | role-craft | when a project needs a professional odachi does not have, or an existing role answers like a costume. Interview, research, and end in odachi role new. | skills/role-craft/SKILL.md |
 | security | when the change reads input from outside, decides who may do what, holds a secret, adds a dependency, writes a log or handles a failure. Name the trust boundary before the code. | skills/security/SKILL.md |

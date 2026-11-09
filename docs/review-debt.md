@@ -9,11 +9,21 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while paying 0249.
+Last written: while closing 0250.
 
 ## Open
 
-Nothing: 0249 paid the heading row.
+### the brief loses every line after the first
+
+Found while opening 0250. `odachi start --brief` keeps a bullet's first physical line and drops the
+rest without a word: the requirement in the task doc arrived as "…a video for YouTube or", and every
+decision in the brief lost its tail. Nothing warned; it was caught because the quoted line ended
+mid-sentence.
+
+Reopens when a draft written with wrapped lines —80 columns, the width the rest of these documents
+use— is handed to `start --brief`. The reader must either join a bullet's continuation lines or refuse
+the draft and name the line. The fix is in that reader, with a test that starts from a wrapped bullet
+and asserts the stored requirement is whole.
 
 ## Closed by feature 0249
 
