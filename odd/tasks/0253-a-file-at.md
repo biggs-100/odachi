@@ -8,7 +8,7 @@ R1 · "a file at a skill's root is refused because the installer never copies it
 ## Done when
 
 ## Steps
-- [x] T1 · a file at a skill's root is refused because the installer never copies it, and the attribution travels in the body   R1
+- [x] T1 · a file at a skill's root is refused because the installer never copies it, and the attribution travels in the body   R1 · tree:a400f6a0f01f95fe2305834cb87db45ba20dfdc1
 
 ## History
 L1 · "a file at a skill's root is refused because the installer never copies it, and the attribution travels in the body"
