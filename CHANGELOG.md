@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.37.0 - 2026-11-09
 
 - **A new project is born with the review on.** `odachi init` writes `odd/review.toml` with `mode = "on"`
   when the project has none, and never replaces one: the switch is the human's, so an existing file is
