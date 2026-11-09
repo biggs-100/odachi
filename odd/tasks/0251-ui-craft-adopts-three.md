@@ -16,8 +16,8 @@ R1 · "ui-craft carries the user's job and the copy of every state, and the acce
 ## Steps
 - [x] T1 · the job and the copy: task-and-content.md and its gate   R1 · route:inline · tree:f3f13d7784ebe4274a49b25f8c476777c4a0042f
 - [x] T2 · the six states with their copy: states-and-copy.md and its gate   R1 · route:inline · tree:f42adf81ac839484c45da5e5703001cfaf6a20b7
-- [ ] T3 · WCAG 2.2 in the-numbers and the three checks the-read adds   R1 · route:inline
-- [ ] T4 · the registry, the changelog bullet and the impact map   R1 · route:inline
+- [x] T3 · WCAG 2.2 in the-numbers and the three checks the-read adds   R1 · route:inline · tree:fb748e87ea87a98d0e19b98fcb68a0784d92fd9c
+- [x] T4 · the registry, the changelog bullet and the impact map   R1 · route:inline · tree:9a57fd877656aa14a54028c7f7ba6dd7a180a8dd
 
 ## History
 L1 · "ui-craft carries the user's job and the copy of every state, and the accessibility figures cite WCAG 2.2"
