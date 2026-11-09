@@ -7,6 +7,12 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The heading speaks the block's language.** `odachi level --to` renames a block's `## Cómo hablás`
+  heading to `## How you speak` when it rewrites the voice, so a block written before the language
+  migration does not keep a Spanish heading over an English voice. A fix, patch (0249).
+
 ## v0.36.0 - 2026-11-08
 
 - **The voice speaks neutral Spanish.** Both voices say it where the rule lives: no regional slang,

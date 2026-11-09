@@ -242,6 +242,10 @@ func appendBlock(content, block string) string {
 // byte of the file —the rules, the verbs, whatever the human wrote above and
 // below— is preserved, the way the .gitignore block preserves its file.
 //
+// The heading names the language the block speaks, so it is rewritten too: a
+// block written before the language migration says `## Cómo hablás`, and an
+// English voice under a Spanish heading reads as a section nobody meant.
+//
 // A block written before the voice moved into it has no section, and it gains one
 // as the last section of the block. A file with no block is returned untouched:
 // writing the whole block is init's job, and level never invents a block for a
@@ -255,16 +259,16 @@ func WithVoice(content, voice string) (string, bool, error) {
 		return content, false, err
 	}
 
-	start, end, insert, ok := voiceSpan(content)
-	if !ok {
+	at := locateVoice(content)
+	if !at.ok {
 		return content, false, nil
 	}
-	if insert {
-		added := content[:start] + "\n" + Section + "\n\n" + body + content[start:]
+	if at.insert {
+		added := content[:at.end] + "\n" + Section + "\n\n" + body + content[at.end:]
 		return added, true, nil
 	}
 
-	updated := content[:start] + "\n" + body + content[end:]
+	updated := content[:at.heading] + Section + "\n\n" + body + content[at.end:]
 	return updated, updated != content, nil
 }
 
@@ -274,50 +278,59 @@ func WithVoice(content, voice string) (string, bool, error) {
 // because a human's trailing blank line is not a different voice.
 func VoiceIn(content string) (string, bool) {
 	content = fold(content)
-	start, end, insert, ok := voiceSpan(content)
-	if !ok || insert {
+	at := locateVoice(content)
+	if !at.ok || at.insert {
 		return "", false
 	}
-	return strings.TrimSpace(content[start:end]), true
+	return strings.TrimSpace(content[at.start:at.end]), true
 }
 
 // HasBlock reports whether content carries a complete odachi block. A truncated
 // block is not one: `odachi init` repairs it, and a check that called it complete
 // would leave the agent without rules.
 func HasBlock(content string) bool {
-	_, _, _, ok := voiceSpan(fold(content))
-	return ok
+	return locateVoice(fold(content)).ok
 }
 
-// voiceSpan locates the bytes the voice section's body owns. insert says the
-// block has no voice section yet, and then start == end is the line it belongs
-// before: the end of the block, so the voice is always the last section.
-func voiceSpan(text string) (start, end int, insert, ok bool) {
+// voiceSpan is where a block keeps its voice: the heading line, and the body the
+// heading owns.
+type voiceSpan struct {
+	heading    int  // the heading line, when insert is false
+	start, end int  // the body
+	insert     bool // insert says the block has no voice section yet
+	ok         bool
+}
+
+// locateVoice finds the bytes the voice section owns. insert says the block has
+// no voice section yet, and then start == end is the line it belongs before: the
+// end of the block, so the voice is always the last section.
+func locateVoice(text string) voiceSpan {
 	begin := lineStart(text, Begin)
 	if begin < 0 {
-		return 0, 0, false, false
+		return voiceSpan{}
 	}
 
 	offset := lineStart(text[begin:], End)
 	if offset < 0 {
-		return 0, 0, false, false
+		return voiceSpan{}
 	}
 	endMarker := begin + offset
 
-	heading, headingText := sectionHeading(text[begin:endMarker])
+	heading, length := sectionHeading(text[begin:endMarker])
 	if heading < 0 {
-		return endMarker, endMarker, true, true
+		return voiceSpan{start: endMarker, end: endMarker, insert: true, ok: true}
 	}
 
-	start = begin + heading + len(headingText)
-	if strings.HasPrefix(text[start:], "\n") {
-		start++
+	at := voiceSpan{heading: begin + heading, ok: true}
+	at.start = at.heading + length
+	if strings.HasPrefix(text[at.start:], "\n") {
+		at.start++
 	}
 
 	// The body stops at the next heading line, so a section that is not last —
 	// a human moved it, or an older block grew one after it — keeps what follows.
-	end = endMarker
-	for from := start; from < endMarker; {
+	at.end = endMarker
+	for from := at.start; from < endMarker; {
 		newline := strings.IndexByte(text[from:endMarker], '\n')
 		if newline < 0 {
 			break
@@ -327,27 +340,27 @@ func voiceSpan(text string) (start, end int, insert, ok bool) {
 			break
 		}
 		if text[lineStart] == '#' {
-			end = lineStart
+			at.end = lineStart
 			break
 		}
 		from = lineStart
 	}
-	return start, end, false, true
+	return at
 }
 
 // lineStart is the index of the marker when it owns its own line, and -1 when it
 // does not: a marker inside another line is not a block this tool wrote.
-// sectionHeading finds the voice heading, preferring the English one. The
-// Spanish alias keeps a block written before the language migration readable
-// and rewritable.
-func sectionHeading(text string) (int, string) {
+// sectionHeading finds the voice heading and how long it is, preferring the
+// English one. The Spanish alias keeps a block written before the language
+// migration readable and rewritable.
+func sectionHeading(text string) (pos, length int) {
 	if heading := lineStart(text, Section); heading >= 0 {
-		return heading, Section
+		return heading, len(Section)
 	}
 	if heading := lineStart(text, SectionES); heading >= 0 {
-		return heading, SectionES
+		return heading, len(SectionES)
 	}
-	return -1, ""
+	return -1, 0
 }
 
 func lineStart(text, marker string) int {
