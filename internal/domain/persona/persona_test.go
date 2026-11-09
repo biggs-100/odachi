@@ -451,6 +451,8 @@ func TestTheVoiceStylesTheChatAndNeverTheArtifacts(t *testing.T) {
 			"the human's own words",
 			"quoted as they were said",
 			"regional slang",
+			"voseo",
+			"neutral Spanish",
 			"emphasis",
 		} {
 			if !strings.Contains(voice, want) {
