@@ -7,12 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.36.0 - 2026-11-08
 
 - **The voice speaks neutral Spanish.** Both voices say it where the rule lives: no regional slang,
   no voseo and no local expressions -neutral Spanish, the same for every region- while the artifacts
   stay English. Every project reads the sentence in the block `init` writes, so its next `init`
   refreshes it. A contract change, minor (0248).
+- **Install:** `curl -fsSL https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.sh | bash`
+  or, on Windows, `irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 | iex`.
 
 ## v0.35.0 - 2026-11-08
 
