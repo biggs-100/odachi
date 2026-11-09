@@ -12,3 +12,4 @@ R1 · "an old block keeps its Spanish heading: odachi level renames ## Cómo hab
 
 ## History
 L1 · "an old block keeps its Spanish heading: odachi level renames ## Cómo hablás to ## How you speak"
+L2 · OFICIO · "the heading is located with the body, not searched again in WithVoice" (porque voiceSpan already finds the heading line while it looks for the block; returning it keeps one read of the same bytes, where a backward search would be a second way to answer the same question and the two could drift)
