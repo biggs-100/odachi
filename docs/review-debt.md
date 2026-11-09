@@ -9,11 +9,22 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0244.
+Last written: while closing 0248.
 
 ## Open
 
-Nothing open as of this writing.
+### the legacy heading still says Cómo hablás
+
+Found by the verifier of 0248 while it checked that the voice speaks neutral Spanish. The heading of
+the block an older release wrote is `## Cómo hablás` (voseo), and `rules.WithVoice` replaces the body
+under the heading, not the heading itself: a project whose block predates the English migration and
+runs `odachi level` keeps that heading after the voice says neutral Spanish. `init` regenerates a
+fresh block with the English heading, so the path is `level` on an old block, and no test exercises
+the alias.
+
+Reopens when the block a project already has is refreshed by `level`: the same moment the stale-block
+warning is in play. The fix is a heading comparison that recognises the alias and writes the English
+one, with a test that starts from a Spanish block and runs `level`.
 
 ## Closed by feature 0244
 
