@@ -19,5 +19,6 @@
 | slices | when a large request has to be split into small steps, when the code no longer fits in one read, or when deciding whether to delegate to a subagent. | skills/slices/SKILL.md |
 | tests | when writing, fixing or deciding what a change tests. The failing test first, the code after. | skills/tests/SKILL.md |
 | triage | when there are several bugs, a backlog or a report that repeats. Classify by root and fix once, not once per issue. | skills/triage/SKILL.md |
+| tui-design | a terminal interface, a panel, a rail, a status bar, a prompt; a TUI that looks busy, flat or generic; a critique before shipping one. | skills/tui-design/SKILL.md |
 | ui-craft | build or review a screen, landing page, dashboard, form or component; when it looks generic or AI-made; which numbers and which motion to use. | skills/ui-craft/SKILL.md |
 | writing | when writing a message, a PR description, an issue comment, or documentation someone will read to act. | skills/writing/SKILL.md |
