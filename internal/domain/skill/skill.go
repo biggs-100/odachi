@@ -28,6 +28,9 @@ const (
 	MaxDescription = 200
 	// MaxBodyLines is the most lines a skill body may have.
 	MaxBodyLines = 60
+	// MaxRuleChars is the longest a rule may be. A rule that needs more is two
+	// rules, and a line that wraps hides the second one below the fold.
+	MaxRuleChars = 140
 	// TriggerPrefix is how every description starts.
 	TriggerPrefix = "Trigger:"
 	// NamePattern is the one slug shape a directory and a name share.
@@ -139,6 +142,25 @@ func (s Skill) Problems() []Problem {
 			add("the %q section is missing", section)
 		case content == "":
 			add("the %q section is empty", section)
+		}
+	}
+
+	// A rule is one line and a bullet. A paragraph is twelve rules the count
+	// reads as one - ui-craft had exactly that - and a wrapped bullet hides its
+	// second half where a reader skimming the list never sees it.
+	if rules, ok := sectionContent(body, "Rules"); ok {
+		for _, line := range strings.Split(rules, "\n") {
+			rule := strings.TrimSpace(line)
+			if rule == "" {
+				continue
+			}
+			if !strings.HasPrefix(rule, "- ") {
+				add("a ## Rules line is not a bullet: %q; one rule is one line, starting with a dash", excerpt(rule))
+				continue
+			}
+			if length := utf8.RuneCountInString(rule); length > MaxRuleChars {
+				add("a rule has %d characters; the maximum is %d: a rule that needs more is two rules", length, MaxRuleChars)
+			}
 		}
 	}
 
@@ -428,7 +450,7 @@ func ValidSlug(slug string) bool {
 func Template(name string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: (fill in when this skill is used)\n---\n\n" +
 		"## When\n\n(say when this skill must be loaded)\n\n" +
-		"## Rules\n\n(fill in the rules a senior would enforce)\n\n" +
+		"## Rules\n\n- (fill in the rules a senior would enforce)\n\n" +
 		"## Output\n\n(what this skill hands back)\n\n" +
 		"## Never\n\n(fill in what this skill never does)\n"
 }
@@ -487,6 +509,17 @@ func bodyLines(body string) []string {
 		lines = lines[:len(lines)-1]
 	}
 	return lines
+}
+
+// excerpt shortens a line for a refusal, so the message stays one line even when
+// the line it names is the one that broke the rule.
+func excerpt(line string) string {
+	const max = 60
+	runes := []rune(line)
+	if len(runes) <= max {
+		return line
+	}
+	return string(runes[:max]) + "…"
 }
 
 // sectionContent returns what follows a `## <heading>` line up to the next

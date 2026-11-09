@@ -35,7 +35,7 @@ Los criterios observables, cada uno con la salida que lo verifica.
 // validSkill renders a minimal, valid skill under any name.
 func validSkill(name, trigger string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: " + trigger +
-		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
+		"\n---\n\n## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
 }
 
 func parse(dir, text string) skill.Skill {
@@ -84,7 +84,7 @@ func TestParseReadsTheFrontmatter(t *testing.T) {
 // TestParseWithoutFrontmatterIsOneReason: a file that never declares itself is
 // not guessed at, and the reason names the missing header.
 func TestParseWithoutFrontmatterIsOneReason(t *testing.T) {
-	got := parse("suelta", "## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n")
+	got := parse("suelta", "## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Never\n\nnunca\n")
 
 	if got.HasFrontmatter {
 		t.Fatal("HasFrontmatter = true for a file without ---")
@@ -202,7 +202,7 @@ func TestEmptySectionIsRefused(t *testing.T) {
 // TestMissingSectionIsRefused: absence is emptiness, and the reason names it.
 func TestMissingSectionIsRefused(t *testing.T) {
 	text := "---\nname: corta\ndescription: Trigger: una skill sin Nunca\n---\n\n" +
-		"## When\n\ncuando\n\n## Rules\n\nregla\n"
+		"## When\n\ncuando\n\n## Rules\n\n- regla\n"
 
 	problems := parse("corta", text).Problems()
 
@@ -319,5 +319,32 @@ func TestTemplateIsAValidStartingPoint(t *testing.T) {
 	}
 	if strings.Contains(text, "TODO") {
 		t.Errorf("the template contains TODO:\n%s", text)
+	}
+}
+
+// TestARuleIsOneBulletOnOneLine: the line count is only honest if a line is a
+// rule. ui-craft hid twelve rules in one paragraph and the count read it as one.
+func TestARuleIsOneBulletOnOneLine(t *testing.T) {
+	text := "---\nname: prosa\ndescription: Trigger: una skill con prosa\n---\n\n" +
+		"## When\n\ncuando\n\n## Rules\n\nElegí el orden y después el color.\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
+
+	problems := parse("prosa", text).Problems()
+
+	if !strings.Contains(joined(problems), "is not a bullet") {
+		t.Errorf("problems = %q, want the prose reason", joined(problems))
+	}
+}
+
+// TestARuleOverTheLineBudget: a rule that needs more than 140 characters is two
+// rules, and a wrapped bullet is where the second half hides.
+func TestARuleOverTheLineBudget(t *testing.T) {
+	long := strings.Repeat("y una regla que se estira ", 6)
+	text := "---\nname: largo\ndescription: Trigger: una skill con una regla larga\n---\n\n" +
+		"## When\n\ncuando\n\n## Rules\n\n- " + long + "\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
+
+	problems := parse("largo", text).Problems()
+
+	if !strings.Contains(joined(problems), "maximum is 140") {
+		t.Errorf("problems = %q, want the length reason", joined(problems))
 	}
 }
