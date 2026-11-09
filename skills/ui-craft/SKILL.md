@@ -21,6 +21,7 @@ A screen, a landing, a dashboard, a form or a component is to be built or review
 | choosing a scale, spacing, radius, contrast or layout | `references/the-numbers.md` |
 | search, filters, a large collection or a comparison | `references/browse-and-compare.md` |
 | what the screen is for, and the words it uses | `references/task-and-content.md` |
+| an empty, loading, error or zero state, and its copy | `references/states-and-copy.md` |
 | a transition, a gesture or anything that moves | `references/motion.md` |
 | the last pass before calling it done | `references/the-read.md` |
 
@@ -34,6 +35,7 @@ The winner and why, the files changed, the five states covered, the contrast mea
 - `references/the-numbers.md` — the scale, spacing, radius, contrast and layout numbers.
 - `references/browse-and-compare.md` — search, filters, the loading pattern and the return to the place.
 - `references/task-and-content.md` — the job the screen serves, the truthful content, the label that predicts.
+- `references/states-and-copy.md` — the six states, with the sentence each one says.
 - `references/motion.md` — when motion earns its place, and the timings that keep it calm.
 - `references/the-read.md` — the last pass: the winner, the states, the measured contrast, the worst content.
 
