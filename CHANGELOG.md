@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.36.3 - 2026-11-09
 
 - **ui-craft starts from the job.** The skill now carries the five jobs a surface serves —find, compare,
   act, read, decide— with the content it may use, the label that predicts its outcome, and the six states
