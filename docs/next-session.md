@@ -1,55 +1,51 @@
 # Next session
 
-Written while closing the session that shipped `v0.34.0` and adopted it in this clone. The project has
-no open feature: 0245 closed, released, installed, and this repository now runs the gate it wrote.
+Written while closing the session after `v0.35.0` and 0247. No feature is open; the store's queue is
+empty, and the only thing waiting is a decision, not a debt.
 
 ## Where the project is
 
-- `v0.34.0` is published (tag on `a1aed42`); the workflow ran the suite, signed and attested.
-- `main` carries 0244, 0245 and the release; the last commit is the adoption of `0.34.0` in this clone.
-- The installed binary is `0.34.0`. `.git/hooks/commit-msg` is the gate; the old `.git/hooks/pre-commit`
-  was retired with a backup in the clone's store. `odachi doctor` has one warning left, which this file
-  closes: it names 0245 as the newest feature.
+- `v0.35.0` is published (tag on `82e2fed`); the workflow ran the suite, signed and attested.
+- `main` carries 0246 and 0247, and the release; the installed binary is `0.35.0`.
+- The gate is `.git/hooks/commit-msg` (since 0245), and `odachi doctor` is all clear.
 - `Unreleased` is empty: the release renamed it, and the next feature writes under it.
+- `docs/review-debt.md` has no open row.
 
 ## What this session did
 
-- **0244, the registry repair is pinned** (#454, merged): `skill new` regenerating `SKILLS.md` when the
-  slug exists is now tested by seeding the skill with the registry missing and stale, and reading the
-  regenerated file. The row left `docs/review-debt.md`, which is now empty.
-- **0245, the gate sees the message** (#455, merged): the `Odachi-Change:` lane could not make its first
-  commit because `pre-commit` runs before the message file exists. The gate moved to `commit-msg`,
-  `init` retires its own `pre-commit` (only when every line is odachi's, and after a backup), and
-  `check --message <path>` reads the line, checks the fence, and defers the proof.
-- **The review found a CRITICAL** on the first tree: a marker is not ownership. `init` tells a human to
-  paste its snippet inside their own hook, so the retirement now keeps any file with a line odachi does
-  not write, byte for byte.
-- **The verifier found three promises** the code did not make: the fence reads the worktree (not the
-  staged paths), the fork point only exists after the commit, and no remote closes the lane. All three
-  sentences were corrected in the brief, the task doc and the changelog.
-- **`v0.34.0`** (#456, merged, tag `a1aed42`), then installed and adopted here with `odachi init`.
+- **0244, the registry repair is pinned** (#454): the test reads the regenerated `SKILLS.md` when the
+  skill already exists, with the red observed by skipping `syncRegistry`.
+- **0245, the gate sees the message** (#455, `v0.34.0`): `pre-commit` runs before the message file exists,
+  so the `Odachi-Change:` lane could not make its first commit. The gate moved to `commit-msg`; `init`
+  retires its own `pre-commit` only when every line is odachi's, and backs it up first; `check
+  --message <path>` reads the trailer, checks the fence, and defers the proof.
+- **0246, a project writes nothing** (#458, `v0.35.0`): the app's project half is deleted (117 lines in,
+  585 out). A stored `project_agents` key is carried through untouched, and a plain `init` records no
+  decision now that none is forced.
+- **0247, the inert key is pinned through the rewrite** (#460): a second reviewer found that the 0246
+  test set up a store the run never rewrote, so its assertion was skipped. The test now runs with an
+  explicit scope and fails if the key is dropped (the red was observed with the pass-through removed).
+- **The second opinion, paid.** Muse Spark 1.3 Contributor reviewed the tree another model wrote and
+  approved it with one causal warning and one suggestion -both real, both fixed in 0247. It is the way
+  a clone gets a verdict from someone other than the author: `odachi review --model <other> --exec ...`.
 
 ## The questions that wait
 
-- **A second opinion.** Every verdict in this clone came from the model that wrote the code; `check`
-  names it. Another model is the way the store gets one.
-- **The app's project-write path has no CLI caller.** `internal/app/init` can still write project agent
-  files when a library caller asks (`NoProjectAgents: false`); no CLI path does. Deleting it is a
-  cleanup.
-- **The store grows.** `odachi clean --apply` would free about 371 KB in 159 files; nothing depends on
-  it, and it is a housekeeping decision, not a feature.
+- **Nothing is owed.** The candidates, not debts: a third opinion from a third model on a future
+  feature; `odachi clean --apply` frees about 417 KB of the store; and the bench has not crossed the
+  new gate yet.
 
 ## The limits to remember
 
 - **The proof is measured when `check --run` starts.** An edit during the twelve-minute suite leaves the
-  proof naming the earlier tree, and the run still prints "ready". Finish the tree first, then run.
-- The trailer lane reads the message file at `commit-msg`; a message with no trailer keeps the answer the
+  proof naming the earlier tree while the run still prints "ready". Finish the tree, then run.
+- **`main` is protected.** A direct `git push origin main` is rejected; every change, the close included,
+  lands through a pull request whose gate runs on the three platforms.
+- The trailer lane reads the message at `commit-msg`; a message with no trailer keeps the answer the
   `pre-commit` gate gave, and a repository with no remote keeps the lane closed.
-- A fused gate: the first commit after `init` runs `commit-msg`, so a change that names itself no longer
-  needs the proof to exist before the commit — it is owed after it.
 - One heavy gate per machine; `go test ./...` takes about 700 s here.
 - `odachi review --exec` gives the reviewer 600 s; a prompt over roughly 100 KB does not fit.
-- `odachi check --run` writes `proof/` (ignored); the proof and the verdict name the worktree tree.
+- The review store is keyed by tree; a docs-only commit after a close is paperwork, and `check` says so.
 
 ## The commands that work
 
@@ -58,7 +54,7 @@ odachi check --run "go test ./..." --timeout 1800
 ```
 
 ```sh
-odachi review --base <feature-base> \
+odachi review --base <feature-base> --model opencode-go/muse-spark-1.3-contributor#high \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
