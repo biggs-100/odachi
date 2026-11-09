@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.36.2 - 2026-11-09
 
 - **Motion graphics is a skill.** A request for a title card, a stat, a logo sting or a short video for
   YouTube, Shorts or Reels loads `motion-graphics`: one idea and a beat sheet before a frame, the craft
