@@ -488,6 +488,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.StringVar(&opts.Run, "run", "", "run the command, capture the output and write proof/<NNNN>-<slug>.txt")
+	flags.StringVar(&opts.Message, "message", "", "the message file a commit-msg hook was handed: judge the change before it is a commit")
 	flags.StringVar(&opts.Proof, "proof", "", "use a proof that is already written (agents and CI)")
 	flags.StringVar(&opts.Base, "base", "HEAD", "what to compare the fence against (empty: against nothing, everything counts as new)")
 	flags.StringVar(&opts.FenceFrom, "fence-from", "", "read the fence from this git ref instead of the worktree (CI: the base branch)")
@@ -962,7 +963,7 @@ func reportStoreMoveJSON(result storemove.Result, stdout, stderr io.Writer) int 
 }
 
 // reportCheck prints the gate's verdict. A ready run is silent under --quiet,
-// because the pre-commit hook runs it on every commit; a blocked run always
+// because the commit-msg hook runs it on every commit; a blocked run always
 // says what blocks and which command unblocks it.
 func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writer) int {
 	if asJSON {
@@ -1266,6 +1267,7 @@ func (f *dryRunFiles) Backup(path string) (string, error) {
 	return path + ".bak", nil
 }
 func (f *dryRunFiles) MakeExecutable(string) error { return nil }
+func (f *dryRunFiles) Remove(string) error         { return nil }
 
 // initSkills is the join between `odachi init` and `odachi pack`. init decides
 // where the skills go — the project's cross-client directory, or the human's home
@@ -1702,6 +1704,8 @@ the version:
 check flags:
   --run s         run the command and write this tree's proof
   --proof path    use a proof that is already written (agents and CI)
+  --message path  the message file a commit-msg hook was handed: judge the change
+                  before it is a commit, and defer the proof to the tree it carries
   --base ref      what to compare the fence against (default HEAD; empty: against nothing)
   --fence-from ref  read the fence from this git ref instead of the worktree (CI: the base branch)
   --ci            judge the tree the way CI does: the fence and the base come from the
@@ -1833,7 +1837,7 @@ what init leaves written, in one command (--skills project and --agents both, th
   .claude/output-styles  odachi.md: the same block, to choose it with /config in this project
   .claude/agents         odachi-worker.md and odachi-verify.md: the Claude Code subagents
   .gitignore             /proof/, /.odachi/reviews/ and *.bak-* do not dirty the tree
-  .git/hooks/pre-commit  no commit without odachi check --quiet green
+  .git/hooks/commit-msg  no commit without odachi check --message green
   .agents/skills         the project's skills: the folder every client reads
   ~/.agents/skills       the bootstrap skill: how to start a project from scratch
 

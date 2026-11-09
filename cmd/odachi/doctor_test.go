@@ -93,7 +93,7 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	}
 	// This is also the guard that init and doctor agree on the hook marker: if
 	// init renamed it, check 5 would stop recognising its own hook.
-	if !strings.Contains(out, "the pre-commit hook is odachi's: yes") {
+	if !strings.Contains(out, "the commit-msg hook is odachi's: yes") {
 		t.Fatalf("doctor must recognise the hook init installs:\n%s", out)
 	}
 }
@@ -147,16 +147,16 @@ func TestDoctorReportsEachBrokenInstall(t *testing.T) {
 		{
 			name: "no hook",
 			break_: func(t *testing.T, dir string) {
-				if err := os.Remove(filepath.Join(dir, ".git", "hooks", "pre-commit")); err != nil {
+				if err := os.Remove(filepath.Join(dir, ".git", "hooks", "commit-msg")); err != nil {
 					t.Fatalf("remove the hook: %v", err)
 				}
 			},
-			want: []string{"there is no .git/hooks/pre-commit", "there is no local gate", "odachi init"},
+			want: []string{"there is no .git/hooks/commit-msg", "there is no local gate", "odachi init"},
 		},
 		{
 			name: "the hook belongs to somebody else",
 			break_: func(t *testing.T, dir string) {
-				writeFile(t, dir, ".git/hooks/pre-commit", "#!/bin/sh\nnpm test\n")
+				writeFile(t, dir, ".git/hooks/commit-msg", "#!/bin/sh\nnpm test\n")
 			},
 			want: []string{"is not odachi's", "odachi init"},
 		},

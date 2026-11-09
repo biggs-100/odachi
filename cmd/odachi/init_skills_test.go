@@ -440,7 +440,7 @@ func TestInitKeepsTheProjectArtifactsWhenTheHomeIsNotWritable(t *testing.T) {
 	if code == 0 {
 		t.Fatalf("code = 0, want a refusal: the only place the agent lives could not be written")
 	}
-	for _, rel := range []string{"AGENTS.md", ".gitignore", ".git/hooks/pre-commit"} {
+	for _, rel := range []string{"AGENTS.md", ".gitignore", ".git/hooks/commit-msg"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
 			t.Errorf("%s was not written: %v", rel, err)
 		}

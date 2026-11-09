@@ -3,7 +3,7 @@
 // mirrors that block in the project, the door in the human's home that makes
 // odachi available in any folder —opt-in, with --global—, the marked block in
 // .gitignore that keeps the
-// generated evidence out of the tree, the pre-commit hook that refuses a commit
+// generated evidence out of the tree, the commit-msg hook that refuses a commit
 // without a proof for the current tree, and the skills the agent reads — the
 // curriculum in the project and the bootstrap skill in the human's home, so an
 // agent can learn how to start a project in a folder where nothing exists yet.
@@ -41,7 +41,11 @@ const (
 // The artifacts this command owns.
 const (
 	gitDir   = ".git"
-	hookPath = ".git/hooks/pre-commit"
+	hookPath = ".git/hooks/commit-msg"
+	// hookPathOld is where an older release kept the gate. pre-commit cannot see
+	// the message, so a document-less change could never pass it; init retires
+	// its own old hook instead of leaving two gates that disagree.
+	hookPathOld = ".git/hooks/pre-commit"
 )
 
 // skillsCopy is the project's copy of the craft, spelled once: the adoption
@@ -76,7 +80,7 @@ func hookFor(exe string) string {
 	return "#!/bin/sh\n" + hookMarker +
 		"\nODACHI='" + exe + "'" +
 		"\n[ -x \"$ODACHI\" ] || ODACHI=odachi" +
-		"\n\"$ODACHI\" check --quiet || exit 1\n"
+		"\n\"$ODACHI\" check --message \"$1\" --quiet || exit 1\n"
 }
 
 // Options is one `odachi init` invocation.
@@ -169,6 +173,7 @@ type Files interface {
 	Read(path string) ([]byte, error)
 	Write(path string, data []byte) error
 	Backup(path string) (string, error)
+	Remove(path string) error
 	MakeExecutable(path string) error
 }
 
@@ -583,7 +588,7 @@ type runner struct {
 	homePending string
 }
 
-// installHook installs the pre-commit hook, keeps odachi's own hook up to date,
+// installHook installs the commit-msg hook, keeps odachi's own hook up to date,
 // and refuses to replace a hook someone else wrote.
 func (r *runner) installHook(exe string) *Result {
 	path := filepath.Join(r.dir, hookPath)
@@ -608,7 +613,7 @@ func (r *runner) installHook(exe string) *Result {
 		}
 		if string(data) == hook {
 			r.lines = append(r.lines, hookPath+": unchanged")
-			return nil
+			return r.retireOldHook()
 		}
 
 		if _, err := r.files.Backup(path); err != nil {
@@ -628,7 +633,72 @@ func (r *runner) installHook(exe string) *Result {
 
 	r.changed = append(r.changed, hookPath)
 	r.lines = append(r.lines, hookPath+": installed")
+	return r.retireOldHook()
+}
+
+// retireOldHook removes the gate an older release wrote at pre-commit, now that
+// commit-msg carries it. A hook somebody else wrote is named and left alone: it
+// is the human's, and init never deletes work it did not write.
+func (r *runner) retireOldHook() *Result {
+	path := filepath.Join(r.dir, hookPathOld)
+
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		problem := blocked("could not check " + hookPathOld + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+		return &problem
+	}
+	if !exists {
+		return nil
+	}
+	data, err := r.files.Read(path)
+	if err != nil {
+		problem := blocked("could not read " + hookPathOld + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+		return &problem
+	}
+	if !strings.Contains(string(data), hookMarker) && !strings.Contains(string(data), hookMarkerOld) && !strings.Contains(string(data), hookMarkerES) {
+		r.lines = append(r.lines, hookPathOld+": left alone, it is not odachi's")
+		return nil
+	}
+	// The marker travels with the snippet init tells a human to paste inside their
+	// own hook, so a match is not ownership: a line odachi never writes keeps the
+	// file. Only the hook odachi wrote, line by line, is retired.
+	if !ownGate(string(data)) {
+		r.lines = append(r.lines, hookPathOld+": left alone, it has lines odachi did not write")
+		return nil
+	}
+	// The old hook is not versioned and may carry a human's own checks; the copy
+	// is the difference between a move and a loss.
+	if _, err := r.files.Backup(path); err != nil {
+		problem := blocked("could not back up " + hookPathOld + " before removing it: " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+		return &problem
+	}
+
+	if err := r.files.Remove(path); err != nil {
+		problem := blocked("could not remove " + hookPathOld + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+		return &problem
+	}
+	r.changed = append(r.changed, hookPathOld)
+	r.lines = append(r.lines, hookPathOld+": removed, the gate lives in "+hookPath)
 	return nil
+}
+
+// ownGate reports whether every line of a hook is one odachi writes. A human's
+// hook that pasted odachi's snippet inside it carries the marker but keeps its
+// own lines, and one of those is enough to make the file the human's.
+func ownGate(content string) bool {
+	for _, raw := range strings.Split(content, "\n") {
+		line := strings.TrimSpace(raw)
+		switch {
+		case line == "", line == "#!/bin/sh":
+		case line == hookMarker, line == hookMarkerOld, line == hookMarkerES:
+		case strings.HasPrefix(line, "ODACHI="):
+		case line == `[ -x "$ODACHI" ] || ODACHI=odachi`:
+		case strings.HasPrefix(line, `"$ODACHI" check`):
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // foreignHook is the refusal: the three lines to paste, and nothing touched.

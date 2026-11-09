@@ -184,7 +184,7 @@ func hookOf(exe string) string {
 func configured() *fakeFiles {
 	files := newFakeFiles()
 	files.mkdir(".git")
-	files.put(".git/hooks/pre-commit", hookOf("odachi"))
+	files.put(".git/hooks/commit-msg", hookOf("odachi"))
 	// The block `odachi init` writes, with the voice of the profile in the file:
 	// check 11 compares the two, so a configured project has to carry both. Since
 	// 0242 the project carries no agent file: the door lives in the home, and the
@@ -396,7 +396,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 		{
 			name: "the hook is gone",
 			mutate: func(f *fakeFiles, _ *fakeLookup, _ *fakeProfiles) {
-				delete(f.files, at(".git/hooks/pre-commit"))
+				delete(f.files, at(".git/hooks/commit-msg"))
 			},
 			check:  domaindoctor.CheckHook,
 			fix:    "odachi init",
@@ -405,7 +405,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 		{
 			name: "the hook belongs to somebody else",
 			mutate: func(f *fakeFiles, _ *fakeLookup, _ *fakeProfiles) {
-				f.put(".git/hooks/pre-commit", "#!/bin/sh\nnpm test\n")
+				f.put(".git/hooks/commit-msg", "#!/bin/sh\nnpm test\n")
 			},
 			check:  domaindoctor.CheckHook,
 			fix:    "odachi init",
@@ -414,7 +414,7 @@ func TestEachProblemNamesItsCommand(t *testing.T) {
 		{
 			name: "the hook names a binary that is gone",
 			mutate: func(f *fakeFiles, _ *fakeLookup, _ *fakeProfiles) {
-				f.put(".git/hooks/pre-commit", hookOf("/home/ana/bin/odachi-viejo"))
+				f.put(".git/hooks/commit-msg", hookOf("/home/ana/bin/odachi-viejo"))
 			},
 			check:  domaindoctor.CheckHookExe,
 			fix:    "odachi init",
@@ -1117,7 +1117,7 @@ func TestAGlobalDoorThatMatchesIsClean(t *testing.T) {
 // TestHookNamingOdachiByNameUsesThePath is the install that works twice and
 // fails once: the hook says `odachi`, and a shell cannot find it.
 func TestHookNamingOdachiByNameUsesThePath(t *testing.T) {
-	files := configured().put(".git/hooks/pre-commit", hookOf("odachi"))
+	files := configured().put(".git/hooks/commit-msg", hookOf("odachi"))
 	result := run(files, &fakeLookup{err: errors.New("not found")}, cleanProfiles(), "/home/ana/bin/odachi")
 
 	got := checkOf(t, result, domaindoctor.CheckHookExe)

@@ -124,7 +124,7 @@ type Options struct {
 	// TimeoutSeconds bounds Run. Zero or less means DefaultTimeout.
 	TimeoutSeconds int
 	// Quiet changes nothing about the result: the printer decides whether a
-	// ready run says anything (the pre-commit hook depends on the silence).
+	// ready run says anything (the commit-msg hook depends on the silence).
 	Quiet bool
 	// Out is where the proof command's output is mirrored while it runs, so a
 	// human watching a lock sees the work instead of silence. Nil is quiet: the
@@ -153,6 +153,11 @@ type Options struct {
 	// default branch, the same ref --ci uses. Empty means the lane is closed, and
 	// the run keeps the answer it always gave.
 	ChangeBase string
+	// Message is the path git handed a commit-msg hook. Non-empty opens the lane
+	// before the commit exists: the line is read from the message, the fence is
+	// measured against what is staged, and the proof is deferred to the tree the
+	// commit will carry. Empty keeps the answer a plain run always gave.
+	Message string
 
 	// Growth measures the clone's store as a close names it. It is a port so the
 	// verb that owns the policy answers, and nil means the caller wired none: the
@@ -233,7 +238,7 @@ type Shell interface {
 
 // Result is what the CLI prints and exits with. It has the same shape as the
 // other verbs; Reason and Next make the gate's decision visible to machines and
-// to the pre-commit hook.
+// to the commit-msg hook.
 type Result struct {
 	Code    int
 	Reason  string
@@ -258,6 +263,13 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 
 	r := &runner{opts: opts, files: files, git: git, shell: shell}
+
+	// The message lane judges a commit that does not exist yet, so it has nothing
+	// to run: the proof is owed by the tree the commit will carry. Asking for
+	// both would run the suite twice for one commit.
+	if opts.Message != "" && opts.Run != "" {
+		return blocked("--message and --run do not go together: the message judges a commit that does not exist yet, and its proof is owed after it; drop one of the two")
+	}
 
 	if opts.Run != "" {
 		if problem := r.ensureProofDir(); problem != nil {
@@ -303,7 +315,12 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	// it is never replaced. A project that never writes a trailer reaches the same
 	// answer it always did (0181).
 	if r.opts.Feature == 0 && (feature == nil || documentClosed(feature)) {
-		claimed, problem := r.claimedChange()
+		var claimed *tasks.Document
+		if r.opts.Message != "" {
+			claimed, problem = r.claimedMessage()
+		} else {
+			claimed, problem = r.claimedChange()
+		}
 		if problem != nil {
 			return *problem
 		}
@@ -335,6 +352,15 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			// built, and nothing else in this gate reads the requirements.
 			state.Unplanned = unplannedRequirements(feature.Doc)
 		}
+	}
+
+	// The message lane judges a commit that does not exist yet: the proof is owed
+	// by the tree that commit will carry, and the review with it. The close's own
+	// questions -unplanned requirements and paperwork- are asked after the commit.
+	if r.opts.Message != "" && feature != nil && feature.Number == 0 {
+		state.ProofDeferred = true
+		closedNow = false
+		state.Unplanned = nil
 	}
 
 	proofPath, proofRel := proofPathFor(opts.Dir, feature)
@@ -413,7 +439,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 
 	verdict := gate.Evaluate(state)
-	if verdict.Code == gate.Ready {
+	if verdict.Code == gate.Ready && r.opts.Message == "" {
 		// The review gate is last on purpose: everything before it is something
 		// the agent can act on, and sending an agent to `odachi review` while the
 		// proof gate is still failing would be a dead end that resolves nothing.
@@ -653,17 +679,66 @@ func (r *runner) claimedChange() (*tasks.Document, *Result) {
 	}
 
 	line := declared.Line
+	return changeDocument(line, start), nil
+}
+
+// claimedMessage reads the trailer from the message git handed a commit-msg
+// hook. Before the commit exists there is no range to read and no fork point to
+// find: the message is the whole record, the fence is measured against what is
+// staged, and the proof is owed by the tree the commit will carry.
+func (r *runner) claimedMessage() (*tasks.Document, *Result) {
+	base := strings.TrimSpace(r.opts.ChangeBase)
+	if base == "" {
+		return nil, nil
+	}
+
+	path := r.opts.Message
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(r.opts.Dir, path)
+	}
+	data, err := r.files.Read(path)
+	if err != nil {
+		problem := blocked("could not read the commit message " + r.opts.Message + ": " + oneLine(err.Error()) + "; git runs the hook inside the repository")
+		return nil, &problem
+	}
+	declared, ok, err := change.Parse([]string{string(data)})
+	if err != nil {
+		problem := blocked(oneLine(err.Error()))
+		return nil, &problem
+	}
+	if !ok {
+		return nil, nil
+	}
+
+	branch, onDefault, err := r.git.OnDefaultBranch(r.opts.Dir, r.opts.ChangeBase)
+	if err != nil {
+		problem := blocked("could not tell whether this change sits on the default branch: " +
+			oneLine(err.Error()) + "; fix the repository and run odachi check again")
+		return nil, &problem
+	}
+	if onDefault {
+		problem := blocked("a change that names itself in a trailer lives on a branch, not on " + branch + ": move the commits to a branch and run again")
+		return nil, &problem
+	}
+
+	return changeDocument(declared.Line, ""), nil
+}
+
+// changeDocument is the document a trailer names, built the same way whether the
+// line came from the commits or from the message of the one being made. The base
+// is empty before the commit exists: there is no fork point to name yet.
+func changeDocument(line, base string) *tasks.Document {
 	return &tasks.Document{
 		Number: 0,
 		Slug:   changeSlug(line),
 		Doc: taskdoc.TaskDoc{
 			Title:        line,
-			Base:         start,
+			Base:         base,
 			Light:        true,
 			Requirements: []taskdoc.Requirement{{ID: "R1", Text: line}},
 			Steps:        []taskdoc.Step{{ID: "T1", Text: line, Requirement: "R1", Done: true}},
 		},
-	}, nil
+	}
 }
 
 // changeSlug names a document-less change's proof after its line: lowercase
