@@ -28,9 +28,10 @@ const (
 	MaxDescription = 200
 	// MaxBodyLines is the most lines a skill body may have.
 	MaxBodyLines = 60
-	// MaxRuleChars is the longest a rule may be. A rule that needs more is two
-	// rules, and a line that wraps hides the second one below the fold.
-	MaxRuleChars = 140
+	// MaxRuleChars is the longest a rule may be. A rule that needs more is a
+	// paragraph wearing a dash: 140 split 78 single sentences in this catalog, and
+	// 300 catches the one rule that carries two ideas.
+	MaxRuleChars = 300
 	// TriggerPrefix is how every description starts.
 	TriggerPrefix = "Trigger:"
 	// NamePattern is the one slug shape a directory and a name share.
@@ -145,23 +146,40 @@ func (s Skill) Problems() []Problem {
 		}
 	}
 
-	// A rule is one line and a bullet. A paragraph is twelve rules the count
-	// reads as one - ui-craft had exactly that - and a wrapped bullet hides its
-	// second half where a reader skimming the list never sees it.
+	// A rule is one bullet. It may wrap -that is typography- but its text is one
+	// instruction, and a paragraph in the section is several rules the count reads
+	// as none. ui-craft had exactly that: twelve rules in sixteen hundred
+	// characters, invisible to every check.
 	if rules, ok := sectionContent(body, "Rules"); ok {
+		current := ""
+		flush := func() {
+			if current == "" {
+				return
+			}
+			if length := utf8.RuneCountInString(current); length > MaxRuleChars {
+				add("a rule has %d characters; the maximum is %d: a rule that needs more is a paragraph", length, MaxRuleChars)
+			}
+			current = ""
+		}
+		prose := false
 		for _, line := range strings.Split(rules, "\n") {
 			rule := strings.TrimSpace(line)
-			if rule == "" {
-				continue
-			}
-			if !strings.HasPrefix(rule, "- ") {
-				add("a ## Rules line is not a bullet: %q; one rule is one line, starting with a dash", excerpt(rule))
-				continue
-			}
-			if length := utf8.RuneCountInString(rule); length > MaxRuleChars {
-				add("a rule has %d characters; the maximum is %d: a rule that needs more is two rules", length, MaxRuleChars)
+			switch {
+			case rule == "":
+				flush()
+				prose = false
+			case strings.HasPrefix(rule, "- "), strings.HasPrefix(rule, "* "):
+				flush()
+				prose = false
+				current = rule
+			case current != "":
+				current += " " + rule
+			case !prose:
+				add("a ## Rules line is not a bullet: %q; one rule is one bullet", excerpt(rule))
+				prose = true
 			}
 		}
+		flush()
 	}
 
 	problems = append(problems, s.referenceProblems(body)...)

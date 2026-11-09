@@ -15,7 +15,7 @@ R1 · "a rule is one bullet on one line: `skills --check` refuses prose or a wra
 ## Steps
 - [x] T1 · the check refuses prose and a rule over 140 characters, tests red first   R1 · route:inline · tree:272d32a5c277e13135e7948f4210c332fb4799f3
 - [x] T2 · the rewrite, first batch: the prose-heavy skills   R1 · route:inline · tree:825ff08fac2d65e1cd456da9db2d9e0ba827603d
-- [ ] T3 · the rewrite, the rest, the registry and Unreleased   R1 · route:inline
+- [x] T3 · the rewrite, the rest, the registry and Unreleased   R1 · route:inline · tree:2b534e755459a680d7a4f7461c0a3417df9bd84b
 
 ## History
 L1 · "a rule is one bullet on one line: `skills --check` refuses prose or a wrapped rule in `## Rules`"

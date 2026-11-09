@@ -338,13 +338,13 @@ func TestARuleIsOneBulletOnOneLine(t *testing.T) {
 // TestARuleOverTheLineBudget: a rule that needs more than 140 characters is two
 // rules, and a wrapped bullet is where the second half hides.
 func TestARuleOverTheLineBudget(t *testing.T) {
-	long := strings.Repeat("y una regla que se estira ", 6)
+	long := strings.Repeat("y una regla que se estira ", 14)
 	text := "---\nname: largo\ndescription: Trigger: una skill con una regla larga\n---\n\n" +
 		"## When\n\ncuando\n\n## Rules\n\n- " + long + "\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
 
 	problems := parse("largo", text).Problems()
 
-	if !strings.Contains(joined(problems), "maximum is 140") {
+	if !strings.Contains(joined(problems), "maximum is 300") {
 		t.Errorf("problems = %q, want the length reason", joined(problems))
 	}
 }

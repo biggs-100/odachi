@@ -10,7 +10,7 @@ import (
 
 // routerMain is a skill with one reference: the smallest folder that is more
 // than a lone SKILL.md.
-const routerMain = "---\nname: router\ndescription: Trigger: cuando hay que enrutar\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## References\n\n- `references/numbers.md` — the scale.\n"
+const routerMain = "---\nname: router\ndescription: Trigger: cuando hay que enrutar\n---\n\n## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## References\n\n- `references/numbers.md` — the scale.\n"
 
 func routerSkill() pack.Skill {
 	return pack.Skill{
@@ -176,7 +176,7 @@ func TestASkillFolderWithAPathOutsideIsRefused(t *testing.T) {
 func TestAnAssetTravelsWhole(t *testing.T) {
 	root := home()
 	files := newFakeFiles(nil)
-	main := "---\nname: router\ndescription: Trigger: cuando hay que copiar\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## Assets\n\n- `assets/doc.md` — the template.\n"
+	main := "---\nname: router\ndescription: Trigger: cuando hay que copiar\n---\n\n## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## Assets\n\n- `assets/doc.md` — the template.\n"
 
 	result := run(files, fakeHome{dir: root}, pack.Options{Agents: "claude", Skills: []pack.Skill{{
 		Name: "router",
