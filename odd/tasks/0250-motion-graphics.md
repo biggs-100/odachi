@@ -15,7 +15,7 @@ R1 · "a skill that turns a request for a motion graphic or a YouTube or Reels v
 ## Steps
 - [x] T1 · the body: trigger, rules, gates, references and output, under 60 lines   R1 · route:inline · tree:83bbc409d5abf436457cc9c68773debaa67337ed
 - [x] T2 · the craft references: the-piece, motion-principles and the-ai-look   R1 · route:inline · tree:07580af8f03b73946a8277badd5f8f45e2a0e27b
-- [ ] T3 · the medium references: type-in-motion, formats and the-render   R1 · route:inline
+- [x] T3 · the medium references: type-in-motion, formats and the-render   R1 · route:inline · tree:39563bc0003340a550d240048c004673a36d52de
 - [ ] T4 · the scene-plan asset, the registry and the changelog bullet   R1 · route:inline
 
 ## History
