@@ -421,6 +421,15 @@ func (reviewModeCodec) Render(config review.ProjectConfig) ([]byte, error) {
 	return reviewtoml.Render(config)
 }
 
+// reviewDefault is the file a project is born with: the review on, and no model
+// pinned, so the reviewer uses the session's. The mode is the domain's word and
+// the format is the adapter's; init only asks for the bytes.
+type reviewDefault struct{}
+
+func (reviewDefault) Default() ([]byte, error) {
+	return reviewtoml.Render(review.ProjectConfig{Mode: review.ModeOn})
+}
+
 // loadProfile reads odd/profile.toml when it exists. The human owns that
 // file: it wins over inference, and a malformed one blocks with a sentence
 // instead of being silently replaced. The verb is the command the human has to

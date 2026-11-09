@@ -96,6 +96,10 @@ type Options struct {
 	// Profiles is the profile at hand, read and not inferred. nil means the
 	// tool's default audience: novato.
 	Profiles Profiles
+	// Review renders the review policy a project is born with. nil writes
+	// nothing: a caller that only wants the rules and the hook says so with a
+	// nil port, the way it says it with a nil Home.
+	Review ReviewConfig
 	// Agents is the client selection this run was asked for. Empty means "the
 	// stored one, or both": a plain init after `--agents opencode` must not
 	// bring the other client back.
@@ -162,6 +166,14 @@ type Profiles interface {
 	Written(dir string) (name string, err error)
 }
 
+// ReviewConfig is the review policy port, one method wide: the bytes of a file
+// that asks for the verdict. A port and not a render here for the same reason as
+// Profiles: the domain owns the mode, the adapter owns the format, and init must
+// not carry a second copy of either.
+type ReviewConfig interface {
+	Default() ([]byte, error)
+}
+
 // Files is the disk port: enough to read, back up and replace the two files,
 // and to make the hook executable.
 type Files interface {
@@ -193,7 +205,7 @@ type Result struct {
 
 // Run performs one `odachi init`.
 func Run(opts Options, files Files, skills Skills) Result {
-	r := &runner{dir: opts.Dir, files: files, skills: skills, profiles: opts.Profiles, agentSelection: opts.AgentSelection, home: opts.Home}
+	r := &runner{dir: opts.Dir, files: files, skills: skills, profiles: opts.Profiles, agentSelection: opts.AgentSelection, home: opts.Home, review: opts.Review}
 	if r.dir == "" {
 		r.dir = "."
 	}
@@ -257,6 +269,12 @@ func Run(opts Options, files Files, skills Skills) Result {
 	if problem := r.writeAgentStore(opts.Agents != "" || opts.Skills != ""); problem != nil {
 		// The hook and the rules block are already in place: report how much of
 		// the job is done instead of pretending nothing happened.
+		problem.Files = append([]string{}, r.changed...)
+		return *problem
+	}
+	// A project is born with the review on: the switch is a file, and a file that
+	// already exists is the human's decision, never init's to overwrite.
+	if problem := r.writeReview(); problem != nil {
 		problem.Files = append([]string{}, r.changed...)
 		return *problem
 	}
@@ -448,6 +466,40 @@ func (r *runner) writeAgentStore(explicit bool) *Result {
 	return nil
 }
 
+// writeReview leaves odd/review.toml with the switch on. It is a file and not an
+// absence on purpose: a project that never wrote one keeps the behaviour it had,
+// and a project that already has one is never met by this code. The file is the
+// human's decision, so an existing one is kept byte for byte and the run says so.
+func (r *runner) writeReview() *Result {
+	if r.review == nil {
+		return nil
+	}
+
+	name := filepath.ToSlash(layout.Review)
+	exists, err := r.files.Exists(filepath.Join(r.dir, layout.Review))
+	if err != nil {
+		problem := blocked("could not check " + name + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+		return &problem
+	}
+	if exists {
+		r.lines = append(r.lines, name+": kept; the review switch is the human's, and init does not rewrite it")
+		return nil
+	}
+
+	data, err := r.review.Default()
+	if err != nil {
+		problem := blocked("could not write the review policy: " + oneLine(err.Error()) + "; run odachi review mode on after odachi init")
+		return &problem
+	}
+	if err := r.files.Write(filepath.Join(r.dir, layout.Review), data); err != nil {
+		problem := blocked("could not write " + name + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
+		return &problem
+	}
+	r.changed = append(r.changed, name)
+	r.lines = append(r.lines, name+": on; a close asks for a verdict, and odachi review mode off turns it off")
+	return nil
+}
+
 // pathWarning is the half-broken install: the hook works from the absolute path,
 // the rules do not work at all. It names the folder to add, because "put it on
 // the PATH" is the kind of advice that leaves a beginner exactly where they were.
@@ -469,6 +521,7 @@ type runner struct {
 	profiles       Profiles
 	agentSelection AgentSelection
 	home           Home
+	review         ReviewConfig
 	changed        []string
 	lines          []string
 	// storedSelection is what the project had before this run: empty means no

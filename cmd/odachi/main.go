@@ -1182,6 +1182,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		AgentSelection: agentSelection{},
 		Home:           osHome{},
 		Global:         true,
+		Review:         reviewDefault{},
 		Skills:         skillsScope,
 		Existing:       existing,
 	}, disk(dir), &initSkills{dir: dir, verb: "odachi init"})
