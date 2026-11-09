@@ -8,7 +8,7 @@ R1 · "the inert-key test rewrites the store, and the impact map says what docto
 ## Done when
 
 ## Steps
-- [x] T1 · the inert-key test rewrites the store, and the impact map says what doctor does now   R1
+- [x] T1 · the inert-key test rewrites the store, and the impact map says what doctor does now   R1 · tree:3a9dcc314b70467d49390b787945bc0188b8c397
 
 ## History
 L1 · "the inert-key test rewrites the store, and the impact map says what doctor does now"
