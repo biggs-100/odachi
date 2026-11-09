@@ -13,9 +13,9 @@ R1 · "a new project is born with the review on: `init` writes `odd/review.toml`
 - Unreleased names the change: a contract change, minor (0254)
 
 ## Steps
-- [ ] T1 · the port and the write: init leaves odd/review.toml with mode on   R1 · route:inline
-- [ ] T2 · the tests: written, kept byte for byte, and named in --json   R1 · route:inline
-- [ ] T3 · Unreleased and the impact map   R1 · route:inline
+- [x] T1 · the port and the write: init leaves odd/review.toml with mode on   R1 · route:inline · tree:89119879ffea64766ac123d7d7f9bd9dbd426576
+- [x] T2 · the tests: written, kept byte for byte, and named in --json   R1 · route:inline · tree:1aac406a6b691e0b382d912f6f6e3014a12d7143
+- [x] T3 · Unreleased and the impact map   R1 · route:inline · tree:39d4ad7c29f754e8dd5777376c2bd7fb8b41b0e6
 
 ## History
 L1 · "a new project is born with the review on: `init` writes `odd/review.toml` with `mode = "on"` and never replaces one"

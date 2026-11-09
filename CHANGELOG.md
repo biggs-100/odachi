@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A new project is born with the review on.** `odachi init` writes `odd/review.toml` with `mode = "on"`
+  when the project has none, and never replaces one: the switch is the human's, so an existing file is
+  kept byte for byte and the run says it kept it. A close on a new project now asks for a verdict, and a
+  project with no reachable model closes by configuring one or by `odachi review waive`. A contract
+  change, minor (0254).
+
 ## v0.36.5 - 2026-11-09
 
 - **The attribution travels with the skill, and a file that cannot travel is refused.** `odachi skills
