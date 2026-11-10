@@ -17,7 +17,7 @@ R1 · "una medida del revisor: cuántos defectos sembrados encuentra cada lente,
 
 ## Steps
 - [x] T1 · el fixture clean/ y seeded/ y el manifiesto que nombra cada defecto, con su lector y sus errores   R1 · route:inline · tree:597024fe63b3130d8b1c586cdc57cb0ea4828c37
-- [ ] T2 · el puntaje: un veredicto contra el manifiesto da encontrados, perdidos y ruido por lente   R1 · route:inline
+- [x] T2 · el puntaje: un veredicto contra el manifiesto da encontrados, perdidos y ruido por lente   R1 · route:inline · tree:38049119e99df93f768ad318653edf3f3afa97a5
 - [ ] T3 · review probe corre los cuatro lentes, guarda sus veredictos y escribe la primera medida   R1 · route:inline
 
 ## History
