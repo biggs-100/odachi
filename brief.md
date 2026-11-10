@@ -4,8 +4,8 @@
 - a rule is one bullet on one line: `skills --check` refuses prose or a wrapped rule in `## Rules`
 
 ## Done when
-- `internal/domain/skill` refuses a `## Rules` line that is not a bullet, and a rule over 140 characters, each with its test observed red first
-- every bundled skill carries `## Rules` as bullets, none over 140 characters, and none loses a rule the old text had
+- `internal/domain/skill` refuses a `## Rules` line that is not a bullet, and a rule over 300 characters, each with its test observed red first
+- every bundled skill carries `## Rules` as bullets, none over 300 characters, and none loses a rule the old text had
 - `odachi skills --check` is green and `odachi skills --write` leaves SKILLS.md unchanged
 - the tests that pin a skill's words still pass, or their expectation moves with the rule it pins
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
@@ -19,7 +19,7 @@
 
 ## Decisions taken
 - One physical line per rule: the model follows a list better than a paragraph, and a line count is gameable because one line can hide twelve rules.
-- 140 characters is the limit; a rule that needs more is two rules.
+- 300 characters is the limit: a rule that needs more is a paragraph, and 140 split 78 single sentences.
 - The rewrite keeps every rule: a loss is a regression, not a simplification.
 - The reach is the whole catalog, because the skill that hides the most rules is the one in use every day.
 - There is no sensitive data in the first version.
