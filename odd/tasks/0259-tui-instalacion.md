@@ -22,7 +22,7 @@ R1 · "una tui de instalación y configuración al igual que gentle-ai"
 ## Steps
 - [x] T1 · the configuration state and the ordered operations that apply it, with tests   R1 · route:inline · tree:8415d336856092ec8bd5dd31a78b37aec868c60e
 - [x] T2 · the odachi tui verb, Bubbletea, the no-TTY refusal and the detection screen   R1 · route:inline · tree:6339255e56b51cae5a9c1db6ad0b83d8f9f8ac5d
-- [ ] T3 · the client, skills-scope and voice screens, and cancel writes nothing   R1 · route:inline
+- [x] T3 · the client, skills-scope and voice screens, and cancel writes nothing   R1 · route:inline · tree:fd3d1c74823fab5c7586bfec46c2da45574500c0
 - [ ] T4 · the review screen: on or off and the model of each lens, preserving the file   R1 · route:inline
 - [ ] T5 · the apply screen: one line per operation, a failure stops and names what remains   R1 · route:inline
 - [ ] T6 · the ADR that supersedes 0001, the help, the changelog and the impact map   R1 · route:inline
