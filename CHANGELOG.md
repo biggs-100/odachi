@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.38.1 - 2026-11-09
 
 - **A wrapped bullet arrives whole.** `odachi start --brief` now reads a bullet's continuation lines
   until a blank line, a header or the next bullet, instead of keeping its first physical line: a draft
