@@ -25,7 +25,7 @@ R1 · "una tui de instalación y configuración al igual que gentle-ai"
 - [x] T3 · the client, skills-scope and voice screens, and cancel writes nothing   R1 · route:inline · tree:fd3d1c74823fab5c7586bfec46c2da45574500c0
 - [ ] T4 · the review screen: on or off and the model of each lens, preserving the file   R1 · route:inline
 - [x] T5 · the apply screen: one line per operation, a failure stops and names what remains   R1 · route:inline · tree:1f235063317160026ca84d7106cea28b6d5b0e8e
-- [ ] T6 · the ADR that supersedes 0001, the help, the changelog and the impact map   R1 · route:inline
+- [x] T6 · the ADR that supersedes 0001, the help, the changelog and the impact map   R1 · route:inline · tree:e1ea6ae21ea6be7a5fd0c87acecb395f0314231f
 - [ ] T7 · the screen tests with teatest and the closing proof   R1 · route:inline
 
 ## History
