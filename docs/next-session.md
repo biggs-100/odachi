@@ -1,6 +1,7 @@
 # Next session
 
-Written while closing 0258. One reproduction waits; the routing measure waits; nothing else is owed.
+Written while closing 0258, after the ninth probe. One reproduction waits; the routing table waits for
+its own measure; nothing else is owed.
 
 ## Where the project is
 
@@ -38,6 +39,10 @@ Written while closing 0258. One reproduction waits; the routing measure waits; n
   The policy landed first because the base fence still protected `main.go`. The review found four gaps
   -the precedence not pinned, the empty flag falling through, `--json` ignored and two untested
   branches- and all four were paid before the merge, with a correction review of the delta.
+- **0259, the ninth probe** (docs only, no release): with a requirement that names the contract but not
+  the rejected shapes, `tests` put all five edges in the test in 3 of 3 runs; without it, 2, 4 and 4
+  edges, and one run shipped an implementation that accepted an inverted range. The probe is in
+  `docs/skill-evaluation.md`; the order and the red did not move, the coverage did.
 
 ## The questions that wait
 
@@ -48,9 +53,9 @@ Written while closing 0258. One reproduction waits; the routing measure waits; n
 - Candidates, not debts: `odachi clean --apply` frees about 555 KB; the installer leaves a
   `SKILL.md.bak-*` beside a skill it replaced and they accumulate (five for `ui-craft` alone); an
   `odachi check` stopped at 17:07 left its own tree without a proof.
-- Proposed and not written: **the routing table in the block**, and a measure of whether a skill
-  improves the work, not only whether it loads. The measure needs a design before code; the earlier
-  attempt in `docs/skill-evaluation.md` scored less than its table claimed.
+- Proposed and not written: **the routing table in the block**. The ninth probe supports the premise
+  -the text changes what the test covers- but the table itself is unmeasured: the next step is a design,
+  not code, and the earlier attempt in `docs/skill-evaluation.md` is the cautionary case.
 
 ## The limits to remember
 
@@ -80,6 +85,9 @@ Written while closing 0258. One reproduction waits; the routing measure waits; n
   were paid that way. A warning still earns no round on its own.
 - **The installer refuses while another process holds `odachi.exe`** and names the PID. Wait for that
   run; killing it aborts somebody's gate.
+- **A measurement needs an artifact the prompt does not name.** When the requirement listed the five
+  rejected shapes, both arms covered them and `tests` looked inert; with the shapes unlisted, the arm
+  without the skill missed edges and one contract failed. The lever was the prompt, not the text.
 - One heavy gate per machine; `go test ./...` takes about 700 s. `review --exec` gives the reviewer 600 s.
 
 ## The commands that work
