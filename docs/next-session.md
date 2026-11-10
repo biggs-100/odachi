@@ -1,13 +1,13 @@
 # Next session
 
-Written while closing 0258, after the ninth probe, the installer measurement and the cleanup. Nothing
-is owed.
+Written while closing 0259. Two review-debt rows and the installer's slow backup leak wait; nothing
+else is owed.
 
 ## Where the project is
 
-- `v0.38.2` is published (tag on `34f8095`); the session shipped nine releases: `0.36.1` through
-  `0.36.5`, `0.37.0`, `0.38.0`, `0.38.1` and `0.38.2`, and `main` carries 0249 to 0258.
-- The installed binary is `0.38.2`; the installer replaced it in one run, and `doctor` is all clear.
+- `v0.38.3` is published (tag on `3f441b3`); the session shipped ten releases: `0.36.1` through
+  `0.36.5`, `0.37.0`, `0.38.0`, `0.38.1`, `0.38.2` and `0.38.3`, and `main` carries 0249 to 0259.
+- The installed binary is `0.38.3`; the installer replaced it in one run, and `doctor` is all clear.
 - 21 skills bundled, 61 in `~/.agents/skills`, 21 that match the payload.
 - `Unreleased` is empty: the release renamed it, and the next feature writes under it.
 
@@ -39,10 +39,17 @@ is owed.
   The policy landed first because the base fence still protected `main.go`. The review found four gaps
   -the precedence not pinned, the empty flag falling through, `--json` ignored and two untested
   branches- and all four were paid before the merge, with a correction review of the delta.
-- **0259, the ninth probe** (docs only, no release): with a requirement that names the contract but not
+- **The ninth probe** (docs only, no release): with a requirement that names the contract but not
   the rejected shapes, `tests` put all five edges in the test in 3 of 3 runs; without it, 2, 4 and 4
   edges, and one run shipped an implementation that accepted an inverted range. The probe is in
   `docs/skill-evaluation.md`; the order and the red did not move, the coverage did.
+- **0259, the installation TUI** (`v0.38.3`): `odachi tui` detects the project, chooses the clients, the
+  skills scope, the voice and the review switch and lens models, and applies with `init`/`setup`,
+  `level --to`, `review mode` and the new `review.SetConfig`. A folder without the block is asked
+  setup or init; without a terminal the verb refuses and names `odachi setup`. ADR 0051 supersedes
+  0001's no-TUI for this surface. The verifier found the setup/init choice missing, the voseo, the
+  untidy module and T4 unrecorded; the review approved with one warning (an empty table discarded) paid
+  and two recorded in `docs/review-debt.md`.
 - **The installer measurement** (docs only, no release): a controlled downgrade to `v0.36.2` and one
   upgrade to `v0.38.2` replaced the old `ui-craft` in a single run; the `v0.38.0` report did not
   reproduce.
@@ -52,6 +59,12 @@ is owed.
 
 ## The questions that wait
 
+- **`docs/review-debt.md` has two rows** from 0259's correction review: the apply hands the lens table to
+  the runner unnormalised (the file is normalised by `review.SetConfig`), and a nil table would be
+  cleared by a caller that never touched it (the TUI always passes a non-nil map). The next change to
+  the apply pays them with a test.
+- **The installer still leaves a `SKILL.md.bak-*` on each upgrade**: a slow leak, not a debt; the 89
+  accumulated ones are gone.
 - **The routing table stays out of the block** (decided while closing 0258): the plan already routes a
   step (`--skill`, the `skills:` tail) and `skills --resolve` makes that list inspectable. The third
   probe found the block is not the lever and the ninth found the step is, so a table there would add
@@ -93,6 +106,16 @@ is owed.
 - **A measurement needs an artifact the prompt does not name.** When the requirement listed the five
   rejected shapes, both arms covered them and `tests` looked inert; with the shapes unlisted, the arm
   without the skill missed edges and one contract failed. The lever was the prompt, not the text.
+- **A dependency marks the change full.** `go.mod` is a signal: the review asks four lenses, and the
+  module owes `go mod tidy -diff` clean before the proof, not after.
+- **The verifier earns its keep before the review.** 0259's verifier found a step never recorded (T4),
+  the setup/init screen missing, the voseo and the untidy module; the review would have found them a
+  round later, one at a time.
+- **A step's tree comes from the commit that carried its code.** When two steps share a commit,
+  `plan --done T4 --commit <sha>` names the tree; the doc commit after the proof is what the gate can
+  compare.
+- **A large candidate splits the review.** 0259's prompt ran in two parts and the correction reviewed
+  only the delta; the `--since <verdict's tree>` lane is the cheap one for fixes.
 - One heavy gate per machine; `go test ./...` takes about 700 s. `review --exec` gives the reviewer 600 s.
 
 ## The commands that work
