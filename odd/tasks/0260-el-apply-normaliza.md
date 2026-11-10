@@ -8,7 +8,7 @@ R1 · "el apply normaliza la tabla de lentes no vacía y no toca una tabla nula"
 ## Done when
 
 ## Steps
-- [ ] T1 · el apply normaliza la tabla de lentes no vacía y no toca una tabla nula   R1
+- [x] T1 · el apply normaliza la tabla de lentes no vacía y no toca una tabla nula   R1 · tree:8830981dd57397c02250830061b15a72e7ff71c8
 
 ## History
 L1 · "el apply normaliza la tabla de lentes no vacía y no toca una tabla nula"
