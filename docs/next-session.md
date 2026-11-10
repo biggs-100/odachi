@@ -1,7 +1,7 @@
 # Next session
 
-Written while closing 0258, after the ninth probe and the installer measurement. The routing table
-waits for its own measure; nothing else is owed.
+Written while closing 0258, after the ninth probe, the installer measurement and the cleanup. Nothing
+is owed.
 
 ## Where the project is
 
@@ -46,15 +46,16 @@ waits for its own measure; nothing else is owed.
 - **The installer measurement** (docs only, no release): a controlled downgrade to `v0.36.2` and one
   upgrade to `v0.38.2` replaced the old `ui-craft` in a single run; the `v0.38.0` report did not
   reproduce.
+- **The cleanup** (no feature): `clean --apply` freed 566 KB in 215 files, and the 89 `SKILL.md.bak-*`
+  the installer had left in the home (242 KB) are gone. The installer still writes one on each upgrade:
+  a slow leak, not a debt.
 
 ## The questions that wait
 
-- Candidates, not debts: `odachi clean --apply` frees about 555 KB; the installer leaves a
-  `SKILL.md.bak-*` beside a skill it replaced and they accumulate (five for `ui-craft` alone); an
-  `odachi check` stopped at 17:07 left its own tree without a proof.
-- Proposed and not written: **the routing table in the block**. The ninth probe supports the premise
-  -the text changes what the test covers- but the table itself is unmeasured: the next step is a design,
-  not code, and the earlier attempt in `docs/skill-evaluation.md` is the cautionary case.
+- **The routing table stays out of the block** (decided while closing 0258): the plan already routes a
+  step (`--skill`, the `skills:` tail) and `skills --resolve` makes that list inspectable. The third
+  probe found the block is not the lever and the ninth found the step is, so a table there would add
+  text without evidence. Reopen when a case appears that a step's own list cannot route.
 
 ## The limits to remember
 
