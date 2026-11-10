@@ -498,7 +498,7 @@ func TestAProjectSkillCarriesItsAsset(t *testing.T) {
 	withHome(t, home)
 	project := t.TempDir()
 	seed := map[string]string{
-		"skills/router/SKILL.md":      "---\nname: router\ndescription: Trigger: cuando hay que copiar\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## Assets\n\n- `assets/doc.md` — the template.\n",
+		"skills/router/SKILL.md":      "---\nname: router\ndescription: Trigger: cuando hay que copiar\n---\n\n## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Never\n\nnunca\n\n## Output\n\nthe file.\n\n## Assets\n\n- `assets/doc.md` — the template.\n",
 		"skills/router/assets/doc.md": "# template\n",
 		"SKILLS.md":                   "# generated\n",
 	}

@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A rule is one bullet, and a paragraph is not a rule.** `skills --check` refuses a `## Rules` section
+  written as prose and a rule over 300 characters, because both hide instructions that the line count
+  reads as none. 140 would have split 78 single sentences; 300 catches the one rule that carries two
+  ideas. `ui-craft`'s twelve rules in one paragraph are eight bullets now; `bootstrap`, `drive`
+  and `tests` lose their prose for the same reason, and a wrapped bullet still counts as one rule. A
+  contract change for the skills, minor (0255).
+
 ## v0.37.0 - 2026-11-09
 
 - **A new project is born with the review on.** `odachi init` writes `odd/review.toml` with `mode = "on"`

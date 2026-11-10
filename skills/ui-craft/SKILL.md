@@ -11,7 +11,14 @@ A screen, a landing, a dashboard, a form or a component is to be built or review
 
 ## Rules
 
-**The order.** Content first: the real copy, the longest name, the biggest number. Then one thing wins the screen, and size, weight, colour and space carry the hierarchy in that order of cheapness. Layout from the numbers; breakpoints by content, never by device. Type: a scale, two families at most, one display size that earns its weight. Colour: one accent and a neutral ramp tinted with it, contrast measured and never estimated. Detail: one radius per level, one shadow per elevation, a 1px border at rest, one icon family. States: empty, loading, error, disabled and focus for every control, each with its copy, before the happy path. Remove: cut until it breaks, then put back one thing.
+- **Content first**: the real copy, the longest name, the biggest number, before any layout.
+- **One thing wins the screen**, and size, weight, colour and space carry the hierarchy in that order of cheapness.
+- **Layout from the numbers**; breakpoints by content, never by device.
+- **Type**: a scale, two families at most, one display size that earns its weight.
+- **Colour**: one accent and a neutral ramp tinted with it; contrast measured, never estimated.
+- **Detail**: one radius per level, one shadow per elevation, a 1px border at rest, one icon family.
+- **States first**: empty, loading, error, disabled and focus for every control, each with its copy.
+- **Remove**: cut until it breaks, then put back one thing.
 
 ## Decision gates
 

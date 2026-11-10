@@ -9,29 +9,26 @@ You are inside an odachi project: there is `brief.md`, `odd/tasks/` and the odac
 
 ## Rules
 
-Before anything: a question is answered, not implemented -an answer is not a proposal- and work starts when the human asks for it or approves one; an irreversible action (push, pull request, merge, tag or release, `init`, another folder) names its exact target and waits for a yes.
-
-A fence rule protects a file the feature must not touch, never a reason (ADR 0027).
-
-The four pieces and who owns each one:
-
-- `brief.md` — the vision and the fence. The human writes it; do not rewrite it.
-- `odd/` — the plan and the rules: `odd/tasks/` (moved with `odachi plan`) plus `fence.toml`, `profile.toml`, `review.toml` and `roles/`, which travel with the repository.
-- `proof/` — the evidence: real command output, tied to the tree. `check --run` writes it.
-- `.git/odachi/` — the clone's store: verdicts, versions, the lock and the client choice. It never travels. An older project carrying `.odachi/`: `store move` adopts it and prints the git commands.
-
-The feature cycle, in order:
-
-1. No brief, no build: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`, or with `--brief` when `shape` drafted it.
-2. `odachi plan "<step>" --req R1 --route inline`: one step per deliverable behavior, and the step says who runs it: `--route inline`, or `--route delegated --agent <name>`.
-3. Commit what start wrote -brief, fence, profile and task doc, steps included- before you branch. If they do not land together, the next change is judged by the last feature's fence, or a reset loses them.
-4. Work the step. A vision decision: `odachi ask "<question>"` and wait. A requirement the human changes: `odachi ask --change "<words>" --req R1`: its steps reopen and `brief.md` does not move.
-5. `odachi check`: the gate. The proof is owed by the closing tree, not by every step.
-6. One commit per step, and `odachi plan --done T1`: it records the tree the step produced, which a rebase cannot rewrite.
-7. At the end, `odachi summary` and tell in three lines what the human decided.
-
-If the request does not fit in one reading -you cannot say what must exist or what it must not touch- load `shape` before `start`: it ends in `odachi start --brief`.
-Once the work is understood, load `slices` before splitting; its policy wins over other global skills: a writer only for real parallelism or a long session, never for size. A change that fits one line opens with `odachi start --light "<requirement>"`: one quoted requirement, one step with the same words, no brief, and the project's fence and voice untouched. The lane is for a change whose whole story is the diff. A change whose diff is the whole record writes `Odachi-Change: <line>` in its commit instead: `check` and `review` read it from the merge-base, the proof is named after the line, and no document is written. That lane lives on a branch and reads the remote's default branch, or the `--base` the human names. A second step, a vision decision, or anything the fence protects is the signal you left it: write a brief and open the feature again.
+- **A question is answered, not implemented**: an answer is not a proposal, and work starts when the human asks for it or approves one.
+- **An irreversible action names its exact target and waits for a yes**: push, pull request, merge, tag, release, `init`, another folder.
+- **A fence rule protects a file the feature must not touch**, never a reason (ADR 0027).
+- `brief.md` is the vision and the fence: the human writes it, you do not rewrite it.
+- `odd/` is the plan and the rules: `odd/tasks/` plus `fence.toml`, `profile.toml`, `review.toml` and `roles/`, and it travels with the repository.
+- `proof/` is the evidence: real command output tied to the tree, written by `check --run`.
+- `.git/odachi/` is the clone's store: verdicts, versions, the lock and the client choice; it never travels, and `store move` adopts an older `.odachi/`.
+- **No brief, no build**: `odachi start`, answering; without a terminal, with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`, or `--brief` when `shape` drafted it.
+- `odachi plan "<step>" --req R1 --route inline`: one step per deliverable behavior, and the step says who runs it, `--route delegated --agent <name>` included.
+- **Commit what start wrote** -brief, fence, profile and task doc, steps included- before you branch; apart, the next change is judged by the last feature's fence.
+- Work the step. A vision decision is `odachi ask "<question>"` and a wait; a requirement the human changes is `odachi ask --change "<words>" --req R1`, whose steps reopen and `brief.md` does not move.
+- `odachi check` is the gate, and the proof is owed by the closing tree, not by every step.
+- One commit per step, then `odachi plan --done T1`: it records the tree the step produced, which a rebase cannot rewrite.
+- At the end, `odachi summary` and three lines on what the human decided.
+- If the request does not fit in one reading, load `shape` before `start`: it ends in `odachi start --brief`.
+- Once the work is understood, load `slices` before splitting: a writer only for real parallelism or a long session, never for size.
+- A change that fits one line opens with `odachi start --light "<requirement>"`: one quoted requirement, one step with the same words, no brief, and the fence and voice untouched.
+- A change whose diff is the whole record writes `Odachi-Change: <line>` in its commit instead: `check` and `review` read it from the merge-base, the proof is named after the line, and no document is written.
+- That lane lives on a branch and reads the remote's default branch, or the `--base` the human names; a second step, a vision decision, or anything the fence protects means you left it.
+- Requirements quoted **verbatim**, done-when observable, and observe RED before the code; a delegated step declares `--route delegated` at plan time, and every commit carries its `Risk:` line.
 
 ## Specs, test-first and risk
 

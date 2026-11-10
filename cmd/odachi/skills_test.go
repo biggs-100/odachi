@@ -46,7 +46,7 @@ func repoRoot(t *testing.T) string {
 
 func skillFile(name, trigger string) string {
 	return "---\nname: " + name + "\ndescription: Trigger: " + trigger +
-		"\n---\n\n## When\n\ncuando\n\n## Rules\n\nregla\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
+		"\n---\n\n## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Output\n\nlo que devuelve\n\n## Never\n\nnunca\n"
 }
 
 // TestSkillsCheckIsGreenInThisRepo: the bundled skills and the committed
@@ -131,7 +131,7 @@ func TestSkillsCheckReportsOneLinePerViolation(t *testing.T) {
 	}{
 		{
 			name:   "without frontmatter",
-			seed:   map[string]string{"skills/suelta/SKILL.md": "## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n"},
+			seed:   map[string]string{"skills/suelta/SKILL.md": "## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Never\n\nnunca\n"},
 			reason: "frontmatter",
 		},
 		{

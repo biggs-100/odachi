@@ -1,27 +1,27 @@
-# review-on-by-default
+# one-rule-per-line
 
 ## What must exist
-- a new project is born with the review on: `init` writes `odd/review.toml` with `mode = "on"` and never replaces one
+- a rule is one bullet on one line: `skills --check` refuses prose or a wrapped rule in `## Rules`
 
 ## Done when
-- `odachi init` writes `odd/review.toml` with `mode = "on"` when the project has none, through the writer `review mode on` uses
-- a project that already has the file keeps it byte for byte, and the run says it kept it
-- `init --json` reports the file it wrote or kept
-- `odachi check` on a project with that file asks for the verdict the mode owes
+- `internal/domain/skill` refuses a `## Rules` line that is not a bullet, and a rule over 300 characters, each with its test observed red first
+- every bundled skill carries `## Rules` as bullets, none over 300 characters, and none loses a rule the old text had
+- `odachi skills --check` is green and `odachi skills --write` leaves SKILLS.md unchanged
+- the tests that pin a skill's words still pass, or their expectation moves with the rule it pins
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
-- Unreleased names the change: a contract change, minor (0254)
+- Unreleased names the change: a contract change for skills, minor (0255)
 
 ## Not included (first version)
-- no change to a project without the file: absence keeps meaning optional there - back when the human asks for a global default
-- no model pinned by init: the reviewer uses the session's model - back when a project needs [lenses] at birth
+- no change to the 60-line body cap: the count becomes honest, the ceiling stays - back when a skill needs more than 60 lines of rules
+- no token counter and no frontmatter field: a line is a rule - back when a budget per skill is measured to matter
+- no change to `Never`, the gates or the references: this feature judges `## Rules` - back when another section hides prose the same way
 - no change to the installer, the workflow, the canvas or the proofs - back when one of those paths changes
-- no change to what `review mode` means or writes - back when the switch has to mean something else
 
 ## Decisions taken
-- The default is a file, not an absence: a project that never wrote one keeps the behaviour it had.
-- `init` never overwrites the file: an existing one is the human's decision.
-- A new project with no reachable model closes by configuring one or by `review waive`; the gate names both.
-- It is a contract change: the step a new project follows at a close now includes a verdict.
+- One physical line per rule: the model follows a list better than a paragraph, and a line count is gameable because one line can hide twelve rules.
+- 300 characters is the limit: a rule that needs more is a paragraph, and 140 split 78 single sentences.
+- The rewrite keeps every rule: a loss is a regression, not a simplification.
+- The reach is the whole catalog, because the skill that hides the most rules is the one in use every day.
 - There is no sensitive data in the first version.
 - First usable version: today.
-- Wants to learn: whether the review on from the first commit catches what a project only learns later.
+- Wants to learn: whether a list of short rules changes what the agent does, or only how the file reads.

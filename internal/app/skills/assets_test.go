@@ -13,7 +13,7 @@ import (
 func assetSkillText(name string, assets ...string) string {
 	var out strings.Builder
 	out.WriteString("---\nname: " + name + "\ndescription: Trigger: trigger de " + name + "\n---\n\n")
-	out.WriteString("## When\n\ncuando\n\n## Rules\n\nregla\n\n## Never\n\nnunca\n\n")
+	out.WriteString("## When\n\ncuando\n\n## Rules\n\n- regla\n\n## Never\n\nnunca\n\n")
 	out.WriteString("## Output\n\nthe file and its tradeoff.\n\n")
 	out.WriteString("## Assets\n\n")
 	for _, path := range assets {
