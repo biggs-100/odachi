@@ -29,6 +29,8 @@ type State struct {
 	Skills     string
 	Voice      string
 	ReviewMode string
+	// LensModels is the table the review runs with. Nil means the caller did not
+	// touch it; an empty map means the human cleared it, and the operation runs.
 	LensModels map[string]string
 	Project    bool
 }
@@ -102,11 +104,11 @@ func Plan(s State) []Operation {
 		{ID: "voice", Label: "aplicar la voz"},
 		{ID: "review", Label: "configurar el review"},
 	}
-	// The models operation runs whenever the review is on, even with an empty
-	// table: an empty map is the human deleting the last model, and the file has
-	// to be told. Nil and empty are different answers, and only the caller knows
-	// which one it means.
-	if strings.EqualFold(strings.TrimSpace(s.ReviewMode), review.ModeOn) {
+	// The models operation runs whenever the review is on and the table is not
+	// nil: an empty map is the human deleting the last model, and the file has to
+	// be told; nil is the caller that never touched it, and the file keeps what it
+	// has.
+	if strings.EqualFold(strings.TrimSpace(s.ReviewMode), review.ModeOn) && s.LensModels != nil {
 		ops = append(ops, Operation{ID: "models", Label: "fijar el modelo de cada lente"})
 	}
 	return ops
@@ -120,11 +122,20 @@ func Apply(s State, run Runner) Result {
 		return Result{Code: CodeBlocked, Message: strings.Join(problems, "; ")}
 	}
 
+	// The writer receives the canonical table. The empty map stays empty (the
+	// human's clear); only a non-empty table has keys and values to fold.
+	models := s.LensModels
+	if len(models) > 0 {
+		if normalized, err := review.NormalizeLensModels(models); err == nil {
+			models = normalized
+		}
+	}
+
 	plan := Plan(s)
 	result := Result{Code: CodeOK, Steps: make([]Step, 0, len(plan))}
 
 	for i, op := range plan {
-		err := applyOne(s, s.LensModels, op.ID, run)
+		err := applyOne(s, models, op.ID, run)
 		step := Step{Operation: op, Status: Done, Err: err}
 		if err != nil {
 			step.Status = Failed
