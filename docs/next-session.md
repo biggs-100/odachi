@@ -1,7 +1,7 @@
 # Next session
 
-Written while closing 0258, after the ninth probe. One reproduction waits; the routing table waits for
-its own measure; nothing else is owed.
+Written while closing 0258, after the ninth probe and the installer measurement. The routing table
+waits for its own measure; nothing else is owed.
 
 ## Where the project is
 
@@ -43,13 +43,12 @@ its own measure; nothing else is owed.
   the rejected shapes, `tests` put all five edges in the test in 3 of 3 runs; without it, 2, 4 and 4
   edges, and one run shipped an implementation that accepted an inverted range. The probe is in
   `docs/skill-evaluation.md`; the order and the red did not move, the coverage did.
+- **The installer measurement** (docs only, no release): a controlled downgrade to `v0.36.2` and one
+  upgrade to `v0.38.2` replaced the old `ui-craft` in a single run; the `v0.38.0` report did not
+  reproduce.
 
 ## The questions that wait
 
-- **A reproduction, not a diagnosis**: the first install of `v0.38.0` left the old `ui-craft` text and
-  the second wrote the new one, while `install.ps1` replaces the binary (line 215) before `setup`
-  (line 258), which should take one run. The 0.38.1 upgrade changed no skill bytes, so it did not
-  exercise this; reproduce it on the next upgrade that does.
 - Candidates, not debts: `odachi clean --apply` frees about 555 KB; the installer leaves a
   `SKILL.md.bak-*` beside a skill it replaced and they accumulate (five for `ui-craft` alone); an
   `odachi check` stopped at 17:07 left its own tree without a proof.
@@ -83,6 +82,11 @@ its own measure; nothing else is owed.
 - **A review warning can be paid before the merge.** `review --since <verdict's tree>` reviews the
   delta, merges the predecessor's rows and costs one round; the four warnings of 0258's first verdict
   were paid that way. A warning still earns no round on its own.
+- **The installer updates a changed skill in one run.** Measured on 2026-11-10: installed `v0.36.2` (the
+  old `ui-craft`), then `v0.38.2` once -`setup` reported "4 replaced skills, 17 unchanged" and the
+  `ui-craft` hash returned to the new text. The `v0.38.0` report did not reproduce under a controlled
+  downgrade and upgrade; if it recurs, the in-use binary and the project's own `.agents/skills` copy
+  are the two places to look first.
 - **The installer refuses while another process holds `odachi.exe`** and names the PID. Wait for that
   run; killing it aborts somebody's gate.
 - **A measurement needs an artifact the prompt does not name.** When the requirement listed the five
