@@ -9,21 +9,25 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0259.
+Last written: while closing 0260.
 
 ## Open
 
+Nothing open: 0260 paid the two rows.
+
+## Closed by feature 0260
+
 ### the apply hands the lens table over unnormalised
 
-Found by the correction review of 0259 (WARNING, `internal/app/configure/configure.go:127`). `Apply` passes `s.LensModels` straight to the runner; the normalisation that trimmed values and folded keys is gone, and the only new test pins an empty map. The TUI's runner calls `review.SetConfig`, which normalises at the file, so the bytes are safe; what is unpinned is the app's `Runner` contract.
+Found by the correction review of 0259 (WARNING, `internal/app/configure/configure.go:127`). `Apply` passed `s.LensModels` straight to the runner; the normalisation that trimmed values and folded keys was gone, and the only new test pinned an empty map.
 
-Reopens when a second Runner exists. The fix is to normalise a non-empty table before the runner and pin the canonical values, keeping nil (untouched) and empty (cleared) distinct.
+Closed: `normalize` returns the canonical state and the problems, and `Validate` and `Apply` share it, so the runner receives the table the validation accepted and no error is discarded on the way. `TestApplyNormalisesTheLensTable` starts from `{" Risk ": " opencode-go/x "}` and asserts the runner saw `risk` and the trimmed value.
 
 ### the models operation would clear a table nobody touched
 
-Found by the correction review of 0259 (WARNING, `internal/app/configure/configure.go:109`). The models operation runs for every review-on state, including a nil `LensModels`, and `Apply` hands the nil to the writer, which clears the table. The TUI always passes a non-nil map, so no screen reaches this; a caller that never touched the table would.
+Found by the correction review of 0259 (WARNING, `internal/app/configure/configure.go:109`). The models operation ran for every review-on state, including a nil `LensModels`, and `Apply` handed the nil to the writer, which clears the table.
 
-Reopens when the apply is called with a nil table. The fix is to skip the models operation for nil and pin it, leaving the empty map as the human's clear.
+Closed: the plan includes `models` only when `LensModels` is not nil, and the empty map stays the human's clear. `TestApplyLeavesTheTableAloneWhenItIsNil` asserts no models operation and no call.
 
 ## Closed by feature 0257
 

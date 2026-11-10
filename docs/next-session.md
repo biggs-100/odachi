@@ -1,12 +1,11 @@
 # Next session
 
-Written while closing 0259. Two review-debt rows and the installer's slow backup leak wait; nothing
-else is owed.
+Written while closing 0260. The installer's slow backup leak waits; nothing else is owed.
 
 ## Where the project is
 
 - `v0.38.3` is published (tag on `3f441b3`); the session shipped ten releases: `0.36.1` through
-  `0.36.5`, `0.37.0`, `0.38.0`, `0.38.1`, `0.38.2` and `0.38.3`, and `main` carries 0249 to 0259.
+  `0.36.5`, `0.37.0`, `0.38.0`, `0.38.1`, `0.38.2` and `0.38.3`, and `main` carries 0249 to 0260.
 - The installed binary is `0.38.3`; the installer replaced it in one run, and `doctor` is all clear.
 - 21 skills bundled, 61 in `~/.agents/skills`, 21 that match the payload.
 - `Unreleased` is empty: the release renamed it, and the next feature writes under it.
@@ -56,13 +55,12 @@ else is owed.
 - **The cleanup** (no feature): `clean --apply` freed 566 KB in 215 files, and the 89 `SKILL.md.bak-*`
   the installer had left in the home (242 KB) are gone. The installer still writes one on each upgrade:
   a slow leak, not a debt.
+- **0260, the apply normalizes once** (no release, internal): `normalize` returns the canonical state
+  and its problems, and `Validate` and `Apply` share it; the lens table reaches the runner as the
+  validation accepted it, and a nil table is never cleared. The two review-debt rows of 0259 are paid.
 
 ## The questions that wait
 
-- **`docs/review-debt.md` has two rows** from 0259's correction review: the apply hands the lens table to
-  the runner unnormalised (the file is normalised by `review.SetConfig`), and a nil table would be
-  cleared by a caller that never touched it (the TUI always passes a non-nil map). The next change to
-  the apply pays them with a test.
 - **The installer still leaves a `SKILL.md.bak-*` on each upgrade**: a slow leak, not a debt; the 89
   accumulated ones are gone.
 - **The routing table stays out of the block** (decided while closing 0258): the plan already routes a
