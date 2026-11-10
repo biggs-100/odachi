@@ -1,12 +1,12 @@
 # Next session
 
-Written while closing 0260. The installer's slow backup leak waits; nothing else is owed.
+Written while closing 0261. Nothing is owed.
 
 ## Where the project is
 
-- `v0.38.3` is published (tag on `3f441b3`); the session shipped ten releases: `0.36.1` through
-  `0.36.5`, `0.37.0`, `0.38.0`, `0.38.1`, `0.38.2` and `0.38.3`, and `main` carries 0249 to 0260.
-- The installed binary is `0.38.3`; the installer replaced it in one run, and `doctor` is all clear.
+- `v0.38.4` is published (tag on `c6b6592`); the session shipped eleven releases: `0.36.1` through
+  `0.36.5`, `0.37.0`, `0.38.0`, `0.38.1`, `0.38.2`, `0.38.3` and `0.38.4`, and `main` carries 0249 to 0261.
+- The installed binary is `0.38.4`; the installer replaced it in one run, and `doctor` is all clear.
 - 21 skills bundled, 61 in `~/.agents/skills`, 21 that match the payload.
 - `Unreleased` is empty: the release renamed it, and the next feature writes under it.
 
@@ -58,11 +58,15 @@ Written while closing 0260. The installer's slow backup leak waits; nothing else
 - **0260, the apply normalizes once** (no release, internal): `normalize` returns the canonical state
   and its problems, and `Validate` and `Apply` share it; the lens table reaches the runner as the
   validation accepted it, and a nil table is never cleared. The two review-debt rows of 0259 are paid.
+- **0261, the upgrade stops leaving backups** (`v0.38.4`): `pack` backs up a replaced file only inside
+  the project, where the clone's store can hold it and `undo` reads it; the home and a `--dest` outside
+  are replaced and reported as written. The first proof found the other half: the setup/init report
+  counted only backed-up skills, so a home skill written without a backup read as unchanged; `SkillDest`
+  carries `Written` now. The delivery review approved two lenses and the verifier confirmed all four
+  behaviors on real files.
 
 ## The questions that wait
 
-- **The installer still leaves a `SKILL.md.bak-*` on each upgrade**: a slow leak, not a debt; the 89
-  accumulated ones are gone.
 - **The routing table stays out of the block** (decided while closing 0258): the plan already routes a
   step (`--skill`, the `skills:` tail) and `skills --resolve` makes that list inspectable. The third
   probe found the block is not the lever and the ninth found the step is, so a table there would add
@@ -114,6 +118,12 @@ Written while closing 0260. The installer's slow backup leak waits; nothing else
   compare.
 - **A large candidate splits the review.** 0259's prompt ran in two parts and the correction reviewed
   only the delta; the `--since <verdict's tree>` lane is the cheap one for fixes.
+- **A backup is undo material, and undo lives inside a project.** Outside it (the home, a `--dest`)
+  there is no store to read one from: the file is written without a sidecar, because a `.bak-*` beside
+  it is a version nobody can restore. 0261 removed the leak at that rule.
+- **A report counts every state its writer produces.** The setup summary mapped only the pack's backup
+  state, so the written state -a home replacement, a gained file- read as unchanged; when a writer gains
+  a state, the roll-up and its words move with it.
 - One heavy gate per machine; `go test ./...` takes about 700 s. `review --exec` gives the reviewer 600 s.
 
 ## The commands that work
