@@ -254,9 +254,11 @@ func TestSecondIdenticalRunWritesNothingAndBacksUpNothing(t *testing.T) {
 	}
 }
 
-// TestDifferentLocalFileIsBackedUpBeforeTheOverwrite: a file the human edited is
-// saved first, and the write lands after the backup, never before it.
-func TestDifferentLocalFileIsBackedUpBeforeTheOverwrite(t *testing.T) {
+// TestDifferentHomeFileIsWrittenWithoutABackup: a home skill is the machine's
+// copy, refreshed by design. The clone's store cannot hold its backup and undo
+// cannot read it there, so the file is replaced and reported as written; no
+// SKILL.md.bak-* accumulates beside it.
+func TestDifferentHomeFileIsWrittenWithoutABackup(t *testing.T) {
 	root := home()
 	edited := target(root, "claude", "acceptance")
 	files := newFakeFiles(map[string]string{edited: "editado a mano\n"})
@@ -266,20 +268,39 @@ func TestDifferentLocalFileIsBackedUpBeforeTheOverwrite(t *testing.T) {
 	if result.Code != pack.CodeOK {
 		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
 	}
-	if len(files.backups) != 1 || files.backups[0] != edited {
-		t.Fatalf("backups = %v, want [%s]", files.backups, edited)
-	}
-	backupAt := slices.Index(files.events, "backup "+edited)
-	writeAt := slices.Index(files.events, "write "+edited)
-	if backupAt < 0 || writeAt < 0 || backupAt > writeAt {
-		t.Errorf("the backup must come before the write, events: %v", files.events)
+	if len(files.backups) != 0 {
+		t.Fatalf("backups = %v, want none in the home", files.backups)
 	}
 	got, _ := files.content(edited)
 	if would := string(mainFile(bundled()[0])); got != would {
 		t.Errorf("the file was not replaced with the bundled bytes: %q", got)
 	}
-	if !slices.Contains(result.Lines, "claude · 4 installed · 1 backed up · ~/.claude/skills") {
+	if !slices.Contains(result.Lines, "claude · 4 installed · 1 written · ~/.claude/skills") {
 		t.Errorf("the summary line is missing or wrong, lines: %v", result.Lines)
+	}
+}
+
+// TestDestOutsideTheProjectIsWrittenWithoutABackup: a --dest the human typed
+// outside the project has no store either, so the replaced file gets no sidecar.
+func TestDestOutsideTheProjectIsWrittenWithoutABackup(t *testing.T) {
+	dest := filepath.Join("..", "skills-custom")
+	outside := filepath.Join(projectDir(), dest)
+	edited := filepath.Join(outside, "acceptance", "SKILL.md")
+	files := newFakeFiles(map[string]string{edited: "editado a mano\n"})
+
+	result := run(files, fakeHome{dir: home()}, pack.Options{Agents: "claude", Dest: dest})
+
+	if result.Code != pack.CodeOK {
+		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
+	}
+	if len(files.backups) != 0 {
+		t.Fatalf("backups = %v, want none outside the project", files.backups)
+	}
+	if got, _ := files.content(edited); got != string(mainFile(bundled()[0])) {
+		t.Errorf("the file was not replaced with the bundled bytes: %q", got)
+	}
+	if !slices.Contains(result.Lines, "claude · 4 installed · 1 written · ../skills-custom") {
+		t.Errorf("the summary does not say the file was written, lines: %v", result.Lines)
 	}
 }
 
@@ -304,7 +325,7 @@ func TestDryRunTouchesNothing(t *testing.T) {
 	if got, _ := files.content(edited); got != "editado a mano\n" {
 		t.Errorf("dry-run changed the local file: %q", got)
 	}
-	if !slices.Contains(result.Lines, "claude · 4 to install · 1 to back up · ~/.claude/skills") {
+	if !slices.Contains(result.Lines, "claude · 4 to install · 1 to write · ~/.claude/skills") {
 		t.Errorf("the dry-run summary is missing or wrong, lines: %v", result.Lines)
 	}
 	if !strings.Contains(result.Message, "dry-run") {
@@ -330,8 +351,9 @@ func TestDryRunFilesNameWhatWouldBeWritten(t *testing.T) {
 		t.Fatalf("Dests = %d, want 1", len(result.Dests))
 	}
 	dest := result.Dests[0]
-	// Four skills: the one edited here and three that are not there yet.
-	if want := dest.Installed + dest.BackedUp; len(dest.Files) != want {
+	// Every skill this run would touch: the one edited here (written, in the
+	// home) and the ones that are not there yet.
+	if want := dest.Installed + dest.BackedUp + dest.Written; len(dest.Files) != want {
 		t.Fatalf("Files = %v (%d), want one per skill this run would write (%d)", dest.Files, len(dest.Files), want)
 	}
 	if !slices.Contains(dest.Files, "~/.claude/skills/acceptance/SKILL.md") {

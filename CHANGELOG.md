@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **An upgrade stops leaving backups in the home.** `odachi pack` -and the `setup` the installer runs-
+  writes a backup only when the destination is inside the project, where the clone's store can hold it
+  and `undo` can read it. A home skill (or a `--dest` outside) is replaced and reported as written, so
+  `SKILL.md.bak-*` no longer accumulates beside it. A fix, patch (0261).
+
 ## v0.38.3 - 2026-11-10
 
 - **A TUI configures an installation.** `odachi tui` opens a terminal wizard that detects the project,

@@ -17,8 +17,10 @@
 //     table has never heard of is still served: `--scope` installs a known
 //     agent under the other root, and `--dest` installs every named agent into
 //     one directory the human typed. The table is a default, not a cage.
-//   - A configured file that differs is backed up before it is replaced; an
-//     identical file is reported as `unchanged` and not rewritten.
+//   - A configured file that differs is backed up before it is replaced when the
+//     destination is inside the project, where the clone's store and `undo` live;
+//     outside it (the home, a --dest) it is replaced and reported as `written`.
+//     An identical file is reported as `unchanged` and not rewritten.
 //   - Nothing is ever deleted or moved. A skill this tool did not write is
 //     reported with its path and left exactly as it was.
 package pack
@@ -308,6 +310,10 @@ type target struct {
 	dir   string // the directory on disk: absolute, or relative to the project
 	label string // what a human reads: ~/..., ./..., or the --dest path they typed
 	scope string
+	// insideProject says whether the clone's store can hold a backup of a file
+	// here and `undo` can read it. The home and a --dest outside the project have
+	// no such store, so a replaced file there is written without a sidecar.
+	insideProject bool
 }
 
 // targetsFor turns the selection into the directories to install into. With
@@ -320,7 +326,7 @@ func targetsFor(selected []agent.Agent, labels []string, dest string, roots root
 		if !filepath.IsAbs(dir) {
 			dir = filepath.Join(roots.project, dir)
 		}
-		return []target{{names: labels, dir: dir, label: destLabel(dest)}}
+		return []target{{names: labels, dir: dir, label: destLabel(dest), insideProject: withinProject(roots.project, dir)}}
 	}
 
 	targets := make([]target, 0, len(selected))
@@ -333,13 +339,36 @@ func targetsFor(selected []agent.Agent, labels []string, dest string, roots root
 		}
 		at[dir] = len(targets)
 		targets = append(targets, target{
-			names: []string{a.Name},
-			dir:   dir,
-			label: a.Display(),
-			scope: string(a.Scope),
+			names:         []string{a.Name},
+			dir:           dir,
+			label:         a.Display(),
+			scope:         string(a.Scope),
+			insideProject: withinProject(roots.project, dir),
 		})
 	}
 	return targets
+}
+
+// withinProject reports whether dir lives under the project root. That is the
+// only place a backup can go: the store hangs from the clone and `undo` reads it
+// from there, so a file outside it has nowhere to be undone.
+func withinProject(project, dir string) bool {
+	if strings.TrimSpace(project) == "" {
+		return false
+	}
+	root, err := filepath.Abs(project)
+	if err != nil {
+		return false
+	}
+	path, err := filepath.Abs(dir)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 // destLabel is how a human reads the --dest path. An absolute path stays as
@@ -431,10 +460,12 @@ func (r *DestResult) installSkill(t target, who string, skill Skill, files Files
 
 		identical = false
 		r.Files = append(r.Files, display)
-		// The human's bytes go aside before they go away: a backup that can be
-		// skipped is not a backup. A file that was not there needs none, and a
-		// skill that only gained one is never reported as backed up (0207).
-		if exists {
+		// A backup is undo material, and undo lives inside a project: the clone's
+		// store can hold it and `undo` can read it. Outside the project (the home,
+		// a --dest) there is no store to read it from, so the file is replaced and
+		// reported as written. A file that was not there needs none, and a skill
+		// that only gained one is never reported as backed up (0207).
+		if exists && t.insideProject {
 			backedUp = true
 			if !dryRun {
 				if _, err := files.Backup(path); err != nil {
