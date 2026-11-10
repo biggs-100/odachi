@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.38.0 - 2026-11-09
 
 - **A rule is one bullet, and a paragraph is not a rule.** `skills --check` refuses a `## Rules` section
   written as prose and a rule over 300 characters, because both hide instructions that the line count
