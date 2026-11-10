@@ -29,6 +29,8 @@ type State struct {
 	Skills     string
 	Voice      string
 	ReviewMode string
+	// LensModels is the table the review runs with. Nil means the caller did not
+	// touch it; an empty map means the human cleared it, and the operation runs.
 	LensModels map[string]string
 	Project    bool
 }
@@ -70,26 +72,54 @@ type Runner interface {
 	Models(models map[string]string) error
 }
 
-// Validate reports every problem in the state, in the order the screens ask.
-func Validate(s State) []string {
+// normalize returns the state with the values the writer expects and the problems
+// that prevent an apply. One function answers both questions, so the validation
+// and the write cannot disagree about what a valid table is, and no error is
+// discarded on the way to the runner.
+func normalize(s State) (State, []string) {
 	var problems []string
 
-	if _, err := persona.NormalizeSelection(s.Clients); err != nil {
+	if clients, err := persona.NormalizeSelection(s.Clients); err != nil {
 		problems = append(problems, "elige al menos un cliente: opencode, claude o both")
+	} else {
+		s.Clients = clients
 	}
-	if _, err := persona.NormalizeSkills(s.Skills); err != nil || strings.TrimSpace(s.Skills) == "" {
+	if skills, err := persona.NormalizeSkills(s.Skills); err != nil || strings.TrimSpace(s.Skills) == "" {
 		problems = append(problems, "elige el scope de skills: home o project")
+	} else {
+		s.Skills = skills
 	}
-	if _, ok := profile.Builtin()[strings.ToLower(strings.TrimSpace(s.Voice))]; !ok {
+	voice := strings.ToLower(strings.TrimSpace(s.Voice))
+	if _, ok := profile.Builtin()[voice]; !ok {
 		problems = append(problems, fmt.Sprintf("el perfil %q no existe: usa %s",
 			s.Voice, strings.Join(profileNames(), ", ")))
+	} else {
+		s.Voice = voice
 	}
-	if _, err := review.NormalizeMode(s.ReviewMode); err != nil {
+	if mode, err := review.NormalizeMode(s.ReviewMode); err != nil {
 		problems = append(problems, "el review tiene que ser on u off")
+	} else {
+		s.ReviewMode = mode
 	}
-	if _, err := review.NormalizeLensModels(s.LensModels); err != nil {
-		problems = append(problems, err.Error())
+	if s.LensModels != nil {
+		models, err := review.NormalizeLensModels(s.LensModels)
+		switch {
+		case err != nil:
+			problems = append(problems, err.Error())
+		case models == nil:
+			// An empty table is the human clearing it: keep the map non-nil so
+			// the plan knows the table was touched.
+			s.LensModels = map[string]string{}
+		default:
+			s.LensModels = models
+		}
 	}
+	return s, problems
+}
+
+// Validate reports every problem in the state, in the order the screens ask.
+func Validate(s State) []string {
+	_, problems := normalize(s)
 	return problems
 }
 
@@ -102,11 +132,11 @@ func Plan(s State) []Operation {
 		{ID: "voice", Label: "aplicar la voz"},
 		{ID: "review", Label: "configurar el review"},
 	}
-	// The models operation runs whenever the review is on, even with an empty
-	// table: an empty map is the human deleting the last model, and the file has
-	// to be told. Nil and empty are different answers, and only the caller knows
-	// which one it means.
-	if strings.EqualFold(strings.TrimSpace(s.ReviewMode), review.ModeOn) {
+	// The models operation runs whenever the review is on and the table is not
+	// nil: an empty map is the human deleting the last model, and the file has to
+	// be told; nil is the caller that never touched it, and the file keeps what it
+	// has.
+	if strings.EqualFold(strings.TrimSpace(s.ReviewMode), review.ModeOn) && s.LensModels != nil {
 		ops = append(ops, Operation{ID: "models", Label: "fijar el modelo de cada lente"})
 	}
 	return ops
@@ -116,9 +146,11 @@ func Plan(s State) []Operation {
 // Every operation after the failure is reported pending: the screen has to say
 // what remains, not only what broke.
 func Apply(s State, run Runner) Result {
-	if problems := Validate(s); len(problems) > 0 {
+	normalized, problems := normalize(s)
+	if len(problems) > 0 {
 		return Result{Code: CodeBlocked, Message: strings.Join(problems, "; ")}
 	}
+	s = normalized
 
 	plan := Plan(s)
 	result := Result{Code: CodeOK, Steps: make([]Step, 0, len(plan))}

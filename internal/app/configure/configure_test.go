@@ -175,6 +175,46 @@ func TestApplyClearsTheLensTableWhenTheReviewIsOn(t *testing.T) {
 	}
 }
 
+// TestApplyNormalisesTheLensTable: the runner receives the canonical table the
+// file format expects, not the spelling the caller typed.
+func TestApplyNormalisesTheLensTable(t *testing.T) {
+	in := valid()
+	in.LensModels = map[string]string{" Risk ": " opencode-go/x "}
+	run := &fakeRunner{}
+
+	got := configure.Apply(in, run)
+
+	if got.Code != configure.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, configure.CodeOK, got.Message)
+	}
+	if got := run.models["risk"]; got != "opencode-go/x" {
+		t.Fatalf("models = %v, want the folded key and the trimmed value", run.models)
+	}
+	if _, ok := run.models[" Risk "]; ok {
+		t.Fatalf("models = %v, want no raw key", run.models)
+	}
+}
+
+// TestApplyLeavesTheTableAloneWhenItIsNil: a caller that never touched the table
+// does not clear it, and the models operation is not planned at all.
+func TestApplyLeavesTheTableAloneWhenItIsNil(t *testing.T) {
+	in := valid()
+	in.LensModels = nil
+	run := &fakeRunner{}
+
+	got := configure.Apply(in, run)
+
+	if got.Code != configure.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, configure.CodeOK, got.Message)
+	}
+	if calls := strings.Join(run.ops(), ","); calls != "install,voice,review" {
+		t.Fatalf("calls = %q, want no models operation for a nil table", calls)
+	}
+	if run.models != nil {
+		t.Fatalf("models = %v, want nil: the table was never touched", run.models)
+	}
+}
+
 // TestApplyRefusesAnInvalidStateWithoutTouchingTheRunner: validation runs before
 // the first write, so a state the wizard should have refused changes nothing.
 func TestApplyRefusesAnInvalidStateWithoutTouchingTheRunner(t *testing.T) {
