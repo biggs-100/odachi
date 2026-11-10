@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.38.4 - 2026-11-10
 
 - **An upgrade stops leaving backups in the home.** `odachi pack` -and the `setup` the installer runs-
   writes a backup only when the destination is inside the project, where the clone's store can hold it
