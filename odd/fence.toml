@@ -12,3 +12,8 @@
 not   = "the binary installation (download and replace) stays in the scripts: the TUI configures the installed binary - back when the installer itself needs a screen"
 paths = ["scripts/install.ps1", "scripts/install.sh"]
 deps  = []
+
+[[rule]]
+not   = "the stored proofs are the evidence this tree ran: the package that writes them may change, a proof that already exists may not"
+paths = ["proof/**"]
+deps  = []
