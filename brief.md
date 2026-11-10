@@ -9,7 +9,7 @@
 - the run writes nothing: the tree is byte-identical after it
 - the tests pin the project-first order, the home fallback, the missing name and the empty step, each observed red first
 - go test ./... is green and odachi check --run "go test ./..." is green
-- Unreleased names the change: a new read-only surface on skills, minor (0258)
+- Unreleased names the change: a new read-only surface on skills, patch (0258)
 
 ## Not included (first version)
 - no change to delegate: it keeps printing the paths this verb reads
