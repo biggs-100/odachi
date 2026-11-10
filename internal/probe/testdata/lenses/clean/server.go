@@ -1,9 +1,5 @@
 package probe
 
-// The clean arm: the same small service with no defect in it. This is the arm
-// that measures noise - a reviewer that reports anything here reported something
-// nobody planted.
-
 import (
 	"context"
 	"database/sql"

@@ -147,41 +147,46 @@ HTTP service; the key names five defects -SQL built by concatenation (risk), a
 retry with no cap and a discarded body-read error (resilience, twice), a function
 named `data` that reads a file, keeps a package global and returns a capped size
 (readability), and a test that copies the implementation's formula (reliability).
+The clean arm is the same service with none of them.
 
-Two runs, same tree `ab60fcd3`, same model `opencode-go/deepseek-v4.1-flash`,
-same prompts, 2026-11-10:
+One run, model `opencode-go/deepseek-v4.1-flash`, 2026-11-10: seeded tree
+`fb234044`, clean tree `37c46aac`.
 
-| Run | risk | readability | reliability | resilience | not in the key |
+| Arm | risk | readability | reliability | resilience | not in the key |
 | --- | --- | --- | --- | --- | --- |
-| first (four defects in the key) | 1/1 | 1/1 | 0/1 | 1/1 | 1 |
-| second (five) | 1/1 | 1/1 | 1/1 | 1/2 | 2 |
-| union of both | 1/1 | 1/1 | 1/1 | 2/2 | 3 |
+| seeded | 1/1 | 1/1 | 1/1 | 2/2 | 4 |
+| clean | - | - | - | - | 10 |
 
-What the two runs say, in the order they matter:
+What this says:
 
-1. **One pass is not stable.** The same bytes, the same prompt and the same model
-   missed a different defect each time: the first run never read the test, the
-   second never named the discarded read error. Their union is 5/5 and their
-   intersection is 3/5. This repository's own skill probes found the same shape
-   (2, 4 and 4 edges across runs); the review had never been measured that way.
-2. **The lenses bleed into each other.** The reliability pass spent its findings
-   on `cache.go` -a resilience file- and called `limits_test.go` audited clean;
-   the failure it missed was the one it owed. Per-lens ownership is not how a
-   model reads a diff.
-3. **The noise was real.** All three findings outside the key were defects a
-   person can defend: the same package global written from several goroutines
-   without a lock, reported by two lenses, and the discarded read error the first
-   key did not name. The key was corrected after the first run, and the first
-   number is kept here rather than replaced.
-4. **Severity is generous.** The retry defect came back BLOCKER once and CRITICAL
-   once; the key's floor is WARNING. A lens asked for a floor under its own
-   judgment will be above it, which costs nothing here and would matter in a
-   pipeline that blocks on severity.
+1. **Recall on the planted defects was 5 of 5.** Every defect the key names was
+   found, at its place, at or above its floor, by the lens that owed it. On this
+   fixture the four prompts do what they claim.
+2. **The clean arm is not clean.** Ten findings on code with nothing planted, and
+   reading them one by one, every one names a real weakness: the handler answers
+   every database error -including a timeout and a refused connection- with 404,
+   it never checks the response status from the remote, the response write error is
+   discarded, `limit` clamps the upper side and not a negative, the handler and the
+   cache have no tests. The lenses were right and the fixture was sloppy. Until the
+   clean arm is genuinely clean, the number that reads as *noise* is really *a
+   person's taste written into code the reviewer had no key for*.
+3. **The key is the boundary of the measurement, not a verdict on the reviewer.**
+   Four seeded findings fell outside it, and they were real too: a package global
+   written from several goroutines without a lock, the request error discarded, the
+   read error returned as success from another lens. A defect nobody planted is
+   called noise by the score and would be a finding a person keeps.
 
-What it does not say: five defects in a 120-line fixture is not a population. A
-single run of a single model says nothing about another model, a bigger diff, or
-the same model next month. The instrument is what this part adds; the sample is
-one tree.
+Two earlier runs of the same fixture were made with a probe that never asked the
+clean arm and with comments in the fixture that told the reviewer it was an exam.
+Their numbers -3/4 and 4/5, a different defect missed each time- are not kept here:
+the instrument that produced them could not report the half it was silent about,
+and the fixture leaked its own answer. They are the reason both fixes exist.
+
+What it does not say: five defects in a 120-line fixture is not a population, one
+run of one model is a snapshot, and a key written by the same person who wrote the
+fixture inherits that person's blind spots. The instrument is what this part adds;
+the sample is one tree, and the next measurement is the same fixture across models
+and repeated runs.
 
 ## Part 6: our own numbers
 
@@ -208,10 +213,11 @@ From `.git/odachi/reviews/` in this clone, 16 verdicts kept:
 
 ## Part 7: what is missing, with the probe that would show it
 
-1. **The measurement is one tree and one model** (0263 closed the gap that it did
-   not exist): two runs of five defects say the pass is unstable, not how often.
-   The next measurement is the same fixture across models and repeated runs, and
-   a fixture big enough to carry defects a reviewer would miss at scale.
+1. **The fixture's clean arm is sloppy** (0263 closed the gap that no measurement
+   existed): ten findings on code with nothing planted, all of them real. The
+   instrument reports them as noise because the key says so; precision is not
+   measured until the clean arm is code a careful person would approve. That is
+   the next job on the fixture, not on the lenses.
 2. **No deterministic analyzer runs.** The gate runs `go vet`, `go test -race`
    and the suite. It does not run `govulncheck`, a linter with a real ruleset, a
    secret scanner or a dependency review. The field's cheapest answer to C6, and
@@ -245,8 +251,8 @@ here. Changing the four lens files would buy nothing.
 **The instrument is the problem.** In the field's terms, odachi solved C7 and C3 —
 provenance and intent — better than most production teams, and left C4 and C5
 unmeasured, C6 deterministic, and C1 partly. Our review was a well-designed
-opinion that had never been graded; 0263 graded it, and the grade says one pass
-is unstable.
+opinion that had never been graded; 0263 graded it, and the grade says the lenses
+find what a key plants, on a fixture whose clean arm still needs to earn its name.
 
 The order that follows from the measurement:
 
@@ -257,10 +263,10 @@ The order that follows from the measurement:
 2. **Make a standing blocker visible** (C2, C7): a close that carries
    `changes_requested` says so in the gate's own line and needs a recorded human
    waiver to proceed, instead of "ready" with a footnote in a document.
-3. **Answer the instability the probe found** (C4): two runs that miss different
-   defects mean a verdict is one draw, not a measurement. The candidates are a
-   second reading on full-tier trees, the verifier on every full tier instead of
-   only on named risks, and an independent judge per lens.
+3. **Make the clean arm clean** (C4): the probe's precision number is only worth
+   reading once the arm with nothing planted is code a person would approve, and
+   the first run says it is not. Then repeat the run across models, and a verdict
+   stops being one draw.
 
 Then, in a second wave: heterogeneous judges for full-tier trees, size-based
 escalation of the tier, changed-line coverage as a floor signal, and the fixture

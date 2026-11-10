@@ -112,26 +112,42 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	}
 	defer os.RemoveAll(work)
 
-	tree, paths, diff, problem := materialize(work, fixture, files, shell, git)
+	// The two arms are two candidates: the clean one is a change that carries no
+	// defect, and its findings are the noise the lenses raise on code nobody
+	// broke. They are read separately because a reviewer handed both at once
+	// knows which half is the exam.
+	clean, problem := build(work, "clean", fixture, assets.Clean, files, shell, git)
+	if problem != nil {
+		return *problem
+	}
+	seeded, problem := build(work, "seeded", fixture, assets.Seeded, files, shell, git)
 	if problem != nil {
 		return *problem
 	}
 
 	names := []string{review.Risk, review.Readability, review.Reliability, review.Resilience}
-	prompts := make(map[string]string, len(names))
+	bodies := make(map[string]string, len(names))
 	for _, name := range names {
 		body, err := lenses.Lens(name)
 		if err != nil {
 			return *blocked(err.Error())
 		}
-		prompts[name] = review.Prompt(review.PromptInput{
-			Brief:  Brief,
-			Tree:   tree,
-			Base:   "HEAD",
-			Paths:  paths,
-			Diff:   diff,
-			Lenses: []review.Lens{{Name: name, Body: body}},
-		})
+		bodies[name] = body
+	}
+
+	prompts := make(map[string]map[string]string, 2)
+	for _, one := range []candidate{clean, seeded} {
+		prompts[one.name] = make(map[string]string, len(names))
+		for _, name := range names {
+			prompts[one.name][name] = review.Prompt(review.PromptInput{
+				Brief:  Brief,
+				Tree:   one.tree,
+				Base:   "HEAD",
+				Paths:  one.paths,
+				Diff:   one.diff,
+				Lenses: []review.Lens{{Name: name, Body: bodies[name]}},
+			})
+		}
 	}
 
 	// The key names the lenses this probe owes: a fixture with no readability
@@ -148,38 +164,100 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 
 	if strings.TrimSpace(opts.Exec) == "" {
 		var out strings.Builder
-		for _, name := range owed {
-			out.WriteString("# ---- " + name + " ----\n")
-			out.WriteString(prompts[name])
-			out.WriteString("\n")
+		for _, one := range []candidate{clean, seeded} {
+			for _, name := range names {
+				out.WriteString("# ---- " + one.name + " / " + name + " ----\n")
+				out.WriteString(prompts[one.name][name])
+				out.WriteString("\n")
+			}
 		}
 		return Result{
 			Code:    CodeOK,
 			Prompt:  out.String(),
-			Summary: "printed " + strconv.Itoa(len(owed)) + " prompts and ran nothing: add --exec to measure",
+			Summary: "printed " + strconv.Itoa(2*len(names)) + " prompts and ran nothing: add --exec to measure",
 		}
 	}
 
-	verdicts := make(map[string]review.Verdict, len(owed))
-	lines := make([]string, 0, len(owed)+2)
+	seededVerdicts := make(map[string]review.Verdict, len(owed))
+	lines := make([]string, 0, len(owed)+4)
 	for _, name := range owed {
-		answer, problem := ask(opts, files, shell, work, name, prompts[name], tree)
+		answer, stored, problem := ask(opts, files, shell, work, "seeded", name, prompts[seeded.name][name], seeded.tree)
 		if problem != nil {
 			return *problem
 		}
 		verdict, err := review.Parse([]byte(answer))
 		if err != nil {
-			return *blocked("the " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
+			return *blocked("the seeded " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
 		}
-		verdicts[name] = verdict
-		lines = append(lines, "stored: "+storePath(opts.Dir, name, tree))
+		seededVerdicts[name] = verdict
+		lines = append(lines, "stored: "+stored)
 	}
 
-	score := probe.ScoreOne(manifest, verdicts)
+	cleanNoise := 0
+	for _, name := range names {
+		answer, stored, problem := ask(opts, files, shell, work, "clean", name, prompts[clean.name][name], clean.tree)
+		if problem != nil {
+			return *problem
+		}
+		verdict, err := review.Parse([]byte(answer))
+		if err != nil {
+			return *blocked("the clean " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
+		}
+		lines = append(lines, "stored: "+stored)
+		for _, finding := range verdict.Findings {
+			cleanNoise++
+			lines = append(lines, fmt.Sprintf("clean noise  %s:%d (%s, %s)", finding.Path, finding.Line, name, finding.Severity))
+		}
+	}
+
+	score := probe.ScoreOne(manifest, seededVerdicts)
 	lines = append(lines, render(score)...)
-	summary := score.Summary()
-	lines = append(lines, summary)
+	summary := score.Summary() + fmt.Sprintf(" · clean %d", cleanNoise)
+	// The summary is the last thing the CLI prints, not a row of the table: a
+	// report that carries it twice reads as two measurements.
 	return Result{Code: CodeOK, Lines: lines, Summary: summary}
+}
+
+// candidate is one arm materialized into a throwaway repository and read by the
+// same port every gate reads.
+type candidate struct {
+	name  string
+	tree  string
+	paths []string
+	diff  string
+}
+
+// build writes one arm into its own directory and reads its candidate. Both arms
+// start from an empty base, so a reviewer reads the code as an addition: the
+// clean arm is the same change with no defect in it, and whatever a lens reports
+// there is noise nobody planted.
+func build(work, name string, fixture fs.FS, arm string, files Files, shell Shell, git Git) (candidate, *Result) {
+	dir := filepath.Join(work, name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return candidate{}, blocked("could not make the " + name + " arm: " + oneLine(err.Error()))
+	}
+
+	if err := writeArm(dir, assets.Clean, fixture, files); err != nil {
+		return candidate{}, blocked("could not write the clean files of the " + name + " arm: " + oneLine(err.Error()))
+	}
+	if arm == assets.Seeded {
+		if err := writeArm(dir, assets.Seeded, fixture, files); err != nil {
+			return candidate{}, blocked("could not write the seeded arm: " + oneLine(err.Error()))
+		}
+	}
+
+	for _, command := range []string{"git init -q", "git commit -q --allow-empty -m base", "git add -A"} {
+		stdout, stderr, code, _, err := shell.Run(dir, command, 120)
+		if err != nil || code != 0 {
+			return candidate{}, blocked("the " + name + " arm's git failed: " + oneLine(strings.TrimSpace(stdout+stderr)))
+		}
+	}
+
+	tree, paths, diff, err := git.Candidate(dir, "HEAD")
+	if err != nil {
+		return candidate{}, blocked("could not read the " + name + " candidate: " + oneLine(err.Error()))
+	}
+	return candidate{name: name, tree: tree, paths: paths, diff: diff}, nil
 }
 
 // load reads the manifest and roots the fixture: the one the human named, or the
@@ -255,10 +333,10 @@ func writeArm(work, arm string, fixture fs.FS, files Files) error {
 
 // ask runs one reviewer and returns its answer, after writing the prompt where
 // the command can read it and the answer where a person can find it.
-func ask(opts Options, files Files, shell Shell, work, lens, prompt, tree string) (string, *Result) {
-	promptPath := filepath.Join(work, "prompt-"+lens+".txt")
+func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree string) (string, string, *Result) {
+	promptPath := filepath.Join(work, "prompt-"+arm+"-"+lens+".txt")
 	if err := files.Write(promptPath, []byte(prompt)); err != nil {
-		return "", blocked("could not write the " + lens + " prompt: " + oneLine(err.Error()))
+		return "", "", blocked("could not write the " + lens + " prompt: " + oneLine(err.Error()))
 	}
 
 	command := strings.ReplaceAll(opts.Exec, "{prompt}", shell.Quote(promptPath))
@@ -266,26 +344,38 @@ func ask(opts Options, files Files, shell Shell, work, lens, prompt, tree string
 
 	stdout, stderr, code, timedOut, err := shell.Run(work, command, TimeoutSeconds)
 	if err != nil {
-		return "", blocked("the " + lens + " reviewer could not be run: " + oneLine(err.Error()))
+		return "", "", blocked("the " + lens + " reviewer could not be run: " + oneLine(err.Error()))
 	}
 	if timedOut {
-		return "", blocked("the " + lens + " reviewer did not answer in " + strconv.Itoa(TimeoutSeconds) + "s")
+		return "", "", blocked("the " + lens + " reviewer did not answer in " + strconv.Itoa(TimeoutSeconds) + "s")
 	}
 	if code != 0 {
-		return "", blocked("the " + lens + " reviewer exited " + strconv.Itoa(code) + ": " + oneLine(strings.TrimSpace(stderr)))
+		return "", "", blocked("the " + lens + " reviewer exited " + strconv.Itoa(code) + ": " + oneLine(strings.TrimSpace(stderr)))
 	}
 
-	if err := files.Write(storePath(opts.Dir, lens, tree), []byte(stdout)); err != nil {
-		return "", blocked("could not store the " + lens + " answer: " + oneLine(err.Error()))
+	stored := storePath(opts.Dir, arm, lens, tree, files)
+	if err := files.Write(stored, []byte(stdout)); err != nil {
+		return "", "", blocked("could not store the " + lens + " answer: " + oneLine(err.Error()))
 	}
-	return stdout, nil
+	return stdout, stored, nil
 }
 
 // storePath is where a probe stores one answer. It is not the review store: a
 // probe's answer is about a fixture, and `check` must never read one as a
 // verdict for the tree this clone builds.
-func storePath(dir, lens, tree string) string {
-	return filepath.Join(dir, ".git", "odachi", "probe", tree+"-"+lens+".json")
+//
+// The fixture's tree is the same on every run, so the tree alone would make the
+// second measurement overwrite the first: the name carries the first free
+// number, and the store keeps the runs a person compares.
+func storePath(dir, arm, lens, tree string, files Files) string {
+	base := filepath.Join(dir, ".git", "odachi", "probe", tree+"-"+arm+"-"+lens)
+	path := base + ".json"
+	for i := 2; ; i++ {
+		if exists, err := files.Exists(path); err != nil || !exists {
+			return path
+		}
+		path = base + "-" + strconv.Itoa(i) + ".json"
+	}
 }
 
 // render prints the score as a table a person reads: one row per lens, then the

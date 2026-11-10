@@ -18,8 +18,9 @@ R1 · "una medida del revisor: cuántos defectos sembrados encuentra cada lente,
 ## Steps
 - [x] T1 · el fixture clean/ y seeded/ y el manifiesto que nombra cada defecto, con su lector y sus errores   R1 · route:inline · tree:597024fe63b3130d8b1c586cdc57cb0ea4828c37
 - [x] T2 · el puntaje: un veredicto contra el manifiesto da encontrados, perdidos y ruido por lente   R1 · route:inline · tree:38049119e99df93f768ad318653edf3f3afa97a5
-- [ ] T3 · review probe corre los cuatro lentes, guarda sus veredictos y escribe la primera medida   R1 · route:inline
+- [x] T3 · review probe corre los cuatro lentes, guarda sus veredictos y escribe la primera medida   R1 · route:inline · tree:eefd30ad50b53b2ab62ecc6ebd2b29670b6dc8a9
 
 ## History
 L1 · "una medida del revisor: cuántos defectos sembrados encuentra cada lente, y cuánto ruido levanta sobre el mismo código sin defectos"
 L2 · OFICIO · "start --force rewrote odd/fence.toml from the new brief and dropped the proof rule; the archtest caught it and the rule is back" (porque a fence outlives a feature: proof/** is doctrine, not a non-goal of 0263, and a regenerated fence that forgets it lets a candidate overwrite the evidence another tree produced)
+L3 · OFICIO · "the probe stores each answer under a numbered name and prints the path ask() wrote, not a second lookup" (porque the fixture's tree is the same on every run, so the first free number is what keeps two measurements side by side; asking twice returned a name nobody wrote, and the test now pins that every stored: line names a file)

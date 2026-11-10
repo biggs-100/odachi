@@ -12,7 +12,8 @@ not a version.
 - **The lenses are measured.** `odachi review probe` asks the four shipping lens prompts about a fixture
   with defects planted in it and scores the answers against a written key: found, called low, missed, and
   findings nobody planted. Without `--exec` it prints the prompts and runs nobody. The first measurement is
-  in `docs/review-research.md`: two runs of one tree missed a different defect each time. A new surface,
+  in `docs/review-research.md`: five of five planted defects found, and ten findings on the arm with
+  nothing planted, all of them real. A new surface,
   patch (0263).
 
 ## v0.38.5 - 2026-11-10

@@ -1,8 +1,5 @@
 package probe
 
-// The seeded arm: the same small service with four defects planted in it, one
-// for each lens. The manifest names them by line; this file is the exam.
-
 import (
 	"context"
 	"database/sql"

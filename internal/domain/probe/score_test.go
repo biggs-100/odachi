@@ -135,6 +135,25 @@ func TestScoreCreditsADefectFoundByAnotherLensWithoutCallingItFound(t *testing.T
 	}
 }
 
+// TestScoreCountsAFindingAtThePlaceEvenWhenItSaysPreExisting: the key counts the
+// place. A reviewer that names the planted line and calls it pre-existing judged
+// the sentence, not the location, and one sentence is never both a miss and
+// noise.
+func TestScoreCountsAFindingAtThePlaceEvenWhenItSaysPreExisting(t *testing.T) {
+	t.Parallel()
+
+	score := probe.ScoreOne(key(), map[string]review.Verdict{
+		review.Risk: {Findings: []review.Finding{finding("server.go", 30, review.Critical, false)}},
+	})
+
+	if score.Lenses[0].Found != 1 {
+		t.Errorf("risk row = %+v, want the place counted as found", score.Lenses[0])
+	}
+	if len(score.Noise) != 0 {
+		t.Errorf("noise = %+v, want none: the finding names a planted place", score.Noise)
+	}
+}
+
 // TestScoreWithNoVerdictMeasuresSilence: a lens that produced no answer missed
 // every defect it owed. An absent run is not a skipped measurement.
 func TestScoreWithNoVerdictMeasuresSilence(t *testing.T) {

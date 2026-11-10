@@ -126,15 +126,16 @@ type lensFinding struct {
 // one planted line are one defect found, and a lens that is not the defect's own
 // still found something real - it is a miss for the lens under test, never noise.
 //
-// Causal is part of "at the place": a finding that calls the defect pre-existing
-// judged the candidate and said this was not it, so the key cannot count it as a
-// catch.
+// Causal is not part of the place. A reviewer that names the right line and calls
+// it pre-existing judged the sentence, not the location: the key counts the
+// place, the noise counts what corresponds to no defect, and one sentence is
+// never both.
 func matchedAt(findings []lensFinding, claimed []bool, defect Defect, window int) (matched, reached bool) {
 	for i, item := range findings {
 		if claimed[i] {
 			continue
 		}
-		if item.finding.Path != defect.Path || !item.finding.Causal {
+		if item.finding.Path != defect.Path {
 			continue
 		}
 		if distance(item.finding.Line, defect.Line) > window {
