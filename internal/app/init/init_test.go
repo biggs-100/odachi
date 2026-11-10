@@ -544,6 +544,26 @@ func TestInitInstallsTheSkillsAfterTheProjectArtifacts(t *testing.T) {
 	}
 }
 
+// TestInitSaysASkillItWroteWithoutABackup: a home skill replaced without a
+// backup is a change the report has to name, not an unchanged one.
+func TestInitSaysASkillItWroteWithoutABackup(t *testing.T) {
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+	skills := &fakeSkills{report: initapp.SkillReport{
+		Dests: []initapp.SkillDest{
+			{Label: "~/.agents/skills", Installed: 19, Written: 1, Files: []string{"~/.agents/skills/acceptance/SKILL.md"}},
+		},
+	}}
+
+	got := runWith(files, skills)
+
+	if got.Code != 0 {
+		t.Fatalf("Code = %d, want 0 (lines %q)", got.Code, got.Lines)
+	}
+	if indexOfLine(got.Lines, "~/.agents/skills: 19 installed skills, 1 written skill") < 0 {
+		t.Errorf("the report does not name the written skill: %q", got.Lines)
+	}
+}
+
 // A second run writes nothing and says so: the skills half reports the same
 // `unchanged` the three artifacts report, in the one message a human reads.
 func TestInitRerunSaysTheSkillsWereAlreadyThere(t *testing.T) {

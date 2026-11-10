@@ -10,10 +10,11 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
-// TestSetupDryRunCountsASkillItWouldReplace: after an upgrade the skills in the
+// TestSetupDryRunCountsASkillItWouldWrite: after an upgrade the skills in the
 // home differ from the binary's, and a rehearsal that counts only missing and
 // identical ones says "nothing to write" about the exact machine it exists for.
-func TestSetupDryRunCountsASkillItWouldReplace(t *testing.T) {
+// The changed home skill is written without a backup, so the report says so.
+func TestSetupDryRunCountsASkillItWouldWrite(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	writeFile(t, home, ".config/opencode/opencode.json", "{}")
@@ -27,8 +28,8 @@ func TestSetupDryRunCountsASkillItWouldReplace(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 	report := out + errOut
-	if !strings.Contains(report, "would replace") {
-		t.Errorf("the rehearsal does not count the skill it would replace:\n%s", report)
+	if !strings.Contains(report, "would write") {
+		t.Errorf("the rehearsal does not count the skill it would write:\n%s", report)
 	}
 	if strings.Contains(report, "nothing to write") {
 		t.Errorf("the rehearsal calls an out-of-date machine current:\n%s", report)
@@ -110,10 +111,10 @@ func TestSetupDryRunJSONSaysItIsARehearsal(t *testing.T) {
 	}
 }
 
-// TestTheRealRunSaysItReplacedASkill: the count is not only for the rehearsal. A
-// real setup over a skill an older binary wrote reports it, and the old bytes are
-// beside it.
-func TestTheRealRunSaysItReplacedASkill(t *testing.T) {
+// TestTheRealRunWritesAChangedHomeSkillWithoutABackup: the count is not only for
+// the rehearsal. A real setup over a skill an older binary wrote reports it, and
+// the home gets no sidecar: there is no store there to read one from.
+func TestTheRealRunWritesAChangedHomeSkillWithoutABackup(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 	writeFile(t, home, ".config/opencode/opencode.json", "{}")
@@ -126,18 +127,22 @@ func TestTheRealRunSaysItReplacedASkill(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	if !strings.Contains(out+errOut, "replaced") {
-		t.Errorf("a real run does not say what it replaced:\n%s%s", out, errOut)
+	if !strings.Contains(out+errOut, "written") {
+		t.Errorf("a real run does not say what it wrote:\n%s%s", out, errOut)
 	}
 	backups, err := filepath.Glob(filepath.Join(home, ".agents", "skills", "acceptance", "SKILL.md.bak-*"))
-	if err != nil || len(backups) == 0 {
-		t.Errorf("the replaced skill was not backed up: %v (%v)", backups, err)
+	if err != nil {
+		t.Fatalf("glob: %v", err)
+	}
+	if len(backups) != 0 {
+		t.Errorf("backups = %v, want none in the home", backups)
 	}
 }
 
 // TestASettledHomeWithOneChangedSkillIsNotNothingToWrite: the state the 0121
 // review named and no test built -a machine that is current except for one skill
-// an older binary wrote. The rehearsal must say would replace, never nothing.
+// an older binary wrote. The rehearsal must say it would write the skill, never
+// nothing.
 func TestASettledHomeWithOneChangedSkillIsNotNothingToWrite(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
@@ -156,7 +161,7 @@ func TestASettledHomeWithOneChangedSkillIsNotNothingToWrite(t *testing.T) {
 		t.Fatalf("the rehearsal failed: %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 	report := out + errOut
-	if !strings.Contains(report, "would replace") {
+	if !strings.Contains(report, "would write") {
 		t.Errorf("the only drift is a skill and the rehearsal does not name it:\n%s", report)
 	}
 	if strings.Contains(report, "nothing to write") {

@@ -13,11 +13,14 @@ import (
 type SkillDest struct {
 	Label     string
 	Installed int
-	// Replaced is a skill whose bytes differ from the binary's: a real run backs
-	// it up and writes it, a rehearsal says it would. Without the count a
-	// rehearsal of an upgraded binary reported "nothing to write" while every
-	// changed skill awaited a rewrite.
-	Replaced  int
+	// Replaced is a skill whose bytes differ from the binary's and whose old
+	// bytes were backed up first: a real run backs it up and writes it, a
+	// rehearsal says it would.
+	Replaced int
+	// Written is a skill whose file was written without a backup: the target is
+	// outside the project (the home), where no store can hold the old bytes, or
+	// the skill only gained a file. It is a change the report has to name.
+	Written   int
 	Unchanged int
 	Files     []string
 }
@@ -145,6 +148,13 @@ func skillLine(dest SkillDest, dry bool) string {
 			parts = append(parts, "would replace "+count(dest.Replaced, "skill", "skills"))
 		} else {
 			parts = append(parts, count(dest.Replaced, "replaced skill", "replaced skills"))
+		}
+	}
+	if dest.Written > 0 {
+		if dry {
+			parts = append(parts, "would write "+count(dest.Written, "skill", "skills"))
+		} else {
+			parts = append(parts, count(dest.Written, "written skill", "written skills"))
 		}
 	}
 	if dest.Unchanged > 0 {
