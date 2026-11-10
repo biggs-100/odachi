@@ -109,6 +109,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runInit(dir, args[1:], stdout, stderr)
 	case "setup":
 		return runSetup(args[1:], stdout, stderr)
+	case "tui":
+		return runTUI(dir, args[1:], stdin, stdout, stderr)
 	case "skills":
 		return runSkills(dir, args[1:], stdout, stderr)
 	case "skill":
@@ -1690,6 +1692,7 @@ usage:
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills home|project] [--agents opencode|claude|both] [--json]
   odachi setup [--agents opencode|claude|both] [--dry-run] [--json]
+  odachi tui
   odachi skills [--check | --write | --resolve <step>]
   odachi role new <slug>
   odachi role [<slug>]
@@ -1938,6 +1941,8 @@ after start:
                                                  (odachi init --skills project keeps a copy here)
   odachi setup                                  the home half alone: the door, the subagents and the
                                                  craft; writes nothing in the current folder
+  odachi tui                                    the wizard: detects the state, chooses clients, skills,
+                                                 voice and review, and applies each with the verbs above
   odachi skills                                 the project's skills and their trigger
   odachi skills --check                         validate (CI runs it); exit 1 when something does not comply
   odachi skills --write                         regenerate SKILLS.md from the frontmatter
