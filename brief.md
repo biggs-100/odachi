@@ -1,40 +1,33 @@
-# tui-instalacion
+# medida-de-los-lentes
 
 ## What must exist
-- una tui de instalación y configuración al igual que gentle-ai
-- `odachi tui` opens a terminal wizard that configures the clients, the skills scope, the voice and the review, and applies each choice with the verbs that already exist
+- una medida del revisor: cuántos defectos sembrados encuentra cada lente, y cuánto ruido levanta sobre el mismo código sin defectos
+- `odachi review probe` recorre un fixture con defectos plantados y su gemelo limpio, ejecuta el mismo `--exec` que `review`, y compara lo que el revisor dice contra un manifiesto escrito a mano
+- el manifiesto nombra cada defecto: path, línea, lente que debería verlo, severidad mínima y una frase de qué es
+- la salida es una tabla por lente -encontrados de total, severidades, y hallazgos sobre el brazo limpio- y termina en una línea con el número
+- el fixture y el manifiesto son la verdad de la medida: el defecto que no está en el manifiesto no cuenta, y el que está y nadie ve se reporta como perdido
 
 ## Done when
-- `odachi tui` opens the wizard when there is a terminal; without one it refuses with a line that names `odachi setup` and prints no screen output
-- the first screen says the version, whether the folder is an odachi project, the clients chosen or detected, the skills scope and the profile in force
-- when the folder is not a project, the wizard offers to configure the machine alone (`setup`) or to initialize the project (`init`), and never creates a repository without the human choosing it
-- the wizard chooses at least one client (opencode, claude or both); the choice is stored in `.git/odachi/agents.toml` and filters what `init` and `setup` write
-- the wizard chooses the skills scope (home or project) and applies it
-- the wizard chooses the voice (novato, senior or ci) and applies it through the same path as `level --to`, without copying the profile table
-- the wizard turns the review on or off and can set the model of each lens; the resulting `odd/review.toml` keeps the `max_prompt_kb` and the `keep_*` it already had
-- applying shows each operation with its result; one that fails is named and stops the rest, leaving no half configuration in silence
-- cancelling before applying writes nothing: the tree is byte for byte the same
-- the domain gains no dependency and knows nothing about the screens; the TUI lives in `cmd/odachi` or in an adapter and calls the existing operations
-- the tests cover each screen's transition and the state it applies, with `teatest`; the no-TTY start has its test
-- `go test ./...` is green and `odachi check --run "go test ./..."` is green
-- Unreleased names the new verb and the dependency, patch (0259)
+- `odachi review probe --fixture <dir>` sin `--exec` imprime el prompt que pediría, no llama a nadie y sale 0
+- con `--exec`, corre un revisor por lente, guarda cada veredicto en el store y puntúa contra el manifiesto
+- un defecto cuenta como encontrado si hay un hallazgo del mismo path, con línea dentro de la ventana del manifiesto y severidad igual o mayor al piso
+- un hallazgo que no corresponde a ningún defecto cuenta como ruido, y el brazo limpio no tiene ninguno por definición
+- un fixture sin manifiesto, un manifiesto con un lente que no existe, o un defecto sin path son errores que nombran lo que falta
+- el fixture no entra a la suite: los tests puntúan veredictos escritos a mano, sin red y sin modelo
+- `go test ./...` es verde y `odachi check --run "go test ./..."` es verde
+- la primera medida queda escrita en `docs/review-research.md` con fecha, modelo y número
+- Unreleased nombra el verbo y el fixture, patch (0263)
 
 ## Not included (first version)
-- no per-client model picker (opencode's or claude's internal model): only the review lens models - back when the client's own model is what has to be chosen
-- no backups, uninstall or community tools: that is a second product - back when the TUI manages more than the setup
-- the binary installation (download and replace) stays in the scripts: the TUI configures the installed binary - back when the installer itself needs a screen
-- `max_prompt_kb` and the store retention are not touched from the TUI - back when someone asks to tune the store's memory from the wizard
-- no editing `brief.md`, the task doc, or opening a feature from the TUI: it is setup, not the whole product - back when the wizard becomes the default entry
-- no mouse, no themes and no animation beyond the spinner - back when the screens are used daily and the feel matters
-- no `--json` for the TUI: the flags remain the surface for machines - back when a script needs the same configuration
+- no corre en CI ni en la gate: cuesta llamadas a un modelo y no es determinista - back when a probe is cheap enough to run per change
+- no elige un modelo distinto por lente: mide lo que `odd/review.toml` diga hoy - back when heterogeneity is what is being measured
+- no mide el verifier ni el floor, solo los cuatro lentes - back when the verifier owes its own probe
+- no genera defectos: el manifiesto es a mano y se revisa como código - back when the fixture grows past what a person can hold
+- no toca el contenido de los lentes: medir editando el examen no mide nada - back when a lens is changed for a reason the probe records
 
 ## Decisions taken
-- The TUI is an adapter over the operations that already exist; the domain stays pure and dependency-free.
-- Bubbletea + Lipgloss, the same stack gentle-ai uses: the binary stays static and makes no network call.
-- A new `odachi tui` verb; the flags and `setup` keep their behavior.
-- ADR 0001 ("no TUI") is superseded by a new ADR: it said screens are a second product; this one says installing and configuring cannot demand knowing seven flags. The CLI stays the interface for machines.
-- The first version is installation and configuration, bounded: clients, skills, voice and review.
-- The copy the human reads is Spanish; code, docs and commits are English.
-- A review file is edited through the format that already exists, preserving what the TUI does not touch.
-- The apply screen reports each operation; silence is not success.
-- The screens follow `tui-design`: the terminal floor and the capture at 180x50 and 80x24.
+- El instrumento es un subcomando de `review` (`odachi review probe`), igual que `review mode`: la superficie que ya existe y el mismo camino de `--exec`.
+- El fixture vive versionado en `internal/probe/`: dos carpetas, `clean/` y `seeded/`, y el manifiesto.
+- La medida es recall y ruido, no cobertura: un defecto cuenta una vez, y el ruido se cuenta por hallazgo.
+- El fixture es Go y pequeño, con defectos visibles en el diff y sin necesidad de compilar.
+- El probe escribe sus veredictos en el store como cualquier review, al lado de los demás.

@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The lenses are measured.** `odachi review probe` asks the four shipping lens prompts about a fixture
+  with defects planted in it and scores the answers against a written key: found, called low, missed, and
+  findings nobody planted. Without `--exec` it prints the prompts and runs nobody. The first measurement is
+  in `docs/review-research.md`: five of five planted defects found, and ten findings on the arm with
+  nothing planted, all of them real. A new surface,
+  patch (0263).
+
 ## v0.38.5 - 2026-11-10
 
 - **A verdict is filed under the tree `check` names.** `odachi review` fills its candidate index from

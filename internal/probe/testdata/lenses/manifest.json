@@ -1,0 +1,46 @@
+{
+  "name": "lenses",
+  "window": 3,
+  "defects": [
+    {
+      "id": "risk-query-built-by-concatenation",
+      "path": "server.go",
+      "line": 25,
+      "lens": "risk",
+      "severity": "CRITICAL",
+      "why": "the id from the query string is concatenated into the SQL, so the request decides the statement"
+    },
+    {
+      "id": "resilience-retry-with-no-cap",
+      "path": "cache.go",
+      "line": 32,
+      "lens": "resilience",
+      "severity": "WARNING",
+      "why": "a failed fetch retries forever with no cap, no backoff and no way to stop it from the caller"
+    },
+    {
+      "id": "resilience-read-error-discarded",
+      "path": "cache.go",
+      "line": 37,
+      "lens": "resilience",
+      "severity": "WARNING",
+      "why": "the body read error is discarded and a truncated body is returned as a successful answer"
+    },
+    {
+      "id": "readability-name-does-three-jobs",
+      "path": "limits.go",
+      "line": 11,
+      "lens": "readability",
+      "severity": "SUGGESTION",
+      "why": "data reads a file, keeps it in a package global and returns a capped size: three jobs behind a name that says none"
+    },
+    {
+      "id": "reliability-test-copies-the-formula",
+      "path": "limits_test.go",
+      "line": 8,
+      "lens": "reliability",
+      "severity": "WARNING",
+      "why": "the test writes the implementation's own formula and compares it to itself, so it cannot disagree with the code"
+    }
+  ]
+}
