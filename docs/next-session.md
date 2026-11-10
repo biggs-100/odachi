@@ -44,8 +44,6 @@ Written while closing 0257. One reproduction waits; nothing else is owed.
   `SKILL.md.bak-*` beside a skill it replaced and they accumulate (five for `ui-craft` alone); an
   `odachi check` stopped at 17:07 left its own tree without a proof.
 - Proposed and not written, from the comparison with gentle-ai and the skill system:
-  - **The delegated hand-off uses the client's identifier.** `delegate` passes absolute paths to
-    skills in the home, the case where OpenCode may refuse to read them. Measure it before fixing it.
   - **`skills --resolve <step>`**: show which skills a step would receive, and from which scope.
   - **The routing table in the block**, and a measure of whether a skill improves the work, not only
     whether it loads.
@@ -67,6 +65,10 @@ Written while closing 0257. One reproduction waits; nothing else is owed.
 - **`plan --done` must be committed before the merge.** Left uncommitted, it aborts the next pull.
 - **The installer's path is what a project gets.** A file that exists in the source and not in
   `references/` or `assets/` is a file nobody installs.
+- **A home skill is readable by the worker.** Measured on 2026-11-09: `opencode run --agent
+  odachi-worker` read `C:\Users\USER\.agents\skills\tests\SKILL.md` headless, with no permission
+  prompt. `delegate` prints `./.agents/skills` when the project carries the craft and the home path
+  otherwise, and OpenCode did not refuse the absolute path. The hand-off needs no fix.
 - One heavy gate per machine; `go test ./...` takes about 700 s. `review --exec` gives the reviewer 600 s.
 
 ## The commands that work
