@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A TUI configures an installation.** `odachi tui` opens a terminal wizard that detects the project,
+  chooses the clients, the skills scope, the voice and the review switch and lens models, and applies
+  each choice with the verbs that already exist: a failure stops the run and names what remains, and
+  cancelling before applying writes nothing. The screens are Bubbletea + Lipgloss; the domain and the
+  flags are untouched, and without a terminal the verb refuses and names `odachi setup`. A new surface,
+  patch (0259).
+
 ## v0.38.2 - 2026-11-09
 
 - **The hand-off can be inspected before it runs.** `odachi skills --resolve T1` prints every skill a
