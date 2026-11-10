@@ -774,6 +774,37 @@ func TestBriefFlagRecordsTheDraftAsTheArtifact(t *testing.T) {
 	}
 }
 
+// TestBriefFlagKeepsAWrappedBulletWhole: the draft may be written at 80
+// columns; the brief this run records must carry the whole requirement, not its
+// first physical line (0256, review debt).
+func TestBriefFlagKeepsAWrappedBulletWhole(t *testing.T) {
+	draft := `# demo
+
+## What must exist
+- un video para YouTube o
+Shorts de hasta sesenta segundos,
+con el movimiento como mensaje
+
+## Done when
+- el video se ve en el teléfono
+`
+	files := newFakeFiles(map[string]string{"draft.md": draft}, nil)
+
+	got := start.Run(start.Options{BriefPath: "draft.md", Machine: true}, nil, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	recorded, ok := files.files["brief.md"]
+	if !ok {
+		t.Fatalf("--brief left no brief.md: the run that read the vision must record it")
+	}
+	want := "un video para YouTube o Shorts de hasta sesenta segundos, con el movimiento como mensaje"
+	if parsed := brief.Parse(string(recorded)); len(parsed.Outcome) != 1 || parsed.Outcome[0] != want {
+		t.Errorf("brief.md outcomes = %q, want the whole bullet", parsed.Outcome)
+	}
+}
+
 // TestBriefFlagLeavesTheArtifactAlone: when --brief names brief.md itself, the
 // human's bytes are the artifact. The run reads them and writes no second version,
 // so a note the parser ignores survives (0186).

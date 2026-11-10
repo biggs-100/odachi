@@ -1,16 +1,15 @@
 # Next session
 
-Written while closing the session after `v0.38.0` and 0255. One row waits in `docs/review-debt.md`;
-nothing else is owed.
+Written while closing 0256. One review row and one reproduction wait; nothing else is owed.
 
 ## Where the project is
 
 - `v0.38.0` is published (tag on `a12ea3d`); the session shipped seven releases: `0.36.1` through
-  `0.36.5`, `0.37.0` and `0.38.0`.
-- `main` carries 0249 to 0255; the installed binary is `0.38.0`.
+  `0.36.5`, `0.37.0` and `0.38.0`, and `main` carries 0249 to 0256.
+- The installed binary is `0.38.0`; 0256 changed the source and is not released.
 - 21 skills bundled, 61 in `~/.agents/skills`, 21 that match the payload. `doctor` is all clear except
   the note this file fixes.
-- `Unreleased` is empty: the release renamed it, and the next feature writes under it.
+- `Unreleased` names 0256: a fix, patch.
 
 ## What this session did
 
@@ -29,18 +28,27 @@ nothing else is owed.
 - **0255, a rule is one bullet** (`v0.38.0`): `skills --check` refuses prose in `## Rules` and a rule over
   300 characters; the catalog and the fixtures became bullets. The review caught the brief saying 140
   while the code measured 300, and the change was recorded with `ask --change`.
+- **0256, a wrapped bullet arrives whole** (unreleased): `brief.Parse` reads a bullet as a list item and
+  joins the lines after it until a blank line, a header or another bullet, so `start --brief` records
+  the whole requirement and no longer drops the tail of every decision. The join stops at a blank line,
+  so a note written under a bullet stays a note.
 
 ## The questions that wait
 
-- **`docs/review-debt.md` has one open row**: `odachi start --brief` keeps a bullet's first physical
-  line and drops the rest without a word. One line per bullet is the format; the fix is to join
-  continuations or refuse the draft, with a test.
+- **`docs/review-debt.md` has one open row**: the header and empty-bullet resets that stop a wrapped
+  bullet's join have no test. The fix is one test per stop, each observed red by disabling its branch.
 - **A reproduction, not a diagnosis**: the first install of `v0.38.0` left the old `ui-craft` text and
   the second wrote the new one, while `install.ps1` replaces the binary (line 215) before `setup`
   (line 258), which should take one run. Reproduce it on the next upgrade before calling it a defect.
 - Candidates, not debts: `odachi clean --apply` frees about 555 KB; the installer leaves a
   `SKILL.md.bak-*` beside a skill it replaced and they accumulate (five for `ui-craft` alone); an
   `odachi check` stopped at 17:07 left its own tree without a proof.
+- Proposed and not written, from the comparison with gentle-ai and the skill system:
+  - **The delegated hand-off uses the client's identifier.** `delegate` passes absolute paths to
+    skills in the home, the case where OpenCode may refuse to read them. Measure it before fixing it.
+  - **`skills --resolve <step>`**: show which skills a step would receive, and from which scope.
+  - **The routing table in the block**, and a measure of whether a skill improves the work, not only
+    whether it loads.
 
 ## The limits to remember
 

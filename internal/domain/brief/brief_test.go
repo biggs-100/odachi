@@ -113,6 +113,49 @@ func TestParseMalformedInputNeverPanicsAndYieldsZeroBrief(t *testing.T) {
 	}
 }
 
+// TestParseJoinsAWrappedBullet: a human drafts at 80 columns, so one bullet may
+// run over several physical lines. The reader keeps the whole sentence instead
+// of the first line (0256, review debt).
+func TestParseJoinsAWrappedBullet(t *testing.T) {
+	md := `# demo
+
+## Qué tiene que existir
+- un video para YouTube o
+Shorts de hasta sesenta segundos,
+con el movimiento como mensaje
+
+## Listo cuando
+- algo
+`
+	got := brief.Parse(md)
+
+	want := []string{"un video para YouTube o Shorts de hasta sesenta segundos, con el movimiento como mensaje"}
+	if !reflect.DeepEqual(got.Outcome, want) {
+		t.Errorf("Outcome = %q, want the whole bullet", got.Outcome)
+	}
+}
+
+// TestParseDoesNotJoinProseAfterABlankLine: the join stops at a blank line, so
+// a note the human wrote for themselves under a bullet is not swallowed into
+// the requirement (0256).
+func TestParseDoesNotJoinProseAfterABlankLine(t *testing.T) {
+	md := `# demo
+
+## Qué tiene que existir
+- algo
+
+Una nota que el humano escribió para sí.
+
+## Listo cuando
+- listo
+`
+	got := brief.Parse(md)
+
+	if !reflect.DeepEqual(got.Outcome, []string{"algo"}) {
+		t.Errorf("Outcome = %q, want [algo]", got.Outcome)
+	}
+}
+
 func TestParseIgnoresUnknownSections(t *testing.T) {
 	md := `# demo
 

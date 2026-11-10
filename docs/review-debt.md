@@ -9,9 +9,22 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0254.
+Last written: while closing 0256.
 
 ## Open
+
+### the header stop of a wrapped bullet has no test
+
+Found by the review of 0256 (WARNING, `internal/domain/brief/brief_test.go:116`). The join stops at a
+blank line, a header and another bullet, and the added tests pin only the blank line: the `open = nil`
+resets on the three header branches and on the empty bullet run in every brief but are never observed.
+Delete them and a note written directly under the next section is glued into the previous section's
+last requirement, while the suite stays green.
+
+Reopens when a wrapped bullet is followed by a header and a prose line. The fix is one test per stop,
+each observed red by disabling its branch, in `internal/domain/brief`.
+
+## Closed by feature 0256
 
 ### the brief loses every line after the first
 
@@ -20,10 +33,12 @@ rest without a word: the requirement in the task doc arrived as "…a video for 
 decision in the brief lost its tail. Nothing warned; it was caught because the quoted line ended
 mid-sentence.
 
-Reopens when a draft written with wrapped lines —80 columns, the width the rest of these documents
-use— is handed to `start --brief`. The reader must either join a bullet's continuation lines or refuse
-the draft and name the line. The fix is in that reader, with a test that starts from a wrapped bullet
-and asserts the stored requirement is whole.
+Closed: `brief.Parse` reads a bullet as a list item, so the lines that follow it continue it until a
+blank line, a header or another bullet. `TestParseJoinsAWrappedBullet` starts from a wrapped bullet and
+asserts the whole sentence, observed red first ("Outcome = [un video para YouTube o]");
+`TestParseDoesNotJoinProseAfterABlankLine` pins the stop and was observed red with the blank-line reset
+disabled, when the note was swallowed. `TestBriefFlagKeepsAWrappedBulletWhole` pins the path the debt
+came from: the draft a run records as `brief.md` carries the requirement whole.
 
 ## Closed by feature 0249
 

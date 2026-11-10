@@ -52,46 +52,72 @@ func chapter(header string) string {
 }
 
 // Parse reads a brief.md and returns its parts. Bullet lines outside a known
-// section, empty bullets, and unknown headers are ignored.
+// section, empty bullets, and unknown headers are ignored. A bullet is read as
+// a list item, so a line that follows it without a blank line in between
+// continues it: the human drafts at 80 columns and the tool keeps the sentence
+// whole (0256).
 func Parse(md string) Brief {
 	var b Brief
 	section := ""
+	// open is the list the last bullet was appended to. A following line joins
+	// that bullet until a blank line, a header or another bullet ends it.
+	var open *[]string
 
 	for _, raw := range strings.Split(md, "\n") {
 		line := strings.TrimSpace(strings.TrimSuffix(raw, "\r"))
 		if line == "" {
+			open = nil
 			continue
 		}
 
 		// A header always ends the previous section, known or not.
 		if strings.HasPrefix(line, "## ") {
 			section = chapter(line)
+			open = nil
 			continue
 		}
 		if strings.HasPrefix(line, headerName) {
 			b.Name = strings.TrimSpace(strings.TrimPrefix(line, headerName))
 			section = ""
+			open = nil
 			continue
 		}
 		if strings.HasPrefix(line, "#") {
 			// Deeper or malformed header: not part of any brief section.
 			section = ""
+			open = nil
+			continue
+		}
+
+		if !strings.HasPrefix(line, "-") {
+			// Prose under a bullet is that bullet's own continuation.
+			if open != nil && len(*open) > 0 {
+				(*open)[len(*open)-1] += " " + line
+			}
 			continue
 		}
 
 		item, ok := bullet(line)
 		if !ok {
+			// An empty bullet ends the one above it and carries nothing.
+			open = nil
 			continue
 		}
 		switch section {
 		case "outcome":
 			b.Outcome = append(b.Outcome, item)
+			open = &b.Outcome
 		case "donewhen":
 			b.DoneWhen = append(b.DoneWhen, item)
+			open = &b.DoneWhen
 		case "nongoals":
 			b.NonGoals = append(b.NonGoals, item)
+			open = &b.NonGoals
 		case "decisions":
 			b.Decisions = append(b.Decisions, item)
+			open = &b.Decisions
+		default:
+			open = nil
 		}
 	}
 
