@@ -22,8 +22,8 @@ const (
 	CodeBlocked = 1
 )
 
-// State is what the wizard collected. Project is the detected fact, not a choice:
-// a folder with a project uses init, one without uses setup.
+// State is what the wizard collected. Project is the chosen action: true
+// initializes the project (init), false configures the machine alone (setup).
 type State struct {
 	Clients    string
 	Skills     string
@@ -75,13 +75,13 @@ func Validate(s State) []string {
 	var problems []string
 
 	if _, err := persona.NormalizeSelection(s.Clients); err != nil {
-		problems = append(problems, "elegí al menos un cliente: opencode, claude o both")
+		problems = append(problems, "elige al menos un cliente: opencode, claude o both")
 	}
 	if _, err := persona.NormalizeSkills(s.Skills); err != nil || strings.TrimSpace(s.Skills) == "" {
-		problems = append(problems, "elegí el scope de skills: home o project")
+		problems = append(problems, "elige el scope de skills: home o project")
 	}
 	if _, ok := profile.Builtin()[strings.ToLower(strings.TrimSpace(s.Voice))]; !ok {
-		problems = append(problems, fmt.Sprintf("el perfil %q no existe: usá %s",
+		problems = append(problems, fmt.Sprintf("el perfil %q no existe: usa %s",
 			s.Voice, strings.Join(profileNames(), ", ")))
 	}
 	if _, err := review.NormalizeMode(s.ReviewMode); err != nil {

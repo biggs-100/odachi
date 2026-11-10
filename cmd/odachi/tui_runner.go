@@ -31,8 +31,10 @@ func newTUIRunner(dir string) tuiRunner {
 	}
 }
 
-// Install runs init in a project and setup in a folder that is not one. The
-// clients and the skills scope are the two choices init records.
+// Install runs init when the human chose the project, setup when they chose the
+// machine alone. The clients and the skills scope are the two choices init
+// records; setup writes no store, which is why a folder without a repository is
+// asked which one it wants.
 func (r tuiRunner) Install(project bool, clients, skills string) error {
 	var out, errOut bytes.Buffer
 	code := 0

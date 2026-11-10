@@ -110,6 +110,55 @@ func TestTUIEnterWalksTheSteps(t *testing.T) {
 	}
 }
 
+// TestTUINonProjectOffersSetupOrInit: a folder without the block asks what to do
+// before it writes anything; setup is the default and init is chosen explicitly.
+func TestTUINonProjectOffersSetupOrInit(t *testing.T) {
+	in := wizard()
+	in.Project = false
+	m := newTUIModel(in)
+
+	m, _ = press(t, m, enterKey) // state -> scope
+	if m.step != stepScope {
+		t.Fatalf("step = %d, want the scope screen", m.step)
+	}
+	view := m.View()
+	for _, want := range []string{"configurar la máquina (setup)", "inicializar el proyecto (init)"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the scope screen does not offer %q:\n%s", want, view)
+		}
+	}
+
+	m, _ = press(t, m, enterKey) // default: the machine
+	if m.init {
+		t.Fatal("init = true, want the machine default")
+	}
+
+	m, _ = press(t, m, escKey) // clients -> scope
+	if m.step != stepScope {
+		t.Fatalf("step = %d, want the scope screen", m.step)
+	}
+	m, _ = press(t, m, downKey)
+	m, _ = press(t, m, enterKey)
+	if !m.init {
+		t.Fatal("init = false, want the project chosen")
+	}
+}
+
+// TestTUIMachinePathSkipsTheSkillsScreen: the machine has one scope, so the
+// screen that chooses one would be a question with a single answer.
+func TestTUIMachinePathSkipsTheSkillsScreen(t *testing.T) {
+	in := wizard()
+	in.Project = false
+	m := newTUIModel(in)
+
+	m, _ = press(t, m, enterKey) // state -> scope (machine default)
+	m, _ = press(t, m, enterKey) // scope -> clients
+	m, _ = press(t, m, enterKey) // clients -> voice
+	if m.step != stepVoice {
+		t.Fatalf("step = %d, want voice: the skills screen is a project question", m.step)
+	}
+}
+
 // TestTUIClientScreenOffersTheThreeChoices: both, opencode and claude are the
 // values the store knows, and the cursor picks one.
 func TestTUIClientScreenOffersTheThreeChoices(t *testing.T) {

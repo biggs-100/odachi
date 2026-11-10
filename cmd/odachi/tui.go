@@ -46,7 +46,7 @@ func runTUI(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer
 	}
 
 	if !isTerminal(stdin) || streamTarget(stdout) == nil {
-		fmt.Fprintln(stderr, "odachi: la tui necesita una terminal; configurá con odachi setup (o odachi init) y sus flags")
+		fmt.Fprintln(stderr, "odachi: la tui necesita una terminal; configura con odachi setup (o odachi init) y sus flags")
 		return start.CodeBlocked
 	}
 
@@ -119,6 +119,7 @@ type tuiStep int
 
 const (
 	stepState tuiStep = iota
+	stepScope
 	stepClients
 	stepSkills
 	stepVoice
@@ -133,6 +134,10 @@ var (
 	tuiSkills  = []string{persona.SkillsHome, persona.SkillsProject}
 	tuiVoices  = []string{"novato", "senior", "ci"}
 	tuiLenses  = review.AllLenses()
+
+	// tuiScopes is the choice a folder that is not a project had to be given: a
+	// machine-only setup writes nothing here, init is what creates the project.
+	tuiScopes = []string{"machine", "project"}
 )
 
 // tuiModel is the wizard: the detected facts, the choices and where it stands.
@@ -140,6 +145,8 @@ type tuiModel struct {
 	state        tuiState
 	step         tuiStep
 	width        int
+	init         bool // the chosen action: initialize the project, or the machine only
+	scope        int
 	client       int
 	skills       int
 	voice        int
@@ -160,6 +167,7 @@ func newTUIModel(state tuiState) tuiModel {
 	}
 	return tuiModel{
 		state:  state,
+		init:   state.Project,
 		client: indexOf(tuiClients, state.Clients),
 		skills: indexOf(tuiSkills, state.Skills),
 		voice:  indexOf(tuiVoices, state.Voice),
@@ -184,9 +192,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q":
 			return m, tea.Quit
 		case "esc":
-			if m.step > stepState {
-				m.step--
-			}
+			m = m.back()
 		case "enter":
 			if m.step == stepReview {
 				return m.enterReview()
@@ -214,10 +220,21 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m tuiModel) next() (tea.Model, tea.Cmd) {
 	switch m.step {
 	case stepState:
+		if m.state.Project {
+			m.step = stepClients
+		} else {
+			m.step = stepScope
+		}
+	case stepScope:
+		m.init = tuiScopes[m.scope] == "project"
 		m.step = stepClients
 	case stepClients:
 		m.state.Clients = tuiClients[m.client]
-		m.step = stepSkills
+		if m.init {
+			m.step = stepSkills
+		} else {
+			m.step = stepVoice
+		}
 	case stepSkills:
 		m.state.Skills = tuiSkills[m.skills]
 		m.step = stepVoice
@@ -226,6 +243,34 @@ func (m tuiModel) next() (tea.Model, tea.Cmd) {
 		m.step = stepReview
 	}
 	return m, nil
+}
+
+// back is one screen towards the first one. The scope and the skills screens are
+// conditional: a project skips the first, a machine-only setup skips the second.
+func (m tuiModel) back() tuiModel {
+	switch m.step {
+	case stepScope:
+		m.step = stepState
+	case stepClients:
+		if m.state.Project {
+			m.step = stepState
+		} else {
+			m.step = stepScope
+		}
+	case stepSkills:
+		m.step = stepClients
+	case stepVoice:
+		if m.init {
+			m.step = stepSkills
+		} else {
+			m.step = stepClients
+		}
+	case stepReview:
+		m.step = stepVoice
+	case stepSummary:
+		m.step = stepReview
+	}
+	return m
 }
 
 // enterReview toggles the switch on its row, or opens the model of the lens the
@@ -266,7 +311,7 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 		}
 		checked, err := review.NormalizeModel(value)
 		if err != nil {
-			m.editErr = "el modelo no es un identificador: usá provider/name#variant"
+			m.editErr = "el modelo no es un identificador: usa provider/name#variant"
 			return m
 		}
 		m.state.Models[lens] = checked
@@ -290,6 +335,8 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 // summary are not choices.
 func (m tuiModel) move(delta int) tuiModel {
 	switch m.step {
+	case stepScope:
+		m.scope = clamp(m.scope+delta, len(tuiScopes))
 	case stepClients:
 		m.client = clamp(m.client+delta, len(tuiClients))
 	case stepSkills:
@@ -306,6 +353,8 @@ func (m tuiModel) move(delta int) tuiModel {
 // reads it; the identifiers and the code stay English.
 func (m tuiModel) View() string {
 	switch m.step {
+	case stepScope:
+		return m.viewChoices("Qué configurar", scopeLabels(), m.scope)
 	case stepClients:
 		return m.viewChoices("Clientes", clientLabels(), m.client)
 	case stepSkills:
@@ -386,7 +435,7 @@ func (m tuiModel) apply() (tea.Model, tea.Cmd) {
 		Voice:      m.state.Voice,
 		ReviewMode: m.state.Review,
 		LensModels: m.state.Models,
-		Project:    m.state.Project,
+		Project:    m.init,
 	}, m.run)
 	m.applied = true
 	m.step = stepApply
@@ -450,10 +499,18 @@ func (m tuiModel) facts() string {
 		project = "sí: el bloque de odachi está en AGENTS.md"
 	}
 
+	action := "solo la máquina (setup); la elección no se guarda sin un proyecto"
+	skills := "home (la máquina)"
+	if m.init {
+		action = "inicializar el proyecto (init)"
+		skills = m.state.Skills
+	}
+
 	rows := [][2]string{
 		{"Proyecto", project},
+		{"Configurar", action},
 		{"Clientes", m.state.Clients},
-		{"Skills", m.state.Skills},
+		{"Skills", skills},
 		{"Voz", m.state.Voice},
 		{"Review", m.state.Review},
 		{"Modelos", modelsLine(m.state.Models)},
@@ -464,6 +521,11 @@ func (m tuiModel) facts() string {
 		fmt.Fprintf(&out, "  %-10s %s\n", row[0], row[1])
 	}
 	return out.String()
+}
+
+// scopeLabels names the two actions a folder that is not a project can take.
+func scopeLabels() []string {
+	return []string{"configurar la máquina (setup)", "inicializar el proyecto (init)"}
 }
 
 // clientLabels names the three client choices the way the screen reads them.
