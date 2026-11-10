@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/biggs-100/odachi/internal/adapters/agentstoml"
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/domain/persona"
@@ -37,6 +39,188 @@ func seedTUIProject(t *testing.T, dir string) {
 		t.Fatalf("reviewtoml.Render: %v", err)
 	}
 	writeFile(t, dir, filepath.FromSlash(review.ModePath), string(config))
+}
+
+// keys the wizard answers, in the form the program delivers them.
+var (
+	enterKey = tea.KeyMsg{Type: tea.KeyEnter}
+	downKey  = tea.KeyMsg{Type: tea.KeyDown}
+	upKey    = tea.KeyMsg{Type: tea.KeyUp}
+	escKey   = tea.KeyMsg{Type: tea.KeyEsc}
+	qKey     = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")}
+)
+
+// wizard is a state with every choice made.
+func wizard() tuiState {
+	return tuiState{
+		Version: "9.9.9",
+		Project: true,
+		Clients: persona.SelectionBoth,
+		Skills:  persona.SkillsHome,
+		Voice:   "novato",
+		Review:  review.ModeOn,
+	}
+}
+
+// press sends one key to the model and returns the model it became.
+func press(t *testing.T, m tuiModel, key tea.KeyMsg) (tuiModel, tea.Cmd) {
+	t.Helper()
+	next, cmd := m.Update(key)
+	got, ok := next.(tuiModel)
+	if !ok {
+		t.Fatalf("Update returned %T, want tuiModel", next)
+	}
+	return got, cmd
+}
+
+// TestTUIEnterWalksTheSteps: the wizard is linear, and enter commits each choice.
+func TestTUIEnterWalksTheSteps(t *testing.T) {
+	m := newTUIModel(wizard())
+	for want := stepClients; want <= stepSummary; want++ {
+		m, _ = press(t, m, enterKey)
+		if m.step != want {
+			t.Fatalf("step = %d, want %d", m.step, want)
+		}
+	}
+}
+
+// TestTUIClientScreenOffersTheThreeChoices: both, opencode and claude are the
+// values the store knows, and the cursor picks one.
+func TestTUIClientScreenOffersTheThreeChoices(t *testing.T) {
+	m := newTUIModel(wizard())
+	m, _ = press(t, m, enterKey) // state -> clients
+
+	view := m.View()
+	for _, want := range []string{"ambos (opencode y claude)", "opencode", "claude"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the client screen does not offer %q:\n%s", want, view)
+		}
+	}
+
+	m, _ = press(t, m, downKey) // both -> opencode
+	m, _ = press(t, m, enterKey)
+	if m.state.Clients != persona.SelectionOpenCode {
+		t.Fatalf("Clients = %q, want opencode", m.state.Clients)
+	}
+	if m.step != stepSkills {
+		t.Fatalf("step = %d, want skills", m.step)
+	}
+}
+
+// TestTUICursorStaysInsideItsList: holding down at the end does not fall off.
+func TestTUICursorStaysInsideItsList(t *testing.T) {
+	m := newTUIModel(wizard())
+	m, _ = press(t, m, enterKey) // clients
+	if m.client != 0 {
+		t.Fatalf("client = %d, want 0", m.client)
+	}
+	m, _ = press(t, m, upKey)
+	if m.client != 0 {
+		t.Fatalf("client after up = %d, want 0", m.client)
+	}
+	for i := 0; i < 5; i++ {
+		m, _ = press(t, m, downKey)
+	}
+	if m.client != len(tuiClients)-1 {
+		t.Fatalf("client = %d, want the last option", m.client)
+	}
+}
+
+// TestTUISkillsScreenChoosesTheScope: home and project are the two scopes.
+func TestTUISkillsScreenChoosesTheScope(t *testing.T) {
+	m := newTUIModel(wizard())
+	m, _ = press(t, m, enterKey) // clients
+	m, _ = press(t, m, enterKey) // -> skills
+	m, _ = press(t, m, downKey)  // home -> project
+	m, _ = press(t, m, enterKey)
+
+	if m.state.Skills != persona.SkillsProject {
+		t.Fatalf("Skills = %q, want project", m.state.Skills)
+	}
+	if m.step != stepVoice {
+		t.Fatalf("step = %d, want voice", m.step)
+	}
+}
+
+// TestTUIVoiceScreenChoosesTheBuiltIn: the wizard offers the three voices odachi
+// ships, and the summary shows the one chosen.
+func TestTUIVoiceScreenChoosesTheBuiltIn(t *testing.T) {
+	m := newTUIModel(wizard())
+	m, _ = press(t, m, enterKey) // clients
+	m, _ = press(t, m, enterKey) // skills
+	m, _ = press(t, m, enterKey) // -> voice
+	m, _ = press(t, m, downKey)  // novato -> senior
+	m, _ = press(t, m, downKey)  // senior -> ci
+	m, _ = press(t, m, enterKey)
+
+	if m.state.Voice != "ci" {
+		t.Fatalf("Voice = %q, want ci", m.state.Voice)
+	}
+	if m.step != stepSummary {
+		t.Fatalf("step = %d, want summary", m.step)
+	}
+	if !strings.Contains(m.View(), "ci") {
+		t.Errorf("the summary does not show the chosen voice:\n%s", m.View())
+	}
+}
+
+// TestTUIEscapeGoesBackOneScreen: back is one screen, and the first screen has no
+// back.
+func TestTUIEscapeGoesBackOneScreen(t *testing.T) {
+	m := newTUIModel(wizard())
+	m, _ = press(t, m, enterKey) // clients
+	m, _ = press(t, m, enterKey) // skills
+	m, _ = press(t, m, enterKey) // voice
+
+	m, _ = press(t, m, escKey)
+	if m.step != stepSkills {
+		t.Fatalf("step = %d, want skills", m.step)
+	}
+	m, _ = press(t, m, escKey)
+	if m.step != stepClients {
+		t.Fatalf("step = %d, want clients", m.step)
+	}
+	m, _ = press(t, m, escKey)
+	if m.step != stepState {
+		t.Fatalf("step = %d, want the first screen", m.step)
+	}
+	m, _ = press(t, m, escKey)
+	if m.step != stepState {
+		t.Fatalf("step = %d, want the first screen: there is no earlier one", m.step)
+	}
+}
+
+// TestTUIQuitReturnsTheQuitCommand: q asks the program to close from any screen.
+func TestTUIQuitReturnsTheQuitCommand(t *testing.T) {
+	m := newTUIModel(wizard())
+	m, _ = press(t, m, enterKey) // clients
+	_, cmd := press(t, m, qKey)
+	if cmd == nil {
+		t.Fatal("cmd = nil, want tea.Quit")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Fatalf("cmd() = %T, want tea.QuitMsg", cmd())
+	}
+}
+
+// TestTUITheChoicesAreShownInTheSummary: the last screen is the decision a human
+// reviews before applying it.
+func TestTUITheChoicesAreShownInTheSummary(t *testing.T) {
+	m := newTUIModel(wizard())
+	m, _ = press(t, m, enterKey) // clients
+	m, _ = press(t, m, downKey)  // both -> opencode
+	m, _ = press(t, m, enterKey)
+	m, _ = press(t, m, downKey) // home -> project
+	m, _ = press(t, m, enterKey)
+	m, _ = press(t, m, downKey) // novato -> senior
+	m, _ = press(t, m, enterKey)
+
+	view := m.View()
+	for _, want := range []string{"opencode", "project", "senior"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the summary does not show %q:\n%s", want, view)
+		}
+	}
 }
 
 // TestTUIDetectsTheState: the first screen starts from what the project already

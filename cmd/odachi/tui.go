@@ -105,28 +105,67 @@ func detectTUIState(dir string) (tuiState, error) {
 	return state, nil
 }
 
-// tuiModel is the first screen: the detected facts and the way out. The screens
-// that choose and apply arrive in the next steps.
+// tuiStep is where the wizard is. The review and the apply screens arrive in the
+// next steps; the summary is where they will hang.
+type tuiStep int
+
+const (
+	stepState tuiStep = iota
+	stepClients
+	stepSkills
+	stepVoice
+	stepSummary
+)
+
+// The options each single-choice screen offers, in the order a human reads them.
+var (
+	tuiClients = []string{persona.SelectionBoth, persona.SelectionOpenCode, persona.SelectionClaude}
+	tuiSkills  = []string{persona.SkillsHome, persona.SkillsProject}
+	tuiVoices  = []string{"novato", "senior", "ci"}
+)
+
+// tuiModel is the wizard: the detected facts, the choices and where it stands.
 type tuiModel struct {
-	state tuiState
-	width int
+	state  tuiState
+	step   tuiStep
+	width  int
+	client int
+	skills int
+	voice  int
 }
 
-// newTUIModel is the model a run starts with.
+// newTUIModel is the model a run starts with, positioned on what the project
+// already chose.
 func newTUIModel(state tuiState) tuiModel {
-	return tuiModel{state: state}
+	return tuiModel{
+		state:  state,
+		client: indexOf(tuiClients, state.Clients),
+		skills: indexOf(tuiSkills, state.Skills),
+		voice:  indexOf(tuiVoices, state.Voice),
+	}
 }
 
 // Init does nothing: the first screen is already the state.
 func (m tuiModel) Init() tea.Cmd { return nil }
 
-// Update handles the window size and the one key the first screen answers.
+// Update handles the keys the wizard answers. Nothing here touches the disk: the
+// choices are the model's until the apply screen runs them.
 func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "esc", "ctrl+c":
+		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "esc":
+			if m.step > stepState {
+				m.step--
+			}
+		case "enter":
+			return m.next()
+		case "up", "k":
+			m = m.move(-1)
+		case "down", "j":
+			m = m.move(1)
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -134,10 +173,87 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the first screen. The copy is Spanish because the human reads it;
-// the identifiers and the code stay English.
+// next advances one screen, committing the choice the screen was showing.
+func (m tuiModel) next() (tea.Model, tea.Cmd) {
+	switch m.step {
+	case stepState:
+		m.step = stepClients
+	case stepClients:
+		m.state.Clients = tuiClients[m.client]
+		m.step = stepSkills
+	case stepSkills:
+		m.state.Skills = tuiSkills[m.skills]
+		m.step = stepVoice
+	case stepVoice:
+		m.state.Voice = tuiVoices[m.voice]
+		m.step = stepSummary
+	}
+	return m, nil
+}
+
+// move changes the cursor of the screen the wizard is on. The detection and the
+// summary are not choices.
+func (m tuiModel) move(delta int) tuiModel {
+	switch m.step {
+	case stepClients:
+		m.client = clamp(m.client+delta, len(tuiClients))
+	case stepSkills:
+		m.skills = clamp(m.skills+delta, len(tuiSkills))
+	case stepVoice:
+		m.voice = clamp(m.voice+delta, len(tuiVoices))
+	}
+	return m
+}
+
+// View renders the screen the wizard is on. The copy is Spanish because the human
+// reads it; the identifiers and the code stay English.
 func (m tuiModel) View() string {
-	title := lipgloss.NewStyle().Bold(true).Render("odachi " + m.state.Version)
+	switch m.step {
+	case stepClients:
+		return m.viewChoices("Clientes", clientLabels(), m.client)
+	case stepSkills:
+		return m.viewChoices("Skills", tuiSkills, m.skills)
+	case stepVoice:
+		return m.viewChoices("Voz", tuiVoices, m.voice)
+	case stepSummary:
+		return m.viewSummary()
+	default:
+		return m.viewState()
+	}
+}
+
+// viewState is the first screen: where the project is before any choice.
+func (m tuiModel) viewState() string {
+	return m.header("instalación y configuración") + m.facts() + "\n  enter seguir · q salir\n"
+}
+
+// viewSummary is the last screen before the apply: the choices as they will be.
+func (m tuiModel) viewSummary() string {
+	return m.header("resumen") + m.facts() + "\n  q salir\n"
+}
+
+// viewChoices renders one single-choice screen with its cursor.
+func (m tuiModel) viewChoices(title string, options []string, cursor int) string {
+	var out strings.Builder
+	out.WriteString(m.header(title))
+	for i, option := range options {
+		marker := "  "
+		if i == cursor {
+			marker = "> "
+		}
+		out.WriteString("  " + marker + option + "\n")
+	}
+	out.WriteString("\n  ↑↓ elegir · enter seguir · esc volver · q salir\n")
+	return out.String()
+}
+
+// header is the line every screen starts with.
+func (m tuiModel) header(title string) string {
+	return lipgloss.NewStyle().Bold(true).Render("odachi "+m.state.Version) + " · " + title + "\n\n"
+}
+
+// facts renders the state as the rows a human reads.
+func (m tuiModel) facts() string {
 	project := "no: esta carpeta no tiene el bloque de odachi"
 	if m.state.Project {
 		project = "sí: el bloque de odachi está en AGENTS.md"
@@ -152,10 +268,42 @@ func (m tuiModel) View() string {
 	}
 
 	var out strings.Builder
-	out.WriteString(title + " · instalación y configuración\n\n")
 	for _, row := range rows {
 		fmt.Fprintf(&out, "  %-10s %s\n", row[0], row[1])
 	}
-	out.WriteString("\n  q salir\n")
 	return out.String()
+}
+
+// clientLabels names the three client choices the way the screen reads them.
+func clientLabels() []string {
+	labels := make([]string, len(tuiClients))
+	for i, value := range tuiClients {
+		labels[i] = value
+		if value == persona.SelectionBoth {
+			labels[i] = "ambos (opencode y claude)"
+		}
+	}
+	return labels
+}
+
+// indexOf is the cursor a value sits on, or the first option for a value the
+// screen does not offer.
+func indexOf(options []string, value string) int {
+	for i, option := range options {
+		if option == value {
+			return i
+		}
+	}
+	return 0
+}
+
+// clamp keeps a cursor inside its list.
+func clamp(value, length int) int {
+	if value < 0 {
+		return 0
+	}
+	if value >= length {
+		return length - 1
+	}
+	return value
 }
