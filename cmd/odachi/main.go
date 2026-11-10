@@ -1690,7 +1690,7 @@ usage:
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills home|project] [--agents opencode|claude|both] [--json]
   odachi setup [--agents opencode|claude|both] [--dry-run] [--json]
-  odachi skills [--check | --write]
+  odachi skills [--check | --write | --resolve <step>]
   odachi role new <slug>
   odachi role [<slug>]
   odachi skill new <slug> --scope project|home
@@ -1771,6 +1771,8 @@ clean flags:
 skills flags:
   --check         validate each skill and SKILLS.md; exits 1 when something does not comply
   --write         regenerate SKILLS.md from the frontmatter
+  --resolve s     the skills a step of the current feature would receive, with their
+                  exact path and whether they come from the project or the home
   --json          machine output
 
 pack flags:
@@ -1939,6 +1941,7 @@ after start:
   odachi skills                                 the project's skills and their trigger
   odachi skills --check                         validate (CI runs it); exit 1 when something does not comply
   odachi skills --write                         regenerate SKILLS.md from the frontmatter
+  odachi skills --resolve T1                    what T1 would receive: path and scope of each skill
   odachi skill new <slug> --scope project           create .agents/skills/<slug>/SKILL.md and its SKILLS.md
   odachi skill new <slug> --scope home              the same, once per machine in ~/.agents/skills
   odachi pack --agents claude,codex             install the bundled skills into each agent

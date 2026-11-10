@@ -13,7 +13,9 @@ R1 · "skills --resolve <step>: ver qué skills recibiría un paso y de qué sco
 - Unreleased names the change: a new read-only surface on skills, minor (0258)
 
 ## Steps
-- [ ] T1 · the resolve surface: the flag, the project and home paths, the missing name and the empty step, tests red first   R1 · route:inline
+- [x] T1 · the resolve surface: the flag, the project and home paths, the missing name and the empty step, tests red first   R1 · route:inline · tree:3ff8edca93684d429a9618e114bbecc9aa106448
 
 ## History
 L1 · "skills --resolve <step>: ver qué skills recibiría un paso y de qué scope"
+L2 · OFICIO · "The resolve surface lives in cmd/odachi and reuses craftPath; it adds no app package" (porque the resolver already exists there and a second copy of the project-first order would be the way the two verbs disagree; the brief's non-goal says reuse it)
+L3 · OFICIO · "A name that resolves nowhere blocks the run; an empty step is an answer" (porque the surface exists to inspect a hand-off, and a missing skill means the hand-off it describes would fail, while a step that owes none is a valid answer and exits 0)

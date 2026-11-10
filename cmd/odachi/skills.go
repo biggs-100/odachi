@@ -6,11 +6,14 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	skillsapp "github.com/biggs-100/odachi/internal/app/skills"
 	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // runSkills parses the flags and wires the Files adapter: listing, --check and
@@ -20,13 +23,15 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 
 	var (
-		check  bool
-		write  bool
-		asJSON bool
+		check   bool
+		write   bool
+		resolve string
+		asJSON  bool
 	)
 
 	flags.BoolVar(&check, "check", false, "validate each skill and SKILLS.md; exits 1 when something does not comply")
 	flags.BoolVar(&write, "write", false, "regenerate SKILLS.md from the frontmatter")
+	flags.StringVar(&resolve, "resolve", "", "the skills a step of the current feature would receive, with their path and scope")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
@@ -45,8 +50,100 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "odachi: --check and --write do not go together: use one of the two (odachi skills --check or odachi skills --write)")
 		return start.CodeBlocked
 	}
+	// Visit tells "the flag was absent" apart from "the flag was given empty":
+	// `--resolve "$STEP"` with an unset variable must not fall through to the
+	// plain listing and report a hand-off nobody asked for.
+	resolveSet := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "resolve" {
+			resolveSet = true
+		}
+	})
+	if resolveSet {
+		if strings.TrimSpace(resolve) == "" {
+			fmt.Fprintln(stderr, "odachi: --resolve needs the step: odachi skills --resolve T1")
+			return start.CodeBlocked
+		}
+		other := ""
+		switch {
+		case check:
+			other = "--check"
+		case write:
+			other = "--write"
+		case asJSON:
+			other = "--json"
+		}
+		if other != "" {
+			fmt.Fprintf(stderr, "odachi: --resolve and %s do not go together: use one of them (odachi skills --resolve <step>, or odachi skills %s)\n", other, other)
+			return start.CodeBlocked
+		}
+		return resolveSkills(dir, resolve, stdout, stderr)
+	}
 
 	return reportSkills(skillsapp.Run(skillsapp.Options{Dir: dir, Check: check, Write: write}, disk(dir)), asJSON, stdout, stderr)
+}
+
+// resolveSkills answers what a step of the current feature would receive: the
+// exact SKILL.md each name resolves to and the scope it came from. It is the
+// read-only twin of `delegate`, and it writes nothing.
+func resolveSkills(dir, stepID string, stdout, stderr io.Writer) int {
+	current, err := tasks.Current(disk(dir), dir)
+	if err != nil {
+		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+
+	stepID = strings.ToUpper(strings.TrimSpace(stepID))
+	var step taskdoc.Step
+	found := false
+	for _, candidate := range current.Doc.Steps {
+		if candidate.ID == stepID {
+			step = candidate
+			found = true
+			break
+		}
+	}
+	if !found {
+		if len(current.Doc.Steps) == 0 {
+			fmt.Fprintf(stderr, "odachi: %s has no steps yet: run odachi plan \"<the step>\" first\n", current.Rel)
+			return start.CodeBlocked
+		}
+		ids := make([]string, 0, len(current.Doc.Steps))
+		for _, candidate := range current.Doc.Steps {
+			ids = append(ids, candidate.ID)
+		}
+		fmt.Fprintf(stderr, "odachi: %s is not a step of %s: the steps are %s\n", stepID, current.Rel, strings.Join(ids, ", "))
+		return start.CodeBlocked
+	}
+
+	if len(step.Skills) == 0 {
+		fmt.Fprintf(stdout, "%s names no skills\n", step.ID)
+		return start.CodeOK
+	}
+
+	blocked := false
+	for _, name := range step.Skills {
+		found, ok := craftPath(dir, name)
+		if !ok {
+			looked := craftPaths(dir, name)
+			places := make([]string, 0, len(looked))
+			for _, path := range looked {
+				places = append(places, filepath.ToSlash(path))
+			}
+			fmt.Fprintf(stderr, "odachi: %s has no SKILL.md in %s\n", name, strings.Join(places, " or "))
+			blocked = true
+			continue
+		}
+		scope := "home"
+		if found == filepath.Join(dir, ".agents", "skills", name, "SKILL.md") {
+			scope = "project"
+		}
+		fmt.Fprintf(stdout, "%s  %s  (%s)\n", name, filepath.ToSlash(found), scope)
+	}
+	if blocked {
+		return start.CodeBlocked
+	}
+	return start.CodeOK
 }
 
 // runSkill parses `odachi skill new <slug> --scope project|home`. `skill` has one

@@ -209,7 +209,11 @@ represented by `Render` at all. `taskdoc.Unaccounted` is the grammar's answer to
   never reads a user's skill folder: it reads the project's curriculum. It exits
   `1` with one English line per violation, each naming the file; a repository
   without `skills/` exits `0` and says `odachi skill new <slug> --scope
-  project|home`. No skill means no error.
+  project|home`. No skill means no error. `--resolve <step>` is the read-only
+  answer to what a step would receive: it reads the current feature, resolves each
+  name project-first with the same resolver `delegate` uses, and prints the exact
+  path and its scope; a name no scope carries blocks with both places it looked.
+  It writes nothing.
 
 ## Notes
 
