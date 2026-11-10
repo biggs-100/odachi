@@ -51,6 +51,27 @@ func TestTUIWizardRunsInATerminal(t *testing.T) {
 	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
 }
 
+// TestTUIWizardAsksTheScopeInATerminal: a folder without the block gets the
+// setup-or-init screen before any write, and the terminal drives it too.
+func TestTUIWizardAsksTheScopeInATerminal(t *testing.T) {
+	in := wizard()
+	in.Project = false
+	model := newTUIModel(in)
+
+	tm := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(80, 24))
+	waitFor(t, tm, "Proyecto")
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyEnter}) // state -> scope
+	waitFor(t, tm, "Qué configurar")
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyDown})  // machine -> project
+	tm.Send(tea.KeyMsg{Type: tea.KeyEnter}) // scope -> clients
+	waitFor(t, tm, "Clientes")
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
+}
+
 // TestTUIWizardQuitsFromTheFirstScreen: q closes the program before any choice,
 // and the terminal returns to the shell.
 func TestTUIWizardQuitsFromTheFirstScreen(t *testing.T) {
