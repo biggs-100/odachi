@@ -15,6 +15,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/configure"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 )
@@ -113,8 +114,8 @@ func detectTUIState(dir string) (tuiState, error) {
 	return state, nil
 }
 
-// tuiStep is where the wizard is. The review and the apply screens arrive in the
-// next steps; the summary is where they will hang.
+// tuiStep is where the wizard is: the linear order, with the scope and the
+// skills screens skipped when the choice they ask does not exist.
 type tuiStep int
 
 const (
@@ -132,7 +133,7 @@ const (
 var (
 	tuiClients = []string{persona.SelectionBoth, persona.SelectionOpenCode, persona.SelectionClaude}
 	tuiSkills  = []string{persona.SkillsHome, persona.SkillsProject}
-	tuiVoices  = []string{"novato", "senior", "ci"}
+	tuiVoices  = voiceNames()
 	tuiLenses  = review.AllLenses()
 
 	// tuiScopes is the choice a folder that is not a project had to be given: a
@@ -144,7 +145,6 @@ var (
 type tuiModel struct {
 	state        tuiState
 	step         tuiStep
-	width        int
 	init         bool // the chosen action: initialize the project, or the machine only
 	scope        int
 	client       int
@@ -210,8 +210,6 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down", "j":
 			m = m.move(1)
 		}
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
 	}
 	return m, nil
 }
@@ -521,6 +519,17 @@ func (m tuiModel) facts() string {
 		fmt.Fprintf(&out, "  %-10s %s\n", row[0], row[1])
 	}
 	return out.String()
+}
+
+// voiceNames is the profiles the binary ships, read from the one table the
+// validation reads. The screen does not carry a second copy of the list.
+func voiceNames() []string {
+	names := make([]string, 0, len(profile.Builtin()))
+	for name := range profile.Builtin() {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // scopeLabels names the two actions a folder that is not a project can take.

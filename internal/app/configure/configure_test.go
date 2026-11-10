@@ -154,6 +154,27 @@ func TestApplyStopsAtTheFirstFailureAndLeavesTheRestPending(t *testing.T) {
 	}
 }
 
+// TestApplyClearsTheLensTableWhenTheReviewIsOn: an empty table is a decision the
+// human made by deleting the last model, and the runner receives it as one; nil
+// is the caller that never touched the table.
+func TestApplyClearsTheLensTableWhenTheReviewIsOn(t *testing.T) {
+	in := valid()
+	in.LensModels = map[string]string{}
+	run := &fakeRunner{}
+
+	got := configure.Apply(in, run)
+
+	if got.Code != configure.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, configure.CodeOK, got.Message)
+	}
+	if run.models == nil || len(run.models) != 0 {
+		t.Fatalf("models = %v, want an explicit empty table", run.models)
+	}
+	if got := strings.Join(run.ops(), ","); got != "install,voice,review,models" {
+		t.Fatalf("calls = %q, want the models operation with an empty table", got)
+	}
+}
+
 // TestApplyRefusesAnInvalidStateWithoutTouchingTheRunner: validation runs before
 // the first write, so a state the wizard should have refused changes nothing.
 func TestApplyRefusesAnInvalidStateWithoutTouchingTheRunner(t *testing.T) {
@@ -192,6 +213,7 @@ func TestApplyPassesTheDetectedProjectToInstall(t *testing.T) {
 type fakeRunner struct {
 	calls  []call
 	failAt string
+	models map[string]string
 }
 
 type call struct {
@@ -221,6 +243,7 @@ func (f *fakeRunner) Voice(profile string) error { return f.record("voice", prof
 func (f *fakeRunner) Review(mode string) error { return f.record("review", mode) }
 
 func (f *fakeRunner) Models(models map[string]string) error {
+	f.models = models
 	return f.record("models", "")
 }
 

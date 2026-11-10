@@ -224,8 +224,7 @@ func TestTUIVoiceScreenChoosesTheBuiltIn(t *testing.T) {
 	m, _ = press(t, m, enterKey) // clients
 	m, _ = press(t, m, enterKey) // skills
 	m, _ = press(t, m, enterKey) // -> voice
-	m, _ = press(t, m, downKey)  // novato -> senior
-	m, _ = press(t, m, downKey)  // senior -> ci
+	m, _ = press(t, m, upKey)    // novato -> ci, the first of the sorted table
 	m, _ = press(t, m, enterKey)
 
 	if m.state.Voice != "ci" {

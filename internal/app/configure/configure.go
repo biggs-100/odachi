@@ -102,7 +102,11 @@ func Plan(s State) []Operation {
 		{ID: "voice", Label: "aplicar la voz"},
 		{ID: "review", Label: "configurar el review"},
 	}
-	if strings.EqualFold(strings.TrimSpace(s.ReviewMode), review.ModeOn) && len(s.LensModels) > 0 {
+	// The models operation runs whenever the review is on, even with an empty
+	// table: an empty map is the human deleting the last model, and the file has
+	// to be told. Nil and empty are different answers, and only the caller knows
+	// which one it means.
+	if strings.EqualFold(strings.TrimSpace(s.ReviewMode), review.ModeOn) {
 		ops = append(ops, Operation{ID: "models", Label: "fijar el modelo de cada lente"})
 	}
 	return ops
@@ -116,12 +120,11 @@ func Apply(s State, run Runner) Result {
 		return Result{Code: CodeBlocked, Message: strings.Join(problems, "; ")}
 	}
 
-	models, _ := review.NormalizeLensModels(s.LensModels)
 	plan := Plan(s)
 	result := Result{Code: CodeOK, Steps: make([]Step, 0, len(plan))}
 
 	for i, op := range plan {
-		err := applyOne(s, models, op.ID, run)
+		err := applyOne(s, s.LensModels, op.ID, run)
 		step := Step{Operation: op, Status: Done, Err: err}
 		if err != nil {
 			step.Status = Failed
