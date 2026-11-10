@@ -29,8 +29,8 @@ const (
 	// MaxBodyLines is the most lines a skill body may have.
 	MaxBodyLines = 60
 	// MaxRuleChars is the longest a rule may be. A rule that needs more is a
-	// paragraph wearing a dash: 140 split 78 single sentences in this catalog, and
-	// 300 catches the one rule that carries two ideas.
+	// paragraph wearing a dash; the measurement that chose 300 is in the
+	// changelog, where a decision's history belongs.
 	MaxRuleChars = 300
 	// TriggerPrefix is how every description starts.
 	TriggerPrefix = "Trigger:"
