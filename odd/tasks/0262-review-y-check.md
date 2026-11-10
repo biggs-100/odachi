@@ -8,7 +8,7 @@ R1 · "review y check nombran el mismo árbol para el mismo worktree limpio, y u
 ## Done when
 
 ## Steps
-- [ ] T1 · review y check nombran el mismo árbol para el mismo worktree limpio, y una carpeta ignorada no mueve ese id   R1
+- [x] T1 · review y check nombran el mismo árbol para el mismo worktree limpio, y una carpeta ignorada no mueve ese id   R1 · tree:099ac096998a5ea6b6fad42255c82b07d942f016
 
 ## History
 L1 · "review y check nombran el mismo árbol para el mismo worktree limpio, y una carpeta ignorada no mueve ese id"
