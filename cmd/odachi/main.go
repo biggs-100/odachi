@@ -1355,6 +1355,7 @@ func (s initSkills) report(scope string, results ...scopedResult) initapp.SkillR
 				Label:     dest.Dest,
 				Installed: dest.Installed,
 				Replaced:  dest.BackedUp,
+				Written:   dest.Written,
 				Unchanged: dest.Unchanged,
 				Files:     dest.Files,
 			})

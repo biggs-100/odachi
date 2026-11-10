@@ -152,9 +152,10 @@ func TestPackSecondRunIsIdentical(t *testing.T) {
 	}
 }
 
-// TestPackBacksUpAModifiedFile: the human's bytes are saved before they are
-// replaced, and the file ends up with the bundled version.
-func TestPackBacksUpAModifiedFile(t *testing.T) {
+// TestPackWritesAModifiedHomeFileWithoutABackup: the home has no store to hold
+// the old bytes and undo cannot read a backup there, so the file is replaced and
+// reported as written; no SKILL.md.bak-* is left beside it.
+func TestPackWritesAModifiedHomeFileWithoutABackup(t *testing.T) {
 	home := t.TempDir()
 	withHome(t, home)
 
@@ -170,23 +171,16 @@ func TestPackBacksUpAModifiedFile(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 (stderr %q)", code, errOut)
 	}
-	if !strings.Contains(out, "1 backed up") {
-		t.Errorf("stdout does not report the backup:\n%s", out)
+	if !strings.Contains(out, "1 written") {
+		t.Errorf("stdout does not report the write:\n%s", out)
 	}
 
 	backups, err := filepath.Glob(path + ".bak-*")
 	if err != nil {
 		t.Fatalf("glob: %v", err)
 	}
-	if len(backups) != 1 {
-		t.Fatalf("backups = %v, want exactly one", backups)
-	}
-	saved, err := os.ReadFile(backups[0])
-	if err != nil {
-		t.Fatalf("read backup: %v", err)
-	}
-	if string(saved) != "editado a mano\n" {
-		t.Errorf("the backup does not hold the human's bytes: %q", saved)
+	if len(backups) != 0 {
+		t.Fatalf("backups = %v, want none in the home", backups)
 	}
 	got, err := os.ReadFile(path)
 	if err != nil {

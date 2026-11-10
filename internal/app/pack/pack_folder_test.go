@@ -59,9 +59,10 @@ func TestASkillFolderTravelsWhole(t *testing.T) {
 	}
 }
 
-// TestAChangedReferenceIsBackedUpAndWritten: a skill that already lived keeps
-// its bytes aside when a reference changes, and the next run is quiet again.
-func TestAChangedReferenceIsBackedUpAndWritten(t *testing.T) {
+// TestAChangedHomeReferenceIsWrittenWithoutABackup: a reference of a skill in the
+// home is replaced without a sidecar, because the clone's store cannot hold it
+// and undo cannot read it there; the next run is quiet again.
+func TestAChangedHomeReferenceIsWrittenWithoutABackup(t *testing.T) {
 	root := home()
 	files := newFakeFiles(nil)
 	opts := pack.Options{Agents: "claude", Skills: []pack.Skill{routerSkill()}}
@@ -77,13 +78,13 @@ func TestAChangedReferenceIsBackedUpAndWritten(t *testing.T) {
 	if result.Code != pack.CodeOK {
 		t.Fatalf("code = %d, want 0 (message %q)", result.Code, result.Message)
 	}
-	if !slices.Contains(files.backups, reference) {
-		t.Errorf("the changed reference was not backed up: %v", files.backups)
+	if len(files.backups) != 0 {
+		t.Errorf("backups = %v, want none in the home", files.backups)
 	}
 	if got := string(files.files[reference]); got != "the scale\n" {
 		t.Errorf("reference = %q, want the bundled bytes", got)
 	}
-	if !slices.Contains(result.Lines, "claude · backed up and written · ~/.claude/skills/router/") {
+	if !slices.Contains(result.Lines, "claude · written · ~/.claude/skills/router/") {
 		t.Errorf("the skill is not reported as one folder, lines: %v", result.Lines)
 	}
 }
