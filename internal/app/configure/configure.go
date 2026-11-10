@@ -72,26 +72,54 @@ type Runner interface {
 	Models(models map[string]string) error
 }
 
-// Validate reports every problem in the state, in the order the screens ask.
-func Validate(s State) []string {
+// normalize returns the state with the values the writer expects and the problems
+// that prevent an apply. One function answers both questions, so the validation
+// and the write cannot disagree about what a valid table is, and no error is
+// discarded on the way to the runner.
+func normalize(s State) (State, []string) {
 	var problems []string
 
-	if _, err := persona.NormalizeSelection(s.Clients); err != nil {
+	if clients, err := persona.NormalizeSelection(s.Clients); err != nil {
 		problems = append(problems, "elige al menos un cliente: opencode, claude o both")
+	} else {
+		s.Clients = clients
 	}
-	if _, err := persona.NormalizeSkills(s.Skills); err != nil || strings.TrimSpace(s.Skills) == "" {
+	if skills, err := persona.NormalizeSkills(s.Skills); err != nil || strings.TrimSpace(s.Skills) == "" {
 		problems = append(problems, "elige el scope de skills: home o project")
+	} else {
+		s.Skills = skills
 	}
-	if _, ok := profile.Builtin()[strings.ToLower(strings.TrimSpace(s.Voice))]; !ok {
+	voice := strings.ToLower(strings.TrimSpace(s.Voice))
+	if _, ok := profile.Builtin()[voice]; !ok {
 		problems = append(problems, fmt.Sprintf("el perfil %q no existe: usa %s",
 			s.Voice, strings.Join(profileNames(), ", ")))
+	} else {
+		s.Voice = voice
 	}
-	if _, err := review.NormalizeMode(s.ReviewMode); err != nil {
+	if mode, err := review.NormalizeMode(s.ReviewMode); err != nil {
 		problems = append(problems, "el review tiene que ser on u off")
+	} else {
+		s.ReviewMode = mode
 	}
-	if _, err := review.NormalizeLensModels(s.LensModels); err != nil {
-		problems = append(problems, err.Error())
+	if s.LensModels != nil {
+		models, err := review.NormalizeLensModels(s.LensModels)
+		switch {
+		case err != nil:
+			problems = append(problems, err.Error())
+		case models == nil:
+			// An empty table is the human clearing it: keep the map non-nil so
+			// the plan knows the table was touched.
+			s.LensModels = map[string]string{}
+		default:
+			s.LensModels = models
+		}
 	}
+	return s, problems
+}
+
+// Validate reports every problem in the state, in the order the screens ask.
+func Validate(s State) []string {
+	_, problems := normalize(s)
 	return problems
 }
 
@@ -118,24 +146,17 @@ func Plan(s State) []Operation {
 // Every operation after the failure is reported pending: the screen has to say
 // what remains, not only what broke.
 func Apply(s State, run Runner) Result {
-	if problems := Validate(s); len(problems) > 0 {
+	normalized, problems := normalize(s)
+	if len(problems) > 0 {
 		return Result{Code: CodeBlocked, Message: strings.Join(problems, "; ")}
 	}
-
-	// The writer receives the canonical table. The empty map stays empty (the
-	// human's clear); only a non-empty table has keys and values to fold.
-	models := s.LensModels
-	if len(models) > 0 {
-		if normalized, err := review.NormalizeLensModels(models); err == nil {
-			models = normalized
-		}
-	}
+	s = normalized
 
 	plan := Plan(s)
 	result := Result{Code: CodeOK, Steps: make([]Step, 0, len(plan))}
 
 	for i, op := range plan {
-		err := applyOne(s, models, op.ID, run)
+		err := applyOne(s, s.LensModels, op.ID, run)
 		step := Step{Operation: op, Status: Done, Err: err}
 		if err != nil {
 			step.Status = Failed
