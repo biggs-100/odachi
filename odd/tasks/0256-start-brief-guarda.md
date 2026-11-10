@@ -8,7 +8,7 @@ R1 · "start --brief guarda el bullet entero: une las continuaciones hasta una l
 ## Done when
 
 ## Steps
-- [ ] T1 · start --brief guarda el bullet entero: une las continuaciones hasta una línea en blanco, un encabezado u otro bullet   R1
+- [x] T1 · start --brief guarda el bullet entero: une las continuaciones hasta una línea en blanco, un encabezado u otro bullet   R1 · tree:63ce695cea2a3f0489cc811bf1247c87513b02ff
 
 ## History
 L1 · "start --brief guarda el bullet entero: une las continuaciones hasta una línea en blanco, un encabezado u otro bullet"
