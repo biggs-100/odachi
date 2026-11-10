@@ -7,8 +7,17 @@
 #
 # written by hand after start (0132): start carries every non-goal as a template,
 # and the rules below are the ones somebody gave paths. The rest live in brief.md.
+#
+# 0258: main.go is not a path this feature must not touch -it carries the help
+# text the new surface needs- so the installer rule names the installer paths and
+# not the CLI entry point (the 0252 lesson).
 
 [[rule]]
-not   = "no change to the installer, the workflow, the canvas or the proofs - back when one of those paths changes"
-paths = ["internal/app/bench/**", "internal/bench/**", "internal/domain/bench/**", "cmd/odachi/bench.go", "cmd/odachi/main.go", "scripts/install.ps1", "scripts/install.sh", ".github/workflows/**", "internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts", "proof/**"]
+not   = "no change to delegate: it keeps printing the paths this verb reads"
+paths = ["cmd/odachi/delegate.go", "internal/app/delegate/**"]
+deps  = []
+
+[[rule]]
+not   = "no change to the installer, the workflow, the canvas or the proofs"
+paths = ["scripts/install.ps1", "scripts/install.sh", ".github/workflows/**", "internal/assets/design/canvas.html", "internal/adapters/designserver/**", "internal/assets/design/plugin.ts", "proof/**"]
 deps  = []
