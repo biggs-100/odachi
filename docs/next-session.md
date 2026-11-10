@@ -1,12 +1,12 @@
 # Next session
 
-Written while closing 0257. One reproduction waits; nothing else is owed.
+Written while closing 0258. One reproduction waits; the routing measure waits; nothing else is owed.
 
 ## Where the project is
 
-- `v0.38.1` is published (tag on `0189969`); the session shipped eight releases: `0.36.1` through
-  `0.36.5`, `0.37.0`, `0.38.0` and `0.38.1`, and `main` carries 0249 to 0257.
-- The installed binary is `0.38.1`; the installer replaced it in one run, and `doctor` is all clear.
+- `v0.38.2` is published (tag on `34f8095`); the session shipped nine releases: `0.36.1` through
+  `0.36.5`, `0.37.0`, `0.38.0`, `0.38.1` and `0.38.2`, and `main` carries 0249 to 0258.
+- The installed binary is `0.38.2`; the installer replaced it in one run, and `doctor` is all clear.
 - 21 skills bundled, 61 in `~/.agents/skills`, 21 that match the payload.
 - `Unreleased` is empty: the release renamed it, and the next feature writes under it.
 
@@ -31,8 +31,13 @@ Written while closing 0257. One reproduction waits; nothing else is owed.
   joins the lines after it until a blank line, a header or another bullet, so `start --brief` records
   the whole requirement and no longer drops the tail of every decision. The join stops at a blank line,
   so a note written under a bullet stays a note.
-- **0257, every stop has its test** (unreleased): the header and empty-bullet resets that end the join
-  are pinned, each observed red by deleting its branch. Tests only: nothing a person installs changed.
+- **0257, every stop has its test** (tests only, no release): the header and empty-bullet resets that end
+  the join are pinned, each observed red by deleting its branch.
+- **0258, the hand-off can be inspected** (`v0.38.2`): `skills --resolve <step>` prints each skill a step
+  would receive with its exact path and its scope, reusing `craftPath`; a name no scope carries blocks.
+  The policy landed first because the base fence still protected `main.go`. The review found four gaps
+  -the precedence not pinned, the empty flag falling through, `--json` ignored and two untested
+  branches- and all four were paid before the merge, with a correction review of the delta.
 
 ## The questions that wait
 
@@ -43,10 +48,9 @@ Written while closing 0257. One reproduction waits; nothing else is owed.
 - Candidates, not debts: `odachi clean --apply` frees about 555 KB; the installer leaves a
   `SKILL.md.bak-*` beside a skill it replaced and they accumulate (five for `ui-craft` alone); an
   `odachi check` stopped at 17:07 left its own tree without a proof.
-- Proposed and not written, from the comparison with gentle-ai and the skill system:
-  - **`skills --resolve <step>`**: show which skills a step would receive, and from which scope.
-  - **The routing table in the block**, and a measure of whether a skill improves the work, not only
-    whether it loads.
+- Proposed and not written: **the routing table in the block**, and a measure of whether a skill
+  improves the work, not only whether it loads. The measure needs a design before code; the earlier
+  attempt in `docs/skill-evaluation.md` scored less than its table claimed.
 
 ## The limits to remember
 
@@ -69,6 +73,13 @@ Written while closing 0257. One reproduction waits; nothing else is owed.
   odachi-worker` read `C:\Users\USER\.agents\skills\tests\SKILL.md` headless, with no permission
   prompt. `delegate` prints `./.agents/skills` when the project carries the craft and the home path
   otherwise, and OpenCode did not refuse the absolute path. The hand-off needs no fix.
+- **A flag given empty is not a flag absent.** `flag.Visit` tells them apart; `--resolve "$STEP"` with
+  an unset variable would otherwise fall through to the plain listing and report success.
+- **A review warning can be paid before the merge.** `review --since <verdict's tree>` reviews the
+  delta, merges the predecessor's rows and costs one round; the four warnings of 0258's first verdict
+  were paid that way. A warning still earns no round on its own.
+- **The installer refuses while another process holds `odachi.exe`** and names the PID. Wait for that
+  run; killing it aborts somebody's gate.
 - One heavy gate per machine; `go test ./...` takes about 700 s. `review --exec` gives the reviewer 600 s.
 
 ## The commands that work
@@ -80,6 +91,12 @@ odachi check --run "go test ./..." --timeout 1800
 ```sh
 # no --model: each lens uses the model odd/review.toml names (deepseek-v4.1-flash today)
 odachi review --base <feature-base> \
+  --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
+```
+
+```sh
+# paying the review's warnings before the merge: the delta, one round
+odachi review --since <the verdict's tree> \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 

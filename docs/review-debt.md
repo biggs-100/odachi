@@ -9,11 +9,11 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0257.
+Last written: while closing 0258.
 
 ## Open
 
-Nothing open: 0257 paid the last row.
+Nothing open: 0258 paid its four rows in the branch, before the merge.
 
 ## Closed by feature 0257
 
