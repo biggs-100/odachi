@@ -2,13 +2,14 @@
 
 The skills are the product: text an agent reads before it works. `embed_test.go` proves the text
 still carries certain sentences; it does not prove that an agent, reading them, works differently.
-This document records eight attempts at measuring the difference, their results, and what they do not
+This document records nine attempts at measuring the difference, their results, and what they do not
 prove. The measured skill is `tests`, with a neutral agent: first on a one-line fix, then on a new
 function whose edges are the task, then on the same function delivered as a task-doc step, the shape
 the project actually ships, then on that step with the skill removed, then on the step handed to a
 delegated worker, then on the parent that hands it, then on that parent with the worker that refuses a
-delegation without the section, and finally on a project the release initialized, with the verb that
-composes the hand-off.
+delegation without the section, then on a project the release initialized, with the verb that
+composes the hand-off, and finally on the same step with a requirement that names the contract but
+not the rejected shapes, to see whether the text changes edge coverage.
 
 ## The question
 
@@ -290,7 +291,7 @@ written first that still never fails before the code.
   it is read.
 - **The effect is on the order and the naming, not on the edge coverage.** The prompt already names
   the five rejected shapes, and both arms test them. A task that did not name them would be the next
-  place to look for that difference.
+  place to look for that difference -the ninth probe takes it, and finds it.
 - **The chain without the skill is not deterministic.** One run loaded no skill at all, one
   substituted `go-tests`, one did it by hand. Three runs show the spread, not its distribution.
 
@@ -478,6 +479,68 @@ worker's.
   not name the verb: `odachi init` rewrites it, and nothing told the project it was stale. That is the
   next question, not something this probe measured.
 
+## The edge-coverage probe: the task
+
+The fourth probe could not see edge coverage because its requirement named the five rejected shapes, so
+both arms tested them. This one keeps the same project, the same step and the same prompt, and changes
+the requirement: it names the two accepted shapes and says every other input must fail naming what it
+read, but it does not list the rejected ones.
+
+The fixture is a Go program whose `config.Parse` returns "not implemented", a brief, one task doc with
+one inline step, and the block. Every run starts in a fresh copy in its own isolated folder. The prompt
+is the parent's sentence: *Trabajá el paso T1 del plan.*
+
+## The edge-coverage probe: the arms
+
+Three runs per arm, same model (`opencode-go/deepseek-v4.1-flash`), same agent (`--agent build`). The
+with arm runs at the baseline, 61 installed; the without arm moves the home copy of `tests` out, 60,
+and restores it after, 61, measured at both ends with `odachi doctor`. The five rejected shapes are the
+ones the earlier probes used: empty, inverted, missing last, missing first and non-numeric.
+
+## The edge-coverage probe: the result
+
+The decisive events of one run per arm, in order.
+
+```
+with-1     skill drive · skill tests · read the task doc · write config_test.go · go test (RED)
+           write config.go · go test (green) · odachi check · close T1
+without-1  skill drive · skill go-tests · write config_test.go · go test (RED)
+           write config.go · go test (green)
+```
+
+| run | arm | `tests` | 1 test before code | 2 red observed | 3 name says what breaks | 4 suite + contract | edges (of 5) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | with | 1 | 1 | 1 | 1 | 1 | 5/5 |
+| 2 | with | 1 | 1 | 1 | 1 | 1 | 5/5 |
+| 3 | with | 1 | 1 | 1 | 1 | 1 | 5/5 |
+| 1 | without | 0 | 1 | 1 | 0 | 0 | 2/5 |
+| 2 | without | 0 | 1 | 1 | 0 | 1 | 4/5 |
+| 3 | without | 0 | 1 | 1 | 1 | 1 | 4/5 |
+
+The five edges are `""`, `8010-8000`, `8000-`, `-8010` and a non-numeric input. The with arm covered
+all five in 3 of 3; the without arm covered 2, 4 and 4, and always missed at least one. The without-1
+run also shipped an implementation that accepted an inverted range: its test did not name that edge,
+and `8010-8000` printed a range instead of failing, so the contract failed.
+
+The red was read from the transcript: every run's first `go test` between the test and the code failed
+with "not implemented", so check 2 is the same in both arms.
+
+## The edge-coverage probe: what it adds
+
+- **The text changes edge coverage when the prompt does not name the shapes.** 15 of 15 edges against
+  10 of 15, and the with arm covered all five in every run. This is the effect the fourth probe said
+  its corpus could not see.
+- **The order is still `drive`'s; the coverage is `tests`'.** Both arms wrote the test first and
+  watched it fail; what moved was how many edges the test names.
+- **The test decides the contract.** The without-1 run's implementation followed its test: the
+  inverted range was absent, so it was accepted, and the contract failed.
+- **The arms differ by more than one file.** The without arm loaded `go-tests` in 3 of 3 (its
+  description points at `tests`), `use-modern-go` in 1 of 3 and `commits`; the client chooses the set,
+  as the fourth probe already noted.
+- **The names move with the skill too.** The with arm's three runs named the behaviour; the without
+  arm did in one of three.
+- One model, three runs per arm, one fixture: the claim is about this corpus.
+
 ## What it proves, and what it does not
 
 - **The instrument repeats, and the chain fires on a step.** Twelve runs on a bare symptom never
@@ -489,6 +552,10 @@ worker's.
   instruction to load `drive` was not even the order the block arm followed.
 - **The task's shape is the lever the corpus names.** What the step runs share is the brief, the task
   doc and a prompt that names the step; what the twelve bare runs lack is all three at once.
+- **The text changes edge coverage when the requirement does not name the edges.** With `tests`, 15 of
+  15 rejected shapes reached the test, 5 of 5 in every run; without it, 10 of 15, and one run shipped
+  an implementation that accepted an inverted range. The order and the red did not depend on it: the
+  step's `drive` orders both.
 - **It does not isolate the ingredient.** The step, the brief, the task doc and the word *plan* arrive
   together; which one matched is not measured.
 - **It does not prove the test is better code.** The marginal probe shows the artifact arriving in the
