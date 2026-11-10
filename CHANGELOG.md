@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.38.6 - 2026-11-10
 
 - **The lenses are measured.** `odachi review probe` asks the four shipping lens prompts about a fixture
   with defects planted in it and scores the answers against a written key: found, called low, missed, and
