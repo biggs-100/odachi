@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.38.3 - 2026-11-10
 
 - **A TUI configures an installation.** `odachi tui` opens a terminal wizard that detects the project,
   chooses the clients, the skills scope, the voice and the review switch and lens models, and applies
