@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The hand-off can be inspected before it runs.** `odachi skills --resolve T1` prints every skill a
+  step of the current feature would receive, with the exact `SKILL.md` each name resolves to and whether
+  it comes from the project or the home. It reads only: a name no scope carries blocks with both places
+  it looked, and a step that declares none says so. A new read-only surface on skills, minor (0258).
+
 ## v0.38.1 - 2026-11-09
 
 - **A wrapped bullet arrives whole.** `odachi start --brief` now reads a bullet's continuation lines

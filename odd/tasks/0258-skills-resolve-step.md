@@ -17,3 +17,5 @@ R1 · "skills --resolve <step>: ver qué skills recibiría un paso y de qué sco
 
 ## History
 L1 · "skills --resolve <step>: ver qué skills recibiría un paso y de qué scope"
+L2 · OFICIO · "The resolve surface lives in cmd/odachi and reuses craftPath; it adds no app package" (porque the resolver already exists there and a second copy of the project-first order would be the way the two verbs disagree; the brief's non-goal says reuse it)
+L3 · OFICIO · "A name that resolves nowhere blocks the run; an empty step is an answer" (porque the surface exists to inspect a hand-off, and a missing skill means the hand-off it describes would fail, while a step that owes none is a valid answer and exits 0)
