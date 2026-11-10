@@ -12,3 +12,4 @@ R1 · "un skill del home no deja SKILL.md.bak al actualizarse: el respaldo solo 
 
 ## History
 L1 · "un skill del home no deja SKILL.md.bak al actualizarse: el respaldo solo se escribe dentro del proyecto"
+L2 · OFICIO · "T1's recorded tree is the first half; the report half landed in 4872cf6, and the closing proof names the final tree" (porque the first proof found four end-to-end tests pinning the old rule and the report ignored the pack's written state; the fix is a correction after the step closed, and the proof is the final evidence)
