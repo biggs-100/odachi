@@ -8,7 +8,7 @@ R1 · "la unión de un bullet termina en un encabezado o en un bullet vacío: ca
 ## Done when
 
 ## Steps
-- [ ] T1 · la unión de un bullet termina en un encabezado o en un bullet vacío: cada corte tiene su test   R1
+- [x] T1 · la unión de un bullet termina en un encabezado o en un bullet vacío: cada corte tiene su test   R1 · tree:32890c025195c0c98919cbf54f1b8225326a97d6
 
 ## History
 L1 · "la unión de un bullet termina en un encabezado o en un bullet vacío: cada corte tiene su test"
