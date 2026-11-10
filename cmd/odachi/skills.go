@@ -50,12 +50,30 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "odachi: --check and --write do not go together: use one of the two (odachi skills --check or odachi skills --write)")
 		return start.CodeBlocked
 	}
-	if resolve != "" {
-		if check || write {
-			other := "--check"
-			if write {
-				other = "--write"
-			}
+	// Visit tells "the flag was absent" apart from "the flag was given empty":
+	// `--resolve "$STEP"` with an unset variable must not fall through to the
+	// plain listing and report a hand-off nobody asked for.
+	resolveSet := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "resolve" {
+			resolveSet = true
+		}
+	})
+	if resolveSet {
+		if strings.TrimSpace(resolve) == "" {
+			fmt.Fprintln(stderr, "odachi: --resolve needs the step: odachi skills --resolve T1")
+			return start.CodeBlocked
+		}
+		other := ""
+		switch {
+		case check:
+			other = "--check"
+		case write:
+			other = "--write"
+		case asJSON:
+			other = "--json"
+		}
+		if other != "" {
 			fmt.Fprintf(stderr, "odachi: --resolve and %s do not go together: use one of them (odachi skills --resolve <step>, or odachi skills %s)\n", other, other)
 			return start.CodeBlocked
 		}
@@ -108,12 +126,11 @@ func resolveSkills(dir, stepID string, stdout, stderr io.Writer) int {
 		found, ok := craftPath(dir, name)
 		if !ok {
 			looked := craftPaths(dir, name)
-			if len(looked) == 1 {
-				fmt.Fprintf(stderr, "odachi: %s has no SKILL.md at %s (the home could not be read)\n", name, filepath.ToSlash(looked[0]))
-			} else {
-				fmt.Fprintf(stderr, "odachi: %s has no SKILL.md in the project (%s) or the home (%s)\n",
-					name, filepath.ToSlash(looked[0]), filepath.ToSlash(looked[1]))
+			places := make([]string, 0, len(looked))
+			for _, path := range looked {
+				places = append(places, filepath.ToSlash(path))
 			}
+			fmt.Fprintf(stderr, "odachi: %s has no SKILL.md in %s\n", name, strings.Join(places, " or "))
 			blocked = true
 			continue
 		}

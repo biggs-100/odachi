@@ -40,7 +40,7 @@ R1 · "demo"
 ## Done when
 
 ## Steps
-- [ ] T1 · one   R1 · route:delegated/odachi-worker · skills:tests,drive
+- [ ] T1 · one   R1 · route:delegated/odachi-worker · skills:tests,drive,writing
 - [ ] T2 · two   R1 · route:inline
 - [ ] T3 · three   R1 · route:delegated/odachi-worker · skills:ghost
 
@@ -48,7 +48,12 @@ R1 · "demo"
 L1 · "demo"
 `)
 	write(dir, ".agents/skills/tests/SKILL.md", "---\nname: tests\n---\n")
-	write(home, ".agents/skills/drive/SKILL.md", "---\nname: drive\n---\n")
+	// drive lives in both scopes with different bytes: the project copy must win,
+	// and a resolver that asked the home first would return the other path.
+	write(dir, ".agents/skills/drive/SKILL.md", "---\nname: drive\nproject\n---\n")
+	write(home, ".agents/skills/drive/SKILL.md", "---\nname: drive\nhome\n---\n")
+	// writing lives only in the home: the fallback the project-first order names.
+	write(home, ".agents/skills/writing/SKILL.md", "---\nname: writing\n---\n")
 	return dir, home
 }
 
@@ -63,13 +68,18 @@ func TestSkillsResolveNamesTheProjectCopyAndTheHomeOne(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (stdout %q, stderr %q)", code, out, errOut)
 	}
 	projectPath := filepath.ToSlash(filepath.Join(dir, ".agents", "skills", "tests", "SKILL.md"))
-	homePath := filepath.ToSlash(filepath.Join(home, ".agents", "skills", "drive", "SKILL.md"))
-	for _, want := range []string{"tests", projectPath, "(project)", "drive", homePath, "(home)"} {
+	projectDrive := filepath.ToSlash(filepath.Join(dir, ".agents", "skills", "drive", "SKILL.md"))
+	homeDrive := filepath.ToSlash(filepath.Join(home, ".agents", "skills", "drive", "SKILL.md"))
+	homeWriting := filepath.ToSlash(filepath.Join(home, ".agents", "skills", "writing", "SKILL.md"))
+	for _, want := range []string{"tests", projectPath, "(project)", "drive", projectDrive, "writing", homeWriting, "(home)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output does not carry %q:\n%s", want, out)
 		}
 	}
-	if strings.Index(out, "tests") > strings.Index(out, "drive") {
+	if strings.Contains(out, homeDrive) {
+		t.Errorf("the home copy won over the project one:\n%s", out)
+	}
+	if strings.Index(out, "tests") > strings.Index(out, "drive") || strings.Index(out, "drive") > strings.Index(out, "writing") {
 		t.Errorf("the names are not in the step's order:\n%s", out)
 	}
 }
@@ -149,7 +159,7 @@ func TestSkillsResolveWritesNothing(t *testing.T) {
 func TestSkillsResolveRefusesTheOtherIntents(t *testing.T) {
 	dir, _ := resolveTree(t)
 
-	for _, other := range []string{"--check", "--write"} {
+	for _, other := range []string{"--check", "--write", "--json"} {
 		t.Run(other, func(t *testing.T) {
 			code, _, errOut := runDir(t, dir, []string{"skills", "--resolve", "T1", other}, "")
 			if code == 0 {
@@ -159,6 +169,55 @@ func TestSkillsResolveRefusesTheOtherIntents(t *testing.T) {
 				t.Errorf("the refusal does not name both flags (%q):\n%s", other, errOut)
 			}
 		})
+	}
+}
+
+// TestSkillsResolveRefusesAnEmptyStep: a flag given empty is not the plain
+// listing; an unset shell variable must not report a hand-off nobody asked for.
+func TestSkillsResolveRefusesAnEmptyStep(t *testing.T) {
+	dir, _ := resolveTree(t)
+
+	code, out, errOut := runDir(t, dir, []string{"skills", "--resolve", ""}, "")
+
+	if code == 0 {
+		t.Fatalf("code = 0, want blocked (stdout %q)", out)
+	}
+	if message := out + errOut; !strings.Contains(message, "--resolve") || !strings.Contains(message, "step") {
+		t.Errorf("the refusal does not say the flag needs a step:\n%s", message)
+	}
+}
+
+// TestSkillsResolveSaysWhenTheFeatureHasNoSteps: a document with no plan is told
+// apart from an unknown id, because the command that unblocks it is different.
+func TestSkillsResolveSaysWhenTheFeatureHasNoSteps(t *testing.T) {
+	dir, _ := resolveTree(t)
+	doc := `# demo
+Base: abc1234
+
+## Requirements (verbatim, from the user)
+R1 · "demo"
+
+## Done when
+
+## Steps
+
+## History
+L1 · "demo"
+`
+	if err := os.WriteFile(filepath.Join(dir, "odd", "tasks", "0001-demo.md"), []byte(doc), 0o644); err != nil {
+		t.Fatalf("rewrite the task doc: %v", err)
+	}
+
+	code, out, errOut := runDir(t, dir, []string{"skills", "--resolve", "T1"}, "")
+
+	if code == 0 {
+		t.Fatalf("code = 0, want blocked")
+	}
+	message := out + errOut
+	for _, want := range []string{"no steps", "0001-demo.md"} {
+		if !strings.Contains(message, want) {
+			t.Errorf("the refusal does not name %q:\n%s", want, message)
+		}
 	}
 }
 
