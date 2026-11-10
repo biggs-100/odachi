@@ -19,6 +19,14 @@
       "why": "a failed fetch retries forever with no cap, no backoff and no way to stop it from the caller"
     },
     {
+      "id": "resilience-read-error-discarded",
+      "path": "cache.go",
+      "line": 38,
+      "lens": "resilience",
+      "severity": "WARNING",
+      "why": "the body read error is discarded and a truncated body is returned as a successful answer"
+    },
+    {
       "id": "readability-name-does-three-jobs",
       "path": "limits.go",
       "line": 11,

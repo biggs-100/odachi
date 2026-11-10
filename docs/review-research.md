@@ -138,7 +138,52 @@ each.
 | C7 Provenance | proof and verdict named by tree, gate from the base ref | **covered**, ahead of the field, with one hole (below) |
 | C8 Comprehension | the human reads briefs and verdicts, not code | **partial by design**; no artifact that transfers the change |
 
-## Part 5: our own numbers
+## Part 5: the first measurement of the lenses
+
+`odachi review probe` (feature 0263) asks the four shipping lens prompts about a
+fixture with defects planted in it and scores the answers against a written key:
+found, called low, missed, and findings nobody planted. The fixture is a small
+HTTP service; the key names five defects -SQL built by concatenation (risk), a
+retry with no cap and a discarded body-read error (resilience, twice), a function
+named `data` that reads a file, keeps a package global and returns a capped size
+(readability), and a test that copies the implementation's formula (reliability).
+
+Two runs, same tree `ab60fcd3`, same model `opencode-go/deepseek-v4.1-flash`,
+same prompts, 2026-11-10:
+
+| Run | risk | readability | reliability | resilience | not in the key |
+| --- | --- | --- | --- | --- | --- |
+| first (four defects in the key) | 1/1 | 1/1 | 0/1 | 1/1 | 1 |
+| second (five) | 1/1 | 1/1 | 1/1 | 1/2 | 2 |
+| union of both | 1/1 | 1/1 | 1/1 | 2/2 | 3 |
+
+What the two runs say, in the order they matter:
+
+1. **One pass is not stable.** The same bytes, the same prompt and the same model
+   missed a different defect each time: the first run never read the test, the
+   second never named the discarded read error. Their union is 5/5 and their
+   intersection is 3/5. This repository's own skill probes found the same shape
+   (2, 4 and 4 edges across runs); the review had never been measured that way.
+2. **The lenses bleed into each other.** The reliability pass spent its findings
+   on `cache.go` -a resilience file- and called `limits_test.go` audited clean;
+   the failure it missed was the one it owed. Per-lens ownership is not how a
+   model reads a diff.
+3. **The noise was real.** All three findings outside the key were defects a
+   person can defend: the same package global written from several goroutines
+   without a lock, reported by two lenses, and the discarded read error the first
+   key did not name. The key was corrected after the first run, and the first
+   number is kept here rather than replaced.
+4. **Severity is generous.** The retry defect came back BLOCKER once and CRITICAL
+   once; the key's floor is WARNING. A lens asked for a floor under its own
+   judgment will be above it, which costs nothing here and would matter in a
+   pipeline that blocks on severity.
+
+What it does not say: five defects in a 120-line fixture is not a population. A
+single run of a single model says nothing about another model, a bigger diff, or
+the same model next month. The instrument is what this part adds; the sample is
+one tree.
+
+## Part 6: our own numbers
 
 From `.git/odachi/reviews/` in this clone, 16 verdicts kept:
 
@@ -161,13 +206,12 @@ From `.git/odachi/reviews/` in this clone, 16 verdicts kept:
   the model but not the time, so "when it was judged" is self-reported. C7 is
   covered for bytes and incomplete for time.
 
-## Part 6: what is missing, with the probe that would show it
+## Part 7: what is missing, with the probe that would show it
 
-1. **Nothing measures the reviewer itself.** `docs/skill-evaluation.md` measures
-   skills with probes and a control arm. No equivalent exists for the lenses: we
-   do not know their recall on a planted defect, or their false-positive rate on
-   clean code. Every claim in Part 4 about the lenses is a reading of the prompt,
-   not a measurement of the output.
+1. **The measurement is one tree and one model** (0263 closed the gap that it did
+   not exist): two runs of five defects say the pass is unstable, not how often.
+   The next measurement is the same fixture across models and repeated runs, and
+   a fixture big enough to carry defects a reviewer would miss at scale.
 2. **No deterministic analyzer runs.** The gate runs `go vet`, `go test -race`
    and the suite. It does not run `govulncheck`, a linter with a real ruleset, a
    secret scanner or a dependency review. The field's cheapest answer to C6, and
@@ -191,7 +235,7 @@ From `.git/odachi/reviews/` in this clone, 16 verdicts kept:
    test. It cannot know whether the added lines are exercised, because nothing
    measures changed-line coverage or mutation on the candidate.
 
-## Part 7: the verdict
+## Part 8: the verdict
 
 **The lenses are not the problem.** Their taxonomy is not behind the field: intent
 drift, test adequacy, causality of findings, partial failure, and the ban on style
@@ -200,25 +244,27 @@ here. Changing the four lens files would buy nothing.
 
 **The instrument is the problem.** In the field's terms, odachi solved C7 and C3 —
 provenance and intent — better than most production teams, and left C4 and C5
-unmeasured, C6 deterministic, and C1 partly. Our review is a well-designed opinion
-that has never been graded.
+unmeasured, C6 deterministic, and C1 partly. Our review was a well-designed
+opinion that had never been graded; 0263 graded it, and the grade says one pass
+is unstable.
 
-Three things would move it from opinion to instrument, in this order:
+The order that follows from the measurement:
 
-1. **Measure the lenses** (C4, C5): a seeded-defect fixture and a clean-code arm,
-   the same doctrine `skill-evaluation.md` already uses for skills. Without it,
-   every other improvement is an assertion about quality we cannot show.
-2. **Run the deterministic tools** (C6, C1): a linter with a real ruleset plus
+1. **Run the deterministic tools** (C6, C1): a linter with a real ruleset plus
    `govulncheck` in the gate, and the result as a floor row the review must
    acknowledge. Cheap, reproducible, and it removes a class of defect from the
    model's attention entirely.
-3. **Make a standing blocker visible** (C2, C7): a close that carries
+2. **Make a standing blocker visible** (C2, C7): a close that carries
    `changes_requested` says so in the gate's own line and needs a recorded human
    waiver to proceed, instead of "ready" with a footnote in a document.
+3. **Answer the instability the probe found** (C4): two runs that miss different
+   defects mean a verdict is one draw, not a measurement. The candidates are a
+   second reading on full-tier trees, the verifier on every full tier instead of
+   only on named risks, and an independent judge per lens.
 
 Then, in a second wave: heterogeneous judges for full-tier trees, size-based
-escalation of the tier, changed-line coverage as a floor signal, and the verifier
-on every full-tier tree rather than only on named risks.
+escalation of the tier, changed-line coverage as a floor signal, and the fixture
+grown across models and repeated runs.
 
 ## What this does not prove
 

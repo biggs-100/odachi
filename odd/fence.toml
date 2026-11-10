@@ -37,3 +37,8 @@ deps  = []
 not   = "no toca el contenido de los lentes: medir editando el examen no mide nada - back when a lens is changed for a reason the probe records"
 paths = ["internal/assets/review/*.md"]
 deps  = []
+
+[[rule]]
+not   = "the stored proofs are the evidence this tree ran: the package that writes them may change, a proof that already exists may not"
+paths = ["proof/**"]
+deps  = []

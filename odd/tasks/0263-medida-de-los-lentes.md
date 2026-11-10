@@ -22,3 +22,4 @@ R1 · "una medida del revisor: cuántos defectos sembrados encuentra cada lente,
 
 ## History
 L1 · "una medida del revisor: cuántos defectos sembrados encuentra cada lente, y cuánto ruido levanta sobre el mismo código sin defectos"
+L2 · OFICIO · "start --force rewrote odd/fence.toml from the new brief and dropped the proof rule; the archtest caught it and the rule is back" (porque a fence outlives a feature: proof/** is doctrine, not a non-goal of 0263, and a regenerated fence that forgets it lets a candidate overwrite the evidence another tree produced)

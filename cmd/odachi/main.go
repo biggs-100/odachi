@@ -17,6 +17,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/check"
 	"github.com/biggs-100/odachi/internal/app/clean"
 	initapp "github.com/biggs-100/odachi/internal/app/init"
+	"github.com/biggs-100/odachi/internal/app/lensprobe"
 	"github.com/biggs-100/odachi/internal/app/level"
 	"github.com/biggs-100/odachi/internal/app/pack"
 	"github.com/biggs-100/odachi/internal/app/plan"
@@ -602,6 +603,9 @@ func flagSet(flags *flag.FlagSet, name string) bool {
 
 // runReview parses the flags, wires the four adapters and reports the verdict.
 func runReview(dir string, args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "probe" {
+		return runReviewProbe(dir, args[1:], stdout, stderr)
+	}
 	if len(args) > 0 && args[0] == "mode" {
 		return runReviewMode(dir, args[1:], stdout, stderr)
 	}
@@ -701,6 +705,47 @@ func hasFlag(args []string, name string) bool {
 		}
 	}
 	return false
+}
+
+// runReviewProbe measures the four lenses against a fixture with defects planted
+// in it, and prints what each one found. It is the inspection lane of the review
+// verb: the bare form prints the prompt and runs nobody, and --exec answers it.
+func runReviewProbe(dir string, args []string, stdout, stderr io.Writer) int {
+	const usageLine = "usage: odachi review probe [--fixture <dir>] [--exec \"<command>\"] [--model <id>]"
+
+	flags := flag.NewFlagSet("odachi review probe", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	opts := lensprobe.Options{Dir: dir}
+	flags.StringVar(&opts.Fixture, "fixture", "", "a fixture folder with clean/, seeded/ and manifest.json (default: the one that ships with the binary)")
+	flags.StringVar(&opts.Exec, "exec", "", "run this command once per lens with {prompt} as the file to read (and {model} replaced); it answers the measurement")
+	flags.StringVar(&opts.Model, "model", "", "model that replaces {model} in --exec")
+
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fmt.Fprintln(stdout, usageLine)
+			return start.CodeOK
+		}
+		fmt.Fprintf(stderr, "odachi: invalid flag: %s; %s\n", oneLine(err.Error()), usageLine)
+		return start.CodeBlocked
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "odachi: extra argument: %s; %s\n", flags.Arg(0), usageLine)
+		return start.CodeBlocked
+	}
+
+	result := lensprobe.Run(opts, disk(dir), gitRepo{}, osShell{}, reviewLenses{})
+	if result.Prompt != "" {
+		fmt.Fprint(stdout, result.Prompt)
+	}
+	for _, line := range result.Lines {
+		fmt.Fprintln(stdout, line)
+	}
+	fmt.Fprintln(stdout, result.Summary)
+	if result.Code != lensprobe.CodeOK {
+		fmt.Fprintln(stderr, "odachi: "+result.Summary)
+	}
+	return result.Code
 }
 
 // runReviewWaive records the human's decision that the current feature lands without
