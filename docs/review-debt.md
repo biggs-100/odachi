@@ -9,9 +9,13 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0256.
+Last written: while closing 0257.
 
 ## Open
+
+Nothing open: 0257 paid the last row.
+
+## Closed by feature 0257
 
 ### the header stop of a wrapped bullet has no test
 
@@ -21,8 +25,10 @@ resets on the three header branches and on the empty bullet run in every brief b
 Delete them and a note written directly under the next section is glued into the previous section's
 last requirement, while the suite stays green.
 
-Reopens when a wrapped bullet is followed by a header and a prose line. The fix is one test per stop,
-each observed red by disabling its branch, in `internal/domain/brief`.
+Closed: `TestParseStopsAJoinAtAHeader` pins the three header shapes -the section header, the name
+header and the deeper one- with a table, and `TestParseStopsAJoinAtAnEmptyBullet` pins the empty bullet.
+Each was observed red by deleting its reset: the note arrived joined to the previous requirement
+("Outcome = [algo una nota]") in all four cases.
 
 ## Closed by feature 0256
 

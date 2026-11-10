@@ -156,6 +156,44 @@ Una nota que el humano escribió para sí.
 	}
 }
 
+// TestParseStopsAJoinAtAHeader: every header shape ends the bullet above it, so
+// a note written under the next section is not glued to the previous section's
+// last requirement (0257, review debt).
+func TestParseStopsAJoinAtAHeader(t *testing.T) {
+	cases := map[string]string{
+		"section header": "## Listo cuando",
+		"name header":    "# demo",
+		"deeper header":  "### nota",
+	}
+	for name, header := range cases {
+		t.Run(name, func(t *testing.T) {
+			md := "## Qué tiene que existir\n- algo\n" + header + "\nuna nota\n"
+			got := brief.Parse(md)
+
+			if !reflect.DeepEqual(got.Outcome, []string{"algo"}) {
+				t.Errorf("Outcome = %q, want [algo]: the note crossed the header", got.Outcome)
+			}
+		})
+	}
+}
+
+// TestParseStopsAJoinAtAnEmptyBullet: an empty bullet ends the one above it, so
+// the prose after it is not its continuation (0257, review debt).
+func TestParseStopsAJoinAtAnEmptyBullet(t *testing.T) {
+	md := `# demo
+
+## Qué tiene que existir
+- algo
+-
+una nota
+`
+	got := brief.Parse(md)
+
+	if !reflect.DeepEqual(got.Outcome, []string{"algo"}) {
+		t.Errorf("Outcome = %q, want [algo]: the note crossed the empty bullet", got.Outcome)
+	}
+}
+
 func TestParseIgnoresUnknownSections(t *testing.T) {
 	md := `# demo
 

@@ -1,11 +1,11 @@
 # Next session
 
-Written while closing 0256. One review row and one reproduction wait; nothing else is owed.
+Written while closing 0257. One reproduction waits; nothing else is owed.
 
 ## Where the project is
 
 - `v0.38.1` is published (tag on `0189969`); the session shipped eight releases: `0.36.1` through
-  `0.36.5`, `0.37.0`, `0.38.0` and `0.38.1`, and `main` carries 0249 to 0256.
+  `0.36.5`, `0.37.0`, `0.38.0` and `0.38.1`, and `main` carries 0249 to 0257.
 - The installed binary is `0.38.1`; the installer replaced it in one run, and `doctor` is all clear.
 - 21 skills bundled, 61 in `~/.agents/skills`, 21 that match the payload.
 - `Unreleased` is empty: the release renamed it, and the next feature writes under it.
@@ -31,11 +31,11 @@ Written while closing 0256. One review row and one reproduction wait; nothing el
   joins the lines after it until a blank line, a header or another bullet, so `start --brief` records
   the whole requirement and no longer drops the tail of every decision. The join stops at a blank line,
   so a note written under a bullet stays a note.
+- **0257, every stop has its test** (unreleased): the header and empty-bullet resets that end the join
+  are pinned, each observed red by deleting its branch. Tests only: nothing a person installs changed.
 
 ## The questions that wait
 
-- **`docs/review-debt.md` has one open row**: the header and empty-bullet resets that stop a wrapped
-  bullet's join have no test. The fix is one test per stop, each observed red by disabling its branch.
 - **A reproduction, not a diagnosis**: the first install of `v0.38.0` left the old `ui-craft` text and
   the second wrote the new one, while `install.ps1` replaces the binary (line 215) before `setup`
   (line 258), which should take one run. The 0.38.1 upgrade changed no skill bytes, so it did not
