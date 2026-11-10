@@ -46,9 +46,11 @@ func Correction(root, tree string) (paths []string, diff string, err error) {
 	return paths, diff, err
 }
 
-// snapshot writes the worktree into a throwaway index read from target and
-// answers the content tree the index holds, the paths that differ from target,
-// and their diff.
+// snapshot writes the worktree into a throwaway index and answers the content
+// tree the index holds, the paths that differ from target, and their diff.
+//
+// The index is built from HEAD, not from target: see stageWorktree. The
+// comparison still runs against target, which is what the candidate adds.
 func snapshot(root, target string) (tree string, paths []string, diff string, err error) {
 	dir, err := os.MkdirTemp("", "odachi-candidate-")
 	if err != nil {
@@ -58,16 +60,11 @@ func snapshot(root, target string) (tree string, paths []string, diff string, er
 
 	env := []string{"GIT_INDEX_FILE=" + filepath.Join(dir, "index")}
 
-	readTree := []string{"read-tree", target}
 	if target == "" {
 		target = EmptyTree
-		readTree = []string{"read-tree", "--empty"}
 	}
 
-	if _, err := runEnv(root, env, readTree...); err != nil {
-		return "", nil, "", err
-	}
-	if _, err := runEnv(root, env, "add", "--all", "--", "."); err != nil {
+	if err := stageWorktree(root, env); err != nil {
 		return "", nil, "", err
 	}
 

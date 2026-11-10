@@ -12,3 +12,4 @@ R1 · "review y check nombran el mismo árbol para el mismo worktree limpio, y u
 
 ## History
 L1 · "review y check nombran el mismo árbol para el mismo worktree limpio, y una carpeta ignorada no mueve ese id"
+L2 · OFICIO · "The index the candidate is read from starts at HEAD, not at the base: one helper, stageWorktree, now feeds TreeHash, Candidate and Diff" (porque read-tree base keeps the entry of a path a later commit untracked, and add --all stages it again even though git ignores it, so review named a tree check never asks about; HEAD is the only parent the three verbs agree on)

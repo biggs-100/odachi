@@ -99,6 +99,37 @@ func TestDiffExcludesIgnoredFiles(t *testing.T) {
 	}
 }
 
+// TestDiffDoesNotResurrectAnIgnoredFileItsBaseTracked: the same stale index
+// entry that moved the candidate's tree also decided the diff. A path the base
+// tracked and a later commit untracked is not part of the candidate any more,
+// and the local content of an ignored file must never reach the reviewer.
+func TestDiffDoesNotResurrectAnIgnoredFileItsBaseTracked(t *testing.T) {
+	t.Parallel()
+	root, _ := newRepo(t)
+
+	if err := os.MkdirAll(filepath.Join(root, ".atl"), 0o755); err != nil {
+		t.Fatalf("mkdir .atl: %v", err)
+	}
+	write(t, filepath.Join(root, ".atl", "skill-registry.md"), "registro\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "the registry is tracked")
+	base := git(t, root, "rev-parse", "HEAD")
+
+	git(t, root, "rm", "--cached", "-q", ".atl/skill-registry.md")
+	write(t, filepath.Join(root, ".gitignore"), ".atl/\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "the registry is machine-local")
+	write(t, filepath.Join(root, ".atl", "skill-registry.md"), "registro\notra línea\n")
+
+	diff, err := gitx.Diff(root, base)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if strings.Contains(diff, "otra línea") {
+		t.Errorf("the diff carries the content of an ignored file. Diff:\n%s", diff)
+	}
+}
+
 // TestDiffAgainstNothingShowsEveryFileAsAnAddition is the first day of a
 // project: there is no commit to compare against, so every file in the worktree
 // is new and every file has to be reviewable.

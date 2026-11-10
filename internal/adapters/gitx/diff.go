@@ -63,16 +63,11 @@ func Diff(root, base string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	readTree := []string{"read-tree", target}
 	if target == "" {
 		target = EmptyTree
-		readTree = []string{"read-tree", "--empty"}
 	}
 
-	if _, err := runEnv(root, env, readTree...); err != nil {
-		return "", err
-	}
-	if _, err := runEnv(root, env, "add", "--all", "--", "."); err != nil {
+	if err := stageWorktree(root, env); err != nil {
 		return "", err
 	}
 
