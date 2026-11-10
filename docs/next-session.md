@@ -4,12 +4,11 @@ Written while closing 0256. One review row and one reproduction wait; nothing el
 
 ## Where the project is
 
-- `v0.38.0` is published (tag on `a12ea3d`); the session shipped seven releases: `0.36.1` through
-  `0.36.5`, `0.37.0` and `0.38.0`, and `main` carries 0249 to 0256.
-- The installed binary is `0.38.0`; 0256 changed the source and is not released.
-- 21 skills bundled, 61 in `~/.agents/skills`, 21 that match the payload. `doctor` is all clear except
-  the note this file fixes.
-- `Unreleased` names 0256: a fix, patch.
+- `v0.38.1` is published (tag on `0189969`); the session shipped eight releases: `0.36.1` through
+  `0.36.5`, `0.37.0`, `0.38.0` and `0.38.1`, and `main` carries 0249 to 0256.
+- The installed binary is `0.38.1`; the installer replaced it in one run, and `doctor` is all clear.
+- 21 skills bundled, 61 in `~/.agents/skills`, 21 that match the payload.
+- `Unreleased` is empty: the release renamed it, and the next feature writes under it.
 
 ## What this session did
 
@@ -28,7 +27,7 @@ Written while closing 0256. One review row and one reproduction wait; nothing el
 - **0255, a rule is one bullet** (`v0.38.0`): `skills --check` refuses prose in `## Rules` and a rule over
   300 characters; the catalog and the fixtures became bullets. The review caught the brief saying 140
   while the code measured 300, and the change was recorded with `ask --change`.
-- **0256, a wrapped bullet arrives whole** (unreleased): `brief.Parse` reads a bullet as a list item and
+- **0256, a wrapped bullet arrives whole** (`v0.38.1`): `brief.Parse` reads a bullet as a list item and
   joins the lines after it until a blank line, a header or another bullet, so `start --brief` records
   the whole requirement and no longer drops the tail of every decision. The join stops at a blank line,
   so a note written under a bullet stays a note.
@@ -39,7 +38,8 @@ Written while closing 0256. One review row and one reproduction wait; nothing el
   bullet's join have no test. The fix is one test per stop, each observed red by disabling its branch.
 - **A reproduction, not a diagnosis**: the first install of `v0.38.0` left the old `ui-craft` text and
   the second wrote the new one, while `install.ps1` replaces the binary (line 215) before `setup`
-  (line 258), which should take one run. Reproduce it on the next upgrade before calling it a defect.
+  (line 258), which should take one run. The 0.38.1 upgrade changed no skill bytes, so it did not
+  exercise this; reproduce it on the next upgrade that does.
 - Candidates, not debts: `odachi clean --apply` frees about 555 KB; the installer leaves a
   `SKILL.md.bak-*` beside a skill it replaced and they accumulate (five for `ui-craft` alone); an
   `odachi check` stopped at 17:07 left its own tree without a proof.
@@ -76,7 +76,8 @@ odachi check --run "go test ./..." --timeout 1800
 ```
 
 ```sh
-odachi review --base <feature-base> --model opencode-go/muse-spark-1.3-contributor#high \
+# no --model: each lens uses the model odd/review.toml names (deepseek-v4.1-flash today)
+odachi review --base <feature-base> \
   --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
 ```
 
