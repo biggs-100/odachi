@@ -13,7 +13,16 @@ Last written: while closing 0256.
 
 ## Open
 
-Nothing open: 0256 paid the last row.
+### the header stop of a wrapped bullet has no test
+
+Found by the review of 0256 (WARNING, `internal/domain/brief/brief_test.go:116`). The join stops at a
+blank line, a header and another bullet, and the added tests pin only the blank line: the `open = nil`
+resets on the three header branches and on the empty bullet run in every brief but are never observed.
+Delete them and a note written directly under the next section is glued into the previous section's
+last requirement, while the suite stays green.
+
+Reopens when a wrapped bullet is followed by a header and a prose line. The fix is one test per stop,
+each observed red by disabling its branch, in `internal/domain/brief`.
 
 ## Closed by feature 0256
 

@@ -1,6 +1,6 @@
 # Next session
 
-Written while closing 0256. The review debt is empty; one reproduction waits, and nothing else is owed.
+Written while closing 0256. One review row and one reproduction wait; nothing else is owed.
 
 ## Where the project is
 
@@ -35,6 +35,8 @@ Written while closing 0256. The review debt is empty; one reproduction waits, an
 
 ## The questions that wait
 
+- **`docs/review-debt.md` has one open row**: the header and empty-bullet resets that stop a wrapped
+  bullet's join have no test. The fix is one test per stop, each observed red by disabling its branch.
 - **A reproduction, not a diagnosis**: the first install of `v0.38.0` left the old `ui-craft` text and
   the second wrote the new one, while `install.ps1` replaces the binary (line 215) before `setup`
   (line 258), which should take one run. Reproduce it on the next upgrade before calling it a defect.
