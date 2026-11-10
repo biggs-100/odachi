@@ -49,6 +49,55 @@ func TestCandidateAnswersTheThreeQuestionsInOneRead(t *testing.T) {
 	}
 }
 
+// TestCandidateNamesTheTreeCheckNamesForAnIgnoredFileItsBaseTracked: `review`
+// names the candidate and `check` names the worktree, and a verdict only counts
+// for the second id when both name the same bytes. A file the base committed and
+// a later commit untracked keeps its index entry when the index is read from that
+// base, so `add --all` staged it again and wrote a tree `check` never asks about.
+// Git ignores the file now, so nothing about it may move the id.
+func TestCandidateNamesTheTreeCheckNamesForAnIgnoredFileItsBaseTracked(t *testing.T) {
+	t.Parallel()
+	root, _ := newRepo(t)
+
+	if err := os.MkdirAll(filepath.Join(root, ".atl"), 0o755); err != nil {
+		t.Fatalf("mkdir .atl: %v", err)
+	}
+	write(t, filepath.Join(root, ".atl", "skill-registry.md"), "registro\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "the registry is tracked")
+	// The feature forks here, so the tree it is reviewed against still tracks the
+	// file: that is the entry the bug came from.
+	base := git(t, root, "rev-parse", "HEAD")
+
+	git(t, root, "rm", "--cached", "-q", ".atl/skill-registry.md")
+	write(t, filepath.Join(root, ".gitignore"), ".atl/\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "the registry is machine-local")
+
+	tree, _, _, err := gitx.Candidate(root, base)
+	if err != nil {
+		t.Fatalf("Candidate: %v", err)
+	}
+	want, err := gitx.TreeHash(root)
+	if err != nil {
+		t.Fatalf("TreeHash: %v", err)
+	}
+	if tree != want {
+		t.Errorf("Candidate = %q, want the tree check names %q", tree, want)
+	}
+
+	// A machine-local edit is the human's business: git ignores the file, so the
+	// id both verbs name stays put.
+	write(t, filepath.Join(root, ".atl", "skill-registry.md"), "registro\notra línea\n")
+	touched, _, _, err := gitx.Candidate(root, base)
+	if err != nil {
+		t.Fatalf("Candidate after touching the ignored file: %v", err)
+	}
+	if touched != tree {
+		t.Errorf("an ignored file moved the candidate: %q -> %q", tree, touched)
+	}
+}
+
 // TestCandidateSeesADeletedFile: a deletion is part of the candidate. A read
 // that only staged what exists would report a clean tree for a change that
 // removes code.

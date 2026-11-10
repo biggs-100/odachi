@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A verdict is filed under the tree `check` names.** `odachi review` fills its candidate index from
+  `HEAD`, the same parent `check` reads, so a path the base tracked and a later commit untracked no
+  longer reappears in the candidate: `review` and `check` name one tree for one clean worktree, and an
+  ignored file -a machine-local registry, a build folder- cannot move a verdict's id. A fix, patch (0262).
+
 ## v0.38.4 - 2026-11-10
 
 - **An upgrade stops leaving backups in the home.** `odachi pack` -and the `setup` the installer runs-

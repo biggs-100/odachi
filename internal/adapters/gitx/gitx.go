@@ -69,15 +69,7 @@ func TreeHash(root string) (string, error) {
 
 	env := []string{"GIT_INDEX_FILE=" + filepath.Join(dir, "index")}
 
-	if _, err := runEnv(root, env, "rev-parse", "--verify", "HEAD"); err != nil {
-		if _, err := runEnv(root, env, "read-tree", "--empty"); err != nil {
-			return "", err
-		}
-	} else if _, err := runEnv(root, env, "read-tree", "HEAD"); err != nil {
-		return "", err
-	}
-
-	if _, err := runEnv(root, env, "add", "--all", "--", "."); err != nil {
+	if err := stageWorktree(root, env); err != nil {
 		return "", err
 	}
 
@@ -86,6 +78,29 @@ func TreeHash(root string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(tree), nil
+}
+
+// stageWorktree fills the caller's throwaway index with the worktree: HEAD's
+// tree first, nothing at all when there is no commit, then every file git does
+// not ignore.
+//
+// The index starts at HEAD and not at the base the caller compares against. A
+// path the base tracked and a later commit untracked keeps its index entry when
+// the index is read from that base, and `add --all` then stages the file again
+// although git ignores it now: `review` named a tree `check` never asks about,
+// and a machine-local edit to that file moved the verdict's id. HEAD is the only
+// parent that agrees with TreeHash, so every verb names the same bytes.
+func stageWorktree(root string, env []string) error {
+	if _, err := runEnv(root, env, "rev-parse", "--verify", "HEAD"); err != nil {
+		if _, err := runEnv(root, env, "read-tree", "--empty"); err != nil {
+			return err
+		}
+	} else if _, err := runEnv(root, env, "read-tree", "HEAD"); err != nil {
+		return err
+	}
+
+	_, err := runEnv(root, env, "add", "--all", "--", ".")
+	return err
 }
 
 // Between names the paths that differ between two trees. Both are tree ids, as
