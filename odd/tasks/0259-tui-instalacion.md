@@ -30,3 +30,4 @@ R1 · "una tui de instalación y configuración al igual que gentle-ai"
 
 ## History
 L1 · "una tui de instalación y configuración al igual que gentle-ai"
+L2 · OFICIO · "The correction review's two warnings about the apply are recorded, not paid in this feature" (porque the file is normalized by review.SetConfig and the TUI always passes a non-nil table; a WARNING earns no round, and the rows wait in docs/review-debt.md for the next change to the apply)
