@@ -20,7 +20,7 @@ R1 · "una tui de instalación y configuración al igual que gentle-ai"
 - Unreleased names the new verb and the dependency, patch (0259)
 
 ## Steps
-- [ ] T1 · the configuration state and the ordered operations that apply it, with tests   R1 · route:inline
+- [x] T1 · the configuration state and the ordered operations that apply it, with tests   R1 · route:inline · tree:8415d336856092ec8bd5dd31a78b37aec868c60e
 - [ ] T2 · the odachi tui verb, Bubbletea, the no-TTY refusal and the detection screen   R1 · route:inline
 - [ ] T3 · the client, skills-scope and voice screens, and cancel writes nothing   R1 · route:inline
 - [ ] T4 · the review screen: on or off and the model of each lens, preserving the file   R1 · route:inline
