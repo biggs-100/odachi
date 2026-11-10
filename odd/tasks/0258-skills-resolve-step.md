@@ -10,7 +10,7 @@ R1 · "skills --resolve <step>: ver qué skills recibiría un paso y de qué sco
 - the run writes nothing: the tree is byte-identical after it
 - the tests pin the project-first order, the home fallback, the missing name and the empty step, each observed red first
 - go test ./... is green and odachi check --run "go test ./..." is green
-- Unreleased names the change: a new read-only surface on skills, minor (0258)
+- Unreleased names the change: a new read-only surface on skills, patch (0258)
 
 ## Steps
 - [x] T1 · the resolve surface: the flag, the project and home paths, the missing name and the empty step, tests red first   R1 · route:inline · tree:3ff8edca93684d429a9618e114bbecc9aa106448
@@ -19,3 +19,4 @@ R1 · "skills --resolve <step>: ver qué skills recibiría un paso y de qué sco
 L1 · "skills --resolve <step>: ver qué skills recibiría un paso y de qué scope"
 L2 · OFICIO · "The resolve surface lives in cmd/odachi and reuses craftPath; it adds no app package" (porque the resolver already exists there and a second copy of the project-first order would be the way the two verbs disagree; the brief's non-goal says reuse it)
 L3 · OFICIO · "A name that resolves nowhere blocks the run; an empty step is an answer" (porque the surface exists to inspect a hand-off, and a missing skill means the hand-off it describes would fail, while a step that owes none is a valid answer and exits 0)
+L4 · OFICIO · "0258 ships as a patch, v0.38.2, not the minor the brief drafted" (porque the release table calls a new capability a patch and start --light shipped as v0.11.99; the human chose patch over minor)
