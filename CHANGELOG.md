@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.38.9 - 2026-11-11
 
 - **The fence keeps what it protects.** `odachi start` reads `odd/fence.toml` before writing it and keeps
   every rule already there, adding only the non-goals the new run brings; a fence it cannot read is left
