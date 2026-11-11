@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.38.12 - 2026-11-11
 
 - **The brief remembers every feature.** `odachi start` wrote `brief.md` from its own answers, so the
   sentence behind each fence rule died with the feature that wrote it while the rule -append-only since
