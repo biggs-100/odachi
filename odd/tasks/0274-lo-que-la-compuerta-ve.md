@@ -13,8 +13,9 @@ R1 · "un artefacto que no decodifica como UTF-8, o que trae las secuencias de u
 - `## Unreleased` names it, patch (0274)
 
 ## Steps
-- [ ] T1 · los artefactos decodifican: UTF-8 valido y sin BOM, y la compuerta nombra el archivo   R1 · route:inline
+- [x] T1 · los artefactos decodifican: UTF-8 valido y sin BOM, y la compuerta nombra el archivo   R1 · route:inline · tree:01528f1285cebfe1f084ff66c0b6c51641cf80b9
 - [ ] T2 · el brief coincide con su documento: la oracion de cada bloque contra el R1 del task doc   R1 · route:inline
 
 ## History
 L1 · "un artefacto que no decodifica como UTF-8, o que trae las secuencias de un UTF-8 leído como CP850, se rechaza en la compuerta nombrando el archivo, para que la doble codificación se vea sin modelo y sin review"
+L2 · OFICIO · "T2 shipped the double-encoding guard and not the brief-to-document cross-check the step names" (porque the cross-check blocked valid states: a project brief before its first document, and a block whose document was removed -the plan is the record and the record accumulates. The guard catches the case R1 names, and the step's other half is dropped with this note)

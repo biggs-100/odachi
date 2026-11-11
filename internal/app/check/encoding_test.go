@@ -60,3 +60,38 @@ func TestAFileSavedWithABOMBlocks(t *testing.T) {
 		t.Errorf("the refusal does not name the file: %q", got.Message)
 	}
 }
+
+// TestABriefThatCarriesADoubleEncodingBlocks is 0274's second half: the bytes decode,
+// so no decoder can see the damage, and the gate names the sequence instead of judging
+// a brief that no longer says what was written.
+func TestABriefThatCarriesADoubleEncodingBlocks(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "brief.md")] = []byte("# turnos\n\n## What must exist\n- reservar turnos \u00e2\u20ac\u00a6 sin pausa\n\n## Done when\n- reservo un turno\n")
+
+	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
+
+	if got.Code == int(gate.Ready) {
+		t.Fatal("a brief with a double-encoded sentence was judged ready")
+	}
+	if !strings.Contains(got.Message, "brief.md") {
+		t.Errorf("the refusal does not name the file: %q", got.Message)
+	}
+	if !strings.Contains(got.Message, "encoding") {
+		t.Errorf("the refusal does not say what happened: %q", got.Message)
+	}
+}
+
+// TestATaskDocumentMayNameTheSequences: the task documents are prose, and a document
+// that explains this defect has to be able to write the marker without blocking the
+// gate that watches for it.
+func TestATaskDocumentMayNameTheSequences(t *testing.T) {
+	doc := "# turnos\n\nBase: abc1234\n\n## Requirements (verbatim, from the user)\nR1 \u00b7 \"reservar turnos \u00e2\u20ac\u00a6 sin pausa\"\n\n## Steps\n- [ ] T1 \u00b7 reservar turnos   R1 \u00b7 route:inline\n"
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd/tasks/0007-turnos.md")] = []byte(doc)
+
+	got := run(t, files, &fakeGit{tree: currentTree}, check.Options{})
+
+	if strings.Contains(got.Message, "encoding") {
+		t.Errorf("a task document that names the sequence was refused for it: %q", got.Message)
+	}
+}

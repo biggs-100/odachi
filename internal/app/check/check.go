@@ -348,6 +348,12 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	if problem := r.artifactsDecode(); problem != nil {
 		return *problem
 	}
+	// A brief that carries the signature of a double encoding is a record somebody
+	// rewrote: the bytes decode, so nothing before this can see it, and the gate names
+	// it instead of judging the tree as if the words were the ones written (0274).
+	if problem := r.briefSaysWhatItMeans(); problem != nil {
+		return *problem
+	}
 	closedNow := false
 	if feature != nil {
 		state.OpenQuestions = len(feature.Doc.OpenQuestions())
