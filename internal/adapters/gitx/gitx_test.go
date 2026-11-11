@@ -376,3 +376,36 @@ func TestErrorsIncludeGitStderr(t *testing.T) {
 		t.Fatalf("ChangedPaths(non-repo) succeeded, want an error")
 	}
 }
+
+// TestAncestorAnswersInOneDirection: the gate asks this to tell a verdict that
+// judged a wider diff from one that started inside the feature, and an answer
+// that came back either way would let the second kind through (0268).
+func TestAncestorAnswersInOneDirection(t *testing.T) {
+	root, base := newRepo(t)
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("segunda línea\n"), 0o644); err != nil {
+		t.Fatalf("write notes.txt: %v", err)
+	}
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "segundo")
+	next := git(t, root, "rev-parse", "HEAD")
+
+	covered, err := gitx.Ancestor(root, base, next)
+	if err != nil {
+		t.Fatalf("Ancestor(base, next): %v", err)
+	}
+	if !covered {
+		t.Errorf("%s is not read as an ancestor of %s", base, next)
+	}
+
+	backwards, err := gitx.Ancestor(root, next, base)
+	if err != nil {
+		t.Fatalf("Ancestor(next, base): %v", err)
+	}
+	if backwards {
+		t.Errorf("%s is read as an ancestor of %s", next, base)
+	}
+
+	if _, err := gitx.Ancestor(root, "", next); err == nil {
+		t.Error("an empty commit was accepted as an ancestry question")
+	}
+}

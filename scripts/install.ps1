@@ -194,7 +194,32 @@ try {
     }
 
     $out = Join-Path $tmp 'out'
-    Expand-Archive -LiteralPath $archive -DestinationPath $out -Force
+    # Extraction without Expand-Archive on purpose (0269): the cmdlet comes from a
+    # module, and a Windows PowerShell 5.1 that inherits a PSModulePath carrying
+    # PowerShell 7's modules loads the modern one, whose -Force calls
+    # ExtractToDirectory with the three-argument overload .NET Framework does not
+    # have. The installer died before verifying anything. ZipFile ships with the
+    # framework: no module, no version, no surprise.
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    try {
+        $zip = [System.IO.Compression.ZipFile]::OpenRead($archive)
+        try {
+            foreach ($entry in $zip.Entries) {
+                $destination = Join-Path $out $entry.FullName
+                $parent = Split-Path -Parent $destination
+                if (-not (Test-Path -LiteralPath $parent)) {
+                    New-Item -ItemType Directory -Path $parent -Force | Out-Null
+                }
+                [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $destination, $true)
+            }
+        }
+        finally {
+            $zip.Dispose()
+        }
+    }
+    catch {
+        Fail "no pude extraer ${asset}: $($_.Exception.Message); no instaló nada"
+    }
     $source = Join-Path $out 'odachi.exe'
     if (-not (Test-Path -LiteralPath $source)) {
         Fail "$asset no trae el binario odachi.exe"

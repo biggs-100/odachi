@@ -223,6 +223,10 @@ type fakeGit struct {
 	mergeBase    string
 	mergeBaseErr error
 
+	// ancestor is the answer to "is older an ancestor of newer". Nil is "no": a
+	// test that does not care about ancestry declares nothing (0268).
+	ancestor func(older, newer string) (bool, error)
+
 	// onDefault is the answer to "is HEAD on the default branch", defaultBranch
 	// is the name the refusal prints, and onDefaultErr is git failing to answer.
 	onDefault     bool
@@ -298,6 +302,15 @@ func (g *fakeGit) MergeBase(root, ref string) (string, error) {
 		return g.mergeBase, nil
 	}
 	return g.tree, nil
+}
+
+// Ancestor answers the ancestry question the review gate asks about a verdict's
+// base, or "no" when the test declared nothing.
+func (g *fakeGit) Ancestor(root, older, newer string) (bool, error) {
+	if g.ancestor == nil {
+		return false, nil
+	}
+	return g.ancestor(older, newer)
 }
 
 // OnDefaultBranch answers whether HEAD belongs to the branch that follows the

@@ -558,6 +558,12 @@ func (gitRepo) Messages(root, base string) ([]string, error) { return gitx.Messa
 
 func (gitRepo) MergeBase(root, ref string) (string, error) { return gitx.MergeBase(root, ref) }
 
+// Ancestor answers whether a verdict's base came before the feature's: it did,
+// and the verdict saw the feature's whole diff.
+func (gitRepo) Ancestor(root, older, newer string) (bool, error) {
+	return gitx.Ancestor(root, older, newer)
+}
+
 // OnDefaultBranch answers whether HEAD sits on the branch this clone follows for
 // a base, and names it: a detached HEAD has no name, so the answer comes from the
 // commits, and a clone with no local default branch answers no.

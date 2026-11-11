@@ -19,41 +19,31 @@ paths = ["internal/probe/testdata/lenses/**"]
 deps  = []
 
 # This non-goal has no paths yet:
-#   the file keeps its shape: canonical TOML, one key per line, and the commented template for a non-goal without paths - back when the shape itself is the question
+#   one tree, one verdict stays: a second verdict for the same bytes is still refused - back when the store has to hold two judgments of one tree
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "the file keeps its shape: canonical TOML, one key per line, and the commented template for a non-goal without paths - back when the shape itself is the question"
+# not   = "one tree, one verdict stays: a second verdict for the same bytes is still refused - back when the store has to hold two judgments of one tree"
 # paths = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   one rule is never folded into another: the same `not` keeps the rule as written, and its paths and deps do not grow across runs - back when a rule itself has to change
+#   what counts as a document is not redefined here: the same classifier the proof and the review already share answers it - back when "documents only" itself is the question
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "one rule is never folded into another: the same `not` keeps the rule as written, and its paths and deps do not grow across runs - back when a rule itself has to change"
+# not   = "what counts as a document is not redefined here: the same classifier the proof and the review already share answers it - back when \"documents only\" itself is the question"
 # paths = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   a commented template does not outlive the brief that wrote it: only rules with paths survive a new brief - back when a human wants their own notes kept
+#   no verdict is written or repaired: `check` reads the store and reports, `review` stays the only thing that writes - back when a verdict has to be rebuilt from something else
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "a commented template does not outlive the brief that wrote it: only rules with paths survive a new brief - back when a human wants their own notes kept"
-# paths = []
-# deps  = []
-
-# This non-goal has no paths yet:
-#   no migration of fences an older odachi wrote: a file check already reads is merged as it is - back when the old shape has to be repaired
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "no migration of fences an older odachi wrote: a file check already reads is merged as it is - back when the old shape has to be repaired"
+# not   = "no verdict is written or repaired: `check` reads the store and reports, `review` stays the only thing that writes - back when a verdict has to be rebuilt from something else"
 # paths = []
 # deps  = []
