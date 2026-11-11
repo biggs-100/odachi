@@ -189,8 +189,8 @@ func canonicalStepText(text string) (string, error) {
 	switch {
 	case normalized == "":
 		return "", fmt.Errorf(`the step has no text: write odachi plan "<text>"`)
-	case strings.HasPrefix(normalized, "-"):
-		return "", fmt.Errorf(`a step does not start with a dash: odachi plan writes "- [ ] T<n>" itself; write the text without the dash`)
+	case strings.HasPrefix(normalized, "- "):
+		return "", fmt.Errorf(`a step does not start with a bullet: odachi plan writes "- [ ] T<n>" itself; write the text without the bullet`)
 	case utf8.RuneCountInString(normalized) > MaxStepText:
 		return "", fmt.Errorf("the step has %d characters and the maximum is %d; summarize it in one line",
 			utf8.RuneCountInString(normalized), MaxStepText)
