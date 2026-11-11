@@ -8,6 +8,14 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The brief remembers every feature.** `odachi start` wrote `brief.md` from its own answers, so the
+  sentence behind each fence rule died with the feature that wrote it while the rule -append-only since
+  0266- survived. A run now appends a block named after the feature, the block repeats the canonical
+  headers the parser already reads, and the four lists are the union of every block: outcomes, done-when,
+  non-goals and decisions. A requirement the file already carries is not written twice. Patch (0271).
+
 ## v0.38.11 - 2026-11-11
 
 - **A requirement may start with a dash.** `odachi start --light -- "--runs 0 se rechaza"` wrote nothing: the

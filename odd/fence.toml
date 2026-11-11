@@ -19,31 +19,31 @@ paths = ["internal/probe/testdata/lenses/**"]
 deps  = []
 
 # This non-goal has no paths yet:
-#   the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question
+#   the shape of a block does not change: it repeats the canonical headers, which is what the parser already reads - back when the block shape itself is the question
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question"
+# not   = "the shape of a block does not change: it repeats the canonical headers, which is what the parser already reads - back when the block shape itself is the question"
 # paths = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   a step that starts with a bullet and a space is never accepted: that is the one that doubles the checkbox - back when the renderer stops writing the bullet
+#   bullets are not merged inside a section: a repeated outcome is ignored by its exact text, never folded into a similar one - back when a human wants two spellings unified
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "a step that starts with a bullet and a space is never accepted: that is the one that doubles the checkbox - back when the renderer stops writing the bullet"
+# not   = "bullets are not merged inside a section: a repeated outcome is ignored by its exact text, never folded into a similar one - back when a human wants two spellings unified"
 # paths = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   nothing about the other verbs changes: `plan` and `ask` keep their messages, and only `start --light` learns the form - back when another verb takes a free line
+#   the past is never rewritten: a block already written is not corrected, reordered or trimmed - back when the vision itself has to be edited
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "nothing about the other verbs changes: `plan` and `ask` keep their messages, and only `start --light` learns the form - back when another verb takes a free line"
+# not   = "the past is never rewritten: a block already written is not corrected, reordered or trimmed - back when the vision itself has to be edited"
 # paths = []
 # deps  = []

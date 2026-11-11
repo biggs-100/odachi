@@ -245,3 +245,42 @@ func TestParseAcceptsAnySectionOrderAndCRLF(t *testing.T) {
 		t.Errorf("Decisions = %q, want [decidido]", got.Decisions)
 	}
 }
+
+// TestParseReadsEveryBlock: the brief accumulates one block per feature, and the
+// four lists are the union of every block, not the last one (0271).
+func TestParseReadsEveryBlock(t *testing.T) {
+	md := `# el-brief-acumula
+
+## What must exist
+- el brief deja de reemplazarse
+
+## Not included (first version)
+- no se reescribe el pasado
+
+## 0271 · el-brief-acumula
+
+## What must exist
+- una feature agrega su seccion
+
+## Not included (first version)
+- no hay merge de bullets
+
+## Decisions taken
+- el bloque repite los headers canonicos
+`
+
+	got := brief.Parse(md)
+
+	if want := []string{"el brief deja de reemplazarse", "una feature agrega su seccion"}; !reflect.DeepEqual(got.Outcome, want) {
+		t.Errorf("Outcome = %q, want the union %q", got.Outcome, want)
+	}
+	if want := []string{"no se reescribe el pasado", "no hay merge de bullets"}; !reflect.DeepEqual(got.NonGoals, want) {
+		t.Errorf("NonGoals = %q, want the union %q", got.NonGoals, want)
+	}
+	if want := []string{"el bloque repite los headers canonicos"}; !reflect.DeepEqual(got.Decisions, want) {
+		t.Errorf("Decisions = %q, want %q", got.Decisions, want)
+	}
+	if got.Name != "el-brief-acumula" {
+		t.Errorf("Name = %q, want the title line", got.Name)
+	}
+}

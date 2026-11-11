@@ -9,11 +9,19 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0267.
+Last written: while closing 0271.
 
 ## Open
 
-Nothing open: 0267 paid the row 0265 left, and 0266's verdict carried none.
+Nothing open: 0271 paid the row its own review carried.
+
+## Closed by feature 0271
+
+### the fence is not built from the union the brief claims
+
+Found by the correction review of 0271 (WARNING, `odd/fence.toml:22`). The feature made `brief.md` accumulate, and its third outcome said the non-goal list the fence is built from is the union of every block. It was not: `writeArtifacts` handed `mergeFence` only the run's own non-goals, so an older feature's template disappeared on the next run while its rule -append-only since 0266- stayed. The same finding noticed that the assertion watching the fence had been deleted with the test it lived in, so nothing would have caught a regression.
+
+Closed: the union is read before the first write (`briefAndRunNonGoals`), a brief or fence that cannot be read blocks with the files untouched, and `TestStartCarriesEveryBlocksNonGoalsIntoTheFence` was observed red with the finding's own symptom -the fence dropped `no se toca el esquema viejo`- and green after. The row is keyed by the fence file's bytes, which the next run rewrites; it leaves the store then, and it is recorded here as paid.
 
 ## Closed by feature 0267
 
