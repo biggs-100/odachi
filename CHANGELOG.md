@@ -8,6 +8,15 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A record that does not decode is refused.** The brief corrupted on 0271 decoded as UTF-8 -the bytes
+  were the text of one encoding read by another-, so no parser and no gate saw it and only a model did. The
+  gate now refuses a file whose bytes are not UTF-8, names where the first invalid byte is, refuses a file
+  saved with a BOM, and refuses the sequences a UTF-8 file leaves when a console reads it as CP850 and
+  writes it back -in the brief and the TOMLs, never in a task document, because prose may have to name
+  them. Patch (0274).
+
 ## v0.38.13 - 2026-11-11
 
 - **`review --since` takes the tree a person copies.** The store names a verdict by forty characters, and
