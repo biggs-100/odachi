@@ -14,7 +14,7 @@ R1 · "atacá todo eso: que el help liste todos los verbos, que el README no afi
 
 ## Steps
 - [x] T1 · el help no pierde un verbo: el uso los lista y un test lee los casos del despachador   R1 · route:inline · tree:aa04a25a14bba917d2ea69f5d0f6549c03f690f5
-- [ ] T2 · el README dice lo que el repo hace: sin numeros, provenance con su comando, el test de install.ps1 y un indice   R1 · route:inline
+- [x] T2 · el README dice lo que el repo hace: sin numeros, provenance con su comando, el test de install.ps1 y un indice   R1 · route:inline · tree:904ace9b7cc6c52d9ae37b9ef1cdd5810344d4d8
 
 ## History
 L1 · "atacá todo eso: que el help liste todos los verbos, que el README no afirme lo que el repo desmiente (provenance, surfaces, packages, install.ps1), y los topics y la descripción del repo"
