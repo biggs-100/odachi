@@ -14,7 +14,7 @@ R1 · "el brazo limpio del fixture deja de tener defectos: los hallazgos que un 
 
 ## Steps
 - [x] T1 · limpiar el codigo del brazo clean: los diez hallazgos de la primera medida, sin tocar el manifiesto   R1 · route:delegated/odachi-worker · skills:tests · tree:f8ef58e2e427d671743b1ec4ee80a5d0d9e3a8fe
-- [ ] T2 · medir de nuevo y escribir la lectura vigente en docs/review-research.md con fecha y modelo   R1 · route:inline
+- [x] T2 · medir de nuevo y escribir la lectura vigente en docs/review-research.md con fecha y modelo   R1 · route:inline · tree:737d233062cbf94a67fed6e525a2490932f4e3d7
 
 ## History
 L1 · "el brazo limpio del fixture deja de tener defectos: los hallazgos que un lente reporta sobre él se pagan en el código, o se registran como gusto y se dejan"

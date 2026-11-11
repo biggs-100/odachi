@@ -3,15 +3,10 @@ not   = "no se toca el contenido de los lentes: medir editando el examen no mide
 paths = ["internal/assets/review/*.md"]
 deps  = []
 
-# This non-goal has no paths yet:
-#   no corre en CI ni en la gate: cuesta llamadas a un modelo y no es determinista - back when a probe is cheap enough to run per change
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "no corre en CI ni en la gate: cuesta llamadas a un modelo y no es determinista - back when a probe is cheap enough to run per change"
-# paths = []
-# deps  = []
+[[rule]]
+not   = "no corre en CI ni en la gate: cuesta llamadas a un modelo y no es determinista - back when a probe is cheap enough to run per change"
+paths = [".github/workflows/**"]
+deps  = []
 
 [[rule]]
 not   = "no se agregan defectos nuevos al brazo sembrado: la llave no crece en la misma feature que la limpia - back when the fixture outgrows five defects"

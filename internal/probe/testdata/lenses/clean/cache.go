@@ -1,8 +1,8 @@
 package probe
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
