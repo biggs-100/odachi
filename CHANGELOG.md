@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.38.8 - 2026-11-11
 
 - **The measurement repeats.** `odachi review probe --runs N` asks every lens and arm N times and reports a median with the range it moved in: on the fixture, every planted defect was found in most draws, while the findings nobody planted moved from 3 to 7 and the clean arm from 0 to 5. One draw is not a measurement. A new flag, patch (0265).
 
@@ -2448,7 +2448,6 @@ Listo en un comando, y el agente sabe manejarlo.
 
 - Primera versión que se instala: `start`, `ask`, `level`, `summary`, `check`, `init`,
   `--version`, hook de pre-commit, instaladores `sh` y `ps1`, y seis binarios.
-
 
 
 
