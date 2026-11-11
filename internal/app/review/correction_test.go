@@ -30,6 +30,74 @@ func verdictFor(t *testing.T, tree, base string, lenses []string, passes ...doma
 	return string(domainreview.Render(sealed))
 }
 
+// TestACorrectionTakesTheTreeAPersonCopies is 0272: the store names a verdict by
+// forty characters and the human copies the first eight from a listing; --since
+// must resolve the prefix to the stored verdict instead of looking for a file that
+// cannot exist.
+func TestACorrectionTakesTheTreeAPersonCopies(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.changed = []string{"b.go"}
+	p.git.diff = "diff --git a/b.go b/b.go\n--- a/b.go\n+++ b/b.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
+	p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": gitBlob}
+	p.shell.output = `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`
+	p.files.files[storePath(correctedTree)] = []byte(verdictFor(t, correctedTree, "abc1234", []string{"reliability"},
+		domainreview.Pass{Path: "a.go", Lens: "reliability", Blob: gitBlob}))
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Since: correctedTree[:8]})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("a prefix the store holds was refused: code = %d (%s)", result.Code, result.Message)
+	}
+	if !slices.Equal(p.git.corrections, []string{correctedTree}) {
+		t.Errorf("corrections = %v, want the full tree %s", p.git.corrections, correctedTree)
+	}
+	if said := strings.Join(result.Lines, "\n"); !strings.Contains(said, correctedTree) {
+		t.Errorf("the run does not say which tree it completed:\n%s", said)
+	}
+}
+
+// TestACorrectionRefusesAPrefixThatNamesTwoVerdicts: completing the wrong answer is
+// worse than asking for three more characters, so the run names what it found.
+func TestACorrectionRefusesAPrefixThatNamesTwoVerdicts(t *testing.T) {
+	const one = "abcdef1111111111111111111111111111111111"
+	const two = "abcdef2222222222222222222222222222222222"
+	p := newProject()
+	p.files.files[storePath(one)] = []byte(verdictFor(t, one, "abc1234", []string{"reliability"}))
+	p.files.files[storePath(two)] = []byte(verdictFor(t, two, "abc1234", []string{"reliability"}))
+
+	result := p.run(review.Options{Since: "abcdef"})
+
+	if result.Code == review.CodeOK {
+		t.Fatal("an ambiguous prefix was resolved to one verdict")
+	}
+	said := result.Message + "\n" + strings.Join(result.Lines, "\n")
+	for _, want := range []string{one, two, "more characters"} {
+		if !strings.Contains(said, want) {
+			t.Errorf("the refusal does not say %q:\n%s", want, said)
+		}
+	}
+}
+
+// TestACorrectionSaysWhenNoVerdictStartsWithThePrefix: the old message said there
+// was no verdict for the tree, which was false for a prefix the store could not
+// spell; the new one says what it looked for and where the list is.
+func TestACorrectionSaysWhenNoVerdictStartsWithThePrefix(t *testing.T) {
+	p := newProject()
+
+	result := p.run(review.Options{Since: "999999"})
+
+	if result.Code == review.CodeOK {
+		t.Fatal("a prefix nobody carries was accepted")
+	}
+	if !strings.Contains(result.Message, "no verdict in this clone starts with 999999") {
+		t.Errorf("the message does not say what it looked for: %q", result.Message)
+	}
+	if said := strings.Join(result.Lines, "\n"); !strings.Contains(said, "odachi review --all") {
+		t.Errorf("the refusal does not name the listing:\n%s", said)
+	}
+}
+
 // TestACorrectionReviewsOnlyWhatMoved: a fix after a verdict is a delta. The
 // prompt is built from the paths and the diff since the tree the verdict named,
 // the answer judges only those, and the stored verdict carries the predecessor's
