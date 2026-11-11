@@ -3,14 +3,16 @@ package main
 import (
 	"bytes"
 	"os"
+	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // TestTheUsageNamesEveryVerbTheBinaryAnswers: the usage block is what a stranger
 // reads first, and a verb the dispatcher answers but the block forgets is a surface
-// nobody finds -`design` and `review probe` were missing for weeks. The list is read
-// from the dispatcher's own switch, so there is no third list to keep in step (0273).
+// nobody finds -`design` and `review probe` were missing. The list is read from the
+// dispatcher's own switch, so there is no third list to keep in step (0273).
 func TestTheUsageNamesEveryVerbTheBinaryAnswers(t *testing.T) {
 	source, err := os.ReadFile("main.go")
 	if err != nil {
@@ -18,8 +20,10 @@ func TestTheUsageNamesEveryVerbTheBinaryAnswers(t *testing.T) {
 	}
 
 	verbs := dispatchVerbs(t, string(source))
-	if len(verbs) < 10 {
-		t.Fatalf("read %d verbs from the dispatcher, want every one: %v", len(verbs), verbs)
+	// `version` closes the dispatcher today: a scan that stopped at a nested brace
+	// would end before it, and fewer verbs would pass the loop below in silence.
+	if !slices.Contains(verbs, "version") {
+		t.Fatalf("the scan did not reach the end of the dispatcher: %v", verbs)
 	}
 
 	var out bytes.Buffer
@@ -27,35 +31,31 @@ func TestTheUsageNamesEveryVerbTheBinaryAnswers(t *testing.T) {
 
 	block := usageBlock(t, out.String())
 	for _, verb := range verbs {
-		if !strings.Contains(block, "odachi "+verb) {
+		if !namesVerb(block, verb) {
 			t.Errorf("the usage block does not name %q, and the binary answers it", verb)
 		}
 	}
 }
 
-// dispatchVerbs reads the case labels of the `switch args[0]` block: the verbs the
-// binary answers, taken from the one place that answers them.
-func dispatchVerbs(t *testing.T, source string) []string {
-	t.Helper()
-
-	verbs := make([]string, 0, 32)
-	inSwitch := false
-	for _, line := range strings.Split(source, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if !inSwitch {
-			if trimmed == "switch args[0] {" {
-				inSwitch = true
-			}
+// namesVerb reports whether a line of the block offers exactly this verb. The
+// boundary matters: `skill` is a prefix of `skills`, and a substring test would
+// call a forgotten verb documented (0273).
+func namesVerb(block, verb string) bool {
+	for _, line := range strings.Split(block, "\n") {
+		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "odachi "+verb)
+		if !ok {
 			continue
 		}
-		if trimmed == "}" {
-			break
+		if rest == "" {
+			return true
 		}
-		if strings.HasPrefix(trimmed, `case "`) && strings.HasSuffix(trimmed, `":`) {
-			verbs = append(verbs, strings.TrimSuffix(strings.TrimPrefix(trimmed, `case "`), `":`))
+		next, _ := utf8.DecodeRuneInString(rest)
+		if next != ' ' && next != '\t' {
+			continue
 		}
+		return true
 	}
-	return verbs
+	return false
 }
 
 // usageBlock is the list under "usage:" and nothing else: the body further down
@@ -73,4 +73,31 @@ func usageBlock(t *testing.T, help string) string {
 		return rest[:end]
 	}
 	return rest
+}
+
+// dispatchVerbs reads the case labels of the `switch args[0]` block: the verbs the
+// binary answers, taken from the one place that answers them. The scan ends at the
+// brace that closes the switch, which sits at one tab; a nested block inside a case
+// closes deeper, and reading it as the end would drop every verb after it (0273).
+func dispatchVerbs(t *testing.T, source string) []string {
+	t.Helper()
+
+	verbs := make([]string, 0, 32)
+	inSwitch := false
+	for _, line := range strings.Split(source, "\n") {
+		if !inSwitch {
+			if strings.TrimSpace(line) == "switch args[0] {" {
+				inSwitch = true
+			}
+			continue
+		}
+		if line == "\t}" {
+			break
+		}
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, `case "`) && strings.HasSuffix(trimmed, `":`) {
+			verbs = append(verbs, strings.TrimSuffix(strings.TrimPrefix(trimmed, `case "`), `":`))
+		}
+	}
+	return verbs
 }
