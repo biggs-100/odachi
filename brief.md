@@ -111,10 +111,10 @@
 
 ## Not included (first version)
 - nothing is repaired: the gate reads and refuses, it never writes the good file back - back when a repair command is the question
-- nothing is guessed: a sentence that no longer matches its document is named, not merged with the other version - back when the tool has to choose between two
-- the marker list is a backstop and not the rule: text with no task document to compare against is the only place it speaks - back when every artifact has a counterpart
+- nothing is guessed: the gate names the file and the sequence it found, it never decides which of two versions was meant - back when the tool has to choose
+- the task documents are never scanned for the markers: they are prose, and one of them may have to name the sequence to explain this defect - back when every artifact may be scanned
 
 ## Decisions taken
-- The cross-check beats a blacklist: the brief and its task document carry the same sentence by construction, so a difference is the defect itself; the CP850 markers only cover what has no counterpart.
+- The marker list is the rule and the task documents are the exception: the brief and the TOMLs are rendered by the tool, so a sequence there is a double encoding, and prose is the one place that may name it.
 - The gate refuses and names; the repair is a human editor or `odachi start`, never a silent rewrite of the record.
-- The mojibake markers are read in `brief.md` and `odd/*.toml` only, because a task document is prose that may have to name them to explain this very defect.
+- A cross-check against the task documents was tried and dropped: it blocked a brief before its first document and a block whose document was removed, and the record accumulates.
