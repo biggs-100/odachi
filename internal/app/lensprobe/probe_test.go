@@ -71,7 +71,9 @@ const verdictJSON = `{
 const emptyJSON = `{"reviewer":"fake-reviewer","model":"fixture/reviewer","inspection":{"status":"completed","paths":["server.go"]},"findings":[],"verdict":"approved"}`
 
 func options(exec string) lensprobe.Options {
-	return lensprobe.Options{Dir: "C:\\project", Exec: exec, Model: "fixture/reviewer"}
+	// Runs: 1 is the flag's own default, so a test that wants another count says
+	// so; a zero here would be the refusal the flag exists for (0267).
+	return lensprobe.Options{Dir: "C:\\project", Exec: exec, Model: "fixture/reviewer", Runs: 1}
 }
 
 // arm picks the canned answer from the prompt the command was handed.
@@ -273,7 +275,7 @@ func TestProbeRepeatsTheMeasurement(t *testing.T) {
 func TestProbeRefusesARunCountOutsideTheRange(t *testing.T) {
 	t.Parallel()
 
-	for _, runs := range []int{-1, lensprobe.MaxRuns + 1} {
+	for _, runs := range []int{-1, 0, lensprobe.MaxRuns + 1} {
 		shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
 		opts := options("reviewer {prompt}")
 		opts.Runs = runs

@@ -90,7 +90,9 @@ type Options struct {
 	Exec string
 	// Model replaces {model} in Exec.
 	Model string
-	// Runs is how many draws the measurement holds. Zero means one.
+	// Runs is how many draws the measurement holds, from one to MaxRuns. A run
+	// that asks for zero is refused and told the minimum: one draw is a number,
+	// and zero draws is a question nobody measured.
 	Runs int
 }
 
@@ -168,9 +170,6 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	}
 
 	draws := opts.Runs
-	if draws == 0 {
-		draws = 1
-	}
 	if draws < 1 || draws > MaxRuns {
 		return *blocked("--runs " + strconv.Itoa(opts.Runs) + ": the measurement holds between 1 and " + strconv.Itoa(MaxRuns) +
 			" draws, and each one is a reviewer per lens and arm")

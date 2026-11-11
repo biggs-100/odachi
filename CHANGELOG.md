@@ -14,6 +14,9 @@ not a version.
   every rule already there, adding only the non-goals the new run brings; a fence it cannot read is left
   alone and named instead of overwritten. The rules are read and written through one adapter, so a file a
   run writes is a file the gate can read. Patch (0266).
+- **Zero draws is refused, not measured.** `odachi review probe --runs 0` no longer becomes one draw in
+  silence: the count is checked against the range the measurement holds and the message names the minimum.
+  The row the last review left open in that file is paid. A fix, patch (0267).
 
 ## v0.38.8 - 2026-11-11
 
