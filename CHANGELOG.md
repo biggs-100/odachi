@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.38.7 - 2026-11-11
 
 - **The clean arm pays what the lenses find.** The fixture's arm with nothing planted was reviewed three times
   and gave 10, 1 and 4 findings: the ten it named were real and are now fixed in the code, and the five planted
@@ -2443,7 +2443,6 @@ Listo en un comando, y el agente sabe manejarlo.
 
 - Primera versión que se instala: `start`, `ask`, `level`, `summary`, `check`, `init`,
   `--version`, hook de pre-commit, instaladores `sh` y `ps1`, y seis binarios.
-
 
 
 
