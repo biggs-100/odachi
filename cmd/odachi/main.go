@@ -1735,6 +1735,7 @@ usage:
   odachi delegate <taskdoc> --step T1 [--surface <path>] [--command <cmd>]
   odachi level [--to <profile>]
   odachi summary
+  odachi design <list|comments|open|stop|handoff|sync>
   odachi progress
   odachi undo [--list | --collect] [--file brief] [--artifact <path>]
   odachi clean [--apply] [--legacy] [--json]
@@ -1744,6 +1745,7 @@ usage:
   odachi review [--lens <lens>]
   odachi review mode [status|on|off]
   odachi review waive --because "<why>"
+  odachi review probe [--runs N] [--exec "<command>"]
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills home|project] [--agents opencode|claude|both] [--json]
