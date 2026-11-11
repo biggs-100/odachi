@@ -15,6 +15,11 @@ not a version.
   --since names (bbf385ca)", about a verdict the clone held. The correction now resolves the prefix against
   the store's own listing -the one `--all` prints- refuses an ambiguous prefix naming its candidates, says
   when nothing starts with it, and tells which tree the correction completed. Patch (0272).
+- **The public face says what the repository does.** `odachi --help` now names `design` and `review probe`,
+  and a test reads the dispatcher's own cases so a verb cannot be answered and hidden at once. The README
+  lost the counts that rot -eighteen surfaces, 44 packages-, stopped denying the provenance attestation
+  `gh attestation verify` reads, stopped claiming `install.ps1` has no automated test, and opens with a
+  table of contents. Patch (0273).
 
 ## v0.38.12 - 2026-11-11
 
