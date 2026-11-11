@@ -19,31 +19,31 @@ paths = ["internal/probe/testdata/lenses/**"]
 deps  = []
 
 # This non-goal has no paths yet:
-#   one tree, one verdict stays: a second verdict for the same bytes is still refused - back when the store has to hold two judgments of one tree
+#   the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "one tree, one verdict stays: a second verdict for the same bytes is still refused - back when the store has to hold two judgments of one tree"
+# not   = "the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question"
 # paths = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   what counts as a document is not redefined here: the same classifier the proof and the review already share answers it - back when "documents only" itself is the question
+#   a step that starts with a bullet and a space is never accepted: that is the one that doubles the checkbox - back when the renderer stops writing the bullet
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "what counts as a document is not redefined here: the same classifier the proof and the review already share answers it - back when \"documents only\" itself is the question"
+# not   = "a step that starts with a bullet and a space is never accepted: that is the one that doubles the checkbox - back when the renderer stops writing the bullet"
 # paths = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   no verdict is written or repaired: `check` reads the store and reports, `review` stays the only thing that writes - back when a verdict has to be rebuilt from something else
+#   nothing about the other verbs changes: `plan` and `ask` keep their messages, and only `start --light` learns the form - back when another verb takes a free line
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "no verdict is written or repaired: `check` reads the store and reports, `review` stays the only thing that writes - back when a verdict has to be rebuilt from something else"
+# not   = "nothing about the other verbs changes: `plan` and `ask` keep their messages, and only `start --light` learns the form - back when another verb takes a free line"
 # paths = []
 # deps  = []

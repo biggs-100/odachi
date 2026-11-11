@@ -1,24 +1,23 @@
-# la-base-que-cubre
+# el-requisito-con-guion
 
 ## What must exist
-- check no se contradice en el cierre: un veredicto cuya base es anterior a la de la feature la cubre, y un árbol que solo movió documentos después de ese veredicto no vuelve a pedir review
-- a verdict whose base is a descendant of the feature's base is still refused, naming the base: the lane must not become a hole
-- the two symptoms the human saw are one rule: `ready` next to "the feature is closed and its tree has no verdict", and a `review --base` the store answers with "this tree already has a verdict"
+- un requisito que empieza con guion se puede pasar: `start --light -- "--runs 0 …"` lo escribe tal cual, y sin el `--` el error dice cómo pasarlo
+- the refusal that a step cannot start with a dash becomes the narrower rule it meant: a markdown bullet (`- `) doubles the checkbox, and `--runs` duplicates nothing
+- the message names the form instead of the flag package's complaint, because "invalid flag" does not tell a human what to type
 
 ## Done when
-- a verdict for this tree whose base is an ancestor of the feature's base asks for nothing, and `check` says which tree and which base it speaks for
-- a verdict whose base is a descendant of the feature's base is still refused, naming the base it judged and the base the feature starts from
-- after a commit that only moved documents on a closed feature, `check` prints ready with no line about a missing verdict, and says the verdict belongs to the code's tree
-- the same tree with no verdict for the code it runs on still names the missing verdict, and the close still names it
-- the ancestry question is asked of the repository through one port method, and the fake in the gate's tests answers it
+- `odachi start --light -- "--runs 0 se rechaza"` writes a task document whose requirement and step carry that sentence verbatim
+- `odachi start --light "--runs 0 se rechaza"` fails with a message that names `odachi start --light -- "<the line>"`
+- `odachi plan "- [ ] T1 · algo"` is still refused, and the message says a step does not start with a bullet
+- a step text that starts with a single dash is accepted, because the hazard is the bullet and not the dash
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
-- `## Unreleased` names the rule, patch (0268)
+- `## Unreleased` names it, patch (0270)
 
 ## Not included (first version)
-- one tree, one verdict stays: a second verdict for the same bytes is still refused - back when the store has to hold two judgments of one tree
-- what counts as a document is not redefined here: the same classifier the proof and the review already share answers it - back when "documents only" itself is the question
-- no verdict is written or repaired: `check` reads the store and reports, `review` stays the only thing that writes - back when a verdict has to be rebuilt from something else
+- the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question
+- a step that starts with a bullet and a space is never accepted: that is the one that doubles the checkbox - back when the renderer stops writing the bullet
+- nothing about the other verbs changes: `plan` and `ask` keep their messages, and only `start --light` learns the form - back when another verb takes a free line
 
 ## Decisions taken
-- Ancestry, not equality: a base earlier than the feature's judged more than its diff, never less, and treating the two as different erased a review that had happened.
-- The port gains one question -is this commit an ancestor of that one- instead of the gate guessing with path lists, because a subset of paths is not a subset of bytes.
+- The hazard is the bullet, not the dash: `- [ ] T1` pasted whole is what breaks the file, and `--runs 0` protects nothing.
+- The error teaches the form it wants: a human reads the message, not the flag package's vocabulary.
