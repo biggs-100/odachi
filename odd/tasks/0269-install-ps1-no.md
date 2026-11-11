@@ -8,7 +8,7 @@ R1 · "install.ps1 no usa Expand-Archive: extrae el zip con ZipFile y sobrevive 
 ## Done when
 
 ## Steps
-- [ ] T1 · install.ps1 no usa Expand-Archive: extrae el zip con ZipFile y sobrevive a un PSModulePath de PowerShell 7   R1
+- [x] T1 · install.ps1 no usa Expand-Archive: extrae el zip con ZipFile y sobrevive a un PSModulePath de PowerShell 7   R1 · tree:e3e861b47c43abb4f5271a6efa48a9f9f22bd953
 
 ## History
 L1 · "install.ps1 no usa Expand-Archive: extrae el zip con ZipFile y sobrevive a un PSModulePath de PowerShell 7"
