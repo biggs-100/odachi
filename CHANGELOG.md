@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.38.13 - 2026-11-11
 
 - **`review --since` takes the tree a person copies.** The store names a verdict by forty characters, and
   `--since` with a prefix looked for a file named after the prefix: "there is no verdict for the tree
