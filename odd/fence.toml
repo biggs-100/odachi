@@ -107,3 +107,33 @@ deps  = []
 # not   = "nothing is suggested or ordered like a search: the correction lane names the candidates it found, it does not rank them - back when finding a tree becomes a question of its own"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   no new verb and no new flag: the change is what the binary says about itself - back when a surface is actually missing
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no new verb and no new flag: the change is what the binary says about itself - back when a surface is actually missing"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the prose of the README beyond the claims that are false or rot: no rewrite of the tutorial - back when the story itself has to change
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the prose of the README beyond the claims that are false or rot: no rewrite of the tutorial - back when the story itself has to change"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the repository's metadata (topics and description) is set with `gh repo edit`, outside the gate, because it is not a file in the tree - back when the tree has to carry it
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the repository's metadata (topics and description) is set with `gh repo edit`, outside the gate, because it is not a file in the tree - back when the tree has to carry it"
+# paths = []
+# deps  = []
