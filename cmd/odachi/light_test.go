@@ -28,6 +28,58 @@ func TestStartLightRefusesASecondLine(t *testing.T) {
 	}
 }
 
+// TestStartLightTakesALineThatStartsWithADash is 0270: a requirement may name a
+// flag, and Go's own separator is how it reaches the verb. Without this, `un --runs
+// 0 se rechaza` -a requirement we wrote twice in one day- could not be opened at all.
+func TestStartLightTakesALineThatStartsWithADash(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepoWithCommit(t, dir)
+
+	const line = "--runs 0 se rechaza"
+	code, _, stderr := runDir(t, dir, []string{"start", "--light", "--", line}, "")
+	if code != 0 {
+		t.Fatalf("start --light -- %q: exit %d, stderr=%s", line, code, stderr)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(dir, "odd", "tasks"))
+	if err != nil {
+		t.Fatalf("read the task documents: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("task documents = %d, want one", len(entries))
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "odd", "tasks", entries[0].Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := taskdoc.Parse(string(data))
+	if len(doc.Requirements) != 1 || doc.Requirements[0].Text != line {
+		t.Errorf("Requirements = %+v, want the line verbatim", doc.Requirements)
+	}
+	if len(doc.Steps) != 1 || doc.Steps[0].Text != line {
+		t.Errorf("Steps = %+v, want one step with the same words", doc.Steps)
+	}
+}
+
+// TestStartLightNamesTheSeparatorWhenTheLineStartsWithADash: the refusal a human
+// meets first must say what to type, not what the flag package thought.
+func TestStartLightNamesTheSeparatorWhenTheLineStartsWithADash(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	code, _, stderr := runDir(t, dir, []string{"start", "--light", "--runs 0 se rechaza"}, "")
+	if code != 1 {
+		t.Fatalf("start --light without the separator: exit %d, want 1", code)
+	}
+	if !strings.Contains(stderr, "--light -- ") {
+		t.Errorf("stderr %q does not name the form that works", stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "odd")); err == nil {
+		t.Error("a refused run wrote odd/, want nothing")
+	}
+}
+
 // TestStartLightEndToEnd: one line in, one document out, and no brief beside it.
 func TestStartLightEndToEnd(t *testing.T) {
 	t.Parallel()

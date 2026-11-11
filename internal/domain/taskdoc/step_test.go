@@ -161,8 +161,7 @@ func TestAddStepRejectsBadText(t *testing.T) {
 		{"spaces only", "   "},
 		{"multiline", "primera linea\nsegunda linea"},
 		{"with return", "primera linea\rsegunda linea"},
-		{"leading dash", "- primer paso"},
-		{"attached dash", "-primer paso"},
+		{"leading bullet", "- primer paso"},
 		{"121 characters", strings.Repeat("a", 121)},
 	}
 
@@ -179,6 +178,37 @@ func TestAddStepRejectsBadText(t *testing.T) {
 				t.Errorf("error must be one line: %q", err)
 			}
 		})
+	}
+}
+
+// TestAddStepRejectsABulletByItsName: the rule is the markdown bullet and not the
+// dash, so the message names the bullet a human pasted (0270).
+func TestAddStepRejectsABulletByItsName(t *testing.T) {
+	doc := canonical(t)
+
+	_, err := doc.AddStep("- [ ] T1 · reservar un turno", "R1")
+
+	if err == nil {
+		t.Fatal("a pasted bullet was accepted as a step")
+	}
+	if !strings.Contains(err.Error(), "bullet") {
+		t.Errorf("the message does not name the bullet: %q", err)
+	}
+}
+
+// TestAddStepKeepsADashThatIsNotABullet is 0270: a requirement may start with a
+// flag, and `- [ ]` is what doubles the checkbox, not every dash.
+func TestAddStepKeepsADashThatIsNotABullet(t *testing.T) {
+	doc := canonical(t)
+
+	for _, text := range []string{"--runs 0 se rechaza", "-primer paso"} {
+		grown, err := doc.AddStep(text, "R1")
+		if err != nil {
+			t.Fatalf("AddStep(%q): %v", text, err)
+		}
+		if got := grown.Steps[len(grown.Steps)-1].Text; got != text {
+			t.Errorf("text = %q, want %q", got, text)
+		}
 	}
 }
 
