@@ -171,7 +171,11 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		if in.briefDoc != nil {
 			content = *in.briefDoc
 		}
-		if problem := r.put(briefFile, []byte(brief.Render(content))); problem != nil {
+		number, problem := r.nextNumber()
+		if problem != nil {
+			return *problem
+		}
+		if problem := r.writeBriefBlock(number, slug, content); problem != nil {
 			return *problem
 		}
 	}
@@ -250,6 +254,32 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		Task:    filepath.ToSlash(taskPath),
 		Files:   r.written,
 	}
+}
+
+// writeBriefBlock records this run's vision without erasing the ones before it. A
+// brief that replaces itself loses the sentence behind every fence rule that
+// outlived it, and the fence has been append-only since 0266: the block repeats the
+// canonical headers Parse already reads, so the union costs no second grammar
+// (0271). A requirement the file already carries is the same feature, and nothing
+// is appended twice.
+func (r *runner) writeBriefBlock(number int, title string, content brief.Brief) *Result {
+	path := filepath.Join(r.opts.Dir, briefFile)
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		return failure(blocked("could not check " + briefFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
+	}
+	if !exists {
+		return r.put(briefFile, []byte(brief.Render(content)))
+	}
+
+	data, err := r.files.Read(path)
+	if err != nil {
+		return failure(blocked("could not read " + briefFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
+	}
+
+	block := fmt.Sprintf("## %04d · %s\n\n%s", number, title, brief.RenderFeature(content))
+	merged := strings.TrimRight(string(data), "\n") + "\n\n" + block
+	return r.put(briefFile, []byte(merged))
 }
 
 // mergeFence reads the fence the worktree already has and returns it with the

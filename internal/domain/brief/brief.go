@@ -133,8 +133,20 @@ func Render(b Brief) string {
 	var out strings.Builder
 
 	if name := strings.TrimSpace(b.Name); name != "" {
-		out.WriteString(headerName + name + "\n")
+		out.WriteString(headerName + name + "\n\n")
 	}
+
+	out.WriteString(RenderFeature(b))
+
+	return out.String()
+}
+
+// RenderFeature writes the four canonical sections without the title line: the
+// block a second feature appends to a brief that already exists (0271). The
+// sections are the ones Parse already reads, repeated, so the reader and the
+// writer live on one grammar.
+func RenderFeature(b Brief) string {
+	var out strings.Builder
 
 	sections := []struct {
 		header string

@@ -349,7 +349,7 @@ func TestBatchedShowsEveryAnswerTogetherBeforeWriting(t *testing.T) {
 
 // TestForceBacksUpTheBriefAndWritesTheSameBytes: the same answers produce the
 // same brief, and the file the human may have edited is never lost.
-func TestForceBacksUpTheBriefAndWritesTheSameBytes(t *testing.T) {
+func TestForceBacksUpTheBriefBeforeAppendingASecondBlock(t *testing.T) {
 	var firstEvents []string
 	first := newFakeFiles(nil, &firstEvents)
 	opts := flagsCarryTheSameAnswers()
@@ -360,11 +360,14 @@ func TestForceBacksUpTheBriefAndWritesTheSameBytes(t *testing.T) {
 	}
 	firstBrief := first.content(t, "brief.md")
 	firstProfile := first.content(t, filepath.Join("odd", "profile.toml"))
-	firstFence := first.content(t, filepath.Join("odd", "fence.toml"))
 
 	var secondEvents []string
 	second := &fakeFiles{files: first.files, events: &secondEvents}
 	opts.Force = true
+	// A second feature: the same answers would append nothing, and the brief is a
+	// record of decisions, not of attempts (0271).
+	opts.Outcome = "quiero cancelar turnos"
+	opts.Done = []string{"el turno cancelado desaparece de la agenda"}
 
 	got := start.Run(opts, nil, second, nil)
 	if got.Code != start.CodeOK {
@@ -374,23 +377,19 @@ func TestForceBacksUpTheBriefAndWritesTheSameBytes(t *testing.T) {
 	if backup, write := firstIndex(secondEvents, "backup brief.md"), firstIndex(secondEvents, "write brief.md"); backup < 0 || backup > write {
 		t.Errorf("brief.md must be backed up before it is rewritten; events: %v", secondEvents)
 	}
-	if second.content(t, "brief.md") != firstBrief {
-		t.Errorf("brief.md changed with the same answers:\n%s\nvs\n%s", second.content(t, "brief.md"), firstBrief)
+	merged := second.content(t, "brief.md")
+	if !strings.HasPrefix(merged, strings.TrimRight(firstBrief, "\n")) {
+		t.Errorf("the first block is not the head of the brief:\n%s", merged)
+	}
+	if !strings.Contains(merged, "quiero cancelar turnos") {
+		t.Errorf("the second block was not appended:\n%s", merged)
 	}
 	if second.content(t, filepath.Join("odd", "profile.toml")) != firstProfile {
 		t.Errorf("profile.toml changed with the same answers")
 	}
-	if second.content(t, filepath.Join("odd", "fence.toml")) != firstFence {
-		t.Errorf("fence.toml changed with the same answers")
-	}
-	taskDoc := "odd/tasks/0001-quiero-reservar-turnos.md"
+	taskDoc := "odd/tasks/0002-quiero-cancelar-turnos.md"
 	if got.Task != taskDoc {
-		t.Errorf("second task doc = %q, want the existing document reused", got.Task)
-	}
-	for _, event := range secondEvents {
-		if event == "write "+taskDoc || event == "backup "+taskDoc {
-			t.Errorf("second run touched the task doc (%s); its steps and history are the memory of the work", event)
-		}
+		t.Errorf("second task doc = %q, want %q", got.Task, taskDoc)
 	}
 }
 
@@ -844,6 +843,36 @@ func TestStartTouchesNothingWhenTheFenceCannotBeRead(t *testing.T) {
 	}
 }
 
+// TestStartKeepsTheBriefAFeatureAlreadyWrote is 0271: the brief is the project's
+// vision, and every run replaced it, so the sentence behind a fence rule died with
+// the feature that wrote it while the rule itself survived.
+func TestStartKeepsTheBriefAFeatureAlreadyWrote(t *testing.T) {
+	const previous = "# el-requisito-con-guion\n\n## What must exist\n- un requisito que empieza con guion se puede pasar\n\n## Not included (first version)\n- el verbo conserva su forma\n"
+	files := newFakeFiles(map[string]string{"brief.md": previous}, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Force = true
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+
+	if got := start.Run(opts, nil, files, nil); got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+
+	text := files.content(t, "brief.md")
+	if !strings.Contains(text, "un requisito que empieza con guion se puede pasar") {
+		t.Errorf("the previous block is gone:\n%s", text)
+	}
+	if !strings.Contains(text, outcome) {
+		t.Errorf("the run did not write its own block:\n%s", text)
+	}
+	if !strings.Contains(text, "## 0001 · ") {
+		t.Errorf("the new block does not carry the feature number:\n%s", text)
+	}
+	if parsed := brief.Parse(text); len(parsed.Outcome) != 2 {
+		t.Errorf("the brief reads %d outcomes, want the union of two blocks: %q", len(parsed.Outcome), parsed.Outcome)
+	}
+}
+
 // TestBriefFlagRecordsTheDraftAsTheArtifact covers the senior/ci path: the run
 // reads the draft instead of asking, and records it as brief.md -a run that leaves
 // no brief.md leaves the project without the vision it just read (0186).
@@ -1020,10 +1049,11 @@ func TestBriefFlagRefusesToReplaceAnExistingBrief(t *testing.T) {
 	}
 }
 
-// TestBriefFlagWithForceReplacesTheBriefAfterBackingItUp: --force is the way out
-// the refusal itself names, and it replaces brief.md -the previous bytes are kept
-// first, so the human can undo it (0186).
-func TestBriefFlagWithForceReplacesTheBriefAfterBackingItUp(t *testing.T) {
+// TestBriefFlagWithForceAppendsTheDraftAfterBackingItUp: --force is the way out
+// the refusal itself names, and it no longer replaces brief.md: the draft's block
+// is appended, and the previous bytes are kept in a backup the human can undo
+// (0186, 0271).
+func TestBriefFlagWithForceAppendsTheDraftAfterBackingItUp(t *testing.T) {
 	const previous = "# otra\n\n## What must exist\n- lo de antes\n"
 	draft := `# turnos
 
@@ -1043,8 +1073,9 @@ func TestBriefFlagWithForceReplacesTheBriefAfterBackingItUp(t *testing.T) {
 		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
 	}
 	recorded := brief.Parse(files.content(t, "brief.md"))
-	if len(recorded.Outcome) != 1 || recorded.Outcome[0] != "reservar turnos" {
-		t.Errorf("brief.md was not replaced by the draft: %+v", recorded)
+	want := []string{"lo de antes", "reservar turnos"}
+	if len(recorded.Outcome) != len(want) || recorded.Outcome[0] != want[0] || recorded.Outcome[1] != want[1] {
+		t.Errorf("brief.md holds %+v, want the previous block and the draft's", recorded.Outcome)
 	}
 	if backup, write := firstIndex(events, "backup brief.md"), firstIndex(events, "write brief.md"); backup < 0 || backup > write {
 		t.Errorf("brief.md was not backed up before it was written: %v", events)
