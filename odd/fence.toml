@@ -1,28 +1,59 @@
-[[rule]]
-not   = "no se toca el contenido de los lentes: medir editando el examen no mide nada - back when a lens is changed for a reason the probe records"
-paths = ["internal/assets/review/*.md"]
-deps  = []
-
-[[rule]]
-not   = "no corre en CI ni en la gate: cuesta llamadas a un modelo y no es determinista - back when a probe is cheap enough to run per change"
-paths = [".github/workflows/**"]
-deps  = []
-
-[[rule]]
-not   = "no se agregan defectos nuevos al brazo sembrado: la llave no crece en la misma feature que la limpia - back when the fixture outgrows five defects"
-paths = ["internal/probe/testdata/lenses/manifest.json"]
-deps  = []
 # This non-goal has no paths yet:
-#   no se cambia el puntaje ni el verbo: solo el código que se mide - back when the score itself is the question
+#   no se toca el fixture ni los lentes: la repetición mide lo que ya existe - back when the fixture or a lens changes for a reason this feature records
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "no se cambia el puntaje ni el verbo: solo el código que se mide - back when the score itself is the question"
+# not   = "no se toca el fixture ni los lentes: la repetición mide lo que ya existe - back when the fixture or a lens changes for a reason this feature records"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no corre en CI ni en la gate: N veces una llamada a un modelo multiplica el costo - back when a cheap reviewer makes a probe per change affordable
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no corre en CI ni en la gate: N veces una llamada a un modelo multiplica el costo - back when a cheap reviewer makes a probe per change affordable"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no hay intervalos de confianza ni tests estadísticos: mediana y rango, que es lo que una persona lee - back when the number has to support a claim
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no hay intervalos de confianza ni tests estadísticos: mediana y rango, que es lo que una persona lee - back when the number has to support a claim"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se cambia el puntaje: la regla de encontrado, bajo y perdido queda como está - back when the scoring rule itself is the question
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se cambia el puntaje: la regla de encontrado, bajo y perdido queda como está - back when the scoring rule itself is the question"
 # paths = []
 # deps  = []
 
 [[rule]]
 not   = "the stored proofs are the evidence this tree ran: the package that writes them may change, a proof that already exists may not"
 paths = ["proof/**"]
+deps  = []
+
+[[rule]]
+not   = "no se toca el contenido de los lentes: medir editando el examen no mide nada - back when the fixture or a lens changes for a reason this feature records"
+paths = ["internal/assets/review/*.md"]
+deps  = []
+
+[[rule]]
+not   = "no corre en CI ni en la gate: N veces una llamada a un modelo multiplica el costo - back when a cheap reviewer makes a probe per change affordable"
+paths = [".github/workflows/**"]
+deps  = []
+
+[[rule]]
+not   = "no se toca el fixture ni los lentes: la repeticion mide lo que ya existe"
+paths = ["internal/probe/testdata/lenses/**"]
 deps  = []
