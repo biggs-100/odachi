@@ -802,6 +802,48 @@ func TestStartRefusesAFenceItCannotRead(t *testing.T) {
 	}
 }
 
+// TestStartReportsAFenceThatHadNoRules: the teaching file a first run writes holds
+// no rule, and the next run that adds one still has to say what it saved and what
+// it brought, because a merge nobody reports is a merge nobody can audit.
+func TestStartReportsAFenceThatHadNoRules(t *testing.T) {
+	files := newFakeFiles(map[string]string{"odd/fence.toml": ""}, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+	opts.Exclude = []string{"Pagos"}
+
+	got := start.Run(opts, nil, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	said := strings.Join(got.Lines, "\n")
+	if !strings.Contains(said, "kept 0") || !strings.Contains(said, "added 1") {
+		t.Errorf("the run does not report a merge into an empty fence:\n%s", said)
+	}
+}
+
+// TestStartTouchesNothingWhenTheFenceCannotBeRead: the fence is read before the
+// brief, the profile or the voice are written, so a run that blocks leaves the
+// human's files as they were instead of replacing the vision and then refusing.
+func TestStartTouchesNothingWhenTheFenceCannotBeRead(t *testing.T) {
+	files := newFakeFiles(map[string]string{"odd/fence.toml": "[[rule]]\nnot =\n"}, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+
+	got := start.Run(opts, nil, files, nil)
+
+	if got.Code != start.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+	}
+	for _, path := range []string{"brief.md", "odd/profile.toml"} {
+		if _, ok := files.files[path]; ok {
+			t.Errorf("%s was written by a run that blocked on the fence", path)
+		}
+	}
+}
+
 // TestBriefFlagRecordsTheDraftAsTheArtifact covers the senior/ci path: the run
 // reads the draft instead of asking, and records it as brief.md -a run that leaves
 // no brief.md leaves the project without the vision it just read (0186).
