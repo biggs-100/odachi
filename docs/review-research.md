@@ -190,6 +190,16 @@ lenses are noisy" and not "the arm is clean": it is that **one run is one draw**
 and a precision number needs repetition before it means anything. That is the next
 feature on the instrument, not on the fixture.
 
+The repeated measurement (0265). `--runs 3` on the same fixture, same model,
+2026-11-11: risk, readability and reliability found their defect in all three
+draws; resilience found both of its own in two draws and one in the third; the
+findings nobody planted moved from 3 to 7, and the clean arm from 0 to 5.
+
+Read together with the three earlier draws, this is the shape of the instrument:
+**what the key plants is found reliably, and what nobody planted is where the
+variance lives**. A single precision number would hide that, and a single recall
+number would flatter it. The reading is a median with a range, and the range is
+the finding.
 What it does not say: five defects in a 120-line fixture is not a population, one
 run of one model is a snapshot, and a key written by the same person who wrote the
 fixture inherits that person's blind spots. The instrument is what this part adds;

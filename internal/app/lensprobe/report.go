@@ -140,7 +140,7 @@ func span(s Spread) string {
 func (r Runs) Summary() string {
 	parts := make([]string, 0, len(r.Lenses))
 	for _, row := range r.Lenses {
-		parts = append(parts, row.Lens+" "+strconv.Itoa(row.Found.Median)+"/"+strconv.Itoa(row.Found.Median+row.Low.Median+row.Missed.Median)+" ("+span(row.Found)+")")
+		parts = append(parts, row.Lens+" "+strconv.Itoa(row.Found.Median)+"/"+strconv.Itoa(row.Found.Median+row.Low.Median+row.Missed.Median))
 	}
 	return fmt.Sprintf("runs %d · %s · noise %s · clean %s", r.Count, strings.Join(parts, ", "), span(r.Noise), span(r.Clean))
 }

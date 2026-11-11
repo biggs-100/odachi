@@ -130,7 +130,7 @@ func TestProbeScoresEveryLensAndTheCleanArm(t *testing.T) {
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
 	}
-	want := "runs 1 · risk 1/1 (1), readability 0/1 (0), reliability 0/1 (0), resilience 0/2 (0) · noise 0 · clean 0"
+	want := "runs 1 · risk 1/1, readability 0/1, reliability 0/1, resilience 0/2 · noise 0 · clean 0"
 	if result.Summary != want {
 		t.Errorf("Summary = %q, want %q", result.Summary, want)
 	}
