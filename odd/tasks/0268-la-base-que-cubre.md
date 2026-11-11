@@ -15,7 +15,7 @@ R1 · "check no se contradice en el cierre: un veredicto cuya base es anterior a
 
 ## Steps
 - [x] T1 · a verdict with an earlier base covers the feature: the gate asks git instead of refusing a wider diff   R1 · route:inline · tree:70835b18ed640a353257b54a857f609c2dd265b3
-- [ ] T2 · a close that only moved documents names the verdict it has instead of asking for one   R1 · route:inline
+- [x] T2 · a close that only moved documents names the verdict it has instead of asking for one   R1 · route:inline · tree:52d57dbe0f71307569d77f6568051f5b9f52c274
 
 ## History
 L1 · "check no se contradice en el cierre: un veredicto cuya base es anterior a la de la feature la cubre, y un árbol que solo movió documentos después de ese veredicto no vuelve a pedir review"

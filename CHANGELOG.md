@@ -8,6 +8,20 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The Windows installer no longer trusts a cmdlet.** `scripts/install.ps1` extracted the release with
+  `Expand-Archive -Force`, and a Windows PowerShell 5.1 that inherits a `PSModulePath` carrying PowerShell
+  7's modules loads the modern module, whose `-Force` calls `ExtractToDirectory` with the three-argument
+  overload .NET Framework does not have: the installer died before it verified anything. It now opens the
+  zip with `ZipFile` and extracts each entry, which ships with the framework. A fix, patch (0269).
+- **A base that came before is not another diff.** `odachi check` compared a verdict's base with the
+  feature's by equality, so a review that judged a wider diff read as one that judged something else: the
+  gate asked for a verdict the store already had, next to the same run saying ready, and named a
+  `review --base` the store answers with "this tree already has a verdict". The gate now asks git whether
+  that base came before the feature's -earlier or equal covers, later starts inside it and still refuses-
+  and a close that only moved documents keeps the verdict it has. Patch (0268).
+
 ## v0.38.9 - 2026-11-11
 
 - **The fence keeps what it protects.** `odachi start` reads `odd/fence.toml` before writing it and keeps
