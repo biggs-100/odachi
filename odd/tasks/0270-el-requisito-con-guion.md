@@ -13,7 +13,7 @@ R1 · "un requisito que empieza con guion se puede pasar: `start --light -- "--r
 - `## Unreleased` names it, patch (0270)
 
 ## Steps
-- [ ] T1 · un paso puede empezar con guion: se rechaza la viñeta, y el mensaje dice viñeta   R1 · route:inline
+- [x] T1 · un paso puede empezar con guion: se rechaza la viñeta, y el mensaje dice viñeta   R1 · route:inline · tree:78bcc446152e4a807bc1b709d74776ffaa780f37
 - [ ] T2 · start --light sin -- ensena la forma: el error nombra el -- y la linea entre comillas   R1 · route:inline
 
 ## History

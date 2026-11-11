@@ -181,7 +181,15 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi start -h to see the flags")
+		message := "odachi: invalid flag: " + oneLine(err.Error()) + "; run odachi start -h to see the flags"
+		// A light feature is one line, and that line may name a flag: Go's own
+		// separator is the way in, and a human who typed the line without it reads
+		// this message first. Naming the form costs a sentence and saves a puzzle
+		// (0270).
+		if opts.Light {
+			message += `; a line that starts with a dash goes after --: odachi start --light -- "<the line>"`
+		}
+		fmt.Fprintln(stderr, message)
 		return start.CodeBlocked
 	}
 	// The lane is the line: with --light the one positional argument is the
