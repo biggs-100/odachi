@@ -341,6 +341,13 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		state.HasBrief = true
 		state.BriefMissing = nil
 	}
+
+	// Every artifact this gate is about to interpret has to be text. The question is
+	// asked first because everything after reads them, and a record that does not
+	// decode is one the gate would judge blind (0274).
+	if problem := r.artifactsDecode(); problem != nil {
+		return *problem
+	}
 	closedNow := false
 	if feature != nil {
 		state.OpenQuestions = len(feature.Doc.OpenQuestions())
