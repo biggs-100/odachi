@@ -8,6 +8,14 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A requirement may start with a dash.** `odachi start --light -- "--runs 0 se rechaza"` wrote nothing: the
+  rule against a step starting with a dash refused the line, and without the separator the message was the
+  flag package's own "invalid flag". The rule now refuses the markdown bullet that doubles the checkbox
+  (`- `) and says so, and `start --light` names the separator a line that starts with a dash needs. Patch
+  (0270).
+
 ## v0.38.10 - 2026-11-11
 
 - **The Windows installer no longer trusts a cmdlet.** `scripts/install.ps1` extracted the release with

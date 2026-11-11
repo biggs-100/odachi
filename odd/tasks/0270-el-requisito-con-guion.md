@@ -14,7 +14,7 @@ R1 · "un requisito que empieza con guion se puede pasar: `start --light -- "--r
 
 ## Steps
 - [x] T1 · un paso puede empezar con guion: se rechaza la viñeta, y el mensaje dice viñeta   R1 · route:inline · tree:78bcc446152e4a807bc1b709d74776ffaa780f37
-- [ ] T2 · start --light sin -- ensena la forma: el error nombra el -- y la linea entre comillas   R1 · route:inline
+- [x] T2 · start --light sin -- ensena la forma: el error nombra el -- y la linea entre comillas   R1 · route:inline · tree:c32832b247a57074513307b77b5f12bc65d5d365
 
 ## History
 L1 · "un requisito que empieza con guion se puede pasar: `start --light -- "--runs 0 …"` lo escribe tal cual, y sin el `--` el error dice cómo pasarlo"
