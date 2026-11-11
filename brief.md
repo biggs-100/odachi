@@ -94,3 +94,28 @@
 ## Decisions taken
 - The test reads the dispatcher's own cases instead of a third list: a hand-kept list of verbs is the same drift with one more place to forget.
 - The README loses the numbers instead of updating them: "62 packages" is true today and a lie in a month, and the project already says a number in prose is a claim nobody measures.
+
+## 0274 · lo-que-la-compuerta-ve
+
+## What must exist
+- un artefacto que no decodifica como UTF-8, o que trae las secuencias de un UTF-8 leído como CP850, se rechaza en la compuerta nombrando el archivo, para que la doble codificación se vea sin modelo y sin review
+- the gate compares what the brief says with the requirement its task document carries: two copies of one sentence that no longer match is a record that was mangled, and no heuristic is needed to see it
+- a file saved with a BOM is refused too, because its first line stops being the line the parser reads
+
+## Done when
+- a `brief.md` whose bytes are not UTF-8 blocks the gate, naming the file and how to save it
+- a `brief.md` with a BOM blocks, naming the BOM
+- a brief block whose requirement no longer matches its task document's R1 blocks, naming both files
+- a clean tree stays ready, so the guards do not tax every run
+- `go test ./...` is green and `odachi check --run "go test ./..."` is green
+- `## Unreleased` names it, patch (0274)
+
+## Not included (first version)
+- nothing is repaired: the gate reads and refuses, it never writes the good file back - back when a repair command is the question
+- nothing is guessed: a sentence that no longer matches its document is named, not merged with the other version - back when the tool has to choose between two
+- the marker list is a backstop and not the rule: text with no task document to compare against is the only place it speaks - back when every artifact has a counterpart
+
+## Decisions taken
+- The cross-check beats a blacklist: the brief and its task document carry the same sentence by construction, so a difference is the defect itself; the CP850 markers only cover what has no counterpart.
+- The gate refuses and names; the repair is a human editor or `odachi start`, never a silent rewrite of the record.
+- The mojibake markers are read in `brief.md` and `odd/*.toml` only, because a task document is prose that may have to name them to explain this very defect.

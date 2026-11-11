@@ -137,3 +137,33 @@ deps  = []
 # not   = "the repository's metadata (topics and description) is set with `gh repo edit`, outside the gate, because it is not a file in the tree - back when the tree has to carry it"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   nothing is repaired: the gate reads and refuses, it never writes the good file back - back when a repair command is the question
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "nothing is repaired: the gate reads and refuses, it never writes the good file back - back when a repair command is the question"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   nothing is guessed: a sentence that no longer matches its document is named, not merged with the other version - back when the tool has to choose between two
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "nothing is guessed: a sentence that no longer matches its document is named, not merged with the other version - back when the tool has to choose between two"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the marker list is a backstop and not the rule: text with no task document to compare against is the only place it speaks - back when every artifact has a counterpart
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the marker list is a backstop and not the rule: text with no task document to compare against is the only place it speaks - back when every artifact has a counterpart"
+# paths = []
+# deps  = []
