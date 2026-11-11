@@ -14,7 +14,7 @@ R1 · "el brief deja de reemplazarse: cada start agrega la seccion de su feature
 - `## Unreleased` names it, patch (0271)
 
 ## Steps
-- [ ] T1 · el brief acumula: cada start agrega su bloque y el parser lee la union de todos   R1 · route:inline
+- [x] T1 · el brief acumula: cada start agrega su bloque y el parser lee la union de todos   R1 · route:inline · tree:83edc00899b9d84d3e1955d9b799259477ba6248
 - [ ] T2 · una corrida no duplica: el mismo requisito no agrega un bloque dos veces   R1 · route:inline
 
 ## History

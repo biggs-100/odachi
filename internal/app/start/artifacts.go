@@ -3,6 +3,7 @@ package start
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -276,6 +277,20 @@ func (r *runner) writeBriefBlock(number int, title string, content brief.Brief) 
 	if err != nil {
 		return failure(blocked("could not read " + briefFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again"))
 	}
+
+	// The same requirement is the same feature: a run that repeats it appends
+	// nothing, because the brief is a record of decisions and not a log of attempts.
+	existing := brief.Parse(string(data))
+	fresh := make([]string, 0, len(content.Outcome))
+	for _, outcome := range content.Outcome {
+		if !slices.Contains(existing.Outcome, strings.TrimSpace(outcome)) {
+			fresh = append(fresh, outcome)
+		}
+	}
+	if len(fresh) == 0 {
+		return nil
+	}
+	content.Outcome = fresh
 
 	block := fmt.Sprintf("## %04d · %s\n\n%s", number, title, brief.RenderFeature(content))
 	merged := strings.TrimRight(string(data), "\n") + "\n\n" + block

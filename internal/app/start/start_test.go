@@ -873,6 +873,27 @@ func TestStartKeepsTheBriefAFeatureAlreadyWrote(t *testing.T) {
 	}
 }
 
+// TestStartDoesNotWriteTheSameBlockTwice: running the same requirement again is
+// the same feature, and the brief is a record of decisions, not a log of attempts.
+func TestStartDoesNotWriteTheSameBlockTwice(t *testing.T) {
+	files := newFakeFiles(nil, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Force = true
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+
+	for i := 0; i < 2; i++ {
+		if got := start.Run(opts, nil, files, nil); got.Code != start.CodeOK {
+			t.Fatalf("run %d: Code = %d, want %d (message: %s)", i+1, got.Code, start.CodeOK, got.Message)
+		}
+	}
+
+	text := files.content(t, "brief.md")
+	if count := strings.Count(text, "- "+outcome); count != 1 {
+		t.Errorf("the requirement appears %d times, want once:\n%s", count, text)
+	}
+}
+
 // TestBriefFlagRecordsTheDraftAsTheArtifact covers the senior/ci path: the run
 // reads the draft instead of asking, and records it as brief.md -a run that leaves
 // no brief.md leaves the project without the vision it just read (0186).
