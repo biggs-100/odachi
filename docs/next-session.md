@@ -1,50 +1,55 @@
 # Next session
 
-Written after `v0.38.9` shipped. Nothing is owed.
+Written after `v0.38.10` shipped. Nothing is owed.
 
 ## Where the project is
 
-- `v0.38.9` is published: annotated tag on `63a5657` (`Merge pull request #517`), and the binary installed on
-  this machine reports `odachi v0.38.9`. `main` is that merge commit.
-- The two patches it names went in with #516: `odachi start` keeps the fence it finds instead of drawing it
-  again (0266), and `odachi review probe --runs 0` is refused instead of being measured as one draw (0267).
-- 265 features, 643 steps, 0 open questions; `docs/review-debt.md` holds no open row.
-- `## Unreleased` no longer exists: the next feature writes it again, above the newest version.
+- `v0.38.10` is published: annotated tag on `358b78c` (`Merge pull request #520`), sixteen assets, and the
+  binary installed on this machine reports `odachi v0.38.10`. `main` is that merge commit.
+- Two patches name it: `odachi check` no longer calls a verdict judged from an earlier base "another diff"
+  (0268), and `scripts/install.ps1` extracts the release without `Expand-Archive` (0269).
+- 267 features, 646 steps, 0 open questions; `docs/review-debt.md` holds no open row.
+- The closing tree carries `proof/0269-install-ps1-no.txt` and one verdict
+  (`.git/odachi/reviews/3bfb0f4….json`, reliability and resilience, base `0d9293c`, no findings).
+- `## Unreleased` does not exist: the next feature writes it again, above `## v0.38.10`.
 
 ## What shipped
 
-- **0266, the fence keeps what it protects.** `start` reads `odd/fence.toml` before writing it, keeps every
-  rule as it was, appends only the non-goals the run brings, reports how many it kept, and blocks on a fence
-  it cannot parse instead of overwriting it. `Decode` and `Render` live together in
-  `internal/adapters/fencetoml`, so the writer and the gate share one grammar. Proved with the installed
-  binary in a scratch project: three runs, a rule added by hand between them, `kept 3 rules it already had
-  and added 1`, and the hand-written rule still there.
-- **0267, zero draws is refused.** The row 0265's review left on `probe.go` is paid; the range test iterates
-  `{-1, 0, MaxRuns + 1}` and was observed red on the zero.
+- **0268, a base that came before is not another diff.** `check` compared the verdict's base with the
+  feature's by equality, so a review that judged a wider diff read as "judged something else": the run said
+  `ready` and, in the same output, `the feature is closed and its tree has no verdict`, naming a
+  `review --base` the store answers with "this tree already has a verdict". The gate now asks git whether
+  that base came before -earlier or equal covers, later starts inside the feature and is still refused- and
+  the store's search asks the same question, so a close that only moved documents keeps its verdict. The
+  port gained `Ancestor` for it.
+- **0269, the installer stops trusting a cmdlet.** Four Windows-only installer tests were red on a machine
+  whose Windows PowerShell 5.1 inherits PowerShell 7's `PSModulePath`: the modern `Archive` module's
+  `-Force` calls `ExtractToDirectory` with the three-argument overload .NET Framework lacks, and the
+  installer died before verifying anything. `install.ps1` opens the zip with `ZipFile` now.
 
 ## The questions that wait
 
-- **None open.** The release question this file carried is answered: `v0.38.9` exists and the chain in
-  `docs/releases.md` was followed (rename the heading only, PR, merge, annotated tag).
-- **One approval is one draw.** The final review of the closing tree approved it with no findings, and an
-  earlier draw of the same code produced a causal blocker that turned out to be real. The lens is a sample,
-  not a proof that nothing is left (0265).
+- **None open.** The next feature writes the new `## Unreleased`.
+- **One approval is one draw**, and one fix is one sample: the lens approved this tree with no findings,
+  after an earlier draw of a similar tree produced a causal blocker that was real (0265).
 
 ## The limits to remember
 
+- **The environment is part of the red.** Four installer tests failed identically on `main` and passed in
+  CI: a child Windows PowerShell inherits `PSModulePath`, so which `Expand-Archive` it loads depends on who
+  started it. A red that does not reproduce in CI is a machine fact until proved otherwise; measure it with
+  a probe before believing the change broke it.
 - **The store can block a verdict.** A causal BLOCKER or CRITICAL row stays potent while its blob is
-  unchanged, and every new verdict inherits it. `docs/review-debt.md` is the list a human reads; when a row
-  is missing there, the store still holds it -that is how 0266 found 0265's row.
-- **One tree, one verdict.** A second `odachi review --base <sha>` for a tree that already has a verdict is
-  refused: the verdict is content-addressed by tree, not by base. When two features close on one branch,
-  review with the older feature's base.
-- **A docs-only change owes no new proof.** `check` says "the proof belongs to the code it ran on, and only
-  documents moved since", which is why closing documents commit without another 700-second run.
-- **A document that describes the past goes stale in one release.** This file named a PR that was already
-  merged and a release that had already shipped; the same happened at the close of 0265 with "Nothing is
-  owed". Rewrite it when the facts move, not only when the session ends.
-- **A light feature's requirement cannot start with a dash**: `odachi start --light -- "un --runs 0 …"` is
-  the shape that works.
+  unchanged and every new verdict inherits it. `docs/review-debt.md` is what a human reads; when a row is
+  missing there, the store still holds it.
+- **One tree, one verdict.** Review with the oldest feature's base when two features close on one branch;
+  with 0268 in, a wider verdict covers the later feature, and the exact-base complaint is gone.
+- **A docs-only change owes no new proof**, and `check` says so: "the proof belongs to the code it ran on,
+  and only documents moved since".
+- **This file goes stale in one release.** It has now been rewritten twice in a day for that reason; write
+  it when the facts move, not only when the session ends.
+- **Two features in one pull request is a last resort** and it has one justification: the second is what
+  makes the first provable here. Write that in the body, or split.
 - **One heavy gate per machine**: `go test ./...` takes about 700 s and `check --run` writes the proof.
 
 ## The commands that work
@@ -55,11 +60,12 @@ odachi check --run "go test ./..." --timeout 1800
 
 ```sh
 # a verdict for the tree, with the answer kept beside it
-odachi review --base <feature base> --lens reliability --model opencode-go/deepseek-v4.1-flash \
+odachi review --base <oldest feature base> --lens reliability,resilience \
+  --because "<why the extra lens>" --model opencode-go/deepseek-v4.1-flash \
   --exec 'C:\Users\USER\AppData\Local\Temp\odachi-rev.bat {model} {prompt} C:\Users\USER\AppData\Local\Temp\review.json'
 ```
 
 ```sh
-# the release, after the merge it names: heading only, an annotated tag, and the binary rebuilt
+# the release, after the merge it names: heading only, an annotated tag, the binary rebuilt
 go build -trimpath -ldflags "-s -w -X main.version=vX.Y.Z" -o %LOCALAPPDATA%\odachi\bin\odachi.exe ./cmd/odachi
 ```
