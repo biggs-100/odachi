@@ -8,6 +8,14 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **`review --since` takes the tree a person copies.** The store names a verdict by forty characters, and
+  `--since` with a prefix looked for a file named after the prefix: "there is no verdict for the tree
+  --since names (bbf385ca)", about a verdict the clone held. The correction now resolves the prefix against
+  the store's own listing -the one `--all` prints- refuses an ambiguous prefix naming its candidates, says
+  when nothing starts with it, and tells which tree the correction completed. Patch (0272).
+
 ## v0.38.12 - 2026-11-11
 
 - **The brief remembers every feature.** `odachi start` wrote `brief.md` from its own answers, so the

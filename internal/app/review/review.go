@@ -1879,6 +1879,9 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	if downgraded > 0 {
 		lines = append(lines, fmt.Sprintf("earned blocking: %d finding(s) downgraded for citing outside the candidate", downgraded))
 	}
+	if corrected, problem := r.sinceVerdict(); problem == nil && strings.TrimSpace(corrected.Tree) != "" {
+		lines = append(lines, "completed the verdict of "+corrected.Tree)
+	}
 	if carried.findings+carried.passes > 0 {
 		lines = append(lines, fmt.Sprintf("carried from the store: %d potent finding(s) and %d potent pass(es) about unchanged bytes", carried.findings, carried.passes))
 	}
@@ -2974,6 +2977,65 @@ func (r *runner) base() string {
 	return EmptyTree
 }
 
+// sinceTree resolves the spelling --since takes into the tree the store names: the
+// full hash, or the prefix of one verdict this clone holds. The listing is the one
+// `--all` prints, so a correction costs a copy-paste from what the command showed
+// instead of forty characters read out of a directory (0272).
+func (r *runner) sinceTree(spelling string) (string, *Result) {
+	tree := strings.TrimSpace(spelling)
+	if tree == "" {
+		return "", nil
+	}
+
+	names, err := r.files.List(r.storePath(domain.Dir))
+	if err != nil {
+		problem := blocked("could not read the review store: " + oneLine(err.Error()) + "; check the permissions and run odachi review --all")
+		return "", &problem
+	}
+
+	lower := strings.ToLower(tree)
+	matches := make([]string, 0, 1)
+	for _, name := range names {
+		if !strings.HasSuffix(name, ".json") || strings.HasSuffix(name, ".scope.json") {
+			continue
+		}
+		stem := strings.TrimSuffix(name, ".json")
+		if strings.HasPrefix(strings.ToLower(stem), lower) {
+			matches = append(matches, stem)
+		}
+	}
+	sort.Strings(matches)
+
+	switch len(matches) {
+	case 0:
+		problem := Result{
+			Code:    CodeBlocked,
+			Message: "no verdict in this clone starts with " + tree,
+			Lines: []string{
+				"no verdict in this clone starts with " + tree + ": a correction completes an answer this clone holds",
+				"next: odachi review --all",
+			},
+		}
+		return "", &problem
+	case 1:
+		return matches[0], nil
+	default:
+		shown := matches
+		if len(shown) > 3 {
+			shown = shown[:3]
+		}
+		problem := Result{
+			Code:    CodeBlocked,
+			Message: tree + " names " + strconv.Itoa(len(matches)) + " verdicts: write more characters",
+			Lines: []string{
+				tree + " names " + strconv.Itoa(len(matches)) + " verdicts; more characters pick one: " + strings.Join(shown, ", "),
+				"next: odachi review --all",
+			},
+		}
+		return "", &problem
+	}
+}
+
 // sinceVerdict reads the verdict --since names, once. A correction completes an
 // answer this clone holds: without the file there is nothing to complete, and
 // reviewing the whole candidate is the way out.
@@ -2981,7 +3043,10 @@ func (r *runner) sinceVerdict() (domain.Verdict, *Result) {
 	if r.correction != nil {
 		return *r.correction, nil
 	}
-	tree := strings.TrimSpace(r.opts.Since)
+	tree, problem := r.sinceTree(r.opts.Since)
+	if problem != nil {
+		return domain.Verdict{}, problem
+	}
 	if tree == "" {
 		return domain.Verdict{}, nil
 	}

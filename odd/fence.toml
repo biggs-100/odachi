@@ -19,6 +19,36 @@ paths = ["internal/probe/testdata/lenses/**"]
 deps  = []
 
 # This non-goal has no paths yet:
+#   the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   a step that starts with a bullet and a space is never accepted: that is the one that doubles the checkbox - back when the renderer stops writing the bullet
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "a step that starts with a bullet and a space is never accepted: that is the one that doubles the checkbox - back when the renderer stops writing the bullet"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   nothing about the other verbs changes: `plan` and `ask` keep their messages, and only `start --light` learns the form - back when another verb takes a free line
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "nothing about the other verbs changes: `plan` and `ask` keep their messages, and only `start --light` learns the form - back when another verb takes a free line"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
 #   the shape of a block does not change: it repeats the canonical headers, which is what the parser already reads - back when the block shape itself is the question
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
@@ -45,5 +75,35 @@ deps  = []
 #
 # [[rule]]
 # not   = "the past is never rewritten: a block already written is not corrected, reordered or trimmed - back when the vision itself has to be edited"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no other verb learns the prefix: `--show` and `--attach` keep asking for the exact name or a path - back when they need the same courtesy
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no other verb learns the prefix: `--show` and `--attach` keep asking for the exact name or a path - back when they need the same courtesy"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   an ambiguous prefix never picks one: it asks for more characters instead of guessing - back when the store keeps aliases
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "an ambiguous prefix never picks one: it asks for more characters instead of guessing - back when the store keeps aliases"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   nothing is suggested or ordered like a search: the correction lane names the candidates it found, it does not rank them - back when finding a tree becomes a question of its own
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "nothing is suggested or ordered like a search: the correction lane names the candidates it found, it does not rank them - back when finding a tree becomes a question of its own"
 # paths = []
 # deps  = []

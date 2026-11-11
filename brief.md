@@ -46,3 +46,27 @@
 ## Decisions taken
 - A block repeats the canonical headers instead of inventing a nested grammar: `brief.Parse` already appends every section it finds, and a second grammar would be a parser to keep in step forever.
 - A feature is named by its number and slug, the same pair its task document carries, so the brief and the plan are easy to read side by side.
+
+## 0272 · el-prefijo-que-resuelve
+
+## What must exist
+- `--since` acepta el árbol que un humano copia: un prefijo del veredicto guardado, y resuelve al árbol completo antes de medir el delta
+- the refusal tells the two cases apart: nothing in the store starts with that prefix, or several verdicts do and more characters are needed
+- the full forty-character tree keeps working exactly as it does today
+
+## Done when
+- `--since <prefix>` of a single stored verdict measures the delta from its full tree, and the run says which tree it completed
+- a prefix that matches two verdicts is refused, naming both and asking for more characters
+- a prefix that matches none is refused with a message that no stored verdict starts with it, and names `odachi review --all`
+- a full tree keeps working without a resolver in the way
+- `go test ./...` is green and `odachi check --run "go test ./..."` is green
+- `## Unreleased` names it, patch (0272)
+
+## Not included (first version)
+- no other verb learns the prefix: `--show` and `--attach` keep asking for the exact name or a path - back when they need the same courtesy
+- an ambiguous prefix never picks one: it asks for more characters instead of guessing - back when the store keeps aliases
+- nothing is suggested or ordered like a search: the correction lane names the candidates it found, it does not rank them - back when finding a tree becomes a question of its own
+
+## Decisions taken
+- The prefix is read against the store's own listing, which is what `--all` prints: one place decides what a tree is called, and the correction lane does not grow a second index.
+- The message says which tree the correction completed, because the whole point of the lane is that the human does not have to remember a forty-character hash.
