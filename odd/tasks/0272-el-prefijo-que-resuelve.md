@@ -13,8 +13,8 @@ R1 · "`--since` acepta el árbol que un humano copia: un prefijo del veredicto 
 - `## Unreleased` names it, patch (0272)
 
 ## Steps
-- [ ] T1 · el prefijo resuelve: --since con un pedazo del arbol mide desde el veredicto guardado   R1 · route:inline
-- [ ] T2 · el prefijo ambiguo o ausente se explica: dos se nombran, ninguno dice como listarlos   R1 · route:inline
+- [x] T1 · el prefijo resuelve: --since con un pedazo del arbol mide desde el veredicto guardado   R1 · route:inline · tree:495212d0f467326bd8738048b6af441a45be7ba9
+- [x] T2 · el prefijo ambiguo o ausente se explica: dos se nombran, ninguno dice como listarlos   R1 · route:inline · tree:495212d0f467326bd8738048b6af441a45be7ba9
 
 ## History
 L1 · "`--since` acepta el árbol que un humano copia: un prefijo del veredicto guardado, y resuelve al árbol completo antes de medir el delta"
