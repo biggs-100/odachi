@@ -288,7 +288,10 @@ func (r *runner) writeBriefBlock(number int, title string, content brief.Brief) 
 		}
 	}
 	if len(fresh) == 0 {
-		return nil
+		// Nothing new, and the file is still written: --force is the human asking
+		// for the artifacts again, its backup is what undo reads, and rewriting the
+		// same bytes adds no block.
+		return r.put(briefFile, data)
 	}
 	content.Outcome = fresh
 

@@ -15,7 +15,7 @@ R1 · "el brief deja de reemplazarse: cada start agrega la seccion de su feature
 
 ## Steps
 - [x] T1 · el brief acumula: cada start agrega su bloque y el parser lee la union de todos   R1 · route:inline · tree:83edc00899b9d84d3e1955d9b799259477ba6248
-- [ ] T2 · una corrida no duplica: el mismo requisito no agrega un bloque dos veces   R1 · route:inline
+- [x] T2 · una corrida no duplica: el mismo requisito no agrega un bloque dos veces   R1 · route:inline · tree:f06834b5d23c0e0c4762f493f581b75197b67783
 
 ## History
 L1 · "el brief deja de reemplazarse: cada start agrega la seccion de su feature, y lo que estaba escrito antes queda"
