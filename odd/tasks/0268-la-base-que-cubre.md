@@ -19,3 +19,4 @@ R1 · "check no se contradice en el cierre: un veredicto cuya base es anterior a
 
 ## History
 L1 · "check no se contradice en el cierre: un veredicto cuya base es anterior a la de la feature la cubre, y un árbol que solo movió documentos después de ese veredicto no vuelve a pedir review"
+L2 · OFICIO · "T1's recorded tree (70835b1) predates a gofmt fix and the step's commit is now 765686c" (porque the new adapter test was written without its final newline and gofmt -l flagged it; plan --done does not rewrite a finished step, so the record says which tree the step actually left and what changed after it)

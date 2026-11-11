@@ -1098,7 +1098,10 @@ func (r *runner) lastVerdictTree(feature *tasks.Document) (string, bool) {
 		if err != nil || strings.TrimSpace(verdict.Tree) == "" {
 			continue
 		}
-		if !sameCommit(r.git, r.opts.Dir, verdict.Base, base) {
+		// A verdict that judged from this base or an earlier one speaks for the
+		// feature: the wider diff contains it (0268). A later base began inside the
+		// feature and never saw its start.
+		if !r.baseCovers(verdict.Base, base) {
 			continue
 		}
 		if best == "" || at.After(bestAt) || (at.Equal(bestAt) && verdict.Tree > best) {

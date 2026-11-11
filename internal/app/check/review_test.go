@@ -1414,6 +1414,42 @@ func TestAVerdictWithALaterBaseStillOwesTheVerdict(t *testing.T) {
 	}
 }
 
+// TestADocumentsOnlyCloseAfterAWiderVerdictStaysPaperwork is 0268's second half:
+// the verdict that judged the close started from an earlier base, so the store's
+// search for "a verdict at this feature's base" missed it and the close asked for a
+// review it already had.
+func TestADocumentsOnlyCloseAfterAWiderVerdictStaysPaperwork(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	const judgedFrom = "dac1e1bfaf2c6a3c39418ff689700a1fadef6adf"
+	const closeTree = "9e9a800f6d1578115dafb0b154ff34bfa4499bd8"
+
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	files[filepath.ToSlash(reviewPath(closeTree))] = verdictFileAtBase(t, closeTree, judgedFrom)
+
+	note := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"CHANGELOG.md"},
+		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": reviewableDoc(base, true)},
+		betweenByFrom: map[string][]string{
+			base:      {"internal/app/check/check.go", "CHANGELOG.md", "odd/tasks/0007-turnos.md"},
+			closeTree: {"CHANGELOG.md"},
+		},
+		ancestor: func(older, newer string) (bool, error) {
+			return older == judgedFrom && newer == base, nil
+		},
+	}
+
+	got := run(t, newFakeFiles(files), note, check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a release note after a wider verdict asked for a verdict: %s (%s)", got.Message, got.Next)
+	}
+	if note := reviewNote(got); strings.Contains(note, "odachi review --base") {
+		t.Errorf("the run still asks for a command the store refuses:\n%s", note)
+	}
+}
+
 // reviewNote is what a ready run said about the review it did not make. With the
 // project's switch on, a close names the verdict and stays ready (ADR 0043); the
 // only thing that refuses is --require-review, and a finding the review made.
