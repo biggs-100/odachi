@@ -18,3 +18,4 @@ R1 · "el brazo limpio del fixture deja de tener defectos: los hallazgos que un 
 
 ## History
 L1 · "el brazo limpio del fixture deja de tener defectos: los hallazgos que un lente reporta sobre él se pagan en el código, o se registran como gusto y se dejan"
+L2 · OFICIO · "el probe no llega a clean 0: dos corridas del mismo codigo limpio dieron clean 1 y clean 4, con hallazgos distintos" (porque cada corrida es una tirada del revisor, no una medicion: la limpieza paga defectos reales pero la varianza del muestreo impide que el numero baje a cero, y el Done when estaba escrito como si una corrida fuera una medicion)

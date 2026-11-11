@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"errors"
 	"context"
 	"fmt"
 	"io"
@@ -11,6 +12,9 @@ import (
 
 // attempts is how many times a fetch is tried before it gives up.
 const attempts = 3
+
+// backoff grows with each attempt: a remote that is down is not hammered.
+const backoff = 50 * time.Millisecond
 
 // fetchTimeout bounds one remote call so a peer that never answers cannot hold
 // the caller forever.
@@ -49,11 +53,19 @@ func (c *cache) set(k, v string) {
 func (c *cache) fetch(ctx context.Context, url string) (string, error) {
 	var last error
 	for attempt := 0; attempt < attempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return "", fmt.Errorf("fetch: %w", err)
+		}
 		body, err := c.once(ctx, url)
 		if err == nil {
 			return body, nil
 		}
+		var status *statusError
+		if errors.As(err, &status) && !status.retry {
+			return "", fmt.Errorf("fetch: %w", err)
+		}
 		last = err
+		time.Sleep(time.Duration(attempt+1) * backoff)
 	}
 	return "", fmt.Errorf("fetch after %d attempts: %w", attempts, last)
 }
@@ -70,7 +82,7 @@ func (c *cache) once(ctx context.Context, url string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return "", fmt.Errorf("remote answered %s", resp.Status)
+		return "", &statusError{status: resp.Status, retry: resp.StatusCode >= http.StatusInternalServerError}
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize+1))
@@ -82,3 +94,12 @@ func (c *cache) once(ctx context.Context, url string) (string, error) {
 	}
 	return string(body), nil
 }
+
+// statusError is an answer the remote gave and will give again: a 4xx is the
+// caller's mistake, a 5xx is worth retrying.
+type statusError struct {
+	status string
+	retry  bool
+}
+
+func (e *statusError) Error() string { return "remote answered " + e.status }
