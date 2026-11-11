@@ -2,6 +2,14 @@
 
 **Two hands: you decide, the agent builds. And you learn the craft.**
 
+## Contents
+
+- [What it is](#what-it-is) - [What it is NOT](#what-it-is-not)
+- [The four artifacts](#the-four-artifacts) - [The skills, in your agent](#the-skills-in-your-agent)
+- [Ceremony and voice](#ceremony-and-voice) - [Review: four lenses, no ceremony](#review-four-lenses-no-ceremony)
+- [CI: the gate from the base ref](#ci-the-gate-from-the-base-ref)
+- [Installation](#installation) - [Contributing](#contributing) - [Status](#status) - [License](#license)
+
 ## What it is
 
 - **Proof-Driven Development**: the method has a name. Nothing is done without a
@@ -631,24 +639,30 @@ whose four checks passed, and the gate keeps the failed output when it does not.
 
 ## Status
 
-Pure domain in `internal/domain/...` with an import guard, adapters in
-`internal/adapters/...`, and eighteen surfaces: `start`, `ask`, `plan`, `level`,
-`summary`, `progress`, `undo`, `check`, `review`, `doctor`, `bench`, `init`, `setup`,
-`skills`, `skill new`, `role`, `pack` and `--version`. 44 packages, green on Linux, macOS and
-Windows —ubuntu repeats the internal suite with the race detector—.
+Pure domain in `internal/domain/...` with an import guard, and adapters in
+`internal/adapters/...`. The surfaces are the ones `odachi --help` lists, and a
+test fails when one of them stops appearing there; the suite is green on Linux,
+macOS and Windows, and ubuntu repeats the internal suite with the race detector.
+This file keeps no count of packages or verbs: a number in prose is a claim nobody
+repeats, and it rots in a week.
 
 Published releases and what changed in each one: [CHANGELOG.md](CHANGELOG.md) and the
-[releases page](https://github.com/biggs-100/odachi/releases). This file does not name the newest: a number here is a claim nobody
-measures. The one-line
-installation is tested against the
-real release, not a fixture. `install.ps1` was verified by hand on Windows with
-the published release: there is no automated test because it would need an HTTP
-listener in CI.
+[releases page](https://github.com/biggs-100/odachi/releases). This file does not
+name the newest for the same reason. The one-line installation is tested against
+the real release, not a fixture: `scripts/install.sh` runs over `file://` against a
+tarball the test builds, and `scripts/install.ps1` runs the same way on Windows,
+with a shim answering for cosign, so what the tests measure is the installer's
+decision and not sigstore's cryptography.
 
-The release config **signs the checksums and ships an SBOM per archive**, and it
-**has no `brews` and no provenance**: there is no tap, and the chain stops at the
-signature that says who published (provenance would say which source produced
-it). Each of those is added when it exists, not before.
+The release **signs the checksums, ships an SBOM per archive and publishes a
+provenance attestation**, which names the repository, the commit and the workflow
+that produced each file:
+
+```sh
+gh attestation verify odachi_<version>_windows_amd64.zip --repo biggs-100/odachi
+```
+
+There is **no Homebrew tap**: it is added when it exists, not before.
 
 ## License
 

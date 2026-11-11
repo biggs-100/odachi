@@ -70,3 +70,27 @@
 ## Decisions taken
 - The prefix is read against the store's own listing, which is what `--all` prints: one place decides what a tree is called, and the correction lane does not grow a second index.
 - The message says which tree the correction completed, because the whole point of the lane is that the human does not have to remember a forty-character hash.
+
+## 0273 · la-cara-dice-la-verdad
+
+## What must exist
+- atacá todo eso: que el help liste todos los verbos, que el README no afirme lo que el repo desmiente (provenance, surfaces, packages, install.ps1), y los topics y la descripción del repo
+- the usage block cannot drift from the dispatcher again: a test reads the verbs the binary answers and finds each one where a person looks
+- the README stops measuring what it cannot measure: a count in prose is a claim nobody repeats, and the command that answers it is one line away
+
+## Done when
+- every verb the dispatcher handles appears in `odachi --help`, and a test fails naming the one that is missing (observed red with `design` today)
+- `review probe`, `review mode` and `review waive` are visible where a person looking for review finds them
+- the README no longer claims a package count, a surface count, that the release has no provenance, or that `install.ps1` has no automated test; each place names the command or keeps no number
+- the README opens with a short table of contents that links the sections it has
+- `go test ./...` is green and `odachi check --run "go test ./..."` is green
+- `## Unreleased` names it, patch (0273)
+
+## Not included (first version)
+- no new verb and no new flag: the change is what the binary says about itself - back when a surface is actually missing
+- the prose of the README beyond the claims that are false or rot: no rewrite of the tutorial - back when the story itself has to change
+- the repository's metadata (topics and description) is set with `gh repo edit`, outside the gate, because it is not a file in the tree - back when the tree has to carry it
+
+## Decisions taken
+- The test reads the dispatcher's own cases instead of a third list: a hand-kept list of verbs is the same drift with one more place to forget.
+- The README loses the numbers instead of updating them: "62 packages" is true today and a lie in a month, and the project already says a number in prose is a claim nobody measures.
