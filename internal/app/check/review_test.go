@@ -110,6 +110,21 @@ func verdictFileAtBase(t *testing.T, tree, base string) string {
 	return string(domainreview.Render(sealed))
 }
 
+// verdictFileWithRowsAtBase seals a verdict that says which diff it judged and
+// carries the coverage row for every file it passed.
+func verdictFileWithRowsAtBase(t *testing.T, tree, base string, passes []domainreview.Pass) string {
+	t.Helper()
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "claude",
+		Lenses:   []string{domainreview.Reliability},
+		Passes:   passes,
+	}, tree, base, reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the seeded verdict: %v", err)
+	}
+	return string(domainreview.Render(sealed))
+}
+
 // codeChange is a candidate that touches ordinary code, so the evidence asks for
 // the reliability lens and the review gate is on.
 func codeChange() *fakeGit {
@@ -1331,6 +1346,71 @@ func TestACommittedReleaseNoteAfterTheCloseStaysPaperwork(t *testing.T) {
 
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("a release note after the close asked for a verdict: %s (%s)", got.Message, got.Next)
+	}
+}
+
+// TestAVerdictWithAnEarlierBaseCoversTheFeature is 0268: a verdict that judged a
+// wider diff judged this feature's too. Two features closed on one branch and the
+// review used the older base; the gate read it as "another diff" and sent the human
+// to `odachi review --base`, a command the store answers with "this tree already
+// has a verdict".
+func TestAVerdictWithAnEarlierBaseCoversTheFeature(t *testing.T) {
+	const featureBase = "3ba149ebc39c806fc9a0e832b3decd15eb82f1cc"
+	const judgedFrom = "dac1e1bfaf2c6a3c39418ff689700a1fadef6adf"
+
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(featureBase, true)
+	files[filepath.ToSlash(reviewPath(currentTree))] = verdictFileWithRowsAtBase(t, currentTree, judgedFrom,
+		[]domainreview.Pass{{Path: "internal/app/check/check.go", Blob: checkBlob, Lens: domainreview.Reliability}})
+
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+		ancestor: func(older, newer string) (bool, error) {
+			return older == judgedFrom && newer == featureBase, nil
+		},
+	}
+
+	got := run(t, newFakeFiles(files), git, check.Options{ReviewMode: true, RequireReview: true})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a verdict with an earlier base was read as another diff: %s (%s)", got.Message, got.Next)
+	}
+	if note := strings.Join(got.Lines, "\n"); strings.Contains(note, "odachi review --base") {
+		t.Errorf("the run still asks for a command the store refuses:\n%s", note)
+	}
+}
+
+// TestAVerdictWithALaterBaseStillOwesTheVerdict is the other half: a base after
+// the feature's start means the review never saw the beginning of the diff, and
+// that is the one case the base field exists for.
+func TestAVerdictWithALaterBaseStillOwesTheVerdict(t *testing.T) {
+	const featureBase = "3ba149ebc39c806fc9a0e832b3decd15eb82f1cc"
+	const judgedFrom = "9e9a800f6d1578115dafb0b154ff34bfa4499bd8" // after the feature started
+
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(featureBase, true)
+	files[filepath.ToSlash(reviewPath(currentTree))] = verdictFileWithRowsAtBase(t, currentTree, judgedFrom,
+		[]domainreview.Pass{{Path: "internal/app/check/check.go", Blob: checkBlob, Lens: domainreview.Reliability}})
+
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+		ancestor: func(older, newer string) (bool, error) {
+			// The feature's base is the ancestor here, not the verdict's.
+			return older == featureBase && newer == judgedFrom, nil
+		},
+	}
+
+	got := run(t, newFakeFiles(files), git, check.Options{ReviewMode: true, RequireReview: true})
+
+	if got.Code == int(gate.Ready) {
+		t.Fatal("a verdict whose base starts after the feature was accepted")
+	}
+	if !strings.Contains(got.Message, featureBase) {
+		t.Errorf("the refusal does not name the base the feature starts from: %q", got.Message)
 	}
 }
 

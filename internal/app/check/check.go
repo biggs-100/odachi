@@ -204,6 +204,10 @@ type Git interface {
 	// MergeBase is the fork point of HEAD and a ref: the commit a document-less
 	// change is measured from, and the base its review must name.
 	MergeBase(root, ref string) (string, error)
+	// Ancestor answers whether older is an ancestor of newer. A verdict that
+	// judged from an earlier base saw this feature's whole diff; one that started
+	// later never saw its beginning, and that is the base field's question (0268).
+	Ancestor(root, older, newer string) (bool, error)
 	// OnDefaultBranch answers whether HEAD sits on the branch this clone follows
 	// for base, and names it. A detached HEAD has no name, so the repository
 	// answers from the commits; a clone with no local default answers no, which is
@@ -1297,10 +1301,11 @@ func (r *runner) requireReview(base string) *Result {
 		return &problem
 	}
 
-	// A closed feature owes the verdict of its own diff. A verdict that judged
-	// something else - the closing commit, another base - does not answer the
-	// question this tree asks, and accepting it would make the base decoration.
-	if base != "" && !sameCommit(r.git, r.opts.Dir, verdict.Base, base) {
+	// A closed feature owes the verdict of its own diff. A base earlier than the
+	// feature's judged that diff and more, so it answers the question this tree
+	// asks; a base after the feature's start never saw its beginning, and accepting
+	// it would make the base decoration (0268).
+	if base != "" && !r.baseCovers(verdict.Base, base) {
 		message := fmt.Sprintf("the review of this tree judged another diff (base %q): the feature starts at %s", strings.TrimSpace(verdict.Base), base)
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
@@ -1418,6 +1423,26 @@ func (r *runner) requireReview(base string) *Result {
 // would not be runnable.
 func (r *runner) storeFile(rel string) string {
 	return filepath.ToSlash(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
+}
+
+// baseCovers reports whether a verdict judged the diff this feature asks about:
+// the same base, or an earlier one, whose diff contains the feature's whole. A
+// base after the feature's start begins inside it and never saw its beginning,
+// which is the one case the field exists for. A repository that cannot answer is
+// "no": a verdict nobody can place is not evidence (0268).
+func (r *runner) baseCovers(judged, start string) bool {
+	if sameCommit(r.git, r.opts.Dir, judged, start) {
+		return true
+	}
+	older, newer := strings.TrimSpace(judged), strings.TrimSpace(start)
+	if older == "" || newer == "" {
+		return false
+	}
+	covered, err := r.git.Ancestor(r.opts.Dir, older, newer)
+	if err != nil {
+		return false
+	}
+	return covered
 }
 
 // sameCommit reports whether two spellings name the same commit. A base is a

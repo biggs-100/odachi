@@ -265,6 +265,18 @@ func MergeBase(root, ref string) (string, error) {
 	return compareBase(root, strings.TrimSpace(ref))
 }
 
+// Ancestor answers whether older is an ancestor of newer: the question
+// `git merge-base --is-ancestor` answers, and equal commits are not "an ancestor"
+// -the caller already decided equality, and folding the two would hide which one
+// it heard.
+func Ancestor(root, older, newer string) (bool, error) {
+	older, newer = strings.TrimSpace(older), strings.TrimSpace(newer)
+	if older == "" || newer == "" {
+		return false, errors.New("git: an ancestry question needs two commits")
+	}
+	return reachableFrom(root, newer, older)
+}
+
 // OnDefaultBranch answers whether HEAD sits on the default branch of the clone
 // as base names it: origin/main names `main`, refs/remotes/origin/main names
 // `main` too, and a remote on `trunk` names `trunk`. A local branch is the

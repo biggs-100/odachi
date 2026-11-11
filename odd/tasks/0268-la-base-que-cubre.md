@@ -14,7 +14,7 @@ R1 · "check no se contradice en el cierre: un veredicto cuya base es anterior a
 - `## Unreleased` names the rule, patch (0268)
 
 ## Steps
-- [ ] T1 · a verdict with an earlier base covers the feature: the gate asks git instead of refusing a wider diff   R1 · route:inline
+- [x] T1 · a verdict with an earlier base covers the feature: the gate asks git instead of refusing a wider diff   R1 · route:inline · tree:70835b18ed640a353257b54a857f609c2dd265b3
 - [ ] T2 · a close that only moved documents names the verdict it has instead of asking for one   R1 · route:inline
 
 ## History
