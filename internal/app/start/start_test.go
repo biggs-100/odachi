@@ -894,6 +894,65 @@ func TestStartDoesNotWriteTheSameBlockTwice(t *testing.T) {
 	}
 }
 
+// TestStartTouchesNothingWhenTheBriefCannotBeRead: the brief is read before the
+// profile, the voice and the fence are written, so a probe or a read that fails
+// blocks with the human's files as they were (0271).
+func TestStartTouchesNothingWhenTheBriefCannotBeRead(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(*fakeFiles)
+	}{
+		{
+			name: "the read fails",
+			setup: func(f *fakeFiles) {
+				f.failRead = func(path string) error {
+					if filepath.ToSlash(path) == "brief.md" {
+						return errors.New("denied")
+					}
+					return nil
+				}
+			},
+		},
+		{
+			name: "the probe fails",
+			setup: func(f *fakeFiles) {
+				f.failExists = func(path string) error {
+					if filepath.ToSlash(path) == "brief.md" {
+						return errors.New("denied")
+					}
+					return nil
+				}
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			files := newFakeFiles(map[string]string{"brief.md": "# a\n\n## What must exist\n- a\n"}, nil)
+			c.setup(files)
+			opts := flagsCarryTheSameAnswers()
+			opts.Force = true
+			opts.Profile = novatoProfile(t)
+			opts.Machine = true
+
+			got := start.Run(opts, nil, files, nil)
+
+			if got.Code != start.CodeBlocked {
+				t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+			}
+			assertOneLine(t, got.Message)
+			if !strings.Contains(got.Message, "brief.md") {
+				t.Errorf("message %q does not name the brief", got.Message)
+			}
+			for _, path := range []string{"odd/profile.toml", "odd/fence.toml"} {
+				if _, ok := files.files[path]; ok {
+					t.Errorf("%s was written by a run that blocked on the brief", path)
+				}
+			}
+		})
+	}
+}
+
 // TestBriefFlagRecordsTheDraftAsTheArtifact covers the senior/ci path: the run
 // reads the draft instead of asking, and records it as brief.md -a run that leaves
 // no brief.md leaves the project without the vision it just read (0186).
