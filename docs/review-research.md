@@ -182,6 +182,14 @@ Their numbers -3/4 and 4/5, a different defect missed each time- are not kept he
 the instrument that produced them could not report the half it was silent about,
 and the fixture leaked its own answer. They are the reason both fixes exist.
 
+The clean arm, three draws (0264). The same clean code, the same model, three
+runs: 10 findings, then 1, then 4, and the defect that one run called a warning
+the next one did not see. Ten real defects were paid between the first and the
+second draw; the number still moved up on the third. So the reading is not "the
+lenses are noisy" and not "the arm is clean": it is that **one run is one draw**,
+and a precision number needs repetition before it means anything. That is the next
+feature on the instrument, not on the fixture.
+
 What it does not say: five defects in a 120-line fixture is not a population, one
 run of one model is a snapshot, and a key written by the same person who wrote the
 fixture inherits that person's blind spots. The instrument is what this part adds;

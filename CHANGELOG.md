@@ -7,6 +7,13 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The clean arm pays what the lenses find.** The fixture's arm with nothing planted was reviewed three times
+  and gave 10, 1 and 4 findings: the ten it named were real and are now fixed in the code, and the five planted
+  defects are still found. The lesson belongs to the instrument -one run is one draw, so precision needs
+  repetition- and `docs/review-research.md` carries the reading. Patch (0264).
+
 ## v0.38.6 - 2026-11-10
 
 - **The lenses are measured.** `odachi review probe` asks the four shipping lens prompts about a fixture
