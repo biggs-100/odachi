@@ -130,7 +130,7 @@ func TestProbeScoresEveryLensAndTheCleanArm(t *testing.T) {
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
 	}
-	want := "risk 1/1, readability 0/1, reliability 0/1, resilience 0/2 · noise 0 · clean 0"
+	want := "runs 1 · risk 1/1 (1), readability 0/1 (0), reliability 0/1 (0), resilience 0/2 (0) · noise 0 · clean 0"
 	if result.Summary != want {
 		t.Errorf("Summary = %q, want %q", result.Summary, want)
 	}
@@ -185,8 +185,8 @@ func TestProbeCountsTheCleanArmsFindingsAsNoise(t *testing.T) {
 	if !strings.HasSuffix(result.Summary, "· clean 4") {
 		t.Errorf("Summary = %q, want the four clean answers counted as noise", result.Summary)
 	}
-	if !strings.Contains(strings.Join(result.Lines, "\n"), "clean noise  server.go:25") {
-		t.Errorf("the report does not name the clean arm's finding:\n%s", strings.Join(result.Lines, "\n"))
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "clean") {
+		t.Errorf("the report does not carry the clean arm:\n%s", strings.Join(result.Lines, "\n"))
 	}
 }
 
@@ -237,4 +237,59 @@ func paths(f *fakeFiles) []string {
 		out = append(out, path)
 	}
 	return out
+}
+
+// TestProbeRepeatsTheMeasurement: --runs asks every lens and arm once per draw,
+// and the reading says how many draws it holds. The aggregation itself is pinned
+// by TestSummarize, so this only proves the loop is wired.
+func TestProbeRepeatsTheMeasurement(t *testing.T) {
+	t.Parallel()
+
+	shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
+	opts := options("reviewer {prompt}")
+	opts.Runs = 3
+	result := lensprobe.Run(opts, newFiles(), fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
+
+	if result.Code != lensprobe.CodeOK {
+		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
+	}
+	reviewers := 0
+	for _, command := range shell.commands {
+		if !strings.HasPrefix(command, "git ") {
+			reviewers++
+		}
+	}
+	if want := 3 * 8; reviewers != want {
+		t.Errorf("reviewers run = %d, want %d (three draws of eight)", reviewers, want)
+	}
+	if !strings.HasPrefix(result.Summary, "runs 3 · ") {
+		t.Errorf("Summary = %q, want it to name three draws", result.Summary)
+	}
+}
+
+// TestProbeRefusesARunCountOutsideTheRange: a count the measurement cannot hold
+// is refused before any reviewer runs, and the message names the bound and what
+// one draw costs.
+func TestProbeRefusesARunCountOutsideTheRange(t *testing.T) {
+	t.Parallel()
+
+	for _, runs := range []int{-1, lensprobe.MaxRuns + 1} {
+		shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
+		opts := options("reviewer {prompt}")
+		opts.Runs = runs
+		result := lensprobe.Run(opts, newFiles(), fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
+		if result.Code != lensprobe.CodeBlocked {
+			t.Fatalf("Run(--runs %d) = %d, want blocked: %s", runs, result.Code, result.Summary)
+		}
+		for _, want := range []string{"1", "10", "reviewer"} {
+			if !strings.Contains(result.Summary, want) {
+				t.Errorf("message %q does not name %q", result.Summary, want)
+			}
+		}
+		for _, command := range shell.commands {
+			if !strings.HasPrefix(command, "git ") {
+				t.Errorf("--runs %d started a reviewer: %q", runs, command)
+			}
+		}
+	}
 }

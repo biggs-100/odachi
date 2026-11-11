@@ -21,7 +21,6 @@
 package lensprobe
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -43,6 +42,10 @@ an answer, with their tests. Nothing else changed.`
 // TimeoutSeconds is what one reviewer may take. It matches `review --exec`: a
 // model that stalls at this size does not answer late, it does not answer.
 const TimeoutSeconds = 600
+
+// MaxRuns is how many draws one measurement may hold. Past ten it is an
+// experiment, and an experiment is designed somewhere else.
+const MaxRuns = 10
 
 // CodeOK is a probe that ran and produced a number, whatever the number is: the
 // measurement does not pass or fail, it reports.
@@ -87,6 +90,8 @@ type Options struct {
 	Exec string
 	// Model replaces {model} in Exec.
 	Model string
+	// Runs is how many draws the measurement holds. Zero means one.
+	Runs int
 }
 
 // Result is what the CLI prints and exits with.
@@ -162,6 +167,15 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 		}
 	}
 
+	draws := opts.Runs
+	if draws == 0 {
+		draws = 1
+	}
+	if draws < 1 || draws > MaxRuns {
+		return *blocked("--runs " + strconv.Itoa(opts.Runs) + ": the measurement holds between 1 and " + strconv.Itoa(MaxRuns) +
+			" draws, and each one is a reviewer per lens and arm")
+	}
+
 	if strings.TrimSpace(opts.Exec) == "" {
 		var out strings.Builder
 		for _, one := range []candidate{clean, seeded} {
@@ -178,43 +192,46 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 		}
 	}
 
-	seededVerdicts := make(map[string]review.Verdict, len(owed))
-	lines := make([]string, 0, len(owed)+4)
-	for _, name := range owed {
-		answer, stored, problem := ask(opts, files, shell, work, "seeded", name, prompts[seeded.name][name], seeded.tree)
-		if problem != nil {
-			return *problem
+	scores := make([]probe.Score, 0, draws)
+	cleanCounts := make([]int, 0, draws)
+	lines := make([]string, 0, draws*(len(owed)+len(names))+6)
+
+	for draw := 1; draw <= draws; draw++ {
+		seededVerdicts := make(map[string]review.Verdict, len(owed))
+		for _, name := range owed {
+			answer, stored, problem := ask(opts, files, shell, work, "seeded", name, prompts[seeded.name][name], seeded.tree, draw)
+			if problem != nil {
+				return *problem
+			}
+			verdict, err := review.Parse([]byte(answer))
+			if err != nil {
+				return *blocked("the seeded " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
+			}
+			seededVerdicts[name] = verdict
+			lines = append(lines, "stored: "+stored)
 		}
-		verdict, err := review.Parse([]byte(answer))
-		if err != nil {
-			return *blocked("the seeded " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
+
+		cleanNoise := 0
+		for _, name := range names {
+			answer, stored, problem := ask(opts, files, shell, work, "clean", name, prompts[clean.name][name], clean.tree, draw)
+			if problem != nil {
+				return *problem
+			}
+			verdict, err := review.Parse([]byte(answer))
+			if err != nil {
+				return *blocked("the clean " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
+			}
+			lines = append(lines, "stored: "+stored)
+			cleanNoise += len(verdict.Findings)
 		}
-		seededVerdicts[name] = verdict
-		lines = append(lines, "stored: "+stored)
+
+		scores = append(scores, probe.ScoreOne(manifest, seededVerdicts))
+		cleanCounts = append(cleanCounts, cleanNoise)
 	}
 
-	cleanNoise := 0
-	for _, name := range names {
-		answer, stored, problem := ask(opts, files, shell, work, "clean", name, prompts[clean.name][name], clean.tree)
-		if problem != nil {
-			return *problem
-		}
-		verdict, err := review.Parse([]byte(answer))
-		if err != nil {
-			return *blocked("the clean " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
-		}
-		lines = append(lines, "stored: "+stored)
-		for _, finding := range verdict.Findings {
-			cleanNoise++
-			lines = append(lines, fmt.Sprintf("clean noise  %s:%d (%s, %s)", finding.Path, finding.Line, name, finding.Severity))
-		}
-	}
-
-	score := probe.ScoreOne(manifest, seededVerdicts)
-	lines = append(lines, render(score)...)
-	summary := score.Summary() + fmt.Sprintf(" · clean %d", cleanNoise)
-	// The summary is the last thing the CLI prints, not a row of the table: a
-	// report that carries it twice reads as two measurements.
+	runs := Summarize(scores, cleanCounts)
+	lines = append(lines, renderRuns(runs)...)
+	summary := runs.Summary()
 	return Result{Code: CodeOK, Lines: lines, Summary: summary}
 }
 
@@ -333,7 +350,7 @@ func writeArm(work, arm string, fixture fs.FS, files Files) error {
 
 // ask runs one reviewer and returns its answer, after writing the prompt where
 // the command can read it and the answer where a person can find it.
-func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree string) (string, string, *Result) {
+func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree string, draw int) (string, string, *Result) {
 	promptPath := filepath.Join(work, "prompt-"+arm+"-"+lens+".txt")
 	if err := files.Write(promptPath, []byte(prompt)); err != nil {
 		return "", "", blocked("could not write the " + lens + " prompt: " + oneLine(err.Error()))
@@ -353,7 +370,7 @@ func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree s
 		return "", "", blocked("the " + lens + " reviewer exited " + strconv.Itoa(code) + ": " + oneLine(strings.TrimSpace(stderr)))
 	}
 
-	stored := storePath(opts.Dir, arm, lens, tree, files)
+	stored := storePath(opts.Dir, arm, lens, tree, draw, files)
 	if err := files.Write(stored, []byte(stdout)); err != nil {
 		return "", "", blocked("could not store the " + lens + " answer: " + oneLine(err.Error()))
 	}
@@ -367,8 +384,11 @@ func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree s
 // The fixture's tree is the same on every run, so the tree alone would make the
 // second measurement overwrite the first: the name carries the first free
 // number, and the store keeps the runs a person compares.
-func storePath(dir, arm, lens, tree string, files Files) string {
+func storePath(dir, arm, lens, tree string, draw int, files Files) string {
 	base := filepath.Join(dir, ".git", "odachi", "probe", tree+"-"+arm+"-"+lens)
+	if draw > 1 {
+		base = base + "-r" + strconv.Itoa(draw)
+	}
 	path := base + ".json"
 	for i := 2; ; i++ {
 		if exists, err := files.Exists(path); err != nil || !exists {
@@ -376,23 +396,6 @@ func storePath(dir, arm, lens, tree string, files Files) string {
 		}
 		path = base + "-" + strconv.Itoa(i) + ".json"
 	}
-}
-
-// render prints the score as a table a person reads: one row per lens, then the
-// findings nobody planted, then the line that summarises it.
-func render(score probe.Score) []string {
-	lines := make([]string, 0, len(score.Lenses)+len(score.Noise))
-	lines = append(lines, fmt.Sprintf("%-12s %5s %5s %6s", "lens", "found", "low", "missed"))
-	for _, row := range score.Lenses {
-		lines = append(lines, fmt.Sprintf("%-12s %2d/%-2d %5d %6d", row.Lens, row.Found, row.Total, row.Low, row.Missed))
-		if len(row.MissedIDs) > 0 {
-			lines = append(lines, "             missed: "+strings.Join(row.MissedIDs, ", "))
-		}
-	}
-	for _, noise := range score.Noise {
-		lines = append(lines, fmt.Sprintf("noise        %s:%d (%s, %s)", noise.Finding.Path, noise.Finding.Line, noise.Lens, noise.Finding.Severity))
-	}
-	return lines
 }
 
 // blocked is a probe that could not run, with the one line the human reads.
