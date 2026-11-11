@@ -1,71 +1,60 @@
 # Next session
 
-Written while closing 0263. Nothing is owed.
+Written while closing 0264. Nothing is owed.
 
 ## Where the project is
 
-- `v0.38.6` is published (tag on `342117c`); the session shipped `v0.38.5` (0262) and `v0.38.6` (0263),
-  and `main` carries both task docs.
-- The installed binary is `0.38.6`; `doctor` is all clear with one warning, this file, which this run pays.
-- 261 features, 636 steps, 0 open questions, and `docs/review-debt.md` is empty.
-- `v0.38.6` renamed `Unreleased`: the next feature writes under it again.
+- `v0.38.7` is published (tag on `edd782e`); this session shipped `v0.38.6` (0263) and `v0.38.7` (0264).
+- The installed binary is `0.38.7`; `doctor` is clear except this file, which this run pays.
+- 262 features, 639 steps, 0 open questions; `docs/review-debt.md` has no row.
+- `v0.38.7` renamed `Unreleased`: the next feature writes under it again.
 
 ## What this session did
 
-- **0262, the two trees meet** (`v0.38.5`): `review` and `check` name one tree for one worktree. The
-  issue blamed an ignored folder; the cause was `read-tree <base>`, which keeps the index entry of a path
-  a later commit untracked, so `add --all` staged it again although git ignored it. `stageWorktree` reads
-  the index from HEAD for `TreeHash`, `Candidate` and `Diff`. RED observed first; consequence recorded:
-  a correction now reports such a path as a deletion.
-- **The research** (`docs/review-research.md`): six sources with sample sizes (Harvard/Jellyfish, Sonar,
-  DORA, arXiv 2603.15911, METR, Morgan Stanley), eight failure classes, the coverage matrix, and our own
-  numbers -15 of 16 kept verdicts approved, which is the field's signature of a rubber stamp and was the
-  argument for measuring.
 - **0263, the lenses are measured** (`v0.38.6`): `odachi review probe` asks the four shipping prompts
-  about a fixture with five planted defects and a clean arm, and scores found, low, missed and noise
-  against a written key. First run: **5 of 5** planted defects found, and **10 findings on the clean
-  arm**, every one of them real. Both arms are asked; the answers live in `.git/odachi/probe/`, never in
-  the review store.
-- **The review of 0263 found five defects and all were paid**: the probe never measured the clean arm
-  (the half of the requirement), the fixture told the reviewer it was an exam, `causal: false` was
-  counted as both miss and noise, two runs of one tree overwrote each other, and the summary printed
-  twice. Two correction rounds on the delta, then approved with no findings.
-- **The fence**: `start --force` rewrote `odd/fence.toml` from the new brief and dropped the rule that
-  protects `proof/**`. The archtest caught it, the rule is back, and the decision is recorded. A fence
-  outlives the feature that wrote it.
+  about a fixture with five planted defects and a clean arm, and scores found, low, missed and noise against
+  a written key. Answers live in `.git/odachi/probe/`, never in the review store. First run: 5 of 5 planted
+  defects found, 10 findings on the clean arm. Its own review found five defects -the clean arm was never
+  measured, the fixture said it was an exam, `causal: false` counted twice, runs overwrote each other, the
+  summary printed twice- and every one was paid.
+- **The research** (`docs/review-research.md`) is the frame everything else sits in: six sources with sample
+  sizes, eight failure classes, the coverage matrix, and the numbers from this clone.
+- **0264, the clean arm pays** (`v0.38.7`): the ten findings the lenses named on the arm with nothing planted
+  are fixed in the code -404 only for `sql.ErrNoRows`, the remote status checked, read and write errors
+  propagated, a client timeout, a bounded body, a negated limit clamped, handler and cache tests- and the
+  five planted defects are still found. The manifest and the seeded arm were not touched, and the fence now
+  protects the manifest by path.
 
 ## The questions that wait
 
-- **The clean arm is not clean.** Ten findings on code with nothing planted, all real: the handler
-  answers every database error with 404, it never checks the remote status, the response write error is
-  discarded, `limit` does not clamp negatives, and the handler and the cache have no tests. Until that
-  arm is code a person would approve, the number that reads as noise is the fixture's sloppiness, not
-  the lens's precision. This is the next feature on the probe, and it is the fixture's job.
-- **A verdict cannot stop a close.** `check` says ready while a `changes_requested` verdict stands on the
-  tree; today the only thing preventing a merge over a blocker is the agent's judgment. Reopen when a
-  merge over a standing blocker has to be refused by the tool rather than by a person.
+- **One run is one draw.** The same clean code, same model, three runs: 10 findings, then 1, then 4, with a
+  different one each time. Precision is not measured until the probe repeats: `--runs N`, a median and the
+  spread per lens. That is the next feature on the instrument, and it is the reason 0264 did not reach
+  `clean 0`.
+- **`start --force` regenerates `odd/fence.toml` and drops doctrine rules.** Three features in a row:
+  `proof/**`, `internal/assets/review/*.md` and `.github/workflows/**` had to be restored by hand, and each
+  time a different tool caught it (the archtest, then the review). The fix is that `start` merges the fence
+  instead of rewriting it. This is the oldest open defect in the method.
+- **`brief.md` still says `clean 0`** in "What must exist" and "Done when", and the reading says otherwise.
+  The deviation is recorded in `odd/tasks/0264-brazo-limpio.md` and in PR #509. The human changes the
+  criterion with `odachi ask --change "..." --req R1`, or leaves it as the aspiration it turned out to be.
 
 ## The limits to remember
 
-- **The probe's key is written by the same person who wrote the fixture.** Five defects in a 120-line
-  fixture is one tree and one model, not a population; recall is measured, precision is not yet.
-- **Two earlier probe runs are discarded, not data.** They came from an instrument that never asked the
-  clean arm and a fixture that leaked it was an exam. The numbers 3/4 and 4/5 in `docs/review-research.md`
-  history are the reason both fixes exist; do not read them as a result.
-- **A review pass is one draw.** Not proven by this session's instrument, but the skill probes found the
-  same shape (2, 4 and 4 edges across runs) and the review has no repetition lane yet.
-- **The gate's own tools are the cheapest coverage.** No `govulncheck`, no linter with a ruleset, no
-  secret scan; JetBrains puts 20-25% of AI hallucinations inside what static analysis catches. That is a
-  floor row, not a lens.
-- **`start --force` regenerates the fence from the brief it is given.** A rule that is doctrine and not a
-  non-goal of this feature will be dropped silently; the archtest is what catches it.
-- **A probe answer is not a verdict.** The store under `.git/odachi/probe/` is separate on purpose:
-  writing a fixture's answer into `reviews/` would make `check` believe a tree was judged.
-- **`review --since <tree>` is the cheap correction lane.** Three rounds this session, each on a delta of
-  a few lines, and each merge waited for the delta to be approved.
-- **The release chain**: branch `release/vX.Y.Z`, rename `## Unreleased` to the version and nothing else,
-  PR, merge, then an annotated tag on the merge commit. Renaming every `## Unreleased` in the file also
-  rewrites the prose that explains the section; the first attempt this session did exactly that.
+- **The local gate does not see what the CI gate sees.** `check --run "go test ./..."` runs no `gofmt`, and
+  `gofmt -l .` in CI covers `testdata` too. A file can be gofmt-clean on disk and dirty in the blob: check
+  `git show HEAD:<path> | gofmt -l` before pushing a change under `testdata`.
+- **The fixture's files are testdata, so nothing compiles them.** To prove the clean arm still builds and its
+  tests pass, copy the four files to a temp module with a `go.mod` and run `go test` there.
+- **A probe answer is not a verdict.** `.git/odachi/probe/` is separate on purpose; writing a fixture's answer
+  into `reviews/` would make `check` believe a tree was judged.
+- **The manifest is the exam, and the fence protects it.** A feature that "cleans" the clean arm could pass by
+  deleting the key; the path rule is what makes that impossible.
+- **`review --since <tree>` is the cheap correction lane**, and three rounds this session each reviewed a
+  delta of a few lines. A merge waits for the delta to be approved.
+- **The release chain**: branch `release/vX.Y.Z`, rename `## Unreleased` and nothing else, PR, merge, then an
+  annotated tag on the merge commit. Renaming every `## Unreleased` in the file rewrites the prose too; edit
+  the heading line only.
 - One heavy gate per machine; `go test ./...` takes about 700 s and `check --run` writes the proof.
 
 ## The commands that work
@@ -75,7 +64,7 @@ odachi check --run "go test ./..." --timeout 1800
 ```
 
 ```sh
-# the measurement: prints eight prompts (two arms, four lenses) and runs nobody
+# the measurement: eight prompts (two arms, four lenses), runs nobody
 odachi review probe
 ```
 
@@ -86,7 +75,6 @@ odachi review probe --model opencode-go/deepseek-v4.1-flash \
 ```
 
 ```sh
-# no --model: each lens uses the model odd/review.toml names
-odachi review --base <feature-base> --lens reliability \
-  --exec 'C:\Users\USER\AppData\Roaming\npm\node_modules\@opencode\cli\bin\opencode.exe run --agent odachi-reviewer --model {model} --file {prompt} "Answer the review prompt in the attached file."'
+# the clean arm has no build of its own: prove it in a temp module
+Copy-Item internal/probe/testdata/lenses/clean/*.go $env:TEMP\cc\; "module x`n`ngo 1.25" | Set-Content $env:TEMP\cc\go.mod; cd $env:TEMP\cc; go test ./...
 ```
