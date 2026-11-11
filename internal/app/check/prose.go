@@ -3,6 +3,8 @@ package check
 import (
 	"fmt"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/layout"
 )
 
 // mojibake are the sequences a UTF-8 file leaves behind when a console reads it as
@@ -15,7 +17,7 @@ var mojibake = []string{"Ã", "Â", "â€"}
 // signature of a double encoding. The task documents are left out on purpose: they are
 // prose, and a document may have to name these very sequences to explain the defect.
 func (r *runner) briefSaysWhatItMeans() *Result {
-	for _, rel := range []string{briefFile, fenceFile, profileFileLayout()} {
+	for _, rel := range []string{briefFile, fenceFile, layout.Profile} {
 		data, found, err := r.readArtifact(rel)
 		if err != nil {
 			problem := blocked("could not read " + rel + ": " + oneLine(err.Error()) + "; check the permissions and run odachi check again")
@@ -33,6 +35,3 @@ func (r *runner) briefSaysWhatItMeans() *Result {
 	}
 	return nil
 }
-
-// profileFileLayout is where the profile lives, named once for this file.
-func profileFileLayout() string { return "odd/profile.toml" }
