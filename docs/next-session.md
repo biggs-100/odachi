@@ -1,48 +1,50 @@
 # Next session
 
-Written after `v0.38.11` shipped. Nothing is owed.
+Written after `v0.38.12` shipped. Nothing is owed.
 
 ## Where the project is
 
-- `v0.38.11` is published: annotated tag on `2dc4123` (`Merge pull request #523`), sixteen assets, and the
-  binary installed on this machine reports `odachi v0.38.11`. `main` is that merge commit.
-- The patch it names came in with #522: `odachi start --light` takes a requirement that starts with a dash,
-  and a step may start with a dash because the rule now refuses the markdown bullet (0270).
-- 268 features, 648 steps, 0 open questions; `docs/review-debt.md` holds no open row.
-- The closing tree carries `proof/0270-el-requisito-con-guion.txt` and one verdict
-  (`.git/odachi/reviews/1508cb8….json`, reliability, base `b6975a7`, no findings).
-- `## Unreleased` does not exist: the next feature writes it again, above `## v0.38.11`.
+- `v0.38.12` is published: annotated tag on `c0f8c55` (`Merge pull request #526`), sixteen assets, and the
+  binary installed on this machine reports `odachi v0.38.12`. `main` is that merge commit.
+- The patch it names came in with #525: `odachi start` appends a block to `brief.md` instead of writing it
+  from scratch, and the fence is built from every non-goal the brief carries (0271).
+- 269 features, 650 steps, 0 open questions; `docs/review-debt.md` holds no open row.
+- The closing tree carries `proof/0271-el-brief-acumula.txt` and one verdict
+  (`.git/odachi/reviews/b82fded7….json`, reliability, base `c3c7004`).
+- `## Unreleased` does not exist: the next feature writes it again, above `## v0.38.12`.
 
 ## What shipped
 
-- **0270, a requirement may start with a dash.** Opening a feature about `--runs 0` failed twice, both times
-  for the wrong reason: without Go's separator the message was the flag package's `invalid flag`, and with
-  it, `a step does not start with a dash` came from a rule written to stop a pasted `- [ ] T1 …`. The rule
-  now refuses the bullet and says "bullet"; `start --light` names the form a line that starts with a dash
-  needs. Two reds were observed in the domain and one in the CLI.
+- **0271, the brief keeps every feature it has seen.** The fence has been append-only since 0266, so a rule
+  outlived the feature that wrote it while the sentence behind it did not. A run now appends a block named
+  after the feature, the block repeats the canonical headers `brief.Parse` already reads, and the four lists
+  are the union: outcomes, done-when, non-goals and decisions. The same requirement is not written twice,
+  `--force` still writes the file when nothing is new because `undo` reads the backup, and the fence is
+  built from the union of the blocks.
+- **Two findings from its own review, both real and both paid.** The brief went through a console that
+  decoded UTF-8 as CP850 during the hand merge that opened the feature (`â€¦`, `Ã³`), and the tree's review
+  found it; the third outcome said the fence was built from the union and it was not, and the tree's review
+  found that too. Both corrections are in the pull request with the reds that pin them.
 
 ## The questions that wait
 
-- **None open.** The next feature writes the new `## Unreleased`.
-- **The brief is per feature, not per project.** `brief.md` is replaced by every `start --force` and holds
-  the current requirement; the project's doctrine calls it the vision. That tension is still the oldest
-  open question after the fence, and it needs the human's word before code (0270 was the papercut, not it).
-- **One approval is one draw.** The lens approved the closing tree with no findings, and earlier draws of
-  similar trees produced real blockers. A verdict is a sample, not proof that nothing is left (0265).
+- **None open.** The brief question is answered: `brief.md` is the project's vision and it accumulates, one
+  block per feature, with the same headers the parser reads. A light feature (`start --light`) still writes
+  no brief: it is one line, and its line lives in its task document.
+- **One approval is one draw.** The lens approved the closing tree, and the same lens had found two real
+  defects in the previous tree. A verdict is a sample, not a proof that nothing is left (0265).
 
 ## The limits to remember
 
-- **The environment is part of the red.** Four installer tests failed identically on `main` and passed in
-  CI because a child Windows PowerShell inherits `PSModulePath`; measure with a probe before blaming the
-  change (0269).
-- **The store can block a verdict.** A causal BLOCKER or CRITICAL row stays potent while its blob is
-  unchanged, and every new verdict inherits it. `docs/review-debt.md` is the list a human reads.
-- **One tree, one verdict**, and a wider base covers a later feature, so review with the oldest feature's
-  base when two close together (0268).
-- **A docs-only change owes no new proof**: `check` says "the proof belongs to the code it ran on, and only
-  documents moved since".
-- **This file goes stale in one release.** Three releases today, three rewrites; write it when the facts
-  move, not only when the session ends.
+- **A review row is keyed by bytes, not by truth.** The WARNING about `odd/fence.toml` stayed potent after
+  its fix landed, because the row names the fence file and the fix was in the code. `docs/review-debt.md`
+  records it as paid; the store retires it when those bytes change.
+- **The console is not UTF-8.** PowerShell on this machine decodes UTF-8 as CP850 on the way through, so a
+  file rebuilt through `Get-Content`/`Set-Content` comes back with `â€¦`. Rebuild artifacts with Python or
+  with the tool; `brief.md` is the artifact whose requirements must stay verbatim.
+- **The environment is part of the red** (0269), **the store can block a verdict** (0265), **one tree, one
+  verdict** and a wider base covers a later feature (0268), **a docs-only change owes no new proof**.
+- **This file goes stale in one release.** Four releases today, four rewrites; write it when the facts move.
 - **One heavy gate per machine**: `go test ./...` takes about 700 s and `check --run` writes the proof.
 
 ## The commands that work
@@ -55,11 +57,6 @@ odachi check --run "go test ./..." --timeout 1800
 # a verdict for the tree, with the answer kept beside it
 odachi review --base <feature base> --lens reliability --model opencode-go/deepseek-v4.1-flash \
   --exec 'C:\Users\USER\AppData\Local\Temp\odachi-rev.bat {model} {prompt} C:\Users\USER\AppData\Local\Temp\review.json'
-```
-
-```sh
-# a requirement that starts with a flag: the separator is part of the call
-odachi start --light -- "--runs 0 se rechaza"
 ```
 
 ```sh
