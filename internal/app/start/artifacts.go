@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/adapters/fencetoml"
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/fence"
@@ -101,67 +102,6 @@ func looseNonGoals(selections []string) []string {
 	return loose
 }
 
-// renderFence writes the fence in the canonical TOML shape: one [[rule]] per rule,
-// one key per line, and, for every non-goal that arrived as a phrase, the commented
-// block that turns it into one when the human knows the paths.
-func renderFence(rules []fence.Rule, loose []string) string {
-	if len(rules) == 0 && len(loose) == 0 {
-		// An empty file teaches nothing. The fence is the mechanism that keeps
-		// scope small, so when the human chose no exclusion the file explains
-		// what it is for and what a rule looks like.
-		return "# Empty on purpose: you chose no \"NOT included\".\n" +
-			"# The fence is what stops scope from growing: without rules, nothing\n" +
-			"# warns you when the work goes past what you asked for.\n" +
-			"#\n" +
-			"# When you decide something that does not belong in this first version, add it here:\n" +
-			"#\n" +
-			"# [[rule]]\n" +
-			"# not   = \"pagos\"\n" +
-			"# paths = [\"payment*\", \"**/payments/**\"]\n" +
-			"# deps  = [\"stripe\", \"mercadopago\"]\n"
-	}
-
-	var out strings.Builder
-
-	for i, rule := range rules {
-		if i > 0 {
-			out.WriteString("\n")
-		}
-		out.WriteString("[[rule]]\n")
-		fmt.Fprintf(&out, "%-5s = %s\n", "not", strconv.Quote(rule.Not))
-		fmt.Fprintf(&out, "%-5s = %s\n", "paths", quoteList(rule.Paths))
-		fmt.Fprintf(&out, "%-5s = %s\n", "deps", quoteList(rule.Deps))
-	}
-
-	for _, text := range loose {
-		if out.Len() > 0 {
-			out.WriteString("\n")
-		}
-		// A comment, not a rule: this fence holds only what somebody gave paths
-		// for, and the absence of a path is a question, not a policy.
-		out.WriteString("# This non-goal has no paths yet:\n")
-		out.WriteString("#   " + text + "\n")
-		out.WriteString("# A rule protects files: write what it must keep out of the tree, then\n")
-		out.WriteString("# remove the '#' in front of the four lines below.\n")
-		out.WriteString("#\n")
-		out.WriteString("# [[rule]]\n")
-		fmt.Fprintf(&out, "# %-5s = %s\n", "not", strconv.Quote(text))
-		out.WriteString("# paths = []\n")
-		out.WriteString("# deps  = []\n")
-	}
-
-	return out.String()
-}
-
-// quoteList renders a TOML array of strings.
-func quoteList(items []string) string {
-	quoted := make([]string, 0, len(items))
-	for _, item := range items {
-		quoted = append(quoted, strconv.Quote(item))
-	}
-	return "[" + strings.Join(quoted, ", ") + "]"
-}
-
 // RenderProfile writes the resolved profile, one field per line, name first and
 // always present, in the key order of Contract A. It is exported because
 // `odachi level --to` writes the same file, and the format has one owner.
@@ -239,7 +179,7 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	// than a rule that is still a question.
 	rules := rulesFor(in.nonGoals)
 	loose := looseNonGoals(in.nonGoals)
-	if problem := r.put(fenceFile, []byte(renderFence(rules, loose))); problem != nil {
+	if problem := r.put(fenceFile, []byte(fencetoml.Render(rules, loose))); problem != nil {
 		return *problem
 	}
 

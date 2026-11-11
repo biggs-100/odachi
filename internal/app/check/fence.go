@@ -6,27 +6,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/BurntSushi/toml"
-
+	"github.com/biggs-100/odachi/internal/adapters/fencetoml"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/fence"
 )
-
-// fenceDocument is the TOML shape `odachi start` writes: one [[rule]] per
-// non-goal, each with a name and the paths and dependencies it forbids.
-//
-// The file is small, canonical and owned by this gate, so it is decoded here and
-// nowhere else: one owner for the shape, and the fence rules stay pure domain
-// values.
-type fenceDocument struct {
-	Rules []fenceRule `toml:"rule"`
-}
-
-type fenceRule struct {
-	Not   string   `toml:"not"`
-	Paths []string `toml:"paths"`
-	Deps  []string `toml:"deps"`
-}
 
 // fenceRules reads the human's fence. A missing file means no rules — nothing
 // was excluded, so nothing is fenced — and a malformed one blocks with the file
@@ -52,21 +35,18 @@ func (r *runner) worktreeFenceRules() ([]fence.Rule, *Result) {
 }
 
 // decodeFence turns the file into rules. One decoder for both copies: the base
-// fence and the candidate's cannot be read by two different grammars.
+// fence and the candidate's cannot be read by two different grammars. The
+// grammar itself lives in fencetoml, beside the renderer that writes it, so a
+// file `start` produces is a file this gate can read.
 func decodeFence(data []byte, found bool) ([]fence.Rule, *Result) {
 	if !found {
 		return nil, nil
 	}
 
-	var document fenceDocument
-	if _, err := toml.Decode(string(data), &document); err != nil {
+	rules, err := fencetoml.Decode(data)
+	if err != nil {
 		problem := blocked(fmt.Sprintf("could not read %s: %s; fix the file (odachi start writes it) and run odachi check again", fenceFile, oneLine(err.Error())))
 		return nil, &problem
-	}
-
-	rules := make([]fence.Rule, 0, len(document.Rules))
-	for _, rule := range document.Rules {
-		rules = append(rules, fence.Rule{Not: rule.Not, Paths: rule.Paths, Deps: rule.Deps})
 	}
 	return rules, nil
 }
