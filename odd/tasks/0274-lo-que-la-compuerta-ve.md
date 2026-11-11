@@ -14,7 +14,7 @@ R1 · "un artefacto que no decodifica como UTF-8, o que trae las secuencias de u
 
 ## Steps
 - [x] T1 · los artefactos decodifican: UTF-8 valido y sin BOM, y la compuerta nombra el archivo   R1 · route:inline · tree:01528f1285cebfe1f084ff66c0b6c51641cf80b9
-- [ ] T2 · el brief coincide con su documento: la oracion de cada bloque contra el R1 del task doc   R1 · route:inline
+- [x] T2 · el brief coincide con su documento: la oracion de cada bloque contra el R1 del task doc   R1 · route:inline · tree:786eb49ca87e77c6a55fa5f4853f7011563a44a8
 
 ## History
 L1 · "un artefacto que no decodifica como UTF-8, o que trae las secuencias de un UTF-8 leído como CP850, se rechaza en la compuerta nombrando el archivo, para que la doble codificación se vea sin modelo y sin review"
