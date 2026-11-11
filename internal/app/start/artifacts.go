@@ -173,12 +173,16 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	if problem := r.refreshVoice(); problem != nil {
 		return *problem
 	}
-	// The fence is written from the non-goals, and a non-goal that arrives as a
-	// phrase is not a rule: it protects no path, so the file carries it as a
-	// template and the run says what to write. A rule nobody can trust is worse
-	// than a rule that is still a question.
-	rules := rulesFor(in.nonGoals)
-	loose := looseNonGoals(in.nonGoals)
+	// The fence is the memory of what the project refuses, so a run adds to it
+	// instead of drawing it again: every rule already written is kept as it is,
+	// and only the non-goals this run brings are new (0266). A non-goal that
+	// arrives as a phrase is not a rule -it protects no path, so the file carries
+	// it as a template and the run says what to write- and a rule nobody can
+	// trust is worse than a rule that is still a question.
+	rules, loose, kept, problem := r.mergeFence(in.nonGoals)
+	if problem != nil {
+		return *problem
+	}
 	if problem := r.put(fenceFile, []byte(fencetoml.Render(rules, loose))); problem != nil {
 		return *problem
 	}
@@ -215,6 +219,13 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	if reused != "" {
 		lines = append(lines, reused)
 	}
+	if kept > 0 {
+		line := fmt.Sprintf("the fence kept %d rules it already had", kept)
+		if added := len(rules) - kept; added > 0 {
+			line += fmt.Sprintf(" and added %d", added)
+		}
+		lines = append(lines, line)
+	}
 	for _, text := range loose {
 		lines = append(lines, fmt.Sprintf(
 			"the non-goal %q came as free text: a rule protects files, and a phrase names none, so %s carries it as a template; write the paths it must keep out and remove the '#' in front of the block",
@@ -237,6 +248,73 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		Task:    filepath.ToSlash(taskPath),
 		Files:   r.written,
 	}
+}
+
+// mergeFence reads the fence the worktree already has and returns it with the
+// non-goals this run brings appended; kept is how many rules were already there,
+// which is what the run reports. A rule already written wins over the same
+// non-goal arriving again, because the rule's name is its identity and a run is
+// not the owner of a policy it found.
+//
+// The rules are read through fencetoml, the same grammar check reads them with:
+// a merge that writes what the gate cannot parse is the defect this replaces. A
+// file it cannot read blocks instead of being overwritten, because a policy
+// nobody could understand is not this run's to delete.
+func (r *runner) mergeFence(nonGoals []string) (rules []fence.Rule, loose []string, kept int, problem *Result) {
+	existing, problem := r.fenceRulesOnDisk()
+	if problem != nil {
+		return nil, nil, 0, problem
+	}
+
+	rules = append(rules, existing...)
+	kept = len(existing)
+	seen := make(map[string]bool, len(existing)+len(nonGoals))
+	for _, rule := range existing {
+		seen[rule.Not] = true
+	}
+	for _, rule := range rulesFor(nonGoals) {
+		if seen[rule.Not] {
+			continue
+		}
+		seen[rule.Not] = true
+		rules = append(rules, rule)
+	}
+	for _, text := range looseNonGoals(nonGoals) {
+		if seen[text] {
+			continue
+		}
+		seen[text] = true
+		loose = append(loose, text)
+	}
+	return rules, loose, kept, nil
+}
+
+// fenceRulesOnDisk is the fence this run is about to replace. A missing file is
+// an empty policy; a file that exists and cannot be read or parsed is a policy
+// the run cannot merge, and the block names the file.
+func (r *runner) fenceRulesOnDisk() ([]fence.Rule, *Result) {
+	path := filepath.Join(r.opts.Dir, fenceFile)
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		problem := blocked("could not check " + fenceFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again")
+		return nil, &problem
+	}
+	if !exists {
+		return nil, nil
+	}
+
+	data, err := r.files.Read(path)
+	if err != nil {
+		problem := blocked("could not read " + fenceFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again")
+		return nil, &problem
+	}
+
+	rules, err := fencetoml.Decode(data)
+	if err != nil {
+		problem := blocked("could not read " + fenceFile + ": " + oneLine(err.Error()) + "; fix the file and run odachi start again")
+		return nil, &problem
+	}
+	return rules, nil
 }
 
 // refreshVoice keeps the block's voice in step with the profile this run wrote.

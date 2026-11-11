@@ -698,6 +698,110 @@ func TestPresetNonGoalIsMatchedCaseAndAccentInsensitively(t *testing.T) {
 	}
 }
 
+// TestStartKeepsTheRulesTheFenceAlreadyHas is 0266: the fence is the memory of
+// what the project refuses, not a draft of the last interview. A run that starts
+// again with a new non-goal must find the rules already there and add to them.
+func TestStartKeepsTheRulesTheFenceAlreadyHas(t *testing.T) {
+	existing := "[[rule]]\n" +
+		"not   = \"the stored proofs are the evidence this tree ran\"\n" +
+		"paths = [\"proof/**\"]\n" +
+		"deps  = []\n"
+	files := newFakeFiles(map[string]string{"odd/fence.toml": existing}, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+	opts.Exclude = []string{"Pagos"}
+
+	if got := start.Run(opts, nil, files, nil); got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+
+	text := files.content(t, filepath.Join("odd", "fence.toml"))
+	if !strings.Contains(text, `not   = "the stored proofs are the evidence this tree ran"`) ||
+		!strings.Contains(text, `paths = ["proof/**"]`) {
+		t.Errorf("the rule the fence already had is gone:\n%s", text)
+	}
+	if !strings.Contains(text, `paths = ["payment*", "**/payments/**"]`) {
+		t.Errorf("the rule this run brought did not land:\n%s", text)
+	}
+}
+
+// TestStartDoesNotAddATwinForARuleAlreadyThere: the rule's name is its identity,
+// so a non-goal the fence already protects must not add a second copy.
+func TestStartDoesNotAddATwinForARuleAlreadyThere(t *testing.T) {
+	existing := "[[rule]]\n" +
+		"not   = \"pagos\"\n" +
+		"paths = [\"internal/pay/**\"]\n" +
+		"deps  = []\n"
+	files := newFakeFiles(map[string]string{"odd/fence.toml": existing}, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+	opts.Exclude = []string{"Pagos"}
+
+	if got := start.Run(opts, nil, files, nil); got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+
+	text := files.content(t, filepath.Join("odd", "fence.toml"))
+	if count := strings.Count(text, `not   = "pagos"`); count != 1 {
+		t.Errorf("the fence holds %d rules named pagos, want 1:\n%s", count, text)
+	}
+	if !strings.Contains(text, `paths = ["internal/pay/**"]`) {
+		t.Errorf("the rule the fence had was rewritten by this run:\n%s", text)
+	}
+}
+
+// TestStartSaysHowManyRulesItKept: a merge nobody reports is a merge nobody can
+// audit, and the human reads this line to know the policy survived.
+func TestStartSaysHowManyRulesItKept(t *testing.T) {
+	existing := "[[rule]]\n" +
+		"not   = \"pagos\"\n" +
+		"paths = [\"payment*\", \"**/payments/**\"]\n" +
+		"deps  = []\n\n" +
+		"[[rule]]\n" +
+		"not   = \"login\"\n" +
+		"paths = [\"**/login*\", \"**/auth/login*\"]\n" +
+		"deps  = []\n"
+	files := newFakeFiles(map[string]string{"odd/fence.toml": existing}, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+	opts.Exclude = []string{"recordatorios"}
+
+	got := start.Run(opts, nil, files, nil)
+
+	if got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+	if said := strings.Join(got.Lines, "\n"); !strings.Contains(said, "kept 2") {
+		t.Errorf("the run does not say how many rules it kept:\n%s", said)
+	}
+}
+
+// TestStartRefusesAFenceItCannotRead: a file it cannot parse is a policy it
+// cannot merge, and overwriting it would delete what it could not understand.
+func TestStartRefusesAFenceItCannotRead(t *testing.T) {
+	broken := "[[rule]]\nnot =\n"
+	files := newFakeFiles(map[string]string{"odd/fence.toml": broken}, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+
+	got := start.Run(opts, nil, files, nil)
+
+	if got.Code != start.CodeBlocked {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeBlocked, got.Message)
+	}
+	assertOneLine(t, got.Message)
+	if !strings.Contains(got.Message, "odd/fence.toml") {
+		t.Errorf("message %q does not name the fence", got.Message)
+	}
+	if files.content(t, filepath.Join("odd", "fence.toml")) != broken {
+		t.Error("the fence the run could not read was overwritten")
+	}
+}
+
 // TestBriefFlagRecordsTheDraftAsTheArtifact covers the senior/ci path: the run
 // reads the draft instead of asking, and records it as brief.md -a run that leaves
 // no brief.md leaves the project without the vision it just read (0186).

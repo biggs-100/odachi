@@ -14,7 +14,7 @@ R1 · "start deja de reescribir odd/fence.toml: conserva las reglas que ya está
 - `## Unreleased` names the merge, patch (0266)
 
 ## Steps
-- [ ] T1 · one owner for the file: fencetoml decodes and renders it, and check and start both go through it   R1 · route:inline
+- [x] T1 · one owner for the file: fencetoml decodes and renders it, and check and start both go through it   R1 · route:inline · tree:65bf43f7848a0827d8f713cb2a21f10a0b28cfcc
 - [ ] T2 · start merges: it keeps every rule already in the fence, adds only the new ones, and says how many it kept   R1 · route:inline
 
 ## History
