@@ -1,25 +1,27 @@
-# brazo-limpio
+# la-medida-se-repite
 
 ## What must exist
-- el brazo limpio del fixture deja de tener defectos: los hallazgos que un lente reporta sobre él se pagan en el código, o se registran como gusto y se dejan
-- el número de precisión se puede leer: una corrida del probe sobre el fixture devuelve limpio 0
-- los cinco defectos sembrados siguen ahí y se siguen encontrando: limpiar un brazo no puede tocar el examen
+- el probe deja de reportar una tirada: corre el fixture N veces y reporta, por lente y por brazo, una mediana y el rango en que se movió
+- `--runs N`: sin el flag la medida es una corrida, como hoy; con `--runs 3` son tres por brazo y por lente
+- cada corrida guarda su respuesta numerada en el store del probe, para que el número se pueda auditar después
 
 ## Done when
-- el código de `clean/` responde a los diez hallazgos de la primera medida: el status del remoto, el error de lectura y el de escritura, el timeout del cliente, el 404 que tapa un timeout de base, el límite que no acota negativos, y los tests que faltan del handler y del cache
-- una corrida del probe con revisor devuelve `clean 0` y los cinco sembrados encontrados
-- el manifiesto no se mueve: los cinco defectos, sus paths, sus líneas y sus pisos son los mismos
+- sin `--runs`, el comando se comporta igual que hoy y lo dice en el resumen
+- con `--runs N`, se ejecutan N corridas por cada brazo y cada lente, y el informe imprime mediana y rango de encontrados, ruido y limpio
+- un `--runs 0` o negativo se rechaza nombrando el mínimo, y un `--runs` mayor que 10 se rechaza nombrando el costo
+- los tests puntúan tres corridas distintas con respuestas escritas a mano y pinchan mediana y rango, sin red y sin modelo
 - `go test ./...` es verde y `odachi check --run "go test ./..."` es verde
-- la medida nueva queda en `docs/review-research.md` con fecha y modelo, y reemplaza a la anterior como lectura vigente
-- Unreleased nombra el fixture limpio, patch (0264)
+- la nueva lectura de la precisión queda en `docs/review-research.md` con fecha, modelo y la dispersión observada
+- Unreleased nombra la repetición, patch (0265)
 
 ## Not included (first version)
-- no se toca el contenido de los lentes: medir editando el examen no mide nada - back when a lens is changed for a reason the probe records
-- no corre en CI ni en la gate: cuesta llamadas a un modelo y no es determinista - back when a probe is cheap enough to run per change
-- no se agregan defectos nuevos al brazo sembrado: la llave no crece en la misma feature que la limpia - back when the fixture outgrows five defects
-- no se cambia el puntaje ni el verbo: solo el código que se mide - back when the score itself is the question
+- no se toca el fixture ni los lentes: la repetición mide lo que ya existe - back when the fixture or a lens changes for a reason this feature records
+- no corre en CI ni en la gate: N veces una llamada a un modelo multiplica el costo - back when a cheap reviewer makes a probe per change affordable
+- no hay intervalos de confianza ni tests estadísticos: mediana y rango, que es lo que una persona lee - back when the number has to support a claim
+- no se cambia el puntaje: la regla de encontrado, bajo y perdido queda como está - back when the scoring rule itself is the question
 
 ## Decisions taken
-- El brazo limpio se gana el nombre: la medida es la que dice si quedó limpio, no la intención.
-- Lo que un lente marque y sea real se paga en el código; lo que sea preferencia se registra en el cierre y no se deja como ruido pendiente.
-- La medida anterior no se borra: se reemplaza como lectura vigente, con fecha y modelo, y la vieja queda como historia.
+- Mediana y no media: una tirada rara no mueve el centro.
+- El rango es el hallazgo de 0264, así que viaja en el informe al lado de la mediana y no en una nota.
+- El tope de corridas es 10: más que eso es un experimento, y un experimento se diseña aparte.
+- N corridas por brazo y por lente se guardan numeradas, porque el número sin las respuestas no se puede auditar.
