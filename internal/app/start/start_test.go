@@ -873,6 +873,32 @@ func TestStartKeepsTheBriefAFeatureAlreadyWrote(t *testing.T) {
 	}
 }
 
+// TestStartCarriesEveryBlocksNonGoalsIntoTheFence: the brief accumulates, so the
+// fence is built from every sentence it holds and a template from an older feature
+// survives the next one (0271). Without this the block's third outcome was false:
+// the fence took only the run's own non-goals.
+func TestStartCarriesEveryBlocksNonGoalsIntoTheFence(t *testing.T) {
+	const previous = "# otra\n\n## What must exist\n- lo de antes\n\n## Not included (first version)\n- no se toca el esquema viejo\n"
+	files := newFakeFiles(map[string]string{"brief.md": previous}, nil)
+	opts := flagsCarryTheSameAnswers()
+	opts.Force = true
+	opts.Profile = novatoProfile(t)
+	opts.Machine = true
+	opts.Exclude = []string{"Pagos"}
+
+	if got := start.Run(opts, nil, files, nil); got.Code != start.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, start.CodeOK, got.Message)
+	}
+
+	fence := files.content(t, filepath.Join("odd", "fence.toml"))
+	if !strings.Contains(fence, "no se toca el esquema viejo") {
+		t.Errorf("the fence dropped the non-goal an older block carried:\n%s", fence)
+	}
+	if !strings.Contains(fence, `paths = ["payment*", "**/payments/**"]`) {
+		t.Errorf("the fence dropped this run's rule:\n%s", fence)
+	}
+}
+
 // TestStartDoesNotWriteTheSameBlockTwice: running the same requirement again is
 // the same feature, and the brief is a record of decisions, not a log of attempts.
 func TestStartDoesNotWriteTheSameBlockTwice(t *testing.T) {

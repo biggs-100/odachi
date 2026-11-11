@@ -156,7 +156,16 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	// arrives as a phrase is not a rule -it protects no path, so the file carries
 	// it as a template and the run says what to write- and a rule nobody can
 	// trust is worse than a rule that is still a question.
-	rules, loose, kept, hadFence, problem := r.mergeFence(in.nonGoals)
+	// The fence is built from every non-goal the brief carries, not only this run's:
+	// the brief accumulates since 0271, and a rule whose sentence survives while the
+	// template it came from disappears would be half a memory. The union is read
+	// before the first write, so a fence or a brief that cannot be read still blocks
+	// with the human's files untouched.
+	fenceGoals, problem := r.briefAndRunNonGoals(in.nonGoals)
+	if problem != nil {
+		return *problem
+	}
+	rules, loose, kept, hadFence, problem := r.mergeFence(fenceGoals)
 	if problem != nil {
 		return *problem
 	}
@@ -255,6 +264,36 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		Task:    filepath.ToSlash(taskPath),
 		Files:   r.written,
 	}
+}
+
+// briefAndRunNonGoals is the non-goal list the fence is built from: the existing
+// brief's, in the order they were written, and then this run's, without repeating a
+// sentence. A brief that cannot be read is not an empty one: it blocks, because
+// building the fence from half a vision is worse than stopping (0271).
+func (r *runner) briefAndRunNonGoals(run []string) ([]string, *Result) {
+	goals := make([]string, 0, len(run)+1)
+
+	path := filepath.Join(r.opts.Dir, briefFile)
+	exists, err := r.files.Exists(path)
+	if err != nil {
+		problem := blocked("could not check " + briefFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again")
+		return nil, &problem
+	}
+	if exists {
+		data, err := r.files.Read(path)
+		if err != nil {
+			problem := blocked("could not read " + briefFile + ": " + oneLine(err.Error()) + "; check the permissions and run odachi start again")
+			return nil, &problem
+		}
+		goals = append(goals, brief.Parse(string(data)).NonGoals...)
+	}
+
+	for _, goal := range run {
+		if !slices.Contains(goals, strings.TrimSpace(goal)) {
+			goals = append(goals, goal)
+		}
+	}
+	return goals, nil
 }
 
 // writeBriefBlock records this run's vision without erasing the ones before it. A
