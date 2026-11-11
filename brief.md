@@ -1,25 +1,24 @@
-# la-cerca-se-fusiona
+# la-base-que-cubre
 
 ## What must exist
-- start deja de reescribir odd/fence.toml: conserva las reglas que ya están y solo agrega las nuevas, y una regla con paths nunca se pierde
-- the merge reads the file it is about to replace with the same grammar the gate reads it with, so nothing start writes is a file check cannot parse
-- a non-goal this run repeats does not add a second rule with the same name
+- check no se contradice en el cierre: un veredicto cuya base es anterior a la de la feature la cubre, y un árbol que solo movió documentos después de ese veredicto no vuelve a pedir review
+- a verdict whose base is a descendant of the feature's base is still refused, naming the base: the lane must not become a hole
+- the two symptoms the human saw are one rule: `ready` next to "the feature is closed and its tree has no verdict", and a `review --base` the store answers with "this tree already has a verdict"
 
 ## Done when
-- `odachi start` over a fence that already protects `proof/**` ends with that rule and its `not` unchanged
-- a new non-goal adds its rule and `check` reads the result: the round trip through the adapter returns the same rules
-- a non-goal that repeats an existing rule leaves one `[[rule]]` with that `not`
-- with no fence file the run writes today's file, the commented template for a non-goal without paths included
-- the run says how many rules it kept
+- a verdict for this tree whose base is an ancestor of the feature's base asks for nothing, and `check` says which tree and which base it speaks for
+- a verdict whose base is a descendant of the feature's base is still refused, naming the base it judged and the base the feature starts from
+- after a commit that only moved documents on a closed feature, `check` prints ready with no line about a missing verdict, and says the verdict belongs to the code's tree
+- the same tree with no verdict for the code it runs on still names the missing verdict, and the close still names it
+- the ancestry question is asked of the repository through one port method, and the fake in the gate's tests answers it
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
-- `## Unreleased` names the merge, patch (0266)
+- `## Unreleased` names the rule, patch (0268)
 
 ## Not included (first version)
-- the file keeps its shape: canonical TOML, one key per line, and the commented template for a non-goal without paths - back when the shape itself is the question
-- one rule is never folded into another: the same `not` keeps the rule as written, and its paths and deps do not grow across runs - back when a rule itself has to change
-- a commented template does not outlive the brief that wrote it: only rules with paths survive a new brief - back when a human wants their own notes kept
-- no migration of fences an older odachi wrote: a file check already reads is merged as it is - back when the old shape has to be repaired
+- one tree, one verdict stays: a second verdict for the same bytes is still refused - back when the store has to hold two judgments of one tree
+- what counts as a document is not redefined here: the same classifier the proof and the review already share answers it - back when "documents only" itself is the question
+- no verdict is written or repaired: `check` reads the store and reports, `review` stays the only thing that writes - back when a verdict has to be rebuilt from something else
 
 ## Decisions taken
-- Decode and render live in one adapter, fencetoml: a merge that writes a file the gate cannot read is this same defect in a new coat.
-- The rule's `not` is its identity: a run that repeats a non-goal must find the rule already there, not add a twin.
+- Ancestry, not equality: a base earlier than the feature's judged more than its diff, never less, and treating the two as different erased a review that had happened.
+- The port gains one question -is this commit an ancestor of that one- instead of the gate guessing with path lists, because a subset of paths is not a subset of bytes.
