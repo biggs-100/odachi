@@ -1,50 +1,51 @@
 # Next session
 
-Written after `v0.38.12` shipped. Nothing is owed.
+Written after `v0.38.13` shipped. Nothing is owed.
 
 ## Where the project is
 
-- `v0.38.12` is published: annotated tag on `c0f8c55` (`Merge pull request #526`), sixteen assets, and the
-  binary installed on this machine reports `odachi v0.38.12`. `main` is that merge commit.
-- The patch it names came in with #525: `odachi start` appends a block to `brief.md` instead of writing it
-  from scratch, and the fence is built from every non-goal the brief carries (0271).
-- 269 features, 650 steps, 0 open questions; `docs/review-debt.md` holds no open row.
-- The closing tree carries `proof/0271-el-brief-acumula.txt` and one verdict
-  (`.git/odachi/reviews/b82fded7….json`, reliability, base `c3c7004`).
-- `## Unreleased` does not exist: the next feature writes it again, above `## v0.38.12`.
+- `v0.38.13` is published: annotated tag on `6bc8864` (`Merge pull request #530`), sixteen assets, and the
+  binary installed on this machine reports `odachi v0.38.13`. `main` is that merge commit.
+- Two patches went in today for it: `review --since` resolves the prefix a person copies to the stored
+  verdict (0272), and the public face says what the repository does -`--help` names every verb the
+  dispatcher answers, and the README lost the counts that rot (0273).
+- 271 features, 654 steps, 0 open questions; `docs/review-debt.md` holds no open row.
+- The closing tree carries `proof/0273-la-cara-dice-la-verdad.txt` and one verdict
+  (`.git/odachi/reviews/68fecbb0….json`, reliability, base `94645f0`, no findings).
+- `## Unreleased` does not exist: the next feature writes it again, above `## v0.38.13`.
 
 ## What shipped
 
-- **0271, the brief keeps every feature it has seen.** The fence has been append-only since 0266, so a rule
-  outlived the feature that wrote it while the sentence behind it did not. A run now appends a block named
-  after the feature, the block repeats the canonical headers `brief.Parse` already reads, and the four lists
-  are the union: outcomes, done-when, non-goals and decisions. The same requirement is not written twice,
-  `--force` still writes the file when nothing is new because `undo` reads the backup, and the fence is
-  built from the union of the blocks.
-- **Two findings from its own review, both real and both paid.** The brief went through a console that
-  decoded UTF-8 as CP850 during the hand merge that opened the feature (`â€¦`, `Ã³`), and the tree's review
-  found it; the third outcome said the fence was built from the union and it was not, and the tree's review
-  found that too. Both corrections are in the pull request with the reds that pin them.
+- **0272, the tree a human copies.** `domain.Name` accepted any hash-like string, so `--since bbf385ca`
+  looked for `reviews/bbf385ca.json` and answered "there is no verdict for the tree --since names" about a
+  verdict the clone held -it cost a full review instead of the cheap delta. The correction resolves the
+  prefix against the store listing `--all` prints, refuses an ambiguous one naming its candidates, and says
+  which tree it completed.
+- **0273, the public face.** `design` and `review probe` were answered and absent from the usage block; the
+  README claimed eighteen surfaces (twenty-three), 44 packages (62), no provenance (`gh attestation verify`
+  exits 0), and no automated test for `install.ps1` (the Windows suite runs it over `file://`). The counts
+  are gone instead of updated, and a test reads the dispatcher's own cases so a verb cannot hide again.
 
 ## The questions that wait
 
-- **None open.** The brief question is answered: `brief.md` is the project's vision and it accumulates, one
-  block per feature, with the same headers the parser reads. A light feature (`start --light`) still writes
-  no brief: it is one line, and its line lives in its task document.
-- **One approval is one draw.** The lens approved the closing tree, and the same lens had found two real
-  defects in the previous tree. A verdict is a sample, not a proof that nothing is left (0265).
+- **None open.** The next feature writes the new `## Unreleased`.
+- **One approval is one draw.** Every verdict today was a single sample; two of them approved a tree and the
+  next tree's review found real defects in what the first had passed.
 
 ## The limits to remember
 
-- **A review row is keyed by bytes, not by truth.** The WARNING about `odd/fence.toml` stayed potent after
-  its fix landed, because the row names the fence file and the fix was in the code. `docs/review-debt.md`
-  records it as paid; the store retires it when those bytes change.
-- **The console is not UTF-8.** PowerShell on this machine decodes UTF-8 as CP850 on the way through, so a
-  file rebuilt through `Get-Content`/`Set-Content` comes back with `â€¦`. Rebuild artifacts with Python or
-  with the tool; `brief.md` is the artifact whose requirements must stay verbatim.
-- **The environment is part of the red** (0269), **the store can block a verdict** (0265), **one tree, one
+- **A test that reads source can be fooled.** The usage test matched `odachi skill` inside `odachi skills`
+  and stopped its scan at any brace: the review of the tree found both. A reader needs a token boundary and
+  the block's own closing brace, and a guard that fails when the scan does not reach the last case.
+- **`## Unreleased` appears twice in `CHANGELOG.md`**: once in the heading and once in the intro prose that
+  explains it. `strings.Replace` on the first match rewrites the sentence, not the heading; rename the line
+  whose content is exactly `## Unreleased`.
+- **A run queued with zero jobs is GitHub's problem**, not a busy queue: `gh run view <id> --json jobs` says
+  `total=0`, and closing and reopening the pull request triggers a fresh run that starts.
+- **A rebase of a closing branch needs a fresh proof and a fresh verdict**, and the conflicted commit cannot
+  run the hook: resolve, run `check --run`, review the delta, then push with `--force-with-lease`.
+- **The store's rows are keyed by bytes** (0265), **the console is not UTF-8** (0271), **one tree, one
   verdict** and a wider base covers a later feature (0268), **a docs-only change owes no new proof**.
-- **This file goes stale in one release.** Four releases today, four rewrites; write it when the facts move.
 - **One heavy gate per machine**: `go test ./...` takes about 700 s and `check --run` writes the proof.
 
 ## The commands that work
@@ -57,6 +58,11 @@ odachi check --run "go test ./..." --timeout 1800
 # a verdict for the tree, with the answer kept beside it
 odachi review --base <feature base> --lens reliability --model opencode-go/deepseek-v4.1-flash \
   --exec 'C:\Users\USER\AppData\Local\Temp\odachi-rev.bat {model} {prompt} C:\Users\USER\AppData\Local\Temp\review.json'
+```
+
+```sh
+# a correction takes the prefix the listing shows
+odachi review --since bbf385ca --lens reliability --exec '...'
 ```
 
 ```sh
