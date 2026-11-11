@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.38.10 - 2026-11-11
 
 - **The Windows installer no longer trusts a cmdlet.** `scripts/install.ps1` extracted the release with
   `Expand-Archive -Force`, and a Windows PowerShell 5.1 that inherits a `PSModulePath` carrying PowerShell
