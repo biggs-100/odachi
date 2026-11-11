@@ -1,43 +1,3 @@
-# This non-goal has no paths yet:
-#   no se toca el fixture ni los lentes: la repetición mide lo que ya existe - back when the fixture or a lens changes for a reason this feature records
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "no se toca el fixture ni los lentes: la repetición mide lo que ya existe - back when the fixture or a lens changes for a reason this feature records"
-# paths = []
-# deps  = []
-
-# This non-goal has no paths yet:
-#   no corre en CI ni en la gate: N veces una llamada a un modelo multiplica el costo - back when a cheap reviewer makes a probe per change affordable
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "no corre en CI ni en la gate: N veces una llamada a un modelo multiplica el costo - back when a cheap reviewer makes a probe per change affordable"
-# paths = []
-# deps  = []
-
-# This non-goal has no paths yet:
-#   no hay intervalos de confianza ni tests estadísticos: mediana y rango, que es lo que una persona lee - back when the number has to support a claim
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "no hay intervalos de confianza ni tests estadísticos: mediana y rango, que es lo que una persona lee - back when the number has to support a claim"
-# paths = []
-# deps  = []
-
-# This non-goal has no paths yet:
-#   no se cambia el puntaje: la regla de encontrado, bajo y perdido queda como está - back when the scoring rule itself is the question
-# A rule protects files: write what it must keep out of the tree, then
-# remove the '#' in front of the four lines below.
-#
-# [[rule]]
-# not   = "no se cambia el puntaje: la regla de encontrado, bajo y perdido queda como está - back when the scoring rule itself is the question"
-# paths = []
-# deps  = []
-
 [[rule]]
 not   = "the stored proofs are the evidence this tree ran: the package that writes them may change, a proof that already exists may not"
 paths = ["proof/**"]
@@ -57,3 +17,43 @@ deps  = []
 not   = "no se toca el fixture ni los lentes: la repeticion mide lo que ya existe"
 paths = ["internal/probe/testdata/lenses/**"]
 deps  = []
+
+# This non-goal has no paths yet:
+#   the file keeps its shape: canonical TOML, one key per line, and the commented template for a non-goal without paths - back when the shape itself is the question
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the file keeps its shape: canonical TOML, one key per line, and the commented template for a non-goal without paths - back when the shape itself is the question"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   one rule is never folded into another: the same `not` keeps the rule as written, and its paths and deps do not grow across runs - back when a rule itself has to change
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "one rule is never folded into another: the same `not` keeps the rule as written, and its paths and deps do not grow across runs - back when a rule itself has to change"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   a commented template does not outlive the brief that wrote it: only rules with paths survive a new brief - back when a human wants their own notes kept
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "a commented template does not outlive the brief that wrote it: only rules with paths survive a new brief - back when a human wants their own notes kept"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no migration of fences an older odachi wrote: a file check already reads is merged as it is - back when the old shape has to be repaired
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no migration of fences an older odachi wrote: a file check already reads is merged as it is - back when the old shape has to be repaired"
+# paths = []
+# deps  = []

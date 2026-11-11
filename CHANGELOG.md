@@ -8,6 +8,16 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The fence keeps what it protects.** `odachi start` reads `odd/fence.toml` before writing it and keeps
+  every rule already there, adding only the non-goals the new run brings; a fence it cannot read is left
+  alone and named instead of overwritten. The rules are read and written through one adapter, so a file a
+  run writes is a file the gate can read. Patch (0266).
+- **Zero draws is refused, not measured.** `odachi review probe --runs 0` no longer becomes one draw in
+  silence: the count is checked against the range the measurement holds and the message names the minimum.
+  The row the last review left open in that file is paid. A fix, patch (0267).
+
 ## v0.38.8 - 2026-11-11
 
 - **The measurement repeats.** `odachi review probe --runs N` asks every lens and arm N times and reports a median with the range it moved in: on the fixture, every planted defect was found in most draws, while the findings nobody planted moved from 3 to 7 and the clean arm from 0 to 5. One draw is not a measurement. A new flag, patch (0265).

@@ -9,11 +9,19 @@ outside the worktree, so it does not travel with the repository. This file does.
 - **It is not a gate**: `check` does not read it, and a row here never blocks a
   merge. It is the list a person reads before choosing the next feature.
 
-Last written: while closing 0265.
+Last written: while closing 0267.
 
 ## Open
 
-Nothing open: 0264 left no row.
+Nothing open: 0267 paid the row 0265 left, and 0266's verdict carried none.
+
+## Closed by feature 0267
+
+### zero draws is measured as one
+
+Found by the review of 0265 (CRITICAL, `internal/app/lensprobe/probe.go:171`). `if draws == 0 { draws = 1 }` turned an explicit `--runs 0` into a single draw, and the range check that follows can never see a zero. The brief's Done-when for 0265 said a zero is rejected naming the minimum, and the test iterated only `{-1, 11}`, so the gap passed CI. The row stayed potent -the blob never changed- and it blocked every later verdict as a causal CRITICAL; it was missing from this file at the close of 0265, which is why 0266 found it in the store instead of here.
+
+Closed: the coercion is gone and the count is checked against the range, so `--runs 0` blocks with "the measurement holds between 1 and 10 draws"; `TestProbeRefusesARunCountOutsideTheRange` iterates `{-1, 0, MaxRuns + 1}` and was observed red on the zero (it measured one draw before the fix). The row retires with the blob: 0266's verdict was stored once the file changed.
 
 ## Closed by feature 0260
 

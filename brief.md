@@ -1,27 +1,25 @@
-# la-medida-se-repite
+# la-cerca-se-fusiona
 
 ## What must exist
-- el probe deja de reportar una tirada: corre el fixture N veces y reporta, por lente y por brazo, una mediana y el rango en que se movió
-- `--runs N`: sin el flag la medida es una corrida, como hoy; con `--runs 3` son tres por brazo y por lente
-- cada corrida guarda su respuesta numerada en el store del probe, para que el número se pueda auditar después
+- start deja de reescribir odd/fence.toml: conserva las reglas que ya están y solo agrega las nuevas, y una regla con paths nunca se pierde
+- the merge reads the file it is about to replace with the same grammar the gate reads it with, so nothing start writes is a file check cannot parse
+- a non-goal this run repeats does not add a second rule with the same name
 
 ## Done when
-- sin `--runs`, el comando se comporta igual que hoy y lo dice en el resumen
-- con `--runs N`, se ejecutan N corridas por cada brazo y cada lente, y el informe imprime mediana y rango de encontrados, ruido y limpio
-- un `--runs 0` o negativo se rechaza nombrando el mínimo, y un `--runs` mayor que 10 se rechaza nombrando el costo
-- los tests puntúan tres corridas distintas con respuestas escritas a mano y pinchan mediana y rango, sin red y sin modelo
-- `go test ./...` es verde y `odachi check --run "go test ./..."` es verde
-- la nueva lectura de la precisión queda en `docs/review-research.md` con fecha, modelo y la dispersión observada
-- Unreleased nombra la repetición, patch (0265)
+- `odachi start` over a fence that already protects `proof/**` ends with that rule and its `not` unchanged
+- a new non-goal adds its rule and `check` reads the result: the round trip through the adapter returns the same rules
+- a non-goal that repeats an existing rule leaves one `[[rule]]` with that `not`
+- with no fence file the run writes today's file, the commented template for a non-goal without paths included
+- the run says how many rules it kept
+- `go test ./...` is green and `odachi check --run "go test ./..."` is green
+- `## Unreleased` names the merge, patch (0266)
 
 ## Not included (first version)
-- no se toca el fixture ni los lentes: la repetición mide lo que ya existe - back when the fixture or a lens changes for a reason this feature records
-- no corre en CI ni en la gate: N veces una llamada a un modelo multiplica el costo - back when a cheap reviewer makes a probe per change affordable
-- no hay intervalos de confianza ni tests estadísticos: mediana y rango, que es lo que una persona lee - back when the number has to support a claim
-- no se cambia el puntaje: la regla de encontrado, bajo y perdido queda como está - back when the scoring rule itself is the question
+- the file keeps its shape: canonical TOML, one key per line, and the commented template for a non-goal without paths - back when the shape itself is the question
+- one rule is never folded into another: the same `not` keeps the rule as written, and its paths and deps do not grow across runs - back when a rule itself has to change
+- a commented template does not outlive the brief that wrote it: only rules with paths survive a new brief - back when a human wants their own notes kept
+- no migration of fences an older odachi wrote: a file check already reads is merged as it is - back when the old shape has to be repaired
 
 ## Decisions taken
-- Mediana y no media: una tirada rara no mueve el centro.
-- El rango es el hallazgo de 0264, así que viaja en el informe al lado de la mediana y no en una nota.
-- El tope de corridas es 10: más que eso es un experimento, y un experimento se diseña aparte.
-- N corridas por brazo y por lente se guardan numeradas, porque el número sin las respuestas no se puede auditar.
+- Decode and render live in one adapter, fencetoml: a merge that writes a file the gate cannot read is this same defect in a new coat.
+- The rule's `not` is its identity: a run that repeats a non-goal must find the rule already there, not add a twin.
