@@ -1,13 +1,13 @@
 # Next session
 
-Written while closing 0264. Nothing is owed.
+Written while closing 0265. Nothing is owed.
 
 ## Where the project is
 
-- `v0.38.7` is published (tag on `edd782e`); this session shipped `v0.38.6` (0263) and `v0.38.7` (0264).
-- The installed binary is `0.38.7`; `doctor` is clear except this file, which this run pays.
-- 262 features, 639 steps, 0 open questions; `docs/review-debt.md` has no row.
-- `v0.38.7` renamed `Unreleased`: the next feature writes under it again.
+- `v0.38.8` is published (tag on `97c95b0`); the session shipped `v0.38.6`, `v0.38.7` and `v0.38.8`.
+- The installed binary is `0.38.8`; `doctor` is clear except this file, which this run pays.
+- 263 features, 641 steps, 0 open questions; `docs/review-debt.md` holds one row, left on purpose.
+- `v0.38.8` renamed `Unreleased`: the next feature writes under it again.
 
 ## What this session did
 
@@ -25,6 +25,13 @@ Written while closing 0264. Nothing is owed.
   five planted defects are still found. The manifest and the seeded arm were not touched, and the fence now
   protects the manifest by path.
 
+- **0265, the measurement repeats** (`v0.38.8`): `--runs N` asks every lens and arm N times and reports a
+  median with the range each number moved in; answers are stored numbered per draw; `--runs 0` and 11 are
+  refused. The three-draw reading: risk, readability and reliability found their defect in all three draws,
+  resilience found both in two and one in the third, the findings nobody planted moved 3..7, and the clean
+  arm 0..5. Precision is an interval, not a number. Its own review found five defects; four were paid
+  (`--runs 0` coerced, the summary sum of medians, a weakened assertion, a comment describing nothing) and
+  the fifth is the open row in `docs/review-debt.md`.
 ## The questions that wait
 
 - **One run is one draw.** The same clean code, same model, three runs: 10 findings, then 1, then 4, with a
