@@ -24,8 +24,8 @@ paths = ["internal/domain/gate/**"]
 deps  = []
 
 [[rule]]
-not   = "el fixture de la sonda y su puntaje son intocables: 0279 solo puede limpiar la sonda donde el linter lo nombra, no cambiar lo que mide - back when the probe's arm or its scoring changes for a reason this feature records"
-paths = ["internal/domain/probe/**", "internal/probe/**"]
+not   = "el fixture de la sonda y su llave son intocables: medir cambiando el examen no mide nada - back when the probe's arm, its planted defects or the manifest change for a reason this feature records"
+paths = ["internal/probe/**", "internal/domain/probe/manifest.go"]
 deps  = []
 
 # This non-goal has no paths yet:
@@ -385,5 +385,35 @@ deps  = []
 #
 # [[rule]]
 # not   = "govulncheck and the other Part 8 items are not here"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the fixture stays as 0281 left it: no arm and no planted defect moves
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the fixture stays as 0281 left it: no arm and no planted defect moves"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the review of a tree is untouched: no new verdict, no new draw, no new lens
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the review of a tree is untouched: no new verdict, no new draw, no new lens"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no new flag and no new verb: the split is what the four counters say
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no new flag and no new verb: the split is what the four counters say"
 # paths = []
 # deps  = []
