@@ -15,11 +15,11 @@ R1 · "a verdict can be paid by N draws of the same judge: `odachi review --runs
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
 
 ## Steps
-- [ ] T1 · el flag tiene borde: --runs va de 1 a 10, el techo se rechaza antes del store, y sin --exec no hay tirada   R1 · route:inline
-- [ ] T2 · N tiradas por lente pagan una union: cada lente contesta N veces y dos tiradas del mismo defecto dejan una sola fila   R1 · route:inline
-- [ ] T3 · el veredicto dice cuantas tiradas pago cada lente: draws en el archivo, ausente lee uno, y --show lo imprime   R1 · route:inline
-- [ ] T4 · una corrida posterior completa la lente: se paga solo la diferencia hasta N, y pedir cero se rechaza con el conteo   R1 · route:inline
-- [ ] T5 · una tirada que falla no tira las otras: lo que contesto se guarda, el conteo dice 2 de 3, y la corrida sale bloqueada   R1 · route:inline
+- [x] T1 · el flag tiene borde: --runs va de 1 a 10, el techo se rechaza antes del store, y sin --exec no hay tirada   R1 · route:inline · tree:3f82b8debd415ff1c787dd8304957f7281dd3761
+- [x] T2 · N tiradas por lente pagan una union: cada lente contesta N veces y dos tiradas del mismo defecto dejan una sola fila   R1 · route:inline · tree:3beb25e9d9d13e7c3851acaac12786c0a08f927b
+- [x] T3 · el veredicto dice cuantas tiradas pago cada lente: draws en el archivo, ausente lee uno, y --show lo imprime   R1 · route:inline · tree:cbddb7070cf5022959fc2f5cefe23480f7f3af4d
+- [x] T4 · una corrida posterior completa la lente: se paga solo la diferencia hasta N, y pedir cero se rechaza con el conteo   R1 · route:inline · tree:ebcae3f914429a2e7d2be46dcfad37782ce85ed7
+- [x] T5 · una tirada que falla no tira las otras: lo que contesto se guarda, el conteo dice 2 de 3, y la corrida sale bloqueada   R1 · route:inline · tree:13e51fc913e38282f1f2ac2b075e773650a9ea13
 
 ## History
 L1 · "a verdict can be paid by N draws of the same judge: `odachi review --runs N` asks each required lens N times and files the union of what they answered as one verdict"
