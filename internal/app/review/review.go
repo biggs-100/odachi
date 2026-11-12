@@ -1091,31 +1091,56 @@ func (r *runner) exec() Result {
 
 	// Every group is resolved before any of them runs: a group that cannot name
 	// its model must not be discovered after another one was paid for.
-	groups := r.lensGroups(todo)
-	commands := make([]string, len(groups))
-	resolved := make([]string, len(groups))
-	for i, group := range groups {
+	commands := map[string]string{}
+	resolved := map[string]string{}
+	for _, group := range r.lensGroups(todo) {
 		command, model, problem := r.reviewerCommand(group.model, group.lenses)
 		if problem != nil {
 			return *problem
 		}
-		commands[i] = command
-		resolved[i] = model
+		commands[group.model] = command
+		resolved[group.model] = model
 	}
 
-	// The prompt is what the reviewer is paid for, and its size is the one thing
-	// odachi knows before spending anything: a model that stalls at a size does
-	// not answer late, it does not answer at all. A candidate whose prompt does not
-	// fit the project's limit is reviewed in parts -each one a reviewer of its own,
-	// with the group's lenses and model- and the store merges their answers into
-	// the tree's one verdict, the way it merges one group per lens.
-	units, problem := r.units(cand, groups, commands, resolved)
-	if problem != nil {
-		return *problem
+	// A draw is one answer per lens, and the draw that pays the second answer carries
+	// only the lenses that still owe one: a lens already paid to N is never asked
+	// again just because it shares a call with a lens that owes another. The rounds
+	// are built before anything runs, so a prompt that does not fit is refused before
+	// the first command is paid for.
+	depth := 0
+	for _, lens := range todo {
+		if owed[strings.ToLower(strings.TrimSpace(lens))] > depth {
+			depth = owed[strings.ToLower(strings.TrimSpace(lens))]
+		}
 	}
-	prompts := make([]string, len(units))
-	for i, unit := range units {
-		prompts[i] = unit.prompt
+	var drawn []drawing
+	var prompts []string
+	for n := 1; n <= depth; n++ {
+		due := dueDraws(todo, owed, n)
+		if len(due) == 0 {
+			break
+		}
+		groups := r.lensGroups(due)
+		groupCommands := make([]string, len(groups))
+		groupModels := make([]string, len(groups))
+		for i, group := range groups {
+			groupCommands[i] = commands[group.model]
+			groupModels[i] = resolved[group.model]
+		}
+		// The prompt is what the reviewer is paid for, and its size is the one thing
+		// odachi knows before spending anything: a model that stalls at a size does
+		// not answer late, it does not answer at all. A candidate whose prompt does
+		// not fit the project's limit is reviewed in parts -each one a reviewer of
+		// its own, with the group's lenses and model- and the store merges their
+		// answers into the tree's one verdict.
+		units, problem := r.units(cand, groups, groupCommands, groupModels)
+		if problem != nil {
+			return *problem
+		}
+		for _, unit := range units {
+			prompts = append(prompts, unit.prompt)
+		}
+		drawn = append(drawn, drawing{n: n, of: depth, units: units})
 	}
 	if problem := r.promptTooBig(prompts); problem != nil {
 		return *problem
@@ -1128,198 +1153,200 @@ func (r *runner) exec() Result {
 	var last Result
 	// Every unit is asked as many times as --runs asked for: a draw is one answer,
 	// and one answer is one sample of a judge, not a verdict about the tree.
-	for _, paid := range r.draws(units, owed) {
-		unit := paid.unit
-		command := unit.command
-		group := lensGroup{lenses: unit.lenses, model: unit.model}
+	for _, round := range drawn {
+		for _, unit := range round.units {
+			paid := draw{unit: unit, n: round.n, of: round.of}
+			command := unit.command
+			group := lensGroup{lenses: unit.lenses, model: unit.model}
 
-		// The command is a reviewer, so it gets the prompt the verb prints, for the
-		// lenses this group owns. The text was built and measured before any group
-		// ran: a reviewer started without one reviews whatever it decides to look
-		// at, and that is not the candidate this verdict is filed under.
-		text := unit.prompt
+			// The command is a reviewer, so it gets the prompt the verb prints, for the
+			// lenses this group owns. The text was built and measured before any group
+			// ran: a reviewer started without one reviews whatever it decides to look
+			// at, and that is not the candidate this verdict is filed under.
+			text := unit.prompt
 
-		// A command that names {verdict} is given a file before it runs, emptied
-		// first: an answer a previous group left there is not this group's, and a
-		// reviewer that writes nothing must not inherit it.
-		answerRel, answerPath := "", ""
-		if strings.Contains(command, answerToken) {
-			rel, err := domain.AnswerPath(cand.tree)
+			// A command that names {verdict} is given a file before it runs, emptied
+			// first: an answer a previous group left there is not this group's, and a
+			// reviewer that writes nothing must not inherit it.
+			answerRel, answerPath := "", ""
+			if strings.Contains(command, answerToken) {
+				rel, err := domain.AnswerPath(cand.tree)
+				if err != nil {
+					return blocked(oneLine(err.Error()) + "; the reviewer was not started")
+				}
+				answerRel = rel
+				answerPath = r.storePath(rel)
+				if err := r.files.Write(answerPath, nil); err != nil {
+					problem := blocked("could not prepare " + r.storeLabel(rel) + " for the reviewer's answer: " +
+						oneLine(err.Error()) + "; the reviewer was not started")
+					return problem
+				}
+				command = strings.ReplaceAll(command, answerToken, r.shell.Quote(answerPath))
+			}
+
+			// The question is filed once it has been sent, whatever came back: the bytes
+			// that produced a verdict - or a failure - are the only way to read the run
+			// again without regenerating them. A command that never started was handed
+			// nothing, and a run that refuses before this point writes nothing.
+			promptRel, err := domain.GroupPromptPath(cand.tree, group.lenses)
 			if err != nil {
 				return blocked(oneLine(err.Error()) + "; the reviewer was not started")
 			}
-			answerRel = rel
-			answerPath = r.storePath(rel)
-			if err := r.files.Write(answerPath, nil); err != nil {
-				problem := blocked("could not prepare " + r.storeLabel(rel) + " for the reviewer's answer: " +
-					oneLine(err.Error()) + "; the reviewer was not started")
-				return problem
+			if unit.of > 1 {
+				promptRel, err = domain.PartPromptPath(cand.tree, group.lenses, unit.part, unit.of)
+				if err != nil {
+					return blocked(oneLine(err.Error()) + "; the reviewer was not started")
+				}
+			} else if round.n == 1 && len(round.units) == 1 {
+				if canonical, err := domain.PromptPath(cand.tree); err == nil {
+					promptRel = canonical
+				}
 			}
-			command = strings.ReplaceAll(command, answerToken, r.shell.Quote(answerPath))
-		}
+			stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
+			// The question is filed once it has been sent, whatever came back: the bytes
+			// that produced a verdict - or a failure - are the only way to read the run
+			// again without regenerating them, and a command that never started was
+			// handed nothing to file.
+			if err == nil {
+				// A store that cannot hold the question says so and keeps going: the
+				// answer is the paid thing, and throwing it away to report a missing
+				// file would be the same loss this feature exists to prevent.
+				if writeErr := r.files.Write(r.storePath(promptRel), []byte(text)); writeErr != nil {
+					notes = appendUnique(notes, "the prompt could not be filed in "+r.storeLabel(promptRel)+": "+oneLine(writeErr.Error()))
+				}
+			}
+			// The answer is stdout, unless the command was given a file to write it
+			// in. Then the file is the answer and stdout is only diagnosis: a reviewer
+			// that prints a banner, a spinner or its own logs keeps its answer readable.
+			diagnosis := stdout
+			if stderr != "" {
+				diagnosis += stderr
+			}
+			// A draw that does not answer after another one landed leaves what landed:
+			// the sentence names the draw that was lost and how many the lens holds, and
+			// the run stops blocked, because the verb did not do what it was asked even
+			// though the store kept what it paid for.
+			lost := func(reason string) string {
+				return reason + r.lostDraw(len(landed), paid, group)
+			}
+			switch {
+			case err != nil:
+				return r.stoppedWithAnswer(lost(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error())+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
+			case timedOut:
+				return r.stoppedWithAnswer(lost(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds)+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
+			case exitCode != 0:
+				return r.stoppedWithAnswer(lost(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode)+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
+			}
 
-		// The question is filed once it has been sent, whatever came back: the bytes
-		// that produced a verdict - or a failure - are the only way to read the run
-		// again without regenerating them. A command that never started was handed
-		// nothing, and a run that refuses before this point writes nothing.
-		promptRel, err := domain.GroupPromptPath(cand.tree, group.lenses)
-		if err != nil {
-			return blocked(oneLine(err.Error()) + "; the reviewer was not started")
-		}
-		if unit.of > 1 {
-			promptRel, err = domain.PartPromptPath(cand.tree, group.lenses, unit.part, unit.of)
-			if err != nil {
-				return blocked(oneLine(err.Error()) + "; the reviewer was not started")
+			answer := stdout
+			if answerPath != "" {
+				data, problem := r.answerFrom(answerRel, answerPath, command)
+				if problem != nil {
+					return r.stopped(lost(problem.Message), diagnosis, rel, len(settled), selected, todo, landed)
+				}
+				answer = data
 			}
-		} else if len(groups) == 1 {
-			if canonical, err := domain.PromptPath(cand.tree); err == nil {
-				promptRel = canonical
-			}
-		}
-		stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
-		// The question is filed once it has been sent, whatever came back: the bytes
-		// that produced a verdict - or a failure - are the only way to read the run
-		// again without regenerating them, and a command that never started was
-		// handed nothing to file.
-		if err == nil {
-			// A store that cannot hold the question says so and keeps going: the
-			// answer is the paid thing, and throwing it away to report a missing
-			// file would be the same loss this feature exists to prevent.
-			if writeErr := r.files.Write(r.storePath(promptRel), []byte(text)); writeErr != nil {
-				notes = appendUnique(notes, "the prompt could not be filed in "+r.storeLabel(promptRel)+": "+oneLine(writeErr.Error()))
-			}
-		}
-		// The answer is stdout, unless the command was given a file to write it
-		// in. Then the file is the answer and stdout is only diagnosis: a reviewer
-		// that prints a banner, a spinner or its own logs keeps its answer readable.
-		diagnosis := stdout
-		if stderr != "" {
-			diagnosis += stderr
-		}
-		// A draw that does not answer after another one landed leaves what landed:
-		// the sentence names the draw that was lost and how many the lens holds, and
-		// the run stops blocked, because the verb did not do what it was asked even
-		// though the store kept what it paid for.
-		lost := func(reason string) string {
-			return reason + r.lostDraw(len(landed), paid, group)
-		}
-		switch {
-		case err != nil:
-			return r.stoppedWithAnswer(lost(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error())+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
-		case timedOut:
-			return r.stoppedWithAnswer(lost(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds)+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
-		case exitCode != 0:
-			return r.stoppedWithAnswer(lost(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode)+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
-		}
 
-		answer := stdout
-		if answerPath != "" {
-			data, problem := r.answerFrom(answerRel, answerPath, command)
-			if problem != nil {
-				return r.stopped(lost(problem.Message), diagnosis, rel, len(settled), selected, todo, landed)
+			// A refutation is an answer too, and it is stored beside the verdict it judges.
+			if domain.Sniff([]byte(answer)) == domain.KindRefutation {
+				refutation, err := domain.ParseRefutation([]byte(answer))
+				if err != nil {
+					return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
+				}
+				// The refuter may have moved the worktree too; what it cites is the diff
+				// it was given, and the file is filed under the tree that exists now.
+				r.afterReviewer()
+				return r.storeRefutation(refutation, command)
 			}
-			answer = data
-		}
 
-		// A refutation is an answer too, and it is stored beside the verdict it judges.
-		if domain.Sniff([]byte(answer)) == domain.KindRefutation {
-			refutation, err := domain.ParseRefutation([]byte(answer))
+			parsed, err := domain.Parse([]byte(answer))
 			if err != nil {
 				return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
 			}
-			// The refuter may have moved the worktree too; what it cites is the diff
-			// it was given, and the file is filed under the tree that exists now.
-			r.afterReviewer()
-			return r.storeRefutation(refutation, command)
-		}
+			// The command is the reviewer: it is the one fact the tool knows about an
+			// answer that came out of a shell.
+			if strings.TrimSpace(parsed.Reviewer) == "" {
+				parsed.Reviewer = command
+			}
+			// The identity that judged, when the command named one. It is the reviewer's
+			// own declaration, and the gate compares it with the proof's. It comes from
+			// the resolution of THIS group, not from a field the last one wrote.
+			parsed.Model = unit.model
+			if err := parsed.Validate(); err != nil {
+				return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
+			}
+			// The per-lens map is what lets the identity gate judge each lens on its
+			// own: this group's lenses were judged by this group's model.
+			if parsed.Model != "" {
+				if parsed.Models == nil {
+					parsed.Models = map[string]string{}
+				}
+				for _, lens := range group.lenses {
+					parsed.Models[lens] = parsed.Model
+				}
+			}
 
-		parsed, err := domain.Parse([]byte(answer))
-		if err != nil {
-			return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
-		}
-		// The command is the reviewer: it is the one fact the tool knows about an
-		// answer that came out of a shell.
-		if strings.TrimSpace(parsed.Reviewer) == "" {
-			parsed.Reviewer = command
-		}
-		// The identity that judged, when the command named one. It is the reviewer's
-		// own declaration, and the gate compares it with the proof's. It comes from
-		// the resolution of THIS group, not from a field the last one wrote.
-		parsed.Model = unit.model
-		if err := parsed.Validate(); err != nil {
-			return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
-		}
-		// The per-lens map is what lets the identity gate judge each lens on its
-		// own: this group's lenses were judged by this group's model.
-		if parsed.Model != "" {
-			if parsed.Models == nil {
-				parsed.Models = map[string]string{}
+			// One landing is one answer: the count a lens carries grows by one per draw,
+			// and a later run's top-up adds to what the file already counted.
+			if parsed.Draws == nil {
+				parsed.Draws = map[string]int{}
 			}
 			for _, lens := range group.lenses {
-				parsed.Models[lens] = parsed.Model
+				parsed.Draws[lens] = 1
 			}
-		}
 
-		// One landing is one answer: the count a lens carries grows by one per draw,
-		// and a later run's top-up adds to what the file already counted.
-		if parsed.Draws == nil {
-			parsed.Draws = map[string]int{}
-		}
-		for _, lens := range group.lenses {
-			parsed.Draws[lens] = 1
-		}
-
-		// The lenses are the ones this reviewer was asked to answer, not the ones
-		// it claims: the tool stamps them. The answer is written before the next
-		// group starts, under the candidate the prompt named, so a later failure
-		// cannot lose it and a reviewer's edits cannot move it. The collision that
-		// stops paying twice for a lens allows the ones this run was told to top up.
-		permitted := append(append([]string{}, todo...), landed...)
-		last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, permitted)
-		if last.Code != CodeOK {
-			if len(landed) == 0 {
-				return last
+			// The lenses are the ones this reviewer was asked to answer, not the ones
+			// it claims: the tool stamps them. The answer is written before the next
+			// group starts, under the candidate the prompt named, so a later failure
+			// cannot lose it and a reviewer's edits cannot move it. The collision that
+			// stops paying twice for a lens allows the ones this run was told to top up.
+			permitted := append(append([]string{}, todo...), landed...)
+			last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, permitted)
+			if last.Code != CodeOK {
+				if len(landed) == 0 {
+					return last
+				}
+				return r.stopped(oneLine(last.Message), diagnosis, rel, len(settled), selected, todo, landed)
 			}
-			return r.stopped(oneLine(last.Message), diagnosis, rel, len(settled), selected, todo, landed)
-		}
-		if answerPath != "" {
-			// The answer is the verdict file now; this one was scaffolding. If it
-			// stays, the human is told where: a leftover nobody names is read as a
-			// verdict by the next person who looks.
-			if err := r.files.Remove(answerPath); err != nil {
-				notes = appendUnique(notes, "the answer file stayed in "+r.storeLabel(answerRel)+": "+oneLine(err.Error()))
+			if answerPath != "" {
+				// The answer is the verdict file now; this one was scaffolding. If it
+				// stays, the human is told where: a leftover nobody names is read as a
+				// verdict by the next person who looks.
+				if err := r.files.Remove(answerPath); err != nil {
+					notes = appendUnique(notes, "the answer file stayed in "+r.storeLabel(answerRel)+": "+oneLine(err.Error()))
+				}
 			}
-		}
-		for _, lens := range group.lenses {
-			landed = appendUnique(landed, lens)
-		}
-
-		// The verdict for this tree exists now, so the decision that asked for its
-		// lenses is written beside it: a reader of the verdict cannot otherwise tell
-		// whether a change asked for four lenses or a person did. It is filed after
-		// the answer landed and never instead of it - a record that costs the run its
-		// paid answer would be the loss 0038 exists to prevent - and a file that
-		// cannot be written says so rather than hiding behind the verdict.
-		if problem := r.fileScope(cand.tree, required, selected); problem != nil {
-			landedNote := fmt.Sprintf("%s; the verdict landed in %s", problem.Message, r.storeLabel(rel))
-			return Result{Code: problem.Code, Message: landedNote, Lines: []string{landedNote}}
-		}
-		if len(last.Lines) > 2 {
-			for _, note := range last.Lines[2:] {
-				notes = appendUnique(notes, note)
+			for _, lens := range group.lenses {
+				landed = appendUnique(landed, lens)
 			}
-		}
 
-		// The prompt named one candidate and every answer belongs to it. A reviewer
-		// that edited the worktree moved the bytes under the answer, so the run
-		// stops: what the tree holds now is not what the verdict describes, and
-		// reviewing those bytes is a different run.
-		live, problem := r.treeHash()
-		if problem != nil {
-			return r.stopped(oneLine(problem.Message), diagnosis, rel, len(settled), selected, todo, landed)
-		}
-		if live != cand.tree {
-			return r.moved(command, rel, live, diagnosis, len(settled)+len(landed), len(selected))
+			// The verdict for this tree exists now, so the decision that asked for its
+			// lenses is written beside it: a reader of the verdict cannot otherwise tell
+			// whether a change asked for four lenses or a person did. It is filed after
+			// the answer landed and never instead of it - a record that costs the run its
+			// paid answer would be the loss 0038 exists to prevent - and a file that
+			// cannot be written says so rather than hiding behind the verdict.
+			if problem := r.fileScope(cand.tree, required, selected); problem != nil {
+				landedNote := fmt.Sprintf("%s; the verdict landed in %s", problem.Message, r.storeLabel(rel))
+				return Result{Code: problem.Code, Message: landedNote, Lines: []string{landedNote}}
+			}
+			if len(last.Lines) > 2 {
+				for _, note := range last.Lines[2:] {
+					notes = appendUnique(notes, note)
+				}
+			}
+
+			// The prompt named one candidate and every answer belongs to it. A reviewer
+			// that edited the worktree moved the bytes under the answer, so the run
+			// stops: what the tree holds now is not what the verdict describes, and
+			// reviewing those bytes is a different run.
+			live, problem := r.treeHash()
+			if problem != nil {
+				return r.stopped(oneLine(problem.Message), diagnosis, rel, len(settled), selected, todo, landed)
+			}
+			if live != cand.tree {
+				return r.moved(command, rel, live, diagnosis, len(settled)+len(landed), len(selected))
+			}
 		}
 	}
 
@@ -1394,24 +1421,24 @@ type draw struct {
 	n, of int
 }
 
-// draws is every answer this run pays for, in a deterministic order: the units in
-// the order they were built, each one as many times as the lens it owes the most. A
-// group answers all of its lenses in one call, so the call is paid once for the lens
-// that still owes the most, and the other lenses of the group count it too.
-func (r *runner) draws(units []unit, owed map[string]int) []draw {
-	var draws []draw
-	for _, u := range units {
-		count := 0
-		for _, lens := range u.lenses {
-			if owed[lens] > count {
-				count = owed[lens]
-			}
-		}
-		for n := 1; n <= count; n++ {
-			draws = append(draws, draw{unit: u, n: n, of: count})
+// drawing is one round of answers: the units of the lenses that still owe that draw,
+// run once each. The rounds are nested -draw two carries only the lenses that owe a
+// second answer-, which is what keeps a lens from being paid more than it was asked.
+type drawing struct {
+	n, of int
+	units []unit
+}
+
+// dueDraws is the lenses that still owe the nth answer, in the order the evidence
+// asked for them.
+func dueDraws(todo []string, owed map[string]int, n int) []string {
+	var due []string
+	for _, lens := range todo {
+		if owed[strings.ToLower(strings.TrimSpace(lens))] >= n {
+			due = append(due, lens)
 		}
 	}
-	return draws
+	return due
 }
 
 // splitRefusal is the refusal a split cannot answer: the size, the limit, the file

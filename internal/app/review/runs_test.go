@@ -352,3 +352,40 @@ func TestADrawThatFailsWithNothingLandedIsTheRefusalItAlwaysWas(t *testing.T) {
 		t.Errorf("the run talks about a count with nothing landed:\n%s", strings.Join(result.Lines, "\n"))
 	}
 }
+
+// TestAGroupThatOwesDifferentCountsAsksOnlyWhatEachLensOwes: a group answers all of
+// its lenses in one call, so a lens already paid to N would be asked again just
+// because it shares the call with a lens that still owes one -and the file would say
+// more than the run asked for. The second draw carries only the lens that owes it.
+func TestAGroupThatOwesDifferentCountsAsksOnlyWhatEachLensOwes(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	// reliability already holds one answer; risk holds none.
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "revisor",
+		Lenses:   []string{"reliability"},
+		Draws:    map[string]int{"reliability": 1},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the verdict the tree holds: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(sealed)
+	p.shell.output = `{"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"risk"},{"path":"a.go","lens":"reliability"}]}`
+
+	result := p.run(review.Options{
+		Exec:    "revisor --model {model}",
+		Runs:    2,
+		Lens:    "risk,reliability",
+		Because: "the test needs two lenses with different counts in one group",
+	})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	held := filedVerdict(t, p)
+	for _, lens := range []string{"reliability", "risk"} {
+		if got := held.DrawsFor(lens); got != 2 {
+			t.Errorf("draws for %s = %d, want the two the run asked for", lens, got)
+		}
+	}
+}
