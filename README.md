@@ -70,7 +70,7 @@ current -and `odachi setup --dry-run` first shows every file it would write and
 writes none. A second run changes nothing, and the report names the clients it did
 not find instead of skipping them in silence.
 
-If you prefer to build: `go build ./cmd/odachi` (you need Go 1.25 or newer), and
+If you prefer to build: `go build ./cmd/odachi` (you need Go 1.26.11 or newer), and
 the binary says `odachi dev`, because the release injects the version, not the
 code.
 
@@ -619,6 +619,15 @@ that: `.golangci.yml` names the five linters, `lint` is declared at `CRITICAL` i
 `odd/review.toml`, and a teammate needs `golangci-lint` on the `PATH` -without it
 every review here carries a row saying the command could not run, which is the
 honest answer and not a pass.
+
+The same holds for the dependencies. `govulncheck ./...` is a second check at
+`CRITICAL`: it reads the vulnerability database, follows the code's call graph and
+fails only when the candidate calls something a CVE affects. It needs the network
+on the machine that runs the review -the database is not vendored-, so a review on a
+disconnected machine fails that row instead of passing it, and the way past is a
+refutation with the reason written (`--dismiss check:govulncheck --because`). This
+repository asks for the Go release that has the fixes: raising the `go` directive in
+`go.mod` is how the backlog was paid before the row was declared.
 
 ## CI: the gate from the base ref
 

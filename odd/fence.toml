@@ -417,3 +417,33 @@ deps  = []
 # not   = "no new flag and no new verb: the split is what the four counters say"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   no se instala otra herramienta: govulncheck esta en la maquina y nada mas entra al piso
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se instala otra herramienta: govulncheck esta en la maquina y nada mas entra al piso"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   el ruleset de golangci-lint no se toca: esta feature agrega una fila
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "el ruleset de golangci-lint no se toca: esta feature agrega una fila"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   una vulnerabilidad que el codigo no llama no bloquea: govulncheck la reporta y la fila mide lo alcanzable
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "una vulnerabilidad que el codigo no llama no bloquea: govulncheck la reporta y la fila mide lo alcanzable"
+# paths = []
+# deps  = []
