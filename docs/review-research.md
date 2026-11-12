@@ -1,6 +1,7 @@
 # Review under pressure: what the field learned, and what our review does with it
 
-Written 2026-11-10, after a session that shipped 0262. The question: code is now
+Written 2026-11-10, after a session that shipped 0262; updated 2026-11-12 with the
+first field reading of the draws (Part 5). The question: code is now
 almost free to write, the queue is review, so are our four lenses and our review
 system answering the problem the field actually has, or a problem we imagined?
 
@@ -206,6 +207,41 @@ fixture inherits that person's blind spots. The instrument is what this part add
 the sample is one tree, and the next measurement is the same fixture across models
 and repeated runs.
 
+## Part 5b: the draws on real work
+
+The instrument left the fixture when `--runs` shipped in `v0.39.0`: one answer per lens
+had always been one sample, and the tool can now buy more. Its first field reading came
+from its own candidate, four reviews of one afternoon and two draws on the last of them.
+
+- **`dfca16e5`, the full candidate read once.** One finding: a causal WARNING that a
+  lens already paid to N could gain extra draws when it shared a call with a lens that
+  still owed one. Approved, because a warning does not block.
+- **`425dcaac`, the same candidate read once again after the merge.** Three findings,
+  one of them a CRITICAL: a prompt split into parts counted one draw per part, so
+  `--runs 1` recorded two. The first read had approved this code.
+- **`721b02cc`, the fix read with two draws.** Two findings: one real -the refusal named
+  one more than the largest count and so spent several draws while promising one- and
+  one false, a CRITICAL about the widened handover that a test closed.
+- **`bd559098`, the correction that closed the feature, two draws over the delta.**
+  Approved, and the false row retired by a recorded dismissal.
+
+What this says: on this candidate the second read did not find a better sentence for
+what the first said -it found a different mechanism of the class the first had landed
+on (the count), plus two defects the first never mentioned. The probe measured the same
+shape on a fixture, where the key's defects are found every time and the variance lives
+in what nobody planted; here the unplanted class was the counter itself, written by the
+same agent that had just approved it.
+
+It also says what a correction is not. The verdict that closed `0275` (`bbe8d2ff`) read
+only the delta since `dfca16e5` and found nothing; the next full read of the merged tree
+found a CRITICAL. ADR 0048's title was already right -a second reading is not a second
+opinion- and this is the first field evidence that a *full* second reading is one.
+
+What it does not prove: four verdicts, one model, one candidate, one afternoon. These
+are counts of findings, not of defects that would have hurt, and a finding nobody fixed
+would be the only thing that could measure the difference. Four draw counts in one
+store is a start, not a rate.
+
 ## Part 6: our own numbers
 
 From `.git/odachi/reviews/` in this clone, 16 verdicts kept:
@@ -283,8 +319,10 @@ The order that follows from the measurement:
    waiver to proceed, instead of "ready" with a footnote in a document.
 3. **Make the clean arm clean** (C4): the probe's precision number is only worth
    reading once the arm with nothing planted is code a person would approve, and
-   the first run says it is not. Then repeat the run across models, and a verdict
-   stops being one draw.
+   the first run says it is not. Then repeat the run across models.
+   *The last clause is half kept*: a verdict stopped being one draw in `v0.39.0`
+   (`--runs`), and the first field reading is in Part 5b -a full second read found a
+   CRITICAL the first had approved-. Repeating the probe across models is still open.
 
 Then, in a second wave: heterogeneous judges for full-tier trees, size-based
 escalation of the tier, changed-line coverage as a floor signal, and the fixture
