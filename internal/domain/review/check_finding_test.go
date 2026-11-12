@@ -141,3 +141,19 @@ func TestACheckRowCanBeDismissed(t *testing.T) {
 		t.Errorf("Derive = %q, want %q: a dismissed row never blocks", got, review.Approved)
 	}
 }
+
+// TestEveryBlockingRowIsAnsweredOrTheGateStaysClosed: a verdict can carry more
+// than one row that blocks, and a waiver answers one. The gate asks about all of
+// them, so waiving the first cannot hide the second.
+func TestEveryBlockingRowIsAnsweredOrTheGateStaysClosed(t *testing.T) {
+	first := review.Finding{Path: "a.go", Line: 3, Severity: review.Critical, Causal: true, Lens: review.Reliability, Why: "the round trip is lost"}
+	second := review.Finding{Path: "b.go", Line: 9, Severity: review.Blocker, Causal: true, Lens: review.Reliability, Why: "the turn is lost"}
+
+	rows := review.BlockingAllAfter([]review.Finding{first, second}, review.Answers{})
+	if len(rows) != 2 {
+		t.Fatalf("BlockingAllAfter = %d rows, want both blockers", len(rows))
+	}
+	if got, ok := review.BlockingAfter([]review.Finding{first, second}, review.Answers{}); !ok || got.Why != first.Why {
+		t.Errorf("BlockingAfter = %+v, %v; want the first row, unchanged", got, ok)
+	}
+}

@@ -1525,21 +1525,38 @@ func waivedRowDoc(base, fingerprint string, done bool) string {
 	return doc.AppendHistory(`L2 · "waived the row ` + fingerprint + `: the tree ships with it open, by biggs at 2026-11-12T09:00:00Z"`).Render()
 }
 
+// blockingRow is the row the blocking close stands behind.
+func blockingRow() domainreview.Finding {
+	return domainreview.Finding{
+		Path: "internal/app/check/check.go", Line: 1, Severity: domainreview.Blocker,
+		Causal: true, Lens: domainreview.Reliability, Why: "pierde el turno", Blob: checkBlob,
+	}
+}
+
+// secondBlockingRow is a different defect in the same verdict: another path, so
+// another fingerprint.
+func secondBlockingRow() domainreview.Finding {
+	return domainreview.Finding{
+		Path: "internal/app/check/fence.go", Line: 2, Severity: domainreview.Critical,
+		Causal: true, Lens: domainreview.Reliability, Why: "el fence se lee tarde", Blob: checkBlob,
+	}
+}
+
 // blockingClose is the close that a causal blocker refuses, with the document the
 // caller asked for.
-func blockingClose(t *testing.T, doc string) check.Result {
+func blockingClose(t *testing.T, doc string, findings ...domainreview.Finding) check.Result {
 	t.Helper()
 	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
 
+	if len(findings) == 0 {
+		findings = []domainreview.Finding{blockingRow()}
+	}
 	files := readyFiles()
 	files["odd/tasks/0007-turnos.md"] = doc
 	blocking, err := domainreview.Seal(domainreview.Verdict{
 		Reviewer: "claude",
 		Lenses:   []string{domainreview.Reliability},
-		Findings: []domainreview.Finding{{
-			Path: "internal/app/check/check.go", Line: 1, Severity: domainreview.Blocker,
-			Causal: true, Lens: domainreview.Reliability, Why: "pierde el turno", Blob: checkBlob,
-		}},
+		Findings: findings,
 	}, currentTree, base, reviewInstant)
 	if err != nil {
 		t.Fatalf("sealing the blocking verdict: %v", err)
@@ -1568,7 +1585,7 @@ func TestAWaivedRowLetsTheCloseThroughAndSaysSo(t *testing.T) {
 		t.Fatalf("a waived row did not let the close through: %d/%q (%s)", got.Code, got.Reason, got.Message)
 	}
 	printed := strings.Join(append([]string{got.Message}, got.Lines...), "\n")
-	for _, want := range []string{"the review asks for changes", "waived the row " + row} {
+	for _, want := range []string{"the review asked for changes", "waived row " + row} {
 		if !strings.Contains(printed, want) {
 			t.Errorf("the ready line does not carry %q:\n%s", want, printed)
 		}
@@ -1586,5 +1603,44 @@ func TestAWaiverOfAnotherRowDoesNotOpenThisOne(t *testing.T) {
 	}
 	if got.Reason != check.ReasonReviewChanges {
 		t.Errorf("reason = %q, want %q", got.Reason, check.ReasonReviewChanges)
+	}
+}
+
+// TestWaivingOneRowDoesNotAnswerTheOther: a verdict can stand behind two rows, and
+// the decision answers the one the human read. The gate keeps refusing on the row
+// nobody answered, and its line names it.
+func TestWaivingOneRowDoesNotAnswerTheOther(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	waived := domainreview.Fingerprint(blockingRow())
+
+	got := blockingClose(t, waivedRowDoc(base, waived, true), blockingRow(), secondBlockingRow())
+	if got.Code != int(gate.NeedsDecision) {
+		t.Fatalf("a waived row hid the other blocker: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+	if got.Reason != check.ReasonReviewChanges {
+		t.Errorf("reason = %q, want %q", got.Reason, check.ReasonReviewChanges)
+	}
+	printed := strings.Join(append([]string{got.Message}, got.Lines...), "\n")
+	for _, want := range []string{"el fence se lee tarde", "waived: " + waived} {
+		if !strings.Contains(printed, want) {
+			t.Errorf("the refusal does not carry %q:\n%s", want, printed)
+		}
+	}
+}
+
+// TestBothRowsAnsweredLetsTheCloseThrough: the human answered every row the review
+// stands behind, and the ready line says how many.
+func TestBothRowsAnsweredLetsTheCloseThrough(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	doc := waivedRowDoc(base, domainreview.Fingerprint(blockingRow()), true)
+	doc = taskdoc.Parse(doc).AppendHistory(`L3 · "waived the row ` + domainreview.Fingerprint(secondBlockingRow()) + `: also this one, by biggs"`).Render()
+
+	got := blockingClose(t, doc, blockingRow(), secondBlockingRow())
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("two waived rows did not let the close through: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+	printed := strings.Join(append([]string{got.Message}, got.Lines...), "\n")
+	if !strings.Contains(printed, "waived rows ") {
+		t.Errorf("the ready line does not say how many rows were waived:\n%s", printed)
 	}
 }
