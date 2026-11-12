@@ -110,6 +110,12 @@ type Options struct {
 	// in the store and nothing in the gate reads it, so a stored verdict disposes
 	// of the ones the project stopped keeping. A negative number keeps none too.
 	KeepPrompts int
+	// Checks are the deterministic tools the project declared, in the order the
+	// file lists them. Empty means it declared none and this run executes nothing.
+	Checks []domain.Check
+	// CheckTimeout is how long one check may run, in seconds, from the same file.
+	// Zero means the default: a tool that hangs must not hang the review.
+	CheckTimeout int
 	// Dismiss is the row the human retires, as `path:line`, and Because is the
 	// evidence. Both or neither: a dismissal without a reason is the silent edit
 	// the file beside the verdict exists to replace.
@@ -329,6 +335,15 @@ type runner struct {
 	// correction is the verdict --since names, read once: it is both the tree the
 	// delta is measured from and the answer the stored verdict completes.
 	correction *domain.Verdict
+	// ran is what the declared checks answered, computed once: every model group
+	// and every part of a split candidate reads this same value, because a tool
+	// that ran twice could answer twice.
+	ran *[]domain.CheckResult
+	// off is why the declared checks did not run, when they did not: this clone
+	// never approved them, or approved a list the project has changed since. It
+	// travels into the prompt, so a review never claims to have measured what it
+	// skipped.
+	off string
 }
 
 // worktree is one read of the candidate: its content tree, the paths that
@@ -456,6 +471,7 @@ func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptIn
 	// lenses section states what the evidence asked for and what --lens added on
 	// top, in the caller's words when they gave any.
 	required := domain.Lenses(domain.Assess(cand.paths, cand.diff))
+
 	var scope *domain.Scope
 	if added := domain.Raised(required, selected); len(added) > 0 {
 		scope = &domain.Scope{
@@ -464,6 +480,13 @@ func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptIn
 			Asked:    strings.TrimSpace(r.opts.Lens),
 			Because:  strings.TrimSpace(r.opts.Because),
 		}
+	}
+
+	// The tools the project declared run here, before the prompt is written: the
+	// reviewer reads what is already known instead of paying to find it again.
+	checks, off, problem := r.ranChecks()
+	if problem != nil {
+		return domain.PromptInput{}, problem
 	}
 
 	return domain.PromptInput{
@@ -478,6 +501,8 @@ func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptIn
 		Floor:       domain.FloorFor(cand.paths, cand.diff),
 		Scope:       scope,
 		Correction:  strings.TrimSpace(r.opts.Since),
+		Checks:      checks,
+		ChecksOff:   off,
 	}, nil
 }
 

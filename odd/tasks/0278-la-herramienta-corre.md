@@ -13,7 +13,7 @@ R1 · "la herramienta corre antes que el modelo y su fallo es un defecto que no 
 - ## Unreleased names it, patch (0278)
 
 ## Steps
-- [ ] T1 · el archivo del review declara las comprobaciones: nombre, comando y severidad, y un archivo sin ellas se lee igual   R1 · route:inline
+- [x] T1 · el archivo del review declara las comprobaciones: nombre, comando y severidad, y un archivo sin ellas se lee igual   R1 · route:inline · tree:b8709618731d17669f6eecc59c84c20736bb6514
 - [ ] T2 · el review corre cada comprobacion en el worktree del candidato y el prompt lleva el resultado antes de cualquier lente   R1 · route:inline
 - [ ] T3 · una comprobacion que falla es un finding de la herramienta, con su salida y su severidad   R1 · route:inline
 - [ ] T4 · el veredicto dice lo que corrio: --show nombra las comprobaciones y Unreleased nombra la feature   R1 · route:inline
