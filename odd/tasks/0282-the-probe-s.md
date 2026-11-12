@@ -15,3 +15,4 @@ R1 · "the probe's reading separates a suggestion from an invented row: noise co
 
 ## History
 L1 · "the probe's reading separates a suggestion from an invented row: noise counts only what claims a defect, both arms report both numbers, and the 0281 answers re-read under the split are in review-research"
+L2 · OFICIO · "La regla de la sonda deja de proteger el puntaje y conserva el fixture y la llave" (porque la llave es lo que se compara y el puntaje es como se lee la respuesta, y esta feature cambia justamente esa lectura: una regla que protege el archivo que la feature existe para mover se abre sola o bloquea lo que el humano decidio; el brief movio sus non-goals en el commit de apertura, asi que la compuerta no se abre por omision)

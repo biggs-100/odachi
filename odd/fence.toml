@@ -24,8 +24,8 @@ paths = ["internal/domain/gate/**"]
 deps  = []
 
 [[rule]]
-not   = "el fixture de la sonda y su puntaje son intocables: 0279 solo puede limpiar la sonda donde el linter lo nombra, no cambiar lo que mide - back when the probe's arm or its scoring changes for a reason this feature records"
-paths = ["internal/domain/probe/**", "internal/probe/**"]
+not   = "el fixture de la sonda y su llave son intocables: medir cambiando el examen no mide nada - back when the probe's arm, its planted defects or the manifest change for a reason this feature records"
+paths = ["internal/probe/**", "internal/domain/probe/manifest.go"]
 deps  = []
 
 # This non-goal has no paths yet:
