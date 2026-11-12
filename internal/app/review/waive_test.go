@@ -67,3 +67,63 @@ func TestAWaiverWithoutAReasonIsRefused(t *testing.T) {
 		t.Error("a refused waiver wrote the line")
 	}
 }
+
+// TestWaivingARowRecordsTheFingerprintAndThePerson: the decision about one blocking
+// row is a different decision from "this feature lands without a verdict", and it
+// names the row it answers, who answered it and when.
+func TestWaivingARowRecordsTheFingerprintAndThePerson(t *testing.T) {
+	p := newProject()
+	seedTask(p, "odd/tasks/0161-turnos.md", "turnos")
+
+	result := reviewapp.Waive(reviewapp.WaiveOptions{
+		Dir:     dir,
+		Because: "the tree ships with this row open",
+		Row:     "3F2A1B4C5D6E7F80",
+		By:      "biggs",
+		Now:     now,
+	}, p.files)
+	if result.Code != reviewapp.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored := string(p.files.files[fullPath("odd/tasks/0161-turnos.md")])
+	doc := taskdoc.Parse(stored)
+	if !doc.WaivedRow("3f2a1b4c5d6e7f80") {
+		t.Fatalf("the document does not carry the row:\n%s", stored)
+	}
+	for _, want := range []string{"by biggs", "2026-10-21T20:31:00Z", "the tree ships with this row open"} {
+		if !strings.Contains(stored, want) {
+			t.Errorf("the record does not carry %q:\n%s", want, stored)
+		}
+	}
+	if doc.ReviewWaived {
+		t.Error("a row waiver waived the whole feature's verdict")
+	}
+}
+
+// TestARowWaiverNamesARowAndSaysWhy: a word that is not a fingerprint names nothing,
+// and a decision without a reason is silence. Both are refused before the document
+// is touched.
+func TestARowWaiverNamesARowAndSaysWhy(t *testing.T) {
+	cases := map[string]reviewapp.WaiveOptions{
+		"no reason": {Because: "  ", Row: "3f2a1b4c5d6e7f80"},
+		"not a row": {Because: "because", Row: "the one the review found"},
+		"too short": {Because: "because", Row: "3f2a"},
+	}
+
+	for name, opts := range cases {
+		t.Run(name, func(t *testing.T) {
+			p := newProject()
+			seedTask(p, "odd/tasks/0161-turnos.md", "turnos")
+			opts.Dir = dir
+
+			result := reviewapp.Waive(opts, p.files)
+			if result.Code != reviewapp.CodeBlocked {
+				t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+			}
+			if strings.Contains(string(p.files.files[fullPath("odd/tasks/0161-turnos.md")]), "waived the row") {
+				t.Error("a refused waiver wrote the line")
+			}
+		})
+	}
+}

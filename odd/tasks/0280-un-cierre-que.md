@@ -13,7 +13,7 @@ R1 · "un cierre que trae un veredicto que pide cambios lo dice en la linea del 
 - ## Unreleased names it, patch (0280)
 
 ## Steps
-- [ ] T1 · el gate dice que el review pidio cambios y nombra el hallazgo, la huella y la dispensa que lo contesta   R1 · route:inline
+- [x] T1 · el gate dice que el review pidio cambios y nombra el hallazgo, la huella y la dispensa que lo contesta   R1 · route:inline · tree:63a21e4f4a358b604c5b70819ce351470bd57a92
 - [ ] T2 · review waive registra la huella del hallazgo con la razon y quien, y se lee de vuelta   R1 · route:inline
 - [ ] T3 · una dispensa que cubre la huella deja pasar el cierre, y una que no la cubre no   R1 · route:inline
 - [ ] T4 · la cara: --show y el README dicen como se dispensa un hallazgo bloqueante   R1 · route:inline
