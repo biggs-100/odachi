@@ -20,13 +20,23 @@ import (
 //     defect and called it harmless, which is a different failure from silence;
 //   - missed: nothing at the place at all.
 //
-// Everything else a reviewer says is noise, counted once, with the lens that
-// said it.
+// Everything else a reviewer says is counted once, with the lens that said it,
+// and read by what it claims: a finding that says something is wrong is noise,
+// and one that only suggests an improvement is a note. Counting both as noise
+// scored the reviewer that improves the fixture below the one that stays quiet
+// (0281).
 type Score struct {
 	// Lenses is one row per lens, in the canonical order.
 	Lenses []LensScore
-	// Noise is every finding that matches no planted defect.
+	// Noise is every finding that matches no planted defect, read by Tally.
 	Noise []Noise
+}
+
+// Tally is what a set of findings reads as when nothing was planted: the noise
+// that claims a defect, and the notes that only suggest one.
+type Tally struct {
+	Noise int
+	Notes int
 }
 
 // LensScore is one lens's row.
@@ -178,6 +188,34 @@ func rank(severity review.Severity) int {
 	}
 }
 
+// claims reports whether a finding says something is wrong. A suggestion says the
+// code could be better; a warning or above claims a defect. A severity the
+// vocabulary does not know counts as a claim: a row nobody can read is not a
+// note of approval.
+func claims(severity review.Severity) bool {
+	return rank(severity) != rank(review.Suggestion)
+}
+
+// TallyOf reads the findings nobody planted by what they claim. It is one
+// function for both arms of the probe: the arm with defects has its key, and the
+// arm with nothing planted has only this.
+func TallyOf(findings []Noise) Tally {
+	tally := Tally{}
+	for _, item := range findings {
+		if claims(item.Finding.Severity) {
+			tally.Noise++
+			continue
+		}
+		tally.Notes++
+	}
+	return tally
+}
+
+// Tally is this score's reading of the findings nobody planted.
+func (s Score) Tally() Tally {
+	return TallyOf(s.Noise)
+}
+
 // Percent is the found-over-total ratio as a whole number, for the report. A
 // lens with no defects has no ratio and prints none.
 func (l LensScore) Percent() int {
@@ -188,11 +226,12 @@ func (l LensScore) Percent() int {
 }
 
 // Summary is the one line a person reads first: every lens's found/total, and
-// how many findings nobody planted.
+// what the findings nobody planted claimed.
 func (s Score) Summary() string {
 	parts := make([]string, 0, len(s.Lenses))
 	for _, row := range s.Lenses {
 		parts = append(parts, fmt.Sprintf("%s %d/%d", row.Lens, row.Found, row.Total))
 	}
-	return fmt.Sprintf("%s · noise %d", strings.Join(parts, ", "), len(s.Noise))
+	tally := s.Tally()
+	return fmt.Sprintf("%s · noise %d, notes %d", strings.Join(parts, ", "), tally.Noise, tally.Notes)
 }

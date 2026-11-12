@@ -67,6 +67,19 @@ const verdictJSON = `{
   "verdict": "changes_requested"
 }`
 
+// suggestionJSON is the answer a reviewer gives when it proposes an improvement
+// on code that carries no defect: the arm could take it, and it is not a claim
+// that something is wrong.
+const suggestionJSON = `{
+  "reviewer": "fake-reviewer",
+  "model": "fixture/reviewer",
+  "inspection": {"status": "completed", "paths": ["server.go"]},
+  "findings": [
+    {"path": "cache.go", "line": 40, "severity": "SUGGESTION", "causal": true, "evidence": "cited", "why": "the backoff ignores ctx"}
+  ],
+  "verdict": "approved"
+}`
+
 // emptyJSON is the clean answer: a reviewer that found nothing.
 const emptyJSON = `{"reviewer":"fake-reviewer","model":"fixture/reviewer","inspection":{"status":"completed","paths":["server.go"]},"findings":[],"verdict":"approved"}`
 
@@ -132,7 +145,7 @@ func TestProbeScoresEveryLensAndTheCleanArm(t *testing.T) {
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
 	}
-	want := "runs 1 · risk 1/1, readability 0/1, reliability 0/1, resilience 0/2 · noise 0 · clean 0"
+	want := "runs 1 · risk 1/1, readability 0/1, reliability 0/1, resilience 0/2 · seeded noise 0 · seeded notes 0 · clean noise 0 · clean notes 0"
 	if result.Summary != want {
 		t.Errorf("Summary = %q, want %q", result.Summary, want)
 	}
@@ -184,11 +197,34 @@ func TestProbeCountsTheCleanArmsFindingsAsNoise(t *testing.T) {
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
 	}
-	if !strings.HasSuffix(result.Summary, "· clean 4") {
-		t.Errorf("Summary = %q, want the four clean answers counted as noise", result.Summary)
+	if !strings.HasSuffix(result.Summary, "· clean noise 4 · clean notes 0") {
+		t.Errorf("Summary = %q, want the four clean claims counted as noise", result.Summary)
 	}
-	if !strings.Contains(strings.Join(result.Lines, "\n"), "clean") {
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "clean noise") {
 		t.Errorf("the report does not carry the clean arm:\n%s", strings.Join(result.Lines, "\n"))
+	}
+}
+
+// TestProbeReadsASuggestionOnTheCleanArmAsANote: the reading that ranked a model
+// below a silent one counted an improvement as an invented defect (0281). A
+// suggestion on the arm with nothing planted is a note, and it is counted next to
+// the noise instead of inside it.
+func TestProbeReadsASuggestionOnTheCleanArmAsANote(t *testing.T) {
+	t.Parallel()
+
+	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(suggestionJSON, verdictJSON)}, fakeLenses{})
+
+	if result.Code != lensprobe.CodeOK {
+		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
+	}
+	if !strings.HasSuffix(result.Summary, "· clean noise 0 · clean notes 4") {
+		t.Errorf("Summary = %q, want four notes and no noise on the clean arm", result.Summary)
+	}
+	table := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"seeded noise", "seeded notes", "clean noise", "clean notes"} {
+		if !strings.Contains(table, want) {
+			t.Errorf("the table does not name %q:\n%s", want, table)
+		}
 	}
 }
 

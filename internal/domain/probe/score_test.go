@@ -48,7 +48,7 @@ func TestScoreCountsACatchAtThePlace(t *testing.T) {
 	if len(score.Noise) != 0 {
 		t.Errorf("noise = %+v, want none", score.Noise)
 	}
-	if got, want := score.Summary(), "risk 1/1, readability 1/1 · noise 0"; got != want {
+	if got, want := score.Summary(), "risk 1/1, readability 1/1 · noise 0, notes 0"; got != want {
 		t.Errorf("Summary = %q, want %q", got, want)
 	}
 }
@@ -110,6 +110,50 @@ func TestScoreCallsEverythingNobodyPlantedNoise(t *testing.T) {
 	}
 	if score.Noise[0].Lens == "" {
 		t.Error("a noise row does not name the lens that said it")
+	}
+}
+
+// TestTallyReadsASuggestionAsANoteAndAClaimAsNoise: on the arm with nothing
+// planted, a suggestion says the code could be better and a warning or above
+// claims a defect. Counted as one number, the reviewer that improves the fixture
+// is scored as noisy and the one that says nothing is scored as precise (0281),
+// and the comparison between models measures a style instead of an error.
+func TestTallyReadsASuggestionAsANoteAndAClaimAsNoise(t *testing.T) {
+	t.Parallel()
+
+	score := probe.ScoreOne(key(), map[string]review.Verdict{
+		review.Risk: {
+			Findings: []review.Finding{
+				finding("server.go", 30, review.Critical, true),
+				finding("cache.go", 12, review.Suggestion, true),
+				finding("cache.go", 20, review.Warning, true),
+				finding("cache.go", 28, review.Blocker, true),
+			},
+		},
+	})
+
+	tally := score.Tally()
+	if tally.Notes != 1 {
+		t.Errorf("notes = %d, want 1: a suggestion is an improvement, not an invented defect", tally.Notes)
+	}
+	if tally.Noise != 2 {
+		t.Errorf("noise = %d, want 2: a warning and a blocker claim defects nobody planted", tally.Noise)
+	}
+}
+
+// TestTallyOfReadsTheArmWithNothingPlanted: the clean arm has no key, so what a
+// reviewer says there is read by what it claims and nothing else. One function
+// reads both arms, because two readings of the same vocabulary would disagree.
+func TestTallyOfReadsTheArmWithNothingPlanted(t *testing.T) {
+	t.Parallel()
+
+	got := probe.TallyOf([]probe.Noise{
+		{Finding: finding("server.go", 12, review.Suggestion, true)},
+		{Finding: finding("cache.go", 8, review.Suggestion, true)},
+		{Finding: finding("limits.go", 4, review.Critical, true)},
+	})
+	if got.Notes != 2 || got.Noise != 1 {
+		t.Errorf("tally = %+v, want two notes and one claim", got)
 	}
 }
 
