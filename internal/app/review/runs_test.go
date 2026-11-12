@@ -203,3 +203,98 @@ func TestAVerdictStoredBeforeTheFieldReadsAsOneDraw(t *testing.T) {
 		t.Errorf("--show does not read an absent count as one draw:\n%s", shown)
 	}
 }
+
+// drawsVerdict is a verdict this tree already holds: paid by that many answers, and
+// naming a warning at each line it is given. It is what a top-up finds on disk.
+func drawsVerdict(t *testing.T, draws int, lines ...int) domainreview.Verdict {
+	t.Helper()
+	verdict := domainreview.Verdict{
+		Reviewer: "revisor",
+		Lenses:   []string{"reliability"},
+		Draws:    map[string]int{"reliability": draws},
+	}
+	for _, line := range lines {
+		verdict.Findings = append(verdict.Findings, domainreview.Finding{
+			Path:     "a.go",
+			Line:     line,
+			Severity: domainreview.Warning,
+			Causal:   true,
+			Why:      "the draw before this one saw it",
+			Lens:     "reliability",
+		})
+	}
+	sealed, err := domainreview.Seal(verdict, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the verdict this tree already holds: %v", err)
+	}
+	return sealed
+}
+
+// TestALaterRunPaysOnlyTheDrawsThatAreMissing: a lens paid by one answer still owes
+// the two a run of three asks for, and the run pays those two -not three, and not
+// nothing. The count is what makes "the lens already paid for" a fact instead of a
+// refusal.
+func TestALaterRunPaysOnlyTheDrawsThatAreMissing(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.files.files[storePath(currentTree)] = domainreview.Render(drawsVerdict(t, 1))
+	p.shell.output = oneAnswer
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 3})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if len(p.shell.commands) != 2 {
+		t.Errorf("reviewer calls = %d, want only the two draws missing", len(p.shell.commands))
+	}
+	if got := filedVerdict(t, p).DrawsFor("reliability"); got != 3 {
+		t.Errorf("draws = %d, want the three the file now counts", got)
+	}
+}
+
+// TestATopUpAddsItsRowsToTheOnesAlreadyPaid: the union grows across runs. The rows a
+// first run paid for stand, the new answer adds what it found, and the file is one
+// verdict with a count.
+func TestATopUpAddsItsRowsToTheOnesAlreadyPaid(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.files.files[storePath(currentTree)] = domainreview.Render(drawsVerdict(t, 1, 3))
+	p.shell.output = warningDraw(5, "the second draw saw it")
+
+	if result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 2}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	findings := filedFindings(t, p)
+	if len(findings) != 2 {
+		t.Fatalf("rows = %d, want the one that stood and the one this draw added: %v", len(findings), findings)
+	}
+	if got := filedVerdict(t, p).DrawsFor("reliability"); got != 2 {
+		t.Errorf("draws = %d, want 2", got)
+	}
+}
+
+// TestARunThatAsksForNoNewDrawIsRefusedNamingTheCount: asking for three on a lens
+// that already has three pays nothing, and saying so with the count is what lets a
+// person ask for a fourth instead of guessing why the run refused.
+func TestARunThatAsksForNoNewDrawIsRefusedNamingTheCount(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.files.files[storePath(currentTree)] = domainreview.Render(drawsVerdict(t, 3))
+	p.shell.output = oneAnswer
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 3})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (%s)", result.Code, result.Message)
+	}
+	if len(p.shell.commands) != 0 {
+		t.Errorf("reviewer calls = %v, want none", p.shell.commands)
+	}
+	for _, want := range []string{"3 draws", "--runs 4"} {
+		if !strings.Contains(strings.Join(append([]string{result.Message}, result.Lines...), "\n"), want) {
+			t.Errorf("the refusal does not name %q: %s %v", want, result.Message, result.Lines)
+		}
+	}
+}
