@@ -325,7 +325,7 @@ func TestADrawThatDoesNotAnswerLeavesTheOnesThatDid(t *testing.T) {
 		t.Errorf("rows = %d, want the two defects the draws named", len(held.Findings))
 	}
 	said := strings.Join(append([]string{result.Message}, result.Lines...), "\n")
-	for _, want := range []string{"draw 3 of 3", "holds 2 draws", "--runs 3"} {
+	for _, want := range []string{"draw 3 of 3", "holds 2 draws", "--runs 3", `--exec "<your reviewer command>"`} {
 		if !strings.Contains(said, want) {
 			t.Errorf("the run does not say %q:\n%s", want, said)
 		}
@@ -417,6 +417,36 @@ func TestOneAnswerInPartsIsOneDraw(t *testing.T) {
 		}
 		if got := filedVerdict(t, p).DrawsFor("reliability"); got != runs {
 			t.Errorf("--runs %d recorded %d draws, want %d: the parts are one answer", runs, got, runs)
+		}
+	}
+}
+
+// TestTheHandoverKeepsTheLensTheRunWasToldToJudge: a run widened with --lens that
+// loses an answer hands over a command asking for the same lens again. Without it
+// the evidence would choose, and the lens the human paid for would silently drop out
+// of the retry.
+func TestTheHandoverKeepsTheLensTheRunWasToldToJudge(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{
+		{output: `{"findings":[],"passes":[{"path":"a.go","lens":"risk"},{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+		{output: "boom: the model did not answer", exitCode: 1},
+	}
+
+	result := p.run(review.Options{
+		Exec:    "revisor --model {model}",
+		Runs:    2,
+		Lens:    "risk,reliability",
+		Because: "the test needs a run that names its lenses",
+	})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (%s)", result.Code, result.Message)
+	}
+	said := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"--runs 2", "--lens risk,reliability", `--exec "<your reviewer command>"`} {
+		if !strings.Contains(said, want) {
+			t.Errorf("the handover does not carry %q:\n%s", want, said)
 		}
 	}
 }

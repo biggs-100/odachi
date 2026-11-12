@@ -1539,18 +1539,12 @@ func (r *runner) stoppedWith(reason, output, rel string, savedBefore int, select
 		if kept != "" {
 			lines = append(lines, "the answer is kept in "+kept+": repair it and attach it again")
 		}
-		next := ""
-		if len(missing) > 0 {
-			next = "odachi review --lens " + strings.Join(missing, ",")
-		}
-		// A run with draws asks again and pays only what is missing (the top-up), so
-		// the command it hands over is the same count -the lens may be answered and
-		// still owe a draw, which is why this line does not need a missing lens.
-		if r.opts.Runs > 1 {
-			next = "odachi review --runs " + strconv.Itoa(r.opts.Runs)
-		}
-		if next != "" {
-			lines = append(lines, "next: "+next+" pays what the tree still owes")
+		// A hint a person cannot run is not a hint: the command carries the count,
+		// the lenses the caller asked for, and the placeholder for the reviewer, which
+		// odachi never remembers. A lens may be answered and still owe a draw, so the
+		// line does not need a missing lens to be right.
+		if r.opts.Runs > 1 || len(missing) > 0 {
+			lines = append(lines, "next: "+r.nextReview(missing))
 		}
 		return Result{
 			Code:    CodeBlocked,
@@ -3810,6 +3804,25 @@ func lensLine(required []string, verdict domain.Verdict) string {
 	return "lenses: " + covered + " · required: " + needed
 }
 
+// nextReview is the command a run hands over: a hint a person cannot run is not a
+// hint, so it carries every flag the verb needs to accept it -the count, the lenses
+// the caller asked for, and the placeholder for the reviewer, because which model
+// judges is the human's decision at the keyboard and odachi never remembers it.
+func (r *runner) nextReview(missing []string) string {
+	line := "odachi review"
+	if r.opts.Runs > 1 {
+		line += " --runs " + strconv.Itoa(r.opts.Runs)
+	}
+	lenses := strings.TrimSpace(r.opts.Lens)
+	if lenses == "" && len(missing) > 0 {
+		lenses = strings.Join(missing, ",")
+	}
+	if lenses != "" {
+		line += " --lens " + lenses
+	}
+	return line + ` --exec "<your reviewer command>"`
+}
+
 // lostDraw is the sentence a failed draw adds to the run's refusal. Nothing landed
 // yet means the run failed like any other and there is no count to report; once an
 // answer exists, the run names the draw it lost and what the lens holds now, because
@@ -3826,8 +3839,8 @@ func (r *runner) lostDraw(landed int, paid draw, group lensGroup) string {
 			}
 		}
 	}
-	return fmt.Sprintf("; draw %d of %d did not answer, and %s holds %s",
-		paid.n, paid.of, strings.Join(group.lenses, ", "), drawCount(held))
+	return fmt.Sprintf("; draw %d of %d did not answer; the file holds %s for %s",
+		paid.n, paid.of, drawCount(held), strings.Join(group.lenses, ", "))
 }
 
 // drawCount is how many answers paid for one lens, in the words a person reads. One
@@ -4053,7 +4066,7 @@ func nothingOwed(rel string, selected []string, stored *domain.Verdict, runs int
 		", and --runs " + strconv.Itoa(runs) + " pays nothing"
 	lines := []string{message}
 	if runs < MaxRuns {
-		lines = append(lines, "next: odachi review --runs "+strconv.Itoa(runs+1)+" pays one more draw, or odachi review --show")
+		lines = append(lines, "next: odachi review --runs "+strconv.Itoa(runs+1)+` --exec "<your reviewer command>" pays one more draw, or odachi review --show`)
 	} else {
 		lines = append(lines, "next: odachi review --show ("+strconv.Itoa(MaxRuns)+" is the most draws a lens may hold)")
 	}
