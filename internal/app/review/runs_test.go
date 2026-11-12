@@ -325,7 +325,7 @@ func TestADrawThatDoesNotAnswerLeavesTheOnesThatDid(t *testing.T) {
 		t.Errorf("rows = %d, want the two defects the draws named", len(held.Findings))
 	}
 	said := strings.Join(append([]string{result.Message}, result.Lines...), "\n")
-	for _, want := range []string{"draw 3 of 3", "holds 2 draws", "--runs 3"} {
+	for _, want := range []string{"draw 3 of 3", "holds 2 draws", "--runs 3", `--exec "<your reviewer command>"`} {
 		if !strings.Contains(said, want) {
 			t.Errorf("the run does not say %q:\n%s", want, said)
 		}
@@ -387,5 +387,161 @@ func TestAGroupThatOwesDifferentCountsAsksOnlyWhatEachLensOwes(t *testing.T) {
 		if got := held.DrawsFor(lens); got != 2 {
 			t.Errorf("draws for %s = %d, want the two the run asked for", lens, got)
 		}
+	}
+}
+
+// TestOneAnswerInPartsIsOneDraw: a prompt that does not fit is asked in parts, and
+// the parts are one answer to one lens. The count says how many times the judge was
+// asked, not how many calls the tool made, so a split candidate counts once per
+// round however many parts it carries.
+func TestOneAnswerInPartsIsOneDraw(t *testing.T) {
+	for _, runs := range []int{1, 3} {
+		p := newProject()
+		p.host.model = "host/default"
+		p.git.changed = []string{"a.go", "b.go"}
+		p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": gitBlob}
+		p.git.diff = bigDiff("a.go", "b.go")
+		p.shell.script = []fakeAnswer{
+			{output: `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`},
+		}
+
+		result := p.run(review.Options{Exec: "revisor --model {model}", MaxPromptKB: 25, Runs: runs})
+
+		if result.Code != review.CodeOK {
+			t.Fatalf("--runs %d = code %d, want 0 (%s)", runs, result.Code, result.Message)
+		}
+		if got := filedVerdict(t, p).DrawsFor("reliability"); got != runs {
+			t.Errorf("--runs %d recorded %d draws, want %d: the parts are one answer", runs, got, runs)
+		}
+	}
+}
+
+// TestTheHandoverKeepsTheLensTheRunWasToldToJudge: a run widened with --lens that
+// loses an answer hands over a command asking for the same lens again. Without it
+// the evidence would choose, and the lens the human paid for would silently drop out
+// of the retry.
+func TestTheHandoverKeepsTheLensTheRunWasToldToJudge(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{
+		{output: `{"findings":[],"passes":[{"path":"a.go","lens":"risk"},{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+		{output: "boom: the model did not answer", exitCode: 1},
+	}
+
+	result := p.run(review.Options{
+		Exec:    "revisor --model {model}",
+		Runs:    2,
+		Lens:    "risk,reliability",
+		Because: "the test needs a run that names its lenses",
+	})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (%s)", result.Code, result.Message)
+	}
+	said := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"--runs 2", "--lens risk,reliability", `--exec "<your reviewer command>"`} {
+		if !strings.Contains(said, want) {
+			t.Errorf("the handover does not carry %q:\n%s", want, said)
+		}
+	}
+}
+
+// TestTheRefusalNamesOneMoreThanTheFileCounts: the number in the next line is the
+// count the file holds plus one, not the count the refused run asked for. A tree
+// holding five, asked for three, must send the human to six: anything lower pays
+// nothing, and the refusal would be the only thing the run got right.
+func TestTheRefusalNamesOneMoreThanTheFileCounts(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.files.files[storePath(currentTree)] = domainreview.Render(drawsVerdict(t, 5))
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 3})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (%s)", result.Code, result.Message)
+	}
+	said := strings.Join(result.Lines, "\n")
+	if !strings.Contains(said, "--runs 6") {
+		t.Errorf("the refusal does not name one more than the five it holds:\n%s", said)
+	}
+	if strings.Contains(said, "--runs 4") {
+		t.Errorf("the refusal names the count the run asked for:\n%s", said)
+	}
+}
+
+// passesAnswer is an answer that audits both lenses on the changed path.
+const passesAnswer = `{"findings":[],"passes":[{"path":"a.go","lens":"risk"},{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`
+
+// TestTheHandoverRunsAfterAWidenedRunRecordedWhy: the line a widened run hands over
+// names --lens without --because, and the verb demands a reason only when the scope
+// is not on file. A run that landed an answer wrote that record, so the line it hands
+// over has to pass the same check it came from.
+func TestTheHandoverRunsAfterAWidenedRunRecordedWhy(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{
+		{output: passesAnswer},
+		{output: "boom: the model did not answer", exitCode: 1},
+	}
+
+	first := p.run(review.Options{
+		Exec:    "revisor --model {model}",
+		Runs:    2,
+		Lens:    "risk,reliability",
+		Because: "the words the scope record keeps",
+	})
+	if first.Code != review.CodeBlocked {
+		t.Fatalf("the first run = %d, want blocked on the draw it lost (%s)", first.Code, first.Message)
+	}
+	if !strings.Contains(strings.Join(first.Lines, "\n"), "--lens risk,reliability") {
+		t.Fatalf("the handover does not carry the widened lens:\n%s", strings.Join(first.Lines, "\n"))
+	}
+
+	// The same line without the words: the record on file is the reason.
+	second := p.run(review.Options{Exec: "revisor --model {model}", Runs: 2, Lens: "risk,reliability"})
+
+	if strings.Contains(second.Message, "say why with --because") {
+		t.Errorf("the handover is refused for the reason it recorded: %s", second.Message)
+	}
+}
+
+// TestTheRefusalNamesTheSmallestCountThatPaysOne: lenses can hold different counts
+// after a draw failed for one of them. One more than the largest pays several draws
+// while the sentence promises one; the number to name is one more than the smallest,
+// which pays exactly one -for the lenses that hold the least-.
+func TestTheRefusalNamesTheSmallestCountThatPaysOne(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "revisor",
+		Lenses:   []string{"risk", "reliability"},
+		Draws:    map[string]int{"risk": 5, "reliability": 3},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the verdict the tree holds: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(sealed)
+
+	result := p.run(review.Options{
+		Exec:    "revisor --model {model}",
+		Runs:    3,
+		Lens:    "risk,reliability",
+		Because: "the test needs a tree whose lenses hold different counts",
+	})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (%s)", result.Code, result.Message)
+	}
+	said := strings.Join(result.Lines, "\n")
+	if !strings.Contains(said, "--runs 4") {
+		t.Errorf("the refusal does not name one more than the smallest count:\n%s", said)
+	}
+	if strings.Contains(said, "--runs 6") {
+		t.Errorf("the refusal names a count that pays several draws:\n%s", said)
 	}
 }
