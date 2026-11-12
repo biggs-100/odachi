@@ -712,3 +712,26 @@ func TestTheHumanRetiresARowFromTheCLI(t *testing.T) {
 		t.Errorf("--show = %d %q, want the retired row named", code, shown)
 	}
 }
+
+// TestReviewRefusesAWrittenZeroDraws: a verdict paid by no draw is not a verdict,
+// and the app reads a zero as "the caller said nothing" because that is the zero
+// value of an int. The refusal has to happen where the flags can still tell a
+// default from a choice, and before anything is read.
+func TestReviewRefusesAWrittenZeroDraws(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+
+	code, out, errOut := runDir(t, dir, []string{"review", "--runs", "0"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	for _, want := range []string{"--runs 0", "between 1 and 10"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("stderr %q does not name %q", errOut, want)
+		}
+	}
+	if files := storeEntries(t, dir); len(files) != 0 {
+		t.Errorf("the store holds %v, want nothing", files)
+	}
+}
