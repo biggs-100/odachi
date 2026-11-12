@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.39.1 - 2026-11-11
 
 - **The count counts answers, not landings.** A prompt that does not fit is asked in
   parts, and the parts of one answer are one answer: every landing used to add a draw,
