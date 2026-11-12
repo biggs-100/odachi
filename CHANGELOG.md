@@ -10,6 +10,19 @@ not a version.
 
 ## Unreleased
 
+- **The probe's reading separates a suggestion from an invented row.** The score
+  counted every finding nobody planted with one number, so a reviewer that proposed
+  improvements on the arm with nothing planted scored as noisy and a reviewer that
+  said nothing scored as precise -and the comparison between two models measured a
+  style instead of an error (0281). A finding is now read by what it claims: a
+  suggestion is a note, a warning or above is noise. Both arms print both numbers
+  (`seeded noise`, `seeded notes`, `clean noise`, `clean notes`) in the table and in
+  the summary line. The stored answers of 0281, replayed through the new reading,
+  reproduce the old totals and say what they meant: neither model invented a defect
+  on the clean arm, and deepseek's six findings there are six suggestions. Patch (0282).
+
+## v0.40.2 - 2026-11-12
+
 - **A close that requests changes says so, and only a written waiver opens it.** A
   verdict that stands behind a blocking row stops the close -the review saying no, not the
   review being absent- and until now the only ways past it were a fix or a refutation, so a
@@ -20,6 +33,8 @@ not a version.
   what the review asked for and that the human waived it. The decision answers that row and
   only that row -another tree, changed bytes or a new finding ask again-, so the gate still
   cannot be opened by omission. Patch (0280).
+
+## v0.40.1 - 2026-11-12
 
 - **The floor runs for real.** This project declares `golangci-lint run ./...` at
   `CRITICAL`, so every review runs it before any lens and a failure is a row the
