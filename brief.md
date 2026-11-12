@@ -118,3 +118,37 @@
 - The marker list is the rule and the task documents are the exception: the brief and the TOMLs are rendered by the tool, so a sequence there is a double encoding, and prose is the one place that may name it.
 - The gate refuses and names; the repair is a human editor or `odachi start`, never a silent rewrite of the record.
 - A cross-check against the task documents was tried and dropped: it blocked a brief before its first document and a block whose document was removed, and the record accumulates.
+
+## 0275 · lo-que-una-tirada-no-ve
+
+## What must exist
+- a verdict can be paid by N draws of the same judge: `odachi review --runs N` asks each required lens N times and files the union of what they answered as one verdict
+- the verdict says how many draws paid for each lens, so "approved" stops meaning "approved once" without saying so
+- a lens already paid by one draw can be brought to N by a later run, paying only the draws that are missing: the union grows, it never shrinks
+- two draws that name the same defect -same path, blob, lens, line and severity- pay one row, so repetition does not become noise
+- a draw that does not answer leaves the draws that did: the verdict's count says what answered, and the run names the draw that failed and the command that pays the rest
+
+## Done when
+- `odachi review --runs 3` with `--exec` asks each required lens three times and writes `<tree>.json` whose `draws` says 3 for every lens it asked
+- a second `odachi review --runs 3` over the same tree pays only the two missing draws per lens and the file says 3; a run that asks for no new draw is refused, naming the count the lens already has
+- two answers naming one defect at one place under one lens pay one row, and the row kept is the first draw's words
+- a run whose third draw does not answer stores the two that did, says `2 of 3`, names the draw that failed, and exits blocked with the command that pays the third
+- `--runs 1` behaves as today and records one draw per lens; a stored verdict with no `draws` reads as one draw per lens, so every verdict already in a store stays valid
+- `--runs 11` is refused naming the ceiling of ten before a store or a reviewer is touched
+- `--show` prints the draws beside the lenses, and `## Unreleased` names it, patch (0275)
+- `go test ./...` is green and `odachi check --run "go test ./..."` is green
+
+## Not included (first version)
+- no project default and no tier table: the count is typed on the run that pays for it, because a default spends money nobody asked to spend - back when a project asks for a floor by tier and the gate can name it
+- the gate does not refuse a one-draw verdict and `--require-review` keeps its meaning: the record says what the verdict cost and the human weighs it (0043, 0048) - back when a project asks for `--min-draws` and accepts the refusal
+- a draw is the same judge a second time, not a second model: independence is a different instrument, and two lenses answered by the same weights are one opinion in four costumes (0048) - back when heterogeneous draws are designed and measured
+- no per-row count of the draws that saw it: a row found by one draw of three stands as the row it is, because silence is not exculpation (0033) - back when a row's instability becomes something the review can measure
+- `review probe` and its fixture are untouched: the probe measures the lenses against a key, and this changes what a verdict about a tree costs - back when the probe's clean arm earns its name
+
+## Decisions taken
+- The count lives per lens in the verdict, because a lens is the unit that answers, and one draw can fail alone.
+- An absent `draws` means one draw: the field arrives as a schema bump (current 4 to 5), and every verdict already written keeps its old meaning instead of being reread as a claim it never made.
+- Two draws that find one defect pay one row: `findingKey` is already the identity a defect is filed under, and repetition must not become a second finding.
+- A later run brings a lens to N instead of re-answering it: the union can only add findings, so re-drawing can never turn a changes-requested into an approved, and nothing already paid is paid twice.
+- A draw that fails does not throw away the draws that answered: the count is written truthfully and the exit is blocked, because the verb did not do what it was asked even though the store kept what it paid for.
+- N draws buy variance, not independence: three draws of a judge that always answers the same sentence are one draw paid three times, and the count says how much was paid, never how much was seen.

@@ -149,21 +149,71 @@ deps  = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   nothing is guessed: a sentence that no longer matches its document is named, not merged with the other version - back when the tool has to choose between two
+#   nothing is guessed: the gate names the file and the sequence it found, it never decides which of two versions was meant - back when the tool has to choose
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "nothing is guessed: a sentence that no longer matches its document is named, not merged with the other version - back when the tool has to choose between two"
+# not   = "nothing is guessed: the gate names the file and the sequence it found, it never decides which of two versions was meant - back when the tool has to choose"
 # paths = []
 # deps  = []
 
 # This non-goal has no paths yet:
-#   the marker list is a backstop and not the rule: text with no task document to compare against is the only place it speaks - back when every artifact has a counterpart
+#   the task documents are never scanned for the markers: they are prose, and one of them may have to name the sequence to explain this defect - back when every artifact may be scanned
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
 #
 # [[rule]]
-# not   = "the marker list is a backstop and not the rule: text with no task document to compare against is the only place it speaks - back when every artifact has a counterpart"
+# not   = "the task documents are never scanned for the markers: they are prose, and one of them may have to name the sequence to explain this defect - back when every artifact may be scanned"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no project default and no tier table: the count is typed on the run that pays for it, because a default spends money nobody asked to spend - back when a project asks for a floor by tier and the gate can name it
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no project default and no tier table: the count is typed on the run that pays for it, because a default spends money nobody asked to spend - back when a project asks for a floor by tier and the gate can name it"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the gate does not refuse a one-draw verdict and `--require-review` keeps its meaning: the record says what the verdict cost and the human weighs it (0043, 0048) - back when a project asks for `--min-draws` and accepts the refusal
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the gate does not refuse a one-draw verdict and `--require-review` keeps its meaning: the record says what the verdict cost and the human weighs it (0043, 0048) - back when a project asks for `--min-draws` and accepts the refusal"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   a draw is the same judge a second time, not a second model: independence is a different instrument, and two lenses answered by the same weights are one opinion in four costumes (0048) - back when heterogeneous draws are designed and measured
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "a draw is the same judge a second time, not a second model: independence is a different instrument, and two lenses answered by the same weights are one opinion in four costumes (0048) - back when heterogeneous draws are designed and measured"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no per-row count of the draws that saw it: a row found by one draw of three stands as the row it is, because silence is not exculpation (0033) - back when a row's instability becomes something the review can measure
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no per-row count of the draws that saw it: a row found by one draw of three stands as the row it is, because silence is not exculpation (0033) - back when a row's instability becomes something the review can measure"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   `review probe` and its fixture are untouched: the probe measures the lenses against a key, and this changes what a verdict about a tree costs - back when the probe's clean arm earns its name
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "`review probe` and its fixture are untouched: the probe measures the lenses against a key, and this changes what a verdict about a tree costs - back when the probe's clean arm earns its name"
 # paths = []
 # deps  = []
