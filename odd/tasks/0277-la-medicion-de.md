@@ -8,7 +8,7 @@ R1 · "la medicion de campo de las tiradas queda en review-research: una segunda
 ## Done when
 
 ## Steps
-- [ ] T1 · la medicion de campo de las tiradas queda en review-research: una segunda lectura encontro tres defectos   R1
+- [x] T1 · la medicion de campo de las tiradas queda en review-research: una segunda lectura encontro tres defectos   R1 · tree:cd17eb0b9c5f3065f3bfa68dce319ce87f61ffe6
 
 ## History
 L1 · "la medicion de campo de las tiradas queda en review-research: una segunda lectura encontro tres defectos"
