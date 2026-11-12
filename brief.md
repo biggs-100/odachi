@@ -94,3 +94,27 @@
 ## Decisions taken
 - The test reads the dispatcher's own cases instead of a third list: a hand-kept list of verbs is the same drift with one more place to forget.
 - The README loses the numbers instead of updating them: "62 packages" is true today and a lie in a month, and the project already says a number in prose is a claim nobody measures.
+
+## 0274 · lo-que-la-compuerta-ve
+
+## What must exist
+- un artefacto que no decodifica como UTF-8, o que trae las secuencias de un UTF-8 leído como CP850, se rechaza en la compuerta nombrando el archivo, para que la doble codificación se vea sin modelo y sin review
+- the gate compares what the brief says with the requirement its task document carries: two copies of one sentence that no longer match is a record that was mangled, and no heuristic is needed to see it
+- a file saved with a BOM is refused too, because its first line stops being the line the parser reads
+
+## Done when
+- a `brief.md` whose bytes are not UTF-8 blocks the gate, naming the file and how to save it
+- a `brief.md` with a BOM blocks, naming the BOM
+- a clean tree stays ready, so the guards do not tax every run
+- `go test ./...` is green and `odachi check --run "go test ./..."` is green
+- `## Unreleased` names it, patch (0274)
+
+## Not included (first version)
+- nothing is repaired: the gate reads and refuses, it never writes the good file back - back when a repair command is the question
+- nothing is guessed: the gate names the file and the sequence it found, it never decides which of two versions was meant - back when the tool has to choose
+- the task documents are never scanned for the markers: they are prose, and one of them may have to name the sequence to explain this defect - back when every artifact may be scanned
+
+## Decisions taken
+- The marker list is the rule and the task documents are the exception: the brief and the TOMLs are rendered by the tool, so a sequence there is a double encoding, and prose is the one place that may name it.
+- The gate refuses and names; the repair is a human editor or `odachi start`, never a silent rewrite of the record.
+- A cross-check against the task documents was tried and dropped: it blocked a brief before its first document and a block whose document was removed, and the record accumulates.

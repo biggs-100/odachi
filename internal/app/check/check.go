@@ -341,6 +341,19 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		state.HasBrief = true
 		state.BriefMissing = nil
 	}
+
+	// Every artifact this gate is about to interpret has to be text. The question is
+	// asked first because everything after reads them, and a record that does not
+	// decode is one the gate would judge blind (0274).
+	if problem := r.artifactsDecode(); problem != nil {
+		return *problem
+	}
+	// A brief that carries the signature of a double encoding is a record somebody
+	// rewrote: the bytes decode, so nothing before this can see it, and the gate names
+	// it instead of judging the tree as if the words were the ones written (0274).
+	if problem := r.briefSaysWhatItMeans(); problem != nil {
+		return *problem
+	}
 	closedNow := false
 	if feature != nil {
 		state.OpenQuestions = len(feature.Doc.OpenQuestions())
