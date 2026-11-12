@@ -450,3 +450,26 @@ func TestTheHandoverKeepsTheLensTheRunWasToldToJudge(t *testing.T) {
 		}
 	}
 }
+
+// TestTheRefusalNamesOneMoreThanTheFileCounts: the number in the next line is the
+// count the file holds plus one, not the count the refused run asked for. A tree
+// holding five, asked for three, must send the human to six: anything lower pays
+// nothing, and the refusal would be the only thing the run got right.
+func TestTheRefusalNamesOneMoreThanTheFileCounts(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.files.files[storePath(currentTree)] = domainreview.Render(drawsVerdict(t, 5))
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 3})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (%s)", result.Code, result.Message)
+	}
+	said := strings.Join(result.Lines, "\n")
+	if !strings.Contains(said, "--runs 6") {
+		t.Errorf("the refusal does not name one more than the five it holds:\n%s", said)
+	}
+	if strings.Contains(said, "--runs 4") {
+		t.Errorf("the refusal names the count the run asked for:\n%s", said)
+	}
+}
