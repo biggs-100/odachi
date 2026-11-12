@@ -1154,6 +1154,9 @@ func (r *runner) exec() Result {
 	// Every unit is asked as many times as --runs asked for: a draw is one answer,
 	// and one answer is one sample of a judge, not a verdict about the tree.
 	for _, round := range drawn {
+		// One answer to one lens is one draw, however many parts it was asked in: the
+		// parts of a round are one response, and the count is per response.
+		stamped := make(map[string]bool, len(round.units))
 		for _, unit := range round.units {
 			paid := draw{unit: unit, n: round.n, of: round.of}
 			command := unit.command
@@ -1286,13 +1289,19 @@ func (r *runner) exec() Result {
 				}
 			}
 
-			// One landing is one answer: the count a lens carries grows by one per draw,
-			// and a later run's top-up adds to what the file already counted.
+			// One landing is one answer: the count a lens carries grows by one per
+			// draw, and a later run's top-up adds to what the file already counted. A
+			// part of the same round is not a second answer, so it does not count
+			// twice.
 			if parsed.Draws == nil {
 				parsed.Draws = map[string]int{}
 			}
 			for _, lens := range group.lenses {
+				if stamped[lens] {
+					continue
+				}
 				parsed.Draws[lens] = 1
+				stamped[lens] = true
 			}
 
 			// The lenses are the ones this reviewer was asked to answer, not the ones

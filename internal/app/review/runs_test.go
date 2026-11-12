@@ -389,3 +389,34 @@ func TestAGroupThatOwesDifferentCountsAsksOnlyWhatEachLensOwes(t *testing.T) {
 		}
 	}
 }
+
+// TestOneAnswerInPartsIsOneDraw: a prompt that does not fit is asked in parts, and
+// the parts are one answer to one lens. The count says how many times the judge was
+// asked, not how many calls the tool made, so a split candidate counts once per
+// round however many parts it carries.
+func TestOneAnswerInPartsIsOneDraw(t *testing.T) {
+	for _, runs := range []int{1, 3} {
+		p := newProject()
+		p.host.model = "host/default"
+		p.git.changed = []string{"a.go", "b.go"}
+		p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": gitBlob}
+		p.git.diff = bigDiff("a.go", "b.go")
+		p.shell.script = []fakeAnswer{
+			{output: `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`},
+			{output: `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`},
+		}
+
+		result := p.run(review.Options{Exec: "revisor --model {model}", MaxPromptKB: 25, Runs: runs})
+
+		if result.Code != review.CodeOK {
+			t.Fatalf("--runs %d = code %d, want 0 (%s)", runs, result.Code, result.Message)
+		}
+		if got := filedVerdict(t, p).DrawsFor("reliability"); got != runs {
+			t.Errorf("--runs %d recorded %d draws, want %d: the parts are one answer", runs, got, runs)
+		}
+	}
+}
