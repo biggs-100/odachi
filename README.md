@@ -415,9 +415,22 @@ odachi review                            # the prompt, to paste into your agent
 odachi review --exec "agent {prompt}"    # or have it run it: prompt on stdin and in {prompt}
 odachi review --exec "cli --model {model} {prompt}"   # and with the session's model
 odachi review --exec "cli {prompt} > {verdict}"       # if its stdout is noisy, it writes the answer
+odachi review --runs 3 --exec "agent {prompt}"        # three answers per lens, filed as one verdict
 odachi review --attach verdict.json      # or save what it answered
 odachi review --show                     # which verdict exists, and whether one is due
 ```
+
+One answer is one draw of one judge, and a reviewer's answers vary between runs: the
+same clean code scored 10, 1 and 4 findings in three draws. `--runs N` asks each lens
+N times (1 to 10) and files the union as one verdict. A defect is identified by its
+file, bytes, lens, place and severity -never by the sentence that describes it-, so a
+second draw that names the same defect pays one row, and a row one draw saw stands: the
+other draws being quiet is one sample each, not an acquittal. The verdict records how
+many answers paid each lens, and `--show` prints it. Asking for three on a lens that
+already has one pays only the two missing: the union can only add findings, so drawing
+again can never turn a `changes_requested` into an `approved`. A draw that does not
+answer leaves the ones that did, and the run names the draw it lost and the top-up that
+pays the rest.
 
 The prompt has a home. The printed form writes it into the clone's store as
 `reviews/<tree>.prompt.md`, beside the verdict it will judge, and names it on

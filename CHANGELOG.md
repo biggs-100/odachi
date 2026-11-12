@@ -8,6 +8,21 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A verdict can be paid by more than one draw.** The review was one answer per lens
+  -one sample of one judge- and the store refused a second run over the same tree, so a
+  defect that draw did not think of stayed invisible behind an approval. `--runs N` asks
+  each lens N times and files the union as one verdict: a defect is identified by its
+  file, bytes, lens, place and severity, so two draws that name it pay one row, and a row
+  one draw saw stands because the other draws being quiet is one sample each, not an
+  acquittal. The verdict now records how many answers paid each lens, `--show` prints it,
+  and a lens paid by one draw is brought to N by a later run that pays only the missing
+  answers -the union only adds, so drawing again can never turn a `changes_requested`
+  into an `approved`-. A draw that does not answer leaves the ones that did, names the
+  draw it lost and the top-up that pays the rest. The schema moves to 5, so an older
+  binary says upgrade instead of calling a good verdict broken. Patch (0275).
+
 ## v0.38.14 - 2026-11-11
 
 - **A record that does not decode is refused.** The brief corrupted on 0271 decoded as UTF-8 -the bytes
