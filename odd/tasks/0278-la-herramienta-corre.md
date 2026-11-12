@@ -10,7 +10,7 @@ R1 · "la herramienta corre antes que el modelo y su fallo es un defecto que no 
 - una comprobación cuyo comando no existe deja una fila que lo dice, en vez de caerse
 - las comprobaciones corren en el worktree del candidato y no en el repositorio
 - go test ./... is green and odachi check --run "go test ./..." is green
-- ## Unreleased names it, minor (0278): the verdict and the review file both move to schema 6
+- ## Unreleased names it, patch (0278)
 
 ## Steps
 - [x] T1 · el archivo del review declara las comprobaciones: nombre, comando y severidad, y un archivo sin ellas se lee igual   R1 · route:inline · tree:b8709618731d17669f6eecc59c84c20736bb6514
@@ -27,3 +27,4 @@ L5 · OFICIO · "Una comprobacion declarada y no instalada es una fila que dice 
 L6 · OFICIO · "El contador de esquema es uno solo: la feature lo sube a 6 y los tres archivos lo declaran" (porque el campo check y la tabla de comprobaciones llegan a la vez, y un contador por archivo dejaria pasar un archivo que el binario no lee entero; la linea anterior que hablaba de review.toml en 4 queda corregida por esta)
 L7 · OFICIO · "La feature es minor y no patch: cambia la forma de un registro guardado, y docs/releases.md llama contrato a eso" (porque el veredicto sube de esquema y review.toml gana una tabla; un binario viejo tiene que decir actualiza, y eso es la senal visible de que algo puede tener que adaptarse)
 L8 · OFICIO · "Una fila de herramienta se desestima con razon aunque sea causal y bloquee" (porque un analizador no razona: no hay cita que refutar, y la unica refutacion posible es que la regla no aplique a este codigo; la razon queda escrita al lado del veredicto con quien y cuando, asi que la compuerta no se abre por omision)
+L9 · OFICIO · "El Done-when dice patch y la release sale minor: la decision del humano la supersede, y la linea del plan queda como se escribio" (porque el humano eligio v0.40.0 al preguntarle, porque el veredicto y review.toml se mueven a esquema 6 y docs/releases.md llama contrato a eso; reescribir el Done-when para que dijera minor era editar la vara que mide la feature, y la correccion del arbol lo marco)
