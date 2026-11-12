@@ -8,6 +8,22 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A review runs the project's tools before it pays a model.** `odd/review.toml`
+  declares them -a name, the command and the severity a failure is worth- and each one
+  runs on the candidate before any lens reads it: a tool that exits non-zero, hangs
+  past `check_timeout_s` or names a command nobody installed files a finding in the
+  verdict, so the reviewer cannot approve past it, and the prompt carries what it said
+  so no lens pays to find it again. The row cites no line, because a tool judged the
+  candidate and an invented path sends a person to fix the wrong file: `--show` prints
+  it as `check:lint` and `--dismiss` takes it back with a reason, the one blocking row
+  a person may retire without a refuter. The declaration travels with the repository
+  and the agreement to run it does not -`odachi review checks approve` records the exact
+  list in the clone's store, and a cloned `review.toml` runs nothing until the person
+  who cloned it says so-. The verdict moves to schema 6 and the review file with it, so
+  an older binary says upgrade instead of calling a good file broken. Minor (0278).
+
 ## v0.39.1 - 2026-11-11
 
 - **The count counts answers, not landings.** A prompt that does not fit is asked in

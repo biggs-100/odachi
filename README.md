@@ -569,6 +569,36 @@ now, and `--no-review` turns the mode off for one run; neither changes the file.
 The file is versioned, so changing it moves the tree and the proof is retaken
 with `odachi check --run "<command>"`.
 
+A review can run the project's own deterministic tools before any lens reads the
+candidate. `odd/review.toml` declares them, one `[[check]]` table each:
+
+```toml
+[[check]]
+name     = "lint"
+command  = "golangci-lint run ./..."
+severity = "WARNING"
+```
+
+A check that exits non-zero, hangs past `check_timeout_s`, or names a command
+nobody installed is filed as a finding in the verdict, at the severity the project
+declared, and the prompt carries what the tool said so no lens pays to find it
+again. A blocking severity stops the approval and a `WARNING` is recorded and
+answered: what the verdict does with it is what it does with any other row. The
+exit status is the whole
+judgment, so declare a command that fails when the tree is bad: `gofmt -l .` lists
+the files it would rewrite and exits zero, and a check that always passes is a
+line of the prompt that says nothing. A tool's row cites no line:
+it judged the candidate, not a place, and `odachi review --show` prints it as
+`check:lint`. A blocking one is retired with `--dismiss check:lint --because
+"<why>"`, the one row a person may retire without a refuter, because an analyzer
+has no reasoning to refute.
+
+The declaration travels with the repository; the agreement to run it does not. A
+cloned `review.toml` runs nothing until the person who cloned it says
+`odachi review checks approve`, which records the exact list in the clone's store
+-a command that changes asks again-. `odachi review checks` says what is declared
+and whether this clone agreed; a project that declares none runs none.
+
 ## CI: the gate from the base ref
 
 A local hook can be skipped, and a change can edit the fence it must obey. In CI,

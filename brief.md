@@ -176,3 +176,28 @@
 - A draw is one answer to one lens over the whole candidate: the parts of one answer are one round, so the count is per answer and never per call.
 - The hint carries `--exec "<your command>"` because the flag refuses without it, and a hint a person cannot run is not a hint.
 - The number a refusal names is the one the file holds plus one: the count is the fact, and the run that was refused is not.
+
+## 0278 · la-herramienta-corre
+
+## What must exist
+- la herramienta corre antes que el modelo y su fallo es un defecto que no se puede ignorar
+
+## Done when
+- una comprobación declarada que sale distinta de cero deja en el veredicto un finding con su nombre, su salida y la severidad que el proyecto le declaró
+- una comprobación que sale cero no deja finding, y el prompt dice que pasó
+- una comprobación cuyo comando no existe deja una fila que lo dice, en vez de caerse
+- las comprobaciones corren en el worktree del candidato y no en el repositorio
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0278)
+
+## Not included (first version)
+- no built-in tools and no language detection: the project declares its commands in odd/review.toml, and a project that declares none runs none
+- no installation and no download: a missing command is a row that says so
+- the gate does not run the checks: it reads the verdict they produced
+- no parsing of the output into a file and a line: the row carries the text, and a check row is not placed on a path
+- review probe and its fixture are untouched: this changes what a review of a tree measures, not the probe
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.

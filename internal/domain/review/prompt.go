@@ -53,6 +53,14 @@ type PromptInput struct {
 	// existed.
 	Part int
 	Of   int
+	// Checks are the deterministic tools the project declared, and what each
+	// answered about these bytes. Empty means the project declared none, and the
+	// prompt is exactly the one printed before checks existed.
+	Checks []CheckResult
+	// ChecksOff is why the declared tools did not run, when the project declared
+	// some and this clone has not approved them. The prompt says so: a review that
+	// stayed quiet about the tools it skipped reports on a tree nobody measured.
+	ChecksOff string
 }
 
 // PromptSizeKB is the size odachi compares against the project's limit: kilobytes
@@ -119,6 +127,15 @@ func Prompt(in PromptInput) string {
 	out.WriteString("\n")
 
 	out.WriteString(floorSection(in.Floor))
+
+	out.WriteString(checksSection(in.Checks))
+
+	if off := strings.TrimSpace(in.ChecksOff); off != "" {
+		out.WriteString("## The checks that did not run\n\n")
+		out.WriteString(off + "\n")
+		out.WriteString("Do not read the tools' silence as a clean tree: nobody measured this\n")
+		out.WriteString("candidate with them.\n\n")
+	}
 
 	out.WriteString("## The diff (the whole candidate, against the base)\n")
 	out.WriteString(section(in.Diff))
@@ -334,6 +351,43 @@ func floorSection(floor Floor) string {
 	out.WriteString(fmt.Sprintf("line within %d of one. What the candidate did not touch is a follow-up\n", FloorContext))
 	out.WriteString("(\"causal\": false), and a causal BLOCKER or CRITICAL that cannot cite is\n")
 	out.WriteString("downgraded one tier by the tool before the verdict is stored.\n\n")
+
+	return out.String()
+}
+
+// checksSection is what the tools this review ran answered, said in the words the
+// reviewer acts on: which one passed, which one failed and with what line. A
+// project that declared none prints nothing, because a section that only says "no
+// checks" is a paragraph the reviewer pays for and learns nothing from.
+//
+// This is the reading a model did not have to do. It travels before the rules, so
+// the reviewer starts from what is already known instead of paying for it again.
+func checksSection(checks []CheckResult) string {
+	if len(checks) == 0 {
+		return ""
+	}
+
+	var out strings.Builder
+	out.WriteString("## The checks (the tools this project declared, run before any lens)\n\n")
+	for _, check := range checks {
+		out.WriteString("- " + check.Name + ": " + string(check.Status))
+		if check.Status == CheckFailed {
+			out.WriteString(fmt.Sprintf(" (exit %d)", check.Exit))
+		}
+		if check.Note != "" {
+			out.WriteString(" · " + check.Note)
+		}
+		out.WriteString(" · `" + check.Command + "`\n")
+		if strings.TrimSpace(check.Output) == "" {
+			continue
+		}
+		for _, line := range strings.Split(strings.TrimRight(check.Output, "\n"), "\n") {
+			out.WriteString("    " + line + "\n")
+		}
+	}
+	out.WriteString("\nThis is what the tools said about these bytes, not an opinion: a failing check\n")
+	out.WriteString("is already a finding in the verdict, so do not report it again. Report what the\n")
+	out.WriteString("tools cannot see.\n\n")
 
 	return out.String()
 }

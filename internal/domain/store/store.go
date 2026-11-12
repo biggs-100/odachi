@@ -45,6 +45,11 @@ const (
 	// Agents is the client selection: which clients receive the native agent.
 	// It is the person's choice, not the team's, so it does not travel.
 	Agents = "agents.toml"
+	// Checks is the clone's agreement to run the deterministic tools the project
+	// declares. It lives here for the same reason: a repository's review.toml
+	// must not be able to run anything by being cloned, and the agreement to
+	// execute it belongs to the person who cloned it.
+	Checks = "checks.toml"
 )
 
 // Git is the one fact the store needs from the repository: where its common

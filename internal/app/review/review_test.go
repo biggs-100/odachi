@@ -370,6 +370,9 @@ type fakeShell struct {
 	timeout int
 	// commands is every command that ran, in order: one per model group.
 	commands []string
+	// dirs is where each of those commands ran, in the same order: the checks run
+	// in the candidate, and a test that cannot see the directory cannot say so.
+	dirs []string
 
 	// script is one answer per call, in order: it is how a test makes the
 	// second group fail after the first one answered. Without it every call
@@ -408,6 +411,7 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string
 	s.command = command
 	s.timeout = timeoutSeconds
 	s.commands = append(s.commands, command)
+	s.dirs = append(s.dirs, dir)
 	if s.after != nil {
 		s.after()
 	}

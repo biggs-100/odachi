@@ -110,6 +110,12 @@ type Options struct {
 	// in the store and nothing in the gate reads it, so a stored verdict disposes
 	// of the ones the project stopped keeping. A negative number keeps none too.
 	KeepPrompts int
+	// Checks are the deterministic tools the project declared, in the order the
+	// file lists them. Empty means it declared none and this run executes nothing.
+	Checks []domain.Check
+	// CheckTimeout is how long one check may run, in seconds, from the same file.
+	// Zero means the default: a tool that hangs must not hang the review.
+	CheckTimeout int
 	// Dismiss is the row the human retires, as `path:line`, and Because is the
 	// evidence. Both or neither: a dismissal without a reason is the silent edit
 	// the file beside the verdict exists to replace.
@@ -329,6 +335,15 @@ type runner struct {
 	// correction is the verdict --since names, read once: it is both the tree the
 	// delta is measured from and the answer the stored verdict completes.
 	correction *domain.Verdict
+	// ran is what the declared checks answered, computed once: every model group
+	// and every part of a split candidate reads this same value, because a tool
+	// that ran twice could answer twice.
+	ran *[]domain.CheckResult
+	// off is why the declared checks did not run, when they did not: this clone
+	// never approved them, or approved a list the project has changed since. It
+	// travels into the prompt, so a review never claims to have measured what it
+	// skipped.
+	off string
 }
 
 // worktree is one read of the candidate: its content tree, the paths that
@@ -456,6 +471,7 @@ func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptIn
 	// lenses section states what the evidence asked for and what --lens added on
 	// top, in the caller's words when they gave any.
 	required := domain.Lenses(domain.Assess(cand.paths, cand.diff))
+
 	var scope *domain.Scope
 	if added := domain.Raised(required, selected); len(added) > 0 {
 		scope = &domain.Scope{
@@ -464,6 +480,13 @@ func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptIn
 			Asked:    strings.TrimSpace(r.opts.Lens),
 			Because:  strings.TrimSpace(r.opts.Because),
 		}
+	}
+
+	// The tools the project declared run here, before the prompt is written: the
+	// reviewer reads what is already known instead of paying to find it again.
+	checks, off, problem := r.ranChecks()
+	if problem != nil {
+		return domain.PromptInput{}, problem
 	}
 
 	return domain.PromptInput{
@@ -478,6 +501,8 @@ func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptIn
 		Floor:       domain.FloorFor(cand.paths, cand.diff),
 		Scope:       scope,
 		Correction:  strings.TrimSpace(r.opts.Since),
+		Checks:      checks,
+		ChecksOff:   off,
 	}, nil
 }
 
@@ -1606,7 +1631,7 @@ func (r *runner) retire() Result {
 		return blocked("--dismiss says which row and --because says why: a dismissal without evidence is silence, and this file exists to replace that")
 	}
 
-	path, line, problem := r.dismissTarget()
+	path, line, check, problem := r.dismissTarget()
 	if problem != nil {
 		return *problem
 	}
@@ -1630,8 +1655,8 @@ func (r *runner) retire() Result {
 		if domain.IsDismissed(finding) {
 			continue
 		}
-		open = append(open, fmt.Sprintf("%s:%d", finding.Path, finding.Line))
-		if sameRow(finding, path, line) {
+		open = append(open, rowLabel(finding))
+		if sameRow(finding, path, line, check) {
 			matched = &verdict.Findings[i]
 		}
 	}
@@ -1639,10 +1664,14 @@ func (r *runner) retire() Result {
 		if len(open) == 0 {
 			return blocked("the review of this tree holds no open row: there is nothing to dismiss in " + r.storeLabel(rel))
 		}
-		return blocked(fmt.Sprintf("the review of %s holds no open row at %s:%d: the rows it holds are %s",
-			r.storeLabel(rel), path, line, strings.Join(open, ", ")))
+		return blocked(fmt.Sprintf("the review of %s holds no open row named %s: the rows it holds are %s",
+			r.storeLabel(rel), labelOf(path, line, check), strings.Join(open, ", ")))
 	}
-	if matched.Causal && matched.Severity.Blocks() {
+	// A causal block a person wrote is refuted with a citation or answered by a
+	// fix: a gate that opens by omission is not a gate. A tool's row is the
+	// exception, because there is no reasoning to refute -the analyzer measured
+	// the bytes- and the human's recorded reason is the whole of the judgment.
+	if matched.Causal && matched.Severity.Blocks() && strings.TrimSpace(matched.Check) == "" {
 		message := fmt.Sprintf("%s:%d is a causal %s: a blocking row is refuted with a citation or answered by a fix, not dismissed",
 			matched.Path, matched.Line, matched.Severity)
 		return Result{
@@ -1668,6 +1697,7 @@ func (r *runner) retire() Result {
 		Fingerprint: domain.Fingerprint(*matched),
 		Path:        matched.Path,
 		Line:        matched.Line,
+		Check:       matched.Check,
 		Reason:      strings.TrimSpace(r.opts.Because),
 		By:          strings.TrimSpace(r.opts.By),
 		At:          at.UTC().Format(time.RFC3339),
@@ -1682,7 +1712,7 @@ func (r *runner) retire() Result {
 		return blocked("could not write " + r.storeLabel(sidecar) + ": " + oneLine(err.Error()) + "; run odachi review --dismiss again")
 	}
 
-	message := fmt.Sprintf("dismissed %s:%d in %s: the row travels with your reason", matched.Path, matched.Line, r.storeLabel(rel))
+	message := fmt.Sprintf("dismissed %s in %s: the row travels with your reason", rowLabel(*matched), r.storeLabel(rel))
 	return Result{
 		Code:    CodeOK,
 		Message: message,
@@ -1695,28 +1725,71 @@ func (r *runner) retire() Result {
 	}
 }
 
-// dismissTarget reads `path:line` from the flag. The line is required: a row is a
-// place and a claim, and a path alone would dismiss every row a file carries.
-func (r *runner) dismissTarget() (string, int, *Result) {
+// dismissTarget reads `path:line` from the flag, or `check:<name>` for a row a tool
+// filed. The line is required for a place: a row is a place and a claim, and a path
+// alone would dismiss every row a file carries.
+func (r *runner) dismissTarget() (string, int, string, *Result) {
 	target := strings.TrimSpace(r.opts.Dismiss)
+	if name, ok := checkTarget(target); ok {
+		if name == "" {
+			problem := blocked("--dismiss says check: with no name: use check:<the tool the row names>, for example check:lint")
+			return "", 0, "", &problem
+		}
+		return "", 0, name, nil
+	}
+
 	at := strings.LastIndex(target, ":")
 	if at <= 0 || at == len(target)-1 {
-		problem := blocked("--dismiss takes <path>:<line>, the place the row names: for example internal/app/review.go:815")
-		return "", 0, &problem
+		problem := blocked("--dismiss takes <path>:<line>, the place the row names, or check:<name> for a row a tool filed")
+		return "", 0, "", &problem
 	}
 	path := strings.TrimSpace(target[:at])
 	number := strings.TrimSpace(target[at+1:])
 	line, err := strconv.Atoi(number)
 	if err != nil || line < 0 {
 		problem := blocked("--dismiss says " + number + " for a line: use the line number the row names, exactly as the verdict printed it")
-		return "", 0, &problem
+		return "", 0, "", &problem
 	}
-	return path, line, nil
+	return path, line, "", nil
 }
 
-// sameRow compares one finding with the place the human named, the way paths are
-// compared everywhere in the store: forward slashes and no case.
-func sameRow(finding domain.Finding, path string, line int) bool {
+// checkTarget reads the `check:<name>` spelling: a tool's row names a tool, not a
+// place, so the human copies what the verdict printed.
+func checkTarget(target string) (string, bool) {
+	const prefix = "check:"
+	if len(target) < len(prefix) || !strings.EqualFold(target[:len(prefix)], prefix) {
+		return "", false
+	}
+	return strings.TrimSpace(target[len(prefix):]), true
+}
+
+// rowLabel is how one row is named to a person: its place, or the tool that filed
+// it.
+func rowLabel(finding domain.Finding) string {
+	if check := strings.TrimSpace(finding.Check); check != "" {
+		return "check:" + check
+	}
+	return fmt.Sprintf("%s:%d", finding.Path, finding.Line)
+}
+
+// labelOf names the row a dismissal asked for, in the same words.
+func labelOf(path string, line int, check string) string {
+	if check != "" {
+		return "check:" + check
+	}
+	return fmt.Sprintf("%s:%d", path, line)
+}
+
+// sameRow compares one finding with the row the human named, the way paths are
+// compared everywhere in the store: forward slashes and no case. A row a tool filed
+// is matched by the tool's name and never by a place, because it has none.
+func sameRow(finding domain.Finding, path string, line int, check string) bool {
+	if check != "" {
+		return strings.EqualFold(strings.TrimSpace(finding.Check), check)
+	}
+	if strings.TrimSpace(finding.Check) != "" {
+		return false
+	}
 	canonical := func(value string) string {
 		return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(value), "\\", "/"))
 	}
@@ -1948,6 +2021,9 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		stamped.Lenses = domain.Add(nil, judged)
 		if len(stamped.Lenses) == 1 {
 			for i, finding := range stamped.Findings {
+				if strings.TrimSpace(finding.Check) != "" {
+					continue
+				}
 				if strings.TrimSpace(finding.Lens) == "" {
 					stamped.Findings[i].Lens = stamped.Lenses[0]
 				}
@@ -1978,6 +2054,15 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 
 	var downgraded int
 	stamped.Findings, downgraded = domain.Earned(stamped.Findings, floor)
+
+	// The tools the project declared ran before the prompt, and what they said is
+	// the verdict's own row: appended after Earned, because a tool cites its
+	// output and not a line of the diff, and the floor has nothing to judge there.
+	checkRows, problem := r.checkFindings()
+	if problem != nil {
+		return *problem
+	}
+	stamped.Findings = appendMissing(stamped.Findings, checkRows)
 
 	stamped, carried, notes, problem := r.inherit(stamped, tree, work.paths)
 	if problem != nil {
@@ -2255,6 +2340,11 @@ func (r *runner) stampLenses(verdict domain.Verdict, class domain.Tier) (domain.
 
 	if len(stamped.Lenses) == 1 {
 		for i, finding := range stamped.Findings {
+			if strings.TrimSpace(finding.Check) != "" {
+				// A tool's row names the tool, not a specialist: giving it the
+				// tree's only lens would say a model found what a linter did.
+				continue
+			}
 			if strings.TrimSpace(finding.Lens) == "" {
 				stamped.Findings[i].Lens = stamped.Lenses[0]
 			}
@@ -2275,6 +2365,11 @@ func (r *runner) stampLenses(verdict domain.Verdict, class domain.Tier) (domain.
 func (r *runner) stampBlobs(verdict domain.Verdict) (domain.Verdict, *Result) {
 	stamped := verdict
 	for i, finding := range stamped.Findings {
+		if strings.TrimSpace(finding.Check) != "" {
+			// A tool's row is about the candidate, not about a file: there are no
+			// bytes to hash and a receipt here would name a path nobody read.
+			continue
+		}
 		blob, problem := r.stampBlob("the finding's content receipt", finding.Path)
 		if problem != nil {
 			return domain.Verdict{}, problem
@@ -2919,10 +3014,16 @@ func (r *runner) answersOf(tree string) (domain.Answers, string) {
 }
 
 // findingKey is the identity a finding is filed under: the same file, bytes,
-// lens, place and severity is one defect, however many verdicts saw it.
+// lens, place and severity is one defect, however many verdicts saw it. A row a
+// tool filed adds the tool's name and nothing else changes, so every row already
+// stored keeps the identity it was filed under.
 func findingKey(finding domain.Finding) string {
-	return finding.Path + "|" + finding.Blob + "|" + finding.Lens + "|" +
+	key := finding.Path + "|" + finding.Blob + "|" + finding.Lens + "|" +
 		strconv.Itoa(finding.Line) + "|" + string(finding.Severity)
+	if check := strings.TrimSpace(finding.Check); check != "" {
+		key += "|" + check
+	}
+	return key
 }
 
 // passKey is the identity of one clean row: the same file, bytes and lens.
@@ -3685,9 +3786,14 @@ func shown(summary, rel string, verdict domain.Verdict) []string {
 // file, the severity, whether the candidate caused it, and the evidence. A
 // dismissal also prints the reason that judged it: a verdict says what it
 // discarded, not only what it kept.
+//
+// A row a tool filed takes the place of the file: `check:lint` is what the human
+// copies to dismiss it, and a name is the whole of what it judged.
 func findingLine(finding domain.Finding) string {
 	where := finding.Path
-	if finding.Line > 0 {
+	if check := strings.TrimSpace(finding.Check); check != "" {
+		where = "check:" + check
+	} else if finding.Line > 0 {
 		where = fmt.Sprintf("%s:%d", finding.Path, finding.Line)
 	}
 

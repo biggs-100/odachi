@@ -30,6 +30,20 @@ type file struct {
 	// same way it always did.
 	KeepVerdicts int `toml:"keep_verdicts"`
 	KeepPrompts  int `toml:"keep_prompts"`
+	// Checks are the deterministic tools the review runs before any lens, and
+	// CheckTimeout how long one may take. A file with neither declares no tools:
+	// the review runs nothing on its behalf, exactly as it did before this key
+	// existed.
+	CheckTimeout int     `toml:"check_timeout_s"`
+	Checks       []check `toml:"check"`
+}
+
+// check is one declared tool as the file writes it. The domain decides what a
+// usable check is; this struct only names the keys.
+type check struct {
+	Name     string `toml:"name"`
+	Command  string `toml:"command"`
+	Severity string `toml:"severity"`
 }
 
 // Decode parses the file. Unknown keys are an error naming them; an empty or
@@ -53,7 +67,7 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 		for _, key := range unknown {
 			keys = append(keys, key.String())
 		}
-		return review.ProjectConfig{}, fmt.Errorf("review: unknown keys: %s; this file configures mode, the model of each lens, the biggest prompt you pay for and how many records and prompts you keep", strings.Join(keys, ", "))
+		return review.ProjectConfig{}, fmt.Errorf("review: unknown keys: %s; this file configures mode, the model of each lens, the biggest prompt you pay for, how many records and prompts you keep, and the deterministic tools the review runs", strings.Join(keys, ", "))
 	}
 
 	mode, err := review.NormalizeMode(f.Mode)
@@ -76,13 +90,41 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
+	checks, err := review.NormalizeChecks(declaredChecks(f.Checks))
+	if err != nil {
+		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
+	}
+	timeout, err := review.NormalizeCheckTimeout(f.CheckTimeout)
+	if err != nil {
+		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
+	}
 	return review.ProjectConfig{
 		Mode:         mode,
 		Lenses:       lenses,
 		MaxPromptKB:  limit,
 		KeepVerdicts: verdicts,
 		KeepPrompts:  prompts,
+		Checks:       checks,
+		CheckTimeout: timeout,
 	}, nil
+}
+
+// declaredChecks copies the file's tables into the domain's vocabulary. The
+// severity arrives as the text the human wrote and the domain decides whether it
+// is one of the four.
+func declaredChecks(raw []check) []review.Check {
+	if len(raw) == 0 {
+		return nil
+	}
+	out := make([]review.Check, 0, len(raw))
+	for _, one := range raw {
+		out = append(out, review.Check{
+			Name:     one.Name,
+			Command:  one.Command,
+			Severity: review.Severity(one.Severity),
+		})
+	}
+	return out
 }
 
 // Render writes the canonical file: the comment, the switch, and the lens table
@@ -118,6 +160,18 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 	out.WriteString("# odachi clean --apply keeps this many review records -the newest trees- and this many prompts\n")
 	out.WriteString("keep_verdicts = " + strconv.Itoa(verdicts) + "\n")
 	out.WriteString("keep_prompts = " + strconv.Itoa(prompts) + "\n")
+	checks, err := review.NormalizeChecks(config.Checks)
+	if err != nil {
+		return nil, fmt.Errorf("review: %w", err)
+	}
+	if len(checks) > 0 {
+		timeout, err := review.NormalizeCheckTimeout(config.CheckTimeout)
+		if err != nil {
+			return nil, fmt.Errorf("review: %w", err)
+		}
+		out.WriteString("# how long one declared tool may run before the review stops waiting for it\n")
+		out.WriteString("check_timeout_s = " + strconv.Itoa(timeout) + "\n")
+	}
 	if len(config.Lenses) > 0 {
 		out.WriteString("# odachi: the model that judges each lens; when a provider retires one, the run names the model and the lens it served, and this line is the fix\n")
 		out.WriteString("\n[lenses]\n")
@@ -127,5 +181,44 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 			}
 		}
 	}
+	if len(checks) > 0 {
+		out.WriteString("# odachi: the deterministic tools a review runs on the candidate before any lens; a failure is filed at this severity, and the project that declares none runs none\n")
+		for _, check := range checks {
+			out.WriteString("\n[[check]]\n")
+			out.WriteString("name = \"" + tomlString(check.Name) + "\"\n")
+			out.WriteString("command = \"" + tomlString(check.Command) + "\"\n")
+			out.WriteString("severity = \"" + string(check.Severity) + "\"\n")
+		}
+	}
 	return []byte(out.String()), nil
+}
+
+// tomlString escapes what a TOML basic string cannot carry as itself: a
+// backslash, a quote, and every control character. The command is a human's shell
+// line, and a two-line one is ordinary; writing it raw would produce a file this
+// same reader refuses, so the writer escapes instead of losing the project's
+// configuration.
+func tomlString(value string) string {
+	var out strings.Builder
+	for _, r := range value {
+		switch r {
+		case '\\':
+			out.WriteString(`\\`)
+		case '"':
+			out.WriteString(`\"`)
+		case '\n':
+			out.WriteString(`\n`)
+		case '\r':
+			out.WriteString(`\r`)
+		case '\t':
+			out.WriteString(`\t`)
+		default:
+			if r < 0x20 || r == 0x7f {
+				out.WriteString(fmt.Sprintf(`\u%04X`, r))
+				continue
+			}
+			out.WriteRune(r)
+		}
+	}
+	return out.String()
 }

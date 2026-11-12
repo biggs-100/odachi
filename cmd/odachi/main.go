@@ -620,6 +620,9 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "waive" {
 		return runReviewWaive(dir, args[1:], stdout, stderr)
 	}
+	if len(args) > 0 && args[0] == "checks" {
+		return runReviewChecks(dir, args[1:], stdout, stderr)
+	}
 
 	flags := flag.NewFlagSet("odachi review", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -703,6 +706,8 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	opts.LensModels = config.Lenses
 	opts.MaxPromptKB = config.MaxPromptKB
 	opts.KeepPrompts = config.KeepPrompts
+	opts.Checks = config.Checks
+	opts.CheckTimeout = config.CheckTimeout
 	// The dismissal records whose word it is; the operating system already knows
 	// who is at the keyboard, and a single-user CLI needs nothing more.
 	opts.By = firstOf(os.Getenv("USERNAME"), os.Getenv("USER"))
@@ -799,6 +804,52 @@ func runReviewWaive(dir string, args []string, stdout, stderr io.Writer) int {
 
 	result := reviewapp.Waive(reviewapp.WaiveOptions{Dir: dir, Because: because}, disk(dir))
 	return reportReview(result, asJSON, stdout, stderr)
+}
+
+// runReviewChecks answers or records what this clone agreed to run. The grammar is
+// the mode's: the action is a word, not a flag value, and --json works before or
+// after it.
+func runReviewChecks(dir string, args []string, stdout, stderr io.Writer) int {
+	const usageLine = "usage: odachi review checks [status|approve] [--json]"
+
+	const (
+		actionStatus  = "status"
+		actionApprove = "approve"
+	)
+
+	action := actionStatus
+	actionSeen := false
+	asJSON := false
+
+	for _, arg := range args {
+		switch arg {
+		case "-h", "--help":
+			fmt.Fprintln(stdout, usageLine)
+			return start.CodeOK
+		case "--json", "-json":
+			asJSON = true
+		case actionStatus, actionApprove:
+			if actionSeen {
+				fmt.Fprintln(stderr, "odachi: the checks action is chosen once; "+usageLine)
+				return start.CodeBlocked
+			}
+			action = arg
+			actionSeen = true
+		default:
+			fmt.Fprintf(stderr, "odachi: I do not understand %q; %s\n", arg, usageLine)
+			return start.CodeBlocked
+		}
+	}
+
+	opts := reviewapp.CheckOptions{
+		Dir:   dir,
+		Store: storeRoot(dir),
+		By:    firstOf(os.Getenv("USERNAME"), os.Getenv("USER")),
+	}
+	if action == actionApprove {
+		return reportReview(reviewapp.Approve(opts, osFiles{}, reviewModeCodec{}), asJSON, stdout, stderr)
+	}
+	return reportReview(reviewapp.CheckStatus(opts, osFiles{}, reviewModeCodec{}), asJSON, stdout, stderr)
 }
 
 // runReviewMode parses the small mode grammar by hand: the action is a word,
@@ -1753,6 +1804,7 @@ usage:
   odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
   odachi review [--lens <lens>]
   odachi review mode [status|on|off]
+  odachi review checks [status|approve]
   odachi review waive --because "<why>"
   odachi review probe [--runs N] [--exec "<command>"]
   odachi doctor [--json]
@@ -1811,6 +1863,12 @@ review mode:
   odachi review mode on       a close names the verdict it did not get, and does not refuse
   odachi review mode off      check does not require it, even when the hook runs check
   the mode lives in odd/review.toml; --require-review and --no-review override it for one run
+
+review checks:
+  odachi review checks           what odd/review.toml declares, and whether this clone agreed
+  odachi review checks approve   this clone agrees to run those exact commands: the record
+                                 lives in the store, so a cloned repository runs nothing
+                                 until the person who cloned it says so
 
 plan flags:
   --req R<n>      requirement the new step is tied to

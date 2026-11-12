@@ -98,6 +98,11 @@ type Finding struct {
 	Path     string   `json:"path"`
 	Line     int      `json:"line"`
 	Severity Severity `json:"severity"`
+	// Check names the deterministic tool that filed this row, when one did. A
+	// check row has no path and no line: the tool judged the candidate, not a
+	// place in the diff, and inventing a file would send a person to fix the
+	// wrong one. Empty means a reviewer's finding about a file.
+	Check string `json:"check,omitempty"`
 	// Causal is true only when the candidate introduced, activated or worsened
 	// the defect. A pre-existing problem is a follow-up, not a blocker.
 	Causal bool   `json:"causal"`
@@ -403,8 +408,13 @@ func (v Verdict) Validate() error {
 	}
 
 	for i, finding := range v.Findings {
-		if strings.TrimSpace(finding.Path) == "" {
+		check := strings.TrimSpace(finding.Check)
+		if strings.TrimSpace(finding.Path) == "" && check == "" {
 			return fmt.Errorf("finding %d does not say path: without the file it cannot be fixed", i+1)
+		}
+		if check != "" && finding.Line != 0 {
+			return fmt.Errorf("finding %d is the check %q and says line %d: a tool judged the candidate, not a line of the diff",
+				i+1, check, finding.Line)
 		}
 		if !finding.Severity.Valid() {
 			return fmt.Errorf("finding %d (%s) says severity %q; the vocabulary is BLOCKER, CRITICAL, WARNING, SUGGESTION",
