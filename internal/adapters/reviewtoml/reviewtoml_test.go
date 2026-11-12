@@ -40,7 +40,7 @@ func TestDecodeRefusesATypo(t *testing.T) {
 	for name, data := range cases {
 		t.Run(name, func(t *testing.T) {
 			if got, err := reviewtoml.Decode([]byte(data)); err == nil {
-				t.Fatalf("Decode = %q, want an error", got)
+				t.Fatalf("Decode = %+v, want an error", got)
 			}
 		})
 	}
