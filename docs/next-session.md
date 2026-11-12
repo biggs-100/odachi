@@ -1,66 +1,69 @@
 # Next session
 
-Written when the session closed, after `v0.40.0` and 0278 shipped. Nothing is owed.
+Written when the session closed, after `v0.40.1` and 0279 shipped. Nothing is owed.
 
 ## Where the project is
 
-- `v0.40.0` is published: annotated tag on `a23ea84` (`Merge pull request #543`), sixteen assets
-  built and attested by the release workflow, and the binary installed on this machine reports
-  `odachi v0.40.0`.
-- `main` is `a23ea84`. 276 features, 670 steps, 0 open questions.
-- The closing tree of 0278 carries `proof/0278-la-herramienta-corre.txt` and one verdict
-  (`.git/odachi/reviews/0bba7325….json`, two draws per correction, fourteen draws of reliability
-  over the feature), approved with no open row.
-- `## Unreleased` does not exist: the next feature writes it again, above `## v0.40.0`.
+- `v0.40.1` is published: annotated tag on `467e446` (`Merge pull request #546`), sixteen assets
+  built and attested, and the binary on this machine reports `odachi v0.40.1`.
+- `main` is `467e446`. 277 features, 675 steps, 0 open questions.
+- The closing tree of 0279 carries `proof/0279-el-piso-corre.txt` and one verdict
+  (`.git/odachi/reviews/de8cad6b….json`), a correction of `1c0469c9` that measured the fence
+  wording the rebase brought and carried the rest.
+- **This project now has a floor**: `odd/review.toml` declares `golangci-lint run ./...` at
+  `CRITICAL`, `.golangci.yml` pins the five linters, and this clone approved that exact list. Every
+  review runs it before any lens.
+- `## Unreleased` does not exist: the next feature writes it again, above `## v0.40.1`.
 
 ## What shipped
 
-- **0278, the tool runs before the model.** `odd/review.toml` declares deterministic tools -name,
-  command and the severity a failure is worth- and the review runs each one on the candidate before
-  any lens reads it. A tool that exits non-zero, hangs past `check_timeout_s` or names a command
-  nobody installed is filed as a finding at the declared severity, with its own words as the
-  evidence; the prompt carries it so no lens pays to find it again. A tool's row has no path and no
-  line: `--show` prints `check:lint`, and a blocking one is dismissed with `--dismiss check:lint
-  --because "<why>"`, the one blocking row a person may retire without a refuter.
-- **The declaration travels, the agreement does not.** `odachi review checks approve` writes the
-  exact list's fingerprint in the clone's store, so a cloned `review.toml` runs nothing until the
-  person who cloned it says so, and a command that changes asks again. The fingerprint is
-  length-prefixed, because the review of this tree showed a separator inside a command could make
-  one check hash like two.
-- **The review found two defects in its own security control** -the forgeable fingerprint and a
-  two-line command written as invalid TOML- and both are fixed with tests. That is the second tree
-  in a row where a full read found what a correction had approved.
-- The verdict and `odd/review.toml` are schema 6, and `docs/releases.md` is why this was a minor.
+- **0279, the floor runs for real.** Pinning the ruleset in `.golangci.yml` measured 54 findings
+  where the installed default reported 46 -three `SA5011` in tests, four quickfix suggestions and an
+  unused field were hidden-, and all 54 are paid: 38 errors now say what they do with them, four dead
+  things are deleted, a split's dead assignment is gone.
+- **The fence was narrowed and it cost two PRs.** The gate reads the policy from the base ref, so a
+  change cannot touch what the base protects; and a loosened fence needs a brief change in the same
+  change. The new rule landed first (#547, carrying 0279's opening), then the code (#546).
+- **The changelog gained the `## v0.40.0` section it shipped without.** A release renames
+  `## Unreleased` to `## vX.Y.Z - date`; v0.40.0 was published with 0278's entry still in the
+  worklog.
 
 ## The decision that waits
 
-**What the review does next: run this against a real ruleset, and then the standing blocker.** The
-mechanism exists and this project declares nothing, which is the first thing to fix and the last
-thing to do it: `golangci-lint run ./...` reports 46 findings here today -38 of them `errcheck`-, so
-declaring it means choosing a ruleset (`.golangci.yml`) and fixing or excluding what it names.
-`govulncheck` is not installed on this machine, and installing it is a decision, not a step. After
-that, Part 8's second item is still untouched: a close that carries `changes_requested` should say
-so in the gate's own line and need a recorded human waiver, instead of "ready" with a footnote.
+**Part 8's second item: a standing blocker visible in the gate's own line.** A close that carries
+`changes_requested` should say so where `check` speaks and need a recorded human waiver to proceed,
+instead of a "ready" with a footnote in a document. The research ranks it next, it touches the gate's
+voice rather than its rules, and the store already knows how to hold a named waiver
+(`review waive --because`).
 
-**One wart, named and not fixed:** a verdict's `reviewer` field concatenates its merges, and it now
-also concatenates the reviewer commands of every correction, so one field reads as a paragraph of
-six names. The identity the gate compares is `models`; deduping the field is a small change nobody
-has asked for.
+The other candidates, in the order the research ranks them: repeat the probe across models (the
+fixture is still the one model's), and heterogeneous judges for full-tier trees. Separately,
+`govulncheck` is still not installed: installing it is the decision, and the check table is ready for
+it the day it exists.
+
+**One wart, named and not fixed:** a verdict's `reviewer` field concatenates its merges and now also
+every correction's command, so one field reads as a paragraph of names. The identity the gate
+compares is `models`; deduping the field is a small change nobody has asked for.
 
 ## The limits to remember
 
-- **A finding about the record costs a full cycle, and so does one about the code.** 0278 took three
-  proofs and three reviews: two real defects in the control it built, and one done-when the step had
-  rewritten to match the release it wanted.
-- **A correction is not a second reading.** The delta of a document-only change asks for no lens, and
-  `--lens` beside it needs `--because`: the scope record is the only place a later reader learns who
-  asked.
-- **The prompt of this feature is 148 KB** against `max_prompt_kb = 120`, so it splits in two parts,
-  and a split costs one call per part per draw. Raising the limit means a new tree and a new proof.
-- **A check is judged by its exit status.** `gofmt -l .` lists files and exits zero, so it is a check
-  that always passes; `golangci-lint` is the one that fails.
-- **PowerShell's `Add-Content` writes CRLF and the repo is LF**: after appending Go code, `gofmt -w`
-  is not optional, and `TestEveryGoFileIsGofmtClean` is what says so.
+- **A fence change is two problems, not one.** The base ref is the policy: touching a protected path
+  needs the rule already there, and loosening a rule needs `brief.md` to move in the same change.
+  Order: the rule and the brief first, the code after.
+- **A rebase moves the proof, not only the commits.** A step's tree is content, so it survives; the
+  proof and the verdict name content too, so a document that changes wording after the close costs a
+  new proof and, at most, a `--since` correction of the delta.
+- **A correction of a document-only delta needs `--because`**: the evidence asks for no lens, and the
+  scope record is the only place a later reader learns who asked.
+- **`golangci-lint run ./...` is ~1 minute on a warm cache** and is now part of every review here. A
+  teammate without the binary gets a `CRITICAL` row saying the command could not run, which is the
+  honest answer and not a pass.
+- **The prompt of 0279 is about 145 KB** against `max_prompt_kb = 120`, so it splits in two parts and
+  a split costs one call per part per draw.
+- **PowerShell's `Set-Content`/`Add-Content` write CRLF and the repo is LF**: after editing Go code,
+  `gofmt -w` is not optional, and `TestEveryGoFileIsGofmtClean` is what says so.
+- **The local hook can be skipped with `--no-verify`**, and the one place it is right is a change
+  that is a single document: CI runs the whole suite on it. Never for code.
 - **The console is not UTF-8** (0271), one tree one verdict (0268), a docs-only change owes no new
   proof *after* the close.
 - **One heavy gate per machine**: `go test ./...` takes about 700 s here and three to five minutes on
@@ -85,13 +88,15 @@ odachi review --since <tree prefix> --runs 2 --lens reliability --because "<why>
 ```
 
 ```sh
-# the checks a project declares, and whether this clone agreed to run them
-odachi review checks            # what odd/review.toml declares
-odachi review checks approve    # this clone agrees, by fingerprint
+# what the floor is, and whether this clone agreed to run it
+odachi review checks
+odachi review checks approve
+golangci-lint run ./...     # what the declared check runs
 ```
 
 ```sh
-# the release, after the merge it names: the tag, then the binary
+# the release, after the merge it names: rename Unreleased, then the tag, then the binary
+# (in CHANGELOG.md: "## Unreleased" becomes "## vX.Y.Z - <date>")
 git tag -a vX.Y.Z <merge commit> -m "vX.Y.Z: <the sentence the notes carry>" && git push origin vX.Y.Z
 go build -trimpath -ldflags "-s -w -X main.version=vX.Y.Z" -o %LOCALAPPDATA%\odachi\bin\odachi.exe ./cmd/odachi
 ```
