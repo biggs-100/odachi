@@ -272,3 +272,24 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0283 · govulncheck-corre-en
+
+## What must exist
+- govulncheck corre en cada review como una fila del piso, y la deuda que encuentra se paga: no queda una vulnerabilidad que el codigo llame
+
+## Done when
+- el toolchain sube a la version que arregla las 25: govulncheck ./... sale 0
+- odd/review.toml declara govulncheck a CRITICAL, este clon la aprobo, y un review de este arbol dice govulncheck: passed
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0284)
+
+## Not included (first version)
+- no se instala otra herramienta: govulncheck esta en la maquina y nada mas entra al piso
+- el ruleset de golangci-lint no se toca: esta feature agrega una fila
+- una vulnerabilidad que el codigo no llama no bloquea: govulncheck la reporta y la fila mide lo alcanzable
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.
