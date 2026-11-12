@@ -282,7 +282,7 @@
 - el toolchain sube a la version que arregla las 25: govulncheck ./... sale 0
 - odd/review.toml declara govulncheck a CRITICAL, este clon la aprobo, y un review de este arbol dice govulncheck: passed
 - go test ./... is green and odachi check --run "go test ./..." is green
-- ## Unreleased names it, patch (0284)
+- ## Unreleased names it, patch (0283)
 
 ## Not included (first version)
 - no se instala otra herramienta: govulncheck esta en la maquina y nada mas entra al piso

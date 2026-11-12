@@ -29,8 +29,8 @@ command = "golangci-lint run ./..."
 severity = "CRITICAL"
 
 # the dependency half of the floor (0283): a CVE in a package the candidate calls
-# is a defect no lens can see, and the exit status is git's answer. It reads the
-# vulnerability database over the network, so a machine that cannot reach it
+# is a defect no lens can see, and the exit status is the whole judgment. It reads
+# the vulnerability database over the network, so a machine that cannot reach it
 # fails the row instead of passing it.
 [[check]]
 name = "govulncheck"
