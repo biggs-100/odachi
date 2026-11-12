@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.39.0 - 2026-11-11
 
 - **A verdict can be paid by more than one draw.** The review was one answer per lens
   -one sample of one judge- and the store refused a second run over the same tree, so a
@@ -21,7 +21,7 @@ not a version.
   answers -the union only adds, so drawing again can never turn a `changes_requested`
   into an `approved`-. A draw that does not answer leaves the ones that did, names the
   draw it lost and the top-up that pays the rest. The schema moves to 5, so an older
-  binary says upgrade instead of calling a good verdict broken. Patch (0275).
+  binary says upgrade instead of calling a good verdict broken. Minor (0275).
 
 ## v0.38.14 - 2026-11-11
 
