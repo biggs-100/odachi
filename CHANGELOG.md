@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.40.4 - 2026-11-12
 
 - **The floor reads the dependencies too.** `govulncheck ./...` is now a check at
   `CRITICAL`, so every review here runs a vulnerability scan before any lens reads the
