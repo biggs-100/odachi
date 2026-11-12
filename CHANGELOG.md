@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.38.14 - 2026-11-11
 
 - **A record that does not decode is refused.** The brief corrupted on 0271 decoded as UTF-8 -the bytes
   were the text of one encoding read by another-, so no parser and no gate saw it and only a model did. The
