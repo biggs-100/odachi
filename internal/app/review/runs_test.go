@@ -298,3 +298,57 @@ func TestARunThatAsksForNoNewDrawIsRefusedNamingTheCount(t *testing.T) {
 		}
 	}
 }
+
+// TestADrawThatDoesNotAnswerLeavesTheOnesThatDid: the answers that landed are paid
+// for, and a reviewer that fails on the third does not throw them away. The verdict
+// says what it holds, the run names the draw it lost, and the command that pays the
+// rest is a top-up -the one thing that makes the loss recoverable.
+func TestADrawThatDoesNotAnswerLeavesTheOnesThatDid(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{
+		{output: warningDraw(3, "the first draw saw it")},
+		{output: warningDraw(4, "the second draw saw it")},
+		{output: "boom: the model did not answer", exitCode: 1},
+	}
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 3})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked: the verb did not do what it was asked (%s)", result.Code, result.Message)
+	}
+	held := filedVerdict(t, p)
+	if got := held.DrawsFor("reliability"); got != 2 {
+		t.Errorf("draws = %d, want the two answers that landed", got)
+	}
+	if len(held.Findings) != 2 {
+		t.Errorf("rows = %d, want the two defects the draws named", len(held.Findings))
+	}
+	said := strings.Join(append([]string{result.Message}, result.Lines...), "\n")
+	for _, want := range []string{"draw 3 of 3", "holds 2 draws", "--runs 3"} {
+		if !strings.Contains(said, want) {
+			t.Errorf("the run does not say %q:\n%s", want, said)
+		}
+	}
+}
+
+// TestADrawThatFailsWithNothingLandedIsTheRefusalItAlwaysWas: no answer exists, so
+// there is no count to report and nothing to keep. The run fails like it always did
+// and invents no verdict.
+func TestADrawThatFailsWithNothingLandedIsTheRefusalItAlwaysWas(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{{output: "boom: the model did not answer", exitCode: 1}}
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 3})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (%s)", result.Code, result.Message)
+	}
+	if _, stored := p.files.files[storePath(currentTree)]; stored {
+		t.Error("a verdict was stored with no answer")
+	}
+	if strings.Contains(strings.Join(result.Lines, "\n"), "did not answer, and") {
+		t.Errorf("the run talks about a count with nothing landed:\n%s", strings.Join(result.Lines, "\n"))
+	}
+}

@@ -199,6 +199,19 @@ func (v Verdict) DrawsFor(lens string) int {
 	return 1
 }
 
+// PaidFor is how many answers this verdict holds for one lens: zero when the lens
+// was never answered, and the difference matters to a run that is topping up. It is
+// not DrawsFor, which reads a lens the file does not count as one draw.
+func (v Verdict) PaidFor(lens string) int {
+	name := strings.ToLower(strings.TrimSpace(lens))
+	for _, covered := range v.Lenses {
+		if strings.ToLower(strings.TrimSpace(covered)) == name {
+			return v.DrawsFor(name)
+		}
+	}
+	return 0
+}
+
 // Missing reports which required lenses this verdict does not cover, in the order
 // they were required. It is the question both `--show` and the optional gate ask,
 // so it is answered in one place.

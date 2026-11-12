@@ -534,8 +534,8 @@ func owedDraws(selected []string, stored *domain.Verdict, runs int) map[string]i
 	for _, lens := range selected {
 		name := strings.ToLower(strings.TrimSpace(lens))
 		paid := 0
-		if stored != nil && containsLens(stored.Lenses, name) {
-			paid = stored.DrawsFor(name)
+		if stored != nil {
+			paid = stored.PaidFor(name)
 		}
 		if paid < runs {
 			owed[name] = runs - paid
@@ -1128,7 +1128,8 @@ func (r *runner) exec() Result {
 	var last Result
 	// Every unit is asked as many times as --runs asked for: a draw is one answer,
 	// and one answer is one sample of a judge, not a verdict about the tree.
-	for _, unit := range r.draws(units, owed) {
+	for _, paid := range r.draws(units, owed) {
+		unit := paid.unit
 		command := unit.command
 		group := lensGroup{lenses: unit.lenses, model: unit.model}
 
@@ -1195,20 +1196,27 @@ func (r *runner) exec() Result {
 		if stderr != "" {
 			diagnosis += stderr
 		}
+		// A draw that does not answer after another one landed leaves what landed:
+		// the sentence names the draw that was lost and how many the lens holds, and
+		// the run stops blocked, because the verb did not do what it was asked even
+		// though the store kept what it paid for.
+		lost := func(reason string) string {
+			return reason + r.lostDraw(len(landed), paid, group)
+		}
 		switch {
 		case err != nil:
-			return r.stoppedWithAnswer(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error())+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
+			return r.stoppedWithAnswer(lost(command+" did not give a verdict for "+r.judgeLine(group.lenses, unit.model)+": could not run the reviewer: "+oneLine(err.Error())+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
 		case timedOut:
-			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds)+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
+			return r.stoppedWithAnswer(lost(fmt.Sprintf("%s did not give a verdict for %s: the review did not finish in %ds", command, r.judgeLine(group.lenses, unit.model), ExecTimeoutSeconds)+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
 		case exitCode != 0:
-			return r.stoppedWithAnswer(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode)+r.optionsLine(unit.model), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
+			return r.stoppedWithAnswer(lost(fmt.Sprintf("%s did not give a verdict for %s: the reviewer exited with code %d", command, r.judgeLine(group.lenses, unit.model), exitCode)+r.optionsLine(unit.model)), diagnosis, rel, answerPath, answerRel, len(settled), selected, todo, landed)
 		}
 
 		answer := stdout
 		if answerPath != "" {
 			data, problem := r.answerFrom(answerRel, answerPath, command)
 			if problem != nil {
-				return r.stopped(problem.Message, diagnosis, rel, len(settled), selected, todo, landed)
+				return r.stopped(lost(problem.Message), diagnosis, rel, len(settled), selected, todo, landed)
 			}
 			answer = data
 		}
@@ -1217,7 +1225,7 @@ func (r *runner) exec() Result {
 		if domain.Sniff([]byte(answer)) == domain.KindRefutation {
 			refutation, err := domain.ParseRefutation([]byte(answer))
 			if err != nil {
-				return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
+				return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
 			}
 			// The refuter may have moved the worktree too; what it cites is the diff
 			// it was given, and the file is filed under the tree that exists now.
@@ -1227,7 +1235,7 @@ func (r *runner) exec() Result {
 
 		parsed, err := domain.Parse([]byte(answer))
 		if err != nil {
-			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
+			return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
 		}
 		// The command is the reviewer: it is the one fact the tool knows about an
 		// answer that came out of a shell.
@@ -1239,7 +1247,7 @@ func (r *runner) exec() Result {
 		// the resolution of THIS group, not from a field the last one wrote.
 		parsed.Model = unit.model
 		if err := parsed.Validate(); err != nil {
-			return r.unreadable(command+" did not give a verdict: "+err.Error(), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
+			return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
 		}
 		// The per-lens map is what lets the identity gate judge each lens on its
 		// own: this group's lenses were judged by this group's model.
@@ -1379,12 +1387,19 @@ func (r *runner) units(cand candidate, groups []lensGroup, commands, resolved []
 	return units, nil
 }
 
+// draw is one paid answer: a unit asked one more time. `n` of `of` is which answer
+// this is for that unit, so a run that loses one can say which one it lost.
+type draw struct {
+	unit  unit
+	n, of int
+}
+
 // draws is every answer this run pays for, in a deterministic order: the units in
 // the order they were built, each one as many times as the lens it owes the most. A
 // group answers all of its lenses in one call, so the call is paid once for the lens
 // that still owes the most, and the other lenses of the group count it too.
-func (r *runner) draws(units []unit, owed map[string]int) []unit {
-	var draws []unit
+func (r *runner) draws(units []unit, owed map[string]int) []draw {
+	var draws []draw
 	for _, u := range units {
 		count := 0
 		for _, lens := range u.lenses {
@@ -1392,8 +1407,8 @@ func (r *runner) draws(units []unit, owed map[string]int) []unit {
 				count = owed[lens]
 			}
 		}
-		for n := 0; n < count; n++ {
-			draws = append(draws, u)
+		for n := 1; n <= count; n++ {
+			draws = append(draws, draw{unit: u, n: n, of: count})
 		}
 	}
 	return draws
@@ -1488,8 +1503,18 @@ func (r *runner) stoppedWith(reason, output, rel string, savedBefore int, select
 		if kept != "" {
 			lines = append(lines, "the answer is kept in "+kept+": repair it and attach it again")
 		}
+		next := ""
 		if len(missing) > 0 {
-			lines = append(lines, "next: odachi review --lens "+strings.Join(missing, ","))
+			next = "odachi review --lens " + strings.Join(missing, ",")
+		}
+		// A run with draws asks again and pays only what is missing (the top-up), so
+		// the command it hands over is the same count -the lens may be answered and
+		// still owe a draw, which is why this line does not need a missing lens.
+		if r.opts.Runs > 1 {
+			next = "odachi review --runs " + strconv.Itoa(r.opts.Runs)
+		}
+		if next != "" {
+			lines = append(lines, "next: "+next+" pays what the tree still owes")
 		}
 		return Result{
 			Code:    CodeBlocked,
@@ -3747,6 +3772,26 @@ func lensLine(required []string, verdict domain.Verdict) string {
 		needed = strings.Join(required, ", ")
 	}
 	return "lenses: " + covered + " · required: " + needed
+}
+
+// lostDraw is the sentence a failed draw adds to the run's refusal. Nothing landed
+// yet means the run failed like any other and there is no count to report; once an
+// answer exists, the run names the draw it lost and what the lens holds now, because
+// those two numbers are what makes the loss recoverable by a top-up.
+func (r *runner) lostDraw(landed int, paid draw, group lensGroup) string {
+	if landed == 0 {
+		return ""
+	}
+	held := 0
+	if stored, problem := r.storedVerdict(paid.unit.work.tree); problem == nil && stored != nil {
+		for _, lens := range group.lenses {
+			if n := stored.PaidFor(lens); n > held {
+				held = n
+			}
+		}
+	}
+	return fmt.Sprintf("; draw %d of %d did not answer, and %s holds %s",
+		paid.n, paid.of, strings.Join(group.lenses, ", "), drawCount(held))
 }
 
 // drawCount is how many answers paid for one lens, in the words a person reads. One
