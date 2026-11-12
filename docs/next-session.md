@@ -7,7 +7,7 @@ Written when the session closed, after `v0.40.0` and 0278 shipped. Nothing is ow
 - `v0.40.0` is published: annotated tag on `a23ea84` (`Merge pull request #543`), sixteen assets
   built and attested by the release workflow, and the binary installed on this machine reports
   `odachi v0.40.0`.
-- `main` is `a23ea84`. 276 features, 667 steps, 0 open questions.
+- `main` is `a23ea84`. 276 features, 670 steps, 0 open questions.
 - The closing tree of 0278 carries `proof/0278-la-herramienta-corre.txt` and one verdict
   (`.git/odachi/reviews/0bba7325….json`, two draws per correction, fourteen draws of reliability
   over the feature), approved with no open row.
