@@ -635,6 +635,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&opts.Show, "show", false, "which verdict exists for this tree, or that there is none")
 	flags.BoolVar(&opts.All, "all", false, "list every verdict the clone's store holds, newest first")
 	flags.StringVar(&opts.Lens, "lens", "", "explicit lens: risk | readability | reliability | resilience | all (repeatable or comma-separated)")
+	flags.IntVar(&opts.Runs, "runs", 1, "how many draws each lens answers: N calls per lens filed as one verdict (1 to 10)")
 	flags.StringVar(&opts.Refute, "refute", "", "print the refuter's prompt for this verdict")
 	flags.StringVar(&opts.Since, "since", "", "correct the verdict for this tree: the prompt is the delta since it, and the stored verdict keeps its rows")
 	flags.StringVar(&opts.Dismiss, "dismiss", "", "retire one row of this tree's verdict: <path>:<line>, with --because")
@@ -652,6 +653,14 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 	if flags.NArg() > 0 {
 		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi review only takes flags (run odachi review -h)\n", flags.Arg(0))
+		return start.CodeBlocked
+	}
+
+	// The app reads a zero as the caller that never chose a count, because an int
+	// cannot tell the two apart. A written zero is refused here, where the flags
+	// still know the difference, and before anything is read.
+	if hasFlag(args, "runs") && opts.Runs < 1 {
+		fmt.Fprintf(stderr, "odachi: --runs %d: a verdict holds between 1 and %d draws, and each one is an answer per lens\n", opts.Runs, reviewapp.MaxRuns)
 		return start.CodeBlocked
 	}
 
@@ -1791,6 +1800,8 @@ review flags:
   --since tree    correct the verdict for that tree: the prompt is only what moved since
                   those bytes, and the stored verdict carries its rows
   --lens s        explicit lens: risk | readability | reliability | resilience | all
+  --runs n        how many draws each lens answers: n calls per lens filed as one
+                  verdict, 1 to 10 (default 1); a later run pays only the draws missing
   --refute path   print the refuter's prompt for that verdict
   --base ref      what to compare the candidate against (default HEAD; empty: against nothing)
   --json          machine output

@@ -50,6 +50,11 @@ const EmptyTree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 // a real one and short enough to give up.
 const ExecTimeoutSeconds = 600
 
+// MaxRuns is how many draws one verdict may hold. Past ten it is an experiment,
+// and an experiment is designed somewhere else: a measurement names the same
+// ceiling in `review probe`, and a verdict names it here.
+const MaxRuns = 10
+
 // briefFile is the vision the review is judged against.
 const briefFile = "brief.md"
 
@@ -88,6 +93,10 @@ type Options struct {
 	// Model is the raw --model value: the identity that replaces {model}.
 	// Empty means the host's answer.
 	Model string
+	// Runs is how many draws each lens answers, from one to MaxRuns. Zero is the
+	// caller that chose no count and means one: the zero value of an int cannot
+	// tell "one" from "not said", and a run that did not ask pays once.
+	Runs int
 	// LensModels is the project's model per lens, from `odd/review.toml`.
 	// A lens with no entry is left to the reviewer command, which is what the
 	// file meant before the table existed.
@@ -240,6 +249,11 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses, host Ho
 	if opts.Dir == "" {
 		opts.Dir = "."
 	}
+	// A count of zero is the caller that never chose one, and means one. It is
+	// resolved before the runner exists so every lane reads the same number.
+	if opts.Runs == 0 {
+		opts.Runs = 1
+	}
 
 	r := &runner{opts: opts, files: files, git: git, shell: shell, lenses: lenses, host: host}
 
@@ -254,6 +268,21 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses, host Ho
 	// accepted and silently ignored, which is the same lie as a missing answer.
 	if strings.TrimSpace(opts.Model) != "" && opts.Exec == "" {
 		return blocked("--model only means something with --exec: it replaces " + modelToken + " in the reviewer command")
+	}
+
+	// A draw is one answer, and a run may not buy more than the ceiling: past ten
+	// it is an experiment, and an experiment is designed somewhere else. The
+	// refusal comes before anything is read, so a count nobody can pay costs no
+	// store question and no reviewer.
+	if opts.Runs < 1 || opts.Runs > MaxRuns {
+		return blocked("--runs " + strconv.Itoa(opts.Runs) + ": a verdict holds between 1 and " +
+			strconv.Itoa(MaxRuns) + " draws, and each one is an answer per lens")
+	}
+
+	// The count counts answers, and only --exec produces one. In the bare form the
+	// flag would be accepted and ignored, which is the lie --model already refuses.
+	if opts.Runs > 1 && strings.TrimSpace(opts.Exec) == "" {
+		return blocked("--runs " + strconv.Itoa(opts.Runs) + " has nothing to count without --exec: each draw is an answer, and this form asks nobody")
 	}
 
 	switch {
