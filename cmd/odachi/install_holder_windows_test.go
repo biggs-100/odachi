@@ -89,7 +89,7 @@ func TestPowerShellInstallerSaysWhatToDoWhenNothingHoldsTheFile(t *testing.T) {
 
 	handle := holdWithoutSharing(t, target)
 	code, output := runPowerShellInstaller(t, powershell, fixture, binDir, powershellShim(t, 0))
-	syscall.CloseHandle(handle)
+	_ = syscall.CloseHandle(handle)
 
 	if code != 1 {
 		t.Fatalf("install.ps1 exit = %d with an unshareable target, want 1:\n%s", code, output)

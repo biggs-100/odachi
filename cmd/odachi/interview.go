@@ -22,18 +22,18 @@ type terminalInterview struct {
 // lines after the first are indented under "why: " so the block still reads as
 // one piece.
 func (t *terminalInterview) Ask(q start.Question) (string, error) {
-	fmt.Fprintf(t.out, "\n? %s\n", q.Text)
+	_, _ = fmt.Fprintf(t.out, "\n? %s\n", q.Text)
 	if q.Why != "" {
 		why := strings.Split(q.Why, "\n")
-		fmt.Fprintf(t.out, "  why: %s\n", why[0])
+		_, _ = fmt.Fprintf(t.out, "  why: %s\n", why[0])
 		for _, line := range why[1:] {
-			fmt.Fprintf(t.out, "       %s\n", line)
+			_, _ = fmt.Fprintf(t.out, "       %s\n", line)
 		}
 	}
 	if len(q.Options) > 0 {
-		fmt.Fprintf(t.out, "  options: %s\n", strings.Join(q.Options, ", "))
+		_, _ = fmt.Fprintf(t.out, "  options: %s\n", strings.Join(q.Options, ", "))
 	}
-	fmt.Fprint(t.out, "> ")
+	_, _ = fmt.Fprint(t.out, "> ")
 
 	line, err := t.in.ReadString('\n')
 	if err != nil && strings.TrimSpace(line) == "" {

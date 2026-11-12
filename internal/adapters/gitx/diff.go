@@ -53,8 +53,7 @@ func Diff(root, base string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(dir)
-
+	defer func() { _ = os.RemoveAll(dir) }()
 	env := []string{"GIT_INDEX_FILE=" + filepath.Join(dir, "index")}
 
 	// The empty tree is "compare against nothing": there is no base commit, so

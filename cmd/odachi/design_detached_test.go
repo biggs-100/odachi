@@ -73,7 +73,7 @@ func TestDesignOpenReturnsWithADetachedCanvas(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the canvas does not answer after open: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("health = %d, want 200", response.StatusCode)
 	}

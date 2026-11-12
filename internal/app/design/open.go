@@ -80,7 +80,7 @@ func Running(client *http.Client, canvas Canvas) bool {
 	if err != nil {
 		return false
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	return response.StatusCode == http.StatusOK
 }
 
@@ -110,7 +110,7 @@ func Show(client *http.Client, canvas Canvas, slug string) error {
 	if err != nil {
 		return fmt.Errorf("could not reach the canvas at %s: %w", canvas.Addr, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		reason, _ := io.ReadAll(response.Body)
 		return fmt.Errorf("the canvas at %s answered %s: %s", canvas.Addr, response.Status, strings.TrimSpace(string(reason)))
@@ -128,7 +128,7 @@ func Stop(client *http.Client, path string, canvas Canvas) error {
 	if err != nil {
 		return fmt.Errorf("could not reach the canvas at %s: %w", canvas.Addr, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("the canvas at %s answered %s", canvas.Addr, response.Status)
 	}

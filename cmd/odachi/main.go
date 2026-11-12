@@ -55,13 +55,13 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	// The version ask comes before anything that can fail: a deleted working
 	// directory must not stop a human from asking what they installed.
 	if isVersionAsk(args) {
-		fmt.Fprint(stdout, versionLine(version))
+		_, _ = fmt.Fprint(stdout, versionLine(version))
 		return start.CodeOK
 	}
 
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: could not read the current directory: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: could not read the current directory: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 	return runIn(dir, args, stdin, stdout, stderr)
@@ -73,7 +73,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 	// The version ask comes before the dispatch: a leading dash is otherwise a
 	// `odachi start` flag, and `--version` is the one a human types first.
 	if isVersionAsk(args) {
-		fmt.Fprint(stdout, versionLine(version))
+		_, _ = fmt.Fprint(stdout, versionLine(version))
 		return start.CodeOK
 	}
 
@@ -128,10 +128,10 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runBench(dir, args[1:], stdout, stderr)
 	case "version":
 		// Reached only with arguments: `odachi version` alone was answered above.
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug> --scope project|home), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		_, _ = fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug> --scope project|home), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -189,7 +189,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		if opts.Light {
 			message += `; a line that starts with a dash goes after --: odachi start --light -- "<the line>"`
 		}
-		fmt.Fprintln(stderr, message)
+		_, _ = fmt.Fprintln(stderr, message)
 		return start.CodeBlocked
 	}
 	// The lane is the line: with --light the one positional argument is the
@@ -197,13 +197,13 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	// only, because the interview is what asks.
 	if opts.Light {
 		if rest := flags.Args(); len(rest) > 1 {
-			fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi start --light takes one line in quotes\n", rest[1])
+			_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi start --light takes one line in quotes\n", rest[1])
 			return start.CodeBlocked
 		} else if len(rest) == 1 && strings.TrimSpace(opts.Outcome) == "" {
 			opts.Outcome = rest[0]
 		}
 	} else if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi start only takes flags (run odachi start -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi start only takes flags (run odachi start -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -279,11 +279,11 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi ask -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi ask -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi ask takes a single question in quotes\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi ask takes a single question in quotes\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -322,7 +322,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi plan -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi plan -h to see the flags")
 		return start.CodeBlocked
 	}
 
@@ -333,7 +333,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 		rest = nil
 	}
 	if len(rest) > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi plan takes a single text in quotes\n", rest[0])
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi plan takes a single text in quotes\n", rest[0])
 		return start.CodeBlocked
 	}
 
@@ -344,7 +344,7 @@ func runPlan(dir string, args []string, stdout, stderr io.Writer) int {
 		for _, raw := range opts.Skills {
 			name := strings.ToLower(strings.TrimSpace(raw))
 			if _, ok := craftPath(dir, name); !ok {
-				fmt.Fprintf(stderr, "odachi: the skill %q is not installed; the ones I know are %s\n", raw, craftList(craftNames(dir)))
+				_, _ = fmt.Fprintf(stderr, "odachi: the skill %q is not installed; the ones I know are %s\n", raw, craftList(craftNames(dir)))
 				return start.CodeBlocked
 			}
 		}
@@ -373,11 +373,11 @@ func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi level -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi level -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi level only takes flags (run odachi level -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi level only takes flags (run odachi level -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -407,11 +407,11 @@ func runSummary(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi summary -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi summary -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi summary takes no arguments (run odachi summary -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi summary takes no arguments (run odachi summary -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -434,17 +434,17 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi progress -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi progress -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi progress takes no arguments (run odachi progress -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi progress takes no arguments (run odachi progress -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
 	enabled, err := reviewapp.Enabled(dir, osFiles{}, reviewModeCodec{})
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 
@@ -463,7 +463,7 @@ func runProgress(dir string, args []string, stdout, stderr io.Writer) int {
 		return reportProgressJSON(result, stdout, stderr)
 	}
 	for _, line := range result.Lines {
-		fmt.Fprintln(stdout, line)
+		_, _ = fmt.Fprintln(stdout, line)
 	}
 	return result.Code
 }
@@ -479,10 +479,10 @@ func reportProgressJSON(result progress.Result, stdout, stderr io.Writer) int {
 
 	data, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: could not print the report as JSON: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: could not print the report as JSON: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
-	fmt.Fprintln(stdout, string(data))
+	_, _ = fmt.Fprintln(stdout, string(data))
 	return result.Code
 }
 
@@ -516,23 +516,23 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi check -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi check -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi check only takes flags (run odachi check -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi check only takes flags (run odachi check -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 	if opts.TimeoutSeconds <= 0 {
-		fmt.Fprintln(stderr, "odachi: --timeout has to be greater than zero seconds; run odachi check -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: --timeout has to be greater than zero seconds; run odachi check -h to see the flags")
 		return start.CodeBlocked
 	}
 	if opts.Run != "" && opts.Proof != "" {
-		fmt.Fprintln(stderr, "odachi: --run and --proof do not go together: use one of the two (odachi check --run \"<command>\" or odachi check --proof <file>)")
+		_, _ = fmt.Fprintln(stderr, "odachi: --run and --proof do not go together: use one of the two (odachi check --run \"<command>\" or odachi check --proof <file>)")
 		return start.CodeBlocked
 	}
 	if opts.RequireReview && noReview {
-		fmt.Fprintln(stderr, "odachi: --require-review and --no-review do not go together: choose one; without flags the project mode decides")
+		_, _ = fmt.Fprintln(stderr, "odachi: --require-review and --no-review do not go together: choose one; without flags the project mode decides")
 		return start.CodeBlocked
 	}
 	// --ci decides where the policy and the base come from. A --base or a
@@ -540,7 +540,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	// pick one without saying so: the flag that exists to fix a green which
 	// lied must not be ambiguous itself.
 	if ci && (flagSet(flags, "base") || flagSet(flags, "fence-from")) {
-		fmt.Fprintln(stderr, "odachi: --ci reads the fence and the base from the remote's default branch, so --base and --fence-from beside it say it twice: drop that flag, or drop --ci and name the base yourself")
+		_, _ = fmt.Fprintln(stderr, "odachi: --ci reads the fence and the base from the remote's default branch, so --base and --fence-from beside it say it twice: drop that flag, or drop --ci and name the base yourself")
 		return start.CodeBlocked
 	}
 	// The ref is named, not resolved to a commit: CI reads the base branch as this
@@ -549,7 +549,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	if ci {
 		base, err := gitRepo{}.RemoteBase(dir)
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		opts.Base = base
@@ -573,7 +573,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	if !opts.RequireReview && !noReview {
 		enabled, err := reviewapp.Enabled(dir, osFiles{}, reviewModeCodec{})
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		opts.ReviewMode = enabled
@@ -651,11 +651,11 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi review -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi review -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi review only takes flags (run odachi review -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi review only takes flags (run odachi review -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -663,7 +663,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	// cannot tell the two apart. A written zero is refused here, where the flags
 	// still know the difference, and before anything is read.
 	if hasFlag(args, "runs") && opts.Runs < 1 {
-		fmt.Fprintf(stderr, "odachi: --runs %d: a verdict holds between 1 and %d draws, and each one is an answer per lens\n", opts.Runs, reviewapp.MaxRuns)
+		_, _ = fmt.Fprintf(stderr, "odachi: --runs %d: a verdict holds between 1 and %d draws, and each one is an answer per lens\n", opts.Runs, reviewapp.MaxRuns)
 		return start.CodeBlocked
 	}
 
@@ -676,21 +676,21 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	if forms > 1 {
-		fmt.Fprintln(stderr, `odachi: --exec, --attach, --show, --all and --refute do not go together: choose a single form (odachi review | odachi review --exec "<command>" | odachi review --attach <file> | odachi review --show | odachi review --all | odachi review --refute <verdict>)`)
+		_, _ = fmt.Fprintln(stderr, `odachi: --exec, --attach, --show, --all and --refute do not go together: choose a single form (odachi review | odachi review --exec "<command>" | odachi review --attach <file> | odachi review --show | odachi review --all | odachi review --refute <verdict>)`)
 		return start.CodeBlocked
 	}
 
 	// --since corrects a verdict, so it belongs to the forms that produce one: a
 	// correction of a read-only form would be a flag nobody reads.
 	if opts.Since != "" && (opts.Show || opts.All || opts.Refute != "" || opts.Dismiss != "") {
-		fmt.Fprintln(stderr, "odachi: --since corrects a verdict; it does not go with --show, --all, --refute or --dismiss")
+		_, _ = fmt.Fprintln(stderr, "odachi: --since corrects a verdict; it does not go with --show, --all, --refute or --dismiss")
 		return start.CodeBlocked
 	}
 	// The base of a correction is the one its predecessor judged: a --base beside
 	// --since would be accepted and silently replaced, and a flag that does nothing
 	// is a lie about what the run obeyed.
 	if opts.Since != "" && hasFlag(args, "base") {
-		fmt.Fprintln(stderr, "odachi: --since keeps the base of the verdict it corrects; drop --base (the stored verdict names it)")
+		_, _ = fmt.Fprintln(stderr, "odachi: --since keeps the base of the verdict it corrects; drop --base (the stored verdict names it)")
 		return start.CodeBlocked
 	}
 
@@ -700,7 +700,7 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	// blocks with the path and the fix, which is the CLI's job to say.
 	config, err := reviewapp.Config(dir, osFiles{}, reviewModeCodec{})
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 	opts.LensModels = config.Lenses
@@ -746,29 +746,29 @@ func runReviewProbe(dir string, args []string, stdout, stderr io.Writer) int {
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			fmt.Fprintln(stdout, usageLine)
+			_, _ = fmt.Fprintln(stdout, usageLine)
 			return start.CodeOK
 		}
-		fmt.Fprintf(stderr, "odachi: invalid flag: %s; %s\n", oneLine(err.Error()), usageLine)
+		_, _ = fmt.Fprintf(stderr, "odachi: invalid flag: %s; %s\n", oneLine(err.Error()), usageLine)
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; %s\n", flags.Arg(0), usageLine)
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; %s\n", flags.Arg(0), usageLine)
 		return start.CodeBlocked
 	}
 
 	result := lensprobe.Run(opts, disk(dir), gitRepo{}, osShell{}, reviewLenses{})
 	if result.Prompt != "" {
-		fmt.Fprint(stdout, result.Prompt)
+		_, _ = fmt.Fprint(stdout, result.Prompt)
 	}
 	for _, line := range result.Lines {
-		fmt.Fprintln(stdout, line)
+		_, _ = fmt.Fprintln(stdout, line)
 	}
 	if result.Code != lensprobe.CodeOK {
-		fmt.Fprintln(stderr, "odachi: "+result.Summary)
+		_, _ = fmt.Fprintln(stderr, "odachi: "+result.Summary)
 		return result.Code
 	}
-	fmt.Fprintln(stdout, result.Summary)
+	_, _ = fmt.Fprintln(stdout, result.Summary)
 	return result.Code
 }
 
@@ -791,14 +791,14 @@ func runReviewWaive(dir string, args []string, stdout, stderr io.Writer) int {
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			fmt.Fprintln(stdout, usageLine)
+			_, _ = fmt.Fprintln(stdout, usageLine)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; "+usageLine)
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; "+usageLine)
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; %s\n", flags.Arg(0), usageLine)
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; %s\n", flags.Arg(0), usageLine)
 		return start.CodeBlocked
 	}
 
@@ -824,19 +824,19 @@ func runReviewChecks(dir string, args []string, stdout, stderr io.Writer) int {
 	for _, arg := range args {
 		switch arg {
 		case "-h", "--help":
-			fmt.Fprintln(stdout, usageLine)
+			_, _ = fmt.Fprintln(stdout, usageLine)
 			return start.CodeOK
 		case "--json", "-json":
 			asJSON = true
 		case actionStatus, actionApprove:
 			if actionSeen {
-				fmt.Fprintln(stderr, "odachi: the checks action is chosen once; "+usageLine)
+				_, _ = fmt.Fprintln(stderr, "odachi: the checks action is chosen once; "+usageLine)
 				return start.CodeBlocked
 			}
 			action = arg
 			actionSeen = true
 		default:
-			fmt.Fprintf(stderr, "odachi: I do not understand %q; %s\n", arg, usageLine)
+			_, _ = fmt.Fprintf(stderr, "odachi: I do not understand %q; %s\n", arg, usageLine)
 			return start.CodeBlocked
 		}
 	}
@@ -864,19 +864,19 @@ func runReviewMode(dir string, args []string, stdout, stderr io.Writer) int {
 	for _, arg := range args {
 		switch arg {
 		case "-h", "--help":
-			fmt.Fprintln(stdout, usageLine)
+			_, _ = fmt.Fprintln(stdout, usageLine)
 			return start.CodeOK
 		case "--json", "-json":
 			asJSON = true
 		case reviewapp.ModeStatus, reviewapp.ModeOn, reviewapp.ModeOff:
 			if actionSeen {
-				fmt.Fprintln(stderr, "odachi: the review mode is chosen once; "+usageLine)
+				_, _ = fmt.Fprintln(stderr, "odachi: the review mode is chosen once; "+usageLine)
 				return start.CodeBlocked
 			}
 			action = arg
 			actionSeen = true
 		default:
-			fmt.Fprintf(stderr, "odachi: I do not understand %q; %s\n", arg, usageLine)
+			_, _ = fmt.Fprintf(stderr, "odachi: I do not understand %q; %s\n", arg, usageLine)
 			return start.CodeBlocked
 		}
 	}
@@ -924,11 +924,11 @@ func runUndo(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi undo -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi undo -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi undo only takes flags (run odachi undo -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi undo only takes flags (run odachi undo -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -961,11 +961,11 @@ func runClean(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi clean -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi clean -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi clean only takes flags (run odachi clean -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi clean only takes flags (run odachi clean -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -973,7 +973,7 @@ func runClean(dir string, args []string, stdout, stderr io.Writer) int {
 	opts.Store = storeRoot(dir)
 	limits, from, problem := cleanLimits(dir)
 	if problem != "" {
-		fmt.Fprintln(stderr, "odachi: "+problem)
+		_, _ = fmt.Fprintln(stderr, "odachi: "+problem)
 		return start.CodeBlocked
 	}
 	opts.KeepVerdicts = limits.KeepVerdicts
@@ -998,10 +998,10 @@ func reportClean(result clean.Result, asJSON bool, stdout, stderr io.Writer) int
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return result.Code
 	}
 	return reportOutcome(outcome{Code: result.Code, Message: result.Message, Lines: result.Lines}, false, stdout, stderr)
@@ -1013,11 +1013,11 @@ func runStore(dir string, args []string, stdout, stderr io.Writer) int {
 	const usageLine = "usage: odachi store move [--dry-run] [--json]"
 
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "odachi: store needs an action: "+usageLine)
+		_, _ = fmt.Fprintln(stderr, "odachi: store needs an action: "+usageLine)
 		return start.CodeBlocked
 	}
 	if args[0] != "move" {
-		fmt.Fprintf(stderr, "odachi: store %s is not an action; %s\n", args[0], usageLine)
+		_, _ = fmt.Fprintf(stderr, "odachi: store %s is not an action; %s\n", args[0], usageLine)
 		return start.CodeBlocked
 	}
 
@@ -1030,17 +1030,17 @@ func runStore(dir string, args []string, stdout, stderr io.Writer) int {
 		case "--json":
 			asJSON = true
 		case "-h", "--help":
-			fmt.Fprintln(stdout, usageLine)
+			_, _ = fmt.Fprintln(stdout, usageLine)
 			return start.CodeOK
 		default:
-			fmt.Fprintf(stderr, "odachi: %s is not a flag of store move; %s\n", arg, usageLine)
+			_, _ = fmt.Fprintf(stderr, "odachi: %s is not a flag of store move; %s\n", arg, usageLine)
 			return start.CodeBlocked
 		}
 	}
 
 	storeRoot, err := store.Root(dir, gitRepo{})
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error())+"; odachi store move needs the clone's store, so run it inside a git repository")
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error())+"; odachi store move needs the clone's store, so run it inside a git repository")
 		return start.CodeBlocked
 	}
 
@@ -1049,10 +1049,10 @@ func runStore(dir string, args []string, stdout, stderr io.Writer) int {
 		return reportStoreMoveJSON(result, stdout, stderr)
 	}
 	for _, line := range result.Lines {
-		fmt.Fprintln(stdout, line)
+		_, _ = fmt.Fprintln(stdout, line)
 	}
 	if result.Code != storemove.CodeOK {
-		fmt.Fprintln(stderr, "odachi: "+result.Message)
+		_, _ = fmt.Fprintln(stderr, "odachi: "+result.Message)
 	}
 	return result.Code
 }
@@ -1072,10 +1072,10 @@ func reportStoreMoveJSON(result storemove.Result, stdout, stderr io.Writer) int 
 
 	data, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
-	fmt.Fprintln(stdout, string(data))
+	_, _ = fmt.Fprintln(stdout, string(data))
 	return result.Code
 }
 
@@ -1107,10 +1107,10 @@ func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writ
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return result.Code
 	}
 
@@ -1118,7 +1118,7 @@ func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writ
 		// A ready run is silent for the hook, except for what the run has to say and
 		// did not stop: a reminder nobody reads is not a reminder.
 		if result.Note != "" {
-			fmt.Fprintln(stderr, "odachi: "+result.Note)
+			_, _ = fmt.Fprintln(stderr, "odachi: "+result.Note)
 		}
 		return result.Code
 	}
@@ -1136,7 +1136,7 @@ func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writ
 		if i == 0 && result.Code != start.CodeOK {
 			line = "odachi: " + line
 		}
-		fmt.Fprintln(out, line)
+		_, _ = fmt.Fprintln(out, line)
 	}
 	return result.Code
 }
@@ -1173,10 +1173,10 @@ func reportReview(result reviewapp.Result, asJSON bool, stdout, stderr io.Writer
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return result.Code
 	}
 
@@ -1184,35 +1184,35 @@ func reportReview(result reviewapp.Result, asJSON bool, stdout, stderr io.Writer
 		// The store copy is the one an agent hands to a reviewer; stdout stays the
 		// prompt alone, because a pipe into a reviewer must carry nothing else.
 		for _, file := range result.Files {
-			fmt.Fprintln(stderr, "odachi: the prompt is also at "+file)
+			_, _ = fmt.Fprintln(stderr, "odachi: the prompt is also at "+file)
 		}
-		fmt.Fprint(stdout, result.Prompt)
+		_, _ = fmt.Fprint(stdout, result.Prompt)
 		if !strings.HasSuffix(result.Prompt, "\n") {
-			fmt.Fprintln(stdout)
+			_, _ = fmt.Fprintln(stdout)
 		}
 		return result.Code
 	}
 
 	if result.Code == start.CodeOK {
 		for _, line := range result.Lines {
-			fmt.Fprintln(stdout, line)
+			_, _ = fmt.Fprintln(stdout, line)
 		}
 		if len(result.Lines) == 0 {
-			fmt.Fprintln(stdout, result.Message)
+			_, _ = fmt.Fprintln(stdout, result.Message)
 		}
 		return result.Code
 	}
 
-	fmt.Fprintln(stderr, "odachi: "+result.Message)
+	_, _ = fmt.Fprintln(stderr, "odachi: "+result.Message)
 	if len(result.Lines) > 1 {
 		for _, line := range result.Lines[1:] {
-			fmt.Fprintln(stderr, line)
+			_, _ = fmt.Fprintln(stderr, line)
 		}
 	}
 	if result.Output != "" {
-		fmt.Fprint(stderr, result.Output)
+		_, _ = fmt.Fprint(stderr, result.Output)
 		if !strings.HasSuffix(result.Output, "\n") {
-			fmt.Fprintln(stderr)
+			_, _ = fmt.Fprintln(stderr)
 		}
 	}
 	return result.Code
@@ -1243,30 +1243,30 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi init -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi init -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi init only takes flags (run odachi init -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi init only takes flags (run odachi init -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 	if skillsScope != "" {
 		if _, err := persona.NormalizeSkills(skillsScope); err != nil {
-			fmt.Fprintf(stderr, "odachi: --skills has to be \"project\" or \"home\", not %q; project leaves the skills in the project, home leaves them in ~/.agents/skills\n", skillsScope)
+			_, _ = fmt.Fprintf(stderr, "odachi: --skills has to be \"project\" or \"home\", not %q; project leaves the skills in the project, home leaves them in ~/.agents/skills\n", skillsScope)
 			return start.CodeBlocked
 		}
 		skillsScope = strings.ToLower(strings.TrimSpace(skillsScope))
 	}
 	if strings.TrimSpace(agents) != "" {
 		if _, err := persona.NormalizeSelection(agents); err != nil {
-			fmt.Fprintf(stderr, "odachi: %s; use opencode, claude or both\n", oneLine(err.Error()))
+			_, _ = fmt.Fprintf(stderr, "odachi: %s; use opencode, claude or both\n", oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 	}
 
 	created, err := ensureHistory(dir)
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+err.Error())
+		_, _ = fmt.Fprintln(stderr, "odachi: "+err.Error())
 		return start.CodeBlocked
 	}
 	// A repository that already has a commit is a project that already lives, and
@@ -1277,7 +1277,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	// chose.
 	existing, err := repositoryLives(dir, created)
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+err.Error())
+		_, _ = fmt.Fprintln(stderr, "odachi: "+err.Error())
 		return start.CodeBlocked
 	}
 
@@ -1286,7 +1286,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	// that says it may not be touched cannot run the job, so the refusal names the
 	// variable instead of writing half of it.
 	if os.Getenv("ODACHI_NO_SETUP") != "" {
-		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: init writes the door in the home and the home is not touched; unset the variable to run init")
+		_, _ = fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: init writes the door in the home and the home is not touched; unset the variable to run init")
 		return start.CodeBlocked
 	}
 
@@ -1336,16 +1336,16 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi setup -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi setup -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi setup only takes flags (run odachi setup -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi setup only takes flags (run odachi setup -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
 	if os.Getenv("ODACHI_NO_SETUP") != "" {
-		fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: this machine's home is not touched; unset it to run setup")
+		_, _ = fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: this machine's home is not touched; unset it to run setup")
 		return start.CodeBlocked
 	}
 
@@ -1601,10 +1601,10 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return result.Code
 	}
 
@@ -1621,7 +1621,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 		if i == 0 && result.Code != start.CodeOK {
 			line = "odachi: " + line
 		}
-		fmt.Fprintln(out, line)
+		_, _ = fmt.Fprintln(out, line)
 	}
 	return result.Code
 }
@@ -1752,20 +1752,20 @@ func reportOutcome(o outcome, asJSON bool, stdout, stderr io.Writer) int {
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return o.Code
 	}
 
 	if o.Code == start.CodeOK {
 		for _, line := range humanLines(o) {
-			fmt.Fprintln(stdout, line)
+			_, _ = fmt.Fprintln(stdout, line)
 		}
 		return o.Code
 	}
-	fmt.Fprintln(stderr, "odachi: "+o.Message)
+	_, _ = fmt.Fprintln(stderr, "odachi: "+o.Message)
 	return o.Code
 }
 
@@ -1780,7 +1780,7 @@ func humanLines(o outcome) []string {
 
 // usage is the help a human reads with `odachi start -h`.
 func usage(out io.Writer) {
-	fmt.Fprint(out, `odachi · two hands: you decide, the agent builds
+	_, _ = fmt.Fprint(out, `odachi · two hands: you decide, the agent builds
 
 usage:
   odachi                      the same as odachi start

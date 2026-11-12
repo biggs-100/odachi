@@ -154,7 +154,7 @@ func prepareInput(command, input string) (stdin *os.File, prepared string, clean
 	if err != nil {
 		return nil, "", func() {}, fmt.Errorf("could not prepare the prompt in a temporary file: %w", err)
 	}
-	cleanup = func() { os.RemoveAll(dir) }
+	cleanup = func() { _ = os.RemoveAll(dir) }
 
 	path := filepath.Join(dir, "prompt.md")
 	if err := os.WriteFile(path, []byte(input), 0o600); err != nil {
@@ -166,8 +166,8 @@ func prepareInput(command, input string) (stdin *os.File, prepared string, clean
 		return nil, "", cleanup, fmt.Errorf("could not open the temporary prompt: %w", err)
 	}
 	cleanup = func() {
-		file.Close()
-		os.RemoveAll(dir)
+		_ = file.Close()
+		_ = os.RemoveAll(dir)
 	}
 
 	return file, strings.ReplaceAll(command, promptToken, quotePath(path)), cleanup, nil

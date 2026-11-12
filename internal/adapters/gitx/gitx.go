@@ -65,8 +65,7 @@ func TreeHash(root string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(dir)
-
+	defer func() { _ = os.RemoveAll(dir) }()
 	env := []string{"GIT_INDEX_FILE=" + filepath.Join(dir, "index")}
 
 	if err := stageWorktree(root, env); err != nil {

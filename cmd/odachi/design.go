@@ -65,28 +65,28 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi design -h to see the actions")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi design -h to see the actions")
 		return start.CodeBlocked
 	}
 
 	switch action {
 	case appdesign.ActionList:
 		if flags.NArg() > 1 {
-			fmt.Fprintln(stderr, "odachi: odachi design list takes at most one slug")
+			_, _ = fmt.Fprintln(stderr, "odachi: odachi design list takes at most one slug")
 			return start.CodeBlocked
 		}
 	case appdesign.ActionComments:
 		if flags.NArg() != 1 {
-			fmt.Fprintln(stderr, "odachi: say which design: odachi design comments <slug> [--resolve id1,id2]")
+			_, _ = fmt.Fprintln(stderr, "odachi: say which design: odachi design comments <slug> [--resolve id1,id2]")
 			return start.CodeBlocked
 		}
 	case appdesign.ActionHandoff:
 		if flags.NArg() != 1 {
-			fmt.Fprintln(stderr, "odachi: say which artboard: odachi design handoff <slug>/<artboard>")
+			_, _ = fmt.Fprintln(stderr, "odachi: say which artboard: odachi design handoff <slug>/<artboard>")
 			return start.CodeBlocked
 		}
 	default:
-		fmt.Fprintf(stderr, "odachi: unknown action %q: odachi design list or odachi design comments <slug>\n", action)
+		_, _ = fmt.Fprintf(stderr, "odachi: unknown action %q: odachi design list or odachi design comments <slug>\n", action)
 		return start.CodeBlocked
 	}
 
@@ -115,7 +115,7 @@ func runDesign(dir string, args []string, stdout, stderr io.Writer) int {
 	if action == appdesign.ActionList {
 		sources, err := designSources(dir)
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not read the project's stylesheets: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not read the project's stylesheets: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
 		opts.Sources = sources
@@ -162,10 +162,10 @@ func reportDesign(result appdesign.Result, asJSON bool, stdout, stderr io.Writer
 
 	out, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: could not encode the report: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: could not encode the report: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
-	fmt.Fprintln(stdout, string(out))
+	_, _ = fmt.Fprintln(stdout, string(out))
 	return result.Code
 }
 
@@ -215,7 +215,7 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 
@@ -224,7 +224,7 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 	if action == appdesign.ActionStop {
 		canvas, ok := appdesign.ReadCanvas(path)
 		if !ok {
-			fmt.Fprintln(stdout, "no canvas is running for this clone")
+			_, _ = fmt.Fprintln(stdout, "no canvas is running for this clone")
 			return start.CodeOK
 		}
 		if err := appdesign.Stop(nil, path, canvas); err != nil {
@@ -233,21 +233,21 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 			// fail forever.
 			if !appdesign.Running(nil, canvas) {
 				if err := appdesign.ForgetCanvas(path); err != nil {
-					fmt.Fprintln(stderr, "odachi: the canvas at "+canvas.Addr+" is not running, and its address could not be forgotten: "+oneLine(err.Error()))
+					_, _ = fmt.Fprintln(stderr, "odachi: the canvas at "+canvas.Addr+" is not running, and its address could not be forgotten: "+oneLine(err.Error()))
 					return start.CodeBlocked
 				}
-				fmt.Fprintln(stdout, "no canvas is running at "+canvas.Addr+": the address is forgotten")
+				_, _ = fmt.Fprintln(stdout, "no canvas is running at "+canvas.Addr+": the address is forgotten")
 				return start.CodeOK
 			}
-			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, "canvas stopped")
+		_, _ = fmt.Fprintln(stdout, "canvas stopped")
 		return start.CodeOK
 	}
 
 	if flags.NArg() > 1 {
-		fmt.Fprintln(stderr, "odachi: odachi design open takes at most one slug")
+		_, _ = fmt.Fprintln(stderr, "odachi: odachi design open takes at most one slug")
 		return start.CodeBlocked
 	}
 	slug := ""
@@ -260,30 +260,30 @@ func runCanvas(action, dir string, args []string, stdout, stderr io.Writer) int 
 	// because the page it would open is already there.
 	if running, ok := appdesign.ReadCanvas(path); ok && appdesign.Running(nil, running) {
 		if err := appdesign.Show(nil, running, slug); err != nil {
-			fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, "canvas at "+running.URL)
+		_, _ = fmt.Fprintln(stdout, "canvas at "+running.URL)
 		return start.CodeOK
 	}
 
 	// A detached child owns the canvas: the command returns, the page stays, and
 	// the agent can keep working with the canvas open.
 	if err := spawnCanvas(dir, slug, port); err != nil {
-		fmt.Fprintln(stderr, "odachi: could not open the canvas: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: could not open the canvas: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 	running, ok := waitCanvas(path, 5*time.Second)
 	if !ok {
-		fmt.Fprintln(stderr, "odachi: the canvas did not start; the log says:")
+		_, _ = fmt.Fprintln(stderr, "odachi: the canvas did not start; the log says:")
 		for _, line := range tailLines(filepath.Join(dir, ".git", "odachi", "design-canvas.log"), 8) {
-			fmt.Fprintln(stderr, "  "+line)
+			_, _ = fmt.Fprintln(stderr, "  "+line)
 		}
 		return start.CodeBlocked
 	}
 
-	fmt.Fprintln(stdout, "canvas at "+running.URL)
-	fmt.Fprintln(stdout, "odachi design stop closes it")
+	_, _ = fmt.Fprintln(stdout, "canvas at "+running.URL)
+	_, _ = fmt.Fprintln(stdout, "odachi design stop closes it")
 	if !noBrowser {
 		openBrowser(running.URL)
 	}
@@ -302,7 +302,7 @@ func runDesignServe(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&slug, "slug", "", "design the page opens first")
 	flags.IntVar(&port, "port", 0, "loopback port; 0 lets the kernel choose")
 	if err := flags.Parse(args); err != nil {
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 
@@ -310,7 +310,7 @@ func runDesignServe(dir string, args []string, stdout, stderr io.Writer) int {
 	server := designserver.New(designserver.Options{Dir: dir, Slug: slug, Canvas: assetsdesign.Canvas()})
 	addr, url, err := server.Listen(port)
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: could not open the canvas: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: could not open the canvas: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 	if err := appdesign.WriteCanvas(path, appdesign.Canvas{
@@ -322,11 +322,11 @@ func runDesignServe(dir string, args []string, stdout, stderr io.Writer) int {
 		StartedAt: time.Now().UTC().Format(time.RFC3339),
 	}); err != nil {
 		_ = server.Close()
-		fmt.Fprintln(stderr, "odachi: the canvas started but its address could not be recorded in "+path+": "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: the canvas started but its address could not be recorded in "+path+": "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 
-	fmt.Fprintln(stdout, "canvas at "+url)
+	_, _ = fmt.Fprintln(stdout, "canvas at "+url)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	defer signal.Stop(stop)
@@ -356,7 +356,7 @@ func spawnCanvas(dir, slug string, port int) error {
 	if err != nil {
 		return err
 	}
-	defer logFile.Close()
+	defer func() { _ = logFile.Close() }()
 
 	child := exec.Command(exe, "design", "serve", "--slug", slug, "--port", strconv.Itoa(port))
 	child.Dir = dir
@@ -417,7 +417,7 @@ func openBrowser(url string) {
 func runDesignSync(dir string, stdout, stderr io.Writer) int {
 	sources, err := designSources(dir)
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: could not read the project's stylesheets: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: could not read the project's stylesheets: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 

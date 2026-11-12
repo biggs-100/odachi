@@ -451,17 +451,17 @@ func (s *Server) enqueue(slug string, comment domain.Comment) (bool, error) {
 	}
 	name := temp.Name()
 	if _, err := temp.Write(append(data, '\n')); err != nil {
-		temp.Close()
-		os.Remove(name)
+		_ = temp.Close()
+		_ = os.Remove(name)
 		return false, err
 	}
 	if err := temp.Close(); err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return false, err
 	}
 	final := filepath.Join(dir, "queue-"+comment.ID+".json")
 	if err := os.Rename(name, final); err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return false, err
 	}
 	return true, nil
@@ -576,11 +576,11 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case what := <-ch:
-			fmt.Fprintf(w, "data: %s\n\n", what)
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", what)
 			flusher.Flush()
 		case <-ticker.C:
 			if changed := s.changed(); len(changed) > 0 {
-				fmt.Fprintf(w, "data: %s\n\n", strings.Join(changed, ","))
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", strings.Join(changed, ","))
 				flusher.Flush()
 			}
 		}
@@ -760,12 +760,12 @@ func (s *Server) writeComments(slug string, comments domain.Comments) error {
 	}
 	name := temp.Name()
 	if _, err := temp.Write(data); err != nil {
-		temp.Close()
-		os.Remove(name)
+		_ = temp.Close()
+		_ = os.Remove(name)
 		return err
 	}
 	if err := temp.Close(); err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return err
 	}
 	return os.Rename(name, path)

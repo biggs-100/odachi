@@ -280,7 +280,7 @@ func Run(opts Options, files Files, guard lock.Lock) Result {
 	if held.Refusal != "" {
 		return blocked(held.Refusal)
 	}
-	defer held.Release()
+	defer func() { _ = held.Release() }()
 
 	return withNotice(apply(opts, files), held.Notice)
 }

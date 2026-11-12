@@ -117,8 +117,7 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	if err != nil {
 		return *blocked("could not make a throwaway directory: " + oneLine(err.Error()))
 	}
-	defer os.RemoveAll(work)
-
+	defer func() { _ = os.RemoveAll(work) }()
 	// The two arms are two candidates: the clean one is a change that carries no
 	// defect, and its findings are the noise the lenses raise on code nobody
 	// broke. They are read separately because a reviewer handed both at once

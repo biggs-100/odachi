@@ -39,15 +39,15 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi skills -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi skills -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi skills only takes flags (run odachi skills -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi skills only takes flags (run odachi skills -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 	if check && write {
-		fmt.Fprintln(stderr, "odachi: --check and --write do not go together: use one of the two (odachi skills --check or odachi skills --write)")
+		_, _ = fmt.Fprintln(stderr, "odachi: --check and --write do not go together: use one of the two (odachi skills --check or odachi skills --write)")
 		return start.CodeBlocked
 	}
 	// Visit tells "the flag was absent" apart from "the flag was given empty":
@@ -61,7 +61,7 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 	})
 	if resolveSet {
 		if strings.TrimSpace(resolve) == "" {
-			fmt.Fprintln(stderr, "odachi: --resolve needs the step: odachi skills --resolve T1")
+			_, _ = fmt.Fprintln(stderr, "odachi: --resolve needs the step: odachi skills --resolve T1")
 			return start.CodeBlocked
 		}
 		other := ""
@@ -74,7 +74,7 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 			other = "--json"
 		}
 		if other != "" {
-			fmt.Fprintf(stderr, "odachi: --resolve and %s do not go together: use one of them (odachi skills --resolve <step>, or odachi skills %s)\n", other, other)
+			_, _ = fmt.Fprintf(stderr, "odachi: --resolve and %s do not go together: use one of them (odachi skills --resolve <step>, or odachi skills %s)\n", other, other)
 			return start.CodeBlocked
 		}
 		return resolveSkills(dir, resolve, stdout, stderr)
@@ -89,7 +89,7 @@ func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
 func resolveSkills(dir, stepID string, stdout, stderr io.Writer) int {
 	current, err := tasks.Current(disk(dir), dir)
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 
@@ -105,19 +105,19 @@ func resolveSkills(dir, stepID string, stdout, stderr io.Writer) int {
 	}
 	if !found {
 		if len(current.Doc.Steps) == 0 {
-			fmt.Fprintf(stderr, "odachi: %s has no steps yet: run odachi plan \"<the step>\" first\n", current.Rel)
+			_, _ = fmt.Fprintf(stderr, "odachi: %s has no steps yet: run odachi plan \"<the step>\" first\n", current.Rel)
 			return start.CodeBlocked
 		}
 		ids := make([]string, 0, len(current.Doc.Steps))
 		for _, candidate := range current.Doc.Steps {
 			ids = append(ids, candidate.ID)
 		}
-		fmt.Fprintf(stderr, "odachi: %s is not a step of %s: the steps are %s\n", stepID, current.Rel, strings.Join(ids, ", "))
+		_, _ = fmt.Fprintf(stderr, "odachi: %s is not a step of %s: the steps are %s\n", stepID, current.Rel, strings.Join(ids, ", "))
 		return start.CodeBlocked
 	}
 
 	if len(step.Skills) == 0 {
-		fmt.Fprintf(stdout, "%s names no skills\n", step.ID)
+		_, _ = fmt.Fprintf(stdout, "%s names no skills\n", step.ID)
 		return start.CodeOK
 	}
 
@@ -130,7 +130,7 @@ func resolveSkills(dir, stepID string, stdout, stderr io.Writer) int {
 			for _, path := range looked {
 				places = append(places, filepath.ToSlash(path))
 			}
-			fmt.Fprintf(stderr, "odachi: %s has no SKILL.md in %s\n", name, strings.Join(places, " or "))
+			_, _ = fmt.Fprintf(stderr, "odachi: %s has no SKILL.md in %s\n", name, strings.Join(places, " or "))
 			blocked = true
 			continue
 		}
@@ -138,7 +138,7 @@ func resolveSkills(dir, stepID string, stdout, stderr io.Writer) int {
 		if found == filepath.Join(dir, ".agents", "skills", name, "SKILL.md") {
 			scope = "project"
 		}
-		fmt.Fprintf(stdout, "%s  %s  (%s)\n", name, filepath.ToSlash(found), scope)
+		_, _ = fmt.Fprintf(stdout, "%s  %s  (%s)\n", name, filepath.ToSlash(found), scope)
 	}
 	if blocked {
 		return start.CodeBlocked
@@ -150,11 +150,11 @@ func resolveSkills(dir, stepID string, stdout, stderr io.Writer) int {
 // subcommand on purpose: creating one skill and touching nothing else.
 func runSkill(dir string, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "odachi: missing the subcommand: the only one is odachi skill new <slug> --scope project|home")
+		_, _ = fmt.Fprintln(stderr, "odachi: missing the subcommand: the only one is odachi skill new <slug> --scope project|home")
 		return start.CodeBlocked
 	}
 	if args[0] != "new" {
-		fmt.Fprintf(stderr, "odachi: unknown subcommand: %s; the only one is odachi skill new <slug> --scope project|home\n", args[0])
+		_, _ = fmt.Fprintf(stderr, "odachi: unknown subcommand: %s; the only one is odachi skill new <slug> --scope project|home\n", args[0])
 		return start.CodeBlocked
 	}
 
@@ -196,21 +196,21 @@ func runSkill(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi skill new -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi skill new -h to see the flags")
 		return start.CodeBlocked
 	}
 	if len(positionals) == 0 {
-		fmt.Fprintln(stderr, "odachi: missing the slug: odachi skill new <slug> --scope project|home")
+		_, _ = fmt.Fprintln(stderr, "odachi: missing the slug: odachi skill new <slug> --scope project|home")
 		return start.CodeBlocked
 	}
 	if len(positionals) > 1 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi skill new takes a single slug\n", positionals[1])
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi skill new takes a single slug\n", positionals[1])
 		return start.CodeBlocked
 	}
 	slug := positionals[0]
 	if scope != "" {
 		if _, err := persona.NormalizeSkills(scope); err != nil {
-			fmt.Fprintf(stderr, "odachi: --scope has to be \"project\" or \"home\", not %q; project writes .agents/skills/<slug>, home writes ~/.agents/skills/<slug>\n", scope)
+			_, _ = fmt.Fprintf(stderr, "odachi: --scope has to be \"project\" or \"home\", not %q; project writes .agents/skills/<slug>, home writes ~/.agents/skills/<slug>\n", scope)
 			return start.CodeBlocked
 		}
 		scope = strings.ToLower(strings.TrimSpace(scope))
@@ -226,7 +226,7 @@ func runSkill(dir string, args []string, stdout, stderr io.Writer) int {
 			if err != nil {
 				reason = oneLine(err.Error())
 			}
-			fmt.Fprintln(stderr, "odachi: could not find your home to write ~/.agents/skills/<slug>: "+reason+"; run odachi skill new <slug> --scope project, or set a home and run it again")
+			_, _ = fmt.Fprintln(stderr, "odachi: could not find your home to write ~/.agents/skills/<slug>: "+reason+"; run odachi skill new <slug> --scope project, or set a home and run it again")
 			return start.CodeBlocked
 		}
 		home = resolved
@@ -275,10 +275,10 @@ func reportSkills(result skillsapp.Result, asJSON bool, stdout, stderr io.Writer
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return result.Code
 	}
 
@@ -294,7 +294,7 @@ func reportSkills(result skillsapp.Result, asJSON bool, stdout, stderr io.Writer
 		if result.Code != start.CodeOK {
 			line = "odachi: " + line
 		}
-		fmt.Fprintln(out, line)
+		_, _ = fmt.Fprintln(out, line)
 	}
 	return result.Code
 }

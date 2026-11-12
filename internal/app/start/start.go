@@ -159,8 +159,7 @@ func Run(opts Options, interview Interview, files Files, guard lock.Lock) Result
 	if held.Refusal != "" {
 		return blocked(held.Refusal)
 	}
-	defer held.Release()
-
+	defer func() { _ = held.Release() }()
 	return withNotice(r.run(), held.Notice)
 }
 
