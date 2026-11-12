@@ -1,49 +1,55 @@
 # Next session
 
-Written after `v0.38.14` shipped. Nothing is owed.
+Written after `v0.39.0` shipped. Nothing is owed.
 
 ## Where the project is
 
-- `v0.38.14` is published: annotated tag on `d8c0d91` (`Merge pull request #533`), sixteen assets, and the
-  binary installed on this machine reports `odachi v0.38.14`. `main` is that merge commit.
-- The patch it names came in with #532: the gate refuses an artifact whose bytes are not UTF-8, one saved
-  with a BOM, and one carrying the sequences a UTF-8 file leaves when a console reads it as CP850 (0274).
-- 272 features, 656 steps, 0 open questions; `docs/review-debt.md` holds no open row.
-- The closing tree carries `proof/0274-lo-que-la-compuerta-ve.txt` and one verdict
-  (`.git/odachi/reviews/ab7974e0….json`, reliability, base `0a84a94`).
-- `## Unreleased` does not exist: the next feature writes it again, above `## v0.38.14`.
+- `v0.39.0` is published: annotated tag on `adf4f69` (`Merge pull request #536`), assets built and
+  attested by the release workflow -which ran the suite before goreleaser-, and the binary installed on
+  this machine reports `odachi v0.39.0`. `main` is that merge commit.
+- 273 features, 661 steps, 0 open questions; `docs/review-debt.md` holds no open row.
+- The closing tree carries `proof/0275-lo-que-una-tirada-no-ve.txt` and one verdict
+  (`.git/odachi/reviews/bbe8d2ff….json`, four lenses), written as a correction of `dfca16e5`.
+- `## Unreleased` does not exist: the next feature writes it again, above `## v0.39.0`.
 
 ## What shipped
 
-- **0274, a record that does not decode is refused.** The brief corrupted on 0271 was valid UTF-8 -the bytes
-  of one encoding read by another- so no decoder and no gate saw it. The gate now names the byte where a file
-  stops decoding, refuses a BOM, and refuses the CP850 markers in the brief and the TOMLs, never in a task
-  document: prose may have to name them.
-- **A rule was planned and dropped.** Comparing every brief block with its task document's requirement
-  looked like the non-heuristic detector; the tests showed it blocks valid states -a brief before its first
-  document, a block whose document was removed- and the record accumulates. The craft note keeps why.
+- **0275, a verdict can be paid by more than one draw.** `--runs N` (1 to 10) asks each lens N times and
+  files the union as one verdict. A defect is identified by its file, bytes, lens, place and severity
+  -never by the sentence that describes it-, so two draws that name it pay one row and the first draw's
+  words survive. A lens paid by one draw is brought to N by a later run that pays only the missing
+  answers: the union only adds, so drawing again can never turn a `changes_requested` into an
+  `approved`. A draw that does not answer leaves the ones that did, names the draw it lost and the
+  top-up that pays the rest. The verdict carries the count per lens (`draws`, schema 5), `--show` prints
+  it, and an absent field reads as one draw so every verdict already in a store keeps its meaning.
+- **The review found the defect the design had.** A lens already paid to N was asked again whenever it
+  shared a call with a lens that still owed one -a group answers all its lenses in one call- and the
+  file ended at N+1, past the count the run was given. Fixed in `06d2f21` by nesting the rounds: draw
+  two carries only the lenses that owe a second answer. The fix changed the bytes the row named, so the
+  correction retired the row by itself.
+- **The release is a minor, not the patch the brief said.** `docs/releases.md` calls a stored-record
+  change a minor; the brief was not rewritten, and the divergence is recorded in the changelog entry.
 
 ## The questions that wait
 
 - **None open.** The next feature writes the new `## Unreleased`.
-- **One approval is one draw**, and today's own feature is the example: a verdict approved a tree, and the
-  next review found the record promising what the code did not do. The instrument (N draws, the union of
-  what they found) has not been designed yet, and it is the next big thing.
+- **The instrument is in the tool and not yet measured on a real candidate.** The probe measured
+  variance on a fixture -10, 1 and 4 findings on the same clean code-; the next measurement is the same
+  tree reviewed with `--runs 1` and `--runs 3`, and it is evidence, not a feature.
 
 ## The limits to remember
 
-- **A finding about the record costs a full cycle.** The review of 0274 found, twice, that the brief promised
-  or described something the code did not do; each fix costs a proof (700 s) and a verdict. Write the
-  brief's non-goals and decisions after the design is settled, or expect to pay twice.
-- **The store's rows are keyed by bytes**: a WARNING whose claim a record edit fixed stays potent until the
-  file it names changes (0265, 0271).
-- **A run queued with zero jobs is GitHub's**: `gh run view <id> --json jobs` says `total=0`, and closing
-  and reopening the pull request triggers a fresh run.
-- **`CHANGELOG.md` carries `## Unreleased` twice** -the heading and the prose about it- so the rename is
-  line-based.
-- **The console is not UTF-8** (0271), **one tree, one verdict** and a wider base covers a later feature
-  (0268), **a docs-only change owes no new proof**.
-- **One heavy gate per machine**: `go test ./...` takes about 700 s and `check --run` writes the proof.
+- **The verdict that closed 0275 has schema 4 and no `draws`.** It was written by `v0.38.14`, before the
+  field existed: the first record that carries the count is the next review of any tree.
+- **`--runs` multiplies the cost.** Four lenses times N calls, each up to the 600 s `--exec` timeout; the
+  ceiling of ten is the probe's own, and past it an experiment is designed somewhere else.
+- **A round carries only the lenses that owe it.** The `draws` count is exact only because of that:
+  asking a group without it asks a finished lens again and counts it.
+- **`CHANGELOG.md` carries `Unreleased` twice** -the heading and the prose about it- so the rename is
+  line-based, and writing the file with Windows line endings rewrites it; the hook normalizes to LF.
+- **One heavy gate per machine**: `go test ./...` takes about 700 s here and three to four minutes on CI.
+- The console is not UTF-8 (0271), one tree one verdict and a wider base covers a later feature (0268),
+  and a docs-only change owes no new proof.
 
 ## The commands that work
 
@@ -52,17 +58,18 @@ odachi check --run "go test ./..." --timeout 1800
 ```
 
 ```sh
-# a verdict for the tree, with the answer kept beside it
-odachi review --base <feature base> --lens reliability --model opencode-go/deepseek-v4.1-flash \
+# a verdict paid by several draws, for the lens the risk line names
+odachi review --runs 3 --base <feature base> --lens reliability --model opencode-go/deepseek-v4.1-flash \
   --exec 'C:\Users\USER\AppData\Local\Temp\odachi-rev.bat {model} {prompt} C:\Users\USER\AppData\Local\Temp\review.json'
 ```
 
 ```sh
-# a correction takes the prefix the listing shows
-odachi review --since bbf385ca --lens reliability --exec '...'
+# a correction measures only the delta and carries the predecessor's rows
+odachi review --since <tree prefix> --lens reliability --exec '...'
 ```
 
 ```sh
-# the release, after the merge it names: heading only, an annotated tag, the binary rebuilt
+# the release, after the merge it names: the tag, then the binary
+git tag -a vX.Y.Z <merge commit> -m "vX.Y.Z: <the sentence the notes carry>" && git push origin vX.Y.Z
 go build -trimpath -ldflags "-s -w -X main.version=vX.Y.Z" -o %LOCALAPPDATA%\odachi\bin\odachi.exe ./cmd/odachi
 ```
