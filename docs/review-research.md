@@ -249,34 +249,48 @@ question came from the two cheapest the provider serves: `deepseek-v4.1-flash` a
 `muse-spark-1.3-contributor`, one draw each on the same bundled fixture (two arms, five
 planted defects, four lenses), on 2026-11-12.
 
-| model | risk | readability | reliability | resilience | noise | clean |
-| --- | --- | --- | --- | --- | --- | --- |
-| deepseek-v4.1-flash | 1/1 | 1/1 | 1/1 | 2/2 | 5 | 6 |
-| muse-spark-1.3 | 1/1 | 0/1 | 1/1 | 1/2 | 1 | 0 |
+The first table had one `noise` column and one `clean` column, and that was the defect
+this part ended up naming: both counted a `SUGGESTION` the same way they counted an
+invented `CRITICAL`, so "this reviewer talks" and "this reviewer invents" printed as the
+same number. `0282` split it -a suggestion is a note, a warning or above is noise- and
+the same stored answers, each one replayed through the new reading instead of asked
+again, read as two numbers per arm:
+
+| model | risk | readability | reliability | resilience | seeded noise | seeded notes | clean noise | clean notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| deepseek-v4.1-flash | 1/1 | 1/1 | 1/1 | 2/2 | 5 | 0 | 0 | 6 |
+| muse-spark-1.3 | 1/1 | 0/1 | 1/1 | 1/2 | 1 | 0 | 0 | 0 |
+
+The replay reproduces the first reading exactly -`noise 5 · clean 6` and `noise 1 ·
+clean 0`-, so the split adds a meaning, not a measurement.
 
 - **The planted class is not the question.** Both found the SQL injection the key calls
   `risk-query-built-by-concatenation`, both found the reliability defect, both found the
   retry defect in `cache.go`. What they disagree about is the softer defects: muse did not
   report the name that does three jobs (readability) nor the body error discarded as a
-  success (resilience), and it stayed quiet on the arm with nothing planted.
-- **The two are opposite instruments.** Deepseek found every planted defect and answered
-  the clean arm with six findings; muse found three of five and said nothing about the
-  clean arm. One is a reviewer that looks everywhere and trusts its own eye; the other is
-  a reviewer that answers only when it is sure and misses what it is not. Neither is the
+  success (resilience).
+- **Neither model invented a defect on the arm with nothing planted.** Both `clean noise`
+  columns are zero. The six findings deepseek raised there are six suggestions, and a model
+  that fabricated a blocker on clean code would be the only one moving that column -which
+  is the number the arm exists for.
+- **The clean arm was never dirty.** Read one by one, the six findings are real
+  observations about the fixture: a `time.Sleep` backoff that never selects on `ctx.Done()`,
+  permanent errors retried three times, untested branches. All six are `SUGGESTION`, none
+  invents a defect, and a person reading them would agree with several. "clean 6" was six
+  improvements the arm could take, and the old column printed them as if they were six
+  false alarms.
+- **The seeded noise is small and it is made of claims.** Five findings at places no
+  planted defect sits (deepseek) and one (muse), and neither model wrote a `SUGGESTION` on
+  the arm that carries the defects: everything they said there either names a defect or
+  opens with "something is wrong". That is the noise this probe exists to count.
+- **The two are opposite instruments, and the split says where.** Deepseek finds every
+  planted defect, makes five claims nobody planted and six suggestions; muse finds three of
+  five, makes one claim and no suggestions. The old reading ranked them by the suggestions
+  deepseek adds. The split ranks them by the claims they both make, 5 to 1. Neither is the
   better instrument, and a project that pays for one gets one half of each.
-- **The clean arm is not dirty, and the metric still counts it.** Read one by one, the six
-  findings on the arm with nothing planted are real observations about the fixture: a
-  `time.Sleep` backoff that never selects on `ctx.Done()`, permanent errors retried three
-  times, untested branches. All six are `SUGGESTION`, none invents a defect, and a person
-  reading them would agree with several. So "clean 6" is not six lies -it is six
-  improvements the arm could take, and the probe's `clean` column counts `SUGGESTION` the
-  same way it would count an invented `CRITICAL`.
-- **What this changes in the ordering.** Part 8 said the arm has to earn its name before
-  the precision number means anything. This reading says the arm already earns it in the
-  sense that nothing there is false, and that the number that does not mean what it
-  pretends is the `clean` count itself: a model that suggests improvements is scored as
-  noisy, and a model that says nothing is scored as precise. The next change is not the
-  arm; it is the reading of its answer, split by severity.
+- **The next change this part named, the split, is `0282`.** It said the arm did not need
+  to move before the reading did, and the re-read above is what the reading says once it
+  can tell an opinion from an alarm.
 
 What it does not prove: one draw per model, two models, one fixture, one afternoon. A
 `--runs 5` reading would say which of these disagreements are the model's opinion and
@@ -311,9 +325,12 @@ From `.git/odachi/reviews/` in this clone, 16 verdicts kept:
 
 1. **The fixture's clean arm is sloppy** (0263 closed the gap that no measurement
    existed): ten findings on code with nothing planted, all of them real. The
-   instrument reports them as noise because the key says so; precision is not
-   measured until the clean arm is code a careful person would approve. That is
-   the next job on the fixture, not on the lenses.
+   instrument reported them as noise because the key says a finding there matches
+   nothing; `0282` split that count, so the same findings are read by what they
+   claim -a note that suggests an improvement, or a claim that something is wrong-
+   instead of all landing in one column. Precision is still not measured until the
+   clean arm is code a careful person would approve. That is the next job on the
+   fixture, not on the lenses.
 2. **No deterministic analyzer runs.** The gate runs `go vet`, `go test -race`
    and the suite. It does not run `govulncheck`, a linter with a real ruleset, a
    secret scanner or a dependency review. The field's cheapest answer to C6, and
