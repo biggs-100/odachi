@@ -146,7 +146,10 @@ const (
 type CheckResult struct {
 	Name    string
 	Command string
-	Status  CheckStatus
+	// Severity is the severity the project declared: what a failure is worth is
+	// its decision, and the row the verdict files carries it.
+	Severity Severity
+	Status   CheckStatus
 	// Exit is the tool's own exit code, zero when it did not produce one.
 	Exit int
 	// Output is what the tool printed, clipped by ClipCheckOutput.

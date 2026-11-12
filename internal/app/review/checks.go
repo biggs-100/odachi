@@ -229,7 +229,7 @@ func offReason(declared int, approved bool) string {
 // tree hash describes: a check that edits the candidate is out of contract, and the
 // verdict is filed under the tree read before it.
 func (r *runner) runCheck(check domain.Check, timeout int) domain.CheckResult {
-	result := domain.CheckResult{Name: check.Name, Command: check.Command}
+	result := domain.CheckResult{Name: check.Name, Command: check.Command, Severity: check.Severity}
 
 	stdout, stderr, exitCode, timedOut, err := r.shell.Run(r.opts.Dir, check.Command, timeout)
 	result.Exit = exitCode
@@ -266,4 +266,80 @@ func joinOutput(stdout, stderr string) string {
 		return out
 	}
 	return out + "\n" + said
+}
+
+// checkFindings is what the tools said, as the rows the verdict carries: one per
+// failing check, at the severity the project declared, with the tool's own words
+// as the evidence. A tool that answered clean filed nothing, and no tool filed
+// anything when this clone has not approved the list.
+//
+// The row is the reviewer's peer, not its pupil: it blocks by the same rule, and a
+// person dismisses it with a reason like any other.
+func (r *runner) checkFindings() ([]domain.Finding, *Result) {
+	results, off, problem := r.ranChecks()
+	if problem != nil {
+		return nil, problem
+	}
+	if off != "" {
+		return nil, nil
+	}
+
+	rows := make([]domain.Finding, 0, len(results))
+	for _, result := range results {
+		if !result.Failed() {
+			continue
+		}
+		rows = append(rows, domain.Finding{
+			Check:    result.Name,
+			Severity: result.Severity,
+			// The tool measured these bytes, and causal is what makes it able to
+			// block: what a linter reports on the candidate is the candidate's.
+			Causal:   true,
+			Evidence: domain.EvidenceCited,
+			Why:      checkWhy(result),
+		})
+	}
+	return rows, nil
+}
+
+// checkWhy is the row's evidence: how the tool ended and what it said. The first
+// line stands alone so a person reading the verdict sees the reason before the
+// noise.
+func checkWhy(result domain.CheckResult) string {
+	var out strings.Builder
+	switch result.Status {
+	case domain.CheckFailed:
+		fmt.Fprintf(&out, "the check %s exited %d", result.Name, result.Exit)
+	case domain.CheckTimedOut:
+		out.WriteString("the check " + result.Name + " was stopped by the ceiling")
+		if result.Note != "" {
+			out.WriteString(" (" + result.Note + ")")
+		}
+	default:
+		out.WriteString("the check " + result.Name + " could not run")
+		if result.Note != "" {
+			out.WriteString(": " + result.Note)
+		}
+	}
+	if output := strings.TrimSpace(result.Output); output != "" {
+		out.WriteString("\n" + output)
+	}
+	return out.String()
+}
+
+// appendMissing adds the rows a verdict does not already carry, by the same
+// identity the store files every finding under: a second part of one run, or a
+// draw that paid again, cannot file the same check twice.
+func appendMissing(findings, extra []domain.Finding) []domain.Finding {
+	seen := make(map[string]bool, len(findings))
+	for _, finding := range findings {
+		seen[findingKey(finding)] = true
+	}
+	for _, row := range extra {
+		if seen[findingKey(row)] {
+			continue
+		}
+		findings = append(findings, row)
+	}
+	return findings
 }

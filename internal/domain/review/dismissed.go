@@ -34,6 +34,9 @@ type Dismissal struct {
 	// Path and Line are the row's place, for a person reading the file.
 	Path string `json:"path"`
 	Line int    `json:"line,omitempty"`
+	// Check names the tool that filed the row, when a tool did. A check row has
+	// no place: what it judged is the candidate, and this is how the file says so.
+	Check string `json:"check,omitempty"`
 	// Reason is the human's evidence. It is required: a dismissal without one is
 	// silence wearing a decision's clothes.
 	Reason string `json:"reason"`
@@ -91,8 +94,11 @@ func ParseDismissals(data []byte) (Dismissals, error) {
 		if !hashLike(strings.TrimSpace(row.Fingerprint)) {
 			return Dismissals{}, fmt.Errorf("dismissal %d says fingerprint %q; a fingerprint is hex like a hash, and one that is not names nothing", i+1, row.Fingerprint)
 		}
-		if strings.TrimSpace(row.Path) == "" {
-			return Dismissals{}, fmt.Errorf("dismissal %d does not say path: without the file it judged nothing", i+1)
+		if strings.TrimSpace(row.Path) == "" && strings.TrimSpace(row.Check) == "" {
+			return Dismissals{}, fmt.Errorf("dismissal %d does not say path: without the file or the tool it judged nothing", i+1)
+		}
+		if strings.TrimSpace(row.Check) != "" && row.Line != 0 {
+			return Dismissals{}, fmt.Errorf("dismissal %d is the check %q and says line %d: a tool judged the candidate, not a line", i+1, row.Check, row.Line)
 		}
 		if strings.TrimSpace(row.Reason) == "" {
 			return Dismissals{}, fmt.Errorf("dismissal %d (%s) does not say why: a dismissal without evidence is silence, not a judgment", i+1, row.Path)

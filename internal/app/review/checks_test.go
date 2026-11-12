@@ -218,3 +218,176 @@ func TestAProjectThatDeclaresNoChecksRunsNothing(t *testing.T) {
 		t.Errorf("the prompt claims checks nobody declared:\n%s", result.Prompt)
 	}
 }
+
+// storedVerdictOf is what the run filed for the current tree.
+func (p *project) storedVerdictOf(t *testing.T) domainreview.Verdict {
+	t.Helper()
+	verdict, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	return verdict
+}
+
+// TestAFailingCheckIsAFindingTheVerdictCarries: the tool filed the row, so the
+// reviewer cannot approve past it. A warning is information and a critical blocks,
+// exactly as it does for a row a person wrote.
+func TestAFailingCheckIsAFindingTheVerdictCarries(t *testing.T) {
+	p := newProject()
+	p.approveChecks([]domainreview.Check{lintCheck})
+	p.shell.script = []fakeAnswer{
+		{output: "a.go:1:1: something is wrong\n", exitCode: 1},
+		{output: `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`},
+	}
+
+	result := p.run(review.Options{Exec: "revisor", Checks: []domainreview.Check{lintCheck}})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored := p.storedVerdictOf(t)
+	if len(stored.Findings) != 1 {
+		t.Fatalf("findings = %+v, want the check's row", stored.Findings)
+	}
+	row := stored.Findings[0]
+	if row.Check != "lint" {
+		t.Errorf("the row does not name the check: %+v", row)
+	}
+	if row.Path != "" || row.Line != 0 {
+		t.Errorf("the row claims a place: path %q line %d, want neither", row.Path, row.Line)
+	}
+	if row.Severity != domainreview.Warning {
+		t.Errorf("severity = %q, want the declared WARNING", row.Severity)
+	}
+	if !strings.Contains(row.Why, "a.go:1:1: something is wrong") {
+		t.Errorf("the row does not carry the tool's words: %q", row.Why)
+	}
+	if stored.Verdict != domainreview.Approved {
+		t.Errorf("verdict = %q, want %q: a warning does not block", stored.Verdict, domainreview.Approved)
+	}
+}
+
+// TestACheckDeclaredAtCriticalBlocksTheTree: the severity is the project's, and the
+// project that declares a blocker gets a blocker.
+func TestACheckDeclaredAtCriticalBlocksTheTree(t *testing.T) {
+	p := newProject()
+	blocking := lintCheck
+	blocking.Severity = domainreview.Critical
+	p.approveChecks([]domainreview.Check{blocking})
+	p.shell.script = []fakeAnswer{
+		{output: "a.go:1:1: something is wrong\n", exitCode: 1},
+		{output: `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`},
+	}
+
+	result := p.run(review.Options{Exec: "revisor", Checks: []domainreview.Check{blocking}})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored := p.storedVerdictOf(t)
+	if stored.Verdict != domainreview.ChangesRequested {
+		t.Errorf("verdict = %q, want %q", stored.Verdict, domainreview.ChangesRequested)
+	}
+}
+
+// TestAPassingCheckFilesNoRow: a tool that found nothing wrote nothing, and the
+// verdict is the reviewer's alone.
+func TestAPassingCheckFilesNoRow(t *testing.T) {
+	p := newProject()
+	p.approveChecks([]domainreview.Check{lintCheck})
+	p.shell.script = []fakeAnswer{
+		{},
+		{output: `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`},
+	}
+
+	result := p.run(review.Options{Exec: "revisor", Checks: []domainreview.Check{lintCheck}})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if stored := p.storedVerdictOf(t); len(stored.Findings) != 0 {
+		t.Errorf("findings = %+v, want none for a passing check", stored.Findings)
+	}
+}
+
+// TestACheckThisCloneNeverApprovedFilesNoRow: nothing ran, so nothing is filed, and
+// the verdict never claims a measurement nobody made.
+func TestACheckThisCloneNeverApprovedFilesNoRow(t *testing.T) {
+	p := newProject()
+	p.shell.script = []fakeAnswer{
+		{output: `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`},
+	}
+
+	result := p.run(review.Options{Exec: "revisor", Checks: []domainreview.Check{lintCheck}})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if stored := p.storedVerdictOf(t); len(stored.Findings) != 0 {
+		t.Errorf("findings = %+v, want none: the tools never ran", stored.Findings)
+	}
+}
+
+// fileCheck is one failing blocking check, run and stored, ready to be dismissed.
+func fileCheck(t *testing.T) *project {
+	t.Helper()
+	t.Parallel()
+
+	p := newProject()
+	blocking := lintCheck
+	blocking.Severity = domainreview.Critical
+	p.approveChecks([]domainreview.Check{blocking})
+	p.shell.script = []fakeAnswer{
+		{output: "a.go:1:1: something is wrong\n", exitCode: 1},
+		{output: `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`},
+	}
+	if result := p.run(review.Options{Exec: "revisor", Checks: []domainreview.Check{blocking}}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	return p
+}
+
+// TestACheckRowIsDismissedByNamingTheTool: an analyzer has no reasoning to refute,
+// so the human's recorded reason is the whole judgment -and the gate opens only
+// with that reason written beside the verdict.
+func TestACheckRowIsDismissedByNamingTheTool(t *testing.T) {
+	p := fileCheck(t)
+
+	result := p.run(review.Options{
+		Dismiss: "check:lint",
+		Because: "the ruleset flags a pattern this file must keep",
+	})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "dismissed check:lint") {
+		t.Errorf("message = %q, want it to name the tool", result.Message)
+	}
+
+	sidecar, err := domainreview.DismissedPath(currentTree)
+	if err != nil {
+		t.Fatalf("DismissedPath = %v", err)
+	}
+	dismissals, err := domainreview.ParseDismissals(p.files.files[filepath.Join(store, filepath.FromSlash(sidecar))])
+	if err != nil {
+		t.Fatalf("the dismissals do not parse: %v", err)
+	}
+	if len(dismissals.Rows) != 1 || dismissals.Rows[0].Check != "lint" {
+		t.Fatalf("the dismissal does not name the tool: %+v", dismissals.Rows)
+	}
+}
+
+// TestADismissalOfACheckThatIsNotThereNamesTheToolsItHas: the human copies a name,
+// and a name that is not in the verdict reads the ones that are.
+func TestADismissalOfACheckThatIsNotThereNamesTheToolsItHas(t *testing.T) {
+	p := fileCheck(t)
+
+	result := p.run(review.Options{
+		Dismiss: "check:vuln",
+		Because: "not this one",
+	})
+	if result.Code == review.CodeOK {
+		t.Fatalf("dismissing a row that is not there = 0, want a refusal (%s)", result.Message)
+	}
+	if !strings.Contains(result.Message, "check:lint") {
+		t.Errorf("the refusal %q does not name the rows the verdict holds", result.Message)
+	}
+}

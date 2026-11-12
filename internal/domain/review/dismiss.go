@@ -58,6 +58,12 @@ func Fingerprint(f Finding) string {
 		strings.ToLower(strings.TrimSpace(f.Lens)),
 		evidence,
 	}
+	// The tool that filed the row is part of what the row is, and it is appended
+	// last: a finding about a file hashes exactly as it did before checks existed,
+	// so every dismissal a store already holds still names the same defect.
+	if strings.TrimSpace(f.Check) != "" {
+		parts = append(parts, strings.ToLower(strings.TrimSpace(f.Check)))
+	}
 	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
 	return hex.EncodeToString(sum[:])[:16]
 }
