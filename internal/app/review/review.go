@@ -551,6 +551,7 @@ func mergeVerdicts(existing, incoming domain.Verdict) domain.Verdict {
 	merged.Findings = appendUnseenFindings(existing.Findings, incoming.Findings)
 	merged.Passes = appendUnseenPasses(existing.Passes, incoming.Passes)
 	merged.Lenses = append(append([]string{}, existing.Lenses...), incoming.Lenses...)
+	merged.Draws = sumDraws(existing.Draws, incoming.Draws)
 	// The same command asked again is the same reviewer: repeating its name would
 	// read as a second judge, and a second draw is one judge reading twice.
 	switch {
@@ -644,6 +645,22 @@ func appendUnseenPasses(existing, incoming []domain.Pass) []domain.Pass {
 		merged = append(merged, pass)
 	}
 	return merged
+}
+
+// sumDraws adds the answers each half paid for: a lens drawn three times across two
+// runs is three draws, never one and one that a reader has to add up.
+func sumDraws(existing, incoming map[string]int) map[string]int {
+	if len(existing) == 0 && len(incoming) == 0 {
+		return nil
+	}
+	sum := make(map[string]int, len(existing)+len(incoming))
+	for lens, count := range existing {
+		sum[lens] = count
+	}
+	for lens, count := range incoming {
+		sum[lens] += count
+	}
+	return sum
 }
 
 // refute prints the refuter's prompt for a verdict someone already filed. It is
@@ -1185,6 +1202,15 @@ func (r *runner) exec() Result {
 			for _, lens := range group.lenses {
 				parsed.Models[lens] = parsed.Model
 			}
+		}
+
+		// One landing is one answer: the count a lens carries grows by one per draw,
+		// and a later run's top-up adds to what the file already counted.
+		if parsed.Draws == nil {
+			parsed.Draws = map[string]int{}
+		}
+		for _, lens := range group.lenses {
+			parsed.Draws[lens] = 1
 		}
 
 		// The lenses are the ones this reviewer was asked to answer, not the ones
@@ -3651,7 +3677,11 @@ func lenses(covered []string) string {
 func lensLine(required []string, verdict domain.Verdict) string {
 	covered := "none"
 	if len(verdict.Lenses) > 0 {
-		covered = strings.Join(verdict.Lenses, ", ")
+		paid := make([]string, 0, len(verdict.Lenses))
+		for _, lens := range verdict.Lenses {
+			paid = append(paid, lens+" ("+drawCount(verdict.DrawsFor(lens))+")")
+		}
+		covered = strings.Join(paid, ", ")
 	}
 
 	needed := "none"
@@ -3659,6 +3689,16 @@ func lensLine(required []string, verdict domain.Verdict) string {
 		needed = strings.Join(required, ", ")
 	}
 	return "lenses: " + covered + " · required: " + needed
+}
+
+// drawCount is how many answers paid for one lens, in the words a person reads. One
+// is written too: an approval with no number beside it is the silence the field
+// exists to remove.
+func drawCount(n int) string {
+	if n == 1 {
+		return "1 draw"
+	}
+	return strconv.Itoa(n) + " draws"
 }
 
 // refutationLine is the witnesses as `--show` reports them: which files answered,

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -161,6 +162,11 @@ type Verdict struct {
 	// evidence; the prompt it was given is. A verdict stored before lenses existed
 	// has none, and the optional gate treats that as "covers nothing".
 	Lenses []string `json:"lenses,omitempty"`
+	// Draws is how many answers paid for each lens: one draw is one call to the
+	// judge, and a verdict paid by three says so instead of leaving a reader to
+	// assume one. A lens with no entry was paid once -what every verdict written
+	// before the field could say- so an old file reads exactly as it did.
+	Draws map[string]int `json:"draws,omitempty"`
 	// Passes are the clean answers: (path, blob, lens) rows a lens audited and
 	// found empty. They are the other half of coverage — a finding answers its
 	// own row, a pass answers the row of a clean blob. A verdict stored before
@@ -180,6 +186,17 @@ type Verdict struct {
 // decide which findings travel beyond the paths a candidate judged.
 func (f Finding) Blocks() bool {
 	return !IsDismissed(f) && f.Causal && f.Severity.Blocks()
+}
+
+// DrawsFor is how many answers paid for one lens. A lens the file does not count
+// was paid once: the count is the field's meaning, and a verdict written before the
+// field made exactly one call. Nothing reads a missing entry as zero, because zero
+// answers is not a verdict at all.
+func (v Verdict) DrawsFor(lens string) int {
+	if draws := v.Draws[strings.ToLower(strings.TrimSpace(lens))]; draws > 0 {
+		return draws
+	}
+	return 1
 }
 
 // Missing reports which required lenses this verdict does not cover, in the order
@@ -334,6 +351,25 @@ func (v Verdict) Validate() error {
 		}
 	}
 
+	// The count is per lens and the tool stamps it: a key the vocabulary does not
+	// know is a word nobody can read, and a count below one is a lens that no
+	// answer paid for, which is a verdict about nothing.
+	drawLenses := make([]string, 0, len(v.Draws))
+	for lens := range v.Draws {
+		drawLenses = append(drawLenses, lens)
+	}
+	sort.Strings(drawLenses)
+	for _, lens := range drawLenses {
+		if !IsLens(lens) {
+			return fmt.Errorf("the verdict says %d draws paid for the lens %q; the lenses are %s",
+				v.Draws[lens], lens, strings.Join(order, ", "))
+		}
+		if v.Draws[lens] < 1 {
+			return fmt.Errorf("the verdict says %d draws paid for the lens %s; a lens no answer paid for was not judged",
+				v.Draws[lens], lens)
+		}
+	}
+
 	// The verdict is derived, never administered: an author who declares one that
 	// contradicts their own findings has misread the rule, and storing it would
 	// hide the finding with the severity vocabulary.
@@ -438,11 +474,26 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 	sealed.Models = models
 	sealed.At = instant(v.At, now)
 	sealed.Lenses = inOrder(v.Lenses)
+	sealed.Draws = normalizeDraws(v.Draws)
 	sealed.Verdict = Derive(v.Findings)
 	if sealed.Findings == nil {
 		sealed.Findings = []Finding{}
 	}
 	return sealed, nil
+}
+
+// normalizeDraws files every count under the lens name the vocabulary uses, so a
+// hand-written "Reliability" and a stamped "reliability" are one key. The counts
+// themselves were validated before this runs.
+func normalizeDraws(draws map[string]int) map[string]int {
+	if len(draws) == 0 {
+		return nil
+	}
+	normalized := make(map[string]int, len(draws))
+	for lens, count := range draws {
+		normalized[strings.ToLower(strings.TrimSpace(lens))] = count
+	}
+	return normalized
 }
 
 // Name is the file a verdict for one tree lives in. The tree is the name.

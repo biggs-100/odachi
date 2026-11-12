@@ -21,8 +21,8 @@ func warningDraw(line int, why string) string {
 	return fmt.Sprintf(`{"inspection":{"status":"completed","paths":["a.go"]},"findings":[{"path":"a.go","line":%d,"severity":"WARNING","lens":"reliability","causal":true,"why":%q}]}`, line, why)
 }
 
-// filedFindings reads the verdict the run filed for the current tree.
-func filedFindings(t *testing.T, p *project) []domainreview.Finding {
+// filedVerdict reads the verdict the run filed for the current tree.
+func filedVerdict(t *testing.T, p *project) domainreview.Verdict {
 	t.Helper()
 	data, ok := p.files.files[storePath(currentTree)]
 	if !ok {
@@ -32,7 +32,13 @@ func filedFindings(t *testing.T, p *project) []domainreview.Finding {
 	if err != nil {
 		t.Fatalf("the filed verdict does not parse: %v", err)
 	}
-	return parsed.Findings
+	return parsed
+}
+
+// filedFindings reads the rows the run filed for the current tree.
+func filedFindings(t *testing.T, p *project) []domainreview.Finding {
+	t.Helper()
+	return filedVerdict(t, p).Findings
 }
 
 // TestReviewRefusesADrawCountItCannotPay: --runs is a count of answers, and a count
@@ -146,5 +152,54 @@ func TestTwoDrawsThatNameOneDefectPayOneRow(t *testing.T) {
 	}
 	if findings[0].Why != "the first draw said it this way" {
 		t.Errorf("the row kept %q, want the words of the draw that paid first", findings[0].Why)
+	}
+}
+
+// TestTheVerdictSaysHowManyDrawsPaidForEachLens: the count is in the file, so a
+// reader of an approval can tell one answer from three without asking the person
+// who paid. One landing is one answer.
+func TestTheVerdictSaysHowManyDrawsPaidForEachLens(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = oneAnswer
+
+	if result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 3}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	if got := filedVerdict(t, p).DrawsFor("reliability"); got != 3 {
+		t.Errorf("draws for reliability = %d, want the three answers that landed", got)
+	}
+}
+
+// TestShowPrintsTheDrawsBesideTheLenses: --show is where a person reads what a tree
+// holds, so the count has to be there. A verdict approved by three answers must not
+// read like one approved by one.
+func TestShowPrintsTheDrawsBesideTheLenses(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.output = oneAnswer
+	if result := p.run(review.Options{Exec: "revisor --model {model}", Runs: 3}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	shown := strings.Join(p.run(review.Options{Show: true}).Lines, "\n")
+
+	if !strings.Contains(shown, "reliability (3 draws)") {
+		t.Errorf("--show does not print the count beside the lens:\n%s", shown)
+	}
+}
+
+// TestAVerdictStoredBeforeTheFieldReadsAsOneDraw: every verdict already in a store
+// was paid by one answer, and the field that says so arrived later. Reading silence
+// as zero would turn the whole store into reviews nobody paid for.
+func TestAVerdictStoredBeforeTheFieldReadsAsOneDraw(t *testing.T) {
+	p := newProject()
+	p.files.files[storePath(currentTree)] = domainreview.Render(warningVerdict(t, currentTree))
+
+	shown := strings.Join(p.run(review.Options{Show: true}).Lines, "\n")
+
+	if !strings.Contains(shown, "reliability (1 draw)") {
+		t.Errorf("--show does not read an absent count as one draw:\n%s", shown)
 	}
 }
