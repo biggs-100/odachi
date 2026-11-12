@@ -548,10 +548,17 @@ func containsLens(lenses []string, lens string) bool {
 // and an answer that was already paid for is not replaced by a second opinion.
 func mergeVerdicts(existing, incoming domain.Verdict) domain.Verdict {
 	merged := existing
-	merged.Findings = append(append([]domain.Finding{}, existing.Findings...), incoming.Findings...)
-	merged.Passes = append(append([]domain.Pass{}, existing.Passes...), incoming.Passes...)
+	merged.Findings = appendUnseenFindings(existing.Findings, incoming.Findings)
+	merged.Passes = appendUnseenPasses(existing.Passes, incoming.Passes)
 	merged.Lenses = append(append([]string{}, existing.Lenses...), incoming.Lenses...)
-	merged.Reviewer = existing.Reviewer + " + " + incoming.Reviewer
+	// The same command asked again is the same reviewer: repeating its name would
+	// read as a second judge, and a second draw is one judge reading twice.
+	switch {
+	case existing.Reviewer == "":
+		merged.Reviewer = incoming.Reviewer
+	case incoming.Reviewer != "" && incoming.Reviewer != existing.Reviewer:
+		merged.Reviewer = existing.Reviewer + " + " + incoming.Reviewer
+	}
 	merged.At = incoming.At
 	merged.Verdict = ""
 	merged.Inspection = domain.MergeInspection(existing.Inspection, incoming.Inspection)
@@ -595,6 +602,48 @@ func appendUnique(values []string, value string) []string {
 		}
 	}
 	return append(values, value)
+}
+
+// appendUnseenFindings keeps every row the verdict already had and adds only the
+// defects it did not name. A defect is identified by its file, bytes, lens, place
+// and severity -never by the sentence that describes it-, so a second draw of the
+// same judge repeats a defect or says something new, and repeating it pays one row.
+// The words of the row that already stood survive: they are what the first payment
+// bought, and the second draw's sentence is a rewording, not a new fact.
+func appendUnseenFindings(existing, incoming []domain.Finding) []domain.Finding {
+	merged := append([]domain.Finding{}, existing...)
+	seen := make(map[string]bool, len(existing))
+	for _, finding := range existing {
+		seen[findingKey(finding)] = true
+	}
+	for _, finding := range incoming {
+		key := findingKey(finding)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		merged = append(merged, finding)
+	}
+	return merged
+}
+
+// appendUnseenPasses is the same rule for a clean row: one file audited under one
+// lens is one row, however many draws audited it.
+func appendUnseenPasses(existing, incoming []domain.Pass) []domain.Pass {
+	merged := append([]domain.Pass{}, existing...)
+	seen := make(map[string]bool, len(existing))
+	for _, pass := range existing {
+		seen[passKey(pass)] = true
+	}
+	for _, pass := range incoming {
+		key := passKey(pass)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		merged = append(merged, pass)
+	}
+	return merged
 }
 
 // refute prints the refuter's prompt for a verdict someone already filed. It is
@@ -1012,7 +1061,9 @@ func (r *runner) exec() Result {
 	var landed []string
 	var notes []string
 	var last Result
-	for i, unit := range units {
+	// Every unit is asked as many times as --runs asked for: a draw is one answer,
+	// and one answer is one sample of a judge, not a verdict about the tree.
+	for _, unit := range r.draws(units) {
 		command := unit.command
 		group := lensGroup{lenses: unit.lenses, model: unit.model}
 
@@ -1020,7 +1071,7 @@ func (r *runner) exec() Result {
 		// lenses this group owns. The text was built and measured before any group
 		// ran: a reviewer started without one reviews whatever it decides to look
 		// at, and that is not the candidate this verdict is filed under.
-		text := prompts[i]
+		text := unit.prompt
 
 		// A command that names {verdict} is given a file before it runs, emptied
 		// first: an answer a previous group left there is not this group's, and a
@@ -1250,6 +1301,18 @@ func (r *runner) units(cand candidate, groups []lensGroup, commands, resolved []
 		}
 	}
 	return units, nil
+}
+
+// draws is every answer this run pays for, in a deterministic order: the units in
+// the order they were built, each one drawn as many times as --runs asked.
+func (r *runner) draws(units []unit) []unit {
+	draws := make([]unit, 0, len(units)*r.opts.Runs)
+	for _, u := range units {
+		for n := 0; n < r.opts.Runs; n++ {
+			draws = append(draws, u)
+		}
+	}
+	return draws
 }
 
 // splitRefusal is the refusal a split cannot answer: the size, the limit, the file
