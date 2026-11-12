@@ -17,7 +17,7 @@ R1 · "el piso corre de verdad: golangci-lint corre en cada review y la deuda qu
 - [x] T2 · los 38 errores ignorados se contestan: errcheck sale cero y cada Close y Release dice que hace con su error   R1 · route:inline · tree:c58448f3d128f0557617b118374f313a5e9cbd01
 - [x] T3 · lo que el linter llama muerto se borra: unused, ineffassign y staticcheck salen cero   R1 · route:inline · tree:f0800e08091b41c336e90d1404bc608a77f17d67
 - [x] T4 · el piso se declara a CRITICAL, este clon lo aprueba, y un review de este arbol dice lint: passed   R1 · route:inline · tree:d41790cbaeb8739e6f89b4bea46dcf51d261a28b
-- [ ] T5 · la cara: el README dice como se declara un piso y el changelog nombra la feature   R1 · route:inline
+- [x] T5 · la cara: el README dice como se declara un piso y el changelog nombra la feature   R1 · route:inline · tree:c1d3882f9786db128f30b146b0551a20499b867f
 
 ## History
 L1 · "el piso corre de verdad: golangci-lint corre en cada review y la deuda que encuentra se paga"
