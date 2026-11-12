@@ -201,3 +201,28 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0279 · el-piso-corre
+
+## What must exist
+- el piso corre de verdad: golangci-lint corre en cada review y la deuda que encuentra se paga
+
+## Done when
+- el ruleset queda fijado en .golangci.yml y golangci-lint run ./... sale cero en este arbol
+- los 46 hallazgos se arreglan o se borran: nada queda silenciado con //nolint sin la razon escrita
+- odd/review.toml declara la comprobacion a CRITICAL, este clon la aprobo, y un review dice lint: passed
+- un arbol con un hallazgo nuevo deja la fila check:lint en el veredicto y pide cambios
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0279)
+
+## Not included (first version)
+- no new linter beyond the pinned set: no --enable-all, and a linter joins the ruleset as a decision, not as a step
+- no silencing: a finding is fixed or deleted, and a //nolint carries the reason and the row it answers
+- govulncheck is not in this feature: it is not installed, and installing a tool is a decision of its own
+- the review's own code changes only where a linter names it: this feature uses the mechanism, it does not extend it
+- the standing blocker of Part 8's second item is not here
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.
