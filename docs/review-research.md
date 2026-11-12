@@ -379,9 +379,11 @@ The order that follows from the measurement:
 3. **Make the clean arm clean** (C4): the probe's precision number is only worth
    reading once the arm with nothing planted is code a person would approve, and
    the first run says it is not. Then repeat the run across models.
-   *The last clause is half kept*: a verdict stopped being one draw in `v0.39.0`
-   (`--runs`), and the first field reading is in Part 5b -a full second read found a
-   CRITICAL the first had approved-. Repeating the probe across models is still open.
+   *The last clause is started*: a verdict stopped being one draw in `v0.39.0`
+   (`--runs`), the first field reading is in Part 5b -a full second read found a
+   CRITICAL the first had approved-, and Part 5c repeated the probe across two
+   models, one draw each, which the split of `0282` made comparable. A third model
+   with `--runs 5` is still open.
 
 Then, in a second wave: heterogeneous judges for full-tier trees, size-based
 escalation of the tier, changed-line coverage as a floor signal, and the fixture
