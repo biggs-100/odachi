@@ -226,3 +226,27 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0280 · un-cierre-que
+
+## What must exist
+- un cierre que trae un veredicto que pide cambios lo dice en la linea del gate y solo pasa con una dispensa humana escrita
+
+## Done when
+- un cierre con un hallazgo bloqueante es NeedsDecision y la linea nombra el hallazgo y la dispensa que lo contesta
+- odachi review waive --because registra la huella del hallazgo y quien dispensa, en el task doc
+- con esa huella dispensada el cierre pasa, y la linea sigue diciendo que el review pidio cambios y quien lo dispenso
+- un hallazgo distinto de un arbol posterior vuelve a frenar: la dispensa no se hereda
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0280)
+
+## Not included (first version)
+- no waiver without a reason and no waiver without a who: a dispensa is a named decision, and silence is what the file beside the verdict exists to replace
+- the dismissal of a warning is untouched: this is about a row that blocks, not about retiring noise
+- the review itself does not change: no new verdict, no new draw, and the reviewer keeps its word
+- govulncheck and the other Part 8 items are not here
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.

@@ -3804,6 +3804,10 @@ func findingLine(finding domain.Finding) string {
 	line := where + " · " + string(finding.Severity) + " · " + causal + " · " + finding.Why
 	if domain.IsDismissed(finding) {
 		line += " · dismissed: " + finding.Reason
+	} else if finding.Causal && finding.Severity.Blocks() {
+		// A row that stops the close prints the identity a waiver answers, so the
+		// human copies it instead of provoking the gate to learn it.
+		line += " · row " + domain.Fingerprint(finding)
 	}
 	return line
 }

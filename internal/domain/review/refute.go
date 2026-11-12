@@ -274,6 +274,18 @@ func IndexOf(findings []Finding, finding Finding) int {
 // file order: causal, BLOCKER or CRITICAL, not dismissed with evidence, and not
 // lifted by the refutations filed for this tree.
 func BlockingAfter(findings []Finding, answers Answers) (Finding, bool) {
+	for _, finding := range BlockingAllAfter(findings, answers) {
+		return finding, true
+	}
+	return Finding{}, false
+}
+
+// BlockingAllAfter is every row that still blocks, in the same order and by the
+// same rule. A verdict can stand behind more than one row, so a gate that answers
+// them has to see all of them: answering the first and stopping is how the second
+// one disappears.
+func BlockingAllAfter(findings []Finding, answers Answers) []Finding {
+	var blocking []Finding
 	for i, finding := range findings {
 		if IsDismissed(finding) {
 			continue
@@ -284,9 +296,9 @@ func BlockingAfter(findings []Finding, answers Answers) (Finding, bool) {
 		if answers.Lifts(findingID(i), finding) {
 			continue
 		}
-		return finding, true
+		blocking = append(blocking, finding)
 	}
-	return Finding{}, false
+	return blocking
 }
 
 // DeriveAfter is the whole rule with refutations taken into account: a causal

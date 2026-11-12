@@ -777,16 +777,18 @@ func runReviewProbe(dir string, args []string, stdout, stderr io.Writer) int {
 // project with one model needs, and it is a decision on the document rather than a
 // flag that dies with the shell.
 func runReviewWaive(dir string, args []string, stdout, stderr io.Writer) int {
-	const usageLine = `usage: odachi review waive --because "<why this feature lands without a verdict>" [--json]`
+	const usageLine = `usage: odachi review waive --because "<why>" [--row <fingerprint>] [--json]`
 
 	flags := flag.NewFlagSet("odachi review waive", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
 	var (
 		because string
+		row     string
 		asJSON  bool
 	)
-	flags.StringVar(&because, "because", "", "why this feature lands without a review verdict")
+	flags.StringVar(&because, "because", "", "why the feature lands without a verdict, or why the tree ships with this row open")
+	flags.StringVar(&row, "row", "", "the fingerprint of one blocking row the decision answers, as the gate prints it")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	if err := flags.Parse(args); err != nil {
@@ -802,7 +804,12 @@ func runReviewWaive(dir string, args []string, stdout, stderr io.Writer) int {
 		return start.CodeBlocked
 	}
 
-	result := reviewapp.Waive(reviewapp.WaiveOptions{Dir: dir, Because: because}, disk(dir))
+	result := reviewapp.Waive(reviewapp.WaiveOptions{
+		Dir:     dir,
+		Because: because,
+		Row:     row,
+		By:      firstOf(os.Getenv("USERNAME"), os.Getenv("USER")),
+	}, disk(dir))
 	return reportReview(result, asJSON, stdout, stderr)
 }
 
@@ -1805,7 +1812,7 @@ usage:
   odachi review [--lens <lens>]
   odachi review mode [status|on|off]
   odachi review checks [status|approve]
-  odachi review waive --because "<why>"
+  odachi review waive --because "<why>" [--row <fingerprint>]
   odachi review probe [--runs N] [--exec "<command>"]
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]

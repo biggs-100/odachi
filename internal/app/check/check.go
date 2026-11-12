@@ -988,6 +988,24 @@ func (r *runner) reviewGate(feature *tasks.Document) *Result {
 	return r.softened(r.requireReview(""))
 }
 
+// waivedRow reports whether the open feature's document answers this exact
+// blocking row. The fingerprint is the whole identity: another row, another tree
+// or changed bytes are another decision.
+func (r *runner) waivedRow(fingerprint string) bool {
+	if r.feature == nil {
+		return false
+	}
+	return r.feature.Doc.WaivedRow(fingerprint)
+}
+
+// pluralRows is the word for a count of rows: one row, two rows.
+func pluralRows(n int) string {
+	if n == 1 {
+		return "row"
+	}
+	return "rows"
+}
+
 // softened turns a review refusal into a note unless the human asked to be refused.
 // The review does not authorise delivery (ADR 0043): with the project's switch on,
 // a close names what the review says and the commit proceeds. The one refusal that
@@ -1393,16 +1411,50 @@ func (r *runner) requireReview(base string) *Result {
 		return problem
 	}
 
-	if finding, blocking := reviewdomain.BlockingAfter(verdict.Findings, answers); blocking {
+	// Every row the review stands behind has to be answered: a verdict can carry
+	// more than one, and a waiver answers exactly one. Answering the first row and
+	// stopping would hide the rest behind it.
+	blockingRows := reviewdomain.BlockingAllAfter(verdict.Findings, answers)
+	if len(blockingRows) > 0 {
+		open := make([]reviewdomain.Finding, 0, len(blockingRows))
+		waived := make([]string, 0, len(blockingRows))
+		for _, row := range blockingRows {
+			fingerprint := reviewdomain.Fingerprint(row)
+			if r.waivedRow(fingerprint) {
+				waived = append(waived, fingerprint)
+				continue
+			}
+			open = append(open, row)
+		}
+		if len(open) == 0 {
+			// The decision is the human's and it is written down: the close goes
+			// through, and the line keeps saying both halves, because a waiver
+			// that hides what it answered is the silent gate with a signature.
+			r.reviewNote = "the review asked for changes and the human waived " +
+				pluralRows(len(waived)) + " " + strings.Join(waived, ", ") +
+				": " + oneLine(reviewFinding(blockingRows[0]))
+			return nil
+		}
+
+		finding := open[0]
 		message := "the review asks for changes: " + oneLine(reviewFinding(finding))
+		if len(open) > 1 {
+			message += fmt.Sprintf(" (and %d more %s that block)", len(open)-1, pluralRows(len(open)-1))
+		}
+		if len(waived) > 0 {
+			message += "; waived: " + strings.Join(waived, ", ")
+		}
+		next := "odachi review waive --row " + reviewdomain.Fingerprint(finding) + ` --because "<why the tree ships with this row open>"`
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewChanges,
 			Message: message,
-			Next:    "odachi review --show",
+			Next:    next,
 			Lines: []string{
 				message,
 				"next: odachi review --show",
+				next,
+				"why: a row the review stands behind is a decision, and the decision is the human's to write down",
 			},
 		}
 		if votes := blockVote(verdict.Findings, answers, finding); votes != "" {
