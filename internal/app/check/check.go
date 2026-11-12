@@ -1395,14 +1395,17 @@ func (r *runner) requireReview(base string) *Result {
 
 	if finding, blocking := reviewdomain.BlockingAfter(verdict.Findings, answers); blocking {
 		message := "the review asks for changes: " + oneLine(reviewFinding(finding))
+		next := "odachi review waive --row " + reviewdomain.Fingerprint(finding) + ` --because "<why the tree ships with this row open>"`
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewChanges,
 			Message: message,
-			Next:    "odachi review --show",
+			Next:    next,
 			Lines: []string{
 				message,
 				"next: odachi review --show",
+				next,
+				"why: a row the review stands behind is a decision, and the decision is the human's to write down",
 			},
 		}
 		if votes := blockVote(verdict.Findings, answers, finding); votes != "" {

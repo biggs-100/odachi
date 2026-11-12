@@ -1500,4 +1500,20 @@ func TestAModeOnCloseStillStopsForABlocker(t *testing.T) {
 	if got.Reason != check.ReasonReviewChanges {
 		t.Errorf("reason = %q, want %q", got.Reason, check.ReasonReviewChanges)
 	}
+
+	// The refusal is a decision the human can make: it hands over the exact row —
+	// by fingerprint — and the command that records the decision, so the way out
+	// is not "edit something until the gate goes quiet".
+	printed := strings.Join(append([]string{got.Message}, got.Lines...), "\n")
+	row := domainreview.Fingerprint(blocking.Findings[0])
+	for _, want := range []string{
+		"the review asks for changes",
+		"pierde el turno",
+		"--row " + row,
+		`--because "<why the tree ships with this row open>"`,
+	} {
+		if !strings.Contains(printed, want) {
+			t.Errorf("the refusal does not carry %q:\n%s", want, printed)
+		}
+	}
 }
