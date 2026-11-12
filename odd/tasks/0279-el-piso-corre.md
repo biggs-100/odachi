@@ -15,7 +15,7 @@ R1 · "el piso corre de verdad: golangci-lint corre en cada review y la deuda qu
 ## Steps
 - [x] T1 · el ruleset queda fijado en .golangci.yml: cinco linters nombrados y una version nueva no mueve el piso   R1 · route:inline · tree:0b58026d7789f7a1fb516a26ef11baec2097147e
 - [x] T2 · los 38 errores ignorados se contestan: errcheck sale cero y cada Close y Release dice que hace con su error   R1 · route:inline · tree:c58448f3d128f0557617b118374f313a5e9cbd01
-- [ ] T3 · lo que el linter llama muerto se borra: unused, ineffassign y staticcheck salen cero   R1 · route:inline
+- [x] T3 · lo que el linter llama muerto se borra: unused, ineffassign y staticcheck salen cero   R1 · route:inline · tree:f0800e08091b41c336e90d1404bc608a77f17d67
 - [ ] T4 · el piso se declara a CRITICAL, este clon lo aprueba, y un review de este arbol dice lint: passed   R1 · route:inline
 - [ ] T5 · la cara: el README dice como se declara un piso y el changelog nombra la feature   R1 · route:inline
 

@@ -20,4 +20,13 @@ readability = "opencode-go/deepseek-v4.1-flash"
 reliability = "opencode-go/deepseek-v4.1-flash"
 resilience = "opencode-go/deepseek-v4.1-flash"
 
+# the deterministic floor (0279): a linter is judged by its exit status, and this
+# one failing is a CRITICAL row the review cannot approve past. The ruleset is
+# pinned in .golangci.yml, so a linter upgrade cannot make it report on its own.
+[[check]]
+name = "lint"
+command = "golangci-lint run ./..."
+severity = "CRITICAL"
+
+
 
