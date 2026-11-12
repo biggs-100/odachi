@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.40.3 - 2026-11-12
 
 - **The probe's reading separates a suggestion from an invented row.** The score
   counted every finding nobody planted with one number, so a reviewer that proposed
