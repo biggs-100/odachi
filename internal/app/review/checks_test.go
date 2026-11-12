@@ -409,3 +409,31 @@ func TestADismissalOfACheckThatIsNotThereNamesTheToolsItHas(t *testing.T) {
 		t.Errorf("the refusal %q does not name the rows the verdict holds", result.Message)
 	}
 }
+
+// TestShowPrintsTheRowAWaiverAnswers: the human copies the identity the gate would
+// refuse on, instead of learning it by being stopped.
+func TestShowPrintsTheRowAWaiverAnswers(t *testing.T) {
+	p := newProject()
+	blocking := domainreview.Finding{
+		Path: "a.go", Line: 3, Severity: domainreview.Critical, Causal: true,
+		Lens: domainreview.Reliability, Why: "the round trip is lost", Blob: gitBlob,
+	}
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "revisor",
+		Lenses:   []string{domainreview.Reliability},
+		Findings: []domainreview.Finding{blocking},
+	}, currentTree, review.DefaultBase, now)
+	if err != nil {
+		t.Fatalf("Seal = %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(sealed)
+
+	result := p.run(review.Options{Show: true})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	printed := strings.Join(append([]string{result.Message}, result.Lines...), "\n")
+	if !strings.Contains(printed, "row "+domainreview.Fingerprint(blocking)) {
+		t.Errorf("--show does not print the row a waiver answers:\n%s", printed)
+	}
+}

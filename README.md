@@ -599,6 +599,16 @@ cloned `review.toml` runs nothing until the person who cloned it says
 -a command that changes asks again-. `odachi review checks` says what is declared
 and whether this clone agreed; a project that declares none runs none.
 
+A verdict that requests changes stops the close, and that is the review saying no
+rather than the review being absent. The gate prints the row it stands behind and
+the row's fingerprint; `odachi review --show` prints the same identity. A person
+who decides to ship anyway writes the decision down -
+`odachi review waive --row <fingerprint> --because "<why>"` - and it lands in the
+task document with the reason, who signed it and when. The close then goes
+through, and its line keeps saying both halves: what the review asked for and
+that the human waived it. The decision answers that row and only that row: another
+tree, changed bytes or a new finding ask again.
+
 Declare a floor after the debt is paid, not before: a check at `CRITICAL` blocks
 every review the day it is written, so a tree that already fails the linter stops
 being approvable by anyone, and the backlog becomes a wall. Pin the ruleset in the

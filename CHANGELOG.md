@@ -10,6 +10,17 @@ not a version.
 
 ## Unreleased
 
+- **A close that requests changes says so, and only a written waiver opens it.** A
+  verdict that stands behind a blocking row stops the close -the review saying no, not the
+  review being absent- and until now the only ways past it were a fix or a refutation, so a
+  person who decided to ship anyway had nowhere to say so. The gate now prints the row and
+  its fingerprint, `--show` prints the same identity, and `odachi review waive --row
+  <fingerprint> --because "<why>"` records the decision in the task document with the reason,
+  who signed it and when. The close then goes through and its line keeps saying both halves:
+  what the review asked for and that the human waived it. The decision answers that row and
+  only that row -another tree, changed bytes or a new finding ask again-, so the gate still
+  cannot be opened by omission. Patch (0280).
+
 - **The floor runs for real.** This project declares `golangci-lint run ./...` at
   `CRITICAL`, so every review runs it before any lens and a failure is a row the
   reviewer cannot approve past. The ruleset is pinned in `.golangci.yml` instead of
