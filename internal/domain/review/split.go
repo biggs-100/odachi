@@ -67,7 +67,7 @@ func Split(in PromptInput, limitKB int) ([]PromptInput, error) {
 		}
 
 		parts = append(parts, partOf(in, bin, carried.String()))
-		bin, carried = nil, strings.Builder{}
+		carried = strings.Builder{}
 		if !fits([]string{path}, hunks[path]) {
 			return nil, tooBigForAPart(path, in, limitKB)
 		}

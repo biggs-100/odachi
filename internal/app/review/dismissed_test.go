@@ -71,6 +71,7 @@ func TestTheHumansDismissalRetiresACarriedRow(t *testing.T) {
 	}
 	if carried == nil {
 		t.Fatal("the potent row did not travel")
+		return
 	}
 	if !domainreview.IsDismissed(*carried) {
 		t.Errorf("the row travels open: %+v", *carried)

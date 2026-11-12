@@ -1062,8 +1062,8 @@ func (r *runner) voiceCheck(check domaindoctor.Check, content string) domaindoct
 	}
 	if len(notes) > 0 {
 		detail := strings.Join(notes, "; ")
-		switch {
-		case check.Detail == "":
+		switch check.Detail {
+		case "":
 			check.Detail = detail
 		default:
 			check.Detail += "; " + detail

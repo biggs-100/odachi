@@ -214,7 +214,7 @@ func tomlString(value string) string {
 			out.WriteString(`\t`)
 		default:
 			if r < 0x20 || r == 0x7f {
-				out.WriteString(fmt.Sprintf(`\u%04X`, r))
+				fmt.Fprintf(&out, `\u%04X`, r)
 				continue
 			}
 			out.WriteRune(r)

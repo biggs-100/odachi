@@ -304,30 +304,6 @@ func load(opts Options) (probe.Manifest, fs.FS, *Result) {
 	return manifest, sub, nil
 }
 
-// materialize writes the clean arm, commits it, overlays the seeded arm and
-// reads the candidate. The candidate is the one every gate reads, so the diff
-// the reviewer sees here is shaped like the diff it sees in a feature.
-func materialize(work string, fixture fs.FS, files Files, shell Shell, git Git) (string, []string, string, *Result) {
-	if err := writeArm(work, assets.Clean, fixture, files); err != nil {
-		return "", nil, "", blocked("could not write the clean arm: " + oneLine(err.Error()))
-	}
-	for _, command := range []string{"git init -q", "git add -A", "git commit -qm clean"} {
-		stdout, stderr, code, _, err := shell.Run(work, command, 120)
-		if err != nil || code != 0 {
-			return "", nil, "", blocked("the fixture's git failed: " + oneLine(strings.TrimSpace(stdout+stderr)))
-		}
-	}
-	if err := writeArm(work, assets.Seeded, fixture, files); err != nil {
-		return "", nil, "", blocked("could not write the seeded arm: " + oneLine(err.Error()))
-	}
-
-	tree, paths, diff, err := git.Candidate(work, "HEAD")
-	if err != nil {
-		return "", nil, "", blocked("could not read the candidate: " + oneLine(err.Error()))
-	}
-	return tree, paths, diff, nil
-}
-
 // writeArm writes one arm's files under work, keeping their relative paths.
 func writeArm(work, arm string, fixture fs.FS, files Files) error {
 	return fs.WalkDir(fixture, arm, func(name string, entry fs.DirEntry, err error) error {

@@ -348,7 +348,7 @@ func floorSection(floor Floor) string {
 		out.WriteString("\n")
 	}
 	out.WriteString("\nThis is the candidate's own writing: a finding must cite one of those lines or a\n")
-	out.WriteString(fmt.Sprintf("line within %d of one. What the candidate did not touch is a follow-up\n", FloorContext))
+	fmt.Fprintf(&out, "line within %d of one. What the candidate did not touch is a follow-up\n", FloorContext)
 	out.WriteString("(\"causal\": false), and a causal BLOCKER or CRITICAL that cannot cite is\n")
 	out.WriteString("downgraded one tier by the tool before the verdict is stored.\n\n")
 
@@ -372,7 +372,7 @@ func checksSection(checks []CheckResult) string {
 	for _, check := range checks {
 		out.WriteString("- " + check.Name + ": " + string(check.Status))
 		if check.Status == CheckFailed {
-			out.WriteString(fmt.Sprintf(" (exit %d)", check.Exit))
+			fmt.Fprintf(&out, " (exit %d)", check.Exit)
 		}
 		if check.Note != "" {
 			out.WriteString(" · " + check.Note)

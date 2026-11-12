@@ -1079,6 +1079,7 @@ func TestTheFirstFailedFileKeepsItsPathAndReason(t *testing.T) {
 	failure := result.Dests[0].Failure
 	if failure == nil {
 		t.Fatalf("the destination did not record the failure: %+v", result.Dests[0])
+		return
 	}
 	if want := "~/.claude/skills/acceptance/SKILL.md"; failure.Path != want {
 		t.Errorf("Path = %q, want %q", failure.Path, want)

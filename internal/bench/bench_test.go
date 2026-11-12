@@ -268,6 +268,7 @@ func TestTheCheckJourneyFollowsTheRule(t *testing.T) {
 	}
 	if journey == nil {
 		t.Fatal("the journey about a check without a proof is gone")
+		return
 	}
 
 	if len(journey.Steps) != 5 {

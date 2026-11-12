@@ -157,13 +157,6 @@ func (r *runner) pendGlobal(message string) {
 	r.lines = append(r.lines, "pending: "+message)
 }
 
-// personaBlocked is the persona half's refusal: the file, the reason the adapter
-// gave, and the command that retries the run.
-func personaBlocked(what string, err error) *Result {
-	result := blocked(what + ": " + oneLine(err.Error()) + "; check the permissions and run odachi init again")
-	return &result
-}
-
 // personaLine is one destination in one line: what arrived, what was already
 // there, and how the human selects the agent in that client. The last part is the
 // point of the whole job — a file nobody knows how to pick is a file nobody uses.
