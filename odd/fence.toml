@@ -217,3 +217,33 @@ deps  = []
 # not   = "`review probe` and its fixture are untouched: the probe measures the lenses against a key, and this changes what a verdict about a tree costs - back when the probe's clean arm earns its name"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   no change to what a split part may cite, or to how the parts of one answer merge their rows: the count is the only thing that is wrong - back when the parts themselves have to change
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no change to what a split part may cite, or to how the parts of one answer merge their rows: the count is the only thing that is wrong - back when the parts themselves have to change"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the handover never guesses the human's reviewer command and never remembers it: it carries a placeholder, because which model judges is the human's decision at the keyboard - back when odachi stores the command it ran
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the handover never guesses the human's reviewer command and never remembers it: it carries a placeholder, because which model judges is the human's decision at the keyboard - back when odachi stores the command it ran"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no new flag and no new verb: the fix is what the two existing lines say and what one counter counts - back when a surface is actually missing
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no new flag and no new verb: the fix is what the two existing lines say and what one counter counts - back when a surface is actually missing"
+# paths = []
+# deps  = []

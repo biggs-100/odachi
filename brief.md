@@ -152,3 +152,27 @@
 - A later run brings a lens to N instead of re-answering it: the union can only add findings, so re-drawing can never turn a changes-requested into an approved, and nothing already paid is paid twice.
 - A draw that fails does not throw away the draws that answered: the count is written truthfully and the exit is blocked, because the verb did not do what it was asked even though the store kept what it paid for.
 - N draws buy variance, not independence: three draws of a judge that always answers the same sentence are one draw paid three times, and the count says how much was paid, never how much was seen.
+
+## 0276 · el-conteo-cuenta-respuestas
+
+## What must exist
+- a candidate whose prompt does not fit and is reviewed in parts records one draw per answer, not one per part: `--runs 1` over a split candidate leaves `draws` at 1, and `--runs 3` at 3
+- the command a failed or a complete run hands over can be run as printed: it carries the placeholder the flag needs, so pasting it pays what the run says it pays
+- the refusal that says a lens already holds enough names one more than the file counts, not one more than the refused run asked for
+
+## Done when
+- a split candidate, forced with a small `max_prompt_kb`, records `draws` of 1 for a run of one and 3 for a run of three
+- the next line of a failed draw is a command `odachi review` accepts: it names `--exec` with a placeholder and the count, and it keeps the lens the run was told to judge
+- a tree whose lens holds 5 draws, asked for 3, is refused with `--runs 6` in the next line
+- `go test ./...` is green and `odachi check --run "go test ./..."` is green
+- `## Unreleased` names it, patch (0276)
+
+## Not included (first version)
+- no change to what a split part may cite, or to how the parts of one answer merge their rows: the count is the only thing that is wrong - back when the parts themselves have to change
+- the handover never guesses the human's reviewer command and never remembers it: it carries a placeholder, because which model judges is the human's decision at the keyboard - back when odachi stores the command it ran
+- no new flag and no new verb: the fix is what the two existing lines say and what one counter counts - back when a surface is actually missing
+
+## Decisions taken
+- A draw is one answer to one lens over the whole candidate: the parts of one answer are one round, so the count is per answer and never per call.
+- The hint carries `--exec "<your command>"` because the flag refuses without it, and a hint a person cannot run is not a hint.
+- The number a refusal names is the one the file holds plus one: the count is the fact, and the run that was refused is not.
