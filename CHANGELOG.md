@@ -10,6 +10,20 @@ not a version.
 
 ## Unreleased
 
+- **The floor runs for real.** This project declares `golangci-lint run ./...` at
+  `CRITICAL`, so every review runs it before any lens and a failure is a row the
+  reviewer cannot approve past. The ruleset is pinned in `.golangci.yml` instead of
+  inherited from the installed binary -naming the five linters measured 54 findings
+  where the defaults reported 46, and all of them are paid: 38 errors that were ignored
+  now say what they do with them, four dead things are deleted, a split's dead
+  assignment is gone, and three nil checks in tests say the flow stops there. The 0278
+  fence protected `internal/app/lensprobe` as a whole and the human narrowed it to the
+  fixture and the scoring, so this feature could clean the probe where the linter named
+  it. A teammate now needs `golangci-lint` on the `PATH`; without it every review here
+  carries a row saying the command could not run. Patch (0279).
+
+## v0.40.0 - 2026-11-12
+
 - **A review runs the project's tools before it pays a model.** `odd/review.toml`
   declares them -a name, the command and the severity a failure is worth- and each one
   runs on the candidate before any lens reads it: a tool that exits non-zero, hangs

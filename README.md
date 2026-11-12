@@ -599,6 +599,17 @@ cloned `review.toml` runs nothing until the person who cloned it says
 -a command that changes asks again-. `odachi review checks` says what is declared
 and whether this clone agreed; a project that declares none runs none.
 
+Declare a floor after the debt is paid, not before: a check at `CRITICAL` blocks
+every review the day it is written, so a tree that already fails the linter stops
+being approvable by anyone, and the backlog becomes a wall. Pin the ruleset in the
+tool's own file (`.golangci.yml`, `.eslintrc`, whatever it reads) instead of
+inheriting the defaults of the installed binary: a default that moves with an
+upgrade would start blocking trees nobody touched. This repository does exactly
+that: `.golangci.yml` names the five linters, `lint` is declared at `CRITICAL` in
+`odd/review.toml`, and a teammate needs `golangci-lint` on the `PATH` -without it
+every review here carries a row saying the command could not run, which is the
+honest answer and not a pass.
+
 ## CI: the gate from the base ref
 
 A local hook can be skipped, and a change can edit the fence it must obey. In CI,
