@@ -988,6 +988,16 @@ func (r *runner) reviewGate(feature *tasks.Document) *Result {
 	return r.softened(r.requireReview(""))
 }
 
+// waivedRow reports whether the open feature's document answers this exact
+// blocking row. The fingerprint is the whole identity: another row, another tree
+// or changed bytes are another decision.
+func (r *runner) waivedRow(fingerprint string) bool {
+	if r.feature == nil {
+		return false
+	}
+	return r.feature.Doc.WaivedRow(fingerprint)
+}
+
 // softened turns a review refusal into a note unless the human asked to be refused.
 // The review does not authorise delivery (ADR 0043): with the project's switch on,
 // a close names what the review says and the commit proceeds. The one refusal that
@@ -1394,6 +1404,15 @@ func (r *runner) requireReview(base string) *Result {
 	}
 
 	if finding, blocking := reviewdomain.BlockingAfter(verdict.Findings, answers); blocking {
+		fingerprint := reviewdomain.Fingerprint(finding)
+		if r.waivedRow(fingerprint) {
+			// The decision is the human's and it is written down: the close goes
+			// through, and the line keeps saying both halves, because a waiver
+			// that hides what it answered is the silent gate with a signature.
+			r.reviewNote = "the review asks for changes and the human waived the row " + fingerprint +
+				": " + oneLine(reviewFinding(finding))
+			return nil
+		}
 		message := "the review asks for changes: " + oneLine(reviewFinding(finding))
 		next := "odachi review waive --row " + reviewdomain.Fingerprint(finding) + ` --because "<why the tree ships with this row open>"`
 		problem := Result{
