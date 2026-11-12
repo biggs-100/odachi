@@ -6,7 +6,9 @@
 // defect by file, line, lens and severity floor. The probe writes the clean arm
 // into a throwaway repository, commits it, overlays the seeded arm, and asks the
 // shipping prompt -the same one `review` builds- one question per lens. It then
-// scores every answer against the key: found, called low, missed, and noise.
+// scores every answer against the key: found, called low, missed, and the
+// findings nobody planted, split by what they claim -a claim of a defect is
+// noise, a suggestion is a note, on both arms.
 //
 // Two properties are what make the number worth reading:
 //
@@ -119,9 +121,10 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	}
 	defer func() { _ = os.RemoveAll(work) }()
 	// The two arms are two candidates: the clean one is a change that carries no
-	// defect, and its findings are the noise the lenses raise on code nobody
-	// broke. They are read separately because a reviewer handed both at once
-	// knows which half is the exam.
+	// defect, and its findings are what the lenses raise on code nobody broke.
+	// They are read separately because a reviewer handed both at once knows which
+	// half is the exam, and each one is split by what a finding claims: a claim is
+	// noise, a suggestion is a note.
 	clean, problem := build(work, "clean", fixture, assets.Clean, files, shell, git)
 	if problem != nil {
 		return *problem
@@ -191,8 +194,8 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	}
 
 	scores := make([]probe.Score, 0, draws)
-	cleanCounts := make([]int, 0, draws)
-	lines := make([]string, 0, draws*(len(owed)+len(names))+6)
+	cleanTallies := make([]probe.Tally, 0, draws)
+	lines := make([]string, 0, draws*(len(owed)+len(names))+8)
 
 	for draw := 1; draw <= draws; draw++ {
 		seededVerdicts := make(map[string]review.Verdict, len(owed))
@@ -209,7 +212,7 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 			lines = append(lines, "stored: "+stored)
 		}
 
-		cleanNoise := 0
+		cleanFindings := make([]probe.Noise, 0)
 		for _, name := range names {
 			answer, stored, problem := ask(opts, files, shell, work, "clean", name, prompts[clean.name][name], clean.tree, draw)
 			if problem != nil {
@@ -220,14 +223,16 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 				return *blocked("the clean " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
 			}
 			lines = append(lines, "stored: "+stored)
-			cleanNoise += len(verdict.Findings)
+			for _, finding := range verdict.Findings {
+				cleanFindings = append(cleanFindings, probe.Noise{Lens: name, Finding: finding})
+			}
 		}
 
 		scores = append(scores, probe.ScoreOne(manifest, seededVerdicts))
-		cleanCounts = append(cleanCounts, cleanNoise)
+		cleanTallies = append(cleanTallies, probe.TallyOf(cleanFindings))
 	}
 
-	runs := Summarize(scores, cleanCounts)
+	runs := Summarize(scores, cleanTallies)
 	lines = append(lines, renderRuns(runs)...)
 	summary := runs.Summary()
 	return Result{Code: CodeOK, Lines: lines, Summary: summary}

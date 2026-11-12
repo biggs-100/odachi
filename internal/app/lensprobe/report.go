@@ -22,10 +22,15 @@ type Runs struct {
 	Count int
 	// Lenses is one row per lens the key names, in the canonical order.
 	Lenses []LensRuns
-	// Noise is the findings nobody planted, per draw.
+	// Noise is what the findings nobody planted claimed on the seeded arm, per
+	// draw: a defect at a place the key does not name.
 	Noise Spread
-	// Clean is the findings on the arm with nothing planted, per draw.
+	// Notes is what those findings only suggested, per draw.
+	Notes Spread
+	// Clean is the same claim read on the arm with nothing planted, per draw.
 	Clean Spread
+	// CleanNotes is what the clean arm's findings only suggested, per draw.
+	CleanNotes Spread
 }
 
 // LensRuns is one lens's row across the draws.
@@ -49,18 +54,31 @@ var lensorder = []string{review.Risk, review.Readability, review.Reliability, re
 
 // Summarize folds the draws into one reading. A draw that does not score a lens
 // counts as zero found, zero low and zero missed for it, which is what an absent
-// row means.
-func Summarize(scores []probe.Score, clean []int) Runs {
-	runs := Runs{Count: len(scores), Clean: spread(clean)}
+// row means. The clean arm has no key, so it arrives as a tally per draw, read by
+// the same function the seeded arm's noise goes through.
+func Summarize(scores []probe.Score, clean []probe.Tally) Runs {
+	runs := Runs{Count: len(scores)}
+	cleanNoise := make([]int, 0, len(clean))
+	cleanNotes := make([]int, 0, len(clean))
+	for _, tally := range clean {
+		cleanNoise = append(cleanNoise, tally.Noise)
+		cleanNotes = append(cleanNotes, tally.Notes)
+	}
+	runs.Clean = spread(cleanNoise)
+	runs.CleanNotes = spread(cleanNotes)
 	if len(scores) == 0 {
 		return runs
 	}
 
 	noise := make([]int, 0, len(scores))
+	notes := make([]int, 0, len(scores))
 	for _, score := range scores {
-		noise = append(noise, len(score.Noise))
+		tally := score.Tally()
+		noise = append(noise, tally.Noise)
+		notes = append(notes, tally.Notes)
 	}
 	runs.Noise = spread(noise)
+	runs.Notes = spread(notes)
 
 	for _, name := range lensorder {
 		row := LensRuns{Lens: name}
@@ -115,15 +133,18 @@ func spread(values []int) Spread {
 }
 
 // renderRuns prints the reading of the draws: one row per lens with the median
-// of what it found and the range it moved in, then the two arms.
+// of what it found and the range it moved in, then both arms, each one split by
+// what the findings nobody planted claimed.
 func renderRuns(runs Runs) []string {
-	lines := make([]string, 0, len(runs.Lenses)+2)
+	lines := make([]string, 0, len(runs.Lenses)+4)
 	lines = append(lines, fmt.Sprintf("%-12s %13s %13s %13s", "lens", "found", "low", "missed"))
 	for _, row := range runs.Lenses {
 		lines = append(lines, fmt.Sprintf("%-12s %13s %13s %13s", row.Lens, span(row.Found), span(row.Low), span(row.Missed)))
 	}
-	lines = append(lines, fmt.Sprintf("%-12s %13s", "noise", span(runs.Noise)))
-	lines = append(lines, fmt.Sprintf("%-12s %13s", "clean", span(runs.Clean)))
+	lines = append(lines, fmt.Sprintf("%-12s %13s", "seeded noise", span(runs.Noise)))
+	lines = append(lines, fmt.Sprintf("%-12s %13s", "seeded notes", span(runs.Notes)))
+	lines = append(lines, fmt.Sprintf("%-12s %13s", "clean noise", span(runs.Clean)))
+	lines = append(lines, fmt.Sprintf("%-12s %13s", "clean notes", span(runs.CleanNotes)))
 	return lines
 }
 
@@ -136,11 +157,12 @@ func span(s Spread) string {
 }
 
 // Summary is the one line the reading ends with: the draws, every lens's median
-// with its range when it moved, and the two arms.
+// with its range when it moved, and both arms split by what a finding claimed.
 func (r Runs) Summary() string {
 	parts := make([]string, 0, len(r.Lenses))
 	for _, row := range r.Lenses {
 		parts = append(parts, row.Lens+" "+strconv.Itoa(row.Found.Median)+"/"+strconv.Itoa(row.Found.Median+row.Low.Median+row.Missed.Median))
 	}
-	return fmt.Sprintf("runs %d · %s · noise %s · clean %s", r.Count, strings.Join(parts, ", "), span(r.Noise), span(r.Clean))
+	return fmt.Sprintf("runs %d · %s · seeded noise %s · seeded notes %s · clean noise %s · clean notes %s",
+		r.Count, strings.Join(parts, ", "), span(r.Noise), span(r.Notes), span(r.Clean), span(r.CleanNotes))
 }
