@@ -121,9 +121,11 @@ func CheckStatus(opts CheckOptions, files ModeFiles, codec ModeCodec) Result {
 	case exists:
 		header = "not approved: this clone approved a different list"
 	}
-	lines = append([]string{header, "the review runs them before any lens"}, lines...)
 	if !exists || !approval.Covers(config.Checks) {
+		lines = append([]string{header}, lines...)
 		lines = append(lines, "odachi review checks approve")
+	} else {
+		lines = append([]string{header, "the review runs them before any lens"}, lines...)
 	}
 	return Result{Code: CodeOK, Message: header, Lines: lines}
 }

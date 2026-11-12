@@ -37,7 +37,7 @@ func TestThePromptCarriesWhatTheChecksAnswered(t *testing.T) {
 	})
 
 	for _, want := range []string{
-		"## The checks that ran (deterministic, before any lens)",
+		"## The checks (the tools this project declared, run before any lens)",
 		"- lint: passed",
 		"- vuln: failed (exit 1)",
 		"GO-2026-1234",
@@ -55,7 +55,7 @@ func TestTheChecksComeBeforeTheLenses(t *testing.T) {
 		{Name: "lint", Command: "golangci-lint run ./...", Status: review.CheckPassed},
 	})
 
-	checks := strings.Index(prompt, "## The checks that ran")
+	checks := strings.Index(prompt, "## The checks (the tools this project declared, run before any lens)")
 	lenses := strings.Index(prompt, "## The six rules")
 	if checks < 0 || lenses < 0 {
 		t.Fatalf("the prompt is missing a section: checks=%d rules=%d", checks, lenses)
@@ -69,7 +69,7 @@ func TestTheChecksComeBeforeTheLenses(t *testing.T) {
 // reads exactly the prompt this verb printed before the feature existed.
 func TestACandidateWithNoChecksPrintsNoSection(t *testing.T) {
 	prompt := promptWithChecks(nil)
-	if strings.Contains(prompt, "## The checks that ran") {
+	if strings.Contains(prompt, "## The checks (the tools this project declared, run before any lens)") {
 		t.Errorf("the prompt claims checks nobody declared:\n%s", prompt)
 	}
 }
@@ -136,3 +136,4 @@ func TestOnlyAPassedCheckIsPassed(t *testing.T) {
 		}
 	}
 }
+

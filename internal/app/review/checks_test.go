@@ -49,7 +49,7 @@ func TestTheDeclaredCheckRunsOnTheCandidate(t *testing.T) {
 	if len(p.shell.dirs) == 0 || p.shell.dirs[0] != dir {
 		t.Errorf("the check ran in %v, want the candidate at %q", p.shell.dirs, dir)
 	}
-	if !strings.Contains(result.Prompt, "## The checks that ran") {
+	if !strings.Contains(result.Prompt, "## The checks (the tools this project declared, run before any lens)") {
 		t.Fatalf("the prompt does not carry the checks:\n%s", result.Prompt)
 	}
 	for _, want := range []string{"- lint: failed (exit 1)", "a.go:1:1: something is wrong"} {
@@ -214,7 +214,7 @@ func TestAProjectThatDeclaresNoChecksRunsNothing(t *testing.T) {
 	if len(p.shell.commands) != 1 || p.shell.commands[0] == lintCheck.Command {
 		t.Errorf("commands = %v, want only the reviewer", p.shell.commands)
 	}
-	if strings.Contains(result.Prompt, "## The checks that ran") {
+	if strings.Contains(result.Prompt, "## The checks (the tools this project declared, run before any lens)") {
 		t.Errorf("the prompt claims checks nobody declared:\n%s", result.Prompt)
 	}
 }
@@ -372,6 +372,24 @@ func TestACheckRowIsDismissedByNamingTheTool(t *testing.T) {
 	}
 	if len(dismissals.Rows) != 1 || dismissals.Rows[0].Check != "lint" {
 		t.Fatalf("the dismissal does not name the tool: %+v", dismissals.Rows)
+	}
+}
+
+// TestShowNamesTheToolThatFiledTheRow: the human reads `check:lint` and copies it
+// to dismiss the row, so the face of the verdict says exactly what the verb takes.
+func TestShowNamesTheToolThatFiledTheRow(t *testing.T) {
+	p := fileCheck(t)
+
+	result := p.run(review.Options{Show: true})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	printed := strings.Join(append([]string{result.Message}, result.Lines...), "\n")
+	if !strings.Contains(printed, "check:lint") {
+		t.Errorf("--show does not name the tool:\n%s", printed)
+	}
+	if strings.Contains(printed, " · 0") {
+		t.Errorf("--show prints a place for a row that has none:\n%s", printed)
 	}
 }
 

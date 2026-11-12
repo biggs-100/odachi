@@ -3786,9 +3786,14 @@ func shown(summary, rel string, verdict domain.Verdict) []string {
 // file, the severity, whether the candidate caused it, and the evidence. A
 // dismissal also prints the reason that judged it: a verdict says what it
 // discarded, not only what it kept.
+//
+// A row a tool filed takes the place of the file: `check:lint` is what the human
+// copies to dismiss it, and a name is the whole of what it judged.
 func findingLine(finding domain.Finding) string {
 	where := finding.Path
-	if finding.Line > 0 {
+	if check := strings.TrimSpace(finding.Check); check != "" {
+		where = "check:" + check
+	} else if finding.Line > 0 {
 		where = fmt.Sprintf("%s:%d", finding.Path, finding.Line)
 	}
 

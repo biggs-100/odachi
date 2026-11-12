@@ -368,7 +368,7 @@ func checksSection(checks []CheckResult) string {
 	}
 
 	var out strings.Builder
-	out.WriteString("## The checks that ran (deterministic, before any lens)\n\n")
+	out.WriteString("## The checks (the tools this project declared, run before any lens)\n\n")
 	for _, check := range checks {
 		out.WriteString("- " + check.Name + ": " + string(check.Status))
 		if check.Status == CheckFailed {
