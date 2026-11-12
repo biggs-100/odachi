@@ -250,3 +250,25 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0282 · the-probe-s
+
+## What must exist
+- the probe's reading separates a suggestion from an invented row: noise counts only what claims a defect, both arms report both numbers, and the 0281 answers re-read under the split are in review-research
+
+## Done when
+- a suggestion on either arm is a note, and a warning or above where nothing was planted is noise
+- the table and the summary line print noise, notes, clean noise and clean notes across the draws
+- the answers 0281 stored are re-read by severity and review-research Part 5c carries the corrected numbers
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0282)
+
+## Not included (first version)
+- the fixture stays as 0281 left it: no arm and no planted defect moves
+- the review of a tree is untouched: no new verdict, no new draw, no new lens
+- no new flag and no new verb: the split is what the four counters say
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.

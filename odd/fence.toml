@@ -387,3 +387,33 @@ deps  = []
 # not   = "govulncheck and the other Part 8 items are not here"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   the fixture stays as 0281 left it: no arm and no planted defect moves
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the fixture stays as 0281 left it: no arm and no planted defect moves"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the review of a tree is untouched: no new verdict, no new draw, no new lens
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the review of a tree is untouched: no new verdict, no new draw, no new lens"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no new flag and no new verb: the split is what the four counters say
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no new flag and no new verb: the split is what the four counters say"
+# paths = []
+# deps  = []
