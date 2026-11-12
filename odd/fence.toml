@@ -18,6 +18,16 @@ not   = "no se toca el fixture ni los lentes: la repeticion mide lo que ya exist
 paths = ["internal/probe/testdata/lenses/**"]
 deps  = []
 
+[[rule]]
+not   = "the gate does not run the checks: it reads the verdict they produced"
+paths = ["internal/domain/gate/**"]
+deps  = []
+
+[[rule]]
+not   = "el fixture de la sonda y su puntaje son intocables: 0279 solo puede limpiar la sonda donde el linter lo nombra, no cambiar lo que mide - back when the probe's arm or its scoring changes for a reason this feature records"
+paths = ["internal/domain/probe/**", "internal/probe/**"]
+deps  = []
+
 # This non-goal has no paths yet:
 #   the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question
 # A rule protects files: write what it must keep out of the tree, then
@@ -268,11 +278,6 @@ deps  = []
 # paths = []
 # deps  = []
 
-[[rule]]
-not   = "the gate does not run the checks: it reads the verdict they produced"
-paths = ["internal/domain/gate/**"]
-deps  = []
-
 # This non-goal has no paths yet:
 #   no parsing of the output into a file and a line: the row carries the text, and a check row is not placed on a path
 # A rule protects files: write what it must keep out of the tree, then
@@ -283,7 +288,52 @@ deps  = []
 # paths = []
 # deps  = []
 
-[[rule]]
-not   = "review probe and its fixture are untouched: this changes what a review of a tree measures, not the probe"
-paths = ["internal/app/lensprobe/**", "internal/domain/probe/**", "internal/probe/**"]
-deps  = []
+# This non-goal has no paths yet:
+#   no new linter beyond the pinned set: no --enable-all, and a linter joins the ruleset as a decision, not as a step
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no new linter beyond the pinned set: no --enable-all, and a linter joins the ruleset as a decision, not as a step"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no silencing: a finding is fixed or deleted, and a //nolint carries the reason and the row it answers
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no silencing: a finding is fixed or deleted, and a //nolint carries the reason and the row it answers"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   govulncheck is not in this feature: it is not installed, and installing a tool is a decision of its own
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "govulncheck is not in this feature: it is not installed, and installing a tool is a decision of its own"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the review's own code changes only where a linter names it: this feature uses the mechanism, it does not extend it
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the review's own code changes only where a linter names it: this feature uses the mechanism, it does not extend it"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   the standing blocker of Part 8's second item is not here
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the standing blocker of Part 8's second item is not here"
+# paths = []
+# deps  = []
