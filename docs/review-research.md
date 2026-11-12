@@ -242,6 +242,48 @@ are counts of findings, not of defects that would have hurt, and a finding nobod
 would be the only thing that could measure the difference. Four draw counts in one
 store is a start, not a rate.
 
+## Part 5c: two models on the same fixture
+
+Part 8 asked for the probe to be repeated across models, and the first reading of that
+question came from the two cheapest the provider serves: `deepseek-v4.1-flash` and
+`muse-spark-1.3-contributor`, one draw each on the same bundled fixture (two arms, five
+planted defects, four lenses), on 2026-11-12.
+
+| model | risk | readability | reliability | resilience | noise | clean |
+| --- | --- | --- | --- | --- | --- | --- |
+| deepseek-v4.1-flash | 1/1 | 1/1 | 1/1 | 2/2 | 5 | 6 |
+| muse-spark-1.3 | 1/1 | 0/1 | 1/1 | 1/2 | 1 | 0 |
+
+- **The planted class is not the question.** Both found the SQL injection the key calls
+  `risk-query-built-by-concatenation`, both found the reliability defect, both found the
+  retry defect in `cache.go`. What they disagree about is the softer defects: muse did not
+  report the name that does three jobs (readability) nor the body error discarded as a
+  success (resilience), and it stayed quiet on the arm with nothing planted.
+- **The two are opposite instruments.** Deepseek found every planted defect and answered
+  the clean arm with six findings; muse found three of five and said nothing about the
+  clean arm. One is a reviewer that looks everywhere and trusts its own eye; the other is
+  a reviewer that answers only when it is sure and misses what it is not. Neither is the
+  better instrument, and a project that pays for one gets one half of each.
+- **The clean arm is not dirty, and the metric still counts it.** Read one by one, the six
+  findings on the arm with nothing planted are real observations about the fixture: a
+  `time.Sleep` backoff that never selects on `ctx.Done()`, permanent errors retried three
+  times, untested branches. All six are `SUGGESTION`, none invents a defect, and a person
+  reading them would agree with several. So "clean 6" is not six lies -it is six
+  improvements the arm could take, and the probe's `clean` column counts `SUGGESTION` the
+  same way it would count an invented `CRITICAL`.
+- **What this changes in the ordering.** Part 8 said the arm has to earn its name before
+  the precision number means anything. This reading says the arm already earns it in the
+  sense that nothing there is false, and that the number that does not mean what it
+  pretends is the `clean` count itself: a model that suggests improvements is scored as
+  noisy, and a model that says nothing is scored as precise. The next change is not the
+  arm; it is the reading of its answer, split by severity.
+
+What it does not prove: one draw per model, two models, one fixture, one afternoon. A
+`--runs 5` reading would say which of these disagreements are the model's opinion and
+which are the draw's, and a third model with a different family would say whether
+"suggests on clean code" is one vendor's habit or a general property of a lens prompt that
+asks for real defects only.
+
 ## Part 6: our own numbers
 
 From `.git/odachi/reviews/` in this clone, 16 verdicts kept:

@@ -8,7 +8,7 @@ R1 · "la sonda se mide hoy sobre los dos brazos y dos modelos, y la lectura que
 ## Done when
 
 ## Steps
-- [ ] T1 · la sonda se mide hoy sobre los dos brazos y dos modelos, y la lectura queda en review-research   R1
+- [x] T1 · la sonda se mide hoy sobre los dos brazos y dos modelos, y la lectura queda en review-research   R1
 
 ## History
 L1 · "la sonda se mide hoy sobre los dos brazos y dos modelos, y la lectura queda en review-research"
