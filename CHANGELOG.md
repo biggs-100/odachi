@@ -8,6 +8,18 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The floor reads the dependencies too.** `govulncheck ./...` is now a check at
+  `CRITICAL`, so every review here runs a vulnerability scan before any lens reads the
+  candidate and a CVE in a package the code calls stops the approval. It is the class no
+  lens can see: a database lookup, not a line to judge. The debt came first -the tool
+  named 25 vulnerabilities the code reached, all in the standard library, and the fix was
+  a Go release the repository did not ask for-, so the `go` directive moves to `1.26.11`
+  and the scan reports none. The row needs the network: on a machine that cannot reach the
+  database it fails instead of passing, and the way past is a refutation with the reason
+  written. Patch (0283).
+
 ## v0.40.3 - 2026-11-12
 
 - **The probe's reading separates a suggestion from an invented row.** The score

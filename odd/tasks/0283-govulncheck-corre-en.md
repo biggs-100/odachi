@@ -12,7 +12,7 @@ R1 · "govulncheck corre en cada review como una fila del piso, y la deuda que e
 
 ## Steps
 - [x] T1 · el toolchain sube a la version que arregla las 25: govulncheck sale 0   R1 · route:inline · tree:8318e074e248c219de4106fe495dabc35431bb4e
-- [ ] T2 · la fila govulncheck se declara a CRITICAL, este clon la aprueba, y un review la reporta   R1 · route:inline
+- [x] T2 · la fila govulncheck se declara a CRITICAL, este clon la aprueba, y un review la reporta   R1 · route:inline · tree:ea697b82f04907c7a9c456bcd10d000d25632221
 - [ ] T3 · la cara: el README dice que el piso corre govulncheck y que necesita la base de vulnerabilidades   R1 · route:inline
 
 ## History
