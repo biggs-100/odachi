@@ -48,7 +48,7 @@ func runDelegate(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi delegate -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi delegate -h to see the flags")
 		return start.CodeBlocked
 	}
 
@@ -59,10 +59,10 @@ func runDelegate(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 	switch {
 	case taskDoc == "":
-		fmt.Fprintln(stderr, `odachi: missing the task doc: write odachi delegate odd/tasks/<file>.md --step T1`)
+		_, _ = fmt.Fprintln(stderr, `odachi: missing the task doc: write odachi delegate odd/tasks/<file>.md --step T1`)
 		return start.CodeBlocked
 	case len(rest) > 0:
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi delegate takes one task doc\n", rest[0])
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi delegate takes one task doc\n", rest[0])
 		return start.CodeBlocked
 	}
 
@@ -76,9 +76,9 @@ func runDelegate(dir string, args []string, stdout, stderr io.Writer) int {
 	}, disk(dir))
 
 	if result.Code != delegateapp.CodeOK {
-		fmt.Fprintln(stderr, "odachi: "+result.Message)
+		_, _ = fmt.Fprintln(stderr, "odachi: "+result.Message)
 		return result.Code
 	}
-	fmt.Fprint(stdout, result.Prompt)
+	_, _ = fmt.Fprint(stdout, result.Prompt)
 	return start.CodeOK
 }

@@ -21,7 +21,6 @@ package store
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 )
 
 // DirName is the folder inside the git common directory. It is the single
@@ -78,9 +77,4 @@ func Root(dir string, git Git) (string, error) {
 // Path resolves an entry inside the store, accepted with forward slashes.
 func Path(root, entry string) string {
 	return filepath.Join(root, filepath.FromSlash(entry))
-}
-
-// oneLine keeps a message on one line whatever git said.
-func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
 }

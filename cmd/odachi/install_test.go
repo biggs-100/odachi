@@ -158,7 +158,7 @@ func writeArchive(t *testing.T, path, name string, data []byte) {
 	if err != nil {
 		t.Fatalf("create %s: %v", path, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	gz := gzip.NewWriter(file)
 	tw := tar.NewWriter(gz)

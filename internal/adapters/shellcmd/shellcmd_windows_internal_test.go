@@ -16,7 +16,7 @@ func TestKillTreeReportsTaskkillFailure(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("start: %v", err)
 	}
-	defer cmd.Process.Kill()
+	defer func() { _ = cmd.Process.Kill() }()
 
 	err := killTree(cmd)
 	if err == nil {

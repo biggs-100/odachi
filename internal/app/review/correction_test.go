@@ -290,6 +290,7 @@ func TestACorrectionTurnsABlockerAboutMovedBytesIntoAFollowUp(t *testing.T) {
 	}
 	if kept == nil {
 		t.Fatalf("the blocker vanished instead of becoming a follow-up: %+v", stored.Findings)
+		return
 	}
 	if kept.Causal {
 		t.Errorf("the blocker still calls itself causal after the fix: %+v", *kept)

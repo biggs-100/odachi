@@ -216,7 +216,7 @@ func ensureHistory(dir string) (bool, error) {
 	}
 	git, err := exec.LookPath("git")
 	if err != nil {
-		return false, errors.New("I need a program that keeps the project history and I could not find it: install git (git-scm.com) and run odachi init again")
+		return false, errors.New("could not find git, the program that keeps the project history: install it (git-scm.com) and run odachi init again")
 	}
 	cmd := exec.Command(git, "init", dir)
 	cmd.Stdout, cmd.Stderr = io.Discard, io.Discard

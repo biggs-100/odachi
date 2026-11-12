@@ -44,17 +44,17 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi pack -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi pack -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi pack only takes flags (run odachi pack -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi pack only takes flags (run odachi pack -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
 	embedded, err := bundledskills.All()
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error())+"; download odachi again")
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error())+"; download odachi again")
 		return start.CodeBlocked
 	}
 
@@ -68,14 +68,14 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 	if own.Code != start.CodeOK {
 		// A catalog that cannot be read is not an empty catalog: installing only
 		// the bundled set would hide the project's own skills without saying so.
-		fmt.Fprintln(stderr, "odachi: "+own.Message)
+		_, _ = fmt.Fprintln(stderr, "odachi: "+own.Message)
 		return start.CodeBlocked
 	}
 	if problems := projectProblems(own.Skills); len(problems) > 0 {
 		for _, line := range problems {
-			fmt.Fprintln(stderr, "odachi: "+line)
+			_, _ = fmt.Fprintln(stderr, "odachi: "+line)
 		}
-		fmt.Fprintln(stderr, "odachi: the project's catalog does not pass its check: fix it and run odachi pack again (odachi skills --check lists every problem)")
+		_, _ = fmt.Fprintln(stderr, "odachi: the project's catalog does not pass its check: fix it and run odachi pack again (odachi skills --check lists every problem)")
 		return start.CodeBlocked
 	}
 	project := make([]pack.Skill, 0, len(own.Skills))
@@ -85,7 +85,7 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 		for _, reference := range s.References {
 			data, err := files.Read(filepath.Join(dir, skillsapp.Dir, s.Name, filepath.FromSlash(reference)))
 			if err != nil {
-				fmt.Fprintln(stderr, "odachi: could not read skills/"+s.Name+"/"+reference+": "+oneLine(err.Error())+"; fix the file and run odachi pack again")
+				_, _ = fmt.Fprintln(stderr, "odachi: could not read skills/"+s.Name+"/"+reference+": "+oneLine(err.Error())+"; fix the file and run odachi pack again")
 				return start.CodeBlocked
 			}
 			entry.Files = append(entry.Files, pack.File{Path: reference, Content: data})
@@ -93,7 +93,7 @@ func runPack(dir string, args []string, stdout, stderr io.Writer) int {
 		for _, asset := range s.Assets {
 			data, err := files.Read(filepath.Join(dir, skillsapp.Dir, s.Name, filepath.FromSlash(asset)))
 			if err != nil {
-				fmt.Fprintln(stderr, "odachi: could not read skills/"+s.Name+"/"+asset+": "+oneLine(err.Error())+"; fix the file and run odachi pack again")
+				_, _ = fmt.Fprintln(stderr, "odachi: could not read skills/"+s.Name+"/"+asset+": "+oneLine(err.Error())+"; fix the file and run odachi pack again")
 				return start.CodeBlocked
 			}
 			entry.Files = append(entry.Files, pack.File{Path: asset, Content: data})
@@ -170,10 +170,10 @@ func reportPack(result pack.Result, asJSON bool, stdout, stderr io.Writer) int {
 		}
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return result.Code
 	}
 
@@ -189,7 +189,7 @@ func reportPack(result pack.Result, asJSON bool, stdout, stderr io.Writer) int {
 		if result.Code != start.CodeOK {
 			line = "odachi: " + line
 		}
-		fmt.Fprintln(out, line)
+		_, _ = fmt.Fprintln(out, line)
 	}
 	return result.Code
 }

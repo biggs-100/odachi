@@ -39,11 +39,11 @@ func runBench(_ string, args []string, stdout, stderr io.Writer) int {
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi bench -h to see the flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: invalid flag: "+oneLine(err.Error())+"; run odachi bench -h to see the flags")
 		return start.CodeBlocked
 	}
 	if flags.NArg() > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi bench only takes flags (run odachi bench -h)\n", flags.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi bench only takes flags (run odachi bench -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
 
@@ -124,10 +124,10 @@ func reportBench(result benchapp.Result, asJSON bool, stdout, stderr io.Writer) 
 
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return result.Code
 	}
 
@@ -136,7 +136,7 @@ func reportBench(result benchapp.Result, asJSON bool, stdout, stderr io.Writer) 
 		out = stderr
 	}
 	for _, line := range result.Lines {
-		fmt.Fprintln(out, line)
+		_, _ = fmt.Fprintln(out, line)
 	}
 	return result.Code
 }

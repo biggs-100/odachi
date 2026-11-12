@@ -45,11 +45,11 @@ func WriteAtomic(path string, data []byte, perm fs.FileMode) error {
 	}()
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("fsx: could not write %s: %w", tmpName, err)
 	}
 	if err := tmp.Sync(); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("fsx: could not sync %s: %w", tmpName, err)
 	}
 	if err := tmp.Close(); err != nil {

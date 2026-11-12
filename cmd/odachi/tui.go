@@ -42,25 +42,25 @@ func runTUI(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer
 			usage(stdout)
 			return start.CodeOK
 		}
-		fmt.Fprintln(stderr, "odachi: tui takes no flags: odachi tui")
+		_, _ = fmt.Fprintln(stderr, "odachi: tui takes no flags: odachi tui")
 		return start.CodeBlocked
 	}
 
 	if !isTerminal(stdin) || streamTarget(stdout) == nil {
-		fmt.Fprintln(stderr, "odachi: la tui necesita una terminal; configura con odachi setup (o odachi init) y sus flags")
+		_, _ = fmt.Fprintln(stderr, "odachi: la tui necesita una terminal; configura con odachi setup (o odachi init) y sus flags")
 		return start.CodeBlocked
 	}
 
 	state, err := detectTUIState(dir)
 	if err != nil {
-		fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 
 	model := newTUIModel(state)
 	model.run = newTUIRunner(dir)
 	if _, err := tea.NewProgram(model, tea.WithInput(stdin), tea.WithOutput(stdout)).Run(); err != nil {
-		fmt.Fprintln(stderr, "odachi: la tui se cerró con un error: "+oneLine(err.Error()))
+		_, _ = fmt.Fprintln(stderr, "odachi: la tui se cerró con un error: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
 	return start.CodeOK
@@ -516,7 +516,7 @@ func (m tuiModel) facts() string {
 
 	var out strings.Builder
 	for _, row := range rows {
-		fmt.Fprintf(&out, "  %-10s %s\n", row[0], row[1])
+		_, _ = fmt.Fprintf(&out, "  %-10s %s\n", row[0], row[1])
 	}
 	return out.String()
 }

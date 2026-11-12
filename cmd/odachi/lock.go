@@ -128,10 +128,10 @@ func createExclusive(path string, line []byte) error {
 		return err
 	}
 	if _, err := file.Write(line); err != nil {
-		file.Close()
+		_ = file.Close()
 		// A half-written lock would say the wrong owner for ten minutes; the
 		// create was ours, so undoing it is safe.
-		os.Remove(path)
+		_ = os.Remove(path)
 		return err
 	}
 	return file.Close()

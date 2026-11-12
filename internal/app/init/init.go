@@ -544,11 +544,10 @@ type runner struct {
 	// "would write" because no byte moved. It is the runner's job and not the
 	// Files port's: a port that silently swallowed a write would hide the report.
 	dryRun bool
-	// existing says the repository already has a commit, and minimal is the
-	// answer this run derived from it: the project never chose, nothing of
-	// odachi's footprint is here yet, and the machine is where the craft lives.
-	existing bool
-	minimal  bool
+	// minimal is the answer this run derived from the footprint: the project never
+	// chose, nothing of odachi's footprint is here yet, and the machine is where the
+	// craft lives.
+	minimal bool
 	// adoptAgent is the agent half's own inference: a repository that already
 	// lives, no choice recorded about its agent, and no agent file here. It does
 	// not read the craft's answer, because a project that keeps its copy is not

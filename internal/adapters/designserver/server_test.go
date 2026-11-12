@@ -53,7 +53,7 @@ func TestShowMovesTheCanvasToAKnownDesign(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST show: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("POST show = %d, want 200", response.StatusCode)
 	}
@@ -62,7 +62,7 @@ func TestShowMovesTheCanvasToAKnownDesign(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST show unknown: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusNotFound {
 		t.Errorf("POST show unknown = %d, want 404", response.StatusCode)
 	}
@@ -83,7 +83,7 @@ func TestShowRefusesAForeignOriginAndANonJSONBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST show: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusForbidden {
 		t.Errorf("foreign origin = %d, want 403", response.StatusCode)
 	}
@@ -92,7 +92,7 @@ func TestShowRefusesAForeignOriginAndANonJSONBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST show text: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusUnsupportedMediaType {
 		t.Errorf("text body = %d, want 415", response.StatusCode)
 	}
@@ -108,7 +108,7 @@ func TestTheCanvasRefusesARouteWithoutItsToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET without token: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusNotFound {
 		t.Errorf("route without token = %d, want 404", response.StatusCode)
 	}
@@ -122,7 +122,7 @@ func TestTheCanvasRefusesARouteWithoutItsToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET foreign host: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusForbidden {
 		t.Errorf("foreign host = %d, want 403", response.StatusCode)
 	}
@@ -151,7 +151,7 @@ func TestACommentIsBounded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST long comment: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusBadRequest {
 		t.Errorf("a 4001-byte comment = %d, want 400", response.StatusCode)
 	}
@@ -180,7 +180,7 @@ func TestAnArtboardSymlinkCannotEscapeTheDesign(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET the symlink: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusNotFound {
 		t.Errorf("a symlink that leaves the design = %d, want 404", response.StatusCode)
 	}
@@ -240,7 +240,7 @@ func TestTheWatcherAnnouncesAHandoffChange(t *testing.T) {
 	if _, _, err := server.Listen(0); err != nil {
 		t.Fatal(err)
 	}
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	server.changed()
 	if err := os.WriteFile(filepath.Join(root, "design", "pricing", "handoffs.json"), []byte(`{"version":1,"chosen":"01-a.html","handoffs":{"01-a.html":{"status":"sent"}}}`), 0o644); err != nil {
@@ -264,7 +264,7 @@ func TestASentCommentIsQueuedForTheSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST comment: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusCreated {
 		t.Fatalf("POST comment = %d, want 201", response.StatusCode)
 	}
@@ -305,7 +305,7 @@ func TestCollectedCommentsAreSentInABatch(t *testing.T) {
 		if err != nil {
 			t.Fatalf("POST comment: %v", err)
 		}
-		response.Body.Close()
+		_ = response.Body.Close()
 		if response.StatusCode != http.StatusCreated {
 			t.Fatalf("POST comment = %d, want 201", response.StatusCode)
 		}
@@ -315,7 +315,7 @@ func TestCollectedCommentsAreSentInABatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST send: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("POST send = %d, want 200", response.StatusCode)
 	}
@@ -347,7 +347,7 @@ func TestACanvasWithoutASessionQueuesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST comment: %v", err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusCreated {
 		t.Fatalf("POST comment = %d, want 201", response.StatusCode)
 	}
@@ -390,7 +390,7 @@ func TestTheCanvasServesOnlyWhatTheManifestLists(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GET %s: %v", path, err)
 		}
-		response.Body.Close()
+		_ = response.Body.Close()
 		if response.StatusCode != http.StatusNotFound {
 			t.Errorf("GET %s = %d, want 404", path, response.StatusCode)
 		}
@@ -408,7 +408,7 @@ func TestACommentIsWrittenWhereEveryAgentReadsIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusCreated {
 		t.Fatalf("POST comment = %d", response.StatusCode)
 	}
@@ -449,13 +449,12 @@ func TestResolvingACommentKeepsTheFileValid(t *testing.T) {
 	if err := json.NewDecoder(created.Body).Decode(&comment); err != nil {
 		t.Fatal(err)
 	}
-	created.Body.Close()
-
+	_ = created.Body.Close()
 	response, err := http.Post(base+"/api/design/pricing/comments/"+comment.ID, "application/json", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("resolve = %d", response.StatusCode)
 	}
@@ -484,8 +483,7 @@ func TestACanvasNeverOverwritesAFileItCannotParse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer response.Body.Close()
-
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusConflict {
 		t.Fatalf("POST over a broken file = %d, want 409", response.StatusCode)
 	}
@@ -504,7 +502,7 @@ func get(t *testing.T, url string, into any) {
 	if err != nil {
 		t.Fatalf("GET %s: %v", url, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if err := json.NewDecoder(response.Body).Decode(into); err != nil {
 		t.Fatalf("GET %s: %v", url, err)
 	}
@@ -516,7 +514,7 @@ func getText(t *testing.T, url string) string {
 	if err != nil {
 		t.Fatalf("GET %s: %v", url, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		t.Fatalf("GET %s: %v", url, err)
@@ -543,7 +541,7 @@ func TestACrossOriginRequestIsRefused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusForbidden {
 		t.Fatalf("cross-origin POST = %d, want 403", response.StatusCode)
 	}
@@ -557,7 +555,7 @@ func TestACrossOriginRequestIsRefused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stopped.Body.Close()
+	_ = stopped.Body.Close()
 	if stopped.StatusCode != http.StatusForbidden {
 		t.Fatalf("cross-origin stop = %d, want 403", stopped.StatusCode)
 	}
@@ -572,7 +570,7 @@ func TestABodyThatIsNotJSONIsRefused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	if response.StatusCode != http.StatusUnsupportedMediaType {
 		t.Fatalf("text/plain POST = %d, want 415", response.StatusCode)
 	}
@@ -613,7 +611,7 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	// The positive case takes a comment, not the stop route: a canvas this test
 	// killed could not be asked the next question.
@@ -631,7 +629,7 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		response.Body.Close()
+		_ = response.Body.Close()
 		return response.StatusCode
 	}
 
@@ -653,7 +651,7 @@ func TestOwnPageAcceptsItsOwnOriginAndRefusesTheRest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stopped.Body.Close()
+	_ = stopped.Body.Close()
 	if stopped.StatusCode != http.StatusForbidden {
 		t.Errorf("a foreign origin on the stop route = %d, want 403", stopped.StatusCode)
 	}

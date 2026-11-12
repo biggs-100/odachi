@@ -49,11 +49,11 @@ func runRole(dir string, args []string, stdout, stderr io.Writer) int {
 
 	if sub == "new" {
 		if len(args) == 0 {
-			fmt.Fprintln(stderr, "odachi: missing the slug: odachi role new <slug>")
+			_, _ = fmt.Fprintln(stderr, "odachi: missing the slug: odachi role new <slug>")
 			return start.CodeBlocked
 		}
 		if len(args) > 1 {
-			fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role new takes a single slug\n", args[1])
+			_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role new takes a single slug\n", args[1])
 			return start.CodeBlocked
 		}
 		return reportRole(roleapp.New(dir, args[0], disk(dir)), asJSON, stdout, stderr)
@@ -61,14 +61,14 @@ func runRole(dir string, args []string, stdout, stderr io.Writer) int {
 
 	inputs, code, message := roleContext(dir)
 	if code != start.CodeOK {
-		fmt.Fprintln(stderr, "odachi: "+message)
+		_, _ = fmt.Fprintln(stderr, "odachi: "+message)
 		return code
 	}
 	if sub == "" {
 		return reportRole(roleapp.List(dir, inputs.block, inputs.clients, inputs.dest, disk(dir)), asJSON, stdout, stderr)
 	}
 	if len(args) > 0 {
-		fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role takes a single slug\n", args[0])
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi role takes a single slug\n", args[0])
 		return start.CodeBlocked
 	}
 	return reportRole(roleapp.Render(dir, sub, inputs.block, inputs.clients, inputs.dest, disk(dir)), asJSON, stdout, stderr)
@@ -210,10 +210,10 @@ func reportRole(result roleapp.Result, asJSON bool, stdout, stderr io.Writer) in
 
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
+			_, _ = fmt.Fprintln(stderr, "odachi: could not build the JSON output: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		fmt.Fprintln(stdout, string(data))
+		_, _ = fmt.Fprintln(stdout, string(data))
 		return result.Code
 	}
 
@@ -229,7 +229,7 @@ func reportRole(result roleapp.Result, asJSON bool, stdout, stderr io.Writer) in
 		if result.Code != start.CodeOK {
 			line = "odachi: " + line
 		}
-		fmt.Fprintln(out, line)
+		_, _ = fmt.Fprintln(out, line)
 	}
 	return result.Code
 }

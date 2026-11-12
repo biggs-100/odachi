@@ -468,7 +468,7 @@ func TestTUIRunnerInstallChoosesInitOrSetup(t *testing.T) {
 func TestTUIRunnerReportsTheVerbError(t *testing.T) {
 	r := newTUIRunner("proyecto")
 	r.initFn = func(_ string, _ []string, _, stderr io.Writer) int {
-		fmt.Fprintln(stderr, "odachi: the store is broken")
+		_, _ = fmt.Fprintln(stderr, "odachi: the store is broken")
 		return 1
 	}
 

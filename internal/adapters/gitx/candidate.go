@@ -56,8 +56,7 @@ func snapshot(root, target string) (tree string, paths []string, diff string, er
 	if err != nil {
 		return "", nil, "", err
 	}
-	defer os.RemoveAll(dir)
-
+	defer func() { _ = os.RemoveAll(dir) }()
 	env := []string{"GIT_INDEX_FILE=" + filepath.Join(dir, "index")}
 
 	if target == "" {

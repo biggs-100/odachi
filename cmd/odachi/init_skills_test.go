@@ -68,8 +68,8 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	homeDir = previous
-	os.RemoveAll(home)
-	os.RemoveAll(template)
+	_ = os.RemoveAll(home)
+	_ = os.RemoveAll(template)
 	os.Exit(code)
 }
 

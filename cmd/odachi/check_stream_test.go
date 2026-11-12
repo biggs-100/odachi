@@ -64,13 +64,13 @@ func TestTheGateStreamsOnlyToATerminal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("temp file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	if got := streamTarget(file); got != nil {
 		t.Fatalf("streamTarget(regular file) = %T, want nil: only a character device is a terminal", got)
 	}
 
 	if devNull, err := os.OpenFile(os.DevNull, os.O_RDWR, 0); err == nil {
-		defer devNull.Close()
+		defer func() { _ = devNull.Close() }()
 		if got := streamTarget(devNull); got == nil {
 			t.Fatalf("streamTarget(character device) = nil, want the writer: a terminal receives the live copy")
 		}

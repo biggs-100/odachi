@@ -80,7 +80,7 @@ const (
 // its own timeout instead of hanging the suite.
 func TestRunStreamWritesWhileTheCommandRuns(t *testing.T) {
 	if os.Getenv(helperEnv) == "1" {
-		fmt.Fprintln(os.Stdout, "ready-out")
+		_, _ = fmt.Fprintln(os.Stdout, "ready-out")
 		fmt.Fprintln(os.Stderr, "ready-err")
 		release := os.Getenv(releaseEnv)
 		// The wait is bounded: a parent that dies leaves no spinner behind. The
@@ -101,7 +101,7 @@ func TestRunStreamWritesWhileTheCommandRuns(t *testing.T) {
 	t.Setenv(releaseEnv, release)
 	// Whatever happens below, the child hears the release: a test that fails must
 	// not leave the process it started waiting for a file nobody will write.
-	defer os.WriteFile(release, []byte("fail\n"), 0o600)
+	defer func() { _ = os.WriteFile(release, []byte("fail\n"), 0o600) }()
 
 	seen := newWatchBuffer()
 	type result struct {
