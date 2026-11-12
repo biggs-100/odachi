@@ -580,9 +580,11 @@ severity = "WARNING"
 ```
 
 A check that exits non-zero, hangs past `check_timeout_s`, or names a command
-nobody installed is filed as a finding in the verdict -at the severity the
-project declared-, so the reviewer cannot approve past it, and the prompt carries
-what the tool said so no lens pays to find it again. The exit status is the whole
+nobody installed is filed as a finding in the verdict, at the severity the project
+declared, and the prompt carries what the tool said so no lens pays to find it
+again. A blocking severity stops the approval and a `WARNING` is recorded and
+answered: what the verdict does with it is what it does with any other row. The
+exit status is the whole
 judgment, so declare a command that fails when the tree is bad: `gofmt -l .` lists
 the files it would rewrite and exits zero, and a check that always passes is a
 line of the prompt that says nothing. A tool's row cites no line:

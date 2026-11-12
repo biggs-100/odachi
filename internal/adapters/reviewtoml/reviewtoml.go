@@ -193,9 +193,32 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 	return []byte(out.String()), nil
 }
 
-// tomlString escapes the two characters a TOML basic string cannot carry as
-// themselves. A command is a human's shell line and travels as written, so the
-// writer escapes instead of refusing what the reader would accept.
+// tomlString escapes what a TOML basic string cannot carry as itself: a
+// backslash, a quote, and every control character. The command is a human's shell
+// line, and a two-line one is ordinary; writing it raw would produce a file this
+// same reader refuses, so the writer escapes instead of losing the project's
+// configuration.
 func tomlString(value string) string {
-	return strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(value)
+	var out strings.Builder
+	for _, r := range value {
+		switch r {
+		case '\\':
+			out.WriteString(`\\`)
+		case '"':
+			out.WriteString(`\"`)
+		case '\n':
+			out.WriteString(`\n`)
+		case '\r':
+			out.WriteString(`\r`)
+		case '\t':
+			out.WriteString(`\t`)
+		default:
+			if r < 0x20 || r == 0x7f {
+				out.WriteString(fmt.Sprintf(`\u%04X`, r))
+				continue
+			}
+			out.WriteRune(r)
+		}
+	}
+	return out.String()
 }

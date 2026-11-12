@@ -136,4 +136,3 @@ func TestOnlyAPassedCheckIsPassed(t *testing.T) {
 		}
 	}
 }
-

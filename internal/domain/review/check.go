@@ -266,9 +266,10 @@ func (a CheckApproval) Covers(checks []Check) bool {
 // the file writes them, each with its name, its command and the severity it is
 // paid at. Nothing is hashed twice, so two runs of the same file agree.
 //
-// A list the domain refuses still hashes -the approval of it will simply never
-// match, because an approval is written from the list the review accepted- and
-// the delimiter cannot be forged by a name, a command or a severity.
+// Every field is written with its length in front, because the command is a
+// human's shell line and can carry any character at all: without the length, one
+// check whose command contains the delimiter would hash the same as two checks,
+// and an approval would cover a list nobody wrote.
 func ChecksFingerprint(checks []Check) string {
 	if len(checks) == 0 {
 		return ""
@@ -281,16 +282,22 @@ func ChecksFingerprint(checks []Check) string {
 
 	var lines strings.Builder
 	for _, check := range normalized {
-		lines.WriteString(string(check.Name))
-		lines.WriteString("\x00")
-		lines.WriteString(string(check.Command))
-		lines.WriteString("\x00")
-		lines.WriteString(string(check.Severity))
+		writeField(&lines, string(check.Name))
+		writeField(&lines, string(check.Command))
+		writeField(&lines, string(check.Severity))
 		lines.WriteString("\n")
 	}
 
 	sum := sha256.Sum256([]byte(lines.String()))
 	return hex.EncodeToString(sum[:])
+}
+
+// writeField writes one field with its length in front: the length is what makes
+// two different lists impossible to spell the same way.
+func writeField(out *strings.Builder, value string) {
+	out.WriteString(strconv.Itoa(len(value)))
+	out.WriteString(":")
+	out.WriteString(value)
 }
 
 // RenderCheckApproval writes the record the clone keeps. It is the plain header

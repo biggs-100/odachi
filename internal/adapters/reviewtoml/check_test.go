@@ -145,6 +145,37 @@ func TestRenderRoundTripsTheChecks(t *testing.T) {
 	}
 }
 
+// TestRenderWritesATwoLineCommandBackAsToml: a check's command is a shell line and
+// may run over two lines. The writer must escape what the reader decodes, or one
+// rewrite of the file leaves a project that cannot read its own configuration.
+func TestRenderWritesATwoLineCommandBackAsToml(t *testing.T) {
+	command := "do-first --flag\n\tdo-second --quote \"x\" --nul \x00"
+
+	config := review.ProjectConfig{
+		Mode:         review.ModeOn,
+		KeepVerdicts: review.DefaultKeepVerdicts,
+		Checks: []review.Check{
+			{Name: "multi", Command: command, Severity: review.Warning},
+		},
+	}
+
+	data, err := reviewtoml.Render(config)
+	if err != nil {
+		t.Fatalf("Render = %v, want no error", err)
+	}
+
+	back, err := reviewtoml.Decode(data)
+	if err != nil {
+		t.Fatalf("Decode(Render(config)) = %v, want the file odachi wrote to be readable:\n%s", err, data)
+	}
+	if len(back.Checks) != 1 {
+		t.Fatalf("the round trip kept %d checks, want 1", len(back.Checks))
+	}
+	if back.Checks[0].Command != command {
+		t.Errorf("the command came back as %q, want %q", back.Checks[0].Command, command)
+	}
+}
+
 // TestRenderSaysHowLongAToolMayRun: a project that declared tools reads the
 // ceiling next to them instead of guessing what the run used.
 func TestRenderSaysHowLongAToolMayRun(t *testing.T) {

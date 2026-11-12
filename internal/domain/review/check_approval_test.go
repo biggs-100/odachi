@@ -51,6 +51,28 @@ func TestOneWordChangedIsAnotherList(t *testing.T) {
 	}
 }
 
+// TestOneCommandCannotForgeAnotherList: the command is a human's shell line and
+// can carry any character, including the separator an earlier fingerprint used. A
+// list that is approved must be the only list with that identity, or the approval
+// covers tools nobody wrote.
+func TestOneCommandCannotForgeAnotherList(t *testing.T) {
+	one := []review.Check{{Name: "a", Command: "b\x00WARNING\nc\x00d", Severity: review.Warning}}
+	two := []review.Check{
+		{Name: "a", Command: "b", Severity: review.Warning},
+		{Name: "c", Command: "d", Severity: review.Warning},
+	}
+	if review.ChecksFingerprint(one) == review.ChecksFingerprint(two) {
+		t.Error("one check with a crafted command hashes like two checks")
+	}
+
+	// The same shape without a NUL: a command that ends where another begins.
+	first := []review.Check{{Name: "ab", Command: "c", Severity: review.Warning}}
+	second := []review.Check{{Name: "a", Command: "bc", Severity: review.Warning}}
+	if review.ChecksFingerprint(first) == review.ChecksFingerprint(second) {
+		t.Error("two names that swap a character share one fingerprint")
+	}
+}
+
 // TestAnApprovalCoversTheListItWasWrittenFor: the record survives a reread and
 // stops covering the day the list changes.
 func TestAnApprovalCoversTheListItWasWrittenFor(t *testing.T) {

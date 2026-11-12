@@ -52,6 +52,15 @@ type Dismissals struct {
 	Rows []Dismissal `json:"dismissed"`
 }
 
+// rowLabelOf names the row a message is about: the file and the line for a
+// finding, and the tool for a row a tool filed, which has no place at all.
+func rowLabelOf(row Dismissal) string {
+	if check := strings.TrimSpace(row.Check); check != "" {
+		return "check:" + check
+	}
+	return row.Path
+}
+
 // DismissedName is the file a tree's dismissals live in, beside its verdict.
 func DismissedName(tree string) (string, error) {
 	if !hashLike(tree) {
@@ -101,10 +110,10 @@ func ParseDismissals(data []byte) (Dismissals, error) {
 			return Dismissals{}, fmt.Errorf("dismissal %d is the check %q and says line %d: a tool judged the candidate, not a line", i+1, row.Check, row.Line)
 		}
 		if strings.TrimSpace(row.Reason) == "" {
-			return Dismissals{}, fmt.Errorf("dismissal %d (%s) does not say why: a dismissal without evidence is silence, not a judgment", i+1, row.Path)
+			return Dismissals{}, fmt.Errorf("dismissal %d (%s) does not say why: a dismissal without evidence is silence, not a judgment", i+1, rowLabelOf(row))
 		}
 		if row.Line < 0 {
-			return Dismissals{}, fmt.Errorf("dismissal %d (%s) says line %d; use 0 for the whole file or the line number", i+1, row.Path, row.Line)
+			return Dismissals{}, fmt.Errorf("dismissal %d (%s) says line %d; use 0 for the whole file or the line number", i+1, rowLabelOf(row), row.Line)
 		}
 		if trimmed := strings.TrimSpace(row.At); trimmed != "" {
 			if _, err := time.Parse(time.RFC3339, trimmed); err != nil {

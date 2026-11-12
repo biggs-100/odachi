@@ -10,13 +10,13 @@ R1 · "la herramienta corre antes que el modelo y su fallo es un defecto que no 
 - una comprobación cuyo comando no existe deja una fila que lo dice, en vez de caerse
 - las comprobaciones corren en el worktree del candidato y no en el repositorio
 - go test ./... is green and odachi check --run "go test ./..." is green
-- ## Unreleased names it, patch (0278)
+- ## Unreleased names it, minor (0278): the verdict and the review file both move to schema 6
 
 ## Steps
 - [x] T1 · el archivo del review declara las comprobaciones: nombre, comando y severidad, y un archivo sin ellas se lee igual   R1 · route:inline · tree:b8709618731d17669f6eecc59c84c20736bb6514
 - [x] T2 · el review corre cada comprobacion en el worktree del candidato y el prompt lleva el resultado antes de cualquier lente   R1 · route:inline · tree:62f4ca56abc94cc777c9d8d5bb959d7a894d7255
 - [x] T3 · una comprobacion que falla es un finding de la herramienta, con su salida y su severidad   R1 · route:inline · tree:c0c821ab17d9d610c520e5696f5196c5b60e6613
-- [ ] T4 · el veredicto dice lo que corrio: --show nombra las comprobaciones y Unreleased nombra la feature   R1 · route:inline
+- [x] T4 · el veredicto dice lo que corrio: --show nombra las comprobaciones y Unreleased nombra la feature   R1 · route:inline · tree:75889510bb274ced49af69a2697418ff48ee8fbf
 
 ## History
 L1 · "la herramienta corre antes que el modelo y su fallo es un defecto que no se puede ignorar"
