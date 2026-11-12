@@ -1,51 +1,48 @@
 # Next session
 
-Written after `v0.38.13` shipped. Nothing is owed.
+Written after `v0.38.14` shipped. Nothing is owed.
 
 ## Where the project is
 
-- `v0.38.13` is published: annotated tag on `6bc8864` (`Merge pull request #530`), sixteen assets, and the
-  binary installed on this machine reports `odachi v0.38.13`. `main` is that merge commit.
-- Two patches went in today for it: `review --since` resolves the prefix a person copies to the stored
-  verdict (0272), and the public face says what the repository does -`--help` names every verb the
-  dispatcher answers, and the README lost the counts that rot (0273).
-- 271 features, 654 steps, 0 open questions; `docs/review-debt.md` holds no open row.
-- The closing tree carries `proof/0273-la-cara-dice-la-verdad.txt` and one verdict
-  (`.git/odachi/reviews/68fecbb0….json`, reliability, base `94645f0`, no findings).
-- `## Unreleased` does not exist: the next feature writes it again, above `## v0.38.13`.
+- `v0.38.14` is published: annotated tag on `d8c0d91` (`Merge pull request #533`), sixteen assets, and the
+  binary installed on this machine reports `odachi v0.38.14`. `main` is that merge commit.
+- The patch it names came in with #532: the gate refuses an artifact whose bytes are not UTF-8, one saved
+  with a BOM, and one carrying the sequences a UTF-8 file leaves when a console reads it as CP850 (0274).
+- 272 features, 656 steps, 0 open questions; `docs/review-debt.md` holds no open row.
+- The closing tree carries `proof/0274-lo-que-la-compuerta-ve.txt` and one verdict
+  (`.git/odachi/reviews/ab7974e0….json`, reliability, base `0a84a94`).
+- `## Unreleased` does not exist: the next feature writes it again, above `## v0.38.14`.
 
 ## What shipped
 
-- **0272, the tree a human copies.** `domain.Name` accepted any hash-like string, so `--since bbf385ca`
-  looked for `reviews/bbf385ca.json` and answered "there is no verdict for the tree --since names" about a
-  verdict the clone held -it cost a full review instead of the cheap delta. The correction resolves the
-  prefix against the store listing `--all` prints, refuses an ambiguous one naming its candidates, and says
-  which tree it completed.
-- **0273, the public face.** `design` and `review probe` were answered and absent from the usage block; the
-  README claimed eighteen surfaces (twenty-three), 44 packages (62), no provenance (`gh attestation verify`
-  exits 0), and no automated test for `install.ps1` (the Windows suite runs it over `file://`). The counts
-  are gone instead of updated, and a test reads the dispatcher's own cases so a verb cannot hide again.
+- **0274, a record that does not decode is refused.** The brief corrupted on 0271 was valid UTF-8 -the bytes
+  of one encoding read by another- so no decoder and no gate saw it. The gate now names the byte where a file
+  stops decoding, refuses a BOM, and refuses the CP850 markers in the brief and the TOMLs, never in a task
+  document: prose may have to name them.
+- **A rule was planned and dropped.** Comparing every brief block with its task document's requirement
+  looked like the non-heuristic detector; the tests showed it blocks valid states -a brief before its first
+  document, a block whose document was removed- and the record accumulates. The craft note keeps why.
 
 ## The questions that wait
 
 - **None open.** The next feature writes the new `## Unreleased`.
-- **One approval is one draw.** Every verdict today was a single sample; two of them approved a tree and the
-  next tree's review found real defects in what the first had passed.
+- **One approval is one draw**, and today's own feature is the example: a verdict approved a tree, and the
+  next review found the record promising what the code did not do. The instrument (N draws, the union of
+  what they found) has not been designed yet, and it is the next big thing.
 
 ## The limits to remember
 
-- **A test that reads source can be fooled.** The usage test matched `odachi skill` inside `odachi skills`
-  and stopped its scan at any brace: the review of the tree found both. A reader needs a token boundary and
-  the block's own closing brace, and a guard that fails when the scan does not reach the last case.
-- **`## Unreleased` appears twice in `CHANGELOG.md`**: once in the heading and once in the intro prose that
-  explains it. `strings.Replace` on the first match rewrites the sentence, not the heading; rename the line
-  whose content is exactly `## Unreleased`.
-- **A run queued with zero jobs is GitHub's problem**, not a busy queue: `gh run view <id> --json jobs` says
-  `total=0`, and closing and reopening the pull request triggers a fresh run that starts.
-- **A rebase of a closing branch needs a fresh proof and a fresh verdict**, and the conflicted commit cannot
-  run the hook: resolve, run `check --run`, review the delta, then push with `--force-with-lease`.
-- **The store's rows are keyed by bytes** (0265), **the console is not UTF-8** (0271), **one tree, one
-  verdict** and a wider base covers a later feature (0268), **a docs-only change owes no new proof**.
+- **A finding about the record costs a full cycle.** The review of 0274 found, twice, that the brief promised
+  or described something the code did not do; each fix costs a proof (700 s) and a verdict. Write the
+  brief's non-goals and decisions after the design is settled, or expect to pay twice.
+- **The store's rows are keyed by bytes**: a WARNING whose claim a record edit fixed stays potent until the
+  file it names changes (0265, 0271).
+- **A run queued with zero jobs is GitHub's**: `gh run view <id> --json jobs` says `total=0`, and closing
+  and reopening the pull request triggers a fresh run.
+- **`CHANGELOG.md` carries `## Unreleased` twice** -the heading and the prose about it- so the rename is
+  line-based.
+- **The console is not UTF-8** (0271), **one tree, one verdict** and a wider base covers a later feature
+  (0268), **a docs-only change owes no new proof**.
 - **One heavy gate per machine**: `go test ./...` takes about 700 s and `check --run` writes the proof.
 
 ## The commands that work
