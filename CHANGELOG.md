@@ -17,8 +17,9 @@ not a version.
   the tree that shipped `--runs`, which the first draw had approved. The other two
   defects that draw found are paid with it: the command a failed run hands over now
   carries `--exec` and the lens it was told to judge, because pasting a hint the verb
-  refuses pays nothing; and the refusal that says a lens already holds enough names the
-  count the file holds plus one, not the count the refused run asked for. Patch (0276).
+  refuses pays nothing; and the refusal that says a lens already holds enough names one more
+  than the smallest count the file holds -not the count the refused run asked for, and not one
+  more than the largest, which would spend several draws while promising one-. Patch (0276).
 
 ## v0.39.0 - 2026-11-11
 

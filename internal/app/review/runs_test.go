@@ -473,3 +473,75 @@ func TestTheRefusalNamesOneMoreThanTheFileCounts(t *testing.T) {
 		t.Errorf("the refusal names the count the run asked for:\n%s", said)
 	}
 }
+
+// passesAnswer is an answer that audits both lenses on the changed path.
+const passesAnswer = `{"findings":[],"passes":[{"path":"a.go","lens":"risk"},{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`
+
+// TestTheHandoverRunsAfterAWidenedRunRecordedWhy: the line a widened run hands over
+// names --lens without --because, and the verb demands a reason only when the scope
+// is not on file. A run that landed an answer wrote that record, so the line it hands
+// over has to pass the same check it came from.
+func TestTheHandoverRunsAfterAWidenedRunRecordedWhy(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.shell.script = []fakeAnswer{
+		{output: passesAnswer},
+		{output: "boom: the model did not answer", exitCode: 1},
+	}
+
+	first := p.run(review.Options{
+		Exec:    "revisor --model {model}",
+		Runs:    2,
+		Lens:    "risk,reliability",
+		Because: "the words the scope record keeps",
+	})
+	if first.Code != review.CodeBlocked {
+		t.Fatalf("the first run = %d, want blocked on the draw it lost (%s)", first.Code, first.Message)
+	}
+	if !strings.Contains(strings.Join(first.Lines, "\n"), "--lens risk,reliability") {
+		t.Fatalf("the handover does not carry the widened lens:\n%s", strings.Join(first.Lines, "\n"))
+	}
+
+	// The same line without the words: the record on file is the reason.
+	second := p.run(review.Options{Exec: "revisor --model {model}", Runs: 2, Lens: "risk,reliability"})
+
+	if strings.Contains(second.Message, "say why with --because") {
+		t.Errorf("the handover is refused for the reason it recorded: %s", second.Message)
+	}
+}
+
+// TestTheRefusalNamesTheSmallestCountThatPaysOne: lenses can hold different counts
+// after a draw failed for one of them. One more than the largest pays several draws
+// while the sentence promises one; the number to name is one more than the smallest,
+// which pays exactly one -for the lenses that hold the least-.
+func TestTheRefusalNamesTheSmallestCountThatPaysOne(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "revisor",
+		Lenses:   []string{"risk", "reliability"},
+		Draws:    map[string]int{"risk": 5, "reliability": 3},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the verdict the tree holds: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(sealed)
+
+	result := p.run(review.Options{
+		Exec:    "revisor --model {model}",
+		Runs:    3,
+		Lens:    "risk,reliability",
+		Because: "the test needs a tree whose lenses hold different counts",
+	})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked (%s)", result.Code, result.Message)
+	}
+	said := strings.Join(result.Lines, "\n")
+	if !strings.Contains(said, "--runs 4") {
+		t.Errorf("the refusal does not name one more than the smallest count:\n%s", said)
+	}
+	if strings.Contains(said, "--runs 6") {
+		t.Errorf("the refusal names a count that pays several draws:\n%s", said)
+	}
+}

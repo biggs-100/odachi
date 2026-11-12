@@ -4059,20 +4059,22 @@ func nothingOwed(rel string, selected []string, stored *domain.Verdict, runs int
 		return alreadyStored(rel)
 	}
 	counted := make([]string, 0, len(selected))
-	most := 0
+	least := -1
 	for _, lens := range selected {
-		counted = append(counted, lens+" ("+drawCount(stored.PaidFor(lens))+")")
-		if held := stored.PaidFor(lens); held > most {
-			most = held
+		held := stored.PaidFor(lens)
+		counted = append(counted, lens+" ("+drawCount(held)+")")
+		if least < 0 || held < least {
+			least = held
 		}
 	}
 	message := "this tree already has a verdict: " + rel + " holds " + strings.Join(counted, ", ") +
 		", and --runs " + strconv.Itoa(runs) + " pays nothing"
 	lines := []string{message}
-	// The number to name is the count the file holds plus one: the count is the fact,
-	// and the run that was refused is not.
-	if most < MaxRuns {
-		lines = append(lines, "next: odachi review --runs "+strconv.Itoa(most+1)+` --exec "<your reviewer command>" pays one more draw, or odachi review --show`)
+	// The number to name is one more than the smallest count, because that is the
+	// smallest run that pays exactly one draw -for the lenses that hold the least. One
+	// more than the largest would spend several while promising one.
+	if least >= 0 && least < MaxRuns {
+		lines = append(lines, "next: odachi review --runs "+strconv.Itoa(least+1)+` --exec "<your reviewer command>" pays one more draw, or odachi review --show`)
 	} else {
 		lines = append(lines, "next: odachi review --show ("+strconv.Itoa(MaxRuns)+" is the most draws a lens may hold)")
 	}
