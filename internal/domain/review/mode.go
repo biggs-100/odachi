@@ -37,6 +37,14 @@ type ProjectConfig struct {
 	// odachi shipped, and `Render` writes them.
 	KeepVerdicts int
 	KeepPrompts  int
+	// Checks are the deterministic tools this project runs on a candidate before
+	// any lens reads it, in the order the file declares them. Empty means the
+	// project declared none, which is every project that never opened the file.
+	Checks []Check
+	// CheckTimeout is how long one check may run, in seconds. Zero on disk reads
+	// as DefaultCheckTimeout, so a file written before the key existed waits the
+	// same as one odachi wrote today.
+	CheckTimeout int
 }
 
 // The numbers odachi ships, and the reason they are not the human's: a project
