@@ -1,17 +1,20 @@
 # Next session
 
-Written after 0288, the ratchet reaching `start` with its walker in a package of its own.
+Written after 0289, the ratchet reaching `review` and closing over the three packages
+that talk to the agent.
 
 ## Where the project is
 
 - `v0.41.0` is published: annotated tag on `68a2ae2` (`Merge pull request #568`), sixteen
   assets built and attested, and the binary on this machine reports `odachi v0.41.0`.
-- `main` is past 0288's merge (PR #573). 286 features, 699 steps, 0 open questions.
-- **The ratchet covers two packages**: `internal/app/check` (4 sentences, 5 unreadable) and
-  `internal/app/start` (2 sentences, 3 unreadable) freeze their debt in a
-  `refusals.baseline` each, and the mechanism lives in `internal/refusal` (walk, both
-  directions, the counts). **`internal/app/review` still owes its slice**: 114 refusals, 30
-  with a way out.
+- `main` is past 0289's merge (PR #575). 287 features, 700 steps, 0 open questions.
+- **The ratchet covers three packages**: `internal/app/check` (4 sentences, 5 unreadable),
+  `internal/app/start` (2, 3) and `internal/app/review` (52, 5 across two files). Each
+  freezes its debt in a `refusals.baseline`, and the mechanism -walk, both directions, the
+  counts- lives in `internal/refusal`.
+- **The scope of a ratchet is the constructor it reads**: `blocked(...)`. `refused(...)`
+  stays outside -7 calls in `review`, 4 in `check`-, named in 0289's decision line and not
+  fixed, because widening the walker moves every baseline under it.
 - **`main` is protected:** every change enters through a pull request, the release rename
   included. A fence change is still two problems -the policy lands before the code-.
 - **Every review runs two tools before any lens**: `lint` and `govulncheck ./...`, both at
@@ -22,32 +25,35 @@ Written after 0288, the ratchet reaching `start` with its walker in a package of
 
 ## What shipped
 
-- **0288, the ratchet reaches start** (no release: pinning a rule is not a capability).
-  `internal/refusal` holds the walk, `Grew`, `Shrunk` and `CountIssues`; `check` kept its
-  baseline byte for byte and lost 202 lines of duplicated walker; `start` froze two
-  sentences and three unreadable calls. Its own review found the count comparison had been
-  left in both tests and it was paid in a correction over the delta.
+- **0289, the ratchet reaches review** (no release: pinning a rule is not a capability).
+  52 sentences and 2 count rows, generated from the walk so no row is a transcription; both
+  directions observed by hand before the baseline existed; the verdict approved by the
+  reliability lens at two draws. `check` and `start` did not move a byte.
 
 ## The decision that waits
 
 **Heterogeneous lenses is deferred by the human until they say so** -no money for more
-models-, so it is not next. The cheap model prices say a review with two vendors costs the
-same calls and cents, and that argument is recorded; the decision is not.
+models-, so it is not next.
 
-**The next slice of the ratchet is `internal/app/review`**: 114 refusals, 30 with a way out.
-It is the biggest surface and the one that talks to the agent most often.
+**No slice of the ratchet waits.** The three packages are covered, and the next debt is a
+different shape: issue #572, the gate certifying a green command rather than a test that can
+fail. It needs its brief before code, and the fence protects `internal/domain/gate/**`, so it
+is two pull requests and a vision decision first.
 
 **The third model waits for a call this size.** The free tier refuses a probe-sized prompt
 after 45 to 90 seconds while a small one answers in two.
 
 **Named and not fixed:** a refutation still writes its own time (`refute.go` calls
 `instant`); the gate's continuation test covers seven of its ten reasons and the fence
-protects the package; and `go.mod` asks for a patch of Go.
+protects the package; `go.mod` asks for a patch of Go.
 
 ## The limits to remember
 
 - **A ratchet has two directions and both must fail**, including the counts: a shrink
   reported through a log is a shrink nobody sees in CI.
+- **The scope of a ratchet is the constructor it reads.** Widening the walker past
+  `blocked(...)` moves every baseline under it, so a scope change is its own feature with
+  all of them in the same diff.
 - **A mechanism with a second consumer gets a home, and the extraction includes the prose.**
   The walk moved before the count comparison did, and the review caught the half that stayed
   duplicated.
@@ -57,6 +63,9 @@ protects the package; and `go.mod` asks for a patch of Go.
   tree. `odachi undo --artifact <taskdoc>`, then re-run after a commit that succeeded.
 - **A record line after the proof voids the proof**, and once the document is closed the hook
   refuses the commit: write the records, measure, commit.
+- **`proof/` is ignored by git.** The proof is evidence in the working tree and CI regenerates
+  it; `git add proof/<feature>.txt` fails by design, and the closing commit passes because the
+  tree, not the file, is what the proof names.
 - **The classifier reads `go/token` as touching secrets**, so a test that parses Go asks for
   all four lenses.
 - **The actor does not write its own receipt**; the tool stamps what it proves.
