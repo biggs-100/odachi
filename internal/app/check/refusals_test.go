@@ -17,7 +17,8 @@ import (
 
 // baselineFile is the frozen list of refusals this package had the day the ratchet
 // was written. It only shrinks: a refusal that names no way out and is not here
-// fails the suite, and one that disappears is reported so the number goes down.
+// fails the suite, and one that disappears fails it too, so the number in the file
+// follows the debt down instead of drifting.
 const baselineFile = "refusals.baseline"
 
 // wayOut is the shape of a continuation a person can type: an odachi verb or a
@@ -49,7 +50,7 @@ func TestEveryRefusalNamesAWayOutOrIsInTheBaseline(t *testing.T) {
 		t.Errorf("a refusal names no way out and is not in %s: %s\nname the command in its sentence, or add it to the baseline on purpose", baselineFile, row)
 	}
 	for _, row := range shrunk(found, baseline) {
-		t.Logf("this refusal is gone; lower %s: %s", baselineFile, row)
+		t.Errorf("this refusal is gone; lower %s: %s", baselineFile, row)
 	}
 
 	for file, count := range unreadable {
@@ -60,20 +61,20 @@ func TestEveryRefusalNamesAWayOutOrIsInTheBaseline(t *testing.T) {
 		case count > want:
 			t.Errorf("%s has %d refusal(s) the walk cannot read and %s froze %d: a message built from a value cannot be judged, and it may not grow", file, count, baselineFile, want)
 		case count < want:
-			t.Logf("%s now has %d refusal(s) the walk cannot read; lower %s", file, count, baselineFile)
+			t.Errorf("%s now has %d refusal(s) the walk cannot read; lower %s", file, count, baselineFile)
 		}
 	}
 	for file := range frozen {
 		if _, ok := unreadable[file]; !ok {
-			t.Logf("%s no longer builds a refusal from a value; remove its count from %s", file, baselineFile)
+			t.Errorf("%s no longer builds a refusal from a value; remove its count from %s", file, baselineFile)
 		}
 	}
 }
 
 // grew is what the walk found and the baseline does not freeze: a refusal that
-// arrived without a way out. Shrunk is its other direction, and the two are
-// separate on purpose -one fails the suite, the other only asks the record to
-// follow.
+// arrived without a way out. Shrunk is its other direction: a row that left, which
+// the file must stop claiming. Both fail, because a baseline that drifts above the
+// debt is a number nobody reads.
 func grew(found, baseline []string) []string {
 	out := make([]string, 0)
 	for _, row := range found {
