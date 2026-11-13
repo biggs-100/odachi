@@ -20,7 +20,7 @@ const baselineFile = "refusals.baseline"
 // What this does not prove: that the named continuation works. A sentence that
 // points at a command which runs and does nothing passes here.
 func TestEveryRefusalNamesAWayOutOrIsInTheBaseline(t *testing.T) {
-	found, err := refusal.Walk(".")
+	found, err := refusal.Walk(".", refusal.AtTheCall("blocked"))
 	if err != nil {
 		t.Fatalf("walking this package: %v", err)
 	}

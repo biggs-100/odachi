@@ -35,6 +35,35 @@ import (
 // flag. A sentence that names neither is a dead end.
 var wayOut = regexp.MustCompile(`(?i)odachi\s+[a-z-]+|--[a-z][a-z-]+`)
 
+// Source says where a builder keeps the sentence it shows a human.
+type Source int
+
+const (
+	// CallSite is a constructor: the first argument of every call is the message,
+	// and a value nobody can follow is counted.
+	CallSite Source = iota
+	// Body is a helper that hardcodes part of its message: the sentence lives in
+	// the function, and one helper is one row however many places call it.
+	Body
+)
+
+// Builder is one way a package builds a refusal: the function's name and the side
+// that carries the sentence. A package declares its own, because the walk cannot
+// guess which helper is a door and which is a convenience (0292).
+type Builder struct {
+	Name string
+	From Source
+}
+
+// AtTheCall declares a constructor: its calls are read, and the first argument is
+// the sentence.
+func AtTheCall(name string) Builder { return Builder{Name: name, From: CallSite} }
+
+// InTheBody declares a helper that builds its message: the function is read, and its
+// calls are not -the arguments a call passes are values, and reading them would
+// count one dead end once per use (0292).
+func InTheBody(name string) Builder { return Builder{Name: name, From: Body} }
+
 // Found is what one walk found in a directory.
 type Found struct {
 	// Sentences are the refusals that name no way out, as "file<TAB>sentence",
@@ -52,11 +81,22 @@ type Baseline struct {
 	Counts    map[string]int
 }
 
-// Walk reads a package's production sources and collects every refusal built for
-// `blocked(...)`: the sentence when it can be read statically, a count when it
-// cannot. Test files are skipped: a fixture that builds a refusal on purpose is not
-// a refusal a human reads.
-func Walk(dir string) (Found, error) {
+// Walk reads a package's production sources and collects every refusal built by the
+// builders the package declares: the sentence when it can be read statically, a count
+// when it cannot. A constructor is read at its call sites; a helper that builds the
+// message is read in its body, once. Test files are skipped: a fixture that builds a
+// refusal on purpose is not a refusal a human reads.
+func Walk(dir string, builders ...Builder) (Found, error) {
+	atCall := make(map[string]bool, len(builders))
+	inBody := make(map[string]bool, len(builders))
+	for _, builder := range builders {
+		if builder.From == Body {
+			inBody[builder.Name] = true
+			continue
+		}
+		atCall[builder.Name] = true
+	}
+
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return Found{}, err
@@ -73,27 +113,61 @@ func Walk(dir string) (Found, error) {
 			return Found{}, err
 		}
 		ast.Inspect(file, func(n ast.Node) bool {
-			call, ok := n.(*ast.CallExpr)
-			if !ok || len(call.Args) == 0 {
+			switch node := n.(type) {
+			case *ast.FuncDecl:
+				if node.Recv != nil || !inBody[node.Name.Name] {
+					return true
+				}
+				for _, sentence := range bodySentences(node.Body) {
+					if !wayOut.MatchString(sentence) {
+						found.Sentences = append(found.Sentences, name+"\t"+sentence)
+					}
+				}
 				return true
-			}
-			fun, ok := call.Fun.(*ast.Ident)
-			if !ok || fun.Name != "blocked" {
-				return true
-			}
-			sentence, _ := staticSentence(call.Args[0])
-			sentence = strings.TrimSpace(sentence)
-			switch {
-			case sentence == "":
-				found.Unreadable[name]++
-			case !wayOut.MatchString(sentence):
-				found.Sentences = append(found.Sentences, name+"\t"+sentence)
+			case *ast.CallExpr:
+				fun, ok := node.Fun.(*ast.Ident)
+				if !ok || !atCall[fun.Name] || len(node.Args) == 0 {
+					return true
+				}
+				sentence, _ := staticSentence(node.Args[0])
+				sentence = strings.TrimSpace(sentence)
+				switch {
+				case sentence == "":
+					found.Unreadable[name]++
+				case !wayOut.MatchString(sentence):
+					found.Sentences = append(found.Sentences, name+"\t"+sentence)
+				}
 			}
 			return true
 		})
 	}
 	slices.Sort(found.Sentences)
 	return found, nil
+}
+
+// bodySentences is every message a declared helper builds, as far as the walk can
+// read it. A helper that hardcodes its sentence is one dead end however many places
+// call it, which is why it is read here and not at the call sites (0292).
+func bodySentences(body *ast.BlockStmt) []string {
+	if body == nil {
+		return nil
+	}
+	var sentences []string
+	ast.Inspect(body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || len(call.Args) == 0 {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || (sel.Sel.Name != "Sprintf" && sel.Sel.Name != "Errorf") {
+			return true
+		}
+		if sentence, _ := staticSentence(call.Args[0]); strings.TrimSpace(sentence) != "" {
+			sentences = append(sentences, strings.TrimSpace(sentence))
+		}
+		return true
+	})
+	return sentences
 }
 
 // ReadBaseline reads the frozen list: `sentence<TAB>file<TAB>text` rows and
