@@ -1,0 +1,11 @@
+# Refusals that name no way out, frozen the day the ratchet was written (0287).
+#
+# This file only shrinks. A sentence here whose refusal later names a command must
+# be deleted, and a count here must go down when a call stops building its message
+# from a value. The test reports both directions; adding a line is a deliberate act
+# a reviewer sees in the diff, never a way to make the suite green in a hurry.
+sentence	check.go	a change that names itself in a trailer lives on a branch, not on : move the commits to a branch and run again
+sentence	check.go	could not find the merge-base with :
+sentence	check.go	could not read the commit message : ; git runs the hook inside the repository
+sentence	check.go	could not read the commits since :
+count	check.go	5
