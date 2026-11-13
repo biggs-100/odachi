@@ -274,6 +274,16 @@ deps  = []
 # deps  = []
 
 # This non-goal has no paths yet:
+#   the gate does not run the checks: it reads the verdict they produced
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "the gate does not run the checks: it reads the verdict they produced"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
 #   no parsing of the output into a file and a line: the row carries the text, and a check row is not placed on a path
 # A rule protects files: write what it must keep out of the tree, then
 # remove the '#' in front of the four lines below.
@@ -610,5 +620,45 @@ deps  = []
 #
 # [[rule]]
 # not   = "no entra arreglar plan --done cuando registra el arbol anterior: queda nombrado, no arreglado"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se reescriben las refutaciones ya guardadas: conservan la hora que traen
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se reescriben las refutaciones ya guardadas: conservan la hora que traen"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   nada del veredicto cambia: su hora, su reclamo y su sello quedan como 0286 los dejo
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "nada del veredicto cambia: su hora, su reclamo y su sello quedan como 0286 los dejo"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no cambian los lentes, ni el prompt del refutador, ni el numero de testigos: la pregunta es de quien es la hora
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no cambian los lentes, ni el prompt del refutador, ni el numero de testigos: la pregunta es de quien es la hora"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra un flag nuevo: la refutacion se sella como hasta ahora
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra un flag nuevo: la refutacion se sella como hasta ahora"
 # paths = []
 # deps  = []
