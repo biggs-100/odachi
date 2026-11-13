@@ -298,6 +298,38 @@ which are the draw's, and a third model with a different family would say whethe
 "suggests on clean code" is one vendor's habit or a general property of a lens prompt that
 asks for real defects only.
 
+## Part 5d: the third model could not be measured
+
+Part 5c left one question open: whether "suggests on clean code" is one vendor's habit or a
+property of the lens prompt. The answer needs a third family and several draws. This is what
+happened when it was tried on 2026-11-12, and it is written down because the attempt is
+evidence about the instrument, not about the models.
+
+- **`mimo-v2.6-flash` answered five of the six calls of one draw.** Each answer took between
+  two and eight minutes, and the sixth -the clean arm's readability lens- stalled at the 600 s
+  ceiling the probe allows, which is the same defect `odd/review.toml` recorded in 0190 and
+  0192, now on the probe's small prompts instead of a full review.
+- **What it did answer was valid.** On the seeded arm its risk lens named the SQL blocker
+  (`server.go:25`) and the IDOR beside it (`server.go:21`); its readability lens raised five
+  findings; and on the clean arm's risk lens it said nothing, with `approved`.
+- **The free models are not a way around the cost.** `opencode/glm-5.3-flash-free` and
+  `opencode/minimax-m3.1-flash-free` answer `Free usage limit reached` on this machine, so a
+  measurement with them is not possible today.
+- **The cheap paid siblings were declined** for this session. The estimate was under ten
+  cents for forty calls of prompts this size, which is a fact for the next decision and not a
+  claim about their quality.
+
+What this part proves: **availability is part of a judge's fitness.** A probe draw needs nine
+answers -four lenses on the seeded arm, four on the clean one- and a score with a missing arm
+is not a score. A model that takes eight minutes per call and stalls one in six cannot sit
+behind a close either: `review` would pay the 600 s ceiling per stalled lens and return
+nothing. The two models Part 5c measured answered every call in seconds, which is why their
+numbers exist at all.
+
+What it does not prove: anything about noise, notes or the clean arm for a third family. The
+question stays where Part 5c left it, and it is answered the day a free quota is available or
+a cheap model answers at this size.
+
 ## Part 6: our own numbers
 
 From `.git/odachi/reviews/` in this clone, 16 verdicts kept:
