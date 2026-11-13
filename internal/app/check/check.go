@@ -468,7 +468,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	// (0052). It runs on the closing tree, with the command that just passed, and
 	// a run that could not be judged is a note: blocking on a copy that does not
 	// build would stop every change that adds a symbol its tests call.
-	if closedNow && opts.Message == "" && opts.Run != "" && !state.ProofFailed && !state.ProofTimedOut && feature != nil {
+	if closedNow && opts.Message == "" && feature != nil {
 		// A waiver is the human's decision and it is named: a close that skips
 		// the row in silence is the silence the row exists to remove (0052).
 		if feature.Doc.UndoWaived {
@@ -2052,9 +2052,26 @@ func requirementIDs(feature *tasks.Document) []string {
 // a note, because a change that adds a symbol its tests call cannot be undone
 // into a compiling tree (0052).
 //
+// The evidence is read before the row runs. A stored run for this tree answers
+// every later check the same way, so the block is not a coincidence of the one
+// invocation that had `--run`; and a close without the row owes it the way it
+// owes the proof.
+//
 // The copy is a plain directory exported from the tree, not a worktree: a tree is
 // not a commit, so git cannot check it out, and the worktree is never touched.
 func (r *runner) undoRow(state *gate.State, feature *tasks.Document, proofPath string) {
+	path := strings.TrimSuffix(proofPath, ".txt") + ".undone.txt"
+
+	if stored, ok := r.storedUndo(path); ok {
+		r.applyUndo(state, stored)
+		return
+	}
+
+	if r.opts.Run == "" {
+		state.UndoMissing = true
+		return
+	}
+
 	base := strings.TrimSpace(feature.Doc.Base)
 	if base == "" {
 		base = strings.TrimSpace(r.opts.Base)
@@ -2076,7 +2093,14 @@ func (r *runner) undoRow(state *gate.State, feature *tasks.Document, proofPath s
 
 	revert := undone.Revertable(paths)
 	if len(revert) == 0 {
-		r.undoNote = "not owed: the change adds no production behavior"
+		evidence := undone.Evidence{
+			Tree:    tree,
+			Command: r.opts.Run,
+			Verdict: undone.NotOwed,
+			Note:    "the change adds no production behavior",
+		}
+		r.writeUndo(path, evidence)
+		r.applyUndo(state, evidence)
 		return
 	}
 
@@ -2088,38 +2112,66 @@ func (r *runner) undoRow(state *gate.State, feature *tasks.Document, proofPath s
 	defer func() { _ = r.git.Discard(dir) }()
 
 	if err := r.git.PatchReverse(dir, diff, revert); err != nil {
-		r.undoNote = "could not be prepared: the change did not apply in reverse"
+		r.undoNote = "could not be prepared: the change did not apply in reverse: " + oneLine(err.Error())
 		return
 	}
 
 	stdout, stderr, code, timedOut, err := r.shell.Run(dir, r.opts.Run, r.opts.TimeoutSeconds)
 	if err != nil {
-		r.undoNote = "could not be judged: the command did not run"
+		r.undoNote = "could not be judged: the command did not run: " + oneLine(err.Error())
 		return
 	}
 
-	output := stdout + stderr
-	verdict := undone.Classify(code, output)
-	if timedOut {
-		verdict = undone.Unknown
+	evidence := undone.Evidence{Tree: tree, Command: r.opts.Run, Output: stdout + stderr}
+	switch {
+	case timedOut:
+		evidence.Verdict = undone.Unknown
+		evidence.Note = fmt.Sprintf("the command did not finish in %ds", r.opts.TimeoutSeconds)
+	default:
+		evidence.Verdict = undone.Classify(code, evidence.Output)
+		if evidence.Verdict == undone.Unknown {
+			evidence.Note = "the copy did not build"
+		}
 	}
 
-	path := strings.TrimSuffix(proofPath, ".txt") + ".undone.txt"
-	if err := r.files.Write(path, []byte(undone.Render(undone.Evidence{
-		Tree:    tree,
-		Command: r.opts.Run,
-		Verdict: verdict,
-		Output:  output,
-	}))); err != nil {
+	r.writeUndo(path, evidence)
+	r.applyUndo(state, evidence)
+}
+
+// storedUndo reads the evidence of a row already taken for this tree. A file for
+// another tree is not this tree's answer, and a file this binary cannot read is
+// read the same way: the close takes the row again instead of trusting it.
+func (r *runner) storedUndo(path string) (undone.Evidence, bool) {
+	data, err := r.files.Read(path)
+	if err != nil {
+		return undone.Evidence{}, false
+	}
+	stored, err := undone.Parse(string(data))
+	if err != nil || stored.Tree != r.tree {
+		return undone.Evidence{}, false
+	}
+	return stored, true
+}
+
+// writeUndo keeps the row as evidence and names it when it could not be kept.
+func (r *runner) writeUndo(path string, e undone.Evidence) {
+	if err := r.files.Write(path, []byte(undone.Render(e))); err != nil {
 		r.undoNote = "ran, and its evidence could not be written: " + oneLine(err.Error())
 	}
+}
 
-	switch verdict {
+// applyUndo turns a stored verdict into the gate's state and the close's words.
+// An unknown verdict is a note and never a block: a copy that does not build says
+// nothing about the tests (0052).
+func (r *runner) applyUndo(state *gate.State, e undone.Evidence) {
+	switch e.Verdict {
 	case undone.Missed:
 		state.UndoMissed = true
-		state.UndoCommand = r.opts.Run
+		state.UndoCommand = e.Command
 	case undone.Unknown:
-		r.undoNote = "could not be judged: the copy did not build, or the command never ran"
+		r.undoNote = "could not be judged: " + e.Note
+	case undone.NotOwed:
+		r.undoNote = "not owed: " + e.Note
 	}
 }
 

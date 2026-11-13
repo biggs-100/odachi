@@ -38,6 +38,10 @@ const (
 	// tests do not notice the code being reverted, so a green proof certifies
 	// nothing about this behavior (0052).
 	ReasonUndoMissed = "undo_missed"
+	// ReasonUndoMissing is a close whose row was never taken for this tree. The
+	// close owes it the way it owes the proof, and a stored proof without it is
+	// the skip that would make the row a coincidence of one invocation.
+	ReasonUndoMissing = "undo_missing"
 )
 
 // Commands that resolve a block. Every blocked result names one.
@@ -84,6 +88,10 @@ type State struct {
 	// as a note, by name, and the row's silence is what it must never be.
 	UndoMissed  bool
 	UndoCommand string
+	// UndoMissing says the close has no row for this tree. The close owes it the
+	// way it owes the proof, and a stored proof without it is the skip that turns
+	// the row into a coincidence of one invocation (0052).
+	UndoMissing bool
 
 	OpenQuestions int
 	// Unplanned names the requirements the feature declares and no step names. It
@@ -168,6 +176,10 @@ func Evaluate(s State) Result {
 	// An undo that could not be judged is not a miss and not a pass: it is the
 	// caller's note, and it never blocks. Blocking on it would stop every change
 	// that adds a symbol its tests call, which is most of them (0052).
+	case s.UndoMissing:
+		return Result{NeedsWork, ReasonUndoMissing,
+			"the row that reverts the change was not taken for this tree, and the close owes it",
+			nextRun(s.ProofCommand)}
 	case s.UndoMissed:
 		return Result{NeedsWork, ReasonUndoMissed,
 			"the tests do not notice the change being undone: the suite stayed green without it",

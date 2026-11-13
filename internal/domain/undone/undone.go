@@ -18,6 +18,7 @@ const (
 	UndoneHeader  = "# undone "
 	CommandHeader = "# command "
 	VerdictHeader = "# verdict "
+	NoteHeader    = "# note "
 	OutputHeader  = "# output"
 )
 
@@ -40,15 +41,24 @@ const (
 	// Unknown is a copy that could not be judged: it did not build, or the
 	// command never ran. It is neither a pass nor a miss, and it never blocks.
 	Unknown Verdict = "unknown"
+	// NotOwed is a change with no production file to revert: a document or a
+	// test. It is evidence of a question that did not apply, and a close reads it
+	// back so a row that was skipped is never confused with one that was taken.
+	NotOwed Verdict = "not_owed"
 )
 
-// Evidence is one undone run: the tree it judged, the command, the verdict and
-// the output exactly as it came out.
+// Evidence is one undone run: the tree it judged, the command, the verdict, an
+// optional note that says what the verdict cannot, and the output exactly as it
+// came out.
 type Evidence struct {
 	Tree    string
 	Command string
 	Verdict Verdict
-	Output  string
+	// Note carries the cause a verdict cannot: the timeout of a run that never
+	// finished, or the sentence that says there was nothing to undo. It is what a
+	// later check reads instead of guessing.
+	Note   string
+	Output string
 }
 
 // Revertable is the set of paths the undo reverts: the production Go files of the
@@ -96,6 +106,9 @@ func Render(e Evidence) string {
 	out.WriteString(UndoneHeader + e.Tree + "\n")
 	out.WriteString(CommandHeader + e.Command + "\n")
 	out.WriteString(VerdictHeader + string(e.Verdict) + "\n")
+	if e.Note != "" {
+		out.WriteString(NoteHeader + e.Note + "\n")
+	}
 	out.WriteString(OutputHeader + "\n")
 	out.WriteString(e.Output)
 	return out.String()
@@ -123,9 +136,20 @@ func Parse(text string) (Evidence, error) {
 	}
 	verdict := Verdict(strings.TrimSpace(strings.TrimPrefix(third, VerdictHeader)))
 	switch verdict {
-	case Missed, Noticed, Unknown:
+	case Missed, Noticed, Unknown, NotOwed:
 	default:
-		return Evidence{}, fmt.Errorf("undone: %q is not a verdict; the verdicts are missed, noticed, unknown", verdict)
+		return Evidence{}, fmt.Errorf("undone: %q is not a verdict; the verdicts are missed, noticed, unknown, not_owed", verdict)
+	}
+
+	note := ""
+	if line, after, ok := cutLine(rest); ok && strings.HasPrefix(line, NoteHeader) {
+		note = strings.TrimSpace(strings.TrimPrefix(line, NoteHeader))
+		// The next line must be the terminator: the note is the last header the
+		// writer puts before it.
+		if next, _, ok := cutLine(after); !ok || next != OutputHeader {
+			return Evidence{}, fmt.Errorf(`undone: the "# note" line is not followed by "# output": the headers are out of order`)
+		}
+		rest = after
 	}
 
 	fourth, output, ok := cutLine(rest)
@@ -137,6 +161,7 @@ func Parse(text string) (Evidence, error) {
 		Tree:    strings.TrimSpace(strings.TrimPrefix(first, UndoneHeader)),
 		Command: strings.TrimSpace(strings.TrimPrefix(second, CommandHeader)),
 		Verdict: verdict,
+		Note:    note,
 		Output:  output,
 	}, nil
 }

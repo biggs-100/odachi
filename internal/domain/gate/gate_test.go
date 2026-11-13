@@ -65,6 +65,10 @@ func TestEvaluationOrder(t *testing.T) {
 	undoMissed.UndoMissed = true
 	undoMissed.UndoCommand = "go test ./..."
 
+	undoMissing := ready()
+	undoMissing.UndoMissing = true
+	undoMissing.ProofCommand = "go test ./..."
+
 	tests := []struct {
 		name    string
 		state   gate.State
@@ -158,6 +162,14 @@ func TestEvaluationOrder(t *testing.T) {
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonUndoMissed,
 			message: "the tests do not notice the change being undone: the suite stayed green without it",
+			next:    `odachi check --run "go test ./..."`,
+		},
+		{
+			name:    "the row was never taken",
+			state:   undoMissing,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonUndoMissing,
+			message: "the row that reverts the change was not taken for this tree, and the close owes it",
 			next:    `odachi check --run "go test ./..."`,
 		},
 		{

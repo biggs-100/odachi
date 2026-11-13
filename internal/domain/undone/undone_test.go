@@ -87,6 +87,7 @@ func TestParseReadsBackWhatRenderWrote(t *testing.T) {
 		{Tree: "4a1c9f", Command: "go test ./...", Verdict: undone.Noticed, Output: "--- FAIL: TestX\n"},
 		{Tree: "4a1c9f", Command: "echo ok", Verdict: undone.Missed, Output: ""},
 		{Tree: "4a1c9f", Command: `go test ./... -run "TestGate"`, Verdict: undone.Unknown, Output: "# output\n"},
+		{Tree: "4a1c9f", Command: "go test ./...", Verdict: undone.NotOwed, Output: ""},
 	}
 
 	for _, want := range cases {

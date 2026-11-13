@@ -9,6 +9,26 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/gitx"
 )
 
+// TestTheCopyRefusesWhatItCannotJudge: the empty tree, the empty patch and the
+// empty path list are asked once and answered without a git call, and a discard
+// of nothing is not an error.
+func TestTheCopyRefusesWhatItCannotJudge(t *testing.T) {
+	t.Parallel()
+
+	if _, err := gitx.Archive(t.TempDir(), "  "); err == nil {
+		t.Fatal("an empty tree was archived")
+	}
+	if err := gitx.PatchReverse(t.TempDir(), "", []string{"pay.go"}); err != nil {
+		t.Fatalf("an empty patch is not an error: %v", err)
+	}
+	if err := gitx.PatchReverse(t.TempDir(), "diff --git a/pay.go b/pay.go\n", nil); err != nil {
+		t.Fatalf("no paths means nothing to revert: %v", err)
+	}
+	if err := gitx.Discard(""); err != nil {
+		t.Fatalf("discarding nothing is not an error: %v", err)
+	}
+}
+
 // TestArchiveAndReverseKeepTheTestsAndLoseTheChange is the copy the undo row
 // judges: the production file goes back to what the base had, the test that
 // arrived with the change stays, and the worktree is never touched.

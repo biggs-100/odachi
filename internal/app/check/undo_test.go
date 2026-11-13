@@ -18,6 +18,7 @@ func closeWithUndo(t *testing.T, git *fakeGit, shell *fakeShell) check.Result {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.undone.txt"))
 
 	return check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45},
 		files, git, shell)
@@ -44,6 +45,9 @@ func TestACloseWhoseSuiteStaysGreenWithoutTheChangeDoesNotClose(t *testing.T) {
 	}
 	if len(git.patched) != 1 || git.patched[0] != "internal/app/pay.go" {
 		t.Fatalf("the row reverted %v; it must revert the production files and keep the witness", git.patched)
+	}
+	if shell.dir != filepath.Join(dir, ".undo-copy") {
+		t.Fatalf("the row ran in %q; it must run in the copy, never in the worktree", shell.dir)
 	}
 	for _, line := range got.Lines {
 		if strings.HasPrefix(line, "next: ") && !strings.Contains(line, "go test ./...") {
@@ -84,6 +88,7 @@ func TestACloseWaivedByTheHumanSaysSoAndSkipsTheRow(t *testing.T) {
 		1,
 	))
 	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.undone.txt"))
 
 	git := &fakeGit{tree: currentTree, changed: []string{"internal/app/pay.go"}}
 	shell := &fakeShell{runs: []fakeRun{{output: "ok\n"}}}

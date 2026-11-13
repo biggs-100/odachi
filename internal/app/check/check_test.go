@@ -15,6 +15,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/domain/undone"
 )
 
 // dir is the project root the run sees. It is absolute-looking and never
@@ -383,6 +384,7 @@ type fakeShell struct {
 	runs []fakeRun
 
 	command  string
+	dir      string
 	timeout  int
 	wasAsked bool
 	// streamed records whether the run was given a writer, and it writes the
@@ -406,6 +408,7 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string
 
 func (s *fakeShell) RunStream(dir, command string, timeoutSeconds int, w io.Writer) (string, string, int, bool, error) {
 	s.wasAsked = true
+	s.dir = dir
 	s.command = command
 	s.timeout = timeoutSeconds
 	s.streamed = w != nil
@@ -466,7 +469,13 @@ func readyFiles() map[string]string {
 		"odd/tasks/0007-turnos.md": featureDoc(`L1 · "reservar turnos"`),
 		"odd/fence.toml":           "",
 		"proof/0007-turnos.txt":    proofFile(currentTree, "go test ./...", "ok\n"),
-		"odd/profile.toml":         `name = "novato"`,
+		"proof/0007-turnos.undone.txt": undone.Render(undone.Evidence{
+			Tree:    currentTree,
+			Command: "go test ./...",
+			Verdict: undone.Noticed,
+			Output:  "--- FAIL: TestTurno\n",
+		}),
+		"odd/profile.toml": `name = "novato"`,
 	}
 }
 
