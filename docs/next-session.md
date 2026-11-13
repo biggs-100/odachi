@@ -1,71 +1,86 @@
 # Next session
 
-Written after 0289, the ratchet reaching `review` and closing over the three packages
-that talk to the agent.
+Written after 0290, the gate measuring whether a test can fail.
 
 ## Where the project is
 
-- `v0.41.0` is published: annotated tag on `68a2ae2` (`Merge pull request #568`), sixteen
-  assets built and attested, and the binary on this machine reports `odachi v0.41.0`.
-- `main` is past 0289's merge (PR #575). 287 features, 700 steps, 0 open questions.
+- `v0.41.0` is published and is older than three features: 0288 (the ratchet reached
+  `start`), 0289 (it reached `review`) and 0290 (the gate runs the undo). The tag that
+  carries them is a decision, not a formality.
+- `main` is past 0290's merge (PR #577) and the policy that licensed it (PR #578).
+  288 features, 706 steps, 0 open questions.
 - **The ratchet covers three packages**: `internal/app/check` (4 sentences, 5 unreadable),
-  `internal/app/start` (2, 3) and `internal/app/review` (52, 5 across two files). Each
-  freezes its debt in a `refusals.baseline`, and the mechanism -walk, both directions, the
-  counts- lives in `internal/refusal`.
-- **The scope of a ratchet is the constructor it reads**: `blocked(...)`. `refused(...)`
-  stays outside -7 calls in `review`, 4 in `check`-, named in 0289's decision line and not
-  fixed, because widening the walker moves every baseline under it.
-- **`main` is protected:** every change enters through a pull request, the release rename
-  included. A fence change is still two problems -the policy lands before the code-.
-- **Every review runs two tools before any lens**: `lint` and `govulncheck ./...`, both at
+  `internal/app/start` (2, 3) and `internal/app/review` (52, 5 across two files). The
+  mechanism -walk, both directions, the counts- lives in `internal/refusal`.
+- **The gate runs one command of its own**: the undo row of ADR 0052. It exports the tree
+  with `git archive`, reverts the production `.go` files in the copy, runs the same command
+  that just passed, and blocks only a suite that stayed green. Everything else it still
+  reads: lint and `govulncheck` run in the review and travel as rows.
+- **`main` is protected**, and a fence change is two pull requests: the policy first. CI
+  reads the fence from `main`, so a rule retired inside a branch does not stop that branch
+  from being judged by it -0290 learned this the hard way and split itself in two-.
+- Every review runs two tools before any lens: `lint` and `govulncheck ./...`, both at
   `CRITICAL`, approved in this clone; the second needs the network.
 - The repository asks for **Go 1.26.11** (`go.mod`); the verdict's schema is **7**, its `at`
   is the clone's clock and `declared_at` is what the reviewer claimed.
-- `odachi doctor` is clean: 15 checks, no warnings.
+- `odachi doctor` was clean at v0.41.0: 15 checks. It is the first command to run if
+  something smells.
 
 ## What shipped
 
-- **0289, the ratchet reaches review** (no release: pinning a rule is not a capability).
-  52 sentences and 2 count rows, generated from the walk so no row is a transcription; both
-  directions observed by hand before the baseline existed; the verdict approved by the
-  reliability lens at two draws. `check` and `start` did not move a byte.
+- **0290, `check` measures whether a test can fail** (no release yet). The row is evidence,
+  not an action: `proof/<feature>.undone.txt` starts with `# undone <tree>` and every later
+  `check` reads it back, so the block does not last only as long as the invocation that had
+  `--run`. A close with no row owes it (`undo_missing`); a copy that does not build is a
+  note; "there is nothing to undo" is a stored verdict; a refactor is waived by the human
+  with a reason (`start --waive-undo --because "<why>"`), and the close names it.
+- **Its first review asked for changes**, and it was right: the row lived in the run and the
+  evidence was never parsed. The correction moved the block onto the evidence and added the
+  missing-row reason. The second verdict approved the delta.
 
 ## The decision that waits
 
-**Heterogeneous lenses is deferred by the human until they say so** -no money for more
-models-, so it is not next.
+**The release that carries 0288, 0289 and 0290** is the next decision a person makes. None
+of the three changes a stored format; all three change what the gate does at a close.
 
-**No slice of the ratchet waits.** The three packages are covered, and the next debt is a
-different shape: issue #572, the gate certifying a green command rather than a test that can
-fail. It needs its brief before code, and the fence protects `internal/domain/gate/**`, so it
-is two pull requests and a vision decision first.
+**Heterogeneous lenses is still deferred by the human** -no money for more models-, so it is
+not next.
+
+**Issue #572 shipped as 0290** and is closed by it. The next debt has no name yet: the
+`refused(...)` helper of `review` stays outside the ratchet by design, and the gate's
+continuation test still covers seven of its ten reasons.
 
 **The third model waits for a call this size.** The free tier refuses a probe-sized prompt
 after 45 to 90 seconds while a small one answers in two.
 
 **Named and not fixed:** a refutation still writes its own time (`refute.go` calls
-`instant`); the gate's continuation test covers seven of its ten reasons and the fence
-protects the package; `go.mod` asks for a patch of Go.
+`instant`); the gate's continuation test covers seven of its ten reasons; `go.mod` asks for a
+patch of Go.
 
 ## The limits to remember
 
+- **The fence is read from the base, not from the branch.** A policy lands first, in its own
+  pull request; the code it licenses follows. A branch that retires a rule while touching the
+  path that rule protects is refused by CI with the old policy.
+- **The undo row cannot judge a change that adds a symbol its tests call.** Reverting the
+  production file leaves a copy whose tests do not compile, and that is a note, never a
+  block. It is the documented limit of ADR 0052, and 0290 itself closes under it.
+- **A refactor is the human's declared waiver**, never the tool's guess: a suite that stays
+  green because nothing changed is indistinguishable from one that notices nothing.
+- **The row is evidence.** It is read on every close; a file for another tree is not this
+  tree's answer, and a close without it owes it the way it owes the proof.
+- **A stub proof command is blocked by the row.** A fixture that closes with `echo ok` stays
+  green when reverted, so it waives the row by name -the three tests that did it are the
+  record-.
 - **A ratchet has two directions and both must fail**, including the counts: a shrink
   reported through a log is a shrink nobody sees in CI.
-- **The scope of a ratchet is the constructor it reads.** Widening the walker past
-  `blocked(...)` moves every baseline under it, so a scope change is its own feature with
-  all of them in the same diff.
 - **A mechanism with a second consumer gets a home, and the extraction includes the prose.**
-  The walk moved before the count comparison did, and the review caught the half that stayed
-  duplicated.
-- **The fence protects paths, not intentions.** `internal/domain/gate/**` is closed to a
-  test-only fix, and loosening it is two PRs. Check the fence before planning that step.
 - **`plan --done` runs even when the commit before it failed**, recording the previous HEAD's
   tree. `odachi undo --artifact <taskdoc>`, then re-run after a commit that succeeded.
 - **A record line after the proof voids the proof**, and once the document is closed the hook
   refuses the commit: write the records, measure, commit.
 - **`proof/` is ignored by git.** The proof is evidence in the working tree and CI regenerates
-  it; `git add proof/<feature>.txt` fails by design, and the closing commit passes because the
-  tree, not the file, is what the proof names.
+  it; the closing commit passes because the tree, not the file, is what the proof names.
 - **The classifier reads `go/token` as touching secrets**, so a test that parses Go asks for
   all four lenses.
 - **The actor does not write its own receipt**; the tool stamps what it proves.
@@ -73,11 +88,14 @@ protects the package; `go.mod` asks for a patch of Go.
 - **A floor is declared after the debt is paid**, and the debt can be the toolchain itself.
 - **A commit's message is safer rewritten with `git commit-tree <tree> -p <parent> -F msg`**
   than with checkout+amend; the reflog recovers the trees.
+- **A rebase keeps the tree hashes when the content does not move**, so a proof and a verdict
+  survive it: the commit ids change and the evidence does not.
 - **A release renames `## Unreleased` before the tag, and the rename is a PR**
   (`release/vX.Y.Z`), with the tag on that merge.
 - **PowerShell's `Set-Content`/`Add-Content` write CRLF and the repo is LF**: `gofmt -w` after
   Go code, and check the bytes after a `-replace` that renames a heading.
-- **One heavy gate per machine**: `go test ./...` takes about 700 s here.
+- **One heavy gate per machine**: `go test ./...` takes about 700 s here, and `check --run`
+  runs it once -the undo row runs in the copy only when the binary in use has 0290-.
 
 ## The commands that work
 
