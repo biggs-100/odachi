@@ -16,7 +16,7 @@ R1 · "el ratchet mira la negativa que el humano lee, no el constructor que la a
 - [x] T1 · el walker recibe los constructores que el paquete declara, y cada paquete que hoy lee blocked sigue igual   R1 · route:inline · tree:c5d308c3fe1ff4731c9beb968fc72e530c08d87f
 - [x] T2 · review declara refused y su baseline lo congela, sin mover el conteo de check ni de start   R1 · route:inline · tree:a026137ded202e7cbe72816f76907bb7dcb026c2
 - [x] T3 · la frase de refused de review dice que correr, y su test la fija   R1 · route:inline · tree:2cd82cf40a0944f86ec0d4b70bcd2cfdc1ec3d8e
-- [ ] T4 · el changelog nombra 0292 bajo Unreleased   R1 · route:inline
+- [x] T4 · el changelog nombra 0292 bajo Unreleased   R1 · route:inline · tree:d130085baeda9b2921faea33b7198687ea75fcd3
 
 ## History
 L1 · "el ratchet mira la negativa que el humano lee, no el constructor que la arma: la de review que hoy no dice que correr pasa a decirlo, y el mecanismo la vigila"
