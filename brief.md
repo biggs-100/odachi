@@ -399,3 +399,26 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0290 · check-mide-si
+
+## What must exist
+- check mide si el test puede fallar, no solo si el comando paso: si el suite sigue verde al deshacer el cambio, el arbol no cierra
+
+## Done when
+- un feature que cierra con tests que no fallan al deshacer el cambio no cierra: check lo nombra con el comando, la salida y el next
+- la fila corre sobre el arbol que cierra y su evidencia queda escrita como una prueba: arbol, comando y salida
+- un test que si falla al deshacer el cambio deja el arbol cerrar
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no entra mutacion sobre todo el modulo ni dependencia nueva: solo el comportamiento del cambio y lo que la toolchain del proyecto ya corre
+- no entra numero de cobertura ni umbral: la cobertura no es una conducta
+- no cambian los lentes ni sus modelos: los lentes heterogeneos son su propia decision (0048)
+- no cambia el formato de la prueba y proof/** no sale de la cerca: # covers sigue siendo un claim
+- no entra arreglar plan --done cuando registra el arbol anterior: queda nombrado, no arreglado
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
