@@ -51,6 +51,29 @@ type Evidence struct {
 	Output  string
 }
 
+// Revertable is the set of paths the undo reverts: the production Go files of the
+// diff. A test that disappears with the code is not a witness, a fixture is not
+// behavior, and the module files are not the change's conduct -reverting them
+// turns a behavior into a dependency (0052).
+func Revertable(paths []string) []string {
+	out := make([]string, 0, len(paths))
+	for _, path := range paths {
+		path = strings.TrimSpace(strings.ReplaceAll(path, `\`, "/"))
+		switch {
+		case path == "":
+			continue
+		case !strings.HasSuffix(path, ".go"):
+			continue
+		case strings.HasSuffix(path, "_test.go"):
+			continue
+		case strings.HasPrefix(path, "testdata/") || strings.Contains(path, "/testdata/"):
+			continue
+		}
+		out = append(out, path)
+	}
+	return out
+}
+
 // Classify reads a finished run. An exit of zero is the block the row exists
 // for; a build failure is unknown, because a copy that does not compile says
 // nothing about the tests; any other non-zero is the suite noticing.
