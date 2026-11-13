@@ -1,0 +1,8 @@
+# Refusals that name no way out, frozen the day the ratchet reached this package (0288).
+#
+# This file only shrinks. A sentence whose refusal later names a command must be
+# deleted, and a count must go down when a call stops building its message from a
+# value. Adding a line is a deliberate act a reviewer sees in the diff.
+sentence	start.go	a feature named  is already open at ; finish it, or say what this change is in different words
+sentence	start.go	could not resolve the profile :
+count	start.go	3

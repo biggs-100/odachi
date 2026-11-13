@@ -527,3 +527,23 @@ deps  = []
 # not   = "la prueba no juzga si la salida que nombra sirve: ese limite queda escrito"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   review queda para su rebanada: esta llega a start
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "review queda para su rebanada: esta llega a start"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se reescribe ninguna negativa: el baseline las congela
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se reescribe ninguna negativa: el baseline las congela"
+# paths = []
+# deps  = []

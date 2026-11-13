@@ -357,3 +357,24 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0288 · el-ratchet-llega
+
+## What must exist
+- el ratchet llega a start: sus negativas sin salida quedan congeladas y el mecanismo vive en un solo lugar
+
+## Done when
+- el walker y las dos direcciones viven en internal/refusal, con sus propias pruebas
+- check lo consume y su baseline no cambia: la prueba sigue midiendo lo mismo
+- start congela sus dos frases sin salida y sus tres llamadas ilegibles
+- una negativa nueva en start sin salida falla la suite
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- review queda para su rebanada: esta llega a start
+- no se reescribe ninguna negativa: el baseline las congela
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.
