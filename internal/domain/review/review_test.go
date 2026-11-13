@@ -350,15 +350,82 @@ func TestSealStampsWhatOnlyTheToolKnows(t *testing.T) {
 	}
 }
 
-// TestSealNormalizesTheInstant: an author may write an offset; the stored file
-// always carries the same shape, so two verdicts can be compared.
-func TestSealNormalizesTheInstant(t *testing.T) {
-	sealed, err := review.Seal(review.Verdict{Reviewer: "x", At: "2026-10-21T17:31:00-03:00"}, tree, "HEAD", now)
+// TestSealNormalizesTheClaim: an author may write an offset; the claim is stored in
+// the same shape as the stamp, so two verdicts can be compared.
+func TestSealNormalizesTheClaim(t *testing.T) {
+	sealed, err := review.Seal(review.Verdict{Reviewer: "x", At: "2026-10-21T17:30:00-03:00"}, tree, "HEAD", now)
 	if err != nil {
 		t.Fatalf("Seal = %v", err)
 	}
 	if sealed.At != "2026-10-21T20:31:00Z" {
-		t.Errorf("At = %q, want the same instant in UTC", sealed.At)
+		t.Errorf("At = %q, want the tool's instant", sealed.At)
+	}
+	if sealed.DeclaredAt != "2026-10-21T20:30:00Z" {
+		t.Errorf("DeclaredAt = %q, want the author's instant in UTC", sealed.DeclaredAt)
+	}
+}
+
+// TestSealStampsTheClockAndKeepsTheClaim: the reviewer writes `at`, and the tool
+// kept it, so a sample of verdicts all claimed a round hour. The seal stamps the
+// instant the clone wrote the file and keeps the declared time beside it as a
+// claim: the record says both, and the reader can see they disagree (0286).
+func TestSealStampsTheClockAndKeepsTheClaim(t *testing.T) {
+	t.Parallel()
+
+	stamp := time.Date(2026, 11, 12, 21, 30, 12, 0, time.UTC)
+	sealed, err := review.Seal(review.Verdict{Reviewer: "agent", At: "2026-11-12T00:00:00Z"}, tree, "HEAD", stamp)
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	if sealed.At != "2026-11-12T21:30:12Z" {
+		t.Errorf("At = %q, want the instant the tool sealed it", sealed.At)
+	}
+	if sealed.DeclaredAt != "2026-11-12T00:00:00Z" {
+		t.Errorf("DeclaredAt = %q, want the time the reviewer wrote", sealed.DeclaredAt)
+	}
+}
+
+// TestSealKeepsNoClaimWhenThereIsNothingToDisagreeWith: a verdict that declares no
+// time, or the instant the tool stamped, gains no claim. A field that repeats the
+// stamp is noise wearing a disagreement's clothes. A time nobody can parse never
+// reaches the seal: Validate refuses it first, in words that name the shape.
+func TestSealKeepsNoClaimWhenThereIsNothingToDisagreeWith(t *testing.T) {
+	t.Parallel()
+
+	stamp := time.Date(2026, 11, 12, 21, 30, 12, 0, time.UTC)
+	for name, at := range map[string]string{
+		"none":  "",
+		"equal": "2026-11-12T21:30:12Z",
+	} {
+		sealed, err := review.Seal(review.Verdict{Reviewer: "agent", At: at}, tree, "HEAD", stamp)
+		if err != nil {
+			t.Fatalf("%s: Seal: %v", name, err)
+		}
+		if sealed.DeclaredAt != "" {
+			t.Errorf("%s: DeclaredAt = %q, want no claim", name, sealed.DeclaredAt)
+		}
+		if sealed.At != "2026-11-12T21:30:12Z" {
+			t.Errorf("%s: At = %q, want the stamp", name, sealed.At)
+		}
+	}
+}
+
+// TestAVerdictWithAClaimRendersAndParses: the claim travels in the file, so the
+// next reader sees the disagreement the seal recorded.
+func TestAVerdictWithAClaimRendersAndParses(t *testing.T) {
+	t.Parallel()
+
+	sealed, err := review.Seal(review.Verdict{Reviewer: "agent", At: "2026-11-12T00:00:00Z"}, tree, "HEAD",
+		time.Date(2026, 11, 12, 21, 30, 12, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	parsed, err := review.Parse(review.Render(sealed))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if parsed.DeclaredAt != "2026-11-12T00:00:00Z" {
+		t.Errorf("DeclaredAt = %q after a round trip, want the claim", parsed.DeclaredAt)
 	}
 }
 

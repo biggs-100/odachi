@@ -159,9 +159,18 @@ type Verdict struct {
 	// Models is the model per lens when the project assigned one: the review runs
 	// one reviewer per model group, and the verdict says who judged what. A lens
 	// with no entry was left to the reviewer command.
-	Models   map[string]string `json:"models,omitempty"`
-	At       string            `json:"at"`
-	Findings []Finding         `json:"findings"`
+	Models map[string]string `json:"models,omitempty"`
+	// At is the instant the tool sealed this file: the clock of the clone that
+	// wrote it, never the reviewer's word. A verdict stored before 0286 carries
+	// the reviewer's own time here, and nothing can tell the two apart; the field
+	// is honest from the schema that introduced DeclaredAt onwards.
+	At string `json:"at"`
+	// DeclaredAt is the time the reviewer wrote, kept only when it parses and
+	// disagrees with At. The record says both, because a reviewer that claims a
+	// round hour is evidence about the reviewer, and dropping it would erase the
+	// only trace of a wrong clock.
+	DeclaredAt string    `json:"declared_at,omitempty"`
+	Findings   []Finding `json:"findings"`
 	// Lenses are the specialists the prompt asked this verdict to answer. The tool
 	// stamps them, because the reviewer's opinion about which lenses it used is not
 	// evidence; the prompt it was given is. A verdict stored before lenses existed
@@ -495,7 +504,14 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 		return Verdict{}, err
 	}
 	sealed.Models = models
-	sealed.At = instant(v.At, now)
+	sealed.At = stamp(now)
+	sealed.DeclaredAt = declared(v.At, now)
+	// A draft that already carries a claim is one this tool sealed before: the
+	// merged record keeps what its first part said about the reviewer, and a second
+	// seal is not a second claim (0286).
+	if sealed.DeclaredAt == "" {
+		sealed.DeclaredAt = strings.TrimSpace(v.DeclaredAt)
+	}
 	sealed.Lenses = inOrder(v.Lenses)
 	sealed.Draws = normalizeDraws(v.Draws)
 	sealed.Verdict = Derive(v.Findings)
@@ -639,6 +655,32 @@ func instant(at string, now time.Time) string {
 		now = time.Now()
 	}
 	return now.UTC().Format(time.RFC3339)
+}
+
+// stamp is the instant the tool sealed the record: the clock of this clone, in the
+// one shape the store compares. The reviewer does not own this field; it used to
+// write it, and a sample of verdicts all claimed a round hour (0286).
+func stamp(now time.Time) string {
+	if now.IsZero() {
+		now = time.Now()
+	}
+	return now.UTC().Truncate(time.Second).Format(time.RFC3339)
+}
+
+// declared keeps the time the reviewer wrote when it parses and disagrees with the
+// stamp. A claim that repeats the stamp is the same fact twice, and a claim nobody
+// can parse is not a fact: both are dropped, and the difference between them and a
+// wrong clock is what the field exists to show.
+func declared(at string, now time.Time) string {
+	parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(at))
+	if err != nil {
+		return ""
+	}
+	claim := parsed.UTC().Format(time.RFC3339)
+	if claim == stamp(now) {
+		return ""
+	}
+	return claim
 }
 
 // oneLine keeps a message on one line whatever a decoder said.
