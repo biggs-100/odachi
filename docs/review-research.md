@@ -312,9 +312,15 @@ evidence about the instrument, not about the models.
 - **What it did answer was valid.** On the seeded arm its risk lens named the SQL blocker
   (`server.go:25`) and the IDOR beside it (`server.go:21`); its readability lens raised five
   findings; and on the clean arm's risk lens it said nothing, with `approved`.
-- **The free models are not a way around the cost.** `opencode/glm-5.3-flash-free` and
-  `opencode/minimax-m3.1-flash-free` answer `Free usage limit reached` on this machine, so a
-  measurement with them is not possible today.
+- **The free models are not a way around the cost, and the reason is the size of a probe
+  prompt.** The same CLI -`opencode v2.2.7`, the binary the `PATH` wrapper calls, with no
+  second installation- answers a small prompt with `opencode/flint-40b-free` and
+  `opencode/glm-5.3-flash-free` in two seconds, and keeps answering when the calls are 45 and
+  90 seconds apart. The 8.7 KB prompt this probe sends is a different question: both models
+  answered `Free usage limit reached` after 45 and 90 seconds of waiting, and six calls back
+  to back spent the budget from the first one. So the free tier is a small budget measured by
+  burst and by size -a conversation fits in it, a probe call does not-, and a draw needs eight
+  of those calls.
 - **The cheap paid siblings were declined** for this session. The estimate was under ten
   cents for forty calls of prompts this size, which is a fact for the next decision and not a
   claim about their quality.
@@ -327,8 +333,8 @@ nothing. The two models Part 5c measured answered every call in seconds, which i
 numbers exist at all.
 
 What it does not prove: anything about noise, notes or the clean arm for a third family. The
-question stays where Part 5c left it, and it is answered the day a free quota is available or
-a cheap model answers at this size.
+question stays where Part 5c left it, and it is answered the day a free tier allows a call this
+size or a cheap model answers at this size.
 
 ## Part 6: our own numbers
 
