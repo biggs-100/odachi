@@ -10,6 +10,17 @@ not a version.
 
 ## Unreleased
 
+- **The ratchet reads the sentence a human meets, not the constructor that builds it.** The walk
+  knew one name, `blocked`, so the refusals a package builds with a helper were outside the
+  mechanism -and `review` builds all of its own with `refused`, the same name `check` uses for the
+  same job, with one difference that mattered: `check`'s sentence names the command and `review`'s
+  ended at "I wrote nothing"-. A package now declares its builders -the constructor whose first
+  argument is the sentence, the helper that hardcodes it- and the walk reads one side per name, so a
+  helper is frozen once instead of counted once per use. The three packages keep the constructor
+  they had: `check` and `start` keep their baselines to the byte. The one dead end the mechanism
+  could then see is paid: an unreadable verdict names the file and the command that reads it again.
+  Patch (0292).
+
 - **A refutation's hour is the clock's, and its shape has a number.** A refutation kept the
   refuter's own `at`, the defect 0286 fixed for the verdict. The seal now stamps the instant
   the clone wrote the file, keeps the time the refuter declared in `declared_at` when it
