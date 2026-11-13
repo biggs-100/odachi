@@ -11,7 +11,7 @@ R1 · "lo que un agente lee en cada sesion queda fijado por bytes: crecer cuesta
 - go test ./... is green and odachi check --run "go test ./..." is green
 
 ## Steps
-- [ ] T1 · la comparacion en un solo lugar: paquete budget puro, dos direcciones, con sus tests   R1 · route:inline
+- [x] T1 · la comparacion en un solo lugar: paquete budget puro, dos direcciones, con sus tests   R1 · route:inline · tree:6b218261e145536fe77a0cad6558c42ba154fbe8
 - [ ] T2 · los pines: bloque, lentes y SKILLS.md en un baseline, y el suite falla cuando crecen   R1 · route:inline
 
 ## History
