@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.41.0 - 2026-11-12
 
 - **The record says when the tool sealed it, and what the reviewer claimed.** A verdict's
   `at` was written by the reviewer, so a sample of verdicts all claimed a round hour and the
