@@ -14,7 +14,7 @@ R1 · "la hora de una refutacion tambien la escribe el reloj al sellarla, y lo q
 - ## Unreleased names it, minor (0291)
 
 ## Steps
-- [ ] T1 · el sello: el reloj escribe la hora, lo declarado queda en declared_at, y la refutacion declara su esquema   R1 · route:inline
+- [x] T1 · el sello: el reloj escribe la hora, lo declarado queda en declared_at, y la refutacion declara su esquema   R1 · route:inline · tree:69a97ee8747c8632acb0b23f72d2ad0877682e3b
 - [ ] T2 · la cara: review --show y la linea del guardado dicen la hora del sello y, cuando discrepa, la que escribio el refutador   R1 · route:inline
 - [ ] T3 · el changelog nombra 0291 bajo Unreleased   R1 · route:inline
 
