@@ -1,6 +1,11 @@
 package gate_test
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -18,7 +23,26 @@ func ready() gate.State {
 	}
 }
 
-func TestEvaluationOrder(t *testing.T) {
+// evaluationCase is one answer the gate gives: the state that produces it, and the
+// words a human reads when it does.
+type evaluationCase struct {
+	name    string
+	state   gate.State
+	code    gate.Code
+	reason  string
+	message string
+	next    string
+}
+
+// evaluationCases is the one list of the gate's answers: every reason it can return,
+// the state that produces it, and the continuation that resolves it. The exact words
+// and the property "every block names a command" are both read from here, because two
+// hand lists that must both grow is one list that gets forgotten (0293).
+var evaluationCases = buildEvaluationCases()
+
+// buildEvaluationCases names the states once, so a case that isolates one block only
+// breaks that one thing.
+func buildEvaluationCases() []evaluationCase {
 	noBrief := gate.State{Violations: []string{"pagos"}, OpenQuestions: 3, TreeHash: "4a1c9f"}
 
 	incompleteBrief := ready()
@@ -69,14 +93,7 @@ func TestEvaluationOrder(t *testing.T) {
 	undoMissing.UndoMissing = true
 	undoMissing.ProofCommand = "go test ./..."
 
-	tests := []struct {
-		name    string
-		state   gate.State
-		code    gate.Code
-		reason  string
-		message string
-		next    string
-	}{
+	return []evaluationCase{
 		{
 			name:    "no brief",
 			state:   noBrief,
@@ -181,8 +198,13 @@ func TestEvaluationOrder(t *testing.T) {
 			next:    "",
 		},
 	}
+}
 
-	for _, tc := range tests {
+// TestEvaluationOrder is the whole table: the state, the words, and the continuation
+// every block names. The last one is the property this file used to keep in a second
+// list of seven (0293).
+func TestEvaluationOrder(t *testing.T) {
+	for _, tc := range evaluationCases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := gate.Evaluate(tc.state)
 			if got.Code != tc.code {
@@ -196,6 +218,16 @@ func TestEvaluationOrder(t *testing.T) {
 			}
 			if got.Next != tc.next {
 				t.Errorf("Next = %q, want %q", got.Next, tc.next)
+			}
+			// One property, judged for every reason the table holds: a block that
+			// leaves the reader nowhere to go is the defect the continuation exists
+			// to prevent, and ready is the one answer that resolves itself (0293).
+			if tc.code == gate.Ready {
+				if got.Next != "" {
+					t.Errorf("Next = %q, want empty for a ready result", got.Next)
+				}
+			} else if !strings.HasPrefix(got.Next, "odachi ") {
+				t.Errorf("Next = %q, want a command starting with %q: every block names what resolves it", got.Next, "odachi ")
 			}
 			if strings.Contains(got.Message, "\n") {
 				t.Errorf("Message must be one line, got %q", got.Message)
@@ -262,36 +294,6 @@ func TestEvaluationOrderIsFirstBlockWins(t *testing.T) {
 	state.ProofFailed = false
 	if got := gate.Evaluate(state); got.Reason != gate.ReasonReady {
 		t.Fatalf("Reason = %q, want %q (ready is last)", got.Reason, gate.ReasonReady)
-	}
-}
-
-func TestEveryBlockedResultNamesAContinuation(t *testing.T) {
-	blocked := []struct {
-		name  string
-		state gate.State
-	}{
-		{"no brief", gate.State{}},
-		{"brief incomplete", gate.State{HasBrief: true, BriefMissing: []string{"vision"}}},
-		{"out of scope", gate.State{HasBrief: true, Violations: []string{"pagos"}}},
-		{"open question", gate.State{HasBrief: true, OpenQuestions: 2}},
-		{"proof missing", gate.State{HasBrief: true, TreeHash: "4a1c9f"}},
-		{"proof stale", func() gate.State { s := ready(); s.ProofTreeHash = "otro"; return s }()},
-		{"proof failed", func() gate.State { s := ready(); s.ProofFailed = true; s.ProofCommand = "go test ./..."; return s }()},
-	}
-
-	for _, tc := range blocked {
-		t.Run(tc.name, func(t *testing.T) {
-			got := gate.Evaluate(tc.state)
-			if got.Code == gate.Ready {
-				t.Fatalf("state %q evaluated as ready, want blocked", tc.name)
-			}
-			if got.Next == "" {
-				t.Fatalf("blocked result %q has no Next: every block must name a command that resolves it", tc.name)
-			}
-			if !strings.HasPrefix(got.Next, "odachi ") {
-				t.Fatalf("Next = %q, want a command starting with %q", got.Next, "odachi ")
-			}
-		})
 	}
 }
 
@@ -498,4 +500,61 @@ func TestAProofIsOwedAtTheClose(t *testing.T) {
 	if got := gate.Evaluate(failed); got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofFailed {
 		t.Errorf("a failed proof mid-feature = %d/%q, want proof_failed", got.Code, got.Reason)
 	}
+}
+
+// TestEveryReasonInTheSourceHasItsRow: the table is the only list, so the source is the
+// other half of the promise -one half that drifts is the defect this file exists to
+// catch-. A reason declared in gate.go with no row would ship unjudged, and a row naming
+// a reason the gate no longer returns would keep a promise nobody keeps (0293).
+func TestEveryReasonInTheSourceHasItsRow(t *testing.T) {
+	declared := reasonConstants(t)
+	held := make(map[string]bool, len(evaluationCases))
+	for _, tc := range evaluationCases {
+		held[tc.reason] = true
+	}
+
+	for _, reason := range declared {
+		if !held[reason] {
+			t.Errorf("the gate declares %q and no row in evaluationCases produces it: add the state, its words and its continuation", reason)
+		}
+	}
+	for reason := range held {
+		if !slices.Contains(declared, reason) {
+			t.Errorf("evaluationCases names %q, which gate.go does not declare", reason)
+		}
+	}
+}
+
+// reasonConstants reads the reasons the gate declares from its own source. Go cannot be
+// asked for a package's constants, and a list copied by hand is the second list this
+// feature exists to remove (0293).
+func reasonConstants(t *testing.T) []string {
+	t.Helper()
+
+	file, err := parser.ParseFile(token.NewFileSet(), "gate.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parsing gate.go: %v", err)
+	}
+	var reasons []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		spec, ok := n.(*ast.ValueSpec)
+		if !ok {
+			return true
+		}
+		for i, name := range spec.Names {
+			if !strings.HasPrefix(name.Name, "Reason") || i >= len(spec.Values) {
+				continue
+			}
+			lit, ok := spec.Values[i].(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				continue
+			}
+			if value, err := strconv.Unquote(lit.Value); err == nil {
+				reasons = append(reasons, value)
+			}
+		}
+		return true
+	})
+	slices.Sort(reasons)
+	return reasons
 }

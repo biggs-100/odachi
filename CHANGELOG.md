@@ -10,6 +10,14 @@ not a version.
 
 ## Unreleased
 
+- **The gate's reasons are declared once, and the test walks them all.** The exact words of every
+  reason were pinned by a table, and the property "every block names a command" was pinned again by
+  a second hand list of seven states -the gate gained `undo_missed` and `undo_missing` and the
+  property never learned about them-. The table is now the only list: the continuation is judged in
+  the same loop that judges the words, and a new test reads the reasons from `gate.go` and fails
+  when one is declared with no row -or when a row names a reason the code no longer returns-. Patch
+  (0293).
+
 - **The ratchet reads the sentence a human meets, not the constructor that builds it.** The walk
   knew one name, `blocked`, so the refusals a package builds with a helper were outside the
   mechanism -and `review` builds all of its own with `refused`, the same name `check` uses for the

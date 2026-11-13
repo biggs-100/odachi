@@ -471,3 +471,26 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0293 · el-gate-declara
+
+## What must exist
+- el gate declara sus razones una vez y la prueba las recorre todas: una razon nueva no entra sin un estado que la produzca ni un next que la resuelva
+
+## Done when
+- la prueba de continuacion recorre las filas de la unica tabla, y ninguna razon queda fuera del bucle
+- una razon nueva en el fuente del gate sin fila en la tabla hace fallar el suite
+- cada razon bloqueada tiene un next que empieza con odachi, y ready no tiene ninguno
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0293)
+
+## Not included (first version)
+- no se toca la cerca: hoy ninguna regla protege internal/domain/gate, y esta feature no agrega una
+- no se reescriben los mensajes ni los next que el humano ya lee: la tabla los fija tal cual
+- no entra un verbo ni un flag nuevos: la pregunta es como se prueba el gate, no que hace
+- no se agrega una razon nueva al gate: las once quedan como estan
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
