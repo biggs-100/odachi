@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.40.5 - 2026-11-12
 
 - **A verdict names its judges once.** The `reviewer` field appended every correction
   whole, so a tree with four lenses, two draws each and one correction read as six
