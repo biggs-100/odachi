@@ -547,3 +547,23 @@ deps  = []
 # not   = "no se reescribe ninguna negativa: el baseline las congela"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   review conserva su conducta: no hay veredicto, ni draw, ni lente nuevos - back when la conducta del review es la pregunta
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "review conserva su conducta: no hay veredicto, ni draw, ni lente nuevos - back when la conducta del review es la pregunta"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   el mecanismo tiene una sola casa: el walker y las dos direcciones viven en internal/refusal - back when un paquete necesita una variante propia
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "el mecanismo tiene una sola casa: el walker y las dos direcciones viven en internal/refusal - back when un paquete necesita una variante propia"
+# paths = []
+# deps  = []

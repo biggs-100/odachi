@@ -378,3 +378,24 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0289 · el-ratchet-llega
+
+## What must exist
+- el ratchet llega a review: sus negativas sin salida quedan congeladas y el mecanismo sigue viviendo en un solo lugar
+
+## Done when
+- internal/refusal es el unico lugar del walker y de las dos direcciones: review lo consume sin copiar la logica
+- review congela sus negativas sin salida y sus llamadas ilegibles en su propio refusals.baseline
+- una negativa nueva en review sin salida falla la suite
+- check y start conservan su baseline byte por byte: la prueba sigue midiendo lo mismo
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- review conserva su conducta: no hay veredicto, ni draw, ni lente nuevos - back when la conducta del review es la pregunta
+- el mecanismo tiene una sola casa: el walker y las dos direcciones viven en internal/refusal - back when un paquete necesita una variante propia
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.
