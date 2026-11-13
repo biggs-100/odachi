@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
 // The two things a refuter may say about one finding. There is no third: an
@@ -33,9 +35,24 @@ type Judgment struct {
 // Refutation is the refuter's answer about one verdict. It is stored beside the
 // verdict, named after the same tree, and written once.
 type Refutation struct {
-	Tree        string     `json:"tree"`
-	Refuter     string     `json:"refuter,omitempty"`
-	At          string     `json:"at"`
+	// Schema is the version of this file's shape, stamped by the tool. The
+	// refutation was the fourth strict decoder and the only one with no number to
+	// announce itself: without it, the next field it gains reads as an unknown key
+	// in every binary older than the change (0291).
+	Schema int    `json:"schema"`
+	Tree   string `json:"tree"`
+	// Refuter names the account that answered. The quorum counts accounts, so two
+	// answers from one name are one opinion written twice.
+	Refuter string `json:"refuter,omitempty"`
+	// At is the instant the tool sealed this file: the clock of the clone that
+	// wrote it, never the refuter's word. A refutation stored before 0291 carries
+	// the refuter's own time here, and nothing can tell the two apart; the field is
+	// honest from the schema that introduced DeclaredAt onwards.
+	At string `json:"at"`
+	// DeclaredAt is the time the refuter wrote, kept only when it parses and
+	// disagrees with At. A refuter that claims a round hour is evidence about the
+	// refuter, and dropping it would erase the only trace of a wrong clock.
+	DeclaredAt  string     `json:"declared_at,omitempty"`
 	Refutations []Judgment `json:"refutations"`
 }
 
@@ -77,6 +94,18 @@ func ParseRefutation(data []byte) (Refutation, error) {
 		return Refutation{}, errors.New("the refutation is empty: there is nothing to save")
 	}
 
+	// The number is read before the strict pass, for the reason a verdict reads it
+	// that way: a strict decoder cannot tell a typo from a writer that is ahead of
+	// it, and a file from a newer odachi is not a broken file (0291).
+	var head struct {
+		Schema int `json:"schema"`
+	}
+	if json.Unmarshal([]byte(text), &head) == nil {
+		if _, err := schema.Read(head.Schema); err != nil {
+			return Refutation{}, fmt.Errorf("the refutation cannot be read: %w", err)
+		}
+	}
+
 	decoder := json.NewDecoder(strings.NewReader(text))
 	decoder.DisallowUnknownFields()
 
@@ -102,6 +131,11 @@ func ParseRefutation(data []byte) (Refutation, error) {
 		}
 	}
 
+	if parsed.Schema == 0 {
+		// A refutation written before the field existed: answered as the first
+		// schema, so a caller never compares against "no version".
+		parsed.Schema = schema.First
+	}
 	if parsed.Refutations == nil {
 		parsed.Refutations = []Judgment{}
 	}
@@ -158,10 +192,18 @@ func SealRefutation(r Refutation, findings []Finding, tree string, now time.Time
 	}
 
 	sealed := Refutation{
+		Schema:      schema.Current,
 		Tree:        tree,
 		Refuter:     strings.TrimSpace(r.Refuter),
-		At:          instant(r.At, now),
+		At:          stamp(now),
+		DeclaredAt:  declared(r.At, now),
 		Refutations: make([]Judgment, 0, len(blocking)),
+	}
+	// A draft that already carries a claim is one this tool sealed before: the
+	// merged record keeps what its first part said about the refuter, and a second
+	// seal is not a second claim (0291, the rule 0286 gave the verdict).
+	if sealed.DeclaredAt == "" {
+		sealed.DeclaredAt = strings.TrimSpace(r.DeclaredAt)
 	}
 	// The stored record is in the verdict's file order and covers every blocking
 	// finding, so a reader a month later sees the whole question and not just the

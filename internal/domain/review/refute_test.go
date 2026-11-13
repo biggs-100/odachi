@@ -2,10 +2,13 @@ package review_test
 
 import (
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
 // blockingFindings is the verdict the refuter is asked about: one blocker, one
@@ -377,5 +380,145 @@ func TestRefutePromptSaysWhatIsNotRefutable(t *testing.T) {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("the refuter prompt does not say %q", want)
 		}
+	}
+}
+
+// TestSealRefutationStampsTheClockAndKeepsTheClaim: the refuter writes `at`, and
+// the tool kept it, the same way it kept a reviewer's until 0286. The seal stamps
+// the instant the clone wrote the file and keeps the declared time beside it as a
+// claim, so the record says both and a reader sees they disagree (0291).
+func TestSealRefutationStampsTheClockAndKeepsTheClaim(t *testing.T) {
+	t.Parallel()
+
+	stamp := time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC)
+	sealed, err := review.SealRefutation(review.Refutation{
+		Refuter:     "agent",
+		At:          "2026-11-13T00:00:00Z",
+		Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "el diff no toca la validacion, ya estaba"}},
+	}, blockingFindings(), tree, stamp)
+	if err != nil {
+		t.Fatalf("SealRefutation: %v", err)
+	}
+	if sealed.At != "2026-11-13T21:30:12Z" {
+		t.Errorf("At = %q, want the instant the tool sealed it", sealed.At)
+	}
+	if sealed.DeclaredAt != "2026-11-13T00:00:00Z" {
+		t.Errorf("DeclaredAt = %q, want the time the refuter wrote", sealed.DeclaredAt)
+	}
+}
+
+// TestSealRefutationKeepsNoClaimWhenThereIsNothingToDisagreeWith: a refutation
+// that declares no time, or the instant the tool stamped, gains no claim. Nothing
+// parses is refused the same way a verdict refuses it (0291).
+func TestSealRefutationKeepsNoClaimWhenThereIsNothingToDisagreeWith(t *testing.T) {
+	t.Parallel()
+
+	stamp := time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC)
+	for name, at := range map[string]string{
+		"none":  "",
+		"equal": "2026-11-13T21:30:12Z",
+	} {
+		sealed, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: at}, blockingFindings(), tree, stamp)
+		if err != nil {
+			t.Fatalf("%s: SealRefutation: %v", name, err)
+		}
+		if sealed.DeclaredAt != "" {
+			t.Errorf("%s: DeclaredAt = %q, want no claim", name, sealed.DeclaredAt)
+		}
+		if sealed.At != "2026-11-13T21:30:12Z" {
+			t.Errorf("%s: At = %q, want the stamp", name, sealed.At)
+		}
+	}
+}
+
+// TestARefutationWithAClaimRendersAndParses: the claim travels in the file, so the
+// next reader sees the disagreement the seal recorded instead of one time it
+// cannot attribute.
+func TestARefutationWithAClaimRendersAndParses(t *testing.T) {
+	t.Parallel()
+
+	sealed, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: "2026-11-13T00:00:00Z"},
+		blockingFindings(), tree, time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("SealRefutation: %v", err)
+	}
+	parsed, err := review.ParseRefutation(review.RenderRefutation(sealed))
+	if err != nil {
+		t.Fatalf("ParseRefutation: %v", err)
+	}
+	if parsed.At != "2026-11-13T21:30:12Z" {
+		t.Errorf("At = %q, want the stamp", parsed.At)
+	}
+	if parsed.DeclaredAt != "2026-11-13T00:00:00Z" {
+		t.Errorf("DeclaredAt = %q after a round trip, want the claim", parsed.DeclaredAt)
+	}
+}
+
+// TestARefutationWrittenTodayCarriesItsSchema: the refutation was the fourth
+// strict decoder and the only one with no number to announce its shape. Without
+// one, the next field it gains reads as an unknown key in every older binary, and
+// the words send the human to fix a file that is not broken (0291).
+func TestARefutationWrittenTodayCarriesItsSchema(t *testing.T) {
+	sealed, err := review.SealRefutation(review.Refutation{Refuter: "agent"}, blockingFindings(), tree, now)
+	if err != nil {
+		t.Fatalf("SealRefutation: %v", err)
+	}
+
+	rendered := string(review.RenderRefutation(sealed))
+	if !strings.Contains(rendered, `"schema": `+strconv.Itoa(schema.Current)) {
+		t.Fatalf("the stored refutation does not carry schema %d:\n%s", schema.Current, rendered)
+	}
+
+	back, err := review.ParseRefutation(review.RenderRefutation(sealed))
+	if err != nil {
+		t.Fatalf("ParseRefutation: %v", err)
+	}
+	if back.Schema != schema.Current {
+		t.Errorf("Schema = %d, want %d", back.Schema, schema.Current)
+	}
+}
+
+// TestARefutationFromANewerOdachiAsksForAnUpgrade: the strict decoder meets a
+// field it does not know and a version above its own, and must name the version
+// first. Naming the field sends the human to fix a file that is not broken.
+func TestARefutationFromANewerOdachiAsksForAnUpgrade(t *testing.T) {
+	future := schema.Current + 1
+	text := `{"schema":` + strconv.Itoa(future) + `,"tree":"` + tree +
+		`","at":"2026-11-13T00:00:00Z","refutations":[],"a_field_nobody_knows":true}`
+
+	_, err := review.ParseRefutation([]byte(text))
+	if err == nil {
+		t.Fatalf("ParseRefutation(schema %d) = no error, want a refusal", future)
+	}
+	message := err.Error()
+	for _, want := range []string{"upgrade", "schema " + strconv.Itoa(future), "schema " + strconv.Itoa(schema.Current)} {
+		if !strings.Contains(message, want) {
+			t.Errorf("the refusal %q does not name %q", message, want)
+		}
+	}
+	if strings.Contains(message, "unknown") {
+		t.Errorf("the refusal %q names an unknown key, which sends the human to fix a file that is not broken", message)
+	}
+}
+
+// TestARefutationStoredBeforeTheNumberStillReadsAndStillLifts: the oldest files
+// carry no schema and no claim, and an absent number is the first schema forever.
+// A refutation written before 0291 keeps the power it had (0291).
+func TestARefutationStoredBeforeTheNumberStillReadsAndStillLifts(t *testing.T) {
+	text := `{"tree":"` + tree + `","refuter":"agent","at":"2026-11-13T00:00:00Z","refutations":[` +
+		`{"id":"F1","verdict":"refuted","why":"el diff no toca la validacion, ya estaba en la linea 12"}]}`
+
+	parsed, err := review.ParseRefutation([]byte(text))
+	if err != nil {
+		t.Fatalf("ParseRefutation: %v", err)
+	}
+	if parsed.Schema != schema.First {
+		t.Errorf("Schema = %d, want the first schema %d", parsed.Schema, schema.First)
+	}
+	if parsed.DeclaredAt != "" {
+		t.Errorf("DeclaredAt = %q, want nothing: the file never had the field", parsed.DeclaredAt)
+	}
+	if _, blocking := review.BlockingAfter(blockingFindings(), review.Answers{parsed}); !blocking {
+		t.Error("a refutation stored before the number stopped lifting its finding")
 	}
 }
