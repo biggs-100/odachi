@@ -447,3 +447,23 @@ deps  = []
 # not   = "una vulnerabilidad que el codigo no llama no bloquea: govulncheck la reporta y la fila mide lo alcanzable"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   el campo sigue siendo un string y el esquema no sube: la forma del registro guardado no cambia
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "el campo sigue siendo un string y el esquema no sube: la forma del registro guardado no cambia"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   los veredictos ya guardados no se reescriben: el arreglo se ve en los nuevos
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "los veredictos ya guardados no se reescriben: el arreglo se ve en los nuevos"
+# paths = []
+# deps  = []

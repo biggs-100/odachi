@@ -679,6 +679,73 @@ func TestExecOnADocumentsOnlyChangeSaysNothingIsDue(t *testing.T) {
 	}
 }
 
+// TestAMergedVerdictNamesEachReviewerOnce: the reviewer field is one string, and
+// every correction used to append itself to it, so a verdict that had two judges
+// read as six -two draws per lens and a correction each adding a name again-
+// (0284). Each author is named once, in the order it first appeared.
+func TestAMergedVerdictNamesEachReviewerOnce(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.shell.output = `{"reviewer":"first","findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"risk"}]}`
+
+	seed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "first + second",
+		Lenses:   []string{"reliability"},
+		Passes:   []domainreview.Pass{{Path: "a.go", Blob: gitBlob, Lens: "reliability"}},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(seed)
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk", Because: "the test asks for a wider scope"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the completed verdict does not parse: %v", err)
+	}
+	if stored.Reviewer != "first + second" {
+		t.Errorf("reviewer = %q, want each author named once", stored.Reviewer)
+	}
+}
+
+// TestAMergedVerdictKeepsTheReviewerOnlyOneSideNames: deduping is not dropping. A
+// correction that ran with a different command adds its author, and the order is
+// the order they appeared in.
+func TestAMergedVerdictKeepsTheReviewerOnlyOneSideNames(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.shell.output = `{"reviewer":"second","findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"risk"}]}`
+
+	seed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "first",
+		Lenses:   []string{"reliability"},
+		Passes:   []domainreview.Pass{{Path: "a.go", Blob: gitBlob, Lens: "reliability"}},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(seed)
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk", Because: "the test asks for a wider scope"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the completed verdict does not parse: %v", err)
+	}
+	if stored.Reviewer != "first + second" {
+		t.Errorf("reviewer = %q, want both authors, in the order they appeared", stored.Reviewer)
+	}
+}
+
 // TestASecondRunCompletesTheVerdict: the store grows by lens. A run that finds a
 // verdict covering reliability judges risk and adds it, keeping the rows it did
 // not pay for again.
