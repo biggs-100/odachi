@@ -8,6 +8,15 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A verdict names its judges once.** The `reviewer` field appended every correction
+  whole, so a tree with four lenses, two draws each and one correction read as six
+  authors: the same two names, written again by each merge. The merge now keeps the
+  record's shape and its spelling -one sealed string, ` + ` between names- and writes a
+  name that is already there once, in the order it first appeared, so `odachi review
+  --show` says who judged and how many, instead of printing a paragraph. Patch (0284).
+
 ## v0.40.4 - 2026-11-12
 
 - **The floor reads the dependencies too.** `govulncheck ./...` is now a check at
