@@ -1,6 +1,11 @@
 package gate_test
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -495,4 +500,61 @@ func TestAProofIsOwedAtTheClose(t *testing.T) {
 	if got := gate.Evaluate(failed); got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofFailed {
 		t.Errorf("a failed proof mid-feature = %d/%q, want proof_failed", got.Code, got.Reason)
 	}
+}
+
+// TestEveryReasonInTheSourceHasItsRow: the table is the only list, so the source is the
+// other half of the promise -one half that drifts is the defect this file exists to
+// catch-. A reason declared in gate.go with no row would ship unjudged, and a row naming
+// a reason the gate no longer returns would keep a promise nobody keeps (0293).
+func TestEveryReasonInTheSourceHasItsRow(t *testing.T) {
+	declared := reasonConstants(t)
+	held := make(map[string]bool, len(evaluationCases))
+	for _, tc := range evaluationCases {
+		held[tc.reason] = true
+	}
+
+	for _, reason := range declared {
+		if !held[reason] {
+			t.Errorf("the gate declares %q and no row in evaluationCases produces it: add the state, its words and its continuation", reason)
+		}
+	}
+	for reason := range held {
+		if !slices.Contains(declared, reason) {
+			t.Errorf("evaluationCases names %q, which gate.go does not declare", reason)
+		}
+	}
+}
+
+// reasonConstants reads the reasons the gate declares from its own source. Go cannot be
+// asked for a package's constants, and a list copied by hand is the second list this
+// feature exists to remove (0293).
+func reasonConstants(t *testing.T) []string {
+	t.Helper()
+
+	file, err := parser.ParseFile(token.NewFileSet(), "gate.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parsing gate.go: %v", err)
+	}
+	var reasons []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		spec, ok := n.(*ast.ValueSpec)
+		if !ok {
+			return true
+		}
+		for i, name := range spec.Names {
+			if !strings.HasPrefix(name.Name, "Reason") || i >= len(spec.Values) {
+				continue
+			}
+			lit, ok := spec.Values[i].(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				continue
+			}
+			if value, err := strconv.Unquote(lit.Value); err == nil {
+				reasons = append(reasons, value)
+			}
+		}
+		return true
+	})
+	slices.Sort(reasons)
+	return reasons
 }

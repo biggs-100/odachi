@@ -12,7 +12,7 @@ R1 · "el gate declara sus razones una vez y la prueba las recorre todas: una ra
 - ## Unreleased names it, patch (0293)
 
 ## Steps
-- [ ] T1 · la tabla de ejemplos es la unica lista: la continuacion se prueba recorriendo sus filas   R1 · route:inline
+- [x] T1 · la tabla de ejemplos es la unica lista: la continuacion se prueba recorriendo sus filas   R1 · route:inline · tree:27171dd49ad1ccaf6f5fef0ac9eaa00747ce9207
 - [ ] T2 · una razon nueva en el fuente del gate sin fila en la tabla hace fallar el suite   R1 · route:inline
 - [ ] T3 · el changelog nombra 0293 bajo Unreleased   R1 · route:inline
 
