@@ -3218,3 +3218,20 @@ func TestShowNamesARefutationThatNeverSaidWhoAnswered(t *testing.T) {
 		t.Errorf("the show line leaves the witness without a name:\n%s", lines)
 	}
 }
+
+// TestTheRefusalOfAVerdictSaysWhatToRun: the sentence a human meets when an attached
+// verdict cannot be read used to end at "I wrote nothing" -the fact, not the way out-.
+// A refusal the ratchet can now see has to teach the command (0292).
+func TestTheRefusalOfAVerdictSaysWhatToRun(t *testing.T) {
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.files.files[fullPath("veredicto.json")] = []byte("no es json")
+
+	result := p.run(review.Options{Base: "HEAD", Attach: "veredicto.json"})
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "odachi review --attach veredicto.json") {
+		t.Errorf("the refusal does not say what to run: %s", result.Message)
+	}
+}

@@ -49,7 +49,6 @@ sentence	review.go	the refuter %q already answered this tree: a second answer fr
 sentence	review.go	the review of %s holds no open row named %s: the rows it holds are %s
 sentence	review.go	the review of this tree holds no open row: there is nothing to dismiss in
 sentence	review.go	the verdict %s is from tree %s and this tree is %s: a verdict is refuted with the diff that saw it born
-sentence	review.go	the verdict %s is no good: %s; I wrote nothing
 sentence	review.go	this tree already has %d refutations and %d is the ceiling: a finding they did not lift needs a fix, not another witness
 sentence	review.go	this tree already has %d refutations and %d is the ceiling: the finding they did not lift needs a fix, not another witness
 sentence	waive.go	; a waiver is a decision about one feature, and there is no open one to name
