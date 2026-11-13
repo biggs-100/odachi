@@ -494,3 +494,25 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0295 · lo-que-un
+
+## What must exist
+- lo que un agente lee en cada sesion queda fijado por bytes: crecer cuesta un commit deliberado, y acortarlo baja el pin
+
+## Done when
+- el bloque que init inyecta, los cuatro lentes y SKILLS.md tienen su tamano en un baseline, y el suite falla cuando alguno crece
+- un texto que se acorta hace fallar la prueba hasta que el pin baja, asi el numero no miente hacia arriba
+- el baseline vive en un solo archivo y la comparacion en un solo lugar, no una copia por paquete
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no se cambia el texto de ninguna de las tres superficies: esta feature mide, no edita
+- no entra un techo que permita crecer: el pin es exacto, y subirlo es un commit con motivo
+- no se mide el prompt entero del review con su diff: eso ya tiene max_prompt_kb, y el diff no es fijo
+- no entra release ni changelog: nada observable cambia para quien usa el binario
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.

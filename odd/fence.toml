@@ -742,3 +742,43 @@ deps  = []
 # not   = "no se agrega una razon nueva al gate: las once quedan como estan"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   no se cambia el texto de ninguna de las tres superficies: esta feature mide, no edita
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se cambia el texto de ninguna de las tres superficies: esta feature mide, no edita"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra un techo que permita crecer: el pin es exacto, y subirlo es un commit con motivo
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra un techo que permita crecer: el pin es exacto, y subirlo es un commit con motivo"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se mide el prompt entero del review con su diff: eso ya tiene max_prompt_kb, y el diff no es fijo
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se mide el prompt entero del review con su diff: eso ya tiene max_prompt_kb, y el diff no es fijo"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra release ni changelog: nada observable cambia para quien usa el binario
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra release ni changelog: nada observable cambia para quien usa el binario"
+# paths = []
+# deps  = []
