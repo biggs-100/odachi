@@ -19,11 +19,6 @@ paths = ["internal/probe/testdata/lenses/**"]
 deps  = []
 
 [[rule]]
-not   = "the gate does not run the checks: it reads the verdict they produced"
-paths = ["internal/domain/gate/**"]
-deps  = []
-
-[[rule]]
 not   = "el fixture de la sonda y su llave son intocables: medir cambiando el examen no mide nada - back when the probe's arm, its planted defects or the manifest change for a reason this feature records"
 paths = ["internal/probe/**", "internal/domain/probe/manifest.go"]
 deps  = []
@@ -565,5 +560,55 @@ deps  = []
 #
 # [[rule]]
 # not   = "el mecanismo tiene una sola casa: el walker y las dos direcciones viven en internal/refusal - back when un paquete necesita una variante propia"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra mutacion sobre todo el modulo ni dependencia nueva: solo el comportamiento del cambio y lo que la toolchain del proyecto ya corre
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra mutacion sobre todo el modulo ni dependencia nueva: solo el comportamiento del cambio y lo que la toolchain del proyecto ya corre"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra numero de cobertura ni umbral: la cobertura no es una conducta
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra numero de cobertura ni umbral: la cobertura no es una conducta"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no cambian los lentes ni sus modelos: los lentes heterogeneos son su propia decision (0048)
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no cambian los lentes ni sus modelos: los lentes heterogeneos son su propia decision (0048)"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no cambia el formato de la prueba y proof/** no sale de la cerca: # covers sigue siendo un claim
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no cambia el formato de la prueba y proof/** no sale de la cerca: # covers sigue siendo un claim"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra arreglar plan --done cuando registra el arbol anterior: queda nombrado, no arreglado
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra arreglar plan --done cuando registra el arbol anterior: queda nombrado, no arreglado"
 # paths = []
 # deps  = []
