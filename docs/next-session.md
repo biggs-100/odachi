@@ -1,59 +1,69 @@
 # Next session
 
-Written after `v0.41.0` and 0286, the feature that gave the record its clock.
+Written after 0287, the ratchet over the refusals this package can read.
 
 ## Where the project is
 
 - `v0.41.0` is published: annotated tag on `68a2ae2` (`Merge pull request #568`), sixteen
   assets built and attested, and the binary on this machine reports `odachi v0.41.0`.
-- `main` is past 0286's merge (PR #567). 284 features, 693 steps, 0 open questions.
-- **The verdict's schema is 7.** `at` is the instant the clone sealed the file; the time the
-  reviewer wrote is `declared_at`, kept only when it parses and disagrees. A binary older
-  than v0.41.0 refuses a schema-7 file and names the upgrade.
+- `main` is past 0287's merge (PR #570). 285 features, 696 steps, 0 open questions.
+- **`internal/app/check` has a ratchet**: `refusals.baseline` freezes four sentences that
+  name no way out and five calls the walk cannot read. It fails on a new one and on a
+  frozen one that disappears, so the number follows the debt in the same commit.
+  `internal/app/start` (33 refusals, 20 with a way out) and `internal/app/review` (114, 30)
+  still owe their slice.
 - **`main` is protected:** every change enters through a pull request, the release rename
   included. A fence change is still two problems -the policy lands before the code-.
-- **Every review runs two tools before any lens**: `lint` (`golangci-lint run ./...`) and
-  `govulncheck ./...`, both at `CRITICAL`, approved in this clone. The second needs the
-  network; a machine that cannot reach the database fails the row instead of passing it, and
-  the way past is `--dismiss check:govulncheck --because "<why>"`.
-- The repository asks for **Go 1.26.11** (`go.mod`).
-- A verdict's `reviewer` field names each judge once, in the order it appeared.
+- **Every review runs two tools before any lens**: `lint` and `govulncheck ./...`, both at
+  `CRITICAL`, approved in this clone. The second needs the network; the way past a
+  disconnected machine is `--dismiss check:govulncheck --because "<why>"`.
+- The repository asks for **Go 1.26.11** (`go.mod`); the verdict's schema is **7**, and its
+  `at` is the clone's clock while `declared_at` is what the reviewer claimed.
 - `odachi doctor` is clean: 15 checks, no warnings.
 
 ## What shipped
 
-- **0286, the clock stamps the verdict** (`v0.41.0`, minor). `Seal` kept the reviewer's own
-  `at`, so every verdict in the sample claimed a round hour. The tool now stamps the instant
-  it wrote the file and keeps the answer's time as `declared_at` when it differs; `--show`
-  and the line a run ends with print both. A re-seal (a completion or a correction) keeps the
-  claim the first part made. The feature proved itself on its own review: that verdict
-  declared `at: 2026-11-12T21:30:12Z`, the exact instant written in the tests the same diff
-  added -the model copied a timestamp out of the text it was reviewing.
+- **0287, a refusal that names no way out cannot land** (no release: pinning a rule is not a
+  capability). A test walks `internal/app/check` with `go/parser`, keeps the sentence of every
+  `blocked(...)` it can read statically and counts the calls whose message is a value. Both
+  are frozen in `refusals.baseline`, and both directions fail: a new refusal breaks the
+  suite, and a frozen one that disappears breaks it until the file follows. Its own review
+  found the second half was only a `t.Logf` -invisible in CI- and the fix landed in a
+  correction over the delta.
 
 ## The decision that waits
 
-**The research's queue is the work, and nothing is owed.** In its order: the third model for
-the probe with `--runs 5` -blocked while the free tier refuses a call the size of a probe
-prompt and the paid flash is declined- and then heterogeneous judges for full-tier trees,
-which the format already supports as one model per lens in `odd/review.toml`.
+**Heterogeneous lenses is a decision, not a build.** `odd/review.toml` already names one
+model per lens and all four are `deepseek-v4.1-flash`: one opinion in four disguises. Giving
+one or two lenses another vendor costs the same calls (four lenses, one call each per draw),
+and the cheap ones sit at or below today's price. What nobody has measured is whether two
+vendors disagree usefully; that measurement is the probe with two models, blocked below.
 
-**Two things are named and not fixed.** A refutation also declares its time with the writer's
-pen (`internal/domain/review/refute.go` still calls `instant`), and the same fix applies; the
-requirement was about a verdict, and the other surface is its own change. And `go.mod`'s `go`
-directive is a patch version: a contributor's toolchain is the repository's decision.
+**The third model waits for a call this size.** The free tier refuses a probe-sized prompt
+after 45 to 90 seconds while a small one answers in two, and the paid flash was declined.
+`docs/review-research.md` Part 5d keeps the attempt and the rule it found: availability is
+part of a judge's fitness.
+
+**Named and not fixed:** a refutation still writes its own time (`refute.go` calls
+`instant`); the gate's continuation test covers seven of its ten reasons and the fence
+protects the package; and `go.mod` asks for a patch of Go.
 
 ## The limits to remember
 
-- **The actor does not write its own receipt.** The tool stamps what it can prove -the tree,
-  the schema, the instant- and keeps what the actor claims beside it, labelled as a claim.
-  The same rule applies to any field a reviewer writes about itself.
-- **A field written under the old schema number is what the number exists to announce.** Bump
-  the schema in the commit that adds the field, not in the one that documents it.
-- **The installed binary is the one that runs in reviews.** A feature's own verdict is sealed
-  by the released binary, not by the tree under review, so its `schema` is the released one.
-- **`odachi plan --done --commit <sha>` records the tree of that commit**, not the worktree's.
-- **A record line written after the proof voids it.** Write every record, then measure, then
-  commit.
+- **A ratchet has two directions and both must fail.** A shrink reported through a log is a
+  shrink nobody sees: `go test ./...` without `-v` discards it, so the baseline drifts above
+  the debt forever.
+- **The fence protects paths, not intentions.** `internal/domain/gate/**` is closed to a
+  test-only fix, and loosening it is two PRs. Check the fence before planning a step that
+  edits it, not after the commit is refused.
+- **`plan --done` runs even when the commit before it failed.** Chaining `git commit; odachi
+  plan --done` records the previous HEAD's tree. `odachi undo --artifact <taskdoc>` restores
+  the record, and the tree is written again after a commit that succeeded.
+- **The classifier reads a test that imports `go/token` as touching secrets.** It asks for all
+  four lenses; the review is due for any code change anyway.
+- **The actor does not write its own receipt.** The tool stamps what it can prove and keeps
+  the claim beside it.
+- **A field written under the old schema number is what the number exists to announce.**
 - **A floor is declared after the debt is paid**, and the debt can be the toolchain itself.
 - **A CRITICAL row that needs the network is a contract with whoever clones.**
 - **A commit's message is safer rewritten with `git commit-tree <tree> -p <parent> -F msg`**
@@ -61,11 +71,7 @@ directive is a patch version: a contributor's toolchain is the repository's deci
 - **A rebase does not move a proof or a verdict when the content does not change.**
 - **A release renames `## Unreleased` before the tag, and the rename is a PR**
   (`release/vX.Y.Z`), with the tag on that merge.
-- **The probe needs nine answers per draw** and one stall voids it; the free tier of this
-  machine refuses a call the size of a probe prompt after 45 to 90 seconds, while a small
-  prompt answers in two.
-- **The probe's answers live in `.git/odachi/probe/<fixture-tree>-<arm>-<lens>-<n>.json`**,
-  the name does not carry the model -the `model` field inside does.
+- **The probe needs nine answers per draw** and one stall voids it.
 - **PowerShell's `Set-Content`/`Add-Content` write CRLF and the repo is LF**: `gofmt -w` after
   Go code, and check the bytes after a `-replace` that renames a heading.
 - **One heavy gate per machine**: `go test ./...` takes about 700 s here.
@@ -82,13 +88,13 @@ odachi review --runs 2 --base <feature base> --exec 'C:\Users\USER\AppData\Local
 ```
 
 ```sh
-# a correction measures only the delta, carries the predecessor's rows, and takes no --base
+# a correction measures only the delta, carries the predecessor's rows, takes no --base
 odachi review --since <tree prefix> --runs 2 --because "<why>"
 ```
 
 ```sh
-# what the record says about itself: who judged, when the tool sealed it, and the claim
-odachi review --show
+# when a commit was refused and a step recorded the wrong tree
+odachi undo --artifact odd/tasks/<the taskdoc>.md
 ```
 
 ```sh
