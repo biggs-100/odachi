@@ -1,0 +1,59 @@
+# Refusals that name no way out, frozen the day the ratchet reached this package (0289).
+#
+# This file only shrinks. A sentence whose refusal later names a command must be
+# deleted, and a count must go down when a call stops building its message from a
+# value. Adding a line is a deliberate act a reviewer sees in the diff.
+sentence	checks.go	; remove  and approve the list again
+sentence	checks.go	could not check %s: %s
+sentence	checks.go	could not read %s: %s
+sentence	checks.go	could not write %s: %s
+sentence	checks.go	odd/review.toml declares no checks: there is nothing to approve, and a project that declares none runs none
+sentence	checks.go	the approval does not say who agreed: run it from the clone that holds your account
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; I wrote nothing
+sentence	review.go	; the prompt was not written
+sentence	review.go	; the reviewer was not started
+sentence	review.go	; the reviewer was not started
+sentence	review.go	; the reviewer was not started
+sentence	review.go	; the reviewer was not started
+sentence	review.go	; the reviewer was not started
+sentence	review.go	could not check whether %s already exists: %s; check the permissions
+sentence	review.go	could not check whether %s already exists: %s; check the permissions
+sentence	review.go	could not check whether %s exists: %s
+sentence	review.go	could not hash %s to carry the verdict this correction completes: %s; I wrote nothing
+sentence	review.go	could not hash %s to stamp %s: %s; I wrote nothing
+sentence	review.go	could not hash %s to weigh the store's potent rows: %s; I wrote nothing
+sentence	review.go	could not hash %s to weigh the store's potent rows: %s; I wrote nothing
+sentence	review.go	could not prepare  for the reviewer's answer: ; the reviewer was not started
+sentence	review.go	could not read the commits since :
+sentence	review.go	could not read the review store to weigh the potent rows: %s; I wrote nothing
+sentence	review.go	could not read the verdict %s: %s; check the path
+sentence	review.go	could not read the verdict %s: %s; check the path
+sentence	review.go	could not write %s: %s
+sentence	review.go	could not write the refutation %s: %s; check the permissions
+sentence	review.go	could not write the scope record in :
+sentence	review.go	did not give a verdict: it names  and the answer in  could not be read:
+sentence	review.go	the refuter %q already answered this tree: a second answer from the same account is not a second witness
+sentence	review.go	the review of %s holds no open row named %s: the rows it holds are %s
+sentence	review.go	the review of this tree holds no open row: there is nothing to dismiss in
+sentence	review.go	the verdict %s is from tree %s and this tree is %s: a verdict is refuted with the diff that saw it born
+sentence	review.go	this tree already has %d refutations and %d is the ceiling: a finding they did not lift needs a fix, not another witness
+sentence	review.go	this tree already has %d refutations and %d is the ceiling: the finding they did not lift needs a fix, not another witness
+sentence	waive.go	; a waiver is a decision about one feature, and there is no open one to name
+sentence	waive.go	; a waiver is a decision about one feature, and there is no open one to name
+sentence	waive.go	could not write the waiver:
+sentence	waive.go	could not write the waiver:
+count	checks.go	1
+count	review.go	4
