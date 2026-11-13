@@ -293,3 +293,23 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0284 · la-procedencia-de
+
+## What must exist
+- la procedencia de un veredicto nombra a cada autor una sola vez
+
+## Done when
+- un veredicto que fusiona dos tiradas y una correccion nombra a cada autor una sola vez
+- un autor que solo aparece en una de las dos partes sigue en la fusion
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0284)
+
+## Not included (first version)
+- el campo sigue siendo un string y el esquema no sube: la forma del registro guardado no cambia
+- los veredictos ya guardados no se reescriben: el arreglo se ve en los nuevos
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.
