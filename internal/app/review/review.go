@@ -1901,7 +1901,7 @@ func (r *runner) show() Result {
 
 	if answers, refFiles := r.storedRefutations(tree); len(refFiles) > 0 {
 		result.Files = append(result.Files, refFiles...)
-		result.Lines = append(result.Lines, refutationLine(answers, refFiles, parsed.Findings))
+		result.Lines = append(result.Lines, refutationLines(answers, refFiles, parsed.Findings)...)
 	}
 	return result
 }
@@ -2298,7 +2298,8 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 	}
 
 	stands, refuted := counts(sealed)
-	message := "refutation saved in " + r.storeLabel(rel) + " · " + domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
+	message := "refutation saved in " + r.storeLabel(rel) + " (" + witnessWhen(sealed) + ") · " +
+		domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
 	if still := r.stillBlockingLine(tree, verdict.Findings); still != "" {
 		message += "\n" + still
 	}
@@ -3993,9 +3994,12 @@ func drawCount(n int) string {
 	return strconv.Itoa(n) + " draws"
 }
 
-// refutationLine is the witnesses as `--show` reports them: which files answered,
-// how many stood and how many refuted, and whether the block survived them.
-func refutationLine(answers domain.Answers, files []string, findings []domain.Finding) string {
+// refutationLines is the witnesses as `--show` reports them: which files answered,
+// how many stood and how many refuted, whether the block survived them, and one
+// line per answer that says when this clone sealed it -with the refuter's own hour
+// beside the stamp when it disagrees (0291)-. The count alone was a record of what
+// the refutation said and never of who wrote it or when.
+func refutationLines(answers domain.Answers, files []string, findings []domain.Finding) []string {
 	stands := 0
 	refuted := 0
 	for _, answer := range answers {
@@ -4010,9 +4014,33 @@ func refutationLine(answers domain.Answers, files []string, findings []domain.Fi
 
 	line := fmt.Sprintf("refutation: %s · stands: %d · refuted: %d", strings.Join(files, ", "), stands, refuted)
 	if _, blocking := domain.BlockingAfter(findings, answers); !blocking {
-		return line + " · no longer blocks anything"
+		line += " · no longer blocks anything"
+	} else {
+		line += " · still blocking"
 	}
-	return line + " · still blocking"
+
+	lines := make([]string, 0, len(answers)+1)
+	lines = append(lines, line)
+	for _, answer := range answers {
+		lines = append(lines, "witness: "+witnessWhen(answer))
+	}
+	return lines
+}
+
+// witnessWhen is the half of a line a person reads first about one answer: who
+// answered and when the clone sealed it. A refuter that claimed another time gets
+// it named beside the stamp, because one of the two is a fact (0291, the sentence
+// 0286 gave the verdict).
+func witnessWhen(answer domain.Refutation) string {
+	who := strings.TrimSpace(answer.Refuter)
+	if who == "" {
+		who = "unnamed refuter"
+	}
+	line := who + " · sealed " + answer.At
+	if claim := strings.TrimSpace(answer.DeclaredAt); claim != "" {
+		line += " · the refuter wrote " + claim
+	}
+	return line
 }
 
 // counts is the same arithmetic for the message a refutation prints when stored.
