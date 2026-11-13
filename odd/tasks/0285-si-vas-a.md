@@ -8,7 +8,7 @@ R1 · "si vas a usar otro modelo de otra familia puedes usar mimo v2.6 flash que
 ## Done when
 
 ## Steps
-- [ ] T1 · si vas a usar otro modelo de otra familia puedes usar mimo v2.6 flash que tambien es barato   R1
+- [x] T1 · si vas a usar otro modelo de otra familia puedes usar mimo v2.6 flash que tambien es barato   R1 · tree:44c9523d298ad3f4a091a8aa0f469744663d34bf
 
 ## History
 L1 · "si vas a usar otro modelo de otra familia puedes usar mimo v2.6 flash que tambien es barato"
