@@ -61,6 +61,21 @@ func TestEvaluationOrder(t *testing.T) {
 	failedProof.ProofLastLine = "FAIL github.com/biggs-100/odachi/internal/domain/gate 0.02s"
 	failedProof.ProofCommand = "go test ./..."
 
+	undoMissed := ready()
+	undoMissed.UndoMissed = true
+	undoMissed.UndoCommand = "go test ./..."
+
+	undoUnknown := ready()
+	undoUnknown.UndoUnknown = "the reverted copy did not build"
+	undoUnknown.UndoCommand = "go test ./..."
+
+	// Both at once: a copy that did not build cannot report a miss, so the
+	// unknown is the only thing the row can defend.
+	bothUndo := ready()
+	bothUndo.UndoMissed = true
+	bothUndo.UndoUnknown = "the reverted copy did not build"
+	bothUndo.UndoCommand = "go test ./..."
+
 	tests := []struct {
 		name    string
 		state   gate.State
@@ -146,6 +161,30 @@ func TestEvaluationOrder(t *testing.T) {
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofFailed,
 			message: "the proof failed: FAIL github.com/biggs-100/odachi/internal/domain/gate 0.02s",
+			next:    `odachi check --run "go test ./..."`,
+		},
+		{
+			name:    "the suite does not notice the undo",
+			state:   undoMissed,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonUndoMissed,
+			message: "the tests do not notice the change being undone: the suite stayed green without it",
+			next:    `odachi check --run "go test ./..."`,
+		},
+		{
+			name:    "the undo could not be judged",
+			state:   undoUnknown,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonUndoUnknown,
+			message: "the undo could not be judged: the reverted copy did not build; a copy that does not build is not a test that noticed",
+			next:    `odachi check --run "go test ./..."`,
+		},
+		{
+			name:    "an unknown undo outranks a miss",
+			state:   bothUndo,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonUndoUnknown,
+			message: "the undo could not be judged: the reverted copy did not build; a copy that does not build is not a test that noticed",
 			next:    `odachi check --run "go test ./..."`,
 		},
 		{
