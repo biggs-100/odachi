@@ -469,7 +469,13 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	// a run that could not be judged is a note: blocking on a copy that does not
 	// build would stop every change that adds a symbol its tests call.
 	if closedNow && opts.Message == "" && opts.Run != "" && !state.ProofFailed && !state.ProofTimedOut && feature != nil {
-		r.undoRow(&state, feature, proofPath)
+		// A waiver is the human's decision and it is named: a close that skips
+		// the row in silence is the silence the row exists to remove (0052).
+		if feature.Doc.UndoWaived {
+			r.undoNote = "waived by the human: " + feature.Doc.UndoWaiverReason
+		} else {
+			r.undoRow(&state, feature, proofPath)
+		}
 	}
 
 	verdict := gate.Evaluate(state)

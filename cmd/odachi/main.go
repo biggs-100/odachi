@@ -173,6 +173,8 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	flags.StringVar(&brief, "brief", "", "read the brief this path carries instead of asking, and record it as brief.md")
 	flags.BoolVar(&force, "force", false, "rewrite an existing brief.md")
 	flags.BoolVar(&opts.WaiveReview, "waive-review", false, "record that this feature lands without a review verdict (the proof and the fence still apply)")
+	flags.BoolVar(&opts.WaiveUndo, "waive-undo", false, "record that this feature lands without the row that reverts the change, and why: --because is its reason")
+	flags.StringVar(&opts.WaiveUndoReason, "because", "", "the reason a waiver carries; --waive-undo without it is refused")
 	flags.BoolVar(&opts.Light, "light", false, "open a feature that fits one line: no brief, one step with the same words")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
@@ -208,6 +210,12 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	}
 
 	opts.Dir = dir
+	// A waiver without its reason is refused before anything is written: the
+	// decision is only a decision when a reviewer can read why (0052).
+	if opts.WaiveUndo && strings.TrimSpace(opts.WaiveUndoReason) == "" {
+		_, _ = fmt.Fprintln(stderr, `odachi: --waive-undo needs --because "<why>": a waiver nobody can read is a silence with a flag`)
+		return start.CodeBlocked
+	}
 	// The lock lives in the clone's store, so the store is resolved before the
 	// first write. A folder that is not a git repository has no store and runs
 	// without the lock: there is nowhere to put it, and guessing is what this
@@ -2019,6 +2027,8 @@ flags:
   --brief path    read the brief this path carries instead of asking, and record it as brief.md
   --force         rewrite an existing brief.md (it is backed up first)
   --waive-review  record that this feature lands without a review verdict (the proof and the fence still apply)
+  --waive-undo    record that this feature lands without the row that reverts the change;
+                  --because "<why>" is its reason, and without it the run is refused
   --light         open a feature that fits one line: no brief, one step with the same words,
                   and the fence and the voice untouched; the line is the requirement
   --json          machine output

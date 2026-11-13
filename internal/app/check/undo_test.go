@@ -72,6 +72,42 @@ func TestACloseWhoseSuiteNoticesTheChangeCloses(t *testing.T) {
 	}
 }
 
+// TestACloseWaivedByTheHumanSaysSoAndSkipsTheRow: a refactor stays green when
+// reverted because the behavior did not change, and only the human can say which
+// one it is. The close names the waiver instead of skipping the row in silence.
+func TestACloseWaivedByTheHumanSaysSoAndSkipsTheRow(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(strings.Replace(
+		reviewableDoc("abc1234", true),
+		"Base: abc1234\n",
+		"Base: abc1234\nUndo: waived - solo cambie nombres\n",
+		1,
+	))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+
+	git := &fakeGit{tree: currentTree, changed: []string{"internal/app/pay.go"}}
+	shell := &fakeShell{runs: []fakeRun{{output: "ok\n"}}}
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45},
+		files, git, shell)
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a waived row blocked the close: %d %s %q", got.Code, got.Reason, got.Message)
+	}
+	found := false
+	for _, line := range got.Lines {
+		if strings.Contains(line, "undo: waived by the human: solo cambie nombres") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("the close did not name the waiver: %v", got.Lines)
+	}
+	if git.archived != "" {
+		t.Fatalf("a waived feature copied a tree: %q", git.archived)
+	}
+}
+
 // TestACloseWithNothingToUndoClosesAndSaysSo: a change of documents or tests only
 // has no production file to revert, and a silent row is the silence this gate
 // exists to avoid. The row is named, never a green nobody can tell from a pass.
