@@ -4260,7 +4260,8 @@ func nothingOwed(rel string, selected []string, stored *domain.Verdict, runs int
 // refused is an attached verdict the tool will not store: one line, and nothing
 // written.
 func refused(path, reason string) Result {
-	message := fmt.Sprintf("the verdict %s is no good: %s; I wrote nothing", path, oneLine(reason))
+	message := fmt.Sprintf("the verdict %s is no good: %s; fix the file and run odachi review --attach %s again",
+		path, oneLine(reason), path)
 	return Result{
 		Code:    CodeBlocked,
 		Message: message,

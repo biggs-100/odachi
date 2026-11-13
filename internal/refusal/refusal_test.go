@@ -50,7 +50,7 @@ func writeFixture(t *testing.T) string {
 func TestWalkSeparatesTheFourShapes(t *testing.T) {
 	t.Parallel()
 
-	found, err := refusal.Walk(writeFixture(t))
+	found, err := refusal.Walk(writeFixture(t), refusal.AtTheCall("blocked"))
 	if err != nil {
 		t.Fatalf("Walk: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestWalkSeparatesTheFourShapes(t *testing.T) {
 func TestWalkRefusesADirectoryItCannotRead(t *testing.T) {
 	t.Parallel()
 
-	if _, err := refusal.Walk(filepath.Join(t.TempDir(), "nope")); err == nil {
+	if _, err := refusal.Walk(filepath.Join(t.TempDir(), "nope"), refusal.AtTheCall("blocked")); err == nil {
 		t.Fatal("Walk answered a directory that does not exist")
 	}
 }
@@ -169,5 +169,108 @@ func TestCountIssuesJudgesTheFourCases(t *testing.T) {
 	}
 	if lines := refusal.CountIssues(map[string]int{"a.go": 3}, map[string]int{"a.go": 3}, "refusals.baseline"); len(lines) != 0 {
 		t.Errorf("issues = %q, want none when the count and the baseline agree", lines)
+	}
+}
+
+// helperFixture is a package with the two kinds of builder: a constructor that
+// carries the sentence at the call site, and a helper that hardcodes it inside.
+const helperFixture = `package fixture
+
+import "fmt"
+
+func blocked(string) {}
+
+func refused(path, reason string) string {
+	message := fmt.Sprintf("the verdict %s is no good: %s; I wrote nothing", path, reason)
+	return message
+}
+
+func run(message string) {
+	_ = blocked("this one names nothing")
+	_ = blocked(message)
+	_ = refused("verdict.json", "not json")
+}
+`
+
+// writeHelperFixture writes the two builders and returns its directory.
+func writeHelperFixture(t *testing.T) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(helperFixture), 0o600); err != nil {
+		t.Fatalf("writing the fixture: %v", err)
+	}
+	return dir
+}
+
+// TestABuilderKeepsItsSentenceWhereThePackageSaysItDoes: a constructor is judged at
+// its call sites, and a helper that hardcodes its sentence is judged where the
+// sentence lives. Reading the wrong side invents debt either way: a helper's call
+// passes a value, so reading the call would count it once per use instead of freezing
+// the one sentence a human reads (0292).
+func TestABuilderKeepsItsSentenceWhereThePackageSaysItDoes(t *testing.T) {
+	t.Parallel()
+
+	found, err := refusal.Walk(writeHelperFixture(t), refusal.AtTheCall("blocked"), refusal.InTheBody("refused"))
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	want := []string{
+		"main.go\tthe verdict %s is no good: %s; I wrote nothing",
+		"main.go\tthis one names nothing",
+	}
+	if !slices.Equal(found.Sentences, want) {
+		t.Errorf("sentences = %q, want %q", found.Sentences, want)
+	}
+	if found.Unreadable["main.go"] != 1 {
+		t.Errorf("unreadable = %v, want one call in main.go: the blocked(message) one", found.Unreadable)
+	}
+}
+
+// TestAPackageThatDeclaresOneBuilderIsNotJudgedByTheOther: a package that declares
+// only its constructor pays nothing for a helper it did not declare -no sentence and
+// no count-. This is what keeps the mechanism's move from dragging the baselines of
+// the packages that do not need it (0292).
+func TestAPackageThatDeclaresOneBuilderIsNotJudgedByTheOther(t *testing.T) {
+	t.Parallel()
+
+	found, err := refusal.Walk(writeHelperFixture(t), refusal.AtTheCall("blocked"))
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	want := []string{"main.go\tthis one names nothing"}
+	if !slices.Equal(found.Sentences, want) {
+		t.Errorf("sentences = %q, want %q", found.Sentences, want)
+	}
+	if found.Unreadable["main.go"] != 1 {
+		t.Errorf("unreadable = %v, want one call in main.go and nothing from refused", found.Unreadable)
+	}
+}
+
+// TestABuilderWhoseSentenceNamesAWayOutIsNotDebt: the body reading judges a helper
+// by the same rule as a call site. check's refused teaches the command; a package
+// that declared it would still pay nothing for it (0292).
+func TestABuilderWhoseSentenceNamesAWayOutIsNotDebt(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	source := `package fixture
+
+import "fmt"
+
+func refused(shown, reason string) string {
+	return fmt.Sprintf("the proof %s is not valid: %s; run odachi check --run \"<command>\" so the tool writes it", shown, reason)
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(source), 0o600); err != nil {
+		t.Fatalf("writing the fixture: %v", err)
+	}
+
+	found, err := refusal.Walk(dir, refusal.InTheBody("refused"))
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	if len(found.Sentences) != 0 {
+		t.Errorf("sentences = %q, want none: the sentence names a command", found.Sentences)
 	}
 }

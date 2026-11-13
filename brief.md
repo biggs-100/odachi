@@ -447,3 +447,27 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0292 · el-ratchet-mira
+
+## What must exist
+- el ratchet mira la negativa que el humano lee, no el constructor que la arma: la de review que hoy no dice que correr pasa a decirlo, y el mecanismo la vigila
+
+## Done when
+- una negativa que un helper arma sin llamar a blocked entra al ratchet: o esta en el baseline o el suite falla
+- el walker lee los constructores que el paquete declara, y un paquete que declara uno conserva su conteo: check y start no se mueven
+- la frase de refused de review dice que correr, como ya lo dice la de check
+- el baseline sigue bajando solo: una frase pagada se borra y una nueva se agrega a proposito
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0292)
+
+## Not included (first version)
+- no se reescribe ninguna frase que el humano ya lee sin que un test la fije: el baseline congela lo que queda
+- no entran los otros paquetes: esta llega a review y al mecanismo, y check y start conservan su conteo
+- no se retira ni se afloja ninguna regla de la cerca
+- no entra un flag nuevo: el walker recibe lo que el paquete declara
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
