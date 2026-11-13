@@ -11,7 +11,7 @@ R1 · "check mide si el test puede fallar, no solo si el comando paso: si el sui
 - go test ./... is green and odachi check --run "go test ./..." is green
 
 ## Steps
-- [ ] T1 · la cerca deja de cerrar internal/domain/gate/** para este motivo, y esa politica aterriza sola antes que el codigo   R1 · route:inline
+- [x] T1 · la cerca deja de cerrar internal/domain/gate/** para este motivo, y esa politica aterriza sola antes que el codigo   R1 · route:inline · tree:113962368616b6a4b59558d8974202f05866db63
 - [ ] T2 · la puerta aprende el estado: un arbol cuyos tests no fallan al deshacer el cambio no cierra   R1 · route:inline
 - [ ] T3 · check corre el comando sobre una copia con el cambio deshecho y guarda la corrida como evidencia   R1 · route:inline
 
