@@ -18,3 +18,4 @@ R1 · "el ratchet llega a start: sus negativas sin salida quedan congeladas y el
 
 ## History
 L1 · "el ratchet llega a start: sus negativas sin salida quedan congeladas y el mecanismo vive en un solo lugar"
+L2 · OFICIO · "La comparacion de cuentas se extrae tambien: las tres pruebas comparten la sentencia, no solo el walker" (porque el review de este arbol dijo que la direccion de las cuentas quedo sin extraer y que la logica se repetia en dos paquetes; el mecanismo que se copia dos veces es el que se atrasa, y la prosa de cada caso vive mejor en el paquete que la juzga)

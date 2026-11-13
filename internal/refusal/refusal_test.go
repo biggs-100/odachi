@@ -136,3 +136,38 @@ func TestReadBaselineReadsTheTwoKinds(t *testing.T) {
 		}
 	}
 }
+
+// TestCountIssuesJudgesTheFourCases: a count the baseline never froze, one that
+// grew, one that shrank, and a file that stopped building a refusal from a value.
+// Each is a different act for the reader, and the wording lives here so the packages
+// that consume the ratchet cannot drift.
+func TestCountIssuesJudgesTheFourCases(t *testing.T) {
+	t.Parallel()
+
+	found := map[string]int{"new.go": 2, "grew.go": 4, "shrank.go": 1}
+	frozen := map[string]int{"grew.go": 3, "shrank.go": 2, "gone.go": 5}
+
+	got := refusal.CountIssues(found, frozen, "refusals.baseline")
+	if len(got) != 4 {
+		t.Fatalf("issues = %q, want one per case", got)
+	}
+	for _, want := range []string{
+		"new.go has 2 refusal(s) the walk cannot read and no count in refusals.baseline",
+		"grew.go has 4 refusal(s) the walk cannot read and refusals.baseline froze 3",
+		"shrank.go now has 1 refusal(s) the walk cannot read; lower refusals.baseline",
+		"gone.go now has 0 refusal(s) the walk cannot read; lower refusals.baseline",
+	} {
+		var seen bool
+		for _, line := range got {
+			if strings.HasPrefix(line, want) {
+				seen = true
+			}
+		}
+		if !seen {
+			t.Errorf("issues do not carry %q:\n%s", want, strings.Join(got, "\n"))
+		}
+	}
+	if lines := refusal.CountIssues(map[string]int{"a.go": 3}, map[string]int{"a.go": 3}, "refusals.baseline"); len(lines) != 0 {
+		t.Errorf("issues = %q, want none when the count and the baseline agree", lines)
+	}
+}

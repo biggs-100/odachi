@@ -161,6 +161,38 @@ func Shrunk(found, baseline []string) []string {
 	return out
 }
 
+// CountIssues is the count direction, judged and worded: the files where the walk's
+// count and the frozen one disagree. New, grown and shrunk are separate sentences
+// because they ask for different acts -add the count on purpose, or lower it-, and
+// the file that disappeared is a shrink too.
+func CountIssues(found, frozen map[string]int, baseline string) []string {
+	files := make([]string, 0, len(found)+len(frozen))
+	for file := range found {
+		files = append(files, file)
+	}
+	for file := range frozen {
+		if _, ok := found[file]; !ok {
+			files = append(files, file)
+		}
+	}
+	slices.Sort(files)
+
+	out := make([]string, 0, len(files))
+	for _, file := range files {
+		count, counted := found[file]
+		want, known := frozen[file]
+		switch {
+		case counted && !known:
+			out = append(out, fmt.Sprintf("%s has %d refusal(s) the walk cannot read and no count in %s", file, count, baseline))
+		case counted && count > want:
+			out = append(out, fmt.Sprintf("%s has %d refusal(s) the walk cannot read and %s froze %d: a message built from a value cannot be judged, and it may not grow", file, count, baseline, want))
+		case want > count:
+			out = append(out, fmt.Sprintf("%s now has %d refusal(s) the walk cannot read; lower %s", file, count, baseline))
+		}
+	}
+	return out
+}
+
 // staticSentence is the sentence a refusal carries when it can be read statically:
 // a literal, a concatenation, or the format string of a Sprintf/Errorf. The second
 // value says the sentence is only part of the message.

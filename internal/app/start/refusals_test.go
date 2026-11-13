@@ -36,20 +36,7 @@ func TestEveryRefusalNamesAWayOutOrIsInTheBaseline(t *testing.T) {
 		t.Errorf("this refusal is gone; lower %s: %s", baselineFile, row)
 	}
 
-	for file, count := range found.Unreadable {
-		want, ok := baseline.Counts[file]
-		switch {
-		case !ok:
-			t.Errorf("%s has %d refusal(s) the walk cannot read and no count in %s", file, count, baselineFile)
-		case count > want:
-			t.Errorf("%s has %d refusal(s) the walk cannot read and %s froze %d: a message built from a value cannot be judged, and it may not grow", file, count, baselineFile, want)
-		case count < want:
-			t.Errorf("%s now has %d refusal(s) the walk cannot read; lower %s", file, count, baselineFile)
-		}
-	}
-	for file := range baseline.Counts {
-		if _, ok := found.Unreadable[file]; !ok {
-			t.Errorf("%s no longer builds a refusal from a value; remove its count from %s", file, baselineFile)
-		}
+	for _, line := range refusal.CountIssues(found.Unreadable, baseline.Counts, baselineFile) {
+		t.Error(line)
 	}
 }
