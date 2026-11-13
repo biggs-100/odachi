@@ -216,12 +216,14 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		reused = filepath.ToSlash(taskPath) + ": kept, the steps and history it carries are the memory of the work"
 	} else {
 		doc := taskdoc.TaskDoc{
-			Title:        slug,
-			Base:         r.opts.Base,
-			ReviewWaived: r.opts.WaiveReview,
-			Requirements: []taskdoc.Requirement{{ID: "R1", Text: r.answers.outcome}},
-			DoneWhen:     r.answers.done,
-			History:      []string{`L1 · "` + r.answers.outcome + `"`},
+			Title:            slug,
+			Base:             r.opts.Base,
+			ReviewWaived:     r.opts.WaiveReview,
+			UndoWaived:       r.opts.WaiveUndo,
+			UndoWaiverReason: strings.TrimSpace(r.opts.WaiveUndoReason),
+			Requirements:     []taskdoc.Requirement{{ID: "R1", Text: r.answers.outcome}},
+			DoneWhen:         r.answers.done,
+			History:          []string{`L1 · "` + r.answers.outcome + `"`},
 		}
 		if problem := r.put(taskPath, []byte(doc.Render())); problem != nil {
 			return *problem

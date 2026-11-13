@@ -485,12 +485,14 @@ func TestReviewModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	// The base the feature starts from is the commit the tree is on now.
 	base := headOf(t, dir)
 	doc := taskdoc.TaskDoc{
-		Title:        "turnos",
-		Base:         base,
-		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
-		DoneWhen:     []string{"reservo un turno"},
-		Steps:        []taskdoc.Step{{ID: "T1", Text: "reservar un turno", Requirement: "R1"}},
-		History:      []string{`L1 · "reservar turnos"`},
+		Title:            "turnos",
+		Base:             base,
+		Requirements:     []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:         []string{"reservo un turno"},
+		Steps:            []taskdoc.Step{{ID: "T1", Text: "reservar un turno", Requirement: "R1"}},
+		UndoWaived:       true,
+		UndoWaiverReason: "the proof command is a stub: this fixture judges the review, not the suite",
+		History:          []string{`L1 · "reservar turnos"`},
 	}
 	writeFile(t, dir, "odd/tasks/0001-turnos.md", doc.Render())
 	if code, out, errOut := runDir(t, dir, []string{"review", "mode", "on"}, ""); code != 0 {
@@ -536,12 +538,14 @@ func TestCheckAcceptsAVerdictThatNamesTheBaseShort(t *testing.T) {
 	base := headOf(t, dir)
 
 	doc := taskdoc.TaskDoc{
-		Title:        "turnos",
-		Base:         base,
-		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
-		DoneWhen:     []string{"reservo un turno"},
-		Steps:        []taskdoc.Step{{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: base}},
-		History:      []string{`L1 · "reservar turnos"`},
+		Title:            "turnos",
+		Base:             base,
+		Requirements:     []taskdoc.Requirement{{ID: "R1", Text: "reservar turnos"}},
+		DoneWhen:         []string{"reservo un turno"},
+		Steps:            []taskdoc.Step{{ID: "T1", Text: "reservar un turno", Requirement: "R1", Done: true, Commit: base}},
+		UndoWaived:       true,
+		UndoWaiverReason: "the proof command is a stub: this fixture judges the review, not the suite",
+		History:          []string{`L1 · "reservar turnos"`},
 	}
 	writeFile(t, dir, "odd/tasks/0001-turnos.md", doc.Render())
 	// The same two lines `odachi init` writes: the store and the proof are

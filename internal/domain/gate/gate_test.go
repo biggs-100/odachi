@@ -61,6 +61,14 @@ func TestEvaluationOrder(t *testing.T) {
 	failedProof.ProofLastLine = "FAIL github.com/biggs-100/odachi/internal/domain/gate 0.02s"
 	failedProof.ProofCommand = "go test ./..."
 
+	undoMissed := ready()
+	undoMissed.UndoMissed = true
+	undoMissed.UndoCommand = "go test ./..."
+
+	undoMissing := ready()
+	undoMissing.UndoMissing = true
+	undoMissing.ProofCommand = "go test ./..."
+
 	tests := []struct {
 		name    string
 		state   gate.State
@@ -146,6 +154,22 @@ func TestEvaluationOrder(t *testing.T) {
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofFailed,
 			message: "the proof failed: FAIL github.com/biggs-100/odachi/internal/domain/gate 0.02s",
+			next:    `odachi check --run "go test ./..."`,
+		},
+		{
+			name:    "the suite does not notice the undo",
+			state:   undoMissed,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonUndoMissed,
+			message: "the tests do not notice the change being undone: the suite stayed green without it",
+			next:    `odachi check --run "go test ./..."`,
+		},
+		{
+			name:    "the row was never taken",
+			state:   undoMissing,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonUndoMissing,
+			message: "the row that reverts the change was not taken for this tree, and the close owes it",
 			next:    `odachi check --run "go test ./..."`,
 		},
 		{

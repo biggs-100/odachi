@@ -545,6 +545,15 @@ func withDefaults(loaded profile.Profile, known map[string]profile.Profile) prof
 // adapter and a review can never be produced for a candidate `check` did not see.
 type gitRepo struct{}
 
+// Archive exports the tree into a directory the undo row judges, and Discard
+// removes it. The repository is read, never written (0052).
+func (gitRepo) Archive(root, tree string) (string, error) { return gitx.Archive(root, tree) }
+func (gitRepo) Discard(dir string) error                  { return gitx.Discard(dir) }
+
+func (gitRepo) PatchReverse(dir, diff string, paths []string) error {
+	return gitx.PatchReverse(dir, diff, paths)
+}
+
 func (gitRepo) TreeHash(root string) (string, error) { return gitx.TreeHash(root) }
 func (gitRepo) Head(root string) (string, error)     { return gitx.Head(root) }
 

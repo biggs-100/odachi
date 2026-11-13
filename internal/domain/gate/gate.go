@@ -34,6 +34,14 @@ const (
 	ReasonProofMissing = "proof_missing"
 	ReasonProofStale   = "proof_stale"
 	ReasonProofFailed  = "proof_failed"
+	// ReasonUndoMissed is a suite that stayed green with the change undone: the
+	// tests do not notice the code being reverted, so a green proof certifies
+	// nothing about this behavior (0052).
+	ReasonUndoMissed = "undo_missed"
+	// ReasonUndoMissing is a close whose row was never taken for this tree. The
+	// close owes it the way it owes the proof, and a stored proof without it is
+	// the skip that would make the row a coincidence of one invocation.
+	ReasonUndoMissing = "undo_missing"
 )
 
 // Commands that resolve a block. Every blocked result names one.
@@ -69,6 +77,21 @@ type State struct {
 	// raise or what they have to fix.
 	ProofTimedOut       bool
 	ProofTimeoutSeconds int
+
+	// UndoMissed says the suite stayed green with the change undone.
+	// UndoCommand is what ran, so the continuation names it exactly instead of a
+	// generic command.
+	//
+	// An undo that could not be judged -the reverted copy did not build- is not
+	// here on purpose: it is neither a pass nor a miss, and blocking on it would
+	// stop every change that adds a symbol its tests call. The caller reports it
+	// as a note, by name, and the row's silence is what it must never be.
+	UndoMissed  bool
+	UndoCommand string
+	// UndoMissing says the close has no row for this tree. The close owes it the
+	// way it owes the proof, and a stored proof without it is the skip that turns
+	// the row into a coincidence of one invocation (0052).
+	UndoMissing bool
 
 	OpenQuestions int
 	// Unplanned names the requirements the feature declares and no step names. It
@@ -107,8 +130,9 @@ type Result struct {
 
 // Evaluate applies the documented order: no brief -> brief incomplete -> out of
 // scope -> fence loosened -> open question -> proof missing -> proof stale ->
-// proof failed -> ready. The order decides the Code too: a block only the human
-// can clear is NeedsDecision, a block the agent can clear is NeedsWork.
+// proof failed -> undo missed -> ready. The order decides the Code too: a block
+// only the human can clear is NeedsDecision, a block the agent can clear is
+// NeedsWork.
 func Evaluate(s State) Result {
 	switch {
 	case !s.HasBrief:
@@ -149,6 +173,17 @@ func Evaluate(s State) Result {
 		return Result{NeedsWork, ReasonProofFailed, "the proof did not finish in " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
 	case s.ProofFailed:
 		return Result{NeedsWork, ReasonProofFailed, "the proof failed: " + proofLastLine(s.ProofLastLine), nextRun(s.ProofCommand)}
+	// An undo that could not be judged is not a miss and not a pass: it is the
+	// caller's note, and it never blocks. Blocking on it would stop every change
+	// that adds a symbol its tests call, which is most of them (0052).
+	case s.UndoMissing:
+		return Result{NeedsWork, ReasonUndoMissing,
+			"the row that reverts the change was not taken for this tree, and the close owes it",
+			nextRun(s.ProofCommand)}
+	case s.UndoMissed:
+		return Result{NeedsWork, ReasonUndoMissed,
+			"the tests do not notice the change being undone: the suite stayed green without it",
+			nextRun(s.UndoCommand)}
 	default:
 		if s.ProofDeferred && s.ProofTreeHash != s.TreeHash {
 			return Result{Ready, ReasonReady, "ready for a step: the proof is owed when this feature closes, and the tree that closes it is the one CI judges", ""}

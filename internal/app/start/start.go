@@ -99,6 +99,13 @@ type Options struct {
 	// is recorded in the task doc so the gate names it instead of hiding it.
 	WaiveReview bool
 
+	// WaiveUndo is the same decision for the row that reverts the change, and it
+	// is only a decision with its reason: a refactor whose behavior did not
+	// change stays green when reverted, and the tool does not guess which one it
+	// is. A waiver nobody can read is a silence with a flag (0052).
+	WaiveUndo       bool
+	WaiveUndoReason string
+
 	// Light opens a feature that fits one line: the requirement is quoted, one
 	// step carries the same words, and there is no brief. It writes the task doc
 	// and nothing else -the fence and the voice belong to the project, not to this

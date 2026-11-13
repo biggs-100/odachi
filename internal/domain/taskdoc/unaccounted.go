@@ -87,7 +87,8 @@ func Unaccounted(md string) []string {
 // and the first section. Render writes all of them back, so none is content a
 // canonical rewrite would destroy.
 func isPreambleField(line string) bool {
-	return strings.HasPrefix(line, basePrefix) || line == reviewWaivedLine || line == lightLine
+	return strings.HasPrefix(line, basePrefix) || line == reviewWaivedLine || line == lightLine ||
+		strings.HasPrefix(line, undoWaivedPrefix)
 }
 
 // splitLines is the line walk Parse and Unaccounted share: trailing CRs gone,

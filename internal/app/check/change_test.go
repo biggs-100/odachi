@@ -8,6 +8,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/check"
 	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/proof"
+	"github.com/biggs-100/odachi/internal/domain/undone"
 )
 
 // changeLine is the trailer the fixture writes: one line, no document.
@@ -15,6 +16,10 @@ const changeLine = "bring back the wait state on the pay button"
 
 // changeProof is the proof a document-less change owes, named after its line.
 const changeProof = "proof/change-bring-back-the-wait-state-on-the-pay-button.txt"
+
+// changeUndo is the row the same close owes: the evidence lives beside the proof,
+// and a close that does not take it again reads it back (0052).
+const changeUndo = "proof/change-bring-back-the-wait-state-on-the-pay-button.undone.txt"
 
 // claimedGit is a branch whose commits name a change, and the fork point it is
 // measured from.
@@ -38,6 +43,8 @@ func TestAClaimedChangeIsJudgedAgainstItsTrailer(t *testing.T) {
 		Covers:  []string{"R1"},
 		Output:  "ok\n",
 	})
+	seed[changeUndo] = undone.Render(undone.Evidence{Tree: currentTree, Command: "go test ./...", Verdict: undone.Noticed, Output: "--- FAIL: TestX\n"})
+	seed[changeUndo] = undone.Render(undone.Evidence{Tree: currentTree, Command: "go test ./...", Verdict: undone.Noticed, Output: "--- FAIL: TestX\n"})
 	files := newFakeFiles(seed)
 
 	got := run(t, files, claimedGit(), check.Options{ChangeBase: "origin/main"})
@@ -72,6 +79,8 @@ func TestAClaimedChangeOwesAVerdictAtItsMergeBase(t *testing.T) {
 		Covers:  []string{"R1"},
 		Output:  "ok\n",
 	})
+	seed[changeUndo] = undone.Render(undone.Evidence{Tree: currentTree, Command: "go test ./...", Verdict: undone.Noticed, Output: "--- FAIL: TestX\n"})
+	seed[changeUndo] = undone.Render(undone.Evidence{Tree: currentTree, Command: "go test ./...", Verdict: undone.Noticed, Output: "--- FAIL: TestX\n"})
 	files := newFakeFiles(seed)
 
 	got := run(t, files, claimedGit(), check.Options{

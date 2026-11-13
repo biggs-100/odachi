@@ -57,6 +57,12 @@ type TaskDoc struct {
 	// review verdict. The gate names it instead of hiding it; the proof and the
 	// fence still apply.
 	ReviewWaived bool
+	// UndoWaived is the human's decision that this feature lands without the row
+	// that reverts the change: a refactor whose behavior did not change stays
+	// green when reverted, and the tool does not guess intent (0052). A waiver
+	// without a reason is no waiver: the reason is what a reviewer reads.
+	UndoWaived       bool
+	UndoWaiverReason string
 	// Light says the feature was opened as one line: a quoted requirement and one
 	// step with the same words, no brief. The artifact carries the shape, so no
 	// command line has to remember it (0166).
@@ -81,6 +87,11 @@ const (
 	// review verdict. It lives in the preamble, where the gate reads it, and it
 	// is the only ceremony a small change may skip: the proof and the fence stay.
 	reviewWaivedLine = "Review: waived"
+
+	// undoWaivedPrefix is the human's decision that this feature lands without
+	// the row that reverts the change. The line carries its reason: a waiver
+	// nobody can read is a silence with a flag (0052).
+	undoWaivedPrefix = "Undo: waived - "
 
 	// lightLine says the feature was opened as one line: a quoted requirement and
 	// one step with the same words, no brief. It is a decision the artifact
@@ -185,6 +196,18 @@ func Parse(md string) TaskDoc {
 			continue
 		}
 
+		// The undo waiver is a decision of the same kind, and it only counts with
+		// the reason it carries: a line that waves at the row without one waives
+		// nothing (0052).
+		if preamble && strings.HasPrefix(line, undoWaivedPrefix) {
+			reason := strings.TrimSpace(strings.TrimPrefix(line, undoWaivedPrefix))
+			if reason != "" {
+				d.UndoWaived = true
+				d.UndoWaiverReason = reason
+				continue
+			}
+		}
+
 		// The lane is a decision of the same kind, in the same place: a line in the
 		// history that says "Light: yes" is prose, not a shape the gate must obey.
 		if preamble && line == lightLine {
@@ -267,6 +290,9 @@ func (d TaskDoc) Render() string {
 	}
 	if d.ReviewWaived {
 		b.WriteString(reviewWaivedLine + "\n")
+	}
+	if d.UndoWaived {
+		b.WriteString(undoWaivedPrefix + d.UndoWaiverReason + "\n")
 	}
 	if d.Light {
 		b.WriteString(lightLine + "\n")

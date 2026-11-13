@@ -15,6 +15,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/domain/undone"
 )
 
 // dir is the project root the run sees. It is absolute-looking and never
@@ -232,6 +233,32 @@ type fakeGit struct {
 	onDefault     bool
 	defaultBranch string
 	onDefaultErr  error
+
+	// archived is the tree the undo row exported, patched is the set of paths it
+	// reverted, and their errors are the copy failing for real.
+	archived   string
+	archiveErr error
+	patched    []string
+	patchErr   error
+}
+
+// Archive answers with a path that is not a directory: the fake shell never looks
+// inside it, and creating one would make the test depend on the disk.
+func (g *fakeGit) Archive(root, tree string) (string, error) {
+	if g.archiveErr != nil {
+		return "", g.archiveErr
+	}
+	g.archived = tree
+	return filepath.Join(root, ".undo-copy"), nil
+}
+
+func (g *fakeGit) Discard(dir string) error { return nil }
+
+// PatchReverse records what the row asked to revert: the paths are the whole
+// boundary between the code and its witnesses.
+func (g *fakeGit) PatchReverse(dir, diff string, paths []string) error {
+	g.patched = append([]string(nil), paths...)
+	return g.patchErr
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) { return g.tree, nil }
@@ -351,7 +378,13 @@ type fakeShell struct {
 	timedOut bool
 	err      error
 
+	// runs, when set, answers the calls in order and then falls back to the
+	// fields above. The undo row and the proof are two runs of one command, and a
+	// fake with one answer would make the second prove the first.
+	runs []fakeRun
+
 	command  string
+	dir      string
 	timeout  int
 	wasAsked bool
 	// streamed records whether the run was given a writer, and it writes the
@@ -360,21 +393,38 @@ type fakeShell struct {
 	streamed bool
 }
 
+// fakeRun is one scripted answer of the shell.
+type fakeRun struct {
+	output   string
+	stderr   string
+	exitCode int
+	timedOut bool
+	err      error
+}
+
 func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string, int, bool, error) {
 	return s.RunStream(dir, command, timeoutSeconds, nil)
 }
 
 func (s *fakeShell) RunStream(dir, command string, timeoutSeconds int, w io.Writer) (string, string, int, bool, error) {
 	s.wasAsked = true
+	s.dir = dir
 	s.command = command
 	s.timeout = timeoutSeconds
 	s.streamed = w != nil
+
+	output, stderr, code, timedOut, err := s.output, s.stderr, s.exitCode, s.timedOut, s.err
+	if len(s.runs) > 0 {
+		next := s.runs[0]
+		s.runs = s.runs[1:]
+		output, stderr, code, timedOut, err = next.output, next.stderr, next.exitCode, next.timedOut, next.err
+	}
 	if w != nil {
-		if _, err := io.WriteString(w, s.output+s.stderr); err != nil {
+		if _, err := io.WriteString(w, output+stderr); err != nil {
 			return "", "", 0, false, err
 		}
 	}
-	return s.output, s.stderr, s.exitCode, s.timedOut, s.err
+	return output, stderr, code, timedOut, err
 }
 
 // completeBrief is the smallest brief that passes brief.Parse and Missing.
@@ -419,7 +469,13 @@ func readyFiles() map[string]string {
 		"odd/tasks/0007-turnos.md": featureDoc(`L1 · "reservar turnos"`),
 		"odd/fence.toml":           "",
 		"proof/0007-turnos.txt":    proofFile(currentTree, "go test ./...", "ok\n"),
-		"odd/profile.toml":         `name = "novato"`,
+		"proof/0007-turnos.undone.txt": undone.Render(undone.Evidence{
+			Tree:    currentTree,
+			Command: "go test ./...",
+			Verdict: undone.Noticed,
+			Output:  "--- FAIL: TestTurno\n",
+		}),
+		"odd/profile.toml": `name = "novato"`,
 	}
 }
 

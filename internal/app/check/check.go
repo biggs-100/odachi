@@ -27,6 +27,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	reviewdomain "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
+	"github.com/biggs-100/odachi/internal/domain/undone"
 )
 
 // DefaultTimeout is how long the proof command may take when --timeout is not
@@ -227,6 +228,14 @@ type Git interface {
 	// of the tree. It is what makes the lazy ignore file unnecessary in a project
 	// that ran `odachi init`.
 	Ignored(root, path string) (bool, error)
+	// Archive exports a tree into a new directory the caller owns, and Discard
+	// removes it. The undo row judges a copy: a tree is not a commit, so a
+	// worktree cannot hold it, and the worktree itself is never touched (0052).
+	Archive(root, tree string) (dir string, err error)
+	Discard(dir string) error
+	// PatchReverse reverts the diff inside dir, only for the paths given: the copy
+	// keeps its tests and loses the change.
+	PatchReverse(dir, diff string, paths []string) error
 }
 
 // Shell is the command port. A non-zero exit is the command's result, not an
@@ -455,6 +464,20 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		}
 	}
 
+	// The row that reverts the change: only a suite that stayed green blocks
+	// (0052). It runs on the closing tree, with the command that just passed, and
+	// a run that could not be judged is a note: blocking on a copy that does not
+	// build would stop every change that adds a symbol its tests call.
+	if closedNow && opts.Message == "" && feature != nil {
+		// A waiver is the human's decision and it is named: a close that skips
+		// the row in silence is the silence the row exists to remove (0052).
+		if feature.Doc.UndoWaived {
+			r.undoNote = "waived by the human: " + feature.Doc.UndoWaiverReason
+		} else {
+			r.undoRow(&state, feature, proofPath)
+		}
+	}
+
 	verdict := gate.Evaluate(state)
 	if verdict.Code == gate.Ready && r.opts.Message == "" {
 		// The review gate is last on purpose: everything before it is something
@@ -546,6 +569,10 @@ type runner struct {
 	// work is the one read of the candidate: tree, changed paths and diff. The
 	// fence, the lens class and the proof all describe these same bytes.
 	work *worktree
+	// undoNote is what the row that reverts the change has to say when it could
+	// not judge, or when there is nothing to undo. It never blocks: only a suite
+	// that stayed green does (0052).
+	undoNote string
 }
 
 // worktree is one read of the candidate: the content tree that names the proof,
@@ -2019,6 +2046,135 @@ func requirementIDs(feature *tasks.Document) []string {
 	return ids
 }
 
+// undoRow judges the closing tree by taking the change away: it reverts the
+// production files in a copy, runs the same command that just passed, and reads
+// the result. Only a suite that stayed green blocks; a copy that did not build is
+// a note, because a change that adds a symbol its tests call cannot be undone
+// into a compiling tree (0052).
+//
+// The evidence is read before the row runs. A stored run for this tree answers
+// every later check the same way, so the block is not a coincidence of the one
+// invocation that had `--run`; and a close without the row owes it the way it
+// owes the proof.
+//
+// The copy is a plain directory exported from the tree, not a worktree: a tree is
+// not a commit, so git cannot check it out, and the worktree is never touched.
+func (r *runner) undoRow(state *gate.State, feature *tasks.Document, proofPath string) {
+	path := strings.TrimSuffix(proofPath, ".txt") + ".undone.txt"
+
+	if stored, ok := r.storedUndo(path); ok {
+		r.applyUndo(state, stored)
+		return
+	}
+
+	if r.opts.Run == "" {
+		state.UndoMissing = true
+		return
+	}
+
+	base := strings.TrimSpace(feature.Doc.Base)
+	if base == "" {
+		base = strings.TrimSpace(r.opts.Base)
+	}
+	if base == "" {
+		r.undoNote = "not attempted: the feature names no base"
+		return
+	}
+
+	tree, paths, diff, err := r.git.Candidate(r.opts.Dir, base)
+	if err != nil {
+		r.undoNote = "could not be prepared: " + oneLine(err.Error())
+		return
+	}
+	if tree != r.tree {
+		r.undoNote = "could not be prepared: the change read from its base is not this tree"
+		return
+	}
+
+	revert := undone.Revertable(paths)
+	if len(revert) == 0 {
+		evidence := undone.Evidence{
+			Tree:    tree,
+			Command: r.opts.Run,
+			Verdict: undone.NotOwed,
+			Note:    "the change adds no production behavior",
+		}
+		r.writeUndo(path, evidence)
+		r.applyUndo(state, evidence)
+		return
+	}
+
+	dir, err := r.git.Archive(r.opts.Dir, tree)
+	if err != nil {
+		r.undoNote = "could not be prepared: " + oneLine(err.Error())
+		return
+	}
+	defer func() { _ = r.git.Discard(dir) }()
+
+	if err := r.git.PatchReverse(dir, diff, revert); err != nil {
+		r.undoNote = "could not be prepared: the change did not apply in reverse: " + oneLine(err.Error())
+		return
+	}
+
+	stdout, stderr, code, timedOut, err := r.shell.Run(dir, r.opts.Run, r.opts.TimeoutSeconds)
+	if err != nil {
+		r.undoNote = "could not be judged: the command did not run: " + oneLine(err.Error())
+		return
+	}
+
+	evidence := undone.Evidence{Tree: tree, Command: r.opts.Run, Output: stdout + stderr}
+	switch {
+	case timedOut:
+		evidence.Verdict = undone.Unknown
+		evidence.Note = fmt.Sprintf("the command did not finish in %ds", r.opts.TimeoutSeconds)
+	default:
+		evidence.Verdict = undone.Classify(code, evidence.Output)
+		if evidence.Verdict == undone.Unknown {
+			evidence.Note = "the copy did not build"
+		}
+	}
+
+	r.writeUndo(path, evidence)
+	r.applyUndo(state, evidence)
+}
+
+// storedUndo reads the evidence of a row already taken for this tree. A file for
+// another tree is not this tree's answer, and a file this binary cannot read is
+// read the same way: the close takes the row again instead of trusting it.
+func (r *runner) storedUndo(path string) (undone.Evidence, bool) {
+	data, err := r.files.Read(path)
+	if err != nil {
+		return undone.Evidence{}, false
+	}
+	stored, err := undone.Parse(string(data))
+	if err != nil || stored.Tree != r.tree {
+		return undone.Evidence{}, false
+	}
+	return stored, true
+}
+
+// writeUndo keeps the row as evidence and names it when it could not be kept.
+func (r *runner) writeUndo(path string, e undone.Evidence) {
+	if err := r.files.Write(path, []byte(undone.Render(e))); err != nil {
+		r.undoNote = "ran, and its evidence could not be written: " + oneLine(err.Error())
+	}
+}
+
+// applyUndo turns a stored verdict into the gate's state and the close's words.
+// An unknown verdict is a note and never a block: a copy that does not build says
+// nothing about the tests (0052).
+func (r *runner) applyUndo(state *gate.State, e undone.Evidence) {
+	switch e.Verdict {
+	case undone.Missed:
+		state.UndoMissed = true
+		state.UndoCommand = e.Command
+	case undone.Unknown:
+		r.undoNote = "could not be judged: " + e.Note
+	case undone.NotOwed:
+		r.undoNote = "not owed: " + e.Note
+	}
+}
+
 func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	result := Result{
 		Code:    int(verdict.Code),
@@ -2094,6 +2250,12 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	// promise is what a reviewer reads, and a silence would read as coverage.
 	if r.coverNote != "" {
 		result.Lines = append(result.Lines, r.coverNote)
+	}
+	// The row that reverts the change says what it could not judge, or that it
+	// was not owed: a row that disappears without a word is the silence this gate
+	// exists to avoid.
+	if r.undoNote != "" {
+		result.Lines = append(result.Lines, "undo: "+r.undoNote)
 	}
 	// A waived review is a decision, not a silence: the ready tree says so, or
 	// the next reader believes a verdict was made and lost.
