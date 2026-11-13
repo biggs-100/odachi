@@ -8,6 +8,30 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## v0.42.0 - 2026-11-13
+
+- **The ratchet reaches `start`.** `check` froze its dead ends in 0287; `start` now freezes
+  its own -two sentences and three calls the walk cannot read- in a baseline beside the
+  package, and the walk, the two directions and the count comparison moved to
+  `internal/refusal`, so the next package adds a baseline instead of a walker. A refusal that
+  names no command and is not in the baseline fails the suite, and one that disappears fails
+  it too, so the number follows the debt down instead of drifting.
+
+- **The ratchet reaches `review`.** Fifty-two sentences and two count rows, generated from
+  the walk so no row is a transcription. It is the biggest surface and the one that talks to
+  the agent most. What the ratchet cannot see stays written: it reads `blocked(...)`, not
+  every constructor, and widening it would move every baseline under it -so that is a
+  decision of its own, not a step-.
+
+- **The gate measures whether a test can fail.** Closing a feature now takes the change
+  away: `check` exports the tree, reverts the production Go files in the copy, runs the same
+  command that just passed, and refuses the tree when the suite stayed green. A copy that
+  does not build is a note -a change that adds a symbol its tests call cannot be undone into
+  a compiling tree-, and a refactor is waived by the human with a reason, named at the close.
+  The row is evidence: `proof/<feature>.undone.txt` starts with `# undone <tree>` and every
+  later check reads it back, so the block does not last only as long as the run that took it.
+  ADR 0052 writes the boundary: the gate runs the undo and nothing else.
+
 ## v0.41.0 - 2026-11-12
 
 - **The record says when the tool sealed it, and what the reviewer claimed.** A verdict's
