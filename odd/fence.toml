@@ -467,3 +467,33 @@ deps  = []
 # not   = "los veredictos ya guardados no se reescriben: el arreglo se ve en los nuevos"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   el prompt de los lentes no cambia: la cerca lo protege y el reclamo se lee, no se le pide
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "el prompt de los lentes no cambia: la cerca lo protege y el reclamo se lee, no se le pide"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   los veredictos ya guardados no se reescriben: conservan la hora que traen
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "los veredictos ya guardados no se reescriben: conservan la hora que traen"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   el orden del store no cambia: --all ya ordena por cuando se escribio
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "el orden del store no cambia: --all ya ordena por cuando se escribio"
+# paths = []
+# deps  = []
