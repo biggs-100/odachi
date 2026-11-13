@@ -8,6 +8,18 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The record says when the tool sealed it, and what the reviewer claimed.** A verdict's
+  `at` was written by the reviewer, so a sample of verdicts all claimed a round hour and the
+  question "when was this judged" was answered by the model's guess. The seal now stamps the
+  instant the clone wrote the file, in the clone's own clock, and the time the answer declared
+  survives as `declared_at` when it parses and disagrees with the stamp -a claim that repeats
+  the stamp is the same fact twice, and one nobody can parse is refused before it is a
+  claim-. `--show` and the line a run ends with print the seal and, when there is one, the
+  claim beside it. The verdict's schema moves to 7, so a binary older than this one says
+  "upgrade" instead of reading a file it cannot read whole. Minor (0286).
+
 ## v0.40.5 - 2026-11-12
 
 - **A verdict names its judges once.** The `reviewer` field appended every correction

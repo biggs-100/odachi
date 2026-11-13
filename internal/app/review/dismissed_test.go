@@ -3,6 +3,7 @@ package review_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/app/review"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
@@ -223,6 +224,53 @@ func mustDismissedPath(t *testing.T, tree string) string {
 		t.Fatalf("DismissedPath: %v", err)
 	}
 	return rel
+}
+
+// TestShowNamesTheTimeTheReviewerClaimed: the seal stamps the clock, and a claim
+// that disagrees is what the reader needs to see: the record says both, and the
+// line that answers "when was this judged" does not hide the difference (0286).
+func TestShowNamesTheTimeTheReviewerClaimed(t *testing.T) {
+	p := newProject()
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "agent",
+		At:       "2026-11-12T00:00:00Z",
+		Lenses:   []string{"reliability"},
+	}, currentTree, "HEAD", time.Date(2026, 11, 12, 21, 30, 12, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(sealed)
+
+	shown := p.run(review.Options{Show: true})
+	if shown.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", shown.Code, shown.Message)
+	}
+	lines := strings.Join(shown.Lines, "\n")
+	if !strings.Contains(lines, "2026-11-12T21:30:12Z") {
+		t.Errorf("--show does not name the instant the tool sealed:\n%s", lines)
+	}
+	if !strings.Contains(lines, "the reviewer wrote 2026-11-12T00:00:00Z") {
+		t.Errorf("--show does not name the time the reviewer claimed:\n%s", lines)
+	}
+}
+
+// TestShowSaysNothingAboutAClaimWhenThereIsNone: a verdict that never disagreed
+// with the clock prints one time, not two.
+func TestShowSaysNothingAboutAClaimWhenThereIsNone(t *testing.T) {
+	p := newProject()
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "agent",
+		Lenses:   []string{"reliability"},
+	}, currentTree, "HEAD", time.Date(2026, 11, 12, 21, 30, 12, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(sealed)
+
+	lines := strings.Join(p.run(review.Options{Show: true}).Lines, "\n")
+	if strings.Contains(lines, "the reviewer wrote") {
+		t.Errorf("--show invents a claim:\n%s", lines)
+	}
 }
 
 // TestShowNamesTheRowsAPersonRetired: a retired row is not a row to act on, and the

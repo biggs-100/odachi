@@ -2210,7 +2210,7 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	pruneNote := r.prunePrompts()
 
 	message := "verdict saved in " + r.storeLabel(rel) + ": " + sealed.Verdict
-	lines := []string{message, "reviewer: " + sealed.Reviewer + " · " + sealed.At, lenses(sealed.Lenses)}
+	lines := []string{message, "reviewer: " + whoAndWhen(sealed), lenses(sealed.Lenses)}
 	if downgraded > 0 {
 		lines = append(lines, fmt.Sprintf("earned blocking: %d finding(s) downgraded for citing outside the candidate", downgraded))
 	}
@@ -3784,10 +3784,21 @@ func summaryLine(tree string, verdict domain.Verdict, required []string) string 
 
 // shown is the block `--show` prints: what the verdict is, who wrote it, and the
 // findings in the order they were filed.
+// whoAndWhen is the half of a line a person reads first: who judged and when the
+// clone sealed it. A reviewer that claimed another time gets it named beside the
+// stamp -the record says both, and one of them is a fact (0286).
+func whoAndWhen(verdict domain.Verdict) string {
+	line := verdict.Reviewer + " · " + verdict.At
+	if claim := strings.TrimSpace(verdict.DeclaredAt); claim != "" {
+		line += " · the reviewer wrote " + claim
+	}
+	return line
+}
+
 func shown(summary, rel string, verdict domain.Verdict) []string {
 	lines := []string{
 		summary,
-		"reviewer: " + verdict.Reviewer + " · " + verdict.At + " · base " + verdict.Base,
+		"reviewer: " + whoAndWhen(verdict) + " · base " + verdict.Base,
 		"file: " + rel,
 	}
 

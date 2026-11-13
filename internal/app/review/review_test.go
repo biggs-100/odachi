@@ -746,6 +746,39 @@ func TestAMergedVerdictKeepsTheReviewerOnlyOneSideNames(t *testing.T) {
 	}
 }
 
+// TestAMergedVerdictKeepsTheClaimItsPartsCarry: a completion is a second seal, and
+// the claim the first part made is evidence about that reviewer. The merged record
+// keeps it instead of overwriting it with silence (0286).
+func TestAMergedVerdictKeepsTheClaimItsPartsCarry(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]},"passes":[{"path":"a.go","lens":"risk"}]}`
+
+	seed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "first",
+		At:       "2026-10-21T00:00:00Z",
+		Lenses:   []string{"reliability"},
+		Passes:   []domainreview.Pass{{Path: "a.go", Blob: gitBlob, Lens: "reliability"}},
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(seed)
+
+	if result := p.run(review.Options{Exec: "revisor --model {model}", Lens: "risk", Because: "the test asks for a wider scope"}); result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	stored, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("the completed verdict does not parse: %v", err)
+	}
+	if stored.DeclaredAt != "2026-10-21T00:00:00Z" {
+		t.Errorf("DeclaredAt = %q, want the claim the first part made", stored.DeclaredAt)
+	}
+}
+
 // TestASecondRunCompletesTheVerdict: the store grows by lens. A run that finds a
 // verdict covering reliability judges risk and adds it, keeping the rows it did
 // not pay for again.

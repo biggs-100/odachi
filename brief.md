@@ -313,3 +313,26 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0286 · la-hora-de
+
+## What must exist
+- la hora de un veredicto la escribe el reloj al sellarlo, y lo que declaro el modelo queda al lado como reclamo, no como hecho
+
+## Done when
+- un veredicto cuyo JSON dice 00:00Z se sella con la hora del reloj y la declarada queda en declared_at
+- un veredicto sin hora declarada no gana el campo, y uno que declara la misma hora tampoco
+- odachi review --show dice la hora del sello y, cuando discrepa, la que escribio el revisor
+- el esquema sube a 7: un binario viejo dice actualiza
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, minor (0286)
+
+## Not included (first version)
+- el prompt de los lentes no cambia: la cerca lo protege y el reclamo se lee, no se le pide
+- los veredictos ya guardados no se reescriben: conservan la hora que traen
+- el orden del store no cambia: --all ya ordena por cuando se escribio
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.
