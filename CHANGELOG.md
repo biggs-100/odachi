@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.43.0 - 2026-11-13
 
 - **The gate's reasons are declared once, and the test walks them all.** The exact words of every
   reason were pinned by a table, and the property "every block names a command" was pinned again by
