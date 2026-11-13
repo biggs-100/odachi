@@ -45,15 +45,11 @@ func TestEveryRefusalNamesAWayOutOrIsInTheBaseline(t *testing.T) {
 		t.Fatalf("reading %s: %v", baselineFile, err)
 	}
 
-	for _, row := range found {
-		if !slices.Contains(baseline, row) {
-			t.Errorf("a refusal names no way out and is not in %s: %s\nname the command in its sentence, or add it to the baseline on purpose", baselineFile, row)
-		}
+	for _, row := range grew(found, baseline) {
+		t.Errorf("a refusal names no way out and is not in %s: %s\nname the command in its sentence, or add it to the baseline on purpose", baselineFile, row)
 	}
-	for _, row := range baseline {
-		if !slices.Contains(found, row) {
-			t.Logf("this refusal is gone; lower %s: %s", baselineFile, row)
-		}
+	for _, row := range shrunk(found, baseline) {
+		t.Logf("this refusal is gone; lower %s: %s", baselineFile, row)
 	}
 
 	for file, count := range unreadable {
@@ -71,6 +67,55 @@ func TestEveryRefusalNamesAWayOutOrIsInTheBaseline(t *testing.T) {
 		if _, ok := unreadable[file]; !ok {
 			t.Logf("%s no longer builds a refusal from a value; remove its count from %s", file, baselineFile)
 		}
+	}
+}
+
+// grew is what the walk found and the baseline does not freeze: a refusal that
+// arrived without a way out. Shrunk is its other direction, and the two are
+// separate on purpose -one fails the suite, the other only asks the record to
+// follow.
+func grew(found, baseline []string) []string {
+	out := make([]string, 0)
+	for _, row := range found {
+		if !slices.Contains(baseline, row) {
+			out = append(out, row)
+		}
+	}
+	return out
+}
+
+// shrunk is what the baseline froze and the walk no longer sees: the debt paid, and
+// the number must follow it down.
+func shrunk(found, baseline []string) []string {
+	out := make([]string, 0)
+	for _, row := range baseline {
+		if !slices.Contains(found, row) {
+			out = append(out, row)
+		}
+	}
+	return out
+}
+
+// TestGrewAndShrunkReadTheTwoDirections: a ratchet is only a ratchet if it refuses
+// growth and reports the shrinking. The two readings are pure, so they are pinned
+// here without touching the package they guard.
+func TestGrewAndShrunkReadTheTwoDirections(t *testing.T) {
+	t.Parallel()
+
+	found := []string{"check.go\tkept", "check.go\tnew"}
+	baseline := []string{"check.go\tgone", "check.go\tkept"}
+
+	if got := grew(found, baseline); !slices.Equal(got, []string{"check.go\tnew"}) {
+		t.Errorf("grew = %v, want only the row the baseline does not freeze", got)
+	}
+	if got := shrunk(found, baseline); !slices.Equal(got, []string{"check.go\tgone"}) {
+		t.Errorf("shrunk = %v, want only the row that disappeared", got)
+	}
+	if got := grew(found, found); len(got) != 0 {
+		t.Errorf("grew = %v, want nothing when the baseline is current", got)
+	}
+	if got := shrunk(found, found); len(got) != 0 {
+		t.Errorf("shrunk = %v, want nothing when the baseline is current", got)
 	}
 }
 
