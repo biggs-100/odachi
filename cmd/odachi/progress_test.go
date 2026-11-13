@@ -198,7 +198,9 @@ func TestProgressAndCheckAgreeAboutTheReview(t *testing.T) {
 			ID: "T1", Text: "reservar un turno", Requirement: "R1",
 			Done: true, Commit: "abc1234",
 		}},
-		History: []string{`L1 · "reservar turnos"`},
+		UndoWaived:       true,
+		UndoWaiverReason: "the proof command is a stub: this fixture judges the review, not the suite",
+		History:          []string{`L1 · "reservar turnos"`},
 	}.Render())
 
 	code, out, errOut := runDir(t, dir, []string{"progress"}, "")
