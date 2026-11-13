@@ -38,10 +38,6 @@ const (
 	// tests do not notice the code being reverted, so a green proof certifies
 	// nothing about this behavior (0052).
 	ReasonUndoMissed = "undo_missed"
-	// ReasonUndoUnknown is an undo that could not be judged: the reverted copy
-	// did not build, or the change did not apply. It is not a pass and not a
-	// miss, and saying so is the row's whole honesty.
-	ReasonUndoUnknown = "undo_unknown"
 )
 
 // Commands that resolve a block. Every blocked result names one.
@@ -78,14 +74,14 @@ type State struct {
 	ProofTimedOut       bool
 	ProofTimeoutSeconds int
 
-	// UndoUnknown names why the undo could not be judged -the reverted copy did
-	// not build, or the change did not apply-. An unknown undo is never a pass:
-	// it is the row saying it could not see, and the caller that ran it reports
-	// the reason it has.
-	UndoUnknown string
 	// UndoMissed says the suite stayed green with the change undone.
 	// UndoCommand is what ran, so the continuation names it exactly instead of a
 	// generic command.
+	//
+	// An undo that could not be judged -the reverted copy did not build- is not
+	// here on purpose: it is neither a pass nor a miss, and blocking on it would
+	// stop every change that adds a symbol its tests call. The caller reports it
+	// as a note, by name, and the row's silence is what it must never be.
 	UndoMissed  bool
 	UndoCommand string
 
@@ -126,9 +122,9 @@ type Result struct {
 
 // Evaluate applies the documented order: no brief -> brief incomplete -> out of
 // scope -> fence loosened -> open question -> proof missing -> proof stale ->
-// proof failed -> undo unknown -> undo missed -> ready. The order decides the
-// Code too: a block only the human can clear is NeedsDecision, a block the agent
-// can clear is NeedsWork.
+// proof failed -> undo missed -> ready. The order decides the Code too: a block
+// only the human can clear is NeedsDecision, a block the agent can clear is
+// NeedsWork.
 func Evaluate(s State) Result {
 	switch {
 	case !s.HasBrief:
@@ -169,14 +165,9 @@ func Evaluate(s State) Result {
 		return Result{NeedsWork, ReasonProofFailed, "the proof did not finish in " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
 	case s.ProofFailed:
 		return Result{NeedsWork, ReasonProofFailed, "the proof failed: " + proofLastLine(s.ProofLastLine), nextRun(s.ProofCommand)}
-	// An undo that could not be judged is not a miss and not a pass: the row says
-	// it could not see, and it outranks a miss because a copy that does not build
-	// has no failure to report. Both are work, not a decision: the agent adds the
-	// test or fixes the copy (0052).
-	case s.UndoUnknown != "":
-		return Result{NeedsWork, ReasonUndoUnknown,
-			"the undo could not be judged: " + proofLastLine(s.UndoUnknown) + "; a copy that does not build is not a test that noticed",
-			nextRun(s.UndoCommand)}
+	// An undo that could not be judged is not a miss and not a pass: it is the
+	// caller's note, and it never blocks. Blocking on it would stop every change
+	// that adds a symbol its tests call, which is most of them (0052).
 	case s.UndoMissed:
 		return Result{NeedsWork, ReasonUndoMissed,
 			"the tests do not notice the change being undone: the suite stayed green without it",
