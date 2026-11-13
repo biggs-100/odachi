@@ -497,3 +497,33 @@ deps  = []
 # not   = "el orden del store no cambia: --all ya ordena por cuando se escribio"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   las negativas de start y review quedan para otra rebanada: esta congela check
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "las negativas de start y review quedan para otra rebanada: esta congela check"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se reescribe ninguna negativa que el humano ya lee: el baseline las congela
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se reescribe ninguna negativa que el humano ya lee: el baseline las congela"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   la prueba no juzga si la salida que nombra sirve: ese limite queda escrito
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "la prueba no juzga si la salida que nombra sirve: ese limite queda escrito"
+# paths = []
+# deps  = []
