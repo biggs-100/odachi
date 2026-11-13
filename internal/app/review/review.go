@@ -609,6 +609,28 @@ func containsLens(lenses []string, lens string) bool {
 	return false
 }
 
+// joinReviewers names every reviewer once, in the order it first appeared.
+//
+// The field is one sealed string and the record's shape does not change: the names
+// are separated by the " + " this app has always written, and a part already there
+// is not written again. A correction used to append itself whole, so two judges
+// and a few draws read as a paragraph of six (0284).
+func joinReviewers(existing, incoming string) string {
+	parts := make([]string, 0, 4)
+	seen := make(map[string]bool, 4)
+	for _, side := range []string{existing, incoming} {
+		for _, name := range strings.Split(side, " + ") {
+			name = strings.TrimSpace(name)
+			if name == "" || seen[name] {
+				continue
+			}
+			seen[name] = true
+			parts = append(parts, name)
+		}
+	}
+	return strings.Join(parts, " + ")
+}
+
 // mergeVerdicts adds the lenses a run just judged to the verdict this tree
 // already had. The old rows are copied, never recomputed: the file grows by lens,
 // and an answer that was already paid for is not replaced by a second opinion.
@@ -619,13 +641,10 @@ func mergeVerdicts(existing, incoming domain.Verdict) domain.Verdict {
 	merged.Lenses = append(append([]string{}, existing.Lenses...), incoming.Lenses...)
 	merged.Draws = sumDraws(existing.Draws, incoming.Draws)
 	// The same command asked again is the same reviewer: repeating its name would
-	// read as a second judge, and a second draw is one judge reading twice.
-	switch {
-	case existing.Reviewer == "":
-		merged.Reviewer = incoming.Reviewer
-	case incoming.Reviewer != "" && incoming.Reviewer != existing.Reviewer:
-		merged.Reviewer = existing.Reviewer + " + " + incoming.Reviewer
-	}
+	// read as a second judge, and a second draw is one judge reading twice. A
+	// correction adds its own, and each one is named once: a paragraph of the same
+	// two names is not a second opinion (0284).
+	merged.Reviewer = joinReviewers(existing.Reviewer, incoming.Reviewer)
 	merged.At = incoming.At
 	merged.Verdict = ""
 	merged.Inspection = domain.MergeInspection(existing.Inspection, incoming.Inspection)
