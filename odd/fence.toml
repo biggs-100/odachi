@@ -702,3 +702,43 @@ deps  = []
 # not   = "no entra un flag nuevo: el walker recibe lo que el paquete declara"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   no se toca la cerca: hoy ninguna regla protege internal/domain/gate, y esta feature no agrega una
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se toca la cerca: hoy ninguna regla protege internal/domain/gate, y esta feature no agrega una"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se reescriben los mensajes ni los next que el humano ya lee: la tabla los fija tal cual
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se reescriben los mensajes ni los next que el humano ya lee: la tabla los fija tal cual"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra un verbo ni un flag nuevos: la pregunta es como se prueba el gate, no que hace
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra un verbo ni un flag nuevos: la pregunta es como se prueba el gate, no que hace"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se agrega una razon nueva al gate: las once quedan como estan
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se agrega una razon nueva al gate: las once quedan como estan"
+# paths = []
+# deps  = []
