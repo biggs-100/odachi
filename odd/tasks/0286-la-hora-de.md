@@ -15,7 +15,7 @@ R1 · "la hora de un veredicto la escribe el reloj al sellarlo, y lo que declaro
 ## Steps
 - [x] T1 · el sello escribe la hora del reloj y guarda el reclamo aparte   R1 · route:inline · tree:edd488883037be15c15f4214f38e8aa3c71fe4e6
 - [x] T2 · la cara: --show y la linea del review dicen la hora y el reclamo cuando discrepa   R1 · route:inline · tree:762b03a036183f1ca8cc06a5b9f1a78715bbb2da
-- [ ] T3 · el esquema sube a 7 y el changelog lo dice   R1 · route:inline
+- [x] T3 · el esquema sube a 7 y el changelog lo dice   R1 · route:inline · tree:2947653db5b66e2cfe7c9eccec20572396ce0dbb
 
 ## History
 L1 · "la hora de un veredicto la escribe el reloj al sellarlo, y lo que declaro el modelo queda al lado como reclamo, no como hecho"
