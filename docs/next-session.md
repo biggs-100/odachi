@@ -1,14 +1,14 @@
 # Next session
 
-Written after 0290, the gate measuring whether a test can fail.
+Written after 0290, the gate measuring whether a test can fail, and after the release
+that carries it.
 
 ## Where the project is
 
-- `v0.41.0` is published and is older than three features: 0288 (the ratchet reached
-  `start`), 0289 (it reached `review`) and 0290 (the gate runs the undo). The tag that
-  carries them is a decision, not a formality.
-- `main` is past 0290's merge (PR #577) and the policy that licensed it (PR #578).
-  288 features, 706 steps, 0 open questions.
+- `v0.42.0` is published: annotated tag on `e4b9bf9` (`Merge pull request #580`), sixteen
+  assets built and attested, and the binary on this machine reports `odachi v0.42.0`.
+- `main` is past 0290's merge (PR #577), the policy that licensed it (PR #578), and the
+  handover (PR #579). 288 features, 706 steps, 0 open questions.
 - **The ratchet covers three packages**: `internal/app/check` (4 sentences, 5 unreadable),
   `internal/app/start` (2, 3) and `internal/app/review` (52, 5 across two files). The
   mechanism -walk, both directions, the counts- lives in `internal/refusal`.
@@ -23,32 +23,30 @@ Written after 0290, the gate measuring whether a test can fail.
   `CRITICAL`, approved in this clone; the second needs the network.
 - The repository asks for **Go 1.26.11** (`go.mod`); the verdict's schema is **7**, its `at`
   is the clone's clock and `declared_at` is what the reviewer claimed.
-- `odachi doctor` was clean at v0.41.0: 15 checks. It is the first command to run if
-  something smells.
+- `odachi doctor` is clean at v0.42.0: 15 checks, no problems.
 
 ## What shipped
 
-- **0290, `check` measures whether a test can fail** (no release yet). The row is evidence,
-  not an action: `proof/<feature>.undone.txt` starts with `# undone <tree>` and every later
-  `check` reads it back, so the block does not last only as long as the invocation that had
-  `--run`. A close with no row owes it (`undo_missing`); a copy that does not build is a
-  note; "there is nothing to undo" is a stored verdict; a refactor is waived by the human
-  with a reason (`start --waive-undo --because "<why>"`), and the close names it.
+- **0290, `check` measures whether a test can fail** (released in v0.42.0, with 0288 and
+  0289). The row is evidence, not an action: `proof/<feature>.undone.txt` starts with
+  `# undone <tree>` and every later `check` reads it back, so the block does not last only as
+  long as the invocation that had `--run`. A close with no row owes it (`undo_missing`); a
+  copy that does not build is a note; "there is nothing to undo" is a stored verdict; a
+  refactor is waived by the human with a reason (`start --waive-undo --because "<why>"`), and
+  the close names it.
 - **Its first review asked for changes**, and it was right: the row lived in the run and the
   evidence was never parsed. The correction moved the block onto the evidence and added the
   missing-row reason. The second verdict approved the delta.
 
 ## The decision that waits
 
-**The release that carries 0288, 0289 and 0290** is the next decision a person makes. None
-of the three changes a stored format; all three change what the gate does at a close.
+**The next debt has no name yet.** The ratchet covers its three packages, the gate runs the
+one command ADR 0052 allows, and #572 shipped as 0290. What is named and waiting is smaller:
+`review`'s `refused(...)` helper stays outside the ratchet, and the gate's continuation test
+covers seven of its ten reasons.
 
 **Heterogeneous lenses is still deferred by the human** -no money for more models-, so it is
 not next.
-
-**Issue #572 shipped as 0290** and is closed by it. The next debt has no name yet: the
-`refused(...)` helper of `review` stays outside the ratchet by design, and the gate's
-continuation test still covers seven of its ten reasons.
 
 **The third model waits for a call this size.** The free tier refuses a probe-sized prompt
 after 45 to 90 seconds while a small one answers in two.
