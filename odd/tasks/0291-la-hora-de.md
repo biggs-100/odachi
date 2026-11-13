@@ -16,7 +16,9 @@ R1 · "la hora de una refutacion tambien la escribe el reloj al sellarla, y lo q
 ## Steps
 - [x] T1 · el sello: el reloj escribe la hora, lo declarado queda en declared_at, y la refutacion declara su esquema   R1 · route:inline · tree:69a97ee8747c8632acb0b23f72d2ad0877682e3b
 - [x] T2 · la cara: review --show y la linea del guardado dicen la hora del sello y, cuando discrepa, la que escribio el refutador   R1 · route:inline · tree:9a7e8158caf6c5b6e1b86f58672bdafdf9865f22
-- [ ] T3 · el changelog nombra 0291 bajo Unreleased   R1 · route:inline
+- [x] T3 · el changelog nombra 0291 bajo Unreleased   R1 · route:inline · tree:79c2bd5e835266ec99e2cb647d468494c6ca61ae
 
 ## History
 L1 · "la hora de una refutacion tambien la escribe el reloj al sellarla, y lo que declara el refutador queda al lado como reclamo, no como hecho"
+L2 · OFICIO · "La linea de un testigo anterior al numero dice que su hora no es atribuible" (porque el parser marca esos archivos con el primer esquema y el comentario del campo dice que nada distingue la pluma; llamarla sello inventaria una atribucion para cada refutacion que ya vive en un store, que es justo la confusion que esta feature quita (0291))
+L3 · OFICIO · "El reclamo se preserva por el campo guardado, no por el vacio" (porque en un segundo sello el at es la hora que escribio la herramienta, no la palabra del refutador; guardar el vacio como condicion hacia que la misma entrada dependiera de cuanto cayeron separados los dos sellos, y descartaba el reclamo real (0291))

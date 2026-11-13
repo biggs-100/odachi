@@ -32,6 +32,13 @@ type Judgment struct {
 	Why     string `json:"why"`
 }
 
+// SealedFrom is the schema from which a refutation's `at` is the instant this
+// clone sealed the file and the refuter's own hour, when it disagrees, is kept in
+// DeclaredAt. A file written under it carries a time nothing can attribute: it is
+// either the refuter's word or the clock of the clone that stored it, and no field
+// says which (0291).
+const SealedFrom = 8
+
 // Refutation is the refuter's answer about one verdict. It is stored beside the
 // verdict, named after the same tree, and written once.
 type Refutation struct {
@@ -45,9 +52,9 @@ type Refutation struct {
 	// answers from one name are one opinion written twice.
 	Refuter string `json:"refuter,omitempty"`
 	// At is the instant the tool sealed this file: the clock of the clone that
-	// wrote it, never the refuter's word. A refutation stored before 0291 carries
-	// the refuter's own time here, and nothing can tell the two apart; the field is
-	// honest from the schema that introduced DeclaredAt onwards.
+	// wrote it, never the refuter's word. A refutation stored before SealedFrom
+	// carries the refuter's own time here, and nothing can tell the two apart; the
+	// field is honest from the schema that introduced DeclaredAt onwards.
 	At string `json:"at"`
 	// DeclaredAt is the time the refuter wrote, kept only when it parses and
 	// disagrees with At. A refuter that claims a round hour is evidence about the
@@ -199,11 +206,14 @@ func SealRefutation(r Refutation, findings []Finding, tree string, now time.Time
 		DeclaredAt:  declared(r.At, now),
 		Refutations: make([]Judgment, 0, len(blocking)),
 	}
-	// A draft that already carries a claim is one this tool sealed before: the
-	// merged record keeps what its first part said about the refuter, and a second
-	// seal is not a second claim (0291, the rule 0286 gave the verdict).
-	if sealed.DeclaredAt == "" {
-		sealed.DeclaredAt = strings.TrimSpace(r.DeclaredAt)
+	// A draft that already carries a claim is one this tool sealed before, and then
+	// its At is the stamp this tool wrote -not the refuter's word-. Reading that as
+	// a claim would print "the refuter wrote" a time the clone wrote and would drop
+	// the claim the first seal read, so the preserved field decides, not the empty
+	// one: the answer is not allowed to depend on how far apart the two seals fell
+	// (0291).
+	if claim := strings.TrimSpace(r.DeclaredAt); claim != "" {
+		sealed.DeclaredAt = claim
 	}
 	// The stored record is in the verdict's file order and covers every blocking
 	// finding, so a reader a month later sees the whole question and not just the

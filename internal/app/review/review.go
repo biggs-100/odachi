@@ -4031,10 +4031,18 @@ func refutationLines(answers domain.Answers, files []string, findings []domain.F
 // answered and when the clone sealed it. A refuter that claimed another time gets
 // it named beside the stamp, because one of the two is a fact (0291, the sentence
 // 0286 gave the verdict).
+//
+// A file stored before SealedFrom carries a time that is either the refuter's word
+// or the clock of the clone that stored it, and no field says which. Calling it a
+// seal would invent an attribution for every record already in a store, which is
+// the confusion this feature exists to remove.
 func witnessWhen(answer domain.Refutation) string {
 	who := strings.TrimSpace(answer.Refuter)
 	if who == "" {
 		who = "unnamed refuter"
+	}
+	if answer.Schema < domain.SealedFrom {
+		return who + " · the file says " + answer.At + ", and nothing says who wrote it"
 	}
 	line := who + " · sealed " + answer.At
 	if claim := strings.TrimSpace(answer.DeclaredAt); claim != "" {

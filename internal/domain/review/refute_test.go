@@ -522,3 +522,50 @@ func TestARefutationStoredBeforeTheNumberStillReadsAndStillLifts(t *testing.T) {
 		t.Error("a refutation stored before the number stopped lifting its finding")
 	}
 }
+
+// TestASecondSealKeepsTheClaimItsFirstSealRead: attaching a refutation this tool
+// stored before seals it again, and the `at` it carries is the stamp the tool wrote,
+// not the refuter's word. Reading it as a claim would print "the refuter wrote" a
+// time the clone wrote and would drop the claim the first seal read (0291).
+func TestASecondSealKeepsTheClaimItsFirstSealRead(t *testing.T) {
+	t.Parallel()
+
+	stored, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: "2026-11-13T00:00:00Z"},
+		blockingFindings(), tree, time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("SealRefutation: %v", err)
+	}
+
+	again, err := review.SealRefutation(stored, blockingFindings(), tree, time.Date(2026, 11, 13, 22, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("SealRefutation of a stored refutation: %v", err)
+	}
+	if again.DeclaredAt != "2026-11-13T00:00:00Z" {
+		t.Errorf("DeclaredAt = %q, want the claim the first seal read", again.DeclaredAt)
+	}
+	if again.At != "2026-11-13T22:00:00Z" {
+		t.Errorf("At = %q, want this seal's stamp", again.At)
+	}
+}
+
+// TestASecondSealInTheSameSecondIsTheSameRecord: the guard that keeps a claim must
+// not depend on the clock. Two seals in one second read the same input, and one
+// record comes out (0291).
+func TestASecondSealInTheSameSecondIsTheSameRecord(t *testing.T) {
+	t.Parallel()
+
+	stamp := time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC)
+	stored, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: "2026-11-13T00:00:00Z"},
+		blockingFindings(), tree, stamp)
+	if err != nil {
+		t.Fatalf("SealRefutation: %v", err)
+	}
+
+	again, err := review.SealRefutation(stored, blockingFindings(), tree, stamp)
+	if err != nil {
+		t.Fatalf("SealRefutation of a stored refutation: %v", err)
+	}
+	if again.DeclaredAt != "2026-11-13T00:00:00Z" {
+		t.Errorf("DeclaredAt = %q, want the claim, not a second reading of the clock", again.DeclaredAt)
+	}
+}

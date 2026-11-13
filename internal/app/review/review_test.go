@@ -3172,3 +3172,49 @@ func TestTheSavedRefutationNamesTheSealAndTheClaim(t *testing.T) {
 		t.Errorf("the saved line drops the time the refuter claimed:\n%s", lines)
 	}
 }
+
+// TestShowNamesAnUnattributableHourForARefutationStoredBeforeTheNumber: a
+// refutation written before 0291 carries a time in `at` that is either the
+// refuter's word or the clock of the clone that stored it, and no field says which.
+// The line must not call it a seal: that is the misattribution this feature removes,
+// and it would be invented for every record already in a store (0291).
+func TestShowNamesAnUnattributableHourForARefutationStoredBeforeTheNumber(t *testing.T) {
+	p, _ := refutableProject(t)
+	rel, err := domainreview.RefutationPath(currentTree, 1)
+	if err != nil {
+		t.Fatalf("the refutation path: %v", err)
+	}
+	p.files.files[storeFile(rel)] = []byte(`{"tree":"` + currentTree +
+		`","refuter":"agente","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"la linea 3 ya validaba la firma"}]}`)
+
+	result := p.run(review.Options{Show: true})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if strings.Contains(lines, "sealed 2026-11-13T00:00:00Z") {
+		t.Errorf("the show line calls a time nobody attributed a seal:\n%s", lines)
+	}
+	if !strings.Contains(lines, "nothing says who wrote it") {
+		t.Errorf("the show line does not say the hour is unattributable:\n%s", lines)
+	}
+}
+
+// TestShowNamesARefutationThatNeverSaidWhoAnswered: the refuter is optional in the
+// file, and a witness with no name still has to read as one line and not as a gap
+// (0291).
+func TestShowNamesARefutationThatNeverSaidWhoAnswered(t *testing.T) {
+	p, _ := refutableProject(t)
+	rel, err := domainreview.RefutationPath(currentTree, 1)
+	if err != nil {
+		t.Fatalf("the refutation path: %v", err)
+	}
+	p.files.files[storeFile(rel)] = []byte(`{"tree":"` + currentTree +
+		`","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"la linea 3 ya validaba la firma"}]}`)
+
+	result := p.run(review.Options{Show: true})
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "unnamed refuter") {
+		t.Errorf("the show line leaves the witness without a name:\n%s", lines)
+	}
+}
