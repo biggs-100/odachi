@@ -336,3 +336,24 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: no rush.
+
+## 0287 · una-negativa-nueva
+
+## What must exist
+- una negativa nueva que no diga como salir no entra, y el numero de negativas sin salida solo baja
+
+## Done when
+- cada negativa de internal/app/check con mensaje conocido o nombra su salida o lleva una anotacion by design de un vocabulario cerrado
+- la linea base congela las de hoy: la prueba falla con una nueva y avisa cuando alguna desaparece
+- el gate queda fijado: cada razon construye un next no vacio
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- las negativas de start y review quedan para otra rebanada: esta congela check
+- no se reescribe ninguna negativa que el humano ya lee: el baseline las congela
+- la prueba no juzga si la salida que nombra sirve: ese limite queda escrito
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.
