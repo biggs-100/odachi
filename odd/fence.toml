@@ -662,3 +662,43 @@ deps  = []
 # not   = "no entra un flag nuevo: la refutacion se sella como hasta ahora"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   no se reescribe ninguna frase que el humano ya lee sin que un test la fije: el baseline congela lo que queda
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se reescribe ninguna frase que el humano ya lee sin que un test la fije: el baseline congela lo que queda"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entran los otros paquetes: esta llega a review y al mecanismo, y check y start conservan su conteo
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entran los otros paquetes: esta llega a review y al mecanismo, y check y start conservan su conteo"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se retira ni se afloja ninguna regla de la cerca
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se retira ni se afloja ninguna regla de la cerca"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra un flag nuevo: el walker recibe lo que el paquete declara
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra un flag nuevo: el walker recibe lo que el paquete declara"
+# paths = []
+# deps  = []
