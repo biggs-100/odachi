@@ -422,3 +422,28 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0291 · la-hora-de
+
+## What must exist
+- la hora de una refutacion tambien la escribe el reloj al sellarla, y lo que declara el refutador queda al lado como reclamo, no como hecho
+
+## Done when
+- una refutacion que declara su hora se sella con la hora del reloj y lo declarado queda en declared_at
+- una refutacion sin hora declarada no gana el campo, y una que declara la misma hora tampoco
+- review --show dice la hora del sello y, cuando discrepa, la que escribio el refutador
+- el esquema sube a 8 y un binario anterior a la refutacion nueva dice actualiza, no que el archivo esta roto
+- las refutaciones ya guardadas no se reescriben: conservan la hora que traen
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, minor (0291)
+
+## Not included (first version)
+- no se reescriben las refutaciones ya guardadas: conservan la hora que traen
+- nada del veredicto cambia: su hora, su reclamo y su sello quedan como 0286 los dejo
+- no cambian los lentes, ni el prompt del refutador, ni el numero de testigos: la pregunta es de quien es la hora
+- no entra un flag nuevo: la refutacion se sella como hasta ahora
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.

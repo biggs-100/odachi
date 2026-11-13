@@ -642,21 +642,6 @@ func hashLike(s string) bool {
 	return true
 }
 
-// instant is the instant a verdict records. An author may write one; it is
-// normalized to UTC so two stored verdicts can be compared. Without one, the
-// tool's clock is the only honest answer.
-func instant(at string, now time.Time) string {
-	if trimmed := strings.TrimSpace(at); trimmed != "" {
-		if parsed, err := time.Parse(time.RFC3339, trimmed); err == nil {
-			return parsed.UTC().Format(time.RFC3339)
-		}
-	}
-	if now.IsZero() {
-		now = time.Now()
-	}
-	return now.UTC().Format(time.RFC3339)
-}
-
 // stamp is the instant the tool sealed the record: the clock of this clone, in the
 // one shape the store compares. The reviewer does not own this field; it used to
 // write it, and a sample of verdicts all claimed a round hour (0286).

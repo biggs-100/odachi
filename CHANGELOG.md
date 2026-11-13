@@ -8,6 +8,18 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A refutation's hour is the clock's, and its shape has a number.** A refutation kept the
+  refuter's own `at`, the defect 0286 fixed for the verdict. The seal now stamps the instant
+  the clone wrote the file, keeps the time the refuter declared in `declared_at` when it
+  parses and disagrees with the stamp, and `--show` names both -one line per witness, beside
+  the counts-. The refutation was the fourth strict decoder and the only one with no number to
+  announce its shape, so a binary older than the change met the next field as an unknown key
+  and `check` dropped the answer in silence, which turns a refuted finding back into a block
+  nobody explained. It now declares its schema, and `schema.Current` moves to 8 for all four
+  files. A refutation stored before the number still reads and still lifts. Minor (0291).
+
 ## v0.42.0 - 2026-11-13
 
 - **The ratchet reaches `start`.** `check` froze its dead ends in 0287; `start` now freezes

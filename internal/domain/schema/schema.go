@@ -2,7 +2,7 @@
 // older binary that meets a newer file says "upgrade" instead of calling a file
 // that is perfectly well formed broken.
 //
-// It exists because three decoders -the verdict, agents.toml and
+// It exists because four decoders -the verdict, the refutation, agents.toml and
 // odd/review.toml- are strict on purpose, and strictness cannot tell a typo from
 // a newer writer. A field that arrived after the installed binary did reads as an
 // unknown key, and the message sends the human to fix a file that is not broken.
@@ -19,15 +19,17 @@ const (
 	First = 1
 	// Current is the schema this binary writes, and the newest it understands.
 	//
-	// One counter serves the three files on purpose: they are one answer to the
+	// One counter serves the four files on purpose: they are one answer to the
 	// same question - can this binary read what is on disk - and a per-file
 	// counter would let a file the binary cannot fully read pass a check that
 	// only looks at its own number. The cost is accepted and paid at each move:
-	// a key added to one file makes all three declare Current, so a binary older
+	// a key added to one file makes all four declare Current, so a binary older
 	// than this one refuses a verdict whose shape did not change. The words are
 	// still true where it matters - the file on disk is newer than that binary -
 	// and the upgrade is the same command either way.
-	Current = 7
+	//
+	// 8: the refutation declares its shape and keeps the refuter's time as a claim.
+	Current = 8
 )
 
 // Read answers which schema a file with this value was written with. A value this

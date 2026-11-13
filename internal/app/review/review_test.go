@@ -3065,3 +3065,156 @@ func TestNothingOutsideTheStoreIsWritten(t *testing.T) {
 		}
 	}
 }
+
+// refutableProject is a candidate whose store already holds a verdict with one
+// blocking finding, so a refutation has something to answer. It returns the
+// findings the seal needs, which are the ones the verdict carries.
+func refutableProject(t *testing.T) (*project, []domainreview.Finding) {
+	t.Helper()
+
+	p := newProject()
+	p.git.blobs = map[string]string{"a.go": gitBlob}
+	findings := []domainreview.Finding{
+		{Path: "a.go", Line: 3, Severity: domainreview.Critical, Causal: true, Why: "pierde el turno", Blob: gitBlob, Lens: "reliability", Evidence: domainreview.EvidenceCited},
+	}
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "claude",
+		Verdict:  domainreview.ChangesRequested,
+		Findings: findings,
+	}, currentTree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("sealing the verdict: %v", err)
+	}
+	p.files.files[storePath(currentTree)] = domainreview.Render(sealed)
+	return p, findings
+}
+
+// TestShowNamesWhenTheCloneSealedEachRefutation: the refutation's time used to be
+// the refuter's word, and `--show` printed a count instead of a record. Now the
+// line says when this clone sealed it and, when the refuter claimed another hour,
+// that claim sits beside the stamp (0291).
+func TestShowNamesWhenTheCloneSealedEachRefutation(t *testing.T) {
+	p, findings := refutableProject(t)
+
+	sealed, err := domainreview.SealRefutation(domainreview.Refutation{
+		Refuter:     "agente",
+		At:          "2026-11-13T00:00:00Z",
+		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "la linea 3 ya validaba la firma"}},
+	}, findings, currentTree, now)
+	if err != nil {
+		t.Fatalf("sealing the refutation: %v", err)
+	}
+	rel, err := domainreview.RefutationPath(currentTree, 1)
+	if err != nil {
+		t.Fatalf("the refutation path: %v", err)
+	}
+	p.files.files[storeFile(rel)] = domainreview.RenderRefutation(sealed)
+
+	result := p.run(review.Options{Show: true})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "sealed "+now.Format("2006-01-02T15:04:05Z07:00")) {
+		t.Errorf("the show line does not name the instant the clone sealed it:\n%s", lines)
+	}
+	if !strings.Contains(lines, "the refuter wrote 2026-11-13T00:00:00Z") {
+		t.Errorf("the show line drops the time the refuter claimed:\n%s", lines)
+	}
+}
+
+// TestShowKeepsOnlyTheSealWhenTheRefuterDidNotDisagree: a refutation that declares
+// no time, or the instant the tool stamped, gains no claim. A field that repeats
+// the stamp is noise wearing a disagreement's clothes (0291).
+func TestShowKeepsOnlyTheSealWhenTheRefuterDidNotDisagree(t *testing.T) {
+	p, findings := refutableProject(t)
+
+	sealed, err := domainreview.SealRefutation(domainreview.Refutation{
+		Refuter:     "agente",
+		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "la linea 3 ya validaba la firma"}},
+	}, findings, currentTree, now)
+	if err != nil {
+		t.Fatalf("sealing the refutation: %v", err)
+	}
+	rel, err := domainreview.RefutationPath(currentTree, 1)
+	if err != nil {
+		t.Fatalf("the refutation path: %v", err)
+	}
+	p.files.files[storeFile(rel)] = domainreview.RenderRefutation(sealed)
+
+	result := p.run(review.Options{Show: true})
+	lines := strings.Join(result.Lines, "\n")
+	if strings.Contains(lines, "the refuter wrote") {
+		t.Errorf("the show line invents a claim there was none of:\n%s", lines)
+	}
+	if !strings.Contains(lines, "sealed ") {
+		t.Errorf("the show line does not name the seal:\n%s", lines)
+	}
+}
+
+// TestTheSavedRefutationNamesTheSealAndTheClaim: the line the human reads when a
+// refutation lands says when this clone sealed it, and carries the refuter's own
+// hour only when it disagrees with the stamp (0291).
+func TestTheSavedRefutationNamesTheSealAndTheClaim(t *testing.T) {
+	p, _ := refutableProject(t)
+	p.files.files[fullPath("refutacion.json")] = []byte(`{"tree":"` + currentTree +
+		`","refuter":"agente","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"la linea 3 ya validaba la firma"}]}`)
+
+	result := p.run(review.Options{Base: "HEAD", Attach: "refutacion.json"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "sealed "+now.Format("2006-01-02T15:04:05Z07:00")) {
+		t.Errorf("the saved line does not name the instant the clone sealed it:\n%s", lines)
+	}
+	if !strings.Contains(lines, "the refuter wrote 2026-11-13T00:00:00Z") {
+		t.Errorf("the saved line drops the time the refuter claimed:\n%s", lines)
+	}
+}
+
+// TestShowNamesAnUnattributableHourForARefutationStoredBeforeTheNumber: a
+// refutation written before 0291 carries a time in `at` that is either the
+// refuter's word or the clock of the clone that stored it, and no field says which.
+// The line must not call it a seal: that is the misattribution this feature removes,
+// and it would be invented for every record already in a store (0291).
+func TestShowNamesAnUnattributableHourForARefutationStoredBeforeTheNumber(t *testing.T) {
+	p, _ := refutableProject(t)
+	rel, err := domainreview.RefutationPath(currentTree, 1)
+	if err != nil {
+		t.Fatalf("the refutation path: %v", err)
+	}
+	p.files.files[storeFile(rel)] = []byte(`{"tree":"` + currentTree +
+		`","refuter":"agente","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"la linea 3 ya validaba la firma"}]}`)
+
+	result := p.run(review.Options{Show: true})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	if strings.Contains(lines, "sealed 2026-11-13T00:00:00Z") {
+		t.Errorf("the show line calls a time nobody attributed a seal:\n%s", lines)
+	}
+	if !strings.Contains(lines, "nothing says who wrote it") {
+		t.Errorf("the show line does not say the hour is unattributable:\n%s", lines)
+	}
+}
+
+// TestShowNamesARefutationThatNeverSaidWhoAnswered: the refuter is optional in the
+// file, and a witness with no name still has to read as one line and not as a gap
+// (0291).
+func TestShowNamesARefutationThatNeverSaidWhoAnswered(t *testing.T) {
+	p, _ := refutableProject(t)
+	rel, err := domainreview.RefutationPath(currentTree, 1)
+	if err != nil {
+		t.Fatalf("the refutation path: %v", err)
+	}
+	p.files.files[storeFile(rel)] = []byte(`{"tree":"` + currentTree +
+		`","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"la linea 3 ya validaba la firma"}]}`)
+
+	result := p.run(review.Options{Show: true})
+	lines := strings.Join(result.Lines, "\n")
+	if !strings.Contains(lines, "unnamed refuter") {
+		t.Errorf("the show line leaves the witness without a name:\n%s", lines)
+	}
+}
