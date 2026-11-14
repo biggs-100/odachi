@@ -169,8 +169,13 @@ type Verdict struct {
 	// disagrees with At. The record says both, because a reviewer that claims a
 	// round hour is evidence about the reviewer, and dropping it would erase the
 	// only trace of a wrong clock.
-	DeclaredAt string    `json:"declared_at,omitempty"`
-	Findings   []Finding `json:"findings"`
+	DeclaredAt string `json:"declared_at,omitempty"`
+	// Corrects is the tree of the verdict this one completes, and it is absent on a
+	// first review. Without it a correction was indistinguishable from a first look
+	// and no reader could count the rounds; a verdict written before 0296 carries
+	// none, which is what a first review carries too.
+	Corrects string    `json:"corrects,omitempty"`
+	Findings []Finding `json:"findings"`
 	// Lenses are the specialists the prompt asked this verdict to answer. The tool
 	// stamps them, because the reviewer's opinion about which lenses it used is not
 	// evidence; the prompt it was given is. A verdict stored before lenses existed
@@ -499,6 +504,11 @@ func Seal(v Verdict, tree, base string, now time.Time) (Verdict, error) {
 	sealed.Base = strings.TrimSpace(base)
 	sealed.Reviewer = strings.TrimSpace(v.Reviewer)
 	sealed.Model = strings.TrimSpace(v.Model)
+	sealed.Corrects = strings.TrimSpace(v.Corrects)
+	if sealed.Corrects != "" && !hashLike(sealed.Corrects) {
+		return Verdict{}, fmt.Errorf(
+			"the verdict says it corrects %q, which is not a tree: a correction names the tree it completes", sealed.Corrects)
+	}
 	models, err := NormalizeLensModels(v.Models)
 	if err != nil {
 		return Verdict{}, err

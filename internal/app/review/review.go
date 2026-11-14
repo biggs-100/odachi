@@ -2151,6 +2151,10 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		predecessor.Passes = passes
 		sealed = mergeVerdicts(predecessor, sealed)
 		sealed.Tree = tree
+		// The chain is the direct link: this verdict completes the predecessor,
+		// not the verdict the predecessor itself completed, so a reader can walk
+		// the rounds one file at a time (0296).
+		sealed.Corrects = predecessor.Tree
 		base := strings.TrimSpace(sealed.Base)
 		if base == "" {
 			base = r.correctionBase(predecessor)
