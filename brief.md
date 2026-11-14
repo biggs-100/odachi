@@ -616,3 +616,27 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0300 · una-fila-de
+
+## What must exist
+- una fila de deshacer que no compila deja de ser un no juzgado: si el error de compilacion nombra un simbolo que el cambio agrego, la copia noto el revert y eso es evidencia
+
+## Done when
+- undone extrae los nombres declarados en las lineas agregadas del diff -func, metodo, type, const, var- con sus tests
+- un fallo de compilacion que nombra uno de esos nombres es noticed, con una nota que dice cual
+- un fallo de compilacion que no nombra ninguno sigue unknown, con la nota de hoy
+- la fila pasa el diff y escribe veredicto y nota en el archivo undo de la feature
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0300)
+
+## Not included (first version)
+- no se revierte ningun test: la copia conserva los tests como testigo
+- no entra un flag nuevo: el diff ya trae los nombres
+- no se juzga otro lenguaje: el paquete ya es Go
+- no cambia lo que bloquea: solo el verde sigue bloqueando
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
