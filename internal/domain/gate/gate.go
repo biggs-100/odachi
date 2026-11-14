@@ -42,6 +42,11 @@ const (
 	// close owes it the way it owes the proof, and a stored proof without it is
 	// the skip that would make the row a coincidence of one invocation.
 	ReasonUndoMissing = "undo_missing"
+	// ReasonMutationFailed is a guard proven by breaking it: the run took a string
+	// out of the source of truth and the suite either stayed green or failed for a
+	// cause that did not name what the run expected. A guard that does not fire is
+	// a comment with a test's name on it (0297).
+	ReasonMutationFailed = "mutation_failed"
 )
 
 // Commands that resolve a block. Every blocked result names one.
@@ -88,6 +93,16 @@ type State struct {
 	// as a note, by name, and the row's silence is what it must never be.
 	UndoMissed  bool
 	UndoCommand string
+	// MutationFailed says the guard did not fire: the suite stayed green with the
+	// string taken out, or it failed for a cause that did not name what the run
+	// expected. MutationNote carries which of the two, and the three fields after it
+	// let the continuation reproduce the exact question (0297).
+	MutationFailed   bool
+	MutationNote     string
+	MutationCommand  string
+	MutationFile     string
+	MutationRemoved  string
+	MutationExpected string
 	// UndoMissing says the close has no row for this tree. The close owes it the
 	// way it owes the proof, and a stored proof without it is the skip that turns
 	// the row into a coincidence of one invocation (0052).
@@ -184,6 +199,11 @@ func Evaluate(s State) Result {
 		return Result{NeedsWork, ReasonUndoMissed,
 			"the tests do not notice the change being undone: the suite stayed green without it",
 			nextRun(s.UndoCommand)}
+	case s.MutationFailed:
+		return Result{NeedsWork, ReasonMutationFailed,
+			"the mutation row failed: " + s.MutationNote,
+			fmt.Sprintf("odachi check --run %q --mutate %s --remove %q --expect %q",
+				s.MutationCommand, s.MutationFile, s.MutationRemoved, s.MutationExpected)}
 	default:
 		if s.ProofDeferred && s.ProofTreeHash != s.TreeHash {
 			return Result{Ready, ReasonReady, "ready for a step: the proof is owed when this feature closes, and the tree that closes it is the one CI judges", ""}
