@@ -8,6 +8,7 @@ package undone
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -84,20 +85,85 @@ func Revertable(paths []string) []string {
 	return out
 }
 
-// Classify reads a finished run. An exit of zero is the block the row exists
-// for; a build failure is unknown, because a copy that does not compile says
-// nothing about the tests; any other non-zero is the suite noticing.
-func Classify(exitCode int, output string) Verdict {
+// Classify reads a finished run. An exit of zero is the block the row exists for;
+// any non-zero other than a build failure is the suite noticing. A build failure
+// used to be unknown always -a copy that does not compile says nothing about the
+// tests- and that is still true of a failure that names nothing the change added.
+// When it names one of those symbols, the revert took something away and the tests
+// that stayed behind said so: that is the evidence, and the name travels back with
+// the verdict so the note can carry it (0300).
+func Classify(exitCode int, output string, added []string) (Verdict, string) {
 	switch {
 	case exitCode < 0:
-		return Unknown
+		return Unknown, ""
 	case exitCode == 0:
-		return Missed
+		return Missed, ""
 	case strings.Contains(output, buildFailed):
-		return Unknown
+		if name := namesOne(compilerDiagnostics(output), added); name != "" {
+			return Noticed, name
+		}
+		return Unknown, ""
 	default:
-		return Noticed
+		return Noticed, ""
 	}
+}
+
+// diagnostic is the shape of a compiler or vet line: a file, a position, a message.
+// Only these lines are read when a copy does not build, because the question is what
+// the compiler named and not what the run printed somewhere else -a test that failed
+// in another package names its own test, and that is not the revert being noticed-
+// (0300).
+var diagnostic = regexp.MustCompile(`\.go:\d+`)
+
+// compilerDiagnostics is the output reduced to the lines that carry a position.
+func compilerDiagnostics(output string) string {
+	var out strings.Builder
+	for _, line := range strings.Split(output, "\n") {
+		if diagnostic.MatchString(line) {
+			out.WriteString(line)
+			out.WriteString("\n")
+		}
+	}
+	return out.String()
+}
+
+// namesOne is the first of names the output mentions as a whole word, in the order
+// the diff declared them: a stable answer for the note.
+func namesOne(output string, names []string) string {
+	for _, name := range names {
+		if mentionsName(output, name) {
+			return name
+		}
+	}
+	return ""
+}
+
+// mentionsName reports whether the output names this identifier and not a longer
+// word that contains it: `undefined: Renderer` is not `Render`.
+func mentionsName(output, name string) bool {
+	if name == "" {
+		return false
+	}
+	for from := 0; from < len(output); {
+		at := strings.Index(output[from:], name)
+		if at < 0 {
+			return false
+		}
+		at += from
+		before := at == 0 || !nameByte(output[at-1])
+		after := at+len(name) == len(output) || !nameByte(output[at+len(name)])
+		if before && after {
+			return true
+		}
+		from = at + len(name)
+	}
+	return false
+}
+
+// nameByte is a byte that can continue a Go identifier. A dot is not one: the
+// compiler writes `tasks.Totals`, and the name is what follows it.
+func nameByte(c byte) bool {
+	return c == '_' || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9')
 }
 
 // Render writes the evidence: the three header fields, then the output verbatim.

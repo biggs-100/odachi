@@ -143,3 +143,79 @@ func TestACloseWithNothingToUndoClosesAndSaysSo(t *testing.T) {
 		t.Fatalf("the row copied a tree it did not need: %q", git.archived)
 	}
 }
+
+// TestACloseWhoseCopyDoesNotBuildNamesWhatTheChangeAdded: the row reverts the
+// production files and keeps the tests, so a change whose tests call what it added
+// leaves a copy that cannot compile. When the compiler names that symbol, the revert
+// took something away and the tests said so: the evidence is `noticed`, and the file
+// carries the name. A failure that names nothing stays unknown (0300).
+func TestACloseWhoseCopyDoesNotBuildNamesWhatTheChangeAdded(t *testing.T) {
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/pay.go", "internal/app/pay_test.go"},
+		diff: "diff --git a/internal/app/pay.go b/internal/app/pay.go\n" +
+			"--- a/internal/app/pay.go\n" +
+			"+++ b/internal/app/pay.go\n" +
+			"@@ -1 +1,3 @@\n" +
+			"+func Pay(amount int) string {\n" +
+			"+\treturn \"\"\n" +
+			"+}\n",
+	}
+	shell := &fakeShell{runs: []fakeRun{
+		{output: "ok\n"},
+		{exitCode: 1, output: "# github.com/x/y [build failed]\n\tinternal/app/pay_test.go:12:19: undefined: Pay\n"},
+	}}
+
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.undone.txt"))
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45},
+		files, git, shell)
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a build failure that names the change blocked the close: %d %s %q", got.Code, got.Reason, got.Message)
+	}
+	stored := string(files.files[filepath.Join(dir, "proof", "0007-turnos.undone.txt")])
+	for _, want := range []string{"# verdict noticed", "Pay"} {
+		if !strings.Contains(stored, want) {
+			t.Fatalf("the evidence does not carry %q:\n%s", want, stored)
+		}
+	}
+}
+
+// TestACloseWhoseCopyDoesNotBuildForAnotherReasonStaysUnknown: a build failure the
+// change did not cause says nothing about the tests, and the row keeps saying so.
+func TestACloseWhoseCopyDoesNotBuildForAnotherReasonStaysUnknown(t *testing.T) {
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/pay.go", "internal/app/pay_test.go"},
+		diff: "diff --git a/internal/app/pay.go b/internal/app/pay.go\n" +
+			"--- a/internal/app/pay.go\n" +
+			"+++ b/internal/app/pay.go\n" +
+			"+func Pay(amount int) string {\n",
+	}
+	shell := &fakeShell{runs: []fakeRun{
+		{output: "ok\n"},
+		{exitCode: 1, output: "# github.com/x/y [build failed]\n\tinternal/app/pay_test.go:12:19: undefined: SomethingElse\n"},
+	}}
+
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.undone.txt"))
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45},
+		files, git, shell)
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("an unrelated build failure blocked the close: %d %s %q", got.Code, got.Reason, got.Message)
+	}
+	stored := string(files.files[filepath.Join(dir, "proof", "0007-turnos.undone.txt")])
+	for _, want := range []string{"# verdict unknown", "the copy did not build"} {
+		if !strings.Contains(stored, want) {
+			t.Fatalf("the evidence does not carry %q:\n%s", want, stored)
+		}
+	}
+}

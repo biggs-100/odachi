@@ -51,7 +51,7 @@ func TestClassifyReadsTheThreeOutcomes(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := undone.Classify(tc.exitCode, tc.output); got != tc.want {
+			if got, _ := undone.Classify(tc.exitCode, tc.output, nil); got != tc.want {
 				t.Fatalf("Classify(%d, %q) = %q, want %q", tc.exitCode, tc.output, got, tc.want)
 			}
 		})
