@@ -1,20 +1,19 @@
 # Next session
 
-Written after 0291 to 0298, the four releases that carried them, and the study of gentle-shell that
+Written after 0291 to 0299, the five releases that carried them, and the study of gentle-shell that
 produced 0295 and 0297.
 
 ## Where the project is
 
-- `v0.44.2` is published: annotated tag on `5e200c5` (the merge of release PR #598), sixteen assets
+- `v0.44.3` is published: annotated tag on `f6494df` (the merge of release PR #601), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.44.2`. Four releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
-  `v0.44.1` carried 0297, and `v0.44.2` carried 0298.
-- `main` is at that merge. 0298 landed in PR #597 -seven commits over `1733e6c`, the merge this feature
-  started from-, and the release PR renamed `Unreleased` after it. This file quotes the line the tool
-  counts for the tree it describes:
+  `odachi 0.44.3`. Five releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
+  `v0.44.1` carried 0297, `v0.44.2` carried 0298, and `v0.44.3` carried 0299.
+- `main` is at that merge. 0299 landed in PR #600 -five commits over `c653ba3`-, and the release PR
+  renamed `Unreleased` after it. This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 296 features · 730 steps done of 730 · 0 open questions
+  total: 297 features · 734 steps done of 734 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -32,9 +31,11 @@ produced 0295 and 0297.
 - **A guard is proven by breaking it**: `check --run --mutate <file> --remove "<string>" --expect
   "<text>"` takes the string out in a copy, runs the command there, and requires a failure that names
   the expected text. The evidence goes to `proof/<feature>.mutated.txt`.
-- The fence keeps its six active rules; none protects `internal/domain/gate` since 0290, and the
-  measurements this project published are protected since 0298.
-- `odachi doctor` is 15 checks with no problems at `v0.44.2`, and since 0298 check 14 asks whether the
+- The fence keeps its six active rules and, since 0299, no template: a non-goal that names no path stays
+  in `brief.md`, which already carries it verbatim, and `start` counts those instead of copying them.
+  None protects `internal/domain/gate` since 0290; the measurements this project published are protected
+  since 0298.
+- `odachi doctor` is 15 checks with no problems at `v0.44.3`, and since 0298 check 14 asks whether the
   numbers in this file came from the tool instead of only whether it names the newest feature.
 
 ## What shipped
@@ -58,6 +59,27 @@ produced 0295 and 0297.
   before the run, the instrument, the verdict table, the excluded runs and what the data does not show.
   And the handover stopped claiming numbers: it quotes the totals line `odachi summary` prints, check 14
   recomputes it from the task documents, and a note with no such line is a warning instead of a pass.
+- **0299, patch (v0.44.3).** A fence rule protects files, and the rest of the sentence stays in the
+  brief. `odd/fence.toml` went from 939 lines to 29 -ninety-one templates to none, the same six rules-,
+  and opening a feature says three lines instead of ninety-four.
+
+## 0299: what it settled, and what it leaves
+
+**A file that accumulates because nobody counts it.** The fence re-rendered one commented template per
+phrase the brief had ever carried, so it grew with every feature and every run said one warning per
+template. The fix was not a cleanup: the renderer stopped writing what the brief owns, and the next
+`start` healed the file. The same shape appeared twice more in one session -407 stale branch references
+in the remote and a handover claiming a count from six features ago- and the answer was the same:
+measure it, then name it.
+
+**A guard is proven by breaking it, and a mutation that stays green is the finding.** The first mutation
+of 0299's new test passed with the guarded sentence taken out: the test asked for the number and the file
+and left the sentence that carries them free. The assertion was fixed, the second mutation failed naming
+the expected text, and the correction kept its own commit.
+
+**The habit**: `gh pr merge --delete-branch`. Each feature opens a branch and nothing closed it: the
+remote held 407 stale references and the clone 232 merged branches, now one. A branch per feature that
+nobody deletes is the same disease as the templates.
 
 ## 0298: what it settled, and what it leaves
 
