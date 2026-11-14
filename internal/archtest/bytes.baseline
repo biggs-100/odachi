@@ -1,0 +1,13 @@
+# The bytes of every text odachi hands a model, frozen the day the pin was written (0295).
+#
+# This file moves on purpose. A text that grew fails the suite until somebody raises
+# its pin in a commit a reviewer sees, and one that shrank fails until the pin
+# follows it down: a pin that stays above the text stops describing it, and the next
+# raise hides inside that gap. The numbers are measured by the test, never typed.
+block:novato	5583
+block:senior	5077
+index:SKILLS.md	3759
+lens:readability	2138
+lens:reliability	2375
+lens:resilience	2531
+lens:risk	2221
