@@ -8,6 +8,17 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A copy that does not build names what the change took away.** The row that reverts a change reverts
+  the production files and keeps the tests, so a change whose own tests call what it added leaves a copy
+  that cannot compile; the row answered "could not be judged" and the evidence the close paid for was a
+  note nobody could use -it happened to the last two features-. The names the diff adds are now read
+  from its added side, and a build failure that names one of them is `noticed` with the symbol in the
+  note, the way the mutation row treats a red that names the text it removed. A failure that names
+  nothing the change added still says the copy did not build. What blocks does not move: only a suite
+  that stayed green. Patch (0300).
+
 ## v0.44.3 - 2026-11-14
 
 - **A fence rule protects files, and the rest of the sentence stays in the brief.** Opening a feature

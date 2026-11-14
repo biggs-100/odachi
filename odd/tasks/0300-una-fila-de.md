@@ -14,8 +14,8 @@ R1 · "una fila de deshacer que no compila deja de ser un no juzgado: si el erro
 
 ## Steps
 - [x] T1 · los nombres que el diff agrega: declaraciones de lineas agregadas, con sus tests   R1 · route:inline · tree:c0ad853abb0d46cccaf0bdc4062afcd0753e1eca
-- [ ] T2 · el rojo de compilacion que nombra uno de esos nombres es noticed, y el que no sigue unknown   R1 · route:inline
-- [ ] T3 · la fila pasa el diff y escribe la nota con el nombre   R1 · route:inline
+- [x] T2 · el rojo de compilacion que nombra uno de esos nombres es noticed, y el que no sigue unknown   R1 · route:inline · tree:f9d2862c046a2c6a6bfc7e1f6be55ba22b3becc1
+- [x] T3 · la fila pasa el diff y escribe la nota con el nombre   R1 · route:inline · tree:f9d2862c046a2c6a6bfc7e1f6be55ba22b3becc1
 - [ ] T4 · el changelog nombra 0300 bajo Unreleased, patch   R1 · route:inline
 
 ## History
