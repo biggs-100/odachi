@@ -540,3 +540,28 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0297 · un-guard-se
+
+## What must exist
+- un guard se prueba rompiendolo: la corrida nombra el archivo y la cadena, el suite tiene que fallar diciendo esa cadena, y el archivo se restaura
+
+## Done when
+- check --run acepta el archivo y la cadena, corre el suite en una copia sin la cadena, y exige que la salida contenga la cadena esperada
+- si la copia queda verde, check bloquea y dice que el guard no noto nada
+- si falla sin nombrar la cadena, check bloquea y muestra la salida: un rojo por otra razon no es evidencia
+- si la cadena no esta en el archivo, se niega antes de correr: una mutacion que no muta no prueba nada
+- la evidencia queda escrita en proof con el arbol, el archivo, la cadena, la esperada y la salida
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0297)
+
+## Not included (first version)
+- no se mutan varias cadenas en una corrida: una por corrida, y la que no aparece se niega
+- no se toca la fila de deshacer: sin mutacion, check corre como hoy
+- no corre en CI ni en la gate: la mutacion es local, y el piso de la gate sigue siendo la fila de deshacer
+- no se borra una linea entera por numero: la cadena es lo que se quita, y el archivo tiene que seguir siendo Go valido
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
