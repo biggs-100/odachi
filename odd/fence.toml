@@ -822,3 +822,43 @@ deps  = []
 # not   = "no se niega una correccion que el humano pide con motivo: la dispensa es la salida, no el silencio"
 # paths = []
 # deps  = []
+
+# This non-goal has no paths yet:
+#   no se mutan varias cadenas en una corrida: una por corrida, y la que no aparece se niega
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se mutan varias cadenas en una corrida: una por corrida, y la que no aparece se niega"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se toca la fila de deshacer: sin mutacion, check corre como hoy
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se toca la fila de deshacer: sin mutacion, check corre como hoy"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no corre en CI ni en la gate: la mutacion es local, y el piso de la gate sigue siendo la fila de deshacer
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no corre en CI ni en la gate: la mutacion es local, y el piso de la gate sigue siendo la fila de deshacer"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se borra una linea entera por numero: la cadena es lo que se quita, y el archivo tiene que seguir siendo Go valido
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se borra una linea entera por numero: la cadena es lo que se quita, y el archivo tiene que seguir siendo Go valido"
+# paths = []
+# deps  = []

@@ -507,6 +507,11 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.StringVar(&opts.Run, "run", "", "run the command, capture the output and write proof/<NNNN>-<slug>.txt")
+	// The mutation row proves a guard by breaking it: the string is taken out of a
+	// copy of the tree and the failure has to name what the run expected (0297).
+	flags.StringVar(&opts.Mutate, "mutate", "", "take a string out of this file in a copy, and run the proof there")
+	flags.StringVar(&opts.MutateRemove, "remove", "", "the string --mutate takes out: it has to be in the file")
+	flags.StringVar(&opts.MutateExpect, "expect", "", "the text the failure has to name for the guard to count")
 	flags.StringVar(&opts.Message, "message", "", "the message file a commit-msg hook was handed: judge the change before it is a commit")
 	flags.StringVar(&opts.Proof, "proof", "", "use a proof that is already written (agents and CI)")
 	flags.StringVar(&opts.Base, "base", "HEAD", "what to compare the fence against (empty: against nothing, everything counts as new)")

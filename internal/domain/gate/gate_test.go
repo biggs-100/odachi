@@ -93,6 +93,16 @@ func buildEvaluationCases() []evaluationCase {
 	undoMissing.UndoMissing = true
 	undoMissing.ProofCommand = "go test ./..."
 
+	// The mutation row names the question it asked, so the continuation can ask it
+	// again instead of sending the human to a generic command (0297).
+	mutationFailed := ready()
+	mutationFailed.MutationFailed = true
+	mutationFailed.MutationNote = "the suite stayed green with the guard taken out"
+	mutationFailed.MutationCommand = "go test ./..."
+	mutationFailed.MutationFile = "internal/domain/gate/gate.go"
+	mutationFailed.MutationRemoved = "ReasonFuture"
+	mutationFailed.MutationExpected = "the gate declares"
+
 	return []evaluationCase{
 		{
 			name:    "no brief",
@@ -188,6 +198,14 @@ func buildEvaluationCases() []evaluationCase {
 			reason:  gate.ReasonUndoMissing,
 			message: "the row that reverts the change was not taken for this tree, and the close owes it",
 			next:    `odachi check --run "go test ./..."`,
+		},
+		{
+			name:    "the mutation row failed",
+			state:   mutationFailed,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonMutationFailed,
+			message: "the mutation row failed: the suite stayed green with the guard taken out",
+			next:    `odachi check --run "go test ./..." --mutate "internal/domain/gate/gate.go" --remove "ReasonFuture" --expect "the gate declares"`,
 		},
 		{
 			name:    "ready",

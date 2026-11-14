@@ -24,6 +24,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/fence"
 	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/layout"
+	"github.com/biggs-100/odachi/internal/domain/mutated"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	reviewdomain "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
@@ -124,6 +125,12 @@ type Options struct {
 	Base string
 	// TimeoutSeconds bounds Run. Zero or less means DefaultTimeout.
 	TimeoutSeconds int
+	// Mutate names a file whose string is taken out in a copy, MutateRemove is the
+	// string, and MutateExpect is the text the failure has to name: the row that
+	// proves a guard by breaking it (0297). Empty Mutate means the row does not run.
+	Mutate       string
+	MutateRemove string
+	MutateExpect string
 	// Quiet changes nothing about the result: the printer decides whether a
 	// ready run says anything (the commit-msg hook depends on the silence).
 	Quiet bool
@@ -477,6 +484,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			r.undoRow(&state, feature, proofPath)
 		}
 	}
+	r.mutationRow(&state, feature, proofPath)
 
 	verdict := gate.Evaluate(state)
 	if verdict.Code == gate.Ready && r.opts.Message == "" {
@@ -573,6 +581,9 @@ type runner struct {
 	// not judge, or when there is nothing to undo. It never blocks: only a suite
 	// that stayed green does (0052).
 	undoNote string
+	// mutateNote is the same for the mutation row: a copy that did not build, a
+	// command that did not run. Only a guard that did not fire blocks (0297).
+	mutateNote string
 }
 
 // worktree is one read of the candidate: the content tree that names the proof,
@@ -2257,6 +2268,11 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	if r.undoNote != "" {
 		result.Lines = append(result.Lines, "undo: "+r.undoNote)
 	}
+	// The mutation row says what it could not judge, for the same reason: a row
+	// that disappears without a word is a silence a reader fills with a guess.
+	if r.mutateNote != "" {
+		result.Lines = append(result.Lines, "mutation: "+r.mutateNote)
+	}
 	// A waived review is a decision, not a silence: the ready tree says so, or
 	// the next reader believes a verdict was made and lost.
 	if _, closed, waived, known := featureReview(r.feature); known && closed && waived {
@@ -2429,4 +2445,164 @@ func explicitPath(dir, path string) string {
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
 	return strings.Join(strings.Fields(message), " ")
+}
+
+// mutationRow proves a guard by breaking it (0297). The run names a file and a
+// string; the string is taken out of a copy of the tree, the same command runs
+// there, and the failure has to name what the run expected. A row already stored
+// for this tree answers a later check the same way the proof does, so the block is
+// not a coincidence of the invocation that had --run.
+//
+// The copy is the same plain directory the undo row exports: a tree is not a
+// commit, and the worktree is never touched.
+func (r *runner) mutationRow(state *gate.State, feature *tasks.Document, proofPath string) {
+	file := strings.TrimSpace(r.opts.Mutate)
+	if file == "" {
+		return
+	}
+	path := strings.TrimSuffix(proofPath, ".txt") + ".mutated.txt"
+	// The question this run asks, before anything else: the stored row is only an
+	// answer to this same question, and the comparison below is what keeps a new
+	// question from passing on old evidence (0297).
+	asked := mutated.Evidence{
+		Tree:     r.tree,
+		Command:  r.opts.Run,
+		File:     file,
+		Removed:  r.opts.MutateRemove,
+		Expected: r.opts.MutateExpect,
+	}
+	if stored, ok := r.storedMutation(path, asked); ok {
+		r.applyMutation(state, stored)
+		return
+	}
+	if r.opts.Run == "" {
+		return
+	}
+
+	evidence := asked
+	if strings.TrimSpace(evidence.Removed) == "" || strings.TrimSpace(evidence.Expected) == "" {
+		evidence.Verdict = mutated.Unknown
+		evidence.Note = "the row names no string to remove or nothing to expect"
+		r.writeMutation(path, evidence)
+		r.applyMutation(state, evidence)
+		return
+	}
+
+	root := filepath.Join(r.opts.Dir, filepath.FromSlash(file))
+	source, err := r.files.Read(root)
+	if err != nil {
+		evidence.Verdict = mutated.Unknown
+		evidence.Note = "the file could not be read: " + oneLine(err.Error())
+		r.writeMutation(path, evidence)
+		r.applyMutation(state, evidence)
+		return
+	}
+	// A string that is not there is a question that did not apply. Running anyway
+	// would find the suite green and call a real guard missing (0297).
+	if !strings.Contains(string(source), evidence.Removed) {
+		evidence.Verdict = mutated.NoText
+		evidence.Note = "the string is not in the file"
+		r.writeMutation(path, evidence)
+		r.applyMutation(state, evidence)
+		return
+	}
+
+	dir, err := r.git.Archive(r.opts.Dir, r.tree)
+	if err != nil {
+		evidence.Verdict = mutated.Unknown
+		evidence.Note = "the copy could not be prepared: " + oneLine(err.Error())
+		r.writeMutation(path, evidence)
+		r.applyMutation(state, evidence)
+		return
+	}
+	defer func() { _ = r.git.Discard(dir) }()
+
+	copied := filepath.Join(dir, filepath.FromSlash(file))
+	text, err := r.files.Read(copied)
+	if err != nil {
+		evidence.Verdict = mutated.Unknown
+		evidence.Note = "the copy could not be read: " + oneLine(err.Error())
+		r.writeMutation(path, evidence)
+		r.applyMutation(state, evidence)
+		return
+	}
+	mutatedText := strings.Replace(string(text), evidence.Removed, "", 1)
+	if err := r.files.Write(copied, []byte(mutatedText)); err != nil {
+		evidence.Verdict = mutated.Unknown
+		evidence.Note = "the copy could not be written: " + oneLine(err.Error())
+		r.writeMutation(path, evidence)
+		r.applyMutation(state, evidence)
+		return
+	}
+
+	stdout, stderr, code, timedOut, err := r.shell.Run(dir, r.opts.Run, r.opts.TimeoutSeconds)
+	if err != nil {
+		evidence.Verdict = mutated.Unknown
+		evidence.Note = "the command did not run: " + oneLine(err.Error())
+		r.writeMutation(path, evidence)
+		r.applyMutation(state, evidence)
+		return
+	}
+	evidence.Output = stdout + stderr
+	if timedOut {
+		evidence.Verdict = mutated.Unknown
+		evidence.Note = fmt.Sprintf("the command did not finish in %ds", r.opts.TimeoutSeconds)
+	} else {
+		evidence.Verdict = mutated.Classify(code, evidence.Output, evidence.Expected)
+		switch evidence.Verdict {
+		case mutated.Unknown:
+			evidence.Note = "the copy did not build"
+		case mutated.Missed:
+			evidence.Note = "the suite stayed green with the guard taken out"
+		case mutated.WrongReason:
+			evidence.Note = "it failed without naming " + evidence.Expected
+		}
+	}
+	r.writeMutation(path, evidence)
+	r.applyMutation(state, evidence)
+}
+
+// storedMutation reads the evidence of a row already taken for this tree and this
+// question: the file, the string, the expected text and the command have to be the
+// ones this run names. A row for another question is not an answer to this one -
+// reusing it would let a new question pass on old evidence, or repeat a mistyped
+// flag until the tree changes (0297).
+func (r *runner) storedMutation(path string, asked mutated.Evidence) (mutated.Evidence, bool) {
+	data, err := r.files.Read(path)
+	if err != nil {
+		return mutated.Evidence{}, false
+	}
+	stored, err := mutated.Parse(string(data))
+	if err != nil || stored.Tree != r.tree {
+		return mutated.Evidence{}, false
+	}
+	if stored.Command != asked.Command || stored.File != asked.File ||
+		stored.Removed != asked.Removed || stored.Expected != asked.Expected {
+		return mutated.Evidence{}, false
+	}
+	return stored, true
+}
+
+// writeMutation keeps the row as evidence and names it when it could not be kept.
+func (r *runner) writeMutation(path string, e mutated.Evidence) {
+	if err := r.files.Write(path, []byte(mutated.Render(e))); err != nil {
+		r.mutateNote = "ran, and its evidence could not be written: " + oneLine(err.Error())
+	}
+}
+
+// applyMutation turns a verdict into the gate's state and the close's words. Only a
+// guard that did not fire blocks; a copy that could not build is a note, and a
+// question that did not apply says so (0297).
+func (r *runner) applyMutation(state *gate.State, e mutated.Evidence) {
+	switch e.Verdict {
+	case mutated.Missed, mutated.WrongReason, mutated.NoText:
+		state.MutationFailed = true
+		state.MutationNote = e.Note
+		state.MutationCommand = e.Command
+		state.MutationFile = e.File
+		state.MutationRemoved = e.Removed
+		state.MutationExpected = e.Expected
+	case mutated.Unknown:
+		r.mutateNote = "could not be judged: " + e.Note
+	}
 }
