@@ -1,16 +1,17 @@
 # Next session
 
-Written after 0291 to 0298, the three releases that carried them, and the study of gentle-shell that
+Written after 0291 to 0298, the four releases that carried them, and the study of gentle-shell that
 produced 0295 and 0297.
 
 ## Where the project is
 
-- `v0.44.1` is published: annotated tag on `5936639` (the merge of release PR #595), sixteen assets
+- `v0.44.2` is published: annotated tag on `5e200c5` (the merge of release PR #598), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.44.1`. Three releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296, and
-  `v0.44.1` carried 0297.
-- The branch `feat/0298-una-medicion` carries five commits over `1733e6c`, the merge this feature
-  started from, and it quotes the line the tool counts for the tree it closes:
+  `odachi 0.44.2`. Four releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
+  `v0.44.1` carried 0297, and `v0.44.2` carried 0298.
+- `main` is at that merge. 0298 landed in PR #597 -seven commits over `1733e6c`, the merge this feature
+  started from-, and the release PR renamed `Unreleased` after it. This file quotes the line the tool
+  counts for the tree it describes:
 
   ```
   total: 296 features · 730 steps done of 730 · 0 open questions
@@ -33,8 +34,8 @@ produced 0295 and 0297.
   the expected text. The evidence goes to `proof/<feature>.mutated.txt`.
 - The fence keeps its six active rules; none protects `internal/domain/gate` since 0290, and the
   measurements this project published are protected since 0298.
-- `odachi doctor` was 15 checks with no problems at `v0.44.1`; since 0298 it also asks whether the
-  numbers in this file came from the tool.
+- `odachi doctor` is 15 checks with no problems at `v0.44.2`, and since 0298 check 14 asks whether the
+  numbers in this file came from the tool instead of only whether it names the newest feature.
 
 ## What shipped
 
@@ -53,7 +54,7 @@ produced 0295 and 0297.
   longer holds.
 - **0297, patch (v0.44.1).** A guard is proven by breaking it, and the row answers only the question it
   was asked. The first verdict named five rows and all five were answered.
-- **0298, no release yet.** A measurement has a shape: the new `measure` skill carries the criterion
+- **0298, patch (v0.44.2).** A measurement has a shape: the new `measure` skill carries the criterion
   before the run, the instrument, the verdict table, the excluded runs and what the data does not show.
   And the handover stopped claiming numbers: it quotes the totals line `odachi summary` prints, check 14
   recomputes it from the task documents, and a note with no such line is a warning instead of a pass.
