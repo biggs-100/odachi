@@ -2,6 +2,7 @@ package review_test
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -587,5 +588,35 @@ func TestADesignFolderIsADocument(t *testing.T) {
 		if got := review.Classify([]string{path}); got == review.Passive {
 			t.Errorf("Classify(%s) = passive, want the file reviewed", path)
 		}
+	}
+}
+
+// TestDeclaredLensesJoinTheDemandOfEveryPathThatHasSome: a commit that declares a
+// risk says what the change can hurt, and the gate asks the lens that looks for it.
+// The declaration adds to the path floor and never replaces it, and a path the floor
+// asks nothing of -a document- keeps asking nothing: a security review does not look
+// at prose (0301).
+func TestDeclaredLensesJoinTheDemandOfEveryPathThatHasSome(t *testing.T) {
+	paths := []string{"internal/app/pay.go", "docs/readme.md"}
+
+	need := review.NeedWith(paths, "", []string{"security"})
+
+	if got, want := need["internal/app/pay.go"], []string{review.Risk, review.Reliability}; !slices.Equal(got, want) {
+		t.Errorf("the declared lens is not in the demand: got %v, want %v", got, want)
+	}
+	if lenses, ok := need["docs/readme.md"]; ok {
+		t.Errorf("a document answers a declared risk: %v", lenses)
+	}
+
+	// The same declaration on a path the floor already sends to every lens asks
+	// once: a set with a hole in it is a prompt that says the same thing twice.
+	full := review.NeedWith([]string{"internal/app/auth.go"}, "", []string{"security"})
+	if got := full["internal/app/auth.go"]; !slices.Equal(got, review.Lenses(review.Full)) {
+		t.Errorf("a full path answered %v, want the four lenses once", got)
+	}
+
+	// Without a declaration the demand is the one the paths make, unchanged.
+	if !reflect.DeepEqual(review.Need(paths, ""), review.NeedWith(paths, "", nil)) {
+		t.Error("Need and NeedWith(nil) disagree")
 	}
 }

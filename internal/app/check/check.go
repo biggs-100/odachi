@@ -1318,6 +1318,14 @@ func (r *runner) requireReview(base string) *Result {
 	if problem != nil {
 		return problem
 	}
+	// The risk a commit declared asks for its lens, on top of what the paths ask for
+	// and never instead of it. A change that asks for no lens at all -documents
+	// only- keeps asking nothing: the declaration says what the change can hurt, and
+	// a document is not where a lens looks (0301).
+	risks := r.declaredRisks(base)
+	if len(required) > 0 {
+		required = reviewdomain.Add(required, reviewdomain.LensesForRisk(risks))
+	}
 	if len(required) == 0 && base == "" {
 		return nil
 	}
@@ -1509,7 +1517,7 @@ func (r *runner) requireReview(base string) *Result {
 	if problem != nil {
 		return problem
 	}
-	need := reviewdomain.Need(changed, diff)
+	need := reviewdomain.NeedWith(changed, diff, risks)
 	for path, blob := range blobs {
 		if blob == "" {
 			delete(need, path)
@@ -1582,6 +1590,27 @@ func sameCommit(git Git, root, judged, start string) bool {
 // tree needs. The changed paths and the diff are returned with it: coverage is
 // per file, and the same evidence that picks the lenses is the one whose rows
 // must answer.
+// declaredRisks is what the commits of the range declared about their blast radius,
+// read from their messages. A range with no base or a message this binary cannot
+// parse declares nothing here: the ready note is where an unreadable `Risk:` line is
+// named, and a gate that guessed would demand a lens nobody asked for (0301).
+func (r *runner) declaredRisks(base string) []string {
+	if base == "" {
+		return nil
+	}
+	messages, err := r.git.Messages(r.opts.Dir, base)
+	if err != nil {
+		return nil
+	}
+	risk, err := change.ParseRisk(messages)
+	if err != nil {
+		return nil
+	}
+	return risk.Named
+}
+
+// requiredLenses is the lens set the whole candidate asks for, with the paths and
+// diff it was read from: the same value the proof and the review prompt use.
 func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
 	work, problem := r.worktree()
 	if problem != nil {

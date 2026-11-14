@@ -640,3 +640,27 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0301 · el-riesgo-declarado
+
+## What must exist
+- el riesgo declarado en los commits agrega su lente a lo que la puerta exige, y un veredicto sin esa lente no cierra
+
+## Done when
+- review mapea cada riesgo de la tabla de commits a su lente, con su test
+- un cambio cuyos commits declaran security y un veredicto que no contesta risk bloquea nombrando odachi review --lens risk
+- el mismo cambio con la lente contestada cierra
+- un riesgo none o sin linea no agrega nada, y la lente que el piso ya pide no se duplica
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, minor (0301)
+
+## Not included (first version)
+- no entra un riesgo nuevo ni cambia la tabla de commits
+- no se reescribe la linea Risk de los commits ya escritos
+- no entra un flag: la lente se pide con lo que ya existe
+- el piso por rutas no se afloja: el riesgo suma, nunca resta
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
