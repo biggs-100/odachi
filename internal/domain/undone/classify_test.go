@@ -69,6 +69,15 @@ func TestABuildFailureThatNamesTheChangeIsNoticed(t *testing.T) {
 			wantName: "",
 		},
 		{
+			name:     "only a failing test names it, not the compiler",
+			exitCode: 1,
+			output: "# github.com/x/y [build failed]\n\tinternal/app/pay_test.go:12:19: undefined: SomethingElse\n" +
+				"--- FAIL: TestPay (0.00s)\n",
+			added:    []string{"TestPay"},
+			want:     undone.Unknown,
+			wantName: "",
+		},
+		{
 			name:     "a red for another reason",
 			exitCode: 1,
 			output:   "--- FAIL: TestSomething (0.00s)\n",

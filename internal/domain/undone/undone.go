@@ -8,6 +8,7 @@ package undone
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -98,13 +99,32 @@ func Classify(exitCode int, output string, added []string) (Verdict, string) {
 	case exitCode == 0:
 		return Missed, ""
 	case strings.Contains(output, buildFailed):
-		if name := namesOne(output, added); name != "" {
+		if name := namesOne(compilerDiagnostics(output), added); name != "" {
 			return Noticed, name
 		}
 		return Unknown, ""
 	default:
 		return Noticed, ""
 	}
+}
+
+// diagnostic is the shape of a compiler or vet line: a file, a position, a message.
+// Only these lines are read when a copy does not build, because the question is what
+// the compiler named and not what the run printed somewhere else -a test that failed
+// in another package names its own test, and that is not the revert being noticed-
+// (0300).
+var diagnostic = regexp.MustCompile(`\.go:\d+`)
+
+// compilerDiagnostics is the output reduced to the lines that carry a position.
+func compilerDiagnostics(output string) string {
+	var out strings.Builder
+	for _, line := range strings.Split(output, "\n") {
+		if diagnostic.MatchString(line) {
+			out.WriteString(line)
+			out.WriteString("\n")
+		}
+	}
+	return out.String()
 }
 
 // namesOne is the first of names the output mentions as a whole word, in the order
