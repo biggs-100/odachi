@@ -8,6 +8,19 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A measurement has a shape, and a handover cites the tool that counts it.** Any number this project
+  takes now has a door: the new `measure` skill carries the criterion written **before** the run, the
+  instrument and what it measures, the verdict table, the excluded runs with their reason, and what the
+  data does not show -plus the two sentences that keep a byte count from becoming a cost claim-. The
+  record lives in `docs/`, named by its question, and the measurements already published are protected
+  by the fence from here on. And the note a session leaves stopped claiming ledger numbers: it quotes
+  the totals line `odachi summary` prints, `odachi doctor` check 14 recomputes that line from the task
+  documents and warns when the note quotes another count or none, naming both lines so the rewrite is a
+  copy. The line moved into one renderer, so the report and the check cannot spell it differently.
+  Patch (0298).
+
 ## v0.44.1 - 2026-11-14
 
 - **A guard is proven by breaking it, and the run says what it must hear.** `odachi check --run` now
