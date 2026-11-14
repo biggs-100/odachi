@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.44.4 - 2026-11-14
 
 - **A copy that does not build names what the change took away.** The row that reverts a change reverts
   the production files and keeps the tests, so a change whose own tests call what it added leaves a copy
