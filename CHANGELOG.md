@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.45.0 - 2026-11-14
 
 - **The risk a commit declares asks for its lens, and a verdict without it does not close.** The table
   `commits` publishes said which lens each risk owes -data, contract and no-test ask reliability, security
