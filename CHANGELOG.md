@@ -8,6 +8,14 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The catalog carries a Tauri v2 foundation.** A desktop project with a Rust core had no door here: the
+  new 	auri-foundation skill names the boundary the framework keeps crossing -the domain crate never
+  imports Tauri, a command is a thin adapter, the Rust-to-TS contract is generated, the UI is verified in
+  three layers- and ships the depth it needs: the workspace layout, the purity guard recipes, the bridge
+  templates and the desktop verification ladder. Its links point at ootstrap and drive, the doors this
+  catalog has, instead of at the folder it came from. Patch (0302).
 ## v0.45.0 - 2026-11-14
 
 - **The risk a commit declares asks for its lens, and a verdict without it does not close.** The table

@@ -16,7 +16,7 @@ R1 · "el payload de odachi lleva la fundacion de Tauri v2 como skill propio: la
 
 ## Steps
 - [x] T1 · la carpeta del skill: cuerpo de 60 lineas y sus cuatro piezas de profundidad   R1 · route:inline · tree:5cbdf27290d836d3c7456cf608749d410e3fad9d
-- [ ] T2 · el registro y los pines: SKILLS.md, los bytes y el impact map   R1 · route:inline
+- [x] T2 · el registro y los pines: SKILLS.md, los bytes y el impact map   R1 · route:inline · tree:aca78985910ba386fb714942c9c142b560ac25c4
 - [ ] T3 · el changelog nombra 0302 bajo Unreleased, patch   R1 · route:inline
 
 ## History
