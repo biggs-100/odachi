@@ -91,7 +91,7 @@ func TestRequireReviewAsksForVerdictPerRequiredLens(t *testing.T) {
 // evidence asked for passes.
 func TestRequireReviewAcceptsACoveredLens(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, []string{domainreview.Reliability}, nil))
+	files.files[reviewPath(currentTree)] = []byte(verdictAtBase(t, currentTree, "abc1234", []string{domainreview.Reliability}))
 
 	git := &fakeGit{tree: currentTree, changed: []string{"internal/gastos/x.go"}}
 	result := run(t, files, git, check.Options{RequireReview: true})
@@ -106,7 +106,7 @@ func TestRequireReviewAcceptsACoveredLens(t *testing.T) {
 // sentence on every run.
 func TestRequireReviewNamesTheFirstMissingLensOfFour(t *testing.T) {
 	files := newFakeFiles(readyFiles())
-	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, []string{domainreview.Reliability}, nil))
+	files.files[reviewPath(currentTree)] = []byte(verdictAtBase(t, currentTree, "abc1234", []string{domainreview.Reliability}))
 
 	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
 	result := run(t, files, git, check.Options{RequireReview: true})
@@ -219,4 +219,50 @@ func TestAMangledRefutationIsNotAnApproval(t *testing.T) {
 	if !strings.Contains(result.Message, "internal/auth/session.go:12") {
 		t.Errorf("message %q does not name the finding that still blocks", result.Message)
 	}
+}
+
+// TestADeclaredRiskAsksForItsLens: the commits say what the change can hurt, and
+// the gate asks the lens that looks for it. A verdict that answered reliability and
+// nothing else does not close a range whose commits declared `security`, and the
+// refusal names the command: `odachi review --lens risk` (0301).
+func TestADeclaredRiskAsksForItsLens(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
+	files.files[reviewPath(currentTree)] = []byte(verdictAtBase(t, currentTree, "abc1234", []string{domainreview.Reliability}))
+
+	git := &fakeGit{
+		tree:     currentTree,
+		changed:  []string{"internal/gastos/x.go"},
+		messages: []string{"pay the invoice\n\nRisk: security\n"},
+	}
+	result := run(t, files, git, check.Options{RequireReview: true})
+
+	if result.Code != 2 {
+		t.Fatalf("code = %d, want 2: a declared risk that nobody answered closed the tree (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(append([]string{result.Message}, result.Lines...), "\n")
+	for _, want := range []string{"risk", "--lens risk"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("the refusal does not name %q:\n%s", want, lines)
+		}
+	}
+
+	// The same commits with the lens answered close: the demand adds, it does not
+	// become a wall.
+	files.files[reviewPath(currentTree)] = []byte(verdictAtBase(t, currentTree, "abc1234", []string{domainreview.Risk, domainreview.Reliability}))
+	if again := run(t, files, git, check.Options{RequireReview: true}); again.Code == 2 {
+		t.Fatalf("the lens the risk asked for did not close: %s", again.Message)
+	}
+}
+
+// verdictAtBase seals a verdict for tree against the base the feature started from:
+// the gate compares the two, and a verdict sealed with another base answers another
+// diff.
+func verdictAtBase(t *testing.T, tree, base string, lenses []string) string {
+	t.Helper()
+	sealed, err := domainreview.Seal(domainreview.Verdict{Reviewer: "claude", Lenses: lenses}, tree, base, reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the seeded verdict: %v", err)
+	}
+	return string(domainreview.Render(sealed))
 }
