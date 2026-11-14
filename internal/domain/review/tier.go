@@ -118,7 +118,18 @@ func Lenses(t Tier) []string {
 // file: a candidate may need reliability in one file and all four lenses in
 // another, and coverage compares the verdict's rows against exactly this.
 func Need(changedPaths []string, diff string) map[string][]string {
+	return NeedWith(changedPaths, diff, nil)
+}
+
+// NeedWith is Need plus the risks the commits declared through their `Risk:`
+// lines. A declared risk adds its lens to every path the floor already asks
+// something of, and never replaces what the path asks: the declaration says what
+// the change can hurt, and the path floor still says where. A path the floor asks
+// nothing of -a document- keeps asking nothing, because a security review does not
+// look at prose (0301).
+func NeedWith(changedPaths []string, diff string, risks []string) map[string][]string {
 	floor := FloorFor(changedPaths, diff)
+	declared := LensesForRisk(risks)
 
 	need := make(map[string][]string, len(changedPaths))
 	for _, path := range changedPaths {
@@ -127,7 +138,7 @@ func Need(changedPaths []string, diff string) map[string][]string {
 		if len(lenses) == 0 {
 			continue
 		}
-		need[path] = lenses
+		need[path] = Add(lenses, declared)
 	}
 	return need
 }
