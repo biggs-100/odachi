@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.44.1 - 2026-11-14
 
 - **A guard is proven by breaking it, and the run says what it must hear.** `odachi check --run` now
   takes `--mutate <file>`, `--remove "<string>"` and `--expect "<text>"`: the row exports the tree,
