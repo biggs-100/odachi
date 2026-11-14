@@ -16,7 +16,7 @@ R1 · "el riesgo declarado en los commits agrega su lente a lo que la puerta exi
 - [x] T1 · la tabla riesgo a lente: cada riesgo de commits contesta su lente, con su test   R1 · route:inline · tree:c75d2a303c0e3cbaba99307417c3e3bc115e2df4
 - [x] T2 · la demanda por archivo lleva las lentes declaradas, sin duplicar   R1 · route:inline · tree:de3ef7aebaf72fa7c8b55414571c4c0dd50a2053
 - [x] T3 · la puerta pasa el riesgo de los commits y la negativa nombra el comando   R1 · route:inline · tree:def0f13898fd4af349165ad63f6ca2b70a1067a9
-- [ ] T4 · el changelog nombra 0301 bajo Unreleased, minor   R1 · route:inline
+- [x] T4 · el changelog nombra 0301 bajo Unreleased, minor   R1 · route:inline · tree:ae367bdbc11a57543fd78a84b40f62eedb3bb9bb
 
 ## History
 L1 · "el riesgo declarado en los commits agrega su lente a lo que la puerta exige, y un veredicto sin esa lente no cierra"
