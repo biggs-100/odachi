@@ -9,6 +9,7 @@ package mutated
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -87,14 +88,17 @@ func Classify(exitCode int, output, expected string) Verdict {
 }
 
 // Render writes the evidence: the headers in the canonical order, then the output
-// verbatim.
+// verbatim. The string and the expected text are quoted, because both are arbitrary
+// text: a multiline guard would otherwise break its own file, and leading spaces
+// would come back trimmed -a row that cannot round-trip what it claims to record is
+// not evidence (0297).
 func Render(e Evidence) string {
 	var out strings.Builder
 	out.WriteString(MutatedHeader + e.Tree + "\n")
 	out.WriteString(CommandHeader + e.Command + "\n")
 	out.WriteString(FileHeader + e.File + "\n")
-	out.WriteString(RemovedHeader + e.Removed + "\n")
-	out.WriteString(ExpectedHeader + e.Expected + "\n")
+	out.WriteString(RemovedHeader + strconv.Quote(e.Removed) + "\n")
+	out.WriteString(ExpectedHeader + strconv.Quote(e.Expected) + "\n")
 	out.WriteString(VerdictHeader + string(e.Verdict) + "\n")
 	if e.Note != "" {
 		out.WriteString(NoteHeader + e.Note + "\n")
@@ -131,7 +135,17 @@ func Parse(text string) (Evidence, error) {
 		if !ok || !strings.HasPrefix(line, want) {
 			return Evidence{}, fmt.Errorf("mutated: the headers are out of order: %q has to be the one after %q", want, at(i))
 		}
-		values[want] = strings.TrimSpace(strings.TrimPrefix(line, want))
+		value := strings.TrimPrefix(line, want)
+		if want == RemovedHeader || want == ExpectedHeader {
+			// Both are arbitrary text, so both are written quoted and read back
+			// whole: a multiline guard is one value, not a broken header block.
+			unquoted, err := strconv.Unquote(value)
+			if err != nil {
+				return Evidence{}, fmt.Errorf("mutated: %q is not a quoted string: the row cannot read what it recorded", value)
+			}
+			value = unquoted
+		}
+		values[want] = strings.TrimSpace(value)
 		rest = after
 	}
 

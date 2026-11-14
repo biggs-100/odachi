@@ -2461,7 +2461,17 @@ func (r *runner) mutationRow(state *gate.State, feature *tasks.Document, proofPa
 		return
 	}
 	path := strings.TrimSuffix(proofPath, ".txt") + ".mutated.txt"
-	if stored, ok := r.storedMutation(path); ok {
+	// The question this run asks, before anything else: the stored row is only an
+	// answer to this same question, and the comparison below is what keeps a new
+	// question from passing on old evidence (0297).
+	asked := mutated.Evidence{
+		Tree:     r.tree,
+		Command:  r.opts.Run,
+		File:     file,
+		Removed:  r.opts.MutateRemove,
+		Expected: r.opts.MutateExpect,
+	}
+	if stored, ok := r.storedMutation(path, asked); ok {
 		r.applyMutation(state, stored)
 		return
 	}
@@ -2469,13 +2479,7 @@ func (r *runner) mutationRow(state *gate.State, feature *tasks.Document, proofPa
 		return
 	}
 
-	evidence := mutated.Evidence{
-		Tree:     r.tree,
-		Command:  r.opts.Run,
-		File:     file,
-		Removed:  r.opts.MutateRemove,
-		Expected: r.opts.MutateExpect,
-	}
+	evidence := asked
 	if strings.TrimSpace(evidence.Removed) == "" || strings.TrimSpace(evidence.Expected) == "" {
 		evidence.Verdict = mutated.Unknown
 		evidence.Note = "the row names no string to remove or nothing to expect"
@@ -2558,15 +2562,22 @@ func (r *runner) mutationRow(state *gate.State, feature *tasks.Document, proofPa
 	r.applyMutation(state, evidence)
 }
 
-// storedMutation reads the evidence of a row already taken for this tree. A file
-// for another tree, or one this binary cannot read, is taken again.
-func (r *runner) storedMutation(path string) (mutated.Evidence, bool) {
+// storedMutation reads the evidence of a row already taken for this tree and this
+// question: the file, the string, the expected text and the command have to be the
+// ones this run names. A row for another question is not an answer to this one -
+// reusing it would let a new question pass on old evidence, or repeat a mistyped
+// flag until the tree changes (0297).
+func (r *runner) storedMutation(path string, asked mutated.Evidence) (mutated.Evidence, bool) {
 	data, err := r.files.Read(path)
 	if err != nil {
 		return mutated.Evidence{}, false
 	}
 	stored, err := mutated.Parse(string(data))
 	if err != nil || stored.Tree != r.tree {
+		return mutated.Evidence{}, false
+	}
+	if stored.Command != asked.Command || stored.File != asked.File ||
+		stored.Removed != asked.Removed || stored.Expected != asked.Expected {
 		return mutated.Evidence{}, false
 	}
 	return stored, true

@@ -16,7 +16,7 @@ R1 · "un guard se prueba rompiendolo: la corrida nombra el archivo y la cadena,
 ## Steps
 - [x] T1 · el veredicto de la mutacion: lectura, render y las cuatro respuestas, con sus tests   R1 · route:inline · tree:2e120fac7b0cb98e90eac9469e054432b007e468
 - [x] T2 · la corrida: copia el arbol, quita la cadena, corre el suite y exige el mensaje   R1 · route:inline · tree:1dd299f7df607f7727923e3b843ce6f92814ac52
-- [ ] T3 · el changelog nombra 0297 bajo Unreleased, patch   R1 · route:inline
+- [x] T3 · el changelog nombra 0297 bajo Unreleased, patch   R1 · route:inline · tree:816c1dcf085f864569c6aac1ae83ffe1b6bbd019
 
 ## History
 L1 · "un guard se prueba rompiendolo: la corrida nombra el archivo y la cadena, el suite tiene que fallar diciendo esa cadena, y el archivo se restaura"

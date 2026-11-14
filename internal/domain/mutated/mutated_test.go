@@ -115,3 +115,29 @@ func TestNoTextIsAVerdictAndNotASilence(t *testing.T) {
 		t.Errorf("Note = %q, want the cause", parsed.Note)
 	}
 }
+
+// TestARemovedStringWithLinesRoundTrips: the string a run removes is arbitrary text,
+// and a guard block spans lines. Writing it raw broke its own header block on the way
+// back -the file Render produced could not be parsed-, which is the defect the first
+// review named (0297).
+func TestARemovedStringWithLinesRoundTrips(t *testing.T) {
+	t.Parallel()
+
+	evidence := mutated.Evidence{
+		Tree:     tree,
+		Command:  "go test ./...",
+		File:     "internal/app/pay.go",
+		Removed:  "if sinFirma {\n\t\treturn err\n\t}",
+		Expected: "la firma no se verifica\n\tcon un salto",
+		Verdict:  mutated.Noticed,
+		Output:   "FAIL\n",
+	}
+
+	parsed, err := mutated.Parse(mutated.Render(evidence))
+	if err != nil {
+		t.Fatalf("the file Render wrote cannot be parsed: %v\n%s", err, mutated.Render(evidence))
+	}
+	if parsed.Removed != evidence.Removed || parsed.Expected != evidence.Expected {
+		t.Errorf("round trip lost the text: %q / %q", parsed.Removed, parsed.Expected)
+	}
+}

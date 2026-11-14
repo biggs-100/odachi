@@ -205,7 +205,7 @@ func buildEvaluationCases() []evaluationCase {
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonMutationFailed,
 			message: "the mutation row failed: the suite stayed green with the guard taken out",
-			next:    `odachi check --run "go test ./..." --mutate internal/domain/gate/gate.go --remove "ReasonFuture" --expect "the gate declares"`,
+			next:    `odachi check --run "go test ./..." --mutate "internal/domain/gate/gate.go" --remove "ReasonFuture" --expect "the gate declares"`,
 		},
 		{
 			name:    "ready",

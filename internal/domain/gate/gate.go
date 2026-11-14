@@ -202,7 +202,7 @@ func Evaluate(s State) Result {
 	case s.MutationFailed:
 		return Result{NeedsWork, ReasonMutationFailed,
 			"the mutation row failed: " + s.MutationNote,
-			fmt.Sprintf("odachi check --run %q --mutate %s --remove %q --expect %q",
+			fmt.Sprintf("odachi check --run %q --mutate %q --remove %q --expect %q",
 				s.MutationCommand, s.MutationFile, s.MutationRemoved, s.MutationExpected)}
 	default:
 		if s.ProofDeferred && s.ProofTreeHash != s.TreeHash {
