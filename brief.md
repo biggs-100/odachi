@@ -592,3 +592,27 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: como se escribe una medicion que no miente.
+
+## 0299 · una-regla-de
+
+## What must exist
+- una regla de la cerca protege archivos: lo que no nombra archivos se queda en el brief, y start deja de escribir plantillas comentadas y de avisar una vez por cada una
+
+## Done when
+- start reescribe odd/fence.toml con las reglas activas y nada mas
+- start imprime una linea con el numero de reglas y dice que los non-goals sin rutas viven en el brief, en vez de una linea por non-goal
+- un non-goal nuevo con rutas se escribe como regla, y uno sin rutas no agrega nada al archivo ni repite su texto
+- el ejemplo de una cerca vacia se queda: un proyecto sin non-goals sigue aprendiendo la forma
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0299)
+
+## Not included (first version)
+- no se borra ninguna regla activa: las seis quedan y solo se van los comentarios
+- no se toca el brief: los non-goals ya viven ahi y no se mueven
+- no entra un verbo de limpieza ni un flag nuevo: la cerca se poda en el proximo start
+- no cambia el toml que check lee: el parser no aprende nada nuevo
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.

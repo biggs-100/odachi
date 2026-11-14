@@ -23,6 +23,11 @@ not   = "el fixture de la sonda y su llave son intocables: medir cambiando el ex
 paths = ["internal/probe/**", "internal/domain/probe/manifest.go"]
 deps  = []
 
+[[rule]]
+not   = "no se reescribe ninguna medicion ya publicada: docs/skill-evaluation.md y docs/review-research.md quedan como estan"
+paths = ["docs/skill-evaluation.md", "docs/review-research.md"]
+deps  = []
+
 # This non-goal has no paths yet:
 #   the verb keeps its shape: `--light` still takes one quoted line, and `--` stays Go's own separator instead of a new flag - back when the flag set itself is the question
 # A rule protects files: write what it must keep out of the tree, then
@@ -863,14 +868,6 @@ deps  = []
 # paths = []
 # deps  = []
 
-# This non-goal protects the measurements this project already published: a
-# measurement is evidence of a question that was asked once, and rewriting it
-# after the fact edits the exam instead of taking it again.
-[[rule]]
-not   = "no se reescribe ninguna medicion ya publicada: docs/skill-evaluation.md y docs/review-research.md quedan como estan"
-paths = ["docs/skill-evaluation.md", "docs/review-research.md"]
-deps  = []
-
 # This non-goal has no paths yet:
 #   no se corre ninguna medicion en esta feature: se escribe la forma, no un dato nuevo
 # A rule protects files: write what it must keep out of the tree, then
@@ -898,5 +895,45 @@ deps  = []
 #
 # [[rule]]
 # not   = "no cambia lo que summary imprime: la misma linea, un lector mas"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se borra ninguna regla activa: las seis quedan y solo se van los comentarios
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se borra ninguna regla activa: las seis quedan y solo se van los comentarios"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no se toca el brief: los non-goals ya viven ahi y no se mueven
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se toca el brief: los non-goals ya viven ahi y no se mueven"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra un verbo de limpieza ni un flag nuevo: la cerca se poda en el proximo start
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra un verbo de limpieza ni un flag nuevo: la cerca se poda en el proximo start"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no cambia el toml que check lee: el parser no aprende nada nuevo
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no cambia el toml que check lee: el parser no aprende nada nuevo"
 # paths = []
 # deps  = []
