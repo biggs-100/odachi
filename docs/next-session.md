@@ -1,19 +1,20 @@
 # Next session
 
-Written after 0291 to 0300, the six releases that carried them, and the study of gentle-shell that
+Written after 0291 to 0301, the seven releases that carried them, and the study of gentle-shell that
 produced 0295 and 0297.
 
 ## Where the project is
 
-- `v0.44.4` is published: annotated tag on `4b617d5` (the merge of release PR #604), sixteen assets
+- `v0.45.0` is published: annotated tag on `088f617` (the merge of release PR #607), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.44.4`. Six releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
-  `v0.44.1` carried 0297, `v0.44.2` carried 0298, `v0.44.3` carried 0299, and `v0.44.4` carried 0300.
-- `main` is at that merge. 0300 landed in PR #603 -five commits over `6aee47b`-, and the release PR
+  `odachi 0.45.0`. Seven releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
+  `v0.44.1` carried 0297, `v0.44.2` carried 0298, `v0.44.3` carried 0299, `v0.44.4` carried 0300, and
+  `v0.45.0` carried 0301.
+- `main` is at that merge. 0301 landed in PR #606 -five commits over `a5ff710`-, and the release PR
   renamed `Unreleased` after it. This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 298 features · 738 steps done of 738 · 0 open questions
+  total: 299 features · 742 steps done of 742 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -65,6 +66,27 @@ produced 0295 and 0297.
 - **0300, patch (v0.44.4).** A copy that does not build names what the change took away: the row that
   reverts a change answers `noticed` with the symbol the compiler named, instead of "could not be
   judged" -which was the answer for the two features before it-.
+- **0301, minor (v0.45.0).** The risk a commit declares asks for its lens: the table `commits`
+  published is the table the gate reads, a declared risk joins the demand per path and at the lens
+  level, and a verdict without that lens does not close.
+
+## 0301: what it settled, and what it leaves
+
+**A declaration that changes nothing is a sentence.** `Risk: contract` named a lens and a verifier in
+the skill and nothing read it: 0299 declared `contract` on three commits and its verdict closed with
+`required: none`. The mapping now lives in `internal/domain/review/risk.go`, the gate adds those lenses
+to what the paths ask -never instead- and the refusal names `odachi review --lens <lens>`. A change that
+asks for no lens at all keeps asking nothing: a document is not where a lens looks.
+
+**A rule about the gate takes effect with the release that carries it.** 0300 and 0301 both closed with
+the installed binary, which predates their change, so neither answered to its own rule: 0300's undo row
+had to be regenerated with `go run`, and 0301 closed with the lens its paths asked for and not the one
+its four `Risk: contract` lines asked for. Expect the first feature after a release to be the first one
+the new rule judges.
+
+**A record can lie by one line.** The T4 mark of 0301 was staged before the proof and the branch was
+pushed without it, so `main` held a feature whose changelog said released and whose plan said one step
+open. Reading `main` after the merge is what caught it; the fix rides in this pull request.
 
 ## 0300: what it settled, and what it leaves
 
