@@ -8,6 +8,16 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The risk a commit declares asks for its lens, and a verdict without it does not close.** The table
+  `commits` publishes said which lens each risk owes -data, contract and no-test ask reliability, security
+  asks risk, concurrency and delivery ask resilience- and nothing read it: three commits of 0299
+  declared `contract` and the verdict closed with `required: none`. The declared risks now join the lens
+  demand on top of what the changed paths ask for, per file and at the lens level, and the refusal names
+  `odachi review --lens <lens>`. A change that asks for no lens at all keeps asking nothing, and a range
+  whose messages cannot be read declares nothing here. Minor (0301).
+
 ## v0.44.4 - 2026-11-14
 
 - **A copy that does not build names what the change took away.** The row that reverts a change reverts
