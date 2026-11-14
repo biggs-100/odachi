@@ -1761,7 +1761,7 @@ func (r *runner) nextSession() domaindoctor.Check {
 	if err != nil {
 		return domaindoctor.Broken(domaindoctor.CheckNextSession, oneLine(err.Error()), "check the permissions of docs")
 	}
-	return domaindoctor.NextSession(newest, content, exists)
+	return domaindoctor.NextSession(newest, content, exists, tasks.Totals(all))
 }
 
 // environment is the check that explains a proof failing for a reason nobody can

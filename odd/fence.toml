@@ -862,3 +862,41 @@ deps  = []
 # not   = "no se borra una linea entera por numero: la cadena es lo que se quita, y el archivo tiene que seguir siendo Go valido"
 # paths = []
 # deps  = []
+
+# This non-goal protects the measurements this project already published: a
+# measurement is evidence of a question that was asked once, and rewriting it
+# after the fact edits the exam instead of taking it again.
+[[rule]]
+not   = "no se reescribe ninguna medicion ya publicada: docs/skill-evaluation.md y docs/review-research.md quedan como estan"
+paths = ["docs/skill-evaluation.md", "docs/review-research.md"]
+deps  = []
+
+# This non-goal has no paths yet:
+#   no se corre ninguna medicion en esta feature: se escribe la forma, no un dato nuevo
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no se corre ninguna medicion en esta feature: se escribe la forma, no un dato nuevo"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no entra un verbo ni un flag nuevos: check 14 lee el archivo que ya existe
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no entra un verbo ni un flag nuevos: check 14 lee el archivo que ya existe"
+# paths = []
+# deps  = []
+
+# This non-goal has no paths yet:
+#   no cambia lo que summary imprime: la misma linea, un lector mas
+# A rule protects files: write what it must keep out of the tree, then
+# remove the '#' in front of the four lines below.
+#
+# [[rule]]
+# not   = "no cambia lo que summary imprime: la misma linea, un lector mas"
+# paths = []
+# deps  = []

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // fakeFiles is the disk in memory: it lists directories and reads files, which
@@ -222,5 +223,51 @@ func TestFeatureSelectsByNumber(t *testing.T) {
 	// A negative number is unknown, not a way to ask for the default.
 	if _, err := tasks.Feature(files, "raiz", -1); err == nil || !strings.Contains(err.Error(), "0001-turnos") {
 		t.Errorf("Feature(-1) = %v, want the numbers that exist", err)
+	}
+}
+
+// TestTotalsIsTheOneLine: `summary` prints this line and `doctor` compares it
+// with the one docs/next-session.md cites. Two renderers would be two spellings,
+// and the comparison would fail on a file that is right.
+//
+// The step count keeps the spelling the report always had -"1 steps done of 1"-
+// because this feature moved the renderer; making the singular read well is a
+// wording change, and a wording change lands with its own reason.
+//
+// What this does not prove: that the note quotes it. The check does that, and a
+// total nobody copies is a line in a report.
+func TestTotalsIsTheOneLine(t *testing.T) {
+	cases := []struct {
+		name string
+		docs []tasks.Document
+		want string
+	}{
+		{
+			name: "one feature says the singulars",
+			docs: []tasks.Document{{Doc: taskdoc.TaskDoc{
+				Steps:   []taskdoc.Step{{ID: "T1", Done: true}},
+				History: []string{`L1 · PREGUNTA P1 · "¿se puede cancelar?"`},
+			}}},
+			want: "total: 1 feature · 1 steps done of 1 · 1 open question",
+		},
+		{
+			name: "several features say the plurals",
+			docs: []tasks.Document{
+				{Doc: taskdoc.TaskDoc{
+					Steps:   []taskdoc.Step{{ID: "T1", Done: true}, {ID: "T2"}},
+					History: []string{`L1 · PREGUNTA P1 · "¿y esto?"`},
+				}},
+				{Doc: taskdoc.TaskDoc{Steps: []taskdoc.Step{{ID: "T1"}}}},
+			},
+			want: "total: 2 features · 1 steps done of 3 · 1 open question",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tasks.Totals(tc.docs); got != tc.want {
+				t.Errorf("Totals = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }

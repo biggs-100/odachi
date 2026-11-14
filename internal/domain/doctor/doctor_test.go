@@ -25,8 +25,16 @@ func TestEveryCheckHasATitle(t *testing.T) {
 
 // A file that names an older feature is a session that ended two releases ago:
 // the check says which number is missing, because that is the only thing the
-// human has to write.
+// human has to write. A file that names the newest feature and quotes the totals
+// is a handover whose numbers came from the tool.
+//
+// The two questions live in one check because they are one file: a note that
+// names the right feature and claims a count nobody measured is exactly the file
+// that passed twice while a human caught it (0298).
 func TestTheNextSessionLineSaysTheFeatureThatIsMissing(t *testing.T) {
+	const totals = "total: 146 features · 180 steps done of 200 · 0 open questions"
+	const stale = "total: 143 features · 170 steps done of 190 · 0 open questions"
+
 	cases := []struct {
 		name    string
 		check   Check
@@ -34,46 +42,64 @@ func TestTheNextSessionLineSaysTheFeatureThatIsMissing(t *testing.T) {
 		details []string
 	}{
 		{
-			name:    "the file names the newest feature",
-			check:   NextSession(146, "written at the close of 0146", true),
+			name:    "the file names the newest feature and quotes the totals",
+			check:   NextSession(146, "written at the close of 0146\n\n"+totals+"\n", true, totals),
 			status:  StatusOK,
-			details: []string{"0146"},
+			details: []string{"0146", "quotes the totals"},
 		},
 		{
 			name:    "the file names an older one",
-			check:   NextSession(146, "written at the close of 0143", true),
+			check:   NextSession(146, "written at the close of 0143\n"+totals, true, totals),
 			status:  StatusWarning,
 			details: []string{"0146"},
 		},
 		{
 			name:    "a bare year is not a feature",
-			check:   NextSession(146, "written in 2026, at the close of 0146", true),
+			check:   NextSession(146, "written in 2026, at the close of 0146\n"+totals, true, totals),
 			status:  StatusOK,
 			details: []string{"0146"},
 		},
 		{
 			name:    "the note points at the next feature",
-			check:   NextSession(146, "close of 0143, next up: 0147", true),
+			check:   NextSession(146, "close of 0143, next up: 0147\n"+totals, true, totals),
 			status:  StatusWarning,
 			details: []string{"0146"},
 		},
 		{
 			name:    "the project keeps no file",
-			check:   NextSession(146, "", false),
+			check:   NextSession(146, "", false, totals),
 			status:  StatusOK,
 			details: []string{"docs/next-session.md"},
 		},
 		{
 			name:    "the file has no feature in it",
-			check:   NextSession(146, "nothing happened", true),
+			check:   NextSession(146, "nothing happened\n"+totals, true, totals),
 			status:  StatusWarning,
 			details: []string{"0146"},
 		},
 		{
 			name:    "there is no feature yet",
-			check:   NextSession(0, "", false),
+			check:   NextSession(0, "", false, totals),
 			status:  StatusOK,
 			details: []string{"docs/next-session.md"},
+		},
+		{
+			name:    "the file names the feature and claims no totals",
+			check:   NextSession(146, "written at the close of 0146", true, totals),
+			status:  StatusWarning,
+			details: []string{"0146", "quotes no totals", totals},
+		},
+		{
+			name:    "the file quotes a total the tool does not count",
+			check:   NextSession(146, "written at the close of 0146\n"+stale, true, totals),
+			status:  StatusWarning,
+			details: []string{stale, totals},
+		},
+		{
+			name:    "one of the quoted totals is the counted one",
+			check:   NextSession(146, "written at the close of 0146\n"+stale+"\n\n"+totals, true, totals),
+			status:  StatusOK,
+			details: []string{"0146"},
 		},
 	}
 

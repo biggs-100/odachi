@@ -243,7 +243,7 @@ func title(number int) string {
 	case CheckLeftovers:
 		return "no folder from an older release"
 	case CheckNextSession:
-		return "the next session names the newest feature"
+		return "the next session names the newest feature and its totals"
 	case CheckEnvironment:
 		return "the environment a command inherits"
 	default:
@@ -312,16 +312,20 @@ func PathFix(exe string) string {
 }
 
 // NextSession is check 14: does the file a session leaves name the feature the
-// project is on? It asks one question and nothing else: a note that names the
-// newest feature is current, and a note that does not is stale. Reading the
-// highest number a note mentions answers a different question -a bare year is
-// four digits too- and a check that cannot tell 2026 from 0146 warns forever on
-// a note that is right.
+// project is on, and does it quote the totals the tool counts? It asks two
+// questions of one file. The first is a name: a note that names the newest
+// feature is current, and a note that does not is stale. The second is a number:
+// the note pastes the line `odachi summary` prints, so the count a handover
+// claims comes from the tool or the file cannot claim it (0298).
+//
+// Reading the highest number a note mentions answers a different question -a bare
+// year is four digits too- and a check that cannot tell 2026 from 0146 warns
+// forever on a note that is right.
 //
 // A project that keeps no such file is ok, never a warning: the convention is
 // the project's, and the check watches the file once it exists. So is a project
 // with no task document yet - there is nothing a session could name.
-func NextSession(feature int, content string, exists bool) Check {
+func NextSession(feature int, content string, exists bool, totals string) Check {
 	if feature == 0 {
 		return OK(CheckNextSession, "there is no feature yet, so there is nothing docs/next-session.md has to name")
 	}
@@ -330,10 +334,38 @@ func NextSession(feature int, content string, exists bool) Check {
 		return OK(CheckNextSession, "there is no docs/next-session.md, and the newest feature is "+want+": a project keeps its session where it chooses")
 	}
 
-	if NamesFeature(content, feature) {
-		return OK(CheckNextSession, "docs/next-session.md names "+want+", the newest feature")
+	if !NamesFeature(content, feature) {
+		return Warning(CheckNextSession, "docs/next-session.md does not name "+want+", the newest feature")
 	}
-	return Warning(CheckNextSession, "docs/next-session.md does not name "+want+", the newest feature")
+	claims := totalsClaims(content)
+	for _, claim := range claims {
+		if claim == strings.TrimSpace(totals) {
+			return OK(CheckNextSession, "docs/next-session.md names "+want+" and quotes the totals the tool counts")
+		}
+	}
+	if len(claims) > 0 {
+		return Warning(CheckNextSession, "docs/next-session.md quotes \""+claims[0]+"\", and the tool counts \""+totals+"\"")
+	}
+	return Warning(CheckNextSession, "docs/next-session.md names "+want+" but quotes no totals line; paste the one odachi summary prints: "+totals)
+}
+
+// totalsPrefix is the one line a handover quotes: the totals line `odachi
+// summary` prints. A claim is recognized by its own prefix and nothing else, so a
+// number in a sentence stays a sentence (0298).
+const totalsPrefix = "total: "
+
+// totalsClaims returns every totals line the note carries, trimmed. A note that
+// quotes its totals twice is a note with a history, and one of them being the
+// counted line is enough: the question is whether the file can show the number
+// the tool has, not whether it kept only that one.
+func totalsClaims(content string) []string {
+	var claims []string
+	for _, line := range strings.Split(content, "\n") {
+		if trimmed := strings.TrimSpace(line); strings.HasPrefix(trimmed, totalsPrefix) {
+			claims = append(claims, trimmed)
+		}
+	}
+	return claims
 }
 
 // Environment answers what this process hands to the commands it runs. A child

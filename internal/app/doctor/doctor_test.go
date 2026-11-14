@@ -1680,11 +1680,12 @@ func TestTheSessionFileThatNamesAnOlderFeatureIsAWarning(t *testing.T) {
 }
 
 // TestTheSessionFileThatNamesTheNewestFeatureIsClean: the same project, the file
-// rewritten at the close of the feature it names.
+// rewritten at the close of the feature it names, quoting the line `odachi
+// summary` prints for this tree (0298).
 func TestTheSessionFileThatNamesTheNewestFeatureIsClean(t *testing.T) {
 	files := configured().
 		put("odd/tasks/0146-the-block-closes.md", sessionDoc("0146", "the-block-closes")).
-		put("docs/next-session.md", "written at the close of 0146, on v0.11.86\n")
+		put("docs/next-session.md", "written at the close of 0146, on v0.11.86\n\ntotal: 1 feature · 0 steps done of 0 · 0 open questions\n")
 
 	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
 
@@ -1692,8 +1693,33 @@ func TestTheSessionFileThatNamesTheNewestFeatureIsClean(t *testing.T) {
 	if got.Status != domaindoctor.StatusOK {
 		t.Fatalf("a current session file is ok: %s", domaindoctor.Line(got))
 	}
-	if !strings.Contains(got.Detail, "0146") {
-		t.Fatalf("the line must name the feature it read, got %q", got.Detail)
+	for _, want := range []string{"0146", "quotes the totals"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("the line must say %q, got %q", want, got.Detail)
+		}
+	}
+}
+
+// TestAHandoverThatQuotesAnotherCountIsAWarning: the seam that matters is the
+// line the check hands the domain. A file naming the right feature and quoting a
+// count this tree does not have is the file that passed twice while a human
+// caught it, and the answer names both lines so the rewrite is a copy.
+func TestAHandoverThatQuotesAnotherCountIsAWarning(t *testing.T) {
+	const stale = "total: 3 features · 40 steps done of 52 · 1 open question"
+	files := configured().
+		put("odd/tasks/0146-the-block-closes.md", sessionDoc("0146", "the-block-closes")).
+		put("docs/next-session.md", "written at the close of 0146\n\n"+stale+"\n")
+
+	result := run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi")
+
+	got := checkOf(t, result, domaindoctor.CheckNextSession)
+	if got.Status != domaindoctor.StatusWarning {
+		t.Fatalf("a total the tool does not count must warn: %s", domaindoctor.Line(got))
+	}
+	for _, want := range []string{stale, "total: 1 feature · 0 steps done of 0 · 0 open questions"} {
+		if !strings.Contains(got.Detail, want) {
+			t.Fatalf("the line must carry %q, got %q", want, got.Detail)
+		}
 	}
 }
 
