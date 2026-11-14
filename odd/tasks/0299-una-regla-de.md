@@ -15,7 +15,7 @@ R1 · "una regla de la cerca protege archivos: lo que no nombra archivos se qued
 ## Steps
 - [x] T1 · el render escribe reglas y nada mas, y el ejemplo de la cerca vacia se queda   R1 · route:inline · tree:2f0a04f02bdefc18eb536337648263c4edf3406a
 - [x] T2 · start cuenta las plantillas en una linea en vez de una por non-goal   R1 · route:inline · tree:2f0a04f02bdefc18eb536337648263c4edf3406a
-- [ ] T3 · la cerca de este repo queda sin plantillas: la segunda corrida de start la poda   R1 · route:inline
+- [x] T3 · la cerca de este repo queda sin plantillas: la segunda corrida de start la poda   R1 · route:inline · tree:7b3d4ae2821f27da003b5f7af37206ffdc0c0a6d
 - [ ] T4 · el changelog nombra 0299 bajo Unreleased, patch   R1 · route:inline
 
 ## History
