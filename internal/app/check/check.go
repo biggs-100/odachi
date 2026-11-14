@@ -2139,8 +2139,14 @@ func (r *runner) undoRow(state *gate.State, feature *tasks.Document, proofPath s
 		evidence.Verdict = undone.Unknown
 		evidence.Note = fmt.Sprintf("the command did not finish in %ds", r.opts.TimeoutSeconds)
 	default:
-		evidence.Verdict = undone.Classify(code, evidence.Output)
-		if evidence.Verdict == undone.Unknown {
+		verdict, name := undone.Classify(code, evidence.Output, undone.AddedNames(diff))
+		evidence.Verdict = verdict
+		switch {
+		case name != "":
+			// The revert took a symbol away and the tests that stayed behind named
+			// it: that is the evidence, and the note says which name it was (0300).
+			evidence.Note = "the copy did not build, and it names " + name + ": the change's own tests notice the revert"
+		case verdict == undone.Unknown:
 			evidence.Note = "the copy did not build"
 		}
 	}
