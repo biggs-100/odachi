@@ -15,9 +15,8 @@ func TestRoundTripKeepsEveryRule(t *testing.T) {
 	cases := []struct {
 		name  string
 		rules []fence.Rule
-		loose []string
 	}{
-		{name: "no rules and nothing loose"},
+		{name: "no rules at all"},
 		{
 			name:  "one rule",
 			rules: []fence.Rule{{Not: "no se toca el fixture", Paths: []string{"internal/probe/testdata/**"}}},
@@ -31,15 +30,14 @@ func TestRoundTripKeepsEveryRule(t *testing.T) {
 			}},
 		},
 		{
-			name:  "a template nobody gave paths",
+			name:  "a rule a human wrote",
 			rules: []fence.Rule{{Not: "no hay migraciones", Paths: []string{"internal/db/migrations/**"}}},
-			loose: []string{"no se toca el esquema: la migración va en otra feature"},
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got, err := fencetoml.Decode([]byte(fencetoml.Render(c.rules, c.loose)))
+			got, err := fencetoml.Decode([]byte(fencetoml.Render(c.rules)))
 			if err != nil {
 				t.Fatalf("Decode(Render(rules)) error: %v", err)
 			}
@@ -74,11 +72,32 @@ func TestDecodeRejectsAFileItCannotRead(t *testing.T) {
 // TestRenderTeachesTheFenceWithNothingToWrite: an empty file teaches nothing, so
 // the run that chose no non-goals writes what the fence is for.
 func TestRenderTeachesTheFenceWithNothingToWrite(t *testing.T) {
-	got := fencetoml.Render(nil, nil)
+	got := fencetoml.Render(nil)
 	if !strings.Contains(got, "Empty on purpose") {
 		t.Errorf("the empty fence does not explain itself:\n%s", got)
 	}
 	if _, err := fencetoml.Decode([]byte(got)); err != nil {
 		t.Errorf("the teaching text does not decode: %v", err)
+	}
+}
+
+// TestRenderWritesRulesAndNoComment: the fence holds the rules somebody gave paths
+// for and nothing else. A phrase that names no path is not the renderer's business:
+// it lives in the brief, and writing it here as a template made the file ask the
+// same question on every run -ninety-one times in this repository, before the run
+// said anything useful- (0299).
+func TestRenderWritesRulesAndNoComment(t *testing.T) {
+	got := fencetoml.Render([]fence.Rule{
+		{Not: "no se toca el fixture", Paths: []string{"internal/probe/testdata/**"}},
+		{Not: "no hay migraciones", Paths: []string{"internal/db/migrations/**"}},
+	})
+
+	for _, line := range strings.Split(got, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			t.Errorf("the fence carries a comment beside its rules: %q\n%s", line, got)
+		}
+	}
+	if strings.Count(got, "[[rule]]") != 2 {
+		t.Errorf("the fence does not carry its two rules:\n%s", got)
 	}
 }

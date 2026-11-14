@@ -199,7 +199,7 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 	if problem := r.refreshVoice(); problem != nil {
 		return *problem
 	}
-	if problem := r.put(fenceFile, []byte(fencetoml.Render(rules, loose))); problem != nil {
+	if problem := r.put(fenceFile, []byte(fencetoml.Render(rules))); problem != nil {
 		return *problem
 	}
 
@@ -244,12 +244,15 @@ func (r *runner) writeArtifacts(in artifactInput) Result {
 		}
 		lines = append(lines, line)
 	}
-	for _, text := range loose {
-		lines = append(lines, fmt.Sprintf(
-			"the non-goal %q came as free text: a rule protects files, and a phrase names none, so %s carries it as a template; write the paths it must keep out and remove the '#' in front of the block",
-			text, filepath.ToSlash(fenceFile)))
-	}
 	if len(loose) > 0 {
+		// One sentence for all of them: the brief already carries each phrase
+		// verbatim, and a line per phrase said the same warning ninety-one times
+		// in this repository before the run said anything useful (0299).
+		lines = append(lines,
+			"the fence protects files, so what names no paths stays in "+briefFile+": "+
+				tasks.Plural(len(loose), "non-goal", "non-goals"))
+	}
+	if len(rules) > 0 {
 		lines = append(lines, "to prove a rule works: touch a path it protects and run odachi check - it must refuse")
 	}
 	if skipped, err := tasks.Skipped(r.files, r.opts.Dir); err == nil {

@@ -8,6 +8,17 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A fence rule protects files, and the rest of the sentence stays in the brief.** Opening a feature
+  used to print one warning per non-goal the brief had ever carried and write each of them into
+  `odd/fence.toml` as a nine-line commented template: this repository reached ninety-one templates,
+  939 lines, and ninety-one lines of roll call before a run said anything useful. A phrase that names
+  no path is not a rule and not a question for the file: the brief already carries it verbatim, so the
+  fence now holds the rules somebody gave paths for and nothing else, and the run says one line with
+  the count and where those non-goals live. The empty-fence example stays: a project that protects
+  nothing still has to learn the shape. Patch (0299).
+
 ## v0.44.2 - 2026-11-14
 
 - **A measurement has a shape, and a handover cites the tool that counts it.** Any number this project
