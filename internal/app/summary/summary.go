@@ -75,7 +75,6 @@ func Run(opts Options, files Files) Result {
 	}
 
 	lines := make([]string, 0, len(docs)*4+2)
-	var totalDone, totalSteps, totalOpen int
 
 	for i, doc := range docs {
 		if i > 0 {
@@ -84,12 +83,9 @@ func Run(opts Options, files Files) Result {
 
 		done, steps := doc.Doc.Progress()
 		open := len(doc.Doc.OpenQuestions())
-		totalDone += done
-		totalSteps += steps
-		totalOpen += open
 
 		lines = append(lines, fmt.Sprintf("%04d-%s · steps: %d of %d · %s",
-			doc.Number, doc.Slug, done, steps, plural(open, "open question", "open questions")))
+			doc.Number, doc.Slug, done, steps, tasks.Plural(open, "open question", "open questions")))
 		lines = append(lines, "  "+requirementLine(doc.Doc))
 		lines = append(lines, "  history:")
 
@@ -102,9 +98,7 @@ func Run(opts Options, files Files) Result {
 		}
 	}
 
-	totals := fmt.Sprintf("total: %s · %d steps done of %d · %s",
-		plural(len(docs), "feature", "features"), totalDone, totalSteps,
-		plural(totalOpen, "open question", "open questions"))
+	totals := tasks.Totals(docs)
 	lines = append(lines, "", totals)
 	if line := tasks.SkippedLine(skipped); line != "" {
 		lines = append(lines, line)
@@ -134,14 +128,6 @@ func tail(lines []string, n int) []string {
 		return lines
 	}
 	return lines[len(lines)-n:]
-}
-
-// plural renders "1 open question" and "2 open questions".
-func plural(n int, singular, many string) string {
-	if n == 1 {
-		return "1 " + singular
-	}
-	return fmt.Sprintf("%d %s", n, many)
 }
 
 // oneLine keeps every message to a single line, whatever an adapter said.

@@ -217,6 +217,33 @@ func NotFound(docs []Document, number int) string {
 	return fmt.Sprintf("there is no feature %04d in %s; the ones odachi reads are %s", number, Dir, fewNames(names))
 }
 
+// Totals is the one line that counts the project: how many features, how many
+// steps are done of how many, and how many questions wait for an answer. It is
+// rendered here because `summary` prints it and `doctor` compares it with the
+// line a handover cites: two renderers would be two spellings, and the second
+// would warn about a file that is right (0298).
+func Totals(docs []Document) string {
+	done, steps, open := 0, 0, 0
+	for _, doc := range docs {
+		d, s := doc.Doc.Progress()
+		done += d
+		steps += s
+		open += len(doc.Doc.OpenQuestions())
+	}
+	return fmt.Sprintf("total: %s · %d steps done of %d · %s",
+		Plural(len(docs), "feature", "features"), done, steps,
+		Plural(open, "open question", "open questions"))
+}
+
+// Plural renders "1 open question" and "2 open questions": one spelling of the
+// rule, so a report and a check cannot count the same way differently.
+func Plural(n int, singular, many string) string {
+	if n == 1 {
+		return "1 " + singular
+	}
+	return fmt.Sprintf("%d %s", n, many)
+}
+
 // parseName reads NNNN-<slug>.md. Anything else in the directory — a backup, a
 // note, a document the human named by hand — is housekeeping, not a feature.
 func parseName(name string) (number int, slug string, ok bool) {

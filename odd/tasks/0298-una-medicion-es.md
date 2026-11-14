@@ -15,7 +15,7 @@ R1 · "una medicion es un documento con forma escrita antes de correr (criterio 
 - ## Unreleased names it, patch (0298)
 
 ## Steps
-- [ ] T1 · el skill measure: las cinco secciones, su limite y el registro al dia   R1 · route:inline
+- [x] T1 · el skill measure: las cinco secciones, su limite y el registro al dia   R1 · route:inline · tree:d85e1d7992d54dc161d559a6603505738c62bd7a
 - [ ] T2 · una sola funcion rinde la linea de totales, y summary la imprime igual   R1 · route:inline
 - [ ] T3 · check 14 recalcula la linea que el archivo cita y nombra las dos cuando difieren   R1 · route:inline
 - [ ] T4 · docs/next-session.md cita la linea del tool y doctor queda limpio   R1 · route:inline
