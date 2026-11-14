@@ -1604,10 +1604,7 @@ func TestStartCountsThePhrasesInsteadOfRepeatingThem(t *testing.T) {
 			t.Errorf("the run repeats %q instead of counting it:\n%s", phrase, output)
 		}
 	}
-	if !strings.Contains(output, "2 non-goals") {
-		t.Errorf("the run does not count the non-goals that name no paths:\n%s", output)
-	}
-	if !strings.Contains(output, "brief.md") {
-		t.Errorf("the run does not say where those non-goals live:\n%s", output)
+	if !strings.Contains(output, "the fence protects files, so what names no paths stays in brief.md: 2 non-goals") {
+		t.Errorf("the run does not say where the non-goals live, with the count:\n%s", output)
 	}
 }
