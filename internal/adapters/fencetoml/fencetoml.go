@@ -46,11 +46,14 @@ func Decode(data []byte) ([]fence.Rule, error) {
 	return rules, nil
 }
 
-// Render writes the fence in the canonical TOML shape: one [[rule]] per rule,
-// one key per line, and, for every non-goal that arrived as a phrase, the
-// commented block that turns it into one when the human knows the paths.
-func Render(rules []fence.Rule, loose []string) string {
-	if len(rules) == 0 && len(loose) == 0 {
+// Render writes the fence in the canonical TOML shape: one [[rule]] per rule and
+// one key per line. A non-goal that arrived as a phrase is not written at all: the
+// brief already carries the sentence, and a commented block beside the rules was
+// the file asking the same question on every run -the reason this project's fence
+// held ninety-one templates and said ninety-one sentences before it said anything
+// useful (0299)-.
+func Render(rules []fence.Rule) string {
+	if len(rules) == 0 {
 		// An empty file teaches nothing. The fence is the mechanism that keeps
 		// scope small, so when the human chose no exclusion the file explains
 		// what it is for and what a rule looks like.
@@ -76,23 +79,6 @@ func Render(rules []fence.Rule, loose []string) string {
 		fmt.Fprintf(&out, "%-5s = %s\n", "not", strconv.Quote(rule.Not))
 		fmt.Fprintf(&out, "%-5s = %s\n", "paths", quoteList(rule.Paths))
 		fmt.Fprintf(&out, "%-5s = %s\n", "deps", quoteList(rule.Deps))
-	}
-
-	for _, text := range loose {
-		if out.Len() > 0 {
-			out.WriteString("\n")
-		}
-		// A comment, not a rule: this fence holds only what somebody gave paths
-		// for, and the absence of a path is a question, not a policy.
-		out.WriteString("# This non-goal has no paths yet:\n")
-		out.WriteString("#   " + text + "\n")
-		out.WriteString("# A rule protects files: write what it must keep out of the tree, then\n")
-		out.WriteString("# remove the '#' in front of the four lines below.\n")
-		out.WriteString("#\n")
-		out.WriteString("# [[rule]]\n")
-		fmt.Fprintf(&out, "# %-5s = %s\n", "not", strconv.Quote(text))
-		out.WriteString("# paths = []\n")
-		out.WriteString("# deps  = []\n")
 	}
 
 	return out.String()
