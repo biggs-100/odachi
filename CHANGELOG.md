@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.44.2 - 2026-11-14
 
 - **A measurement has a shape, and a handover cites the tool that counts it.** Any number this project
   takes now has a door: the new `measure` skill carries the criterion written **before** the run, the
