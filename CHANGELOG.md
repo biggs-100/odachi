@@ -8,6 +8,16 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A guard is proven by breaking it, and the run says what it must hear.** `odachi check --run` now
+  takes `--mutate <file>`, `--remove "<string>"` and `--expect "<text>"`: the row exports the tree,
+  takes the string out in the copy, runs the same command there, and requires a failure whose output
+  names what the run expected. The evidence is written to `proof/<feature>.mutated.txt` with the tree,
+  the file, the string, the expected text and the output. Three answers block -the suite stayed green,
+  it failed without naming the expected text, and the string was not in the file- and a copy that does
+  not build is a note, like the undo row's. Patch (0297).
+
 ## v0.44.0 - 2026-11-14
 
 - **A correction remembers what it corrected, and the chain has a bound.** A stored verdict did not
