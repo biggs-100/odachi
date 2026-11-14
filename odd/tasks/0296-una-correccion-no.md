@@ -13,7 +13,7 @@ R1 · "una correccion no se repite sin una razon: el veredicto recuerda a cual c
 - ## Unreleased names it, minor (0296)
 
 ## Steps
-- [ ] T1 · el veredicto guarda el arbol que corrige, y el esquema sube a 9   R1 · route:inline
+- [x] T1 · el veredicto guarda el arbol que corrige, y el esquema sube a 9   R1 · route:inline · tree:2140952936273ef44871f4f6aba9ff76931672cc
 - [ ] T2 · la cadena se camina: la tercera correccion se niega sin motivo, y con --because se guarda   R1 · route:inline
 - [ ] T3 · el changelog nombra 0296 bajo Unreleased, minor   R1 · route:inline
 
