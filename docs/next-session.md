@@ -1,6 +1,6 @@
 # Next session
 
-Written after 0291 to 0297, the three releases that carried them, and the study of gentle-shell that
+Written after 0291 to 0298, the three releases that carried them, and the study of gentle-shell that
 produced 0295 and 0297.
 
 ## Where the project is
@@ -9,8 +9,15 @@ produced 0295 and 0297.
   signed and attested, and the binary on this machine was installed from that release and reports
   `odachi 0.44.1`. Three releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296, and
   `v0.44.1` carried 0297.
-- `main` is at that merge, **295 features, 725 steps, 0 open questions** -read from `odachi summary`,
-  never typed-.
+- The branch `feat/0298-una-medicion` carries five commits over `1733e6c`, the merge this feature
+  started from, and it quotes the line the tool counts for the tree it closes:
+
+  ```
+  total: 296 features · 730 steps done of 730 · 0 open questions
+  ```
+
+  -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
+  and warns when the note quotes another count, so the number is never typed-.
 - **`schema.Current` is 9**: the verdict carries `corrects`, the refutation carries `declared_at`, and
   `agents.toml` and `odd/review.toml` share the counter. A binary at `v0.43.0` or older refuses a
   verdict written by this one and says "upgrade".
@@ -24,9 +31,10 @@ produced 0295 and 0297.
 - **A guard is proven by breaking it**: `check --run --mutate <file> --remove "<string>" --expect
   "<text>"` takes the string out in a copy, runs the command there, and requires a failure that names
   the expected text. The evidence goes to `proof/<feature>.mutated.txt`.
-- The fence keeps its five active rules; none protects `internal/domain/gate` since 0290.
-- `odachi doctor` is clean at v0.44.1: 15 checks, no problems **when this file names the newest
-  feature** -check 14 compares names, not claims, and that is the debt 0298 exists to close-.
+- The fence keeps its six active rules; none protects `internal/domain/gate` since 0290, and the
+  measurements this project published are protected since 0298.
+- `odachi doctor` was 15 checks with no problems at `v0.44.1`; since 0298 it also asks whether the
+  numbers in this file came from the tool.
 
 ## What shipped
 
@@ -45,28 +53,24 @@ produced 0295 and 0297.
   longer holds.
 - **0297, patch (v0.44.1).** A guard is proven by breaking it, and the row answers only the question it
   was asked. The first verdict named five rows and all five were answered.
+- **0298, no release yet.** A measurement has a shape: the new `measure` skill carries the criterion
+  before the run, the instrument, the verdict table, the excluded runs and what the data does not show.
+  And the handover stopped claiming numbers: it quotes the totals line `odachi summary` prints, check 14
+  recomputes it from the task documents, and a note with no such line is a warning instead of a pass.
 
-## The next feature: 0298, the measurement document
+## 0298: what it settled, and what it leaves
 
-Two debts meet here and they are the same debt.
+**The shape lives in a skill**, because the agent is who takes the number: `skills/measure/SKILL.md`
+names the five sections, the two sentences that keep a byte count from becoming a cost claim, and where
+the record goes -a document under `docs/`, named by its question-. The measurements this project already
+published are not rewritten; the fence protects them from here on.
 
-**The shape of a measurement.** Any number this project takes needs: the pass/fail criterion written
-**before** the run, a verdict table, the exact commands, the excluded runs with their reason, and a
-section on what the data does not show. The vocabulary comes from gentle-shell's reports: *"bytes are
-not tokens"*, *"instruction accounting is not a cost measurement"*. Without it, 0296 and 0297 have
-nowhere to prove they helped, and the next "diet" is a story.
-
-**The handover that claims numbers nobody measures.** `odachi doctor` check 14 compares a **name**: it
-asks whether `docs/next-session.md` names the newest feature, and today it would have passed a file that
-said 296 features where the tool says 295 -it did, twice, and a human caught it both times-. The fix is
-the same idea as the byte pin: the number in the file comes from the tool or the file cannot claim it.
-Options to settle: the doctor compares the counts it can read, or the handover cites a command and the
-doctor runs it.
-
-The two are one feature because the second is the first applied to this repository: a claim is evidence
-or it is a sentence.
-
-Neither needs a release on its own: documents and a doctor check, and both ride the release after them.
+**A claim is evidence or it is a sentence.** `docs/next-session.md` carries the line the tool counts, on
+its own line, prefixed `total: `; `odachi doctor` reads every such line and asks whether one of them is
+the line it computes. Two limits came with it: the line moves every time a step closes, so the note is a
+tree's claim and not a period's, and the note that lags its own close warns until it is rewritten; and the
+step count still says "1 steps done of 1", because this feature moved the renderer and an amount of
+wording is its own change.
 
 ## The limits to remember
 
