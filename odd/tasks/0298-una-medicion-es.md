@@ -23,3 +23,4 @@ R1 · "una medicion es un documento con forma escrita antes de correr (criterio 
 
 ## History
 L1 · "una medicion es un documento con forma escrita antes de correr (criterio de paso, tabla de veredictos, comandos exactos, corridas excluidas y lo que el dato no muestra) y el traspaso cita la linea que el tool cuenta en vez de afirmar un numero"
+L2 · OFICIO · "el skill measure se escribe a mano en skills/ y no con odachi skill new" (porque skill new escribe .agents/skills, que es la copia que un cliente lee en un proyecto adoptado; el payload de odachi vive en skills/<name>/SKILL.md y es el que embebe el binario, asi que crearlo en el otro lado dejaria el arbol con un skill que nadie embebe)
