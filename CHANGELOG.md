@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.44.0 - 2026-11-14
 
 - **A correction remembers what it corrected, and the chain has a bound.** A stored verdict did not
   say which verdict it completed: `--since` was an input to the run, and the file it wrote was
