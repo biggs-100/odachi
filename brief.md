@@ -565,3 +565,30 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0298 · una-medicion-es
+
+## What must exist
+- una medicion es un documento con forma escrita antes de correr (criterio de paso, tabla de veredictos, comandos exactos, corridas excluidas y lo que el dato no muestra) y el traspaso cita la linea que el tool cuenta en vez de afirmar un numero
+
+## Done when
+- odachi skills lista measure y el skill nombra las cinco secciones con lo que cada una prueba y su limite
+- SKILLS.md nombra measure con su trigger, y la prueba de embed encuentra las cinco secciones en el texto
+- odachi summary imprime la misma linea de totales que hoy, y una sola funcion la rinde para los dos lectores
+- odachi doctor compara la linea de totales que docs/next-session.md cita contra la que cuenta, y nombra las dos cuando difieren
+- si el archivo no cita una linea de totales, doctor avisa en vez de pasar
+- docs/next-session.md cita la linea del tool y doctor queda en 15 checks sin problemas
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0298)
+
+## Not included (first version)
+- no se reescribe ninguna medicion ya publicada: docs/skill-evaluation.md y docs/review-research.md quedan como estan
+- no se corre ninguna medicion en esta feature: se escribe la forma, no un dato nuevo
+- no entra un verbo ni un flag nuevos: check 14 lee el archivo que ya existe
+- no cambia lo que summary imprime: la misma linea, un lector mas
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: como se escribe una medicion que no miente.
