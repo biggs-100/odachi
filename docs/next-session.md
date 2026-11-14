@@ -8,7 +8,7 @@ produced 0295 and the plan behind 0297.
 - `v0.44.0` is published: annotated tag on `1ae4306` (the merge of release PR #591), sixteen assets
   signed and attested, and the binary on this machine was installed from that release -not built by
   hand- and reports `odachi 0.44.0`.
-- `main` is at that merge, 296 features, 727 steps, 0 open questions.
+- `main` is at that merge, 294 features, 722 steps, 0 open questions.
 - **`schema.Current` is 9**: the verdict carries `corrects`, the refutation carries `declared_at`, and
   `agents.toml` and `odd/review.toml` share the same counter. A binary at `v0.43.0` or older refuses a
   verdict written by this one and says "upgrade": that is what the minor bought, and it is the promise
