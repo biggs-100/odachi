@@ -1,19 +1,19 @@
 # Next session
 
-Written after 0291 to 0299, the five releases that carried them, and the study of gentle-shell that
+Written after 0291 to 0300, the six releases that carried them, and the study of gentle-shell that
 produced 0295 and 0297.
 
 ## Where the project is
 
-- `v0.44.3` is published: annotated tag on `f6494df` (the merge of release PR #601), sixteen assets
+- `v0.44.4` is published: annotated tag on `4b617d5` (the merge of release PR #604), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.44.3`. Five releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
-  `v0.44.1` carried 0297, `v0.44.2` carried 0298, and `v0.44.3` carried 0299.
-- `main` is at that merge. 0299 landed in PR #600 -five commits over `c653ba3`-, and the release PR
+  `odachi 0.44.4`. Six releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
+  `v0.44.1` carried 0297, `v0.44.2` carried 0298, `v0.44.3` carried 0299, and `v0.44.4` carried 0300.
+- `main` is at that merge. 0300 landed in PR #603 -five commits over `6aee47b`-, and the release PR
   renamed `Unreleased` after it. This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 297 features · 734 steps done of 734 · 0 open questions
+  total: 298 features · 738 steps done of 738 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -62,6 +62,23 @@ produced 0295 and 0297.
 - **0299, patch (v0.44.3).** A fence rule protects files, and the rest of the sentence stays in the
   brief. `odd/fence.toml` went from 939 lines to 29 -ninety-one templates to none, the same six rules-,
   and opening a feature says three lines instead of ninety-four.
+- **0300, patch (v0.44.4).** A copy that does not build names what the change took away: the row that
+  reverts a change answers `noticed` with the symbol the compiler named, instead of "could not be
+  judged" -which was the answer for the two features before it-.
+
+## 0300: what it settled, and what it leaves
+
+**A red is evidence when it names the change.** The row reverts production files and keeps the tests,
+so a change whose own tests call what it added leaves a copy that cannot compile. The names now come
+from the diff's added side, and only the compiler's diagnostics are read: the first version searched
+the whole output and this feature's own tree proved it too wide -it named a test that had failed in
+another package-. What blocks did not move: only a suite that stayed green.
+
+**A feature that changes the checker needs its own binary for its own evidence.** The close ran with
+the installed release, which predates the change, so its own undo row still said "could not be judged".
+The evidence was regenerated with `go run ./cmd/odachi check --run "go test ./..."` -the binary at the
+tree- and the stored file is what the gate reads afterwards. Expect this for any feature whose behavior
+is the tool's behavior.
 
 ## 0299: what it settled, and what it leaves
 
@@ -102,8 +119,7 @@ wording is its own change.
   proof exists for that tree.
 - **A document commit after a close leaves the local `check` red**, on purpose. CI regenerates its own
   proof from a clean checkout.
-- **The undo row answers three different things**: `the copy did not build`, `not owed: the change adds
-  no production behavior`, and a stored verdict for a suite that stayed green.
+- **The undo row answers four different things**: `noticed` with the symbol the compiler named (`the copy did not build, and it names X`, since 0300), `the copy did not build` for a failure that names nothing the change added, `not owed: the change adds no production behavior`, and `missed` for a suite that stayed green.
 - **A guard that passes the first time proves nothing.** Every new guard this session was verified by
   mutation, and two passed by luck before their fix.
 - **Evidence answers only its own question.** 0297's first verdict found a false green because the stored
