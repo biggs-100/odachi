@@ -29,7 +29,9 @@ const (
 	// and the upgrade is the same command either way.
 	//
 	// 8: the refutation declares its shape and keeps the refuter's time as a claim.
-	Current = 8
+	// 9: the verdict remembers the tree it corrects, so a chain of corrections can
+	// be counted.
+	Current = 9
 )
 
 // Read answers which schema a file with this value was written with. A value this

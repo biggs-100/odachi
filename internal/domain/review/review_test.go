@@ -850,3 +850,51 @@ func TestUncoveredIsTheCoverageArithmetic(t *testing.T) {
 		}
 	})
 }
+
+// TestASealedVerdictKeepsTheTreeItCorrects: a correction completed a verdict
+// without saying which one, so a chain of corrections was indistinguishable from a
+// first review and nothing could count the rounds (0296).
+func TestASealedVerdictKeepsTheTreeItCorrects(t *testing.T) {
+	t.Parallel()
+
+	sealed, err := review.Seal(review.Verdict{Reviewer: "agent", Corrects: otherTree}, tree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	if sealed.Corrects != otherTree {
+		t.Errorf("Corrects = %q, want %q", sealed.Corrects, otherTree)
+	}
+
+	parsed, err := review.Parse(review.Render(sealed))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if parsed.Corrects != otherTree {
+		t.Errorf("Corrects = %q after a round trip, want %q", parsed.Corrects, otherTree)
+	}
+}
+
+// TestASealedVerdictWithoutACorrectionGainsNoField: a first review corrects nothing,
+// and an empty field in every verdict would make the chain unreadable.
+func TestASealedVerdictWithoutACorrectionGainsNoField(t *testing.T) {
+	t.Parallel()
+
+	sealed, err := review.Seal(review.Verdict{Reviewer: "agent"}, tree, "HEAD", now)
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	if strings.Contains(string(review.Render(sealed)), "corrects") {
+		t.Errorf("a first review carries the field:\n%s", review.Render(sealed))
+	}
+}
+
+// TestSealRefusesACorrectionThatNamesNoTree: the field is a tree or nothing. A
+// sentence there would be believed by the walk that counts the chain, and the count
+// would be about a verdict nobody can open.
+func TestSealRefusesACorrectionThatNamesNoTree(t *testing.T) {
+	t.Parallel()
+
+	if _, err := review.Seal(review.Verdict{Reviewer: "agent", Corrects: "la anterior"}, tree, "HEAD", now); err == nil {
+		t.Fatal("Seal accepted a correction that names no tree")
+	}
+}

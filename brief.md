@@ -516,3 +516,27 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0296 · una-correccion-no
+
+## What must exist
+- una correccion no se repite sin una razon: el veredicto recuerda a cual corrige, y la tercera vuelta se niega salvo que el humano diga por que
+
+## Done when
+- un veredicto de correccion guarda el arbol del veredicto que corrige, y el esquema sube a 9
+- una tercera correccion en la misma cadena se niega con un mensaje que nombra la salida: --because con el motivo
+- con --because la tercera correccion se guarda y el motivo queda en la linea que el humano lee
+- una cadena de dos correcciones y el veredicto original siguen funcionando sin motivo
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, minor (0296)
+
+## Not included (first version)
+- no se comparan hallazgos entre veredictos: el tope es la profundidad de la cadena, y ese limite queda escrito
+- no se reescriben los veredictos ya guardados: conservan lo que traen
+- no cambia el costo de una revision ni el numero de tiradas
+- no se niega una correccion que el humano pide con motivo: la dispensa es la salida, no el silencio
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.

@@ -296,3 +296,122 @@ func TestACorrectionTurnsABlockerAboutMovedBytesIntoAFollowUp(t *testing.T) {
 		t.Errorf("the blocker still calls itself causal after the fix: %+v", *kept)
 	}
 }
+
+// TestACorrectionRemembersTheTreeItCompletes: the stored file says which verdict it
+// completed, so a chain of corrections can be counted instead of guessed. Without
+// it a third round looked exactly like the first (0296).
+func TestACorrectionRemembersTheTreeItCompletes(t *testing.T) {
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.changed = []string{"b.go"}
+	p.git.diff = "diff --git a/b.go b/b.go\n--- a/b.go\n+++ b/b.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
+	p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": gitBlob}
+	p.shell.output = `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`
+	p.files.files[storePath(correctedTree)] = []byte(verdictFor(t, correctedTree, "abc1234", []string{"reliability"},
+		domainreview.Pass{Path: "a.go", Lens: "reliability", Blob: gitBlob}))
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Since: correctedTree})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+
+	data, ok := p.files.files[storePath(currentTree)]
+	if !ok {
+		t.Fatalf("no verdict stored for the corrected tree")
+	}
+	stored, err := domainreview.Parse(data)
+	if err != nil {
+		t.Fatalf("the stored verdict does not parse: %v", err)
+	}
+	if stored.Corrects != correctedTree {
+		t.Errorf("corrects = %q, want the tree it completes %s", stored.Corrects, correctedTree)
+	}
+}
+
+// verdictCorrecting seals a verdict that says which one it completed: the link the
+// walk follows. A chain is built by hand because the store is keyed by tree.
+func verdictCorrecting(t *testing.T, tree, corrects string) string {
+	t.Helper()
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "before",
+		Lenses:   []string{"reliability"},
+		Corrects: corrects,
+	}, tree, "abc1234", now)
+	if err != nil {
+		t.Fatalf("sealing the predecessor: %v", err)
+	}
+	return string(domainreview.Render(sealed))
+}
+
+// correctionProject is a candidate that moved one file, with the predecessor the
+// run completes already in the store.
+func correctionProject(t *testing.T, predecessor string) *project {
+	t.Helper()
+
+	p := newProject()
+	p.host.model = "host/default"
+	p.git.changed = []string{"b.go"}
+	p.git.diff = "diff --git a/b.go b/b.go\n--- a/b.go\n+++ b/b.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
+	p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": gitBlob}
+	p.shell.output = `{"findings":[],"passes":[{"path":"b.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["b.go"]}}`
+	p.files.files[storePath(predecessor)] = []byte(verdictFor(t, predecessor, "abc1234", []string{"reliability"},
+		domainreview.Pass{Path: "a.go", Lens: "reliability", Blob: gitBlob}))
+	return p
+}
+
+// TestAThirdCorrectionIsRefusedWithoutAReason: a correction costs a paid review, and
+// a chain that keeps correcting is a loop nobody counted. The refusal names the tree,
+// the rounds it holds and the flag that continues (0296).
+func TestAThirdCorrectionIsRefusedWithoutAReason(t *testing.T) {
+	const first = "2222222222222222222222222222222222222222"
+	const second = "3333333333333333333333333333333333333333"
+
+	p := correctionProject(t, second)
+	p.files.files[storePath(first)] = []byte(verdictCorrecting(t, first, "4444444444444444444444444444444444444444"))
+	p.files.files[storePath(second)] = []byte(verdictCorrecting(t, second, first))
+
+	result := p.run(review.Options{Exec: "revisor --model {model}", Since: second})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want blocked for a third correction (%s)", result.Code, result.Message)
+	}
+	said := strings.Join(result.Lines, "\n") + result.Message
+	if !strings.Contains(said, "third correction") || !strings.Contains(said, "--because") {
+		t.Errorf("the refusal does not name what it is or the way out:\n%s", said)
+	}
+}
+
+// TestAThirdCorrectionIsAllowedWithAReason: the human's reason is the exit, and it is
+// written into the line the human reads -a waiver nobody can read is silence with
+// paperwork- (0296).
+func TestAThirdCorrectionIsAllowedWithAReason(t *testing.T) {
+	const first = "2222222222222222222222222222222222222222"
+	const second = "3333333333333333333333333333333333333333"
+
+	p := correctionProject(t, second)
+	p.files.files[storePath(first)] = []byte(verdictCorrecting(t, first, "4444444444444444444444444444444444444444"))
+	p.files.files[storePath(second)] = []byte(verdictCorrecting(t, second, first))
+
+	const why = "el blocker del pago sigue fallando despues de dos correcciones"
+	result := p.run(review.Options{Exec: "revisor --model {model}", Since: second, Because: why})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 with a reason (%s)", result.Code, result.Message)
+	}
+	if said := strings.Join(result.Lines, "\n"); !strings.Contains(said, why) {
+		t.Errorf("the run does not print the reason it was allowed by:\n%s", said)
+	}
+}
+
+// TestASecondCorrectionNeedsNoReason: two rounds are the budget the method asks for,
+// and demanding a reason there would make the waiver noise (0296).
+func TestASecondCorrectionNeedsNoReason(t *testing.T) {
+	const first = "2222222222222222222222222222222222222222"
+
+	p := correctionProject(t, first)
+	p.files.files[storePath(first)] = []byte(verdictCorrecting(t, first, "4444444444444444444444444444444444444444"))
+
+	if result := p.run(review.Options{Exec: "revisor --model {model}", Since: first}); result.Code != review.CodeOK {
+		t.Fatalf("the second correction = %d, want 0 (%s)", result.Code, result.Message)
+	}
+}

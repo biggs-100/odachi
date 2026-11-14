@@ -2139,6 +2139,14 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		if problem != nil {
 			return *problem
 		}
+		// Two corrections are the method's budget: one batch that answers every
+		// blocker, then one re-verification of what is left. A third round is a loop
+		// somebody has to own, and the human's reason is the only exit (0296).
+		if rounds := r.correctionRounds(predecessor); rounds >= 2 && strings.TrimSpace(r.opts.Because) == "" {
+			return blocked(fmt.Sprintf(
+				"this would be the third correction of %s and the chain already holds %d: a correction costs a paid review, and a third one needs a reason - run it again with --because \"<why>\"",
+				predecessor.Tree, rounds))
+		}
 		// The predecessor answers the paths that did not move. A row about bytes the
 		// fix changed is a receipt for bytes nobody judged, so it travels only when
 		// its blob still matches -the rule 0133 wrote for inheritance-, and a
@@ -2151,6 +2159,10 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		predecessor.Passes = passes
 		sealed = mergeVerdicts(predecessor, sealed)
 		sealed.Tree = tree
+		// The chain is the direct link: this verdict completes the predecessor,
+		// not the verdict the predecessor itself completed, so a reader can walk
+		// the rounds one file at a time (0296).
+		sealed.Corrects = predecessor.Tree
 		base := strings.TrimSpace(sealed.Base)
 		if base == "" {
 			base = r.correctionBase(predecessor)
@@ -2216,6 +2228,11 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	}
 	if corrected, problem := r.sinceVerdict(); problem == nil && strings.TrimSpace(corrected.Tree) != "" {
 		lines = append(lines, "completed the verdict of "+corrected.Tree)
+		// The reason a third correction was allowed is part of the record a human
+		// reads: a waiver nobody can see is silence with paperwork (0296).
+		if because := strings.TrimSpace(r.opts.Because); because != "" && r.correctionRounds(corrected) >= 2 {
+			lines = append(lines, "correction allowed by a reason: "+because)
+		}
 	}
 	if carried.findings+carried.passes > 0 {
 		lines = append(lines, fmt.Sprintf("carried from the store: %d potent finding(s) and %d potent pass(es) about unchanged bytes", carried.findings, carried.passes))
@@ -4300,4 +4317,21 @@ func blocked(message string) Result {
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
 	return strings.Join(strings.Fields(message), " ")
+}
+
+// correctionRounds counts the corrections the chain already holds, from the verdict
+// this run completes. A link the store no longer holds ends the walk: a pruned store
+// forgets old trees, and counting past a hole would invent rounds (0296).
+func (r *runner) correctionRounds(predecessor domain.Verdict) int {
+	rounds := 0
+	current := predecessor
+	for strings.TrimSpace(current.Corrects) != "" {
+		rounds++
+		next, problem := r.storedVerdict(current.Corrects)
+		if problem != nil || next == nil {
+			return rounds
+		}
+		current = *next
+	}
+	return rounds
 }
