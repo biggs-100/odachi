@@ -8,6 +8,17 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **A correction remembers what it corrected, and the chain has a bound.** A stored verdict did not
+  say which verdict it completed: `--since` was an input to the run, and the file it wrote was
+  indistinguishable from a first review. The verdict now carries `corrects`, and the schema moves to
+  9 -a field under the old number is the lie the number exists to announce-. With the link, the store
+  can be walked: a third correction is refused with the tree, the rounds the chain holds and the flag
+  that continues it, and `--because` is the exit -the reason is printed in the line a human reads,
+  because a waiver nobody can see is silence with paperwork-. A second correction needs no reason.
+  Minor (0296).
+
 ## v0.43.0 - 2026-11-13
 
 - **The gate's reasons are declared once, and the test walks them all.** The exact words of every

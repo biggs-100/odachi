@@ -14,7 +14,7 @@ R1 · "una correccion no se repite sin una razon: el veredicto recuerda a cual c
 
 ## Steps
 - [x] T1 · el veredicto guarda el arbol que corrige, y el esquema sube a 9   R1 · route:inline · tree:2140952936273ef44871f4f6aba9ff76931672cc
-- [ ] T2 · la cadena se camina: la tercera correccion se niega sin motivo, y con --because se guarda   R1 · route:inline
+- [x] T2 · la cadena se camina: la tercera correccion se niega sin motivo, y con --because se guarda   R1 · route:inline · tree:99ce095a3d485625892e523f44e58c07062efb1c
 - [ ] T3 · el changelog nombra 0296 bajo Unreleased, minor   R1 · route:inline
 
 ## History
