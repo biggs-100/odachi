@@ -664,3 +664,29 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0302 · el-payload-de
+
+## What must exist
+- el payload de odachi lleva la fundacion de Tauri v2 como skill propio: la puerta de proyecto de escritorio, con su profundidad en references y assets y su link a bootstrap en vez de a la otra skill
+
+## Done when
+- odachi skills lista tauri-foundation y skills --check pasa
+- el cuerpo son 60 lineas o menos y nombra sus cuatro piezas: layout del workspace, recetas de guard, el puente Rust y TS, y la verificacion de UI
+- el link relativo apunta a bootstrap, no a la otra skill de tu home
+- SKILLS.md regenerado y el pin de bytes subido con el numero que mide el test
+- docs/impact-map.md nombra la carpeta del payload
+- una prueba fija el trigger y las reglas que hacen util al skill
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0302)
+
+## Not included (first version)
+- no se traduce el texto: queda en ingles como el resto del payload
+- no se toca la copia de la skill en el home
+- no entra otro framework ni una version anterior de Tauri
+- no cambia nada de lo que bootstrap ya dice
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
