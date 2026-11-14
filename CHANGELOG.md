@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.44.3 - 2026-11-14
 
 - **A fence rule protects files, and the rest of the sentence stays in the brief.** Opening a feature
   used to print one warning per non-goal the brief had ever carried and write each of them into
