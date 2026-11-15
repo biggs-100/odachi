@@ -22,7 +22,8 @@ questions decide it: what isolation, how long, and what happens when it loses a 
   pending transfers never exceeds the balance"-. It is the only level where the
   database promises the result of some serial order, and it pays with retries.
 - A read that decides nothing is read-only: `SET TRANSACTION READ ONLY` stops an
-  accidental write and lets the planner pick a cheaper plan.
+  accidental write. It is a safety belt, not a performance hint: it does not change the
+  plan.
 
 ## The retry is the whole transaction
 

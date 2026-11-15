@@ -84,6 +84,24 @@ func TestDBCraftCountsWhatItShips(t *testing.T) {
 		t.Fatalf("db-craft carries %d references, and the map and the changelog say eight", references)
 	}
 
+	// The two sentences the review corrected, pinned so a rewrite cannot put the
+	// plausible version back: a read-only transaction is not a plan hint, and
+	// `row_security = off` fails a query instead of bypassing a policy (0311).
+	transactions := fileContent(t, "references/transactions.md")
+	if !strings.Contains(transactions, "not a performance hint") {
+		t.Error("transactions.md claims a read-only transaction changes the plan")
+	}
+	access := fileContent(t, "references/access.md")
+	if !strings.Contains(access, "**3. A policy broader than the tenant.**") {
+		t.Error("access.md does not state the third hazard as a policy broader than the tenant")
+	}
+	if !strings.Contains(access, "makes a query that would apply a policy fail") {
+		t.Error("access.md does not say what row_security = off does")
+	}
+	if strings.Contains(access, "row_security = off` setting ignore") {
+		t.Error("access.md lists row_security = off among the doors around the policy again")
+	}
+
 	data, err := os.ReadFile(filepath.Join("..", "docs", "impact-map.md"))
 	if err != nil {
 		t.Fatalf("read docs/impact-map.md: %v", err)
@@ -91,6 +109,19 @@ func TestDBCraftCountsWhatItShips(t *testing.T) {
 	if !strings.Contains(string(data), "`db-craft` ships eight references") {
 		t.Error("the impact map does not say db-craft ships eight references")
 	}
+}
+
+// fileContent is one reference of a skill, flattened to a single line so a phrase can
+// be searched across the wrapping.
+func fileContent(t *testing.T, path string) string {
+	t.Helper()
+	for _, file := range mustSkill(t, "db-craft").Files {
+		if file.Path == path {
+			return strings.Join(strings.Fields(string(file.Content)), " ")
+		}
+	}
+	t.Fatalf("db-craft does not carry %s", path)
+	return ""
 }
 
 // TestDataSendsTheSchemaToItsOwner: `data` decides what is kept; the schema and the

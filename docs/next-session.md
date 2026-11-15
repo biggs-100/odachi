@@ -5,17 +5,14 @@ Written after 0311 and `v0.45.5`.
 ## Where the project is
 
 - **0311 is open on `feat/0311-db-craft`, unmerged and unreleased.** `db-craft` is the catalog's fifth
-  door with depth: seven references (schema, migrations, transactions, indexes, queries, access,
-  operations) plus `the-failures.md`, the catalogue of twenty-eight mistakes. `data` keeps the decision
-  and sends the schema and the migration here.
+  door with depth: eight references (schema, migrations, transactions, indexes, queries, access,
+  operations and the catalogue of failures). `data` keeps the decision and sends the schema and the
+  migration here.
 - **v0.45.5 is published and installed**: tag on `65967dc`, sixteen assets signed and attested, and this
-  machine runs it. `arch-project`, the Tauri scaffold, the gentle-shell gaps and the direction layer are
-  in the home, at 24 of 24 matching.
-- `v0.45.4` is published: annotated tag on `0ed7d2e` (the merge of release PR #621), sixteen assets
-  signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.45.4`. `v0.45.3` carried 0305; this one carries 0306.
-- `main` is at that merge. 0306 landed in PR #620 and the release PR #621 renamed `Unreleased`. The
-  branch of the feature was deleted on merge, as every branch should be.
+  machine runs `odachi 0.45.5`. `arch-project`, the Tauri scaffold, the gentle-shell gaps and the direction
+  layer are in the home, at 24 of 24 matching. `v0.45.4` carried 0306 and `v0.45.3` carried 0305.
+- `main` is at the merge of the release PR #627, and the branch of the feature was deleted on merge, as
+  every branch should be.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
