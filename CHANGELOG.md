@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.45.5 - 2026-11-15
 
 - **`ui-craft` gains the decision it was missing.** Four references: `ai-native.md` (the surface a model
   is inside: streaming, tool calls, the three forms of generative UI, and approval before the
