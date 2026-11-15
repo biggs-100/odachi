@@ -7,6 +7,16 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **`motion-graphics` can draw a board, and it waits for the human's voice.** Two references the skill was
+  missing: `the-board.md` carries the hand-drawn look as a system -paper and ink, one accent per meaning
+  (blue is the way the argument goes, red a way that does not work, gray "not now"), the stroke seeded per
+  element so it does not vibrate between frames, the camera as the transition inside one argument, and
+  correction as the drama-, and `the-voice.md` makes the human's recording the clock: two turns, the script
+  they read and the take they send, the word timestamps as an instrument, and the cue on the stressed word
+  instead of the first frame of a sentence. No TTS. `motion-principles.md` gains the pan and zoom row the
+  transitions table was missing, and the impact map counts eight references. Patch (0306).
 
 ## v0.45.3 - 2026-11-14
 
