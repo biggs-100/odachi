@@ -63,7 +63,7 @@ Written after 0311 and `v0.45.5`.
   queries, access and operations, plus `the-failures.md` with twenty-eight mistakes; `data` hands the
   schema and the migration to it.
 
-- **0310, patch (unreleased).** `ui-craft` gained four references -`ai-native.md`, `art-direction.md`,
+- **0310, patch (v0.45.5).** `ui-craft` gained four references -`ai-native.md`, `art-direction.md`,
   `motion-identity.md`, `depth-and-material.md`-, the body rule that a screen has a direction chosen and
   named, and the OKLCH and fluid-scale rows in `the-numbers.md`.
 
