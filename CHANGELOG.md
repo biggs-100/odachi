@@ -8,6 +8,14 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The count says one step when there is one.** The totals line said "1 steps done of 1" for any project
+  with a single step: the report moved to one renderer in 0298 and kept the old spelling, because a
+  wording change lands with its own reason. It now says "1 step done of 1" and "750 steps done of 751",
+  and the line the handover quotes and the doctor recomputes come from the same renderer, so they move
+  together. Patch (0305).
+
 ## v0.45.2 - 2026-11-14
 
 - **The Tauri foundation skill is called `arch-tauri`.** The name says what it is -architecture- and what it
