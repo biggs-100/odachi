@@ -78,6 +78,7 @@ that arrives in 0.7 s say different things about what matters.
 | hard cut | wake up, a register change | unforgiving: a mismatch of position reads as a mistake |
 | slow dissolve | drift with me | slow; it spends 0.6-1.0 s of the piece |
 | wipe or push with a direction | the story moves that way | implies space, so the next scene must agree |
+| a pan or a zoom on one board | this is the same place, one step later | needs a board built before the camera moves; a cut is cheaper |
 | match cut on a shape | these two things are the same | the strongest and the most work |
 
 A transition chosen for variety rather than for meaning is the third tell: every scene ends the same

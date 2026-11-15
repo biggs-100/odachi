@@ -33,6 +33,9 @@ the motion column says what changes, not how it eases:
 The table is the contract with the renderer: every row has a start and an end, and the piece's length
 is the last end, not the sum of the entrances.
 
+When the voice is the human's, `the-voice.md` owns the clock: these times are written from the recording,
+never before it, and the beats take the unevenness of their pauses.
+
 ## The hook
 
 The first 1.5 s decide whether the rest is watched, and the feed shows them muted. Three hooks that
