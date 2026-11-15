@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.45.1 - 2026-11-14
 
 - **The catalog carries a Tauri v2 foundation.** A desktop project with a Rust core had no door here: the
   new 	auri-foundation skill names the boundary the framework keeps crossing -the domain crate never
