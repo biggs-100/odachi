@@ -24,7 +24,6 @@ with b-roll, footage editing or an avatar: `hyperframes` and `media-use` own tha
 - **The clock belongs to the renderer**: no wall clock, no unseeded random, no screen recording.
 - **Preview a still, then 3 s, then the render**; watch the MP4, not the preview.
 - **Fit the destination before rendering**: frame, safe zone, and a first frame that reads as a thumbnail.
-- **Say what you did not render or verify.** A frame you did not see is a guess.
 
 ## Decision gates
 
@@ -33,9 +32,11 @@ with b-roll, footage editing or an avatar: `hyperframes` and `media-use` own tha
 | a piece to plan: the one idea, the beats, the hook, the length | `references/the-piece.md` |
 | easing, durations, stagger, transitions, weight | `references/motion-principles.md` |
 | the piece looks machine-made and you need the tell and its fix | `references/the-ai-look.md` |
+| a hand-drawn board: whiteboard, sketch, an engineering explainer | `references/the-board.md` |
 | kinetic type, captions, numbers, reading speed | `references/type-in-motion.md` |
 | YouTube, Shorts or Reels: size, duration, safe zone, loop | `references/formats.md` |
 | building and rendering: determinism, HyperFrames, Remotion, the last pass | `references/the-render.md` |
+| the human records the voiceover: the script, the alignment, the retiming | `references/the-voice.md` |
 
 ## Output
 
@@ -46,9 +47,11 @@ The plan, the renderer, the format, the file that rendered, and what was not see
 - `references/the-piece.md` — the one idea, the beat sheet, the hook, the length and the ending.
 - `references/motion-principles.md` — easing, speed, stagger, choreography, transitions, weight.
 - `references/the-ai-look.md` — the tells a generated piece repeats, and the fix for each.
+- `references/the-board.md` — the hand-drawn board: paper, ink, accents, seeded strokes, the camera.
 - `references/type-in-motion.md` — kinetic type, reading speed, captions, numbers.
 - `references/formats.md` — 16:9 and 9:16, durations, safe zones, loop, first frame.
 - `references/the-render.md` — deterministic frames, HyperFrames, Remotion, the checklist.
+- `references/the-voice.md` — the human's recording as the clock, and the script they read.
 
 ## Assets
 
@@ -59,3 +62,4 @@ The plan, the renderer, the format, the file that rendered, and what was not see
 - Screen-record a browser in real time and call it a render.
 - Ship a piece you only watched in the preview.
 - Animate every element because it is there.
+- Synthesize a voiceover: the human records it, and the recording is the clock.
