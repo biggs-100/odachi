@@ -29,8 +29,12 @@ func TestUICraftIsARouter(t *testing.T) {
 	want := []string{
 		"SKILL.md",
 		"references/accessible-and-adaptive.md",
+		"references/ai-native.md",
+		"references/art-direction.md",
 		"references/browse-and-compare.md",
+		"references/depth-and-material.md",
 		"references/grouping-and-emphasis.md",
+		"references/motion-identity.md",
 		"references/motion.md",
 		"references/states-and-copy.md",
 		"references/task-and-content.md",

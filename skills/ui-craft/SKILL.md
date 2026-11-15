@@ -13,6 +13,7 @@ A screen, a landing, a dashboard, a form or a component is to be built or review
 
 - **Content first**: the real copy, the longest name, the biggest number, before any layout.
 - **One thing wins the screen**, and size, weight, colour and space carry the hierarchy in that order of cheapness.
+- **A screen has a direction, chosen and named**: three differ in strategy, one is taken, and its tradeoff is said in a sentence before the first file.
 - **Layout from the numbers**; breakpoints by content, never by device.
 - **Type**: a scale, two families at most, one display size that earns its weight.
 - **Colour**: one accent and a neutral ramp tinted with it; contrast measured, never estimated.
@@ -30,6 +31,10 @@ A screen, a landing, a dashboard, a form or a component is to be built or review
 | what the screen is for, and the words it uses | `references/task-and-content.md` |
 | an empty, loading, error or zero state, and its copy | `references/states-and-copy.md` |
 | a transition, a gesture or anything that moves | `references/motion.md` |
+| a model in the loop: answering, calling a tool, taking an action | `references/ai-native.md` |
+| the look of the whole thing: which direction, and what it costs | `references/art-direction.md` |
+| what the product's signature move is, and when it repeats | `references/motion-identity.md` |
+| a surface that floats, blurs or sits over content | `references/depth-and-material.md` |
 | the markup, the keyboard, or the screen narrowing | `references/accessible-and-adaptive.md` |
 | things that belong together, and what is allowed to lead | `references/grouping-and-emphasis.md` |
 | the last pass before calling it done | `references/the-read.md` |
@@ -46,6 +51,10 @@ The winner and why, the files changed, the five states covered, the contrast mea
 - `references/task-and-content.md` — the job the screen serves, the truthful content, the label that predicts.
 - `references/states-and-copy.md` — the six states, with the sentence each one says.
 - `references/motion.md` — when motion earns its place, and the timings that keep it calm.
+- `references/ai-native.md` — the surface a model is inside: streaming, tools, approval, generative UI.
+- `references/art-direction.md` — four axes, three directions, and the one the brief earns.
+- `references/motion-identity.md` — the one move the product is remembered by, and what it may carry.
+- `references/depth-and-material.md` — the four jobs of depth, and what translucency costs.
 - `references/accessible-and-adaptive.md` — the markup, the keyboard path, and what survives a narrow screen.
 - `references/grouping-and-emphasis.md` — proximity before containers, and the one thing allowed to lead.
 - `references/the-read.md` — the last pass: the winner, the states, the measured contrast, the worst content.

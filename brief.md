@@ -791,3 +791,31 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0310 · ui-craft-gana
+
+## What must exist
+- ui-craft gana el paso que le falta: direccion de arte, superficies de IA, motion con identidad y profundidad con funcion, para que el agente disene cosas de 2026 y no de 2020
+
+## Done when
+- ui-craft lleva cuatro references nuevas, cada una con su fila en ## Decision gates y su bullet en ## References
+- el cuerpo dice que una pantalla tiene una direccion elegida y nombrada, y sigue con 60 lineas o menos
+- ai-native cubre streaming, transparencia de la herramienta, aprobacion antes de lo irreversible, undo y las tres formas de generative UI
+- art-direction exige tres direcciones que difieran en estrategia, cada una con su compromiso declarado
+- motion-identity trata la interaccion firma y que puede cargar; depth-and-material da la version correcta del vidrio y su costo
+- the-numbers gana gama amplia y escala fluida
+- una prueba fija el ruteo de las cuatro y su contenido
+- docs/impact-map.md y el changelog nombran los cuatro
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0310)
+
+## Not included (first version)
+- no entra una direccion visual propia del catalogo: la casa no tiene estilo, ensena a elegir
+- no se tocan las references existentes salvo the-numbers
+- no se edita nada en gentle-shell ni en el home
+- no entran fuentes ni dependencias nuevas
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.

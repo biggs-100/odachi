@@ -1,15 +1,14 @@
 # Next session
 
-Written after 0309 and `v0.45.4`.
+Written after 0310 and `v0.45.4`.
 
 ## Where the project is
 
-- **0309 is open on `feat/0309-gentle-gaps`, unmerged and unreleased.** The gentle-shell audit closed: the
-  attribution `tui-design` carries is pinned by a test, `ui-craft` gained the two pages nobody owned
-  (`accessible-and-adaptive.md`, `grouping-and-emphasis.md`), and the PR policy question was answered -the
-  free-form message with the `Risk:` line stays, the conventional regex does not come.
-- **0308 is merged**: PR #624, on `main`, after 0307 (PR #623). The Tauri door carries the nine scaffold
-  steps, the three conditions for not loading it, and points at `arch-project`.
+- **0310 is open on `feat/0310-ui-craft-direction`, unmerged and unreleased.** `ui-craft` carries the
+  direction layer it was missing: `ai-native.md`, `art-direction.md`, `motion-identity.md` and
+  `depth-and-material.md`, plus the four axes and the OKLCH/fluid-scale rows in `the-numbers.md`. Thirteen
+  references now, and the body says a screen has a direction, chosen and named, before the first file.
+- **0309 is merged**: PR #625, on `main`, after 0308 (PR #624) and 0307 (PR #623).
 - `v0.45.4` is published: annotated tag on `0ed7d2e` (the merge of release PR #621), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
   `odachi 0.45.4`. `v0.45.3` carried 0305; this one carries 0306.
@@ -18,7 +17,7 @@ Written after 0309 and `v0.45.4`.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 307 features · 761 steps done of 761 · 0 open questions
+  total: 308 features · 765 steps done of 765 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -61,6 +60,10 @@ Written after 0309 and `v0.45.4`.
 
 ## What shipped
 
+- **0310, patch (unreleased).** `ui-craft` gained four references -`ai-native.md`, `art-direction.md`,
+  `motion-identity.md`, `depth-and-material.md`-, the body rule that a screen has a direction chosen and
+  named, and the OKLCH and fluid-scale rows in `the-numbers.md`.
+
 - **0309, patch (unreleased).** The gentle-shell audit closed: `tui-design`'s attribution is pinned by a
   test -it was never missing, it lives in the body because the installer copies `SKILL.md`, `references/`
   and `assets/` only-, and `ui-craft` gained `accessible-and-adaptive.md` and `grouping-and-emphasis.md`,
@@ -84,6 +87,22 @@ Written after 0309 and `v0.45.4`.
   the same alignment shape on HyperFrames and Remotion). `motion-principles.md` gained the pan/zoom row
   the transitions table was missing, `the-piece.md` points its times at the recording when there is one,
   the body gained one `## Never`, and the impact map counts eight references.
+
+## 0310: what it settled, and what it leaves
+
+- **What looks current is behaviour, not decoration.** The research -seven production patterns, Material 3
+  Expressive's own framing of expression as usability, accessibility and beauty for a purpose- says the
+  2026 signal is an interface that streams, composes, answers a command and shows its work. The gradient
+  and the glass are the failure mode, not the direction.
+- **The missing layer was a decision, not a rule.** `ui-craft` had execution (numbers, states, tells) and
+  nothing answering "which direction, and what does it cost". `art-direction.md` is that layer, and the
+  body now refuses to start without it.
+- **The catalog keeps no house style.** The default posture is named for the case where the brief is
+  silent, and it is a default, not a brand: a catalog with a look makes every project look the same, which
+  is the defect `the-tells.md` exists to catch.
+- **What is still unproven:** no screen was built with the new pages. They are read text, pinned for
+  routing and content; the first screen made with them is the measurement that says whether the direction
+  layer works.
 
 ## 0309: what it settled, and what it leaves
 
