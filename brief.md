@@ -715,3 +715,28 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0307 · portar-ai-project
+
+## What must exist
+- portar ai project foundation completo a odachi, con una skill nueva arch-project para cualquier stack
+
+## Done when
+- odachi skills --check pasa y el indice lista arch-project con su trigger
+- las cuatro piezas que hoy no tienen dueno entran: el layout hexagonal, la plantilla de ADR, la matriz de comandos por stack y la guia de Go + HTMX
+- bootstrap queda como la primera puerta y arch-project como la segunda, y ninguna repite el material de la otra
+- una prueba fija el trigger de arch-project y su tabla de decision, y la prueba que fija bootstrap sigue verde
+- docs/impact-map.md y SKILLS.md nombran la carpeta nueva, y el pin de bytes sube con el numero que mide el test
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0307)
+
+## Not included (first version)
+- no se edita la copia retirada en ~/.agents/skills-retired
+- no entra una skill por stack ademas de arch-tauri: ni arch-go ni arch-next
+- no se traduce el texto: queda en ingles como el resto del payload
+- no entra un verbo ni un flag nuevo: el cambio es del payload
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
