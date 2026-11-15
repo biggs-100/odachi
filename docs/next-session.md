@@ -1,20 +1,21 @@
 # Next session
 
-Written after 0291 to 0302, the eight releases that carried them, and the study of gentle-shell that
+Written after 0291 to 0304, the nine releases that carried them, and the study of gentle-shell that
 produced 0295 and 0297.
 
 ## Where the project is
 
-- `v0.45.1` is published: annotated tag on `b50328c` (the merge of release PR #610), sixteen assets
+- `v0.45.2` is published: annotated tag on `03150e3` (the merge of release PR #614), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.45.1`. Eight releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
+  `odachi 0.45.2`. Nine releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
   `v0.44.1` carried 0297, `v0.44.2` carried 0298, `v0.44.3` carried 0299, `v0.44.4` carried 0300,
-  `v0.45.0` carried 0301, and `v0.45.1` carried 0302.
-- `main` is at that merge. 0302 landed in PR #609 -five commits over `474371e`-, and the release PR
-  renamed `Unreleased` after it. This file quotes the line the tool counts for the tree it describes:
+  `v0.45.0` carried 0301, `v0.45.1` carried 0302, and `v0.45.2` carried 0303 and 0304.
+- `main` is at that merge. 0303 landed in PR #612 and 0304 in PR #613 -the second one over `5108d3b`-,
+  and the release PR renamed `Unreleased` after them. This file quotes the line the tool counts for the
+  tree it describes:
 
   ```
-  total: 300 features · 745 steps done of 745 · 0 open questions
+  total: 302 features · 750 steps done of 750 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -73,6 +74,27 @@ produced 0295 and 0297.
 - **0302, patch (v0.45.1).** The catalog carries a Tauri v2 foundation: the `tauri-foundation` skill
   names the boundary a desktop project keeps crossing, with its bridge templates, purity guards,
   workspace layout and three-layer UI verification.
+- **0303, patch (v0.45.2).** The skill is called `arch-tauri`: the name says what it is and what it is
+  for, and leaves room for the family. The folder, the test, the index row, the impact map, the byte pin
+  and the home copy moved with it.
+- **0304, patch (v0.45.2).** The foundation enters through the door that already exists: the triage, the
+  birth decisions, the guard recipes, the UI contract and the fifteen lessons are `bootstrap`'s
+  references, and the rules `drive`, `tests` and `commits` own are delegated instead of repeated.
+
+## 0303 and 0304: the catalog has three levels, and each one owns its question
+
+1. **`bootstrap`** - how a project starts in odachi: the interview, the artifacts, the first proof.
+2. **`bootstrap/references/`** - the architecture of any stack: what kind of project this is, the twelve
+   decisions before the first file, the boundary guard, the UI contract, and the lessons that paid for
+   them. Its decision table routes each file; nothing here is a second door.
+3. **`arch-tauri`** - the boundary of one stack: the domain crate never imports Tauri, commands are thin,
+   the contract is generated, the UI is verified in three layers. A project with no Rust core never
+   loads it.
+
+**A copy that carries half a skill is a copy that lies.** `bootstrap` grew five references, and the
+doctor's fixture seeded only its `SKILL.md`, so check 9 read the installed copy as drifted. The closing
+suite caught it, the fixture now copies the whole folder, and the helper that returned only the body is
+gone. It is the same defect the feature fixes at the human level.
 
 ## 0302: what it settled, and what it leaves
 
@@ -164,6 +186,10 @@ wording is its own change.
 - **A document commit after a close leaves the local `check` red**, on purpose. CI regenerates its own
   proof from a clean checkout.
 - **The undo row answers four different things**: `noticed` with the symbol the compiler named (`the copy did not build, and it names X`, since 0300), `the copy did not build` for a failure that names nothing the change added, `not owed: the change adds no production behavior`, and `missed` for a suite that stayed green.
+- **Text with backticks is not edited with a double-quoted shell string.** PowerShell reads
+  `` `t `` and `` `b `` as escapes: a replacement written that way left a tab where
+  `` `tauri-foundation `` began and a backspace where `` `bootstrap `` did, and the corruption shipped
+  in v0.45.1's notes. Edit with the file tool or single quotes, and read the result back.
 - **A guard that passes the first time proves nothing.** Every new guard this session was verified by
   mutation, and two passed by luck before their fix.
 - **Evidence answers only its own question.** 0297's first verdict found a false green because the stored
