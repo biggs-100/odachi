@@ -19,7 +19,7 @@ R1 · "nace db-craft: el oficio de trabajar con una base de datos, con migracion
 - [x] T1 · la puerta nace con migraciones y esquema, las dos paginas que rompen produccion   R1 · tree:ea59ff9808337bfaff7d15b36154c5a0f9e71855
 - [x] T2 · transacciones e idempotencia: aislamiento, reintento completo y outbox   R1 · tree:4e41f7efb3aec9b0140d41d1950c2d5f669c144c
 - [x] T3 · indices y consultas: orden de columnas, covering, keyset y N+1   R1 · tree:967c8524bb4f57909145be21e4e48d12a675d97a
-- [ ] T4 · acceso y operacion: minimo privilegio, RLS, PITR y drill de restore   R1
+- [x] T4 · acceso y operacion: minimo privilegio, RLS, PITR y drill de restore   R1 · tree:a426baf57aabd6e2d19acad71228f1b3f95d30d7
 - [ ] T5 · el catalogo de fallos, los registros y la prueba del ruteo   R1
 
 ## History

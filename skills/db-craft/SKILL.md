@@ -35,6 +35,7 @@ this door decides how it is written. A file on disk is `data`'s, not this one's.
 | a list, a page, a count or a batch write | `references/queries.md` |
 | a role, a grant, row-level security or a tenant | `references/access.md` |
 | a backup, a restore, a pool, vacuum or an upgrade | `references/operations.md` |
+| the change is ready and something feels off | `references/the-failures.md`: the mistake, its symptom and the page that decided it |
 
 ## Output
 
@@ -56,3 +57,4 @@ The schema or the migration, the lock it takes and what it blocks, the way back,
 - `references/queries.md` - the N+1, the cursor, and the two numbers to watch.
 - `references/access.md` - three roles, row-level security and the doors around it.
 - `references/operations.md` - the restore drill, what to watch, the pool and vacuum.
+- `references/the-failures.md` - the catalogue: the mistake, what you see, and the page that decides it.
