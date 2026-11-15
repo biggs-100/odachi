@@ -10,7 +10,7 @@ import (
 // TestArchTauriKeepsTheBoundaryRules: the skill this catalog carries for a
 // Tauri v2 project is the one thing that keeps the framework out of the domain. The
 // rules are pinned because they are the whole value: a body that lost the ACL gate
-// or the generated contract would still look like a foundation (0302).
+// or the generated contract would still look like a foundation (0302, 0308).
 func TestArchTauriKeepsTheBoundaryRules(t *testing.T) {
 	all, err := skills.All()
 	if err != nil {
@@ -34,7 +34,7 @@ func TestArchTauriKeepsTheBoundaryRules(t *testing.T) {
 		"source-scan",
 		"has_app_acl_manifest",
 		"three layers",
-		"bootstrap",
+		"arch-project",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("arch-tauri does not say %q", want)
@@ -74,6 +74,39 @@ func TestArchTauriCarriesItsDepth(t *testing.T) {
 	} {
 		if !files[want] {
 			t.Errorf("arch-tauri does not carry %q; it carries %v", want, files)
+		}
+	}
+}
+
+// TestArchTauriSitsUnderArchProject: the plate is the third level, not the second, and
+// a door that keeps pointing at `bootstrap` sends the reader one level too high. The
+// three conditions for not loading it are pinned with the level, because the port had
+// lost two of the three (0308).
+func TestArchTauriSitsUnderArchProject(t *testing.T) {
+	skill := mustSkill(t, "arch-tauri")
+	body := string(skill.Main())
+
+	for _, want := range []string{
+		"`arch-project` comes first",
+		"no Rust core",
+		"plain Rust crate or CLI",
+		"feature work in a project that already has its boundary",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("arch-tauri does not say %q", want)
+		}
+	}
+
+	for _, file := range skill.Files {
+		if file.Path != "references/tauri-bridge.md" {
+			continue
+		}
+		bridge := string(file.Content)
+		if !strings.Contains(bridge, "arch-project") {
+			t.Error("tauri-bridge does not send the tree and the ADRs to arch-project")
+		}
+		if strings.Contains(bridge, "belong to `bootstrap`") {
+			t.Error("tauri-bridge still sends the shared material to bootstrap: that door is not its level")
 		}
 	}
 }

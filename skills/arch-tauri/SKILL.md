@@ -7,8 +7,12 @@ description: Trigger: a Tauri v2 desktop project, new or restructured (Rust core
 
 When the work is a Tauri v2 desktop app -scaffolding one, or restructuring an
 existing single-crate app into a workspace- and the question is where the domain
-ends and the framework begins. A project with no Rust core is not this skill's:
-load `bootstrap` and nothing here applies.
+ends and the framework begins. `arch-project` comes first: the triage, the tree, the
+ADRs and the commands per stack are its own, and this page is what the stack changes.
+
+Stop where there is no Rust core, on a plain Rust crate or CLI with no webview, and
+on feature work in a project that already has its boundary: the day-to-day manual is
+`drive`.
 
 ## Rules
 
@@ -31,7 +35,7 @@ load `bootstrap` and nothing here applies.
 | A command crosses the boundary, or a Rust to TS contract is needed | `references/tauri-bridge.md`: the flow, the thin-command and error templates, the ACL gating |
 | The UI has to be verified | `references/ui-verification.md`: the three layers, the platform matrix, the `wdio.conf.ts` fragment |
 | Remote or external content in a webview | Commands are gated regardless; configure an explicit `remote` capability |
-| A plain web app with no Rust core | Stop: this skill does not apply; `bootstrap` is the door |
+| A plain web app with no Rust core | Stop: this skill does not apply; `arch-project` carries the shape |
 
 ## Output
 

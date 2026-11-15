@@ -15,7 +15,7 @@ R1 · "el port de Tauri queda completo: los nueve pasos del scaffold, las tres c
 - ## Unreleased names it, patch (0308)
 
 ## Steps
-- [ ] T1 · la reference del scaffold entra con el orden de los nueve pasos y su fila   R1
+- [x] T1 · la reference del scaffold entra con el orden de los nueve pasos y su fila   R1 · tree:07a4a8487f07d9832d0f68dfb6d3b34116e88042
 - [ ] T2 · la puerta deja de mirar a bootstrap: las tres condiciones y el nivel   R1
 - [ ] T3 · la prueba, el impact map y el changelog nombran el port completo   R1
 
