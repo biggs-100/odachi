@@ -740,3 +740,29 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0308 · el-port-de
+
+## What must exist
+- el port de Tauri queda completo: los nueve pasos del scaffold, las tres condiciones de no cargar, y arch-tauri mirando a arch-project
+
+## Done when
+- odachi skills --check pasa y el cuerpo de arch-tauri sigue con 60 lineas o menos
+- los nueve pasos viven en una reference ruteada desde ## Decision gates y listada en ## References
+- las tres condiciones de no cargar estan en el cuerpo, y la que habla de un proyecto sin Rust nombra arch-project
+- tauri-bridge.md manda el layout y los ADRs a arch-project, no a bootstrap
+- una prueba fija el ruteo de la reference nueva y el nivel de la puerta
+- docs/impact-map.md cuenta la reference nueva y el changelog la nombra
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0308)
+
+## Not included (first version)
+- no se edita la copia retirada en ~/.agents/skills-retired
+- no se reescriben el layout ni las recetas de guard: ya estan portados
+- no se renombra la skill, ni entra un flag o un verbo nuevo
+- no se toca la copia del home
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
