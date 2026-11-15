@@ -14,9 +14,11 @@ R1 · "portar ai project foundation completo a odachi, con una skill nueva arch-
 - ## Unreleased names it, patch (0307)
 
 ## Steps
-- [ ] T1 · arch-project nace con sus cinco references movidos y bootstrap rutea a ella   R1
+- [x] T1 · arch-project nace con sus cinco references movidos y bootstrap rutea a ella   R1 · tree:73f61a9cb34738ad1614917f6a592cbd51e02854
 - [ ] T2 · las cuatro piezas sin dueno entran: layout, ADR, matriz por stack y Go + HTMX   R1
 - [ ] T3 · el indice, el impact map, la prueba y el changelog nombran la puerta nueva   R1
 
 ## History
 L1 · "portar ai project foundation completo a odachi, con una skill nueva arch-project para cualquier stack"
+L2 · OFICIO · "los cinco references se mueven a arch-project y no se copian" (porque dos carpetas con el mismo material son dos duenos, y el catalogo ya pago ese defecto en 0302 y 0304)
+L3 · OFICIO · "la skill se llama arch-project y no ai-project-foundation" (porque el nombre viejo es el que colisiona con el trigger de bootstrap; arch-project forma familia con arch-tauri y deja sitio a arch-<stack>)

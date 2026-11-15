@@ -26,6 +26,10 @@ func TestArchProjectIsTheSecondDoor(t *testing.T) {
 		"enforced mechanically",
 		"an unanswered line is a decision taken by accident",
 		"not evidence",
+		"references/layout.md",
+		"references/stack-commands.md",
+		"references/go-htmx.md",
+		"assets/adr-template.md",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("arch-project does not say %q", want)
@@ -65,6 +69,21 @@ func TestArchProjectRoutesEveryReference(t *testing.T) {
 	}
 	if references == 0 {
 		t.Error("arch-project carries no references: a door with no depth is a paragraph")
+	}
+
+	// An asset is a file the skill hands over, not text it reads: it is inventoried
+	// the same way and never routed from the gates.
+	assets := ""
+	if start := strings.Index(body, "## Assets"); start >= 0 {
+		assets = body[start:]
+	}
+	for _, file := range skill.Files {
+		if !strings.HasPrefix(file.Path, "assets/") {
+			continue
+		}
+		if !strings.Contains(assets, "`"+file.Path+"`") {
+			t.Errorf("%s is not a bullet of ## Assets", file.Path)
+		}
 	}
 }
 
