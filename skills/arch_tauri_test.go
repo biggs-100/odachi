@@ -104,9 +104,14 @@ func TestArchTauriSitsUnderArchProject(t *testing.T) {
 		if file.Path != "references/tauri-bridge.md" {
 			continue
 		}
-		bridge := string(file.Content)
-		if !strings.Contains(bridge, "arch-project") {
-			t.Error("tauri-bridge does not send the tree and the ADRs to arch-project")
+		// The sentence is pinned with its owner, not by a token: a header rewritten as
+		// "Layout and the ADRs are `bootstrap`'s; `arch-project` carries the tree" names
+		// arch-project and still sends the material one level too high, which is the
+		// regression this feature exists to prevent (0308).
+		bridge := strings.Join(strings.Fields(string(file.Content)), " ")
+		want := "The tree, the ADRs and the commands per stack belong to `arch-project`; the day-to-day order belongs to `drive`."
+		if !strings.Contains(bridge, want) {
+			t.Errorf("tauri-bridge does not say %q", want)
 		}
 		if strings.Contains(bridge, "belong to `bootstrap`") {
 			t.Error("tauri-bridge still sends the shared material to bootstrap: that door is not its level")
