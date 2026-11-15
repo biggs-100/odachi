@@ -1,5 +1,5 @@
 ---
-name: tauri-foundation
+name: arch-tauri
 description: Trigger: a Tauri v2 desktop project, new or restructured (Rust core and JS/TS frontend). The domain never knows Tauri exists, commands are thin, the contract is generated, the UI is verified.
 ---
 

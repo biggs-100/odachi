@@ -8,6 +8,11 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
+## Unreleased
+
+- **The Tauri foundation skill is called `arch-tauri`.** The name says what it is -architecture- and what it
+  is for -Tauri-, and leaves room for the family it belongs to. One folder, its row in the index, the test
+  that pins it and the impact map moved with it; nothing else changed. Patch (0303).
 ## v0.45.1 - 2026-11-14
 
 - **The catalog carries a Tauri v2 foundation.** A desktop project with a Rust core had no door here: the
