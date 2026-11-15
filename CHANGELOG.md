@@ -9,6 +9,15 @@ not a version.
 
 ## Unreleased
 
+- **`ui-craft` gains the decision it was missing.** Four references: `ai-native.md` (the surface a model
+  is inside: streaming, tool calls, the three forms of generative UI, and approval before the
+  irreversible), `art-direction.md` (four axes, three directions that differ in strategy and the tradeoff
+  each one names), `motion-identity.md` (the one move a product is remembered by, and what it may carry)
+  and `depth-and-material.md` (the four jobs depth is allowed to do, and what translucency costs on the
+  worst backdrop). The body states the rule that made them necessary -a screen has a direction, chosen and
+  named, before the first file- and `the-numbers.md` gains the OKLCH ramp with its sRGB fallback and a
+  fluid display size. The catalog keeps no house style: the pages teach choosing one. Patch (0310).
+
 - **The gentle-shell port closes its text gaps.** The audit compared the 15 skills of `gentle-shell`
   against the payload and the home, and the diff read a missing `NOTICE.md` as a lost attribution: it is
   in `tui-design`'s body, deliberately, because the installer copies `SKILL.md`, `references/` and
