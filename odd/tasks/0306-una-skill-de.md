@@ -6,11 +6,11 @@ Light: yes
 R1 · "una skill de video para TikTok y YouTube: estilo whiteboard, HyperFrames o Remotion, y la voz en off la graba el humano"
 
 ## Done when
-
 - `odachi skills --check` passes.
 - Each reference is a row of `## Decision gates` and a bullet of `## References`.
+
 ## Steps
-- [ ] T1 · una skill de video para TikTok y YouTube: estilo whiteboard, HyperFrames o Remotion, y la voz en off la graba el humano   R1
+- [x] T1 · una skill de video para TikTok y YouTube: estilo whiteboard, HyperFrames o Remotion, y la voz en off la graba el humano   R1 · tree:3a46115c189bdd128c4af1b6d5b9b7eb97449ac7
 
 ## History
 L1 · "una skill de video para TikTok y YouTube: estilo whiteboard, HyperFrames o Remotion, y la voz en off la graba el humano"
