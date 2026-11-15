@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.45.6 - 2026-11-15
 
 - **`db-craft` is born, and the catalog finally has the craft of a database.** Eight references -schema,
   migrations, transactions, indexes, queries, access, operations and the catalogue of failures-, the last
