@@ -766,3 +766,28 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0309 · el-port-de
+
+## What must exist
+- el port de gentle-shell cierra sus huecos de texto: el aviso que perdio tui-design y los dos references de UI que ui-craft no tiene
+
+## Done when
+- odachi skills --check pasa y tui-design lleva el aviso de atribucion
+- ui-craft lleva adaptive-interfaces y composition-and-feedback, ruteados desde ## Decision gates y listados en ## References
+- el cuerpo de ui-craft sigue con 60 lineas o menos y su tabla tiene una fila por reference
+- una prueba fija el ruteo de los dos references nuevos y la presencia del aviso
+- docs/impact-map.md cuenta los references nuevos y el changelog lo nombra
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0309)
+
+## Not included (first version)
+- no se edita nada en la carpeta de gentle-shell
+- no entra la politica de PR de branch-pr: es una pregunta abierta, no trabajo de este feature
+- no se portan issue-creation ni rdd-defect-workflow
+- no se toca la copia del home
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.

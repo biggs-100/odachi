@@ -9,7 +9,7 @@ import (
 )
 
 // TestUICraftIsARouter: the first skill that carries depth keeps its body and
-// ships four references, and every one is named where the agent will look for it.
+// ships its references, and every one is named where the agent will look for it.
 func TestUICraftIsARouter(t *testing.T) {
 	all, err := skills.All()
 	if err != nil {
@@ -28,7 +28,9 @@ func TestUICraftIsARouter(t *testing.T) {
 
 	want := []string{
 		"SKILL.md",
+		"references/accessible-and-adaptive.md",
 		"references/browse-and-compare.md",
+		"references/grouping-and-emphasis.md",
 		"references/motion.md",
 		"references/states-and-copy.md",
 		"references/task-and-content.md",

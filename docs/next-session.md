@@ -1,15 +1,15 @@
 # Next session
 
-Written after 0308 and `v0.45.4`.
+Written after 0309 and `v0.45.4`.
 
 ## Where the project is
 
-- **0308 is open on `feat/0308-tauri-port`, unmerged and unreleased.** The Tauri door caught up with its
-  level: it carries the nine scaffold steps as `references/tauri-scaffold.md`, names the three conditions
-  for not loading it, and sends the tree and the ADRs to `arch-project` instead of `bootstrap`.
-- **0307 is merged**: PR #623, on `main`. The catalog has three levels -`bootstrap` (how a project starts
-  in odachi), `arch-project` (the shape of any stack) and `arch-tauri` (one stack's boundary)- and the
-  five references moved out of `bootstrap`'s folder; they were not copied.
+- **0309 is open on `feat/0309-gentle-gaps`, unmerged and unreleased.** The gentle-shell audit closed: the
+  attribution `tui-design` carries is pinned by a test, `ui-craft` gained the two pages nobody owned
+  (`accessible-and-adaptive.md`, `grouping-and-emphasis.md`), and the PR policy question was answered -the
+  free-form message with the `Risk:` line stays, the conventional regex does not come.
+- **0308 is merged**: PR #624, on `main`, after 0307 (PR #623). The Tauri door carries the nine scaffold
+  steps, the three conditions for not loading it, and points at `arch-project`.
 - `v0.45.4` is published: annotated tag on `0ed7d2e` (the merge of release PR #621), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
   `odachi 0.45.4`. `v0.45.3` carried 0305; this one carries 0306.
@@ -18,7 +18,7 @@ Written after 0308 and `v0.45.4`.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 306 features · 758 steps done of 758 · 0 open questions
+  total: 307 features · 761 steps done of 761 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -61,6 +61,11 @@ Written after 0308 and `v0.45.4`.
 
 ## What shipped
 
+- **0309, patch (unreleased).** The gentle-shell audit closed: `tui-design`'s attribution is pinned by a
+  test -it was never missing, it lives in the body because the installer copies `SKILL.md`, `references/`
+  and `assets/` only-, and `ui-craft` gained `accessible-and-adaptive.md` and `grouping-and-emphasis.md`,
+  the two pages nothing owned.
+
 - **0308, patch (unreleased).** `arch-tauri` gained `references/tauri-scaffold.md` -the nine steps of a
   Tauri v2 scaffold in the order that keeps the boundary-, its `## When` recovered the three conditions
   for not loading it, and `tauri-bridge.md` stopped sending the tree and the ADRs to `bootstrap`.
@@ -79,6 +84,19 @@ Written after 0308 and `v0.45.4`.
   the same alignment shape on HyperFrames and Remotion). `motion-principles.md` gained the pan/zoom row
   the transitions table was missing, `the-piece.md` points its times at the recording when there is one,
   the body gained one `## Never`, and the impact map counts eight references.
+
+## 0309: what it settled, and what it leaves
+
+- **A file-name diff reads a moved file as a lost one.** `tui-design/NOTICE.md` disappeared from the
+  listing and the attribution was in the body all along, moved there on purpose. The audit's first finding
+  was a false positive, and it was found by opening the file, not by trusting the diff. The test exists so
+  the next rewrite cannot make the same disappearance real.
+- **"Two references missing" was four sections.** Reading the source pages against the pages that exist
+  showed the six states and the numbers already owned, and only the markup, the keyboard, the narrowing
+  and the grouping unowned.
+- **Still unported, and named:** `issue-creation` and `rdd-defect-workflow` have no counterpart in this
+  catalog. `judgment-day`, `skill-registry` and `gentle-ai` are absorbed by the review quorum, the
+  generated index and `drive`.
 
 ## 0308: what it settled, and what it leaves
 

@@ -9,6 +9,15 @@ not a version.
 
 ## Unreleased
 
+- **The gentle-shell port closes its text gaps.** The audit compared the 15 skills of `gentle-shell`
+  against the payload and the home, and the diff read a missing `NOTICE.md` as a lost attribution: it is
+  in `tui-design`'s body, deliberately, because the installer copies `SKILL.md`, `references/` and
+  `assets/` only, so a file beside them never reaches a project -and it is pinned by a test now, so a
+  rewrite cannot drop it-. The real gap was `ui-craft`'s: two pages nobody owned. `accessible-and-adaptive.md`
+  carries the markup, the keyboard path and what survives a narrow screen; `grouping-and-emphasis.md`
+  carries proximity before containers and the one thing allowed to lead. Both point at the six states and
+  the measurements instead of restating them. Patch (0309).
+
 - **The Tauri door catches up with the level it sits on.** `arch-tauri` gains
   `references/tauri-scaffold.md` -the nine steps of a Tauri v2 scaffold, in the order that keeps the
   boundary: the workspace that retains `build.rs`, `generate_handler!`, `capabilities/**` and
