@@ -819,3 +819,30 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0311 · nace-db-craft
+
+## What must exist
+- nace db-craft: el oficio de trabajar con una base de datos, con migraciones sin downtime, transacciones, indices, consultas, acceso y operacion, y el catalogo de errores que cuestan incidentes
+
+## Done when
+- db-craft existe con cuerpo de 60 lineas o menos, cada reference con su fila en ## Decision gates y su bullet
+- las siete paginas cubren esquema, migraciones, transacciones, indices, consultas, acceso y operacion
+- the-failures.md es el catalogo de errores con su sintoma y su arreglo, y cada fila apunta a la pagina duena
+- data deja de ser duena de las migraciones y las manda a db-craft, sin perder lo que ya dice
+- Postgres primera persona, con la nota de que cambia en MySQL y SQLite
+- una prueba fija el ruteo de cada reference y las cadenas que no deben faltar
+- docs/impact-map.md y el changelog lo nombran, y SKILLS.md se regenera
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0311)
+
+## Not included (first version)
+- no se escriben scripts de migracion ni se agregan dependencias
+- no se toca la copia del home
+- no se edita nada del repo de gentle-shell
+- no entra un segundo motor: MySQL y SQLite solo como nota de portabilidad
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
