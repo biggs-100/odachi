@@ -1,20 +1,20 @@
 # Next session
 
-Written after 0291 to 0301, the seven releases that carried them, and the study of gentle-shell that
+Written after 0291 to 0302, the eight releases that carried them, and the study of gentle-shell that
 produced 0295 and 0297.
 
 ## Where the project is
 
-- `v0.45.0` is published: annotated tag on `088f617` (the merge of release PR #607), sixteen assets
+- `v0.45.1` is published: annotated tag on `b50328c` (the merge of release PR #610), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.45.0`. Seven releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
-  `v0.44.1` carried 0297, `v0.44.2` carried 0298, `v0.44.3` carried 0299, `v0.44.4` carried 0300, and
-  `v0.45.0` carried 0301.
-- `main` is at that merge. 0301 landed in PR #606 -five commits over `a5ff710`-, and the release PR
+  `odachi 0.45.1`. Eight releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
+  `v0.44.1` carried 0297, `v0.44.2` carried 0298, `v0.44.3` carried 0299, `v0.44.4` carried 0300,
+  `v0.45.0` carried 0301, and `v0.45.1` carried 0302.
+- `main` is at that merge. 0302 landed in PR #609 -five commits over `474371e`-, and the release PR
   renamed `Unreleased` after it. This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 299 features · 742 steps done of 742 · 0 open questions
+  total: 300 features · 745 steps done of 745 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -69,6 +69,28 @@ produced 0295 and 0297.
 - **0301, minor (v0.45.0).** The risk a commit declares asks for its lens: the table `commits`
   published is the table the gate reads, a declared risk joins the demand per path and at the lens
   level, and a verdict without that lens does not close.
+
+- **0302, patch (v0.45.1).** The catalog carries a Tauri v2 foundation: the `tauri-foundation` skill
+  names the boundary a desktop project keeps crossing, with its bridge templates, purity guards,
+  workspace layout and three-layer UI verification.
+
+## 0302: what it settled, and what it leaves
+
+**A port is not a copy.** Two of its four pieces needed a new home: the guard recipes were an asset and
+are read, so they became a reference; and the three links into the other skill now say what they mean
+here -layout and ADRs belong to `bootstrap` and `drive`, and the UI contract is stated instead of
+pointed at a file this catalog does not have-.
+
+**The catalog has rules a folder in the home cannot satisfy.** A skill here needs at most 60 body lines,
+a `## Never`, a `## Output`, and every reference routed from a row of `## Decision gates`; its row moves
+the byte pin, and the impact map refuses a folder it does not name. The port failed three of those on
+the first try, which is the checks doing their job.
+
+**The originals moved, they were not deleted.** `ai-project-foundation` and `tauri-project-foundation`
+now live under `~/.agents/skills-retired/`, out of the path the clients read: the payload is the
+canonical copy from here on. The foundation material still waits as its own feature -its triage table,
+birth checklist, guard recipes, UI doctrine and fifteen lessons, as references of `bootstrap`, with the
+rules `drive`, `tests` and `commits` already own pointing at their owner-.
 
 ## 0301: what it settled, and what it leaves
 
