@@ -21,3 +21,4 @@ R1 · "el port de Tauri queda completo: los nueve pasos del scaffold, las tres c
 
 ## History
 L1 · "el port de Tauri queda completo: los nueve pasos del scaffold, las tres condiciones de no cargar, y arch-tauri mirando a arch-project"
+L2 · OFICIO · "los nueve pasos viven en una reference y no en el cuerpo" (porque el cuerpo tiene techo de 60 lineas y ya estaba en 54: una secuencia de nueve pasos con su razon es una pagina, y meterla en el cuerpo habria borrado reglas para pagarla)
