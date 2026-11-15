@@ -2,6 +2,7 @@
 | Skill | Trigger | Path |
 | --- | --- | --- |
 | acceptance | when deciding whether something is done. Turn a request into observable criteria before writing code. | skills/acceptance/SKILL.md |
+| arch-project | giving a codebase its shape - the kind of project, the decisions before the first file, the boundary the build enforces. The second door, under bootstrap and above arch-<stack>. | skills/arch-project/SKILL.md |
 | arch-tauri | a Tauri v2 desktop project, new or restructured (Rust core and JS/TS frontend). The domain never knows Tauri exists, commands are thin, the contract is generated, the UI is verified. | skills/arch-tauri/SKILL.md |
 | bootstrap | when someone wants to start a project from scratch, asks what odachi is, or does not know where to begin. Do not load it inside a project that is already odachi. | skills/bootstrap/SKILL.md |
 | commits | when deciding what goes into a commit, how to split the work, or what the message and PR description say. | skills/commits/SKILL.md |

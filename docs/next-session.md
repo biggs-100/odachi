@@ -1,9 +1,14 @@
 # Next session
 
-Written after 0306 and `v0.45.4`.
+Written after 0307 and `v0.45.4`.
 
 ## Where the project is
 
+- **0307 is open on `feat/0307-second-door`, unmerged and unreleased.** The catalog has three levels
+  now: `bootstrap` (how a project starts in odachi), `arch-project` (the shape of any stack: triage,
+  birth decisions, tree, guard, commands per stack, UI contract, lessons, Go + HTMX, ADR template) and
+  `arch-tauri` (one stack's boundary). The five references moved out of `bootstrap`'s folder; they were
+  not copied.
 - `v0.45.4` is published: annotated tag on `0ed7d2e` (the merge of release PR #621), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
   `odachi 0.45.4`. `v0.45.3` carried 0305; this one carries 0306.
@@ -12,7 +17,7 @@ Written after 0306 and `v0.45.4`.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 304 features · 752 steps done of 752 · 0 open questions
+  total: 305 features · 755 steps done of 755 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -20,9 +25,13 @@ Written after 0306 and `v0.45.4`.
 
 ## What waits for a decision
 
+- **The home's `bootstrap` still carries the five references.** The session's plugin mirrored `arch-project`
+  into `~/.agents/skills` when the folder appeared, but the first door there was not rewritten: the payload
+  is canonical from here on, and `~/.agents/skills` is only refreshed by an install (`odachi setup`, or
+  `pack --scope home`), which is the human's yes. Until then the home holds the same material twice.
 - **The next feature is not chosen.** Before choosing, `docs/review-debt.md` is the reading list, and it
   is stale: it says "Last written: while closing 0271" and its `## Open` section says nothing is open,
-  while the closes from 0291 to 0306 never wrote their rows there. Decide whether the file is rewritten
+  while the closes from 0291 to 0307 never wrote their rows there. Decide whether the file is rewritten
   from the store or retired; today it is a list nobody can trust.
 - **The board look is unproven by a piece.** 0306 wrote the text an agent reads before producing one, and
   no board video was rendered or watched. The first piece made with it is the measurement that says
@@ -51,6 +60,12 @@ Written after 0306 and `v0.45.4`.
 
 ## What shipped
 
+- **0307, patch (unreleased).** The catalog gained its second level: `arch-project` carries the triage
+  by project kind, the twelve birth decisions, the tree, the guard recipes, the commands per stack, the
+  UI contract, the fifteen lessons, the Go + HTMX page and the ADR template, and `bootstrap` routes to
+  it with no reference of its own. The five files moved; the four pieces the retired skill carried and
+  nothing here did entered with a row each.
+
 - **0306, patch (v0.45.4).** `motion-graphics` gained two references and their routing: `the-board.md`
   (the hand-drawn look as a system: paper and ink, one accent per meaning, seeded rough strokes, draw-on
   as a verb with weight by distance, the camera as the transition inside one argument, correction as the
@@ -59,6 +74,18 @@ Written after 0306 and `v0.45.4`.
   the same alignment shape on HyperFrames and Remotion). `motion-principles.md` gained the pan/zoom row
   the transitions table was missing, `the-piece.md` points its times at the recording when there is one,
   the body gained one `## Never`, and the impact map counts eight references.
+
+## 0307: what it settled, and what it leaves
+
+- **A level is a door, not a drawer.** The material for any stack existed and was unreachable: five
+  references inside `bootstrap`, behind a trigger that asks whether a project is starting in odachi. The
+  door is what changed; the text mostly moved.
+- **The port was never finished.** 0304 recorded five of the eight files and neither the tree, the
+  command matrix, the ADR template nor the Go page; a "complete port" that nobody diffed against the
+  retired folder was a sentence. The four entered here.
+- **A stack page is not a stack door.** `go-htmx.md` lives inside `arch-project` because it is twenty
+  lines of choices, not a boundary; `arch-tauri` is a door because it has a bridge, an ACL and three UI
+  layers. The next stack with that depth earns `arch-<stack>`.
 
 ## 0306: what it settled, and what it leaves
 

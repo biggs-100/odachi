@@ -7,6 +7,16 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The second level of the catalog has a door of its own.** `arch-project` carries what every stack
+  shares -the triage by project kind, the twelve decisions before the first file, the tree, the guard,
+  the commands per stack, the UI contract, the fifteen lessons, the Go + HTMX page and the ADR
+  template- and sits between `bootstrap` and `arch-<stack>`. The five references move out of
+  `bootstrap`'s folder instead of being copied, so the first door routes the shape instead of hiding it
+  in a drawer with five files; the material the retired skill carried and nothing here did -the tree,
+  the command matrix per stack, the ADR template and the Go page- enters with its own row. Patch (0307).
+
 ## v0.45.4 - 2026-11-15
 
 - **`motion-graphics` can draw a board, and it waits for the human's voice.** Two references the skill was
