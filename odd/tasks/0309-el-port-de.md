@@ -22,3 +22,4 @@ R1 · "el port de gentle-shell cierra sus huecos de texto: el aviso que perdio t
 L1 · "el port de gentle-shell cierra sus huecos de texto: el aviso que perdio tui-design y los dos references de UI que ui-craft no tiene"
 L2 · PREGUNTA P1 · "odachi exige commits convencionales (regex type(scope): description con labels type:*) como gentle-shell, o conserva el mensaje libre con la linea Risk: que el gate ya lee"
 L3 · VOS P1 · "odachi conserva el mensaje libre con la linea Risk: y no exige commits convencionales; la politica de PR de branch-pr no se porta"
+L4 · OFICIO · "el aviso de atribucion no se perdio: vive en el cuerpo de tui-design, y T1 fija su presencia con una prueba en vez de mover un archivo" (porque el port lo movio al cuerpo a proposito porque el instalador solo copia SKILL.md, references y assets; el diff de nombres de archivo lo leyo como hueco, y esa es la leccion de la auditoria)
