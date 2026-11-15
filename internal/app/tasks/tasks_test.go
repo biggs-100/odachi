@@ -230,9 +230,9 @@ func TestFeatureSelectsByNumber(t *testing.T) {
 // with the one docs/next-session.md cites. Two renderers would be two spellings,
 // and the comparison would fail on a file that is right.
 //
-// The step count keeps the spelling the report always had -"1 steps done of 1"-
-// because this feature moved the renderer; making the singular read well is a
-// wording change, and a wording change lands with its own reason.
+// The step count is a plural like any other: "1 step done of 1" and "3 steps done
+// of 3". The old spelling was kept when 0298 moved the renderer because a wording
+// change lands with its own reason, and 0305 is that reason.
 //
 // What this does not prove: that the note quotes it. The check does that, and a
 // total nobody copies is a line in a report.
@@ -248,7 +248,7 @@ func TestTotalsIsTheOneLine(t *testing.T) {
 				Steps:   []taskdoc.Step{{ID: "T1", Done: true}},
 				History: []string{`L1 · PREGUNTA P1 · "¿se puede cancelar?"`},
 			}}},
-			want: "total: 1 feature · 1 steps done of 1 · 1 open question",
+			want: "total: 1 feature · 1 step done of 1 · 1 open question",
 		},
 		{
 			name: "several features say the plurals",
@@ -259,7 +259,7 @@ func TestTotalsIsTheOneLine(t *testing.T) {
 				}},
 				{Doc: taskdoc.TaskDoc{Steps: []taskdoc.Step{{ID: "T1"}}}},
 			},
-			want: "total: 2 features · 1 steps done of 3 · 1 open question",
+			want: "total: 2 features · 1 step done of 3 · 1 open question",
 		},
 	}
 

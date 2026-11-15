@@ -230,8 +230,9 @@ func Totals(docs []Document) string {
 		steps += s
 		open += len(doc.Doc.OpenQuestions())
 	}
-	return fmt.Sprintf("total: %s · %d steps done of %d · %s",
-		Plural(len(docs), "feature", "features"), done, steps,
+	return fmt.Sprintf("total: %s · %s done of %d · %s",
+		Plural(len(docs), "feature", "features"),
+		Plural(done, "step", "steps"), steps,
 		Plural(open, "open question", "open questions"))
 }
 
