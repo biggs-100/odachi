@@ -1,0 +1,80 @@
+# Tauri v2 workspace layout (target)
+
+Tauri v2. Paths are illustrative; the boundary is not. Command names shown are the
+ones that matter, not a required spelling of every folder.
+
+<project>/
+├── Cargo.toml                     # [workspace] members = ["domain", "src-tauri"]
+├── domain/                        # PURE CORE crate: no tauri, no tauri-plugin-*, no diesel, no rusqlite
+│   ├── Cargo.toml                 # framework-free dependency set; compiler enforces it (E0432/E0433)
+│   ├── src/
+│   │   ├── lib.rs
+│   │   ├── model/                 # entities + value objects
+│   │   ├── ports/                 # repository / clock / etc. as trait definitions
+│   │   └── service/               # business rules; one owner per rule
+│   └── tests/domain_purity.rs     # module-level backstop scan (assets/rust-guard-recipes.md, Recipe B)
+├── src-tauri/                     # APP crate — KEEP it a workspace member
+│   ├── Cargo.toml                 # tauri v2 + tauri-plugin-* + diesel + rusqlite live HERE
+│   ├── build.rs                   # runs tauri_build::build(); plain form does NOT autogenerate permissions
+│   ├── tauri.conf.json
+│   ├── capabilities/              # MUST stay here: parsed as ./capabilities/**/* relative to the APP crate dir
+│   │   ├── main.json
+│   │   └── migration.json
+│   ├── permissions/               # MUST stay here: resolved as ./permissions/**/* from the APP crate dir
+│   │   └── ...                    # WARNING: ANY file here gates ALL app commands (gating trap)
+│   ├── gen/                       # Tauri's OWN generated output (gen/schemas) — do NOT put your bindings here
+│   └── src/
+│       ├── lib.rs                 # generate_handler![...] lives HERE
+│       ├── commands/              # THIN adapters: validate → domain → map error → DTO
+│       ├── adapters/              # diesel/rusqlite implementations of domain ports
+│       └── error.rs               # serializable AppError
+├── src/                           # frontend (React + TS + Vite)
+│   ├── bindings/                  # generated TS bindings (tauri-specta v2 / ts-rs); committed, never hand-edited
+│   ├── services/                  # THE single typed layer over the generated bindings (Hard Rule 3)
+│   ├── components/
+│   ├── hooks/
+│   ├── stores/
+│   └── types/                     # consumes/re-exports generated bindings only
+└── ...
+
+## Constraint: capabilities/ and permissions/ stay in the app crate
+
+`tauri-build` resolves both globs from the APP CRATE directory, not the workspace root:
+
+- `tauri-build-2.6.2/src/acl.rs` calls `parse_capabilities("./capabilities/**/*")` (~line 428)
+  and `env::current_dir()?.join("permissions")` (~line 308).
+
+A workspace split is safe as long as the app crate remains the crate that (i) runs
+`tauri_build::build()` in its own `build.rs`, (ii) hosts `generate_handler!`, and
+(iii) contains `capabilities/**/*` and `permissions/**/*`. Moving those two
+folders to the workspace root breaks the ACL build.
+
+UNCONFIRMED: whether tauri-cli v2 mis-discovers the built binary when a workspace
+hoists `target/` to the workspace root.
+
+## Current → target (ANTIGRAVITY today)
+
+src-tauri/                          # today: NO permissions/ and NO build.rs
+├── Cargo.toml                      # mixes tauri v2 + tauri-plugin-{sql,store,dialog,shell} + diesel
+│                                   #   + rusqlite + thiserror + serde in ONE crate (rust-version 1.75, edition 2021)
+├── capabilities/{main.json,migration.json}
+├── gen/
+├── src/
+│   ├── commands/{import_s10,math,projects,mod}.rs   -> stays as adapters; must become thin (rules move out)
+│   ├── database/{mod,projects}.rs                   -> becomes an adapter over domain ports
+│   ├── models/mod.rs                                -> becomes the domain model, or moves into the domain crate
+│   └── lib.rs
+└── tauri.conf.json
+
+src-ui/src/{components/forms,components/grid,hooks,services,stores,types,utils}
+                                       -> src/services/ becomes the single typed layer; no invoke() elsewhere
+
+Migration order for this shape: add the source-scan guard first, split the workspace
+later (Decision Gate in SKILL.md). Do not add a `permissions/` file during the split
+without the granting capability.
+
+## Scaffold gap to fix
+
+The reusable scaffold `project-template/frontend/package.json` ships no test layer
+(`"test": "echo \"Error: no test specified\" && exit 1"`). Replacing that stub is part
+of step 7 in SKILL.md; see `references/ui-verification.md`.

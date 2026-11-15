@@ -1,0 +1,78 @@
+package skills_test
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/biggs-100/odachi/skills"
+)
+
+// TestTauriFoundationKeepsTheBoundaryRules: the skill this catalog carries for a
+// Tauri v2 project is the one thing that keeps the framework out of the domain. The
+// rules are pinned because they are the whole value: a body that lost the ACL gate
+// or the generated contract would still look like a foundation (0302).
+func TestTauriFoundationKeepsTheBoundaryRules(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		byName[s.Name] = string(s.Main())
+	}
+
+	content, ok := byName["tauri-foundation"]
+	if !ok {
+		t.Fatal("the payload has no tauri-foundation skill: a desktop project has no door")
+	}
+	for _, want := range []string{
+		"never knows Tauri exists",
+		"thin adapter",
+		"src/services/",
+		"tauri-specta",
+		"serializable",
+		"source-scan",
+		"has_app_acl_manifest",
+		"three layers",
+		"bootstrap",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("tauri-foundation does not say %q", want)
+		}
+	}
+}
+
+// TestTauriFoundationCarriesItsDepth: the body is a door, and the four pieces are
+// what a person actually follows. A reference the body names and the folder does not
+// hold is a dead link in a skill that installs on every machine (0302).
+func TestTauriFoundationCarriesItsDepth(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+
+	var skill skills.Skill
+	for _, s := range all {
+		if s.Name == "tauri-foundation" {
+			skill = s
+		}
+	}
+	if skill.Name == "" {
+		t.Fatal("the payload has no tauri-foundation skill")
+	}
+
+	files := map[string]bool{}
+	for _, file := range skill.Files {
+		files[file.Path] = true
+	}
+	for _, want := range []string{
+		"references/tauri-bridge.md",
+		"references/rust-guard-recipes.md",
+		"references/ui-verification.md",
+		"assets/tauri-layout.txt",
+	} {
+		if !files[want] {
+			t.Errorf("tauri-foundation does not carry %q; it carries %v", want, files)
+		}
+	}
+}
