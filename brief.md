@@ -690,3 +690,28 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0304 · la-fundacion-de
+
+## What must exist
+- la fundacion de un proyecto entra al catalogo por la puerta que ya existe: su triage, sus decisiones de nacimiento, sus guards, su doctrina de UI y sus lecciones viven como references de bootstrap, y las reglas que drive, tests y commits ya tienen se apuntan a su dueno
+
+## Done when
+- skills/bootstrap/references lleva los cinco archivos y el cuerpo de bootstrap los rutea desde su tabla de decision
+- bootstrap sigue pasando skills --check con su trigger intacto
+- el nombre ai-project-foundation no aparece en el payload
+- las seis reglas duplicadas no se repiten: bootstrap las delega nombrando a su dueno
+- una prueba fija que bootstrap rutea sus cinco referencias
+- go test ./... is green and odachi check --run "go test ./..." is green
+- ## Unreleased names it, patch (0304)
+
+## Not included (first version)
+- no entra una skill nueva: bootstrap es la unica puerta
+- no se reescribe el material: se adapta y se queda en ingles
+- no se toca la copia retirada en el home
+- no cambia lo que drive, tests y commits dicen
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.

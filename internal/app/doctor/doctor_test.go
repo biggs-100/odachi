@@ -200,8 +200,11 @@ func configured() *fakeFiles {
 	}
 	// The default init leaves bootstrap in the home; it is the one skill every
 	// project gets there without a project copy, so the fixture carries the bytes
-	// the binary ships and not a template.
-	files.putHome(".agents/skills/bootstrap/SKILL.md", bootstrapContent())
+	// the binary ships and not a template -every file of the folder, because a skill
+	// is its folder and a reference the fixture forgets reads as drift (0304).
+	for _, file := range bootstrapFiles() {
+		files.putHome(".agents/skills/bootstrap/"+file.Path, string(file.Content))
+	}
 	files.put("brief.md", briefComplete)
 	files.put("odd/profile.toml", "name = \"novato\"\n")
 	files.put("skills/acceptance/SKILL.md", skill.Template("acceptance"))
@@ -225,16 +228,6 @@ func blockOfScope(voice, scope string) string {
 		panic(err)
 	}
 	return block
-}
-
-// bootstrapContent is the entry-point skill the binary carries. A fixture that
-// invents its own bytes is a copy the doctor would rightly call stale.
-func bootstrapContent() string {
-	bootstrap, ok := bundledskills.Bootstrap()
-	if !ok {
-		panic("the binary has no bootstrap skill")
-	}
-	return string(bootstrap.Main())
 }
 
 func cleanLookup() *fakeLookup { return &fakeLookup{resolved: "/home/ana/bin/odachi"} }
@@ -1756,4 +1749,14 @@ func TestAnUnreadableSessionFileIsAProblem(t *testing.T) {
 	if !strings.Contains(got.Fix, "check the permissions of docs") {
 		t.Fatalf("the refusal must say what to fix, got %q", got.Fix)
 	}
+}
+
+// bootstrapFiles is the entry-point skill's folder as the binary carries it: the
+// body and every reference beside it.
+func bootstrapFiles() []bundledskills.File {
+	bootstrap, ok := bundledskills.Bootstrap()
+	if !ok {
+		panic("the binary has no bootstrap skill")
+	}
+	return bootstrap.Files
 }

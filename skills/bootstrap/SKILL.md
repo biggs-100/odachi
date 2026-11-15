@@ -3,10 +3,6 @@ name: bootstrap
 description: Trigger: when someone wants to start a project from scratch, asks what odachi is, or does not know where to begin. Do not load it inside a project that is already odachi.
 ---
 
-odachi is a binary and four plain-text artifacts -brief, task doc, proof and
-profile-. The binary enforces the gate; the artifacts are the memory. The human
-decides the vision and what is non-negotiable; the agent executes.
-
 ## When
 
 When someone wants to start a project from scratch, asks what odachi is, or does
@@ -23,11 +19,22 @@ be decided.
 - The answers are the human's: ask them in chat, then pass their own words with `--outcome`, `--audience`, `--done`, `--exclude`, `--sensitive`, `--deadline` and `--learn`, or a draft with `--brief`.
 - A tool shell has no terminal: `start` exits 2 naming the missing flags, and that is the prompt to ask, not a reason to invent the vision.
 - Load `drive` next: the day-to-day manual, one step planned, test-first, one commit at a time.
-- Close with `odachi check --run "<command>"`: the gate runs the proof and writes the real output in `proof/`.
-- A green proof belongs to the tree it ran on.
+- Close with `odachi check --run "<command>"`: the gate runs the proof and writes the real output in `proof/`, and a green proof belongs to the tree it ran on.
 - A project is already odachi if there is `brief.md`, an odachi block in `AGENTS.md`, or `odd/tasks/`: read that block and follow its rules.
-- If you do not know the state, `odachi doctor` says it without writing anything; in a folder that is not a project yet, it names this cycle.
+- `odachi doctor` says the state without writing anything; in a folder that is not a project yet, it names this cycle.
 - The human decides the vision; you execute and explain the why in one line.
+- The rules that keep a shape alive already have an owner: `drive` owns one owner per rule and the fence, `tests` the guard test and the mutation, `commits` the risk line. Read them there; this door says what to build.
+
+## Decision gates
+
+| Situation | What to read |
+| --- | --- |
+| A project starts and the first file is next | `references/project-shape.md`: which kind of project this is, and what each kind drops |
+| The decisions that must exist before code | `references/birth-decisions.md`: the twelve, and why none of them can wait |
+| The codebase needs a boundary the build enforces | `references/guard-recipes.md`: the guard per stack, and what does not work as one |
+| The project has a screen | `references/ui-verification.md`: drivable, observable, inventoried, one command, a capture packet |
+| A rule feels arbitrary | `references/engineering-lessons.md`: the defect each one was paid for |
+| The stack is Tauri v2 | Load `arch-tauri` after this one: that stack's boundary is its own door |
 
 ## Output
 
@@ -35,14 +42,16 @@ The next command and why, in this order: `init`, `start`, `drive`, the proof. A 
 
 ## Never
 
-- Never invent the interview's answers, the exclusions or the done criteria: an
-  assumption is not the human's vision. Ask in chat and wait.
-- Never call the setup done before the first proof exists: a project that has
-  never run `check --run` has not proved anything.
-- Run `odachi check`, `odachi review` or the hook in a folder that is not an
-  odachi project: gates on somebody else's work say nothing.
-- Run `odachi init` in a repository that is not the human's without asking: it
-  writes in the project and in their home. Ask in one sentence and wait for a
-  yes; the human answers in words, never by typing the command.
-- Start over a project that already exists, or rewrite somebody else's
-  `brief.md`.
+- Never invent the interview's answers, the exclusions or the done criteria: an assumption is not the human's vision. Ask in chat and wait.
+- Never call the setup done before the first proof exists: a project that has never run `check --run` has not proved anything.
+- Run `odachi check`, `odachi review` or the hook in a folder that is not an odachi project: gates on somebody else's work say nothing.
+- Run `odachi init` in a repository that is not the human's without asking: it writes in the project and in their home. Ask in one sentence and wait for a yes.
+- Start over a project that already exists, or rewrite somebody else's `brief.md`.
+
+## References
+
+- `references/project-shape.md` - the triage by project kind, and what each kind drops.
+- `references/birth-decisions.md` - the twelve decisions that must exist before the first file.
+- `references/guard-recipes.md` - the boundary guard per stack, and what does not work as one.
+- `references/ui-verification.md` - the UI contract an agent can actually run.
+- `references/engineering-lessons.md` - the fifteen rules, each with the defect that paid for it.
