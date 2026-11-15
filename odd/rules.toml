@@ -1,0 +1,89 @@
+# odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken
+schema = 10
+# odachi: one row per rule the catalog states. enforces is fence:<glob>, check:<name> or test:<TestName>;
+# a rule nothing enforces says so with enforces = "none" and its because, and doctor counts it as debt
+#
+# The backfill of 0312: the rows a mechanism already makes impossible to break, and
+# the rows where the only guard is a sentence. A test that pins a sentence is not
+# listed as an enforcer: it keeps the catalog honest, it does not stop the work.
+
+[[rule]]
+rule     = "una prueba que ya existe es la evidencia de que ese arbol corrio, y no se edita"
+skill    = "drive"
+enforces = "fence:proof/**"
+
+[[rule]]
+rule     = "medir no cambia el examen: el lente no se edita para que la medicion de mejor"
+skill    = "measure"
+enforces = "fence:internal/assets/review/*.md"
+
+[[rule]]
+rule     = "el fixture de la sonda y su llave son intocables: medir cambiando el examen no mide nada"
+skill    = "measure"
+enforces = "fence:internal/probe/**"
+
+[[rule]]
+rule     = "una medicion no corre en la gate: N veces un modelo multiplica el costo"
+skill    = "measure"
+enforces = "fence:.github/workflows/**"
+
+[[rule]]
+rule     = "ningun cambio entra con el linter en rojo"
+skill    = "commits"
+enforces = "check:lint"
+
+[[rule]]
+rule     = "una dependencia con una vulnerabilidad conocida no entra"
+skill    = "security"
+enforces = "check:govulncheck"
+
+[[rule]]
+rule     = "el dominio no importa nada fuera de la stdlib y sus hermanos"
+skill    = "arch-project"
+enforces = "test:TestDomainCoreImportsOnlyStdlibAndSiblings"
+
+[[rule]]
+rule     = "el arbol esta formateado: gofmt no tiene nada que decir"
+skill    = "commits"
+enforces = "test:TestEveryGoFileIsGofmtClean"
+
+[[rule]]
+rule     = "lo que un agente lee en cada sesion tiene su tamano en un baseline, y crecer cuesta un commit"
+skill    = "skill-craft"
+enforces = "test:TestTheTextAnAgentReadsKeepsItsBudget"
+
+[[rule]]
+rule     = "una pregunta se responde, no se implementa: una respuesta no es una propuesta"
+skill    = "drive"
+enforces = "none"
+because  = "que significa una frase es juicio del humano, y ningun comando lee la intencion"
+
+[[rule]]
+rule     = "una accion irreversible nombra su blanco exacto y espera un si"
+skill    = "drive"
+enforces = "none"
+because  = "la puerta puede negar un push despues de que paso; no puede saber que el blanco fue aprobado"
+
+[[rule]]
+rule     = "los requisitos se citan con las palabras del humano, no con las del agente"
+skill    = "drive"
+enforces = "none"
+because  = "check prueba que el requisito existe; solo un lector ve que eran las palabras del humano"
+
+[[rule]]
+rule     = "quien escribe no se verifica a si mismo: un riesgo nombrado pide su verifier"
+skill    = "commits"
+enforces = "none"
+because  = "que el verifier corrio es un registro que una persona mantiene; ningun comando lee quien juzgo"
+
+[[rule]]
+rule     = "la voz es del perfil y no de la sesion"
+skill    = "writing"
+enforces = "none"
+because  = "un registro no se sostiene con un comando"
+
+[[rule]]
+rule     = "un paso es un commit y un commit es un paso"
+skill    = "commits"
+enforces = "none"
+because  = "la historia es una forma que una persona lee; una maquina cuenta commits, no si cada uno es un paso"

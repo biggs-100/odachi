@@ -7,6 +7,23 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A rule can name what enforces it, and the catalog can be counted.** `odd/rules.toml` pairs each rule
+  the catalog states with the mechanism that makes breaking it impossible -a fence path, a declared check,
+  a test- or says `none` with its reason, and `odachi doctor` (check 16) reports the six that say none.
+  The backfill is honest about what a test proves: a test that pins a sentence keeps the catalog from
+  drifting without stopping the work, so it is not listed; only a test that holds the behavior is. A row
+  that names a fence path, a check or a test nothing answers is a problem and not debt, because the
+  project would believe it is protected. Minor (0312).
+
+- **Every declared check names its repair.** `[[check]]` in `odd/review.toml` gains `remedy`: the command
+  that fixes its red, or the sentence that names the repair when no one command can. It is required, and
+  the review prompt prints it beside a failing tool so the reviewer and the agent read the same
+  instruction. The remedy stays out of the check fingerprint on purpose: rewording advice must not ask the
+  human to approve the same tools again. `schema.Current` is 10 -a key arrived in one of the files the
+  counter covers-, so a binary at 9 or older refuses a file that carries it instead of calling it a typo.
+
 ## v0.45.6 - 2026-11-15
 
 - **`db-craft` is born, and the catalog finally has the craft of a database.** Eight references -schema,
