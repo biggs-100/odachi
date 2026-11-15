@@ -2,6 +2,7 @@
 | Skill | Trigger | Path |
 | --- | --- | --- |
 | acceptance | when deciding whether something is done. Turn a request into observable criteria before writing code. | skills/acceptance/SKILL.md |
+| arch-tauri | a Tauri v2 desktop project, new or restructured (Rust core and JS/TS frontend). The domain never knows Tauri exists, commands are thin, the contract is generated, the UI is verified. | skills/arch-tauri/SKILL.md |
 | bootstrap | when someone wants to start a project from scratch, asks what odachi is, or does not know where to begin. Do not load it inside a project that is already odachi. | skills/bootstrap/SKILL.md |
 | commits | when deciding what goes into a commit, how to split the work, or what the message and PR description say. | skills/commits/SKILL.md |
 | data | when data has to be saved, migrated, read or deleted. Decide owner, lifetime and backup before writing the first row. | skills/data/SKILL.md |
@@ -18,7 +19,6 @@
 | skill-craft | when writing a new skill, fixing one that is not being used, or deciding whether something deserves a skill. | skills/skill-craft/SKILL.md |
 | skill-improve | when a skill is not used, grew too long or the agent does not load it. Audit the trigger, cut the body and validate the format again. | skills/skill-improve/SKILL.md |
 | slices | when a large request has to be split into small steps, when the code no longer fits in one read, or when deciding whether to delegate to a subagent. | skills/slices/SKILL.md |
-| tauri-foundation | a Tauri v2 desktop project, new or restructured (Rust core and JS/TS frontend). The domain never knows Tauri exists, commands are thin, the contract is generated, the UI is verified. | skills/tauri-foundation/SKILL.md |
 | tests | when writing, fixing or deciding what a change tests. The failing test first, the code after. | skills/tests/SKILL.md |
 | triage | when there are several bugs, a backlog or a report that repeats. Classify by root and fix once, not once per issue. | skills/triage/SKILL.md |
 | tui-design | a terminal interface, a panel, a rail, a status bar, a prompt; a TUI that looks busy, flat or generic; a critique before shipping one. | skills/tui-design/SKILL.md |

@@ -7,11 +7,11 @@ import (
 	"github.com/biggs-100/odachi/skills"
 )
 
-// TestTauriFoundationKeepsTheBoundaryRules: the skill this catalog carries for a
+// TestArchTauriKeepsTheBoundaryRules: the skill this catalog carries for a
 // Tauri v2 project is the one thing that keeps the framework out of the domain. The
 // rules are pinned because they are the whole value: a body that lost the ACL gate
 // or the generated contract would still look like a foundation (0302).
-func TestTauriFoundationKeepsTheBoundaryRules(t *testing.T) {
+func TestArchTauriKeepsTheBoundaryRules(t *testing.T) {
 	all, err := skills.All()
 	if err != nil {
 		t.Fatalf("All(): %v", err)
@@ -21,9 +21,9 @@ func TestTauriFoundationKeepsTheBoundaryRules(t *testing.T) {
 		byName[s.Name] = string(s.Main())
 	}
 
-	content, ok := byName["tauri-foundation"]
+	content, ok := byName["arch-tauri"]
 	if !ok {
-		t.Fatal("the payload has no tauri-foundation skill: a desktop project has no door")
+		t.Fatal("the payload has no arch-tauri skill: a desktop project has no door")
 	}
 	for _, want := range []string{
 		"never knows Tauri exists",
@@ -37,15 +37,15 @@ func TestTauriFoundationKeepsTheBoundaryRules(t *testing.T) {
 		"bootstrap",
 	} {
 		if !strings.Contains(content, want) {
-			t.Errorf("tauri-foundation does not say %q", want)
+			t.Errorf("arch-tauri does not say %q", want)
 		}
 	}
 }
 
-// TestTauriFoundationCarriesItsDepth: the body is a door, and the four pieces are
+// TestArchTauriCarriesItsDepth: the body is a door, and the four pieces are
 // what a person actually follows. A reference the body names and the folder does not
 // hold is a dead link in a skill that installs on every machine (0302).
-func TestTauriFoundationCarriesItsDepth(t *testing.T) {
+func TestArchTauriCarriesItsDepth(t *testing.T) {
 	all, err := skills.All()
 	if err != nil {
 		t.Fatalf("All(): %v", err)
@@ -53,12 +53,12 @@ func TestTauriFoundationCarriesItsDepth(t *testing.T) {
 
 	var skill skills.Skill
 	for _, s := range all {
-		if s.Name == "tauri-foundation" {
+		if s.Name == "arch-tauri" {
 			skill = s
 		}
 	}
 	if skill.Name == "" {
-		t.Fatal("the payload has no tauri-foundation skill")
+		t.Fatal("the payload has no arch-tauri skill")
 	}
 
 	files := map[string]bool{}
@@ -72,7 +72,7 @@ func TestTauriFoundationCarriesItsDepth(t *testing.T) {
 		"assets/tauri-layout.txt",
 	} {
 		if !files[want] {
-			t.Errorf("tauri-foundation does not carry %q; it carries %v", want, files)
+			t.Errorf("arch-tauri does not carry %q; it carries %v", want, files)
 		}
 	}
 }
