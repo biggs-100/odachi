@@ -8,7 +8,7 @@ R1 · "renombrar tauri-foundation a arch-tauri en el payload, el registro y el h
 ## Done when
 
 ## Steps
-- [ ] T1 · renombrar tauri-foundation a arch-tauri en el payload, el registro y el home, sin dejar el nombre viejo   R1
+- [x] T1 · renombrar tauri-foundation a arch-tauri en el payload, el registro y el home, sin dejar el nombre viejo   R1 · tree:f336eb40b72652dbd85d175802149d2b22a86c8c
 
 ## History
 L1 · "renombrar tauri-foundation a arch-tauri en el payload, el registro y el home, sin dejar el nombre viejo"
