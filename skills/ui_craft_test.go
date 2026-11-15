@@ -32,6 +32,8 @@ func TestUICraftRoutesItsDepth(t *testing.T) {
 		"references/grouping-and-emphasis.md":   {"Proximity", "the-numbers.md", "states-and-copy.md"},
 		"references/ai-native.md":               {"shows its work", "generative UI", "irreversible", "undo"},
 		"references/art-direction.md":           {"three directions", "tradeoff", "house style"},
+		"references/motion-identity.md":         {"signature", "one move", "reduced-motion"},
+		"references/depth-and-material.md":      {"translucen", "reduced transparency", "body text"},
 	} {
 		var content string
 		for _, file := range skill.Files {

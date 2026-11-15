@@ -33,6 +33,8 @@ A screen, a landing, a dashboard, a form or a component is to be built or review
 | a transition, a gesture or anything that moves | `references/motion.md` |
 | a model in the loop: answering, calling a tool, taking an action | `references/ai-native.md` |
 | the look of the whole thing: which direction, and what it costs | `references/art-direction.md` |
+| what the product's signature move is, and when it repeats | `references/motion-identity.md` |
+| a surface that floats, blurs or sits over content | `references/depth-and-material.md` |
 | the markup, the keyboard, or the screen narrowing | `references/accessible-and-adaptive.md` |
 | things that belong together, and what is allowed to lead | `references/grouping-and-emphasis.md` |
 | the last pass before calling it done | `references/the-read.md` |
@@ -51,6 +53,8 @@ The winner and why, the files changed, the five states covered, the contrast mea
 - `references/motion.md` — when motion earns its place, and the timings that keep it calm.
 - `references/ai-native.md` — the surface a model is inside: streaming, tools, approval, generative UI.
 - `references/art-direction.md` — four axes, three directions, and the one the brief earns.
+- `references/motion-identity.md` — the one move the product is remembered by, and what it may carry.
+- `references/depth-and-material.md` — the four jobs of depth, and what translucency costs.
 - `references/accessible-and-adaptive.md` — the markup, the keyboard path, and what survives a narrow screen.
 - `references/grouping-and-emphasis.md` — proximity before containers, and the one thing allowed to lead.
 - `references/the-read.md` — the last pass: the winner, the states, the measured contrast, the worst content.
