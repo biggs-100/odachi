@@ -87,11 +87,13 @@ func TestArchTauriSitsUnderArchProject(t *testing.T) {
 	body := string(skill.Main())
 	flat := strings.Join(strings.Fields(body), " ")
 
+	// The pairing is the rule, not the fragments: a body where each of these words
+	// appears somewhere can still send the reader to the wrong door, which is the
+	// defect this round fixed. Each sentence is pinned whole (0308).
 	for _, want := range []string{
+		"Stop where there is no Rust core, and on a plain Rust crate or CLI with no webview: `arch-project` carries that shape.",
+		"Stop on feature work in a project that already has its boundary: the day-to-day manual is `drive`.",
 		"`arch-project` comes first",
-		"no Rust core",
-		"plain Rust crate or CLI",
-		"feature work in a project that already has its boundary",
 	} {
 		if !strings.Contains(flat, want) {
 			t.Errorf("arch-tauri does not say %q", want)
@@ -133,6 +135,9 @@ func TestArchTauriScaffoldKeepsTheOrder(t *testing.T) {
 		t.Fatal("arch-tauri carries no references/tauri-scaffold.md")
 	}
 
+	// The order is the property, not the presence: nine steps that exist in any order
+	// are nine paragraphs. Each prefix must appear after the one before it (0308).
+	previous := -1
 	for _, want := range []string{
 		"1. **Scaffold the workspace**",
 		"2. **Write the domain-purity guard before the business code**",
@@ -144,9 +149,15 @@ func TestArchTauriScaffoldKeepsTheOrder(t *testing.T) {
 		"8. **Write the first ADR**",
 		"9. **If a file landed under `src-tauri/permissions/`",
 	} {
-		if !strings.Contains(scaffold, want) {
+		at := strings.Index(scaffold, want)
+		if at < 0 {
 			t.Errorf("the scaffold lost a step: %q", want)
+			continue
 		}
+		if at < previous {
+			t.Errorf("the scaffold put %q out of order", want)
+		}
+		previous = at
 	}
 
 	// The two details a person forgets and the compiler does not catch.

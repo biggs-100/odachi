@@ -92,6 +92,10 @@ Written after 0308 and `v0.45.4`.
 - **What is still unowned:** `ANTIGRAVITY` -the human's own project name- is still written in
   `references/rust-guard-recipes.md`. It is harmless in this catalog and noise in a binary anyone
   installs.
+- **A test that checks presence does not check a promise.** Two review rounds found the same shape of
+  defect in the guards this feature wrote: the stop sentence was pinned word by word, so the wrong door
+  passed, and the nine steps were pinned by existence, so any order passed. Both are pinned whole now
+  -the sentence with its door, the steps by increasing position- and each was proven by breaking it.
 
 ## 0307: what it settled, and what it leaves
 
