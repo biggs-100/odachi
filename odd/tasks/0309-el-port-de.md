@@ -15,7 +15,7 @@ R1 · "el port de gentle-shell cierra sus huecos de texto: el aviso que perdio t
 
 ## Steps
 - [x] T1 · el aviso de atribucion vuelve a tui-design como asset   R1 · tree:3ebe691cd8da489d76371375cd58eeee9a2c40f3
-- [ ] T2 · los dos references de UI entran en ui-craft con su fila y su bullet   R1
+- [x] T2 · los dos references de UI entran en ui-craft con su fila y su bullet   R1 · tree:af835c05726598442c4656909a3ccdfa3c5c7cdd
 - [ ] T3 · la prueba, el impact map y el changelog nombran los huecos cerrados   R1
 
 ## History
