@@ -9,6 +9,17 @@ not a version.
 
 ## Unreleased
 
+- **The Tauri door catches up with the level it sits on.** `arch-tauri` gains
+  `references/tauri-scaffold.md` -the nine steps of a Tauri v2 scaffold, in the order that keeps the
+  boundary: the workspace that retains `build.rs`, `generate_handler!`, `capabilities/**` and
+  `permissions/**`, the guard before the business code, the error type before the first command, one
+  thin command as the template, the generated bindings, the single service layer, the three UI levels
+  with the scaffold's dead test script replaced, the first ADR and the capability that lands with the
+  permission file-. Its `## When` names the three conditions for not loading it -no Rust core, a plain
+  Rust crate or CLI with no webview, feature work in a project that already has its boundary- and sends
+  the shared shape to `arch-project`, and `tauri-bridge.md` stops claiming the tree and the ADRs belong
+  to `bootstrap`. Patch (0308).
+
 - **The second level of the catalog has a door of its own.** `arch-project` carries what every stack
   shares -the triage by project kind, the twelve decisions before the first file, the tree, the guard,
   the commands per stack, the UI contract, the fifteen lessons, the Go + HTMX page and the ADR
