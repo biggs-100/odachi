@@ -20,7 +20,7 @@ R1 · "nace db-craft: el oficio de trabajar con una base de datos, con migracion
 - [x] T2 · transacciones e idempotencia: aislamiento, reintento completo y outbox   R1 · tree:4e41f7efb3aec9b0140d41d1950c2d5f669c144c
 - [x] T3 · indices y consultas: orden de columnas, covering, keyset y N+1   R1 · tree:967c8524bb4f57909145be21e4e48d12a675d97a
 - [x] T4 · acceso y operacion: minimo privilegio, RLS, PITR y drill de restore   R1 · tree:a426baf57aabd6e2d19acad71228f1b3f95d30d7
-- [ ] T5 · el catalogo de fallos, los registros y la prueba del ruteo   R1
+- [x] T5 · el catalogo de fallos, los registros y la prueba del ruteo   R1 · tree:1317ae0611748a3c3dfed84cac600a0e26ea9ee2
 
 ## History
 L1 · "nace db-craft: el oficio de trabajar con una base de datos, con migraciones sin downtime, transacciones, indices, consultas, acceso y operacion, y el catalogo de errores que cuestan incidentes"
