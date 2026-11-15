@@ -8,12 +8,11 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.45.2 - 2026-11-14
 
 - **The Tauri foundation skill is called `arch-tauri`.** The name says what it is -architecture- and what it
   is for -Tauri-, and leaves room for the family it belongs to. One folder, its row in the index, the test
   that pins it and the impact map moved with it; nothing else changed. Patch (0303).
-## Unreleased
 
 - **The foundation of a project enters through the door that already exists.** The generic half of a
   project's architecture -the triage by project kind, the twelve decisions that must exist before the
@@ -21,14 +20,16 @@ not a version.
   each paid for by a defect- lives now in `bootstrap`'s references, and its decision table routes each
   one. The rules that `drive`, `tests` and `commits` already own are not restated: `bootstrap`
   names them and sends the reader there. Patch (0304).
+
 ## v0.45.1 - 2026-11-14
 
 - **The catalog carries a Tauri v2 foundation.** A desktop project with a Rust core had no door here: the
-  new 	auri-foundation skill names the boundary the framework keeps crossing -the domain crate never
+  new `tauri-foundation` skill names the boundary the framework keeps crossing -the domain crate never
   imports Tauri, a command is a thin adapter, the Rust-to-TS contract is generated, the UI is verified in
   three layers- and ships the depth it needs: the workspace layout, the purity guard recipes, the bridge
-  templates and the desktop verification ladder. Its links point at ootstrap and drive, the doors this
+  templates and the desktop verification ladder. Its links point at `bootstrap` and drive, the doors this
   catalog has, instead of at the folder it came from. Patch (0302).
+
 ## v0.45.0 - 2026-11-14
 
 - **The risk a commit declares asks for its lens, and a verdict without it does not close.** The table
