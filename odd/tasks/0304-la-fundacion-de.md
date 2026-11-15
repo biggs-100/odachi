@@ -17,7 +17,7 @@ R1 · "la fundacion de un proyecto entra al catalogo por la puerta que ya existe
 - [x] T1 · los cinco archivos de la fundacion en references de bootstrap   R1 · route:inline · tree:56d2dd351add41110e61d6a1f6221f0c19df6aa7
 - [x] T2 · el ruteo en bootstrap y las reglas apuntadas a su dueno   R1 · route:inline · tree:56d2dd351add41110e61d6a1f6221f0c19df6aa7
 - [x] T3 · una prueba fija que bootstrap rutea sus referencias   R1 · route:inline · tree:56d2dd351add41110e61d6a1f6221f0c19df6aa7
-- [ ] T4 · el changelog nombra 0304 bajo Unreleased, patch   R1 · route:inline
+- [x] T4 · el changelog nombra 0304 bajo Unreleased, patch   R1 · route:inline · tree:66596ab911e65641fbb496faef29d61e9ede314b
 
 ## History
 L1 · "la fundacion de un proyecto entra al catalogo por la puerta que ya existe: su triage, sus decisiones de nacimiento, sus guards, su doctrina de UI y sus lecciones viven como references de bootstrap, y las reglas que drive, tests y commits ya tienen se apuntan a su dueno"
