@@ -26,16 +26,22 @@ questions decide it: what isolation, how long, and what happens when it loses a 
 
 ## The retry is the whole transaction
 
-`could not serialize access due to concurrent update` (Repeatable Read, Serializable)
-and `deadlock detected` are not bugs: they are the database refusing a history it
-cannot make serial. The rule is the same for both:
+`could not serialize access due to concurrent update` (Repeatable Read, Serializable) is
+the database refusing a history it cannot make serial. `deadlock detected` is a different
+animal: a cycle in the wait-for graph, which the detector breaks at **every** isolation
+level, Read Committed included. Both are retried the same way, because both mean "your
+transaction did not happen", and a deadlock points at the lock ordering below.
 
 ```
+var err error
 for attempt := 0; attempt < 3; attempt++ {
-    err := inTx(ctx, func(tx Tx) error { return doTheWork(ctx, tx) })
-    if isRetryable(err) { backoff(attempt); continue }
-    return err
+    err = inTx(ctx, func(tx Tx) error { return doTheWork(ctx, tx) })
+    if !isRetryable(err) {
+        return err
+    }
+    backoff(attempt)
 }
+return fmt.Errorf("after 3 attempts: %w", err)   // never a silent success
 ```
 
 - Retry **the whole function**, including the logic that decided which SQL to run: a

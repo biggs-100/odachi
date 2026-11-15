@@ -33,8 +33,12 @@ runs again later costs nothing, and a five-minute convoy costs an incident.
 ## Catalog-only, and the ones that rewrite
 
 Instant: adding a column with a constant default or none, dropping a column (invisible
-at once, the space returns later), `ADD CONSTRAINT … NOT VALID`, and
-`CREATE INDEX CONCURRENTLY`.
+at once, the space returns later), and `ADD CONSTRAINT … NOT VALID`.
+
+Non-blocking but **not** instant: `CREATE INDEX CONCURRENTLY` builds in two passes over
+the table, waits for the transactions that were open when it started, can run for hours
+on a large table, and leaves an `INVALID` index behind when it fails. It also cannot run
+inside a transaction block, so it goes in its own migration with no `BEGIN`.
 
 A rewrite: a volatile default such as `clock_timestamp()`, a stored generated column,
 an identity column, and most type changes. A rewrite holds the table for its whole

@@ -39,9 +39,11 @@ you need it in an incident.
 - A connection is a process in Postgres: more connections is not more throughput, it is
   more context switching. Size the pool to the database's cores, not to the number of
   workers.
-- A pooler in transaction mode rewrites the assumptions: `SET` (without `LOCAL`), session
-  advisory locks, prepared statements and `LISTEN` all outlive the statement the way they
-  should not. Use `SET LOCAL`, `pg_advisory_xact_lock`, and named prepared statements
+- A pooler in transaction mode changes what survives a statement, in both directions:
+  `SET` without `LOCAL` and session-level advisory locks **outlive** it and leak to the
+  next user of that connection; a prepared statement or a `LISTEN` opened in it is
+  **gone** by the next transaction, which is why the pooler has to support them
+  explicitly. Use `SET LOCAL`, `pg_advisory_xact_lock`, and named prepared statements
   only where the pooler supports them.
 - `idle_in_transaction_session_timeout` and `statement_timeout` on the role are cheaper
   than the incident a forgotten transaction causes.

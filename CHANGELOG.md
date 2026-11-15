@@ -9,9 +9,10 @@ not a version.
 
 ## Unreleased
 
-- **`db-craft` is born, and the catalog finally has the craft of a database.** Seven references -schema,
-  migrations, transactions, indexes, queries, access, operations- plus `the-failures.md`, a catalogue of
-  twenty-eight mistakes with the symptom each one produces and the page that decided it. Postgres in the
+- **`db-craft` is born, and the catalog finally has the craft of a database.** Eight references -schema,
+  migrations, transactions, indexes, queries, access, operations and the catalogue of failures-, the last
+  one a list of twenty-eight mistakes with the symptom each one produces and the page that decided it.
+  Postgres in the
   first person, because the numbers that change a decision -the lock each operation takes, `lock_timeout`,
   `NOT VALID` and `VALIDATE`, `CREATE INDEX CONCURRENTLY`, `FORCE ROW LEVEL SECURITY`- are Postgres's, with
   a portability note at the end of every page. `data` keeps the decision -who owns a value, how long it

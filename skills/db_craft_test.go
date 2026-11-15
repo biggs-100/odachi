@@ -1,6 +1,8 @@
 package skills_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -63,6 +65,31 @@ func TestDBCraftCarriesItsDepth(t *testing.T) {
 				t.Errorf("%s does not say %q", path, phrase)
 			}
 		}
+	}
+}
+
+// TestDBCraftCountsWhatItShips: the impact map says how many references the skill
+// carries, and a count that disagrees with the folder is the line a maintainer trusts
+// while it lies. The number in the prose is pinned against the payload (0311).
+func TestDBCraftCountsWhatItShips(t *testing.T) {
+	skill := mustSkill(t, "db-craft")
+
+	references := 0
+	for _, file := range skill.Files {
+		if strings.HasPrefix(file.Path, "references/") {
+			references++
+		}
+	}
+	if references != 8 {
+		t.Fatalf("db-craft carries %d references, and the map and the changelog say eight", references)
+	}
+
+	data, err := os.ReadFile(filepath.Join("..", "docs", "impact-map.md"))
+	if err != nil {
+		t.Fatalf("read docs/impact-map.md: %v", err)
+	}
+	if !strings.Contains(string(data), "`db-craft` ships eight references") {
+		t.Error("the impact map does not say db-craft ships eight references")
 	}
 }
 
