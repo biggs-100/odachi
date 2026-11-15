@@ -32,6 +32,7 @@ const reviewWithLint = `mode = "on"
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "CRITICAL"
+remedy = "run it with --fix, then fix what it still names"
 `
 
 // fenceWithProof is a fence that keeps the proofs out.

@@ -44,6 +44,9 @@ type check struct {
 	Name     string `toml:"name"`
 	Command  string `toml:"command"`
 	Severity string `toml:"severity"`
+	// Remedy is what repairs this tool's red. The domain requires it: a red row
+	// that names no repair is a tool that complains without teaching.
+	Remedy string `toml:"remedy"`
 }
 
 // Decode parses the file. Unknown keys are an error naming them; an empty or
@@ -122,6 +125,7 @@ func declaredChecks(raw []check) []review.Check {
 			Name:     one.Name,
 			Command:  one.Command,
 			Severity: review.Severity(one.Severity),
+			Remedy:   one.Remedy,
 		})
 	}
 	return out
@@ -188,6 +192,7 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 			out.WriteString("name = \"" + tomlString(check.Name) + "\"\n")
 			out.WriteString("command = \"" + tomlString(check.Command) + "\"\n")
 			out.WriteString("severity = \"" + string(check.Severity) + "\"\n")
+			out.WriteString("remedy = \"" + tomlString(check.Remedy) + "\"\n")
 		}
 	}
 	return []byte(out.String()), nil

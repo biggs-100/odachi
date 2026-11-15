@@ -1,5 +1,5 @@
 # odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken
-schema = 3
+schema = 10
 # odachi: the review is the human's decision; on requires it in check, off leaves it optional
 mode = "on"
 # the biggest prompt this project pays a reviewer for; a reviewer that stalls at a size does not answer late
@@ -27,6 +27,7 @@ resilience = "opencode-go/deepseek-v4.1-flash"
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "CRITICAL"
+remedy = "run golangci-lint run ./... --fix, then fix what it still names; never disable the rule"
 
 # the dependency half of the floor (0283): a CVE in a package the candidate calls
 # is a defect no lens can see, and the exit status is the whole judgment. It reads
@@ -36,6 +37,7 @@ severity = "CRITICAL"
 name = "govulncheck"
 command = "govulncheck ./..."
 severity = "CRITICAL"
+remedy = "upgrade the module the finding names in go.mod, then run govulncheck ./... again"
 
 
 

@@ -23,6 +23,7 @@ func declareChecks(t *testing.T, dir string) {
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "WARNING"
+remedy = "fix what the linter names"
 `
 	if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(layout.Review)), []byte(file), 0o644); err != nil {
 		t.Fatalf("write review.toml: %v", err)

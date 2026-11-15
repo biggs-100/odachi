@@ -27,6 +27,12 @@ type Check struct {
 	Name     string
 	Command  string
 	Severity Severity
+	// Remedy is what a person does about this tool's red: the command that
+	// repairs it, or the sentence that names the repair when no one command can.
+	// It is required because a failing check that names no repair is a row the
+	// agent reads and then guesses at, which is what a lint rule's message exists
+	// to prevent (0312).
+	Remedy string
 }
 
 const (
@@ -77,7 +83,12 @@ func NormalizeChecks(raw []Check) ([]Check, error) {
 			return nil, fmt.Errorf("the check %q: %w", name, err)
 		}
 
-		out = append(out, Check{Name: name, Command: command, Severity: severity})
+		remedy := strings.TrimSpace(check.Remedy)
+		if remedy == "" {
+			return nil, fmt.Errorf("the check %q does not say remedy: a red row that names no repair leaves the agent guessing, and a guess is what the tool was declared to stop", name)
+		}
+
+		out = append(out, Check{Name: name, Command: command, Severity: severity, Remedy: remedy})
 	}
 	return out, nil
 }
@@ -149,7 +160,11 @@ type CheckResult struct {
 	// Severity is the severity the project declared: what a failure is worth is
 	// its decision, and the row the verdict files carries it.
 	Severity Severity
-	Status   CheckStatus
+	// Remedy is the project's own words for the repair: the prompt prints it
+	// beside a red so the reviewer knows what the tool's failure is asking for,
+	// and so the sentence reaches the agent that reads the verdict (0312).
+	Remedy string
+	Status CheckStatus
 	// Exit is the tool's own exit code, zero when it did not produce one.
 	Exit int
 	// Output is what the tool printed, clipped by ClipCheckOutput.
@@ -265,6 +280,10 @@ func (a CheckApproval) Covers(checks []Check) bool {
 // ChecksFingerprint is the identity of one declared list: the tools in the order
 // the file writes them, each with its name, its command and the severity it is
 // paid at. Nothing is hashed twice, so two runs of the same file agree.
+//
+// The remedy is left out on purpose: it is advice for the person reading a red,
+// not something the review executes, and rewording it must not ask the human to
+// approve the same tools again.
 //
 // Every field is written with its length in front, because the command is a
 // human's shell line and can carry any character at all: without the length, one

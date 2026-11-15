@@ -17,11 +17,13 @@ func TestDecodeReadsTheChecksTheProjectDeclared(t *testing.T) {
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "WARNING"
+remedy = "fix what the tool names"
 
 [[check]]
 name = "vuln"
 command = "govulncheck ./..."
 severity = "CRITICAL"
+remedy = "upgrade the module the finding names"
 `
 
 	got, err := reviewtoml.Decode([]byte(data))
@@ -52,6 +54,7 @@ check_timeout_s = 45
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "WARNING"
+remedy = "fix what the tool names"
 `
 
 	got, err := reviewtoml.Decode([]byte(data))
@@ -74,11 +77,19 @@ func TestDecodeRefusesACheckItCannotRun(t *testing.T) {
 name = "lint"
 command = "golangci-lint run ./..."
 `,
+		"no remedy": `mode = "on"
+
+[[check]]
+name = "lint"
+command = "golangci-lint run ./..."
+severity = "WARNING"
+`,
 		"no command": `mode = "on"
 
 [[check]]
 name = "lint"
 severity = "WARNING"
+remedy = "fix what the tool names"
 `,
 		"unknown key": `mode = "on"
 
@@ -86,6 +97,7 @@ severity = "WARNING"
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "WARNING"
+remedy = "fix what the tool names"
 timeout = 3
 `,
 	}
@@ -118,8 +130,8 @@ func TestRenderRoundTripsTheChecks(t *testing.T) {
 		Mode:         review.ModeOn,
 		KeepVerdicts: review.DefaultKeepVerdicts,
 		Checks: []review.Check{
-			{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning},
-			{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical},
+			{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning, Remedy: "fix it"},
+			{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical, Remedy: "upgrade it"},
 		},
 	}
 
@@ -155,7 +167,7 @@ func TestRenderWritesATwoLineCommandBackAsToml(t *testing.T) {
 		Mode:         review.ModeOn,
 		KeepVerdicts: review.DefaultKeepVerdicts,
 		Checks: []review.Check{
-			{Name: "multi", Command: command, Severity: review.Warning},
+			{Name: "multi", Command: command, Severity: review.Warning, Remedy: "fix it"},
 		},
 	}
 
@@ -183,7 +195,7 @@ func TestRenderSaysHowLongAToolMayRun(t *testing.T) {
 		Mode:         review.ModeOn,
 		KeepVerdicts: review.DefaultKeepVerdicts,
 		Checks: []review.Check{
-			{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning},
+			{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning, Remedy: "fix it"},
 		},
 	}
 

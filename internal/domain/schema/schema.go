@@ -31,7 +31,9 @@ const (
 	// 8: the refutation declares its shape and keeps the refuter's time as a claim.
 	// 9: the verdict remembers the tree it corrects, so a chain of corrections can
 	// be counted.
-	Current = 9
+	// 10: a declared check names the repair its red asks for, and rulebook rows
+	// name what enforces them.
+	Current = 10
 )
 
 // Read answers which schema a file with this value was written with. A value this

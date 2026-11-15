@@ -378,6 +378,9 @@ func checksSection(checks []CheckResult) string {
 			out.WriteString(" · " + check.Note)
 		}
 		out.WriteString(" · `" + check.Command + "`\n")
+		if check.Status != CheckPassed && strings.TrimSpace(check.Remedy) != "" {
+			out.WriteString("    fix: " + check.Remedy + "\n")
+		}
 		if strings.TrimSpace(check.Output) == "" {
 			continue
 		}
