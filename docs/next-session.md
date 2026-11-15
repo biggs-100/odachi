@@ -21,6 +21,17 @@ produced 0295 and 0297.
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
   and warns when the note quotes another count, so the number is never typed-.
+
+## What waits for a decision
+
+- **The next feature is not chosen.** The three debts the last session left are closed: the store is
+  clean (1.9 MB, nothing left to free), the count says "1 step done of 1", and the changelog is current.
+  What is not decided is what comes next; `docs/review-debt.md` is the list to read before choosing.
+- **One cosmetic debt, one line**: the v0.45.1 section of `CHANGELOG.md` writes `bootstrap` and `drive`
+  without the backticks around `drive`. The published release notes already have them. Fix it whenever
+  the file is touched; it does not justify a pull request of its own.
+- **`Unreleased` is empty** and the next feature writes under it, re-creating the heading.
+
 - **`schema.Current` is 9**: the verdict carries `corrects`, the refutation carries `declared_at`, and
   `agents.toml` and `odd/review.toml` share the counter. A binary at `v0.43.0` or older refuses a
   verdict written by this one and says "upgrade".
