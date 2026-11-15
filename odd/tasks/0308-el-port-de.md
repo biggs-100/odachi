@@ -17,7 +17,7 @@ R1 · "el port de Tauri queda completo: los nueve pasos del scaffold, las tres c
 ## Steps
 - [x] T1 · la reference del scaffold entra con el orden de los nueve pasos y su fila   R1 · tree:07a4a8487f07d9832d0f68dfb6d3b34116e88042
 - [x] T2 · la puerta deja de mirar a bootstrap: las tres condiciones y el nivel   R1 · tree:55cd4c72b9b05f669b8e8caa7d717a94726f8596
-- [ ] T3 · la prueba, el impact map y el changelog nombran el port completo   R1
+- [x] T3 · la prueba, el impact map y el changelog nombran el port completo   R1 · tree:2dffb81a645e438b1bb8e9ae2e627c58ba52b707
 
 ## History
 L1 · "el port de Tauri queda completo: los nueve pasos del scaffold, las tres condiciones de no cargar, y arch-tauri mirando a arch-project"

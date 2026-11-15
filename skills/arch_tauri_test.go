@@ -85,6 +85,7 @@ func TestArchTauriCarriesItsDepth(t *testing.T) {
 func TestArchTauriSitsUnderArchProject(t *testing.T) {
 	skill := mustSkill(t, "arch-tauri")
 	body := string(skill.Main())
+	flat := strings.Join(strings.Fields(body), " ")
 
 	for _, want := range []string{
 		"`arch-project` comes first",
@@ -92,7 +93,7 @@ func TestArchTauriSitsUnderArchProject(t *testing.T) {
 		"plain Rust crate or CLI",
 		"feature work in a project that already has its boundary",
 	} {
-		if !strings.Contains(body, want) {
+		if !strings.Contains(flat, want) {
 			t.Errorf("arch-tauri does not say %q", want)
 		}
 	}
@@ -117,6 +118,10 @@ func TestArchTauriSitsUnderArchProject(t *testing.T) {
 // type before the first command, the capability with the permission file (0308).
 func TestArchTauriScaffoldKeepsTheOrder(t *testing.T) {
 	skill := mustSkill(t, "arch-tauri")
+
+	// The page routes the reference and the reference exists: the two halves the port
+	// can lose separately.
+	assertEveryReferenceIsRouted(t, skill, string(skill.Main()))
 
 	var scaffold string
 	for _, file := range skill.Files {

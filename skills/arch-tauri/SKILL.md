@@ -10,9 +10,9 @@ existing single-crate app into a workspace- and the question is where the domain
 ends and the framework begins. `arch-project` comes first: the triage, the tree, the
 ADRs and the commands per stack are its own, and this page is what the stack changes.
 
-Stop where there is no Rust core, on a plain Rust crate or CLI with no webview, and
-on feature work in a project that already has its boundary: the day-to-day manual is
-`drive`.
+Stop where there is no Rust core, and on a plain Rust crate or CLI with no webview:
+`arch-project` carries that shape. Stop on feature work in a project that already has
+its boundary: the day-to-day manual is `drive`.
 
 ## Rules
 

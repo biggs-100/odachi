@@ -1,14 +1,15 @@
 # Next session
 
-Written after 0307 and `v0.45.4`.
+Written after 0308 and `v0.45.4`.
 
 ## Where the project is
 
-- **0307 is open on `feat/0307-second-door`, unmerged and unreleased.** The catalog has three levels
-  now: `bootstrap` (how a project starts in odachi), `arch-project` (the shape of any stack: triage,
-  birth decisions, tree, guard, commands per stack, UI contract, lessons, Go + HTMX, ADR template) and
-  `arch-tauri` (one stack's boundary). The five references moved out of `bootstrap`'s folder; they were
-  not copied.
+- **0308 is open on `feat/0308-tauri-port`, unmerged and unreleased.** The Tauri door caught up with its
+  level: it carries the nine scaffold steps as `references/tauri-scaffold.md`, names the three conditions
+  for not loading it, and sends the tree and the ADRs to `arch-project` instead of `bootstrap`.
+- **0307 is merged**: PR #623, on `main`. The catalog has three levels -`bootstrap` (how a project starts
+  in odachi), `arch-project` (the shape of any stack) and `arch-tauri` (one stack's boundary)- and the
+  five references moved out of `bootstrap`'s folder; they were not copied.
 - `v0.45.4` is published: annotated tag on `0ed7d2e` (the merge of release PR #621), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
   `odachi 0.45.4`. `v0.45.3` carried 0305; this one carries 0306.
@@ -17,7 +18,7 @@ Written after 0307 and `v0.45.4`.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 305 features · 755 steps done of 755 · 0 open questions
+  total: 306 features · 758 steps done of 758 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -60,6 +61,10 @@ Written after 0307 and `v0.45.4`.
 
 ## What shipped
 
+- **0308, patch (unreleased).** `arch-tauri` gained `references/tauri-scaffold.md` -the nine steps of a
+  Tauri v2 scaffold in the order that keeps the boundary-, its `## When` recovered the three conditions
+  for not loading it, and `tauri-bridge.md` stopped sending the tree and the ADRs to `bootstrap`.
+
 - **0307, patch (unreleased).** The catalog gained its second level: `arch-project` carries the triage
   by project kind, the twelve birth decisions, the tree, the guard recipes, the commands per stack, the
   UI contract, the fifteen lessons, the Go + HTMX page and the ADR template, and `bootstrap` routes to
@@ -74,6 +79,19 @@ Written after 0307 and `v0.45.4`.
   the same alignment shape on HyperFrames and Remotion). `motion-principles.md` gained the pan/zoom row
   the transitions table was missing, `the-piece.md` points its times at the recording when there is one,
   the body gained one `## Never`, and the impact map counts eight references.
+
+## 0308: what it settled, and what it leaves
+
+- **A port is verified by a diff, not by memory.** The Tauri files were all present and the references
+  were adapted cleanly, so the four-file gap of 0304 did not repeat; what the diff found instead was
+  content: an order that lived in one section of the retired body and nowhere else, and a stop-list that
+  lost two of its three conditions on the way in.
+- **A level decays quietly.** `arch-tauri` said "load `bootstrap` and nothing here applies" for a project
+  with no Rust core, which was true until 0307 created the level between them. Nothing failed; the
+  sentence just aged. The test now pins the level, not only the rules.
+- **What is still unowned:** `ANTIGRAVITY` -the human's own project name- is still written in
+  `references/rust-guard-recipes.md`. It is harmless in this catalog and noise in a binary anyone
+  installs.
 
 ## 0307: what it settled, and what it leaves
 
