@@ -1,21 +1,22 @@
 # Next session
 
-Written after 0291 to 0304, the nine releases that carried them, and the study of gentle-shell that
+Written after 0291 to 0305, the ten releases that carried them, and the study of gentle-shell that
 produced 0295 and 0297.
 
 ## Where the project is
 
-- `v0.45.2` is published: annotated tag on `03150e3` (the merge of release PR #614), sixteen assets
+- `v0.45.3` is published: annotated tag on `9273a87` (the merge of release PR #617), sixteen assets
   signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.45.2`. Nine releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
+  `odachi 0.45.3`. Ten releases today: `v0.43.0` carried 0291 to 0293, `v0.44.0` carried 0296,
   `v0.44.1` carried 0297, `v0.44.2` carried 0298, `v0.44.3` carried 0299, `v0.44.4` carried 0300,
-  `v0.45.0` carried 0301, `v0.45.1` carried 0302, and `v0.45.2` carried 0303 and 0304.
-- `main` is at that merge. 0303 landed in PR #612 and 0304 in PR #613 -the second one over `5108d3b`-,
-  and the release PR renamed `Unreleased` after them. This file quotes the line the tool counts for the
-  tree it describes:
+  `v0.45.0` carried 0301, `v0.45.1` carried 0302, `v0.45.2` carried 0303 and 0304, and `v0.45.3`
+  carried 0305.
+- `main` is at that merge. 0303 landed in PR #612, 0304 in PR #613 and 0305 in PR #616, and the release
+  PR renamed `Unreleased` after them. This file quotes the line the tool counts for the tree it
+  describes:
 
   ```
-  total: 302 features · 750 steps done of 750 · 0 open questions
+  total: 303 features · 751 steps done of 751 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -80,6 +81,8 @@ produced 0295 and 0297.
 - **0304, patch (v0.45.2).** The foundation enters through the door that already exists: the triage, the
   birth decisions, the guard recipes, the UI contract and the fifteen lessons are `bootstrap`'s
   references, and the rules `drive`, `tests` and `commits` own are delegated instead of repeated.
+- **0305, patch (v0.45.3).** The count says one step when there is one. The totals line pluralizes the
+  step count now, and the sentence the handover quotes and the doctor recomputes come from one renderer.
 
 ## 0303 and 0304: the catalog has three levels, and each one owns its question
 
@@ -192,6 +195,9 @@ wording is its own change.
   in v0.45.1's notes. Edit with the file tool or single quotes, and read the result back.
 - **A guard that passes the first time proves nothing.** Every new guard this session was verified by
   mutation, and two passed by luck before their fix.
+- **A mark names a tree, and a tree nobody committed is a mark that lies.** `plan --done` before the
+  commit recorded the opening tree for 0305; `undo --artifact` walked back the backups, the doc came
+  back from HEAD, and the mark was written after the commit. Mark last.
 - **Evidence answers only its own question.** 0297's first verdict found a false green because the stored
   row matched by tree alone: a new question reused old evidence. Any stored answer keyed by tree needs
   the question in the key.
