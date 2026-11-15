@@ -13,6 +13,14 @@ not a version.
 - **The Tauri foundation skill is called `arch-tauri`.** The name says what it is -architecture- and what it
   is for -Tauri-, and leaves room for the family it belongs to. One folder, its row in the index, the test
   that pins it and the impact map moved with it; nothing else changed. Patch (0303).
+## Unreleased
+
+- **The foundation of a project enters through the door that already exists.** The generic half of a
+  project's architecture -the triage by project kind, the twelve decisions that must exist before the
+  first file, the boundary guard per stack, the UI contract an agent can run, and the fifteen lessons
+  each paid for by a defect- lives now in `bootstrap`'s references, and its decision table routes each
+  one. The rules that `drive`, `tests` and `commits` already own are not restated: `bootstrap`
+  names them and sends the reader there. Patch (0304).
 ## v0.45.1 - 2026-11-14
 
 - **The catalog carries a Tauri v2 foundation.** A desktop project with a Rust core had no door here: the

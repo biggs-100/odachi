@@ -14,9 +14,9 @@ R1 · "la fundacion de un proyecto entra al catalogo por la puerta que ya existe
 - ## Unreleased names it, patch (0304)
 
 ## Steps
-- [ ] T1 · los cinco archivos de la fundacion en references de bootstrap   R1 · route:inline
-- [ ] T2 · el ruteo en bootstrap y las reglas apuntadas a su dueno   R1 · route:inline
-- [ ] T3 · una prueba fija que bootstrap rutea sus referencias   R1 · route:inline
+- [x] T1 · los cinco archivos de la fundacion en references de bootstrap   R1 · route:inline · tree:56d2dd351add41110e61d6a1f6221f0c19df6aa7
+- [x] T2 · el ruteo en bootstrap y las reglas apuntadas a su dueno   R1 · route:inline · tree:56d2dd351add41110e61d6a1f6221f0c19df6aa7
+- [x] T3 · una prueba fija que bootstrap rutea sus referencias   R1 · route:inline · tree:56d2dd351add41110e61d6a1f6221f0c19df6aa7
 - [ ] T4 · el changelog nombra 0304 bajo Unreleased, patch   R1 · route:inline
 
 ## History
