@@ -8,7 +8,7 @@ not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
 
-## Unreleased
+## v0.45.3 - 2026-11-14
 
 - **The count says one step when there is one.** The totals line said "1 steps done of 1" for any project
   with a single step: the report moved to one renderer in 0298 and kept the old spelling, because a
