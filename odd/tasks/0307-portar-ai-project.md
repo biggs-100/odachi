@@ -16,7 +16,7 @@ R1 · "portar ai project foundation completo a odachi, con una skill nueva arch-
 ## Steps
 - [x] T1 · arch-project nace con sus cinco references movidos y bootstrap rutea a ella   R1 · tree:73f61a9cb34738ad1614917f6a592cbd51e02854
 - [x] T2 · las cuatro piezas sin dueno entran: layout, ADR, matriz por stack y Go + HTMX   R1 · tree:b79753b5780274507621914dce23f75388f51715
-- [ ] T3 · el indice, el impact map, la prueba y el changelog nombran la puerta nueva   R1
+- [x] T3 · el indice, el impact map, la prueba y el changelog nombran la puerta nueva   R1 · tree:af67f9be313d4d9adc68d461135a3e725c45da6a
 
 ## History
 L1 · "portar ai project foundation completo a odachi, con una skill nueva arch-project para cualquier stack"
