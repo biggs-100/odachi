@@ -7,8 +7,12 @@ description: Trigger: a Tauri v2 desktop project, new or restructured (Rust core
 
 When the work is a Tauri v2 desktop app -scaffolding one, or restructuring an
 existing single-crate app into a workspace- and the question is where the domain
-ends and the framework begins. A project with no Rust core is not this skill's:
-load `bootstrap` and nothing here applies.
+ends and the framework begins. `arch-project` comes first: the triage, the tree, the
+ADRs and the commands per stack are its own, and this page is what the stack changes.
+
+Stop where there is no Rust core, and on a plain Rust crate or CLI with no webview:
+`arch-project` carries that shape. Stop on feature work in a project that already has
+its boundary: the day-to-day manual is `drive`.
 
 ## Rules
 
@@ -26,12 +30,12 @@ load `bootstrap` and nothing here applies.
 
 | Situation | What to do |
 | --- | --- |
-| A new project | Split at once: the framework-free domain crate plus the app crate under `src-tauri/` |
+| A new project | Split at once: the framework-free domain crate plus the app crate under `src-tauri/`; `references/tauri-scaffold.md` is the order |
 | An existing single-crate app | Write the source-scan guard first; the workspace split comes later; `references/rust-guard-recipes.md` has every mechanism and what fails as one |
 | A command crosses the boundary, or a Rust to TS contract is needed | `references/tauri-bridge.md`: the flow, the thin-command and error templates, the ACL gating |
 | The UI has to be verified | `references/ui-verification.md`: the three layers, the platform matrix, the `wdio.conf.ts` fragment |
 | Remote or external content in a webview | Commands are gated regardless; configure an explicit `remote` capability |
-| A plain web app with no Rust core | Stop: this skill does not apply; `bootstrap` is the door |
+| A plain web app with no Rust core | Stop: this skill does not apply; `arch-project` carries the shape |
 
 ## Output
 
@@ -49,6 +53,7 @@ layers is reported as scaffolded and not verified, never as done.
 
 ## References
 
+- `references/tauri-scaffold.md` - the nine steps of the scaffold, and the order that keeps the boundary.
 - `references/tauri-bridge.md` - the command flow, the thin-command and error templates, the typed contract, the ACL gating conditions.
 - `references/rust-guard-recipes.md` - the purity mechanisms in order, and what does not work as a guard.
 - `references/ui-verification.md` - the three layers, the platform matrix and the `wdio.conf.ts` fragment.

@@ -1,8 +1,8 @@
 # Tauri v2 bridge: frontend ↔ Rust contract
 
-Tauri v2. This document owns the Tauri-specific bridge rules. Layout, ADRs and the
-layered change checklist belong to `bootstrap` and `drive`, which every project in
-this catalog carries; nothing here repeats them.
+Tauri v2. This document owns the Tauri-specific bridge rules. The tree, the ADRs and
+the commands per stack belong to `arch-project`; the day-to-day order belongs to
+`drive`. Nothing here repeats them.
 
 ## Flow
 

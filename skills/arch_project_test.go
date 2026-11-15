@@ -47,29 +47,7 @@ func TestArchProjectRoutesEveryReference(t *testing.T) {
 		t.Fatal("the payload has no arch-project skill")
 	}
 	skill := mustSkill(t, "arch-project")
-
-	gates := sectionBetween(body, "## Decision gates", "## Output")
-	listed := sectionBetween(body, "## References", "## Assets")
-	if gates == "" {
-		t.Fatal("arch-project has no decision gates: its references are unreachable")
-	}
-
-	references := 0
-	for _, file := range skill.Files {
-		if !strings.HasPrefix(file.Path, "references/") {
-			continue
-		}
-		references++
-		if !strings.Contains(gates, "`"+file.Path+"`") {
-			t.Errorf("%s is not a row of ## Decision gates", file.Path)
-		}
-		if !strings.Contains(listed, "`"+file.Path+"`") {
-			t.Errorf("%s is not a bullet of ## References", file.Path)
-		}
-	}
-	if references == 0 {
-		t.Error("arch-project carries no references: a door with no depth is a paragraph")
-	}
+	assertEveryReferenceIsRouted(t, skill, body)
 
 	// An asset is a file the skill hands over, not text it reads: it is inventoried
 	// the same way and never routed from the gates.
@@ -84,6 +62,38 @@ func TestArchProjectRoutesEveryReference(t *testing.T) {
 		if !strings.Contains(assets, "`"+file.Path+"`") {
 			t.Errorf("%s is not a bullet of ## Assets", file.Path)
 		}
+	}
+}
+
+// assertEveryReferenceIsRouted is the shared rule for a door with depth: a reference
+// is reachable through its row of the decision gates, and a file the folder holds with
+// no bullet is a file nobody reads. Both directions, because the grammar refuses the
+// dead link and the orphan separately -and a page that carries a reference without
+// routing it loses the only in-body pointer to it (0307, 0308).
+func assertEveryReferenceIsRouted(t *testing.T, skill skills.Skill, body string) {
+	t.Helper()
+
+	gates := sectionBetween(body, "## Decision gates", "## Output")
+	listed := sectionBetween(body, "## References", "## Assets")
+	if gates == "" {
+		t.Fatalf("%s has no decision gates: its references are unreachable", skill.Name)
+	}
+
+	references := 0
+	for _, file := range skill.Files {
+		if !strings.HasPrefix(file.Path, "references/") {
+			continue
+		}
+		references++
+		if !strings.Contains(gates, "`"+file.Path+"`") {
+			t.Errorf("%s: %s is not a row of ## Decision gates", skill.Name, file.Path)
+		}
+		if !strings.Contains(listed, "`"+file.Path+"`") {
+			t.Errorf("%s: %s is not a bullet of ## References", skill.Name, file.Path)
+		}
+	}
+	if references == 0 {
+		t.Errorf("%s carries no references: a door with no depth is a paragraph", skill.Name)
 	}
 }
 
