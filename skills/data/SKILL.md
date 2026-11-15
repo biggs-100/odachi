@@ -1,12 +1,14 @@
 ---
 name: data
-description: Trigger: when data has to be saved, migrated, read or deleted. Decide owner, lifetime and backup before writing the first row.
+description: Trigger: when data has to be saved, read or deleted. Decide owner, lifetime and backup before the first row; a schema or a migration is db-craft.
 ---
 
 ## When
 
-When a file has to be persisted, a schema changes, a migration appears, a delete
-is requested, or the question "where do we store this?" comes up.
+When a file has to be persisted, a value has to be kept or deleted, or the question
+"where do we store this?" comes up. A schema, a migration, a query or a transaction is
+`db-craft`'s door: this one decides what is kept and for how long, not how it is
+written.
 
 ## Rules
 

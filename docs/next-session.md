@@ -1,23 +1,22 @@
 # Next session
 
-Written after 0310 and `v0.45.4`.
+Written after 0311 and `v0.45.5`.
 
 ## Where the project is
 
-- **0310 is open on `feat/0310-ui-craft-direction`, unmerged and unreleased.** `ui-craft` carries the
-  direction layer it was missing: `ai-native.md`, `art-direction.md`, `motion-identity.md` and
-  `depth-and-material.md`, plus the four axes and the OKLCH/fluid-scale rows in `the-numbers.md`. Thirteen
-  references now, and the body says a screen has a direction, chosen and named, before the first file.
-- **0309 is merged**: PR #625, on `main`, after 0308 (PR #624) and 0307 (PR #623).
-- `v0.45.4` is published: annotated tag on `0ed7d2e` (the merge of release PR #621), sixteen assets
-  signed and attested, and the binary on this machine was installed from that release and reports
-  `odachi 0.45.4`. `v0.45.3` carried 0305; this one carries 0306.
-- `main` is at that merge. 0306 landed in PR #620 and the release PR #621 renamed `Unreleased`. The
-  branch of the feature was deleted on merge, as every branch should be.
+- **0311 is open on `feat/0311-db-craft`, unmerged and unreleased.** `db-craft` is the catalog's fifth
+  door with depth: eight references (schema, migrations, transactions, indexes, queries, access,
+  operations and the catalogue of failures). `data` keeps the decision and sends the schema and the
+  migration here.
+- **v0.45.5 is published and installed**: tag on `65967dc`, sixteen assets signed and attested, and this
+  machine runs `odachi 0.45.5`. `arch-project`, the Tauri scaffold, the gentle-shell gaps and the direction
+  layer are in the home, at 24 of 24 matching. `v0.45.4` carried 0306 and `v0.45.3` carried 0305.
+- `main` is at the merge of the release PR #627, and the branch of the feature was deleted on merge, as
+  every branch should be.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 308 features · 765 steps done of 765 · 0 open questions
+  total: 309 features · 770 steps done of 770 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -60,7 +59,11 @@ Written after 0310 and `v0.45.4`.
 
 ## What shipped
 
-- **0310, patch (unreleased).** `ui-craft` gained four references -`ai-native.md`, `art-direction.md`,
+- **0311, patch (unreleased).** `db-craft`: seven references on schema, migrations, transactions, indexes,
+  queries, access and operations, plus `the-failures.md` with twenty-eight mistakes; `data` hands the
+  schema and the migration to it.
+
+- **0310, patch (v0.45.5).** `ui-craft` gained four references -`ai-native.md`, `art-direction.md`,
   `motion-identity.md`, `depth-and-material.md`-, the body rule that a screen has a direction chosen and
   named, and the OKLCH and fluid-scale rows in `the-numbers.md`.
 
@@ -87,6 +90,23 @@ Written after 0310 and `v0.45.4`.
   the same alignment shape on HyperFrames and Remotion). `motion-principles.md` gained the pan/zoom row
   the transitions table was missing, `the-piece.md` points its times at the recording when there is one,
   the body gained one `## Never`, and the impact map counts eight references.
+
+## 0311: what it settled, and what it leaves
+
+- **A database door was missing, and the catalog had the policy without the craft.** `data` answered who
+  owns a value and how long it lives; nothing answered what lock the migration takes or what the retry
+  replays. The split is the same one UI already uses: the decision in one door, the craft in another.
+- **Concrete beats portable.** Every page ends with what changes on MySQL or SQLite, and the body is
+  Postgres in the first person, because `lock_timeout`, `NOT VALID` and `FORCE ROW LEVEL SECURITY` are the
+  numbers that change a decision. A generic SQL page would have decided nothing.
+- **The catalogue is the teaching device that worked twice.** `the-tells.md` for design and
+  `the-failures.md` for a database: a mistake, what it looks like, and the page that already decided it.
+- **What is still unproven:** no real schema was migrated with these pages. The advice is sourced -the
+  Postgres documentation on lock levels, serialization failures and RLS, and a 2026 field guide to
+  zero-downtime migrations- and it took four review rounds to stop finding factual errors in it: the lock
+  a `SELECT` takes, a deadlock read as a serializability refusal, `CREATE INDEX CONCURRENTLY` called
+  instant, the `WITH CHECK` default, and `row_security = off` read as a bypass. The first production
+  migration is still the measurement.
 
 ## 0310: what it settled, and what it leaves
 
