@@ -26,7 +26,7 @@ load `bootstrap` and nothing here applies.
 
 | Situation | What to do |
 | --- | --- |
-| A new project | Split at once: the framework-free domain crate plus the app crate under `src-tauri/` |
+| A new project | Split at once: the framework-free domain crate plus the app crate under `src-tauri/`; `references/tauri-scaffold.md` is the order |
 | An existing single-crate app | Write the source-scan guard first; the workspace split comes later; `references/rust-guard-recipes.md` has every mechanism and what fails as one |
 | A command crosses the boundary, or a Rust to TS contract is needed | `references/tauri-bridge.md`: the flow, the thin-command and error templates, the ACL gating |
 | The UI has to be verified | `references/ui-verification.md`: the three layers, the platform matrix, the `wdio.conf.ts` fragment |
@@ -49,6 +49,7 @@ layers is reported as scaffolded and not verified, never as done.
 
 ## References
 
+- `references/tauri-scaffold.md` - the nine steps of the scaffold, and the order that keeps the boundary.
 - `references/tauri-bridge.md` - the command flow, the thin-command and error templates, the typed contract, the ACL gating conditions.
 - `references/rust-guard-recipes.md` - the purity mechanisms in order, and what does not work as a guard.
 - `references/ui-verification.md` - the three layers, the platform matrix and the `wdio.conf.ts` fragment.

@@ -66,6 +66,7 @@ func TestArchTauriCarriesItsDepth(t *testing.T) {
 		files[file.Path] = true
 	}
 	for _, want := range []string{
+		"references/tauri-scaffold.md",
 		"references/tauri-bridge.md",
 		"references/rust-guard-recipes.md",
 		"references/ui-verification.md",
@@ -73,6 +74,47 @@ func TestArchTauriCarriesItsDepth(t *testing.T) {
 	} {
 		if !files[want] {
 			t.Errorf("arch-tauri does not carry %q; it carries %v", want, files)
+		}
+	}
+}
+
+// TestArchTauriScaffoldKeepsTheOrder: the nine steps existed in the retired skill and
+// the port lost them, so the references had every piece and no sequence. The steps are
+// pinned because the order is the rule: the guard before the business code, the error
+// type before the first command, the capability with the permission file (0308).
+func TestArchTauriScaffoldKeepsTheOrder(t *testing.T) {
+	skill := mustSkill(t, "arch-tauri")
+
+	var scaffold string
+	for _, file := range skill.Files {
+		if file.Path == "references/tauri-scaffold.md" {
+			scaffold = string(file.Content)
+		}
+	}
+	if scaffold == "" {
+		t.Fatal("arch-tauri carries no references/tauri-scaffold.md")
+	}
+
+	for _, want := range []string{
+		"1. **Scaffold the workspace**",
+		"2. **Write the domain-purity guard before the business code**",
+		"3. **Define the serializable error type**",
+		"4. **Write one thin command as the template**",
+		"5. **Generate the TypeScript bindings from Rust**",
+		"6. **Create the single service layer**",
+		"7. **Wire the three verification levels**",
+		"8. **Write the first ADR**",
+		"9. **If a file landed under `src-tauri/permissions/`",
+	} {
+		if !strings.Contains(scaffold, want) {
+			t.Errorf("the scaffold lost a step: %q", want)
+		}
+	}
+
+	// The two details a person forgets and the compiler does not catch.
+	for _, want := range []string{"build.rs", "generate_handler!", "no test specified"} {
+		if !strings.Contains(scaffold, want) {
+			t.Errorf("the scaffold does not name %q", want)
 		}
 	}
 }
