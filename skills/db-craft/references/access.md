@@ -37,8 +37,12 @@ reads every tenant. The second failure is the session variable:
 - `SET LOCAL` on a custom setting that was never defined reverts to an empty string, and
   an empty string cast to `uuid` is an error, not a wildcard: define the GUC, and treat
   unset as "no rows", never as "all rows".
-- A policy without `WITH CHECK` filters reads and lets the write land on another
-  tenant's row. Both halves or neither.
+- A write is checked by `WITH CHECK`, and when a policy omits it for `FOR ALL` or
+  `FOR UPDATE` Postgres fills it from the `USING` expression. That default is why the
+  real defect is not the omission but a `USING` broader than the tenant filter -or an
+  explicit `WITH CHECK (true)` added to make a test pass-. A table whose only policy is
+  `FOR SELECT` refuses writes outright. Write the tenant predicate in both halves, on
+  purpose: the default is a copy, and a copy of a wrong filter is still wrong.
 - `SECURITY DEFINER` functions, `BYPASSRLS` roles and a `row_security = off` setting are
   the three doors that walk around every policy: keep them out of the request path and
   name who owns them.

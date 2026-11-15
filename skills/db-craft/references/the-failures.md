@@ -29,7 +29,7 @@ decision lives.
 | Retrying the failed statement | the same error, or a wrong write | retry the whole transaction | `transactions.md` |
 | `SKIP LOCKED` with a global limit | more jobs running than the limit allows | a lock on the counter, or `pg_advisory_xact_lock` | `transactions.md` |
 | Writing the row and the event separately | an event lost or sent twice | the outbox in the same transaction | `transactions.md` |
-| RLS without `FORCE` or without `WITH CHECK` | the owner reads every tenant; a write lands on another | both, and `SET LOCAL` in the transaction | `access.md` |
+| RLS without `FORCE`, or a policy whose `USING` is broader than the tenant | the owner reads every tenant; a write the filter never intended passes both halves | `FORCE`, the tenant predicate in `USING` and `WITH CHECK`, and `SET LOCAL` in the transaction | `access.md` |
 | The application runs as the owner | DDL from a request, RLS bypassed | three roles, grants per table | `access.md` |
 | A plain `SET` on a pooled connection | the next request inherits the tenant | `SET LOCAL` inside the transaction | `access.md` |
 | A backup nobody restored | the RTO is a guess on the worst day | the drill: a mid-day timestamp, a real restore, a number | `operations.md` |

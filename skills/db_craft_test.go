@@ -48,7 +48,7 @@ func TestDBCraftCarriesItsDepth(t *testing.T) {
 		"references/queries.md":      {"N+1", "keyset", "OFFSET", "NOT IN", "p95"},
 		"references/access.md":       {"FORCE ROW LEVEL SECURITY", "SET LOCAL", "WITH CHECK", "BYPASSRLS", "sslmode"},
 		"references/operations.md":   {"restore", "pg_stat_statements", "RTO", "transaction mode", "autovacuum"},
-		"references/the-failures.md": {"lock_timeout", "N+1", "WITH CHECK", "outbox", "the page"},
+		"references/the-failures.md": {"lock_timeout", "N+1", "FORCE", "outbox", "the page"},
 	}
 	for path, phrases := range want {
 		var content string
