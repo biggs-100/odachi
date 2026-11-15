@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.45.4 - 2026-11-15
 
 - **`motion-graphics` can draw a board, and it waits for the human's voice.** Two references the skill was
   missing: `the-board.md` carries the hand-drawn look as a system -paper and ink, one accent per meaning
