@@ -38,16 +38,18 @@ plain `SET`. And define the setting: `SET LOCAL` on a custom variable that was n
 defined reverts to an empty string, and an empty string cast to `uuid` is an error, not
 a wildcard -treat unset as "no rows", never as "all rows".
 
-**3. A filter narrower than the tenant.** A write is checked by `WITH CHECK`, and when a
+**3. A policy broader than the tenant.** A write is checked by `WITH CHECK`, and when a
 policy omits it for `FOR ALL` or `FOR UPDATE` Postgres fills it from `USING`. That
 default is why the defect is not the omission but a `USING` broader than the tenant
 filter -or an explicit `WITH CHECK (true)` added to make a test pass-. A table whose only
 policy is `FOR SELECT` refuses writes outright. Write the tenant predicate in both
 halves on purpose: the default is a copy, and a copy of a wrong filter is still wrong.
 
-**4. The doors that walk around every policy.** `SECURITY DEFINER` functions,
-`BYPASSRLS` roles and a `row_security = off` setting ignore the policy entirely. Keep
-them out of the request path and name who owns them.
+**4. The doors that walk around every policy.** A `BYPASSRLS` role, a `SECURITY DEFINER`
+function owned by one, and a `SET ROLE` into either ignore the policy entirely. Keep them
+out of the request path and name who owns them. `row_security = off` is the opposite
+case -it makes a query that would apply a policy fail instead of applying it, which is
+why `pg_dump` sets it- and is never a way to read more.
 
 ## Choosing the multi-tenant shape
 

@@ -106,7 +106,10 @@ Written after 0311 and `v0.45.5`.
   `the-failures.md` for a database: a mistake, what it looks like, and the page that already decided it.
 - **What is still unproven:** no real schema was migrated with these pages. The advice is sourced -the
   Postgres documentation on lock levels, serialization failures and RLS, and a 2026 field guide to
-  zero-downtime migrations- and pinned by tests, but the first production migration is the measurement.
+  zero-downtime migrations- and it took four review rounds to stop finding factual errors in it: the lock
+  a `SELECT` takes, a deadlock read as a serializability refusal, `CREATE INDEX CONCURRENTLY` called
+  instant, the `WITH CHECK` default, and `row_security = off` read as a bypass. The first production
+  migration is still the measurement.
 
 ## 0310: what it settled, and what it leaves
 
