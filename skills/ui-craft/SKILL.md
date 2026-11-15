@@ -30,6 +30,7 @@ A screen, a landing, a dashboard, a form or a component is to be built or review
 | what the screen is for, and the words it uses | `references/task-and-content.md` |
 | an empty, loading, error or zero state, and its copy | `references/states-and-copy.md` |
 | a transition, a gesture or anything that moves | `references/motion.md` |
+| a model in the loop: answering, calling a tool, taking an action | `references/ai-native.md` |
 | the markup, the keyboard, or the screen narrowing | `references/accessible-and-adaptive.md` |
 | things that belong together, and what is allowed to lead | `references/grouping-and-emphasis.md` |
 | the last pass before calling it done | `references/the-read.md` |
@@ -46,6 +47,7 @@ The winner and why, the files changed, the five states covered, the contrast mea
 - `references/task-and-content.md` — the job the screen serves, the truthful content, the label that predicts.
 - `references/states-and-copy.md` — the six states, with the sentence each one says.
 - `references/motion.md` — when motion earns its place, and the timings that keep it calm.
+- `references/ai-native.md` — the surface a model is inside: streaming, tools, approval, generative UI.
 - `references/accessible-and-adaptive.md` — the markup, the keyboard path, and what survives a narrow screen.
 - `references/grouping-and-emphasis.md` — proximity before containers, and the one thing allowed to lead.
 - `references/the-read.md` — the last pass: the winner, the states, the measured contrast, the worst content.

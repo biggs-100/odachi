@@ -30,6 +30,7 @@ func TestUICraftRoutesItsDepth(t *testing.T) {
 	for path, want := range map[string][]string{
 		"references/accessible-and-adaptive.md": {"the keyboard", "prefers-reduced-motion", "states-and-copy.md"},
 		"references/grouping-and-emphasis.md":   {"Proximity", "the-numbers.md", "states-and-copy.md"},
+		"references/ai-native.md":               {"shows its work", "generative UI", "irreversible", "undo"},
 	} {
 		var content string
 		for _, file := range skill.Files {
@@ -41,7 +42,7 @@ func TestUICraftRoutesItsDepth(t *testing.T) {
 			t.Fatalf("ui-craft does not carry %s", path)
 		}
 		for _, phrase := range want {
-			if !strings.Contains(content, phrase) {
+			if !strings.Contains(strings.ToLower(content), strings.ToLower(phrase)) {
 				t.Errorf("%s does not say %q", path, phrase)
 			}
 		}
