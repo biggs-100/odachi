@@ -21,7 +21,8 @@ runs again later costs nothing, and a five-minute convoy costs an incident.
 
 | operation | lock | blocks |
 | --- | --- | --- |
-| `SELECT`, `INSERT`, `UPDATE`, `DELETE` | `ROW EXCLUSIVE` (shared by writers) | other DDL, not each other |
+| `SELECT` | `ACCESS SHARE` | only `ACCESS EXCLUSIVE`, so DDL waits for it |
+| `INSERT`, `UPDATE`, `DELETE` | `ROW EXCLUSIVE` | other DDL, not each other |
 | `CREATE INDEX` | `SHARE` | writes, not reads |
 | `CREATE INDEX CONCURRENTLY` | `SHARE UPDATE EXCLUSIVE` | nothing you care about; cannot run inside a transaction |
 | `ALTER TABLE` | `ACCESS EXCLUSIVE` | everything, including reads |
@@ -98,7 +99,8 @@ ALTER TABLE orders DROP CONSTRAINT orders_pkey,
 
 ## What changes on another engine
 
-MySQL 8 has instant `ADD COLUMN` too, but the safe path is explicit (`ALGORITHM=INPLACE`,
-`LOCK=NONE`) and it silently falls back to a copy; check the result. SQLite rewrites the
+MySQL 8 has instant `ADD COLUMN` too, but the safe path is explicit: `ALGORITHM=INPLACE`
+or `LOCK=NONE` makes a statement it cannot honour **fail** instead of falling back, while
+the default quietly copies the table. Spell it out and read the result. SQLite rewrites the
 table for most `ALTER`, so its migrations are a new table, a copy and a swap. The rule
 that does not change: know the lock before you write the statement.

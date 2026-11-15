@@ -19,7 +19,7 @@ into the transaction.
   with no access and the migration that creates it grants what the feature needs.
 - `GRANT` to a role, `GRANT` a role to a person; never share a login.
 
-## Row-level security, and the three ways it does nothing
+## Row-level security, and the four ways it does nothing
 
 ```
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
@@ -29,23 +29,25 @@ CREATE POLICY tenant_isolation ON invoices
   WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
 ```
 
-`FORCE` is not optional: without it the table's owner -often the role that created it-
-reads every tenant. The second failure is the session variable:
+**1. No `FORCE`.** Without it the table's owner -often the role that created it- reads
+every tenant, and the policy on the screen proves nothing.
 
-- Set it with `SET LOCAL` **inside the transaction** that reads, because a pooled
-  connection is reused and a plain `SET` leaks the previous tenant to the next request.
-- `SET LOCAL` on a custom setting that was never defined reverts to an empty string, and
-  an empty string cast to `uuid` is an error, not a wildcard: define the GUC, and treat
-  unset as "no rows", never as "all rows".
-- A write is checked by `WITH CHECK`, and when a policy omits it for `FOR ALL` or
-  `FOR UPDATE` Postgres fills it from the `USING` expression. That default is why the
-  real defect is not the omission but a `USING` broader than the tenant filter -or an
-  explicit `WITH CHECK (true)` added to make a test pass-. A table whose only policy is
-  `FOR SELECT` refuses writes outright. Write the tenant predicate in both halves, on
-  purpose: the default is a copy, and a copy of a wrong filter is still wrong.
-- `SECURITY DEFINER` functions, `BYPASSRLS` roles and a `row_security = off` setting are
-  the three doors that walk around every policy: keep them out of the request path and
-  name who owns them.
+**2. The session variable on a pooled connection.** A pooled connection is reused, so:
+set the variable with `SET LOCAL` **inside the transaction** that reads, never with a
+plain `SET`. And define the setting: `SET LOCAL` on a custom variable that was never
+defined reverts to an empty string, and an empty string cast to `uuid` is an error, not
+a wildcard -treat unset as "no rows", never as "all rows".
+
+**3. A filter narrower than the tenant.** A write is checked by `WITH CHECK`, and when a
+policy omits it for `FOR ALL` or `FOR UPDATE` Postgres fills it from `USING`. That
+default is why the defect is not the omission but a `USING` broader than the tenant
+filter -or an explicit `WITH CHECK (true)` added to make a test pass-. A table whose only
+policy is `FOR SELECT` refuses writes outright. Write the tenant predicate in both
+halves on purpose: the default is a copy, and a copy of a wrong filter is still wrong.
+
+**4. The doors that walk around every policy.** `SECURITY DEFINER` functions,
+`BYPASSRLS` roles and a `row_security = off` setting ignore the policy entirely. Keep
+them out of the request path and name who owns them.
 
 ## Choosing the multi-tenant shape
 
