@@ -32,10 +32,10 @@ certificate it earns.
 
 Build the ramp in OKLCH: lightness is a number a person can reason about, and the
 neutrals tint evenly instead of turning grey-green halfway down. A wide-gamut accent
-(`color(display-ps3 ...)` or the `oklch()` value inside an `@supports`) is what makes
-an accent look current on a good screen; it needs a declared sRGB fallback, because the
-person with the ordinary monitor is not an edge case. Measure the contrast after the
-fallback, not before: the fallback is what most people see.
+(`color(display-p3 r g b)` inside an `@supports`) is what makes an accent look current
+on a good screen; it needs a declared sRGB fallback, because the person with the
+ordinary monitor is not an edge case. Measure the contrast after the fallback, not
+before: the fallback is what most people see.
 
 A fluid display size is a `clamp()` on one or two sizes, never on the body text: text
 that shrinks with the viewport is text somebody cannot read on the phone they are

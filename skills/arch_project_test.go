@@ -97,6 +97,32 @@ func assertEveryReferenceIsRouted(t *testing.T, skill skills.Skill, body string)
 	}
 }
 
+// TestTheColourFunctionIsSpelledRight: `the-numbers.md` is copied by an agent building a
+// real screen, and `display-ps3` is not a CSS colour space. The browser drops the whole
+// declaration, so the accent silently renders as the sRGB fallback on every screen -the
+// exact degradation the paragraph exists to prevent-. The spelling is pinned here because
+// neither the compiler nor the gate reads CSS (0310).
+func TestTheColourFunctionIsSpelledRight(t *testing.T) {
+	skill := mustSkill(t, "ui-craft")
+
+	var numbers string
+	for _, file := range skill.Files {
+		if file.Path == "references/the-numbers.md" {
+			numbers = string(file.Content)
+		}
+	}
+	if numbers == "" {
+		t.Fatal("ui-craft carries no references/the-numbers.md")
+	}
+
+	if !strings.Contains(numbers, "color(display-p3") {
+		t.Error("the-numbers.md does not name the wide-gamut function: color(display-p3 r g b)")
+	}
+	if strings.Contains(numbers, "display-ps3") {
+		t.Error("the-numbers.md says display-ps3: no such colour space, and the declaration would be dropped")
+	}
+}
+
 // archProject is the body of the shared door, and whether the payload has it.
 func archProject(t *testing.T) (string, bool) {
 	t.Helper()

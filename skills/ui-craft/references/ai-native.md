@@ -56,7 +56,7 @@ job is known.
 ## Approval is a design, not a dialog
 
 - The preview names the effect in the person's units: the amount and the recipient,
-  the file and the folder, the branch and the branch.
+  the file and the folder, the pull request and its base branch.
 - "Irreversible" is the product's own list -pay, send, delete, publish, deploy- and it
   is the same list every screen reads. A confirmation on a reversible step trains
   people to click through the one that matters.

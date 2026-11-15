@@ -20,7 +20,7 @@ R1 · "ui-craft gana el paso que le falta: direccion de arte, superficies de IA,
 - [x] T1 · ai-native entra: las superficies que nadie disenaba antes de 2025   R1 · tree:17d8444bf4503c1772cb95864580155bbf0b4e91
 - [x] T2 · art-direction entra: tres direcciones que difieran en estrategia   R1 · tree:7004418416adf9ee79de5e41e63b2f11849ef2c0
 - [x] T3 · motion-identity y depth-and-material entran, con su modo de fallo   R1 · tree:443efb2ac2ba58acbde862ce88026c611358aa8f
-- [ ] T4 · the-numbers gana gama amplia y escala fluida, y los registros lo nombran   R1
+- [x] T4 · the-numbers gana gama amplia y escala fluida, y los registros lo nombran   R1 · tree:c1a578b6dc848dc2253b6ab46e5ac1279c660f7b
 
 ## History
 L1 · "ui-craft gana el paso que le falta: direccion de arte, superficies de IA, motion con identidad y profundidad con funcion, para que el agente disene cosas de 2026 y no de 2020"
