@@ -19,6 +19,7 @@ this door decides how it is written. A file on disk is `data`'s, not this one's.
 - **An index exists because a query needs it**: the columns in the order the query filters and sorts, and an index nothing uses is write amplification with a memory bill.
 - **A transaction holds locks**: no network call, no model, no email inside it; the work that leaves the database happens after the commit.
 - **A serialization failure retries the whole transaction**, including the logic that chose the SQL, and never the statement alone.
+- **An effect that leaves the database is at-least-once**: an idempotency key for the request, or an outbox row written in the same transaction as the state it announces.
 
 ## Decision gates
 
@@ -26,6 +27,7 @@ this door decides how it is written. A file on disk is `data`'s, not this one's.
 |---|---|
 | a table, a column, a type, a key or a constraint | `references/schema.md` |
 | a migration, a rename, a backfill or a drop | `references/migrations.md` |
+| a transaction, a retry, a lock or a background job | `references/transactions.md` |
 
 ## Output
 
@@ -42,3 +44,4 @@ The schema or the migration, the lock it takes and what it blocks, the way back,
 
 - `references/schema.md` - types, keys, constraints, soft delete and names: the table is the contract.
 - `references/migrations.md` - the lock each operation takes, expand and contract, and what no staging catches.
+- `references/transactions.md` - isolation, the retry that replays everything, queues and the outbox.

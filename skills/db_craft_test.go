@@ -39,8 +39,9 @@ func TestDBCraftCarriesItsDepth(t *testing.T) {
 	skill := mustSkill(t, "db-craft")
 
 	want := map[string][]string{
-		"references/migrations.md": {"lock_timeout", "ACCESS EXCLUSIVE", "NOT VALID", "expand", "pg_blocking_pids"},
-		"references/schema.md":     {"numeric", "timestamptz", "jsonb", "Soft delete", "snake_case"},
+		"references/migrations.md":   {"lock_timeout", "ACCESS EXCLUSIVE", "NOT VALID", "expand", "pg_blocking_pids"},
+		"references/schema.md":       {"numeric", "timestamptz", "jsonb", "Soft delete", "snake_case"},
+		"references/transactions.md": {"Read Committed", "retry", "SKIP LOCKED", "outbox", "idempotency"},
 	}
 	for path, phrases := range want {
 		var content string

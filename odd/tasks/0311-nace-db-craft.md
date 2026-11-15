@@ -16,7 +16,7 @@ R1 · "nace db-craft: el oficio de trabajar con una base de datos, con migracion
 - ## Unreleased names it, patch (0311)
 
 ## Steps
-- [ ] T1 · la puerta nace con migraciones y esquema, las dos paginas que rompen produccion   R1
+- [x] T1 · la puerta nace con migraciones y esquema, las dos paginas que rompen produccion   R1 · tree:ea59ff9808337bfaff7d15b36154c5a0f9e71855
 - [ ] T2 · transacciones e idempotencia: aislamiento, reintento completo y outbox   R1
 - [ ] T3 · indices y consultas: orden de columnas, covering, keyset y N+1   R1
 - [ ] T4 · acceso y operacion: minimo privilegio, RLS, PITR y drill de restore   R1
