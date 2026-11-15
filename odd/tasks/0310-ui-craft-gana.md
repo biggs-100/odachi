@@ -17,7 +17,7 @@ R1 · "ui-craft gana el paso que le falta: direccion de arte, superficies de IA,
 - ## Unreleased names it, patch (0310)
 
 ## Steps
-- [ ] T1 · ai-native entra: las superficies que nadie disenaba antes de 2025   R1
+- [x] T1 · ai-native entra: las superficies que nadie disenaba antes de 2025   R1 · tree:17d8444bf4503c1772cb95864580155bbf0b4e91
 - [ ] T2 · art-direction entra: tres direcciones que difieran en estrategia   R1
 - [ ] T3 · motion-identity y depth-and-material entran, con su modo de fallo   R1
 - [ ] T4 · the-numbers gana gama amplia y escala fluida, y los registros lo nombran   R1

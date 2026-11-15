@@ -30,6 +30,7 @@ func TestUICraftIsARouter(t *testing.T) {
 		"SKILL.md",
 		"references/accessible-and-adaptive.md",
 		"references/ai-native.md",
+		"references/art-direction.md",
 		"references/browse-and-compare.md",
 		"references/grouping-and-emphasis.md",
 		"references/motion.md",
