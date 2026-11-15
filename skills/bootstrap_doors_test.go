@@ -7,11 +7,11 @@ import (
 	"github.com/biggs-100/odachi/skills"
 )
 
-// TestBootstrapRoutesTheFoundation: the generic half of a project's architecture
-// enters through the door that already exists. `bootstrap` routes the five files
-// and does not restate the rules `drive`, `tests` and `commits` own: a second
-// owner for a rule is the defect this catalog keeps paying for (0304).
-func TestBootstrapRoutesTheFoundation(t *testing.T) {
+// TestBootstrapIsTheFirstDoor: a project's shape is no longer bootstrap's to
+// carry. The first door routes the two that carry it -the shared one and the stack
+// one- and restates none of the rules `drive`, `tests` and `commits` own: a second
+// owner for a rule is the defect this catalog keeps paying for (0304, 0307).
+func TestBootstrapIsTheFirstDoor(t *testing.T) {
 	bootstrap, ok := skills.Bootstrap()
 	if !ok {
 		t.Fatal("the payload has no bootstrap skill")
@@ -19,19 +19,20 @@ func TestBootstrapRoutesTheFoundation(t *testing.T) {
 	body := string(bootstrap.Main())
 	gates := sectionBetween(body, "## Decision gates", "## Output")
 	if gates == "" {
-		t.Fatal("bootstrap has no decision gates: the files it carries are unreachable")
+		t.Fatal("bootstrap has no decision gates: the doors it sends the reader to are unreachable")
 	}
 
-	for _, want := range []string{
-		"references/project-shape.md",
-		"references/birth-decisions.md",
-		"references/guard-recipes.md",
-		"references/ui-verification.md",
-		"references/engineering-lessons.md",
-		"arch-tauri",
-	} {
+	for _, want := range []string{"arch-project", "arch-tauri"} {
 		if !strings.Contains(gates, want) {
 			t.Errorf("bootstrap does not route %q from its decision gates", want)
+		}
+	}
+
+	// The shape left through a door of its own: a reference here would be the
+	// second owner of the same material, which is what 0304 refused and 0307 ends.
+	for _, file := range bootstrap.Files {
+		if strings.HasPrefix(file.Path, "references/") {
+			t.Errorf("bootstrap still carries %q: the shape of the code belongs to arch-project", file.Path)
 		}
 	}
 

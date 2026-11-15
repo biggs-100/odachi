@@ -29,11 +29,7 @@ be decided.
 
 | Situation | What to read |
 | --- | --- |
-| A project starts and the first file is next | `references/project-shape.md`: which kind of project this is, and what each kind drops |
-| The decisions that must exist before code | `references/birth-decisions.md`: the twelve, and why none of them can wait |
-| The codebase needs a boundary the build enforces | `references/guard-recipes.md`: the guard per stack, and what does not work as one |
-| The project has a screen | `references/ui-verification.md`: drivable, observable, inventoried, one command, a capture packet |
-| A rule feels arbitrary | `references/engineering-lessons.md`: the defect each one was paid for |
+| The first file is next, whatever the stack | Load `arch-project` after this one: the kind of project, the twelve decisions, the guard and the UI contract are its door |
 | The stack is Tauri v2 | Load `arch-tauri` after this one: that stack's boundary is its own door |
 
 ## Output
@@ -47,11 +43,4 @@ The next command and why, in this order: `init`, `start`, `drive`, the proof. A 
 - Run `odachi check`, `odachi review` or the hook in a folder that is not an odachi project: gates on somebody else's work say nothing.
 - Run `odachi init` in a repository that is not the human's without asking: it writes in the project and in their home. Ask in one sentence and wait for a yes.
 - Start over a project that already exists, or rewrite somebody else's `brief.md`.
-
-## References
-
-- `references/project-shape.md` - the triage by project kind, and what each kind drops.
-- `references/birth-decisions.md` - the twelve decisions that must exist before the first file.
-- `references/guard-recipes.md` - the boundary guard per stack, and what does not work as one.
-- `references/ui-verification.md` - the UI contract an agent can actually run.
-- `references/engineering-lessons.md` - the fifteen rules, each with the defect that paid for it.
+- Never carry a reference of its own: the shape of the code belongs to `arch-project`, and a file here would be a second owner of the same material.
