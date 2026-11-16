@@ -1537,6 +1537,29 @@ func (r *runner) requireReview(base string) *Result {
 		return &problem
 	}
 
+	// The verdict's own sentence, when there is no row the gate can act on: a verdict
+	// that was attached says changes_requested and carries no finding, and a ready
+	// tree beside that file is the gate contradicting what it just read. A row that
+	// exists keeps the rule above -refuted, waived or blocking-, because a sentence
+	// with an argument under it has already been answered (0292, 0319).
+	if verdict.Verdict == reviewdomain.ChangesRequested && len(verdict.Findings) == 0 {
+		message := "the review asks for changes: the verdict says so, and no row blocks"
+		next := `odachi review waive --because "<why the tree ships with this verdict open>"`
+		problem := Result{
+			Code:    int(gate.NeedsDecision),
+			Reason:  ReasonReviewChanges,
+			Message: message,
+			Next:    next,
+			Lines: []string{
+				message,
+				"next: odachi review --show",
+				next,
+				"why: a verdict that asks for changes is a decision, and the decision is the human's to write down",
+			},
+		}
+		return &problem
+	}
+
 	// Coverage is per row: every changed file whose bytes git can measure owes
 	// one current answer per lens its path class requires. A receipt that
 	// describes other bytes is a file that changed since the verdict — its
