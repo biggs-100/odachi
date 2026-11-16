@@ -14,7 +14,7 @@ R1 · "un veredicto que pide cambios frena el cierre aunque sus filas no bloquee
 ## Steps
 - [x] T1 · la puerta: un veredicto que pide cambios frena el cierre aunque ninguna fila bloquee   R1 · tree:f794b3a98f8034fb5f39d8a532b0fcd85f73ca0d
 - [x] T2 · la dispensa: la fila que sostiene el veredicto se deja pasar con la razon escrita   R1 · tree:f794b3a98f8034fb5f39d8a532b0fcd85f73ca0d
-- [ ] T3 · el changelog y la nota   R1
+- [x] T3 · el changelog y la nota   R1 · tree:ea1e865080f43894cdb07dcc2af77349880a1aa0
 
 ## History
 L1 · "un veredicto que pide cambios frena el cierre aunque sus filas no bloqueen, y la dispensa escrita por fila es la salida"

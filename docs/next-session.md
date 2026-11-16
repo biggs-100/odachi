@@ -1,30 +1,28 @@
 # Next session
 
-Written after 0318 and `v0.48.2`.
+Written after 0319 and `v0.48.3`.
 
 ## Where the project is
 
-- **0318 is on its branch, closing**: `feat/0318-the-demand`. The verification demand now asks the feature's
-  own diff instead of the closing candidate, so a close that only carries the mark and the note is still
-  asked. It is the debt 0317 wrote down, and it is paid.
-- **0317 is merged and released**: PR #639, and `v0.48.2` carries it. A missing, unreadable, unsigned or
-  refuted record is a note on a ready line, and `--require-review` is what refuses it -the rule ADR 0043 gave
-  the verdict-. Its first pass was merged as a stale head and never reached `main`; the second did, and the
-  lesson is at the bottom of this file.
+- **0319 is on its branch, closing**: `feat/0319-the-stop`. A verdict that says `changes_requested` and
+  carries no row now stops the close instead of closing as ready, and the door is written: `odachi review
+  waive --because "<why>"` leaves the decision in the task document.
+- **0318 is merged and released**: PR #641, carried by `v0.48.3`. The verification demand asks the feature's
+  diff, so a close that only carries documents is still asked for the record its code owes.
+- **0317 is merged and released**: PR #639, carried by `v0.48.2`. A verification a clean checkout cannot
+  carry is named, and `--require-review` is what refuses it.
 - **0316 is merged and released**: PR #637, carried by `v0.48.1`. Doctor's check 17 counts the distinct models
   that judge the lenses; on this repository it answers `1 of 4`.
 - **0315 is merged and released**: PR #635, and `v0.48.0` carries it. A risk asks for a verifier, the record
-  is sealed by the tree, and the gate names it. Its hard block was the defect 0317 repaired.
-- **0314 is merged and released**: PR #633, carried by `v0.47.0`. The gate refuses a requirement that is not
-  the brief's words, and the rulebook gained the fourth kind `gate:<reason>`.
-- **`v0.48.2` is published and installed**: tag on `647067d`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.48.2`. `v0.48.1` (tag on `f8ff342`) carries 0316 only; its section says so.
-- `main` is at the merge of the release PR #640, and the branches were deleted on merge, as every branch
+  is sealed by the tree, and the gate names it.
+- **`v0.48.3` is published and installed**: tag on `99c612e`, sixteen assets signed and attested, and this
+  machine runs `odachi 0.48.3`.
+- `main` is at the merge of the release PR #642, and the branches were deleted on merge, as every branch
   should be.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 316 features · 791 steps done of 791 · 0 open questions
+  total: 317 features · 794 steps done of 794 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -32,10 +30,29 @@ Written after 0318 and `v0.48.2`.
 
 ## What waits for a decision
 
-- **The next feature is not chosen.** The queue from the pstack investigation has one item left with work in
-  it: a review that reads artifacts instead of a diff -the research's own debt 3 and 4-. It is the big one:
-  it touches the prompt and the verdict's contract, so it is a minor release. After it, the written grant and
-  `sharpen`, which change how the work is asked for and hold nothing.
+- **The next feature is not chosen, and what is left of the research is its debt 4**: the reviewer is blind
+  outside the prompt by rule -it cannot read callers, tests or the rest of the file-, and the verifier that
+  can is called before the review instead of as part of it. It is the big one: the prompt is near the 120 KB
+  limit, the reviewer's permissions are a design decision (`read: deny` is what keeps the candidate frozen),
+  and the probe that would justify it is the planted-defect fixture. Debt 1 is the fixture's clean arm, debt 2
+  a deterministic analyzer, debt 6 test adequacy.
+- **The ledger**: three rules still say `none` -the question that is answered and not implemented, the
+  irreversible action that waits, and the voice that belongs to the profile-.
+- **The board look is unproven by a piece.** 0306 wrote the text an agent reads before producing one, and no
+  board video was rendered or watched.
+- **`schema.Current` is 10**: the check remedy belongs to it, and `agents.toml`, `odd/review.toml` and
+  `odd/rules.toml` share the counter. The verify record has its own counter (`verify.Schema = 1`).
+- **The ratchet covers three packages through declared builders**, and all three declare every builder they
+  own.
+- **The gate's reasons are declared once**: one table judges the state, the words, the continuation and the
+  verification, and a test reads the `Reason…` constants from `gate.go` with `go/ast`.
+- **The text a session pays for is pinned by bytes** in `internal/archtest/bytes.baseline`, failing in both
+  directions.
+- **A correction remembers its predecessor**, and a third round needs the human's reason.
+- **A guard is proven by breaking it**: `check --run --mutate <file> --remove "<string>" --expect
+  "<text>"`.
+- The fence keeps its six active rules and no template: a non-goal that names no path stays in `brief.md`.
+- `odachi doctor` is 17 checks: 16 were the install, 17 is the quorum.
 - **The verifier's independence is a role, not a comparison.** The record names who verified and refuses a
   record that names nobody, but it does not compare that name with the proof's builder the way the review
   does (`ReasonReviewSelf`). Now that a line can report the quorum, the comparison is one check when a
@@ -70,8 +87,10 @@ Written after 0318 and `v0.48.2`.
 
 ## What shipped
 
-- **0318, patch (unreleased).** The demand asks the feature's diff: a risk declared by its commits, and a
-  diff a lens would read. A close of documents is asked now, and a feature that only wrote documents is not.
+- **0319, patch (unreleased).** A verdict that asks for changes with no row stops the close, and the written
+  waiver is the door.
+- **0318, patch (v0.48.3).** The demand asks the feature's diff: a close of documents is asked for the record
+  its code owes.
 - **0317, patch (v0.48.2).** A verification a clean checkout cannot carry is named, and `--require-review` is
   what refuses it.
 - **0316, patch (v0.48.1).** Doctor's check 17 counts the models that judge the lenses and names the one they
@@ -82,6 +101,18 @@ Written after 0318 and `v0.48.2`.
 - **0314, minor (v0.47.0).** The gate refuses a requirement that is not the brief's words. `odd/rules.toml`
   gains `gate:<reason>` as its fourth kind.
 - **0313, patch (v0.47.0).** `odd/review.toml` declares schema 10 and its two check rows name their remedy.
+
+## 0319: what it settled, and what it leaves
+
+- **The artifact is evidence, and one of its halves was not read.** The gate read the rows; the sentence is the
+  other half, and a verdict attached with `changes_requested` and no row closed as ready.
+- **The line between "a sentence" and "an argument".** A verdict with rows keeps the rule it had -blocking,
+  refuted or waived-, because a sentence with an argument under it has already been answered by somebody. The
+  new stop fires only where there is nothing to argue with: the sentence alone.
+- **The door was already built.** `review waive --because` writes the human's decision into the task document,
+  and the review gate stops asking. No new flag, no new record.
+- **What it leaves.** The same sentence with non-causal rows still closes as ready. That is deliberate: those
+  rows are arguments the gate can act on, and refusing them would re-open every refutation 0292 built.
 
 ## 0318: what it settled, and what it leaves
 
