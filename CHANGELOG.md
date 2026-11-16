@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.48.3 - 2026-11-16
 
 - **The demand asks the feature's diff, not the closing candidate.** A feature whose code was committed step by
   step closes with a tree that only carries the mark and the note, so the verification demand -which read the
