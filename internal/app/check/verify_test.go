@@ -37,6 +37,9 @@ func closedRiskFixture() (*fakeFiles, *fakeGit) {
 		tree:     currentTree,
 		changed:  []string{"internal/gastos/x.go"},
 		messages: []string{"pay the invoice\n\nRisk: contract\n"},
+		// The feature wrote code, whatever the closing candidate carries: the
+		// question the gate asks is the feature's diff (0318).
+		between: []string{"internal/gastos/x.go"},
 	}
 	return files, git
 }
@@ -136,20 +139,21 @@ func TestAnUnreadableRecordIsNotAnApproval(t *testing.T) {
 	}
 }
 
-// TestADocumentOnlyChangeAsksForNoVerification: a risk is a declaration about the
-// code, and a close that only moved documents has no bytes a verifier would probe
-// (0301's rule, kept for the verifier).
-func TestADocumentOnlyChangeAsksForNoVerification(t *testing.T) {
+// TestAPassiveFeatureAsksForNoVerification: a feature that only wrote documents
+// has no bytes a lens would read, and its declared risk asks for no verification
+// (0301's rule, now asked of the feature's own diff).
+func TestAPassiveFeatureAsksForNoVerification(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
 	git := &fakeGit{
 		tree:     currentTree,
 		changed:  []string{"docs/next-session.md"},
 		messages: []string{"the note carries the release\n\nRisk: contract\n"},
+		between:  []string{"docs/next-session.md"},
 	}
 
 	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
-		t.Fatalf("a document-only close asked for a verification: %s", result.Message)
+		t.Fatalf("a document-only feature asked for a verification: %s", result.Message)
 	}
 }
 
@@ -159,6 +163,7 @@ func TestADocumentOnlyChangeAsksForNoVerification(t *testing.T) {
 func TestARiskTheTableDoesNotCarryAsksForNothing(t *testing.T) {
 	files, git := closedRiskFixture()
 	git.messages = []string{"a change\n\nRisk: whatever\n"}
+	git.between = []string{"internal/gastos/x.go"}
 
 	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
 		t.Fatalf("an unknown risk asked for a verification: %s", result.Message)
@@ -216,5 +221,46 @@ func TestTheRefutedRecordIsAlsoANoteUnlessTheHumanAsks(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(result.Lines, "\n"), "the gate closes a tree with no record") {
 		t.Errorf("the note does not carry what the verifier said:\n%s", strings.Join(result.Lines, "\n"))
+	}
+}
+
+// TestACloseThatOnlyMovesDocumentsStillNamesTheRecord: the question is the
+// feature's, not the closing candidate's. A feature that wrote code and closed with
+// the mark and the note has a diff a lens would read, and its declared risk owes a
+// verification even though the closing tree carries documents (0318).
+func TestACloseThatOnlyMovesDocumentsStillNamesTheRecord(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
+	git := &fakeGit{
+		tree:          currentTree,
+		changed:       []string{"docs/next-session.md"},
+		messages:      []string{"the note carries the close\n\nRisk: contract\n"},
+		betweenByFrom: map[string][]string{"abc1234": {"internal/gastos/x.go"}},
+	}
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: a close of documents hid the feature's code (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "contract") {
+		t.Errorf("the refusal does not name the risk: %s", result.Message)
+	}
+}
+
+// TestAPassiveFeatureAsksForNothing: a feature that only wrote documents has no
+// bytes a lens would read, and its declared risk asks for no verification.
+func TestAPassiveFeatureAsksForNothing(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
+	git := &fakeGit{
+		tree:          currentTree,
+		changed:       []string{"docs/next-session.md"},
+		messages:      []string{"the note carries the close\n\nRisk: contract\n"},
+		betweenByFrom: map[string][]string{"abc1234": {"docs/next-session.md"}},
+	}
+
+	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
+		t.Fatalf("a document-only feature asked for a verification: %s", result.Message)
 	}
 }

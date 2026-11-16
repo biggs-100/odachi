@@ -1649,16 +1649,14 @@ func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
 }
 
 // verification is what an independent verifier left about this tree, or the reason
-// the close should ask for it (0315). A risk asks for a verifier the way it asks for
-// a lens: only when the change is one a lens would read, because a close that moved
-// documents has no bytes a probe would catch. The record is read from the clone's
-// store under the tree's name, so a record of another tree answers nothing here.
+// the close should ask for it (0315). The question is the feature's, not the closing
+// candidate's: a close that only marks the last step and writes the note carries
+// documents, and asking the candidate would let a feature whose code was committed
+// step by step close without ever being asked (0318). A risk asks for a verifier the
+// way it asks for a lens -only when the feature's own diff is one a lens would read-.
+// The record is read from the clone's store under the tree's name, so a record of
+// another tree answers nothing here.
 func (r *runner) verification(feature *tasks.Document) (missing, refuted []string) {
-	required, _, _, problem := r.requiredLenses()
-	if problem != nil || len(required) == 0 {
-		return nil, nil
-	}
-
 	var asking []string
 	for _, name := range r.declaredRisks(feature.Doc.Base) {
 		if reviewdomain.AsksForVerifier(name) {
@@ -1666,6 +1664,9 @@ func (r *runner) verification(feature *tasks.Document) (missing, refuted []strin
 		}
 	}
 	if len(asking) == 0 {
+		return nil, nil
+	}
+	if passive, problem := r.featurePassive(feature); problem != nil || passive {
 		return nil, nil
 	}
 
