@@ -15,7 +15,7 @@ R1 · "toda regla del catálogo que se puede hacer cumplir nombra su enforcer, y
 - [x] T1 · la tabla y su lectura: el dominio puro clasifica el enforcer y el adaptador lee odd/rules.toml, con sus tests   R1 · route:inline · tree:2802000eaf3a5783d5cbe4fa7329d0e8713b704f
 - [x] T2 · doctor cuenta las reglas sin enforcer y nombra cada una con su skill, y un enforcer que no resuelve es un problema   R1 · route:inline · tree:0c00e27c6b2b229c82047eae9d499e7f9b49154d
 - [x] T3 · cada fila de check de review.toml nombra el comando que arregla su rojo, y una fila sin remedio no valida   R1 · route:inline · tree:0d5e4352ee358e5dcd53997370bb32d122b36697
-- [ ] T4 · el backfill de las reglas que hoy tienen enforcement y el changelog   R1 · route:inline
+- [x] T4 · el backfill de las reglas que hoy tienen enforcement y el changelog   R1 · route:inline · tree:f282ee435a3d0fde06f7d7c3541e1ba608cc8552
 
 ## History
 L1 · "toda regla del catálogo que se puede hacer cumplir nombra su enforcer, y doctor cuenta como deuda la que no lo tiene; cada fila de check nombra el comando que arregla su rojo"
