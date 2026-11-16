@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.48.1 - 2026-11-16
 
 - **The quorum is a number doctor reads.** `odachi doctor` gains check 17: it counts how many distinct models
   judge the lenses in `odd/review.toml` and says which model they share. Four lenses answered by one model are
