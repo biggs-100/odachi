@@ -7,8 +7,10 @@ Written after 0312 and `v0.45.6`.
 - **0312 is open on `feat/0312-una-regla-nombra`, unmerged and unreleased.** The catalog can be counted:
   `odd/rules.toml` pairs each rule with the mechanism that makes breaking it impossible, or says `none`
   with its reason, and `odachi doctor`'s check 16 reports the six that say none. A declared `[[check]]`
-  now names the `remedy` its red asks for, printed in the review prompt beside the failing tool.
-  `schema.Current` is 10.
+  names the `remedy` its red asks for, printed in the review prompt beside the failing tool; the key is
+  required from `schema.Current = 10` and optional in a file that declares 9. This repository's own
+  `odd/review.toml` stays at 3, because the gate is built from the base ref and its two lines can only
+  move once a release carries the tolerant reader.
 - **0311 is merged and released**: PR #628, and `v0.45.6` carries it. `db-craft` is the catalog's fifth
   door with depth: eight references (schema, migrations, transactions, indexes, queries, access,
   operations and the catalogue of failures). `data` keeps the decision and sends the schema and the
@@ -133,11 +135,13 @@ Written after 0312 and `v0.45.6`.
   and the installed 0.45.6 reads schema 9: the tree's binary has to come first. Building it into the temp
   folder and prepending the PATH is not an install and not a bypass; it runs the gate with the code that
   wrote the file.
-- **What it leaves.** The ledger is a hand-written table, so it can rot the way any list rots; what keeps
-  it honest is that doctor resolves every name and counts every `none`. The next step it enables is
-  choosing one of the six and giving it a mechanism, and the one that looks reachable first is the
-  verbatim requirement: the task doc already carries the quote, so a check could compare `R1` against the
-  brief block the tool wrote.
+- **What it leaves.** Two things. The ledger is a hand-written table, so it can rot the way any list rots;
+  what keeps it honest is that doctor resolves every name and counts every `none`. And this repository's
+  `odd/review.toml` still has no `remedy`: the gate is built from the base ref, so the file can only move
+  to schema 10 after a release carries the reader that tolerates it. The next step the ledger enables is
+  choosing one of the six and giving it a mechanism, and the one that looks reachable first is the verbatim
+  requirement: the task doc already carries the quote, so a check could compare `R1` against the brief
+  block the tool wrote.
 
 ## 0311: what it settled, and what it leaves
 

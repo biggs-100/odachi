@@ -17,12 +17,14 @@ not a version.
   that names a fence path, a check or a test nothing answers is a problem and not debt, because the
   project would believe it is protected. Minor (0312).
 
-- **Every declared check names its repair.** `[[check]]` in `odd/review.toml` gains `remedy`: the command
-  that fixes its red, or the sentence that names the repair when no one command can. It is required, and
-  the review prompt prints it beside a failing tool so the reviewer and the agent read the same
-  instruction. The remedy stays out of the check fingerprint on purpose: rewording advice must not ask the
-  human to approve the same tools again. `schema.Current` is 10 -a key arrived in one of the files the
-  counter covers-, so a binary at 9 or older refuses a file that carries it instead of calling it a typo.
+- **Every declared check names its repair, from the schema that made it a rule.** `[[check]]` in
+  `odd/review.toml` gains `remedy`: the command that fixes its red, or the sentence that names the repair
+  when no one command can. The review prompt prints it beside a failing tool so the reviewer and the agent
+  read the same instruction. `schema.Current` is 10, and the requirement belongs to that version: a file
+  that declares 9 reads `remedy` as optional, because the reader tolerates what the writer had not learned
+  yet. This repository's own table stays where it is until the release puts that reader in the base the
+  gate is built from; its two lines move with the next feature. The remedy stays out of the check
+  fingerprint on purpose: rewording advice must not ask the human to approve the same tools again.
 
 ## v0.45.6 - 2026-11-15
 

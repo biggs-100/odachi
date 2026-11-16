@@ -77,7 +77,8 @@ func TestDecodeRefusesACheckItCannotRun(t *testing.T) {
 name = "lint"
 command = "golangci-lint run ./..."
 `,
-		"no remedy": `mode = "on"
+		"no remedy at schema 10": `schema = 10
+mode = "on"
 
 [[check]]
 name = "lint"
@@ -108,6 +109,28 @@ timeout = 3
 				t.Fatalf("Decode = %+v, want a refusal", got)
 			}
 		})
+	}
+}
+
+// TestAFileAtSchemaNineReadsWithoutARemedy: the reader tolerates what the writer
+// had not learned yet. A file written before the key existed reads as it always
+// did; only a file that declares the schema that made it required owes the
+// repair (0312).
+func TestAFileAtSchemaNineReadsWithoutARemedy(t *testing.T) {
+	data := `schema = 9
+mode = "on"
+
+[[check]]
+name = "lint"
+command = "golangci-lint run ./..."
+severity = "WARNING"
+`
+	got, err := reviewtoml.Decode([]byte(data))
+	if err != nil {
+		t.Fatalf("Decode = %v, want an old file to keep reading", err)
+	}
+	if len(got.Checks) != 1 || got.Checks[0].Remedy != "" {
+		t.Errorf("Decode = %+v, want the check with no remedy", got.Checks)
 	}
 }
 

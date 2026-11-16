@@ -73,6 +73,20 @@ func TestTheRefusalNamesWhatTheRemedyIsFor(t *testing.T) {
 	}
 }
 
+// TestAnOldFileOwesNoRemedy: the requirement belongs to the schema that made it,
+// so the same row is refused at 10 and accepted at 9. Without this the reader
+// would refuse files its own writer had produced one release earlier (0312).
+func TestAnOldFileOwesNoRemedy(t *testing.T) {
+	raw := []review.Check{{Name: "vet", Command: "go vet ./...", Severity: review.Warning}}
+
+	if got, err := review.NormalizeChecksAt(raw, review.RemedySchema-1); err != nil {
+		t.Fatalf("NormalizeChecksAt(9) = %v, want the old file to keep reading: %+v", err, got)
+	}
+	if _, err := review.NormalizeChecksAt(raw, review.RemedySchema); err == nil {
+		t.Fatal("NormalizeChecksAt(10) accepted a check with no remedy")
+	}
+}
+
 // TestTheRefusalNamesTheSeverityVocabulary: the human who wrote a word odachi does
 // not know must read the four it does.
 func TestTheRefusalNamesTheSeverityVocabulary(t *testing.T) {

@@ -61,7 +61,8 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 	// The version is asked before the unknown keys are named: a file from a newer
 	// odachi carries both, and the key that makes it newer is not a typo for the
 	// human to fix.
-	if _, err := schema.Read(f.Schema); err != nil {
+	version, err := schema.Read(f.Schema)
+	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
 
@@ -93,7 +94,7 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
-	checks, err := review.NormalizeChecks(declaredChecks(f.Checks))
+	checks, err := review.NormalizeChecksAt(declaredChecks(f.Checks), version)
 	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}

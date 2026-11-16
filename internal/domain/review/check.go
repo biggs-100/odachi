@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
 // This file owns the deterministic tools a project declares in odd/review.toml:
@@ -45,15 +47,28 @@ const (
 	MaxCheckTimeout = 3600
 )
 
-// NormalizeChecks reads the declared tools and refuses each one the review could
-// not run: a check without a name has no row to file, without a command has
-// nothing to execute, and without a severity cannot be paid at a tier.
+// RemedySchema is the schema that made a check's remedy required. A file written
+// before it reads with the remedy optional: the reader tolerates what the writer
+// had not learned yet, and only a file that declares this version or newer owes
+// the repair (0312).
+const RemedySchema = 10
+
+// NormalizeChecks reads the declared tools at the schema this binary writes: the
+// strict reading, used by a new file and by every test that declares one.
+func NormalizeChecks(raw []Check) ([]Check, error) {
+	return NormalizeChecksAt(raw, schema.Current)
+}
+
+// NormalizeChecksAt reads the declared tools at the schema the file declares. The
+// remedy is required from RemedySchema on and optional before it, because a file
+// that predates the key cannot be refused for a field its writer never had: that
+// is the same rule the schema counter exists for, applied to one key.
 //
 // The name is the identity, so it arrives trimmed and lowercased and no two
 // checks may share one: two tools under one name would pay one row and lose the
 // other. The command is the project's own text and travels as written -it is a
 // shell line, and normalizing it would be rewriting somebody's tool-.
-func NormalizeChecks(raw []Check) ([]Check, error) {
+func NormalizeChecksAt(raw []Check, version int) ([]Check, error) {
 	if len(raw) == 0 {
 		return nil, nil
 	}
@@ -84,7 +99,7 @@ func NormalizeChecks(raw []Check) ([]Check, error) {
 		}
 
 		remedy := strings.TrimSpace(check.Remedy)
-		if remedy == "" {
+		if remedy == "" && version >= RemedySchema {
 			return nil, fmt.Errorf("the check %q does not say remedy: a red row that names no repair leaves the agent guessing, and a guess is what the tool was declared to stop", name)
 		}
 
@@ -294,7 +309,7 @@ func ChecksFingerprint(checks []Check) string {
 		return ""
 	}
 
-	normalized, err := NormalizeChecks(checks)
+	normalized, err := NormalizeChecksAt(checks, schema.First)
 	if err != nil {
 		normalized = checks
 	}
