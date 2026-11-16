@@ -4,9 +4,9 @@ Written after 0319 and `v0.48.3`.
 
 ## Where the project is
 
-- **0319 is on its branch, closing**: `feat/0319-the-stop`. A verdict that says `changes_requested` and
-  carries no row now stops the close instead of closing as ready, and the door is written: `odachi review
-  waive --because "<why>"` leaves the decision in the task document.
+- **0319 is merged and released**: PR #643, and `v0.48.4` carries it (tag on `e5837e4`). A verdict that says
+  `changes_requested` and carries no row now stops the close, and the door is written: `odachi review waive
+  --because "<why>"` leaves the decision in the task document.
 - **0318 is merged and released**: PR #641, carried by `v0.48.3`. The verification demand asks the feature's
   diff, so a close that only carries documents is still asked for the record its code owes.
 - **0317 is merged and released**: PR #639, carried by `v0.48.2`. A verification a clean checkout cannot
@@ -15,9 +15,9 @@ Written after 0319 and `v0.48.3`.
   that judge the lenses; on this repository it answers `1 of 4`.
 - **0315 is merged and released**: PR #635, and `v0.48.0` carries it. A risk asks for a verifier, the record
   is sealed by the tree, and the gate names it.
-- **`v0.48.3` is published and installed**: tag on `99c612e`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.48.3`.
-- `main` is at the merge of the release PR #642, and the branches were deleted on merge, as every branch
+- **`v0.48.4` is published and installed**: tag on `e5837e4`, sixteen assets signed and attested, and this
+  machine runs `odachi 0.48.4`.
+- `main` is at the merge of the release PR #644, and the branches were deleted on merge, as every branch
   should be.
 - This file quotes the line the tool counts for the tree it describes:
 
@@ -30,12 +30,14 @@ Written after 0319 and `v0.48.3`.
 
 ## What waits for a decision
 
-- **The next feature is not chosen, and what is left of the research is its debt 4**: the reviewer is blind
-  outside the prompt by rule -it cannot read callers, tests or the rest of the file-, and the verifier that
-  can is called before the review instead of as part of it. It is the big one: the prompt is near the 120 KB
-  limit, the reviewer's permissions are a design decision (`read: deny` is what keeps the candidate frozen),
-  and the probe that would justify it is the planted-defect fixture. Debt 1 is the fixture's clean arm, debt 2
-  a deterministic analyzer, debt 6 test adequacy.
+- **The decision the session closed on: how the reviewer stops being blind (research debt 4).** Three things
+  have to be chosen before code: whether the tree is frozen into the prompt or the reviewer reads the live
+  tree -the current `read: deny` is what keeps the candidate frozen, and the verdict names a tree that would
+  stop being the one it read-; how much the prompt may grow, when `max_prompt_kb` is already 120; and what
+  measurement justifies believing it more, which is the planted-defect fixture. The next session can write
+  those three options with their costs on one page, and the human chooses there.
+- **What is left of the research besides it**: debt 1 is the fixture's clean arm, debt 2 a deterministic
+  analyzer, debt 6 test adequacy.
 - **The ledger**: three rules still say `none` -the question that is answered and not implemented, the
   irreversible action that waits, and the voice that belongs to the profile-.
 - **The board look is unproven by a piece.** 0306 wrote the text an agent reads before producing one, and no
