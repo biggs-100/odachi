@@ -122,6 +122,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runPack(dir, args[1:], stdout, stderr)
 	case "review":
 		return runReview(dir, args[1:], stdout, stderr)
+	case "verify":
+		return runVerify(dir, args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(dir, args[1:], stdout, stderr)
 	case "bench":
@@ -1827,6 +1829,7 @@ usage:
   odachi review checks [status|approve]
   odachi review waive --because "<why>" [--row <fingerprint>]
   odachi review probe [--runs N] [--exec "<command>"]
+  odachi verify [--exec "<command>"]
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills home|project] [--agents opencode|claude|both] [--json]
@@ -1889,6 +1892,12 @@ review checks:
   odachi review checks approve   this clone agrees to run those exact commands: the record
                                  lives in the store, so a cloned repository runs nothing
                                  until the person who cloned it says so
+
+verify flags:
+  --exec s        run this command with the prompt on stdin (and {prompt} as a path to it)
+                  and store the record it answers under the tree this worktree is; without
+                  it the verb prints the prompt and runs nobody
+  --timeout n     seconds the verifier may take (default 1800)
 
 plan flags:
   --req R<n>      requirement the new step is tied to
