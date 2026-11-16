@@ -1,31 +1,30 @@
 # Next session
 
-Written after 0317 and `v0.48.0`.
+Written after 0318 and `v0.48.2`.
 
 ## Where the project is
 
-- **0317 is on its branch, closing**: `fix/0317-the-repair`. The first real pull request of 0315 found that
-  the verifier's record lives in the clone and CI cannot carry it, so the gate refused every clean checkout. A
-  missing, unreadable, unsigned or refuted record is now a note on a ready line, and `--require-review` is what
-  refuses it -the same rule ADR 0043 gave the verdict-. Its first pass was merged as a stale head and did not
-  reach `main`; this branch is the second, and the lesson is at the bottom of this file.
-- **0316 is on its branch, closing**: doctor's check 17 counts the distinct models that judge the lenses and
-  names the one they share. It is a warning, it never moves the exit code, and on this repository it answers
-  `1 of 4`.
+- **0318 is on its branch, closing**: `feat/0318-the-demand`. The verification demand now asks the feature's
+  own diff instead of the closing candidate, so a close that only carries the mark and the note is still
+  asked. It is the debt 0317 wrote down, and it is paid.
+- **0317 is merged and released**: PR #639, and `v0.48.2` carries it. A missing, unreadable, unsigned or
+  refuted record is a note on a ready line, and `--require-review` is what refuses it -the rule ADR 0043 gave
+  the verdict-. Its first pass was merged as a stale head and never reached `main`; the second did, and the
+  lesson is at the bottom of this file.
+- **0316 is merged and released**: PR #637, carried by `v0.48.1`. Doctor's check 17 counts the distinct models
+  that judge the lenses; on this repository it answers `1 of 4`.
 - **0315 is merged and released**: PR #635, and `v0.48.0` carries it. A risk asks for a verifier, the record
-  is sealed by the tree, and the gate names it. Its hard block was the defect 0317 repairs.
+  is sealed by the tree, and the gate names it. Its hard block was the defect 0317 repaired.
 - **0314 is merged and released**: PR #633, carried by `v0.47.0`. The gate refuses a requirement that is not
   the brief's words, and the rulebook gained the fourth kind `gate:<reason>`.
-- **`v0.48.1` is published and installed, with one patch**: tag on `f8ff342`, sixteen assets signed and
-  attested, and this machine runs `odachi 0.48.1`. It carries 0316 and not 0317: the merge took the head the
-  remote had, and 0317's commits were made after the push. The changelog says so; the release notes come from
-  it.
-- `main` is at the merge of the release PR #636, and the branches were deleted on merge, as every branch
+- **`v0.48.2` is published and installed**: tag on `647067d`, sixteen assets signed and attested, and this
+  machine runs `odachi 0.48.2`. `v0.48.1` (tag on `f8ff342`) carries 0316 only; its section says so.
+- `main` is at the merge of the release PR #640, and the branches were deleted on merge, as every branch
   should be.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 315 features · 788 steps done of 788 · 0 open questions
+  total: 316 features · 791 steps done of 791 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -33,12 +32,10 @@ Written after 0317 and `v0.48.0`.
 
 ## What waits for a decision
 
-- **The next feature is not chosen, and the queue from the pstack investigation says what comes next.** Two
-  things are written down and neither is chosen yet. First, the verification demand reads the closing
-  candidate, so a close that only moves documents is never asked for one: asking it of the feature's whole
-  diff -the way the review gate already does- is the correction 0317 leaves. After it, the agreed order: a
-  review that reads artifacts instead of a diff -the research's own debt 3 and 4-, and then the written grant
-  and `sharpen`.
+- **The next feature is not chosen.** The queue from the pstack investigation has one item left with work in
+  it: a review that reads artifacts instead of a diff -the research's own debt 3 and 4-. It is the big one:
+  it touches the prompt and the verdict's contract, so it is a minor release. After it, the written grant and
+  `sharpen`, which change how the work is asked for and hold nothing.
 - **The verifier's independence is a role, not a comparison.** The record names who verified and refuses a
   record that names nobody, but it does not compare that name with the proof's builder the way the review
   does (`ReasonReviewSelf`). Now that a line can report the quorum, the comparison is one check when a
@@ -62,6 +59,9 @@ Written after 0317 and `v0.48.0`.
   the branch was pushed; the merge took `345ae7d`, and `v0.48.1` went out without the repair its body claimed.
   Before any merge, `gh pr view <n> --json headRefOid` has to equal local `HEAD`, and a branch with an open PR
   is pushed after every commit -not once, at the beginning.
+- **A squash leaves the feature's base outside the history, and CI reads it.** 0317's task document pointed at
+  `345ae7d`; after the squash, `main` only had `90bb26e` with the same tree, and the gate answered `bad object`
+  on a clean checkout. A base is a commit the remote has, and a squash merge is the moment to check that.
 - **An evidence a clean checkout cannot carry is not a CI block.** The verdict learned it in ADR 0043 and the
   verification repeated the mistake in 0315; the repair is a note plus a flag, and the proof stays the thing
   CI reproduces. The next time a record is added to the gate, ask first where it lives.
@@ -70,16 +70,31 @@ Written after 0317 and `v0.48.0`.
 
 ## What shipped
 
-- **0317, patch (unreleased).** A verification the checkout cannot carry is a note, and `--require-review` is
-  what refuses it. The repair the first real pull request asked for.
-- **0316, patch (unreleased).** Doctor's check 17 counts the models that judge the lenses and names the one
-  they share, with the fix and never a failing exit code.
+- **0318, patch (unreleased).** The demand asks the feature's diff: a risk declared by its commits, and a
+  diff a lens would read. A close of documents is asked now, and a feature that only wrote documents is not.
+- **0317, patch (v0.48.2).** A verification a clean checkout cannot carry is named, and `--require-review` is
+  what refuses it.
+- **0316, patch (v0.48.1).** Doctor's check 17 counts the models that judge the lenses and names the one they
+  share, with the fix and never a failing exit code.
 - **0315, minor (v0.48.0).** A risk asks for a verifier and the gate reads the record: `odachi verify
   --exec "<command>"` composes the question from the project's own words, seals the answer under the tree,
   and `check` blocks a close whose record is missing, unreadable, unsigned or refuted.
 - **0314, minor (v0.47.0).** The gate refuses a requirement that is not the brief's words. `odd/rules.toml`
   gains `gate:<reason>` as its fourth kind.
 - **0313, patch (v0.47.0).** `odd/review.toml` declares schema 10 and its two check rows name their remedy.
+
+## 0318: what it settled, and what it leaves
+
+- **A gate question has an owner, and it is the feature.** The candidate answers "what is staged now"; the
+  feature answers "what did this work change". The proof and the review already asked the second; the
+  verification asked the first, and the difference was a close that never saw a record.
+- **The classifier is shared, not copied.** `featurePassive` is the function the review gate calls, so the two
+  cannot disagree about whether the diff deserves a lens.
+- **The tests pin both sides.** A close of documents whose feature wrote code names the record; a feature that
+  only wrote documents asks for nothing. The second is 0301's rule, now asked of the right diff.
+- **What it leaves.** A close of documents still needs the record to name the closing tree -the verifier has to
+  run on the tree that closes-. That is the cost of evidence addressed by content, and it is the human's call
+  whether to run it before or after the last document commit.
 
 ## 0317: what it settled, and what it leaves
 
