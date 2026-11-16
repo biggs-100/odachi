@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.48.0 - 2026-11-16
 
 - **A risk that asks for a verifier is asked for by the gate.** A close whose commits declared a risk now
   owes a record named by the tree that closes it. `odachi verify --exec "<command>"` composes the question
