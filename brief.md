@@ -940,3 +940,25 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que un número de quórum se puede leer de la configuración sin comprar nada.
+
+## 0318 · la-puerta-pregunta
+
+## What must exist
+- la puerta pregunta por el registro del verificador contra el diff completo de la feature y no contra el candidato que el cierre trae: un cierre que solo mueve documentos también lo nombra
+
+## Done when
+- un cierre que solo mueve documentos, de una feature con un riesgo declarado, nombra el registro del verificador
+- una feature sin riesgo declarado, o con un diff pasivo, no pide registro
+- la línea sigue siendo un aviso por defecto y un bloqueo con --require-review
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no se toca la cerca: esta feature no cambia odd/fence.toml
+- no se cambia el verbo ni la forma del registro: la feature solo corrige qué pregunta la puerta
+- no se editan docs/review-research.md ni docs/skill-evaluation.md
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: today.
+- Wants to learn: que una pregunta a la evidencia se puede leer del diff de la feature y no solo del candidato.
