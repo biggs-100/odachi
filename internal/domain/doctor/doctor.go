@@ -83,11 +83,15 @@ const (
 	// so no existing number moves: the table is the place where a correction that
 	// repeated becomes a count instead of another sentence (0312).
 	CheckRules
+	// CheckQuorum asks how many distinct models judge the lenses: a quorum of one
+	// is one opinion in four costumes, and a project that pays four answers is owed
+	// the number before it trusts them (0316).
+	CheckQuorum
 )
 
 // CheckCount is how many checks a complete report has. A test asserts it, so a
 // report can never quietly grow or shrink.
-const CheckCount = 16
+const CheckCount = 17
 
 // MaxChildPath is the longest PATH cmd passes to a child, in characters. The
 // session that opened this check carried 13,888 and the child saw an empty PATH;
@@ -253,6 +257,8 @@ func title(number int) string {
 		return "the environment a command inherits"
 	case CheckRules:
 		return "the rules and what enforces them"
+	case CheckQuorum:
+		return "the models that judge the lenses"
 	default:
 		return ""
 	}
