@@ -7,6 +7,21 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A risk that asks for a verifier is asked for by the gate.** A close whose commits declared a risk now
+  owes a record named by the tree that closes it. `odachi verify --exec "<command>"` composes the question
+  -the requirement in the human's words, the promises the task document keeps, the risk the commits
+  declared-, runs one command with it and seals the answer in the clone's store: the tree, who verified, and
+  the hour the tool wrote. A record of another tree covers nothing, one that names nobody is refused before
+  it is stored, and a record that answered `refuted` stops the close carrying the note that showed the
+  requirement failing. The demand keeps 0301's rule -a risk only asks when the change is one a lens would
+  read, so a close that moved documents owes nothing-, and it is a block, not a note. The catalog's row
+  leaves `none` and names the refusal: four rules nothing enforces instead of five. Minor (0315).
+
+- **The verb's own gate, dogfooded.** This feature declares `Risk: contract`, so the tree that closes it is
+  judged by the mechanism it shipped (0315).
+
 ## v0.47.0 - 2026-11-16
 
 - **The gate refuses a requirement that is not the human's words.** `odachi start` writes the requirement
@@ -130,7 +145,7 @@ not a version.
   new `tauri-foundation` skill names the boundary the framework keeps crossing -the domain crate never
   imports Tauri, a command is a thin adapter, the Rust-to-TS contract is generated, the UI is verified in
   three layers- and ships the depth it needs: the workspace layout, the purity guard recipes, the bridge
-  templates and the desktop verification ladder. Its links point at `bootstrap` and drive, the doors this
+  templates and the desktop verification ladder. Its links point at `bootstrap` and `drive`, the doors this
   catalog has, instead of at the folder it came from. Patch (0302).
 
 ## v0.45.0 - 2026-11-14

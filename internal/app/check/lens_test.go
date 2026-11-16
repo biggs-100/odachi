@@ -7,6 +7,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/check"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
+	domainverify "github.com/biggs-100/odachi/internal/domain/verify"
 )
 
 // verdictWithLenses seals a verdict that covers the given lenses.
@@ -229,6 +230,9 @@ func TestADeclaredRiskAsksForItsLens(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
 	files.files[reviewPath(currentTree)] = []byte(verdictAtBase(t, currentTree, "abc1234", []string{domainreview.Reliability}))
+	// The risk now also owes an independent verifier (0315), and this test is about
+	// the lens: the record is here so the tree lacks exactly one thing.
+	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil))
 
 	git := &fakeGit{
 		tree:     currentTree,

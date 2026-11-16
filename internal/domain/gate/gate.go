@@ -52,6 +52,14 @@ const (
 	// cause that did not name what the run expected. A guard that does not fire is
 	// a comment with a test's name on it (0297).
 	ReasonMutationFailed = "mutation_failed"
+	// ReasonVerifyMissing is a close whose commits declared a risk and whose tree
+	// carries no verification an independent verifier signed: who writes does not
+	// verify itself, and the record is what makes it checkable (0315).
+	ReasonVerifyMissing = "verification_missing"
+	// ReasonVerifyRefuted is the record that exists and says the requirement does
+	// not hold. It is not the same sentence as a missing record, and calling it one
+	// would send the human to produce what is already there (0315).
+	ReasonVerifyRefuted = "verification_refuted"
 )
 
 // Commands that resolve a block. Every blocked result names one.
@@ -62,6 +70,7 @@ const (
 	// that.
 	nextAsk        = "odachi ask \"<your decision>\""
 	nextCheckProof = "odachi check --proof <file>"
+	nextVerify     = "odachi verify --exec \"<command>\""
 )
 
 // Reasons is every reason the gate can answer with, in the order the constants
@@ -84,6 +93,8 @@ func Reasons() []string {
 		ReasonUndoMissed,
 		ReasonUndoMissing,
 		ReasonMutationFailed,
+		ReasonVerifyMissing,
+		ReasonVerifyRefuted,
 	}
 }
 
@@ -153,7 +164,15 @@ type State struct {
 	// may still be waiting for a `ask --change`, and the quote is the human's
 	// decision, not a shape of the plan.
 	QuoteMismatch []string
-	Violations    []string
+	// VerificationMissing names the risks whose commits asked for a verifier and
+	// whose record this tree does not have, or the file it cannot read. It is
+	// gathered at the close, like the quote: mid-feature the record would name a
+	// tree that still moves (0315).
+	VerificationMissing []string
+	// VerificationRefuted holds the notes of a record that answered refuted: the
+	// verifier ran, it read these bytes, and the requirement does not hold.
+	VerificationRefuted []string
+	Violations          []string
 	// ProofDeferred says the feature is still open, so the proof is not owed yet:
 	// it is owed by the tree that closes the feature, which is the one a pull
 	// request and CI judge. Absence and staleness stop blocking; a proof this run
@@ -224,6 +243,21 @@ func Evaluate(s State) Result {
 			"the plan does not quote the human: " + strings.Join(s.QuoteMismatch, "; ") +
 				"; copy the brief's words into the requirement, or record the change with odachi ask --change",
 			`odachi ask --change "<the human's words>" --req R1`}
+	// A close that declared a risk owes the record an independent verifier leaves,
+	// and the rule is the one the catalog already states: who writes does not verify
+	// itself. It is NeedsWork because the agent can run the verifier; the record,
+	// not a sentence in a task document, is what the gate reads (0315).
+	case len(s.VerificationMissing) > 0:
+		return Result{NeedsWork, ReasonVerifyMissing,
+			"the commits declared a risk and this tree has no verification it can read: " + strings.Join(s.VerificationMissing, "; "),
+			nextVerify}
+	// The record exists and says the requirement does not hold. The tree does not
+	// close on the words of the person who wrote it, and the notes say what showed
+	// it (0315).
+	case len(s.VerificationRefuted) > 0:
+		return Result{NeedsWork, ReasonVerifyRefuted,
+			"the verifier refuted this tree: " + strings.Join(s.VerificationRefuted, "; "),
+			nextVerify}
 	// A proof exists as soon as it names the tree it came from. An empty body is
 	// still a proof: `go vet`, `tsc --noEmit` and `gofmt -l` all succeed while
 	// printing nothing, and telling a human "the proof is missing" right after

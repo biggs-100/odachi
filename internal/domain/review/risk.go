@@ -47,3 +47,13 @@ func containsLens(lenses []string, lens string) bool {
 	}
 	return false
 }
+
+// AsksForVerifier reports whether a risk the commits declared asks for an
+// independent verifier. The published table answers yes in its third column for
+// every row, so a name it carries is a name that owes one; the day a row says no,
+// this is where the column lands. A name the table does not carry asks for nobody:
+// the ready note already names the declaration it cannot read (0315).
+func AsksForVerifier(name string) bool {
+	_, ok := LensForRisk(name)
+	return ok
+}

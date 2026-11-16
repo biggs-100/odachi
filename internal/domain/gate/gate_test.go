@@ -76,6 +76,15 @@ func buildEvaluationCases() []evaluationCase {
 	quoteMismatch := ready()
 	quoteMismatch.QuoteMismatch = []string{`R1: the brief says "un paso" and the task doc says "dos pasos"`}
 
+	// A risk asked for a verifier and no record answers this tree; the answer that
+	// a record exists and says the requirement does not hold is its own row, because
+	// "there is no record" would be a lie about a file that is there (0315).
+	verificationMissing := ready()
+	verificationMissing.VerificationMissing = []string{"contract"}
+
+	verificationRefuted := ready()
+	verificationRefuted.VerificationRefuted = []string{"the gate closes a tree with no record"}
+
 	missingProof := ready()
 	missingProof.ProofTreeHash = ""
 	missingProof.ProofOutput = ""
@@ -220,6 +229,22 @@ func buildEvaluationCases() []evaluationCase {
 			reason:  gate.ReasonMutationFailed,
 			message: "the mutation row failed: the suite stayed green with the guard taken out",
 			next:    `odachi check --run "go test ./..." --mutate "internal/domain/gate/gate.go" --remove "ReasonFuture" --expect "the gate declares"`,
+		},
+		{
+			name:    "a risk with no verification",
+			state:   verificationMissing,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonVerifyMissing,
+			message: "the commits declared a risk and this tree has no verification it can read: contract",
+			next:    `odachi verify --exec "<command>"`,
+		},
+		{
+			name:    "the verifier refuted the tree",
+			state:   verificationRefuted,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonVerifyRefuted,
+			message: "the verifier refuted this tree: the gate closes a tree with no record",
+			next:    `odachi verify --exec "<command>"`,
 		},
 		{
 			name:    "ready",
