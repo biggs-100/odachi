@@ -13,7 +13,7 @@ R1 · "quién escribe no se verifica a sí mismo: un riesgo que pide verifier de
 - go test ./... is green and odachi check --run "go test ./..." is green
 
 ## Steps
-- [ ] T1 · el registro: el dominio sella esquema, árbol, autor y hora, lee estricto, y una respuesta sin autor no cubre   R1
+- [x] T1 · el registro: el dominio sella esquema, árbol, autor y hora, lee estricto, y una respuesta sin autor no cubre   R1 · tree:5f6f1534edfa27557fbc337512c081b69c2ec736
 - [ ] T2 · el verbo: odachi verify --exec compone el prompt del verificador, corre el comando y guarda la respuesta tal cual   R1
 - [ ] T3 · la puerta: check pide el registro del árbol que nombra cuando los commits declaran un riesgo, y bloquea   R1
 - [ ] T4 · el catálogo: la fila del verificador deja de decir none y doctor resuelve la razón nueva   R1
