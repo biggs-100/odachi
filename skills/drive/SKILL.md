@@ -37,7 +37,7 @@ You are inside an odachi project: there is `brief.md`, `odd/tasks/` and the odac
 - A delegated step declares it when it is written (`--route delegated --agent <name>`): the task doc keeps the route, and a chat is not the record.
 - Close the commit with the `Risk:` line from `commits`: its table names the lens and the verifier, and a risk allows no waiver.
 
-The verbs: `start` interviews · `ask` asks or records a craft decision (`--craft`) · `plan` opens and closes steps · `check` gates and proof · `review` verdict per tree · `doctor` health without writing · `level` profile · `summary` state · `undo` undoes the last write · `init`, `skills`, `skill new` and `pack` are installation; `--version` touches nothing.
+The verbs: `start` interviews · `ask` asks or records a craft decision (`--craft`) · `plan` opens and closes steps · `check` gates and proof · `review` verdict per tree · `verify` the record of an independent verifier · `doctor` health without writing · `level` profile · `summary` state · `undo` undoes the last write · `init`, `skills`, `skill new` and `pack` are installation; `--version` touches nothing.
 `docs/releases.md`: a release is a tag for a person's change, never for a test alone.
 
 ## Output

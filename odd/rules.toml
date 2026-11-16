@@ -72,8 +72,7 @@ enforces = "gate:requirement_not_the_human_words"
 [[rule]]
 rule     = "quien escribe no se verifica a si mismo: un riesgo nombrado pide su verifier"
 skill    = "commits"
-enforces = "none"
-because  = "que el verifier corrio es un registro que una persona mantiene; ningun comando lee quien juzgo"
+enforces = "gate:verification_missing"
 
 [[rule]]
 rule     = "la voz es del perfil y no de la sesion"
