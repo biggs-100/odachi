@@ -17,6 +17,7 @@ func TestParseNamesTheMechanism(t *testing.T) {
 		{"fence:proof/**", KindFence, "proof/**"},
 		{"check:lint", KindCheck, "lint"},
 		{"test:TestProofIsNamedByTree", KindTest, "TestProofIsNamedByTree"},
+		{"gate:requirement_not_the_human_words", KindGate, "requirement_not_the_human_words"},
 		{"none", KindNone, ""},
 		{"  fence:internal/assets/review/*.md  ", KindFence, "internal/assets/review/*.md"},
 		{"", KindUnknown, ""},
@@ -135,7 +136,8 @@ func TestValidateAcceptsTheThreeMechanisms(t *testing.T) {
 		{Statement: "a", Skill: "drive", Enforces: "fence:proof/**"},
 		{Statement: "b", Skill: "drive", Enforces: "check:lint"},
 		{Statement: "c", Skill: "drive", Enforces: "test:TestSomething"},
-		{Statement: "d", Skill: "drive", Enforces: None, Because: "a judgment call cannot be held by a command"},
+		{Statement: "d", Skill: "drive", Enforces: "gate:requirement_not_the_human_words"},
+		{Statement: "e", Skill: "drive", Enforces: None, Because: "a judgment call cannot be held by a command"},
 	}
 	if problems := Validate(rules); len(problems) != 0 {
 		t.Fatalf("Validate = %+v, want no problems", problems)

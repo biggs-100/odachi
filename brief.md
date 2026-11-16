@@ -868,3 +868,26 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que una regla que nadie hace cumplir se puede ver como un número, no como una advertencia.
+
+## 0314 · un-requisito-que
+
+## What must exist
+- un requisito que no es la cita del humano no pasa la puerta: el check compara el R contra el bloque del brief que escribió start, y un requisito reescrito por el agente bloquea nombrando las dos líneas
+
+## Done when
+- el check compara cada R del task doc contra el bullet de What must exist del bloque del brief de esa feature, y los dos son la misma frase
+- un requisito reescrito por el agente bloquea nombrando la línea del brief y la del task doc
+- una feature light o un task doc sin bloque de brief no se juzga, y la línea dice por qué
+- odd/rules.toml nombra la regla con gate: y doctor resuelve esa clase contra las razones que la puerta declara
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no se toca la cerca: esta feature no cambia odd/fence.toml
+- no se cambia el schema del veredicto ni el contrato de review
+- no se editan docs/review-research.md ni docs/skill-evaluation.md: sus mediciones quedan como estan
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que una regla de honestidad se puede volver una comparacion de bytes.

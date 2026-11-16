@@ -41,6 +41,33 @@ not = "the stored proofs are the evidence"
 paths = ["proof/**"]
 `
 
+// TestCheckSixteenResolvesAGateReason: a rule held by the gate names the refusal
+// the gate answers with, and doctor resolves it against the reasons the gate
+// declares. A name it does not answer is a promise nobody keeps (0314).
+func TestCheckSixteenResolvesAGateReason(t *testing.T) {
+	rows := `[[rule]]
+rule     = "a requirement is the human's words"
+skill    = "drive"
+enforces = "gate:requirement_not_the_human_words"
+`
+	files := configured()
+	files.put("odd/rules.toml", rows)
+	check := checkOf(t, run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi"), domaindoctor.CheckRules)
+	if check.Status != domaindoctor.StatusOK {
+		t.Fatalf("check 16 is %v with a gate reason the tool answers, want ok: %s", check.Status, domaindoctor.Line(check))
+	}
+
+	files = configured()
+	files.put("odd/rules.toml", strings.Replace(rows, "requirement_not_the_human_words", "a_reason_nobody_declared", 1))
+	check = checkOf(t, run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi"), domaindoctor.CheckRules)
+	if check.Status != domaindoctor.StatusProblem {
+		t.Fatalf("check 16 is %v with an invented reason, want a problem: %s", check.Status, domaindoctor.Line(check))
+	}
+	if !strings.Contains(check.Detail, "the gate does not have") {
+		t.Errorf("the problem does not say where it looked: %s", check.Detail)
+	}
+}
+
 // TestCheckSixteenSaysNoTableIsNoDebt: a project that keeps no table has nothing
 // to count, and the line says so instead of inventing a zero.
 func TestCheckSixteenSaysNoTableIsNoDebt(t *testing.T) {

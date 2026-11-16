@@ -4,6 +4,7 @@ package gate
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -34,6 +35,10 @@ const (
 	ReasonProofMissing = "proof_missing"
 	ReasonProofStale   = "proof_stale"
 	ReasonProofFailed  = "proof_failed"
+	// ReasonQuoteMismatch is a requirement whose words are not the brief's: the tool
+	// wrote the sentence twice and only the human edits either, so a drift is an
+	// agent rewriting what it was asked for (0314).
+	ReasonQuoteMismatch = "requirement_not_the_human_words"
 	// ReasonUndoMissed is a suite that stayed green with the change undone: the
 	// tests do not notice the code being reverted, so a green proof certifies
 	// nothing about this behavior (0052).
@@ -58,6 +63,34 @@ const (
 	nextAsk        = "odachi ask \"<your decision>\""
 	nextCheckProof = "odachi check --proof <file>"
 )
+
+// Reasons is every reason the gate can answer with, in the order the constants
+// declare them. It exists so the rulebook can point at one: a rule enforced by
+// "the gate refuses" names the refusal, and a name that is not in this list is a
+// promise the tool does not keep (0314).
+func Reasons() []string {
+	return []string{
+		ReasonReady,
+		ReasonNoBrief,
+		ReasonBriefIncomplete,
+		ReasonOutOfScope,
+		ReasonFenceLoosened,
+		ReasonOpenQuestion,
+		ReasonUnplanned,
+		ReasonQuoteMismatch,
+		ReasonProofMissing,
+		ReasonProofStale,
+		ReasonProofFailed,
+		ReasonUndoMissed,
+		ReasonUndoMissing,
+		ReasonMutationFailed,
+	}
+}
+
+// IsReason reports whether the name is one the gate answers with.
+func IsReason(name string) bool {
+	return slices.Contains(Reasons(), name)
+}
 
 // State is everything Evaluate needs, gathered by the caller. The gate itself
 // reads no files and runs no commands.
@@ -114,8 +147,13 @@ type State struct {
 	// planned is a requirement nobody built, and the plan is the artifact that
 	// says so. Mid-feature the list is empty on purpose -a requirement added by a
 	// change waits for its step, and the steps are planned before the work.
-	Unplanned  []string
-	Violations []string
+	Unplanned []string
+	// QuoteMismatch names the requirements whose words are not the brief's, each
+	// with both sentences. It is gathered at the close: mid-feature the requirement
+	// may still be waiting for a `ask --change`, and the quote is the human's
+	// decision, not a shape of the plan.
+	QuoteMismatch []string
+	Violations    []string
 	// ProofDeferred says the feature is still open, so the proof is not owed yet:
 	// it is owed by the tree that closes the feature, which is the one a pull
 	// request and CI judge. Absence and staleness stop blocking; a proof this run
@@ -176,6 +214,16 @@ func Evaluate(s State) Result {
 			"the feature declares " + strings.Join(s.Unplanned, ", ") + " and no step " + verb +
 				": a requirement nobody planned is a requirement nobody built",
 			nextPlan(s.Unplanned[0])}
+	// The plan is written in the agent's words: the tool wrote the sentence twice,
+	// only the human edits either, and a drift means the requirement was rewritten
+	// instead of quoted. It is NeedsWork because the fix is a copy, and the
+	// continuation names the other door: a human who changed their mind records it
+	// with `ask --change`, and the quote stops being the original's (0314).
+	case len(s.QuoteMismatch) > 0:
+		return Result{NeedsWork, ReasonQuoteMismatch,
+			"the plan does not quote the human: " + strings.Join(s.QuoteMismatch, "; ") +
+				"; copy the brief's words into the requirement, or record the change with odachi ask --change",
+			`odachi ask --change "<the human's words>" --req R1`}
 	// A proof exists as soon as it names the tree it came from. An empty body is
 	// still a proof: `go vet`, `tsc --noEmit` and `gofmt -l` all succeed while
 	// printing nothing, and telling a human "the proof is missing" right after

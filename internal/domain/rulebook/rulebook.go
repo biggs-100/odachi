@@ -26,12 +26,14 @@ const (
 	// a key.
 	None = "none"
 
-	// The three mechanisms a rule can name. Each one is resolved by the app layer
+	// The four mechanisms a rule can name. Each one is resolved by the app layer
 	// against something that already exists on disk: a fence path the gate
-	// refuses, a check the review runs, a test the suite runs.
+	// refuses, a check the review runs, a test the suite runs, or a reason the
+	// gate itself answers with.
 	PrefixFence = "fence:"
 	PrefixCheck = "check:"
 	PrefixTest  = "test:"
+	PrefixGate  = "gate:"
 )
 
 // Rule is one row of the table: the rule as a person reads it, the skill that
@@ -43,7 +45,7 @@ type Rule struct {
 	// Skill is the folder under skills/ that states it: the owner a reader opens
 	// to see the whole argument.
 	Skill string
-	// Enforces is one of fence:<glob>, check:<name>, test:<TestName>, or none.
+	// Enforces is one of fence:<glob>, check:<name>, test:<TestName>, gate:<reason>, or none.
 	Enforces string
 	// Because is the reason a rule has no enforcer. It is required when Enforces
 	// is none and refused otherwise: a justification on an enforced rule is a
@@ -63,6 +65,9 @@ const (
 	KindCheck
 	// KindTest means a test the suite runs.
 	KindTest
+	// KindGate means a reason the gate itself answers with: the refusal is the
+	// mechanism, and the check verb is where it happens.
+	KindGate
 	// KindUnknown means the value names no mechanism this binary knows, which is
 	// a typo or a newer grammar.
 	KindUnknown
@@ -77,6 +82,8 @@ func (k Kind) String() string {
 		return "check"
 	case KindTest:
 		return "test"
+	case KindGate:
+		return "gate"
 	case KindNone:
 		return None
 	default:
@@ -96,6 +103,7 @@ func Parse(enforces string) (Kind, string) {
 		{PrefixFence, KindFence},
 		{PrefixCheck, KindCheck},
 		{PrefixTest, KindTest},
+		{PrefixGate, KindGate},
 	} {
 		if strings.HasPrefix(value, one.prefix) {
 			return one.kind, strings.TrimSpace(strings.TrimPrefix(value, one.prefix))
@@ -151,7 +159,7 @@ func Validate(rules []Rule) []Problem {
 		if enforces == "" {
 			// One problem per defect: an empty value is not also a mechanism this
 			// binary does not know.
-			problems = append(problems, Problem{row, "there is no enforcer: name fence:<glob>, check:<name> or test:<TestName>, or write enforces = \"none\" and its because"})
+			problems = append(problems, Problem{row, "there is no enforcer: name fence:<glob>, check:<name>, test:<TestName> or gate:<reason>, or write enforces = \"none\" and its because"})
 		} else {
 			problems = append(problems, enforcerProblems(row, rule, enforces)...)
 		}
@@ -173,8 +181,8 @@ func enforcerProblems(row int, rule Rule, enforces string) []Problem {
 	kind, name := Parse(enforces)
 	switch kind {
 	case KindUnknown:
-		problems = append(problems, Problem{row, fmt.Sprintf("%q is not an enforcer: an enforcer is fence:<glob>, check:<name>, test:<TestName>, or none", enforces)})
-	case KindFence, KindCheck, KindTest:
+		problems = append(problems, Problem{row, fmt.Sprintf("%q is not an enforcer: an enforcer is fence:<glob>, check:<name>, test:<TestName>, gate:<reason>, or none", enforces)})
+	case KindFence, KindCheck, KindTest, KindGate:
 		if name == "" {
 			problems = append(problems, Problem{row, fmt.Sprintf("%q names no %s: write the name after the colon", enforces, kind)})
 		}

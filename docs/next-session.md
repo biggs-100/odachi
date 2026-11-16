@@ -1,12 +1,15 @@
 # Next session
 
-Written after 0313 and `v0.46.0`.
+Written after 0314 and `v0.46.0`.
 
 ## Where the project is
 
-- **0313 is open on `feat/0313-review-toml-schema`, unmerged.** Three lines: `odd/review.toml` declares
-  schema 10 and its two check rows name their remedy. It is what 0312 could not ship, because the gate is
-  built from the base ref and the reader that tolerates the key had to be released first.
+- **0314 is open on `feat/0314-el-requisito-citado`, unmerged.** The gate refuses a requirement that is not
+  the brief's words, with reason `requirement_not_the_human_words`, and the rulebook gained the fourth kind
+  `gate:<reason>` so a rule held by a refusal can name it. The row for the verbatim requirement leaves
+  `none`: five rules nothing enforces instead of six.
+- **0313 is merged**: PR #632. This repository's `odd/review.toml` declares schema 10 and its two check rows
+  name their remedy.
 - **0312 is merged and released**: PR #630, and `v0.46.0` carries it. The catalog can be counted:
   `odd/rules.toml` pairs each rule with the mechanism that makes breaking it impossible, or says `none`
   with its reason, and `odachi doctor`'s check 16 reports the six that say none -the number is live on this
@@ -41,11 +44,12 @@ Written after 0313 and `v0.46.0`.
   is stale: it says "Last written: while closing 0271" and its `## Open` section says nothing is open,
   while the closes from 0291 to 0311 never wrote their rows there. Decide whether the file is rewritten
   from the store or retired; today it is a list nobody can trust.
-- **Six of the catalog's fifteen ledger rows say `none`.** They are the honest number 0312 measured: the
-  question that is answered and not implemented, the irreversible action that waits, the verbatim
-  requirement, the verifier that is not the author, the voice that belongs to the profile, and the step
-  that is one commit. Each one names why no command holds it. The next feature can pick one and give it a
-  mechanism, or leave the number where it is and say so.
+- **Five of the catalog's fifteen ledger rows say `none`.** They are the honest number: the question that is
+  answered and not implemented, the irreversible action that waits, the verifier that is not the author,
+  the voice that belongs to the profile, and the step that is one commit. Each one names why no command
+  holds it, and the verbatim requirement left this list in 0314 because the gate now compares the quote.
+  The next one that looks reachable is the verifier: whether an independent verifier ran is a record, and a
+  record can be required.
 - **The four lenses are still one vendor.** `odd/review.toml` names `deepseek-v4.1-flash` for all four.
   The format supports one model per lens; the change is configuration and a doctor line that says when
   the quorum is one opinion in four costumes.
@@ -75,6 +79,11 @@ Written after 0313 and `v0.46.0`.
 - `odachi doctor` is 15 checks and this note is what closed its only warning.
 
 ## What shipped
+
+- **0314, minor (unreleased).** The gate refuses a requirement that is not the brief's words: `odachi
+  start` writes the sentence twice, only a human edits either, and a drift is an agent's rewrite. The
+  reason is `requirement_not_the_human_words`, the refusal carries both sentences, and a feature with no
+  block or a light one is not judged. `odd/rules.toml` gains `gate:<reason>` as its fourth kind.
 
 - **0313, patch (unreleased).** This repository's `odd/review.toml` declares schema 10 and its two check
   rows name their remedy: `golangci-lint run ./... --fix` and the module upgrade `govulncheck` asks for. It
@@ -119,6 +128,26 @@ Written after 0313 and `v0.46.0`.
   the same alignment shape on HyperFrames and Remotion). `motion-principles.md` gained the pan/zoom row
   the transitions table was missing, `the-piece.md` points its times at the recording when there is one,
   the body gained one `## Never`, and the impact map counts eight references.
+
+## 0314: what it settled, and what it leaves
+
+- **The tool already wrote the evidence.** The brief's block and the task document's R1 carry the same
+  sentence because `start` wrote both, so "the agent kept the human's words" stopped being a judgment and
+  became a comparison of bytes. That is the pattern for the five rules still in `none`: look for the copy
+  the tool already produced before inventing a mechanism.
+- **A refusal is a mechanism.** The rulebook named fences, review tools and tests, and the gate was missing:
+  `gate:<reason>` resolves against the reasons `gate.Reasons()` declares, so a row that points at a refusal
+  the binary does not answer is a problem. `IsReason` is the resolution, and the gate's own test list is
+  what keeps it honest.
+- **Not judging its own past.** A light feature and a feature with no block never wrote the sentence twice,
+  so they compare clean. A check that blocks them would refuse every feature opened before today.
+- **The grammar move has the same cost as the schema move.** An installed doctor older than this tree
+  refuses a `gate:` row as a typo, because it reads values it does not know as a mistake. The gate does not
+  read the table, so closes and CI are unaffected; the next install is what makes check 16 read it again.
+  The lesson repeats: a reader that is older than the writer has to be published first, or the file has to
+  wait.
+- **What it leaves.** The next reachable row in `none` is the verifier: "who wrote does not verify itself"
+  is a record, and a record can be required by the gate the same way the quote is compared.
 
 ## 0312: what it settled, and what it leaves
 
