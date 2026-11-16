@@ -22,6 +22,24 @@ func promptWithChecks(checks []review.CheckResult) string {
 	})
 }
 
+// TestThePromptSaysWhatRepairsARedCheck: a failing tool that names no repair
+// leaves the reviewer and the agent guessing, so the project's remedy travels in
+// the prompt beside the command, and a passing tool carries none (0312).
+func TestThePromptSaysWhatRepairsARedCheck(t *testing.T) {
+	const remedy = "upgrade the module the finding names"
+	prompt := promptWithChecks([]review.CheckResult{
+		{Name: "lint", Command: "golangci-lint run ./...", Status: review.CheckPassed, Remedy: "never printed"},
+		{Name: "vuln", Command: "govulncheck ./...", Status: review.CheckFailed, Exit: 1, Remedy: remedy},
+	})
+
+	if !strings.Contains(prompt, "fix: "+remedy) {
+		t.Errorf("the prompt does not carry the remedy of the red check:\n%s", prompt)
+	}
+	if strings.Contains(prompt, "never printed") {
+		t.Errorf("the prompt carries the remedy of a check that passed:\n%s", prompt)
+	}
+}
+
 // TestThePromptCarriesWhatTheChecksAnswered: the review reads what ran before it,
 // so it neither repeats a failure nor claims the tree is clean.
 func TestThePromptCarriesWhatTheChecksAnswered(t *testing.T) {

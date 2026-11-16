@@ -44,6 +44,9 @@ type check struct {
 	Name     string `toml:"name"`
 	Command  string `toml:"command"`
 	Severity string `toml:"severity"`
+	// Remedy is what repairs this tool's red. The domain requires it: a red row
+	// that names no repair is a tool that complains without teaching.
+	Remedy string `toml:"remedy"`
 }
 
 // Decode parses the file. Unknown keys are an error naming them; an empty or
@@ -58,7 +61,8 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 	// The version is asked before the unknown keys are named: a file from a newer
 	// odachi carries both, and the key that makes it newer is not a typo for the
 	// human to fix.
-	if _, err := schema.Read(f.Schema); err != nil {
+	version, err := schema.Read(f.Schema)
+	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
 
@@ -90,7 +94,7 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
-	checks, err := review.NormalizeChecks(declaredChecks(f.Checks))
+	checks, err := review.NormalizeChecksAt(declaredChecks(f.Checks), version)
 	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
@@ -122,6 +126,7 @@ func declaredChecks(raw []check) []review.Check {
 			Name:     one.Name,
 			Command:  one.Command,
 			Severity: review.Severity(one.Severity),
+			Remedy:   one.Remedy,
 		})
 	}
 	return out
@@ -188,6 +193,7 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 			out.WriteString("name = \"" + tomlString(check.Name) + "\"\n")
 			out.WriteString("command = \"" + tomlString(check.Command) + "\"\n")
 			out.WriteString("severity = \"" + string(check.Severity) + "\"\n")
+			out.WriteString("remedy = \"" + tomlString(check.Remedy) + "\"\n")
 		}
 	}
 	return []byte(out.String()), nil

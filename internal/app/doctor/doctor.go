@@ -201,6 +201,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.legacyFolder(),
 		r.nextSession(),
 		r.environment(),
+		r.rulesLedger(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)

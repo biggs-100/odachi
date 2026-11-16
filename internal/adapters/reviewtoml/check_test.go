@@ -17,11 +17,13 @@ func TestDecodeReadsTheChecksTheProjectDeclared(t *testing.T) {
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "WARNING"
+remedy = "fix what the tool names"
 
 [[check]]
 name = "vuln"
 command = "govulncheck ./..."
 severity = "CRITICAL"
+remedy = "upgrade the module the finding names"
 `
 
 	got, err := reviewtoml.Decode([]byte(data))
@@ -52,6 +54,7 @@ check_timeout_s = 45
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "WARNING"
+remedy = "fix what the tool names"
 `
 
 	got, err := reviewtoml.Decode([]byte(data))
@@ -74,11 +77,20 @@ func TestDecodeRefusesACheckItCannotRun(t *testing.T) {
 name = "lint"
 command = "golangci-lint run ./..."
 `,
+		"no remedy at schema 10": `schema = 10
+mode = "on"
+
+[[check]]
+name = "lint"
+command = "golangci-lint run ./..."
+severity = "WARNING"
+`,
 		"no command": `mode = "on"
 
 [[check]]
 name = "lint"
 severity = "WARNING"
+remedy = "fix what the tool names"
 `,
 		"unknown key": `mode = "on"
 
@@ -86,6 +98,7 @@ severity = "WARNING"
 name = "lint"
 command = "golangci-lint run ./..."
 severity = "WARNING"
+remedy = "fix what the tool names"
 timeout = 3
 `,
 	}
@@ -96,6 +109,28 @@ timeout = 3
 				t.Fatalf("Decode = %+v, want a refusal", got)
 			}
 		})
+	}
+}
+
+// TestAFileAtSchemaNineReadsWithoutARemedy: the reader tolerates what the writer
+// had not learned yet. A file written before the key existed reads as it always
+// did; only a file that declares the schema that made it required owes the
+// repair (0312).
+func TestAFileAtSchemaNineReadsWithoutARemedy(t *testing.T) {
+	data := `schema = 9
+mode = "on"
+
+[[check]]
+name = "lint"
+command = "golangci-lint run ./..."
+severity = "WARNING"
+`
+	got, err := reviewtoml.Decode([]byte(data))
+	if err != nil {
+		t.Fatalf("Decode = %v, want an old file to keep reading", err)
+	}
+	if len(got.Checks) != 1 || got.Checks[0].Remedy != "" {
+		t.Errorf("Decode = %+v, want the check with no remedy", got.Checks)
 	}
 }
 
@@ -118,8 +153,8 @@ func TestRenderRoundTripsTheChecks(t *testing.T) {
 		Mode:         review.ModeOn,
 		KeepVerdicts: review.DefaultKeepVerdicts,
 		Checks: []review.Check{
-			{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning},
-			{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical},
+			{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning, Remedy: "fix it"},
+			{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical, Remedy: "upgrade it"},
 		},
 	}
 
@@ -155,7 +190,7 @@ func TestRenderWritesATwoLineCommandBackAsToml(t *testing.T) {
 		Mode:         review.ModeOn,
 		KeepVerdicts: review.DefaultKeepVerdicts,
 		Checks: []review.Check{
-			{Name: "multi", Command: command, Severity: review.Warning},
+			{Name: "multi", Command: command, Severity: review.Warning, Remedy: "fix it"},
 		},
 	}
 
@@ -183,7 +218,7 @@ func TestRenderSaysHowLongAToolMayRun(t *testing.T) {
 		Mode:         review.ModeOn,
 		KeepVerdicts: review.DefaultKeepVerdicts,
 		Checks: []review.Check{
-			{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning},
+			{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning, Remedy: "fix it"},
 		},
 	}
 

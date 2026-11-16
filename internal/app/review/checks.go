@@ -231,7 +231,7 @@ func offReason(declared int, approved bool) string {
 // tree hash describes: a check that edits the candidate is out of contract, and the
 // verdict is filed under the tree read before it.
 func (r *runner) runCheck(check domain.Check, timeout int) domain.CheckResult {
-	result := domain.CheckResult{Name: check.Name, Command: check.Command, Severity: check.Severity}
+	result := domain.CheckResult{Name: check.Name, Command: check.Command, Severity: check.Severity, Remedy: check.Remedy}
 
 	stdout, stderr, exitCode, timedOut, err := r.shell.Run(r.opts.Dir, check.Command, timeout)
 	result.Exit = exitCode

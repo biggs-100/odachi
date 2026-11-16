@@ -2,12 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
 )
 
 // withOdachiOnPath puts a fake `odachi` first on the PATH, so the check that
@@ -66,7 +69,7 @@ func configuredProject(t *testing.T) string {
 }
 
 // TestDoctorSaysAConfiguredProjectIsFine is the promise of the verb: a project
-// that went through init and start reports fifteen checks with no problem and
+// that went through init and start reports every check with no problem and
 // exit 0.
 func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	dir := configuredProject(t)
@@ -77,19 +80,20 @@ func TestDoctorSaysAConfiguredProjectIsFine(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
-	if len(lines) != 16 {
-		t.Fatalf("fifteen checks and a summary, got %d lines:\n%s", len(lines), out)
+	if len(lines) != domaindoctor.CheckCount+1 {
+		t.Fatalf("%d checks and a summary, got %d lines:\n%s", domaindoctor.CheckCount, len(lines), out)
 	}
-	for i, line := range lines[:15] {
+	for i, line := range lines[:domaindoctor.CheckCount] {
 		if !strings.HasPrefix(line, "ok ") {
 			t.Fatalf("line %d is not ok in a configured project: %s", i+1, line)
 		}
 	}
-	if !strings.HasPrefix(lines[15], "all clear") {
-		t.Fatalf("the last line is the summary, got %q", lines[15])
+	summary := lines[domaindoctor.CheckCount]
+	if !strings.HasPrefix(summary, "all clear") {
+		t.Fatalf("the last line is the summary, got %q", summary)
 	}
-	if !strings.Contains(lines[15], "15 checks") {
-		t.Fatalf("the summary counts the fifteen checks, got %q", lines[15])
+	if !strings.Contains(summary, fmt.Sprintf("%d checks", domaindoctor.CheckCount)) {
+		t.Fatalf("the summary counts the checks, got %q", summary)
 	}
 	// This is also the guard that init and doctor agree on the hook marker: if
 	// init renamed it, check 5 would stop recognising its own hook.
@@ -252,8 +256,8 @@ func TestDoctorJSONSaysTheSameThing(t *testing.T) {
 		t.Fatalf("--json must be valid JSON: %v\n%s", err, machine)
 	}
 
-	if len(payload.Checks) != 15 {
-		t.Fatalf("--json carries fifteen checks, got %d", len(payload.Checks))
+	if len(payload.Checks) != domaindoctor.CheckCount {
+		t.Fatalf("--json carries the %d checks a report has, got %d", domaindoctor.CheckCount, len(payload.Checks))
 	}
 	lines := strings.Split(strings.TrimRight(human, "\n"), "\n")
 	if payload.Message != lines[len(lines)-1] {

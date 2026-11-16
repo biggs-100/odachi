@@ -1,22 +1,29 @@
 # Next session
 
-Written after 0311 and `v0.45.5`.
+Written after 0312 and `v0.45.6`.
 
 ## Where the project is
 
-- **0311 is open on `feat/0311-db-craft`, unmerged and unreleased.** `db-craft` is the catalog's fifth
+- **0312 is open on `feat/0312-una-regla-nombra`, unmerged and unreleased.** The catalog can be counted:
+  `odd/rules.toml` pairs each rule with the mechanism that makes breaking it impossible, or says `none`
+  with its reason, and `odachi doctor`'s check 16 reports the six that say none. A declared `[[check]]`
+  names the `remedy` its red asks for, printed in the review prompt beside the failing tool; the key is
+  required from `schema.Current = 10` and optional in a file that declares 9. This repository's own
+  `odd/review.toml` stays at 3, because the gate is built from the base ref and its two lines can only
+  move once a release carries the tolerant reader.
+- **0311 is merged and released**: PR #628, and `v0.45.6` carries it. `db-craft` is the catalog's fifth
   door with depth: eight references (schema, migrations, transactions, indexes, queries, access,
   operations and the catalogue of failures). `data` keeps the decision and sends the schema and the
   migration here.
-- **v0.45.5 is published and installed**: tag on `65967dc`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.45.5`. `arch-project`, the Tauri scaffold, the gentle-shell gaps and the direction
-  layer are in the home, at 24 of 24 matching. `v0.45.4` carried 0306 and `v0.45.3` carried 0305.
-- `main` is at the merge of the release PR #627, and the branch of the feature was deleted on merge, as
+- **v0.45.6 is published and installed**: tag on `e149c09`, sixteen assets signed and attested, and this
+  machine runs `odachi 0.45.6`. The home is identical to the binary: 25 skills, 25 matching, and no file
+  of more.
+- `main` is at the merge of the release PR #629, and the branch of the feature was deleted on merge, as
   every branch should be.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 309 features · 770 steps done of 770 · 0 open questions
+  total: 310 features · 774 steps done of 774 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -24,14 +31,25 @@ Written after 0311 and `v0.45.5`.
 
 ## What waits for a decision
 
-- **The home's `bootstrap` still carries the five references.** The session's plugin mirrored `arch-project`
-  into `~/.agents/skills` when the folder appeared, but the first door there was not rewritten: the payload
-  is canonical from here on, and `~/.agents/skills` is only refreshed by an install (`odachi setup`, or
-  `pack --scope home`), which is the human's yes. Until then the home holds the same material twice.
+- **The home is clean, and it took a hand**: the plugin mirrors new payload files into `~/.agents/skills`
+  and `pack` never deletes, so the `bootstrap` there carried five orphan references since 0307. They were
+  removed by hand on 2026-11-15, after `setup` aligned the rest. The habit to keep: after a release,
+  compare every home skill against the payload, because neither tool reports a file that is extra.
 - **The next feature is not chosen.** Before choosing, `docs/review-debt.md` is the reading list, and it
   is stale: it says "Last written: while closing 0271" and its `## Open` section says nothing is open,
-  while the closes from 0291 to 0307 never wrote their rows there. Decide whether the file is rewritten
+  while the closes from 0291 to 0311 never wrote their rows there. Decide whether the file is rewritten
   from the store or retired; today it is a list nobody can trust.
+- **Six of the catalog's fifteen ledger rows say `none`.** They are the honest number 0312 measured: the
+  question that is answered and not implemented, the irreversible action that waits, the verbatim
+  requirement, the verifier that is not the author, the voice that belongs to the profile, and the step
+  that is one commit. Each one names why no command holds it. The next feature can pick one and give it a
+  mechanism, or leave the number where it is and say so.
+- **0312's tree has no verdict yet.** The proof is green (`proof/0312-toda-regla-del.txt`) and the review
+  is the one step left: `odachi review --base e149c09`, with the four lenses this change asks for. It
+  costs model draws, so it waits for the human's command.
+- **The four lenses are still one vendor.** `odd/review.toml` names `deepseek-v4.1-flash` for all four.
+  The format supports one model per lens; the change is configuration and a doctor line that says when
+  the quorum is one opinion in four costumes.
 - **The board look is unproven by a piece.** 0306 wrote the text an agent reads before producing one, and
   no board video was rendered or watched. The first piece made with it is the measurement that says
   whether the reference works.
@@ -59,24 +77,31 @@ Written after 0311 and `v0.45.5`.
 
 ## What shipped
 
-- **0311, patch (unreleased).** `db-craft`: seven references on schema, migrations, transactions, indexes,
+- **0312, minor (unreleased).** The catalog can be counted: `odd/rules.toml` pairs the rules the catalog
+  states with their enforcers -nine rows held by a fence path, a declared check or a test, six saying
+  `none` with a reason- and `odachi doctor`'s check 16 reports the debt, refuses a row that names a
+  mechanism the project does not have, and treats an absent table as no debt. `[[check]]` gains `remedy`,
+  required and printed beside a failing tool in the review prompt. `schema.Current` is 10.
+
+- **0311, patch (v0.45.6).** `db-craft`: eight references on schema, migrations, transactions, indexes,
   queries, access and operations, plus `the-failures.md` with twenty-eight mistakes; `data` hands the
-  schema and the migration to it.
+  schema and the migration to it. Seven review rounds found eleven factual errors in the pages, which is
+  why the reference count and the corrected sentences are pinned by tests.
 
 - **0310, patch (v0.45.5).** `ui-craft` gained four references -`ai-native.md`, `art-direction.md`,
   `motion-identity.md`, `depth-and-material.md`-, the body rule that a screen has a direction chosen and
   named, and the OKLCH and fluid-scale rows in `the-numbers.md`.
 
-- **0309, patch (unreleased).** The gentle-shell audit closed: `tui-design`'s attribution is pinned by a
+- **0309, patch (v0.45.5).** The gentle-shell audit closed: `tui-design`'s attribution is pinned by a
   test -it was never missing, it lives in the body because the installer copies `SKILL.md`, `references/`
   and `assets/` only-, and `ui-craft` gained `accessible-and-adaptive.md` and `grouping-and-emphasis.md`,
   the two pages nothing owned.
 
-- **0308, patch (unreleased).** `arch-tauri` gained `references/tauri-scaffold.md` -the nine steps of a
+- **0308, patch (v0.45.5).** `arch-tauri` gained `references/tauri-scaffold.md` -the nine steps of a
   Tauri v2 scaffold in the order that keeps the boundary-, its `## When` recovered the three conditions
   for not loading it, and `tauri-bridge.md` stopped sending the tree and the ADRs to `bootstrap`.
 
-- **0307, patch (unreleased).** The catalog gained its second level: `arch-project` carries the triage
+- **0307, patch (v0.45.5).** The catalog gained its second level: `arch-project` carries the triage
   by project kind, the twelve birth decisions, the tree, the guard recipes, the commands per stack, the
   UI contract, the fifteen lessons, the Go + HTMX page and the ADR template, and `bootstrap` routes to
   it with no reference of its own. The five files moved; the four pieces the retired skill carried and
@@ -90,6 +115,33 @@ Written after 0311 and `v0.45.5`.
   the same alignment shape on HyperFrames and Remotion). `motion-principles.md` gained the pan/zoom row
   the transitions table was missing, `the-piece.md` points its times at the recording when there is one,
   the body gained one `## Never`, and the impact map counts eight references.
+
+## 0312: what it settled, and what it leaves
+
+- **The pyramid, applied to this repo.** The talk that started it says the deterministic layers come first,
+  verification second, and prose last, and that a correction should become a check rather than another
+  line of rules. The ledger is that sentence made countable: nine of fifteen catalog rules already had a
+  mechanism and nobody had noticed which ones, and six have only a sentence. The number is the asset.
+- **A test that pins a sentence is not an enforcer.** `TestShapeAsksForTheSmallestChange` keeps the catalog
+  from drifting; it does not stop the work. The backfill lists a `test:` only where the test holds the
+  behavior -the stdlib boundary, gofmt, the byte budget- and marks the pinned-sentence rules `none`. This
+  distinction is the whole honesty of the count, and it is the part a later feature could get wrong by
+  listing every test whose name mentions the rule.
+- **A dangling enforcer is worse than none.** A row naming a fence path, a check or a test that does not
+  exist is a problem and not debt, because the project would believe it is protected. Doctor resolves all
+  three: fence paths against `odd/fence.toml`, check names against `odd/review.toml`, test names by
+  walking `internal`, `cmd` and `skills` through the Files port.
+- **A schema bump cannot be committed by the installed binary.** The hook resolves `odachi` from the PATH
+  and the installed 0.45.6 reads schema 9: the tree's binary has to come first. Building it into the temp
+  folder and prepending the PATH is not an install and not a bypass; it runs the gate with the code that
+  wrote the file.
+- **What it leaves.** Two things. The ledger is a hand-written table, so it can rot the way any list rots;
+  what keeps it honest is that doctor resolves every name and counts every `none`. And this repository's
+  `odd/review.toml` still has no `remedy`: the gate is built from the base ref, so the file can only move
+  to schema 10 after a release carries the reader that tolerates it. The next step the ledger enables is
+  choosing one of the six and giving it a mechanism, and the one that looks reachable first is the verbatim
+  requirement: the task doc already carries the quote, so a check could compare `R1` against the brief
+  block the tool wrote.
 
 ## 0311: what it settled, and what it leaves
 
@@ -185,6 +237,10 @@ Written after 0311 and `v0.45.5`.
   was recorded as a craft decision instead of being silent.
 
 ## The limits to remember
+
+- **A schema bump needs the tree's binary ahead of the installed one.** The commit hook runs `odachi`
+  from the PATH, and an installed binary older than the file refuses it as newer. Build into the temp
+  folder, prepend the PATH, and the gate judges the tree with the code that wrote it (0312).
 
 - **The proof names the index tree** (`git write-tree`). The order that closes a feature: the change
   commit, then `plan --done` on top of it, then stage the records and measure, then commit the records.

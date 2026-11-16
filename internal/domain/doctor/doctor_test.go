@@ -10,16 +10,17 @@ import (
 // appended after the ones already numbered, because inserting one in the middle
 // would silently rename every check after it.
 func TestEveryCheckHasATitle(t *testing.T) {
-	for number := CheckVersion; number <= CheckEnvironment; number++ {
+	last := CheckRules
+	for number := CheckVersion; number <= last; number++ {
 		if title(number) == "" {
 			t.Errorf("check %d has no title", number)
 		}
 	}
-	if CheckEnvironment != CheckVersion+CheckCount-1 {
-		t.Fatalf("the fifteen checks are numbered %d..%d, got %d", CheckVersion, CheckEnvironment, CheckVersion+CheckCount-1)
+	if last != CheckVersion+CheckCount-1 {
+		t.Fatalf("the %d checks are numbered %d..%d, got %d", CheckCount, CheckVersion, last, CheckVersion+CheckCount-1)
 	}
-	if CheckCount != 15 {
-		t.Fatalf("ten from Contract XV plus the voice, the task docs, the leftovers one, the session file and the environment, got %d", CheckCount)
+	if CheckCount != 16 {
+		t.Fatalf("ten from Contract XV plus the voice, the task docs, the leftovers one, the session file, the environment and the rules table, got %d", CheckCount)
 	}
 }
 

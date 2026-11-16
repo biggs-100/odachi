@@ -13,8 +13,8 @@ import (
 // so it arrives trimmed and lowercased and the command arrives as typed.
 func TestNormalizeChecksIsTheOrderTheFileWrote(t *testing.T) {
 	got, err := review.NormalizeChecks([]review.Check{
-		{Name: " Lint ", Command: " golangci-lint run ./... ", Severity: "warning"},
-		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical},
+		{Name: " Lint ", Command: " golangci-lint run ./... ", Severity: "warning", Remedy: "fix it"},
+		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical, Remedy: "fix it"},
 	})
 	if err != nil {
 		t.Fatalf("NormalizeChecks = %v, want no error", err)
@@ -34,14 +34,17 @@ func TestNormalizeChecksIsTheOrderTheFileWrote(t *testing.T) {
 // command or a severity is a line that costs a run and answers nothing.
 func TestNormalizeChecksRefusesACheckTheReviewCannotRun(t *testing.T) {
 	cases := map[string]review.Check{
-		"no name":     {Command: "go vet ./...", Severity: review.Warning},
-		"no command":  {Name: "vet", Severity: review.Warning},
-		"no severity": {Name: "vet", Command: "go vet ./..."},
+		"no name":     {Command: "go vet ./...", Severity: review.Warning, Remedy: "fix it"},
+		"no command":  {Name: "vet", Severity: review.Warning, Remedy: "fix it"},
+		"no severity": {Name: "vet", Command: "go vet ./...", Remedy: "fix it"},
 		"bad severity": {
-			Name: "vet", Command: "go vet ./...", Severity: "SERIOUS",
+			Name: "vet", Command: "go vet ./...", Severity: "SERIOUS", Remedy: "fix it",
 		},
 		"name with a space": {
-			Name: "go vet", Command: "go vet ./...", Severity: review.Warning,
+			Name: "go vet", Command: "go vet ./...", Severity: review.Warning, Remedy: "fix it",
+		},
+		"no remedy": {
+			Name: "vet", Command: "go vet ./...", Severity: review.Warning,
 		},
 	}
 
@@ -54,11 +57,41 @@ func TestNormalizeChecksRefusesACheckTheReviewCannotRun(t *testing.T) {
 	}
 }
 
+// TestTheRefusalNamesWhatTheRemedyIsFor: a check whose red names no repair is the
+// one row that teaches nothing, so the refusal says what the key is for.
+func TestTheRefusalNamesWhatTheRemedyIsFor(t *testing.T) {
+	_, err := review.NormalizeChecks([]review.Check{
+		{Name: "vet", Command: "go vet ./...", Severity: review.Warning},
+	})
+	if err == nil {
+		t.Fatal("NormalizeChecks accepted a check with no remedy")
+	}
+	for _, want := range []string{"remedy", "guessing"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal %q does not say %q", err, want)
+		}
+	}
+}
+
+// TestAnOldFileOwesNoRemedy: the requirement belongs to the schema that made it,
+// so the same row is refused at 10 and accepted at 9. Without this the reader
+// would refuse files its own writer had produced one release earlier (0312).
+func TestAnOldFileOwesNoRemedy(t *testing.T) {
+	raw := []review.Check{{Name: "vet", Command: "go vet ./...", Severity: review.Warning}}
+
+	if got, err := review.NormalizeChecksAt(raw, review.RemedySchema-1); err != nil {
+		t.Fatalf("NormalizeChecksAt(9) = %v, want the old file to keep reading: %+v", err, got)
+	}
+	if _, err := review.NormalizeChecksAt(raw, review.RemedySchema); err == nil {
+		t.Fatal("NormalizeChecksAt(10) accepted a check with no remedy")
+	}
+}
+
 // TestTheRefusalNamesTheSeverityVocabulary: the human who wrote a word odachi does
 // not know must read the four it does.
 func TestTheRefusalNamesTheSeverityVocabulary(t *testing.T) {
 	_, err := review.NormalizeChecks([]review.Check{
-		{Name: "vet", Command: "go vet ./...", Severity: "SERIOUS"},
+		{Name: "vet", Command: "go vet ./...", Severity: "SERIOUS", Remedy: "fix it"},
 	})
 	if err == nil {
 		t.Fatal("NormalizeChecks accepted a severity nobody knows")
@@ -74,8 +107,8 @@ func TestTheRefusalNamesTheSeverityVocabulary(t *testing.T) {
 // under, so two tools that share it would pay one row and lose the other.
 func TestTwoChecksWithOneNameAreRefused(t *testing.T) {
 	_, err := review.NormalizeChecks([]review.Check{
-		{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning},
-		{Name: "LINT", Command: "gofmt -l .", Severity: review.Suggestion},
+		{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning, Remedy: "fix it"},
+		{Name: "LINT", Command: "gofmt -l .", Severity: review.Suggestion, Remedy: "fix it"},
 	})
 	if err == nil {
 		t.Fatal("NormalizeChecks accepted two checks with one name")

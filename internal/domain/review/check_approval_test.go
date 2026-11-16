@@ -9,8 +9,8 @@ import (
 
 // approved is the list most of these tests approve.
 var approved = []review.Check{
-	{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning},
-	{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical},
+	{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning, Remedy: "fix it"},
+	{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical, Remedy: "fix it"},
 }
 
 // TestTheFingerprintIsTheListNotTheWords: two spellings of one list -different
@@ -19,8 +19,8 @@ var approved = []review.Check{
 func TestTheFingerprintIsTheListNotTheWords(t *testing.T) {
 	first := review.ChecksFingerprint(approved)
 	same := review.ChecksFingerprint([]review.Check{
-		{Name: " Lint ", Command: " golangci-lint run ./... ", Severity: "warning"},
-		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical},
+		{Name: " Lint ", Command: " golangci-lint run ./... ", Severity: "warning", Remedy: "  fix it  "},
+		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical, Remedy: "fix it"},
 	})
 	if first != same {
 		t.Errorf("the same list has two fingerprints: %q and %q", first, same)
@@ -31,20 +31,33 @@ func TestTheFingerprintIsTheListNotTheWords(t *testing.T) {
 	}
 }
 
+// TestRewordingTheRemedyKeepsTheApproval: the remedy is advice for the person
+// reading a red, not something the review runs, so changing its words must not
+// ask the human to approve the same tools again (0312).
+func TestRewordingTheRemedyKeepsTheApproval(t *testing.T) {
+	reworded := []review.Check{
+		{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Warning, Remedy: "read what the tool says and fix the code"},
+		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical, Remedy: "upgrade the module the finding names"},
+	}
+	if got, want := review.ChecksFingerprint(reworded), review.ChecksFingerprint(approved); got != want {
+		t.Errorf("rewording the remedy changed the fingerprint: %q vs %q", got, want)
+	}
+}
+
 // TestOneWordChangedIsAnotherList: approving a linter is not approving whatever
 // command somebody puts in its place later.
 func TestOneWordChangedIsAnotherList(t *testing.T) {
 	changed := []review.Check{
-		{Name: "lint", Command: "golangci-lint run --fix ./...", Severity: review.Warning},
-		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical},
+		{Name: "lint", Command: "golangci-lint run --fix ./...", Severity: review.Warning, Remedy: "fix it"},
+		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical, Remedy: "fix it"},
 	}
 	if review.ChecksFingerprint(approved) == review.ChecksFingerprint(changed) {
 		t.Error("a command that gained --fix keeps the approval of the one that did not")
 	}
 
 	raised := []review.Check{
-		{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Critical},
-		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical},
+		{Name: "lint", Command: "golangci-lint run ./...", Severity: review.Critical, Remedy: "fix it"},
+		{Name: "vuln", Command: "govulncheck ./...", Severity: review.Critical, Remedy: "fix it"},
 	}
 	if review.ChecksFingerprint(approved) == review.ChecksFingerprint(raised) {
 		t.Error("a check that became CRITICAL keeps the approval of the one that was a warning")
@@ -56,18 +69,18 @@ func TestOneWordChangedIsAnotherList(t *testing.T) {
 // list that is approved must be the only list with that identity, or the approval
 // covers tools nobody wrote.
 func TestOneCommandCannotForgeAnotherList(t *testing.T) {
-	one := []review.Check{{Name: "a", Command: "b\x00WARNING\nc\x00d", Severity: review.Warning}}
+	one := []review.Check{{Name: "a", Command: "b\x00WARNING\nc\x00d", Severity: review.Warning, Remedy: "fix it"}}
 	two := []review.Check{
-		{Name: "a", Command: "b", Severity: review.Warning},
-		{Name: "c", Command: "d", Severity: review.Warning},
+		{Name: "a", Command: "b", Severity: review.Warning, Remedy: "fix it"},
+		{Name: "c", Command: "d", Severity: review.Warning, Remedy: "fix it"},
 	}
 	if review.ChecksFingerprint(one) == review.ChecksFingerprint(two) {
 		t.Error("one check with a crafted command hashes like two checks")
 	}
 
 	// The same shape without a NUL: a command that ends where another begins.
-	first := []review.Check{{Name: "ab", Command: "c", Severity: review.Warning}}
-	second := []review.Check{{Name: "a", Command: "bc", Severity: review.Warning}}
+	first := []review.Check{{Name: "ab", Command: "c", Severity: review.Warning, Remedy: "fix it"}}
+	second := []review.Check{{Name: "a", Command: "bc", Severity: review.Warning, Remedy: "fix it"}}
 	if review.ChecksFingerprint(first) == review.ChecksFingerprint(second) {
 		t.Error("two names that swap a character share one fingerprint")
 	}

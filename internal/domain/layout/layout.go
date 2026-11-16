@@ -28,6 +28,10 @@ const (
 	Profile = "odd/profile.toml"
 	// Review is the review switch and the lens table.
 	Review = "odd/review.toml"
+	// Rules is the table that pairs each rule the catalog states with the
+	// mechanism that enforces it, and the count of rows nothing holds is the debt
+	// `odachi doctor` reports.
+	Rules = "odd/rules.toml"
 )
 
 // LegacyDir is the folder older releases used for everything: the rules, the
