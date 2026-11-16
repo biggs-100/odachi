@@ -98,7 +98,7 @@ func TestWithoutExecThePromptIsPrintedAndNobodyRuns(t *testing.T) {
 		t.Errorf("a run with no command wrote %v", files.files)
 	}
 	joined := strings.Join(result.Lines, "\n")
-	for _, want := range []string{opts.Requirement, opts.DoneWhen[0], "contract", tree, "verified", "refuted"} {
+	for _, want := range []string{opts.Requirement, opts.DoneWhen[0], "contract", tree, "verified", "refuted", "focused probes"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("the prompt does not name %q:\n%s", want, joined)
 		}

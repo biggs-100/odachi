@@ -16,8 +16,8 @@ R1 · "quién escribe no se verifica a sí mismo: un riesgo que pide verifier de
 - [x] T1 · el registro: el dominio sella esquema, árbol, autor y hora, lee estricto, y una respuesta sin autor no cubre   R1 · tree:5f6f1534edfa27557fbc337512c081b69c2ec736
 - [x] T2 · el verbo: odachi verify --exec compone el prompt del verificador, corre el comando y guarda la respuesta tal cual   R1 · tree:59f0fdc750234b2aee9ceb96a13a1d5d46a33c67
 - [x] T3 · la puerta: check pide el registro del árbol que nombra cuando los commits declaran un riesgo, y bloquea   R1 · tree:f7294576c9962f0fe133def54e9d95f53697b899
-- [ ] T4 · el catálogo: la fila del verificador deja de decir none y doctor resuelve la razón nueva   R1
-- [ ] T5 · el changelog y la nota de sesión nombran la feature y lo que deja   R1
+- [x] T4 · el catálogo: la fila del verificador deja de decir none y doctor resuelve la razón nueva   R1 · tree:fdcff4ff296b85776ad91208ef995cac17b30f84
+- [x] T5 · el changelog y la nota de sesión nombran la feature y lo que deja   R1 · tree:15c3306d6a7bd4e6975b5685d6997fe42d915b74
 
 ## History
 L1 · "quién escribe no se verifica a sí mismo: un riesgo que pide verifier deja un registro de una verificación independiente, y la puerta no cierra sin él"

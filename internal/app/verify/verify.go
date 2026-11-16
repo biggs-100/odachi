@@ -188,6 +188,11 @@ func Prompt(opts Options, tree string) string {
 	}
 	b.WriteString("The commits declared this risk: " + risks + "\n\n")
 	b.WriteString("Read the worktree and derive the probes that would catch the requirement unmet: the command that exposes it, the file that contradicts it, the edge the code claims to handle. Run the ones you can, read the rest, and do not edit, commit or delegate.\n\n")
+	// The whole suite belongs to the gate, and a verifier that runs it competes
+	// with the machine for twelve minutes to answer a question one package would
+	// answer (the `tests` skill says the same: focused commands). The first field
+	// run spent its whole timeout there and answered nothing.
+	b.WriteString("Run focused probes, not the whole suite: the gate runs `go test ./...` and pays for it. One package, one test, one file, one command at a time, and a probe you cannot run is `unverified`, not a guess.\n\n")
 	b.WriteString("Answer with one JSON object and nothing else:\n")
 	b.WriteString(`{"schema":1,"by":"<the model or the command that verified>","verdict":"verified|refuted","notes":["<what you ran and what it said>"]}` + "\n\n")
 	b.WriteString(`"verified" means the requirement holds in these bytes. "refuted" means it does not, and the notes name the probe that showed it. The tool stamps the tree and the hour; do not write them.` + "\n")

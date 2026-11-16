@@ -1,33 +1,28 @@
 # Next session
 
-Written after 0314 and `v0.47.0`.
+Written after 0315 and `v0.47.0`.
 
 ## Where the project is
 
-- **0314 is merged and released**: PR #633, and `v0.47.0` carries it. The gate refuses a requirement that is
-  not the brief's words, with reason `requirement_not_the_human_words`, and the rulebook gained the fourth
-  kind `gate:<reason>` so a rule held by a refusal can name it. The row for the verbatim requirement left
-  `none`: five rules nothing enforces instead of six.
+- **0315 is on its branch, closing**: `feat/0315-the-verifier`. A close whose commits declared a risk now
+  owes a record named by the tree that closes it, and the gate reads the file. `odachi verify --exec
+  "<command>"` composes the question -the requirement in the human's words, the promises, the risk-, runs
+  one command and seals the answer -tree, who verified, the hour- in the clone's store. Two reasons:
+  `verification_missing` and `verification_refuted`.
+- **0314 is merged and released**: PR #633, and `v0.47.0` carries it. The gate refuses a requirement that
+  is not the brief's words, with reason `requirement_not_the_human_words`, and the rulebook gained the
+  fourth kind `gate:<reason>` so a rule held by a refusal can name it.
 - **0313 is merged and released**: PR #632, carried by `v0.47.0`. This repository's `odd/review.toml`
   declares schema 10 and its two check rows name their remedy.
-- **0312 is merged and released**: PR #630, and `v0.46.0` carries it. The catalog can be counted:
-  `odd/rules.toml` pairs each rule with the mechanism that makes breaking it impossible, or says `none`
-  with its reason, and `odachi doctor`'s check 16 reports the five that say none. The remedy is required
-  from schema 10 and optional at 9.
+- **0312 is merged and released**: PR #630, and `v0.46.0` carries it. `odd/rules.toml` pairs each rule with
+  what enforces it, and `odachi doctor`'s check 16 reports the rows that say `none`.
 - **`v0.47.0` is published and installed**: tag on `a518a09`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.47.0`. It is the release that made `gate:<reason>` readable here; before it, the
-  installed doctor refused this repository's own table. The home is unchanged at 25 skills.
-- **`v0.46.0`** is published too: tag on `859d675`, and it carried 0312 and the tolerant reader.
-- **0311 is merged and released**: PR #628, and `v0.45.6` carries it. `db-craft` is the catalog's fifth
-  door with depth: eight references (schema, migrations, transactions, indexes, queries, access,
-  operations and the catalogue of failures). `data` keeps the decision and sends the schema and the
-  migration here.
-- `main` is at the merge of the release PR #634, and the branches were deleted on merge, as every branch
-  should be.
+  machine runs `odachi 0.47.0`. The home is unchanged at 25 skills.
+- `main` is at `f78794a`, the session note that followed the release.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 312 features · 779 steps done of 779 · 0 open questions
+  total: 313 features · 784 steps done of 784 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -35,260 +30,95 @@ Written after 0314 and `v0.47.0`.
 
 ## What waits for a decision
 
-- **The home is clean, and it took a hand**: the plugin mirrors new payload files into `~/.agents/skills`
-  and `pack` never deletes, so the `bootstrap` there carried five orphan references since 0307. They were
-  removed by hand on 2026-11-15, after `setup` aligned the rest. The habit to keep: after a release,
-  compare every home skill against the payload, because neither tool reports a file that is extra.
-- **The next feature is not chosen.** Before choosing, `docs/review-debt.md` is the reading list, and it
-  is stale: it says "Last written: while closing 0271" and its `## Open` section says nothing is open,
-  while the closes from 0291 to 0311 never wrote their rows there. Decide whether the file is rewritten
-  from the store or retired; today it is a list nobody can trust.
-- **Five of the catalog's fifteen ledger rows say `none`.** They are the honest number: the question that is
-  answered and not implemented, the irreversible action that waits, the verifier that is not the author,
-  the voice that belongs to the profile, and the step that is one commit. Each one names why no command
-  holds it, and the verbatim requirement left this list in 0314 because the gate now compares the quote.
-  The next one that looks reachable is the verifier: whether an independent verifier ran is a record, and a
-  record can be required.
-- **The four lenses are still one vendor.** `odd/review.toml` names `deepseek-v4.1-flash` for all four.
-  The format supports one model per lens; the change is configuration and a doctor line that says when
-  the quorum is one opinion in four costumes.
-- **The board look is unproven by a piece.** 0306 wrote the text an agent reads before producing one, and
-  no board video was rendered or watched. The first piece made with it is the measurement that says
-  whether the reference works.
-- **One cosmetic debt, one line**: the `v0.45.1` section of `CHANGELOG.md` writes `drive` without the
-  backticks. Fix it whenever the file is touched; it does not justify a pull request of its own.
-- **`Unreleased` does not exist**: `v0.47.0` renamed it, and the next feature re-creates the heading above
-  `## v0.47.0`.
-- **The queue from the pstack investigation, in the order it was agreed.** The verifier is next: "who
-  writes does not verify itself" is a record, and the gate can require a record the way 0314 requires a
-  quote. After it, and in this order: the doctor line that says when the four lenses are one vendor -the
-  probe measured that a cheap second vendor finds 3 of 5 planted defects where deepseek finds 5, so the
-  quorum stays and the line is what is missing-; a review that reads artifacts instead of a diff, which is
-  the research's own debt 3 and 4; and only then the written grant and `sharpen`, which improve how the
-  work is asked for and do not hold anything.
-
+- **The next feature is not chosen, and the queue from the pstack investigation says what comes next.** The
+  four lenses are still one vendor: `odd/review.toml` names `deepseek-v4.1-flash` for all four, the format
+  supports one model per lens, and what is missing is a doctor line that says when the quorum is one
+  opinion in four costumes. The probe measured that a cheap second vendor finds 3 of 5 planted defects where
+  deepseek finds 5, so the quorum stays and the line is the change. After it, and in this order: a review
+  that reads artifacts instead of a diff -the research's own debt 3 and 4-, and only then the written grant
+  and `sharpen`.
+- **The verifier's independence is a role, not a comparison.** The record names who verified and refuses a
+  record that names nobody, but it does not compare that name with the proof's builder the way the review
+  does (`ReasonReviewSelf`). It cannot, today: this machine runs one model, and the comparison would close
+  the queue's first item against its second. The vendor line makes it possible; then this row is one check.
+- **Four of the catalog's fifteen ledger rows say `none`.** They are the honest number: the question that is
+  answered and not implemented, the irreversible action that waits, the voice that belongs to the profile,
+  and the step that is one commit. The verifier left that list in 0315.
+- **The board look is unproven by a piece.** 0306 wrote the text an agent reads before producing one, and no
+  board video was rendered or watched. The first piece made with it is the measurement.
+- **`odd/review.toml` and the four lenses are configuration**, not code: `[[lens]]` takes `model`, and the
+  change above is one file plus a doctor line.
 - **`schema.Current` is 10**: the check remedy belongs to it, and `agents.toml`, `odd/review.toml` and
-  `odd/rules.toml` share the counter. A binary at `v0.45.6` or older refuses a file written at 10 and says
-  "upgrade"; a file that declares 9 still reads, with the remedy optional.
-- **The ratchet covers three packages through declared builders**, and all three declare every builder
-  they own.
-- **The gate's reasons are declared once**: one table judges the state, the words and the continuation,
-  and a test reads the `Reason…` constants from `gate.go` with `go/ast`.
-- **The text a session pays for is pinned by bytes** in `internal/archtest/bytes.baseline`, failing in
-  both directions. The skills themselves are pinned by their trigger, their sections and the 60-line
-  body; their bytes are not in that baseline.
+  `odd/rules.toml` share the counter. The verify record has its own counter (`verify.Schema = 1`) on
+  purpose: a sixth file that starts here moves none of the five.
+- **The ratchet covers three packages through declared builders**, and all three declare every builder they
+  own. The new verbs do not use `blocked(...)`/`refused(...)` builders: their refusals are plain lines.
+- **The gate's reasons are declared once**: one table judges the state, the words, the continuation and now
+  the verification, and a test reads the `Reason…` constants from `gate.go` with `go/ast`.
+- **The text a session pays for is pinned by bytes** in `internal/archtest/bytes.baseline`, failing in both
+  directions. The skills themselves are pinned by their trigger, their sections and the body; their bytes
+  are not in that baseline, so `commits` and `drive` could grow for 0315 without moving it.
 - **A correction remembers its predecessor**, and a third round needs the human's reason.
 - **A guard is proven by breaking it**: `check --run --mutate <file> --remove "<string>" --expect
-  "<text>"` takes the string out in a copy, runs the command there, and requires a failure that names
-  the expected text.
-- The fence keeps its six active rules and no template: a non-goal that names no path stays in
-  `brief.md`.
+  "<text>"`. 0315's new demand was proven by taking the gather out of `check.go` and watching five tests
+  fail.
+- The fence keeps its six active rules and no template: a non-goal that names no path stays in `brief.md`.
 - `odachi doctor` is 15 checks and this note is what closed its only warning.
 
 ## What shipped
 
-- **0314, minor (unreleased).** The gate refuses a requirement that is not the brief's words: `odachi
-  start` writes the sentence twice, only a human edits either, and a drift is an agent's rewrite. The
-  reason is `requirement_not_the_human_words`, the refusal carries both sentences, and a feature with no
-  block or a light one is not judged. `odd/rules.toml` gains `gate:<reason>` as its fourth kind.
+- **0315, minor (unreleased).** A risk asks for a verifier and the gate reads the record: `odachi verify
+  --exec "<command>"` composes the question from the project's own words, seals the answer under the tree,
+  and `check` blocks a close whose record is missing, unreadable, unsigned or refuted. The demand keeps
+  0301's rule -a risk only asks when the change is one a lens would read-. The catalog row leaves `none`;
+  `commits` and `drive` name the verb.
+- **0314, minor (v0.47.0).** The gate refuses a requirement that is not the brief's words. `odd/rules.toml`
+  gains `gate:<reason>` as its fourth kind.
+- **0313, patch (v0.47.0).** `odd/review.toml` declares schema 10 and its two check rows name their remedy.
+- **0312, minor (v0.46.0).** The catalog can be counted: `odd/rules.toml` pairs each rule with what enforces
+  it, doctor's check 16 reports the debt, and `[[check]]` gains `remedy`.
 
-- **0313, patch (unreleased).** This repository's `odd/review.toml` declares schema 10 and its two check
-  rows name their remedy: `golangci-lint run ./... --fix` and the module upgrade `govulncheck` asks for. It
-  is the line 0312 could not ship, because the gate is built from the base ref and the reader that
-  tolerates the key had to be released first.
+## 0315: what it settled, and what it leaves
 
-- **0312, minor (v0.46.0).** The catalog can be counted: `odd/rules.toml` pairs the rules the catalog
-  states with their enforcers -nine rows held by a fence path, a declared check or a test, six saying
-  `none` with a reason- and `odachi doctor`'s check 16 reports the debt, refuses a row that names a
-  mechanism the project does not have, and treats an absent table as no debt. `[[check]]` gains `remedy`,
-  required and printed beside a failing tool in the review prompt. `schema.Current` is 10.
-
-- **0311, patch (v0.45.6).** `db-craft`: eight references on schema, migrations, transactions, indexes,
-  queries, access and operations, plus `the-failures.md` with twenty-eight mistakes; `data` hands the
-  schema and the migration to it. Seven review rounds found eleven factual errors in the pages, which is
-  why the reference count and the corrected sentences are pinned by tests.
-
-- **0310, patch (v0.45.5).** `ui-craft` gained four references -`ai-native.md`, `art-direction.md`,
-  `motion-identity.md`, `depth-and-material.md`-, the body rule that a screen has a direction chosen and
-  named, and the OKLCH and fluid-scale rows in `the-numbers.md`.
-
-- **0309, patch (v0.45.5).** The gentle-shell audit closed: `tui-design`'s attribution is pinned by a
-  test -it was never missing, it lives in the body because the installer copies `SKILL.md`, `references/`
-  and `assets/` only-, and `ui-craft` gained `accessible-and-adaptive.md` and `grouping-and-emphasis.md`,
-  the two pages nothing owned.
-
-- **0308, patch (v0.45.5).** `arch-tauri` gained `references/tauri-scaffold.md` -the nine steps of a
-  Tauri v2 scaffold in the order that keeps the boundary-, its `## When` recovered the three conditions
-  for not loading it, and `tauri-bridge.md` stopped sending the tree and the ADRs to `bootstrap`.
-
-- **0307, patch (v0.45.5).** The catalog gained its second level: `arch-project` carries the triage
-  by project kind, the twelve birth decisions, the tree, the guard recipes, the commands per stack, the
-  UI contract, the fifteen lessons, the Go + HTMX page and the ADR template, and `bootstrap` routes to
-  it with no reference of its own. The five files moved; the four pieces the retired skill carried and
-  nothing here did entered with a row each.
-
-- **0306, patch (v0.45.4).** `motion-graphics` gained two references and their routing: `the-board.md`
-  (the hand-drawn look as a system: paper and ink, one accent per meaning, seeded rough strokes, draw-on
-  as a verb with weight by distance, the camera as the transition inside one argument, correction as the
-  drama, and the traps this look sets) and `the-voice.md` (the human's recording as the clock: the two
-  turns, the script they read, the word timestamps as an instrument, the cue on the stressed word, and
-  the same alignment shape on HyperFrames and Remotion). `motion-principles.md` gained the pan/zoom row
-  the transitions table was missing, `the-piece.md` points its times at the recording when there is one,
-  the body gained one `## Never`, and the impact map counts eight references.
-
-## 0314: what it settled, and what it leaves
-
-- **The tool already wrote the evidence.** The brief's block and the task document's R1 carry the same
-  sentence because `start` wrote both, so "the agent kept the human's words" stopped being a judgment and
-  became a comparison of bytes. That is the pattern for the five rules still in `none`: look for the copy
-  the tool already produced before inventing a mechanism.
-- **A refusal is a mechanism.** The rulebook named fences, review tools and tests, and the gate was missing:
-  `gate:<reason>` resolves against the reasons `gate.Reasons()` declares, so a row that points at a refusal
-  the binary does not answer is a problem. `IsReason` is the resolution, and the gate's own test list is
-  what keeps it honest.
-- **Not judging its own past.** A light feature and a feature with no block never wrote the sentence twice,
-  so they compare clean. A check that blocks them would refuse every feature opened before today.
-- **The grammar move has the same cost as the schema move.** An installed doctor older than this tree
-  refuses a `gate:` row as a typo, because it reads values it does not know as a mistake. The gate does not
-  read the table, so closes and CI are unaffected; the next install is what makes check 16 read it again.
-  The lesson repeats: a reader that is older than the writer has to be published first, or the file has to
-  wait.
-- **What it leaves.** The next reachable row in `none` is the verifier: "who wrote does not verify itself"
-  is a record, and a record can be required by the gate the same way the quote is compared.
-
-## 0312: what it settled, and what it leaves
-
-- **The pyramid, applied to this repo.** The talk that started it says the deterministic layers come first,
-  verification second, and prose last, and that a correction should become a check rather than another
-  line of rules. The ledger is that sentence made countable: nine of fifteen catalog rules already had a
-  mechanism and nobody had noticed which ones, and six have only a sentence. The number is the asset.
-- **A test that pins a sentence is not an enforcer.** `TestShapeAsksForTheSmallestChange` keeps the catalog
-  from drifting; it does not stop the work. The backfill lists a `test:` only where the test holds the
-  behavior -the stdlib boundary, gofmt, the byte budget- and marks the pinned-sentence rules `none`. This
-  distinction is the whole honesty of the count, and it is the part a later feature could get wrong by
-  listing every test whose name mentions the rule.
-- **A dangling enforcer is worse than none.** A row naming a fence path, a check or a test that does not
-  exist is a problem and not debt, because the project would believe it is protected. Doctor resolves all
-  three: fence paths against `odd/fence.toml`, check names against `odd/review.toml`, test names by
-  walking `internal`, `cmd` and `skills` through the Files port.
-- **A schema bump cannot be committed by the installed binary.** The hook resolves `odachi` from the PATH
-  and the installed 0.45.6 reads schema 9: the tree's binary has to come first. Building it into the temp
-  folder and prepending the PATH is not an install and not a bypass; it runs the gate with the code that
-  wrote the file.
-- **What it leaves.** Two things. The ledger is a hand-written table, so it can rot the way any list rots;
-  what keeps it honest is that doctor resolves every name and counts every `none`. And this repository's
-  `odd/review.toml` still has no `remedy`: the gate is built from the base ref, so the file can only move
-  to schema 10 after a release carries the reader that tolerates it. The next step the ledger enables is
-  choosing one of the six and giving it a mechanism, and the one that looks reachable first is the verbatim
-  requirement: the task doc already carries the quote, so a check could compare `R1` against the brief
-  block the tool wrote.
-
-## 0311: what it settled, and what it leaves
-
-- **A database door was missing, and the catalog had the policy without the craft.** `data` answered who
-  owns a value and how long it lives; nothing answered what lock the migration takes or what the retry
-  replays. The split is the same one UI already uses: the decision in one door, the craft in another.
-- **Concrete beats portable.** Every page ends with what changes on MySQL or SQLite, and the body is
-  Postgres in the first person, because `lock_timeout`, `NOT VALID` and `FORCE ROW LEVEL SECURITY` are the
-  numbers that change a decision. A generic SQL page would have decided nothing.
-- **The catalogue is the teaching device that worked twice.** `the-tells.md` for design and
-  `the-failures.md` for a database: a mistake, what it looks like, and the page that already decided it.
-- **What is still unproven:** no real schema was migrated with these pages. The advice is sourced -the
-  Postgres documentation on lock levels, serialization failures and RLS, and a 2026 field guide to
-  zero-downtime migrations- and it took four review rounds to stop finding factual errors in it: the lock
-  a `SELECT` takes, a deadlock read as a serializability refusal, `CREATE INDEX CONCURRENTLY` called
-  instant, the `WITH CHECK` default, and `row_security = off` read as a bypass. The first production
-  migration is still the measurement.
-
-## 0310: what it settled, and what it leaves
-
-- **What looks current is behaviour, not decoration.** The research -seven production patterns, Material 3
-  Expressive's own framing of expression as usability, accessibility and beauty for a purpose- says the
-  2026 signal is an interface that streams, composes, answers a command and shows its work. The gradient
-  and the glass are the failure mode, not the direction.
-- **The missing layer was a decision, not a rule.** `ui-craft` had execution (numbers, states, tells) and
-  nothing answering "which direction, and what does it cost". `art-direction.md` is that layer, and the
-  body now refuses to start without it.
-- **The catalog keeps no house style.** The default posture is named for the case where the brief is
-  silent, and it is a default, not a brand: a catalog with a look makes every project look the same, which
-  is the defect `the-tells.md` exists to catch.
-- **What is still unproven:** no screen was built with the new pages. They are read text, pinned for
-  routing and content; the first screen made with them is the measurement that says whether the direction
-  layer works.
-
-## 0309: what it settled, and what it leaves
-
-- **A file-name diff reads a moved file as a lost one.** `tui-design/NOTICE.md` disappeared from the
-  listing and the attribution was in the body all along, moved there on purpose. The audit's first finding
-  was a false positive, and it was found by opening the file, not by trusting the diff. The test exists so
-  the next rewrite cannot make the same disappearance real.
-- **"Two references missing" was four sections.** Reading the source pages against the pages that exist
-  showed the six states and the numbers already owned, and only the markup, the keyboard, the narrowing
-  and the grouping unowned.
-- **Still unported, and named:** `issue-creation` and `rdd-defect-workflow` have no counterpart in this
-  catalog. `judgment-day`, `skill-registry` and `gentle-ai` are absorbed by the review quorum, the
-  generated index and `drive`.
-
-## 0308: what it settled, and what it leaves
-
-- **A port is verified by a diff, not by memory.** The Tauri files were all present and the references
-  were adapted cleanly, so the four-file gap of 0304 did not repeat; what the diff found instead was
-  content: an order that lived in one section of the retired body and nowhere else, and a stop-list that
-  lost two of its three conditions on the way in.
-- **A level decays quietly.** `arch-tauri` said "load `bootstrap` and nothing here applies" for a project
-  with no Rust core, which was true until 0307 created the level between them. Nothing failed; the
-  sentence just aged. The test now pins the level, not only the rules.
-- **What is still unowned:** `ANTIGRAVITY` -the human's own project name- is still written in
-  `references/rust-guard-recipes.md`. It is harmless in this catalog and noise in a binary anyone
-  installs.
-- **A test that checks presence does not check a promise.** Two review rounds found the same shape of
-  defect in the guards this feature wrote: the stop sentence was pinned word by word, so the wrong door
-  passed, and the nine steps were pinned by existence, so any order passed. Both are pinned whole now
-  -the sentence with its door, the steps by increasing position- and each was proven by breaking it.
-
-## 0307: what it settled, and what it leaves
-
-- **A level is a door, not a drawer.** The material for any stack existed and was unreachable: five
-  references inside `bootstrap`, behind a trigger that asks whether a project is starting in odachi. The
-  door is what changed; the text mostly moved.
-- **The port was never finished.** 0304 recorded five of the eight files and neither the tree, the
-  command matrix, the ADR template nor the Go page; a "complete port" that nobody diffed against the
-  retired folder was a sentence. The four entered here.
-- **A stack page is not a stack door.** `go-htmx.md` lives inside `arch-project` because it is twenty
-  lines of choices, not a boundary; `arch-tauri` is a door because it has a bridge, an ACL and three UI
-  layers. The next stack with that depth earns `arch-<stack>`.
-
-## 0306: what it settled, and what it leaves
-
-- **A look is a reference, not a skill.** The trigger is the same situation the skill already answers,
-  and a second skill would be a second owner of one rule. The look is the positive side of
-  `the-ai-look.md`, and the catalog did not have it.
-- **A refused answer is not a verdict.** The first review declared all seven paths and wrote rows for
-  six; the gate refused it by name, kept the answer in `…refused-<hash>.json`, and wrote no verdict. The
-  second run paid two draws and covered seven of seven. The coverage rule is a row per changed path per
-  lens, and a declaration is not a row.
-- **The changelog entry belongs to the change commit.** The entry landed after the close, the tree moved,
-  and the proof ran twice, twelve minutes each. 0305 did it right: the entry travelled in `55640cc`, the
-  same commit as the code.
-- **A `## Done when` bullet is one physical line.** `plan --done` refuses to rewrite a document whose
-  bullet wraps, and that refusal cost another full measurement. Write the criterion short.
-- **A rule can leave the body when the body already carries it.** The 60-line ceiling had no room left,
-  and the sentence "say what you did not render or verify" lives verbatim in `## Output`; the deletion
-  was recorded as a craft decision instead of being silent.
+- **The tool produced the copy again, and this time it had to invent one.** 0314 compared two sentences the
+  tool already wrote. The verifier had no copy: the record is new, and the shape it copies is the verdict's
+  -content-addressed by tree, sealed with the clone's clock, refusing an author it cannot name-. The
+  pattern is not "reuse what exists" but "copy the shape that already survived review".
+- **Two reasons, not one, because the sentence differs.** A missing record sends the human to run the
+  verifier; a record that answered `refuted` stops the close carrying the note that showed the requirement
+  failing. Calling the second one missing would send the human to produce what is already there.
+- **The demand sits in the gate and not in the review.** The review is softened into a note when the
+  project's switch is on (ADR 0043); the verification is a block like the proof, because the requirement is
+  "la puerta no cierra sin él". It is `NeedsWork`, not a decision: the agent can run the verifier.
+- **A document-only close owes nothing, and that is 0301's rule reused.** A risk is a declaration about the
+  code; a close that moved documents has no bytes a probe would catch.
+- **One old test grew a record.** 0301's lens test closes a feature whose commits declare `security`, and
+  the verification now fires before the review; the fixture seeds a verified record so the tree lacks
+  exactly one thing. The test stayed about the lens.
+- **A wrong order of paragraphs is the cheapest bug.** The first draft of the gate sentence joined risk
+  names into a clause that read "the commits declared the record cannot be read": the field carries
+  sentences, and the sentence has to say what is missing before it lists its entries.
+- **What it leaves.** The comparison of names (see the queue), and one measurement: nobody has run a
+  verifier that refutes. The first refutation is what says whether "refuted" is the answer a verifier
+  reaches.
 
 ## The limits to remember
 
-- **The note's totals are written after the last step is marked, not before.** 0314's note quoted
-  `311 features · 775 steps` because it was written before `plan --done`, and `doctor` check 14 caught it on
-  the next run. The number is the tool's, so the note waits for the mark.
-
-- **A schema bump needs the tree's binary ahead of the installed one.** The commit hook runs `odachi`
-  from the PATH, and an installed binary older than the file refuses it as newer. Build into the temp
-  folder, prepend the PATH, and the gate judges the tree with the code that wrote it (0312).
-
+- **The note's totals are written after the last step is marked, not before.** `plan --done` rewrites the
+  task document, so the number the note quotes is the one the tool counts once every step is closed.
+- **A mark records the tree the worktree had when the mark was written, which is the closing one and not the
+  change commit's.** `plan --done T5` said "the tree was not recorded: the worktree is not the commit" and
+  then wrote the worktree's tree anyway; the second call named it. The step's record is honest about the
+  bytes that carried the mark, and the proof is what speaks for the close.
+- **A schema bump needs the tree's binary ahead of the installed one.** The commit hook runs `odachi` from
+  the PATH, and an installed binary older than the file refuses it as newer. Build into the temp folder,
+  prepend the PATH, and the gate judges the tree with the code that wrote it (0312).
+- **A reason a doctor older than the tree does not know is a typo to it.** `odd/rules.toml` now names
+  `gate:verification_missing`, and an installed 0.47.0 reports it as a problem. Build the tree's binary to
+  read the table it wrote; CI reads it after the release.
 - **The proof names the index tree** (`git write-tree`). The order that closes a feature: the change
   commit, then `plan --done` on top of it, then stage the records and measure, then commit the records.
-  The mark names the change commit's tree; the proof measures the closing one.
+  The proof measures the closing tree, which is the tree the records commit will have.
 - **A document commit after a close leaves the local `check` red**, on purpose. CI regenerates its own
   proof from a clean checkout.
 - **The undo row answers four different things**: `noticed` with the symbol the compiler named, `the copy
@@ -296,6 +126,8 @@ Written after 0314 and `v0.47.0`.
   production behavior`, and `missed` for a suite that stayed green.
 - **Text with backticks is not edited with a double-quoted shell string.** PowerShell reads `` `t `` and
   `` `b `` as escapes. Edit with the file tool or single quotes, and read the result back.
+- **PowerShell's `Set-Content -NoNewline` on an array joins the lines.** It flattened a Go file into one
+  line and the build said "expected 'package', found EOF". Write whole files with the file tool.
 - **A guard that passes the first time proves nothing.** Verify every new guard by mutation.
 - **Evidence answers only its own question.** Any stored answer keyed by tree needs the question in the
   key.
@@ -306,9 +138,6 @@ Written after 0314 and `v0.47.0`.
 - **A release is a tag on the merge of the release pull request.** Install from the release; a local
   `go build` is not published bytes. A version is never moved or reused.
 - **`windows-latest` is the slow gate**: three to eleven minutes against one to four for the others.
-  Merging with it pending is the shortcut the gate exists to stop.
-- **PowerShell's `Add-Content` writes CRLF and a trailing newline**: `internal/archtest` fails a file
-  written that way in the working copy.
 - **The fence is read from the base**: a policy change lands first, in its own pull request.
 - **One heavy gate per machine**: `go test ./...` takes about twelve minutes here, and `check --run` runs
   it twice when the undo row can revert production files.
@@ -322,6 +151,12 @@ odachi check --run "go test ./..." --timeout 1800
 ```sh
 # prove a guard by breaking it: the string out, the failure has to name the text
 odachi check --run "go test ./..." --mutate <file> --remove "<string>" --expect "<text>"
+```
+
+```sh
+# the record the close owes: one command, the prompt on stdin, the answer on stdout
+odachi verify --exec '<command that runs odachi-verify with {prompt}>'
+odachi verify        # the prompt it would ask, and nothing runs
 ```
 
 ```sh

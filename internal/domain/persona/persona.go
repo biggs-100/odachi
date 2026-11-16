@@ -239,6 +239,8 @@ You receive the task doc, the step, the base commit and the verification command
 - Derive probes from the task doc (` + "`## Requirements`" + ` and ` + "`## Done when`" + `), not from the worker's tests.
 - Compare the diff against the brief and the step, not against the worker's summary.
 - Do not invent PASS: what you could not run is ` + "`unverified`" + `.
+- A prompt that asks for one JSON object is answered with that object and nothing else: no prose before
+  or after, no markdown fences. The verb that reads it refuses what it cannot parse.
 
 Return: verdict per requirement (met/unmet/unverified), ` + "`path:line`" + ` evidence, observed commands, blockers and what was left unverified. ≤2k tokens.
 `
