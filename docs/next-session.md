@@ -1,27 +1,31 @@
 # Next session
 
-Written after 0316 and `v0.48.0`.
+Written after 0317 and `v0.48.0`.
 
 ## Where the project is
 
-- **0316 is on its branch, closing**: `feat/0316-the-quorum`. `odachi doctor` gains check 17: it counts the
-  distinct models that judge the lenses and names the one they share. Four lenses answered by one model are
-  one opinion in four costumes, and the line says `1 of 4`, the model, and the fix -a second model in a lens
-  row of `odd/review.toml`-. It is a warning and never moves the exit code.
-- **0315 is merged and released**: PR #635, and `v0.48.0` carries it. A close whose commits declared a risk
-  owes a record named by the tree that closes it; `odachi verify --exec "<command>"` writes it, and the gate
-  reads the file. Two reasons: `verification_missing` and `verification_refuted`. The catalog's row left
-  `none`: four rules nothing enforces.
+- **0317 is on its branch, closing**: `fix/0317-the-repair`. The first real pull request of 0315 found that
+  the verifier's record lives in the clone and CI cannot carry it, so the gate refused every clean checkout. A
+  missing, unreadable, unsigned or refuted record is now a note on a ready line, and `--require-review` is what
+  refuses it -the same rule ADR 0043 gave the verdict-. Its first pass was merged as a stale head and did not
+  reach `main`; this branch is the second, and the lesson is at the bottom of this file.
+- **0316 is on its branch, closing**: doctor's check 17 counts the distinct models that judge the lenses and
+  names the one they share. It is a warning, it never moves the exit code, and on this repository it answers
+  `1 of 4`.
+- **0315 is merged and released**: PR #635, and `v0.48.0` carries it. A risk asks for a verifier, the record
+  is sealed by the tree, and the gate names it. Its hard block was the defect 0317 repairs.
 - **0314 is merged and released**: PR #633, carried by `v0.47.0`. The gate refuses a requirement that is not
   the brief's words, and the rulebook gained the fourth kind `gate:<reason>`.
-- **`v0.48.0` is published and installed**: tag on `729e337`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.48.0`. The install refreshed the home: three agents and two skills (drive, commits).
+- **`v0.48.1` is published and installed, with one patch**: tag on `f8ff342`, sixteen assets signed and
+  attested, and this machine runs `odachi 0.48.1`. It carries 0316 and not 0317: the merge took the head the
+  remote had, and 0317's commits were made after the push. The changelog says so; the release notes come from
+  it.
 - `main` is at the merge of the release PR #636, and the branches were deleted on merge, as every branch
   should be.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 314 features · 787 steps done of 787 · 0 open questions
+  total: 315 features · 788 steps done of 788 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -29,10 +33,12 @@ Written after 0316 and `v0.48.0`.
 
 ## What waits for a decision
 
-- **The next feature is not chosen, and the queue from the pstack investigation says what comes next.** The
-  vendor line is done and it reports what this repository has: 1 of 4. What follows, in the agreed order: a
-  review that reads artifacts instead of a diff -the research's own debt 3 and 4-, and only then the written
-  grant and `sharpen`, which improve how the work is asked for and do not hold anything.
+- **The next feature is not chosen, and the queue from the pstack investigation says what comes next.** Two
+  things are written down and neither is chosen yet. First, the verification demand reads the closing
+  candidate, so a close that only moves documents is never asked for one: asking it of the feature's whole
+  diff -the way the review gate already does- is the correction 0317 leaves. After it, the agreed order: a
+  review that reads artifacts instead of a diff -the research's own debt 3 and 4-, and then the written grant
+  and `sharpen`.
 - **The verifier's independence is a role, not a comparison.** The record names who verified and refuses a
   record that names nobody, but it does not compare that name with the proof's builder the way the review
   does (`ReasonReviewSelf`). Now that a line can report the quorum, the comparison is one check when a
@@ -52,20 +58,46 @@ Written after 0316 and `v0.48.0`.
 - **A correction remembers its predecessor**, and a third round needs the human's reason.
 - **A guard is proven by breaking it**: `check --run --mutate <file> --remove "<string>" --expect
   "<text>"`. 0315's demand was proven by taking the gather out of `check.go` and watching five tests fail.
+- **An open PR merges the head the remote has, not the one in your worktree.** 0317's commits were made after
+  the branch was pushed; the merge took `345ae7d`, and `v0.48.1` went out without the repair its body claimed.
+  Before any merge, `gh pr view <n> --json headRefOid` has to equal local `HEAD`, and a branch with an open PR
+  is pushed after every commit -not once, at the beginning.
+- **An evidence a clean checkout cannot carry is not a CI block.** The verdict learned it in ADR 0043 and the
+  verification repeated the mistake in 0315; the repair is a note plus a flag, and the proof stays the thing
+  CI reproduces. The next time a record is added to the gate, ask first where it lives.
 - The fence keeps its six active rules and no template: a non-goal that names no path stays in `brief.md`.
 - `odachi doctor` is 17 checks: 16 were the install, 17 is the quorum.
 
 ## What shipped
 
+- **0317, patch (unreleased).** A verification the checkout cannot carry is a note, and `--require-review` is
+  what refuses it. The repair the first real pull request asked for.
 - **0316, patch (unreleased).** Doctor's check 17 counts the models that judge the lenses and names the one
-  they share, with the fix and never a failing exit code. `internal/domain/review.Quorum` is the count;
-  spellings of one model are one judge.
+  they share, with the fix and never a failing exit code.
 - **0315, minor (v0.48.0).** A risk asks for a verifier and the gate reads the record: `odachi verify
   --exec "<command>"` composes the question from the project's own words, seals the answer under the tree,
   and `check` blocks a close whose record is missing, unreadable, unsigned or refuted.
 - **0314, minor (v0.47.0).** The gate refuses a requirement that is not the brief's words. `odd/rules.toml`
   gains `gate:<reason>` as its fourth kind.
 - **0313, patch (v0.47.0).** `odd/review.toml` declares schema 10 and its two check rows name their remedy.
+
+## 0317: what it settled, and what it leaves
+
+- **The gate and the checkout answer different questions.** A verdict and a verification live in the clone;
+  a clean checkout has neither. Demanding one there is not rigour, it is an unclosable pull request: three
+  platforms answered `verification_missing` on the first real PR of 0315, and the rule the feature had just
+  won blocked the delivery of everything after it.
+- **The name and the block are two decisions.** The rule stays visible -a ready line says the record is
+  missing or refuted, with its command- and the refusal is the human's: `--require-review`. That is the
+  sentence ADR 0043 already wrote for the verdict, applied to the second opinion.
+- **The proof is the evidence a checkout can reproduce.** The suite runs there, the fence is read from the
+  base, and the opinion of a model costs money and is not deterministic. Evidence that costs money cannot be
+  a condition of every CI run, and the same reasoning answers the one-model question: the gate never spends
+  the budget of a person who has one vendor.
+- **What it leaves.** The demand is read from the candidate the close carries, so a close that only moves
+  documents asks for nothing -the rule 0301 gave the lenses-. A feature whose code was committed step by step
+  would never be asked unless its closing commit carried code. The fix is to ask the question of the feature's
+  whole diff, the way the review gate does with `theCloseOwes`, and it is the next reachable thing.
 
 ## 0316: what it settled, and what it leaves
 
