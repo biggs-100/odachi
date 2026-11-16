@@ -1,34 +1,33 @@
 # Next session
 
-Written after 0314 and `v0.46.0`.
+Written after 0314 and `v0.47.0`.
 
 ## Where the project is
 
-- **0314 is open on `feat/0314-el-requisito-citado`, unmerged.** The gate refuses a requirement that is not
-  the brief's words, with reason `requirement_not_the_human_words`, and the rulebook gained the fourth kind
-  `gate:<reason>` so a rule held by a refusal can name it. The row for the verbatim requirement leaves
+- **0314 is merged and released**: PR #633, and `v0.47.0` carries it. The gate refuses a requirement that is
+  not the brief's words, with reason `requirement_not_the_human_words`, and the rulebook gained the fourth
+  kind `gate:<reason>` so a rule held by a refusal can name it. The row for the verbatim requirement left
   `none`: five rules nothing enforces instead of six.
-- **0313 is merged**: PR #632. This repository's `odd/review.toml` declares schema 10 and its two check rows
-  name their remedy.
+- **0313 is merged and released**: PR #632, carried by `v0.47.0`. This repository's `odd/review.toml`
+  declares schema 10 and its two check rows name their remedy.
 - **0312 is merged and released**: PR #630, and `v0.46.0` carries it. The catalog can be counted:
   `odd/rules.toml` pairs each rule with the mechanism that makes breaking it impossible, or says `none`
-  with its reason, and `odachi doctor`'s check 16 reports the six that say none -the number is live on this
-  machine now that 0.46.0 is installed-. The remedy is required from schema 10 and optional at 9.
-- **`v0.46.0` is published and installed**: tag on `859d675`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.46.0`. The home is unchanged at 25 skills.
+  with its reason, and `odachi doctor`'s check 16 reports the five that say none. The remedy is required
+  from schema 10 and optional at 9.
+- **`v0.47.0` is published and installed**: tag on `a518a09`, sixteen assets signed and attested, and this
+  machine runs `odachi 0.47.0`. It is the release that made `gate:<reason>` readable here; before it, the
+  installed doctor refused this repository's own table. The home is unchanged at 25 skills.
+- **`v0.46.0`** is published too: tag on `859d675`, and it carried 0312 and the tolerant reader.
 - **0311 is merged and released**: PR #628, and `v0.45.6` carries it. `db-craft` is the catalog's fifth
   door with depth: eight references (schema, migrations, transactions, indexes, queries, access,
   operations and the catalogue of failures). `data` keeps the decision and sends the schema and the
   migration here.
-- **v0.45.6 is published and installed**: tag on `e149c09`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.45.6`. The home is identical to the binary: 25 skills, 25 matching, and no file
-  of more.
-- `main` is at the merge of the release PR #629, and the branch of the feature was deleted on merge, as
-  every branch should be.
+- `main` is at the merge of the release PR #634, and the branches were deleted on merge, as every branch
+  should be.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 311 features · 775 steps done of 775 · 0 open questions
+  total: 312 features · 779 steps done of 779 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -58,11 +57,19 @@ Written after 0314 and `v0.46.0`.
   whether the reference works.
 - **One cosmetic debt, one line**: the `v0.45.1` section of `CHANGELOG.md` writes `drive` without the
   backticks. Fix it whenever the file is touched; it does not justify a pull request of its own.
-- **`Unreleased` is empty** and the next feature writes under it, re-creating the heading.
+- **`Unreleased` does not exist**: `v0.47.0` renamed it, and the next feature re-creates the heading above
+  `## v0.47.0`.
+- **The queue from the pstack investigation, in the order it was agreed.** The verifier is next: "who
+  writes does not verify itself" is a record, and the gate can require a record the way 0314 requires a
+  quote. After it, and in this order: the doctor line that says when the four lenses are one vendor -the
+  probe measured that a cheap second vendor finds 3 of 5 planted defects where deepseek finds 5, so the
+  quorum stays and the line is what is missing-; a review that reads artifacts instead of a diff, which is
+  the research's own debt 3 and 4; and only then the written grant and `sharpen`, which improve how the
+  work is asked for and do not hold anything.
 
-- **`schema.Current` is 9**: the verdict carries `corrects`, the refutation carries `declared_at`, and
-  `agents.toml` and `odd/review.toml` share the counter. A binary at `v0.43.0` or older refuses a
-  verdict written by this one and says "upgrade".
+- **`schema.Current` is 10**: the check remedy belongs to it, and `agents.toml`, `odd/review.toml` and
+  `odd/rules.toml` share the counter. A binary at `v0.45.6` or older refuses a file written at 10 and says
+  "upgrade"; a file that declares 9 still reads, with the remedy optional.
 - **The ratchet covers three packages through declared builders**, and all three declare every builder
   they own.
 - **The gate's reasons are declared once**: one table judges the state, the words and the continuation,
@@ -270,6 +277,10 @@ Written after 0314 and `v0.46.0`.
   was recorded as a craft decision instead of being silent.
 
 ## The limits to remember
+
+- **The note's totals are written after the last step is marked, not before.** 0314's note quoted
+  `311 features · 775 steps` because it was written before `plan --done`, and `doctor` check 14 caught it on
+  the next run. The number is the tool's, so the note waits for the mark.
 
 - **A schema bump needs the tree's binary ahead of the installed one.** The commit hook runs `odachi`
   from the PATH, and an installed binary older than the file refuses it as newer. Build into the temp
