@@ -21,3 +21,7 @@ R1 · "quién escribe no se verifica a sí mismo: un riesgo que pide verifier de
 
 ## History
 L1 · "quién escribe no se verifica a sí mismo: un riesgo que pide verifier deja un registro de una verificación independiente, y la puerta no cierra sin él"
+L2 · OFICIO · "El registro del verificador lleva su propio contador de esquema (verify.Schema), no el compartido" (porque el contador de schema.Current es de cinco archivos que un binario viejo lee; un sexto archivo que empieza aquí no debe mover ninguno de los cinco, y un binario que nunca oyó de él nunca lo lee)
+L3 · OFICIO · "La exigencia vive en el gate y no se suaviza con el modo del review" (porque el requisito dice que la puerta no cierra sin el registro; el review se convierte en nota cuando el proyecto lo pide (ADR 0043), y una verificación que también fuera nota sería el silencio que la feature existe para romper)
+L4 · OFICIO · "La independencia del verificador es el rol y el nombre escrito, no una comparación con el modelo del builder" (porque esta máquina corre un modelo para todo, y comparar los nombres cerraría la cola del pstack contra su ítem siguiente; el registro deja el nombre escrito y el día que haya un segundo vendor la comparación es una línea)
+L5 · OFICIO · "El prompt del verificador pide sondas enfocadas y no el suite completo" (porque la primera corrida de campo gastó sus treinta minutos en go test ./... y no respondió nada; el suite es del gate, y el catálogo ya decía que el verificador corre comandos enfocados para no competir por la máquina)

@@ -98,6 +98,14 @@ Written after 0315 and `v0.47.0`.
 - **A wrong order of paragraphs is the cheapest bug.** The first draft of the gate sentence joined risk
   names into a clause that read "the commits declared the record cannot be read": the field carries
   sentences, and the sentence has to say what is missing before it lists its entries.
+- **The first field run found what the tests could not, twice.** The installed verifier answered in prose
+  while the verb requires one JSON object, so its prompt gained the sentence that a JSON prompt is answered
+  with that object and nothing else, and the home was refreshed. And the verifier spent its whole timeout on
+  `go test ./...`, which is the gate's work: the prompt now asks for focused probes, and the second run
+  answered in about twenty minutes with the packages it ran written in the record's notes.
+- **The record that closed this feature was independent by name.** It says `hy4-flash-free (odachi-verify)`,
+  a different model from the proof's builder, and the gate did not have to compare them: the comparison is
+  what the vendor line makes possible, not what this feature promised.
 - **What it leaves.** The comparison of names (see the queue), and one measurement: nobody has run a
   verifier that refutes. The first refutation is what says whether "refuted" is the answer a verifier
   reaches.
