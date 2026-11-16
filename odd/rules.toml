@@ -67,8 +67,7 @@ because  = "la puerta puede negar un push despues de que paso; no puede saber qu
 [[rule]]
 rule     = "los requisitos se citan con las palabras del humano, no con las del agente"
 skill    = "drive"
-enforces = "none"
-because  = "check prueba que el requisito existe; solo un lector ve que eran las palabras del humano"
+enforces = "gate:requirement_not_the_human_words"
 
 [[rule]]
 rule     = "quien escribe no se verifica a si mismo: un riesgo nombrado pide su verifier"

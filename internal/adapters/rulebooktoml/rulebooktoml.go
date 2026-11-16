@@ -86,7 +86,7 @@ func Render(rules []rulebook.Rule) ([]byte, error) {
 	var out strings.Builder
 	out.WriteString("# odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken\n")
 	out.WriteString("schema = " + strconv.Itoa(schema.Current) + "\n")
-	out.WriteString("# odachi: one row per rule the catalog states. enforces is fence:<glob>, check:<name> or test:<TestName>;\n")
+	out.WriteString("# odachi: one row per rule the catalog states. enforces is fence:<glob>, check:<name>, test:<TestName> or gate:<reason>;\n")
 	out.WriteString("# a rule nothing enforces says so with enforces = \"none\" and its because, and doctor counts it as debt\n")
 
 	for _, one := range rules {

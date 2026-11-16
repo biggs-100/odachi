@@ -10,6 +10,7 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/adapters/rulebooktoml"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/rulebook"
 )
@@ -64,6 +65,8 @@ func (r *runner) rulesLedger() domaindoctor.Check {
 			found, mechanism, source = checks[name], "check", layout.Review
 		case rulebook.KindTest:
 			found, mechanism, source = tests[name], "test", "the suite"
+		case rulebook.KindGate:
+			found, mechanism, source = gate.IsReason(name), "gate", "the gate"
 		default:
 			continue
 		}

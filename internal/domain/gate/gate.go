@@ -4,6 +4,7 @@ package gate
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -62,6 +63,34 @@ const (
 	nextAsk        = "odachi ask \"<your decision>\""
 	nextCheckProof = "odachi check --proof <file>"
 )
+
+// Reasons is every reason the gate can answer with, in the order the constants
+// declare them. It exists so the rulebook can point at one: a rule enforced by
+// "the gate refuses" names the refusal, and a name that is not in this list is a
+// promise the tool does not keep (0314).
+func Reasons() []string {
+	return []string{
+		ReasonReady,
+		ReasonNoBrief,
+		ReasonBriefIncomplete,
+		ReasonOutOfScope,
+		ReasonFenceLoosened,
+		ReasonOpenQuestion,
+		ReasonUnplanned,
+		ReasonQuoteMismatch,
+		ReasonProofMissing,
+		ReasonProofStale,
+		ReasonProofFailed,
+		ReasonUndoMissed,
+		ReasonUndoMissing,
+		ReasonMutationFailed,
+	}
+}
+
+// IsReason reports whether the name is one the gate answers with.
+func IsReason(name string) bool {
+	return slices.Contains(Reasons(), name)
+}
 
 // State is everything Evaluate needs, gathered by the caller. The gate itself
 // reads no files and runs no commands.
