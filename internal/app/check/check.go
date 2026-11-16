@@ -26,6 +26,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/mutated"
 	"github.com/biggs-100/odachi/internal/domain/proof"
+	"github.com/biggs-100/odachi/internal/domain/quote"
 	reviewdomain "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 	"github.com/biggs-100/odachi/internal/domain/undone"
@@ -384,6 +385,10 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			// it promises: a requirement nobody planned is a requirement nobody
 			// built, and nothing else in this gate reads the requirements.
 			state.Unplanned = unplannedRequirements(feature.Doc)
+			// The close also ships the words: the brief and the task document carry
+			// the same sentence, written by the tool, and only a human edits either.
+			// A drift is the agent's rewrite, and the fix is a copy (0314).
+			state.QuoteMismatch = r.quoteMismatches(feature)
 		}
 	}
 
@@ -2084,6 +2089,35 @@ func requirementIDs(feature *tasks.Document) []string {
 		ids = append(ids, requirement.ID)
 	}
 	return ids
+}
+
+// quoteMismatches compares the sentence the brief carries for this feature with
+// the requirements the task document quotes. Each result carries both sentences,
+// because the fix is a copy and a reader sent to open two files to find out what
+// to copy is doing the check's job (0314).
+//
+// A brief that cannot be read is not this check's problem: its absence is another
+// reason's, and inventing a mismatch here would block a project for a file
+// somebody is already being told to write.
+func (r *runner) quoteMismatches(feature *tasks.Document) []string {
+	if feature == nil || feature.Number == 0 {
+		return nil
+	}
+	data, err := r.files.Read(filepath.Join(r.opts.Dir, briefFile))
+	if err != nil {
+		return nil
+	}
+
+	mismatches := quote.Compare(string(data), feature.Raw, fmt.Sprintf("%04d", feature.Number))
+	out := make([]string, 0, len(mismatches))
+	for _, mismatch := range mismatches {
+		if strings.TrimSpace(mismatch.Brief) == "" {
+			out = append(out, fmt.Sprintf("%s: the brief has no line for it and the task doc says %q", mismatch.ID, mismatch.Doc))
+			continue
+		}
+		out = append(out, fmt.Sprintf("%s: the brief says %q and the task doc says %q", mismatch.ID, mismatch.Brief, mismatch.Doc))
+	}
+	return out
 }
 
 // undoRow judges the closing tree by taking the change away: it reverts the

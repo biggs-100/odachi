@@ -73,6 +73,9 @@ func buildEvaluationCases() []evaluationCase {
 	twoUnplanned.Unplanned = []string{"R2", "R3"}
 	twoUnplanned.ProofTreeHash = ""
 
+	quoteMismatch := ready()
+	quoteMismatch.QuoteMismatch = []string{`R1: the brief says "un paso" and the task doc says "dos pasos"`}
+
 	missingProof := ready()
 	missingProof.ProofTreeHash = ""
 	missingProof.ProofOutput = ""
@@ -159,6 +162,17 @@ func buildEvaluationCases() []evaluationCase {
 			reason:  gate.ReasonUnplanned,
 			message: "the feature declares R2, R3 and no step names them: a requirement nobody planned is a requirement nobody built",
 			next:    "odachi plan \"<text>\" --req R2",
+		},
+		{
+			name:  "a requirement that is not the brief's words",
+			state: quoteMismatch,
+			code:  gate.NeedsWork,
+			// The two sentences travel with the row: the fix is a copy, and a
+			// reader who has to open both files to find out what to copy is being
+			// sent to do the check's job.
+			reason:  gate.ReasonQuoteMismatch,
+			message: `the plan does not quote the human: R1: the brief says "un paso" and the task doc says "dos pasos"; copy the brief's words into the requirement, or record the change with odachi ask --change`,
+			next:    `odachi ask --change "<the human's words>" --req R1`,
 		}, {
 			name:    "proof missing",
 			state:   missingProof,
