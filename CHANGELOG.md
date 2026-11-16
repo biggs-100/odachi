@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.47.0 - 2026-11-16
 
 - **The gate refuses a requirement that is not the human's words.** `odachi start` writes the requirement
   twice -in the brief's block for the feature and in the task document's R1-, only a human edits either,
