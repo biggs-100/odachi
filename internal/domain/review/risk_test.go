@@ -39,6 +39,22 @@ func TestEachRiskAsksForItsLens(t *testing.T) {
 	}
 }
 
+// TestEveryRiskTheTableCarriesAsksForAVerifier: the `commits` table's third column
+// says every risk owes one, and the gate reads the same names. A word the table
+// does not carry asks for nobody: the ready note already names it (0315).
+func TestEveryRiskTheTableCarriesAsksForAVerifier(t *testing.T) {
+	for _, risk := range []string{"data", "security", "contract", "concurrency", "delivery", "no-test"} {
+		if !review.AsksForVerifier(risk) {
+			t.Errorf("AsksForVerifier(%q) = false, and the table says yes", risk)
+		}
+	}
+	for _, unknown := range []string{"", "none", "everything"} {
+		if review.AsksForVerifier(unknown) {
+			t.Errorf("AsksForVerifier(%q) = true; the table does not carry it", unknown)
+		}
+	}
+}
+
 // TestTheDeclaredLensesKeepTheirOrderAndHaveNoRepeats: the demand is a list the
 // prompt and the refusal both read, so the same commits produce the same order.
 func TestTheDeclaredLensesKeepTheirOrderAndHaveNoRepeats(t *testing.T) {

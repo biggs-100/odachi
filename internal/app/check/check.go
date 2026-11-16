@@ -30,6 +30,7 @@ import (
 	reviewdomain "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 	"github.com/biggs-100/odachi/internal/domain/undone"
+	verifydomain "github.com/biggs-100/odachi/internal/domain/verify"
 )
 
 // DefaultTimeout is how long the proof command may take when --timeout is not
@@ -389,6 +390,10 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			// the same sentence, written by the tool, and only a human edits either.
 			// A drift is the agent's rewrite, and the fix is a copy (0314).
 			state.QuoteMismatch = r.quoteMismatches(feature)
+			// And it ships the record of somebody else reading the tree: a risk the
+			// commits declared asks for an independent verifier, and the gate reads
+			// the record instead of a sentence about one (0315).
+			state.VerificationMissing, state.VerificationRefuted = r.verification(feature)
 		}
 	}
 
@@ -1623,6 +1628,57 @@ func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
 	}
 
 	return reviewdomain.Lenses(reviewdomain.Assess(work.paths, work.diff)), work.paths, work.diff, nil
+}
+
+// verification is what an independent verifier left about this tree, or the reason
+// the close should ask for it (0315). A risk asks for a verifier the way it asks for
+// a lens: only when the change is one a lens would read, because a close that moved
+// documents has no bytes a probe would catch. The record is read from the clone's
+// store under the tree's name, so a record of another tree answers nothing here.
+func (r *runner) verification(feature *tasks.Document) (missing, refuted []string) {
+	required, _, _, problem := r.requiredLenses()
+	if problem != nil || len(required) == 0 {
+		return nil, nil
+	}
+
+	var asking []string
+	for _, name := range r.declaredRisks(feature.Doc.Base) {
+		if reviewdomain.AsksForVerifier(name) {
+			asking = append(asking, name)
+		}
+	}
+	if len(asking) == 0 {
+		return nil, nil
+	}
+
+	rel, err := verifydomain.Path(r.tree)
+	if err != nil {
+		return asking, nil
+	}
+	data, err := r.files.Read(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
+	if err != nil {
+		return asking, nil
+	}
+	record, err := verifydomain.Parse(data)
+	if err == nil {
+		err = record.Validate()
+	}
+	if err != nil {
+		// The file is there and is not a verification. Calling it missing would send
+		// the human to produce what already exists, so the sentence names the file
+		// and the reason, and the fix is to write it again.
+		return []string{fmt.Sprintf("the record %s cannot be read: %s", r.storeFile(rel), oneLine(err.Error()))}, nil
+	}
+	if !record.Covers(r.tree) {
+		return asking, nil
+	}
+	if record.Verdict == verifydomain.Refuted {
+		if len(record.Notes) == 0 {
+			return nil, []string{"the verifier said the requirement does not hold and wrote no note"}
+		}
+		return nil, record.Notes
+	}
+	return nil, nil
 }
 
 // currentBlobs measures the receipt each changed path earns now. A path the
