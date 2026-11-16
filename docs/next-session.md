@@ -1,16 +1,18 @@
 # Next session
 
-Written after 0312 and `v0.45.6`.
+Written after 0313 and `v0.46.0`.
 
 ## Where the project is
 
-- **0312 is open on `feat/0312-una-regla-nombra`, unmerged and unreleased.** The catalog can be counted:
+- **0313 is open on `feat/0313-review-toml-schema`, unmerged.** Three lines: `odd/review.toml` declares
+  schema 10 and its two check rows name their remedy. It is what 0312 could not ship, because the gate is
+  built from the base ref and the reader that tolerates the key had to be released first.
+- **0312 is merged and released**: PR #630, and `v0.46.0` carries it. The catalog can be counted:
   `odd/rules.toml` pairs each rule with the mechanism that makes breaking it impossible, or says `none`
-  with its reason, and `odachi doctor`'s check 16 reports the six that say none. A declared `[[check]]`
-  names the `remedy` its red asks for, printed in the review prompt beside the failing tool; the key is
-  required from `schema.Current = 10` and optional in a file that declares 9. This repository's own
-  `odd/review.toml` stays at 3, because the gate is built from the base ref and its two lines can only
-  move once a release carries the tolerant reader.
+  with its reason, and `odachi doctor`'s check 16 reports the six that say none -the number is live on this
+  machine now that 0.46.0 is installed-. The remedy is required from schema 10 and optional at 9.
+- **`v0.46.0` is published and installed**: tag on `859d675`, sixteen assets signed and attested, and this
+  machine runs `odachi 0.46.0`. The home is unchanged at 25 skills.
 - **0311 is merged and released**: PR #628, and `v0.45.6` carries it. `db-craft` is the catalog's fifth
   door with depth: eight references (schema, migrations, transactions, indexes, queries, access,
   operations and the catalogue of failures). `data` keeps the decision and sends the schema and the
@@ -23,7 +25,7 @@ Written after 0312 and `v0.45.6`.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 310 features · 774 steps done of 774 · 0 open questions
+  total: 311 features · 775 steps done of 775 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -44,9 +46,6 @@ Written after 0312 and `v0.45.6`.
   requirement, the verifier that is not the author, the voice that belongs to the profile, and the step
   that is one commit. Each one names why no command holds it. The next feature can pick one and give it a
   mechanism, or leave the number where it is and say so.
-- **0312's tree has no verdict yet.** The proof is green (`proof/0312-toda-regla-del.txt`) and the review
-  is the one step left: `odachi review --base e149c09`, with the four lenses this change asks for. It
-  costs model draws, so it waits for the human's command.
 - **The four lenses are still one vendor.** `odd/review.toml` names `deepseek-v4.1-flash` for all four.
   The format supports one model per lens; the change is configuration and a doctor line that says when
   the quorum is one opinion in four costumes.
@@ -77,7 +76,12 @@ Written after 0312 and `v0.45.6`.
 
 ## What shipped
 
-- **0312, minor (unreleased).** The catalog can be counted: `odd/rules.toml` pairs the rules the catalog
+- **0313, patch (unreleased).** This repository's `odd/review.toml` declares schema 10 and its two check
+  rows name their remedy: `golangci-lint run ./... --fix` and the module upgrade `govulncheck` asks for. It
+  is the line 0312 could not ship, because the gate is built from the base ref and the reader that
+  tolerates the key had to be released first.
+
+- **0312, minor (v0.46.0).** The catalog can be counted: `odd/rules.toml` pairs the rules the catalog
   states with their enforcers -nine rows held by a fence path, a declared check or a test, six saying
   `none` with a reason- and `odachi doctor`'s check 16 reports the debt, refuses a row that names a
   mechanism the project does not have, and treats an absent table as no debt. `[[check]]` gains `remedy`,
