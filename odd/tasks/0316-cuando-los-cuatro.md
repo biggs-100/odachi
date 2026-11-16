@@ -13,7 +13,7 @@ R1 · "cuando los cuatro lentes son el mismo modelo, doctor lo dice: el quórum 
 
 ## Steps
 - [x] T1 · el quórum se lee: el dominio cuenta los modelos distintos de los lentes y nombra el que comparten   R1 · tree:020a684fed12ab41f005f5ad40fa00e7838dcd61
-- [ ] T2 · doctor: un check nuevo avisa cuando el quórum es uno y no cambia el código de salida   R1
+- [x] T2 · doctor: un check nuevo avisa cuando el quórum es uno y no cambia el código de salida   R1 · tree:b35ef5e790f72516912a42323caecc4a339d79ef
 - [ ] T3 · las notas dicen 17 checks: el README, la nota de sesión y el changelog   R1
 
 ## History
