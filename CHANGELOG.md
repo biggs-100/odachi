@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.48.2 - 2026-11-16
 
 - **The missing verification is a note, and `--require-review` makes it stop.** The record an independent
   verifier leaves lives in the clone's store, and a clean checkout cannot carry it: a gate that refused it
