@@ -846,3 +846,25 @@
 - It is used from the computer.
 - There is no sensitive data in the first version.
 - First usable version: this week.
+
+## 0312 · toda-regla-del
+
+## What must exist
+- toda regla del catálogo que se puede hacer cumplir nombra su enforcer, y doctor cuenta como deuda la que no lo tiene; cada fila de check nombra el comando que arregla su rojo
+
+## Done when
+- odd/rules.toml empareja cada regla con su enforcer, y un archivo ausente no es deuda
+- odachi doctor imprime el conteo y nombra cada regla sin enforcer con su skill
+- cada fila de check de review.toml nombra el comando que arregla su rojo, y una fila sin remedio no valida
+- el backfill cubre las reglas del catálogo que ya tienen enforcement, y las que no quedan en none con su razón
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no se toca la cerca: esta feature no cambia odd/fence.toml
+- no se cambia el schema del veredicto ni el contrato de review
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que una regla que nadie hace cumplir se puede ver como un número, no como una advertencia.
