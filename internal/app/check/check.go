@@ -497,6 +497,20 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	r.mutationRow(&state, feature, proofPath)
 
 	verdict := gate.Evaluate(state)
+	// The verification is evidence from the clone, like the verdict: a clean
+	// checkout cannot carry the record, so a gate that refused it would make every
+	// pull request red -the review learned the same in ADR 0043 (0317). A missing
+	// or refuted record is named, and `--require-review` is the human asking to be
+	// stopped; the second evaluation is the same gate without that one question.
+	if !r.opts.RequireReview && (verdict.Reason == gate.ReasonVerifyMissing || verdict.Reason == gate.ReasonVerifyRefuted) {
+		note := verdict.Message
+		if next := strings.TrimSpace(verdict.Next); next != "" {
+			note += "; " + next
+		}
+		r.verifyNote = note
+		state.VerificationMissing, state.VerificationRefuted = nil, nil
+		verdict = gate.Evaluate(state)
+	}
 	if verdict.Code == gate.Ready && r.opts.Message == "" {
 		// The review gate is last on purpose: everything before it is something
 		// the agent can act on, and sending an agent to `odachi review` while the
@@ -580,6 +594,10 @@ type runner struct {
 	// reviewNote is what the review has to say when it did not stop the close:
 	// the reminder the hook prints, and the line a ready report carries.
 	reviewNote string
+	// verifyNote is the same for an independent verifier: the record is missing,
+	// unreadable, unsigned or refuted, and only `--require-review` makes it stop
+	// the tree (0317).
+	verifyNote string
 	// coverNote names the requirements the closing proof does not declare. It is a
 	// note and never a block: the line is a claim the agent wrote, not evidence the
 	// command produced.
@@ -2408,6 +2426,12 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 	// reading to memory, and memory is what the file exists to replace.
 	if note := r.debtNote(); note != "" {
 		result.Lines = append(result.Lines, note)
+	}
+	if r.verifyNote != "" {
+		result.Lines = append(result.Lines, "verify: "+r.verifyNote)
+		if result.Note == "" {
+			result.Note = "verify: " + r.verifyNote
+		}
 	}
 	// What the review has to say and did not stop: the missing verdict of a close,
 	// or why the one on file does not count. A ready tree says it out loud -the hook

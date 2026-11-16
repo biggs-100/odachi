@@ -7,6 +7,16 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The missing verification is a note, and `--require-review` makes it stop.** The record an independent
+  verifier leaves lives in the clone's store, and a clean checkout cannot carry it: a gate that refused it
+  made every pull request red on the first real one, which is the defect this entry repairs. A missing,
+  unreadable, unsigned or refuted record is now named on a ready line the way a missing verdict is, and only
+  the flag the human already uses to ask for ceremony refuses it. ADR 0043 said a review does not authorise
+  delivery; the verification is an opinion of the same kind, and the proof remains the evidence a checkout can
+  reproduce. Patch (0317).
+
 ## v0.48.1 - 2026-11-16
 
 - **The quorum is a number doctor reads.** `odachi doctor` gains check 17: it counts how many distinct models
