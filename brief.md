@@ -962,3 +962,27 @@
 - There is no sensitive data in the first version.
 - First usable version: today.
 - Wants to learn: que una pregunta a la evidencia se puede leer del diff de la feature y no solo del candidato.
+
+## 0319 · un-veredicto-que
+
+## What must exist
+- un veredicto que pide cambios frena el cierre aunque sus filas no bloqueen, y la dispensa escrita por fila es la salida
+
+## Done when
+- un veredicto changes_requested para el arbol frena el cierre aunque ninguna fila bloquee
+- el cierre nombra el veredicto y la fila que lo sostiene
+- la dispensa por fila deja pasar el cierre con la razon escrita
+- un veredicto aprobado no frena nada
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no se toca la cerca: esta feature no cambia odd/fence.toml
+- no se cambia la forma del veredicto ni su esquema
+- no se cambia el modo del review ni el flag --require-review
+- no se editan docs/review-research.md ni docs/skill-evaluation.md
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que un artefacto que dice una cosa no puede convivir con una puerta que dice otra.
