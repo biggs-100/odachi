@@ -891,3 +891,28 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que una regla de honestidad se puede volver una comparacion de bytes.
+
+## 0315 · quien-escribe-no
+
+## What must exist
+- quién escribe no se verifica a sí mismo: un riesgo que pide verifier deja un registro de una verificación independiente, y la puerta no cierra sin él
+
+## Done when
+- un riesgo declarado en un commit pide su verificador, y la puerta bloquea nombrando el árbol y el riesgo cuando no hay registro
+- el registro guarda el árbol que verificó, quién lo escribió y la hora en que lo selló, como el veredicto
+- un registro de otro árbol no cubre este, y un registro que no dice quién lo escribió no cuenta
+- el comando que produce el registro corre una verificación independiente con el agente verificador del perfil y deja la respuesta tal cual la dio
+- doctor cuenta la fila del catálogo que deja de decir none
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no se toca la cerca: esta feature no cambia odd/fence.toml
+- no se cambia el schema del veredicto ni el contrato de review: el registro del verificador es un archivo aparte con su propia versión
+- no se editan docs/review-research.md ni docs/skill-evaluation.md
+- no se cambia la tabla de riesgos de commits: ya nombra el verificador de cada riesgo
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que una regla que nadie hace cumplir se puede volver una comparación de registros, igual que el requisito de 0314.
