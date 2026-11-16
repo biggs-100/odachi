@@ -12,9 +12,9 @@ R1 · "un requisito que no es la cita del humano no pasa la puerta: el check com
 - go test ./... is green and odachi check --run "go test ./..." is green
 
 ## Steps
-- [ ] T1 · la comparacion: el dominio puro lee el bloque del brief y sus R, y devuelve las que no son la misma frase   R1 · route:inline
-- [ ] T2 · la puerta: check bloquea nombrando la linea del brief y la del task doc, con su rojo observado antes   R1 · route:inline
-- [ ] T3 · la clase gate: doctor la resuelve contra las razones que la puerta declara, y la fila deja de decir none   R1 · route:inline
+- [x] T1 · la comparacion: el dominio puro lee el bloque del brief y sus R, y devuelve las que no son la misma frase   R1 · route:inline · tree:1464cd83ae132e780802c946fb9d4e81d81130a6
+- [x] T2 · la puerta: check bloquea nombrando la linea del brief y la del task doc, con su rojo observado antes   R1 · route:inline · tree:6d9f61a326e9b4860453332fa974a4c3dad833b4
+- [x] T3 · la clase gate: doctor la resuelve contra las razones que la puerta declara, y la fila deja de decir none   R1 · route:inline · tree:358b686eaa308ef5aee17623281f1a87a7bb9ef8
 - [ ] T4 · el changelog y la nota de sesion   R1 · route:inline
 
 ## History

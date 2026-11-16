@@ -9,6 +9,14 @@ not a version.
 
 ## Unreleased
 
+- **The gate refuses a requirement that is not the human's words.** `odachi start` writes the requirement
+  twice -in the brief's block for the feature and in the task document's R1-, only a human edits either,
+  and a drift means an agent rewrote what it was asked for. The close now compares the two sentences and
+  blocks with reason `requirement_not_the_human_words`, carrying both so the fix is a copy; a feature with
+  no block and a light feature are not judged. `odd/rules.toml` gains a fourth kind, `gate:<reason>`, so a
+  rule held by a refusal can name it, and doctor resolves the name against the reasons the gate declares.
+  The requirement's row leaves `none`: five rules nothing enforces instead of six. Minor (0314).
+
 - **This repository's review table declares ten and names its repairs.** `odd/review.toml` moves to
   `schema = 10` and its two check rows carry `remedy`: `golangci-lint run ./... --fix` for the linter and
   the module upgrade `govulncheck` asks for. It is the line 0312 could not ship -the gate is built from the
