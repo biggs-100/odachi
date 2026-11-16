@@ -8,7 +8,7 @@ R1 · "odd/review.toml declara schema 10 y sus dos filas de check nombran el com
 ## Done when
 
 ## Steps
-- [ ] T1 · odd/review.toml declara schema 10 y sus dos filas de check nombran el comando que arregla su rojo   R1
+- [x] T1 · odd/review.toml declara schema 10 y sus dos filas de check nombran el comando que arregla su rojo   R1 · tree:b4afdec04f82fbecfe2086929343ea51d9dabda0
 
 ## History
 L1 · "odd/review.toml declara schema 10 y sus dos filas de check nombran el comando que arregla su rojo"

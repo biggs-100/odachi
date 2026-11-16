@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **This repository's review table declares ten and names its repairs.** `odd/review.toml` moves to
+  `schema = 10` and its two check rows carry `remedy`: `golangci-lint run ./... --fix` for the linter and
+  the module upgrade `govulncheck` asks for. It is the line 0312 could not ship -the gate is built from the
+  base ref, and the reader that tolerates the key had to be released first-, and with it a new check in
+  this project cannot pass without naming what fixes its red. Patch (0313).
+
 ## v0.46.0 - 2026-11-15
 
 - **A rule can name what enforces it, and the catalog can be counted.** `odd/rules.toml` pairs each rule
