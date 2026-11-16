@@ -12,8 +12,8 @@ R1 · "un veredicto que pide cambios frena el cierre aunque sus filas no bloquee
 - go test ./... is green and odachi check --run "go test ./..." is green
 
 ## Steps
-- [ ] T1 · la puerta: un veredicto que pide cambios frena el cierre aunque ninguna fila bloquee   R1
-- [ ] T2 · la dispensa: la fila que sostiene el veredicto se deja pasar con la razon escrita   R1
+- [x] T1 · la puerta: un veredicto que pide cambios frena el cierre aunque ninguna fila bloquee   R1 · tree:f794b3a98f8034fb5f39d8a532b0fcd85f73ca0d
+- [x] T2 · la dispensa: la fila que sostiene el veredicto se deja pasar con la razon escrita   R1 · tree:f794b3a98f8034fb5f39d8a532b0fcd85f73ca0d
 - [ ] T3 · el changelog y la nota   R1
 
 ## History

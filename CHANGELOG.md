@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A verdict that asks for changes with no row stops the close.** The gate read the rows a verdict carries and
+  never its sentence: a verdict attached with `verdict: changes_requested` and no finding closed as ready, which
+  is the gate contradicting the file it had just read. The sentence now stops the close when it has no row the
+  gate can act on, and the door is written -`odachi review waive --because "<why>"` leaves the decision in the
+  task document-. A verdict that carries a row keeps the rule it had: blocking, refuted or waived. Patch (0319).
+
 ## v0.48.3 - 2026-11-16
 
 - **The demand asks the feature's diff, not the closing candidate.** A feature whose code was committed step by
