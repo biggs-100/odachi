@@ -48,7 +48,8 @@ the human with `start --waive-review`.
 The lens is asked with `odachi review --lens <lens>` and is added to the floor's,
 never instead. The verifier is `odachi-verify`, read-only: the whole task doc, a
 verdict per requirement with probes, never against your summary. Its record is what
-the close owes, and `odachi verify --exec "<command>"` is what writes it.
+the close names, and `odachi verify --exec "<command>"` is what writes it; the gate
+refuses it only with `--require-review`, because a clean checkout cannot carry it.
 
 ## Output
 

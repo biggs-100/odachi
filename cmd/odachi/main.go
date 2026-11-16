@@ -521,7 +521,7 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&ci, "ci", false, "judge the tree the way CI does: the fence and the base come from the remote's default branch")
 	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "seconds --run may take")
 	flags.BoolVar(&opts.Quiet, "quiet", false, "prints nothing when ready (for the hook)")
-	flags.BoolVar(&opts.RequireReview, "require-review", false, "requires a review verdict for this tree (default: the project mode)")
+	flags.BoolVar(&opts.RequireReview, "require-review", false, "requires a review verdict and an independent verification for this tree (default: the project mode, which names them)")
 	flags.BoolVar(&noReview, "no-review", false, "does not require review even when the project has it on")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 	flags.IntVar(&opts.Feature, "feature", 0, "the feature number to judge (default: the highest)")
@@ -1858,7 +1858,9 @@ check flags:
                   verified before a push; it takes no --base or --fence-from beside it
   --timeout n     seconds --run may take (default 900)
   --quiet         prints nothing when ready except the reminder the hook must read
-  --require-review  refuses a commit without a verdict for this tree (default: the project mode, which names it and lets the commit through)
+  --require-review  refuses a commit without a verdict and a verification for this
+                  tree (default: the project mode, which names them and lets the
+                  commit through)
   --no-review     does not require review even when the project has it on
   --json          machine output
 

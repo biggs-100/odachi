@@ -48,7 +48,7 @@ func closedRiskFixture() (*fakeFiles, *fakeGit) {
 func TestAClosedRiskOwesItsVerification(t *testing.T) {
 	files, git := closedRiskFixture()
 
-	result := run(t, files, git, check.Options{NoReview: true})
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
 
 	if result.Code != 1 {
 		t.Fatalf("code = %d, want 1: a declared risk closed without a verification (%s)", result.Code, result.Message)
@@ -69,7 +69,7 @@ func TestARefutedVerificationBlocksNamingWhatShowedIt(t *testing.T) {
 	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Refuted,
 		[]string{"odachi verify --exec with no command prints a prompt and exits 0"}))
 
-	result := run(t, files, git, check.Options{NoReview: true})
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
 
 	if result.Code != 1 {
 		t.Fatalf("code = %d, want 1: a refuted tree closed (%s)", result.Code, result.Message)
@@ -85,7 +85,7 @@ func TestAVerifiedRecordForThisTreeCloses(t *testing.T) {
 	files, git := closedRiskFixture()
 	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil))
 
-	if result := run(t, files, git, check.Options{NoReview: true}); result.Code != 0 {
+	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
 		t.Fatalf("the record did not close the tree: %s", result.Message)
 	}
 }
@@ -97,7 +97,7 @@ func TestARecordOfAnotherTreeCoversNothing(t *testing.T) {
 	other := "fedcba9876543210fedcba9876543210fedcba98"
 	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, other, "otro/modelo", domainverify.Verified, nil))
 
-	result := run(t, files, git, check.Options{NoReview: true})
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
 
 	if result.Code != 1 {
 		t.Fatalf("code = %d, want 1: a record for another tree closed this one (%s)", result.Code, result.Message)
@@ -110,7 +110,7 @@ func TestARecordWithoutAnAuthorDoesNotCount(t *testing.T) {
 	files, git := closedRiskFixture()
 	files.files[verifyPath(currentTree)] = []byte(`{"schema":1,"tree":"` + currentTree + `","by":"","at":"2026-11-16T12:00:00Z","verdict":"verified","notes":[]}`)
 
-	result := run(t, files, git, check.Options{NoReview: true})
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
 
 	if result.Code != 1 {
 		t.Fatalf("code = %d, want 1: a record that names nobody closed the tree (%s)", result.Code, result.Message)
@@ -126,7 +126,7 @@ func TestAnUnreadableRecordIsNotAnApproval(t *testing.T) {
 	files, git := closedRiskFixture()
 	files.files[verifyPath(currentTree)] = []byte("basura")
 
-	result := run(t, files, git, check.Options{NoReview: true})
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
 
 	if result.Code != 1 {
 		t.Fatalf("code = %d, want 1: an unreadable record closed the tree (%s)", result.Code, result.Message)
@@ -148,7 +148,7 @@ func TestADocumentOnlyChangeAsksForNoVerification(t *testing.T) {
 		messages: []string{"the note carries the release\n\nRisk: contract\n"},
 	}
 
-	if result := run(t, files, git, check.Options{NoReview: true}); result.Code != 0 {
+	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
 		t.Fatalf("a document-only close asked for a verification: %s", result.Message)
 	}
 }
@@ -160,7 +160,7 @@ func TestARiskTheTableDoesNotCarryAsksForNothing(t *testing.T) {
 	files, git := closedRiskFixture()
 	git.messages = []string{"a change\n\nRisk: whatever\n"}
 
-	if result := run(t, files, git, check.Options{NoReview: true}); result.Code != 0 {
+	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
 		t.Fatalf("an unknown risk asked for a verification: %s", result.Message)
 	}
 }
@@ -176,7 +176,45 @@ func TestTheOpenFeatureOwesTheVerificationAtItsClose(t *testing.T) {
 		messages: []string{"pay the invoice\n\nRisk: contract\n"},
 	}
 
-	if result := run(t, files, git, check.Options{NoReview: true}); result.Code != 0 {
+	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
 		t.Fatalf("an open feature asked for a verification: %s", result.Message)
+	}
+}
+
+// TestAMissingVerificationIsANoteUnlessTheHumanAsks: a clean checkout cannot carry
+// a record that lives in the clone, so a gate that refused it would make every pull
+// request red. It is named -the hook is where a reminder is read- and
+// `--require-review` is the human asking to be stopped (0317).
+func TestAMissingVerificationIsANoteUnlessTheHumanAsks(t *testing.T) {
+	files, git := closedRiskFixture()
+
+	result := run(t, files, git, check.Options{NoReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0: a missing record stopped the tree without being asked (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"verify:", "contract", "odachi verify"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("the ready line does not name %q:\n%s", want, lines)
+		}
+	}
+}
+
+// TestTheRefutedRecordIsAlsoANoteUnlessTheHumanAsks: the same rule for the answer
+// that exists and says no. Who wrote it and that it did not pass stay readable; the
+// exit code stays the human's decision.
+func TestTheRefutedRecordIsAlsoANoteUnlessTheHumanAsks(t *testing.T) {
+	files, git := closedRiskFixture()
+	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Refuted,
+		[]string{"the gate closes a tree with no record"}))
+
+	result := run(t, files, git, check.Options{NoReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0: a refuted record stopped the tree without being asked (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "the gate closes a tree with no record") {
+		t.Errorf("the note does not carry what the verifier said:\n%s", strings.Join(result.Lines, "\n"))
 	}
 }
