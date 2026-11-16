@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The quorum is a number doctor reads.** `odachi doctor` gains check 17: it counts how many distinct models
+  judge the lenses in `odd/review.toml` and says which model they share. Four lenses answered by one model are
+  one opinion in four costumes -the sentence the gate already uses about a verdict from the tree's own
+  builder-, and the line says the number (1 of 4), the model, and the fix: a second model in a lens row. It is
+  a warning and never a problem, so it does not move the exit code: the project decides whether it buys a
+  second vendor. On this repository it reports what the file says, which is 1 of 4. Patch (0316).
+
 ## v0.48.0 - 2026-11-16
 
 - **A risk that asks for a verifier is asked for by the gate.** A close whose commits declared a risk now

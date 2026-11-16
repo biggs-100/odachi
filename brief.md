@@ -916,3 +916,27 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que una regla que nadie hace cumplir se puede volver una comparación de registros, igual que el requisito de 0314.
+
+## 0316 · cuando-los-cuatro
+
+## What must exist
+- cuando los cuatro lentes son el mismo modelo, doctor lo dice: el quórum es una opinión en cuatro disfraces, y la línea nombra cuántos modelos distintos juzgan
+
+## Done when
+- cuando los cuatro lentes nombran el mismo modelo, doctor lo reporta como aviso nombrando cuántos modelos distintos juzgan y cuál comparten
+- cuando los lentes nombran dos modelos distintos, el aviso no aparece
+- la línea no cambia el código de salida de doctor
+- la línea nombra el arreglo: un modelo por lente en odd/review.toml
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no se toca la cerca: esta feature no cambia odd/fence.toml
+- no se cambia el review ni el veredicto: la feature solo lee la tabla de lentes
+- no se asigna un segundo modelo ni se cambia odd/review.toml: la línea avisa y la decisión es del humano
+- no se agrega una llamada de review ni se paga otra medición
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que un número de quórum se puede leer de la configuración sin comprar nada.
