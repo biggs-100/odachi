@@ -7,6 +7,15 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The demand asks the feature's diff, not the closing candidate.** A feature whose code was committed step by
+  step closes with a tree that only carries the mark and the note, so the verification demand -which read the
+  candidate- asked for nothing. It now asks the question the review already asks: the risks the commits
+  declared, and whether the diff from the feature's base to this tree is one a lens would read. A close of
+  documents whose feature wrote code names the record; a feature that only wrote documents asks for nothing.
+  Patch (0318).
+
 ## v0.48.2 - 2026-11-16
 
 - **The missing verification is a note, and `--require-review` makes it stop.** The record an independent
