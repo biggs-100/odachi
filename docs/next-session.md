@@ -1,28 +1,27 @@
 # Next session
 
-Written after 0315 and `v0.47.0`.
+Written after 0316 and `v0.48.0`.
 
 ## Where the project is
 
-- **0315 is on its branch, closing**: `feat/0315-the-verifier`. A close whose commits declared a risk now
-  owes a record named by the tree that closes it, and the gate reads the file. `odachi verify --exec
-  "<command>"` composes the question -the requirement in the human's words, the promises, the risk-, runs
-  one command and seals the answer -tree, who verified, the hour- in the clone's store. Two reasons:
-  `verification_missing` and `verification_refuted`.
-- **0314 is merged and released**: PR #633, and `v0.47.0` carries it. The gate refuses a requirement that
-  is not the brief's words, with reason `requirement_not_the_human_words`, and the rulebook gained the
-  fourth kind `gate:<reason>` so a rule held by a refusal can name it.
-- **0313 is merged and released**: PR #632, carried by `v0.47.0`. This repository's `odd/review.toml`
-  declares schema 10 and its two check rows name their remedy.
-- **0312 is merged and released**: PR #630, and `v0.46.0` carries it. `odd/rules.toml` pairs each rule with
-  what enforces it, and `odachi doctor`'s check 16 reports the rows that say `none`.
-- **`v0.47.0` is published and installed**: tag on `a518a09`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.47.0`. The home is unchanged at 25 skills.
-- `main` is at `f78794a`, the session note that followed the release.
+- **0316 is on its branch, closing**: `feat/0316-the-quorum`. `odachi doctor` gains check 17: it counts the
+  distinct models that judge the lenses and names the one they share. Four lenses answered by one model are
+  one opinion in four costumes, and the line says `1 of 4`, the model, and the fix -a second model in a lens
+  row of `odd/review.toml`-. It is a warning and never moves the exit code.
+- **0315 is merged and released**: PR #635, and `v0.48.0` carries it. A close whose commits declared a risk
+  owes a record named by the tree that closes it; `odachi verify --exec "<command>"` writes it, and the gate
+  reads the file. Two reasons: `verification_missing` and `verification_refuted`. The catalog's row left
+  `none`: four rules nothing enforces.
+- **0314 is merged and released**: PR #633, carried by `v0.47.0`. The gate refuses a requirement that is not
+  the brief's words, and the rulebook gained the fourth kind `gate:<reason>`.
+- **`v0.48.0` is published and installed**: tag on `729e337`, sixteen assets signed and attested, and this
+  machine runs `odachi 0.48.0`. The install refreshed the home: three agents and two skills (drive, commits).
+- `main` is at the merge of the release PR #636, and the branches were deleted on merge, as every branch
+  should be.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 313 features · 784 steps done of 784 · 0 open questions
+  total: 314 features · 787 steps done of 787 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -31,52 +30,61 @@ Written after 0315 and `v0.47.0`.
 ## What waits for a decision
 
 - **The next feature is not chosen, and the queue from the pstack investigation says what comes next.** The
-  four lenses are still one vendor: `odd/review.toml` names `deepseek-v4.1-flash` for all four, the format
-  supports one model per lens, and what is missing is a doctor line that says when the quorum is one
-  opinion in four costumes. The probe measured that a cheap second vendor finds 3 of 5 planted defects where
-  deepseek finds 5, so the quorum stays and the line is the change. After it, and in this order: a review
-  that reads artifacts instead of a diff -the research's own debt 3 and 4-, and only then the written grant
-  and `sharpen`.
+  vendor line is done and it reports what this repository has: 1 of 4. What follows, in the agreed order: a
+  review that reads artifacts instead of a diff -the research's own debt 3 and 4-, and only then the written
+  grant and `sharpen`, which improve how the work is asked for and do not hold anything.
 - **The verifier's independence is a role, not a comparison.** The record names who verified and refuses a
   record that names nobody, but it does not compare that name with the proof's builder the way the review
-  does (`ReasonReviewSelf`). It cannot, today: this machine runs one model, and the comparison would close
-  the queue's first item against its second. The vendor line makes it possible; then this row is one check.
-- **Four of the catalog's fifteen ledger rows say `none`.** They are the honest number: the question that is
-  answered and not implemented, the irreversible action that waits, the voice that belongs to the profile,
-  and the step that is one commit. The verifier left that list in 0315.
+  does (`ReasonReviewSelf`). Now that a line can report the quorum, the comparison is one check when a
+  project runs two vendors; on this machine it would still close the queue's first item against its second.
+- **Three of the catalog's fifteen ledger rows say `none`**: the question that is answered and not
+  implemented, the irreversible action that waits, and the voice that belongs to the profile.
 - **The board look is unproven by a piece.** 0306 wrote the text an agent reads before producing one, and no
-  board video was rendered or watched. The first piece made with it is the measurement.
-- **`odd/review.toml` and the four lenses are configuration**, not code: `[[lens]]` takes `model`, and the
-  change above is one file plus a doctor line.
+  board video was rendered or watched.
 - **`schema.Current` is 10**: the check remedy belongs to it, and `agents.toml`, `odd/review.toml` and
-  `odd/rules.toml` share the counter. The verify record has its own counter (`verify.Schema = 1`) on
-  purpose: a sixth file that starts here moves none of the five.
+  `odd/rules.toml` share the counter. The verify record has its own counter (`verify.Schema = 1`) on purpose.
 - **The ratchet covers three packages through declared builders**, and all three declare every builder they
-  own. The new verbs do not use `blocked(...)`/`refused(...)` builders: their refusals are plain lines.
-- **The gate's reasons are declared once**: one table judges the state, the words, the continuation and now
-  the verification, and a test reads the `Reason…` constants from `gate.go` with `go/ast`.
+  own.
+- **The gate's reasons are declared once**: one table judges the state, the words, the continuation and the
+  verification, and a test reads the `Reason…` constants from `gate.go` with `go/ast`.
 - **The text a session pays for is pinned by bytes** in `internal/archtest/bytes.baseline`, failing in both
-  directions. The skills themselves are pinned by their trigger, their sections and the body; their bytes
-  are not in that baseline, so `commits` and `drive` could grow for 0315 without moving it.
+  directions. The skills themselves are pinned by their trigger, their sections and the body.
 - **A correction remembers its predecessor**, and a third round needs the human's reason.
 - **A guard is proven by breaking it**: `check --run --mutate <file> --remove "<string>" --expect
-  "<text>"`. 0315's new demand was proven by taking the gather out of `check.go` and watching five tests
-  fail.
+  "<text>"`. 0315's demand was proven by taking the gather out of `check.go` and watching five tests fail.
 - The fence keeps its six active rules and no template: a non-goal that names no path stays in `brief.md`.
-- `odachi doctor` is 15 checks and this note is what closed its only warning.
+- `odachi doctor` is 17 checks: 16 were the install, 17 is the quorum.
 
 ## What shipped
 
-- **0315, minor (unreleased).** A risk asks for a verifier and the gate reads the record: `odachi verify
+- **0316, patch (unreleased).** Doctor's check 17 counts the models that judge the lenses and names the one
+  they share, with the fix and never a failing exit code. `internal/domain/review.Quorum` is the count;
+  spellings of one model are one judge.
+- **0315, minor (v0.48.0).** A risk asks for a verifier and the gate reads the record: `odachi verify
   --exec "<command>"` composes the question from the project's own words, seals the answer under the tree,
-  and `check` blocks a close whose record is missing, unreadable, unsigned or refuted. The demand keeps
-  0301's rule -a risk only asks when the change is one a lens would read-. The catalog row leaves `none`;
-  `commits` and `drive` name the verb.
+  and `check` blocks a close whose record is missing, unreadable, unsigned or refuted.
 - **0314, minor (v0.47.0).** The gate refuses a requirement that is not the brief's words. `odd/rules.toml`
   gains `gate:<reason>` as its fourth kind.
 - **0313, patch (v0.47.0).** `odd/review.toml` declares schema 10 and its two check rows name their remedy.
-- **0312, minor (v0.46.0).** The catalog can be counted: `odd/rules.toml` pairs each rule with what enforces
-  it, doctor's check 16 reports the debt, and `[[check]]` gains `remedy`.
+
+## 0316: what it settled, and what it leaves
+
+- **A number can be honest without deciding.** The fear was that a line saying "the quorum is one" would
+  turn into the tool asking for a second vendor. It is a warning, the exit code does not move, and the
+  decision stays where it belongs. What the line removes is the silence, not the choice.
+- **The count is spelling-blind.** `Quorum` trims and lowercases, because two rows typed differently are one
+  judge; counting them twice would invent a quorum the project does not have.
+- **An absent table is not a quorum of one.** A project that runs no review, or one with no lens table, gets
+  a line that says so instead of a warning about a number nobody wrote.
+- **The opening was committed with the first step, again.** `start` and `plan` wrote the brief, the fence,
+  the task document and its three steps, and the first commit swept them in because the opening was not
+  committed on its own. The next feature commits the opening first; it is one command and it keeps the
+  feature's own commits readable.
+- **The first four commits landed on `main` locally.** No branch was created at the opening, and the branch
+  policy would have refused the push anyway. They moved with `git switch -c feat/0316-the-quorum` and
+  `git branch -f main origin/main`: the trees the marks name do not move, so the record stayed valid.
+- **What it leaves.** Nothing to buy and nothing to enforce: the line reports, and the day a project puts a
+  second vendor in a lens row, check 17 says `2 of 4` and stops warning.
 
 ## 0315: what it settled, and what it leaves
 
