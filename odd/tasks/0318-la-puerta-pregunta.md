@@ -13,7 +13,7 @@ R1 · "la puerta pregunta por el registro del verificador contra el diff complet
 ## Steps
 - [x] T1 · la pregunta: la puerta pide el registro contra el diff de la feature, no contra el candidato del cierre   R1 · tree:4b42c14474b4979943e1f5c70cc5638d50601e33
 - [x] T2 · el test: un cierre de documentos con riesgo declarado lo nombra, y una feature pasiva no   R1 · tree:4b42c14474b4979943e1f5c70cc5638d50601e33
-- [ ] T3 · el changelog y la nota   R1
+- [x] T3 · el changelog y la nota   R1 · tree:358da851e001a3ed8d814f512b3096c0e6f6256b
 
 ## History
 L1 · "la puerta pregunta por el registro del verificador contra el diff completo de la feature y no contra el candidato que el cierre trae: un cierre que solo mueve documentos también lo nombra"
