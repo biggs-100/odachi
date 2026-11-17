@@ -12,6 +12,9 @@ R1 · "un revisor que sigue transmitiendo no se mata por el reloj total: la espe
 - go test ./... is green and odachi check --run go test ./... is green
 
 ## Steps
+- [ ] T1 · el reloj: RunInput mide primera salida e inactividad, Run y RunStream quedan igual   R1 · route:inline
+- [ ] T2 · la prueba conserva su plazo total y una prueba lo fija   R1 · route:inline
+- [ ] T3 · el changelog y la nota de cierre   R1 · route:inline
 
 ## History
 L1 · "un revisor que sigue transmitiendo no se mata por el reloj total: la espera mide el silencio, con un plazo para la primera salida y otro para cada pausa, mientras la prueba sigue usando solo su plazo total"
