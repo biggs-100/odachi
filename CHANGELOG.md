@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.48.6 - 2026-11-17
 
 - **The reviewer's clock measures silence, not duration.** One total deadline could not tell a slow model that was still streaming from one that had stopped: the first was killed after the call was paid for, and the second held the run for the whole bound. `RunInput` now stops a reviewer with no first byte after two minutes and one that goes quiet between bytes after two minutes; any byte on either stream re-arms the clock, and the caller still reads the same `timedOut` signal. The proof path keeps only its total deadline, so a silent `go test` is not cut in the middle. Patch (0321).
 
