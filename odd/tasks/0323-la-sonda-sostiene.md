@@ -12,7 +12,7 @@ R1 · "la sonda sostiene los dos brazos del contexto del revisor y la comparacio
 - go test ./... is green and odachi check --run go test ./... is green
 
 ## Steps
-- [ ] T1 · cada mano se congela en su snapshot y el revisor corre dentro; --blind corre el brazo sin snapshot   R1
+- [x] T1 · cada mano se congela en su snapshot y el revisor corre dentro; --blind corre el brazo sin snapshot   R1 · tree:b30122a82edaebad83c2d557aff97b0809071c43
 - [ ] T2 · el fixture gana una base y un defecto que solo se lee en un llamador de esa base   R1
 - [ ] T3 · los dos brazos se corren y el numero va a docs/reviewer-context-measurement.md   R1
 
