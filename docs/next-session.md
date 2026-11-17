@@ -7,7 +7,9 @@ Written after 0322 and `v0.48.5`.
 - **0322 is open on `feat/0322-lineas-normativas`, unreleased, patch, stacked on the unpushed 0321 branch.**
   Every normative line of the four lenses is pinned by its words in `internal/archtest/normative.baseline`, and a
   sweep names a rule lost or added in either direction. T1 and T2 are done; T3 closes with this note. Deliver 0321
-  first: once 0321 is merged, the 0322 pull request shows only its own commits against `main`.
+  first: once 0321 is merged, the 0322 pull request shows only its own commits against `main`. Its task document
+  `Base` currently names 0321's HEAD, which a squash merge will not leave in `main`: repoint it at the new merge
+  commit and refresh the proof before pushing 0322, the same correction 0317 needed.
 - **0321 is open on `feat/0321-reloj-de-silencio`, unreleased, patch.** `RunInput` measures first-output and idle
   silence for a reviewer; any byte re-arms the clock, and the proof path keeps only its total deadline.
 - **0320 shipped in `v0.48.5`**: PR #646 merged on `c6a6ccb`, release PR #647 on `55a8816`, tag pushed, 16 signed
