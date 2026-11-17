@@ -129,8 +129,9 @@ Written after 0320 and `v0.48.4`.
   beside it, and prints `attached and scoped`, `not attached`, `too wide` or `no answer`. A failed canary does
   not block a measurement: the probe reports, and the human reads the line. It costs one extra call per run.
 - **What it leaves.** No before-and-after number on this repository; the clean arm is still dirty; the two
-  vendors question is still open; and the subagent files in the home need `odachi setup` before a reviewer
-  actually gets the new permissions. A stored `--exec` prompt now contains a temporary path that is removed
+  vendors question is still open; and the subagent files in the home still carry `read: deny` -`odachi setup`
+  writes what the installed binary knows, so the new permissions reach the home only after a release carrying
+  this binary is installed and setup runs again-. A stored `--exec` prompt now contains a temporary path that is removed
   when the run ends -it is the question, not a replayable tree-.
 
 ## 0319: what it settled, and what it leaves

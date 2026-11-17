@@ -1,5 +1,5 @@
 # el-revisor-juzga
-Base: 051b47e5c996828b3dfe0bc3de45da1f8ceb59a5
+Base: a274e13d89458ad9d1b2aa861cff27f17d9f4516
 
 ## Requirements (verbatim, from the user)
 R1 · "el revisor juzga un arbol congelado al que puede leer con herramientas acotadas, sin bash ni worktree vivo, sin crecer el prompt, y la mejora se mide con defectos sembrados, un canario de acceso y el prompt grabado"
