@@ -233,6 +233,11 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	}
 
 	runs := Summarize(scores, cleanTallies)
+	canaryLine, problem := runCanary(opts, files, shell, work)
+	if problem != nil {
+		return *problem
+	}
+	lines = append(lines, canaryLine)
 	lines = append(lines, renderRuns(runs)...)
 	summary := runs.Summary()
 	return Result{Code: CodeOK, Lines: lines, Summary: summary}
@@ -353,7 +358,55 @@ func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree s
 	if err := files.Write(stored, []byte(stdout)); err != nil {
 		return "", "", blocked("could not store the " + lens + " answer: " + oneLine(err.Error()))
 	}
+	// The question is kept with the answer: a measurement whose prompt was not
+	// recorded cannot show what the reviewer actually saw, so "same or better"
+	// cannot be established across two runs. The name shares the answer's stem,
+	// so the first-free-number rule keeps the pairs together.
+	question := strings.TrimSuffix(stored, ".json") + ".prompt.md"
+	if err := files.Write(question, []byte(prompt)); err != nil {
+		return "", "", blocked("could not store the " + lens + " prompt: " + oneLine(err.Error()))
+	}
 	return stdout, stored, nil
+}
+
+// runCanary asks one extra question of the same reviewer: whether it can read a
+// marker inside the frozen candidate and cannot read a marker beside it. The
+// answer is filed with its prompt like any other probe answer, so a person can
+// check the two legs later. A canary that did not answer is reported as such,
+// never read as isolation.
+func runCanary(opts Options, files Files, shell Shell, work string) (string, *Result) {
+	const insideMark = "ODACHI-CANARY-INSIDE"
+	const outsideMark = "ODACHI-CANARY-OUTSIDE"
+	for path, mark := range map[string]string{
+		filepath.Join(work, "clean", "canary-inside.txt"): insideMark,
+		filepath.Join(work, "canary-outside.txt"):         outsideMark,
+	} {
+		if err := files.Write(path, []byte(mark+"\n")); err != nil {
+			return "", blocked("could not write the access canary: " + oneLine(err.Error()))
+		}
+	}
+
+	canary := Canary{Inside: insideMark, Outside: outsideMark}
+	prompt := canary.Prompt()
+	promptPath := filepath.Join(work, "canary-prompt.txt")
+	if err := files.Write(promptPath, []byte(prompt)); err != nil {
+		return "", blocked("could not write the access canary prompt: " + oneLine(err.Error()))
+	}
+	command := strings.ReplaceAll(opts.Exec, "{prompt}", shell.Quote(promptPath))
+	command = strings.ReplaceAll(command, "{model}", strings.TrimSpace(opts.Model))
+	stdout, stderr, code, timedOut, err := shell.Run(work, command, TimeoutSeconds)
+	if err != nil || timedOut || code != 0 {
+		return "canary: no answer", nil
+	}
+
+	stored := storePath(opts.Dir, "canary", "canary", "fixture", 1, files)
+	if err := files.Write(stored, []byte(stdout)); err != nil {
+		return "", blocked("could not store the access canary answer: " + oneLine(err.Error()))
+	}
+	if err := files.Write(strings.TrimSuffix(stored, ".json")+".prompt.md", []byte(prompt)); err != nil {
+		return "", blocked("could not store the access canary prompt: " + oneLine(err.Error()))
+	}
+	return canary.Read(stdout + stderr), nil
 }
 
 // storePath is where a probe stores one answer. It is not the review store: a
