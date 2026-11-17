@@ -184,7 +184,6 @@ func run(dir, command, input string, timeoutSeconds int, mirror io.Writer, watch
 			for {
 				select {
 				case <-activity:
-					first = false
 					if !timer.Stop() {
 						select {
 						case <-timer.C:

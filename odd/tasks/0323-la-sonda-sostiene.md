@@ -14,7 +14,7 @@ R1 · "la sonda sostiene los dos brazos del contexto del revisor y la comparacio
 ## Steps
 - [x] T1 · cada mano se congela en su snapshot y el revisor corre dentro; --blind corre el brazo sin snapshot   R1 · tree:b30122a82edaebad83c2d557aff97b0809071c43
 - [x] T2 · el fixture gana una base y un defecto que solo se lee en un llamador de esa base   R1 · tree:18f95e2f8255d6ea6dd7b2b81c9d9ebc96a6cfc4
-- [ ] T3 · los dos brazos se corren y el numero va a docs/reviewer-context-measurement.md   R1
+- [x] T3 · los dos brazos se corren y el numero va a docs/reviewer-context-measurement.md   R1 · tree:24d3046ebac1c32760f92cd04a2da1408fef92dd
 - [x] T4 · una respuesta que narra antes del JSON se lee, no se rechaza   R1 · tree:225c580795076553f1651798e205467504587dd0
 - [x] T5 · el mundo del revisor es su propio temp: desde su cwd, .. no alcanza la otra mano   R1 · tree:225c580795076553f1651798e205467504587dd0
 

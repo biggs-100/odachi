@@ -33,6 +33,33 @@ func TestTheCanaryTellsAccessFromIsolation(t *testing.T) {
 	}
 }
 
+// TestTheBlindCanaryCallsAnyQuoteTooWide: a blind reviewer was handed no
+// candidate, so every marker sits outside the directory it runs in. Quoting
+// either one means it went looking, and that is the branch that turns a leaked
+// arm into a number nobody should read: without this table, a swap of the two
+// markers would report a leak as "not attached" and the suite would stay green.
+func TestTheBlindCanaryCallsAnyQuoteTooWide(t *testing.T) {
+	c := lensprobe.Canary{Inside: "ODACHI-CANARY-INSIDE", Outside: "ODACHI-CANARY-OUTSIDE"}
+
+	cases := []struct {
+		name   string
+		answer string
+		want   string
+	}{
+		{"not attached", "inside: I cannot read that path; outside: I cannot read that path", "canary: not attached"},
+		{"read the inside marker", "inside: ODACHI-CANARY-INSIDE; outside: I cannot read that path", "canary: too wide"},
+		{"read the outside marker", "inside: I cannot read that path; outside: ODACHI-CANARY-OUTSIDE", "canary: too wide"},
+		{"no answer", "", "canary: no answer"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := c.ReadBlind(tc.answer); got != tc.want {
+				t.Errorf("ReadBlind(%q) = %q, want %q", tc.answer, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestTheCanaryPromptNamesBothLegs: the question has to ask for the inside line
 // and the outside one, or a yes cannot be told from a refusal.
 func TestTheCanaryPromptNamesBothLegs(t *testing.T) {

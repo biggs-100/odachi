@@ -1155,7 +1155,7 @@ func (r *runner) exec() Result {
 		return blocked("could not freeze the candidate for the reviewer: " + oneLine(err.Error()) +
 			"; check the permissions and run odachi review again")
 	}
-	defer r.git.Discard(run)
+	defer func() { _ = r.git.Discard(run) }()
 	if err := r.files.Write(filepath.Join(run, scope.FileName), scope.Render()); err != nil {
 		return blocked("could not write the rule that confines the reviewer: " + oneLine(err.Error()) +
 			"; the reviewer was not started: run odachi review again")

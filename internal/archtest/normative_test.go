@@ -78,7 +78,7 @@ func readNormativeBaseline(t *testing.T) map[string]int {
 	if err != nil {
 		t.Fatalf("read %s: %v", normativeBaseline, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	rows := map[string]int{}
 	scanner := bufio.NewScanner(file)

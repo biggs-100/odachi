@@ -72,9 +72,11 @@ blind     runs 3 · risk 1/1, readability 0/1, reliability 1/2, resilience 2/2
           · seeded noise 5 (3..6) · seeded notes 0 (0..1) · clean noise 2 (1..2) · clean notes 1
 ```
 
-The arm with the candidate was quieter on the arm with nothing planted -no claim
-at all- and the arm without it made two. Neither is an invented defect: one names
-the missing test for the 4xx branch in `cache.go`, the other a backoff that sleeps
+The arm with the candidate was quieter on the arm with nothing planted: no claim
+in the median, one in a single draw of three, and one suggestion in one. The arm
+without it made two claims in two draws of three and one in the third -a median of
+two- and a suggestion in every draw. Neither is an invented defect: one names the
+missing test for the 4xx branch in `cache.go`, the other a backoff that sleeps
 after the last attempt and ignores cancellation. They are improvements a person
 would consider, reported at WARNING, and the arm that could read the code did not
 raise them.
@@ -90,10 +92,11 @@ the candidate, `canary: not attached` for the one without.
    read; the arm without one named it in none. This is the case 0320 was argued
    for, and it is the one the field can see: a handler that reads a key nobody
    writes looks correct in a diff and is a dead endpoint in the tree.
-2. **It bought quiet on code with nothing planted.** No claim at all from the arm
-   that could read, two from the arm that could not. Both of the blind arm's were
-   improvements rather than inventions, which is the distinction `0282` added and
-   the reason the number is reported per draw.
+2. **It bought quiet on code with nothing planted.** No claim in the median from
+   the arm that could read -one in a single draw of three- against a median of two
+   from the arm that could not. Both of the blind arm's were improvements rather
+   than inventions, which is the distinction `0282` added and the reason the number
+   is reported per draw.
 3. **On the defects inside the diff it changed little.** Fifteen in-diff
    defect-draws: fifteen for the arm that could read, eleven for the one that could
    not. The gap is in the softer defects -the name that does three jobs, the id
