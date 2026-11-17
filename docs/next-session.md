@@ -129,7 +129,7 @@ Written after 0321 and `v0.48.5`.
   a guard test pins that boundary.
 - **The contract did not move.** Callers still read the same boolean `timedOut`; the reason behind it changed, and
   saying which reason is the separate typed-failure lesson below.
-- **What it leaves.** Three lessons from the same comparison are still unimplemented: the union sweep that
+- **What it leaves.** `verify --exec` shares `RunInput`, so a verifier that works silently for more than two minutes now stops early -the first 0315 field run spent half an hour on `go test ./...` and answered nothing, which is the case this catches, but a legitimate silent probe would be caught too; watch the first real run-. Three lessons from the same comparison are still unimplemented: the union sweep that
   catches a same-size rewrite which drops a pinned rule, the failure schema with `mutation_outcome` and
   `replayability`, and the lock that does not steal by time alone. The review of the closing tree has not been run.
 
