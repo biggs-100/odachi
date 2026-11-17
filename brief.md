@@ -1032,3 +1032,26 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: por que un reloj de silencio mide mejor la vida de un modelo que un reloj total.
+
+## 0322 · una-reescritura-del
+
+## What must exist
+- una reescritura del mismo tamaño no puede borrar una regla de los lentes sin que la puerta lo nombre: cada linea normativa queda medida y cualquier cambio pide una edicion deliberada de la baseline
+
+## Done when
+- la baseline nombra cada linea normativa de los cuatro lentes
+- borrar una regla y poner otra del mismo largo hace fallar la prueba nombrando la linea perdida
+- agregar una linea normativa sin escribirla en la baseline hace fallar la prueba nombrando la linea nueva
+- la baseline cambiada con su razon deja la suite verde
+- go test ./... is green and odachi check --run go test ./... is green
+
+## Not included (first version)
+- no se cambia el contenido de ningun lente: la feature solo mide lo que ya esta escrito
+- no se toca el pin de bytes de 0295: este barrido lo complementa, no lo reemplaza
+- no se mide SKILLS.md ni el bloque: el registro no es una regla de review
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: por que un conteo de bytes no puede decir que una regla sigue escrita.
