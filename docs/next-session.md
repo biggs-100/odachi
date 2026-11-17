@@ -1,12 +1,12 @@
 # Next session
 
-Written after 0322 and `v0.48.6`.
+Written after 0322 and `v0.48.7`.
 
 ## Where the project is
 
-- **0322 is open on `feat/0322-lineas-normativas`, unreleased, patch, rebased on `v0.48.6`.** Every normative line
-  of the four lenses is pinned by its words in `internal/archtest/normative.baseline`, and a sweep names a rule
-  lost or added in either direction. T1 through T3 are done; its three commits sit on `f659118`.
+- **0322 shipped in `v0.48.7`**: PR #650 merged on `4e6fe27`, release PR #651 on `1069e2a`, tag published with its
+  signed and attested assets. Every normative line of the four lenses is pinned by its words in
+  `internal/archtest/normative.baseline`, and a sweep names a rule lost or added in either direction.
 - **0321 shipped in `v0.48.6`**: PR #648 merged on `c4a3581`, release PR #649 on `f659118`, tag published with its
   signed and attested assets. The reviewer's `RunInput` measures first-output and idle silence; the proof path keeps
   only its total deadline.
@@ -24,10 +24,10 @@ Written after 0322 and `v0.48.6`.
   that judge the lenses; on this repository it answers `1 of 4`.
 - **0315 is merged and released**: PR #635, and `v0.48.0` carries it. A risk asks for a verifier, the record
   is sealed by the tree, and the gate names it.
-- **`v0.48.4` is published and installed**: tag on `e5837e4`, sixteen assets signed and attested, and this
-  machine runs `odachi 0.48.4`.
-- `main` is at the merge of the release PR #644, and the branches were deleted on merge, as every branch
-  should be.
+- **`v0.48.7` is published and installed**: sixteen assets signed and attested, and this machine runs
+  `odachi 0.48.7`. The home subagents keep the 0320 reader permissions.
+- `main` is at the merge of the release PR #651 (`1069e2a`), and the four branches of this cycle were deleted
+  locally and on the remote.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
@@ -39,11 +39,9 @@ Written after 0322 and `v0.48.6`.
 
 ## What waits for a decision
 
-- **The reviewer-context decision was taken (research debt 4).** The human delegated the choice; the page in
-  `docs/reviewer-context-research.md` records the three options and their costs. The choice: a frozen tree with
-  bounded reads, no bash and no live worktree; `max_prompt_kb` unchanged at 120; and the planted-defect fixture
-  with a clean arm, an access canary and the prompt saved. What is not done is the **measurement**: no
-  before-and-after was run on this repository, so the gain is still a claim, not a number.
+- **The reviewer-context decision shipped in 0320 (`v0.48.5`).** The page in `docs/reviewer-context-research.md`
+  records the three options and their costs. What is still not done is the **measurement**: no before-and-after
+  was run on this repository, so the gain is a claim, not a number.
 - **The clean arm is the next instrument job (debt 1).** The fixture's clean arm still holds findings a careful
   person would not approve; until it is clean, the precision the probe reports is not worth reading.
 - **A second vendor for the four lenses** remains a decision: doctor's check 17 says `1 of 4` here, and the line
@@ -51,8 +49,8 @@ Written after 0322 and `v0.48.6`.
 - **Two lessons from the gentle-shell comparison are still open**, in the order proposed: the typed failure with
   mutation and replay state, and the lock that only takes over a proven-dead owner. 0321 paid the silence clock and
   0322 paid the union sweep over pinned text.
-- **What is left of the research besides it**: debt 1 is the fixture's clean arm, debt 2 a deterministic
-  analyzer, debt 6 test adequacy.
+- **What is left of the research**: debt 1 is the fixture's clean arm and debt 6 test adequacy. Debt 2, a
+  deterministic analyzer, was paid by 0279 (`golangci-lint`) and 0283 (`govulncheck`).
 - **The ledger**: three rules still say `none` -the question that is answered and not implemented, the
   irreversible action that waits, and the voice that belongs to the profile-.
 - **The board look is unproven by a piece.** 0306 wrote the text an agent reads before producing one, and no
@@ -104,7 +102,7 @@ Written after 0322 and `v0.48.6`.
 
 ## What shipped
 
-- **0322, patch (unreleased).** Every normative lens line is pinned by its words, in both directions.
+- **0322, patch (v0.48.7).** Every normative lens line is pinned by its words, in both directions.
 - **0321, patch (v0.48.6).** The reviewer's clock measures silence; the proof keeps its total deadline.
 - **0320, patch (v0.48.5).** The reviewer reads a frozen candidate; the prompt grows by one path; the probe
   keeps its prompts and checks access with a canary.
@@ -148,9 +146,9 @@ Written after 0322 and `v0.48.6`.
   a guard test pins that boundary.
 - **The contract did not move.** Callers still read the same boolean `timedOut`; the reason behind it changed, and
   saying which reason is the separate typed-failure lesson below.
-- **What it leaves.** `verify --exec` shares `RunInput`, so a verifier that works silently for more than two minutes now stops early -the first 0315 field run spent half an hour on `go test ./...` and answered nothing, which is the case this catches, but a legitimate silent probe would be caught too; watch the first real run-. Three lessons from the same comparison are still unimplemented: the union sweep that
+- **What it leaves.** `verify --exec` shares `RunInput`, so a verifier that works silently for more than two minutes now stops early -the first 0315 field run spent half an hour on `go test ./...` and answered nothing, which is the case this catches, but a legitimate silent probe would be caught too; watch the first real run-. Of the same comparison's lessons, 0322 paid the union sweep that
   catches a same-size rewrite which drops a pinned rule, the failure schema with `mutation_outcome` and
-  `replayability`, and the lock that does not steal by time alone. The review of the closing tree has not been run.
+  `replayability`, and the lock that does not steal by time alone, remain.
 
 ## 0320: what it settled, and what it leaves
 
@@ -268,6 +266,12 @@ Written after 0322 and `v0.48.6`.
 
 ## The limits to remember
 
+- **A stacked branch rebased onto a squash-merged main can put its changelog entry inside a released
+  section.** 0322's entry landed under `v0.48.6` after the rebase, and the top of `CHANGELOG.md` had to be
+  read and corrected before the release. After any stacked rebase, check the first version heading.
+- **A Windows CI test that depends on PowerShell startup needs a budget for the runner.** 0321's streaming
+  test passed locally and failed on `windows-latest` in 1.00 s because a 900 ms idle clock met a slower
+  process start. Ten 300 ms lines with 3 s and 2 s bounds are the fix; the product was never wrong.
 - **The note's totals are written after the last step is marked, not before.** `plan --done` rewrites the
   task document, so the number the note quotes is the one the tool counts once every step is closed.
 - **A mark records the tree the worktree had when the mark was written, which is the closing one and not the
