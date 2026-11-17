@@ -18,3 +18,8 @@ R1 · "un veredicto que pide cambios frena el cierre aunque sus filas no bloquee
 
 ## History
 L1 · "un veredicto que pide cambios frena el cierre aunque sus filas no bloqueen, y la dispensa escrita por fila es la salida"
+L2 · PREGUNTA P1 · "Cómo deja el revisor de estar ciego (deuda 4 de review-research, Part 7): (1) candidate congelado en el prompt con read: deny, o revisor que lee el árbol; (2) con max_prompt_kb ya en 120, crece el prompt o se mantiene/baja; (3) qué medición justifica creerle más: fixture de defectos sembrados (con el brazo limpio arreglado) o sonda de antes/después sobre un candidato real"
+L3 · PREGUNTA P2 · "La cerca (odd/fence.toml regla de 0298) protege docs/review-research.md: no se reescribe ninguna medicion ya publicada, y check la lee del base. ¿Donde escribo la pagina de decision P1: (a) un feature nuevo que levante la regla para ese archivo, (b) un archivo nuevo docs/reviewer-context-research.md sin tocar la cerca, o (c) solo el scratch del clon, que no viaja y se borra con clean"
+L4 · VOS P1 · "la que tu me recomiendes"
+L5 · VOS P2 · "la que tu me recomiendes"
+L6 · OFICIO · "Elijo el arbol congelado con lectura acotada, sin bash ni worktree vivo, prompt sin crecer y medicion con defectos sembrados, canario y prompt grabado; y escribo la pagina en docs/reviewer-context-research.md" (porque El humano delego la eleccion. El arbol congelado con lecturas acotadas es la unica forma con evidencia en dos fuentes independientes que quita los falsos positivos sin romper la garantia del tree; no subir max_prompt_kb evita cambiar truncamiento por dilucion; y la medicion con brazo limpio, canario y prompt grabado es la que puede decir si algo mejoro. El archivo nuevo no toca la cerca que protege docs/review-research.md)
