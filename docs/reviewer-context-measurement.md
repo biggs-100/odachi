@@ -164,6 +164,14 @@ and the store keeps their answers as the evidence for why.
 - **The confinement is opencode's.** A project that runs its review through
   another client, or through a command that ignores the configuration, keeps the
   prompt's sentence and nothing more. `claude` is not confined in this version.
+- **The candidate can carry the rule that beats odachi's.** The client reads a
+  configuration from the directory it runs in and every ancestor, and the nearest
+  one wins. The reviewer runs in the candidate, so an `opencode.json` committed at
+  the candidate's root is discovered closer than the deny odachi writes beside it.
+  No test and no run in this page exercises that case; a project that ships one
+  voids the boundary, silently. Either odachi refuses such a candidate or it
+  merges the two rules; until then, the guarantee holds for candidates with no
+  client configuration of their own.
 - **It measures review, not delivery.** Nothing here says a defect a lens reports
   is a defect a reviewer would have caught in a pull request, and nothing says the
   findings are worth the calls they cost.
