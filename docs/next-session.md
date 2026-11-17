@@ -1,9 +1,14 @@
 # Next session
 
-Written after 0319 and `v0.48.3`.
+Written after 0320 and `v0.48.4`.
 
 ## Where the project is
 
+- **0320 is open on `feat/0320-el-revisor-juzga`, unreleased, patch.** The reviewer reads a frozen snapshot of the
+  exact tree with bounded read tools; bash, edits and the web stay denied. The prompt names a directory, not the
+  tree, and `max_prompt_kb` stays at 120. The probe saves its prompts and runs an access canary with both legs.
+  The decision and its evidence are in `docs/reviewer-context-research.md`. Its steps are T1 through T3 done;
+  T4 closes with this note.
 - **0319 is merged and released**: PR #643, and `v0.48.4` carries it (tag on `e5837e4`). A verdict that says
   `changes_requested` and carries no row now stops the close, and the door is written: `odachi review waive
   --because "<why>"` leaves the decision in the task document.
@@ -22,7 +27,7 @@ Written after 0319 and `v0.48.3`.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 317 features · 794 steps done of 794 · 0 open questions
+  total: 318 features · 798 steps done of 798 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -30,12 +35,15 @@ Written after 0319 and `v0.48.3`.
 
 ## What waits for a decision
 
-- **The decision the session closed on: how the reviewer stops being blind (research debt 4).** Three things
-  have to be chosen before code: whether the tree is frozen into the prompt or the reviewer reads the live
-  tree -the current `read: deny` is what keeps the candidate frozen, and the verdict names a tree that would
-  stop being the one it read-; how much the prompt may grow, when `max_prompt_kb` is already 120; and what
-  measurement justifies believing it more, which is the planted-defect fixture. The next session can write
-  those three options with their costs on one page, and the human chooses there.
+- **The reviewer-context decision was taken (research debt 4).** The human delegated the choice; the page in
+  `docs/reviewer-context-research.md` records the three options and their costs. The choice: a frozen tree with
+  bounded reads, no bash and no live worktree; `max_prompt_kb` unchanged at 120; and the planted-defect fixture
+  with a clean arm, an access canary and the prompt saved. What is not done is the **measurement**: no
+  before-and-after was run on this repository, so the gain is still a claim, not a number.
+- **The clean arm is the next instrument job (debt 1).** The fixture's clean arm still holds findings a careful
+  person would not approve; until it is clean, the precision the probe reports is not worth reading.
+- **A second vendor for the four lenses** remains a decision: doctor's check 17 says `1 of 4` here, and the line
+  warns without moving the exit code.
 - **What is left of the research besides it**: debt 1 is the fixture's clean arm, debt 2 a deterministic
   analyzer, debt 6 test adequacy.
 - **The ledger**: three rules still say `none` -the question that is answered and not implemented, the
@@ -89,6 +97,8 @@ Written after 0319 and `v0.48.3`.
 
 ## What shipped
 
+- **0320, patch (unreleased).** The reviewer reads a frozen candidate; the prompt grows by one path; the probe
+  keeps its prompts and checks access with a canary.
 - **0319, patch (unreleased).** A verdict that asks for changes with no row stops the close, and the written
   waiver is the door.
 - **0318, patch (v0.48.3).** The demand asks the feature's diff: a close of documents is asked for the record
@@ -103,6 +113,26 @@ Written after 0319 and `v0.48.3`.
 - **0314, minor (v0.47.0).** The gate refuses a requirement that is not the brief's words. `odd/rules.toml`
   gains `gate:<reason>` as its fourth kind.
 - **0313, patch (v0.47.0).** `odd/review.toml` declares schema 10 and its two check rows name their remedy.
+
+## 0320: what it settled, and what it leaves
+
+- **The question was a false dichotomy.** "Frozen diff in the prompt or reviewer reading the live tree" left out
+  the form the evidence supports: freeze the whole tree, then read that tree with bounded tools. `gitx.Archive`
+  already exported a tree into a throwaway directory for the undo row, so no new snapshot mechanism was built.
+- **The verdict still names the bytes it judged.** The snapshot is made from `cand.tree`, not from the worktree,
+  and the run refuses before starting a reviewer if the export fails. A worktree that moves while the model
+  answers cannot make it approve a tree different from the one in the file name.
+- **The prompt carries a path, not the tree.** One section names the directory; the six rules no longer ban all
+  reads, only commands and edits. The growth is bounded by a test and the 120 KB limit is pinned in `archtest`,
+  so a future change cannot buy a bigger prompt to hide a bigger candidate.
+- **The canary is reported, not enforced.** `odachi review probe` asks for a marker inside the candidate and one
+  beside it, and prints `attached and scoped`, `not attached`, `too wide` or `no answer`. A failed canary does
+  not block a measurement: the probe reports, and the human reads the line. It costs one extra call per run.
+- **What it leaves.** No before-and-after number on this repository; the clean arm is still dirty; the two
+  vendors question is still open; and the subagent files in the home still carry `read: deny` -`odachi setup`
+  writes what the installed binary knows, so the new permissions reach the home only after a release carrying
+  this binary is installed and setup runs again-. A stored `--exec` prompt now contains a temporary path that is removed
+  when the run ends -it is the question, not a replayable tree-.
 
 ## 0319: what it settled, and what it leaves
 
@@ -263,6 +293,11 @@ odachi review --runs 2 --base <feature base> --exec 'C:\Users\USER\AppData\Local
 ```sh
 # a correction measures the delta, carries the predecessor's rows, takes no --base
 odachi review --since <tree prefix> --runs 2 --because "<why>" --exec '<the same command>'
+```
+
+```sh
+# the probe stores each prompt beside its answer and spends one extra call on the access canary
+odachi review probe --runs 2 --exec 'C:\Users\USER\AppData\Local\Temp\odachi-rev.bat {model} {prompt} C:\Users\USER\AppData\Local\Temp\review.json'
 ```
 
 ```sh

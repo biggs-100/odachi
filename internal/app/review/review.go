@@ -190,6 +190,11 @@ type Git interface {
 	// from HEAD and not from base. A change with no document names itself there,
 	// and that line is the vision the prompt carries.
 	Messages(root, base string) ([]string, error)
+	// Archive exports one tree into a directory the reviewer may read, and
+	// Discard removes it. The candidate is frozen there so a reviewer can check
+	// callers and tests without reading the worktree that may move under it.
+	Archive(root, tree string) (string, error)
+	Discard(dir string) error
 }
 
 // Shell is the command port for --exec. A non-zero exit is the command's result,
@@ -344,6 +349,9 @@ type runner struct {
 	// travels into the prompt, so a review never claims to have measured what it
 	// skipped.
 	off string
+	// frozen is the snapshot this run materialized for the reviewer. The bare
+	// form prepares none, so its prompt stays the question it always was.
+	frozen string
 }
 
 // worktree is one read of the candidate: its content tree, the paths that
@@ -503,6 +511,7 @@ func (r *runner) promptInput(cand candidate, selected []string) (domain.PromptIn
 		Correction:  strings.TrimSpace(r.opts.Since),
 		Checks:      checks,
 		ChecksOff:   off,
+		FrozenTree:  r.frozen,
 	}, nil
 }
 
@@ -1082,6 +1091,18 @@ func (r *runner) exec() Result {
 	if problem != nil {
 		return *problem
 	}
+
+	// The reviewer reads a frozen copy of these exact bytes, not the worktree: a
+	// worktree that moves while the model answers would make the verdict name one
+	// tree and the reviewer have read another. The caller owns the directory and
+	// discards it when the run ends, whatever the reviewer answered.
+	dir, err := r.git.Archive(r.opts.Dir, cand.tree)
+	if err != nil {
+		return blocked("could not freeze the candidate for the reviewer: " + oneLine(err.Error()) +
+			"; check the permissions and run odachi review again")
+	}
+	r.frozen = dir
+	defer r.git.Discard(dir)
 
 	// The candidate the prompt names is the one every answer belongs to: the groups
 	// are filed under it whatever the reviewer leaves behind. rel is computed once,

@@ -31,3 +31,21 @@ func TestThisRepositoryNamesAModelForEveryLens(t *testing.T) {
 		}
 	}
 }
+
+// TestThisRepositoryDoesNotRaiseThePromptLimit: a frozen candidate names one
+// directory in the prompt; it does not inline the tree. Raising the limit to pay
+// for a larger prompt would hide that mistake, so the number takes a deliberate
+// edit, the way the pinned bytes in bytes.baseline do.
+func TestThisRepositoryDoesNotRaiseThePromptLimit(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "odd", "review.toml"))
+	if err != nil {
+		t.Fatalf("read odd/review.toml: %v", err)
+	}
+	config, err := reviewtoml.Decode(data)
+	if err != nil {
+		t.Fatalf("odd/review.toml does not decode: %v", err)
+	}
+	if config.MaxPromptKB != 120 {
+		t.Errorf("odd/review.toml says %d KB, want 120: the reviewer reads the frozen tree instead of carrying it in the prompt", config.MaxPromptKB)
+	}
+}

@@ -298,25 +298,33 @@ func TestSubagentFilesAreSubagentsForEveryClient(t *testing.T) {
 	}
 }
 
-// TestTheReviewerCannotAct: the reviewer answers from the prompt; it must not be
-// able to read the live tree (the candidate is frozen), run commands or edit. In
-// OpenCode every tool it could use is denied; in Claude Code the allowlist is
-// empty.
-func TestTheReviewerCannotAct(t *testing.T) {
+// TestTheReviewerReadsOnlyTheFrozenTree: the reviewer may read files, but only
+// the snapshot the prompt names - never the live worktree, git history or a
+// shell. OpenCode drops the four read denies and keeps the rest; Claude gets a
+// small allowlist without Edit, Bash or WebFetch.
+func TestTheReviewerReadsOnlyTheFrozenTree(t *testing.T) {
 	for _, file := range persona.SubagentFiles() {
 		switch file.Path {
 		case ".opencode/agents/odachi-reviewer.md":
-			for _, want := range []string{"read: deny", "edit: deny", "bash: deny", "task: deny", "webfetch: deny"} {
+			for _, want := range []string{"edit: deny", "bash: deny", "task: deny", "webfetch: deny"} {
 				if !strings.Contains(file.Content, want) {
 					t.Errorf("%s does not deny %q:\n%s", file.Path, want, file.Content)
 				}
 			}
-			if !strings.Contains(file.Content, "Everything you need is in the prompt") {
-				t.Errorf("%s lost the reviewer's contract:\n%s", file.Path, file.Content)
+			for _, gone := range []string{"read: deny", "glob: deny", "grep: deny", "list: deny"} {
+				if strings.Contains(file.Content, gone) {
+					t.Errorf("%s still says %q:\n%s", file.Path, gone, file.Content)
+				}
+			}
+			if !strings.Contains(file.Content, "Read only the frozen candidate") {
+				t.Errorf("%s lost the frozen-tree contract:\n%s", file.Path, file.Content)
 			}
 		case ".claude/agents/odachi-reviewer.md":
-			if !strings.Contains(file.Content, "tools: []") {
-				t.Errorf("%s does not declare an empty tool list:\n%s", file.Path, file.Content)
+			if !strings.Contains(file.Content, "tools: Read, Grep, Glob") {
+				t.Errorf("%s does not declare the read-only allowlist:\n%s", file.Path, file.Content)
+			}
+			if strings.Contains(file.Content, "tools: []") {
+				t.Errorf("%s still declares an empty tool list:\n%s", file.Path, file.Content)
 			}
 		}
 	}

@@ -131,6 +131,33 @@ func TestProbeWithoutExecPrintsTheShippingPrompts(t *testing.T) {
 	}
 }
 
+// TestThePromptIsStoredBesideEachAnswer: a measurement whose question was not
+// recorded cannot show what the reviewer actually saw. Keeping the answer alone
+// is the debt gentle-shell recorded in review-one-call-bench: "same or better"
+// cannot be established without the text that was sent.
+func TestThePromptIsStoredBesideEachAnswer(t *testing.T) {
+	files := newFiles()
+	shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
+	result := lensprobe.Run(options("reviewer {prompt}"), files, fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
+	if result.Code != lensprobe.CodeOK {
+		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
+	}
+
+	var stored int
+	for path, data := range files.files {
+		if !strings.HasSuffix(path, ".prompt.md") || strings.Contains(path, "canary") {
+			continue
+		}
+		stored++
+		if !strings.Contains(string(data), "## The brief") || !strings.Contains(string(data), "## The six rules") {
+			t.Errorf("%s is not the prompt that was asked:\n%s", path, data)
+		}
+	}
+	if stored == 0 {
+		t.Error("no prompt was stored beside an answer")
+	}
+}
+
 // TestProbeScoresEveryLensAndTheCleanArm: with a reviewer, the seeded arm is
 // scored against the key and the clean arm is measured too - a finding on code
 // with no defect is the noise the lenses raise, and it is the other half of the
@@ -297,8 +324,9 @@ func TestProbeRepeatsTheMeasurement(t *testing.T) {
 			reviewers++
 		}
 	}
-	if want := 3 * 8; reviewers != want {
-		t.Errorf("reviewers run = %d, want %d (three draws of eight)", reviewers, want)
+	// Eight reviewer answers per draw, plus one question for the access canary.
+	if want := 3*8 + 1; reviewers != want {
+		t.Errorf("reviewers run = %d, want %d (three draws of eight and one canary)", reviewers, want)
 	}
 	if !strings.HasPrefix(result.Summary, "runs 3 · ") {
 		t.Errorf("Summary = %q, want it to name three draws", result.Summary)

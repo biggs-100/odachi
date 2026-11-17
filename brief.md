@@ -986,3 +986,26 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que un artefacto que dice una cosa no puede convivir con una puerta que dice otra.
+
+## 0320 · el-revisor-juzga
+
+## What must exist
+- el revisor juzga un arbol congelado al que puede leer con herramientas acotadas, sin bash ni worktree vivo, sin crecer el prompt, y la mejora se mide con defectos sembrados, un canario de acceso y el prompt grabado
+
+## Done when
+- odachi-reviewer puede leer, glob y grep sobre el snapshot congelado y el veredicto nombra ese arbol
+- bash, edit y las herramientas de web siguen denegadas al revisor
+- max_prompt_kb sigue en 120 y el prompt de un candidato full no crece
+- la sonda registra defectos sembrados, brazo limpio, canario de acceso y el prompt materializado
+
+## Not included (first version)
+- no se da bash al revisor ni se le deja leer el worktree vivo o la historia
+- no se sube max_prompt_kb
+- no cambia el esquema del veredicto ni el contrato de review
+- no se reescribe docs/review-research.md ni docs/skill-evaluation.md
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: como se mide que un revisor con contexto es mejor.
