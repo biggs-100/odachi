@@ -272,13 +272,15 @@ type fakeGit struct {
 	// corrections records the trees a correction measured its delta against.
 	corrections []string
 
-	// archive is the directory handed to the reviewer, and archived is the tree
-	// it froze. discarded records the cleanup, so a test can say the snapshot
-	// did not outlive the run.
-	archive    string
-	archiveErr error
-	archived   []string
-	discarded  []string
+	// run is the directory this run owns for the reviewer: the candidate inside it
+	// and the rule that confines the model beside it. archived is the tree it
+	// froze and discarded records the cleanup, so a test can say the snapshot did
+	// not outlive the run.
+	run          string
+	candidateDir string
+	archiveErr   error
+	archived     []string
+	discarded    []string
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) {
@@ -339,14 +341,15 @@ func (g *fakeGit) Messages(root, base string) ([]string, error) {
 	return g.messages, nil
 }
 
-// Archive freezes the tree the verdict will name. A fake failure lets a test
-// say what happens when the reviewer cannot be given a candidate at all.
-func (g *fakeGit) Archive(root, tree string) (string, error) {
+// ArchiveRun freezes the tree the verdict will name into a directory this run
+// owns, with the candidate inside it. A fake failure lets a test say what happens
+// when the reviewer cannot be given a candidate at all.
+func (g *fakeGit) ArchiveRun(root, tree string) (string, string, error) {
 	g.archived = append(g.archived, tree)
 	if g.archiveErr != nil {
-		return "", g.archiveErr
+		return "", "", g.archiveErr
 	}
-	return g.archive, nil
+	return g.run, g.candidateDir, nil
 }
 
 func (g *fakeGit) Discard(dir string) error {
@@ -465,9 +468,16 @@ type project struct {
 
 // newProject seeds a project with a brief and one changed file.
 func newProject() *project {
+	run := filepath.Join(filepath.FromSlash("C:/temp"), "odachi-review-test")
 	return &project{
 		files: newFakeFiles(map[string]string{"brief.md": brief}),
-		git:   &fakeGit{tree: currentTree, changed: []string{"a.go"}, diff: diff},
+		git: &fakeGit{
+			tree:         currentTree,
+			changed:      []string{"a.go"},
+			diff:         diff,
+			run:          run,
+			candidateDir: filepath.Join(run, "candidate"),
+		},
 		shell: &fakeShell{},
 		host:  &fakeHost{},
 	}
@@ -1077,7 +1087,13 @@ func (p *project) runWith(opts review.Options) review.Result {
 // under and creating that file changes the tree.
 func (p *project) verdictWrites() []string {
 	var claims []string
+	runPrefix := filepath.ToSlash(p.git.run) + "/"
 	for _, written := range p.files.written() {
+		// The run's own directory is not the project: the rule that confines the
+		// reviewer lives there and the run removes it with itself.
+		if strings.HasPrefix(filepath.ToSlash(written), runPrefix) {
+			continue
+		}
 		if strings.HasSuffix(filepath.ToSlash(written), ".gitignore") {
 			continue
 		}
@@ -2954,11 +2970,32 @@ func TestExecGivesTheReviewerThePrompt(t *testing.T) {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
 
-	if p.shell.input != printed.Prompt {
+	// The frozen candidate is the one paragraph a run adds: the printed form has no
+	// directory to name, because the directory is made for this run. Everything
+	// else is the same question, which is what this rule is about.
+	got, want := withoutFrozenSection(p.shell.input), withoutFrozenSection(printed.Prompt)
+	if got != want {
 		t.Errorf("the reviewer was given a different prompt than `odachi review` prints")
-		t.Logf("what the reviewer got: %s", p.shell.input)
-		t.Logf("what the verb prints: %s", printed.Prompt)
+		t.Logf("what the reviewer got: %s", got)
+		t.Logf("what the verb prints: %s", want)
 	}
+	if !strings.Contains(p.shell.input, "## The frozen candidate") {
+		t.Errorf("the reviewer's prompt names no frozen candidate to read")
+	}
+}
+
+// withoutFrozenSection is the prompt with the frozen candidate's paragraph cut
+// out: the section and everything up to the next one.
+func withoutFrozenSection(prompt string) string {
+	start := strings.Index(prompt, "## The frozen candidate")
+	if start < 0 {
+		return prompt
+	}
+	rest := prompt[start+len("## The frozen candidate"):]
+	if end := strings.Index(rest, "\n## "); end >= 0 {
+		return prompt[:start] + rest[end+1:]
+	}
+	return prompt[:start]
 }
 
 // TestExecFailureWritesNothing: a reviewer that fails is not a review. Exit 1, no
@@ -3063,12 +3100,15 @@ func (g *flakyGit) BlobHash(root, path string) (string, error) { return g.inner.
 
 func (g *flakyGit) Messages(root, base string) ([]string, error) { return g.inner.Messages(root, base) }
 
-func (g *flakyGit) Archive(root, tree string) (string, error) { return g.inner.Archive(root, tree) }
-func (g *flakyGit) Discard(dir string) error                  { return g.inner.Discard(dir) }
+func (g *flakyGit) ArchiveRun(root, tree string) (string, string, error) {
+	return g.inner.ArchiveRun(root, tree)
+}
+func (g *flakyGit) Discard(dir string) error { return g.inner.Discard(dir) }
 
-// TestNothingOutsideTheStoreIsWritten: the whole surface of this verb is
-// the store's reviews/. A review that touched the brief or the code would be a
-// different tool.
+// TestNothingOutsideTheStoreIsWritten: the whole surface of this verb is the
+// store's reviews/ and the directory it owns for the reviewer, which it removes
+// with itself. A review that touched the brief or the code would be a different
+// tool.
 func TestNothingOutsideTheStoreIsWritten(t *testing.T) {
 	storePrefix := filepath.ToSlash(store) + "/"
 
@@ -3081,13 +3121,16 @@ func TestNothingOutsideTheStoreIsWritten(t *testing.T) {
 		p := newProject()
 		p.shell.output = `{"findings":[],"inspection":{"status":"completed","paths":["a.go"]}}`
 		p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
+		runPrefix := filepath.ToSlash(p.git.run) + "/"
 
 		p.run(opts)
 
 		for _, path := range p.files.writes {
-			if !strings.HasPrefix(filepath.ToSlash(path), storePrefix) {
-				t.Errorf("opts %+v wrote outside the store: %s", opts, path)
+			flat := filepath.ToSlash(path)
+			if strings.HasPrefix(flat, storePrefix) || strings.HasPrefix(flat, runPrefix) {
+				continue
 			}
+			t.Errorf("opts %+v wrote outside the store: %s", opts, path)
 		}
 	}
 }

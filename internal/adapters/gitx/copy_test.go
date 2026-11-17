@@ -78,6 +78,39 @@ func TestArchiveAndReverseKeepTheTestsAndLoseTheChange(t *testing.T) {
 	}
 }
 
+// TestArchiveRunLeavesRoomBesideTheCandidate: the reviewer runs in the candidate,
+// and the rule that confines it is written beside it, where the client discovers
+// it. So the run is the directory holding both, and what the reviewer reads is one
+// level down: an export into the run's root would put the config inside the tree.
+func TestArchiveRunLeavesRoomBesideTheCandidate(t *testing.T) {
+	t.Parallel()
+	root, base := newRepo(t)
+
+	write(t, filepath.Join(root, "pay.go"), "package demo\n\nfunc Charge() int { return 2 }\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-m", "charge")
+
+	tree, _, _, err := gitx.Candidate(root, base)
+	if err != nil {
+		t.Fatalf("Candidate: %v", err)
+	}
+	run, candidate, err := gitx.ArchiveRun(root, tree)
+	if err != nil {
+		t.Fatalf("ArchiveRun: %v", err)
+	}
+	defer func() { _ = gitx.Discard(run) }()
+
+	if filepath.Dir(candidate) != run {
+		t.Errorf("candidate %q is not inside the run %q", candidate, run)
+	}
+	if _, err := os.Stat(filepath.Join(candidate, "pay.go")); err != nil {
+		t.Fatalf("the candidate does not hold the tree: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(run, "pay.go")); err == nil {
+		t.Error("the tree was exported into the run's root, leaving no room for the rule beside it")
+	}
+}
+
 // TestDiscardRemovesTheCopy: the row leaves nothing behind, and a directory that
 // is already gone is not an error.
 func TestDiscardRemovesTheCopy(t *testing.T) {

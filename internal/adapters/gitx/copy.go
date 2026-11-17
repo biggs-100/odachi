@@ -32,6 +32,23 @@ func Archive(root, tree string) (string, error) {
 	return dir, nil
 }
 
+// ArchiveRun makes the directory a reviewer runs in: a root this run owns, with
+// the candidate exported inside it. The root is the parent of the bytes a model
+// reads, so it is where the rule that confines the model lives, and removing the
+// root removes both.
+func ArchiveRun(root, tree string) (run, candidate string, err error) {
+	run, err = os.MkdirTemp("", "odachi-review-")
+	if err != nil {
+		return "", "", err
+	}
+	candidate = filepath.Join(run, "candidate")
+	if err := ArchiveInto(root, tree, candidate); err != nil {
+		_ = os.RemoveAll(run)
+		return "", "", err
+	}
+	return run, candidate, nil
+}
+
 // ArchiveInto exports a tree into dir, which the caller owns and picks: the
 // reviewer of a probe reads a copy that sits beside the arms it is measured
 // against, and the canary needs a directory whose neighbours are known.
