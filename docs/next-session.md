@@ -1,14 +1,15 @@
 # Next session
 
-Written after 0320 and `v0.48.4`.
+Written after 0321 and `v0.48.5`.
 
 ## Where the project is
 
-- **0320 is open on `feat/0320-el-revisor-juzga`, unreleased, patch.** The reviewer reads a frozen snapshot of the
-  exact tree with bounded read tools; bash, edits and the web stay denied. The prompt names a directory, not the
-  tree, and `max_prompt_kb` stays at 120. The probe saves its prompts and runs an access canary with both legs.
-  The decision and its evidence are in `docs/reviewer-context-research.md`. Its steps are T1 through T3 done;
-  T4 closes with this note.
+- **0321 is open on `feat/0321-reloj-de-silencio`, unreleased, patch.** `RunInput` measures first-output and idle
+  silence for a reviewer; any byte re-arms the clock, and the proof path keeps only its total deadline. T1 and T2
+  are done; T3 closes with this note.
+- **0320 shipped in `v0.48.5`**: PR #646 merged on `c6a6ccb`, release PR #647 on `55a8816`, tag pushed, 16 signed
+  and attested assets. The reviewer reads a frozen snapshot with bounded tools; the decision and its evidence are
+  in `docs/reviewer-context-research.md`.
 - **0319 is merged and released**: PR #643, and `v0.48.4` carries it (tag on `e5837e4`). A verdict that says
   `changes_requested` and carries no row now stops the close, and the door is written: `odachi review waive
   --because "<why>"` leaves the decision in the task document.
@@ -27,7 +28,7 @@ Written after 0320 and `v0.48.4`.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 318 features · 798 steps done of 798 · 0 open questions
+  total: 319 features · 801 steps done of 801 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -44,6 +45,9 @@ Written after 0320 and `v0.48.4`.
   person would not approve; until it is clean, the precision the probe reports is not worth reading.
 - **A second vendor for the four lenses** remains a decision: doctor's check 17 says `1 of 4` here, and the line
   warns without moving the exit code.
+- **Three lessons from the gentle-shell comparison are still open**, in the order proposed: the union sweep over
+  pinned text, the typed failure with mutation and replay state, and the lock that only takes over a proven-dead
+  owner. 0321 paid the first one, the silence clock.
 - **What is left of the research besides it**: debt 1 is the fixture's clean arm, debt 2 a deterministic
   analyzer, debt 6 test adequacy.
 - **The ledger**: three rules still say `none` -the question that is answered and not implemented, the
@@ -97,7 +101,8 @@ Written after 0320 and `v0.48.4`.
 
 ## What shipped
 
-- **0320, patch (unreleased).** The reviewer reads a frozen candidate; the prompt grows by one path; the probe
+- **0321, patch (unreleased).** The reviewer's clock measures silence; the proof keeps its total deadline.
+- **0320, patch (v0.48.5).** The reviewer reads a frozen candidate; the prompt grows by one path; the probe
   keeps its prompts and checks access with a canary.
 - **0319, patch (unreleased).** A verdict that asks for changes with no row stops the close, and the written
   waiver is the door.
@@ -113,6 +118,20 @@ Written after 0320 and `v0.48.4`.
 - **0314, minor (v0.47.0).** The gate refuses a requirement that is not the brief's words. `odd/rules.toml`
   gains `gate:<reason>` as its fourth kind.
 - **0313, patch (v0.47.0).** `odd/review.toml` declares schema 10 and its two check rows name their remedy.
+
+## 0321: what it settled, and what it leaves
+
+- **A total deadline could not answer the question.** It killed a model that was slow but still streaming, and
+  it waited the whole bound for one that had stopped. gentle-shell's split -first-output and idle, re-armed by
+  any delta- is the mechanism behind the fix.
+- **The reloj lives only where a model answers.** `RunInput` owns it because `review --exec` and `verify --exec`
+  are model calls. `Run` and `RunStream` are the proof path, and a silent `go test` must not be cut at two minutes;
+  a guard test pins that boundary.
+- **The contract did not move.** Callers still read the same boolean `timedOut`; the reason behind it changed, and
+  saying which reason is the separate typed-failure lesson below.
+- **What it leaves.** `verify --exec` shares `RunInput`, so a verifier that works silently for more than two minutes now stops early -the first 0315 field run spent half an hour on `go test ./...` and answered nothing, which is the case this catches, but a legitimate silent probe would be caught too; watch the first real run-. Three lessons from the same comparison are still unimplemented: the union sweep that
+  catches a same-size rewrite which drops a pinned rule, the failure schema with `mutation_outcome` and
+  `replayability`, and the lock that does not steal by time alone. The review of the closing tree has not been run.
 
 ## 0320: what it settled, and what it leaves
 

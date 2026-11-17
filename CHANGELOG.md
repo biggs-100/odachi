@@ -7,6 +7,10 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The reviewer's clock measures silence, not duration.** One total deadline could not tell a slow model that was still streaming from one that had stopped: the first was killed after the call was paid for, and the second held the run for the whole bound. `RunInput` now stops a reviewer with no first byte after two minutes and one that goes quiet between bytes after two minutes; any byte on either stream re-arms the clock, and the caller still reads the same `timedOut` signal. The proof path keeps only its total deadline, so a silent `go test` is not cut in the middle. Patch (0321).
+
 ## v0.48.5 - 2026-11-16
 
 - **The reviewer reads a frozen candidate instead of a blind prompt.** Prompt-only review could not check a claim against callers or tests, but giving a reviewer the live worktree would make the verdict name one tree and the model read another. `odachi review --exec` now exports the candidate's exact tree into a temporary directory, names that directory in the prompt, and discards it when the run ends. `odachi-reviewer` gains read, glob and grep over that snapshot and keeps bash, edit, task and web denied. The prompt grows by one path, not by the tree, and `max_prompt_kb` stays at 120. The probe keeps the prompt beside every answer and asks an access canary with both legs -the line inside the candidate and a marker beside it- so a silent reviewer cannot pass as an isolated one. Patch (0320).

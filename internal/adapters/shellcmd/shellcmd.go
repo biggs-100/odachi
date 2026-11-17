@@ -19,8 +19,41 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 )
+
+// Watchdog bounds silence, not duration. FirstOutput is how long a command may
+// run before its first byte; Idle is how long it may go quiet between bytes.
+// Zero disables that clock. The total timeout still applies in both cases.
+//
+// A model that is slow but keeps writing is alive; one that stops writing has
+// stopped working. A single total deadline cannot tell them apart.
+type Watchdog struct {
+	FirstOutput time.Duration
+	Idle        time.Duration
+}
+
+const (
+	// FirstOutputTimeout is how long a reviewer may stay silent before its first
+	// byte. Two minutes is longer than a slow model's first token and shorter
+	// than the ten-minute total deadline it replaces for a silent answer.
+	FirstOutputTimeout = 120 * time.Second
+	// IdleTimeout is how long a reviewer may go quiet between bytes.
+	IdleTimeout = 120 * time.Second
+)
+
+// pingWriter tells someone that bytes arrived without changing what is written.
+type pingWriter struct {
+	io.Writer
+	ping func()
+}
+
+func (w pingWriter) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	w.ping()
+	return n, err
+}
 
 // waitDelay bounds Wait after the process was killed or exited while a child
 // still holds the output pipes. Without it a timeout can hang on the very
@@ -47,7 +80,7 @@ var ErrUnsupported = errors.New("cannot run commands on this platform: there is 
 // caller decides what a failing proof means. err is reserved for "this could
 // not be run at all". A timeout returns timedOut true and a negative exit code.
 func Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error) {
-	return run(dir, command, "", timeoutSeconds, nil)
+	return run(dir, command, "", timeoutSeconds, nil, Watchdog{})
 }
 
 // RunStream is Run with a mirror: everything the command prints reaches w while
@@ -59,7 +92,7 @@ func Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCo
 // them and a reviewer reads its answer from stdout only. Two goroutines copy the
 // streams, so w must be safe for concurrent use -the terminal is.
 func RunStream(dir, command string, timeoutSeconds int, w io.Writer) (stdout, stderr string, exitCode int, timedOut bool, err error) {
-	return run(dir, command, "", timeoutSeconds, w)
+	return run(dir, command, "", timeoutSeconds, w, Watchdog{})
 }
 
 // RunInput is Run for a command that needs something to work on: the input is
@@ -71,12 +104,21 @@ func RunStream(dir, command string, timeoutSeconds int, w io.Writer) (stdout, st
 // that takes a file needs. A file, not a pipe, feeds stdin: a command that
 // ignores its input then cannot block the caller by leaving the buffer full.
 func RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error) {
-	return run(dir, command, input, timeoutSeconds, nil)
+	return RunInputWithLimits(dir, command, input, timeoutSeconds,
+		Watchdog{FirstOutput: FirstOutputTimeout, Idle: IdleTimeout})
+}
+
+// RunInputWithLimits is RunInput with explicit silence clocks. The defaults in
+// RunInput are for a model; a test or a caller with a different budget names its
+// own. Run and RunStream never pass a watchdog: a proof command such as go test
+// may stay silent for the whole of its total deadline and still be working.
+func RunInputWithLimits(dir, command, input string, timeoutSeconds int, watchdog Watchdog) (stdout, stderr string, exitCode int, timedOut bool, err error) {
+	return run(dir, command, input, timeoutSeconds, nil, watchdog)
 }
 
 // run is the one implementation: the three entry points differ only in the input
 // they prepare and the mirror they write to.
-func run(dir, command, input string, timeoutSeconds int, mirror io.Writer) (stdout, stderr string, exitCode int, timedOut bool, err error) {
+func run(dir, command, input string, timeoutSeconds int, mirror io.Writer, watchdog Watchdog) (stdout, stderr string, exitCode int, timedOut bool, err error) {
 	if strings.TrimSpace(command) == "" {
 		return "", "", 0, false, errors.New("there is no command to run: pass one with odachi check --run \"<command>\"")
 	}
@@ -92,8 +134,12 @@ func run(dir, command, input string, timeoutSeconds int, mirror io.Writer) (stdo
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
+	// The parent keeps the total deadline. The child is what the silence clock
+	// cancels, so either clock kills the same process tree through cmd.Cancel.
+	watchCtx, cancelSilence := context.WithCancel(ctx)
+	defer cancelSilence()
 
-	cmd, err := newCommand(ctx, dir, prepared)
+	cmd, err := newCommand(watchCtx, dir, prepared)
 	if err != nil {
 		return "", "", 0, false, err
 	}
@@ -108,13 +154,56 @@ func run(dir, command, input string, timeoutSeconds int, mirror io.Writer) (stdo
 	// mirror, when there is one, is the same bytes on their way to a human: it
 	// changes nothing about what is returned.
 	var outBuf, errBuf bytes.Buffer
-	if mirror == nil {
-		cmd.Stdout = &outBuf
-		cmd.Stderr = &errBuf
-	} else {
-		cmd.Stdout = io.MultiWriter(&outBuf, mirror)
-		cmd.Stderr = io.MultiWriter(&errBuf, mirror)
+	var outWriter, errWriter io.Writer = &outBuf, &errBuf
+	if mirror != nil {
+		outWriter = io.MultiWriter(&outBuf, mirror)
+		errWriter = io.MultiWriter(&errBuf, mirror)
 	}
+
+	var silent atomic.Bool
+	if watchdog.FirstOutput > 0 || watchdog.Idle > 0 {
+		activity := make(chan struct{}, 1)
+		ping := func() {
+			select {
+			case activity <- struct{}{}:
+			default:
+			}
+		}
+		outWriter = pingWriter{Writer: outWriter, ping: ping}
+		errWriter = pingWriter{Writer: errWriter, ping: ping}
+		stop := make(chan struct{})
+		defer close(stop)
+		go func() {
+			first := watchdog.FirstOutput > 0
+			wait := watchdog.FirstOutput
+			if !first {
+				wait = watchdog.Idle
+			}
+			timer := time.NewTimer(wait)
+			defer timer.Stop()
+			for {
+				select {
+				case <-activity:
+					first = false
+					if !timer.Stop() {
+						select {
+						case <-timer.C:
+						default:
+						}
+					}
+					timer.Reset(watchdog.Idle)
+				case <-timer.C:
+					silent.Store(true)
+					cancelSilence()
+					return
+				case <-stop:
+					return
+				}
+			}
+		}()
+	}
+	cmd.Stdout = outWriter
+	cmd.Stderr = errWriter
 	cmd.WaitDelay = waitDelay
 
 	runErr := cmd.Run()
@@ -122,8 +211,13 @@ func run(dir, command, input string, timeoutSeconds int, mirror io.Writer) (stdo
 	stderr = errBuf.String()
 
 	if ctx.Err() != nil {
-		// The context expired: the process was killed, and the partial output
-		// is what the command had said so far.
+		// The total deadline expired: the process was killed, and the partial
+		// output is what the command had said so far.
+		return stdout, stderr, -1, true, nil
+	}
+	if silent.Load() {
+		// The silence clock fired first. It is the same timedOut signal the
+		// callers already read, with a different reason behind it.
 		return stdout, stderr, -1, true, nil
 	}
 
