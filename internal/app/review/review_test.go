@@ -271,6 +271,14 @@ type fakeGit struct {
 
 	// corrections records the trees a correction measured its delta against.
 	corrections []string
+
+	// archive is the directory handed to the reviewer, and archived is the tree
+	// it froze. discarded records the cleanup, so a test can say the snapshot
+	// did not outlive the run.
+	archive    string
+	archiveErr error
+	archived   []string
+	discarded  []string
 }
 
 func (g *fakeGit) TreeHash(root string) (string, error) {
@@ -329,6 +337,21 @@ func (g *fakeGit) Messages(root, base string) ([]string, error) {
 		return nil, g.messagesErr
 	}
 	return g.messages, nil
+}
+
+// Archive freezes the tree the verdict will name. A fake failure lets a test
+// say what happens when the reviewer cannot be given a candidate at all.
+func (g *fakeGit) Archive(root, tree string) (string, error) {
+	g.archived = append(g.archived, tree)
+	if g.archiveErr != nil {
+		return "", g.archiveErr
+	}
+	return g.archive, nil
+}
+
+func (g *fakeGit) Discard(dir string) error {
+	g.discarded = append(g.discarded, dir)
+	return nil
 }
 
 // fakeHost is the Host port: the model the session says it is using, or none,
@@ -3039,6 +3062,9 @@ func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ign
 func (g *flakyGit) BlobHash(root, path string) (string, error) { return g.inner.BlobHash(root, path) }
 
 func (g *flakyGit) Messages(root, base string) ([]string, error) { return g.inner.Messages(root, base) }
+
+func (g *flakyGit) Archive(root, tree string) (string, error) { return g.inner.Archive(root, tree) }
+func (g *flakyGit) Discard(dir string) error                  { return g.inner.Discard(dir) }
 
 // TestNothingOutsideTheStoreIsWritten: the whole surface of this verb is
 // the store's reviews/. A review that touched the brief or the code would be a

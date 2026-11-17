@@ -99,16 +99,16 @@ func TestPromptKeepsTheSixRulesOnce(t *testing.T) {
 	}
 }
 
-// TestPromptForbidsTheReviewerFromActing: the reviewer reads and answers. A
-// command that also runs commands, edits files or reads other files puts its
-// work in the output, and the output is the verdict.
+// TestPromptForbidsTheReviewerFromActing: the reviewer reads the frozen tree
+// and answers. A command that runs commands, edits files or reads the live
+// worktree puts its work in the output, and the output is the verdict.
 func TestPromptForbidsTheReviewerFromActing(t *testing.T) {
 	prompt := review.Prompt(promptInput())
 
 	for _, want := range []string{
 		"not an operator",
 		"Do not run commands",
-		"do not edit or read other files",
+		"frozen candidate is the only tree you may read",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("the prompt does not carry %q:\n%s", want, prompt)

@@ -61,6 +61,10 @@ type PromptInput struct {
 	// some and this clone has not approved them. The prompt says so: a review that
 	// stayed quiet about the tools it skipped reports on a tree nobody measured.
 	ChecksOff string
+	// FrozenTree is the directory the reviewer may read: a snapshot of this exact
+	// tree, materialized outside the worktree. Empty means no snapshot was
+	// prepared, and the prompt stays the one printed before readers existed.
+	FrozenTree string
 }
 
 // PromptSizeKB is the size odachi compares against the project's limit: kilobytes
@@ -126,6 +130,14 @@ func Prompt(in PromptInput) string {
 	}
 	out.WriteString("\n")
 
+	if dir := strings.TrimSpace(in.FrozenTree); dir != "" {
+		out.WriteString("## The frozen candidate\n\n")
+		out.WriteString("Read only this directory: " + dir + "\n")
+		out.WriteString("It is a read-only copy of this exact tree, including files the diff did not\n")
+		out.WriteString("touch: callers, tests and configuration. Read it to check a claim before you\n")
+		out.WriteString("make it. Do not read the live worktree, git history, or any other path.\n\n")
+	}
+
 	out.WriteString(floorSection(in.Floor))
 
 	out.WriteString(checksSection(in.Checks))
@@ -142,9 +154,10 @@ func Prompt(in PromptInput) string {
 	out.WriteString("\n")
 
 	out.WriteString("## The six rules\n")
-	out.WriteString("1. You are a reviewer, not an operator: everything you need is in this prompt.\n")
-	out.WriteString("   Do not run commands and do not edit or read other files. Your answer is the\n")
-	out.WriteString("   only thing this command produces; anything else lands in its output.\n")
+	out.WriteString("1. You are a reviewer, not an operator: the question is in this prompt and the\n")
+	out.WriteString("   frozen candidate is the only tree you may read. Do not run commands and do\n")
+	out.WriteString("   not edit anything. Your answer is the only thing this command produces;\n")
+	out.WriteString("   anything else lands in its output.\n")
 	out.WriteString("2. Report a finding only if it is a real defect that affects the user and you can\n")
 	out.WriteString("   defend it with concrete evidence. When in doubt, say nothing.\n")
 	out.WriteString("   Style and preference are banned unless they hide a defect.\n")
