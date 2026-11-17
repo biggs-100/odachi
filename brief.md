@@ -1009,3 +1009,26 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: como se mide que un revisor con contexto es mejor.
+
+## 0321 · un-revisor-que
+
+## What must exist
+- un revisor que sigue transmitiendo no se mata por el reloj total: la espera mide el silencio, con un plazo para la primera salida y otro para cada pausa, mientras la prueba sigue usando solo su plazo total
+
+## Done when
+- un comando mudo se detiene en el plazo de primera salida y devuelve timedOut antes del plazo total
+- un comando que escribe con pausas cortas termina sin timedOut aunque supere el plazo de primera salida
+- un comando que calla despues de escribir se detiene en el plazo de inactividad
+- check --run sigue midiendo solo el plazo total y no corta una prueba silenciosa
+- go test ./... is green and odachi check --run go test ./... is green
+
+## Not included (first version)
+- no se cambia la señal de timeout que ven review y verify: sigue siendo timedOut booleano
+- no se pone reloj de silencio a la prueba: la compuerta no debe matar un go test silencioso
+- no cambia el contrato de review ni el esquema del veredicto
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: por que un reloj de silencio mide mejor la vida de un modelo que un reloj total.
