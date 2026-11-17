@@ -26,6 +26,24 @@ func TestThePromptNamesTheFrozenCandidate(t *testing.T) {
 	}
 }
 
+// TestTheFrozenCandidateCostsAPathNotATree: the prompt grows by one directory
+// name, not by the bytes of the files the reviewer will read. A prompt that
+// carried the tree would grow with every candidate and press the same wall.
+func TestTheFrozenCandidateCostsAPathNotATree(t *testing.T) {
+	bare := review.Prompt(promptInput())
+	in := promptInput()
+	in.FrozenTree = "C:/temp/odachi-candidate-with-a-deliberately-long-name-0123456789"
+	frozen := review.Prompt(in)
+
+	growth := len(frozen) - len(bare)
+	if growth > 1024 {
+		t.Errorf("the frozen candidate added %d bytes; it must name a path, not carry the tree", growth)
+	}
+	if strings.Contains(frozen, "package main") || strings.Contains(frozen, "func ") {
+		t.Error("the prompt carries file contents instead of the directory to read")
+	}
+}
+
 // TestThePromptWithoutAFrozenTreeDoesNotInventOne: the bare form prepares no
 // snapshot, so its prompt stays the question it always was.
 func TestThePromptWithoutAFrozenTreeDoesNotInventOne(t *testing.T) {
