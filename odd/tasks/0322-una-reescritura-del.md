@@ -14,7 +14,7 @@ R1 · "una reescritura del mismo tamaño no puede borrar una regla de los lentes
 ## Steps
 - [x] T1 · la baseline nombra cada linea normativa de los cuatro lentes   R1 · route:inline · tree:714d34d0731101ab01b9db64109d49b8e91e4315
 - [x] T2 · el barrido de union falla en los dos sentidos y se prueba mutandolo   R1 · route:inline · tree:0f01f58d769a52378e5016abb02a78fbd978a30f
-- [ ] T3 · el changelog y la nota de cierre   R1 · route:inline
+- [x] T3 · el changelog y la nota de cierre   R1 · route:inline · tree:55f63f3b27e1e30a9ee630d9f16f15cc8750c957
 
 ## History
 L1 · "una reescritura del mismo tamaño no puede borrar una regla de los lentes sin que la puerta lo nombre: cada linea normativa queda medida y cualquier cambio pide una edicion deliberada de la baseline"
