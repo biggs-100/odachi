@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.48.7 - 2026-11-17
 
 - **A rule rewritten to the same length is no longer invisible.** The byte pin in 0295 could not tell a lens rule that survived from one replaced by a sentence of the same size. Every line of the four shipping lens prompts is now listed in `internal/archtest/normative.baseline`, and a sweep compares the baseline with what the lenses actually carry in both directions: a line lost and a line added are both named, with the surface, the words and the file to edit. Changing a rule is still possible; it takes a deliberate edit of the baseline with a `# why:` comment. Patch (0322).
 
