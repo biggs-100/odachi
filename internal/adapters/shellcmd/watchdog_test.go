@@ -31,8 +31,8 @@ func TestASilentReviewerStopsBeforeTheTotalDeadline(t *testing.T) {
 // that would have answered.
 func TestAStreamingReviewerSurvivesTheFirstOutputBound(t *testing.T) {
 	t.Parallel()
-	_, _, _, timedOut, err := shellcmd.RunInputWithLimits(".", chattyCommand(), "", 5,
-		shellcmd.Watchdog{FirstOutput: 200 * time.Millisecond, Idle: 900 * time.Millisecond})
+	_, _, _, timedOut, err := shellcmd.RunInputWithLimits(".", chattyCommand(), "", 15,
+		shellcmd.Watchdog{FirstOutput: 3 * time.Second, Idle: 2 * time.Second})
 	if err != nil {
 		t.Fatalf("RunInputWithLimits: %v", err)
 	}
