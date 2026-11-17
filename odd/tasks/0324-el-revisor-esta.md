@@ -12,7 +12,7 @@ R1 · "el revisor esta acotado por el cliente y no por el prompt: la corrida rec
 - go test ./... is green and odachi check --run go test ./... is green
 
 ## Steps
-- [ ] T1 · review --exec le da al revisor un snapshot con padre propio, y la configuracion que lo acota vive ahi   R1
+- [x] T1 · review --exec le da al revisor un snapshot con padre propio, y la configuracion que lo acota vive ahi   R1 · tree:2f63142a0b1ce87dd77051491268e6babc3c045a
 - [ ] T2 · la sonda escribe la misma configuracion en su mundo y su canario pide una lectura de afuera que se rechaza   R1
 - [ ] T3 · el acotamiento se prueba con una corrida grabada: sin configuracion la marca de afuera se lee, con ella se rechaza   R1
 
