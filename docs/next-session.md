@@ -1,12 +1,15 @@
 # Next session
 
-Written after 0321 and `v0.48.5`.
+Written after 0322 and `v0.48.5`.
 
 ## Where the project is
 
+- **0322 is open on `feat/0322-lineas-normativas`, unreleased, patch, stacked on the unpushed 0321 branch.**
+  Every normative line of the four lenses is pinned by its words in `internal/archtest/normative.baseline`, and a
+  sweep names a rule lost or added in either direction. T1 and T2 are done; T3 closes with this note. Deliver 0321
+  first: once 0321 is merged, the 0322 pull request shows only its own commits against `main`.
 - **0321 is open on `feat/0321-reloj-de-silencio`, unreleased, patch.** `RunInput` measures first-output and idle
-  silence for a reviewer; any byte re-arms the clock, and the proof path keeps only its total deadline. T1 and T2
-  are done; T3 closes with this note.
+  silence for a reviewer; any byte re-arms the clock, and the proof path keeps only its total deadline.
 - **0320 shipped in `v0.48.5`**: PR #646 merged on `c6a6ccb`, release PR #647 on `55a8816`, tag pushed, 16 signed
   and attested assets. The reviewer reads a frozen snapshot with bounded tools; the decision and its evidence are
   in `docs/reviewer-context-research.md`.
@@ -28,7 +31,7 @@ Written after 0321 and `v0.48.5`.
 - This file quotes the line the tool counts for the tree it describes:
 
   ```
-  total: 319 features · 801 steps done of 801 · 0 open questions
+  total: 320 features · 804 steps done of 804 · 0 open questions
   ```
 
   -copied from `odachi summary`; `odachi doctor` check 14 recomputes this line from the task documents
@@ -45,9 +48,9 @@ Written after 0321 and `v0.48.5`.
   person would not approve; until it is clean, the precision the probe reports is not worth reading.
 - **A second vendor for the four lenses** remains a decision: doctor's check 17 says `1 of 4` here, and the line
   warns without moving the exit code.
-- **Three lessons from the gentle-shell comparison are still open**, in the order proposed: the union sweep over
-  pinned text, the typed failure with mutation and replay state, and the lock that only takes over a proven-dead
-  owner. 0321 paid the first one, the silence clock.
+- **Two lessons from the gentle-shell comparison are still open**, in the order proposed: the typed failure with
+  mutation and replay state, and the lock that only takes over a proven-dead owner. 0321 paid the silence clock and
+  0322 paid the union sweep over pinned text.
 - **What is left of the research besides it**: debt 1 is the fixture's clean arm, debt 2 a deterministic
   analyzer, debt 6 test adequacy.
 - **The ledger**: three rules still say `none` -the question that is answered and not implemented, the
@@ -101,6 +104,7 @@ Written after 0321 and `v0.48.5`.
 
 ## What shipped
 
+- **0322, patch (unreleased).** Every normative lens line is pinned by its words, in both directions.
 - **0321, patch (unreleased).** The reviewer's clock measures silence; the proof keeps its total deadline.
 - **0320, patch (v0.48.5).** The reviewer reads a frozen candidate; the prompt grows by one path; the probe
   keeps its prompts and checks access with a canary.
@@ -118,6 +122,21 @@ Written after 0321 and `v0.48.5`.
 - **0314, minor (v0.47.0).** The gate refuses a requirement that is not the brief's words. `odd/rules.toml`
   gains `gate:<reason>` as its fourth kind.
 - **0313, patch (v0.47.0).** `odd/review.toml` declares schema 10 and its two check rows name their remedy.
+
+## 0322: what it settled, and what it leaves
+
+- **A count is not an identity.** `bytes.baseline` says the four lenses are still the same size; it cannot say the
+  same rules are still there. gentle-shell's disposition sweep against a frozen fixture does, and the second file
+  here is the odachi-sized version of it: 117 lines, one per surface and physical line, with `# why:` comments
+  reserved for deliberate changes.
+- **The sweep is a multiset in both directions.** A rule deleted, a rule rewritten to the same length and a rule
+  added without permission are all named with the surface, the exact line and the file to edit. A duplicate is
+  named too, because a count is compared, not just presence.
+- **No lens was touched.** The 0295 pin measures the bytes that a session pays for; this one measures the words a
+  reviewer obeys. The fence still protects `internal/assets/review/*.md` — the mutation used to prove the guard was
+  restored before any commit.
+- **What it leaves.** Only the four lens prompts are swept; the inherited rules live in `prompt.go` and the two
+  voice blocks are still covered by the byte pin alone. The stack must be delivered in order, 0321 before 0322.
 
 ## 0321: what it settled, and what it leaves
 
