@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/lensprobe"
+	"github.com/biggs-100/odachi/internal/domain/scope"
 )
 
 // fakeFiles is the probe's Files port in memory: the fixture is written here and
@@ -522,7 +523,7 @@ func TestTheBlindAnswersAreStoredApartFromTheAttachedOnes(t *testing.T) {
 
 	var plain, blindStored int
 	for path := range files.files {
-		if !strings.HasSuffix(path, ".json") || strings.Contains(path, "canary") {
+		if !strings.HasSuffix(path, ".json") || strings.Contains(path, "canary") || filepath.Base(path) == scope.FileName {
 			continue
 		}
 		if strings.Contains(path, "-blind-") {
@@ -569,7 +570,7 @@ func TestProbeStoresTheWholeAnswer(t *testing.T) {
 
 	kept := 0
 	for path, data := range files.files {
-		if !strings.HasSuffix(path, ".json") || strings.Contains(path, "canary") {
+		if !strings.HasSuffix(path, ".json") || strings.Contains(path, "canary") || filepath.Base(path) == scope.FileName {
 			continue
 		}
 		if !strings.HasPrefix(string(data), "I'll read") {
@@ -579,6 +580,47 @@ func TestProbeStoresTheWholeAnswer(t *testing.T) {
 	}
 	if kept == 0 {
 		t.Error("no answer was stored")
+	}
+}
+
+// TestTheProbeConfinesEveryReader: a reviewer runs where the rule that confines it
+// is discovered, so each arm's directory carries the rule beside its candidate, and
+// the blind arm's empty directory carries it too. A probe that names a directory
+// and plants nothing there measures a reader with the whole machine in reach.
+func TestTheProbeConfinesEveryReader(t *testing.T) {
+	t.Parallel()
+
+	git := &fakeGit{paths: "server.go", diff: "+x"}
+	files := newFiles()
+	if result := lensprobe.Run(options("reviewer {prompt}"), files, git, &fakeShell{answer: arm(emptyJSON, verdictJSON)}, fakeLenses{}); result.Code != lensprobe.CodeOK {
+		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
+	}
+
+	if len(git.archiveInto) != 2 {
+		t.Fatalf("the probe froze %v, want one reader per arm", git.archiveInto)
+	}
+	for _, candidate := range git.archiveInto {
+		rule := filepath.Join(filepath.Dir(candidate), scope.FileName)
+		if _, ok := files.files[rule]; !ok {
+			t.Errorf("the reader of %s has no %s beside it", candidate, scope.FileName)
+		}
+	}
+
+	blindGit := &fakeGit{paths: "server.go", diff: "+x"}
+	blindFiles := newFiles()
+	opts := options("reviewer {prompt}")
+	opts.Blind = true
+	if result := lensprobe.Run(opts, blindFiles, blindGit, &fakeShell{answer: arm(emptyJSON, verdictJSON)}, fakeLenses{}); result.Code != lensprobe.CodeOK {
+		t.Fatalf("the blind arm = %d: %s", result.Code, result.Summary)
+	}
+	confined := 0
+	for path := range blindFiles.files {
+		if filepath.Base(path) == scope.FileName {
+			confined++
+		}
+	}
+	if confined != 1 {
+		t.Errorf("the blind arm wrote %d confinement rules, want the one beside its empty directory", confined)
 	}
 }
 

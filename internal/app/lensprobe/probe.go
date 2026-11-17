@@ -31,6 +31,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/domain/probe"
 	"github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/scope"
 	assets "github.com/biggs-100/odachi/internal/probe"
 )
 
@@ -167,6 +168,9 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 		blank = filepath.Join(root, "blank")
 		if err := os.MkdirAll(blank, 0o755); err != nil {
 			return *blocked("could not make the blind arm's empty directory: " + oneLine(err.Error()))
+		}
+		if err := files.Write(filepath.Join(root, scope.FileName), scope.Render()); err != nil {
+			return *blocked("could not write the rule that confines the blind reviewer: " + oneLine(err.Error()))
 		}
 	}
 
@@ -371,6 +375,10 @@ func build(work, name string, fixture fs.FS, arm string, files Files, shell Shel
 		if err := git.ArchiveInto(dir, tree, snapshot); err != nil {
 			_ = os.RemoveAll(reader)
 			return candidate{}, blocked("could not freeze the " + name + " arm: " + oneLine(err.Error()))
+		}
+		if err := files.Write(filepath.Join(reader, scope.FileName), scope.Render()); err != nil {
+			_ = os.RemoveAll(reader)
+			return candidate{}, blocked("could not write the rule that confines the " + name + " reviewer: " + oneLine(err.Error()))
 		}
 	}
 	return candidate{name: name, tree: tree, reader: reader, snapshot: snapshot, paths: paths, diff: diff}, nil
