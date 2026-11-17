@@ -1,5 +1,5 @@
 # una-reescritura-del
-Base: 4081d66fe132a4fa204b354fd7c5ddab72e8d6c7
+Base: f65911852a1e6b759b17a35d88feac73e95893cd
 
 ## Requirements (verbatim, from the user)
 R1 · "una reescritura del mismo tamaño no puede borrar una regla de los lentes sin que la puerta lo nombre: cada linea normativa queda medida y cualquier cambio pide una edicion deliberada de la baseline"
@@ -19,3 +19,4 @@ R1 · "una reescritura del mismo tamaño no puede borrar una regla de los lentes
 ## History
 L1 · "una reescritura del mismo tamaño no puede borrar una regla de los lentes sin que la puerta lo nombre: cada linea normativa queda medida y cualquier cambio pide una edicion deliberada de la baseline"
 L2 · OFICIO · "Abro el barrido de unión sobre los cuatro lentes con esta frase como requisito" (porque El humano dijo ok, continua despues de que ofreciera el segundo aprendizaje de la comparacion con gentle-shell; los lentes son la unica superficie que el revisor recibe y el pin de bytes no distingue una regla borrada de una reescritura del mismo largo)
+L3 · OFICIO · "La base de 0322 se repunta a f659118, el merge de v0.48.6, y su entrada del changelog sale de v0.48.6 para quedar en Unreleased" (porque 0322 estaba apilada sobre 0321; al rebasar sobre main la entrada de 0322 quedo dentro de v0.48.6, que ya se publico con solo 0321, y la base seguia nombrando el HEAD viejo de 0321 que el squash no deja en main. Los tres arboles de los pasos no cambian porque su contenido es el mismo)

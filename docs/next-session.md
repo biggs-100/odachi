@@ -1,17 +1,15 @@
 # Next session
 
-Written after 0322 and `v0.48.5`.
+Written after 0322 and `v0.48.6`.
 
 ## Where the project is
 
-- **0322 is open on `feat/0322-lineas-normativas`, unreleased, patch, stacked on the unpushed 0321 branch.**
-  Every normative line of the four lenses is pinned by its words in `internal/archtest/normative.baseline`, and a
-  sweep names a rule lost or added in either direction. T1 and T2 are done; T3 closes with this note. Deliver 0321
-  first: once 0321 is merged, the 0322 pull request shows only its own commits against `main`. Its task document
-  `Base` currently names 0321's HEAD, which a squash merge will not leave in `main`: repoint it at the new merge
-  commit and refresh the proof before pushing 0322, the same correction 0317 needed.
-- **0321 is open on `feat/0321-reloj-de-silencio`, unreleased, patch.** `RunInput` measures first-output and idle
-  silence for a reviewer; any byte re-arms the clock, and the proof path keeps only its total deadline.
+- **0322 is open on `feat/0322-lineas-normativas`, unreleased, patch, rebased on `v0.48.6`.** Every normative line
+  of the four lenses is pinned by its words in `internal/archtest/normative.baseline`, and a sweep names a rule
+  lost or added in either direction. T1 through T3 are done; its three commits sit on `f659118`.
+- **0321 shipped in `v0.48.6`**: PR #648 merged on `c4a3581`, release PR #649 on `f659118`, tag published with its
+  signed and attested assets. The reviewer's `RunInput` measures first-output and idle silence; the proof path keeps
+  only its total deadline.
 - **0320 shipped in `v0.48.5`**: PR #646 merged on `c6a6ccb`, release PR #647 on `55a8816`, tag pushed, 16 signed
   and attested assets. The reviewer reads a frozen snapshot with bounded tools; the decision and its evidence are
   in `docs/reviewer-context-research.md`.
@@ -107,7 +105,7 @@ Written after 0322 and `v0.48.5`.
 ## What shipped
 
 - **0322, patch (unreleased).** Every normative lens line is pinned by its words, in both directions.
-- **0321, patch (unreleased).** The reviewer's clock measures silence; the proof keeps its total deadline.
+- **0321, patch (v0.48.6).** The reviewer's clock measures silence; the proof keeps its total deadline.
 - **0320, patch (v0.48.5).** The reviewer reads a frozen candidate; the prompt grows by one path; the probe
   keeps its prompts and checks access with a canary.
 - **0319, patch (unreleased).** A verdict that asks for changes with no row stops the close, and the written
@@ -138,7 +136,7 @@ Written after 0322 and `v0.48.5`.
   reviewer obeys. The fence still protects `internal/assets/review/*.md` — the mutation used to prove the guard was
   restored before any commit.
 - **What it leaves.** Only the four lens prompts are swept; the inherited rules live in `prompt.go` and the two
-  voice blocks are still covered by the byte pin alone. The stack must be delivered in order, 0321 before 0322.
+  voice blocks are still covered by the byte pin alone.
 
 ## 0321: what it settled, and what it leaves
 

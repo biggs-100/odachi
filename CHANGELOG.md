@@ -7,9 +7,11 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## v0.48.6 - 2026-11-17
+## Unreleased
 
 - **A rule rewritten to the same length is no longer invisible.** The byte pin in 0295 could not tell a lens rule that survived from one replaced by a sentence of the same size. Every line of the four shipping lens prompts is now listed in `internal/archtest/normative.baseline`, and a sweep compares the baseline with what the lenses actually carry in both directions: a line lost and a line added are both named, with the surface, the words and the file to edit. Changing a rule is still possible; it takes a deliberate edit of the baseline with a `# why:` comment. Patch (0322).
+
+## v0.48.6 - 2026-11-17
 
 - **The reviewer's clock measures silence, not duration.** One total deadline could not tell a slow model that was still streaming from one that had stopped: the first was killed after the call was paid for, and the second held the run for the whole bound. `RunInput` now stops a reviewer with no first byte after two minutes and one that goes quiet between bytes after two minutes; any byte on either stream re-arms the clock, and the caller still reads the same `timedOut` signal. The proof path keeps only its total deadline, so a silent `go test` is not cut in the middle. Patch (0321).
 
