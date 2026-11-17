@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -25,14 +26,46 @@ func TestTheLensesKeepTheirNormativeLines(t *testing.T) {
 	want := readNormativeBaseline(t)
 	got := currentNormativeLines()
 
+	for _, issue := range sweepIssues(want, got) {
+		t.Error(issue)
+	}
+}
+
+// sweepIssues compares the two multisets in both directions and names the line
+// behind each difference. A count, not just presence, catches a rule pasted
+// twice as the same unreviewed edit it would catch a rule removed.
+func sweepIssues(want, got map[string]int) []string {
+	var issues []string
 	for key, count := range want {
 		if got[key] != count {
-			t.Errorf("normative line lost: %s (%d in the baseline, %d in the shipping lens)", key, count, got[key])
+			issues = append(issues, "normative line lost: "+key+
+				" ("+strconv.Itoa(count)+" in the baseline, "+strconv.Itoa(got[key])+" in the shipping lens)")
 		}
 	}
 	for key, count := range got {
 		if want[key] != count {
-			t.Errorf("new normative line: %s (%d in the shipping lens, %d in the baseline); write it in %s with its reason", key, count, want[key], normativeBaseline)
+			issues = append(issues, "new normative line: "+key+
+				" ("+strconv.Itoa(count)+" in the shipping lens, "+strconv.Itoa(want[key])+" in the baseline); write it in "+
+				normativeBaseline+" with its reason")
+		}
+	}
+	return issues
+}
+
+// TestTheSweepNamesBothDirections: a changed line is one edit seen twice. The
+// message has to say what vanished and what arrived, or the reader has to open
+// two files to find the same sentence.
+func TestTheSweepNamesBothDirections(t *testing.T) {
+	want := map[string]int{"lens:risk\t- a rule that was here": 1}
+	got := map[string]int{"lens:risk\t- a rule that arrived": 1}
+
+	joined := strings.Join(sweepIssues(want, got), "\n")
+	for _, phrase := range []string{
+		"normative line lost", "a rule that was here",
+		"new normative line", "a rule that arrived", "with its reason",
+	} {
+		if !strings.Contains(joined, phrase) {
+			t.Errorf("the sweep does not say %q:\n%s", phrase, joined)
 		}
 	}
 }
