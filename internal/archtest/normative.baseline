@@ -1,0 +1,123 @@
+# Every normative line of the four shipping lenses, in surface<TAB>line form.
+# The byte pin in bytes.baseline sees size; this sees the words. A line lost or
+# added without editing this file fails the union sweep in normative_test.go.
+# When a rule really changes, replace its line here and put # why: above it.
+
+# why: the four lens prompts shipped with v0.48.5
+lens:risk	You inherit the six review rules: you answer from the prompt and run nothing, you report only real defects you can defend with concrete evidence, style is banned, the severity vocabulary is closed, and what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
+lens:risk	only a causal BLOCKER or CRITICAL stops the candidate.
+lens:risk	## What to look at
+lens:risk	- A database query built by concatenating request input instead of parameters.
+lens:risk	- A new endpoint with no permission check on the server.
+lens:risk	- A permission check that exists only in the frontend.
+lens:risk	- An id that comes from the client and decides whose data is read or written.
+lens:risk	- A secret, token or password read from a file the repository versions.
+lens:risk	- A log or error message that prints a token, a password or personal data.
+lens:risk	- A response that returns more fields than the screen uses: hash, national id, phone.
+lens:risk	- A token whose signature is not verified, or that never expires.
+lens:risk	- HTML built from user data without escaping.
+lens:risk	- An uploaded file stored under the name the client sent.
+lens:risk	- A redirect to a URL that arrives as a parameter.
+lens:risk	- A shell command built from user input.
+lens:risk	- A driver message returned verbatim in the HTTP response.
+lens:risk	- A new dependency with no justification, or one that runs a script on install.
+lens:risk	- A file permission wider than needed: 0777, world-writable.
+lens:risk	- A migration that adds a required column with no default to a table with rows.
+lens:risk	- A role compared against a string that comes from the user's request.
+lens:risk	- A sample `.env` with real values inside.
+lens:risk	## What NOT to report
+lens:risk	- Style, naming or structure preferences: if they hide no defect, they do not go in.
+lens:risk	- Generic hardening without a concrete attack: "it could be safer" is not a finding.
+lens:risk	- A problem that was already there before the diff: what was already there is a follow-up, not a blocker.
+lens:risk	- Missing HTTPS, rate limiting or a WAF on something that runs on a person's machine.
+lens:risk	- Dependencies already declared before this candidate.
+lens:risk	- A made-up secret inside a test, which cannot reach production.
+lens:readability	You inherit the six review rules: you answer from the prompt and run nothing, you report only real defects you can defend with concrete evidence, style is banned, the severity vocabulary is closed, and what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
+lens:readability	only a causal BLOCKER or CRITICAL stops the candidate.
+lens:readability	## What to look at
+lens:readability	- A magic number that should be a named constant.
+lens:readability	- Dead code: a commented-out block, a branch that is never reached.
+lens:readability	- A function that does two things and the name says one.
+lens:readability	- A name that lies: `data`, `temp`, `aux`, `handle2`.
+lens:readability	- A boolean parameter that changes behavior: `save(x, true)`.
+lens:readability	- A comment that repeats what the code already says.
+lens:readability	- A comment that went stale against the code it sits next to.
+lens:readability	- A duplicated block that already exists in the same package.
+lens:readability	- A function over fifty lines, or nested more than three levels deep.
+lens:readability	- An error returned without saying what failed.
+lens:readability	- A variable declared far from where it is used.
+lens:readability	- An `else` after a `return`: a branch that can be flattened.
+lens:readability	- A file that mixes layers: HTTP, SQL and business rules in the same place.
+lens:readability	- A test whose name does not say which behavior it pins.
+lens:readability	- A change so large it cannot be read in parts.
+lens:readability	- Behaviour the diff changes and the brief never asked for: the document says what this change is, and this is not it.
+lens:readability	- A TODO noted with no owner and no closing condition.
+lens:readability	- A local abbreviation in a name used from other packages.
+lens:readability	- An exported constant nobody uses outside the package.
+lens:readability	## What NOT to report
+lens:readability	- What a formatter solves alone: spacing, quotes, import order.
+lens:readability	- Preferences for names, comment language or personal style.
+lens:readability	- "This is ugly" without a concrete defect the mess is hiding.
+lens:readability	- The size of a single line or file, on its own.
+lens:readability	- Prose about the architecture of the whole project.
+lens:readability	- A readability problem that was already there before the diff: it is a follow-up, not a blocker.
+lens:reliability	You inherit the six review rules: you answer from the prompt and run nothing, you report only real defects you can defend with concrete evidence, style is banned, the severity vocabulary is closed, and what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
+lens:reliability	only a causal BLOCKER or CRITICAL stops the candidate.
+lens:reliability	## What to look at
+lens:reliability	- A new branch with no test that exercises it.
+lens:reliability	- A test that passes only when run in a certain order.
+lens:reliability	- A test that depends on the clock, on chance or on the network.
+lens:reliability	- A contract that changes without updating the consumer already using it.
+lens:reliability	- An uncovered edge case: empty list, zero, negative, a single item.
+lens:reliability	- A test that asserts on the exact message text and makes it fragile.
+lens:reliability	- A test that cannot fail: it asserts what the code always returns.
+lens:reliability	- A behavior change with no test pinning it.
+lens:reliability	- An error compared by its text instead of its type or code.
+lens:reliability	- A clock or random generator inside the function under test.
+lens:reliability	- A test that shares global state with another and leaves it dirty.
+lens:reliability	- A test double that returns what the test wants, not what the contract says.
+lens:reliability	- A migration or schema change with no round-trip test.
+lens:reliability	- A change in the order of JSON keys that someone already consumes.
+lens:reliability	- A new conditional branch with no complementary case.
+lens:reliability	- An integration test that covers only the adapter's happy path.
+lens:reliability	- A test that copies the implementation's formula and compares it to itself.
+lens:reliability	- A skipped or pending test that reads as coverage.
+lens:reliability	- A test left focused or skipped, like `.only` or a disabled sibling: CI passes because the suite got smaller.
+lens:reliability	- A test that proves one function through a whole flow: it costs more than the behaviour it proves.
+lens:reliability	## What NOT to report
+lens:reliability	- A coverage number: coverage is not a behavior.
+lens:reliability	- "A test is missing" on a branch this candidate did not touch: what was already there is a follow-up.
+lens:reliability	- Preferences for style, test framework or names, unless they hide a defect.
+lens:reliability	- A test failing for a cause unrelated to the diff, without naming that cause.
+lens:reliability	- Asking for tests of a whole module when the candidate changed one function.
+lens:reliability	- A refactor suggestion for test code that does not change what it proves.
+lens:resilience	You inherit the six review rules: you answer from the prompt and run nothing, you report only real defects you can defend with concrete evidence, style is banned, the severity vocabulary is closed, and what was already there is a follow-up, not a blocker. Severity floor: WARNING and SUGGESTION never block;
+lens:resilience	only a causal BLOCKER or CRITICAL stops the candidate.
+lens:resilience	## What to look at
+lens:resilience	- A remote call with no timeout: if the other side never answers, this hangs.
+lens:resilience	- A retry with no backoff and no cap on attempts.
+lens:resilience	- A retry on a non-idempotent operation: it duplicates the effect.
+lens:resilience	- A partial failure that leaves half written and half not, with no rollback.
+lens:resilience	- A write or close error discarded with an underscore.
+lens:resilience	- A closing defer that is ignored and leaves the file or connection open.
+lens:resilience	- A transaction that does not cover every write of the same use case.
+lens:resilience	- A service that starts and serves while its dependency is not ready.
+lens:resilience	- An error path that answers 200 with the error inside the body.
+lens:resilience	- A fallback that returns empty and the caller cannot tell "empty" from "failed".
+lens:resilience	- Background work that cannot be stopped when the process shuts down.
+lens:resilience	- A lock taken with no expiry: if the process dies, nobody can enter again.
+lens:resilience	- A human retry that duplicates the effect: two turns, two charges, two emails.
+lens:resilience	- A queue or buffer with no limit: it grows until it eats the memory.
+lens:resilience	- An error log without the data to reproduce it: id, path, instant.
+lens:resilience	- A failure nobody compares with a threshold the project chose: without a number, "it is fine" is a guess.
+lens:resilience	- An expected failure with nothing in production that would show it: no counter, no event, no alert.
+lens:resilience	- A silent degradation: a default is used and nobody finds out.
+lens:resilience	- A timeout shorter than the normal time of the operation it wraps.
+lens:resilience	- A context that is not propagated to the call below: cancelling above does not cancel below.
+lens:resilience	## What NOT to report
+lens:resilience	- Architecture this candidate did not change: a queue that is missing is another job.
+lens:resilience	- Preferences for style, names or structure, unless they hide a defect.
+lens:resilience	- A theoretical risk with no concrete path that triggers it in this diff.
+lens:resilience	- A retry or timeout that was already there before the candidate: what was already there is a follow-up.
+lens:resilience	- That a circuit breaker, a cache or a separate service would be nice.
+lens:resilience	- A log message in another language or another format.
