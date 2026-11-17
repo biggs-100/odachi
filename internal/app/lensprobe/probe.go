@@ -128,6 +128,16 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 		return *blocked("could not make a throwaway directory: " + oneLine(err.Error()))
 	}
 	defer func() { _ = os.RemoveAll(work) }()
+	// readers are the directories a reviewer may read: each arm gets its own, at
+	// the temp root, because a snapshot that sits beside the other arm is not a
+	// snapshot: the exam is next door. Their parent is the system's temp root, the
+	// same place the copy `review --exec` hands its reviewer lives in.
+	var readers []string
+	defer func() {
+		for _, dir := range readers {
+			_ = os.RemoveAll(dir)
+		}
+	}()
 	// The two arms are two candidates: the clean one is a change that carries no
 	// defect, and its findings are what the lenses raise on code nobody broke.
 	// They are read separately because a reviewer handed both at once knows which
@@ -137,17 +147,24 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	if problem != nil {
 		return *problem
 	}
+	readers = appendReader(readers, clean.reader)
 	seeded, problem := build(work, "seeded", fixture, assets.Seeded, files, shell, git, opts.Blind)
 	if problem != nil {
 		return *problem
 	}
+	readers = appendReader(readers, seeded.reader)
 
 	// The blind arm has no candidate to read, so its reviewer runs in a directory
 	// that holds neither arm: a prompt that bans reads is not isolation, and the
 	// canary is what says the difference.
 	blank := ""
 	if opts.Blind {
-		blank = filepath.Join(work, "blank")
+		root, err := os.MkdirTemp("", "odachi-probe-blank-")
+		if err != nil {
+			return *blocked("could not make the blind arm's empty directory: " + oneLine(err.Error()))
+		}
+		readers = append(readers, root)
+		blank = filepath.Join(root, "blank")
 		if err := os.MkdirAll(blank, 0o755); err != nil {
 			return *blocked("could not make the blind arm's empty directory: " + oneLine(err.Error()))
 		}
@@ -224,7 +241,7 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 			if problem != nil {
 				return *problem
 			}
-			verdict, err := review.Parse([]byte(answer))
+			verdict, err := review.Parse([]byte(answerObject(answer)))
 			if err != nil {
 				return *blocked("the seeded " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
 			}
@@ -238,7 +255,7 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 			if problem != nil {
 				return *problem
 			}
-			verdict, err := review.Parse([]byte(answer))
+			verdict, err := review.Parse([]byte(answerObject(answer)))
 			if err != nil {
 				return *blocked("the clean " + name + " reviewer answered something that is not a verdict: " + oneLine(err.Error()))
 			}
@@ -260,7 +277,11 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	if inside == "" {
 		inside = filepath.Join(work, "clean")
 	}
-	canaryLine, problem := runCanary(opts, files, shell, work, inside, runDir(clean, blank), opts.Blind)
+	// The marker a scoped reader cannot reach sits beside the directory it was
+	// given: its parent, which belongs to this run and holds nothing else.
+	dir := runDir(clean, blank)
+	outside := filepath.Join(filepath.Dir(dir), "canary-outside.txt")
+	canaryLine, problem := runCanary(opts, files, shell, work, inside, outside, dir, opts.Blind)
 	if problem != nil {
 		return *problem
 	}
@@ -276,6 +297,10 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 type candidate struct {
 	name string
 	tree string
+	// reader is the directory this arm's reviewer owns: the candidate and the
+	// marker beside it, and nothing else. It exists so the parent of the reviewer's
+	// working directory cannot hold the other arm.
+	reader string
 	// snapshot is the directory the reviewer may read: an export of this arm's
 	// tree, or empty in the blind arm, where the reviewer gets no directory.
 	snapshot string
@@ -336,14 +361,28 @@ func build(work, name string, fixture fs.FS, arm string, files Files, shell Shel
 
 	// The reviewer reads the frozen arm, not the directory the arms are built in:
 	// a command that ran beside the seeded arm could read the exam it is graded on.
-	snapshot := ""
+	reader, snapshot := "", ""
 	if !blind {
-		snapshot = filepath.Join(work, "snapshot-"+name)
+		reader, err = os.MkdirTemp("", "odachi-probe-"+name+"-")
+		if err != nil {
+			return candidate{}, blocked("could not make the " + name + " arm's reader: " + oneLine(err.Error()))
+		}
+		snapshot = filepath.Join(reader, "candidate")
 		if err := git.ArchiveInto(dir, tree, snapshot); err != nil {
+			_ = os.RemoveAll(reader)
 			return candidate{}, blocked("could not freeze the " + name + " arm: " + oneLine(err.Error()))
 		}
 	}
-	return candidate{name: name, tree: tree, snapshot: snapshot, paths: paths, diff: diff}, nil
+	return candidate{name: name, tree: tree, reader: reader, snapshot: snapshot, paths: paths, diff: diff}, nil
+}
+
+// appendReader keeps a directory the run has to remove, skipping the empty one a
+// blind arm carries.
+func appendReader(readers []string, dir string) []string {
+	if dir == "" {
+		return readers
+	}
+	return append(readers, dir)
 }
 
 // load reads the manifest and roots the fixture: the one the human named, or the
@@ -439,12 +478,12 @@ func ask(opts Options, files Files, shell Shell, work, dir, arm, lens, prompt, t
 // The blind arm has nothing to attach to, so both markers sit outside the empty
 // directory its reviewer runs in and any quote is "too wide": a reviewer that
 // found one went looking, and its number would not be the arm's.
-func runCanary(opts Options, files Files, shell Shell, work, inside, dir string, blind bool) (string, *Result) {
+func runCanary(opts Options, files Files, shell Shell, work, inside, outside, dir string, blind bool) (string, *Result) {
 	const insideMark = "ODACHI-CANARY-INSIDE"
 	const outsideMark = "ODACHI-CANARY-OUTSIDE"
 	for path, mark := range map[string]string{
 		filepath.Join(inside, "canary-inside.txt"): insideMark,
-		filepath.Join(work, "canary-outside.txt"):  outsideMark,
+		outside: outsideMark,
 	} {
 		if err := files.Write(path, []byte(mark+"\n")); err != nil {
 			return "", blocked("could not write the access canary: " + oneLine(err.Error()))
@@ -475,6 +514,19 @@ func runCanary(opts Options, files Files, shell Shell, work, inside, dir string,
 		return canary.ReadBlind(stdout + stderr), nil
 	}
 	return canary.Read(stdout + stderr), nil
+}
+
+// answerObject is the JSON object a reviewer answered, without the narration a
+// model writes around it: "I'll read the frozen candidate" is a status line, and
+// the verb asked for one object. The stored file keeps the whole answer, so the
+// sentence a model wrote is still there for a person to read.
+func answerObject(text string) string {
+	start := strings.Index(text, "{")
+	end := strings.LastIndex(text, "}")
+	if start < 0 || end < start {
+		return text
+	}
+	return text[start : end+1]
 }
 
 // readerLine says which arm the number belongs to: a person comparing two runs

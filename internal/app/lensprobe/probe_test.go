@@ -3,6 +3,7 @@ package lensprobe_test
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -49,12 +50,13 @@ func (g *fakeGit) ArchiveInto(root, tree, dir string) error {
 	return os.MkdirAll(dir, 0o755)
 }
 
-// fakeShell records every command and the directory it ran in, and answers the
-// reviewer from the arm the prompt path names, so one fake can answer both arms
-// differently.
+// fakeShell records every command, the directory it ran in, and what sat beside
+// that directory at the moment of the call: the parent is what ".." reaches, and
+// it has to be read while the world still exists.
 type fakeShell struct {
 	commands []string
 	dirs     []string
+	beside   [][]string
 	answer   func(command string) string
 }
 
@@ -64,6 +66,13 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string
 		return "", "", 0, false, nil
 	}
 	s.dirs = append(s.dirs, dir)
+	names := make([]string, 0)
+	if entries, err := os.ReadDir(filepath.Dir(dir)); err == nil {
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+	}
+	s.beside = append(s.beside, names)
 	return s.answer(command), "", 0, false, nil
 }
 
@@ -337,6 +346,20 @@ func paths(f *fakeFiles) []string {
 	return out
 }
 
+// noArmsBeside fails when the reviewer ran beside an arm. Its parent is what ".."
+// reaches, and the field run of this feature found exactly that: the blind arm
+// read auth.go from the folder the two arms were built in.
+func noArmsBeside(t *testing.T, shell *fakeShell) {
+	t.Helper()
+	for i, names := range shell.beside {
+		for _, name := range names {
+			if name == "clean" || name == "seeded" {
+				t.Errorf("reviewer call %d ran beside %q, which its .. reaches", i+1, name)
+			}
+		}
+	}
+}
+
 // TestProbeRepeatsTheMeasurement: --runs asks every lens and arm once per draw,
 // and the reading says how many draws it holds. The aggregation itself is pinned
 // by TestSummarize, so this only proves the loop is wired.
@@ -386,17 +409,17 @@ func TestTheReviewerReadsTheFrozenArm(t *testing.T) {
 		t.Fatalf("the probe froze %v, want one snapshot per arm", git.archived)
 	}
 	for i, dir := range git.archiveInto {
-		want := []string{"snapshot-clean", "snapshot-seeded"}[i]
-		if !strings.HasSuffix(dir, want) {
-			t.Errorf("snapshot %d is %q, want it under the run's own folder as %q", i, dir, want)
+		want := []string{"odachi-probe-clean-", "odachi-probe-seeded-"}[i]
+		if !strings.HasPrefix(filepath.Base(filepath.Dir(dir)), want) || filepath.Base(dir) != "candidate" {
+			t.Errorf("snapshot %d is %q, want its own reader directory named %q", i, dir, want)
 		}
 	}
 	for _, dir := range shell.dirs {
-		if strings.HasSuffix(dir, "snapshot-clean") || strings.HasSuffix(dir, "snapshot-seeded") {
-			continue
+		if !strings.HasPrefix(filepath.Base(dir), "candidate") && !strings.HasPrefix(filepath.Base(dir), "blank") {
+			t.Errorf("the reviewer ran in %q, want the candidate it was given", dir)
 		}
-		t.Errorf("the reviewer ran in %q, want the snapshot of its own arm", dir)
 	}
+	noArmsBeside(t, shell)
 	named := 0
 	for path, data := range files.files {
 		if !strings.HasSuffix(path, ".prompt.md") || strings.Contains(path, "canary") {
@@ -445,10 +468,11 @@ func TestTheBlindArmGetsNoDirectory(t *testing.T) {
 		t.Errorf("the blind arm froze %v, and it has no snapshot to name", git.archived)
 	}
 	for _, dir := range shell.dirs {
-		if !strings.HasSuffix(dir, "blank") {
+		if filepath.Base(dir) != "blank" {
 			t.Errorf("the blind reviewer ran in %q, want a directory that holds no arm", dir)
 		}
 	}
+	noArmsBeside(t, shell)
 	for path, data := range files.files {
 		if strings.HasSuffix(path, ".prompt.md") && strings.Contains(string(data), "## The frozen candidate") {
 			t.Errorf("%s names a frozen candidate in the blind arm", path)
@@ -509,6 +533,52 @@ func TestTheBlindAnswersAreStoredApartFromTheAttachedOnes(t *testing.T) {
 	}
 	if plain != 8 || blindStored != 8 {
 		t.Errorf("the store holds %d attached and %d blind answers, want eight of each: %v", plain, blindStored, paths(files))
+	}
+}
+
+// TestAReviewerThatNarratesBeforeItsJSONIsRead: the verb asks for one object,
+// and a model that says what it is about to do before it does it still gave one.
+// The narration is a status line, not an answer: refusing it would throw away a
+// measurement that was paid for, and the stored file keeps the whole answer so a
+// person can read what the model said.
+func TestAReviewerThatNarratesBeforeItsJSONIsRead(t *testing.T) {
+	t.Parallel()
+
+	narrating := arm("I'll read the frozen candidate files.\n"+emptyJSON+"\nDone.", "I'll read the candidate.\n"+verdictJSON)
+	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), &fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: narrating}, fakeLenses{})
+
+	if result.Code != lensprobe.CodeOK {
+		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
+	}
+	if !strings.Contains(result.Summary, "risk 1/1") {
+		t.Errorf("Summary = %q, want the seeded defect found", result.Summary)
+	}
+}
+
+// TestProbeStoresTheWholeAnswer: the object is what is parsed and the answer is
+// what is kept. A store that kept only the JSON would lose the sentence that
+// explains a refusal a person has to read.
+func TestProbeStoresTheWholeAnswer(t *testing.T) {
+	t.Parallel()
+
+	files := newFiles()
+	narrating := arm("I'll read the frozen candidate files.\n"+emptyJSON, "I'll read the candidate.\n"+verdictJSON)
+	if result := lensprobe.Run(options("reviewer {prompt}"), files, &fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: narrating}, fakeLenses{}); result.Code != lensprobe.CodeOK {
+		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
+	}
+
+	kept := 0
+	for path, data := range files.files {
+		if !strings.HasSuffix(path, ".json") || strings.Contains(path, "canary") {
+			continue
+		}
+		if !strings.HasPrefix(string(data), "I'll read") {
+			t.Errorf("%s lost the sentence the model wrote before its answer: %q", path, string(data))
+		}
+		kept++
+	}
+	if kept == 0 {
+		t.Error("no answer was stored")
 	}
 }
 
