@@ -37,9 +37,11 @@ import (
 // Brief is what the fixture's candidate says it does. It is the intent every
 // lens is judged against, and it is fixed here because the fixture is fixed: a
 // reviewer that looks for what nobody asked for measures nothing.
-const Brief = `The candidate adds a small HTTP service: one handler that reads a user,
-one in-memory cache with a remote fetch, and one function that caps the size of
-an answer, with their tests. Nothing else changed.`
+const Brief = `The candidate adds a small HTTP service to the wiring the repository already
+has: one handler that reads the authenticated caller's record, one in-memory
+cache with a remote fetch, and one function that caps the size of an answer,
+with their tests. The authentication middleware is already there and does not
+change.`
 
 // TimeoutSeconds is what one reviewer may take. It matches `review --exec`: a
 // model that stalls at this size does not answer late, it does not answer.
@@ -290,14 +292,25 @@ func runDir(one candidate, blank string) string {
 	return blank
 }
 
-// build writes one arm into its own directory and reads its candidate. Both arms
-// start from an empty base, so a reviewer reads the code as an addition: the
-// clean arm is the same change with no defect in it, and whatever a lens reports
-// there is noise nobody planted.
+// build writes one arm into its own directory and reads its candidate. The base
+// is committed first -the repository the change lands in, which neither arm's
+// diff contains- and the arm is the worktree on top of it: the clean arm is the
+// same change with no defect in it, and whatever a lens reports there is noise
+// nobody planted.
 func build(work, name string, fixture fs.FS, arm string, files Files, shell Shell, git Git, blind bool) (candidate, *Result) {
 	dir := filepath.Join(work, name)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return candidate{}, blocked("could not make the " + name + " arm: " + oneLine(err.Error()))
+	}
+
+	if err := writeArm(dir, assets.Base, fixture, files); err != nil {
+		return candidate{}, blocked("could not write the base of the " + name + " arm: " + oneLine(err.Error()))
+	}
+	for _, command := range []string{"git init -q", "git add -A", "git commit -q -m base"} {
+		stdout, stderr, code, _, err := shell.Run(dir, command, 120)
+		if err != nil || code != 0 {
+			return candidate{}, blocked("the " + name + " arm's base commit failed: " + oneLine(strings.TrimSpace(stdout+stderr)))
+		}
 	}
 
 	if err := writeArm(dir, assets.Clean, fixture, files); err != nil {
@@ -309,11 +322,11 @@ func build(work, name string, fixture fs.FS, arm string, files Files, shell Shel
 		}
 	}
 
-	for _, command := range []string{"git init -q", "git commit -q --allow-empty -m base", "git add -A"} {
-		stdout, stderr, code, _, err := shell.Run(dir, command, 120)
-		if err != nil || code != 0 {
-			return candidate{}, blocked("the " + name + " arm's git failed: " + oneLine(strings.TrimSpace(stdout+stderr)))
-		}
+	// The candidate is the worktree against the base commit: nothing is committed
+	// on top, so the diff is exactly what the change adds or rewrites.
+	stdout, stderr, code, _, err := shell.Run(dir, "git add -A", 120)
+	if err != nil || code != 0 {
+		return candidate{}, blocked("the " + name + " arm's git failed: " + oneLine(strings.TrimSpace(stdout+stderr)))
 	}
 
 	tree, paths, diff, err := git.Candidate(dir, "HEAD")

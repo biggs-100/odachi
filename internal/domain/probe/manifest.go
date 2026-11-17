@@ -38,6 +38,11 @@ type Defect struct {
 	// Why is what the defect is, in one sentence, for the person reading the
 	// report. An answer key nobody can check is not an answer key.
 	Why string `json:"why"`
+	// Context names the files a reviewer has to read to see the defect, when the
+	// diff alone cannot show it. They live in the base: a path here is a file the
+	// change does not touch, which is exactly the difference between the arm that
+	// can read the candidate and the arm that only gets the prompt.
+	Context []string `json:"context"`
 }
 
 // Manifest is the fixture's answer key.
@@ -110,6 +115,11 @@ func (m Manifest) Validate() error {
 		}
 		if strings.TrimSpace(defect.Why) == "" {
 			return fmt.Errorf("defect %q does not say what it is: a key nobody can check is not a key", defect.ID)
+		}
+		for _, path := range defect.Context {
+			if strings.TrimSpace(path) == "" {
+				return fmt.Errorf("defect %q names an empty context path: a file a reviewer has to read has a name", defect.ID)
+			}
 		}
 	}
 	return nil

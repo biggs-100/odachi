@@ -754,7 +754,7 @@ func runReviewProbe(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 
 	opts := lensprobe.Options{Dir: dir}
-	flags.StringVar(&opts.Fixture, "fixture", "", "a fixture folder with clean/, seeded/ and manifest.json (default: the one that ships with the binary)")
+	flags.StringVar(&opts.Fixture, "fixture", "", "a fixture folder with base/, clean/, seeded/ and manifest.json (default: the one that ships with the binary)")
 	flags.StringVar(&opts.Exec, "exec", "", "run this command once per lens with {prompt} as the file to read (and {model} replaced); it answers the measurement")
 	flags.StringVar(&opts.Model, "model", "", "model that replaces {model} in --exec")
 	flags.IntVar(&opts.Runs, "runs", 1, "how many draws the measurement holds: the median and the range of each number, 1 to 10")

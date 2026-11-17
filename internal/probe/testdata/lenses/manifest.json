@@ -5,10 +5,19 @@
     {
       "id": "risk-query-built-by-concatenation",
       "path": "server.go",
-      "line": 25,
+      "line": 37,
       "lens": "risk",
       "severity": "CRITICAL",
       "why": "the id from the query string is concatenated into the SQL, so the request decides the statement"
+    },
+    {
+      "id": "reliability-context-key-nobody-writes",
+      "path": "server.go",
+      "line": 24,
+      "lens": "reliability",
+      "severity": "CRITICAL",
+      "context": ["auth.go"],
+      "why": "the handler reads its own callerKey from the context, and the middleware that authenticates every request writes authKey: the lookup never succeeds and every request answers 401. The two agree they carry the caller, and this diff cannot show it: auth.go is in the base and the change does not touch it"
     },
     {
       "id": "resilience-retry-with-no-cap",

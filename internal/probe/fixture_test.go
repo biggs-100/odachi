@@ -45,3 +45,38 @@ func TestTheBundledFixtureIsScorable(t *testing.T) {
 		})
 	}
 }
+
+// TestADefectThatNeedsContextLivesInTheBase: the base is what a defect outside
+// the diff lives in. A fixture that named a context file in an arm would put it
+// back in the diff, and the two readers would measure the same thing.
+func TestADefectThatNeedsContextLivesInTheBase(t *testing.T) {
+	t.Parallel()
+
+	data, err := fs.ReadFile(probe.Fixture(), probe.ManifestPath)
+	if err != nil {
+		t.Fatalf("read the manifest: %v", err)
+	}
+	manifest, err := domainprobe.Parse(data)
+	if err != nil {
+		t.Fatalf("parse the manifest: %v", err)
+	}
+
+	contextual := 0
+	for _, defect := range manifest.Defects {
+		for _, path := range defect.Context {
+			contextual++
+			if _, err := fs.ReadFile(probe.Fixture(), probe.Root+"/"+probe.Base+"/"+path); err != nil {
+				t.Errorf("defect %q needs %s, and the base has no such file: %v", defect.ID, path, err)
+				continue
+			}
+			for _, arm := range []string{probe.Clean, probe.Seeded} {
+				if _, err := fs.ReadFile(probe.Fixture(), probe.Root+"/"+arm+"/"+path); err == nil {
+					t.Errorf("defect %q needs %s, and the %s arm carries it: the file the key calls context would be in the diff", defect.ID, path, arm)
+				}
+			}
+		}
+	}
+	if contextual == 0 {
+		t.Error("no defect needs a file outside the diff, so the two arms of the reader cannot differ")
+	}
+}

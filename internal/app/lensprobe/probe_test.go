@@ -83,7 +83,7 @@ const verdictJSON = `{
   "model": "fixture/reviewer",
   "inspection": {"status": "completed", "paths": ["server.go"]},
   "findings": [
-    {"path": "server.go", "line": 25, "severity": "CRITICAL", "causal": true, "evidence": "cited", "why": "the id is concatenated"}
+    {"path": "server.go", "line": 37, "severity": "CRITICAL", "causal": true, "evidence": "cited", "why": "the id is concatenated"}
   ],
   "verdict": "changes_requested"
 }`
@@ -205,7 +205,7 @@ func TestProbeScoresEveryLensAndTheCleanArm(t *testing.T) {
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
 	}
-	want := "runs 1 · risk 1/1, readability 0/1, reliability 0/1, resilience 0/2 · seeded noise 0 · seeded notes 0 · clean noise 0 · clean notes 0"
+	want := "runs 1 · risk 1/1, readability 0/1, reliability 0/2, resilience 0/2 · seeded noise 0 · seeded notes 0 · clean noise 0 · clean notes 0"
 	if result.Summary != want {
 		t.Errorf("Summary = %q, want %q", result.Summary, want)
 	}
