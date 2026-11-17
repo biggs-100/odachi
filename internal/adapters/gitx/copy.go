@@ -25,19 +25,35 @@ func Archive(root, tree string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if err := ArchiveInto(root, tree, dir); err != nil {
+		_ = os.RemoveAll(dir)
+		return "", err
+	}
+	return dir, nil
+}
+
+// ArchiveInto exports a tree into dir, which the caller owns and picks: the
+// reviewer of a probe reads a copy that sits beside the arms it is measured
+// against, and the canary needs a directory whose neighbours are known.
+func ArchiveInto(root, tree, dir string) error {
+	tree = strings.TrimSpace(tree)
+	if tree == "" {
+		return fmt.Errorf("archive: no tree to export")
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
 
 	tarPath := filepath.Join(dir, ".odachi-undo.tar")
 	if _, err := run(root, "archive", "--format=tar", "-o", tarPath, tree); err != nil {
-		_ = os.RemoveAll(dir)
-		return "", err
+		return err
 	}
 
 	if err := extractTar(tarPath, dir); err != nil {
-		_ = os.RemoveAll(dir)
-		return "", err
+		return err
 	}
 	_ = os.Remove(tarPath)
-	return dir, nil
+	return nil
 }
 
 // PatchReverse reverts a diff inside dir, and only for the paths it is given:

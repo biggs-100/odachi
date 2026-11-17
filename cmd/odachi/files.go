@@ -550,6 +550,10 @@ type gitRepo struct{}
 func (gitRepo) Archive(root, tree string) (string, error) { return gitx.Archive(root, tree) }
 func (gitRepo) Discard(dir string) error                  { return gitx.Discard(dir) }
 
+// ArchiveInto is the probe's form: the caller names the directory, because the
+// reviewer has to read the copy beside the arms it is measured against.
+func (gitRepo) ArchiveInto(root, tree, dir string) error { return gitx.ArchiveInto(root, tree, dir) }
+
 func (gitRepo) PatchReverse(dir, diff string, paths []string) error {
 	return gitx.PatchReverse(dir, diff, paths)
 }

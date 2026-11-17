@@ -748,7 +748,7 @@ func hasFlag(args []string, name string) bool {
 // in it, and prints what each one found. It is the inspection lane of the review
 // verb: the bare form prints the prompt and runs nobody, and --exec answers it.
 func runReviewProbe(dir string, args []string, stdout, stderr io.Writer) int {
-	const usageLine = "usage: odachi review probe [--fixture <dir>] [--exec \"<command>\"] [--model <id>]"
+	const usageLine = "usage: odachi review probe [--fixture <dir>] [--runs N] [--blind] [--exec \"<command>\"] [--model <id>]"
 
 	flags := flag.NewFlagSet("odachi review probe", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -758,6 +758,7 @@ func runReviewProbe(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.Exec, "exec", "", "run this command once per lens with {prompt} as the file to read (and {model} replaced); it answers the measurement")
 	flags.StringVar(&opts.Model, "model", "", "model that replaces {model} in --exec")
 	flags.IntVar(&opts.Runs, "runs", 1, "how many draws the measurement holds: the median and the range of each number, 1 to 10")
+	flags.BoolVar(&opts.Blind, "blind", false, "run the arm before the reader: no frozen candidate, and the reviewer runs in an empty directory")
 
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -1828,7 +1829,7 @@ usage:
   odachi review mode [status|on|off]
   odachi review checks [status|approve]
   odachi review waive --because "<why>" [--row <fingerprint>]
-  odachi review probe [--runs N] [--exec "<command>"]
+  odachi review probe [--runs N] [--blind] [--exec "<command>"]
   odachi verify [--exec "<command>"]
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]

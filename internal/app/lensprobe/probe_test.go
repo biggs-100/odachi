@@ -1,6 +1,8 @@
 package lensprobe_test
 
 import (
+	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -21,9 +23,14 @@ func (f *fakeFiles) Exists(path string) (bool, error)     { _, ok := f.files[pat
 
 // fakeGit answers the candidate with fixed bytes: the probe's job is to ask, not
 // to measure git. Both arms get their own tree, the way two materializations do.
-type fakeGit struct{ paths, diff string }
+type fakeGit struct {
+	paths, diff  string
+	archived     []string
+	archiveInto  []string
+	archiveError error
+}
 
-func (g fakeGit) Candidate(root, base string) (string, []string, string, error) {
+func (g *fakeGit) Candidate(root, base string) (string, []string, string, error) {
 	arm := "clean"
 	if strings.Contains(root, "seeded") {
 		arm = "seeded"
@@ -31,10 +38,23 @@ func (g fakeGit) Candidate(root, base string) (string, []string, string, error) 
 	return "tree-" + arm, []string{g.paths}, g.diff, nil
 }
 
-// fakeShell records every command and answers the reviewer from the arm the
-// prompt path names, so one fake can answer both arms differently.
+// ArchiveInto materializes the arm the way gitx does, so the canary has a real
+// directory to write its marker into.
+func (g *fakeGit) ArchiveInto(root, tree, dir string) error {
+	if g.archiveError != nil {
+		return g.archiveError
+	}
+	g.archived = append(g.archived, tree)
+	g.archiveInto = append(g.archiveInto, dir)
+	return os.MkdirAll(dir, 0o755)
+}
+
+// fakeShell records every command and the directory it ran in, and answers the
+// reviewer from the arm the prompt path names, so one fake can answer both arms
+// differently.
 type fakeShell struct {
 	commands []string
+	dirs     []string
 	answer   func(command string) string
 }
 
@@ -43,6 +63,7 @@ func (s *fakeShell) Run(dir, command string, timeoutSeconds int) (string, string
 	if strings.HasPrefix(command, "git ") {
 		return "", "", 0, false, nil
 	}
+	s.dirs = append(s.dirs, dir)
 	return s.answer(command), "", 0, false, nil
 }
 
@@ -89,13 +110,25 @@ func options(exec string) lensprobe.Options {
 	return lensprobe.Options{Dir: "C:\\project", Exec: exec, Model: "fixture/reviewer", Runs: 1}
 }
 
-// arm picks the canned answer from the prompt the command was handed.
+// canaryAnswer is what a reviewer scoped to the frozen candidate answers: it
+// quotes the marker inside the snapshot and cannot read the one beside it.
+const canaryAnswer = "inside: ODACHI-CANARY-INSIDE; outside: I cannot read that path"
+
+// blindAnswer is what a reviewer that was handed no directory answers.
+const blindAnswer = "inside: I cannot read that path; outside: I cannot read that path"
+
+// arm picks the canned answer from the command: the canary asks its own
+// question, and the other two are the arms.
 func arm(clean, seeded string) func(string) string {
 	return func(command string) string {
-		if strings.Contains(command, "clean") {
+		switch {
+		case strings.Contains(command, "canary"):
+			return canaryAnswer
+		case strings.Contains(command, "clean"):
 			return clean
+		default:
+			return seeded
 		}
-		return seeded
 	}
 }
 
@@ -107,7 +140,7 @@ func TestProbeWithoutExecPrintsTheShippingPrompts(t *testing.T) {
 	t.Parallel()
 
 	shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
-	result := lensprobe.Run(options(""), newFiles(), fakeGit{paths: "server.go", diff: "+query := \"x\" + id"}, shell, fakeLenses{})
+	result := lensprobe.Run(options(""), newFiles(), &fakeGit{paths: "server.go", diff: "+query := \"x\" + id"}, shell, fakeLenses{})
 
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
@@ -138,7 +171,7 @@ func TestProbeWithoutExecPrintsTheShippingPrompts(t *testing.T) {
 func TestThePromptIsStoredBesideEachAnswer(t *testing.T) {
 	files := newFiles()
 	shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
-	result := lensprobe.Run(options("reviewer {prompt}"), files, fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
+	result := lensprobe.Run(options("reviewer {prompt}"), files, &fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
 	}
@@ -167,7 +200,7 @@ func TestProbeScoresEveryLensAndTheCleanArm(t *testing.T) {
 
 	files := newFiles()
 	shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
-	result := lensprobe.Run(options("reviewer {prompt}"), files, fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
+	result := lensprobe.Run(options("reviewer {prompt}"), files, &fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
 
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
@@ -219,7 +252,7 @@ func TestProbeScoresEveryLensAndTheCleanArm(t *testing.T) {
 func TestProbeCountsTheCleanArmsFindingsAsNoise(t *testing.T) {
 	t.Parallel()
 
-	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(verdictJSON, emptyJSON)}, fakeLenses{})
+	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), &fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(verdictJSON, emptyJSON)}, fakeLenses{})
 
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
@@ -239,7 +272,7 @@ func TestProbeCountsTheCleanArmsFindingsAsNoise(t *testing.T) {
 func TestProbeReadsASuggestionOnTheCleanArmAsANote(t *testing.T) {
 	t.Parallel()
 
-	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(suggestionJSON, verdictJSON)}, fakeLenses{})
+	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), &fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(suggestionJSON, verdictJSON)}, fakeLenses{})
 
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
@@ -263,7 +296,7 @@ func TestProbeKeepsEveryRun(t *testing.T) {
 
 	files := newFiles()
 	for i := 0; i < 2; i++ {
-		if result := lensprobe.Run(options("reviewer {prompt}"), files, fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(emptyJSON, verdictJSON)}, fakeLenses{}); result.Code != lensprobe.CodeOK {
+		if result := lensprobe.Run(options("reviewer {prompt}"), files, &fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(emptyJSON, verdictJSON)}, fakeLenses{}); result.Code != lensprobe.CodeOK {
 			t.Fatalf("run %d = %d: %s", i+1, result.Code, result.Summary)
 		}
 	}
@@ -286,7 +319,7 @@ func TestProbeRefusesAnAnswerThatIsNotAVerdict(t *testing.T) {
 	t.Parallel()
 
 	shell := &fakeShell{answer: func(string) string { return "LGTM, looks fine to me" }}
-	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), fakeGit{paths: "a.go", diff: "+x"}, shell, fakeLenses{})
+	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), &fakeGit{paths: "a.go", diff: "+x"}, shell, fakeLenses{})
 
 	if result.Code != lensprobe.CodeBlocked {
 		t.Fatalf("Run = %d, want blocked: %s", result.Code, result.Summary)
@@ -313,7 +346,7 @@ func TestProbeRepeatsTheMeasurement(t *testing.T) {
 	shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
 	opts := options("reviewer {prompt}")
 	opts.Runs = 3
-	result := lensprobe.Run(opts, newFiles(), fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
+	result := lensprobe.Run(opts, newFiles(), &fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
 
 	if result.Code != lensprobe.CodeOK {
 		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
@@ -333,6 +366,152 @@ func TestProbeRepeatsTheMeasurement(t *testing.T) {
 	}
 }
 
+// TestTheReviewerReadsTheFrozenArm: the probe hands the reviewer a snapshot of
+// the arm it was asked about, names it in the prompt, and runs the command inside
+// it, so what the reviewer can read is exactly the candidate the verdict names.
+// The canary is the same question review asks: the marker inside is quotable and
+// the one beside it is not.
+func TestTheReviewerReadsTheFrozenArm(t *testing.T) {
+	t.Parallel()
+
+	git := &fakeGit{paths: "server.go", diff: "+x"}
+	shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
+	files := newFiles()
+	result := lensprobe.Run(options("reviewer {prompt}"), files, git, shell, fakeLenses{})
+
+	if result.Code != lensprobe.CodeOK {
+		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
+	}
+	if len(git.archived) != 2 {
+		t.Fatalf("the probe froze %v, want one snapshot per arm", git.archived)
+	}
+	for i, dir := range git.archiveInto {
+		want := []string{"snapshot-clean", "snapshot-seeded"}[i]
+		if !strings.HasSuffix(dir, want) {
+			t.Errorf("snapshot %d is %q, want it under the run's own folder as %q", i, dir, want)
+		}
+	}
+	for _, dir := range shell.dirs {
+		if strings.HasSuffix(dir, "snapshot-clean") || strings.HasSuffix(dir, "snapshot-seeded") {
+			continue
+		}
+		t.Errorf("the reviewer ran in %q, want the snapshot of its own arm", dir)
+	}
+	named := 0
+	for path, data := range files.files {
+		if !strings.HasSuffix(path, ".prompt.md") || strings.Contains(path, "canary") {
+			continue
+		}
+		if !strings.Contains(string(data), "## The frozen candidate") {
+			t.Errorf("%s does not name the frozen candidate:\n%s", path, data)
+		}
+		named++
+	}
+	if named == 0 {
+		t.Error("no prompt named the frozen candidate")
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "canary: attached and scoped") {
+		t.Errorf("the report does not say the reviewer was scoped to the candidate:\n%s", strings.Join(result.Lines, "\n"))
+	}
+}
+
+// TestTheBlindArmGetsNoDirectory: --blind is the arm before the change. There is
+// no snapshot to name, the reviewer runs in an empty directory, and the canary
+// reads any marker as too wide - a reviewer that found one went looking outside
+// the prompt, which is the leak this arm exists to rule out.
+func TestTheBlindArmGetsNoDirectory(t *testing.T) {
+	t.Parallel()
+
+	git := &fakeGit{paths: "server.go", diff: "+x"}
+	shell := &fakeShell{answer: func(command string) string {
+		switch {
+		case strings.Contains(command, "canary"):
+			return blindAnswer
+		case strings.Contains(command, "clean"):
+			return emptyJSON
+		default:
+			return verdictJSON
+		}
+	}}
+	opts := options("reviewer {prompt}")
+	opts.Blind = true
+	files := newFiles()
+	result := lensprobe.Run(opts, files, git, shell, fakeLenses{})
+
+	if result.Code != lensprobe.CodeOK {
+		t.Fatalf("Run = %d: %s", result.Code, result.Summary)
+	}
+	if len(git.archived) != 0 {
+		t.Errorf("the blind arm froze %v, and it has no snapshot to name", git.archived)
+	}
+	for _, dir := range shell.dirs {
+		if !strings.HasSuffix(dir, "blank") {
+			t.Errorf("the blind reviewer ran in %q, want a directory that holds no arm", dir)
+		}
+	}
+	for path, data := range files.files {
+		if strings.HasSuffix(path, ".prompt.md") && strings.Contains(string(data), "## The frozen candidate") {
+			t.Errorf("%s names a frozen candidate in the blind arm", path)
+		}
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "canary: not attached") {
+		t.Errorf("the blind arm's canary does not say it had nothing to attach to:\n%s", strings.Join(result.Lines, "\n"))
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "reader: no directory (--blind)") {
+		t.Errorf("the report does not say which arm it measured:\n%s", strings.Join(result.Lines, "\n"))
+	}
+}
+
+// TestTheProbeStopsWhenTheSnapshotCannotBeMade: a reviewer handed no snapshot is
+// a different arm, not a broken one, so a freeze that fails blocks the run
+// instead of measuring something nobody asked for.
+func TestTheProbeStopsWhenTheSnapshotCannotBeMade(t *testing.T) {
+	t.Parallel()
+
+	git := &fakeGit{paths: "server.go", diff: "+x", archiveError: errors.New("git archive failed")}
+	result := lensprobe.Run(options("reviewer {prompt}"), newFiles(), git, &fakeShell{answer: arm(emptyJSON, verdictJSON)}, fakeLenses{})
+
+	if result.Code != lensprobe.CodeBlocked {
+		t.Fatalf("Run = %d, want blocked: %s", result.Code, result.Summary)
+	}
+	if !strings.Contains(result.Summary, "git archive failed") {
+		t.Errorf("Summary = %q, want it to name the failure", result.Summary)
+	}
+}
+
+// TestTheBlindAnswersAreStoredApartFromTheAttachedOnes: the two arms ask about
+// the same bytes with a different question, so an answer keyed by the tree alone
+// would let the second run overwrite the first. The mode is part of the name.
+func TestTheBlindAnswersAreStoredApartFromTheAttachedOnes(t *testing.T) {
+	t.Parallel()
+
+	files := newFiles()
+	attached := options("reviewer {prompt}")
+	if result := lensprobe.Run(attached, files, &fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(emptyJSON, verdictJSON)}, fakeLenses{}); result.Code != lensprobe.CodeOK {
+		t.Fatalf("the attached arm = %d: %s", result.Code, result.Summary)
+	}
+	blind := options("reviewer {prompt}")
+	blind.Blind = true
+	if result := lensprobe.Run(blind, files, &fakeGit{paths: "server.go", diff: "+x"}, &fakeShell{answer: arm(emptyJSON, verdictJSON)}, fakeLenses{}); result.Code != lensprobe.CodeOK {
+		t.Fatalf("the blind arm = %d: %s", result.Code, result.Summary)
+	}
+
+	var plain, blindStored int
+	for path := range files.files {
+		if !strings.HasSuffix(path, ".json") || strings.Contains(path, "canary") {
+			continue
+		}
+		if strings.Contains(path, "-blind-") {
+			blindStored++
+			continue
+		}
+		plain++
+	}
+	if plain != 8 || blindStored != 8 {
+		t.Errorf("the store holds %d attached and %d blind answers, want eight of each: %v", plain, blindStored, paths(files))
+	}
+}
+
 // TestProbeRefusesARunCountOutsideTheRange: a count the measurement cannot hold
 // is refused before any reviewer runs, and the message names the bound and what
 // one draw costs.
@@ -343,7 +522,7 @@ func TestProbeRefusesARunCountOutsideTheRange(t *testing.T) {
 		shell := &fakeShell{answer: arm(emptyJSON, verdictJSON)}
 		opts := options("reviewer {prompt}")
 		opts.Runs = runs
-		result := lensprobe.Run(opts, newFiles(), fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
+		result := lensprobe.Run(opts, newFiles(), &fakeGit{paths: "server.go", diff: "+x"}, shell, fakeLenses{})
 		if result.Code != lensprobe.CodeBlocked {
 			t.Fatalf("Run(--runs %d) = %d, want blocked: %s", runs, result.Code, result.Summary)
 		}

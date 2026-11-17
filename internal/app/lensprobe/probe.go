@@ -64,10 +64,12 @@ type Files interface {
 	Exists(path string) (bool, error)
 }
 
-// Git is the port that names the candidate: one read of the worktree, the same
-// one every gate uses.
+// Git is the port that names the candidate and freezes it: one read of the
+// worktree, the same one every gate uses, and one export of the tree into a
+// directory the reviewer may read.
 type Git interface {
 	Candidate(root, base string) (tree string, paths []string, diff string, err error)
+	ArchiveInto(root, tree, dir string) error
 }
 
 // Shell is the port that runs the fixture's git and the reviewer's command.
@@ -96,6 +98,10 @@ type Options struct {
 	// that asks for zero is refused and told the minimum: one draw is a number,
 	// and zero draws is a question nobody measured.
 	Runs int
+	// Blind runs the arm before the change: the reviewer gets the prompt and no
+	// directory, and the run happens in an empty one. It is the other half of the
+	// comparison, and the only way to say what the snapshot bought.
+	Blind bool
 }
 
 // Result is what the CLI prints and exits with.
@@ -125,13 +131,24 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	// They are read separately because a reviewer handed both at once knows which
 	// half is the exam, and each one is split by what a finding claims: a claim is
 	// noise, a suggestion is a note.
-	clean, problem := build(work, "clean", fixture, assets.Clean, files, shell, git)
+	clean, problem := build(work, "clean", fixture, assets.Clean, files, shell, git, opts.Blind)
 	if problem != nil {
 		return *problem
 	}
-	seeded, problem := build(work, "seeded", fixture, assets.Seeded, files, shell, git)
+	seeded, problem := build(work, "seeded", fixture, assets.Seeded, files, shell, git, opts.Blind)
 	if problem != nil {
 		return *problem
+	}
+
+	// The blind arm has no candidate to read, so its reviewer runs in a directory
+	// that holds neither arm: a prompt that bans reads is not isolation, and the
+	// canary is what says the difference.
+	blank := ""
+	if opts.Blind {
+		blank = filepath.Join(work, "blank")
+		if err := os.MkdirAll(blank, 0o755); err != nil {
+			return *blocked("could not make the blind arm's empty directory: " + oneLine(err.Error()))
+		}
 	}
 
 	names := []string{review.Risk, review.Readability, review.Reliability, review.Resilience}
@@ -149,12 +166,13 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 		prompts[one.name] = make(map[string]string, len(names))
 		for _, name := range names {
 			prompts[one.name][name] = review.Prompt(review.PromptInput{
-				Brief:  Brief,
-				Tree:   one.tree,
-				Base:   "HEAD",
-				Paths:  one.paths,
-				Diff:   one.diff,
-				Lenses: []review.Lens{{Name: name, Body: bodies[name]}},
+				Brief:      Brief,
+				Tree:       one.tree,
+				Base:       "HEAD",
+				Paths:      one.paths,
+				Diff:       one.diff,
+				Lenses:     []review.Lens{{Name: name, Body: bodies[name]}},
+				FrozenTree: one.snapshot,
 			})
 		}
 	}
@@ -200,7 +218,7 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	for draw := 1; draw <= draws; draw++ {
 		seededVerdicts := make(map[string]review.Verdict, len(owed))
 		for _, name := range owed {
-			answer, stored, problem := ask(opts, files, shell, work, "seeded", name, prompts[seeded.name][name], seeded.tree, draw)
+			answer, stored, problem := ask(opts, files, shell, work, runDir(seeded, blank), "seeded", name, prompts[seeded.name][name], seeded.tree, draw)
 			if problem != nil {
 				return *problem
 			}
@@ -214,7 +232,7 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 
 		cleanFindings := make([]probe.Noise, 0)
 		for _, name := range names {
-			answer, stored, problem := ask(opts, files, shell, work, "clean", name, prompts[clean.name][name], clean.tree, draw)
+			answer, stored, problem := ask(opts, files, shell, work, runDir(clean, blank), "clean", name, prompts[clean.name][name], clean.tree, draw)
 			if problem != nil {
 				return *problem
 			}
@@ -233,11 +251,19 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 	}
 
 	runs := Summarize(scores, cleanTallies)
-	canaryLine, problem := runCanary(opts, files, shell, work)
+	// The marker inside the candidate goes where the reviewer could read it: the
+	// frozen clean arm. The blind arm has no snapshot, so it goes into the arm's
+	// own directory, outside the empty one its command runs in.
+	inside := clean.snapshot
+	if inside == "" {
+		inside = filepath.Join(work, "clean")
+	}
+	canaryLine, problem := runCanary(opts, files, shell, work, inside, runDir(clean, blank), opts.Blind)
 	if problem != nil {
 		return *problem
 	}
 	lines = append(lines, canaryLine)
+	lines = append(lines, "reader: "+readerLine(opts, clean))
 	lines = append(lines, renderRuns(runs)...)
 	summary := runs.Summary()
 	return Result{Code: CodeOK, Lines: lines, Summary: summary}
@@ -246,17 +272,29 @@ func Run(opts Options, files Files, git Git, shell Shell, lenses Lenses) Result 
 // candidate is one arm materialized into a throwaway repository and read by the
 // same port every gate reads.
 type candidate struct {
-	name  string
-	tree  string
-	paths []string
-	diff  string
+	name string
+	tree string
+	// snapshot is the directory the reviewer may read: an export of this arm's
+	// tree, or empty in the blind arm, where the reviewer gets no directory.
+	snapshot string
+	paths    []string
+	diff     string
+}
+
+// runDir is where the reviewer's command runs: inside the frozen candidate when
+// it has one, as `review --exec` does, and in the empty directory otherwise.
+func runDir(one candidate, blank string) string {
+	if one.snapshot != "" {
+		return one.snapshot
+	}
+	return blank
 }
 
 // build writes one arm into its own directory and reads its candidate. Both arms
 // start from an empty base, so a reviewer reads the code as an addition: the
 // clean arm is the same change with no defect in it, and whatever a lens reports
 // there is noise nobody planted.
-func build(work, name string, fixture fs.FS, arm string, files Files, shell Shell, git Git) (candidate, *Result) {
+func build(work, name string, fixture fs.FS, arm string, files Files, shell Shell, git Git, blind bool) (candidate, *Result) {
 	dir := filepath.Join(work, name)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return candidate{}, blocked("could not make the " + name + " arm: " + oneLine(err.Error()))
@@ -282,7 +320,17 @@ func build(work, name string, fixture fs.FS, arm string, files Files, shell Shel
 	if err != nil {
 		return candidate{}, blocked("could not read the " + name + " candidate: " + oneLine(err.Error()))
 	}
-	return candidate{name: name, tree: tree, paths: paths, diff: diff}, nil
+
+	// The reviewer reads the frozen arm, not the directory the arms are built in:
+	// a command that ran beside the seeded arm could read the exam it is graded on.
+	snapshot := ""
+	if !blind {
+		snapshot = filepath.Join(work, "snapshot-"+name)
+		if err := git.ArchiveInto(dir, tree, snapshot); err != nil {
+			return candidate{}, blocked("could not freeze the " + name + " arm: " + oneLine(err.Error()))
+		}
+	}
+	return candidate{name: name, tree: tree, snapshot: snapshot, paths: paths, diff: diff}, nil
 }
 
 // load reads the manifest and roots the fixture: the one the human named, or the
@@ -334,7 +382,7 @@ func writeArm(work, arm string, fixture fs.FS, files Files) error {
 
 // ask runs one reviewer and returns its answer, after writing the prompt where
 // the command can read it and the answer where a person can find it.
-func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree string, draw int) (string, string, *Result) {
+func ask(opts Options, files Files, shell Shell, work, dir, arm, lens, prompt, tree string, draw int) (string, string, *Result) {
 	promptPath := filepath.Join(work, "prompt-"+arm+"-"+lens+".txt")
 	if err := files.Write(promptPath, []byte(prompt)); err != nil {
 		return "", "", blocked("could not write the " + lens + " prompt: " + oneLine(err.Error()))
@@ -343,7 +391,7 @@ func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree s
 	command := strings.ReplaceAll(opts.Exec, "{prompt}", shell.Quote(promptPath))
 	command = strings.ReplaceAll(command, "{model}", strings.TrimSpace(opts.Model))
 
-	stdout, stderr, code, timedOut, err := shell.Run(work, command, TimeoutSeconds)
+	stdout, stderr, code, timedOut, err := shell.Run(dir, command, TimeoutSeconds)
 	if err != nil {
 		return "", "", blocked("the " + lens + " reviewer could not be run: " + oneLine(err.Error()))
 	}
@@ -354,7 +402,7 @@ func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree s
 		return "", "", blocked("the " + lens + " reviewer exited " + strconv.Itoa(code) + ": " + oneLine(strings.TrimSpace(stderr)))
 	}
 
-	stored := storePath(opts.Dir, arm, lens, tree, draw, files)
+	stored := storePath(opts, arm, lens, tree, draw, files)
 	if err := files.Write(stored, []byte(stdout)); err != nil {
 		return "", "", blocked("could not store the " + lens + " answer: " + oneLine(err.Error()))
 	}
@@ -374,12 +422,16 @@ func ask(opts Options, files Files, shell Shell, work, arm, lens, prompt, tree s
 // answer is filed with its prompt like any other probe answer, so a person can
 // check the two legs later. A canary that did not answer is reported as such,
 // never read as isolation.
-func runCanary(opts Options, files Files, shell Shell, work string) (string, *Result) {
+//
+// The blind arm has nothing to attach to, so both markers sit outside the empty
+// directory its reviewer runs in and any quote is "too wide": a reviewer that
+// found one went looking, and its number would not be the arm's.
+func runCanary(opts Options, files Files, shell Shell, work, inside, dir string, blind bool) (string, *Result) {
 	const insideMark = "ODACHI-CANARY-INSIDE"
 	const outsideMark = "ODACHI-CANARY-OUTSIDE"
 	for path, mark := range map[string]string{
-		filepath.Join(work, "clean", "canary-inside.txt"): insideMark,
-		filepath.Join(work, "canary-outside.txt"):         outsideMark,
+		filepath.Join(inside, "canary-inside.txt"): insideMark,
+		filepath.Join(work, "canary-outside.txt"):  outsideMark,
 	} {
 		if err := files.Write(path, []byte(mark+"\n")); err != nil {
 			return "", blocked("could not write the access canary: " + oneLine(err.Error()))
@@ -394,19 +446,32 @@ func runCanary(opts Options, files Files, shell Shell, work string) (string, *Re
 	}
 	command := strings.ReplaceAll(opts.Exec, "{prompt}", shell.Quote(promptPath))
 	command = strings.ReplaceAll(command, "{model}", strings.TrimSpace(opts.Model))
-	stdout, stderr, code, timedOut, err := shell.Run(work, command, TimeoutSeconds)
+	stdout, stderr, code, timedOut, err := shell.Run(dir, command, TimeoutSeconds)
 	if err != nil || timedOut || code != 0 {
 		return "canary: no answer", nil
 	}
 
-	stored := storePath(opts.Dir, "canary", "canary", "fixture", 1, files)
+	stored := storePath(opts, "canary", "canary", "fixture", 1, files)
 	if err := files.Write(stored, []byte(stdout)); err != nil {
 		return "", blocked("could not store the access canary answer: " + oneLine(err.Error()))
 	}
 	if err := files.Write(strings.TrimSuffix(stored, ".json")+".prompt.md", []byte(prompt)); err != nil {
 		return "", blocked("could not store the access canary prompt: " + oneLine(err.Error()))
 	}
+	if blind {
+		return canary.ReadBlind(stdout + stderr), nil
+	}
 	return canary.Read(stdout + stderr), nil
+}
+
+// readerLine says which arm the number belongs to: a person comparing two runs
+// has to know whether the reviewer could read the candidate, and a report that
+// leaves it to memory is a report about an unknown question.
+func readerLine(opts Options, clean candidate) string {
+	if opts.Blind {
+		return "no directory (--blind): the prompt is the whole candidate"
+	}
+	return "the frozen candidate at " + clean.snapshot
 }
 
 // storePath is where a probe stores one answer. It is not the review store: a
@@ -415,9 +480,14 @@ func runCanary(opts Options, files Files, shell Shell, work string) (string, *Re
 //
 // The fixture's tree is the same on every run, so the tree alone would make the
 // second measurement overwrite the first: the name carries the first free
-// number, and the store keeps the runs a person compares.
-func storePath(dir, arm, lens, tree string, draw int, files Files) string {
-	base := filepath.Join(dir, ".git", "odachi", "probe", tree+"-"+arm+"-"+lens)
+// number, and the store keeps the runs a person compares. The blind arm is a
+// different question about the same bytes, so its answers carry the arm in the
+// name too: evidence answers only its own question.
+func storePath(opts Options, arm, lens, tree string, draw int, files Files) string {
+	if opts.Blind {
+		arm += "-blind"
+	}
+	base := filepath.Join(opts.Dir, ".git", "odachi", "probe", tree+"-"+arm+"-"+lens)
 	if draw > 1 {
 		base = base + "-r" + strconv.Itoa(draw)
 	}
