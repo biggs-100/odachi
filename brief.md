@@ -1126,3 +1126,26 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: por que la precedencia de una configuracion es parte de la regla, y por que dos lecturas del mismo candidato no pueden discrepar.
+
+## 0326 · el-brazo-limpio
+
+## What must exist
+- el brazo limpio del fixture paga las dos mejoras que el brazo ciego reclamo: la rama del 4xx no reintentable tiene su prueba, y el backoff espera cancelable y no duerme despues del ultimo intento
+
+## Done when
+- un test del fixture prueba que un 404 devuelve el error sin reintentar, y el fixture compila y pasa sus pruebas en un modulo aparte
+- el backoff no duerme despues del ultimo intento y una cancelacion durante la espera corta el fetch antes de agotar los intentos, con su test
+- la pagina de la medicion dice que el examen se movio despues del numero y nombra las dos mejoras pagadas
+- go test ./... is green and odachi check --run go test ./... is green
+
+## Not included (first version)
+- no se mide de nuevo: el numero publicado queda como esta, y la pagina dice que el examen se movio despues
+- no se toca el brazo seeded ni la base: solo el brazo limpio
+- no se toca el manifiesto ni la llave de defectos
+- no se cambia la sonda ni el review: esta feature mejora el examen, no el instrumento
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: por que un fixture que nadie compila puede hacer que el brazo limpio deje de ser limpio.
