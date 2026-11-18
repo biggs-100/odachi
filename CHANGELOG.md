@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.50.0 - 2026-11-18
+
 - **A skill's exam runs with one command and leaves its score.** The behavioural measurement of a skill had happened once, by hand: nine probes, a rubric read from transcripts, and a page. `odachi skills eval tests --exec "<command>" --runs 3` builds two arms from the same prompt -the skill in the project's `.agents/skills`, and nothing there- runs the command in each, reads the event stream and decides the two behaviours the order can show: the test before the code, and the suite run between them. The control arm takes the home copy out with `--move-home` and puts it back always, with a journal for a run that died. The record lives in the clone under the identity of the bytes, so the same text is not paid twice. `docs/skill-evals.md` says what it measures and what it does not (0329).
 
 - **The probe's two resilience defects are in different functions.** A single finding could name the retry loop and the discarded read error together, and the scorer claims a finding once, so the per-lens row could count the pair as one defect while the reader had found two. The read lives in its own function now, the key and the page name the new line, and the draws the page publishes are the exam before the change (0328).
