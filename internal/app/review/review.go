@@ -1391,7 +1391,7 @@ func (r *runner) exec() Result {
 			// cannot lose it and a reviewer's edits cannot move it. The collision that
 			// stops paying twice for a lens allows the ones this run was told to top up.
 			permitted := append(append([]string{}, todo...), landed...)
-			last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, permitted)
+			last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, permitted, cand.paths)
 			if last.Code != CodeOK {
 				if len(landed) == 0 {
 					return last
@@ -2025,7 +2025,7 @@ func (r *runner) store(parsed domain.Verdict, base string, judged []string) Resu
 	if problem != nil {
 		return *problem
 	}
-	return r.storeIn(parsed, work, base, judged, nil)
+	return r.storeIn(parsed, work, base, judged, nil, nil)
 }
 
 // collision is the first lens an answer shares with the verdict already stored
@@ -2055,7 +2055,7 @@ func collision(sealed, existing, landed []string) string {
 // lenses its earlier parts landed, and that is the only reason an existing verdict
 // may be merged instead of refused. A caller that passed nothing is a second run
 // over bytes somebody already judged, whatever shape the candidate has.
-func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged, landed []string) Result {
+func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged, landed, allowed []string) Result {
 	tree := work.tree
 
 	// The floor is one reading of the candidate: it fixes the class this verdict
@@ -2215,7 +2215,10 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	// path it leaves out is a hole, and a path nobody changed is an invention.
 	// The caller cannot complete it, because the caller is not the reader.
 	if len(asked) > 0 {
-		if message, detail, ok := inspectionRefusal(stamped, work.paths); !ok {
+		if len(allowed) == 0 {
+			allowed = work.paths
+		}
+		if message, detail, ok := inspectionRefusal(stamped, work.paths, allowed); !ok {
 			return r.refuseInspection(stamped, rel, message, detail)
 		}
 	}
@@ -2595,11 +2598,17 @@ func (r *runner) promptTooBig(prompts []string) *Result {
 // candidate it judges, or ok when it does. It is the half of coverage a row
 // cannot carry: the rows say what was answered, and this says who read the tree
 // and whether it read all of it.
-func inspectionRefusal(verdict domain.Verdict, changed []string) (message string, detail []string, ok bool) {
+//
+// mustCover is the slice the prompt carried, and a path it leaves out is a hole.
+// allowed is the whole candidate, and a path outside it is an invention. A split
+// run is where the two differ: the reviewer of a part reads the frozen candidate,
+// which holds every changed file, so judging the invention against the slice
+// refused an answer --attach accepted for the very same bytes.
+func inspectionRefusal(verdict domain.Verdict, mustCover, allowed []string) (message string, detail []string, ok bool) {
 	declared := verdict.Inspection
 	if declared == nil {
 		return "the answer does not say what its reviewer inspected: it carries no \"inspection\"; no verdict was written",
-			[]string{"the candidate changed: " + strings.Join(changed, ", ")},
+			[]string{"the candidate changed: " + strings.Join(allowed, ", ")},
 			false
 	}
 
@@ -2609,13 +2618,14 @@ func inspectionRefusal(verdict domain.Verdict, changed []string) (message string
 			false
 	}
 
-	missing, foreign := verdict.InspectionCoverage(changed)
+	missing, _ := verdict.InspectionCoverage(mustCover)
 	if len(missing) > 0 {
 		return fmt.Sprintf("the declaration leaves %d changed path(s) out: %s; no verdict was written",
 				len(missing), strings.Join(missing, ", ")),
 			[]string{"ask the reviewer to declare the paths it read - a verdict is not edited to pass the gate"},
 			false
 	}
+	_, foreign := verdict.InspectionCoverage(allowed)
 	if len(foreign) > 0 {
 		return fmt.Sprintf("the declaration names %d path(s) the candidate does not change: %s; no verdict was written",
 				len(foreign), strings.Join(foreign, ", ")),
