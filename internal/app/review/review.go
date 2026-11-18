@@ -2092,6 +2092,12 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		}
 	}
 
+	// The verdict names who answered, lens by lens: --model only exists for --exec,
+	// so an answer attached by hand said who judged once and the per-lens map
+	// stayed empty -and a reader fell back to the project's lens table, naming a
+	// model that never read these bytes.
+	stamped = stampModels(stamped)
+
 	stamped, problem = r.stampBlobs(stamped)
 	if problem != nil {
 		return *problem
@@ -2428,6 +2434,30 @@ func (r *runner) stampLenses(verdict domain.Verdict, class domain.Tier) (domain.
 		}
 	}
 	return stamped, nil
+}
+
+// stampModels gives every lens this answer claims the model the answer names, and
+// leaves a lens that already has one alone. --model exists only for --exec, because
+// it replaces {model} inside a command, so an attached answer said who judged once
+// and its per-lens map stayed empty; a reader then fell back to the project's table
+// and named a model that never read the candidate. What the answer says is the
+// only first-hand account of who answered.
+func stampModels(verdict domain.Verdict) domain.Verdict {
+	model := strings.TrimSpace(verdict.Model)
+	if model == "" {
+		return verdict
+	}
+
+	stamped := verdict
+	if stamped.Models == nil {
+		stamped.Models = make(map[string]string, len(stamped.Lenses))
+	}
+	for _, lens := range stamped.Lenses {
+		if strings.TrimSpace(stamped.Models[lens]) == "" {
+			stamped.Models[lens] = model
+		}
+	}
+	return stamped
 }
 
 // stampBlobs gives every finding its content receipt: the blob id of the file as
