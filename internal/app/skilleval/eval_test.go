@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/app/skilleval"
 	domain "github.com/biggs-100/odachi/internal/domain/skilleval"
@@ -34,6 +35,10 @@ func (f *fakeFiles) Write(path string, data []byte) error {
 	return nil
 }
 func (f *fakeFiles) MkdirAll(string) error { return nil }
+func (f *fakeFiles) Exists(path string) (bool, error) {
+	_, ok := f.written[path]
+	return ok, nil
+}
 
 type fakeShell struct {
 	dirs     []string
@@ -179,6 +184,56 @@ func TestTheSkillGoesBackAfterTheRun(t *testing.T) {
 	if len(home.took) != 1 || len(home.restore) != 1 || home.restore[0] != "tests" {
 		t.Fatalf("took = %v, restore = %v; want one of each for tests", home.took, home.restore)
 	}
+}
+
+// TestAnAnswerAlreadyPaidForIsNotPaidAgain: the record is the receipt. The same
+// skill text over the same exam is refused, and --again is the human saying the
+// second run is worth it.
+func TestAnAnswerAlreadyPaidForIsNotPaidAgain(t *testing.T) {
+	t.Parallel()
+
+	files := &fakeFiles{}
+	record := filepath.FromSlash("C:/store/evals/tests-abc123.json")
+	opts := skilleval.Options{
+		Scratch:  t.TempDir(),
+		Exam:     exam(),
+		Skill:    skill(),
+		Exec:     "agent {prompt}",
+		Runs:     1,
+		Timeout:  60,
+		Record:   record,
+		Identity: "abc123",
+		Now:      time.Unix(0, 0),
+	}
+
+	first := skilleval.Run(opts, files, &fakeShell{}, &fakeHome{})
+	if first.Code != skilleval.CodeOK {
+		t.Fatalf("the first run = %d, want 0 (%s)", first.Code, first.Message)
+	}
+	if _, ok := files.written[record]; !ok {
+		t.Fatalf("the run filed no record; it wrote %v", keys(files.written))
+	}
+
+	second := skilleval.Run(opts, files, &fakeShell{}, &fakeHome{})
+	if second.Code != skilleval.CodeBlocked {
+		t.Fatalf("the second run = %d, want blocked", second.Code)
+	}
+	if !strings.Contains(second.Message, "--again") || !strings.Contains(second.Message, "abc123") {
+		t.Errorf("the refusal does not say what was paid and how to override it: %s", second.Message)
+	}
+
+	opts.Again = true
+	if third := skilleval.Run(opts, files, &fakeShell{}, &fakeHome{}); third.Code != skilleval.CodeOK {
+		t.Fatalf("the run with --again = %d, want 0 (%s)", third.Code, third.Message)
+	}
+}
+
+func keys(files map[string][]byte) []string {
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	return names
 }
 
 // TestNoCommandPrintsThePrompt: without --exec the verb asks the question and

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	domain "github.com/biggs-100/odachi/internal/domain/skilleval"
 	corpus "github.com/biggs-100/odachi/internal/skilleval"
@@ -49,12 +50,23 @@ type Options struct {
 	MoveHome bool
 	// Recover puts back whatever a dead run left out, and measures nothing.
 	Recover bool
+	// Record is where this run files what it measured, when the caller has a
+	// clone to file it in. Empty means the run prints and files nothing.
+	Record string
+	// Identity names the bytes being measured: the skill's text and the exam.
+	Identity string
+	// Again is the human's permission to pay for a measurement that is already
+	// in the store. Without it, a record for the same bytes is a refusal.
+	Again bool
+	// Now is the instant the record carries; a test sets it, a run does not.
+	Now time.Time
 }
 
-// Files is the disk this run writes the projects to.
+// Files is the disk this run writes the projects to, and the clone's records.
 type Files interface {
 	Write(path string, data []byte) error
 	MkdirAll(path string) error
+	Exists(path string) (bool, error)
 }
 
 // Shell runs the human's command.
@@ -71,21 +83,12 @@ type Home interface {
 	Recover() ([]string, error)
 }
 
-// Draw is one paid answer: an arm, a run number, and what the stream showed.
-type Draw struct {
-	Arm        string
-	Run        int
-	Behaviours []domain.Behaviour
-	Loaded     bool
-	Problem    string
-}
-
 // Result is what the verb prints and what the caller files.
 type Result struct {
 	Code    int
 	Message string
 	Lines   []string
-	Draws   []Draw
+	Draws   []domain.Draw
 }
 
 // Run works the exam and answers what each arm showed. A run that cannot keep its
@@ -117,6 +120,21 @@ func Run(opts Options, files Files, shell Shell, home Home) Result {
 		runs = 1
 	}
 
+	// What was already paid for is not paid again: the record is the receipt, and
+	// a skill that changed answers a different identity, so only the same bytes
+	// over the same exam meet this refusal.
+	if opts.Record != "" && !opts.Again {
+		paid, err := files.Exists(opts.Record)
+		if err != nil {
+			return blocked("could not look at the store for a record: " + err.Error())
+		}
+		if paid {
+			return blocked(fmt.Sprintf(
+				"%s was measured already: %s; pass --again to pay for a second run, or change the skill and measure what changed",
+				opts.Exam.Skill, opts.Identity))
+		}
+	}
+
 	path, installed, err := home.Installed(opts.Exam.Skill)
 	if err != nil {
 		return blocked(err.Error())
@@ -140,7 +158,7 @@ func Run(opts Options, files Files, shell Shell, home Home) Result {
 		return blocked("the skill " + opts.Exam.Skill + " is neither installed in the home nor bundled with this binary: there is nothing to measure")
 	}
 
-	var draws []Draw
+	var draws []domain.Draw
 	lines := []string{}
 	for _, arm := range arms {
 		for n := 1; n <= runs; n++ {
@@ -162,13 +180,34 @@ func Run(opts Options, files Files, shell Shell, home Home) Result {
 		lines = append(lines, fmt.Sprintf("%s: %d of %d behaviours across %d draw(s)", arm, met, of, runs))
 	}
 
+	// The record is the whole point of the run: a score nobody can compare is a
+	// sentence, and a skill that gets worse looks exactly like one that never
+	// moved.
+	if opts.Record != "" {
+		record := domain.Record{
+			Schema:   domain.RecordSchema,
+			Skill:    opts.Exam.Skill,
+			Identity: opts.Identity,
+			At:       opts.Now.UTC().Format(time.RFC3339),
+			Draws:    draws,
+		}
+		data, err := domain.RenderRecord(record)
+		if err != nil {
+			return blocked("the draws ran but the record cannot be written: " + err.Error())
+		}
+		if err := files.Write(opts.Record, data); err != nil {
+			return blocked("the draws ran but the record cannot be written: " + err.Error())
+		}
+		lines = append(lines, "record: "+record.Summarize())
+	}
+
 	return Result{Code: CodeOK, Message: fmt.Sprintf("the exam for %s ran %d draw(s) per arm", opts.Exam.Skill, runs), Lines: lines, Draws: draws}
 }
 
 // drawOnce builds one arm, runs the command in it, and scores the stream.
-func drawOnce(opts Options, files Files, shell Shell, arm string, n int) Draw {
+func drawOnce(opts Options, files Files, shell Shell, arm string, n int) domain.Draw {
 	dir := filepath.Join(opts.Scratch, arm, fmt.Sprintf("r%d", n))
-	draw := Draw{Arm: arm, Run: n}
+	draw := domain.Draw{Arm: arm, Run: n}
 
 	if err := build(opts, files, dir, arm); err != nil {
 		draw.Problem = "could not build the arm: " + err.Error()
@@ -248,7 +287,7 @@ func build(opts Options, files Files, dir, arm string) error {
 // describe is one line of the table: the arm, the run, the score, and the event
 // that decided each behaviour, so a reader can check the answer without trusting
 // the number.
-func describe(draw Draw) string {
+func describe(draw domain.Draw) string {
 	if draw.Problem != "" {
 		return fmt.Sprintf("%-7s r%d  -    %s", draw.Arm, draw.Run, draw.Problem)
 	}

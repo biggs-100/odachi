@@ -32,6 +32,9 @@ const DirName = "odachi"
 const (
 	// Reviews holds one verdict per tree.
 	Reviews = "reviews"
+	// Evals holds one record per measured skill text: the score an exam left,
+	// named by what it measured so a second run over the same bytes is refused.
+	Evals = "evals"
 	// Backups holds the undo copies of the artifacts this tool rewrites.
 	Backups = "backups"
 	// Lock is the write lock the multi-file verbs hold.

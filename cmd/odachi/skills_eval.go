@@ -7,10 +7,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/biggs-100/odachi/internal/adapters/skillhome"
 	skillevalapp "github.com/biggs-100/odachi/internal/app/skilleval"
 	"github.com/biggs-100/odachi/internal/app/start"
+	domaineval "github.com/biggs-100/odachi/internal/domain/skilleval"
 	"github.com/biggs-100/odachi/internal/domain/store"
 	corpus "github.com/biggs-100/odachi/internal/skilleval"
 	"github.com/biggs-100/odachi/skills"
@@ -30,6 +32,7 @@ func runSkillsEval(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.IntVar(&opts.Runs, "runs", 3, "draws each arm answers")
 	flags.IntVar(&opts.Timeout, "timeout", 600, "seconds one draw may take")
 	flags.BoolVar(&opts.MoveHome, "move-home", false, "take the skill out of ~/.agents/skills for the run, and put it back")
+	flags.BoolVar(&opts.Again, "again", false, "measure even when the store already holds a record for this text")
 	flags.BoolVar(&opts.Recover, "recover", false, "put back what a run left out, and measure nothing")
 
 	if err := flags.Parse(args); err != nil {
@@ -57,6 +60,12 @@ func runSkillsEval(dir string, args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 		return start.CodeBlocked
 	}
+	text := map[string][]byte{}
+	for _, file := range opts.Skill {
+		text[file.Path] = file.Content
+	}
+	opts.Identity = domaineval.Identity(name, text, exam.Task)
+	opts.Now = time.Now()
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -73,6 +82,7 @@ func runSkillsEval(dir string, args []string, stdout, stderr io.Writer) int {
 			return start.CodeBlocked
 		}
 		mover.Journal = filepath.Join(root, "evals", "home.json")
+		opts.Record = domaineval.Path(root, name, opts.Identity)
 	}
 
 	scratch, err := os.MkdirTemp("", "odachi-eval-")

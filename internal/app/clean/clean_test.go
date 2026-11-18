@@ -295,8 +295,8 @@ func TestAnEmptyCloneReportsZeros(t *testing.T) {
 	if result.Code != clean.CodeOK {
 		t.Fatalf("code = %d, want %d: %s", result.Code, clean.CodeOK, result.Message)
 	}
-	if len(result.Report.Classes) != 10 {
-		t.Fatalf("classes = %d, want the ten the map names", len(result.Report.Classes))
+	if len(result.Report.Classes) != 11 {
+		t.Fatalf("classes = %d, want the eleven the map names", len(result.Report.Classes))
 	}
 	if result.Report.TotalFiles != 0 || result.Report.TotalBytes != 0 {
 		t.Errorf("totals = %d files, %d bytes; want zero", result.Report.TotalFiles, result.Report.TotalBytes)
