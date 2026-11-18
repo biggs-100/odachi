@@ -7,6 +7,14 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+## v0.49.0 - 2026-11-18
+
+- **The reviewer is confined by the client, not by its prompt.** A reviewer told to read one directory would glob the whole machine: the blind arm of the run that opened this cycle cited `auth.go` it was never given, and the tool log said `Glob "**/auth.go" in C:/Users/USER/AppData/Local/Temp`. Every `review --exec` run now gets a directory odachi owns, with the candidate inside it and an `opencode.json` beside it that denies every path outside -one rule, and `read`, `glob` and `grep` stop escaping together- and the command starts inside the candidate instead of the project, so the reviewer cannot read the worktree that may move under the verdict. A candidate that ships its own client configuration can still win over that rule, because the client resolves the nearest one: `docs/reviewer-context-measurement.md` names the limit, and the next feature closes it. Minor, because the reviewer's working directory changed for any command wrapped around it (0324).
+- **The reviewer's context is measured.** The probe holds the two arms of the change 0320 shipped: a frozen candidate per arm, and `--blind` for the arm that gets the prompt, an empty directory and nothing else. The fixture grows a base -`base/auth.go`, in neither diff- and plants a defect only that base reveals: a handler reading a context key the middleware never writes, so every request answers 401. Three draws per arm, one model: the arm that could read named all eighteen defect-draws, the arm without a candidate eleven, and the defect outside the diff went three of three against zero. `docs/reviewer-context-measurement.md` carries the number, the two runs that had to be thrown away, and what the number does not show. Minor (0323).
+- **The floor is paid before the close.** `golangci-lint` found three unchecked lines -two of them shipped by the releases before this one- and the review refused to store a verdict until they were fixed: CI never runs that check, only `review` does, so the floor had rotted unnoticed. Inside the two features above.
+
 ## v0.48.7 - 2026-11-17
 
 - **A rule rewritten to the same length is no longer invisible.** The byte pin in 0295 could not tell a lens rule that survived from one replaced by a sentence of the same size. Every line of the four shipping lens prompts is now listed in `internal/archtest/normative.baseline`, and a sweep compares the baseline with what the lenses actually carry in both directions: a line lost and a line added are both named, with the surface, the words and the file to edit. Changing a rule is still possible; it takes a deliberate edit of the baseline with a `# why:` comment. Patch (0322).
