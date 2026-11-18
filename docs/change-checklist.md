@@ -25,3 +25,12 @@ build with no focused test is not verification.
   proof is the same evidence, and the second run is pure cost.
 - The domain stays stdlib-only. `internal/archtest` enforces it; do not edit the
   guard to make a change fit.
+
+## The review budget
+
+A candidate's authored lines are every added line plus every deleted line of the
+unified diff from the feature's base to the tree that closes it. The headers that
+name a file and mark a hunk are not lines, and neither are the context lines a hunk
+carries; an empty diff, a rename and a mode change count zero. Nothing under
+`proof/` counts, because the proofs are the tool's own evidence, and no path the
+repository ignores counts either, because git never puts one in the diff.
