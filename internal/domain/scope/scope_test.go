@@ -2,6 +2,7 @@ package scope_test
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -60,5 +61,28 @@ func TestTheRuleIsPinnedByItsBytes(t *testing.T) {
 	}
 	if !strings.HasSuffix(scope.FileName, ".json") {
 		t.Errorf("FileName = %q, and the client discovers a JSON document", scope.FileName)
+	}
+}
+
+// TestCarriedNamesTheConfigurationACandidateBrings: the client reads the file
+// nearest to where it runs, so one inside the candidate is discovered after the
+// rule beside it and wins. Naming that file is what lets a run refuse it instead
+// of reviewing bytes whose boundary the candidate set.
+func TestCarriedNamesTheConfigurationACandidateBrings(t *testing.T) {
+	t.Parallel()
+
+	candidate := filepath.FromSlash("C:/temp/run/candidate")
+	for _, name := range []string{scope.FileName, "opencode.jsonc"} {
+		path := filepath.Join(candidate, name)
+		if got := scope.Carried(candidate, func(p string) bool { return p == path }); got != path {
+			t.Errorf("Carried with a %s in the candidate = %q, want %q", name, got, path)
+		}
+	}
+	if got := scope.Carried(candidate, func(string) bool { return false }); got != "" {
+		t.Errorf("Carried on a candidate that brings nothing = %q, want empty", got)
+	}
+	deeper := filepath.Join(candidate, "sub", scope.FileName)
+	if got := scope.Carried(candidate, func(p string) bool { return p == deeper }); got != "" {
+		t.Errorf("Carried saw a nested %s at %q, want empty: the run starts at the root", scope.FileName, got)
 	}
 }

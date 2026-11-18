@@ -1156,6 +1156,14 @@ func (r *runner) exec() Result {
 			"; check the permissions and run odachi review again")
 	}
 	defer func() { _ = r.git.Discard(run) }()
+	if carried, carriedErr := carriedConfig(r.files, frozen); carriedErr != nil {
+		return blocked("could not check the frozen candidate for its own client configuration: " + oneLine(carriedErr.Error()) +
+			"; the reviewer was not started: run odachi review again")
+	} else if carried != "" {
+		return blocked("the candidate carries its own " + scope.FileName + " at " + carried +
+			": the client reads the nearest configuration, so the candidate's is discovered after the rule written beside it and wins" +
+			"; the reviewer was not started: remove it from the candidate and run odachi review again")
+	}
 	if err := r.files.Write(filepath.Join(run, scope.FileName), scope.Render()); err != nil {
 		return blocked("could not write the rule that confines the reviewer: " + oneLine(err.Error()) +
 			"; the reviewer was not started: run odachi review again")
@@ -3621,6 +3629,24 @@ func (r *runner) candidate() (candidate, *Result) {
 	}
 
 	return candidate{brief: visionText, base: work.base, tree: work.tree, paths: work.paths, diff: work.diff}, nil
+}
+
+// carriedConfig answers the client configuration a frozen candidate brings at its
+// root, or "" when it brings none. The client merges from the farthest ancestor to
+// the nearest, so a file inside the candidate is discovered after the rule odachi
+// writes beside it and wins: the boundary becomes whatever the candidate says. A
+// disk that cannot answer blocks, because a boundary nobody could check is not one
+// this run may claim.
+func carriedConfig(files Files, candidate string) (string, error) {
+	var checkErr error
+	carried := scope.Carried(candidate, func(path string) bool {
+		ok, err := files.Exists(path)
+		if err != nil && checkErr == nil {
+			checkErr = err
+		}
+		return ok
+	})
+	return carried, checkErr
 }
 
 // candidateForReview is candidate() plus the lens flag: a verdict is named by

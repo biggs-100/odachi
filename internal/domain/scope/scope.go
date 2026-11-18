@@ -9,10 +9,35 @@
 // parent odachi owns.
 package scope
 
+import "path/filepath"
+
 // FileName is the configuration the opencode client discovers when it starts: it
 // reads it from the location it runs in and from every ancestor, so a file in
 // the parent of the reviewer's directory governs the whole run.
 const FileName = "opencode.json"
+
+// carried is every name a client may discover in the directory it runs in. The
+// .jsonc form is what an older configuration uses, and a candidate that ships
+// either one is read where the run starts.
+var carried = []string{FileName, "opencode.jsonc"}
+
+// Carried answers the configuration a candidate brings at its root, or "" when it
+// brings none. exists is the caller's disk: the domain names what a client would
+// read, and the adapter says whether it is there.
+//
+// A file at the root is the one that governs a run started there, because the
+// client merges from the farthest ancestor to the nearest and the nearest wins.
+// What sits deeper only governs a run started deeper, and this run starts at the
+// candidate's root.
+func Carried(candidate string, exists func(string) bool) string {
+	for _, name := range carried {
+		path := filepath.Join(candidate, name)
+		if exists(path) {
+			return path
+		}
+	}
+	return ""
+}
 
 // Render is the configuration. Every path outside the location is refused before
 // a tool touches it, which is what stops `read`, `glob` and `grep` together: the
