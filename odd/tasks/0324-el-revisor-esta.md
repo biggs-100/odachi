@@ -1,5 +1,5 @@
 # el-revisor-esta
-Base: 03486f0a70bd0f79260003c1f60c8412a49332de
+Base: 5ebc302664c3c77fb834e59d0fa293ea984534d3
 
 ## Requirements (verbatim, from the user)
 R1 · "el revisor esta acotado por el cliente y no por el prompt: la corrida recibe una configuracion que niega cualquier ruta fuera del candidato, el snapshot vive en un directorio que odachi posee, y una marca afuera no se puede leer aunque el prompt lo pida, en la sonda y en el review real"

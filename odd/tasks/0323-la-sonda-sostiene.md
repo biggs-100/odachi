@@ -1,5 +1,5 @@
 # la-sonda-sostiene
-Base: 970de471210c059596cf26f1aeae38407ed5a11d
+Base: 1069e2ac5ae78413c506723b01dcb703c2ef7497
 
 ## Requirements (verbatim, from the user)
 R1 · "la sonda sostiene los dos brazos del contexto del revisor y la comparacion esta medida: cada mano recibe su snapshot congelado y el revisor corre fuera de las dos, el fixture gana una base con un defecto que solo se ve leyendo un llamador, y el numero de antes y despues queda escrito con su seccion de limites"
