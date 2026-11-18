@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	verifyapp "github.com/biggs-100/odachi/internal/app/verify"
@@ -48,6 +49,11 @@ func runVerify(dir string, args []string, stdout, stderr io.Writer) int {
 		Store:          storeRoot(dir),
 		Exec:           execFlag,
 		TimeoutSeconds: timeout,
+		// The silence budgets are the adapter's own numbers, read from the
+		// constants its clock uses: the sentence the verb prints and the clock
+		// that stopped the run cannot drift apart.
+		FirstOutput: shellcmd.FirstOutputTimeout,
+		Idle:        shellcmd.IdleTimeout,
 	}
 
 	// The feature's own words. A project with no task document has nothing to

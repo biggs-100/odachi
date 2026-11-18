@@ -54,14 +54,15 @@ type fakeShell struct {
 	stdout  string
 	stderr  string
 	exit    int
+	stop    verify.Stop
 	err     error
 }
 
-func (s *fakeShell) RunInput(_, command, input string, _ int) (string, string, int, bool, error) {
+func (s *fakeShell) RunInputStopped(_, command, input string, _ int, _, _ time.Duration) (string, string, int, verify.Stop, error) {
 	s.calls++
 	s.command = command
 	s.input = input
-	return s.stdout, s.stderr, s.exit, false, s.err
+	return s.stdout, s.stderr, s.exit, s.stop, s.err
 }
 
 func options() verify.Options {
@@ -189,6 +190,61 @@ func TestAnAnswerForAnotherTreeIsRefused(t *testing.T) {
 	}
 	if len(files.files) != 0 {
 		t.Errorf("an answer for another tree wrote %v", files.files)
+	}
+}
+
+// TestADeadlineStopNamesTheDeadlineAndTheFlagThatRaisesIt: the run was given a
+// total budget and did not answer inside it. The message names that number, and
+// the line below names the command that raises it: the human has to know which
+// clock to move.
+func TestADeadlineStopNamesTheDeadlineAndTheFlagThatRaisesIt(t *testing.T) {
+	files := newFakeFiles()
+	shell := &fakeShell{stop: verify.StopDeadline}
+
+	result := verify.Run(options(), files, fakeGit{tree: tree}, shell)
+
+	if result.Code != verify.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked", result.Code)
+	}
+	joined := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"60", "total deadline", `--timeout`, `odachi verify --exec`} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the deadline message does not name %q:\n%s", want, joined)
+		}
+	}
+	if len(files.files) != 0 {
+		t.Errorf("a run stopped by the deadline wrote %v", files.files)
+	}
+}
+
+// TestASilenceStopNamesItsOwnBudgetAndNotTheDeadline: a silence clock fires long
+// before the total deadline, so sending the human to --timeout would point at a
+// flag that was not the cause. The message names the silence budget it was given
+// and says the deadline was not the reason; the line below says to run the
+// verifier by hand.
+func TestASilenceStopNamesItsOwnBudgetAndNotTheDeadline(t *testing.T) {
+	files := newFakeFiles()
+	shell := &fakeShell{stop: verify.StopSilence}
+	opts := options()
+	opts.FirstOutput = 90 * time.Second
+	opts.Idle = 90 * time.Second
+
+	result := verify.Run(opts, files, fakeGit{tree: tree}, shell)
+
+	if result.Code != verify.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked", result.Code)
+	}
+	joined := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"90", "silence", "not the reason", "by hand"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the silence message does not name %q:\n%s", want, joined)
+		}
+	}
+	if strings.Contains(joined, "--timeout") {
+		t.Errorf("the silence message sends the human to --timeout, which was not the cause:\n%s", joined)
+	}
+	if len(files.files) != 0 {
+		t.Errorf("a run stopped by silence wrote %v", files.files)
 	}
 }
 

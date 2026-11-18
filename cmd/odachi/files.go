@@ -19,6 +19,7 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 	"github.com/biggs-100/odachi/internal/app/clean"
 	"github.com/biggs-100/odachi/internal/app/start"
+	verifyapp "github.com/biggs-100/odachi/internal/app/verify"
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
@@ -669,6 +670,28 @@ func (osShell) Quote(path string) string { return shellcmd.Quote(path) }
 // RunInput is the review's form: the reviewer receives the prompt the verb built.
 func (osShell) RunInput(dir, command, input string, timeoutSeconds int) (string, string, int, bool, error) {
 	return shellcmd.RunInput(dir, command, input, timeoutSeconds)
+}
+
+// RunInputStopped is verify's form: the verb prints a sentence about the clock
+// that stopped the run, so the cause leaves the adapter as itself and not as a
+// boolean.
+func (osShell) RunInputStopped(dir, command, input string, timeoutSeconds int, firstOutput, idle time.Duration) (string, string, int, verifyapp.Stop, error) {
+	stdout, stderr, exitCode, stop, err := shellcmd.RunInputStopped(dir, command, input, timeoutSeconds, firstOutput, idle)
+	return stdout, stderr, exitCode, runInputStop(stop), err
+}
+
+// runInputStop is the one place the adapter's cause and the verb's word meet.
+// It maps by name: the two packages own their vocabularies, and the order of
+// either constant block is not a promise the other one can lean on.
+func runInputStop(stop shellcmd.Stop) verifyapp.Stop {
+	switch stop {
+	case shellcmd.StopDeadline:
+		return verifyapp.StopDeadline
+	case shellcmd.StopSilence:
+		return verifyapp.StopSilence
+	default:
+		return verifyapp.StopNone
+	}
 }
 
 // hostModel is the Host adapter: the model of the session odachi runs in, read
