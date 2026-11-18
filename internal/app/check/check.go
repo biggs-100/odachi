@@ -393,7 +393,12 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			// And it ships the record of somebody else reading the tree: a risk the
 			// commits declared asks for an independent verifier, and the gate reads
 			// the record instead of a sentence about one (0315).
-			state.VerificationMissing, state.VerificationRefuted = r.verification(feature)
+			asking, owed := r.verifierOwed(feature)
+			// Before the record is looked for, the candidate is weighed: a verifier
+			// spent on a tree nobody can finish is a verdict that cannot land, and
+			// the close names the number it measured instead (0331).
+			state.VerificationLines = r.verifierLines(feature, owed)
+			state.VerificationMissing, state.VerificationRefuted = r.verification(asking, owed)
 		}
 	}
 
@@ -502,13 +507,16 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	// pull request red -the review learned the same in ADR 0043 (0317). A missing
 	// or refuted record is named, and `--require-review` is the human asking to be
 	// stopped; the second evaluation is the same gate without that one question.
-	if !r.opts.RequireReview && (verdict.Reason == gate.ReasonVerifyMissing || verdict.Reason == gate.ReasonVerifyRefuted) {
+	// The slice rides the same door: a project that does not owe a verifier does not
+	// owe a slice, and the numbers stay readable as a note (0331).
+	if !r.opts.RequireReview && (verdict.Reason == gate.ReasonVerifyMissing || verdict.Reason == gate.ReasonVerifyRefuted || verdict.Reason == gate.ReasonVerifySlice) {
 		note := verdict.Message
 		if next := strings.TrimSpace(verdict.Next); next != "" {
 			note += "; " + next
 		}
 		r.verifyNote = note
 		state.VerificationMissing, state.VerificationRefuted = nil, nil
+		state.VerificationLines = 0
 		verdict = gate.Evaluate(state)
 	}
 	if verdict.Code == gate.Ready && r.opts.Message == "" {
@@ -1671,25 +1679,62 @@ func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
 	return reviewdomain.Lenses(reviewdomain.Assess(work.paths, work.diff)), work.paths, work.diff, nil
 }
 
-// verification is what an independent verifier left about this tree, or the reason
-// the close should ask for it (0315). The question is the feature's, not the closing
-// candidate's: a close that only marks the last step and writes the note carries
-// documents, and asking the candidate would let a feature whose code was committed
-// step by step close without ever being asked (0318). A risk asks for a verifier the
-// way it asks for a lens -only when the feature's own diff is one a lens would read-.
-// The record is read from the clone's store under the tree's name, so a record of
-// another tree answers nothing here.
-func (r *runner) verification(feature *tasks.Document) (missing, refuted []string) {
-	var asking []string
+// verifierOwed answers whether this close owes an independent verifier, and names
+// the risks that asked for it: a declared risk the table accepts, on a feature
+// whose own diff is one a lens would read. The question is the feature's, not the
+// closing candidate's: a close that only marks the last step and writes the note
+// carries documents, and asking the candidate would let a feature whose code was
+// committed step by step close without ever being asked (0318). A risk asks for a
+// verifier the way it asks for a lens -only when the feature's own diff is one a
+// lens would read-.
+//
+// Both the record and the slice are asked of this one answer, so a feature can
+// never owe a slice without owing the verifier that makes the slice matter (0331).
+func (r *runner) verifierOwed(feature *tasks.Document) (asking []string, owed bool) {
 	for _, name := range r.declaredRisks(feature.Doc.Base) {
 		if reviewdomain.AsksForVerifier(name) {
 			asking = append(asking, name)
 		}
 	}
 	if len(asking) == 0 {
-		return nil, nil
+		return nil, false
 	}
 	if passive, problem := r.featurePassive(feature); problem != nil || passive {
+		return asking, false
+	}
+	return asking, true
+}
+
+// verifierLines measures the candidate a close is about to hand a verifier: the
+// authored lines between the feature's base and the tree that stands, counted from
+// the same port the fence and the review read, so nobody has to trust a second
+// measurement. Only a close that owes a verifier has a slice; the rest is zero and
+// the gate never looks at it (0331).
+func (r *runner) verifierLines(feature *tasks.Document, owed bool) int {
+	if !owed {
+		return 0
+	}
+	base, _, _, known := featureReview(feature)
+	if !known || base == "" {
+		return 0
+	}
+	_, _, diff, err := r.git.Candidate(r.opts.Dir, base)
+	if err != nil {
+		// A diff git cannot read is not a measurement, and a number invented here
+		// would refuse a close for work nobody weighed: the rows that read the tree
+		// already name what cannot be read, and this one stays silent.
+		return 0
+	}
+	return authoredLines(diff)
+}
+
+// verification is what an independent verifier left about this tree, or the reason
+// the close should ask for it (0315). It reads the answer verifierOwed already
+// gave, so the slice and the record cannot disagree about which close owes one. The
+// record is read from the clone's store under the tree's name, so a record of
+// another tree answers nothing here.
+func (r *runner) verification(asking []string, owed bool) (missing, refuted []string) {
+	if !owed {
 		return nil, nil
 	}
 

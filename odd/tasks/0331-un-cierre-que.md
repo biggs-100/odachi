@@ -11,7 +11,7 @@ R1 · "un cierre que le debe un verifier mide su candidato antes de gastarlo: si
 - go test ./... is green and odachi check --run "go test ./..." is green
 
 ## Steps
-- [ ] T1 · la cuenta mide las lineas autoradas del diff contra la base y excluye los archivos generados y el proof   R1 · route:delegated/odachi-worker · skills:tests
+- [x] T1 · la cuenta mide las lineas autoradas del diff contra la base y excluye los archivos generados y el proof   R1 · route:delegated/odachi-worker · skills:tests · tree:c6151de49326929a79d3acc0a26d0117dd4d3ee0
 - [ ] T2 · un cierre que le debe un verifier y pasa de 400 lineas bloquea nombrando el numero y la rebanada   R1 · route:delegated/odachi-worker · skills:tests
 
 ## History

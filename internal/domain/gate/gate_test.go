@@ -85,6 +85,12 @@ func buildEvaluationCases() []evaluationCase {
 	verificationRefuted := ready()
 	verificationRefuted.VerificationRefuted = []string{"the gate closes a tree with no record"}
 
+	// A close that owes a verifier measures its candidate before spending it: past
+	// the slice the record would read a tree nobody can finish, and the refusal
+	// carries both numbers so the human sees how far past the limit it is (0331).
+	verificationSlice := ready()
+	verificationSlice.VerificationLines = 401
+
 	missingProof := ready()
 	missingProof.ProofTreeHash = ""
 	missingProof.ProofOutput = ""
@@ -229,6 +235,14 @@ func buildEvaluationCases() []evaluationCase {
 			reason:  gate.ReasonMutationFailed,
 			message: "the mutation row failed: the suite stayed green with the guard taken out",
 			next:    `odachi check --run "go test ./..." --mutate "internal/domain/gate/gate.go" --remove "ReasonFuture" --expect "the gate declares"`,
+		},
+		{
+			name:    "a close that owes a verifier and passes the slice",
+			state:   verificationSlice,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonVerifySlice,
+			message: "the candidate is 401 authored lines and the limit for a close that owes a verifier is 400: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own",
+			next:    "odachi start",
 		},
 		{
 			name:    "a risk with no verification",
@@ -556,6 +570,32 @@ func TestAProofIsOwedAtTheClose(t *testing.T) {
 	failed := gate.State{HasBrief: true, TreeHash: "tree", ProofTreeHash: "tree", ProofDeferred: true, ProofFailed: true, ProofLastLine: "FAIL github.com/x"}
 	if got := gate.Evaluate(failed); got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofFailed {
 		t.Errorf("a failed proof mid-feature = %d/%q, want proof_failed", got.Code, got.Reason)
+	}
+}
+
+// TestTheSliceIsInclusive: 400 authored lines are a candidate a verifier can
+// finish, and the limit is the slice, not a wall one line early. 401 is the next
+// feature, and the refusal names both numbers (0331).
+func TestTheSliceIsInclusive(t *testing.T) {
+	at := ready()
+	at.VerificationLines = gate.SliceLines
+	if got := gate.Evaluate(at); got.Code != gate.Ready {
+		t.Errorf("a candidate of %d lines = %d/%q, want ready", gate.SliceLines, got.Code, got.Reason)
+	}
+
+	over := ready()
+	over.VerificationLines = gate.SliceLines + 1
+	got := gate.Evaluate(over)
+	if got.Code != gate.NeedsWork || got.Reason != gate.ReasonVerifySlice {
+		t.Fatalf("a candidate of %d lines = %d/%q, want the slice", gate.SliceLines+1, got.Code, got.Reason)
+	}
+	for _, want := range []string{strconv.Itoa(gate.SliceLines + 1), strconv.Itoa(gate.SliceLines)} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, got.Message)
+		}
+	}
+	if got.Next != "odachi start" {
+		t.Errorf("Next = %q, want the rest of the work started as a feature of its own", got.Next)
 	}
 }
 

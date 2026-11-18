@@ -52,6 +52,11 @@ const (
 	// cause that did not name what the run expected. A guard that does not fire is
 	// a comment with a test's name on it (0297).
 	ReasonMutationFailed = "mutation_failed"
+	// ReasonVerifySlice is a close that owes a verifier and carries more authored
+	// lines than one verifier can finish: the record would judge a tree too large
+	// to read, so the gate names the number it measured before anybody pays for the
+	// verdict, and the rest belongs to a feature of its own (0331).
+	ReasonVerifySlice = "verification_slice"
 	// ReasonVerifyMissing is a close whose commits declared a risk and whose tree
 	// carries no verification an independent verifier signed: who writes does not
 	// verify itself, and the record is what makes it checkable (0315).
@@ -73,6 +78,12 @@ const (
 	nextVerify     = "odachi verify --exec \"<command>\""
 )
 
+// SliceLines is how many lines a candidate may author when the tree that closes
+// the feature owes it a verifier: 400, the number the method already writes for
+// one task. Past it the verdict would read a tree nobody can finish in one
+// sitting, and the rest of the work belongs to a feature of its own (0331).
+const SliceLines = 400
+
 // Reasons is every reason the gate can answer with, in the order the constants
 // declare them. It exists so the rulebook can point at one: a rule enforced by
 // "the gate refuses" names the refusal, and a name that is not in this list is a
@@ -93,6 +104,7 @@ func Reasons() []string {
 		ReasonUndoMissed,
 		ReasonUndoMissing,
 		ReasonMutationFailed,
+		ReasonVerifySlice,
 		ReasonVerifyMissing,
 		ReasonVerifyRefuted,
 	}
@@ -169,6 +181,11 @@ type State struct {
 	// gathered at the close, like the quote: mid-feature the record would name a
 	// tree that still moves (0315).
 	VerificationMissing []string
+	// VerificationLines is what the candidate costs, when the close owes a
+	// verifier: the authored lines of the feature's diff, measured before the
+	// record is looked for. Past SliceLines the verifier would judge a tree nobody
+	// can finish, and the gate names the number it read (0331).
+	VerificationLines int
 	// VerificationRefuted holds the notes of a record that answered refuted: the
 	// verifier ran, it read these bytes, and the requirement does not hold.
 	VerificationRefuted []string
@@ -243,6 +260,16 @@ func Evaluate(s State) Result {
 			"the plan does not quote the human: " + strings.Join(s.QuoteMismatch, "; ") +
 				"; copy the brief's words into the requirement, or record the change with odachi ask --change",
 			`odachi ask --change "<the human's words>" --req R1`}
+	// A close that owes a verifier measures its candidate first: a verifier spent
+	// on a tree nobody can finish is a verdict that cannot land, and the rest of
+	// the work is a feature of its own, not the tail of this one (0331). It comes
+	// before the record on purpose - the numbers are what decide whether a verdict
+	// is worth paying for (0315).
+	case s.VerificationLines > SliceLines:
+		return Result{NeedsWork, ReasonVerifySlice,
+			fmt.Sprintf("the candidate is %d authored lines and the limit for a close that owes a verifier is %d: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own",
+				s.VerificationLines, SliceLines),
+			nextStart}
 	// A close that declared a risk owes the record an independent verifier leaves,
 	// and the rule is the one the catalog already states: who writes does not verify
 	// itself. It is NeedsWork because the agent can run the verifier; the record,

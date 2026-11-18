@@ -188,9 +188,12 @@ type fakeGit struct {
 	blobErr error
 
 	// diff is what the port answers for the candidate, and diffErr is the diff
-	// failing for real.
-	diff    string
-	diffErr error
+	// failing for real. diffErrByBase fails one base only: the worktree and the
+	// feature's own diff are two reads, and a test of the second failing must not
+	// take the first one down with it.
+	diff          string
+	diffErr       error
+	diffErrByBase map[string]error
 
 	// candidateCalls counts the one read of the worktree this run asked for.
 	candidateCalls int
@@ -284,6 +287,9 @@ func (g *fakeGit) Candidate(root, base string) (string, []string, string, error)
 	g.bases = append(g.bases, base)
 	if g.changedErr != nil && base != check.EmptyTree {
 		return "", nil, "", g.changedErr
+	}
+	if err, ok := g.diffErrByBase[base]; ok {
+		return "", nil, "", err
 	}
 	if g.diffErr != nil {
 		return "", nil, "", g.diffErr
