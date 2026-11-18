@@ -88,8 +88,12 @@ func buildEvaluationCases() []evaluationCase {
 	// A close that owes a verifier measures its candidate before spending it: past
 	// the slice the record would read a tree nobody can finish, and the refusal
 	// carries both numbers so the human sees how far past the limit it is (0331).
+	// The record is the other half of the state on purpose: the slice exists only
+	// while nobody has signed the tree, and a close that already has its record is
+	// not paying for a verifier at all.
 	verificationSlice := ready()
 	verificationSlice.VerificationLines = 401
+	verificationSlice.VerificationMissing = []string{"contract"}
 
 	missingProof := ready()
 	missingProof.ProofTreeHash = ""
@@ -585,6 +589,10 @@ func TestTheSliceIsInclusive(t *testing.T) {
 
 	over := ready()
 	over.VerificationLines = gate.SliceLines + 1
+	// The close owes the verifier and no record answers this tree: that is the
+	// state the slice exists for, since a close that already has its record is not
+	// spending one (0331).
+	over.VerificationMissing = []string{"contract"}
 	got := gate.Evaluate(over)
 	if got.Code != gate.NeedsWork || got.Reason != gate.ReasonVerifySlice {
 		t.Fatalf("a candidate of %d lines = %d/%q, want the slice", gate.SliceLines+1, got.Code, got.Reason)
@@ -596,6 +604,37 @@ func TestTheSliceIsInclusive(t *testing.T) {
 	}
 	if got.Next != "odachi start" {
 		t.Errorf("Next = %q, want the rest of the work started as a feature of its own", got.Next)
+	}
+}
+
+// TestTheSliceOnlyFiresWhileTheRecordIsMissing: the slice exists to keep a
+// verifier from being spent on a tree nobody can finish. Once the record is in the
+// store, nobody is spending anything: a 401-line close that carries the verifier's
+// own signature on this tree closes, and a refuted record keeps answering with its
+// own sentence instead of the slice (0331).
+func TestTheSliceOnlyFiresWhileTheRecordIsMissing(t *testing.T) {
+	noRecord := ready()
+	noRecord.VerificationLines = gate.SliceLines + 1
+	noRecord.VerificationMissing = []string{"contract"}
+	if got := gate.Evaluate(noRecord); got.Reason != gate.ReasonVerifySlice {
+		t.Fatalf("401 lines with no record = %d/%q, want the slice", got.Code, got.Reason)
+	}
+
+	signed := ready()
+	signed.VerificationLines = gate.SliceLines + 1
+	if got := gate.Evaluate(signed); got.Code != gate.Ready || got.Reason != gate.ReasonReady {
+		t.Errorf("401 lines with the record for this tree = %d/%q, want ready: the verifier already signed it", got.Code, got.Reason)
+	}
+
+	refuted := ready()
+	refuted.VerificationLines = gate.SliceLines + 1
+	refuted.VerificationRefuted = []string{"the gate closes a tree with no record"}
+	got := gate.Evaluate(refuted)
+	if got.Reason != gate.ReasonVerifyRefuted {
+		t.Errorf("401 lines with a refuted record = %d/%q, want the refutation: a refuted record is not a missing one", got.Code, got.Reason)
+	}
+	if strings.Contains(got.Message, "authored lines") {
+		t.Errorf("the refutation was answered with the slice: %s", got.Message)
 	}
 }
 

@@ -184,7 +184,8 @@ type State struct {
 	// VerificationLines is what the candidate costs, when the close owes a
 	// verifier: the authored lines of the feature's diff, measured before the
 	// record is looked for. Past SliceLines the verifier would judge a tree nobody
-	// can finish, and the gate names the number it read (0331).
+	// can finish, and the gate names the number it read -but only while the record
+	// is missing, because a tree already signed has no verdict left to spend (0331).
 	VerificationLines int
 	// VerificationRefuted holds the notes of a record that answered refuted: the
 	// verifier ran, it read these bytes, and the requirement does not hold.
@@ -262,10 +263,13 @@ func Evaluate(s State) Result {
 			`odachi ask --change "<the human's words>" --req R1`}
 	// A close that owes a verifier measures its candidate first: a verifier spent
 	// on a tree nobody can finish is a verdict that cannot land, and the rest of
-	// the work is a feature of its own, not the tail of this one (0331). It comes
-	// before the record on purpose - the numbers are what decide whether a verdict
-	// is worth paying for (0315).
-	case s.VerificationLines > SliceLines:
+	// the work is a feature of its own, not the tail of this one (0331). The
+	// question only exists while the record is missing: once the verifier signed
+	// this tree there is nothing left to spend, and refusing it would name a door
+	// that cannot shrink a diff somebody already read. It comes before the plain
+	// missing case on purpose -an over-limit close with no record earns the better
+	// diagnosis, the number and the slice, not the absence (0315).
+	case s.VerificationLines > SliceLines && len(s.VerificationMissing) > 0:
 		return Result{NeedsWork, ReasonVerifySlice,
 			fmt.Sprintf("the candidate is %d authored lines and the limit for a close that owes a verifier is %d: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own",
 				s.VerificationLines, SliceLines),

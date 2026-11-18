@@ -133,6 +133,46 @@ func TestTheSliceIsANoteUnlessTheHumanAsks(t *testing.T) {
 	}
 }
 
+// TestACandidatePastTheSliceWithItsRecordCloses: the slice is what the close pays
+// before spending a verifier, and this close already has the record the verifier
+// signed for this exact tree. There is nothing left to weigh and nothing left to
+// spend, so 401 authored lines close, and the named next is not `odachi start`
+// (a door that cannot shrink a diff somebody already reviewed) (0331).
+func TestACandidatePastTheSliceWithItsRecordCloses(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0: a 401-line close whose record exists was refused as a slice (%s / next %s)", result.Code, result.Message, result.Next)
+	}
+	if result.Reason == gate.ReasonVerifySlice {
+		t.Fatalf("reason = %q: the closed tree was sent to odachi start to shrink a diff already signed", result.Reason)
+	}
+}
+
+// TestARefutedRecordPastTheSliceStillAnswersRefuted: the refutation leaves the
+// missing list empty, so the slice's guard cannot swallow it. A 401-line close
+// with a record that says the requirement does not hold keeps the sentence that
+// names what showed it (0315, 0331).
+func TestARefutedRecordPastTheSliceStillAnswersRefuted(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Refuted,
+		[]string{"odachi verify --exec with no command prints a prompt and exits 0"}))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Reason != gate.ReasonVerifyRefuted {
+		t.Fatalf("reason = %q, want %q: the refuted record lost to the slice (%s)", result.Reason, gate.ReasonVerifyRefuted, result.Message)
+	}
+	if !strings.Contains(result.Message, "no command prints a prompt") {
+		t.Errorf("the refusal does not carry the note that showed it: %s", result.Message)
+	}
+}
+
 // TestADiffGitCannotReadNamesNoNumber: the measurement failed, so this row says
 // nothing. The missing record still names the risk, and no number is invented for
 // a tree nobody weighed (0331).
