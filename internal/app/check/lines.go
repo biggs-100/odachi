@@ -14,6 +14,12 @@ import "strings"
 // text because git left it out of the diff. An empty diff, a pure rename and a
 // pure mode change count zero.
 //
+// A header is read as a header only where headers live: between `diff --git` and
+// the first `@@` of that entry. Inside a hunk the first character is the whole
+// grammar, so a deleted line whose text begins with `-- ` renders as `--- ...` and
+// is still the author's line -counting it as a header would drop it, and reading
+// its text as a path would rename the entry for the rest of the hunk (0331).
+//
 // The text is the diff Candidate reads for the feature's base: the same bytes
 // the fence and the review judge, measured once so the gate and any later caller
 // cannot disagree about what a candidate costs.
@@ -21,21 +27,31 @@ func authoredLines(diff string) int {
 	total := 0
 	oldPath, newPath := "", ""
 	binary := false
+	hunk := false
 	for _, raw := range strings.Split(diff, "\n") {
 		line := strings.TrimSuffix(raw, "\r")
 		switch {
 		case strings.HasPrefix(line, "diff --git "):
-			oldPath, newPath, binary = "", "", false
+			oldPath, newPath, binary, hunk = "", "", false, false
 		case binary:
 			// A binary body is encoded, not authored lines to read.
 		case strings.HasPrefix(line, "GIT binary patch"):
 			binary = true
+		case strings.HasPrefix(line, "@@"):
+			// The first hunk of the entry closes the header block: every line
+			// after it is content, whatever it starts with.
+			hunk = true
+		case hunk:
+			if strings.HasPrefix(line, "+") || strings.HasPrefix(line, "-") {
+				if !proofPath(authoredPath(newPath, oldPath)) {
+					total++
+				}
+			}
 		case strings.HasPrefix(line, "--- "):
 			oldPath = diffPath(line[len("--- "):])
 		case strings.HasPrefix(line, "+++ "):
 			newPath = diffPath(line[len("+++ "):])
-		case strings.HasPrefix(line, "@@"),
-			strings.HasPrefix(line, "index "),
+		case strings.HasPrefix(line, "index "),
 			strings.HasPrefix(line, "new file mode "),
 			strings.HasPrefix(line, "deleted file mode "),
 			strings.HasPrefix(line, "old mode "),

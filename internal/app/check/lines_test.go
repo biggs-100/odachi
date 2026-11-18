@@ -135,6 +135,47 @@ literal 4
 	}
 }
 
+// TestAuthoredLinesCountsAHunkLineThatLooksLikeAHeader: inside a hunk the first
+// character is the whole grammar. A deleted line whose text begins with `-- `
+// renders as `--- ...` and an added one beginning with `++ ` renders as `+++ ...`;
+// they are the author's lines, and reading them as file headers would both drop
+// them from the count and rename the entry mid-hunk (0331).
+func TestAuthoredLinesCountsAHunkLineThatLooksLikeAHeader(t *testing.T) {
+	diff := `diff --git a/docs/notes.md b/docs/notes.md
+index 1111111..2222222 100644
+--- a/docs/notes.md
++++ b/docs/notes.md
+@@ -1,3 +1,3 @@
+--- a note the author deleted
+--another deleted line
++++ an added line that begins with plus signs
++and one more
+`
+	if got := authoredLines(diff); got != 4 {
+		t.Fatalf("authoredLines counted %d lines, want 4: hunk lines that look like headers are still authored work", got)
+	}
+}
+
+// TestAuthoredLinesCountsNothingWhenADeletedProofOpensWithDashes: a proof is
+// excluded by its path, and a deleted proof whose first line begins with `-- `
+// used to rewrite the path with its own text, so every line after it looked like
+// authored work. The entry keeps its header path for the whole hunk (0331).
+func TestAuthoredLinesCountsNothingWhenADeletedProofOpensWithDashes(t *testing.T) {
+	diff := `diff --git a/proof/0331-un-cierre-que.txt b/proof/0331-un-cierre-que.txt
+deleted file mode 100644
+index 1111111..0000000
+--- a/proof/0331-un-cierre-que.txt
++++ /dev/null
+@@ -1,3 +0,0 @@
+--- ok github.com/biggs-100/odachi/internal/app/check
+--ok github.com/biggs-100/odachi/internal/domain/gate
+--ok github.com/biggs-100/odachi/internal/domain/taskdoc
+`
+	if got := authoredLines(diff); got != 0 {
+		t.Fatalf("authoredLines counted %d lines for a deleted proof, want 0: the path was rewritten mid-hunk", got)
+	}
+}
+
 // TestAuthoredLinesCountsADeletedFileOnce: a deletion names the file where it
 // is gone, `+++ /dev/null`, so the count has to read the path from the old
 // side or it would miss every removed file.
