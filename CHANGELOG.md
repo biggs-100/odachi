@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.49.1 - 2026-11-18
+
 - **The verdict judges the candidate and nothing else.** A candidate that ships its own `opencode.json` was discovered nearer than the rule odachi writes beside it, so it voided the boundary 0324 shipped, in silence: the review now refuses such a candidate and names the file. The declaration is measured against the whole candidate instead of the slice one reviewer's prompt carried, which is where `--exec` refused an answer `--attach` accepted for the same bytes. And an attached verdict now names the model that answered, lens by lens, instead of leaving a reader to the project's table. Patch (0325).
 
 ## v0.49.0 - 2026-11-18
