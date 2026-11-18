@@ -1157,7 +1157,7 @@
 
 ## Done when
 - `odachi skills eval tests --exec "<command>" --runs 3` corre las dos manos, imprime una fila por corrida con los comportamientos que el transcript decide, y guarda el registro en `.git/odachi/evals/`
-- la mano sin skill no carga ninguna: su transcript no muestra una carga y el canario lo responde, sin tocar `~/.agents/skills`
+- la mano sin skill no carga ninguna: el verbo pide permiso explicito, mueve la copia del home y la restaura siempre, y el canario lo responde
 - un puntaje nombra el evento que lo decidio: el test escrito antes del codigo, y `go test` corrido entre los dos
 - el mismo examen sobre los mismos bytes otra vez se niega o reusa el registro: lo pagado no se paga dos veces
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
@@ -1174,5 +1174,5 @@
 - el examen viaja con odachi, embebido como el fixture de la sonda, porque las skills son el producto y la copia de un proyecto es la copia de odachi
 - el verbo no llama a un modelo por si mismo: `--exec` lo pone el humano, como en la sonda; sin `--exec` imprime los prompts y corre a nadie
 - el registro vive en `.git/odachi/evals/`, y `odachi clean` aprende la clase en esta misma feature: lo que nadie retiene crece sin limite
-- la aislacion de la mano sin skill se prueba en la primera tarea: si no se puede sin tocar `~/.agents/skills`, el verbo se niega y nombra la carpeta que estorba en vez de moverla
+- la mano sin skill se aisla pidiendo permiso y moviendo la copia del home, con diario y restauracion siempre: el cliente no tiene interruptor para dejar de leerlo, y un stub dejaria el nombre en juego
 - una corrida se niega cuando ya hay un registro para el mismo examen y los mismos bytes: lo pagado no se paga dos veces
