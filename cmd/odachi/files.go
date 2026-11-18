@@ -550,6 +550,16 @@ type gitRepo struct{}
 func (gitRepo) Archive(root, tree string) (string, error) { return gitx.Archive(root, tree) }
 func (gitRepo) Discard(dir string) error                  { return gitx.Discard(dir) }
 
+// ArchiveInto is the probe's form: the caller names the directory, because the
+// reviewer has to read the copy beside the arms it is measured against.
+func (gitRepo) ArchiveInto(root, tree, dir string) error { return gitx.ArchiveInto(root, tree, dir) }
+
+// ArchiveRun is the review's form: a directory this run owns, with the candidate
+// inside it and room beside the candidate for the rule that confines the model.
+func (gitRepo) ArchiveRun(root, tree string) (string, string, error) {
+	return gitx.ArchiveRun(root, tree)
+}
+
 func (gitRepo) PatchReverse(dir, diff string, paths []string) error {
 	return gitx.PatchReverse(dir, diff, paths)
 }

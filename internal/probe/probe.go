@@ -13,6 +13,12 @@ import (
 	"io/fs"
 )
 
+// Base is the repository both candidates land on: the files the change does not
+// touch, committed before the arm. A defect that only a caller reveals lives
+// here, and it is the one thing a reviewer who reads the candidate can see and a
+// reviewer who only gets the prompt cannot.
+const Base = "base"
+
 // Clean is the arm with no defect: a candidate the reviewer should approve
 // without inventing a finding.
 const Clean = "clean"

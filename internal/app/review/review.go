@@ -25,6 +25,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/change"
 	domain "github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/scope"
 )
 
 // Exit codes, the same shape as the other verbs.
@@ -190,10 +191,10 @@ type Git interface {
 	// from HEAD and not from base. A change with no document names itself there,
 	// and that line is the vision the prompt carries.
 	Messages(root, base string) ([]string, error)
-	// Archive exports one tree into a directory the reviewer may read, and
-	// Discard removes it. The candidate is frozen there so a reviewer can check
-	// callers and tests without reading the worktree that may move under it.
-	Archive(root, tree string) (string, error)
+	// ArchiveRun exports one tree into a directory the reviewer may read, and
+	// answers the root of the run with the candidate inside it: the root is where
+	// the rule that confines the reviewer is written, and Discard removes it.
+	ArchiveRun(root, tree string) (run, candidate string, err error)
 	Discard(dir string) error
 }
 
@@ -1092,18 +1093,6 @@ func (r *runner) exec() Result {
 		return *problem
 	}
 
-	// The reviewer reads a frozen copy of these exact bytes, not the worktree: a
-	// worktree that moves while the model answers would make the verdict name one
-	// tree and the reviewer have read another. The caller owns the directory and
-	// discards it when the run ends, whatever the reviewer answered.
-	dir, err := r.git.Archive(r.opts.Dir, cand.tree)
-	if err != nil {
-		return blocked("could not freeze the candidate for the reviewer: " + oneLine(err.Error()) +
-			"; check the permissions and run odachi review again")
-	}
-	r.frozen = dir
-	defer r.git.Discard(dir)
-
 	// The candidate the prompt names is the one every answer belongs to: the groups
 	// are filed under it whatever the reviewer leaves behind. rel is computed once,
 	// from the same tree, so a failure names the file that holds what landed.
@@ -1153,6 +1142,25 @@ func (r *runner) exec() Result {
 	// The lenses the tree already answered that this run is not paying again: what
 	// a failure counts as saved before the first answer lands.
 	settled := unanswered(covered, todo)
+
+	// The reviewer reads a frozen copy of these exact bytes, not the worktree: a
+	// worktree that moves while the model answers would make the verdict name one
+	// tree and the reviewer have read another. The copy lives inside a directory
+	// this run owns and is not the only thing there: the rule that confines the
+	// model to it is written beside it, because a boundary in a prompt is a
+	// sentence and the client is what enforces one. It is made here, after every
+	// reason not to run a reviewer: a candidate nobody judges has no run.
+	run, frozen, err := r.git.ArchiveRun(r.opts.Dir, cand.tree)
+	if err != nil {
+		return blocked("could not freeze the candidate for the reviewer: " + oneLine(err.Error()) +
+			"; check the permissions and run odachi review again")
+	}
+	defer func() { _ = r.git.Discard(run) }()
+	if err := r.files.Write(filepath.Join(run, scope.FileName), scope.Render()); err != nil {
+		return blocked("could not write the rule that confines the reviewer: " + oneLine(err.Error()) +
+			"; the reviewer was not started: run odachi review again")
+	}
+	r.frozen = frozen
 
 	// Every group is resolved before any of them runs: a group that cannot name
 	// its model must not be discovered after another one was paid for.
@@ -1270,7 +1278,7 @@ func (r *runner) exec() Result {
 					promptRel = canonical
 				}
 			}
-			stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.opts.Dir, command, text, ExecTimeoutSeconds)
+			stdout, stderr, exitCode, timedOut, err := r.shell.RunInput(r.frozen, command, text, ExecTimeoutSeconds)
 			// The question is filed once it has been sent, whatever came back: the bytes
 			// that produced a verdict - or a failure - are the only way to read the run
 			// again without regenerating them, and a command that never started was

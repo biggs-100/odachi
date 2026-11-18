@@ -1079,3 +1079,27 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: por que el acceso al arbol sube la precision y baja el recall, y que parte del numero es del draw.
+
+## 0324 · el-revisor-esta
+
+## What must exist
+- el revisor esta acotado por el cliente y no por el prompt: la corrida recibe una configuracion que niega cualquier ruta fuera del candidato, el snapshot vive en un directorio que odachi posee, y una marca afuera no se puede leer aunque el prompt lo pida, en la sonda y en el review real
+
+## Done when
+- un revisor que intenta leer una ruta fuera del candidato recibe Permission denied: external_directory, y el mismo revisor lee el candidato sin problema
+- glob y grep dentro del candidato no encuentran una marca escrita afuera
+- el snapshot que review --exec le entrega al revisor tiene un padre que odachi creo, y ahi vive la configuracion que lo acota
+- la sonda corre sus dos brazos bajo la misma configuracion, y el canario lo demuestra pidiendo una lectura de afuera que se rechaza
+- go test ./... is green and odachi check --run go test ./... is green
+
+## Not included (first version)
+- el cliente claude no se acota en esta version: la configuracion que enforza es la de opencode
+- no se le quita ninguna herramienta al revisor: read, glob y grep quedan, acotados por la ubicacion
+- no se toca el fixture de la sonda ni sus defectos plantados
+- no se cambia el contenido de los cuatro lentes
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que una garantia escrita en el prompt no es una frontera, y donde vive la frontera real de un agente.

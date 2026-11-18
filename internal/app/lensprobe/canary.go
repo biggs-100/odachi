@@ -23,6 +23,20 @@ func (c Canary) Prompt() string {
 	return out.String()
 }
 
+// ReadBlind judges the answer of a reviewer that was handed no directory: every
+// marker sits outside the directory it runs in, so quoting one means it left the
+// prompt, and silence is the arm's honest state.
+func (c Canary) ReadBlind(answer string) string {
+	switch {
+	case strings.TrimSpace(answer) == "":
+		return "canary: no answer"
+	case strings.Contains(answer, c.Inside) || strings.Contains(answer, c.Outside):
+		return "canary: too wide"
+	default:
+		return "canary: not attached"
+	}
+}
+
 // Read judges the answer conservatively: only a verbatim quote counts as read,
 // and a line that was not answered cannot be called isolation.
 func (c Canary) Read(answer string) string {
