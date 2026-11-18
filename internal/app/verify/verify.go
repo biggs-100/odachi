@@ -47,10 +47,26 @@ type Git interface {
 	TreeHash(root string) (string, error)
 }
 
+// Stop names the clock that ended a run. The verb needs its own word for it:
+// this package decides what a human reads and does not import the shell. Silence
+// and the total deadline are different facts, and telling them apart is what
+// keeps the next step honest.
+type Stop int
+
+const (
+	// StopNone is a run that ended on its own: its exit code is the result.
+	StopNone Stop = iota
+	// StopDeadline is the total deadline expiring.
+	StopDeadline
+	// StopSilence is the silence clock firing before the total deadline.
+	StopSilence
+)
+
 // Shell runs the verifier: one command, the prompt on stdin, and `{prompt}`
-// replaced by a path to the same bytes.
+// replaced by a path to the same bytes. It names the clock that stopped the run,
+// because the two budgets ask the human for different things.
 type Shell interface {
-	RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
+	RunInputStopped(dir, command, input string, timeoutSeconds int, firstOutput, idle time.Duration) (stdout, stderr string, exitCode int, stop Stop, err error)
 }
 
 // Options is what the caller knows: who to run, what the feature promised, and the
@@ -71,6 +87,10 @@ type Options struct {
 	Risks []string
 	// TimeoutSeconds bounds the command.
 	TimeoutSeconds int
+	// FirstOutput is how long the command may stay silent before its first byte.
+	FirstOutput time.Duration
+	// Idle is how long it may go quiet between bytes.
+	Idle time.Duration
 	// Now is the clock the record is sealed with.
 	Now time.Time
 }
@@ -117,12 +137,21 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		return Result{Code: CodeOK, Message: "printed the prompt and ran nobody: add --exec to verify", Lines: lines}
 	}
 
-	stdout, stderr, exit, timedOut, err := shell.RunInput(opts.Dir, opts.Exec, prompt, opts.TimeoutSeconds)
+	stdout, stderr, exit, stop, err := shell.RunInputStopped(opts.Dir, opts.Exec, prompt, opts.TimeoutSeconds, opts.FirstOutput, opts.Idle)
 	if err != nil {
 		return blocked("the verifier could not run: " + oneLine(err.Error()))
 	}
-	if timedOut {
-		return blocked(fmt.Sprintf("the verifier did not answer in %d seconds; raise --timeout or run it by hand and keep its answer", opts.TimeoutSeconds))
+	if stop == StopSilence {
+		// The silence clock fires long before the total deadline, so a run it
+		// stopped is not a run that needed more time: sending the human to
+		// --timeout would name a flag that was not the cause.
+		message := fmt.Sprintf("the verifier went silent and the silence clock stopped it; it was allowed %s, and the %d-second total deadline was not the reason",
+			silenceBudget(opts), opts.TimeoutSeconds)
+		return stopped(message, "next: run the verifier by hand with the prompt on stdin and keep what it says")
+	}
+	if stop != StopNone {
+		message := fmt.Sprintf("the verifier did not answer in %d seconds, the total deadline; the run was stopped and nothing was verified", opts.TimeoutSeconds)
+		return stopped(message, fmt.Sprintf(`next: odachi verify --exec "<command>" --timeout %d`, opts.TimeoutSeconds*2))
 	}
 	if exit != 0 {
 		detail := firstLine(stderr)
@@ -202,6 +231,24 @@ func Prompt(opts Options, tree string) string {
 // blocked is a run that did not reach a verification, or could not store one.
 func blocked(message string) Result {
 	return Result{Code: CodeBlocked, Message: message, Lines: []string{message}}
+}
+
+// stopped is a run one of the clocks cut, with the line that says what to do
+// next: the message names the clock, and the second line names the step.
+func stopped(message, next string) Result {
+	return Result{Code: CodeBlocked, Message: message, Lines: []string{message, next}}
+}
+
+// silenceBudget says how long the run was allowed to stay quiet, in the numbers
+// the clock was given: one when both budgets are the same, both when the run was
+// given different ones, so the message never names a number the clock did not use.
+func silenceBudget(opts Options) string {
+	first := int(opts.FirstOutput / time.Second)
+	idle := int(opts.Idle / time.Second)
+	if first == idle {
+		return fmt.Sprintf("%d seconds without output", first)
+	}
+	return fmt.Sprintf("%d seconds without its first output and %d seconds between outputs", first, idle)
 }
 
 // refused is an answer that arrived and is not a verification.

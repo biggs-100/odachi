@@ -43,6 +43,39 @@ const (
 	IdleTimeout = 120 * time.Second
 )
 
+// Stop names what ended a run. A boolean answers whether a run was cut; it
+// cannot answer which clock cut it, and the two are different facts: silence
+// says the command stopped writing, and the deadline says it did not fit its
+// budget. The caller that pays for the command is the one that has to know.
+type Stop int
+
+const (
+	// StopNone is a run that ended on its own: its exit code is the result.
+	StopNone Stop = iota
+	// StopDeadline is the total deadline expiring.
+	StopDeadline
+	// StopSilence is the silence clock firing before the total deadline.
+	StopSilence
+)
+
+// TimedOut reports whether a clock stopped the run. It is what the entry points
+// that answer with one boolean return, so their behavior does not change.
+func (s Stop) TimedOut() bool { return s != StopNone }
+
+// String spells the cause for a message or a test's failure.
+func (s Stop) String() string {
+	switch s {
+	case StopNone:
+		return "the command ended on its own"
+	case StopDeadline:
+		return "the total deadline"
+	case StopSilence:
+		return "the silence clock"
+	default:
+		return fmt.Sprintf("an unknown stop (%d)", int(s))
+	}
+}
+
 // pingWriter tells someone that bytes arrived without changing what is written.
 type pingWriter struct {
 	io.Writer
@@ -80,7 +113,8 @@ var ErrUnsupported = errors.New("cannot run commands on this platform: there is 
 // caller decides what a failing proof means. err is reserved for "this could
 // not be run at all". A timeout returns timedOut true and a negative exit code.
 func Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error) {
-	return run(dir, command, "", timeoutSeconds, nil, Watchdog{})
+	stdout, stderr, exitCode, stop, err := run(dir, command, "", timeoutSeconds, nil, Watchdog{})
+	return stdout, stderr, exitCode, stop.TimedOut(), err
 }
 
 // RunStream is Run with a mirror: everything the command prints reaches w while
@@ -92,7 +126,8 @@ func Run(dir, command string, timeoutSeconds int) (stdout, stderr string, exitCo
 // them and a reviewer reads its answer from stdout only. Two goroutines copy the
 // streams, so w must be safe for concurrent use -the terminal is.
 func RunStream(dir, command string, timeoutSeconds int, w io.Writer) (stdout, stderr string, exitCode int, timedOut bool, err error) {
-	return run(dir, command, "", timeoutSeconds, w, Watchdog{})
+	stdout, stderr, exitCode, stop, err := run(dir, command, "", timeoutSeconds, w, Watchdog{})
+	return stdout, stderr, exitCode, stop.TimedOut(), err
 }
 
 // RunInput is Run for a command that needs something to work on: the input is
@@ -113,22 +148,32 @@ func RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr st
 // own. Run and RunStream never pass a watchdog: a proof command such as go test
 // may stay silent for the whole of its total deadline and still be working.
 func RunInputWithLimits(dir, command, input string, timeoutSeconds int, watchdog Watchdog) (stdout, stderr string, exitCode int, timedOut bool, err error) {
-	return run(dir, command, input, timeoutSeconds, nil, watchdog)
+	stdout, stderr, exitCode, stop, err := run(dir, command, input, timeoutSeconds, nil, watchdog)
+	return stdout, stderr, exitCode, stop.TimedOut(), err
 }
 
-// run is the one implementation: the three entry points differ only in the input
-// they prepare and the mirror they write to.
-func run(dir, command, input string, timeoutSeconds int, mirror io.Writer, watchdog Watchdog) (stdout, stderr string, exitCode int, timedOut bool, err error) {
+// RunInputStopped is RunInput with the cause carried out of the adapter: the
+// two clocks are named apart, and the silence budgets are the caller's numbers
+// instead of the hidden defaults. It is the form a verb uses when the sentence
+// it prints depends on which clock fired; a caller that only branches on "was
+// it cut" keeps RunInput and pays nothing.
+func RunInputStopped(dir, command, input string, timeoutSeconds int, firstOutput, idle time.Duration) (stdout, stderr string, exitCode int, stop Stop, err error) {
+	return run(dir, command, input, timeoutSeconds, nil, Watchdog{FirstOutput: firstOutput, Idle: idle})
+}
+
+// run is the one implementation: the entry points differ only in the input they
+// prepare, the mirror they write to and whether the cause stays a boolean.
+func run(dir, command, input string, timeoutSeconds int, mirror io.Writer, watchdog Watchdog) (stdout, stderr string, exitCode int, stop Stop, err error) {
 	if strings.TrimSpace(command) == "" {
-		return "", "", 0, false, errors.New("there is no command to run: pass one with odachi check --run \"<command>\"")
+		return "", "", 0, StopNone, errors.New("there is no command to run: pass one with odachi check --run \"<command>\"")
 	}
 	if timeoutSeconds <= 0 {
-		return "", "", 0, false, errors.New("the timeout must be greater than zero seconds")
+		return "", "", 0, StopNone, errors.New("the timeout must be greater than zero seconds")
 	}
 
 	stdin, prepared, cleanup, err := prepareInput(command, input)
 	if err != nil {
-		return "", "", 0, false, err
+		return "", "", 0, StopNone, err
 	}
 	defer cleanup()
 
@@ -141,7 +186,7 @@ func run(dir, command, input string, timeoutSeconds int, mirror io.Writer, watch
 
 	cmd, err := newCommand(watchCtx, dir, prepared)
 	if err != nil {
-		return "", "", 0, false, err
+		return "", "", 0, StopNone, err
 	}
 	// The context's default cancel ends the shell alone; the work is its
 	// children. A timeout that leaves a `go test` writing to a pipe nobody reads
@@ -212,23 +257,23 @@ func run(dir, command, input string, timeoutSeconds int, mirror io.Writer, watch
 	if ctx.Err() != nil {
 		// The total deadline expired: the process was killed, and the partial
 		// output is what the command had said so far.
-		return stdout, stderr, -1, true, nil
+		return stdout, stderr, -1, StopDeadline, nil
 	}
 	if silent.Load() {
-		// The silence clock fired first. It is the same timedOut signal the
-		// callers already read, with a different reason behind it.
-		return stdout, stderr, -1, true, nil
+		// The silence clock fired first. It is the same "the run was cut" the
+		// older entry points answer, with a different reason behind it.
+		return stdout, stderr, -1, StopSilence, nil
 	}
 
 	if runErr != nil {
 		var exitErr *exec.ExitError
 		if errors.As(runErr, &exitErr) {
-			return stdout, stderr, exitErr.ExitCode(), false, nil
+			return stdout, stderr, exitErr.ExitCode(), StopNone, nil
 		}
-		return stdout, stderr, -1, false, fmt.Errorf("could not run the command: %w", runErr)
+		return stdout, stderr, -1, StopNone, fmt.Errorf("could not run the command: %w", runErr)
 	}
 
-	return stdout, stderr, 0, false, nil
+	return stdout, stderr, 0, StopNone, nil
 }
 
 // prepareInput writes the input to a temporary file and returns it opened as the

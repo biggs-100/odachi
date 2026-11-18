@@ -4,6 +4,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
+	verifyapp "github.com/biggs-100/odachi/internal/app/verify"
 )
 
 // TestVerifyWithoutExecPrintsTheQuestionItWouldAsk: the verb reads the project's
@@ -52,6 +55,25 @@ R1 · "quién escribe no se verifica a sí mismo"
 	records, _ := filepath.Glob(filepath.Join(dir, ".git", "odachi", "verifications", "*.json"))
 	if len(records) != 0 {
 		t.Errorf("a run with no command stored %v", records)
+	}
+}
+
+// TestTheAdapterCauseReachesTheVerbByName: the adapter names the clock and the
+// verb keeps its own word for it, so the two vocabularies meet in one mapping.
+// A cast by order would report silence as the deadline the day either constant
+// block grows a case, which is the defect this change removes.
+func TestTheAdapterCauseReachesTheVerbByName(t *testing.T) {
+	for _, tc := range []struct {
+		from shellcmd.Stop
+		want verifyapp.Stop
+	}{
+		{shellcmd.StopNone, verifyapp.StopNone},
+		{shellcmd.StopDeadline, verifyapp.StopDeadline},
+		{shellcmd.StopSilence, verifyapp.StopSilence},
+	} {
+		if got := runInputStop(tc.from); got != tc.want {
+			t.Errorf("runInputStop(%v) = %d, want %d", tc.from, got, tc.want)
+		}
 	}
 }
 

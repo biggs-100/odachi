@@ -55,3 +55,34 @@ func TestAnIdleReviewerStopsAtTheIdleBound(t *testing.T) {
 		t.Error("a reviewer that went quiet after its first line ran to the total deadline")
 	}
 }
+
+// TestASilentReviewerNamesTheSilenceClockAsTheReasonItStopped: a boolean says a
+// run was cut and nothing about which clock cut it. The two are different facts:
+// silence says the model stopped answering, and the deadline says the work did
+// not fit its budget. Only the adapter watched both clocks, so only it can name
+// the one that fired.
+func TestASilentReviewerNamesTheSilenceClockAsTheReasonItStopped(t *testing.T) {
+	t.Parallel()
+	_, _, _, stop, err := shellcmd.RunInputStopped(".", quietCommand(), "", 20,
+		100*time.Millisecond, 100*time.Millisecond)
+	if err != nil {
+		t.Fatalf("RunInputStopped: %v", err)
+	}
+	if stop != shellcmd.StopSilence {
+		t.Errorf("stop = %v, want the silence clock", stop)
+	}
+}
+
+// TestASlowReviewerNamesTheTotalDeadlineAsTheReasonItStopped: with no silence
+// clocks the total deadline is the only one left, and the run says so. Reporting
+// it as silence would send the human to look at a model that was still working.
+func TestASlowReviewerNamesTheTotalDeadlineAsTheReasonItStopped(t *testing.T) {
+	t.Parallel()
+	_, _, _, stop, err := shellcmd.RunInputStopped(".", quietCommand(), "", 1, 0, 0)
+	if err != nil {
+		t.Fatalf("RunInputStopped: %v", err)
+	}
+	if stop != shellcmd.StopDeadline {
+		t.Errorf("stop = %v, want the total deadline", stop)
+	}
+}
