@@ -1176,3 +1176,25 @@
 - el registro vive en `.git/odachi/evals/`, y `odachi clean` aprende la clase en esta misma feature: lo que nadie retiene crece sin limite
 - la mano sin skill se aisla pidiendo permiso y moviendo la copia del home, con diario y restauracion siempre: el cliente no tiene interruptor para dejar de leerlo, y un stub dejaria el nombre en juego
 - una corrida se niega cuando ya hay un registro para el mismo examen y los mismos bytes: lo pagado no se paga dos veces
+
+## 0331 · un-cierre-que
+
+## What must exist
+- un cierre que le debe un verifier mide su candidato antes de gastarlo: si el diff contra la base de la feature pasa de 400 lineas autoradas, el gate bloquea y nombra la rebanada
+
+## Done when
+- un cierre con un riesgo que pide verifier y 401 lineas autoradas bloquea nombrando el numero y la rebanada
+- el mismo cierre con 399 lineas, o con un riesgo que no pide verifier, pasa como hoy
+- la cuenta excluye los archivos generados y el proof, y su definicion queda escrita para el humano
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- el gate no parte el candidato solo: nombra la rebanada y el humano la hace
+- no cambia lo que el verifier ve ni su plazo: evita la corrida que no puede terminar, no la arregla
+- no entra cobertura ni mutacion: la cuenta es de lineas del diff
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que medir el tamano de un candidato es distinto de medir si el candidato es bueno.
