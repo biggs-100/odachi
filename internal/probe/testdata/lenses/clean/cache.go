@@ -25,13 +25,33 @@ const maxResponseSize = 1 << 20
 
 // newCache returns a cache that fetches through a bounded HTTP client.
 func newCache() *cache {
-	return &cache{client: &http.Client{Timeout: fetchTimeout}}
+	return &cache{client: &http.Client{Timeout: fetchTimeout}, wait: waitBetween}
 }
 
 type cache struct {
 	mu     sync.Mutex
 	m      map[string]string
 	client *http.Client
+	// wait is the pause before the next attempt. A cache holds one so a test can
+	// count the pauses instead of living through them, and every attempt but the
+	// last is followed by one: a request that is not going to be made again has
+	// nothing to wait for.
+	wait func(ctx context.Context, d time.Duration) error
+}
+
+// waitBetween pauses before the next attempt and answers early when the caller is
+// gone: a request nobody is waiting for is not worth a sleep. It is a function,
+// not a call to time.Sleep, because the caller's cancellation is the half of a
+// budget a sleep cannot see.
+func waitBetween(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func (c *cache) get(k string) (string, bool) {
@@ -65,7 +85,14 @@ func (c *cache) fetch(ctx context.Context, url string) (string, error) {
 			return "", fmt.Errorf("fetch: %w", err)
 		}
 		last = err
-		time.Sleep(time.Duration(attempt+1) * backoff)
+		// The last attempt is not followed by a sleep: there is no next request to
+		// be gentle to.
+		if attempt == attempts-1 {
+			break
+		}
+		if err := c.wait(ctx, time.Duration(attempt+1)*backoff); err != nil {
+			return "", fmt.Errorf("fetch: %w", err)
+		}
 	}
 	return "", fmt.Errorf("fetch after %d attempts: %w", attempts, last)
 }
