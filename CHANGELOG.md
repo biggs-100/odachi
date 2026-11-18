@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+- **The verdict judges the candidate and nothing else.** A candidate that ships its own `opencode.json` was discovered nearer than the rule odachi writes beside it, so it voided the boundary 0324 shipped, in silence: the review now refuses such a candidate and names the file. The declaration is measured against the whole candidate instead of the slice one reviewer's prompt carried, which is where `--exec` refused an answer `--attach` accepted for the same bytes. And an attached verdict now names the model that answered, lens by lens, instead of leaving a reader to the project's table. Patch (0325).
+
 ## v0.49.0 - 2026-11-18
 
 - **The reviewer is confined by the client, not by its prompt.** A reviewer told to read one directory would glob the whole machine: the blind arm of the run that opened this cycle cited `auth.go` it was never given, and the tool log said `Glob "**/auth.go" in C:/Users/USER/AppData/Local/Temp`. Every `review --exec` run now gets a directory odachi owns, with the candidate inside it and an `opencode.json` beside it that denies every path outside -one rule, and `read`, `glob` and `grep` stop escaping together- and the command starts inside the candidate instead of the project, so the reviewer cannot read the worktree that may move under the verdict. A candidate that ships its own client configuration can still win over that rule, because the client resolves the nearest one: `docs/reviewer-context-measurement.md` names the limit, and the next feature closes it. Minor, because the reviewer's working directory changed for any command wrapped around it (0324).

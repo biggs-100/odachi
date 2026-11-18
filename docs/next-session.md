@@ -1,7 +1,7 @@
 # Next session
 
-Written after 0323 and 0324, the first cycle that measured the review instead of
-arguing for it.
+Written after 0325, the cycle that paid three debts with one proof instead of
+three.
 
 ## Where the project is
 
@@ -19,21 +19,30 @@ arguing for it.
   context key the middleware never writes- went 3/3 against 0/3. On code with
   nothing planted the reader raised no claim in the median and the blind arm a
   median of two.
+- **`v0.49.0` carries it**: tag on the merge of release PR #654 (`7ae1b2e`),
+  sixteen signed and attested assets, and this machine reinstalled from the
+  release. The order that landed it: #653 the fence policy alone, #652 the two
+  features squashed, #654 the release, #655 the ledger and this note aligned with
+  the fence.
+- **0325 closed.** The verdict judges the candidate and nothing else: a candidate
+  that ships its own `opencode.json` is refused with the file named, because the
+  client reads the nearest configuration and it wins over the rule beside the
+  candidate; the declaration is measured against the whole candidate instead of
+  the slice a split prompt carried, which is where `--exec` and `--attach`
+  disagreed about the same bytes; and an attached verdict names the model that
+  answered, lens by lens, instead of leaving a reader to the project's table.
 - The proof of the closing tree is `proof/0324-el-revisor-esta.txt`, and the
-  verdict of 2026-11-17 is in `.git/odachi/reviews/` under the tree this branch
-  closes.
+  verdict of 2026-11-17 is in `.git/odachi/reviews/` under the tree it names.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
-  total: 322 features · 812 steps done of 812 · 0 open questions
+  total: 323 features · 815 steps done of 815 · 0 open questions
 
 ## What waits for a decision
 
-- **The candidate can carry the rule that beats odachi's.** The client reads its
-  configuration from the directory it runs in and every ancestor and the nearest
-  one wins, so an `opencode.json` committed at the candidate's root is discovered
-  closer than the deny odachi writes beside it. GLM's review found it as a WARNING
-  on this close. Either the review refuses such a candidate or it merges the two
-  rules; the page names the limit until then.
+- **The three debts were paid as one feature**: one brief block, three steps, one
+  proof and one verdict. The phrase that held them was "the verdict judges the
+  candidate and nothing else", and the precedent now exists: a batch is a sentence
+  several debts fit in, not a feature per debt.
 - **The fixture's clean arm still takes two improvements**, and they are the two
   claims the blind arm made: no test for the non-retryable 4xx branch, and a
   backoff that sleeps after the last attempt and never watches cancellation. Until
@@ -55,6 +64,28 @@ arguing for it.
 
 ## What this cycle learned
 
+- **A batch is a sentence, not a list.** The proof and the verdict are owed by the
+  closing tree, so three debts that fit one promise cost one proof and one verdict;
+  the only thing that stays per-debt is the commit. 0325 paid the boundary, the two
+  readings and the model for the price of one close, and the sentence that held
+  them was "the verdict judges the candidate and nothing else".
+- **A slice is not the candidate.** A prompt too big is split, so one reviewer reads
+  a part of the diff, but the directory it reads holds the whole tree: a
+  declaration naming a path from another part is not an invention. Judging the
+  invention against the slice is what made `--exec` refuse an answer `--attach`
+  accepted for the same bytes.
+- **A refusal is cheaper than a merge.** Two configurations with two precedences
+  cannot be merged from above: the client reads the nearest one, so the only
+  honest way to keep the boundary is to refuse the candidate that carries one.
+- **The answer is the only first-hand account of who judged.** `--model` exists
+  where a command carries a placeholder; an answer attached by hand says it in its
+  own field. A store that keeps neither leaves the reader to the project's table,
+  which names who was asked, not who answered.
+- **A feature's base is a commit the remote has.** `0323` pointed at the previous
+  session's note, which was never pushed; `0324` pointed at a commit that lived
+  only on its branch, and the squash erased it. CI answered `bad object` and read
+  nothing, twice, for the same reason. The squash is the moment to check the base,
+  not the next pull request.
 - **A sentence in a prompt is not a boundary.** The blind arm of the second run
   cited `auth.go` with no snapshot, and the tool log said how:
   `Glob "**/auth.go" in C:/Users/USER/AppData/Local/Temp · 4 matches`. What holds
@@ -135,14 +166,15 @@ odachi --version
 - **A Windows CI test that depends on PowerShell startup needs a budget for the
   runner.** Ten 300 ms lines with 3 s and 2 s bounds, as 0321's streaming test
   carries.
-- **The attach lane records a model that did not judge.** The answer that closed
-  this cycle came from `opencode-go/glm-5.3`, and the store's per-lens `model`
-  field names the lens table's `deepseek-v4.1-flash`, because `--attach` stamps the
-  table and `--model` needs `--exec`. A verdict should name who answered.
-- **`--exec` and `--attach` disagreed about the same declaration.** The run refused
-  the reviewer's own answer, saying two changed paths "the candidate does not
-  change", while the same bytes attached with the same `--base` were accepted: the
-  unit's paths and the worktree's paths are two readings of one candidate.
+- **A candidate that ships its own `opencode.json` cannot be reviewed.** The client
+  reads the nearest configuration, so odachi refuses the candidate instead of
+  running a reviewer whose boundary the candidate set. A project that keeps one at
+  its root needs it removed -or renamed- before the frozen run.
+- **`--model` still needs `--exec`.** It replaces `{model}` inside a command; an
+  answer attached by hand names its model in its own field, and the store keeps
+  that name per lens.
+- **A document commit after a close leaves the local `check` red**, on purpose: CI
+  regenerates its own proof from a clean checkout.
 - **The note's totals are written after the last step is marked**, from
   `odachi summary`, never typed.
 - **A document commit after a close leaves the local `check` red**, on purpose: CI
