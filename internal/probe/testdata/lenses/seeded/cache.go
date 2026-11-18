@@ -30,12 +30,20 @@ func (c *cache) set(k, v string) {
 
 func (c *cache) fetch(ctx context.Context, url string) (string, error) {
 	for {
-		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		resp, err := http.DefaultClient.Do(req)
+		body, err := c.once(ctx, url)
 		if err == nil {
-			defer resp.Body.Close()
-			b, _ := io.ReadAll(resp.Body)
-			return string(b), nil
+			return body, nil
 		}
 	}
+}
+
+func (c *cache) once(ctx context.Context, url string) (string, error) {
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	return string(b), nil
 }

@@ -30,7 +30,7 @@
     {
       "id": "resilience-read-error-discarded",
       "path": "cache.go",
-      "line": 37,
+      "line": 47,
       "lens": "resilience",
       "severity": "WARNING",
       "why": "the body read error is discarded and a truncated body is returned as a successful answer"

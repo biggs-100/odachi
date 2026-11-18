@@ -52,7 +52,7 @@ key plants, and how many of the three draws named it, at or above its floor:
 | `risk-query-built-by-concatenation` | risk | `server.go:37` | 3/3 | 2/3 |
 | `reliability-context-key-nobody-writes` | reliability | `server.go:24` | **3/3** | **0/3** |
 | `resilience-retry-with-no-cap` | resilience | `cache.go:32` | 3/3 | 3/3 |
-| `resilience-read-error-discarded` | resilience | `cache.go:37` | 3/3 | 3/3 |
+| `resilience-read-error-discarded` | resilience | `cache.go:47` | 3/3 | 3/3 |
 | `readability-name-does-three-jobs` | readability | `limits.go:11` | 3/3 | 1/3 |
 | `reliability-test-copies-the-formula` | reliability | `limits_test.go:8` | 3/3 | 2/3 |
 
@@ -63,7 +63,8 @@ handler, not about the key: the scorer counts a hit by its distance to the line,
 and this is the first thing the table cannot tell.
 
 What the tool printed, verbatim, is a per-lens row. It counts a defect once, so
-two defects four lines apart can compete for one finding:
+two defects four lines apart can compete for one finding; `0328` moved the pair in
+`cache.go` into separate functions, and these draws are the exam before that.
 
 ```
 attached  runs 3 · risk 1/1, readability 1/1, reliability 2/2, resilience 1/2
