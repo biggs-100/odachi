@@ -9,6 +9,7 @@ not a version.
 
 ## Unreleased
 
+- **The probe's two resilience defects are in different functions.** A single finding could name the retry loop and the discarded read error together, and the scorer claims a finding once, so the per-lens row could count the pair as one defect while the reader had found two. The read lives in its own function now, the key and the page name the new line, and the draws the page publishes are the exam before the change (0328).
 - **The gate's streaming test no longer starts a shell.** On Windows the test opened with cmd's `echo` and then waited for PowerShell to start: on a loaded runner those two seconds were the runner's load, not the command's silence, and the test killed a reviewer that kept writing. Every line now comes from cmd itself, about a second apart, and the quiet half of the clock still catches a stall (0327).
 - **The probe's clean arm pays what the blind reviewer found in it.** The control for false positives carried two defects a reader found in the dark -a 4xx branch with no test, and a pause that slept after the last attempt and ignored the caller's cancellation-. The arm now carries the test, which fails if the branch starts retrying a caller's mistake, and a pause that stops at the last attempt and returns the moment the context is gone. The measurement page says its number was taken on the exam before the change, so a later run measures a quieter control. Nothing a person installs changes (0326).
 

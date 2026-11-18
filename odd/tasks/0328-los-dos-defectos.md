@@ -8,7 +8,7 @@ R1 · "los dos defectos de resiliencia viven en funciones distintas, y la llave 
 ## Done when
 
 ## Steps
-- [ ] T1 · los dos defectos de resiliencia viven en funciones distintas, y la llave y la pagina dicen sus lineas nuevas   R1
+- [x] T1 · los dos defectos de resiliencia viven en funciones distintas, y la llave y la pagina dicen sus lineas nuevas   R1 · tree:9db4786118b4fae2fb1d94ce1b6cd578ccc4ee95
 
 ## History
 L1 · "los dos defectos de resiliencia viven en funciones distintas, y la llave y la pagina dicen sus lineas nuevas"
