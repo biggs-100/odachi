@@ -22,8 +22,9 @@ arguing for it.
 - The proof of the closing tree is `proof/0324-el-revisor-esta.txt`, and the
   verdict of 2026-11-17 is in `.git/odachi/reviews/` under the tree this branch
   closes.
-- The tool counts this line for the tree it describes: `total: 322 features · 812
-  steps done of 812 · 0 open questions`, copied from `odachi summary`.
+- The tool counts this line for the tree it describes, copied from `odachi summary`:
+
+  total: 322 features · 812 steps done of 812 · 0 open questions
 
 ## What waits for a decision
 

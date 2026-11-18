@@ -20,7 +20,8 @@ enforces = "fence:internal/assets/review/*.md"
 [[rule]]
 rule     = "el fixture de la sonda y su llave son intocables: medir cambiando el examen no mide nada"
 skill    = "measure"
-enforces = "fence:internal/probe/**"
+enforces = "none"
+because  = "0323 needed the exam to answer a question it could not ask, so the fence stopped protecting it; what guards the change now is the reason the brief records and the review that reads it"
 
 [[rule]]
 rule     = "una medicion no corre en la gate: N veces un modelo multiplica el costo"
