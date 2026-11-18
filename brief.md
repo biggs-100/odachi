@@ -1055,3 +1055,27 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: por que un conteo de bytes no puede decir que una regla sigue escrita.
+
+## 0323 · la-sonda-sostiene
+
+## What must exist
+- la sonda sostiene los dos brazos del contexto del revisor y la comparacion esta medida: cada mano recibe su snapshot congelado y el revisor corre fuera de las dos, el fixture gana una base con un defecto que solo se ve leyendo un llamador, y el numero de antes y despues queda escrito con su seccion de limites
+
+## Done when
+- una corrida con --exec nombra el directorio congelado en cada prompt, y el canario responde attached and scoped
+- el fixture tiene un defecto que no aparece en el diff: el brazo que lee el snapshot lo cuenta como encontrado y el brazo ciego lo cuenta como missed
+- el revisor corre en un directorio que no contiene la otra mano, asi que un listado del cwd no alcanza seeded/
+- una pagina nueva lleva el numero de los dos brazos con sus draws, el modelo y una seccion de lo que no muestra
+- go test ./... is green and odachi check --run go test ./... is green
+
+## Not included (first version)
+- no se cambia el contenido de los cuatro lentes: la medicion no edita el examen que juzga
+- la sonda no corre en CI y no se agrega un segundo modelo: el numero dice un modelo y un draw por brazo
+- no se reescribe docs/review-research.md: el numero va en una pagina nueva
+- el fixture no gana defectos dentro del diff: lo que se agrega es la base y el defecto que solo se ve fuera de ella
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: por que el acceso al arbol sube la precision y baja el recall, y que parte del numero es del draw.

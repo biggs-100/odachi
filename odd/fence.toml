@@ -14,16 +14,6 @@ paths = [".github/workflows/**"]
 deps  = []
 
 [[rule]]
-not   = "no se toca el fixture ni los lentes: la repeticion mide lo que ya existe"
-paths = ["internal/probe/testdata/lenses/**"]
-deps  = []
-
-[[rule]]
-not   = "el fixture de la sonda y su llave son intocables: medir cambiando el examen no mide nada - back when the probe's arm, its planted defects or the manifest change for a reason this feature records"
-paths = ["internal/probe/**", "internal/domain/probe/manifest.go"]
-deps  = []
-
-[[rule]]
 not   = "no se reescribe ninguna medicion ya publicada: docs/skill-evaluation.md y docs/review-research.md quedan como estan"
 paths = ["docs/skill-evaluation.md", "docs/review-research.md"]
 deps  = []
