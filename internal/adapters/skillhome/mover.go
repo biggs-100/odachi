@@ -116,6 +116,21 @@ func (m Mover) Recover() ([]string, error) {
 	return back, nil
 }
 
+// Installed answers where the named skill lives in the home, and whether it is
+// there at all. It reads; it does not move.
+func (m Mover) Installed(name string) (string, bool, error) {
+	path := filepath.Join(m.Skills, name)
+	_, err := os.Stat(path)
+	switch {
+	case err == nil:
+		return path, true, nil
+	case errors.Is(err, os.ErrNotExist):
+		return path, false, nil
+	default:
+		return path, false, fmt.Errorf("could not look at %s: %w", path, err)
+	}
+}
+
 // Pending answers the skills a previous run left out, without touching them.
 func (m Mover) Pending() ([]string, error) {
 	marks, err := m.read()
