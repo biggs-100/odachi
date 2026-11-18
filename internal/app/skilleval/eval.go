@@ -1,0 +1,282 @@
+// Package skilleval runs one skill's exam: the same prompt twice, once with the
+// skill available and once without it, and the score the event stream decides.
+//
+// It is the second instrument after the lens probe, and it is built the same way:
+// nothing here calls a model by itself. Without --exec the verb prints the prompt
+// and runs nobody; with it, the command the human wrote is what runs, and the
+// exam only reads what it wrote.
+package skilleval
+
+import (
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	domain "github.com/biggs-100/odachi/internal/domain/skilleval"
+	corpus "github.com/biggs-100/odachi/internal/skilleval"
+)
+
+// Codes answer what the verb did: nothing was measured, or it was.
+const (
+	CodeOK      = 0
+	CodeBlocked = 1
+)
+
+// The two arms: the one that carries the skill, and the one that does not. They
+// are the whole measurement, and their names are what the record says.
+const (
+	With    = "with"
+	Without = "without"
+)
+
+// Options is one exam run.
+type Options struct {
+	// Scratch is a folder this run owns; every arm and draw is built under it.
+	Scratch string
+	// Skill is the exam and the skill it measures, loaded by the caller.
+	Exam  corpus.Exam
+	Skill []corpus.File
+	// Exec is the command that runs an agent. {prompt} is replaced by the path of
+	// the prompt file; a command without it receives the prompt on stdin.
+	Exec string
+	// Runs is how many draws each arm answers.
+	Runs int
+	// Timeout is how long one draw may take, in seconds.
+	Timeout int
+	// MoveHome is the human's permission to take the skill out of the home for
+	// the length of the run. Without it, a skill installed there is a refusal.
+	MoveHome bool
+	// Recover puts back whatever a dead run left out, and measures nothing.
+	Recover bool
+}
+
+// Files is the disk this run writes the projects to.
+type Files interface {
+	Write(path string, data []byte) error
+	MkdirAll(path string) error
+}
+
+// Shell runs the human's command.
+type Shell interface {
+	RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
+}
+
+// Home is the skills folder the client reads, and the journal that remembers what
+// left it. The exam asks; the adapter moves.
+type Home interface {
+	Installed(name string) (path string, ok bool, err error)
+	Take(name string) (domain.Mark, error)
+	Restore(mark domain.Mark) error
+	Recover() ([]string, error)
+}
+
+// Draw is one paid answer: an arm, a run number, and what the stream showed.
+type Draw struct {
+	Arm        string
+	Run        int
+	Behaviours []domain.Behaviour
+	Loaded     bool
+	Problem    string
+}
+
+// Result is what the verb prints and what the caller files.
+type Result struct {
+	Code    int
+	Message string
+	Lines   []string
+	Draws   []Draw
+}
+
+// Run works the exam and answers what each arm showed. A run that cannot keep its
+// promise leaves nothing half done: the skill it took out goes back before the
+// answer, whatever happened.
+func Run(opts Options, files Files, shell Shell, home Home) Result {
+	if opts.Recover {
+		back, err := home.Recover()
+		if err != nil {
+			return blocked("could not put back what an earlier run left out: " + err.Error())
+		}
+		if len(back) == 0 {
+			return ok([]string{"nothing was left out: the journal is empty"})
+		}
+		return ok([]string{"put back " + strings.Join(back, ", ")})
+	}
+
+	if strings.TrimSpace(opts.Exec) == "" {
+		return ok([]string{
+			"the exam for " + opts.Exam.Skill + " asks for this, twice -once with the skill and once without it:",
+			"",
+			opts.Exam.Task,
+			"next: odachi skills eval " + opts.Exam.Skill + " --exec \"<the command that runs your agent>\" --runs 3",
+		})
+	}
+
+	runs := opts.Runs
+	if runs < 1 {
+		runs = 1
+	}
+
+	path, installed, err := home.Installed(opts.Exam.Skill)
+	if err != nil {
+		return blocked(err.Error())
+	}
+	var taken domain.Mark
+	if installed {
+		if !opts.MoveHome {
+			return blocked(fmt.Sprintf(
+				"%s is installed in the home, and the arm without the skill is that folder absent: pass --move-home to take it out for the run and put it back, or remove it yourself first",
+				path))
+		}
+		taken, err = home.Take(opts.Exam.Skill)
+		if err != nil {
+			return blocked("could not take the skill out of the home: " + err.Error())
+		}
+		defer func() { _ = home.Restore(taken) }()
+	}
+
+	arms := []string{With, Without}
+	if !installed && len(opts.Skill) == 0 {
+		return blocked("the skill " + opts.Exam.Skill + " is neither installed in the home nor bundled with this binary: there is nothing to measure")
+	}
+
+	var draws []Draw
+	lines := []string{}
+	for _, arm := range arms {
+		for n := 1; n <= runs; n++ {
+			draw := drawOnce(opts, files, shell, arm, n)
+			draws = append(draws, draw)
+			lines = append(lines, describe(draw))
+		}
+	}
+
+	for _, arm := range arms {
+		met, of := 0, 0
+		for _, draw := range draws {
+			if draw.Arm != arm {
+				continue
+			}
+			met += domain.Met(draw.Behaviours)
+			of += len(draw.Behaviours)
+		}
+		lines = append(lines, fmt.Sprintf("%s: %d of %d behaviours across %d draw(s)", arm, met, of, runs))
+	}
+
+	return Result{Code: CodeOK, Message: fmt.Sprintf("the exam for %s ran %d draw(s) per arm", opts.Exam.Skill, runs), Lines: lines, Draws: draws}
+}
+
+// drawOnce builds one arm, runs the command in it, and scores the stream.
+func drawOnce(opts Options, files Files, shell Shell, arm string, n int) Draw {
+	dir := filepath.Join(opts.Scratch, arm, fmt.Sprintf("r%d", n))
+	draw := Draw{Arm: arm, Run: n}
+
+	if err := build(opts, files, dir, arm); err != nil {
+		draw.Problem = "could not build the arm: " + err.Error()
+		return draw
+	}
+
+	promptPath := filepath.Join(dir, "prompt.md")
+	if err := files.Write(promptPath, []byte(opts.Exam.Task)); err != nil {
+		draw.Problem = "could not write the prompt: " + err.Error()
+		return draw
+	}
+
+	command := strings.ReplaceAll(opts.Exec, "{prompt}", promptPath)
+	stdout, stderr, exitCode, timedOut, err := shell.RunInput(dir, command, opts.Exam.Task, opts.Timeout)
+	if err != nil {
+		draw.Problem = "the command did not run: " + err.Error()
+		return draw
+	}
+	if timedOut {
+		draw.Problem = fmt.Sprintf("the command was still running at %ds; its answer was thrown away", opts.Timeout)
+		return draw
+	}
+	if exitCode != 0 {
+		draw.Problem = fmt.Sprintf("the command answered %d: %s", exitCode, oneLine(stderr))
+		return draw
+	}
+
+	events, err := domain.ParseStream([]byte(stdout))
+	if err != nil {
+		draw.Problem = "the stream cannot be read: " + err.Error()
+		return draw
+	}
+	draw.Behaviours = domain.Score(events)
+	for _, event := range events {
+		if event.Tool == "skill" && event.Name == opts.Exam.Skill {
+			draw.Loaded = true
+		}
+	}
+	return draw
+}
+
+// build writes the exam's project, and -in the arm that has it- the skill, where
+// the client discovers it: the project's own .agents/skills.
+func build(opts Options, files Files, dir, arm string) error {
+	if err := files.MkdirAll(dir); err != nil {
+		return err
+	}
+	names := make([]string, 0, len(opts.Exam.Files))
+	for name := range opts.Exam.Files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		if err := files.MkdirAll(filepath.Dir(path)); err != nil {
+			return err
+		}
+		if err := files.Write(path, opts.Exam.Files[name]); err != nil {
+			return err
+		}
+	}
+	if arm != With {
+		return nil
+	}
+	for _, file := range opts.Skill {
+		path := filepath.Join(dir, ".agents", "skills", opts.Exam.Skill, filepath.FromSlash(file.Path))
+		if err := files.MkdirAll(filepath.Dir(path)); err != nil {
+			return err
+		}
+		if err := files.Write(path, file.Content); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// describe is one line of the table: the arm, the run, the score, and the event
+// that decided each behaviour, so a reader can check the answer without trusting
+// the number.
+func describe(draw Draw) string {
+	if draw.Problem != "" {
+		return fmt.Sprintf("%-7s r%d  -    %s", draw.Arm, draw.Run, draw.Problem)
+	}
+	loaded := "the skill did not load"
+	if draw.Loaded {
+		loaded = "the skill loaded"
+	}
+	parts := make([]string, 0, len(draw.Behaviours))
+	for _, behaviour := range draw.Behaviours {
+		answer := "no"
+		if behaviour.Met {
+			answer = "yes"
+		}
+		parts = append(parts, behaviour.ID+": "+answer+" ("+behaviour.Why+")")
+	}
+	return fmt.Sprintf("%-7s r%d  %d/%d  %s · %s",
+		draw.Arm, draw.Run, domain.Met(draw.Behaviours), len(draw.Behaviours),
+		strings.Join(parts, " · "), loaded)
+}
+
+func ok(lines []string) Result {
+	return Result{Code: CodeOK, Lines: lines}
+}
+
+func blocked(message string) Result {
+	return Result{Code: CodeBlocked, Message: message, Lines: []string{message}}
+}
+
+func oneLine(s string) string {
+	return strings.Join(strings.Fields(s), " ")
+}

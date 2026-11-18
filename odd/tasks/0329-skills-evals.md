@@ -12,7 +12,7 @@ R1 · "un examen de skill se corre con un comando y deja su puntaje guardado: do
 - `go test ./...` is green and `odachi check --run "go test ./..."` is green
 
 ## Steps
-- [ ] T1 · el instrumento prueba como correr la mano sin skill sin tocar el home, y el verbo se niega si no hay forma limpia   R1 · route:inline
+- [x] T1 · el instrumento prueba como correr la mano sin skill sin tocar el home, y el verbo se niega si no hay forma limpia   R1 · route:inline · tree:d871b0e989814401b7d0c0b47f0dad9595c2206f
 - [ ] T2 · el examen de tests corre las dos manos con la exec del humano y puntua el orden de los eventos   R1 · route:inline
 - [ ] T3 · el puntaje se guarda en el store del clone, clean lo retiene y una corrida repetida se niega   R1 · route:inline
 - [ ] T4 · la pagina del bucle de evals y el changelog   R1 · route:inline
