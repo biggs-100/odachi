@@ -1,6 +1,7 @@
 package review_test
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -277,6 +278,33 @@ func TestStoredVerdictRecordsTheLensesTheToolAsked(t *testing.T) {
 	stored := string(p.files.files[storePath(currentTree)])
 	if !strings.Contains(stored, `"risk"`) || !strings.Contains(stored, `"reliability"`) {
 		t.Fatalf("the stored verdict does not record the lenses it covered:\n%s", stored)
+	}
+}
+
+// TestAnAttachedVerdictNamesTheModelThatAnswered: --model only goes with --exec,
+// because it replaces {model} inside a command, so an answer attached by hand left
+// the store with no model for its lenses and a reader fell back to the lens table -
+// naming the model the project configured instead of the one that read the bytes.
+// The answer already says who judged; the store keeps it.
+func TestAnAttachedVerdictNamesTheModelThatAnswered(t *testing.T) {
+	p := newLensProject()
+	p.files.files[fullPath("veredicto.json")] = []byte(`{"reviewer":"humano","model":"opencode-go/glm-5.3","inspection":{"status":"completed","paths":["a.go"]},"findings":[]}`)
+
+	result := p.run(review.Options{Attach: "veredicto.json"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	stored := string(p.files.files[storePath(currentTree)])
+	var record struct {
+		Model  string            `json:"model"`
+		Models map[string]string `json:"models"`
+	}
+	if err := json.Unmarshal([]byte(stored), &record); err != nil {
+		t.Fatalf("the stored verdict is not JSON: %v\n%s", err, stored)
+	}
+	if got := record.Models[domainreview.Reliability]; got != "opencode-go/glm-5.3" {
+		t.Fatalf("%s names %q, want the model that answered; the whole map is %v",
+			domainreview.Reliability, got, record.Models)
 	}
 }
 

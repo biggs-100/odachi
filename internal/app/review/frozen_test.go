@@ -93,3 +93,30 @@ func TestAFrozenCandidateIsRequired(t *testing.T) {
 		t.Error("a failed freeze discarded a directory it never made")
 	}
 }
+
+// TestACandidateThatCarriesItsOwnRuleIsRefused: the client reads the nearest
+// configuration, so a file inside the candidate is discovered after the rule
+// odachi writes beside it and wins. A reviewer started over such a candidate
+// reads whatever the candidate allows while the verdict still claims a boundary,
+// which is the one answer this run may never give: it refuses and names the file.
+func TestACandidateThatCarriesItsOwnRuleIsRefused(t *testing.T) {
+	p := newProject()
+	p.git.run = filepath.FromSlash("C:/temp/odachi-review-abc")
+	p.git.candidateDir = filepath.Join(p.git.run, "candidate")
+	carried := filepath.Join(p.git.candidateDir, scope.FileName)
+	p.files.files[carried] = []byte(`{"permissions": []}`)
+
+	result := p.run(review.Options{Exec: "revisor"})
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1 (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, scope.FileName) {
+		t.Errorf("the refusal does not name the file that voids the boundary: %q", result.Message)
+	}
+	if len(p.shell.commands) != 0 {
+		t.Errorf("the reviewer ran over a candidate that voids the boundary: %v", p.shell.commands)
+	}
+	if got := p.git.discarded; len(got) != 1 || got[0] != p.git.run {
+		t.Errorf("discarded = %v, want the whole run %q", got, p.git.run)
+	}
+}

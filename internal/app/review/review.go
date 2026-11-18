@@ -1156,6 +1156,14 @@ func (r *runner) exec() Result {
 			"; check the permissions and run odachi review again")
 	}
 	defer func() { _ = r.git.Discard(run) }()
+	if carried, carriedErr := carriedConfig(r.files, frozen); carriedErr != nil {
+		return blocked("could not check the frozen candidate for its own client configuration: " + oneLine(carriedErr.Error()) +
+			"; the reviewer was not started: run odachi review again")
+	} else if carried != "" {
+		return blocked("the candidate carries its own " + scope.FileName + " at " + carried +
+			": the client reads the nearest configuration, so the candidate's is discovered after the rule written beside it and wins" +
+			"; the reviewer was not started: remove it from the candidate and run odachi review again")
+	}
 	if err := r.files.Write(filepath.Join(run, scope.FileName), scope.Render()); err != nil {
 		return blocked("could not write the rule that confines the reviewer: " + oneLine(err.Error()) +
 			"; the reviewer was not started: run odachi review again")
@@ -1383,7 +1391,7 @@ func (r *runner) exec() Result {
 			// cannot lose it and a reviewer's edits cannot move it. The collision that
 			// stops paying twice for a lens allows the ones this run was told to top up.
 			permitted := append(append([]string{}, todo...), landed...)
-			last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, permitted)
+			last = r.storeIn(parsed, unit.work, cand.base, unit.lenses, permitted, cand.paths)
 			if last.Code != CodeOK {
 				if len(landed) == 0 {
 					return last
@@ -2017,7 +2025,7 @@ func (r *runner) store(parsed domain.Verdict, base string, judged []string) Resu
 	if problem != nil {
 		return *problem
 	}
-	return r.storeIn(parsed, work, base, judged, nil)
+	return r.storeIn(parsed, work, base, judged, nil, nil)
 }
 
 // collision is the first lens an answer shares with the verdict already stored
@@ -2047,7 +2055,7 @@ func collision(sealed, existing, landed []string) string {
 // lenses its earlier parts landed, and that is the only reason an existing verdict
 // may be merged instead of refused. A caller that passed nothing is a second run
 // over bytes somebody already judged, whatever shape the candidate has.
-func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged, landed []string) Result {
+func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, judged, landed, allowed []string) Result {
 	tree := work.tree
 
 	// The floor is one reading of the candidate: it fixes the class this verdict
@@ -2083,6 +2091,12 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 			return *problem
 		}
 	}
+
+	// The verdict names who answered, lens by lens: --model only exists for --exec,
+	// so an answer attached by hand said who judged once and the per-lens map
+	// stayed empty -and a reader fell back to the project's lens table, naming a
+	// model that never read these bytes.
+	stamped = stampModels(stamped)
 
 	stamped, problem = r.stampBlobs(stamped)
 	if problem != nil {
@@ -2207,7 +2221,10 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	// path it leaves out is a hole, and a path nobody changed is an invention.
 	// The caller cannot complete it, because the caller is not the reader.
 	if len(asked) > 0 {
-		if message, detail, ok := inspectionRefusal(stamped, work.paths); !ok {
+		if len(allowed) == 0 {
+			allowed = work.paths
+		}
+		if message, detail, ok := inspectionRefusal(stamped, work.paths, allowed); !ok {
 			return r.refuseInspection(stamped, rel, message, detail)
 		}
 	}
@@ -2419,6 +2436,30 @@ func (r *runner) stampLenses(verdict domain.Verdict, class domain.Tier) (domain.
 	return stamped, nil
 }
 
+// stampModels gives every lens this answer claims the model the answer names, and
+// leaves a lens that already has one alone. --model exists only for --exec, because
+// it replaces {model} inside a command, so an attached answer said who judged once
+// and its per-lens map stayed empty; a reader then fell back to the project's table
+// and named a model that never read the candidate. What the answer says is the
+// only first-hand account of who answered.
+func stampModels(verdict domain.Verdict) domain.Verdict {
+	model := strings.TrimSpace(verdict.Model)
+	if model == "" {
+		return verdict
+	}
+
+	stamped := verdict
+	if stamped.Models == nil {
+		stamped.Models = make(map[string]string, len(stamped.Lenses))
+	}
+	for _, lens := range stamped.Lenses {
+		if strings.TrimSpace(stamped.Models[lens]) == "" {
+			stamped.Models[lens] = model
+		}
+	}
+	return stamped
+}
+
 // stampBlobs gives every finding its content receipt: the blob id of the file as
 // it stands in this worktree, measured by the git port and never read from the
 // verdict. Whatever the reviewer declared is overwritten — a hash is a fact
@@ -2587,11 +2628,17 @@ func (r *runner) promptTooBig(prompts []string) *Result {
 // candidate it judges, or ok when it does. It is the half of coverage a row
 // cannot carry: the rows say what was answered, and this says who read the tree
 // and whether it read all of it.
-func inspectionRefusal(verdict domain.Verdict, changed []string) (message string, detail []string, ok bool) {
+//
+// mustCover is the slice the prompt carried, and a path it leaves out is a hole.
+// allowed is the whole candidate, and a path outside it is an invention. A split
+// run is where the two differ: the reviewer of a part reads the frozen candidate,
+// which holds every changed file, so judging the invention against the slice
+// refused an answer --attach accepted for the very same bytes.
+func inspectionRefusal(verdict domain.Verdict, mustCover, allowed []string) (message string, detail []string, ok bool) {
 	declared := verdict.Inspection
 	if declared == nil {
 		return "the answer does not say what its reviewer inspected: it carries no \"inspection\"; no verdict was written",
-			[]string{"the candidate changed: " + strings.Join(changed, ", ")},
+			[]string{"the candidate changed: " + strings.Join(allowed, ", ")},
 			false
 	}
 
@@ -2601,13 +2648,14 @@ func inspectionRefusal(verdict domain.Verdict, changed []string) (message string
 			false
 	}
 
-	missing, foreign := verdict.InspectionCoverage(changed)
+	missing, _ := verdict.InspectionCoverage(mustCover)
 	if len(missing) > 0 {
 		return fmt.Sprintf("the declaration leaves %d changed path(s) out: %s; no verdict was written",
 				len(missing), strings.Join(missing, ", ")),
 			[]string{"ask the reviewer to declare the paths it read - a verdict is not edited to pass the gate"},
 			false
 	}
+	_, foreign := verdict.InspectionCoverage(allowed)
 	if len(foreign) > 0 {
 		return fmt.Sprintf("the declaration names %d path(s) the candidate does not change: %s; no verdict was written",
 				len(foreign), strings.Join(foreign, ", ")),
@@ -3621,6 +3669,24 @@ func (r *runner) candidate() (candidate, *Result) {
 	}
 
 	return candidate{brief: visionText, base: work.base, tree: work.tree, paths: work.paths, diff: work.diff}, nil
+}
+
+// carriedConfig answers the client configuration a frozen candidate brings at its
+// root, or "" when it brings none. The client merges from the farthest ancestor to
+// the nearest, so a file inside the candidate is discovered after the rule odachi
+// writes beside it and wins: the boundary becomes whatever the candidate says. A
+// disk that cannot answer blocks, because a boundary nobody could check is not one
+// this run may claim.
+func carriedConfig(files Files, candidate string) (string, error) {
+	var checkErr error
+	carried := scope.Carried(candidate, func(path string) bool {
+		ok, err := files.Exists(path)
+		if err != nil && checkErr == nil {
+			checkErr = err
+		}
+		return ok
+	})
+	return carried, checkErr
 }
 
 // candidateForReview is candidate() plus the lens flag: a verdict is named by

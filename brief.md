@@ -1103,3 +1103,26 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que una garantia escrita en el prompt no es una frontera, y donde vive la frontera real de un agente.
+
+## 0325 · el-veredicto-juzga
+
+## What must exist
+- el veredicto juzga el candidato y solo el candidato, y dice quien lo juzgo: un candidato que trae su propia configuracion de cliente se rechaza en vez de revisarse, --exec y --attach leen las mismas rutas del mismo candidato, y el modelo que queda escrito es el que respondio
+
+## Done when
+- un candidato que trae su propio opencode.json se niega a revisarse con un mensaje que nombra el archivo, y el mismo candidato sin ese archivo se revisa
+- el mismo candidato declarado por --exec y por --attach produce el mismo conjunto de rutas cambiadas, con un caso que hoy discrepa
+- un veredicto guardado nombra el modelo que respondio aunque la corrida se haya adjuntado con --attach
+- go test ./... is green and odachi check --run go test ./... is green
+
+## Not included (first version)
+- no se toca el contenido de los cuatro lentes: esta feature arregla el veredicto, no lo reescribe
+- no se agrega un segundo cliente al confinamiento: la configuracion que enforza sigue siendo la de opencode
+- no se paga la deuda del fixture ni se separan los dos defectos de resiliencia: eso es otro lote
+- no se cambia la sonda ni su fixture: la frontera se prueba en el review real
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: por que la precedencia de una configuracion es parte de la regla, y por que dos lecturas del mismo candidato no pueden discrepar.
