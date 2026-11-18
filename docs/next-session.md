@@ -31,18 +31,20 @@ three.
   the slice a split prompt carried, which is where `--exec` and `--attach`
   disagreed about the same bytes; and an attached verdict names the model that
   answered, lens by lens, instead of leaving a reader to the project's table.
-- The proof of the closing tree is `proof/0324-el-revisor-esta.txt`, and the
-  verdict of 2026-11-17 is in `.git/odachi/reviews/` under the tree it names.
+- **`v0.49.1` carries it**: tag on the merge of release PR #657 (`70a70e0`),
+  sixteen signed and attested assets, and this machine reinstalled. The Windows
+  gate failed once on `TestAStreamingReviewerSurvivesTheFirstOutputBound` -"a
+  reviewer that kept writing was killed"- and passed on a rerun of the same bytes
+  in 7m18s: a loaded runner, not a regression.
+- The proof of the closing tree is `proof/0325-el-veredicto-juzga.txt`, and the
+  verdict of 2026-11-18 is `ceed0b17...json` in `.git/odachi/reviews/` -approved,
+  reliability lens, `opencode-go/glm-5.3`- with the verifier's record beside it.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
   total: 323 features · 815 steps done of 815 · 0 open questions
 
 ## What waits for a decision
 
-- **The three debts were paid as one feature**: one brief block, three steps, one
-  proof and one verdict. The phrase that held them was "the verdict judges the
-  candidate and nothing else", and the precedent now exists: a batch is a sentence
-  several debts fit in, not a feature per debt.
 - **The fixture's clean arm still takes two improvements**, and they are the two
   claims the blind arm made: no test for the non-retryable 4xx branch, and a
   backoff that sleeps after the last attempt and never watches cancellation. Until
@@ -165,7 +167,8 @@ odachi --version
 
 - **A Windows CI test that depends on PowerShell startup needs a budget for the
   runner.** Ten 300 ms lines with 3 s and 2 s bounds, as 0321's streaming test
-  carries.
+  carries. Even that budget breaks under load: v0.49.1's gate failed once at
+  11m41s and passed on a rerun at 7m18s, on the same bytes.
 - **A candidate that ships its own `opencode.json` cannot be reviewed.** The client
   reads the nearest configuration, so odachi refuses the candidate instead of
   running a reviewer whose boundary the candidate set. A project that keeps one at
