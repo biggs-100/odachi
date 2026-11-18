@@ -22,6 +22,21 @@ func TestSkillsEvalPrintsThePromptAndRunsNobody(t *testing.T) {
 	}
 }
 
+// TestSkillsEvalTakesTheSkillBeforeTheFlags: the shape the page and the verb's own
+// next line print -the skill first, the flags after it- has to run, because the
+// Go flag parser stops at the first word that is not a flag.
+func TestSkillsEvalTakesTheSkillBeforeTheFlags(t *testing.T) {
+	t.Parallel()
+
+	code, stdout, stderr := runDir(t, t.TempDir(), []string{"skills", "eval", "tests", "--runs", "2"}, "")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", code, stderr)
+	}
+	if !strings.Contains(stdout, "config.Parse") {
+		t.Errorf("the documented shape printed no prompt:\n%s", stdout)
+	}
+}
+
 // TestSkillsEvalNamesTheExamsThatExist: a skill with no exam is answered with the
 // list, because a typo and a missing measurement are different answers.
 func TestSkillsEvalNamesTheExamsThatExist(t *testing.T) {

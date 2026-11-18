@@ -14,8 +14,8 @@ R1 · "un examen de skill se corre con un comando y deja su puntaje guardado: do
 ## Steps
 - [x] T1 · el instrumento prueba como correr la mano sin skill sin tocar el home, y el verbo se niega si no hay forma limpia   R1 · route:inline · tree:d871b0e989814401b7d0c0b47f0dad9595c2206f
 - [x] T2 · el examen de tests corre las dos manos con la exec del humano y puntua el orden de los eventos   R1 · route:inline · tree:a9569e2d90040dff7786a4944bbbdae997c1d81d
-- [ ] T3 · el puntaje se guarda en el store del clone, clean lo retiene y una corrida repetida se niega   R1 · route:inline
-- [ ] T4 · la pagina del bucle de evals y el changelog   R1 · route:inline
+- [x] T3 · el puntaje se guarda en el store del clone, clean lo retiene y una corrida repetida se niega   R1 · route:inline · tree:5de48f61da36a45120c4ce1960dff752c4144e50
+- [x] T4 · la pagina del bucle de evals y el changelog   R1 · route:inline · tree:67635a09fc4f0896ddd6ec1f4788cb6fa68ffdaf
 
 ## History
 L1 · "un examen de skill se corre con un comando y deja su puntaje guardado: dos manos con el mismo prompt -una con la skill y otra sin ella-, el puntaje por comportamiento leido del transcript, y el registro en el store del clone"

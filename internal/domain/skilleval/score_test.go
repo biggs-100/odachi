@@ -137,6 +137,25 @@ func TestTheSuiteInsideALongerLineCounts(t *testing.T) {
 	}
 }
 
+// TestATestWithNoCodeStillMeetsTheFirstBehaviour: the branch where a run wrote the
+// test and no code at all is the one that answers "the test came first" without a
+// second event to compare, and nothing pinned it.
+func TestATestWithNoCodeStillMeetsTheFirstBehaviour(t *testing.T) {
+	t.Parallel()
+
+	got := skilleval.Score([]skilleval.Event{
+		write("write", "config_test.go"),
+		run("go test ./..."),
+	})
+
+	if !got[0].Met {
+		t.Errorf("a test with no code file did not count as written first: %+v", got[0])
+	}
+	if !got[1].Met {
+		t.Errorf("a suite after the test and before nothing did not count as the red: %+v", got[1])
+	}
+}
+
 // TestMetCountsWhatTheExamAsksFor is the number the table prints: two here, and
 // zero when nothing fits.
 func TestMetCountsWhatTheExamAsksFor(t *testing.T) {

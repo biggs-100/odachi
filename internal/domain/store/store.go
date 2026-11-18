@@ -34,7 +34,12 @@ const (
 	Reviews = "reviews"
 	// Evals holds one record per measured skill text: the score an exam left,
 	// named by what it measured so a second run over the same bytes is refused.
+	// The journal of a run that took a skill out of the home lives beside them,
+	// and it is not a record: a class that pruned it would leave the skill aside
+	// for good.
 	Evals = "evals"
+	// EvalsJournal is the file inside Evals that remembers what left the home.
+	EvalsJournal = "home.json"
 	// Backups holds the undo copies of the artifacts this tool rewrites.
 	Backups = "backups"
 	// Lock is the write lock the multi-file verbs hold.

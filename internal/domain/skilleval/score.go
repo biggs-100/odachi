@@ -69,9 +69,9 @@ func Score(events []Event) []Behaviour {
 		before.Why = "the test file was written and no code file was"
 	case testAt < codeAt:
 		before.Met = true
-		before.Why = eventAt(events, testAt, "came before") + " the first code file"
+		before.Why = eventAt(events, testAt, "came before")
 	default:
-		before.Why = eventAt(events, testAt, "came after") + " the first code file"
+		before.Why = eventAt(events, testAt, "came after")
 	}
 
 	red := Behaviour{ID: RedBeforeFix, Label: "the suite ran between the test and the code"}
@@ -128,7 +128,7 @@ func runsTheSuite(event Event) bool {
 }
 
 func eventAt(events []Event, at int, verb string) string {
-	return "the test file " + verb + ": " + oneLine(events[at].Path)
+	return "the test file (" + oneLine(events[at].Path) + ") " + verb + " the first code file"
 }
 
 func oneLine(s string) string {

@@ -211,6 +211,7 @@ func TestTheReportNamesEveryClassWithItsOwner(t *testing.T) {
 		"",
 		"  review records       odachi                2 files      120 B  keeps the newest 10 trees",
 		"  review prompts       odachi                1 file        50 B  keeps the prompts of the newest 0 trees · 1 file would go",
+		"  skill exams          odachi                0 files        0 B  keeps the newest 10 records",
 		"  review scaffolding   odachi                1 file        10 B  emptied by --apply · 1 file would go",
 		"  undo backups         odachi                2 files       27 B  keeps the newest 5 of each file",
 		"  agent scratch        odachi                1 file         5 B  emptied by --apply · 1 file would go",

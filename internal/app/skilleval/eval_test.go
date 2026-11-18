@@ -55,6 +55,7 @@ func (s *fakeShell) RunInput(dir, command, input string, _ int) (string, string,
 	}
 	return withStream, "", 0, false, nil
 }
+func (s *fakeShell) Quote(path string) string { return `"` + path + `"` }
 
 type fakeHome struct {
 	at      string

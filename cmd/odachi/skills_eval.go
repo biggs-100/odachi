@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/biggs-100/odachi/internal/adapters/skillhome"
@@ -35,6 +36,15 @@ func runSkillsEval(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&opts.Again, "again", false, "measure even when the store already holds a record for this text")
 	flags.BoolVar(&opts.Recover, "recover", false, "put back what a run left out, and measure nothing")
 
+	// The documented shape starts with the skill, so a leading argument is the
+	// skill and the flags may come after it; the parser stops at the first word
+	// that is not a flag, and the verb is refusal-shaped enough already.
+	name := ""
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		name = args[0]
+		args = args[1:]
+	}
+
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			_, _ = fmt.Fprintln(stdout, skillsEvalUsage)
@@ -43,11 +53,14 @@ func runSkillsEval(dir string, args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "odachi: invalid flag: %s; %s\n", oneLine(err.Error()), skillsEvalUsage)
 		return start.CodeBlocked
 	}
-	if flags.NArg() != 1 {
+	if flags.NArg() != 0 {
+		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; %s\n", flags.Arg(0), skillsEvalUsage)
+		return start.CodeBlocked
+	}
+	if name == "" {
 		_, _ = fmt.Fprintln(stderr, "odachi: the exam names one skill; "+skillsEvalUsage)
 		return start.CodeBlocked
 	}
-	name := flags.Arg(0)
 
 	exam, err := corpus.Load(name)
 	if err != nil {
@@ -81,7 +94,7 @@ func runSkillsEval(dir string, args []string, stdout, stderr io.Writer) int {
 			_, _ = fmt.Fprintln(stderr, "odachi: the exam keeps its journal in the clone's store, and this folder has none: "+oneLine(err.Error()))
 			return start.CodeBlocked
 		}
-		mover.Journal = filepath.Join(root, "evals", "home.json")
+		mover.Journal = filepath.Join(root, store.Evals, store.EvalsJournal)
 		opts.Record = domaineval.Path(root, name, opts.Identity)
 	}
 

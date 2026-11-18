@@ -72,6 +72,9 @@ type Files interface {
 // Shell runs the human's command.
 type Shell interface {
 	RunInput(dir, command, input string, timeoutSeconds int) (stdout, stderr string, exitCode int, timedOut bool, err error)
+	// Quote is how a path reaches the command line: the prompt lives somewhere with
+	// spaces in it on every OS this ships to.
+	Quote(path string) string
 }
 
 // Home is the skills folder the client reads, and the journal that remembers what
@@ -94,12 +97,15 @@ type Result struct {
 // Run works the exam and answers what each arm showed. A run that cannot keep its
 // promise leaves nothing half done: the skill it took out goes back before the
 // answer, whatever happened.
-func Run(opts Options, files Files, shell Shell, home Home) Result {
+func Run(opts Options, files Files, shell Shell, home Home) (result Result) {
+	// Whatever a dead run left out comes home before anything is measured: a
+	// journal with marks is a skill that never came back, and measuring on top of
+	// it would refuse the run with a folder that only looks occupied.
+	back, err := home.Recover()
+	if err != nil {
+		return blocked("could not put back what an earlier run left out: " + err.Error())
+	}
 	if opts.Recover {
-		back, err := home.Recover()
-		if err != nil {
-			return blocked("could not put back what an earlier run left out: " + err.Error())
-		}
 		if len(back) == 0 {
 			return ok([]string{"nothing was left out: the journal is empty"})
 		}
@@ -150,7 +156,14 @@ func Run(opts Options, files Files, shell Shell, home Home) Result {
 		if err != nil {
 			return blocked("could not take the skill out of the home: " + err.Error())
 		}
-		defer func() { _ = home.Restore(taken) }()
+		// The permission covers one run, and the skill coming home is part of the
+		// answer: a restore that failed leaves the machine missing a skill, and no
+		// green line may say the run was clean.
+		defer func() {
+			if err := home.Restore(taken); err != nil {
+				result = blocked("the exam ran and the skill did not come home: " + err.Error())
+			}
+		}()
 	}
 
 	arms := []string{With, Without}
@@ -178,6 +191,18 @@ func Run(opts Options, files Files, shell Shell, home Home) Result {
 			of += len(draw.Behaviours)
 		}
 		lines = append(lines, fmt.Sprintf("%s: %d of %d behaviours across %d draw(s)", arm, met, of, runs))
+	}
+
+	// A run whose draws all failed measured nothing: it files no record, because a
+	// refusal that leaves a receipt would keep the next run from trying again.
+	failed := 0
+	for _, draw := range draws {
+		if draw.Problem != "" {
+			failed++
+		}
+	}
+	if failed == len(draws) {
+		return blocked("no draw answered: " + draws[0].Problem + "; nothing was recorded")
 	}
 
 	// The record is the whole point of the run: a score nobody can compare is a
@@ -220,7 +245,7 @@ func drawOnce(opts Options, files Files, shell Shell, arm string, n int) domain.
 		return draw
 	}
 
-	command := strings.ReplaceAll(opts.Exec, "{prompt}", promptPath)
+	command := strings.ReplaceAll(opts.Exec, "{prompt}", shell.Quote(promptPath))
 	stdout, stderr, exitCode, timedOut, err := shell.RunInput(dir, command, opts.Exam.Task, opts.Timeout)
 	if err != nil {
 		draw.Problem = "the command did not run: " + err.Error()
