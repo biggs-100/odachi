@@ -1837,6 +1837,7 @@ usage:
   odachi setup [--agents opencode|claude|both] [--dry-run] [--json]
   odachi tui
   odachi skills [--check | --write | --resolve <step>]
+  odachi skills eval <skill> [--exec "<command>"] [--runs N] [--timeout N] [--move-home] [--recover]
   odachi role new <slug>
   odachi role [<slug>]
   odachi skill new <slug> --scope project|home

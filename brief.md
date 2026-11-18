@@ -1149,3 +1149,30 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: por que un fixture que nadie compila puede hacer que el brazo limpio deje de ser limpio.
+
+## 0329 · skills-evals
+
+## What must exist
+- un examen de skill se corre con un comando y deja su puntaje guardado: dos manos con el mismo prompt -una con la skill y otra sin ella-, el puntaje por comportamiento leido del transcript, y el registro en el store del clone
+
+## Done when
+- `odachi skills eval tests --exec "<command>" --runs 3` corre las dos manos, imprime una fila por corrida con los comportamientos que el transcript decide, y guarda el registro en `.git/odachi/evals/`
+- la mano sin skill no carga ninguna: el verbo pide permiso explicito, mueve la copia del home y la restaura siempre, y el canario lo responde
+- un puntaje nombra el evento que lo decidio: el test escrito antes del codigo, y `go test` corrido entre los dos
+- el mismo examen sobre los mismos bytes otra vez se niega o reusa el registro: lo pagado no se paga dos veces
+- `go test ./...` is green and `odachi check --run "go test ./..."` is green
+
+## Not included (first version)
+- no corre en CI ni en la gate: N veces una llamada a un modelo multiplica el costo - back when a cheap reviewer makes a probe per change affordable
+- no juzga los dos comportamientos que piden juicio -el nombre del test y el arreglo en la causa-: el humano lee el transcript guardado - back when a cheap, calibrated judge exists
+- no reescribe docs/skill-evaluation.md: la cerca lo congela y esa pagina queda como el acta de las nueve sondas - back when the human unfreezes it
+- no mide las otras 24 skills: una skill y un examen prueban la forma - back when a second skill's exam fits the same form, the second caller
+- no toca la sonda de lentes ni su fixture: es otro instrumento con otra pregunta - back when the two instruments share a record and a refusal
+- no mide el bloque de AGENTS.md ni la descripcion de una skill: el corpus de las nueve sondas no les dio soporte - back when a corpus names a behaviour they change
+
+## Decisions taken
+- el examen viaja con odachi, embebido como el fixture de la sonda, porque las skills son el producto y la copia de un proyecto es la copia de odachi
+- el verbo no llama a un modelo por si mismo: `--exec` lo pone el humano, como en la sonda; sin `--exec` imprime los prompts y corre a nadie
+- el registro vive en `.git/odachi/evals/`, y `odachi clean` aprende la clase en esta misma feature: lo que nadie retiene crece sin limite
+- la mano sin skill se aisla pidiendo permiso y moviendo la copia del home, con diario y restauracion siempre: el cliente no tiene interruptor para dejar de leerlo, y un stub dejaria el nombre en juego
+- una corrida se niega cuando ya hay un registro para el mismo examen y los mismos bytes: lo pagado no se paga dos veces

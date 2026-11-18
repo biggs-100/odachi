@@ -98,8 +98,8 @@ func TestCleanJSONCarriesTheSameMap(t *testing.T) {
 	if payload.Code != 0 {
 		t.Errorf("code = %d, want 0", payload.Code)
 	}
-	if len(payload.Report.Classes) != 10 {
-		t.Errorf("classes = %d, want the ten the map names", len(payload.Report.Classes))
+	if len(payload.Report.Classes) != 11 {
+		t.Errorf("classes = %d, want the eleven the map names", len(payload.Report.Classes))
 	}
 	if payload.Report.TotalFiles != 2 || payload.Report.TotalBytes != 150 {
 		t.Errorf("totals = %d files, %d bytes; want the two verdicts", payload.Report.TotalFiles, payload.Report.TotalBytes)

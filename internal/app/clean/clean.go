@@ -407,6 +407,36 @@ type entry struct {
 	at   time.Time
 }
 
+// evals keeps the newest exam records, with the same lifetime a verdict gets: a
+// record is small, and what grows is the number of skill texts somebody measured.
+// The journal is not a record: it remembers a skill taken out of the home, and a
+// class that pruned it would leave that skill aside for good.
+func (f *found) evals(files Files, opts Options) Class {
+	root := filepath.Join(opts.Store, store.Evals)
+	class := Class{
+		Name:      "skill exams",
+		Owner:     ownerOdachi,
+		Path:      label(opts.Dir, root),
+		Action:    "keeps the newest " + strconv.Itoa(opts.keptVerdicts()) + " " + plural2(opts.keptVerdicts(), "record"),
+		Cleanable: true,
+	}
+	// gather counts what it walked; the class adds nothing on top of it.
+	class, entries := gather(files, opts.Dir, class, root, scanRule{})
+	kept := 0
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].at.After(entries[j].at) })
+	for _, item := range entries {
+		if item.rel == store.EvalsJournal {
+			continue
+		}
+		kept++
+		if kept <= opts.keptVerdicts() {
+			continue
+		}
+		class = f.doom(class, root, item)
+	}
+	return class
+}
+
 // scan reads every class, applies each lifetime and assembles the report.
 func scan(opts Options, files Files) found {
 	// The store hangs from the git common directory, so its parent is the
@@ -418,6 +448,7 @@ func scan(opts Options, files Files) found {
 	classes := []Class{
 		records,
 		prompts,
+		seen.evals(files, opts),
 		seen.everything(files, opts, Class{
 			Name:      "review scaffolding",
 			Owner:     ownerOdachi,

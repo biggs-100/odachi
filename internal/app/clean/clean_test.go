@@ -211,6 +211,7 @@ func TestTheReportNamesEveryClassWithItsOwner(t *testing.T) {
 		"",
 		"  review records       odachi                2 files      120 B  keeps the newest 10 trees",
 		"  review prompts       odachi                1 file        50 B  keeps the prompts of the newest 0 trees · 1 file would go",
+		"  skill exams          odachi                0 files        0 B  keeps the newest 10 records",
 		"  review scaffolding   odachi                1 file        10 B  emptied by --apply · 1 file would go",
 		"  undo backups         odachi                2 files       27 B  keeps the newest 5 of each file",
 		"  agent scratch        odachi                1 file         5 B  emptied by --apply · 1 file would go",
@@ -295,8 +296,8 @@ func TestAnEmptyCloneReportsZeros(t *testing.T) {
 	if result.Code != clean.CodeOK {
 		t.Fatalf("code = %d, want %d: %s", result.Code, clean.CodeOK, result.Message)
 	}
-	if len(result.Report.Classes) != 10 {
-		t.Fatalf("classes = %d, want the ten the map names", len(result.Report.Classes))
+	if len(result.Report.Classes) != 11 {
+		t.Fatalf("classes = %d, want the eleven the map names", len(result.Report.Classes))
 	}
 	if result.Report.TotalFiles != 0 || result.Report.TotalBytes != 0 {
 		t.Errorf("totals = %d files, %d bytes; want zero", result.Report.TotalFiles, result.Report.TotalBytes)

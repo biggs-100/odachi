@@ -19,6 +19,10 @@ import (
 // runSkills parses the flags and wires the Files adapter: listing, --check and
 // --write are three intents of one command.
 func runSkills(dir string, args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "eval" {
+		return runSkillsEval(dir, args[1:], stdout, stderr)
+	}
+
 	flags := flag.NewFlagSet("odachi skills", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
