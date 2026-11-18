@@ -81,6 +81,11 @@ after the last attempt and ignores cancellation. They are improvements a person
 would consider, reported at WARNING, and the arm that could read the code did not
 raise them.
 
+Both were paid afterwards: `0326` added the missing test to the arm and made the
+pause stop at the last attempt and answer the caller's cancellation. These draws
+are the exam as it stood when they were taken. A later run measures a quieter
+control, and its "no claim" is worth more than this one's.
+
 The canary said what it has to say: `canary: attached and scoped` for the arm with
 the candidate, `canary: not attached` for the one without.
 

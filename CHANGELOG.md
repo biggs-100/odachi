@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+- **The probe's clean arm pays what the blind reviewer found in it.** The control for false positives carried two defects a reader found in the dark -a 4xx branch with no test, and a pause that slept after the last attempt and ignored the caller's cancellation-. The arm now carries the test, which fails if the branch starts retrying a caller's mistake, and a pause that stops at the last attempt and returns the moment the context is gone. The measurement page says its number was taken on the exam before the change, so a later run measures a quieter control. Nothing a person installs changes (0326).
+
 ## v0.49.1 - 2026-11-18
 
 - **The verdict judges the candidate and nothing else.** A candidate that ships its own `opencode.json` was discovered nearer than the rule odachi writes beside it, so it voided the boundary 0324 shipped, in silence: the review now refuses such a candidate and names the file. The declaration is measured against the whole candidate instead of the slice one reviewer's prompt carried, which is where `--exec` refused an answer `--attach` accepted for the same bytes. And an attached verdict now names the model that answered, lens by lens, instead of leaving a reader to the project's table. Patch (0325).

@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLimitCapsAtTheMaximum(t *testing.T) {
@@ -189,6 +190,24 @@ func TestCacheFetchRejectsANonSuccessStatus(t *testing.T) {
 	}
 }
 
+// TestCacheFetchDoesNotRetryAClientError: a 4xx is the caller's mistake, and the
+// same request will fail the same way. Retrying it spends the whole budget on an
+// answer that cannot change, so the fetch stops at the first one.
+func TestCacheFetchDoesNotRetryAClientError(t *testing.T) {
+	calls := 0
+	c := newTestCache(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		calls++
+		return testResponse(http.StatusNotFound, strings.NewReader("missing")), nil
+	}))
+
+	if _, err := c.fetch(context.Background(), "https://example.test/data"); err == nil {
+		t.Fatal("fetch accepted a 404 response")
+	}
+	if calls != 1 {
+		t.Fatalf("fetch made %d calls for a 404, want 1: a client error is not retried", calls)
+	}
+}
+
 func TestCacheFetchReturnsAReadError(t *testing.T) {
 	c := newTestCache(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return testResponse(http.StatusOK, errorReader{}), nil
@@ -221,6 +240,44 @@ func TestCacheFetchGivesUpAfterTheLastAttempt(t *testing.T) {
 	}
 	if calls != attempts {
 		t.Fatalf("fetch made %d attempts, want %d", calls, attempts)
+	}
+}
+
+// TestCacheFetchWaitsOnlyBetweenAttempts: three attempts owe two pauses. A pause
+// after the last one is time spent on a request that will not be made.
+func TestCacheFetchWaitsOnlyBetweenAttempts(t *testing.T) {
+	waits := 0
+	c := newTestCache(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("connection refused")
+	}))
+	c.wait = func(context.Context, time.Duration) error {
+		waits++
+		return nil
+	}
+
+	if _, err := c.fetch(context.Background(), "https://example.test/data"); err == nil {
+		t.Fatal("fetch returned nil after every attempt failed")
+	}
+	if waits != attempts-1 {
+		t.Fatalf("fetch paused %d times before %d attempts, want %d", waits, attempts, attempts-1)
+	}
+}
+
+// TestWaitBetweenAnswersTheCancellation: the pause listens to the caller. One that
+// ignores the context holds a request nobody is waiting for, and the caller's
+// cancellation is the half of a budget a sleep cannot see.
+func TestWaitBetweenAnswersTheCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	const wait = 2 * time.Second
+	start := time.Now()
+	err := waitBetween(ctx, wait)
+	if elapsed := time.Since(start); elapsed > wait/4 {
+		t.Fatalf("waitBetween slept %v for a caller that was already gone", elapsed)
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("waitBetween = %v, want the cancellation", err)
 	}
 }
 
