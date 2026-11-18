@@ -8,7 +8,7 @@ R1 · "una corrida cortada dice qué reloj la cortó: silencio y plazo total dej
 ## Done when
 
 ## Steps
-- [ ] T1 · una corrida cortada dice qué reloj la cortó: silencio y plazo total dejan mensajes distintos, cada uno con su número   R1
+- [x] T1 · una corrida cortada dice qué reloj la cortó: silencio y plazo total dejan mensajes distintos, cada uno con su número   R1 · tree:4cb65177d72d63b13155554f877717c4c3c88de4
 
 ## History
 L1 · "una corrida cortada dice qué reloj la cortó: silencio y plazo total dejan mensajes distintos, cada uno con su número"
