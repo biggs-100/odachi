@@ -108,7 +108,7 @@ func TestEveryPageKeepsItsCitations(t *testing.T) {
 		"references/running-containers.md": {"Docker docs, 2026-11"},
 		"references/docker-and-podman.md":  {"podman-run(1)", "podman-systemd.unit(5)", "2026-11"},
 		"references/supply-chain.md":       {"trivy.dev", "docs.sigstore.dev", "CycloneDX 1.7"},
-		"references/hardening.md":          {"moby v27.3.1", "SP 800-190", "v1.9.0"},
+		"references/hardening.md":          {"moby v27.3.1", "SP 800-190", "v1.9.0", "Source: the OWASP Docker Security Cheat Sheet", "Source: Docker rootless docs", "Source: the Kubernetes Secrets docs"},
 		"references/pipelines.md":          {"Docker multi-platform docs, 2026-11"},
 		"references/the-failures.md":       {"Docker logging, 2026-11", "Distribution GC, 2026-11", "musl docs, 2026-11"},
 	}
@@ -118,6 +118,25 @@ func TestEveryPageKeepsItsCitations(t *testing.T) {
 			if !strings.Contains(content, mark) {
 				t.Errorf("%s lost its citation %q: a rule about an outside system with no document and no date is already false", path, mark)
 			}
+		}
+	}
+}
+
+// TestContainerCraftDeclaresItsTrigger: the trigger is the only thing that
+// decides whether the skill loads, and the done-when asks for a test that pins it.
+// A body whose situations nobody recognizes is a file nobody reads, however good
+// the rules inside are (0333).
+func TestContainerCraftDeclaresItsTrigger(t *testing.T) {
+	body := string(mustSkill(t, "container-craft").Main())
+	parts := strings.SplitN(body, "---", 3)
+	if len(parts) < 3 {
+		t.Fatalf("container-craft has no frontmatter to hold a trigger")
+	}
+	front := strings.Join(strings.Fields(parts[1]), " ")
+
+	for _, want := range []string{"Trigger:", "a Dockerfile", "compose file", "docker run", "podman", "registry", "died at 3 a.m."} {
+		if !strings.Contains(front, want) {
+			t.Errorf("the trigger does not name %q, so a session in that situation never loads the skill:\n%s", want, front)
 		}
 	}
 }
