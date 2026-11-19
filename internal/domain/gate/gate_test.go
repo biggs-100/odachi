@@ -85,6 +85,16 @@ func buildEvaluationCases() []evaluationCase {
 	verificationRefuted := ready()
 	verificationRefuted.VerificationRefuted = []string{"the gate closes a tree with no record"}
 
+	// A close that owes a verifier measures its candidate before spending it: past
+	// the slice the record would read a tree nobody can finish, and the refusal
+	// carries both numbers so the human sees how far past the limit it is (0331).
+	// The record is the other half of the state on purpose: the slice exists only
+	// while nobody has signed the tree, and a close that already has its record is
+	// not paying for a verifier at all.
+	verificationSlice := ready()
+	verificationSlice.VerificationLines = 401
+	verificationSlice.VerificationMissing = []string{"contract"}
+
 	missingProof := ready()
 	missingProof.ProofTreeHash = ""
 	missingProof.ProofOutput = ""
@@ -229,6 +239,14 @@ func buildEvaluationCases() []evaluationCase {
 			reason:  gate.ReasonMutationFailed,
 			message: "the mutation row failed: the suite stayed green with the guard taken out",
 			next:    `odachi check --run "go test ./..." --mutate "internal/domain/gate/gate.go" --remove "ReasonFuture" --expect "the gate declares"`,
+		},
+		{
+			name:    "a close that owes a verifier and passes the slice",
+			state:   verificationSlice,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonVerifySlice,
+			message: "the candidate is 401 authored lines and the limit for a close that owes a verifier is 400: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own",
+			next:    "odachi start",
 		},
 		{
 			name:    "a risk with no verification",
@@ -556,6 +574,91 @@ func TestAProofIsOwedAtTheClose(t *testing.T) {
 	failed := gate.State{HasBrief: true, TreeHash: "tree", ProofTreeHash: "tree", ProofDeferred: true, ProofFailed: true, ProofLastLine: "FAIL github.com/x"}
 	if got := gate.Evaluate(failed); got.Code != gate.NeedsWork || got.Reason != gate.ReasonProofFailed {
 		t.Errorf("a failed proof mid-feature = %d/%q, want proof_failed", got.Code, got.Reason)
+	}
+}
+
+// TestTheSliceIsInclusive: 400 authored lines are a candidate a verifier can
+// finish, and the limit is the slice, not a wall one line early. 401 is the next
+// feature, and the refusal names both numbers (0331).
+func TestTheSliceIsInclusive(t *testing.T) {
+	at := ready()
+	at.VerificationLines = gate.SliceLines
+	if got := gate.Evaluate(at); got.Code != gate.Ready {
+		t.Errorf("a candidate of %d lines = %d/%q, want ready", gate.SliceLines, got.Code, got.Reason)
+	}
+
+	over := ready()
+	over.VerificationLines = gate.SliceLines + 1
+	// The close owes the verifier and no record answers this tree: that is the
+	// state the slice exists for, since a close that already has its record is not
+	// spending one (0331).
+	over.VerificationMissing = []string{"contract"}
+	got := gate.Evaluate(over)
+	if got.Code != gate.NeedsWork || got.Reason != gate.ReasonVerifySlice {
+		t.Fatalf("a candidate of %d lines = %d/%q, want the slice", gate.SliceLines+1, got.Code, got.Reason)
+	}
+	for _, want := range []string{strconv.Itoa(gate.SliceLines + 1), strconv.Itoa(gate.SliceLines)} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, got.Message)
+		}
+	}
+	if got.Next != "odachi start" {
+		t.Errorf("Next = %q, want the rest of the work started as a feature of its own", got.Next)
+	}
+}
+
+// TestTheSliceOnlyFiresWhileTheRecordIsMissing: the slice exists to keep a
+// verifier from being spent on a tree nobody can finish. Once the record is in the
+// store, nobody is spending anything: a 401-line close that carries the verifier's
+// own signature on this tree closes, and a refuted record keeps answering with its
+// own sentence instead of the slice (0331).
+func TestTheSliceOnlyFiresWhileTheRecordIsMissing(t *testing.T) {
+	noRecord := ready()
+	noRecord.VerificationLines = gate.SliceLines + 1
+	noRecord.VerificationMissing = []string{"contract"}
+	if got := gate.Evaluate(noRecord); got.Reason != gate.ReasonVerifySlice {
+		t.Fatalf("401 lines with no record = %d/%q, want the slice", got.Code, got.Reason)
+	}
+
+	signed := ready()
+	signed.VerificationLines = gate.SliceLines + 1
+	if got := gate.Evaluate(signed); got.Code != gate.Ready || got.Reason != gate.ReasonReady {
+		t.Errorf("401 lines with the record for this tree = %d/%q, want ready: the verifier already signed it", got.Code, got.Reason)
+	}
+
+	refuted := ready()
+	refuted.VerificationLines = gate.SliceLines + 1
+	refuted.VerificationRefuted = []string{"the gate closes a tree with no record"}
+	got := gate.Evaluate(refuted)
+	if got.Reason != gate.ReasonVerifyRefuted {
+		t.Errorf("401 lines with a refuted record = %d/%q, want the refutation: a refuted record is not a missing one", got.Code, got.Reason)
+	}
+	if strings.Contains(got.Message, "authored lines") {
+		t.Errorf("the refutation was answered with the slice: %s", got.Message)
+	}
+}
+
+// TestARecordThatAnswersNothingKeepsItsOwnDoor: the slice exists for the close
+// that has no record at all. A record that exists and answers nothing here -it
+// speaks for another tree, or nobody can read it- keeps the row that names it and
+// the `odachi verify` that writes the one for this tree: `odachi start` cannot,
+// because the work is already here (0331).
+func TestARecordThatAnswersNothingKeepsItsOwnDoor(t *testing.T) {
+	other := ready()
+	other.VerificationLines = gate.SliceLines + 1
+	other.VerificationMissing = []string{"contract"}
+	other.VerificationRecordFound = true
+
+	got := gate.Evaluate(other)
+	if got.Code != gate.NeedsWork || got.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("a %d-line close whose record answers another tree = %d/%q, want verification_missing",
+			gate.SliceLines+1, got.Code, got.Reason)
+	}
+	if got.Next != `odachi verify --exec "<command>"` {
+		t.Errorf("Next = %q, want the command that writes the record for this tree", got.Next)
+	}
+	if strings.Contains(got.Message, "authored lines") {
+		t.Errorf("the slice answered a close whose record exists: %s", got.Message)
 	}
 }
 

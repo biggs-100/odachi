@@ -1,12 +1,15 @@
 package check_test
 
 import (
+	"errors"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/biggs-100/odachi/internal/app/check"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 	domainverify "github.com/biggs-100/odachi/internal/domain/verify"
 )
 
@@ -42,6 +45,221 @@ func closedRiskFixture() (*fakeFiles, *fakeGit) {
 		between: []string{"internal/gastos/x.go"},
 	}
 	return files, git
+}
+
+// sliceDiff is a candidate that authors n lines of one file: the count a close
+// that owes a verifier measures before it pays for the record (0331).
+func sliceDiff(n int) string {
+	var b strings.Builder
+	b.WriteString("diff --git a/internal/gastos/x.go b/internal/gastos/x.go\n")
+	b.WriteString("--- a/internal/gastos/x.go\n")
+	b.WriteString("+++ b/internal/gastos/x.go\n")
+	b.WriteString("@@ -1,0 +1," + strconv.Itoa(n) + " @@\n")
+	for i := 1; i <= n; i++ {
+		b.WriteString("+linea " + strconv.Itoa(i) + "\n")
+	}
+	return b.String()
+}
+
+// TestACloseThatOwesAVerifierAndPassesTheSliceBlocks: a verifier spent on a tree
+// nobody can finish is a verdict that cannot land, so the close measures its
+// candidate before spending it and names the number it read, the limit, and the
+// door: the rest of the work is a feature of its own (0331).
+func TestACloseThatOwesAVerifierAndPassesTheSliceBlocks(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: a 401-line close that owes a verifier passed (%s)", result.Code, result.Message)
+	}
+	if result.Reason != gate.ReasonVerifySlice {
+		t.Fatalf("reason = %q, want %q: the close paid the record before weighing the tree", result.Reason, gate.ReasonVerifySlice)
+	}
+	lines := result.Message + "\n" + result.Next
+	for _, want := range []string{"401", "400"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("the refusal does not name %q: %s", want, lines)
+		}
+	}
+	if !strings.HasPrefix(result.Next, "odachi ") || !strings.Contains(result.Next, "odachi start") {
+		t.Errorf("next = %q, want the door that starts the rest as a feature of its own", result.Next)
+	}
+}
+
+// TestACandidateUnderTheSliceStillOwesItsRecord: the slice is the number a close
+// that owes a verifier pays before spending it, and under the limit there is
+// nothing to weigh. The candidate carries no record for this tree, so the reason
+// is the missing one -not the slice, and not a ready tree- and it is the same at
+// 399 lines and at the limit itself, because the slice starts past it (0331).
+func TestACandidateUnderTheSliceStillOwesItsRecord(t *testing.T) {
+	for _, n := range []int{399, 400} {
+		t.Run(strconv.Itoa(n)+" lines", func(t *testing.T) {
+			files, git := closedRiskFixture()
+			git.diff = sliceDiff(n)
+
+			result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+			if result.Code != 1 {
+				t.Fatalf("code = %d, want 1: a %d-line close that owes a verifier and has no record passed (%s)", result.Code, n, result.Message)
+			}
+			if result.Reason != gate.ReasonVerifyMissing {
+				t.Fatalf("reason = %q, want %q: the %d-line close was not answered with the record it owes (%s / next %s)",
+					result.Reason, gate.ReasonVerifyMissing, n, result.Message, result.Next)
+			}
+			if !strings.Contains(result.Message, "contract") {
+				t.Errorf("the refusal does not name the risk that asked for the verifier: %s", result.Message)
+			}
+			if !strings.Contains(result.Next, "odachi verify") {
+				t.Errorf("next = %q, want the command that writes the record", result.Next)
+			}
+		})
+	}
+}
+
+// TestACandidatePastTheSliceWithoutAVerifierToOweIsNotRefused: the slice exists
+// only for a close that owes a verifier. A big change whose commits declared no
+// risk that asks for one passes exactly as it did (0331).
+func TestACandidatePastTheSliceWithoutAVerifierToOweIsNotRefused(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	git.messages = []string{"a change with no risk line\n"}
+
+	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
+		t.Fatalf("a close that owes no verifier paid a slice: %s", result.Message)
+	}
+}
+
+// TestTheSliceIsANoteUnlessTheHumanAsks: the same tree that closes without
+// `--require-review` is a note with the same two numbers. A project that does not
+// owe a verifier does not owe a slice, so the exit code stays the human's (0331).
+func TestTheSliceIsANoteUnlessTheHumanAsks(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+
+	result := run(t, files, git, check.Options{NoReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0: the slice stopped a tree without being asked (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"verify:", "401", "400"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("the ready line does not name %q:\n%s", want, lines)
+		}
+	}
+}
+
+// TestACandidatePastTheSliceWithARecordForAnotherTreeOwesTheRecord: the store
+// holds a file under this tree's name and it speaks for another tree, so it
+// answers nothing here. The close owes the record for the tree that stands and
+// `odachi verify` is what writes it; `odachi start` cannot, because the work is
+// already here (0331).
+func TestACandidatePastTheSliceWithARecordForAnotherTreeOwesTheRecord(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	other := "fedcba9876543210fedcba9876543210fedcba98"
+	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, other, "otro/modelo", domainverify.Verified, nil))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: a 401-line close whose record answers another tree passed (%s)", result.Code, result.Message)
+	}
+	if result.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("reason = %q, want %q: the slice named a door that cannot write the record (%s / next %s)",
+			result.Reason, gate.ReasonVerifyMissing, result.Message, result.Next)
+	}
+	if !strings.Contains(result.Next, "odachi verify") {
+		t.Errorf("next = %q, want the command that writes the record for this tree", result.Next)
+	}
+}
+
+// TestACandidatePastTheSliceWithAnUnreadableRecordNamesTheFile: the file is
+// there and nobody can read a verification out of it, so the close keeps the row
+// that names the file and the command that writes it again. Starting the work as
+// a feature of its own would leave the broken record where it is (0331).
+func TestACandidatePastTheSliceWithAnUnreadableRecordNamesTheFile(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	files.files[verifyPath(currentTree)] = []byte("basura")
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: an unreadable record closed a 401-line tree (%s)", result.Code, result.Message)
+	}
+	if result.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("reason = %q, want %q: the slice answers a record that exists and cannot be read with a door that leaves it there (%s / next %s)",
+			result.Reason, gate.ReasonVerifyMissing, result.Message, result.Next)
+	}
+	if !strings.Contains(result.Message, "cannot be read") {
+		t.Errorf("the refusal does not name the record nobody can read: %s", result.Message)
+	}
+	if !strings.Contains(result.Next, "odachi verify") {
+		t.Errorf("next = %q, want the command that writes the record again", result.Next)
+	}
+}
+
+// TestACandidatePastTheSliceWithItsRecordCloses: the slice is what the close pays
+// before spending a verifier, and this close already has the record the verifier
+// signed for this exact tree. There is nothing left to weigh and nothing left to
+// spend, so 401 authored lines close, and the named next is not `odachi start`
+// (a door that cannot shrink a diff somebody already reviewed) (0331).
+func TestACandidatePastTheSliceWithItsRecordCloses(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0: a 401-line close whose record exists was refused as a slice (%s / next %s)", result.Code, result.Message, result.Next)
+	}
+	if result.Reason == gate.ReasonVerifySlice {
+		t.Fatalf("reason = %q: the closed tree was sent to odachi start to shrink a diff already signed", result.Reason)
+	}
+}
+
+// TestARefutedRecordPastTheSliceStillAnswersRefuted: the refutation leaves the
+// missing list empty, so the slice's guard cannot swallow it. A 401-line close
+// with a record that says the requirement does not hold keeps the sentence that
+// names what showed it (0315, 0331).
+func TestARefutedRecordPastTheSliceStillAnswersRefuted(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Refuted,
+		[]string{"odachi verify --exec with no command prints a prompt and exits 0"}))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Reason != gate.ReasonVerifyRefuted {
+		t.Fatalf("reason = %q, want %q: the refuted record lost to the slice (%s)", result.Reason, gate.ReasonVerifyRefuted, result.Message)
+	}
+	if !strings.Contains(result.Message, "no command prints a prompt") {
+		t.Errorf("the refusal does not carry the note that showed it: %s", result.Message)
+	}
+}
+
+// TestADiffGitCannotReadNamesNoNumber: the measurement failed, so this row says
+// nothing. The missing record still names the risk, and no number is invented for
+// a tree nobody weighed (0331).
+func TestADiffGitCannotReadNamesNoNumber(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diffErrByBase = map[string]error{"abc1234": errors.New("bad object abc1234")}
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Reason == gate.ReasonVerifySlice {
+		t.Fatalf("a diff git could not read refused the close as a slice: %s", result.Message)
+	}
+	if strings.Contains(result.Message, "401") || strings.Contains(result.Message, "400") {
+		t.Errorf("the refusal invented a number: %s", result.Message)
+	}
+	if !strings.Contains(result.Message, "no verification") {
+		t.Errorf("the close lost the row it owed: %s", result.Message)
+	}
 }
 
 // TestAClosedRiskOwesItsVerification: the commits said what the change can hurt,
