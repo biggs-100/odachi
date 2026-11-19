@@ -12,8 +12,9 @@ Written after 0335, the cycle that made the catalog say what it can prove.
   Sheet, Rule #1) with the page that repeated it naming that page, and
   `the-failures.md` closes saying how each row is sourced instead of promising that all
   of them are documented.
-- **Not released when this note was written.** The next tag carries it: documents and
-  one guard, so a patch.
+- **`v0.53.0` carries it**, a patch: documents and one guard, and nothing a consumer
+  reads changed shape. The tag lands on the merge of its release pull request and this
+  machine is reinstalled from the release it names.
 - The proof of the closing tree is `proof/0335-el-catalogo-deja.txt`. The verdict judged
   the tree before this note was rewritten (`cbcda09`): its one finding was this very note,
   and the delta between the two trees is the text you are reading. The verifier's record
