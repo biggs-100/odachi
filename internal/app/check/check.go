@@ -625,7 +625,7 @@ type runner struct {
 	verifyNote string
 	// storeNote is what the close says when it could not look at the store at all:
 	// the sentence the verify row prints instead of claiming there is no record it
-	// can read, and the reason its door is `odachi doctor` (0332).
+	// can read, and the reason its door is `odachi check` (0332).
 	storeNote string
 	// coverNote names the requirements the closing proof does not declare. It is a
 	// note and never a block: the line is a claim the agent wrote, not evidence the

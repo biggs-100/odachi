@@ -362,9 +362,11 @@ func TestAnUnreadableRecordIsNotAnApproval(t *testing.T) {
 // whether this tree's record exists. An answered "there is none" is a slice; a
 // question nobody could ask is not, so the slice must not fire - and the close
 // says what happened instead of claiming there is no verification it can read.
-// `odachi doctor` reports the health of a clone and is the verb that names why a
-// store cannot be read; `odachi start` writes no record and `odachi verify` would
-// write into the store nobody can look at (0332).
+// `odachi check` asks the question again once a person has looked at the store,
+// and `odachi doctor` does not: its checks never open the verifications store, so
+// naming it here would send a blocked close to the dead end this test prevents.
+// `odachi start` writes no record and `odachi verify` would write into the store
+// nobody can look at (0332).
 func TestAStoreNobodyCanProbeIsNamedAndDoesNotFireTheSlice(t *testing.T) {
 	files, git := closedRiskFixture()
 	git.diff = sliceDiff(401)
