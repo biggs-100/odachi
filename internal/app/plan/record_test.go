@@ -16,6 +16,10 @@ func (dirtyGit) HeadTree(string) (string, error)       { return "aaaaaaaa", nil 
 func (dirtyGit) WorktreeTree(string) (string, error)   { return "bbbbbbbb", nil }
 func (dirtyGit) TreeOf(string, string) (string, error) { return "", errors.New("no such commit") }
 
+// Diff answers the add form, which this file never runs: the close asks for trees,
+// not for the candidate it already paid for.
+func (dirtyGit) Diff(string, string) (string, error) { return "", nil }
+
 // TestPlanNamesTheFlagWhenItCannotRecordTheTree: the tool already knew it was
 // not recording anything; naming the flag that would is the difference between
 // a note and a dead end.

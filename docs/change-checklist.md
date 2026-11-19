@@ -36,9 +36,13 @@ carries; an empty diff, a rename and a mode change count zero. Nothing under
 repository ignores counts either, because git never puts one in the diff. A file a
 command generates does not count: a feature that only reruns the generator wrote no
 line. That list is closed and lives in `generatedPaths`
-(`internal/app/check/lines.go`), one exact file per entry with the command that owns
+(`internal/domain/authorship/lines.go`), one exact file per entry with the command that owns
 it -today the project's registry `SKILLS.md`, owned by `odachi skills --write`, and
 the registry beside the skills a person writes, `.agents/skills/SKILLS.md`, owned by
 `odachi skill new --scope project`-. A folder or a suffix is not an entry: the
 human's own skill in `.agents/skills/<name>/SKILL.md` is authored work and is
 charged.
+
+The gate reads that number at two moments: the close weighs the candidate before it
+pays a verifier (`odachi check`, 0331), and a feature weighs it before it opens
+another step (`odachi plan "<text>"`, 0334). One count, one limit, two doors.

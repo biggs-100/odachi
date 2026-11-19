@@ -1,10 +1,16 @@
-package check
+// Package authorship measures what a candidate costs the person who wrote it:
+// the lines a diff adds and removes, minus what a command in this repository
+// owns. It lives in the domain because two verbs ask the same question -the
+// close weighs a candidate before paying a verifier, and opening a step weighs
+// it before the plan grows- and a rule two verbs enforce cannot live inside one
+// of them (0331, 0334).
+package authorship
 
 import "strings"
 
-// authoredLines counts the lines a candidate authors: every added line plus
-// every deleted line of the unified diff between a feature's base and the tree
-// that closes it. Both sides count because the reviewer reads both.
+// Lines counts the lines a candidate authors: every added line plus every
+// deleted line of the unified diff between a feature's base and the tree that
+// stands. Both sides count because the reviewer reads both.
 //
 // What is not a line: the headers that name a file or mark a hunk (`diff --git`,
 // `index`, `---`, `+++`, `@@`, the mode and rename pairs), and the context lines
@@ -23,9 +29,9 @@ import "strings"
 // its text as a path would rename the entry for the rest of the hunk (0331).
 //
 // The text is the diff Candidate reads for the feature's base: the same bytes
-// the fence and the review judge, measured once so the gate and any later caller
-// cannot disagree about what a candidate costs.
-func authoredLines(diff string) int {
+// the fence and the review judge, measured once so no two callers can disagree
+// about what a candidate costs.
+func Lines(diff string) int {
 	total := 0
 	oldPath, newPath := "", ""
 	binary := false

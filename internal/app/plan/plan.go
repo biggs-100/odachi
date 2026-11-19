@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/authorship"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -54,13 +56,19 @@ type Options struct {
 	Feature int
 }
 
-// Git answers the done form's two questions: are the bytes the step produced the
-// commit that carries them, and which tree does a commit carry? A mark is only
-// honest when the worktree is that commit, and a commit is remembered by its tree.
+// Git answers the questions both forms ask. Closing a step needs the two trees to
+// compare -whether the bytes the step produced are the commit that carries them,
+// and which tree a commit carries- because a mark is only honest when the worktree
+// is that commit. Opening one needs the diff of the feature so far, which is how
+// the plan weighs a feature that has already written more than one task may carry.
 type Git interface {
 	HeadTree(root string) (string, error)
 	WorktreeTree(root string) (string, error)
 	TreeOf(root, commit string) (string, error)
+	// Diff is the text of the change between base and the tree that stands: the
+	// same bytes the close measures, so the two doors cannot disagree about what
+	// this feature already authored (0334).
+	Diff(root, base string) (string, error)
 }
 
 // Files is the disk port: enough to find the document, read it, back it up and
@@ -151,6 +159,14 @@ func add(current tasks.Document, files Files, opts Options) Result {
 			"write a brief and run odachi start again")
 	}
 
+	// The feature is weighed before the step exists. The close measures the same
+	// candidate once the work is paid; this is the one moment the number can stop
+	// more of it from arriving (0334).
+	refusal, note := sliceVerdict(current, opts)
+	if refusal != "" {
+		return blocked(refusal)
+	}
+
 	grown, err := current.Doc.AddStepBySkills(opts.Text, opts.Requirement, taskdoc.Route{Kind: opts.Route, Agent: opts.Agent}, opts.Skills)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
@@ -161,12 +177,42 @@ func add(current tasks.Document, files Files, opts Options) Result {
 	}
 
 	step := grown.Steps[len(grown.Steps)-1]
+	message := fmt.Sprintf("step %s added to %s", step.ID, current.Rel)
+	if note != "" {
+		message += " · " + note
+	}
 	return Result{
 		Code:    CodeOK,
-		Message: fmt.Sprintf("step %s added to %s", step.ID, current.Rel),
+		Message: message,
 		Task:    current.Rel,
 		Files:   []string{current.Rel},
 	}
+}
+
+// sliceVerdict answers whether this feature may still grow a step. A refusal
+// carries the number it measured, the limit one task carries and the door that
+// starts the rest as a feature of its own; a note says the number could not be
+// taken, because a measurement nobody could read is not a candidate under it, and
+// a repository a caller did not wire -or a document with no base- has nothing to
+// weigh against (0334).
+func sliceVerdict(current tasks.Document, opts Options) (refusal, note string) {
+	if opts.Git == nil {
+		return "", ""
+	}
+	base := strings.TrimSpace(current.Doc.Base)
+	if base == "" {
+		return "", ""
+	}
+
+	diff, err := opts.Git.Diff(opts.Dir, base)
+	if err != nil {
+		return "", "the slice was not measured: " + oneLine(err.Error())
+	}
+	if lines := authorship.Lines(diff); lines > gate.SliceLines {
+		return fmt.Sprintf("the candidate is %d authored lines and one feature authors at most %d: plan the rest with odachi start",
+			lines, gate.SliceLines), ""
+	}
+	return "", ""
 }
 
 // markDone closes a step and records the commit that closed it. Closing a
