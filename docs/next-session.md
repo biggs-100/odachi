@@ -37,6 +37,11 @@ Written after 0336, the cycle that made the wizard a hub.
 - **The stderr test's budget rode in on a skill feature.** Ten seconds measured the
   machine; sixty keeps the defect visible. The reviewer is right that it deserved a step
   of its own.
+- **A second test measures the machine, and it failed on windows-latest.** On the PR that
+  only moved this note, `TestPowerShellItselfIsNotRefused` ran
+  `powershell -NoProfile -Command "exit 0"` with a 30-second budget and took 30.38s on a
+  loaded runner, while the same tree passed ubuntu and macOS. The product is fine; the
+  budget is a measurement of the runner.
 - **The second vendor.** The verdicts of 0335 and 0336 were written by the model that
   produced their proofs, and `check` says so on every close. The doctor's check 17 still
   counts `1 of 4`.
