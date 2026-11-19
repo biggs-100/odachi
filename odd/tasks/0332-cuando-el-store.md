@@ -8,7 +8,7 @@ R1 · "cuando el store no se puede mirar, el cierre lo dice y no dispara el tope
 ## Done when
 
 ## Steps
-- [ ] T1 · cuando el store no se puede mirar, el cierre lo dice y no dispara el tope   R1
+- [x] T1 · cuando el store no se puede mirar, el cierre lo dice y no dispara el tope   R1 · tree:587faa8ba8183d3f8ddd6b2484405a6bbca5e6c5
 
 ## History
 L1 · "cuando el store no se puede mirar, el cierre lo dice y no dispara el tope"
