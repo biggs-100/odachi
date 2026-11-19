@@ -14,8 +14,8 @@ R1 · "el catalogo deja de afirmar lo que no puede probar: el traspaso dice lo q
 ## Steps
 - [x] T1 · el traspaso dice que el movimiento se detecta y que una reescritura paga, con los numeros medidos   R1 · tree:39df0e8289581bd54656a33d3952935826228297
 - [x] T2 · una pagina que pierde una linea Source falla el suite, y el baseline solo baja a mano   R1 · tree:a8e7c2ddd44ef2e46ce177dbc84cfc59cef241d5
-- [ ] T3 · la cita del socket tiene un solo dueno, comprobado en la fuente, y la otra pagina apunta a ella   R1
-- [ ] T4 · the-failures.md cierra con lo que sus filas sostienen, no con una promesa mas grande   R1
+- [x] T3 · la cita del socket tiene un solo dueno, comprobado en la fuente, y la otra pagina apunta a ella   R1 · tree:037cb56c1b9bcabfe31b75e5b14f47f5c69105ba
+- [x] T4 · the-failures.md cierra con lo que sus filas sostienen, no con una promesa mas grande   R1 · tree:90432a8b71fbd78b64db3ff8e5579bf54dbc2731
 
 ## History
 L1 · "el catalogo deja de afirmar lo que no puede probar: el traspaso dice lo que la medicion mostro, el guard de citas mide cada pagina, la cita del socket tiene un solo dueno, y the-failures.md no cierra con una promesa que sus filas desmienten"

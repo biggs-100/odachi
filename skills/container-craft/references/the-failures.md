@@ -27,7 +27,10 @@ for you, you have a rule that only works after the incident.
 
 ## The documents behind this page
 
-Everything above is documented behaviour, checked 2026-11-18:
+What each row stands on, checked 2026-11-18: a document and its version where a
+document says it, the year alone where the version is the whole claim, and
+`practice` for the one rule nobody wrote down -a production change that exists only
+in a commit-.
 
 - Docker: engine resource constraints, logging configuration, packet filtering and
   firewalls, storage, the run and compose references, build best practices,
