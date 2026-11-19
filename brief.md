@@ -1198,3 +1198,29 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que medir el tamano de un candidato es distinto de medir si el candidato es bueno.
+
+## 0333 · una-skill-para
+
+## What must exist
+- una skill para trabajar como un profesional senior en todo lo que tenga que ver con contenedores, docker, podman, devops, etc, buenas practicas y errores que no se deben cometer
+
+## Done when
+- odachi skills --check pasa y el indice lista container-craft con su trigger
+- el cuerpo tiene 60 lineas o menos y cada regla se puede violar de forma observable en el diff
+- las siete references estan ruteadas desde ## Decision gates y listadas en ## References, y toda regla sobre un sistema externo lleva version y fecha
+- the-failures.md es un catalogo: el error, el sintoma, el arreglo y que lo habria atrapado antes
+- una prueba fija el trigger y el ruteo de cada reference
+- SKILLS.md se regenera, el pin de bytes sube con el numero que mide el test, y docs/impact-map.md lo nombra
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no entra un verbo ni un flag nuevo: el cambio es del payload
+- no se porta Kubernetes mas alla de lo que explica un error del contenedor
+- no entra una skill por herramienta: una sola puerta con la diferencia adentro
+- no se toca la copia del home
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que una regla sobre un sistema externo sin version y fecha ya es falsa.
