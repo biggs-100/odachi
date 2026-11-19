@@ -45,7 +45,12 @@ func TestCheckRunFinishesWhenStderrIsNotDrained(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("code = %d, want 0 (stdout: %q)", code, out.String())
 		}
-	case <-time.After(10 * time.Second):
+	// The property is that a stream nobody drains does not block the run, not that
+	// the run is fast: this check builds a repository and runs the gate, and under
+	// the whole suite on a loaded runner ten seconds measured the machine. A real
+	// deadlock still fails here, because the writer only unblocks at the end of the
+	// test (0333, the class 0327 paid once for the watchdog).
+	case <-time.After(60 * time.Second):
 		t.Fatal("check --run did not finish: a stderr nobody drains blocked the command")
 	}
 }
