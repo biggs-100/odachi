@@ -31,8 +31,17 @@ func RunSetup(opts Options, files Files, skills Skills) Result {
 	r.selection = selection
 	r.clients = clients
 
+	// A model the machine was told to use is checked before the first write, the
+	// way init checks it: the flag is a question about the command.
+	models, err := NormalizeModels(opts.Models)
+	if err != nil {
+		return blocked("the model flag is not valid: " + oneLine(err.Error()) +
+			"; run odachi setup --model opencode=<id> or --model claude=<id>")
+	}
+
 	r.installGlobalPersonas()
 	r.installOpenCodeDefault()
+	r.installClientModels(models)
 	r.installSkills()
 
 	// The clients detection did not find are named after the work: they are the

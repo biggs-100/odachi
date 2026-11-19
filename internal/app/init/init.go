@@ -104,6 +104,10 @@ type Options struct {
 	// stored one, or both": a plain init after `--agents opencode` must not
 	// bring the other client back.
 	Agents string
+	// Models is the model this run was told to write for a client, as
+	// `--model <client>=<model>`. The flag names a client explicitly, so a model
+	// is written whatever --agents says, and only for the clients it names.
+	Models map[string]string
 	// AgentSelection is the store of that choice. nil behaves like a project
 	// without a file: both clients, and nothing written.
 	AgentSelection AgentSelection
@@ -226,6 +230,14 @@ func Run(opts Options, files Files, skills Skills) Result {
 	}
 	r.selection = selection
 	r.clients = clients
+	// The model flag is checked before any write: a typo in a client name or a
+	// value that is not an identifier is a question about the command, not a
+	// half-finished install.
+	models, err := NormalizeModels(opts.Models)
+	if err != nil {
+		return blocked("the model flag is not valid: " + oneLine(err.Error()) +
+			"; run odachi init --model opencode=<id> or --model claude=<id>")
+	}
 	// The footprint is an inference, and an inference may not be drawn from a
 	// question odachi did not get an answer to: the facts are read here, before the
 	// first byte, and a failed read stops the run naming the path.
@@ -289,6 +301,10 @@ func Run(opts Options, files Files, skills Skills) Result {
 	} else {
 		r.lines = append(r.lines, "global door: I did not install it (it is opt-in); odachi init --global puts it in the home and odachi shows up in any folder")
 	}
+
+	// The model flag names a client explicitly, so it is written whether or not
+	// this run installed the door. The flag is the decision; --agents is not.
+	r.installClientModels(models)
 
 	r.installSkills()
 

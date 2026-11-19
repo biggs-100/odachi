@@ -178,3 +178,95 @@ func TestTheRootMustBeAnObject(t *testing.T) {
 		t.Errorf("a non-object config was changed:\n%s", updated)
 	}
 }
+
+// TestAModelIsInsertedAndTheCommentsSurvive: the model is one more member in the
+// same document, and the edit keeps the human's comment and line endings.
+func TestAModelIsInsertedAndTheCommentsSurvive(t *testing.T) {
+	original := "{\r\n  // who runs it\r\n  \"$schema\": \"https://opencode.ai/config.json\"\r\n}\r\n"
+	updated, out := opencode.EnsureModel([]byte(original), "anthropic/claude#fast")
+	if out.Status != opencode.Added {
+		t.Fatalf("status = %v, want Added (%s)", out.Status, out.Reason)
+	}
+	if !strings.Contains(string(updated), "// who runs it") {
+		t.Errorf("the comment was lost:\n%s", updated)
+	}
+	if bytes.Contains(bytes.ReplaceAll(updated, []byte("\r\n"), nil), []byte("\n")) {
+		t.Errorf("the edit introduced a bare LF into a CRLF file: %q", updated)
+	}
+	if doc := parse(t, updated); doc["model"] != "anthropic/claude#fast" {
+		t.Errorf("model = %v, want anthropic/claude#fast", doc["model"])
+	}
+}
+
+// TestTheSameModelIsKeptByteForByte: the flag repeats and the file does not move.
+func TestTheSameModelIsKeptByteForByte(t *testing.T) {
+	original := []byte("{\n  \"model\": \"x/y\"\n}\n")
+	updated, out := opencode.EnsureModel(original, "x/y")
+	if out.Status != opencode.Already {
+		t.Fatalf("status = %v, want Already", out.Status)
+	}
+	if !bytes.Equal(updated, original) {
+		t.Errorf("the config changed:\n%s", updated)
+	}
+}
+
+// TestAChangedModelIsReplacedInPlace: the flag names the value explicitly, so a
+// different one is replaced and the surrounding bytes stay untouched.
+func TestAChangedModelIsReplacedInPlace(t *testing.T) {
+	original := "{\n  \"model\": \"old/name#a\",\n  \"mcp\": {}\n}\n"
+	updated, out := opencode.EnsureModel([]byte(original), "new/name#b")
+	if out.Status != opencode.Changed {
+		t.Fatalf("status = %v, want Changed (%s)", out.Status, out.Reason)
+	}
+	if out.Previous != "old/name#a" {
+		t.Errorf("previous = %q, want old/name#a", out.Previous)
+	}
+	want := strings.Replace(original, `"old/name#a"`, `"new/name#b"`, 1)
+	if string(updated) != want {
+		t.Errorf("the edit moved bytes it did not have to:\n%q\nwant\n%q", updated, want)
+	}
+}
+
+func TestEnsureModelRefusesANonObject(t *testing.T) {
+	original := []byte(`["x/y"]`)
+	updated, out := opencode.EnsureModel(original, "x/y")
+	if out.Status != opencode.Unreadable {
+		t.Fatalf("status = %v, want Unreadable", out.Status)
+	}
+	if !bytes.Equal(updated, original) {
+		t.Errorf("a non-object config was changed:\n%s", updated)
+	}
+}
+
+func TestEnsureModelRefusesANonString(t *testing.T) {
+	original := []byte(`{"model": 3}`)
+	updated, out := opencode.EnsureModel(original, "x/y")
+	if out.Status != opencode.Unreadable {
+		t.Fatalf("status = %v, want Unreadable", out.Status)
+	}
+	if !bytes.Equal(updated, original) {
+		t.Errorf("a refused config was changed:\n%s", updated)
+	}
+}
+
+func TestEnsureModelRefusesADuplicateKey(t *testing.T) {
+	original := []byte(`{"model":"a/b","model":"c/d"}`)
+	updated, out := opencode.EnsureModel(original, "e/f")
+	if out.Status != opencode.Unreadable {
+		t.Fatalf("status = %v, want Unreadable", out.Status)
+	}
+	if !bytes.Equal(updated, original) {
+		t.Errorf("an ambiguous config was changed:\n%s", updated)
+	}
+}
+
+func TestEnsureModelRefusesWhatIsNotAnIdentifier(t *testing.T) {
+	original := []byte("{\n  \"model\": \"x/y\"\n}\n")
+	updated, out := opencode.EnsureModel(original, "x; rm -rf")
+	if out.Status != opencode.Unreadable {
+		t.Fatalf("status = %v, want Unreadable", out.Status)
+	}
+	if !bytes.Equal(updated, original) {
+		t.Errorf("a refused model was written:\n%s", updated)
+	}
+}

@@ -11,7 +11,7 @@ R1 · "el tui elige el modelo del verificador y el de cada cliente, y lo escribe
 - la ADR 0053 reemplaza la 0051 y dice por que el selector por cliente vive en el tui
 
 ## Steps
-- [ ] T1 · odachi verify sustituye {model} con el modelo declarado, el --model lo pisa y el de la sesion es el ultimo recurso   R1 · route:delegated/odachi-worker
+- [x] T1 · odachi verify sustituye {model} con el modelo declarado, el --model lo pisa y el de la sesion es el ultimo recurso   R1 · route:delegated/odachi-worker · tree:b172e15af9e8214839b343a221bd37568bc6512f
 - [ ] T2 · init y setup aceptan --model cliente=modelo, para que el verbo haga lo que el tui hace   R1 · route:delegated/odachi-worker
 - [ ] T3 · el tui gana una seccion de modelos con el verificador y uno por cliente, y aplicar escribe cada uno   R1 · route:delegated/odachi-worker
 - [ ] T4 · la ADR 0053 reemplaza la 0051 y dice por que el selector por cliente vive en el tui   R1 · route:inline
