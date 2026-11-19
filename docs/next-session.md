@@ -12,7 +12,8 @@ Written after 0336, the cycle that made the wizard a hub.
   holds.
 - **`v0.54.0` carries it**, a minor because the first screen and its keys changed: the tag
   lands on the merge of its release pull request, sixteen signed and attested assets, and
-  this machine reinstalled from the release it names.
+  this machine reinstalled from the release it names. The hub ships with two sections; the
+  other two are the next feature.
 - The proof of the closing tree is `proof/0336-odachi-tui-abre.txt`, and the verdict and
   the verification record both name `367bb50`.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
@@ -21,6 +22,12 @@ Written after 0336, the cycle that made the wizard a hub.
 
 ## What waits for a decision
 
+- **The next work is decided, and it carries one decision of its own.** The hub ships with two
+  sections and is missing two: the verifier model and the per-client models, and the declared
+  fields of `odd/review.toml` (`max_prompt_kb`, `checks`, `check_timeout`, `keep_*`), which every
+  write preserves and no command sets. `docs/decisions/0051-the-installation-tui-is-an-adapter.md`
+  keeps per-client model pickers out of the installation TUI: the human asked for them, so that
+  feature either supersedes the ADR or says why the picker belongs to the clients it writes.
 - **The 400 cannot see a plan written in advance.** 0336 closed at 1012 authored lines:
   the four steps were planned before the code existed, so `plan`'s refusal -which weighs
   the candidate already on disk- never had a moment to fire. The number still bounds the
@@ -30,6 +37,11 @@ Written after 0336, the cycle that made the wizard a hub.
 - **The stderr test's budget rode in on a skill feature.** Ten seconds measured the
   machine; sixty keeps the defect visible. The reviewer is right that it deserved a step
   of its own.
+- **A second test measures the machine, and it failed on windows-latest.** On the PR that
+  only moved this note, `TestPowerShellItselfIsNotRefused` ran
+  `powershell -NoProfile -Command "exit 0"` with a 30-second budget and took 30.38s on a
+  loaded runner, while the same tree passed ubuntu and macOS. The product is fine; the
+  budget is a measurement of the runner.
 - **The second vendor.** The verdicts of 0335 and 0336 were written by the model that
   produced their proofs, and `check` says so on every close. The doctor's check 17 still
   counts `1 of 4`.
