@@ -221,12 +221,20 @@ type tuiModel struct {
 	voice        int
 	menu         int
 	reviewCursor int
-	editing      bool
-	buffer       string
-	editErr      string
-	run          configure.Runner
-	applied      bool
-	result       configure.Result
+	// The profile section: which row the cursor is on (the axes, then the apply
+	// row), the value picker it opened, the values the human chose but did not
+	// write yet, and the line the last apply left (0336).
+	profileCursor int
+	picking       bool
+	pickCursor    int
+	pending       map[string]string
+	fieldMsg      string
+	editing       bool
+	buffer        string
+	editErr       string
+	run           configure.Runner
+	applied       bool
+	result        configure.Result
 }
 
 // newTUIModel is the model a run starts with, positioned on what the project
@@ -243,11 +251,12 @@ func newTUIModel(state tuiState) tuiModel {
 		}
 	}
 	return tuiModel{
-		state:  state,
-		init:   state.Project,
-		client: indexOf(tuiClients, state.Clients),
-		skills: indexOf(tuiSkills, state.Skills),
-		voice:  indexOf(tuiVoices, state.Voice),
+		state:   state,
+		init:    state.Project,
+		client:  indexOf(tuiClients, state.Clients),
+		skills:  indexOf(tuiSkills, state.Skills),
+		voice:   indexOf(tuiVoices, state.Voice),
+		pending: map[string]string{},
 	}
 }
 
@@ -264,6 +273,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.editing {
 			return m.editKey(msg), nil
+		}
+		if m.step == stepProfile {
+			return m.profileKey(msg)
 		}
 		switch msg.String() {
 		case "q":
@@ -453,20 +465,135 @@ func (m tuiModel) viewState() string {
 }
 
 // viewProfile renders the six axes of the profile in force: what each one says
-// today and the values it may take. The section is a map of the file, never a
-// second copy: an empty value means the profile inherits it (0336).
+// today, the values it may take, and the row that writes them. The section is a
+// map of the file, never a second copy: an empty value means the profile inherits
+// it, and a value chosen here is a choice until it is applied (0336).
 func (m tuiModel) viewProfile() string {
 	var out strings.Builder
 	out.WriteString(m.header("perfil " + m.state.Voice))
-	for _, axis := range m.state.Axes {
-		value := axis.Value
-		if value == "" {
-			value = "(hereda)"
+	for i, axis := range m.state.Axes {
+		marker := "  "
+		if i == m.profileCursor && !m.picking {
+			marker = "> "
 		}
-		out.WriteString("  " + fmt.Sprintf("%-12s %-12s %s\n", axis.Name, value, strings.Join(axis.Allowed, " ")))
+		out.WriteString("  " + marker + fmt.Sprintf("%-12s %-12s %s\n",
+			axis.Name, shownAxis(m.value(axis)), strings.Join(axis.Allowed, " ")))
+		if m.picking && i == m.profileCursor {
+			for j, allowed := range axis.Allowed {
+				pick := "   "
+				if j == m.pickCursor {
+					pick = " > "
+				}
+				out.WriteString("    " + pick + allowed + "\n")
+			}
+		}
 	}
-	out.WriteString("\n  esc volver · q salir\n")
+	marker := "  "
+	if m.profileCursor == len(m.state.Axes) {
+		marker = "> "
+	}
+	out.WriteString("  " + marker + "aplicar los cambios\n")
+	if m.fieldMsg != "" {
+		out.WriteString("\n  " + m.fieldMsg + "\n")
+	}
+	out.WriteString("\n  ↑↓ elegir · enter cambiar · esc volver · q salir\n")
 	return out.String()
+}
+
+// profileKey drives the editor: the rows, the value picker they open, and the row
+// that writes what the human chose. Esc leaves the section and the file alone, so
+// nothing reaches the disk before that last row (0336).
+func (m tuiModel) profileKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "q" {
+		return m, tea.Quit
+	}
+	if m.picking {
+		switch msg.String() {
+		case "esc":
+			m.picking = false
+		case "up", "k":
+			m.pickCursor = clamp(m.pickCursor-1, len(m.state.Axes[m.profileCursor].Allowed))
+		case "down", "j":
+			m.pickCursor = clamp(m.pickCursor+1, len(m.state.Axes[m.profileCursor].Allowed))
+		case "enter":
+			axis := m.state.Axes[m.profileCursor]
+			m.pending[axis.Name] = axis.Allowed[m.pickCursor]
+			m.picking = false
+		}
+		return m, nil
+	}
+
+	switch msg.String() {
+	case "esc":
+		m.step = m.backStep()
+	case "up", "k":
+		m.profileCursor = clamp(m.profileCursor-1, len(m.state.Axes)+1)
+	case "down", "j":
+		m.profileCursor = clamp(m.profileCursor+1, len(m.state.Axes)+1)
+	case "enter":
+		if m.profileCursor == len(m.state.Axes) {
+			return m.applyProfile()
+		}
+		m.picking = true
+		m.pickCursor = indexOf(m.state.Axes[m.profileCursor].Allowed, m.value(m.state.Axes[m.profileCursor]))
+	}
+	return m, nil
+}
+
+// value is what a row shows: the value chosen in this run, or what the file says.
+func (m tuiModel) value(axis profile.Axis) string {
+	if chosen, ok := m.pending[axis.Name]; ok {
+		return chosen
+	}
+	return axis.Value
+}
+
+// applyProfile writes the axes the human changed, one at a time, and stops at the
+// first failure: a half-written profile is reported, never hidden (0336).
+func (m tuiModel) applyProfile() (tea.Model, tea.Cmd) {
+	if len(m.pending) == 0 {
+		m.fieldMsg = "no hay cambios que aplicar"
+		return m, nil
+	}
+	if m.run == nil {
+		return m, nil
+	}
+
+	written := make([]string, 0, len(m.pending))
+	for _, axis := range m.state.Axes {
+		value, ok := m.pending[axis.Name]
+		if !ok {
+			continue
+		}
+		if err := m.run.Field(axis.Name, value); err != nil {
+			m.fieldMsg = "falló " + axis.Name + ": " + err.Error()
+			return m, nil
+		}
+		written = append(written, axis.Name+"="+value)
+		m.state.Axes = withAxisValue(m.state.Axes, axis.Name, value)
+	}
+	m.pending = map[string]string{}
+	m.fieldMsg = "aplicado: " + strings.Join(written, ", ")
+	return m, nil
+}
+
+// withAxisValue records what was written, so the screen shows the file it just
+// produced instead of the one it read at the start.
+func withAxisValue(axes []profile.Axis, name, value string) []profile.Axis {
+	for i := range axes {
+		if axes[i].Name == name {
+			axes[i].Value = value
+		}
+	}
+	return axes
+}
+
+// shownAxis names an empty value the way the file means it: inherited.
+func shownAxis(value string) string {
+	if value == "" {
+		return "(hereda)"
+	}
+	return value
 }
 
 // viewSummary is the last screen before the apply: the choices as they will be.

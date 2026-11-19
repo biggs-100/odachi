@@ -322,6 +322,7 @@ type fakeRun struct {
 	voice   string
 	review  string
 	models  map[string]string
+	fields  []string
 }
 
 func (f *fakeRun) record(op string) error {
@@ -350,6 +351,11 @@ func (f *fakeRun) Review(mode string) error {
 func (f *fakeRun) Models(models map[string]string) error {
 	f.models = models
 	return f.record("models")
+}
+
+func (f *fakeRun) Field(field, value string) error {
+	f.fields = append(f.fields, field+"="+value)
+	return f.record("field")
 }
 
 // errTUI is the failure the fake operations return.
@@ -758,6 +764,66 @@ func TestTUITheMenuHasTwoSectionsAndEscReturnsToIt(t *testing.T) {
 	}
 	if back := editor.back(); back.step != stepState {
 		t.Errorf("esc from the profile landed on step %d, want the menu", back.step)
+	}
+}
+
+// advance presses enter through next and gives the model back, which next returns
+// as the tea.Model interface.
+func advance(t *testing.T, m tuiModel) tuiModel {
+	t.Helper()
+	next, _ := m.next()
+	model, ok := next.(tuiModel)
+	if !ok {
+		t.Fatalf("next returned %T, want tuiModel", next)
+	}
+	return model
+}
+
+// TestTheProfileEditorWritesOnlyWhenApplied: a value chosen in the editor stays in
+// the model, esc leaves the section with the file untouched, and only the apply row
+// writes -one field at a time (0336).
+func TestTheProfileEditorWritesOnlyWhenApplied(t *testing.T) {
+	run := &fakeRun{}
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
+	m.run = run
+	m.menu = 1
+	m = advance(t, m)
+	if m.step != stepProfile {
+		t.Fatalf("step = %d, want the profile editor", m.step)
+	}
+
+	// output is the fourth axis, and detail is its second value.
+	m.profileCursor = 3
+	m, _ = press(t, m, enterKey)
+	m, _ = press(t, m, downKey)
+	m, _ = press(t, m, enterKey)
+	if len(run.calls) != 0 {
+		t.Fatalf("choosing a value wrote %v", run.calls)
+	}
+	if got := m.value(m.state.Axes[3]); got != "detail" {
+		t.Fatalf("the row shows %q, want detail", got)
+	}
+
+	m, _ = press(t, m, escKey)
+	if m.step != stepState {
+		t.Fatalf("esc landed on step %d, want the menu", m.step)
+	}
+	if len(run.calls) != 0 {
+		t.Fatalf("leaving the section wrote %v", run.calls)
+	}
+
+	m.menu = 1
+	m = advance(t, m)
+	m.profileCursor = len(m.state.Axes)
+	m, _ = press(t, m, enterKey)
+	if want := []string{"field"}; !slices.Equal(run.calls, want) {
+		t.Fatalf("calls = %v, want %v", run.calls, want)
+	}
+	if want := []string{"output=detail"}; !slices.Equal(run.fields, want) {
+		t.Errorf("fields = %v, want %v", run.fields, want)
+	}
+	if !strings.Contains(m.fieldMsg, "output=detail") {
+		t.Errorf("the apply line does not say what it wrote: %q", m.fieldMsg)
 	}
 }
 

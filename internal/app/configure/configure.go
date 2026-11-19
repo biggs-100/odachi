@@ -70,6 +70,9 @@ type Runner interface {
 	Voice(profile string) error
 	Review(mode string) error
 	Models(models map[string]string) error
+	// Field writes one axis of the profile: the editor changes one row and this is
+	// the only write it makes (0336).
+	Field(field, value string) error
 }
 
 // normalize returns the state with the values the writer expects and the problems

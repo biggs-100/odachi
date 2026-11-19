@@ -6,7 +6,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/level"
 	appreview "github.com/biggs-100/odachi/internal/app/review"
+	"github.com/biggs-100/odachi/internal/app/start"
 )
 
 // tuiRunner applies one operation of the wizard by calling the verb that already
@@ -64,6 +66,24 @@ func (r tuiRunner) Review(mode string) error {
 // prompt limit and the retention the wizard does not touch.
 func (r tuiRunner) Models(models map[string]string) error {
 	result := appreview.SetConfig(appreview.ConfigOptions{Dir: r.dir, Models: models}, disk(r.dir), reviewModeCodec{})
+	if result.Code != 0 {
+		return errors.New(result.Message)
+	}
+	return nil
+}
+
+// Field writes one axis of the profile through the app that owns the file, the
+// same way Models writes the lens table: the wizard is a caller of the use case,
+// never a second writer (0336).
+func (r tuiRunner) Field(field, value string) error {
+	current, code, message := currentProfile(r.dir, "odachi tui", false)
+	if code != start.CodeOK {
+		return errors.New(message)
+	}
+	if current == nil {
+		return errors.New("no hay perfil que cambiar: run odachi start")
+	}
+	result := level.Set(level.SetOptions{Dir: r.dir, Current: *current, Field: field, Value: value}, disk(r.dir))
 	if result.Code != 0 {
 		return errors.New(result.Message)
 	}

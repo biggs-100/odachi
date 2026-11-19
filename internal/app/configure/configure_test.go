@@ -287,6 +287,10 @@ func (f *fakeRunner) Models(models map[string]string) error {
 	return f.record("models", "")
 }
 
+func (f *fakeRunner) Field(field, value string) error {
+	return f.record("field", field+"="+value)
+}
+
 func (f *fakeRunner) ops() []string {
 	out := make([]string, 0, len(f.calls))
 	for _, c := range f.calls {
