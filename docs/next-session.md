@@ -12,7 +12,8 @@ Written after 0336, the cycle that made the wizard a hub.
   holds.
 - **`v0.54.0` carries it**, a minor because the first screen and its keys changed: the tag
   lands on the merge of its release pull request, sixteen signed and attested assets, and
-  this machine reinstalled from the release it names.
+  this machine reinstalled from the release it names. The hub ships with two sections; the
+  other two are the next feature.
 - The proof of the closing tree is `proof/0336-odachi-tui-abre.txt`, and the verdict and
   the verification record both name `367bb50`.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
@@ -21,6 +22,12 @@ Written after 0336, the cycle that made the wizard a hub.
 
 ## What waits for a decision
 
+- **The next work is decided, and it carries one decision of its own.** The hub ships with two
+  sections and is missing two: the verifier model and the per-client models, and the declared
+  fields of `odd/review.toml` (`max_prompt_kb`, `checks`, `check_timeout`, `keep_*`), which every
+  write preserves and no command sets. `docs/decisions/0051-the-installation-tui-is-an-adapter.md`
+  keeps per-client model pickers out of the installation TUI: the human asked for them, so that
+  feature either supersedes the ADR or says why the picker belongs to the clients it writes.
 - **The 400 cannot see a plan written in advance.** 0336 closed at 1012 authored lines:
   the four steps were planned before the code existed, so `plan`'s refusal -which weighs
   the candidate already on disk- never had a moment to fire. The number still bounds the
