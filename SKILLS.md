@@ -6,6 +6,7 @@
 | arch-tauri | a Tauri v2 desktop project, new or restructured (Rust core and JS/TS frontend). The domain never knows Tauri exists, commands are thin, the contract is generated, the UI is verified. | skills/arch-tauri/SKILL.md |
 | bootstrap | when someone wants to start a project from scratch, asks what odachi is, or does not know where to begin. Do not load it inside a project that is already odachi. | skills/bootstrap/SKILL.md |
 | commits | when deciding what goes into a commit, how to split the work, or what the message and PR description say. | skills/commits/SKILL.md |
+| container-craft | a Dockerfile, a compose file, a `docker run` or `podman` command, an image tag or a registry, a container that died at 3 a.m. Decisions a senior makes, and the version behind each rule. | skills/container-craft/SKILL.md |
 | data | when data has to be saved, read or deleted. Decide owner, lifetime and backup before the first row; a schema or a migration is db-craft. | skills/data/SKILL.md |
 | db-craft | a schema, a migration, a query or a transaction on a SQL database. Postgres first -locks, expand and contract, indexes with evidence-, and what changes on another engine. | skills/db-craft/SKILL.md |
 | design | design a screen, mockup, landing page or UI directions; iterate artboards; what a person asked on one; design system sync. HTML under design/<slug>/. | skills/design/SKILL.md |
