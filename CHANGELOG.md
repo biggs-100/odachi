@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+- **A door for containers, opened before the incident.** `container-craft` joins the catalog with a sixty-line body and seven references: the image and its build, the runtime and compose, Docker against Podman, the supply chain, the hardening baselines, the pipelines, and the catalogue of failures with the column that matters -what would have caught it earlier-. Every rule carries its source and the date it was checked, because half of what everyone knows about containers is the other engine's default: `--memory` without `--memory-swap` allows the same amount again in swap, `-p 8080:80` binds `0.0.0.0` past the host firewall, and a build arg is visible in `docker history` long after the layer that used it. Patch (0333).
+
 ## v0.51.1 - 2026-11-18
 
 - **A store nobody can look at is named by the close, and does not fire the slice.** The close of a feature that owes a verifier asks the store whether this tree's record exists, and that question has two ways of not being answered -the tree's name cannot address a record, and the existence probe comes back an error-. They answered in opposite directions: a store nobody could read kept the row and claimed "no verification it can read", while a tree nobody could name fired the number past the slice. Both now answer the same way -no slice, because an unanswered question is not evidence of absence- and the row says what happened instead of what the store never said: the store could not be looked at, and the door is `odachi check`, the command that asks the question again once a person has looked at the store. `odachi verify` writes into the store nobody can read, and `odachi start` writes no record at all. Patch (0332).
