@@ -10,9 +10,11 @@ import "strings"
 // `index`, `---`, `+++`, `@@`, the mode and rename pairs), and the context lines
 // a hunk carries so it can be read. What is not authored work: any path under
 // proof/, because the proofs are the tool's own evidence named by the tree that
-// produced them; and any path the repository ignores, which never reaches this
-// text because git left it out of the diff. An empty diff, a pure rename and a
-// pure mode change count zero.
+// produced them; any path the repository ignores, which never reaches this text
+// because git left it out of the diff; and the closed list of generated files in
+// generatedPaths, because a command writes them and a feature that only reruns the
+// generator would pay for bytes nobody typed (0331). An empty diff, a pure rename
+// and a pure mode change count zero.
 //
 // A header is read as a header only where headers live: between `diff --git` and
 // the first `@@` of that entry. Inside a hunk the first character is the whole
@@ -43,7 +45,7 @@ func authoredLines(diff string) int {
 			hunk = true
 		case hunk:
 			if strings.HasPrefix(line, "+") || strings.HasPrefix(line, "-") {
-				if !proofPath(authoredPath(newPath, oldPath)) {
+				if !toolPath(authoredPath(newPath, oldPath)) {
 					total++
 				}
 			}
@@ -65,7 +67,7 @@ func authoredLines(diff string) int {
 			strings.HasPrefix(line, "Binary files "):
 			// Headers: they name the entry or its shape, they are not its lines.
 		case strings.HasPrefix(line, "+"), strings.HasPrefix(line, "-"):
-			if !proofPath(authoredPath(newPath, oldPath)) {
+			if !toolPath(authoredPath(newPath, oldPath)) {
 				total++
 			}
 		}
@@ -99,9 +101,58 @@ func diffPath(header string) string {
 	return path
 }
 
-// proofPath reports the one path the count refuses by rule. It is the same
-// exclusion the ignore file writes, kept here with a test so a candidate that
-// forces a proof in does not pay for the tool's own evidence.
+// proofPath reports the directory the count refuses by rule: the proofs are the
+// tool's own evidence, and it is the same exclusion the ignore file writes, kept
+// here with a test so a candidate that forces a proof in does not pay for the
+// tool's own evidence.
 func proofPath(path string) bool {
 	return strings.HasPrefix(path, "proof/")
+}
+
+// generatedPath is one file a generator in this repository owns: the command that
+// writes it and what a hand edit costs, so a reader can check the claim without
+// opening the tool. The two fields are documentation with a job -an entry nobody
+// can trace to a writer is a hole in the count-.
+type generatedPath struct {
+	path  string
+	owner string
+	edit  string
+}
+
+// generatedPaths is the closed list of files the count charges nothing for. They
+// are exact paths, one file at a time: a folder or a suffix would forgive the
+// human's work that lives beside a generated file -`.agents/skills/<name>/SKILL.md`
+// is where a person's own skill lives, and only the registry beside it is written
+// by a command- (0331).
+var generatedPaths = []generatedPath{
+	{
+		path:  "SKILLS.md",
+		owner: "odachi skills --write",
+		edit:  "its first line says it is generated: odachi skills --check reports the drift, odachi doctor names odachi skills --write as the fix, and the next --write replaces the file",
+	},
+	{
+		path:  ".agents/skills/SKILLS.md",
+		owner: "odachi skill new --scope project",
+		edit:  "the same registry beside the skills a person writes: the next skill new rebuilds it from the files on disk, and a hand edit is lost",
+	},
+}
+
+// generated reports whether a path is one of the files a command owns. The
+// comparison is exact: the count forgives the file the generator writes and nothing
+// that merely looks like it (0331).
+func generated(path string) bool {
+	for _, entry := range generatedPaths {
+		if entry.path == path {
+			return true
+		}
+	}
+	return false
+}
+
+// toolPath reports whether a path's lines belong to the tool instead of to the
+// author: the proofs and the generated files. It is the one question both branches
+// of the count ask, so a new exclusion cannot be added to one and forgotten in the
+// other (0331).
+func toolPath(path string) bool {
+	return proofPath(path) || generated(path)
 }

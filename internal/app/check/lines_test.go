@@ -1,6 +1,10 @@
 package check
 
-import "testing"
+import (
+	"strconv"
+	"strings"
+	"testing"
+)
 
 // The counting lives in this package's own test file because authoredLines is
 // internal: the gate is its one caller, and exporting it would invite a second
@@ -173,6 +177,67 @@ index 1111111..0000000
 `
 	if got := authoredLines(diff); got != 0 {
 		t.Fatalf("authoredLines counted %d lines for a deleted proof, want 0: the path was rewritten mid-hunk", got)
+	}
+}
+
+// addedFileDiff is a candidate that creates path with n authored lines: the shape
+// a generator leaves behind when it rewrites a file nobody typed (0331).
+func addedFileDiff(path string, n int) string {
+	var b strings.Builder
+	b.WriteString("diff --git a/" + path + " b/" + path + "\n")
+	b.WriteString("new file mode 100644\n")
+	b.WriteString("index 0000000..1111111\n")
+	b.WriteString("--- /dev/null\n")
+	b.WriteString("+++ b/" + path + "\n")
+	b.WriteString("@@ -0,0 +1," + strconv.Itoa(n) + " @@\n")
+	for i := 1; i <= n; i++ {
+		b.WriteString("+linea " + strconv.Itoa(i) + "\n")
+	}
+	return b.String()
+}
+
+// TestAuthoredLinesCountsNothingForAGeneratedFile: a generated file is written by
+// a command, and a feature that only reruns the generator pays for bytes nobody
+// wrote. The list is closed, so the test walks it: every entry the count forgives
+// is measured here, and an empty list fails instead of passing unmeasured (0331).
+func TestAuthoredLinesCountsNothingForAGeneratedFile(t *testing.T) {
+	if len(generatedPaths) == 0 {
+		t.Fatal("the closed list is empty: this test would pass without measuring anything")
+	}
+	for _, entry := range generatedPaths {
+		t.Run(entry.path, func(t *testing.T) {
+			if got := authoredLines(addedFileDiff(entry.path, 3)); got != 0 {
+				t.Fatalf("authoredLines counted %d lines in the generated %s, want 0: %s wrote them", got, entry.path, entry.owner)
+			}
+		})
+	}
+}
+
+// TestEveryGeneratedPathNamesItsOwner: an entry is a claim about the tool, so it
+// says which command writes the file and what a hand edit costs. A path added
+// without them is a hole in the count nobody can check (0331).
+func TestEveryGeneratedPathNamesItsOwner(t *testing.T) {
+	for _, entry := range generatedPaths {
+		if strings.TrimSpace(entry.owner) == "" {
+			t.Errorf("%s is forgiven and no command owns it: name the writer", entry.path)
+		}
+		if strings.TrimSpace(entry.edit) == "" {
+			t.Errorf("%s is forgiven and says nothing about a hand edit: name what happens to it", entry.path)
+		}
+	}
+}
+
+// TestAuthoredLinesStillChargesWhatAPersonWrote: the exclusion is two exact files
+// and not a name that ends in SKILLS.md, nor a folder: a document, a registry
+// spelled in another directory and the human's own skill beside the generated one
+// are authored work (0331).
+func TestAuthoredLinesStillChargesWhatAPersonWrote(t *testing.T) {
+	for _, path := range []string{"docs/next-session.md", "docs/SKILLS.md", ".agents/skills/acceptance/SKILL.md"} {
+		t.Run(path, func(t *testing.T) {
+			if got := authoredLines(addedFileDiff(path, 2)); got != 2 {
+				t.Fatalf("authoredLines counted %d lines in %s, want 2: a person wrote it", got, path)
+			}
+		})
 	}
 }
 
