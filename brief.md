@@ -1224,3 +1224,26 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que una regla sobre un sistema externo sin version y fecha ya es falsa.
+
+## 0335 · el-catalogo-deja
+
+## What must exist
+- el catalogo deja de afirmar lo que no puede probar: el traspaso dice lo que la medicion mostro, el guard de citas mide cada pagina, la cita del socket tiene un solo dueno, y the-failures.md no cierra con una promesa que sus filas desmienten
+
+## Done when
+- una pagina que pierde una linea Source falla el suite nombrando la pagina y la linea, y el baseline solo baja con una edicion deliberada
+- la cita del socket aparece una sola vez, atribuida al documento que la dice, con su fecha, y la otra pagina apunta a ella
+- the-failures.md no afirma mas de lo que sus filas sostienen
+- docs/next-session.md dice que el movimiento ya se detecta y que una reescritura paga, con el numero medido
+- go test ./... is green and odachi check --run "go test ./..." is green and odachi skills --check is green
+
+## Not included (first version)
+- no se mueve el 400 ni su umbral: la decision es que el numero se queda, y el registro lo dice
+- no se reescribe el catalogo entero: solo los documentos que hoy afirman de mas
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que una cita sin fecha es una regla ya falsa.
+- Wants to learn: que un guard que pregunta si queda alguna no protege un conjunto.

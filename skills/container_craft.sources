@@ -1,0 +1,33 @@
+# Every `Source:` line container-craft carries, in page<TAB>line form.
+# A page that loses one fails the sweep in container_craft_test.go naming the page
+# and the line; a page that adds one fails until it is pinned here on purpose, so
+# the pin follows the pages instead of drifting above them (0335).
+# When a citation really changes, replace its line here and put # why: above it.
+
+# why: the three pages that cite per section, as 0333 shipped them
+references/docker-and-podman.md	Source: podman(1) and podman-systemd.unit(5), 2026-11.
+references/docker-and-podman.md	Source: podman-run(1), 2026-11.
+references/docker-and-podman.md	Source: podman-systemd.unit(5), 2026-11.
+references/docker-and-podman.md	Source: the podman-compose README, 2026-11.
+references/docker-and-podman.md	Source: Docker Compose docs, 2026-11.
+references/docker-and-podman.md	Source: Docker engine network docs, 2026-11.
+references/docker-and-podman.md	Source: the OWASP Docker Security Cheat Sheet, post-Jan-2024.
+references/docker-and-podman.md	Source: Docker `live-restore`, 2026-11.
+
+references/hardening.md	Source: moby v27.3.1 (`oci/caps/defaults.go`) and the Docker engine security page, 2026-11.
+references/hardening.md	Source: the docker run reference, 2026-11.
+references/hardening.md	Source: the OWASP Docker Security Cheat Sheet, post-Jan-2024.
+references/hardening.md	Source: Docker rootless docs, 2026-11, and podman(1), 2026-11.
+references/hardening.md	Source: CIS Docker Benchmark v1.9.0 (2026) and NIST SP 800-190 (final Sept 2017).
+references/hardening.md	Source: Docker secrets and Kubernetes Secrets docs, 2026-11.
+references/hardening.md	Source: the Linux `proc(5)` page and Docker build secrets, 2026-11.
+references/hardening.md	Source: the Kubernetes Secrets docs, 2026-11.
+
+references/supply-chain.md	Source: the Kubernetes images docs, 2026-11.
+references/supply-chain.md	Source: the ECR image-tag mutability docs, 2026-11.
+references/supply-chain.md	Source: Trivy's OS coverage page, 2026-11.
+references/supply-chain.md	Source: the Sigstore cosign verification docs, 2026-11, and Notation v1.1.0 (2024).
+references/supply-chain.md	Source: the Kubernetes admission controllers docs, 2026-11.
+references/supply-chain.md	Source: SLSA v1.2 (2026); the levels are from the v1.0 spec.
+references/supply-chain.md	Source: CycloneDX 1.7 (2025-10-21) and SPDX 3.0 (2025-08).
+references/supply-chain.md	Source: the CNCF Distribution GC and mirror recipes, 2026-11.

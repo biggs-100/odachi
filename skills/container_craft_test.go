@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -142,45 +144,84 @@ func TestContainerCraftDeclaresItsTrigger(t *testing.T) {
 	}
 }
 
-// TestEverySectionSourceCarriesItsDate: the pages that cite per section must put a
-// year in the `Source:` line itself, because a document with no date is a rule that
-// is already false and a sample of markers cannot notice the loss. The independent
-// verifier refuted this class twice before the guard measured it (0333).
-func TestEverySectionSourceCarriesItsDate(t *testing.T) {
+// TestEverySourceLineIsPinned: a rule about an outside system without a document
+// and a date is already false, and the guard used to ask whether a page kept *a*
+// citation -a page that lost one of eight stayed green, which is exactly the loss
+// the property is about (0333). Every Source line a page carries is pinned in
+// container_craft.sources, and a pin the page no longer carries fails too, so the
+// baseline follows the pages down instead of drifting above them (0335).
+func TestEverySourceLineIsPinned(t *testing.T) {
+	pinned := readSources(t)
 	year := regexp.MustCompile(`20\d\d`)
-	for _, path := range []string{
-		"references/docker-and-podman.md",
-		"references/hardening.md",
-		"references/supply-chain.md",
-	} {
-		sources := 0
-		for _, line := range containerLines(t, path) {
+	pages := 0
+
+	for _, file := range mustSkill(t, "container-craft").Files {
+		if !strings.HasPrefix(file.Path, "references/") {
+			continue
+		}
+		for _, line := range strings.Split(string(file.Content), "\n") {
 			trimmed := strings.TrimSpace(line)
 			if !strings.HasPrefix(trimmed, "Source:") {
 				continue
 			}
-			sources++
 			if !year.MatchString(trimmed) {
-				t.Errorf("%s has a Source line with no year: %q", path, trimmed)
+				t.Errorf("%s has a Source line with no year: %q", file.Path, trimmed)
+			}
+			if !slices.Contains(pinned[file.Path], trimmed) {
+				t.Errorf("%s carries a Source line the baseline does not pin: %q; add it to skills/container_craft.sources on purpose",
+					file.Path, trimmed)
 			}
 		}
-		if sources == 0 {
-			t.Errorf("%s cites per section and carries no Source line", path)
+	}
+
+	for _, page := range sortedPages(pinned) {
+		pages++
+		content := containerPage(t, page)
+		for _, line := range pinned[page] {
+			if !strings.Contains(content, line) {
+				t.Errorf("%s lost its Source line: %q", page, line)
+			}
 		}
+	}
+	if pages == 0 {
+		t.Fatal("the baseline pins no page: this test would pass without measuring anything")
 	}
 }
 
-// containerLines is one reference of container-craft, line by line: a property about
-// a line cannot be checked on the flattened text.
-func containerLines(t *testing.T, path string) []string {
+// readSources reads the pinned Source lines: one `page<TAB>line` per row, `#`
+// comments ignored, the same shape internal/archtest/normative.baseline uses.
+func readSources(t *testing.T) map[string][]string {
 	t.Helper()
-	for _, file := range mustSkill(t, "container-craft").Files {
-		if file.Path == path {
-			return strings.Split(string(file.Content), "\n")
-		}
+
+	data, err := os.ReadFile("container_craft.sources")
+	if err != nil {
+		t.Fatalf("read container_craft.sources: %v", err)
 	}
-	t.Fatalf("container-craft does not carry %s", path)
-	return nil
+
+	pinned := map[string][]string{}
+	for _, raw := range strings.Split(string(data), "\n") {
+		line := strings.TrimSpace(strings.TrimSuffix(raw, "\r"))
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		page, source, ok := strings.Cut(line, "\t")
+		if !ok {
+			t.Fatalf("a pinned line is not page<TAB>line: %q", raw)
+		}
+		pinned[page] = append(pinned[page], strings.TrimSpace(source))
+	}
+	return pinned
+}
+
+// sortedPages names the pinned pages in a stable order, so a failure reads the
+// same on every run.
+func sortedPages(pinned map[string][]string) []string {
+	pages := make([]string, 0, len(pinned))
+	for page := range pinned {
+		pages = append(pages, page)
+	}
+	sort.Strings(pages)
+	return pages
 }
 
 // containerPage is one reference of container-craft, flattened to a single line so a
