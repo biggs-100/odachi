@@ -15,7 +15,7 @@ first, then the rules below follow from that one choice.
 
 ## Health behaviour is a flag, not an inference
 
-- **`--health-on-failure none|kill|restart|stop`, default `none`** (podman.1): the healthcheck runs, records the status, and the default does nothing about it.
+- **`--health-on-failure none|kill|restart|stop`, default `none`** (podman-run(1), 2026-11): the healthcheck runs, records the status, and the default does nothing about it.
 - **`HealthOnFailure=kill` "integrates best with systemd"**, because the unit restarts what the engine killed, under the policy the unit declares.
 - **Name the policy where the healthcheck is defined**, or the check is a metric with no consequence.
 - **`restart` inside a unit and `Restart=` on the unit are two owners of one decision**: pick one, and let the other stay out.
@@ -24,9 +24,9 @@ first, then the rules below follow from that one choice.
 
 - **`.container`, `.volume`, `.network`, `.pod` and `.kube` files** are read by a systemd generator at boot and at `daemon-reload` (docs.podman.io, `podman-systemd.unit.5`).
 - **The generator produces real `.service` units**, so `systemctl status`, `journalctl -u` and `Restart=` are the operational surface, not `podman ps`.
-- **The generated `Restart` differs by type**: pods default to `Restart=on-failure`.
-- **`ExitPolicy=stop` means a clean pod exit does not restart**, which is correct for a batch pod and wrong for a service that exits 0 on a dependency error.
-- **So a pod you expect to come back needs `ExitPolicy` named**, not assumed; the default is the one that leaves it down.
+- **The generated `Restart` differs by type**: pods default to `Restart=on-failure` (podman-systemd.unit(5), 2026-11).
+- **`ExitPolicy=stop` means a clean pod exit does not restart** (podman-systemd.unit(5), 2026-11), which is correct for a batch pod and wrong for a service that exits 0 on a dependency error.
+- **So a pod you expect to come back needs `ExitPolicy` named**, not assumed; the default is the one that leaves it down (podman-systemd.unit(5), 2026-11).
 - **Changing a unit file needs a `daemon-reload` before the unit sees it**: edit, reload, restart, in that order.
 
 ## `podman-compose` is not Compose
@@ -38,7 +38,7 @@ first, then the rules below follow from that one choice.
 
 ## Docker Compose in production is a single-host supervisor
 
-- **Docker's docs endorse it for one server, with a separate production file**, and both halves of that sentence matter (docs.docker.com).
+- **Docker's docs endorse it for one server, with a separate production file**, and both halves of that sentence matter (Docker Compose docs, 2026-11).
 - **It has no scheduler, no rolling deploy and no multi-node**: `up` recreates the service, and that recreation is downtime.
 - **Both statements are true and the contest is scope**: endorsed for one host, insufficient for the fleet, so name which one you have.
 - **Decide what you give up before the first deploy**: rolling replacement, host failure and placement are the three, and each one is a tool you are not using.
@@ -52,14 +52,14 @@ first, then the rules below follow from that one choice.
 
 ## The docker socket in a container is host root
 
-- **Mounting it grants the API, and the API is root**: `:ro` "does not replace API authorization" (docs.docker.com).
+- **Mounting it grants the API, and the API is root**: `:ro` "does not replace API authorization" (OWASP Docker cheat sheet, post-2024).
 - **So `-v /var/run/docker.sock:/var/run/docker.sock:ro` is host root with extra steps**, and it is the sentence to quote when the security review asks.
 - **A scoped socket proxy is the only defensible form**, with the endpoints it exposes listed and the exception documented beside it.
 - **Ask whether the container needs the API or one endpoint**, because that answer decides between a proxy and a redesign.
 
 ## `live-restore` is an upgrade convenience
 
-- **Docker restricts it to patch releases** (docs.docker.com/engine/daemon/live-restore), so it covers the restart you do monthly and not the one you do for a feature.
+- **Docker restricts it to patch releases** (Docker `live-restore`, 2026-11), so it covers the restart you do monthly and not the one you do for a feature.
 - **It keeps containers running while the daemon is down**, which is not the same as keeping them healthy while a node is.
 - **A scheduler with health checks is the real answer**, at a much higher cost: a control plane, a second host, and something that owns placement.
 - **Choose by what you are buying**: minutes of upgrade downtime against an order of magnitude in operational surface.

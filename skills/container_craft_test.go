@@ -98,6 +98,30 @@ func TestTheOtherDoorsKeepTheirOwnQuestions(t *testing.T) {
 	}
 }
 
+// TestEveryPageKeepsItsCitations: a rule about an outside system without a
+// document and a date is already false, and a citation is exactly the property a
+// list of nouns cannot notice losing -0333's first review found a page whose
+// Podman defaults had lost theirs while every phrase test stayed green (0333).
+func TestEveryPageKeepsItsCitations(t *testing.T) {
+	cited := map[string][]string{
+		"references/images-and-build.md":   {"Docker best practices, 2026-11", "Docker multi-stage docs"},
+		"references/running-containers.md": {"Docker docs, 2026-11"},
+		"references/docker-and-podman.md":  {"podman-run(1)", "podman-systemd.unit(5)", "2026-11"},
+		"references/supply-chain.md":       {"trivy.dev", "docs.sigstore.dev", "CycloneDX 1.7"},
+		"references/hardening.md":          {"moby v27.3.1", "SP 800-190", "v1.9.0"},
+		"references/pipelines.md":          {"Docker multi-platform docs, 2026-11"},
+		"references/the-failures.md":       {"2026-11", "Sept 2017"},
+	}
+	for path, marks := range cited {
+		content := containerPage(t, path)
+		for _, mark := range marks {
+			if !strings.Contains(content, mark) {
+				t.Errorf("%s lost its citation %q: a rule about an outside system with no document and no date is already false", path, mark)
+			}
+		}
+	}
+}
+
 // containerPage is one reference of container-craft, flattened to a single line so a
 // phrase can be searched across the wrapping.
 func containerPage(t *testing.T, path string) string {

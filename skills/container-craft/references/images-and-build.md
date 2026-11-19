@@ -19,7 +19,7 @@ away. The evidence behind the body's rules, not the rules again.
 
 - A tag is a pointer that can move; a digest pins the exact bytes. (Docker best practices, 2026-11)
 - Pinning a digest is, in the docs' words, "opting out of automated security fixes", so a digest with no update bot is a CVE with a fixed date. (Docker best practices, 2026-11)
-- `--pull` is the only thing that refreshes a tag; a digest cannot be refreshed, only replaced. (Docker best practices, 2026-11)
+- In a build, `--pull` is the only thing that re-resolves the base tag your Dockerfile names; a digest cannot be refreshed, only replaced, and a pulled tag is refreshed by pulling it. (Docker best practices, 2026-11)
 
 ## Non-root
 
@@ -84,6 +84,6 @@ Size is not the decision; what the base removes is.
 | `COPY . .` before the dependency install | every source edit reinstalls the world | copy the manifest first |
 | build tools in the final image | they ship | multi-stage, `COPY --from` |
 | root | the process holds everything the image can reach, so a compromise does too | `USER` with an explicit UID/GID |
-| a mutable base consumed by CI | `--pull` is the only refresh, and a rebuild is a new image | a digest plus an update bot |
+| a mutable base consumed by CI | in a build, `--pull` is the only refresh, and a rebuild is a new image | a digest plus an update bot |
 | a cache mount treated as cache | `--cache-to` does not export it | expect it empty on a fresh runner |
 | believing `rm` shrinks the image | the layer keeps the bytes | it does not; build small in a stage |

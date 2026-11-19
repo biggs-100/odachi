@@ -17,7 +17,7 @@ is `db-craft`; how it reaches a host is this door.
 - **The dependency layer comes before the source**: `COPY . .` ahead of the install reinstalls everything on a one-line change.
 - **The base you can operate beats the base you can build**: distroless has no shell, musl resolves DNS unlike glibc, `scratch` has no CA certificates.
 - **`exec` form, and `--init` when anything forks**: shell-form `CMD` leaves `/bin/sh` at PID 1, which ignores SIGTERM, so each stop costs 10 seconds and a SIGKILL.
-- **A restart policy is not a health signal**: `HEALTHCHECK` sets a status field that nothing acts on, and `on-failure` never fires on exit 0.
+- **A restart policy is not a health signal**: the Docker engine's health status changes nothing by itself -Podman's `--health-on-failure` and a compose `service_healthy` are where it becomes an action-, and `on-failure` never fires on exit 0.
 - **Memory has two budgets and CPU has two meanings**: `--memory` without `--memory-swap` allows the same again in swap; `--cpus` is a ceiling, `--cpu-shares` a weight.
 - **Publish to `127.0.0.1` unless you argued the exception**: `-p 8080:80` binds `0.0.0.0` and writes a `nat` rule the host firewall never sees.
 - **Data on a named volume, source and config on a bind mount**: `down -v` deletes volumes, and an anonymous one is silently replaced by an empty one.
