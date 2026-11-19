@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.51.2 - 2026-11-19
+
 - **A door for containers, opened before the incident.** `container-craft` joins the catalog with a sixty-line body and seven references: the image and its build, the runtime and compose, Docker against Podman, the supply chain, the hardening baselines, the pipelines, and the catalogue of failures with the column that matters -what would have caught it earlier-. Every rule carries its source and the date it was checked, because half of what everyone knows about containers is the other engine's default: `--memory` without `--memory-swap` allows the same amount again in swap, `-p 8080:80` binds `0.0.0.0` past the host firewall, and a build arg is visible in `docker history` long after the layer that used it. Patch (0333).
 
 ## v0.51.1 - 2026-11-18
