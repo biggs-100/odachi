@@ -478,11 +478,19 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 
 // keepModel records the value of the models row the editor was opened on. It is
 // the lens screen's rule, checked by the same function and refused with the same
-// sentence; an empty value is the row meaning "no model", which the plan reads as
-// a line to remove for the verifier and as nothing to write for a client (0337).
+// sentence; an empty value is the verifier's row meaning "no model", which the
+// plan reads as a line to remove.
+//
+// A client's row is not the verifier's: no verb removes that key, and a screen
+// that showed the row empty while the file kept its model would be lying about
+// what the run wrote. It refuses the empty value and names where the line lives.
 func (m tuiModel) keepModel() tuiModel {
 	row := m.modelRows()[m.modelsIndex()]
 	value := strings.TrimSpace(m.buffer)
+	if value == "" && row != modelVerifier {
+		m.editErr = "un cliente no se queda sin modelo desde aquí: escribe uno, o borra la clave model de su archivo"
+		return m
+	}
 	if value != "" {
 		checked, err := review.NormalizeModel(value)
 		if err != nil {

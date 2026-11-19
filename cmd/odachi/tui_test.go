@@ -1107,6 +1107,36 @@ func TestTheModelsSectionNamesNoModelWhenCleared(t *testing.T) {
 	}
 }
 
+// TestTheModelsSectionRefusesToClearAClientRow: no verb removes a client's key,
+// so a row that showed itself empty while the file kept its model would be lying
+// about what the run wrote. The verifier's row is the one that can be cleared,
+// because its line is written by the review file's own writer (0337).
+func TestTheModelsSectionRefusesToClearAClientRow(t *testing.T) {
+	in := wizard()
+	in.ClientModels = map[string]string{persona.SelectionOpenCode: "opencode-go/x"}
+	m := toModels(t, newTUIModel(in))
+
+	m, _ = press(t, m, downKey) // verifier -> opencode
+	m, _ = press(t, m, enterKey)
+	for i := 0; i < len("opencode-go/x"); i++ {
+		m, _ = press(t, m, backspaceKey)
+	}
+	m, _ = press(t, m, enterKey)
+
+	if !m.editing {
+		t.Fatal("editing = false, want the editor still open")
+	}
+	if m.editErr == "" {
+		t.Fatal("editErr is empty, want the refusal on the screen")
+	}
+	if _, ok := m.modelPending[persona.SelectionOpenCode]; ok {
+		t.Fatalf("the refused empty value was kept: %q", m.modelPending[persona.SelectionOpenCode])
+	}
+	if !strings.Contains(m.View(), "borra la clave model") {
+		t.Errorf("the refusal does not say where the line lives:\n%s", m.View())
+	}
+}
+
 // TestTheModelsSectionReachesTheInstallOperation: a client's model is applied by
 // the verb that owns the client file, so the install receives --model instead of
 // the wizard writing opencode.json itself (0337).
