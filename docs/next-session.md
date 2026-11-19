@@ -1,68 +1,58 @@
 # Next session
 
-Written after 0334, the cycle that moved the slice to the door where it can prevent.
+Written after 0335, the cycle that made the catalog say what it can prove.
 
 ## Where the project is
 
-- **0334 closed.** `odachi plan "<text>"` weighs the feature's candidate against the
-  document's base before it writes the step, and refuses past 400 authored lines naming
-  the number, the limit and the door. The count left `internal/app/check` for
-  `internal/domain/authorship`, so the close and the plan read one number from one diff;
-  `plan.Git` gained `Diff` and `cmd/odachi/files.go` implements it over `gitx.Candidate`.
-  The close keeps 0331's refusal as the backstop for a step that is itself too large.
-- **`v0.52.0` carries it**, a minor because a `plan` that used to open can now be
-  refused: the tag lands on the merge of its release pull request, sixteen signed and
-  attested assets, and this machine reinstalled from the release it names.
-- The proof of the closing tree is `proof/0334-odachi-refuses-to.txt`, and the verdict
-  and the verification record both name `af5964a7`.
+- **0335 closed.** Four debts of one class, paid together: the handover says what the
+  400 actually measured (git detects a move; the 521 lines that dominated 0334 were a
+  test file rewritten past the similarity threshold), the citation guard pins all 24
+  `Source:` lines of `container-craft` in `skills/container_craft.sources` and fails in
+  both directions, the docker-socket quote has one owner (OWASP Docker Security Cheat
+  Sheet, Rule #1) with the page that repeated it naming that page, and
+  `the-failures.md` closes saying how each row is sourced instead of promising that all
+  of them are documented.
+- **Not released when this note was written.** The next tag carries it: documents and
+  one guard, so a patch.
+- The proof of the closing tree is `proof/0335-el-catalogo-deja.txt`, and the verdict
+  names the same tree.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
-  total: 332 features · 832 steps done of 832 · 0 open questions
+  total: 333 features · 836 steps done of 836 · 0 open questions
 
 ## What waits for a decision
 
-- **The 400 was measured against a move, and the measurement cleared it.** 0334 closed
-  at 772 authored lines, and only 20 of them were the moved `lines.go`: git detects a
-  rename and charges the lines that changed. The 521 that dominated the number were
-  `lines_test.go`, deleted whole (260) and added whole (261) - rewritten enough to fall
-  under git's 50% similarity, so it is a rewrite and not a move. A rewrite is what a
-  reviewer reads, so the number stays; pairing the two with `-M20%` would read 412 and
-  turn the count into a measure of resemblance. Closed with that reason. What remains
-  open is 0333's own datapoint: 868 lines a verifier read in about two minutes.
-- **The citation guard is narrower than its comment.** It fails when a page loses *all*
-  its `Source:` lines, not when it loses one. The pages are correct today; the guard is
-  not.
-- **`the-failures.md` overclaims at the end.** It says everything above was documented,
-  while one row says "practice, not a doc" and three carry a year alone.
-- **One quote, two documents.** `:ro does not replace API authorization` is attributed
-  to the OWASP cheat sheet on one page and to Docker's docs on another; one is wrong.
 - **The stderr test's budget rode in on a skill feature.** Ten seconds measured the
   machine; sixty keeps the defect visible. The reviewer is right that it deserved a step
   of its own.
-- **The second vendor.** The review of 0334 was written by the model that produced its
+- **The second vendor.** The verdict of 0335 was written by the model that produced its
   proof, and `check` says so. The doctor's check 17 still counts `1 of 4`.
 - **Test adequacy has no evidence** (debt 6): nothing measures changed-line coverage or
   mutation on the candidate.
+- **The 400's own datapoint is still unmeasured.** 0333 closed at 868 authored lines and
+  a verifier read it in about two minutes -the number the limit was never measured
+  against-. The move question is closed: the count stays, and the reason is in the
+  section above.
 
 ## What this cycle learned
 
+- **A guard that asks "is there one?" does not protect a set.** The citation test asked
+  each page whether it kept *a* `Source:` line, so a page that lost one of eight stayed
+  green. The fix is a pin of every line and both directions: a line the page lost, and a
+  line nobody pinned.
+- **A citation with two owners is a citation nobody can check.** The same sentence was
+  attributed to OWASP on one page and to Docker's docs on another; only one carries it,
+  and the other now points at that one instead of inventing a source.
+- **A handover is part of the close, not a note after it.** The review of this feature
+  found that it had corrected the 400 paragraph and left the header, the totals and three
+  paid debts in the same file. `odachi doctor` recomputes that totals line, and the next
+  session would have re-opened work already done.
 - **A number prevents at the door before the work, not at the one that signs it.** At a
   step's close the commit exists and the work is paid; the only place the size can stop
-  more of it is before the next step is written. The close keeps its refusal for the
-  single step that is too large by itself, which no door can see in advance.
-- **A move is not the whole number, and a rewrite is.** The count reads the diff git
-  produces, and git already recognizes a rename: moving `lines.go` cost 20 lines. What
-  cost 521 was a test file rewritten past the similarity threshold -a rewrite pays for
-  both sides because a reader reads both-, which is the number doing its job.
-- **An `ask` after `check --run` voids the proof.** A craft note written after the run
-  moves the task document, so the tree moves and the proof names the one before. The
-  notes go before the proof; this cycle paid a second suite run for it.
-- **A full change that declares `Risk: none` is named by the gate.** 0334 had to declare
-  `contract`: a `plan` that used to exit 0 can now exit 1, and that exit code is the
-  CLI's shape for an agent. The verifier is owed by that row, and it was paid.
-- **The light lane cannot delegate.** It writes one step with the requirement's words and
-  no route, so a light feature with a multi-file change runs inline or leaves the lane;
-  a delegated step needs a brief.
+  more of it is before the next step is written (0334).
+- **A move is not the whole number, and a rewrite is.** Git already recognizes a rename;
+  a file rewritten past the similarity threshold pays for both sides because a reader
+  reads both.
 
 ## The commands that work
 
@@ -83,11 +73,6 @@ odachi review --base <feature base> --lens <lens> --model <provider/model> \
 # the verifier: the same wrapper shape, with the odachi-verify agent
 odachi verify --timeout 1800 \
   --exec '"%TEMP%\odachi-ver2.bat" {prompt} "%TEMP%\ver-out.txt" "%TEMP%\ver.json"'
-```
-
-```sh
-# the review: attach needs --base, or it records base HEAD and the gate refuses
-odachi review --attach <answer.json> --base <feature base>
 ```
 
 ```sh
@@ -120,7 +105,9 @@ git fetch origin && git switch main && git reset --hard origin/main
   never carries it: the link is the `# tree` header.
 - **`odachi` on PATH is the installed binary.** Build the tree's binary into the temp
   folder before asking it anything about a change the tree makes.
-- **`windows-latest` is the slow gate**: today 7m41s against 57s for ubuntu and 5m01s
+- **A note written after `check --run` voids the proof**, because it moves the task
+  document. The notes go before the proof.
+- **`windows-latest` is the slow gate**: today 6m04s against 1m18s for ubuntu and 5m25s
   for macOS.
 - **One heavy gate per machine**: `go test ./...` takes about twelve minutes here, twice
   per proof.
@@ -131,8 +118,7 @@ git fetch origin && git switch main && git reset --hard origin/main
 
 ## The debts this cycle named, in one place
 
-Nothing new is unpaid for the code: 0334 closed with proof, an approved verdict on four
-lenses and a `verified` record, and CI is green on the pull request. What waits is the
-section above, and the oldest item is no longer a question -the number was measured
-against a move and the move came back cheap- but the datapoint that opened it: 868 lines
-a verifier read in two minutes.
+0335 paid what it opened with and left the catalogue's three paid rows out of this list.
+What remains is the section above: a test that measures the runner, one model judging in
+four costumes, no measurement of test adequacy, and the 868-line datapoint nobody has
+answered.
