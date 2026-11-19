@@ -357,6 +357,67 @@ func TestAnUnreadableRecordIsNotAnApproval(t *testing.T) {
 	}
 }
 
+// TestAStoreNobodyCanProbeIsNamedAndDoesNotFireTheSlice: the close owes a
+// verifier and its candidate is past the slice, but the store cannot answer
+// whether this tree's record exists. An answered "there is none" is a slice; a
+// question nobody could ask is not, so the slice must not fire - and the close
+// says what happened instead of claiming there is no verification it can read.
+// `odachi doctor` reports the health of a clone and is the verb that names why a
+// store cannot be read; `odachi start` writes no record and `odachi verify` would
+// write into the store nobody can look at (0332).
+func TestAStoreNobodyCanProbeIsNamedAndDoesNotFireTheSlice(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	files.denyExists = func(path string) error {
+		if filepath.ToSlash(path) == filepath.ToSlash(verifyPath(currentTree)) {
+			return errors.New("permission denied")
+		}
+		return nil
+	}
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Reason == gate.ReasonVerifySlice {
+		t.Fatalf("reason = %q: a store nobody could probe fired the slice, so the close claims the store is empty (%s)", result.Reason, result.Message)
+	}
+	if !strings.Contains(result.Message, "store could not be looked at") {
+		t.Errorf("the refusal does not say the store could not be looked at: %s", result.Message)
+	}
+	if !strings.Contains(result.Message, "permission denied") {
+		t.Errorf("the refusal does not carry what the store answered: %s", result.Message)
+	}
+	if !strings.Contains(result.Next, "odachi doctor") {
+		t.Errorf("next = %q, want the verb that reports why a clone's store cannot be read", result.Next)
+	}
+}
+
+// TestATreeThatCannotNameARecordAgreesWithAnUnprobeableStore: the two answers a
+// close could not get -the path a tree's record would live at, and whether that
+// file exists- are the same "could not answer", so they resolve the same way: no
+// slice, and the sentence the store earns. Resolving them in opposite directions
+// is how a store nobody can read earned the number and a door that cannot write
+// the record (0332).
+func TestATreeThatCannotNameARecordAgreesWithAnUnprobeableStore(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	git.tree = "no-es-un-hash"
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Reason == gate.ReasonVerifySlice {
+		t.Fatalf("reason = %q: a tree that cannot name its record fired the slice, the opposite answer to a store nobody can probe (%s)", result.Reason, result.Message)
+	}
+	if !strings.Contains(result.Message, "store could not be looked at") {
+		t.Errorf("the refusal does not say the store could not be looked at: %s", result.Message)
+	}
+	if !strings.Contains(result.Message, "must be a hash") {
+		t.Errorf("the refusal does not carry what could not answer: %s", result.Message)
+	}
+	if !strings.Contains(result.Next, "odachi doctor") {
+		t.Errorf("next = %q, want the verb that reports the health of the clone", result.Next)
+	}
+}
+
 // TestAPassiveFeatureAsksForNoVerification: a feature that only wrote documents
 // has no bytes a lens would read, and its declared risk asks for no verification
 // (0301's rule, now asked of the feature's own diff).
