@@ -6,6 +6,8 @@ rule here is about the registry side of an artifact whose build lives in
 
 ## A tag is a pointer, a digest is content
 
+Source: the Kubernetes images docs, 2026-11.
+
 - **Pin by digest where the code is deployed**: a retagged image leaves "a mix of Pods running the old and new code" (kubernetes.io/docs/concepts/containers/images).
 - **A moved tag may not pull at all**: `imagePullPolicy` defaults to `IfNotPresent` for any non-`latest` tag, so a node that already cached `:1.4` keeps the old bytes after `:1.4` moves (same source).
 - **The policy names `non-latest` on purpose**: `latest` is the exception the default is written around, so keeping it for a deployed service is a policy you chose, not a default you inherited.
@@ -14,11 +16,15 @@ rule here is about the registry side of an artifact whose build lives in
 
 ## Immutability is the registry's feature, not the Dockerfile's
 
+Source: the ECR image-tag mutability docs, 2026-11.
+
 - **ECR `IMMUTABLE` applies to all tags**, with exceptions added Jul 2025 (docs.aws.amazon.com/AmazonECR/latest/userguide/image-tag-mutability.html).
 - **So it is an all-or-nothing switch per repository**: it stops the retag that overwrote a release, and it also forbids a moving `:staging` beside a fixed `:1.4` in that same repository.
 - **Immutability answers "can this tag change", never "is this the right build"**: two repositories with the same immutable tag still carry different bytes.
 
 ## A scanner reports inventory, not risk
+
+Source: Trivy's OS coverage page, 2026-11.
 
 - **Read the OS coverage matrix before you trust a zero**: Trivy's matrix is per distribution *and version*, and RHEL 10 is SBOM only, no vulnerability verdict (trivy.dev/latest/docs/coverage/os).
 - **An unsupported base yields an SBOM with no CVE opinion**: the scan succeeds, the report comes back empty, and empty reads as clean.
@@ -27,6 +33,8 @@ rule here is about the registry side of an artifact whose build lives in
 - **Re-read the report as a list**, of packages and versions, because that is what it is; the sentence "no vulnerabilities" is an inference the tool did not make.
 
 ## A signature binds an identity to a digest
+
+Source: the Sigstore cosign verification docs, 2026-11, and Notation v1.1.0 (2024).
 
 - **Keyless signing goes through Fulcio, and Rekor records it** (docs.sigstore.dev/cosign/verifying/verify).
 - **`cosign verify` checks the digest claim by default against `--certificate-identity` and `--certificate-oidc-issuer`** (same source), so passing neither proves a signature existed, not who made it.
@@ -37,11 +45,15 @@ rule here is about the registry side of an artifact whose build lives in
 
 ## Admission is where a signature becomes a gate
 
+Source: the Kubernetes admission controllers docs, 2026-11.
+
 - **Verification has to happen at admission**, in OPA/Gatekeeper, Kyverno or sigstore policy-controller (kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
 - **Without a policy engine, signing is a dashboard**: it records intent and blocks nothing that deploys.
 - **A policy you have not tested against an unsigned image is unproven**, so the gate earns its trust by rejecting one deliberately.
 
 ## Provenance says which builder produced it
+
+Source: SLSA v1.2 (2026); the levels are from the v1.0 spec.
 
 - **SLSA v1.2 is current (2026); the L1-L3 ladder is from v1.0** (slsa.dev/spec/v1.0/levels).
 - **L1 provenance exists and is forgeable**: it lists the steps, and anything inside the build can write it.
@@ -52,6 +64,8 @@ rule here is about the registry side of an artifact whose build lives in
 
 ## An SBOM asserts presence
 
+Source: CycloneDX 1.7 (2025-10-21) and SPDX 3.0 (2025-08).
+
 - **CycloneDX 1.7 (2025-10-21, Ecma-424) is security-native**: VEX, vulnerabilities and formulation live in the document (cyclonedx.org).
 - **SPDX 3.0 (2025-08) is license and graph first**, so it is the format when the consumer is legal review rather than a scanner (spdx.dev).
 - **ISO/IEC 5962:2021 standardizes SPDX 2.2.1**, not 3.0: "we have an ISO SBOM" and "we emit SPDX 3.0" are two different claims.
@@ -59,6 +73,8 @@ rule here is about the registry side of an artifact whose build lives in
 - **Completeness is self-declared**: `compositions` can be `incomplete`, so a short SBOM is an assertion someone made, not a scan that missed a line.
 
 ## The registry is state you operate
+
+Source: the CNCF Distribution GC and mirror recipes, 2026-11.
 
 - **Registry garbage collection is stop-the-world**: run it read-only or stopped, or in-flight pushes lose layers (distribution.github.io/distribution/about/garbage-collection).
 - **`--delete-untagged` is opt-in**, and without it every untagged manifest keeps its blobs, so storage grows straight through a deletion policy.
@@ -68,6 +84,8 @@ rule here is about the registry side of an artifact whose build lives in
 - **The daemon's `registry-mirrors` supports Docker Hub only**, so a general mirror is a proxy in front, not a daemon setting.
 
 ## Contested, and both sides are true
+
+These are arguments over the documents above (2026-11), not claims of their own.
 
 - **Scanner as a merge gate**: gate on newly introduced and fixable findings, because a gate on absolute counts fires on a base image nobody in this PR touched and gets disabled within a week.
 - **SBOM as a gate**: requiring the file proves your build emits one; requiring a clean one claims a completeness no scanner can establish.

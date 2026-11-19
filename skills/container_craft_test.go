@@ -107,7 +107,7 @@ func TestEveryPageKeepsItsCitations(t *testing.T) {
 		"references/images-and-build.md":   {"Docker best practices, 2026-11", "Docker multi-stage docs"},
 		"references/running-containers.md": {"Docker docs, 2026-11"},
 		"references/docker-and-podman.md":  {"podman-run(1)", "podman-systemd.unit(5)", "2026-11"},
-		"references/supply-chain.md":       {"trivy.dev", "docs.sigstore.dev", "CycloneDX 1.7"},
+		"references/supply-chain.md":       {"Source: the Kubernetes images docs, 2026-11", "Source: Trivy's OS coverage page, 2026-11", "Source: the CNCF Distribution GC"},
 		"references/hardening.md":          {"moby v27.3.1", "SP 800-190", "v1.9.0", "Source: the OWASP Docker Security Cheat Sheet", "Source: Docker rootless docs", "Source: the Kubernetes Secrets docs"},
 		"references/pipelines.md":          {"Docker multi-platform docs, 2026-11"},
 		"references/the-failures.md":       {"Docker logging, 2026-11", "Distribution GC, 2026-11", "musl docs, 2026-11"},
