@@ -59,7 +59,7 @@ Source: Docker engine network docs, 2026-11.
 
 - **It deletes the network namespace and with it port isolation**, so two containers cannot both want 8080 and the host's policy applies to both.
 - **It is defensible for performance-sensitive workloads and for port-range-heavy ones**, where the per-packet path or the range is the requirement.
-- **It is also the answer for rootless Podman without pasta**, where there is no network device to create.
+- **It is also the answer for rootless Podman without pasta**, where there is no network device to create (podman(1), 2026-11).
 - **An exception is a written reason, not a default that spread**: the compose file should say why, or the next reader removes the wrong thing.
 
 ## The docker socket in a container is host root

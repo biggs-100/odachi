@@ -110,7 +110,7 @@ func TestEveryPageKeepsItsCitations(t *testing.T) {
 		"references/supply-chain.md":       {"trivy.dev", "docs.sigstore.dev", "CycloneDX 1.7"},
 		"references/hardening.md":          {"moby v27.3.1", "SP 800-190", "v1.9.0"},
 		"references/pipelines.md":          {"Docker multi-platform docs, 2026-11"},
-		"references/the-failures.md":       {"2026-11", "Sept 2017"},
+		"references/the-failures.md":       {"Docker logging, 2026-11", "Distribution GC, 2026-11", "musl docs, 2026-11"},
 	}
 	for path, marks := range cited {
 		content := containerPage(t, path)
