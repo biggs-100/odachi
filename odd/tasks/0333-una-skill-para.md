@@ -14,8 +14,8 @@ R1 · "una skill para trabajar como un profesional senior en todo lo que tenga q
 - go test ./... is green and odachi check --run "go test ./..." is green
 
 ## Steps
-- [x] T1 · el cuerpo nace con sus decisiones y la tabla que rutea las siete paginas   R1 · route:delegated/odachi-worker · skills:tests
-- [x] T2 · las siete paginas llevan su version y su fecha, y el catalogo de fallas cierra la puerta   R1 · route:delegated/odachi-worker · skills:tests
+- [x] T1 · el cuerpo nace con sus decisiones y la tabla que rutea las siete paginas   R1 · route:delegated/odachi-worker · skills:tests · tree:1219d1fba0f570dc74ec9debb5c1db2f37438555
+- [x] T2 · las siete paginas llevan su version y su fecha, y el catalogo de fallas cierra la puerta   R1 · route:delegated/odachi-worker · skills:tests · tree:76e29ef778bbc037dd9fc5640032c6fac2032d46
 - [x] T3 · la prueba fija el trigger y el ruteo, y el indice con su pin bajan el numero que el test mide   R1 · route:delegated/odachi-worker · skills:tests · tree:08d302f905bc51e29d05adc2c68d66dad72d446a
 
 ## History
