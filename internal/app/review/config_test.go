@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/app/review"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 )
@@ -124,6 +125,110 @@ func TestSetConfigWritesAMissingFile(t *testing.T) {
 		if !strings.Contains(stored, want) {
 			t.Errorf("the new file lost %q:\n%s", want, stored)
 		}
+	}
+}
+
+// TestSetConfigWritesTheVerifierModel: the wizard can name who answers, and the
+// lens table and the numbers it does not touch survive the write (0337).
+func TestSetConfigWritesTheVerifierModel(t *testing.T) {
+	files := newFakeFiles(map[string]string{domainreview.ModePath: seeded})
+	verify := "cheap/model#fast"
+
+	result := review.SetConfig(review.ConfigOptions{Dir: dir, Verify: &verify}, files, modeCodec{})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	stored := string(files.files[fullPath(domainreview.ModePath)])
+	for _, want := range []string{
+		`verify = "cheap/model#fast"`, `mode = "on"`, `max_prompt_kb = 120`,
+		`keep_verdicts = 4`, `keep_prompts = 2`, `risk = "old/model"`,
+	} {
+		if !strings.Contains(stored, want) {
+			t.Errorf("the write lost %q:\n%s", want, stored)
+		}
+	}
+}
+
+// TestSetConfigKeepsTheVerifierWhenItIsNil: a write that only changes the lens
+// table must not delete the project's verifier.
+func TestSetConfigKeepsTheVerifierWhenItIsNil(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		domainreview.ModePath: "mode = \"on\"\nverify = \"cheap/model\"\n",
+	})
+
+	result := review.SetConfig(review.ConfigOptions{Dir: dir, Models: map[string]string{}}, files, modeCodec{})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if stored := string(files.files[fullPath(domainreview.ModePath)]); !strings.Contains(stored, `verify = "cheap/model"`) {
+		t.Errorf("the verifier line was dropped:\n%s", stored)
+	}
+}
+
+// TestSetConfigRemovesTheVerifierWithAnEmptyValue: clearing the row means the
+// project names no verifier, and the line goes away while the lens table stays.
+func TestSetConfigRemovesTheVerifierWithAnEmptyValue(t *testing.T) {
+	files := newFakeFiles(map[string]string{
+		domainreview.ModePath: "mode = \"on\"\nverify = \"cheap/model\"\n\n[lenses]\nrisk = \"sharp/model\"\n",
+	})
+	empty := ""
+
+	result := review.SetConfig(review.ConfigOptions{Dir: dir, Verify: &empty}, files, modeCodec{})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	stored := string(files.files[fullPath(domainreview.ModePath)])
+	if strings.Contains(stored, "verify") {
+		t.Errorf("the verifier line survived a cleared row:\n%s", stored)
+	}
+	if !strings.Contains(stored, `risk = "sharp/model"`) {
+		t.Errorf("clearing the verifier dropped the lens table:\n%s", stored)
+	}
+}
+
+// TestSetConfigRefusesAVerifierThatIsNotAnIdentifier: the value replaces {model}
+// inside a command, so it obeys the model rule and nothing is written when it
+// does not.
+func TestSetConfigRefusesAVerifierThatIsNotAnIdentifier(t *testing.T) {
+	files := newFakeFiles(map[string]string{domainreview.ModePath: seeded})
+	bad := "a b"
+
+	result := review.SetConfig(review.ConfigOptions{Dir: dir, Verify: &bad}, files, modeCodec{})
+
+	if result.Code == 0 {
+		t.Fatalf("code = 0, want blocked")
+	}
+	if len(files.writes) != 0 || len(files.backups) != 0 {
+		t.Fatalf("writes = %v, backups = %v; want none", files.written(), files.backups)
+	}
+}
+
+// TestSetConfigRendersAnUntouchedVerifierByteForByte: writing a field the wizard
+// did not change leaves the file exactly as it was, verifier included (0337).
+func TestSetConfigRendersAnUntouchedVerifierByteForByte(t *testing.T) {
+	canonical, err := reviewtoml.Render(domainreview.ProjectConfig{
+		Mode:         domainreview.ModeOn,
+		Verify:       "cheap/model#fast",
+		Lenses:       map[string]string{"risk": "sharp/model"},
+		MaxPromptKB:  120,
+		KeepVerdicts: 4,
+		KeepPrompts:  2,
+	})
+	if err != nil {
+		t.Fatalf("reviewtoml.Render: %v", err)
+	}
+	files := newFakeFiles(map[string]string{domainreview.ModePath: string(canonical)})
+
+	result := review.SetConfig(review.ConfigOptions{Dir: dir, Mode: review.ModeOn}, files, modeCodec{})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if stored := string(files.files[fullPath(domainreview.ModePath)]); stored != string(canonical) {
+		t.Errorf("an untouched file moved:\n--- want ---\n%s\n--- got ---\n%s", canonical, stored)
 	}
 }
 
