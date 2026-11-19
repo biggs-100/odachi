@@ -16,15 +16,19 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
-// file mirrors the two things a human writes.
+// file mirrors the keys a human writes.
 type file struct {
 	// Schema is the version that wrote this file. It is not a human choice: a
 	// file written before the key existed carries none and reads as the first
 	// schema, and a value above this binary's is refused as newer, not broken.
-	Schema      int               `toml:"schema"`
-	Mode        string            `toml:"mode"`
-	Lenses      map[string]string `toml:"lenses"`
-	MaxPromptKB int               `toml:"max_prompt_kb"`
+	Schema int               `toml:"schema"`
+	Mode   string            `toml:"mode"`
+	Lenses map[string]string `toml:"lenses"`
+	// Verify is the model `odachi verify` substitutes for {model}. Absent means
+	// the project never chose a verifier, and the session's model is the last
+	// resort.
+	Verify      string `toml:"verify"`
+	MaxPromptKB int    `toml:"max_prompt_kb"`
 	// The two lifetimes `odachi clean` obeys. Absent -or a zero- means the
 	// defaults odachi shipped, so a file written before they existed cleans the
 	// same way it always did.
@@ -71,10 +75,14 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 		for _, key := range unknown {
 			keys = append(keys, key.String())
 		}
-		return review.ProjectConfig{}, fmt.Errorf("review: unknown keys: %s; this file configures mode, the model of each lens, the biggest prompt you pay for, how many records and prompts you keep, and the deterministic tools the review runs", strings.Join(keys, ", "))
+		return review.ProjectConfig{}, fmt.Errorf("review: unknown keys: %s; this file configures mode, the model of each lens and of the verifier, the biggest prompt you pay for, how many records and prompts you keep, and the deterministic tools the review runs", strings.Join(keys, ", "))
 	}
 
 	mode, err := review.NormalizeMode(f.Mode)
+	if err != nil {
+		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
+	}
+	verify, err := verifierModel(f.Verify, md.IsDefined("verify"))
 	if err != nil {
 		return review.ProjectConfig{}, fmt.Errorf("review: %w", err)
 	}
@@ -104,6 +112,7 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 	}
 	return review.ProjectConfig{
 		Mode:         mode,
+		Verify:       verify,
 		Lenses:       lenses,
 		MaxPromptKB:  limit,
 		KeepVerdicts: verdicts,
@@ -111,6 +120,25 @@ func Decode(data []byte) (review.ProjectConfig, error) {
 		Checks:       checks,
 		CheckTimeout: timeout,
 	}, nil
+}
+
+// verifierModel reads the model `odachi verify` runs with. It obeys the rule a
+// lens model obeys -the value replaces {model} inside a command, so it is an
+// identifier and not shell code- and a key written with no value is refused with
+// the line that fixes it. A file that never wrote the key declares nothing, which
+// is not the same decision as writing it empty.
+func verifierModel(value string, declared bool) (string, error) {
+	if !declared {
+		return "", nil
+	}
+	if strings.TrimSpace(value) == "" {
+		return "", fmt.Errorf(`the verify key names no model: write verify = "provider/model#variant" or remove the line`)
+	}
+	checked, err := review.NormalizeModel(value)
+	if err != nil {
+		return "", fmt.Errorf("the verify key: %w", err)
+	}
+	return checked, nil
 }
 
 // declaredChecks copies the file's tables into the domain's vocabulary. The
@@ -146,6 +174,16 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 	out.WriteString("schema = " + strconv.Itoa(schema.Current) + "\n")
 	out.WriteString("# odachi: the review is the human's decision; on asks for it at the close and check says so, off leaves it silent, and --require-review refuses\n")
 	out.WriteString("mode = \"" + normalized + "\"\n")
+	// The verifier's model is written only when the project chose one: a file that
+	// never declared it keeps the bytes it always had.
+	if value := strings.TrimSpace(config.Verify); value != "" {
+		verify, err := review.NormalizeModel(value)
+		if err != nil {
+			return nil, fmt.Errorf("review: %w", err)
+		}
+		out.WriteString("# odachi: the model the verifier runs with, where its command writes {model}; when a provider retires one, the run names the model and this line is the fix\n")
+		out.WriteString("verify = \"" + verify + "\"\n")
+	}
 	limit, err := review.NormalizeMaxPromptKB(config.MaxPromptKB)
 	if err != nil {
 		return nil, fmt.Errorf("review: %w", err)

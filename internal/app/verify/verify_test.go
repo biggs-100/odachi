@@ -286,7 +286,135 @@ func TestAnAnswerThatIsNotOneObjectIsRefused(t *testing.T) {
 	}
 }
 
-// TestTheDeclaredRisksAreWhatAsksForTheVerifier: a feature that declared no risk
+// TestTheModelReplacesThePlaceholderInTheCommand: {model} is the one door a
+// verifier command has to the identity its caller resolved, and the result names
+// that identity so the record's reader knows who answered.
+func TestTheModelReplacesThePlaceholderInTheCommand(t *testing.T) {
+	files := newFakeFiles()
+	shell := &fakeShell{stdout: answer("")}
+	opts := options()
+	opts.Exec = "agent --model {model} {prompt}"
+	opts.Model = "provider/name#high"
+
+	result := verify.Run(opts, files, fakeGit{tree: tree}, shell)
+
+	if result.Code != verify.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", result.Code, verify.CodeOK, result.Message)
+	}
+	if shell.command != "agent --model provider/name#high {prompt}" {
+		t.Errorf("the shell ran %q, want the identity substituted", shell.command)
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "model: provider/name#high") {
+		t.Errorf("the result does not say which model ran: %v", result.Lines)
+	}
+}
+
+// TestACommandThatAsksForAModelAndHasNoneIsRefused: the message names the three
+// ways to name one, and the verifier is not started: a model chosen at random is a
+// verification nobody asked for.
+func TestACommandThatAsksForAModelAndHasNoneIsRefused(t *testing.T) {
+	files := newFakeFiles()
+	shell := &fakeShell{stdout: answer("")}
+	opts := options()
+	opts.Exec = "agent --model {model}"
+
+	result := verify.Run(opts, files, fakeGit{tree: tree}, shell)
+
+	if result.Code != verify.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked", result.Code)
+	}
+	if shell.calls != 0 {
+		t.Errorf("the shell ran %d times with no model known", shell.calls)
+	}
+	joined := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"{model}", "--model", "odd/review.toml", "ODACHI_MODEL"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the refusal does not name %q: %s", want, joined)
+		}
+	}
+}
+
+// TestAModelWithoutThePlaceholderIsRefused: a value that would replace nothing is
+// accepted and ignored in the other direction, which is the same lie.
+func TestAModelWithoutThePlaceholderIsRefused(t *testing.T) {
+	files := newFakeFiles()
+	shell := &fakeShell{stdout: answer("")}
+	opts := options()
+	opts.Model = "provider/name"
+
+	result := verify.Run(opts, files, fakeGit{tree: tree}, shell)
+
+	if result.Code != verify.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked", result.Code)
+	}
+	if shell.calls != 0 {
+		t.Errorf("the shell ran %d times with a model nothing would use", shell.calls)
+	}
+	joined := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"provider/name", "{model}"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the refusal does not name %q: %s", want, joined)
+		}
+	}
+}
+
+// TestAModelWithoutACommandIsRefused: --model only means something with --exec, so
+// the line says which flag gives it meaning instead of printing a prompt nobody
+// asked for.
+func TestAModelWithoutACommandIsRefused(t *testing.T) {
+	files := newFakeFiles()
+	shell := &fakeShell{}
+	opts := options()
+	opts.Exec = ""
+	opts.Model = "provider/name"
+
+	result := verify.Run(opts, files, fakeGit{tree: tree}, shell)
+
+	if result.Code != verify.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked", result.Code)
+	}
+	if shell.calls != 0 {
+		t.Errorf("the shell ran %d times", shell.calls)
+	}
+	if !strings.Contains(strings.Join(result.Lines, "\n"), "--exec") {
+		t.Errorf("the refusal does not name --exec: %v", result.Lines)
+	}
+}
+
+// TestAModelThatLooksLikeShellCodeIsRefused: the identity goes inside a command
+// line, so it obeys the identifier rule a lens model obeys.
+func TestAModelThatLooksLikeShellCodeIsRefused(t *testing.T) {
+	files := newFakeFiles()
+	shell := &fakeShell{stdout: answer("")}
+	opts := options()
+	opts.Exec = "agent {model}"
+	opts.Model = "x; rm -rf ~"
+
+	result := verify.Run(opts, files, fakeGit{tree: tree}, shell)
+
+	if result.Code != verify.CodeBlocked {
+		t.Fatalf("Code = %d, want blocked", result.Code)
+	}
+	if shell.calls != 0 {
+		t.Errorf("the shell ran %d times with a model that is not an identifier", shell.calls)
+	}
+}
+
+// TestTheModelNeverEntersThePrompt: the question is the same bytes whoever
+// answers it, so naming a model cannot change what the verifier is asked.
+func TestTheModelNeverEntersThePrompt(t *testing.T) {
+	named := options()
+	named.Exec = "agent --model {model} {prompt}"
+	named.Model = "provider/name"
+	plain := named
+	plain.Model = ""
+
+	if withModel := verify.Prompt(named, tree); withModel != verify.Prompt(plain, tree) {
+		t.Errorf("the model changed the prompt:\n%s\nwant:\n%s", withModel, verify.Prompt(plain, tree))
+	}
+}
+
+// TestWithoutDeclaredRisksThePromptIsStillPrinted: a feature that declared no risk
 // asks for no verification, and the prompt says so instead of running anyway.
 func TestWithoutDeclaredRisksThePromptIsStillPrinted(t *testing.T) {
 	files := newFakeFiles()

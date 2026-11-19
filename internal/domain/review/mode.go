@@ -21,12 +21,17 @@ const (
 )
 
 // ProjectConfig is what odd/review.toml holds: the switch, optionally the model
-// that judges each lens, the biggest prompt this project pays for, and how much
-// evidence `odachi clean` keeps. A lens without an entry is judged by the
-// session's model, which is what the file meant before this table existed.
+// that judges each lens, the model `odachi verify` runs with, the biggest prompt
+// this project pays for, and how much evidence `odachi clean` keeps. A lens
+// without an entry is judged by the session's model, which is what the file meant
+// before this table existed.
 type ProjectConfig struct {
 	Mode   string
 	Lenses map[string]string
+	// Verify is the model the verifier command receives: the project's choice of
+	// who answers. Empty means the key was never written, and the session's model
+	// is the last resort.
+	Verify string
 	// MaxPromptKB is the largest prompt size, in kilobytes, this project will
 	// spend a reviewer on. Zero means no limit: a file that never wrote the key
 	// reviews as it always did.

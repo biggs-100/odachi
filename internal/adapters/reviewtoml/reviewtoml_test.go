@@ -1,11 +1,13 @@
 package reviewtoml_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/domain/review"
+	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
 // TestDecodeReadsTheSwitch: the one key the file carries, normalized by the
@@ -105,6 +107,121 @@ func TestDecodeRefusesABrokenLensTable(t *testing.T) {
 				t.Fatal("Decode accepted a broken lens table")
 			}
 		})
+	}
+}
+
+// TestDecodeReadsTheVerifierModel: the file may name the model `odachi verify`
+// runs with, as one key beside the switch. A project that never wrote it reads as
+// no choice of its own, and the session's model stays the last resort.
+func TestDecodeReadsTheVerifierModel(t *testing.T) {
+	cases := []struct {
+		name string
+		data string
+		want string
+	}{
+		{name: "absent", data: "mode = \"on\"\n", want: ""},
+		{name: "declared", data: "mode = \"on\"\nverify = \"openai/gpt-5#high\"\n", want: "openai/gpt-5#high"},
+		{name: "surrounding space", data: "mode = \"on\"\nverify = \"  cheap/model  \"\n", want: "cheap/model"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := reviewtoml.Decode([]byte(c.data))
+			if err != nil {
+				t.Fatalf("Decode(%q) = %v", c.data, err)
+			}
+			if got.Verify != c.want {
+				t.Errorf("Verify = %q, want %q", got.Verify, c.want)
+			}
+		})
+	}
+}
+
+// TestDecodeRefusesABrokenVerifierModel: the value replaces {model} inside the
+// verifier's command, so it obeys the same rule a lens model obeys -an identifier,
+// not shell code- and a line with no value is refused saying what to write.
+func TestDecodeRefusesABrokenVerifierModel(t *testing.T) {
+	cases := map[string]string{
+		"empty":        "mode = \"on\"\nverify = \"\"\n",
+		"blank":        "mode = \"on\"\nverify = \"   \"\n",
+		"space inside": "mode = \"on\"\nverify = \"a b\"\n",
+		"shell code":   "mode = \"on\"\nverify = \"x; rm -rf ~\"\n",
+		"not a string": "mode = \"on\"\nverify = 3\n",
+	}
+
+	for name, data := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := reviewtoml.Decode([]byte(data))
+			if err == nil {
+				t.Fatal("Decode accepted a verifier model that cannot be one")
+			}
+			if !strings.Contains(err.Error(), "verify") {
+				t.Errorf("error = %q, want the key named", err)
+			}
+		})
+	}
+
+	for _, data := range []string{"mode = \"on\"\nverify = \"\"\n", "mode = \"on\"\nverify = \"   \"\n"} {
+		_, err := reviewtoml.Decode([]byte(data))
+		if err == nil || !strings.Contains(err.Error(), "provider/model") {
+			t.Errorf("Decode(%q) = %v, want the message to say what to write", data, err)
+		}
+	}
+}
+
+// TestRenderWritesTheVerifierModelOnlyWhenItIsDeclared: the line is the project's
+// choice, it sits above the tables, and it survives the round trip. A file that
+// never chose it carries the same bytes it did before the key existed, which the
+// test below pins.
+func TestRenderWritesTheVerifierModelOnlyWhenItIsDeclared(t *testing.T) {
+	rendered, err := reviewtoml.Render(review.ProjectConfig{
+		Mode:   review.ModeOn,
+		Verify: "cheap/model",
+		Lenses: map[string]string{"risk": "sharp/model"},
+	})
+	if err != nil {
+		t.Fatalf("Render = %v", err)
+	}
+	if !strings.Contains(string(rendered), `verify = "cheap/model"`) {
+		t.Fatalf("Render =\n%s\nwant the verifier model written", rendered)
+	}
+	line := strings.Index(string(rendered), "verify = ")
+	table := strings.Index(string(rendered), "[lenses]")
+	if line < 0 || table < 0 || line > table {
+		t.Errorf("Render =\n%s\nwant the verify line above the lens table", rendered)
+	}
+
+	back, err := reviewtoml.Decode(rendered)
+	if err != nil {
+		t.Fatalf("Decode(Render(x)) = %v", err)
+	}
+	if back.Verify != "cheap/model" || back.Lenses["risk"] != "sharp/model" {
+		t.Errorf("the round trip kept %q and %v, want both choices", back.Verify, back.Lenses)
+	}
+}
+
+// TestRenderWithoutAVerifierModelKeepsTheSameBytes: the key is optional, and a
+// project that never declared it must not gain a line from this binary. The pin is
+// the canonical file itself, so any edit to it moves here on purpose.
+func TestRenderWithoutAVerifierModelKeepsTheSameBytes(t *testing.T) {
+	plain, err := reviewtoml.Render(review.ProjectConfig{Mode: review.ModeOn})
+	if err != nil {
+		t.Fatalf("Render = %v", err)
+	}
+
+	want := strings.Join([]string{
+		"# odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken",
+		"schema = " + strconv.Itoa(schema.Current),
+		"# odachi: the review is the human's decision; on asks for it at the close and check says so, off leaves it silent, and --require-review refuses",
+		`mode = "on"`,
+		"# odachi clean --apply keeps this many review records -the newest trees- and this many prompts",
+		"keep_verdicts = " + strconv.Itoa(review.DefaultKeepVerdicts),
+		"keep_prompts = " + strconv.Itoa(review.DefaultKeepPrompts),
+		"",
+	}, "\n")
+
+	if string(plain) != want {
+		t.Errorf("Render =\n%q\nwant the file unchanged by the new key:\n%q", plain, want)
 	}
 }
 

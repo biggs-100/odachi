@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
+	reviewapp "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	verifyapp "github.com/biggs-100/odachi/internal/app/verify"
@@ -24,11 +25,13 @@ func runVerify(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 
 	var (
-		execFlag string
-		timeout  int
+		execFlag  string
+		modelFlag string
+		timeout   int
 	)
 
 	flags.StringVar(&execFlag, "exec", "", "run this command with the prompt on stdin (and {prompt} as a path to it) and store the record it answers")
+	flags.StringVar(&modelFlag, "model", "", "model that replaces {model} in --exec (default: the verify key in odd/review.toml, or the session's)")
 	flags.IntVar(&timeout, "timeout", verifyapp.DefaultTimeout, "seconds the verifier may take")
 
 	if err := flags.Parse(args); err != nil {
@@ -56,6 +59,16 @@ func runVerify(dir string, args []string, stdout, stderr io.Writer) int {
 		Idle:        shellcmd.IdleTimeout,
 	}
 
+	// The verifier's model is resolved here, where every other choice an option
+	// carries is read: the flag, then the project's file, then the session. The
+	// verb receives one identity and never asks which of the three answered.
+	model, err := verifyModel(dir, execFlag, modelFlag)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
+	opts.Model = model
+
 	// The feature's own words. A project with no task document has nothing to
 	// verify, and the verb says so instead of composing a prompt about nothing.
 	current, err := tasks.Current(osFiles{}, dir)
@@ -76,6 +89,28 @@ func runVerify(dir string, args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(result.Message))
 	}
 	return result.Code
+}
+
+// verifyModel resolves the identity the verifier command runs with: the flag
+// wins, the project's file comes next, and the session's model is the last resort.
+// The bare form asks nobody, so it pays no probe and reads no file; only a typed
+// --model is kept, because the verb refuses a model that would change nothing.
+func verifyModel(dir, execFlag, name string) (string, error) {
+	model := strings.TrimSpace(name)
+	if strings.TrimSpace(execFlag) == "" {
+		return model, nil
+	}
+	if model == "" {
+		config, err := reviewapp.Config(dir, osFiles{}, reviewModeCodec{})
+		if err != nil {
+			return "", err
+		}
+		model = strings.TrimSpace(config.Verify)
+	}
+	if model == "" && strings.Contains(execFlag, verifyapp.ModelToken) {
+		model = hostModel{}.Model(dir)
+	}
+	return model, nil
 }
 
 // firstRequirement is R1 when the document carries it, and the first requirement
