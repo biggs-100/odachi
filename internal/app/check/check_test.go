@@ -53,6 +53,10 @@ type fakeFiles struct {
 	// denyRead does the same for a read, so a witness that cannot be read is a
 	// permission problem and not a file that is simply not there.
 	denyRead func(path string) error
+	// denyExists does the same for the existence question, so a store nobody can
+	// look at is a permission problem and not an empty store: the two answers a
+	// close must never confuse (0332).
+	denyExists func(path string) error
 }
 
 func newFakeFiles(seed map[string]string) *fakeFiles {
@@ -72,6 +76,11 @@ func newFakeFiles(seed map[string]string) *fakeFiles {
 func (f *fakeFiles) Exists(path string) (bool, error) {
 	if f.err != nil {
 		return false, f.err
+	}
+	if f.denyExists != nil {
+		if err := f.denyExists(path); err != nil {
+			return false, err
+		}
 	}
 	_, ok := f.files[path]
 	return ok, nil

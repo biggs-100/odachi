@@ -96,6 +96,15 @@ const (
 // shows what a changes_requested verdict says.
 const nextReview = "odachi review"
 
+// nextStore is the continuation for a store nobody could look at. No verb repairs
+// a filesystem, so the door is the one that asks the question again once a person
+// has looked: `odachi verify` would write into the store nobody can read, and
+// `odachi start` writes no record at all. `odachi doctor` was the first answer and
+// it is wrong: its seventeen checks never open `.git/odachi/verifications`, so it
+// would print healthy lines and leave the block standing -the dead end the gate
+// refuses to name (0332).
+const nextStore = "odachi check"
+
 // Growth is the store's accounting, answered by the verb that owns the policy.
 // check never deletes: the switch is the human's, and a close only names what it
 // would free.
@@ -502,6 +511,14 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	r.mutationRow(&state, feature, proofPath)
 
 	verdict := gate.Evaluate(state)
+	// A store this close could not look at is not a tree with "no verification it
+	// can read": the sentence says the store could not be looked at, and the door is
+	// the verb that reports the health of a clone. The row keeps its reason, so a
+	// machine reads the same question it always did; only the words a human acts on
+	// change (0332).
+	if r.storeNote != "" && verdict.Reason == gate.ReasonVerifyMissing {
+		verdict.Message, verdict.Next = r.storeNote, nextStore
+	}
 	// The verification is evidence from the clone, like the verdict: a clean
 	// checkout cannot carry the record, so a gate that refused it would make every
 	// pull request red -the review learned the same in ADR 0043 (0317). A missing
@@ -606,6 +623,10 @@ type runner struct {
 	// unreadable, unsigned or refuted, and only `--require-review` makes it stop
 	// the tree (0317).
 	verifyNote string
+	// storeNote is what the close says when it could not look at the store at all:
+	// the sentence the verify row prints instead of claiming there is no record it
+	// can read, and the reason its door is `odachi check` (0332).
+	storeNote string
 	// coverNote names the requirements the closing proof does not declare. It is a
 	// note and never a block: the line is a claim the agent wrote, not evidence the
 	// command produced.
@@ -1740,6 +1761,13 @@ func (r *runner) verifierLines(feature *tasks.Document, owed bool) int {
 // neither. A probe that cannot answer is not evidence of absence either -the close
 // keeps the row that names the record instead of paying a slice for one nobody
 // looked at- (0331).
+//
+// The two ways a probe cannot answer -the tree's name cannot address a record, and
+// the existence question came back as an error- are the same answer, and it is the
+// same one: found, so no slice. Answering them in opposite directions is how a store
+// nobody can read fired the number while a tree nobody could name kept the row; and
+// silence about the store is the second half of the defect, which storeNote carries
+// (0332).
 func (r *runner) verification(asking []string, owed bool) (missing, refuted []string, found bool) {
 	if !owed {
 		return nil, nil, false
@@ -1747,11 +1775,13 @@ func (r *runner) verification(asking []string, owed bool) (missing, refuted []st
 
 	rel, err := verifydomain.Path(r.tree)
 	if err != nil {
-		return asking, nil, false
+		r.storeNote = "the store could not be looked at, so this tree's verification was not read: " + oneLine(err.Error()) + "; check the store's permissions"
+		return asking, nil, true
 	}
 	path := filepath.Join(r.opts.Store, filepath.FromSlash(rel))
 	exists, err := r.files.Exists(path)
 	if err != nil {
+		r.storeNote = "the store could not be looked at, so this tree's verification was not read: " + oneLine(err.Error()) + "; check the store's permissions"
 		return asking, nil, true
 	}
 	if !exists {
