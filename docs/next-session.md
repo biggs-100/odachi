@@ -1,61 +1,58 @@
 # Next session
 
-Written after 0335, the cycle that made the catalog say what it can prove.
+Written after 0336, the cycle that made the wizard a hub.
 
 ## Where the project is
 
-- **0335 closed.** Four debts of one class, paid together: the handover says what the
-  400 actually measured (git detects a move; the 521 lines that dominated 0334 were a
-  test file rewritten past the similarity threshold), the citation guard pins all 24
-  `Source:` lines of `container-craft` in `skills/container_craft.sources` and fails in
-  both directions, the docker-socket quote has one owner (OWASP Docker Security Cheat
-  Sheet, Rule #1) with the page that repeated it naming that page, and
-  `the-failures.md` closes saying how each row is sourced instead of promising that all
-  of them are documented.
-- **`v0.53.0` carries it**, a patch: documents and one guard, and nothing a consumer
-  reads changed shape. The tag lands on the merge of its release pull request and this
-  machine is reinstalled from the release it names.
-- The proof of the closing tree is `proof/0335-el-catalogo-deja.txt`. The verdict judged
-  the tree before this note was rewritten (`cbcda09`): its one finding was this very note,
-  and the delta between the two trees is the text you are reading. The verifier's record
-  is the one that names the closing tree.
+- **0336 closed.** `odachi tui` opens on the state plus two sections -`instalar y
+  configurar`, `perfil`- and `esc` returns to the menu from either one. Navigation is a
+  table (forward, back, whether the screen exists for this run), so a new screen is a
+  row. The profile section edits the six axes of the profile in force through `level.Set`,
+  which backs the file up, leaves the voice alone and is silent when the value already
+  holds.
+- **`v0.54.0` carries it**, a minor because the first screen and its keys changed: the tag
+  lands on the merge of its release pull request, sixteen signed and attested assets, and
+  this machine reinstalled from the release it names.
+- The proof of the closing tree is `proof/0336-odachi-tui-abre.txt`, and the verdict and
+  the verification record both name `367bb50`.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
-  total: 333 features · 836 steps done of 836 · 0 open questions
+  total: 334 features · 840 steps done of 840 · 0 open questions
 
 ## What waits for a decision
 
+- **The 400 cannot see a plan written in advance.** 0336 closed at 1012 authored lines:
+  the four steps were planned before the code existed, so `plan`'s refusal -which weighs
+  the candidate already on disk- never had a moment to fire. The number still bounds the
+  feature that grows step by step; a feature planned whole escapes it. The decision is
+  whether the close's own note (which fired here) is the only answer, or a step's close
+  should name the accumulated number too.
 - **The stderr test's budget rode in on a skill feature.** Ten seconds measured the
   machine; sixty keeps the defect visible. The reviewer is right that it deserved a step
   of its own.
-- **The second vendor.** The verdict of 0335 was written by the model that produced its
-  proof, and `check` says so. The doctor's check 17 still counts `1 of 4`.
+- **The second vendor.** The verdicts of 0335 and 0336 were written by the model that
+  produced their proofs, and `check` says so on every close. The doctor's check 17 still
+  counts `1 of 4`.
 - **Test adequacy has no evidence** (debt 6): nothing measures changed-line coverage or
   mutation on the candidate.
-- **The 400's own datapoint is still unmeasured.** 0333 closed at 868 authored lines and
-  a verifier read it in about two minutes -the number the limit was never measured
-  against-. The move question is closed: the count stays, and the reason is in the
-  section above.
 
 ## What this cycle learned
 
-- **A guard that asks "is there one?" does not protect a set.** The citation test asked
-  each page whether it kept *a* `Source:` line, so a page that lost one of eight stayed
-  green. The fix is a pin of every line and both directions: a line the page lost, and a
-  line nobody pinned.
-- **A citation with two owners is a citation nobody can check.** The same sentence was
-  attributed to OWASP on one page and to Docker's docs on another; only one carries it,
-  and the other now points at that one instead of inventing a source.
-- **A handover is part of the close, not a note after it.** The review of this feature
-  found that it had corrected the 400 paragraph and left the header, the totals and three
-  paid debts in the same file. `odachi doctor` recomputes that totals line, and the next
-  session would have re-opened work already done.
-- **A number prevents at the door before the work, not at the one that signs it.** At a
-  step's close the commit exists and the work is paid; the only place the size can stop
-  more of it is before the next step is written (0334).
-- **A move is not the whole number, and a rewrite is.** Git already recognizes a rename;
-  a file rewritten past the similarity threshold pays for both sides because a reader
-  reads both.
+- **A guard can be worse than the defect it guards.** The review found that the hub let
+  one section apply the voice while another edited the profile, so an axis written by
+  hand was reverted in silence. The first fix compared the chosen voice against the one
+  the wizard found: choosing a voice disarmed it. The fix that survived has no guard -
+  the axes written in this run are recorded per write and re-applied after the voice, so
+  the explicit edit is the last word.
+- **A hub creates an order between sections, and the order is a contract.** The voice
+  operation rewrites the whole profile from the builtin; anything explicit has to be
+  re-applied after it, and a write that landed before a failure is still on disk.
+- **The third correction needs its reason in the record** (0296). It was paid here with
+  `--because`, and the reason is what a reader sees beside the verdict.
+- **A `-q` commit that fails looks like a commit.** The hook refused once, the rest of a
+  chained command ran, and the proof was taken on the staged bytes; nothing was lost
+  because the index tree was the one the records named. Check `git log`, not the last
+  exit code of a chain.
 
 ## The commands that work
 
@@ -66,9 +63,15 @@ odachi check --run "go test ./..." --timeout 1800
 
 ```sh
 # the reviewer: a wrapper the AGENT composes, not a command the human keeps.
-# It runs the host CLI with the odachi-reviewer agent, cuts the last JSON object
-# with cut.ps1, and the verdict lands in .git/odachi/reviews/<tree>.json
+# It runs the host CLI with the odachi-reviewer agent and cuts the last JSON object
+# with cut.ps1; the verdict lands in .git/odachi/reviews/<tree>.json
 odachi review --base <feature base> --lens <lens> --model <provider/model> \
+  --exec '"%TEMP%\odachi-rev2.bat" {model} {prompt} "%TEMP%\rev-out.txt" "%TEMP%\rev.json"'
+```
+
+```sh
+# the correction of a verdict: only what moved, and a third round needs --because
+odachi review --since <tree> --because "<why this round exists>" --model <provider/model> \
   --exec '"%TEMP%\odachi-rev2.bat" {model} {prompt} "%TEMP%\rev-out.txt" "%TEMP%\rev.json"'
 ```
 
@@ -94,8 +97,8 @@ git fetch origin && git switch main && git reset --hard origin/main
 ## The limits to remember
 
 - **The reviewer's clock is 600s and the verifier's is 1800s**, with a 120-second
-  silence budget on both. A verifier that streams is killed by the deadline; one that
-  goes quiet is killed by silence, and since 0330 the run says which.
+  silence budget on both. A reviewer reading a large candidate can be cut at 600s and
+  writes nothing; the run says which clock stopped it.
 - **A feature's base is a commit the remote has.** A squash erases a branch-only base,
   and CI answers `bad object`.
 - **The fence is read from the base**: a policy change lands first, in its own pull
@@ -110,7 +113,7 @@ git fetch origin && git switch main && git reset --hard origin/main
   folder before asking it anything about a change the tree makes.
 - **A note written after `check --run` voids the proof**, because it moves the task
   document. The notes go before the proof.
-- **`windows-latest` is the slow gate**: today 6m04s against 1m18s for ubuntu and 5m25s
+- **`windows-latest` is the slow gate**: today 6m49s against 1m01s for ubuntu and 5m13s
   for macOS.
 - **One heavy gate per machine**: `go test ./...` takes about twelve minutes here, twice
   per proof.
@@ -121,7 +124,7 @@ git fetch origin && git switch main && git reset --hard origin/main
 
 ## The debts this cycle named, in one place
 
-0335 paid what it opened with and left the catalogue's three paid rows out of this list.
-What remains is the section above: a test that measures the runner, one model judging in
-four costumes, no measurement of test adequacy, and the 868-line datapoint nobody has
-answered.
+0336 paid what it opened with: the review's two causal findings and the missing test of
+the write path. What remains is the section above -a limit that cannot see a plan written
+in advance, a test that measures the runner, one model judging in four costumes, and no
+measurement of test adequacy.

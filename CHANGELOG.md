@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.54.0 - 2026-11-19
+
 - **The wizard is a hub, and the profile has an editor.** `odachi tui` used to be one pass -state, choices, apply, gone-, so changing one thing meant rerunning everything. It now opens on the state plus two sections (`instalar y configurar`, `perfil`) and `esc` returns to the menu from either one. The profile section lists the six axes of the profile in force with the values each may take, edits one at a time, and writes nothing until its apply row: `level.Set` backs the file up and leaves the voice alone, because the name did not change. Navigation is a table now -forward, back, and whether a screen exists for this run-, so the screens a run skips are walked past in both directions instead of being written twice. Minor, because `odachi tui` opens on a different screen and its keys mean something else (0336).
 
 ## v0.53.0 - 2026-11-19
