@@ -14,8 +14,10 @@ Written after 0335, the cycle that made the catalog say what it can prove.
   of them are documented.
 - **Not released when this note was written.** The next tag carries it: documents and
   one guard, so a patch.
-- The proof of the closing tree is `proof/0335-el-catalogo-deja.txt`, and the verdict
-  names the same tree.
+- The proof of the closing tree is `proof/0335-el-catalogo-deja.txt`. The verdict judged
+  the tree before this note was rewritten (`cbcda09`): its one finding was this very note,
+  and the delta between the two trees is the text you are reading. The verifier's record
+  is the one that names the closing tree.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
   total: 333 features · 836 steps done of 836 · 0 open questions
