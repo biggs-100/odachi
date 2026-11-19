@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.52.0 - 2026-11-19
+
 - **The slice refuses a step, not only a close.** The limit was measured once, at the close, where the only thing it could do was refuse a feature that was already built: 0333 closed at 868 authored lines and the verifier read it in two minutes. The measurement now also happens where it can prevent the next step -`odachi plan "<text>"` weighs the candidate from the feature's base before the step is written, and past 400 authored lines it refuses with the number it read, the limit one feature carries and the door, `odachi start`-. The count moves to `internal/domain/authorship`, so the close and the plan read one number from one diff; a document with no base, a caller with no repository and a light feature keep the answers they had, and a diff nobody can read is named in the line instead of passing as a candidate under the limit. The close keeps its own refusal as the backstop for a step that is itself too large, which no door can see in advance. Minor, because a plan that used to open can now be refused (0334).
 
 ## v0.51.2 - 2026-11-19
