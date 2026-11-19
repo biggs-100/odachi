@@ -386,8 +386,36 @@ func TestAStoreNobodyCanProbeIsNamedAndDoesNotFireTheSlice(t *testing.T) {
 	if !strings.Contains(result.Message, "permission denied") {
 		t.Errorf("the refusal does not carry what the store answered: %s", result.Message)
 	}
-	if !strings.Contains(result.Next, "odachi doctor") {
-		t.Errorf("next = %q, want the verb that reports why a clone's store cannot be read", result.Next)
+	if !strings.Contains(result.Next, "odachi check") {
+		t.Errorf("next = %q, want the command that asks the question again once a person has looked at the store", result.Next)
+	}
+}
+
+// TestTheStoreNobodyCanProbeIsNamedOnTheOrdinaryClose: the requirement names the
+// close a person runs, which is the one without --require-review. The sentence the
+// store earns is written before the softening, and the softening rebuilds its note
+// from the verdict it already had, so that order is what makes the note true. A
+// test that only runs with --require-review never sees it (0332).
+func TestTheStoreNobodyCanProbeIsNamedOnTheOrdinaryClose(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	files.denyExists = func(path string) error {
+		if filepath.ToSlash(path) == filepath.ToSlash(verifyPath(currentTree)) {
+			return errors.New("permission denied")
+		}
+		return nil
+	}
+
+	result := run(t, files, git, check.Options{NoReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0: a store nobody could probe stopped an ordinary close (%s)", result.Code, result.Message)
+	}
+	lines := strings.Join(result.Lines, "\n")
+	for _, want := range []string{"verify:", "store could not be looked at", "permission denied", "odachi check"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("the note does not name %q:\n%s", want, lines)
+		}
 	}
 }
 
@@ -413,8 +441,8 @@ func TestATreeThatCannotNameARecordAgreesWithAnUnprobeableStore(t *testing.T) {
 	if !strings.Contains(result.Message, "must be a hash") {
 		t.Errorf("the refusal does not carry what could not answer: %s", result.Message)
 	}
-	if !strings.Contains(result.Next, "odachi doctor") {
-		t.Errorf("next = %q, want the verb that reports the health of the clone", result.Next)
+	if !strings.Contains(result.Next, "odachi check") {
+		t.Errorf("next = %q, want the command that asks the question again once a person has looked at the store", result.Next)
 	}
 }
 

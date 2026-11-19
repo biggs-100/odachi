@@ -96,12 +96,14 @@ const (
 // shows what a changes_requested verdict says.
 const nextReview = "odachi review"
 
-// nextStore is the continuation for a store nobody could look at. `odachi doctor`
-// reports the health of a clone -the store, its permissions, what cannot be read-,
-// which is the question here. `odachi verify` is the door for a missing record and
-// would write into the same store nobody can read; `odachi start` writes no record
-// at all (0332).
-const nextStore = "odachi doctor"
+// nextStore is the continuation for a store nobody could look at. No verb repairs
+// a filesystem, so the door is the one that asks the question again once a person
+// has looked: `odachi verify` would write into the store nobody can read, and
+// `odachi start` writes no record at all. `odachi doctor` was the first answer and
+// it is wrong: its seventeen checks never open `.git/odachi/verifications`, so it
+// would print healthy lines and leave the block standing -the dead end the gate
+// refuses to name (0332).
+const nextStore = "odachi check"
 
 // Growth is the store's accounting, answered by the verb that owns the policy.
 // check never deletes: the switch is the human's, and a close only names what it
@@ -1773,13 +1775,13 @@ func (r *runner) verification(asking []string, owed bool) (missing, refuted []st
 
 	rel, err := verifydomain.Path(r.tree)
 	if err != nil {
-		r.storeNote = "the store could not be looked at, so this tree's verification was not read: " + oneLine(err.Error())
+		r.storeNote = "the store could not be looked at, so this tree's verification was not read: " + oneLine(err.Error()) + "; check the store's permissions"
 		return asking, nil, true
 	}
 	path := filepath.Join(r.opts.Store, filepath.FromSlash(rel))
 	exists, err := r.files.Exists(path)
 	if err != nil {
-		r.storeNote = "the store could not be looked at, so this tree's verification was not read: " + oneLine(err.Error())
+		r.storeNote = "the store could not be looked at, so this tree's verification was not read: " + oneLine(err.Error()) + "; check the store's permissions"
 		return asking, nil, true
 	}
 	if !exists {
