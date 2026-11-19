@@ -1271,3 +1271,24 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que la navegacion puede ser un dato y no una cadena de ifs.
+
+## 0337 · el-tui-elige
+
+## What must exist
+- el tui elige el modelo del verificador y el de cada cliente, y lo escribe en la configuracion que ese cliente lee; la ADR 0051 se reemplaza
+
+## Done when
+- el tui muestra y cambia el modelo del verificador y el de cada cliente instalado, y aplicar escribe cada uno en su archivo
+- un modelo que no se toco deja su archivo byte a byte identico, y el archivo ajeno conserva cada clave que ya tenia
+- odachi verify usa el modelo declarado y lo sustituye en {model}
+- la ADR 0053 reemplaza la 0051 y dice por que el selector por cliente vive en el tui
+
+## Not included (first version)
+- los campos declarados de odd/review.toml: eso es la feature siguiente
+- no se descarga ni se instala el binario de ningun cliente
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que un archivo ajeno se edita sin perder lo que ya tenia.
