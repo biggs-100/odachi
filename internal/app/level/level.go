@@ -91,6 +91,67 @@ func Run(opts Options, files Files) Result {
 	return facts(opts.Current, count(docs))
 }
 
+// SetOptions is one field change: the axis, the value, and the profile the project
+// runs under today. It is what the configuration TUI applies when the human edits
+// one row and confirms (0336).
+type SetOptions struct {
+	Dir     string
+	Current profile.Profile
+	Field   string
+	Value   string
+}
+
+// Set writes one axis of the human's profile and leaves every other field as it
+// is: the editor changes one row, and a profile that came from a builtin stays
+// what it was everywhere else. The voice follows the profile's name and the name
+// does not change, so AGENTS.md is not touched; a value already in force writes
+// nothing, the way --to is silent on a second run; and the file is copied aside
+// before it is replaced (0336).
+func Set(opts SetOptions, files Files) Result {
+	if opts.Dir == "" {
+		opts.Dir = "."
+	}
+
+	next, err := profile.Set(opts.Current, opts.Field, opts.Value)
+	if err != nil {
+		return blocked(oneLine(err.Error()) + "; run odachi tui and choose the field from the list")
+	}
+
+	field := strings.TrimSpace(opts.Field)
+	if next == opts.Current {
+		message := fmt.Sprintf("the profile already says %s = %s; I wrote nothing", field, shown(opts.Value))
+		return Result{Code: CodeOK, Message: message, Profile: opts.Current.Name}
+	}
+
+	path := filepath.Join(opts.Dir, profileFile)
+	backup := ""
+	exists, err := files.Exists(path)
+	if err != nil {
+		return blocked(fmt.Sprintf("could not check %s: %s; check the permissions and run odachi tui again",
+			profileFile, oneLine(err.Error())))
+	}
+	if exists {
+		// The human's file is copied aside before it is replaced, always.
+		backup, err = files.Backup(path)
+		if err != nil {
+			return blocked(fmt.Sprintf("could not back up %s before rewriting it: %s; check the permissions and run odachi tui again",
+				profileFile, oneLine(err.Error())))
+		}
+	}
+	if err := files.Write(path, []byte(start.RenderProfile(next))); err != nil {
+		return blocked(fmt.Sprintf("could not write %s: %s; check the permissions and run odachi tui again",
+			profileFile, oneLine(err.Error())))
+	}
+
+	lines := make([]string, 0, 2)
+	message := fmt.Sprintf("done: %s = %s in %s; the block voice is unchanged", field, shown(opts.Value), profileFile)
+	lines = append(lines, message)
+	if backup != "" {
+		lines = append(lines, "the previous profile is at "+relative(opts.Dir, backup))
+	}
+	return Result{Code: CodeOK, Message: message, Lines: lines, Profile: next.Name, Files: []string{profileFile}}
+}
+
 // evidence is what the project shows: the four numbers the tour of the tool
 // reports and the two the graduation is made of.
 type evidence struct{ features, answers, changes, craft, open int }

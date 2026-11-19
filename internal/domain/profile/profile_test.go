@@ -286,3 +286,73 @@ func fieldValue(p profile.Profile, field string) string {
 		panic("unknown enum field: " + field)
 	}
 }
+
+// TestAxesNamesEveryFieldTheFileMayCarry: the editor renders the axes from here,
+// so a field the table declares but this list forgets is a field no screen can
+// reach. The order is the one odd/profile.toml prints (0336).
+func TestAxesNamesEveryFieldTheFileMayCarry(t *testing.T) {
+	axes := profile.Axes(profile.Builtin()["novato"])
+
+	want := []string{"brief_source", "questions", "assumptions", "output", "proof", "explain"}
+	if len(axes) != len(want) {
+		t.Fatalf("Axes = %d fields, want %d: %v", len(axes), len(want), axes)
+	}
+	for i, axis := range axes {
+		if axis.Name != want[i] {
+			t.Errorf("Axes[%d] = %q, want %q", i, axis.Name, want[i])
+		}
+		if len(axis.Allowed) == 0 {
+			t.Errorf("%s declares no allowed value, so a screen has nothing to offer", axis.Name)
+		}
+	}
+	if axes[3].Value != "line" {
+		t.Errorf("output = %q, want the value the profile carries", axes[3].Value)
+	}
+}
+
+// TestSetChangesOneFieldAndLeavesTheRest: an editor changes one axis; a profile
+// that came from a builtin stays what it was everywhere else (0336).
+func TestSetChangesOneFieldAndLeavesTheRest(t *testing.T) {
+	before := profile.Builtin()["novato"]
+
+	after, err := profile.Set(before, "output", "detail")
+	if err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+	if after.Output != "detail" {
+		t.Errorf("output = %q, want detail", after.Output)
+	}
+
+	before.Output = "detail"
+	if after != before {
+		t.Errorf("Set changed another field: %+v", after)
+	}
+}
+
+// TestSetRefusesAnAxisNobodyDeclares: a name the table does not carry is a typo,
+// and the error lists the names that exist (0336).
+func TestSetRefusesAnAxisNobodyDeclares(t *testing.T) {
+	_, err := profile.Set(profile.Builtin()["novato"], "tone", "loud")
+	if err == nil {
+		t.Fatal("Set accepted an axis nobody declares")
+	}
+	for _, want := range []string{"tone", "output", "questions"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %v does not name %s", err, want)
+		}
+	}
+}
+
+// TestSetRefusesAValueTheAxisDoesNotAllow: the allowed values are the contract,
+// and a screen must not be able to write one the parser rejects (0336).
+func TestSetRefusesAValueTheAxisDoesNotAllow(t *testing.T) {
+	_, err := profile.Set(profile.Builtin()["novato"], "output", "yaml")
+	if err == nil {
+		t.Fatal("Set accepted a value the axis does not allow")
+	}
+	for _, want := range []string{"output", "yaml", "line", "detail", "json"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %v does not name %s", err, want)
+		}
+	}
+}
