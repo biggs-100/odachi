@@ -323,6 +323,8 @@ type fakeRun struct {
 	review  string
 	models  map[string]string
 	fields  []string
+	axes    []profile.Axis
+	reRead  int
 }
 
 func (f *fakeRun) record(op string) error {
@@ -356,6 +358,11 @@ func (f *fakeRun) Models(models map[string]string) error {
 func (f *fakeRun) Field(field, value string) error {
 	f.fields = append(f.fields, field+"="+value)
 	return f.record("field")
+}
+
+func (f *fakeRun) Axes() ([]profile.Axis, error) {
+	f.reRead++
+	return f.axes, nil
 }
 
 // errTUI is the failure the fake operations return.
@@ -502,6 +509,36 @@ func TestTUIRunnerModelsWritesTheFile(t *testing.T) {
 	}
 	if !strings.Contains(string(stored), `reliability = "opencode-go/x"`) {
 		t.Errorf("the file does not carry the model:\n%s", stored)
+	}
+}
+
+// TestTUIRunnerFieldWritesTheProfile: the editor's apply row reaches level.Set over
+// a real project, and Axes reads the same file back: the two halves of the editor
+// are pinned together instead of only against a fake (0336).
+func TestTUIRunnerFieldWritesTheProfile(t *testing.T) {
+	dir := t.TempDir()
+	initRepo(t, dir)
+	r := newTUIRunner(dir)
+
+	if err := r.Field("output", "detail"); err != nil {
+		t.Fatalf("Field: %v", err)
+	}
+	stored, err := os.ReadFile(filepath.Join(dir, "odd", "profile.toml"))
+	if err != nil {
+		t.Fatalf("read odd/profile.toml: %v", err)
+	}
+	if !strings.Contains(strings.Join(strings.Fields(string(stored)), " "), `output = "detail"`) {
+		t.Errorf("the file does not carry the value:\n%s", stored)
+	}
+
+	axes, err := r.Axes()
+	if err != nil {
+		t.Fatalf("Axes: %v", err)
+	}
+	for _, axis := range axes {
+		if axis.Name == "output" && axis.Value != "detail" {
+			t.Errorf("Axes reads output = %q, want the value just written", axis.Value)
+		}
 	}
 }
 
@@ -783,7 +820,7 @@ func advance(t *testing.T, m tuiModel) tuiModel {
 // the model, esc leaves the section with the file untouched, and only the apply row
 // writes -one field at a time (0336).
 func TestTheProfileEditorWritesOnlyWhenApplied(t *testing.T) {
-	run := &fakeRun{}
+	run := &fakeRun{axes: profile.Axes(profile.Builtin()["novato"])}
 	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
 	m.run = run
 	m.menu = 1
@@ -824,6 +861,70 @@ func TestTheProfileEditorWritesOnlyWhenApplied(t *testing.T) {
 	}
 	if !strings.Contains(m.fieldMsg, "output=detail") {
 		t.Errorf("the apply line does not say what it wrote: %q", m.fieldMsg)
+	}
+}
+
+// TestTheEditorReadsTheProfileAgainOnEntry: the hub applies the voice in one
+// section and edits the profile in another, so the rows describe the file that
+// stands when the section opens, not the one the wizard read at the start (0336).
+func TestTheEditorReadsTheProfileAgainOnEntry(t *testing.T) {
+	axes := profile.Axes(profile.Builtin()["novato"])
+	for i := range axes {
+		if axes[i].Name == "output" {
+			axes[i].Value = "json"
+		}
+	}
+	run := &fakeRun{axes: axes}
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
+	m.run = run
+	m.menu = 1
+
+	m = advance(t, m)
+
+	if run.reRead != 1 {
+		t.Errorf("the section read the profile %d times, want one", run.reRead)
+	}
+	if got := m.value(m.state.Axes[3]); got != "json" {
+		t.Errorf("output reads %q, want the value the file carries now", got)
+	}
+}
+
+// TestTheExplicitEditsSurviveTheVoice: the voice op recomputes every field from the
+// builtin, whatever order the sections ran in, so an axis written in this run is
+// re-applied after it: the last word is the human's edit (0336).
+func TestTheExplicitEditsSurviveTheVoice(t *testing.T) {
+	run := &fakeRun{axes: profile.Axes(profile.Builtin()["novato"])}
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato", Review: review.ModeOff})
+	m.run = run
+	m.menu = 1
+	m = advance(t, m)
+
+	// The human edits one axis and applies it in the editor.
+	m.profileCursor = 3
+	m, _ = press(t, m, enterKey)
+	m, _ = press(t, m, downKey)
+	m, _ = press(t, m, enterKey)
+	m.profileCursor = len(m.state.Axes)
+	m, _ = press(t, m, enterKey)
+
+	// Then a voice is chosen and the install section applies: the voice rewrites
+	// the profile from the builtin, and the edit has to survive it.
+	run.calls = nil
+	run.fields = nil
+	m.state.Voice = "senior"
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+
+	voice := slices.Index(run.calls, "voice")
+	if voice < 0 {
+		t.Fatalf("the voice was not applied: %v", run.calls)
+	}
+	last := len(run.calls) - 1
+	if run.calls[last] != "field" || last < voice {
+		t.Fatalf("the edit was not re-applied after the voice: %v", run.calls)
+	}
+	if want := []string{"output=detail"}; !slices.Equal(run.fields, want) {
+		t.Errorf("fields = %v, want %v", run.fields, want)
 	}
 }
 

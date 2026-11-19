@@ -15,7 +15,7 @@ R1 · "odachi tui abre en un hub con menu y router declarativo, y desde ahi el h
 - [x] T1 · el perfil gana un escritor de un eje: level escribe el campo pedido y conserva los demas   R1 · tree:e71ea2561bd69301cc01174d68e738892b509678
 - [x] T2 · la navegacion del tui es una tabla declarativa y una prueba la recorre   R1 · tree:1a85ac208fd96faaa3bbfb07d918e1d5271a3e34
 - [x] T3 · el hub abre en un menu con instalar y perfil, y esc vuelve al menu desde cualquier seccion   R1 · tree:681bd9ddc390044a0340052ecdfff330ffbbba6c
-- [ ] T4 · el editor de perfil cambia un eje y el aplicar escribe el archivo con su backup   R1
+- [x] T4 · el editor de perfil cambia un eje y el aplicar escribe el archivo con su backup   R1 · tree:473768758dbc568e1adca6959c93e1e6ba8fd804
 
 ## History
 L1 · "odachi tui abre en un hub con menu y router declarativo, y desde ahi el humano edita los seis ejes del perfil, no solo su nombre"

@@ -229,12 +229,16 @@ type tuiModel struct {
 	pickCursor    int
 	pending       map[string]string
 	fieldMsg      string
-	editing       bool
-	buffer        string
-	editErr       string
-	run           configure.Runner
-	applied       bool
-	result        configure.Result
+	// edited is every axis the editor wrote in this run, by name: the voice op
+	// recomputes the whole profile from the builtin, so these are re-applied after
+	// it and an explicit edit is the last word (0336).
+	edited  map[string]string
+	editing bool
+	buffer  string
+	editErr string
+	run     configure.Runner
+	applied bool
+	result  configure.Result
 }
 
 // newTUIModel is the model a run starts with, positioned on what the project
@@ -257,6 +261,7 @@ func newTUIModel(state tuiState) tuiModel {
 		skills:  indexOf(tuiSkills, state.Skills),
 		voice:   indexOf(tuiVoices, state.Voice),
 		pending: map[string]string{},
+		edited:  map[string]string{},
 	}
 }
 
@@ -311,6 +316,13 @@ func (m tuiModel) next() (tea.Model, tea.Cmd) {
 	// menu is, and the table still says where each section starts (0336).
 	if m.step == stepState && m.menu == 1 {
 		m.step = stepProfile
+		// The hub applies the voice in one section and edits the profile in another:
+		// the rows are re-read on entry so they describe the file that stands (0336).
+		if m.run != nil {
+			if axes, err := m.run.Axes(); err == nil && len(axes) > 0 {
+				m.state.Axes = axes
+			}
+		}
 		return m, nil
 	}
 	m.step = m.forwardStep()
@@ -571,6 +583,9 @@ func (m tuiModel) applyProfile() (tea.Model, tea.Cmd) {
 		}
 		written = append(written, axis.Name+"="+value)
 		m.state.Axes = withAxisValue(m.state.Axes, axis.Name, value)
+		// Recorded per write, not after the loop: an axis that landed before a
+		// later failure is still on disk and has to be defended (0336).
+		m.edited[axis.Name] = value
 	}
 	m.pending = map[string]string{}
 	m.fieldMsg = "aplicado: " + strings.Join(written, ", ")
@@ -656,6 +671,28 @@ func (m tuiModel) apply() (tea.Model, tea.Cmd) {
 		LensModels: m.state.Models,
 		Project:    m.init,
 	}, m.run)
+	// The voice op recomputes every field from the builtin, whatever order the run
+	// took, so the axes the human wrote here are re-applied after it: an explicit
+	// edit is the last word, and a write that landed before a failure is defended
+	// too (0336).
+	for _, axis := range m.state.Axes {
+		value, ok := m.edited[axis.Name]
+		if !ok {
+			continue
+		}
+		err := m.run.Field(axis.Name, value)
+		step := configure.Step{
+			Operation: configure.Operation{ID: "field:" + axis.Name, Label: "reafirmar " + axis.Name + "=" + value},
+			Status:    configure.Done,
+			Err:       err,
+		}
+		if err != nil {
+			step.Status = configure.Failed
+			m.result.Code = configure.CodeBlocked
+			m.result.Message = step.Label + ": " + err.Error()
+		}
+		m.result.Steps = append(m.result.Steps, step)
+	}
 	m.applied = true
 	m.step = stepApply
 	return m, nil

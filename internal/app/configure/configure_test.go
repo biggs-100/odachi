@@ -7,6 +7,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/configure"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/review"
 )
 
@@ -290,6 +291,8 @@ func (f *fakeRunner) Models(models map[string]string) error {
 func (f *fakeRunner) Field(field, value string) error {
 	return f.record("field", field+"="+value)
 }
+
+func (f *fakeRunner) Axes() ([]profile.Axis, error) { return nil, nil }
 
 func (f *fakeRunner) ops() []string {
 	out := make([]string, 0, len(f.calls))
