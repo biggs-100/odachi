@@ -19,6 +19,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/clean"
 	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/authorship"
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/change"
 	"github.com/biggs-100/odachi/internal/domain/fence"
@@ -1746,7 +1747,7 @@ func (r *runner) verifierLines(feature *tasks.Document, owed bool) int {
 		// already name what cannot be read, and this one stays silent.
 		return 0
 	}
-	return authoredLines(diff)
+	return authorship.Lines(diff)
 }
 
 // verification is what an independent verifier left about this tree, or the reason
