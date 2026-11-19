@@ -21,12 +21,14 @@ Written after 0334, the cycle that moved the slice to the door where it can prev
 
 ## What waits for a decision
 
-- **The 400 counts a move as work twice, and this cycle paid it again.** 0334 closed at
-  772 authored lines while almost none of it was behaviour: `lines.go` and its fourteen
-  tests moved, and moving counts a line as both deleted and added. 0333 closed at 868
-  and the verifier read it in about two minutes. Two datapoints, one direction: the
-  number bounds movement, not the work a person reads. The open question is whether a
-  move should pay once, or not at all.
+- **The 400 was measured against a move, and the measurement cleared it.** 0334 closed
+  at 772 authored lines, and only 20 of them were the moved `lines.go`: git detects a
+  rename and charges the lines that changed. The 521 that dominated the number were
+  `lines_test.go`, deleted whole (260) and added whole (261) - rewritten enough to fall
+  under git's 50% similarity, so it is a rewrite and not a move. A rewrite is what a
+  reviewer reads, so the number stays; pairing the two with `-M20%` would read 412 and
+  turn the count into a measure of resemblance. Closed with that reason. What remains
+  open is 0333's own datapoint: 868 lines a verifier read in about two minutes.
 - **The citation guard is narrower than its comment.** It fails when a page loses *all*
   its `Source:` lines, not when it loses one. The pages are correct today; the guard is
   not.
@@ -48,9 +50,10 @@ Written after 0334, the cycle that moved the slice to the door where it can prev
   step's close the commit exists and the work is paid; the only place the size can stop
   more of it is before the next step is written. The close keeps its refusal for the
   single step that is too large by itself, which no door can see in advance.
-- **A move is the whole number.** Added plus deleted is what the reviewer reads, so a
-  file that moves costs twice its length: the feature that moved the counter to make the
-  plan weigh it was itself 772 lines over a 400 limit while authoring nearly nothing.
+- **A move is not the whole number, and a rewrite is.** The count reads the diff git
+  produces, and git already recognizes a rename: moving `lines.go` cost 20 lines. What
+  cost 521 was a test file rewritten past the similarity threshold -a rewrite pays for
+  both sides because a reader reads both-, which is the number doing its job.
 - **An `ask` after `check --run` voids the proof.** A craft note written after the run
   moves the task document, so the tree moves and the proof names the one before. The
   notes go before the proof; this cycle paid a second suite run for it.
@@ -130,5 +133,6 @@ git fetch origin && git switch main && git reset --hard origin/main
 
 Nothing new is unpaid for the code: 0334 closed with proof, an approved verdict on four
 lenses and a `verified` record, and CI is green on the pull request. What waits is the
-section above, and the oldest item is the one this cycle fed twice: the number that
-bounds movement instead of work.
+section above, and the oldest item is no longer a question -the number was measured
+against a move and the move came back cheap- but the datapoint that opened it: 868 lines
+a verifier read in two minutes.
