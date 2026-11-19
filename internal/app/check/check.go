@@ -398,7 +398,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			// spent on a tree nobody can finish is a verdict that cannot land, and
 			// the close names the number it measured instead (0331).
 			state.VerificationLines = r.verifierLines(feature, owed)
-			state.VerificationMissing, state.VerificationRefuted = r.verification(asking, owed)
+			state.VerificationMissing, state.VerificationRefuted, state.VerificationRecordFound = r.verification(asking, owed)
 		}
 	}
 
@@ -1733,18 +1733,33 @@ func (r *runner) verifierLines(feature *tasks.Document, owed bool) int {
 // gave, so the slice and the record cannot disagree about which close owes one. The
 // record is read from the clone's store under the tree's name, so a record of
 // another tree answers nothing here.
-func (r *runner) verification(asking []string, owed bool) (missing, refuted []string) {
+//
+// found says the store holds a file under this tree's name. It is the question the
+// slice must not answer: a record that exists and speaks for another tree, or one
+// nobody can parse, has its own row and its own door, and `odachi start` resolves
+// neither. A probe that cannot answer is not evidence of absence either -the close
+// keeps the row that names the record instead of paying a slice for one nobody
+// looked at- (0331).
+func (r *runner) verification(asking []string, owed bool) (missing, refuted []string, found bool) {
 	if !owed {
-		return nil, nil
+		return nil, nil, false
 	}
 
 	rel, err := verifydomain.Path(r.tree)
 	if err != nil {
-		return asking, nil
+		return asking, nil, false
 	}
-	data, err := r.files.Read(filepath.Join(r.opts.Store, filepath.FromSlash(rel)))
+	path := filepath.Join(r.opts.Store, filepath.FromSlash(rel))
+	exists, err := r.files.Exists(path)
 	if err != nil {
-		return asking, nil
+		return asking, nil, true
+	}
+	if !exists {
+		return asking, nil, false
+	}
+	data, err := r.files.Read(path)
+	if err != nil {
+		return asking, nil, true
 	}
 	record, err := verifydomain.Parse(data)
 	if err == nil {
@@ -1754,18 +1769,18 @@ func (r *runner) verification(asking []string, owed bool) (missing, refuted []st
 		// The file is there and is not a verification. Calling it missing would send
 		// the human to produce what already exists, so the sentence names the file
 		// and the reason, and the fix is to write it again.
-		return []string{fmt.Sprintf("the record %s cannot be read: %s", r.storeFile(rel), oneLine(err.Error()))}, nil
+		return []string{fmt.Sprintf("the record %s cannot be read: %s", r.storeFile(rel), oneLine(err.Error()))}, nil, true
 	}
 	if !record.Covers(r.tree) {
-		return asking, nil
+		return asking, nil, true
 	}
 	if record.Verdict == verifydomain.Refuted {
 		if len(record.Notes) == 0 {
-			return nil, []string{"the verifier said the requirement does not hold and wrote no note"}
+			return nil, []string{"the verifier said the requirement does not hold and wrote no note"}, true
 		}
-		return nil, record.Notes
+		return nil, record.Notes, true
 	}
-	return nil, nil
+	return nil, nil, true
 }
 
 // currentBlobs measures the receipt each changed path earns now. A path the

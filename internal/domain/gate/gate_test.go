@@ -638,6 +638,30 @@ func TestTheSliceOnlyFiresWhileTheRecordIsMissing(t *testing.T) {
 	}
 }
 
+// TestARecordThatAnswersNothingKeepsItsOwnDoor: the slice exists for the close
+// that has no record at all. A record that exists and answers nothing here -it
+// speaks for another tree, or nobody can read it- keeps the row that names it and
+// the `odachi verify` that writes the one for this tree: `odachi start` cannot,
+// because the work is already here (0331).
+func TestARecordThatAnswersNothingKeepsItsOwnDoor(t *testing.T) {
+	other := ready()
+	other.VerificationLines = gate.SliceLines + 1
+	other.VerificationMissing = []string{"contract"}
+	other.VerificationRecordFound = true
+
+	got := gate.Evaluate(other)
+	if got.Code != gate.NeedsWork || got.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("a %d-line close whose record answers another tree = %d/%q, want verification_missing",
+			gate.SliceLines+1, got.Code, got.Reason)
+	}
+	if got.Next != `odachi verify --exec "<command>"` {
+		t.Errorf("Next = %q, want the command that writes the record for this tree", got.Next)
+	}
+	if strings.Contains(got.Message, "authored lines") {
+		t.Errorf("the slice answered a close whose record exists: %s", got.Message)
+	}
+}
+
 // TestEveryReasonInTheSourceHasItsRow: the table is the only list, so the source is the
 // other half of the promise -one half that drifts is the defect this file exists to
 // catch-. A reason declared in gate.go with no row would ship unjudged, and a row naming

@@ -181,6 +181,13 @@ type State struct {
 	// gathered at the close, like the quote: mid-feature the record would name a
 	// tree that still moves (0315).
 	VerificationMissing []string
+	// VerificationRecordFound says the store holds a file under this tree's name.
+	// It is what tells the slice apart from the missing row: bytes that decode to a
+	// record for another tree, or to nothing at all, and a store the runner could not
+	// probe, all count, because the record for the tree that stands is what resolves
+	// them and `odachi start` cannot write one. A close with no record at all owns
+	// the number and the door that starts the rest as a feature of its own (0331).
+	VerificationRecordFound bool
 	// VerificationLines is what the candidate costs, when the close owes a
 	// verifier: the authored lines of the feature's diff, measured before the
 	// record is looked for. Past SliceLines the verifier would judge a tree nobody
@@ -264,12 +271,15 @@ func Evaluate(s State) Result {
 	// A close that owes a verifier measures its candidate first: a verifier spent
 	// on a tree nobody can finish is a verdict that cannot land, and the rest of
 	// the work is a feature of its own, not the tail of this one (0331). The
-	// question only exists while the record is missing: once the verifier signed
-	// this tree there is nothing left to spend, and refusing it would name a door
-	// that cannot shrink a diff somebody already read. It comes before the plain
-	// missing case on purpose -an over-limit close with no record earns the better
-	// diagnosis, the number and the slice, not the absence (0315).
-	case s.VerificationLines > SliceLines && len(s.VerificationMissing) > 0:
+	// question only exists while the store holds no record for this tree at all:
+	// once the verifier signed this tree there is nothing left to spend, and a
+	// record that exists and answers nothing here -it speaks for another tree, or
+	// nobody can read it- earns the row that names it, because the record for the
+	// tree that stands is what resolves it and `odachi start` cannot write one. It
+	// comes before the plain missing case on purpose -an over-limit close with no
+	// record earns the better diagnosis, the number and the slice, not the absence
+	// (0315).
+	case s.VerificationLines > SliceLines && len(s.VerificationMissing) > 0 && !s.VerificationRecordFound:
 		return Result{NeedsWork, ReasonVerifySlice,
 			fmt.Sprintf("the candidate is %d authored lines and the limit for a close that owes a verifier is %d: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own",
 				s.VerificationLines, SliceLines),

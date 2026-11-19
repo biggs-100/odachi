@@ -88,15 +88,33 @@ func TestACloseThatOwesAVerifierAndPassesTheSliceBlocks(t *testing.T) {
 	}
 }
 
-// TestACandidateUnderTheSliceCloses: 399 authored lines are a slice a verifier can
-// finish, and the record it signed closes the tree exactly as before (0331).
-func TestACandidateUnderTheSliceCloses(t *testing.T) {
-	files, git := closedRiskFixture()
-	git.diff = sliceDiff(399)
-	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil))
+// TestACandidateUnderTheSliceStillOwesItsRecord: the slice is the number a close
+// that owes a verifier pays before spending it, and under the limit there is
+// nothing to weigh. The candidate carries no record for this tree, so the reason
+// is the missing one -not the slice, and not a ready tree- and it is the same at
+// 399 lines and at the limit itself, because the slice starts past it (0331).
+func TestACandidateUnderTheSliceStillOwesItsRecord(t *testing.T) {
+	for _, n := range []int{399, 400} {
+		t.Run(strconv.Itoa(n)+" lines", func(t *testing.T) {
+			files, git := closedRiskFixture()
+			git.diff = sliceDiff(n)
 
-	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
-		t.Fatalf("a 399-line candidate failed: %s", result.Message)
+			result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+			if result.Code != 1 {
+				t.Fatalf("code = %d, want 1: a %d-line close that owes a verifier and has no record passed (%s)", result.Code, n, result.Message)
+			}
+			if result.Reason != gate.ReasonVerifyMissing {
+				t.Fatalf("reason = %q, want %q: the %d-line close was not answered with the record it owes (%s / next %s)",
+					result.Reason, gate.ReasonVerifyMissing, n, result.Message, result.Next)
+			}
+			if !strings.Contains(result.Message, "contract") {
+				t.Errorf("the refusal does not name the risk that asked for the verifier: %s", result.Message)
+			}
+			if !strings.Contains(result.Next, "odachi verify") {
+				t.Errorf("next = %q, want the command that writes the record", result.Next)
+			}
+		})
 	}
 }
 
@@ -130,6 +148,57 @@ func TestTheSliceIsANoteUnlessTheHumanAsks(t *testing.T) {
 		if !strings.Contains(lines, want) {
 			t.Errorf("the ready line does not name %q:\n%s", want, lines)
 		}
+	}
+}
+
+// TestACandidatePastTheSliceWithARecordForAnotherTreeOwesTheRecord: the store
+// holds a file under this tree's name and it speaks for another tree, so it
+// answers nothing here. The close owes the record for the tree that stands and
+// `odachi verify` is what writes it; `odachi start` cannot, because the work is
+// already here (0331).
+func TestACandidatePastTheSliceWithARecordForAnotherTreeOwesTheRecord(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	other := "fedcba9876543210fedcba9876543210fedcba98"
+	files.files[verifyPath(currentTree)] = []byte(verificationFile(t, other, "otro/modelo", domainverify.Verified, nil))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: a 401-line close whose record answers another tree passed (%s)", result.Code, result.Message)
+	}
+	if result.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("reason = %q, want %q: the slice named a door that cannot write the record (%s / next %s)",
+			result.Reason, gate.ReasonVerifyMissing, result.Message, result.Next)
+	}
+	if !strings.Contains(result.Next, "odachi verify") {
+		t.Errorf("next = %q, want the command that writes the record for this tree", result.Next)
+	}
+}
+
+// TestACandidatePastTheSliceWithAnUnreadableRecordNamesTheFile: the file is
+// there and nobody can read a verification out of it, so the close keeps the row
+// that names the file and the command that writes it again. Starting the work as
+// a feature of its own would leave the broken record where it is (0331).
+func TestACandidatePastTheSliceWithAnUnreadableRecordNamesTheFile(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	files.files[verifyPath(currentTree)] = []byte("basura")
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: an unreadable record closed a 401-line tree (%s)", result.Code, result.Message)
+	}
+	if result.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("reason = %q, want %q: the slice answers a record that exists and cannot be read with a door that leaves it there (%s / next %s)",
+			result.Reason, gate.ReasonVerifyMissing, result.Message, result.Next)
+	}
+	if !strings.Contains(result.Message, "cannot be read") {
+		t.Errorf("the refusal does not name the record nobody can read: %s", result.Message)
+	}
+	if !strings.Contains(result.Next, "odachi verify") {
+		t.Errorf("next = %q, want the command that writes the record again", result.Next)
 	}
 }
 
