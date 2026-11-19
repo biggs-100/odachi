@@ -15,6 +15,7 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/agentstoml"
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 )
@@ -618,6 +619,7 @@ func TestTUIDetectsTheState(t *testing.T) {
 		Voice:   "senior",
 		Review:  review.ModeOn,
 		Models:  map[string]string{"reliability": "opencode-go/deepseek-v4.1-flash"},
+		Axes:    profile.Axes(profile.Builtin()["senior"]),
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("state = %+v, want %+v", got, want)
@@ -718,6 +720,44 @@ func TestTUIWithAFlagIsRefused(t *testing.T) {
 	}
 	if !strings.Contains(errOut, "takes no flags") {
 		t.Errorf("the refusal does not say the verb takes no flags:\n%s", errOut)
+	}
+}
+
+// TestTUITheMenuHasTwoSectionsAndEscReturnsToIt: the wizard opens on a menu, enter
+// walks the section the cursor names, and esc comes back to the menu from either
+// one, so a person can change one thing and leave (0336).
+func TestTUITheMenuHasTwoSectionsAndEscReturnsToIt(t *testing.T) {
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
+
+	if m.step != stepState {
+		t.Fatalf("the wizard opened on step %d, want the menu", m.step)
+	}
+	view := m.View()
+	for _, want := range []string{"instalar y configurar", "perfil"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the menu does not offer %q:\n%s", want, view)
+		}
+	}
+
+	install, _ := m.next()
+	if got := install.(tuiModel).step; got != stepClients {
+		t.Errorf("install landed on step %d, want the first choice of the section", got)
+	}
+
+	m.menu = 1
+	opened, _ := m.next()
+	editor := opened.(tuiModel)
+	if editor.step != stepProfile {
+		t.Fatalf("perfil landed on step %d, want the profile editor", editor.step)
+	}
+	profileView := editor.View()
+	for _, want := range []string{"brief_source", "output", "explain"} {
+		if !strings.Contains(profileView, want) {
+			t.Errorf("the profile screen does not show %q:\n%s", want, profileView)
+		}
+	}
+	if back := editor.back(); back.step != stepState {
+		t.Errorf("esc from the profile landed on step %d, want the menu", back.step)
 	}
 }
 

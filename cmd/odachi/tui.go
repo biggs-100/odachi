@@ -30,6 +30,9 @@ type tuiState struct {
 	Voice   string
 	Review  string
 	Models  map[string]string
+	// Axes is the profile in force, one configurable field per row: the editor
+	// renders what the file says today, never a second copy (0336).
+	Axes []profile.Axis
 }
 
 // runTUI opens the installation and configuration wizard. It refuses before the
@@ -98,6 +101,7 @@ func detectTUIState(dir string) (tuiState, error) {
 	}
 	if voice != nil {
 		state.Voice = voice.Name
+		state.Axes = profile.Axes(*voice)
 	}
 
 	config, _, problem := cleanLimits(dir)
@@ -127,6 +131,9 @@ const (
 	stepReview
 	stepSummary
 	stepApply
+	// stepProfile is the second section of the hub: the six axes of the profile in
+	// force, which is what a person comes back to change (0336).
+	stepProfile
 )
 
 // The options each single-choice screen offers, in the order a human reads them.
@@ -136,13 +143,17 @@ var (
 	tuiVoices  = voiceNames()
 	tuiLenses  = review.AllLenses()
 
+	// tuiMenu is the hub: the two sections the first screen offers. The menu is
+	// what makes the wizard a place to come back to instead of a one-shot run (0336).
+	tuiMenu = []string{"instalar y configurar", "perfil"}
+
 	// tuiScopes is the choice a folder that is not a project had to be given: a
 	// machine-only setup writes nothing here, init is what creates the project.
 	tuiScopes = []string{"machine", "project"}
 )
 
 // tuiSteps is every screen the wizard has, in the order the table walks them.
-var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply}
+var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile}
 
 // tuiRoute is where one screen goes: forward with enter, backward with esc, and
 // whether the screen exists for this run at all. The table is the only place
@@ -167,6 +178,8 @@ var tuiRoutes = map[tuiStep]tuiRoute{
 	stepReview:  {forward: stepSummary, back: stepVoice, when: always},
 	stepSummary: {forward: stepApply, back: stepReview, when: always},
 	stepApply:   {forward: stepApply, back: stepSummary, when: always},
+	// The profile section has one screen: esc is the way back to the menu.
+	stepProfile: {forward: stepProfile, back: stepState, when: always},
 }
 
 // always is the row of a screen that exists for every run.
@@ -206,6 +219,7 @@ type tuiModel struct {
 	client       int
 	skills       int
 	voice        int
+	menu         int
 	reviewCursor int
 	editing      bool
 	buffer       string
@@ -220,6 +234,13 @@ type tuiModel struct {
 func newTUIModel(state tuiState) tuiModel {
 	if state.Models == nil {
 		state.Models = map[string]string{}
+	}
+	// A caller that did not read the file -a test, and the first day- still sees the
+	// axes of the profile it named: the screen never renders an empty list (0336).
+	if len(state.Axes) == 0 && state.Voice != "" {
+		if resolved, err := profile.Resolve(profile.Builtin(), state.Voice); err == nil {
+			state.Axes = profile.Axes(resolved)
+		}
 	}
 	return tuiModel{
 		state:  state,
@@ -274,6 +295,12 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // step it lands on is the table's answer, not a chain of ifs (0336).
 func (m tuiModel) next() (tea.Model, tea.Cmd) {
 	m = m.commit()
+	// The menu is the one screen whose enter picks its destination: that is what a
+	// menu is, and the table still says where each section starts (0336).
+	if m.step == stepState && m.menu == 1 {
+		m.step = stepProfile
+		return m, nil
+	}
 	m.step = m.forwardStep()
 	return m, nil
 }
@@ -365,6 +392,8 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 // summary are not choices.
 func (m tuiModel) move(delta int) tuiModel {
 	switch m.step {
+	case stepState:
+		m.menu = clamp(m.menu+delta, len(tuiMenu))
 	case stepScope:
 		m.scope = clamp(m.scope+delta, len(tuiScopes))
 	case stepClients:
@@ -397,14 +426,47 @@ func (m tuiModel) View() string {
 		return m.viewSummary()
 	case stepApply:
 		return m.viewApply()
+	case stepProfile:
+		return m.viewProfile()
 	default:
 		return m.viewState()
 	}
 }
 
-// viewState is the first screen: where the project is before any choice.
+// viewState is the hub: where the project is, and the two sections a person can
+// open. It is the screen the wizard comes back to, which is what makes a change of
+// mind possible at all (0336).
 func (m tuiModel) viewState() string {
-	return m.header("instalación y configuración") + m.facts() + "\n  enter seguir · q salir\n"
+	var out strings.Builder
+	out.WriteString(m.header("instalación y configuración"))
+	out.WriteString(m.facts())
+	out.WriteString("\n")
+	for i, item := range tuiMenu {
+		marker := "  "
+		if i == m.menu {
+			marker = "> "
+		}
+		out.WriteString("  " + marker + item + "\n")
+	}
+	out.WriteString("\n  ↑↓ elegir · enter abrir · q salir\n")
+	return out.String()
+}
+
+// viewProfile renders the six axes of the profile in force: what each one says
+// today and the values it may take. The section is a map of the file, never a
+// second copy: an empty value means the profile inherits it (0336).
+func (m tuiModel) viewProfile() string {
+	var out strings.Builder
+	out.WriteString(m.header("perfil " + m.state.Voice))
+	for _, axis := range m.state.Axes {
+		value := axis.Value
+		if value == "" {
+			value = "(hereda)"
+		}
+		out.WriteString("  " + fmt.Sprintf("%-12s %-12s %s\n", axis.Name, value, strings.Join(axis.Allowed, " ")))
+	}
+	out.WriteString("\n  esc volver · q salir\n")
+	return out.String()
 }
 
 // viewSummary is the last screen before the apply: the choices as they will be.
