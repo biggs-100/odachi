@@ -89,7 +89,7 @@ line current. Read a line as a question about the command in front of you.
 | the default you are accepting | what it costs | the decision that replaces it | source |
 | --- | --- | --- | --- |
 | `--privileged` | the container is the host with a namespace in front | the capability the process proves it needs, added back | Docker docs, 2026-11 |
-| the docker socket inside a container | the API of a privileged process; `:ro` does not replace API authorization | a narrow proxy, or nothing | Docker docs, 2026-11 |
+| the docker socket inside a container | the API of a privileged process, and read-only is a filesystem flag | a narrow proxy, or nothing | `docker-and-podman.md`, OWASP Rule #1 |
 | stateful data in an anonymous volume | the next `up` attaches a fresh empty one | a named volume, or a bind you own | Compose docs, 2026-11 |
 | `restart: always` on a crash loop | one restart per minute, forever, and no page | `on-failure` with a cap, and an alert that reads it | Docker docs, 2026-11 |
 | ignoring the exit code | the 0 that means failure is the policy that never fires | a non-zero exit, and a healthcheck that reads it | Docker docs, 2026-11 |

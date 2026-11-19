@@ -66,7 +66,7 @@ Source: Docker engine network docs, 2026-11.
 
 Source: the OWASP Docker Security Cheat Sheet, post-Jan-2024.
 
-- **Mounting it grants the API, and the API is root**: `:ro` "does not replace API authorization" (OWASP Docker cheat sheet, post-2024).
+- **Mounting it grants the API, and the API is root**: "filesystem mount flags do not replace API authorization", because a process that can connect to the socket still sends requests that modify the host (OWASP Docker Security Cheat Sheet, Rule #1).
 - **So `-v /var/run/docker.sock:/var/run/docker.sock:ro` is host root with extra steps**, and it is the sentence to quote when the security review asks.
 - **A scoped socket proxy is the only defensible form**, with the endpoints it exposes listed and the exception documented beside it.
 - **Ask whether the container needs the API or one endpoint**, because that answer decides between a proxy and a redesign.
