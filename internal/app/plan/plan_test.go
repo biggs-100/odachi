@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -268,13 +269,21 @@ func TestPlanDoneMarksAndRecordsTheCommit(t *testing.T) {
 	}
 }
 
-// fakeGit answers the trees the done form asks about: HEAD, the worktree, and the
-// tree of a commit a test says the repository can read.
+// fakeGit answers the trees the done form asks about -HEAD, the worktree, and the
+// tree of a commit a test says the repository can read- and the diff the add form
+// weighs when a feature opens another step.
 type fakeGit struct {
 	head     string
 	worktree string
 	trees    map[string]string
 	err      error
+
+	// diff is what the candidate carries, and diffErr is the answer of a
+	// repository that cannot read it. asked records the base the plan measured,
+	// so a test can say the document's own base is the one that was read.
+	diff    string
+	diffErr error
+	asked   *string
 }
 
 func (g fakeGit) HeadTree(string) (string, error) {
@@ -292,6 +301,131 @@ func (g fakeGit) TreeOf(_, commit string) (string, error) {
 		return "", errors.New("unknown commit")
 	}
 	return tree, nil
+}
+
+func (g fakeGit) Diff(_, base string) (string, error) {
+	if g.asked != nil {
+		*g.asked = base
+	}
+	if g.diffErr != nil {
+		return "", g.diffErr
+	}
+	return g.diff, nil
+}
+
+// authoredDiff is a candidate that creates path with n authored lines: enough to
+// cross the slice without a repository, and shaped the way a real one arrives.
+func authoredDiff(path string, n int) string {
+	var b strings.Builder
+	b.WriteString("diff --git a/" + path + " b/" + path + "\n")
+	b.WriteString("new file mode 100644\n")
+	b.WriteString("--- /dev/null\n")
+	b.WriteString("+++ b/" + path + "\n")
+	b.WriteString("@@ -0,0 +1," + strconv.Itoa(n) + " @@\n")
+	for i := 1; i <= n; i++ {
+		b.WriteString("+linea " + strconv.Itoa(i) + "\n")
+	}
+	return b.String()
+}
+
+// seedWithBase is the document of a feature that records where it started: the
+// base a step is weighed against.
+func seedWithBase(base string) string {
+	doc := taskdoc.Parse(seed())
+	doc.Base = base
+	return doc.Render()
+}
+
+// TestAPlanPastTheSliceIsRefused: a feature that already authored more than one
+// task may carry does not grow another step. The number appears before the step
+// is written, where it can prevent the work, not at the close where it can only
+// refuse what is paid; the message names the number, the limit and the door
+// (0334).
+func TestAPlanPastTheSliceIsRefused(t *testing.T) {
+	files := project()
+	files.files[taskPath] = []byte(seedWithBase("abc1234"))
+	asked := ""
+
+	message := assertBlocked(t, plan.Run(plan.Options{
+		Dir: "raiz", Text: "cancelar desde el teléfono",
+		Git: fakeGit{diff: authoredDiff("internal/app/thing.go", 401), asked: &asked},
+	}, files))
+
+	for _, want := range []string{"401", "400", "odachi start"} {
+		if !strings.Contains(message, want) {
+			t.Errorf("message %q does not name %s", message, want)
+		}
+	}
+	if asked != "abc1234" {
+		t.Errorf("measured against %q, want the base the document records", asked)
+	}
+	if len(files.wrote) != 0 || len(files.backups) != 0 {
+		t.Errorf("a refused step wrote %v / backed up %v", files.wrote, files.backups)
+	}
+}
+
+// TestAPlanAtTheSliceIsOpened: the limit is inclusive, exactly as the close's own
+// test says. A candidate of 400 authored lines is a feature that may still plan.
+func TestAPlanAtTheSliceIsOpened(t *testing.T) {
+	files := project()
+	files.files[taskPath] = []byte(seedWithBase("abc1234"))
+
+	res := plan.Run(plan.Options{
+		Dir: "raiz", Text: "cancelar desde el teléfono",
+		Git: fakeGit{diff: authoredDiff("internal/app/thing.go", 400)},
+	}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if step := lastStep(t, files); step.ID != "T3" {
+		t.Errorf("last step = %+v, want T3", step)
+	}
+}
+
+// TestAPlanThatCannotMeasureSaysSo: a repository that cannot read the diff is not
+// a candidate under the limit. The step opens -nobody can be refused for a number
+// that was never taken- and the run says the slice was not measured instead of
+// passing it in silence (0332, 0334).
+func TestAPlanThatCannotMeasureSaysSo(t *testing.T) {
+	files := project()
+	files.files[taskPath] = []byte(seedWithBase("abc1234"))
+
+	res := plan.Run(plan.Options{
+		Dir: "raiz", Text: "cancelar desde el teléfono",
+		Git: fakeGit{diffErr: errors.New("bad object abc1234")},
+	}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	for _, want := range []string{"not measured", "bad object abc1234"} {
+		if !strings.Contains(res.Message, want) {
+			t.Errorf("Message = %q, does not name %s", res.Message, want)
+		}
+	}
+	if step := lastStep(t, files); step.ID != "T3" {
+		t.Errorf("last step = %+v, want T3", step)
+	}
+}
+
+// TestAPlanWithNoBaseIsNotMeasured: a document that records no base has nothing to
+// be measured against, and the run keeps the sentence it always printed instead of
+// inventing a slice.
+func TestAPlanWithNoBaseIsNotMeasured(t *testing.T) {
+	files := project()
+
+	res := plan.Run(plan.Options{
+		Dir: "raiz", Text: "cancelar desde el teléfono",
+		Git: fakeGit{diffErr: errors.New("nothing to measure against")},
+	}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if want := "step T3 added to " + taskRel; res.Message != want {
+		t.Errorf("Message = %q, want %q", res.Message, want)
+	}
 }
 
 // TestPlanDoneDoesNotGuessAnOlderStep: marking a step after a later one is done

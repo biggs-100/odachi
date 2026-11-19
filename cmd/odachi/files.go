@@ -623,6 +623,13 @@ func (gitRepo) Candidate(root, base string) (string, []string, string, error) {
 	return gitx.Candidate(root, base)
 }
 
+// Diff is Candidate's diff alone: what the plan weighs before a feature opens
+// another step, counted by the same port the close measures (0334).
+func (g gitRepo) Diff(root, base string) (string, error) {
+	_, _, diff, err := g.Candidate(root, base)
+	return diff, err
+}
+
 func (gitRepo) Correction(root, tree string) ([]string, string, error) {
 	return gitx.Correction(root, tree)
 }

@@ -42,3 +42,7 @@ the registry beside the skills a person writes, `.agents/skills/SKILLS.md`, owne
 `odachi skill new --scope project`-. A folder or a suffix is not an entry: the
 human's own skill in `.agents/skills/<name>/SKILL.md` is authored work and is
 charged.
+
+The gate reads that number at two moments: the close weighs the candidate before it
+pays a verifier (`odachi check`, 0331), and a feature weighs it before it opens
+another step (`odachi plan "<text>"`, 0334). One count, one limit, two doors.
