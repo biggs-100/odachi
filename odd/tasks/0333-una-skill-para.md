@@ -16,7 +16,7 @@ R1 · "una skill para trabajar como un profesional senior en todo lo que tenga q
 ## Steps
 - [x] T1 · el cuerpo nace con sus decisiones y la tabla que rutea las siete paginas   R1 · route:delegated/odachi-worker · skills:tests
 - [x] T2 · las siete paginas llevan su version y su fecha, y el catalogo de fallas cierra la puerta   R1 · route:delegated/odachi-worker · skills:tests
-- [ ] T3 · la prueba fija el trigger y el ruteo, y el indice con su pin bajan el numero que el test mide   R1 · route:delegated/odachi-worker · skills:tests
+- [x] T3 · la prueba fija el trigger y el ruteo, y el indice con su pin bajan el numero que el test mide   R1 · route:delegated/odachi-worker · skills:tests · tree:08d302f905bc51e29d05adc2c68d66dad72d446a
 
 ## History
 L1 · "una skill para trabajar como un profesional senior en todo lo que tenga que ver con contenedores, docker, podman, devops, etc, buenas practicas y errores que no se deben cometer"
