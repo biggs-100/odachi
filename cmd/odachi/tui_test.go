@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -717,5 +718,67 @@ func TestTUIWithAFlagIsRefused(t *testing.T) {
 	}
 	if !strings.Contains(errOut, "takes no flags") {
 		t.Errorf("the refusal does not say the verb takes no flags:\n%s", errOut)
+	}
+}
+
+// TestTUIWalksTheRouterTable: every screen has a row, and walking forward then
+// back returns to where it started. A screen without a row is a screen the
+// keyboard can enter and not leave, and the conditional screens are walked past
+// in both directions instead of being hardcoded in two switches (0336).
+func TestTUIWalksTheRouterTable(t *testing.T) {
+	for _, step := range tuiSteps {
+		if _, ok := tuiRoutes[step]; !ok {
+			t.Errorf("step %d has no row in the router table", step)
+		}
+	}
+
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
+	var forward []tuiStep
+	m.step = stepState
+	for i := 0; i < len(tuiSteps); i++ {
+		next := m.forwardStep()
+		if next == m.step {
+			break
+		}
+		m.step = next
+		forward = append(forward, next)
+	}
+	if len(forward) == 0 || forward[len(forward)-1] != stepApply {
+		t.Fatalf("forward = %v, want it to end on the apply screen", forward)
+	}
+	for _, skipped := range forward {
+		if skipped == stepScope {
+			t.Errorf("a project walked through the scope screen: %v", forward)
+		}
+	}
+
+	forward = nil
+	m = newTUIModel(tuiState{Project: false, Clients: "both", Skills: "home", Voice: "novato"})
+	m.step = stepState
+	for i := 0; i < len(tuiSteps); i++ {
+		next := m.forwardStep()
+		if next == m.step {
+			break
+		}
+		m.step = next
+		forward = append(forward, next)
+	}
+	if !slices.Contains(forward, stepScope) {
+		t.Errorf("a folder that is not a project skipped the scope question: %v", forward)
+	}
+	if slices.Contains(forward, stepSkills) {
+		t.Errorf("a machine-only setup asked which skills to install in the project: %v", forward)
+	}
+
+	m.step = stepApply
+	for i := 0; i < len(tuiSteps); i++ {
+		next := m.backStep()
+		if next == m.step {
+			break
+		}
+		m.step = next
+	}
+	if m.step != stepState {
+		t.Errorf("walking back ended on step %d, want the first screen", m.step)
 	}
 }

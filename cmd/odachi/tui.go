@@ -141,6 +141,62 @@ var (
 	tuiScopes = []string{"machine", "project"}
 )
 
+// tuiSteps is every screen the wizard has, in the order the table walks them.
+var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply}
+
+// tuiRoute is where one screen goes: forward with enter, backward with esc, and
+// whether the screen exists for this run at all. The table is the only place
+// navigation is written, so a new screen is a row and a test can walk every row
+// instead of trusting two switches to stay in step (0336).
+type tuiRoute struct {
+	forward tuiStep
+	back    tuiStep
+	when    func(tuiModel) bool
+}
+
+var tuiRoutes = map[tuiStep]tuiRoute{
+	stepState: {forward: stepScope, back: stepState, when: always},
+	// A project already carries the block: there is nothing to decide about the
+	// scope, so the question is walked past in both directions.
+	stepScope:   {forward: stepClients, back: stepState, when: func(m tuiModel) bool { return !m.state.Project }},
+	stepClients: {forward: stepSkills, back: stepScope, when: always},
+	// The skills screen belongs to init: a machine-only setup installs the craft
+	// once per machine and has no project copy to choose.
+	stepSkills:  {forward: stepVoice, back: stepClients, when: func(m tuiModel) bool { return m.init }},
+	stepVoice:   {forward: stepReview, back: stepSkills, when: always},
+	stepReview:  {forward: stepSummary, back: stepVoice, when: always},
+	stepSummary: {forward: stepApply, back: stepReview, when: always},
+	stepApply:   {forward: stepApply, back: stepSummary, when: always},
+}
+
+// always is the row of a screen that exists for every run.
+func always(tuiModel) bool { return true }
+
+// forwardStep walks the table from the screen the wizard is on to the first one
+// that exists for this run.
+func (m tuiModel) forwardStep() tuiStep {
+	next := tuiRoutes[m.step].forward
+	for steps := 0; next != m.step && steps < len(tuiSteps); steps++ {
+		if tuiRoutes[next].when(m) {
+			return next
+		}
+		next = tuiRoutes[next].forward
+	}
+	return m.step
+}
+
+// backStep is forwardStep in the other direction.
+func (m tuiModel) backStep() tuiStep {
+	prev := tuiRoutes[m.step].back
+	for steps := 0; prev != m.step && steps < len(tuiSteps); steps++ {
+		if tuiRoutes[prev].when(m) {
+			return prev
+		}
+		prev = tuiRoutes[prev].back
+	}
+	return m.step
+}
+
 // tuiModel is the wizard: the detected facts, the choices and where it stands.
 type tuiModel struct {
 	state        tuiState
@@ -214,60 +270,36 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// next advances one screen, committing the choice the screen was showing.
+// next advances one screen, committing the choice the screen was showing. The
+// step it lands on is the table's answer, not a chain of ifs (0336).
 func (m tuiModel) next() (tea.Model, tea.Cmd) {
-	switch m.step {
-	case stepState:
-		if m.state.Project {
-			m.step = stepClients
-		} else {
-			m.step = stepScope
-		}
-	case stepScope:
-		m.init = tuiScopes[m.scope] == "project"
-		m.step = stepClients
-	case stepClients:
-		m.state.Clients = tuiClients[m.client]
-		if m.init {
-			m.step = stepSkills
-		} else {
-			m.step = stepVoice
-		}
-	case stepSkills:
-		m.state.Skills = tuiSkills[m.skills]
-		m.step = stepVoice
-	case stepVoice:
-		m.state.Voice = tuiVoices[m.voice]
-		m.step = stepReview
-	}
+	m = m.commit()
+	m.step = m.forwardStep()
 	return m, nil
 }
 
-// back is one screen towards the first one. The scope and the skills screens are
-// conditional: a project skips the first, a machine-only setup skips the second.
-func (m tuiModel) back() tuiModel {
+// commit records the choice the screen is showing. Nothing here touches the disk.
+func (m tuiModel) commit() tuiModel {
 	switch m.step {
 	case stepScope:
-		m.step = stepState
+		m.init = tuiScopes[m.scope] == "project"
 	case stepClients:
-		if m.state.Project {
-			m.step = stepState
-		} else {
-			m.step = stepScope
-		}
+		m.state.Clients = tuiClients[m.client]
 	case stepSkills:
-		m.step = stepClients
+		m.state.Skills = tuiSkills[m.skills]
 	case stepVoice:
-		if m.init {
-			m.step = stepSkills
-		} else {
-			m.step = stepClients
-		}
-	case stepReview:
-		m.step = stepVoice
-	case stepSummary:
-		m.step = stepReview
+		m.state.Voice = tuiVoices[m.voice]
 	}
+	return m
+}
+
+// back is one screen towards the first one, skipping the screens this run does
+// not have.
+func (m tuiModel) back() tuiModel {
+	if m.step == stepState {
+		return m
+	}
+	m.step = m.backStep()
 	return m
 }
 
