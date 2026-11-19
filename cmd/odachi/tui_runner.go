@@ -6,7 +6,10 @@ import (
 	"io"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/level"
 	appreview "github.com/biggs-100/odachi/internal/app/review"
+	"github.com/biggs-100/odachi/internal/app/start"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
 // tuiRunner applies one operation of the wizard by calling the verb that already
@@ -68,6 +71,38 @@ func (r tuiRunner) Models(models map[string]string) error {
 		return errors.New(result.Message)
 	}
 	return nil
+}
+
+// Field writes one axis of the profile through the app that owns the file, the
+// same way Models writes the lens table: the wizard is a caller of the use case,
+// never a second writer (0336).
+func (r tuiRunner) Field(field, value string) error {
+	current, code, message := currentProfile(r.dir, "odachi tui", false)
+	if code != start.CodeOK {
+		return errors.New(message)
+	}
+	if current == nil {
+		return errors.New("no hay perfil que cambiar: run odachi start")
+	}
+	result := level.Set(level.SetOptions{Dir: r.dir, Current: *current, Field: field, Value: value}, disk(r.dir))
+	if result.Code != 0 {
+		return errors.New(result.Message)
+	}
+	return nil
+}
+
+// Axes re-reads the profile in force: the hub applies the voice in one section and
+// the editor lives in another, so the rows have to describe the file that stands
+// now, not the one the wizard read when it opened (0336).
+func (r tuiRunner) Axes() ([]profile.Axis, error) {
+	current, code, message := currentProfile(r.dir, "odachi tui", false)
+	if code != start.CodeOK {
+		return nil, errors.New(message)
+	}
+	if current == nil {
+		return nil, errors.New("no hay perfil: run odachi start")
+	}
+	return profile.Axes(*current), nil
 }
 
 // runnerError turns a verb's exit code and output into the line the apply screen

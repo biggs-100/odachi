@@ -1247,3 +1247,27 @@
 - First usable version: this week.
 - Wants to learn: que una cita sin fecha es una regla ya falsa.
 - Wants to learn: que un guard que pregunta si queda alguna no protege un conjunto.
+
+## 0336 · odachi-tui-abre
+
+## What must exist
+- odachi tui abre en un hub con menu y router declarativo, y desde ahi el humano edita los seis ejes del perfil, no solo su nombre
+
+## Done when
+- odachi tui abre en un menu con las acciones de instalar y perfil, y esc vuelve al menu desde cualquier seccion
+- elegir un eje muestra el valor en vigor y permite cambiarlo entre los que el perfil declara, y aplicar escribe odd/profile.toml con ese valor y un backup
+- un perfil que no se toco queda byte a byte identico, y cancelar antes de aplicar no escribe nada
+- la navegacion es una tabla declarativa: una pantalla nueva es una fila, y una prueba recorre la tabla
+- go test ./... is green and odachi check --run "go test ./..." is green and odachi skills --check is green
+
+## Not included (first version)
+- no entra el modelo del verificador ni el de cada cliente: eso es la feature siguiente
+- no entran los campos declarados de odd/review.toml: eso es la feature siguiente
+- no se reescribe la rama de instalacion: reusa las pantallas que ya existen
+- no se toca el perfil fuera del tui: el verbo level conserva su contrato
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que la navegacion puede ser un dato y no una cadena de ifs.

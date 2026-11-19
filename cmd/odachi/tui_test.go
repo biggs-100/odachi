@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/biggs-100/odachi/internal/adapters/agentstoml"
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
 	"github.com/biggs-100/odachi/internal/domain/persona"
+	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/rules"
 )
@@ -320,6 +322,9 @@ type fakeRun struct {
 	voice   string
 	review  string
 	models  map[string]string
+	fields  []string
+	axes    []profile.Axis
+	reRead  int
 }
 
 func (f *fakeRun) record(op string) error {
@@ -348,6 +353,16 @@ func (f *fakeRun) Review(mode string) error {
 func (f *fakeRun) Models(models map[string]string) error {
 	f.models = models
 	return f.record("models")
+}
+
+func (f *fakeRun) Field(field, value string) error {
+	f.fields = append(f.fields, field+"="+value)
+	return f.record("field")
+}
+
+func (f *fakeRun) Axes() ([]profile.Axis, error) {
+	f.reRead++
+	return f.axes, nil
 }
 
 // errTUI is the failure the fake operations return.
@@ -497,6 +512,36 @@ func TestTUIRunnerModelsWritesTheFile(t *testing.T) {
 	}
 }
 
+// TestTUIRunnerFieldWritesTheProfile: the editor's apply row reaches level.Set over
+// a real project, and Axes reads the same file back: the two halves of the editor
+// are pinned together instead of only against a fake (0336).
+func TestTUIRunnerFieldWritesTheProfile(t *testing.T) {
+	dir := t.TempDir()
+	initRepo(t, dir)
+	r := newTUIRunner(dir)
+
+	if err := r.Field("output", "detail"); err != nil {
+		t.Fatalf("Field: %v", err)
+	}
+	stored, err := os.ReadFile(filepath.Join(dir, "odd", "profile.toml"))
+	if err != nil {
+		t.Fatalf("read odd/profile.toml: %v", err)
+	}
+	if !strings.Contains(strings.Join(strings.Fields(string(stored)), " "), `output = "detail"`) {
+		t.Errorf("the file does not carry the value:\n%s", stored)
+	}
+
+	axes, err := r.Axes()
+	if err != nil {
+		t.Fatalf("Axes: %v", err)
+	}
+	for _, axis := range axes {
+		if axis.Name == "output" && axis.Value != "detail" {
+			t.Errorf("Axes reads output = %q, want the value just written", axis.Value)
+		}
+	}
+}
+
 // TestTUIReviewScreenTogglesTheMode: the switch is one row, and enter flips it.
 func TestTUIReviewScreenTogglesTheMode(t *testing.T) {
 	m := toReview(t, newTUIModel(wizard()))
@@ -617,6 +662,7 @@ func TestTUIDetectsTheState(t *testing.T) {
 		Voice:   "senior",
 		Review:  review.ModeOn,
 		Models:  map[string]string{"reliability": "opencode-go/deepseek-v4.1-flash"},
+		Axes:    profile.Axes(profile.Builtin()["senior"]),
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("state = %+v, want %+v", got, want)
@@ -717,5 +763,229 @@ func TestTUIWithAFlagIsRefused(t *testing.T) {
 	}
 	if !strings.Contains(errOut, "takes no flags") {
 		t.Errorf("the refusal does not say the verb takes no flags:\n%s", errOut)
+	}
+}
+
+// TestTUITheMenuHasTwoSectionsAndEscReturnsToIt: the wizard opens on a menu, enter
+// walks the section the cursor names, and esc comes back to the menu from either
+// one, so a person can change one thing and leave (0336).
+func TestTUITheMenuHasTwoSectionsAndEscReturnsToIt(t *testing.T) {
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
+
+	if m.step != stepState {
+		t.Fatalf("the wizard opened on step %d, want the menu", m.step)
+	}
+	view := m.View()
+	for _, want := range []string{"instalar y configurar", "perfil"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the menu does not offer %q:\n%s", want, view)
+		}
+	}
+
+	install, _ := m.next()
+	if got := install.(tuiModel).step; got != stepClients {
+		t.Errorf("install landed on step %d, want the first choice of the section", got)
+	}
+
+	m.menu = 1
+	opened, _ := m.next()
+	editor := opened.(tuiModel)
+	if editor.step != stepProfile {
+		t.Fatalf("perfil landed on step %d, want the profile editor", editor.step)
+	}
+	profileView := editor.View()
+	for _, want := range []string{"brief_source", "output", "explain"} {
+		if !strings.Contains(profileView, want) {
+			t.Errorf("the profile screen does not show %q:\n%s", want, profileView)
+		}
+	}
+	if back := editor.back(); back.step != stepState {
+		t.Errorf("esc from the profile landed on step %d, want the menu", back.step)
+	}
+}
+
+// advance presses enter through next and gives the model back, which next returns
+// as the tea.Model interface.
+func advance(t *testing.T, m tuiModel) tuiModel {
+	t.Helper()
+	next, _ := m.next()
+	model, ok := next.(tuiModel)
+	if !ok {
+		t.Fatalf("next returned %T, want tuiModel", next)
+	}
+	return model
+}
+
+// TestTheProfileEditorWritesOnlyWhenApplied: a value chosen in the editor stays in
+// the model, esc leaves the section with the file untouched, and only the apply row
+// writes -one field at a time (0336).
+func TestTheProfileEditorWritesOnlyWhenApplied(t *testing.T) {
+	run := &fakeRun{axes: profile.Axes(profile.Builtin()["novato"])}
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
+	m.run = run
+	m.menu = 1
+	m = advance(t, m)
+	if m.step != stepProfile {
+		t.Fatalf("step = %d, want the profile editor", m.step)
+	}
+
+	// output is the fourth axis, and detail is its second value.
+	m.profileCursor = 3
+	m, _ = press(t, m, enterKey)
+	m, _ = press(t, m, downKey)
+	m, _ = press(t, m, enterKey)
+	if len(run.calls) != 0 {
+		t.Fatalf("choosing a value wrote %v", run.calls)
+	}
+	if got := m.value(m.state.Axes[3]); got != "detail" {
+		t.Fatalf("the row shows %q, want detail", got)
+	}
+
+	m, _ = press(t, m, escKey)
+	if m.step != stepState {
+		t.Fatalf("esc landed on step %d, want the menu", m.step)
+	}
+	if len(run.calls) != 0 {
+		t.Fatalf("leaving the section wrote %v", run.calls)
+	}
+
+	m.menu = 1
+	m = advance(t, m)
+	m.profileCursor = len(m.state.Axes)
+	m, _ = press(t, m, enterKey)
+	if want := []string{"field"}; !slices.Equal(run.calls, want) {
+		t.Fatalf("calls = %v, want %v", run.calls, want)
+	}
+	if want := []string{"output=detail"}; !slices.Equal(run.fields, want) {
+		t.Errorf("fields = %v, want %v", run.fields, want)
+	}
+	if !strings.Contains(m.fieldMsg, "output=detail") {
+		t.Errorf("the apply line does not say what it wrote: %q", m.fieldMsg)
+	}
+}
+
+// TestTheEditorReadsTheProfileAgainOnEntry: the hub applies the voice in one
+// section and edits the profile in another, so the rows describe the file that
+// stands when the section opens, not the one the wizard read at the start (0336).
+func TestTheEditorReadsTheProfileAgainOnEntry(t *testing.T) {
+	axes := profile.Axes(profile.Builtin()["novato"])
+	for i := range axes {
+		if axes[i].Name == "output" {
+			axes[i].Value = "json"
+		}
+	}
+	run := &fakeRun{axes: axes}
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
+	m.run = run
+	m.menu = 1
+
+	m = advance(t, m)
+
+	if run.reRead != 1 {
+		t.Errorf("the section read the profile %d times, want one", run.reRead)
+	}
+	if got := m.value(m.state.Axes[3]); got != "json" {
+		t.Errorf("output reads %q, want the value the file carries now", got)
+	}
+}
+
+// TestTheExplicitEditsSurviveTheVoice: the voice op recomputes every field from the
+// builtin, whatever order the sections ran in, so an axis written in this run is
+// re-applied after it: the last word is the human's edit (0336).
+func TestTheExplicitEditsSurviveTheVoice(t *testing.T) {
+	run := &fakeRun{axes: profile.Axes(profile.Builtin()["novato"])}
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato", Review: review.ModeOff})
+	m.run = run
+	m.menu = 1
+	m = advance(t, m)
+
+	// The human edits one axis and applies it in the editor.
+	m.profileCursor = 3
+	m, _ = press(t, m, enterKey)
+	m, _ = press(t, m, downKey)
+	m, _ = press(t, m, enterKey)
+	m.profileCursor = len(m.state.Axes)
+	m, _ = press(t, m, enterKey)
+
+	// Then a voice is chosen and the install section applies: the voice rewrites
+	// the profile from the builtin, and the edit has to survive it.
+	run.calls = nil
+	run.fields = nil
+	m.state.Voice = "senior"
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+
+	voice := slices.Index(run.calls, "voice")
+	if voice < 0 {
+		t.Fatalf("the voice was not applied: %v", run.calls)
+	}
+	last := len(run.calls) - 1
+	if run.calls[last] != "field" || last < voice {
+		t.Fatalf("the edit was not re-applied after the voice: %v", run.calls)
+	}
+	if want := []string{"output=detail"}; !slices.Equal(run.fields, want) {
+		t.Errorf("fields = %v, want %v", run.fields, want)
+	}
+}
+
+// TestTUIWalksTheRouterTable: every screen has a row, and walking forward then
+// back returns to where it started. A screen without a row is a screen the
+// keyboard can enter and not leave, and the conditional screens are walked past
+// in both directions instead of being hardcoded in two switches (0336).
+func TestTUIWalksTheRouterTable(t *testing.T) {
+	for _, step := range tuiSteps {
+		if _, ok := tuiRoutes[step]; !ok {
+			t.Errorf("step %d has no row in the router table", step)
+		}
+	}
+
+	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
+	var forward []tuiStep
+	m.step = stepState
+	for i := 0; i < len(tuiSteps); i++ {
+		next := m.forwardStep()
+		if next == m.step {
+			break
+		}
+		m.step = next
+		forward = append(forward, next)
+	}
+	if len(forward) == 0 || forward[len(forward)-1] != stepApply {
+		t.Fatalf("forward = %v, want it to end on the apply screen", forward)
+	}
+	for _, skipped := range forward {
+		if skipped == stepScope {
+			t.Errorf("a project walked through the scope screen: %v", forward)
+		}
+	}
+
+	forward = nil
+	m = newTUIModel(tuiState{Project: false, Clients: "both", Skills: "home", Voice: "novato"})
+	m.step = stepState
+	for i := 0; i < len(tuiSteps); i++ {
+		next := m.forwardStep()
+		if next == m.step {
+			break
+		}
+		m.step = next
+		forward = append(forward, next)
+	}
+	if !slices.Contains(forward, stepScope) {
+		t.Errorf("a folder that is not a project skipped the scope question: %v", forward)
+	}
+	if slices.Contains(forward, stepSkills) {
+		t.Errorf("a machine-only setup asked which skills to install in the project: %v", forward)
+	}
+
+	m.step = stepApply
+	for i := 0; i < len(tuiSteps); i++ {
+		next := m.backStep()
+		if next == m.step {
+			break
+		}
+		m.step = next
+	}
+	if m.step != stepState {
+		t.Errorf("walking back ended on step %d, want the first screen", m.step)
 	}
 }

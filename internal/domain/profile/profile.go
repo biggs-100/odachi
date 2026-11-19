@@ -30,21 +30,72 @@ type Facts struct {
 	Machine  bool
 }
 
-// enumField is one configurable axis: its TOML name, its reader, and the values
-// it may hold. The TOML name appears in errors because the human edits TOML.
+// enumField is one configurable axis: its TOML name, its reader, its writer, and
+// the values it may hold. The TOML name appears in errors because the human edits
+// TOML.
 type enumField struct {
 	name    string
 	allowed []string
 	value   func(Profile) string
+	assign  func(*Profile, string)
 }
 
 var enums = []enumField{
-	{"brief_source", []string{"interview", "repo", "file"}, func(p Profile) string { return p.BriefSource }},
-	{"questions", []string{"one-by-one", "batched", "all"}, func(p Profile) string { return p.Questions }},
-	{"assumptions", []string{"never", "declare", "prefer-safe"}, func(p Profile) string { return p.Assumptions }},
-	{"output", []string{"line", "detail", "json"}, func(p Profile) string { return p.Output }},
-	{"proof", []string{"command", "suite-or-ci"}, func(p Profile) string { return p.Proof }},
-	{"explain", []string{"why", "none"}, func(p Profile) string { return p.Explain }},
+	{"brief_source", []string{"interview", "repo", "file"}, func(p Profile) string { return p.BriefSource }, func(p *Profile, v string) { p.BriefSource = v }},
+	{"questions", []string{"one-by-one", "batched", "all"}, func(p Profile) string { return p.Questions }, func(p *Profile, v string) { p.Questions = v }},
+	{"assumptions", []string{"never", "declare", "prefer-safe"}, func(p Profile) string { return p.Assumptions }, func(p *Profile, v string) { p.Assumptions = v }},
+	{"output", []string{"line", "detail", "json"}, func(p Profile) string { return p.Output }, func(p *Profile, v string) { p.Output = v }},
+	{"proof", []string{"command", "suite-or-ci"}, func(p Profile) string { return p.Proof }, func(p *Profile, v string) { p.Proof = v }},
+	{"explain", []string{"why", "none"}, func(p Profile) string { return p.Explain }, func(p *Profile, v string) { p.Explain = v }},
+}
+
+// Axis is one configurable field of a profile: its TOML name, the values it may
+// hold, and what the profile in force says today. The editor reads this list, so
+// the axes live here and not in a screen (0336).
+type Axis struct {
+	Name    string
+	Allowed []string
+	Value   string
+}
+
+// Axes lists the configurable fields in the order odd/profile.toml prints them.
+func Axes(p Profile) []Axis {
+	axes := make([]Axis, 0, len(enums))
+	for _, field := range enums {
+		axes = append(axes, Axis{Name: field.name, Allowed: slices.Clone(field.allowed), Value: field.value(p)})
+	}
+	return axes
+}
+
+// Set names one axis and gives it a value, refusing an axis nobody declares and a
+// value the axis does not allow. The rest of the profile is untouched: an editor
+// changes one field and the file keeps what the human already chose (0336).
+func Set(p Profile, name, value string) (Profile, error) {
+	for _, field := range enums {
+		if field.name != name {
+			continue
+		}
+		if value != "" && !slices.Contains(field.allowed, value) {
+			return Profile{}, fmt.Errorf("%s: %q is not an allowed value; allowed values: %s", name, value, strings.Join(field.allowed, ", "))
+		}
+		field.assign(&p, value)
+		if err := Validate(p); err != nil {
+			return Profile{}, err
+		}
+		return p, nil
+	}
+	return Profile{}, fmt.Errorf("unknown field: %q; the fields are %s", name, strings.Join(fieldNames(), ", "))
+}
+
+// fieldNames lists the configurable fields, sorted, for an error a human can act
+// on: the name that did not exist leads to the names that do (0336).
+func fieldNames() []string {
+	names := make([]string, 0, len(enums))
+	for _, field := range enums {
+		names = append(names, field.name)
+	}
+	slices.Sort(names)
+	return names
 }
 
 // Validate rejects an unknown value, naming the field, the reject and the

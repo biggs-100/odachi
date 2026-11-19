@@ -30,6 +30,9 @@ type tuiState struct {
 	Voice   string
 	Review  string
 	Models  map[string]string
+	// Axes is the profile in force, one configurable field per row: the editor
+	// renders what the file says today, never a second copy (0336).
+	Axes []profile.Axis
 }
 
 // runTUI opens the installation and configuration wizard. It refuses before the
@@ -98,6 +101,7 @@ func detectTUIState(dir string) (tuiState, error) {
 	}
 	if voice != nil {
 		state.Voice = voice.Name
+		state.Axes = profile.Axes(*voice)
 	}
 
 	config, _, problem := cleanLimits(dir)
@@ -127,6 +131,9 @@ const (
 	stepReview
 	stepSummary
 	stepApply
+	// stepProfile is the second section of the hub: the six axes of the profile in
+	// force, which is what a person comes back to change (0336).
+	stepProfile
 )
 
 // The options each single-choice screen offers, in the order a human reads them.
@@ -136,10 +143,72 @@ var (
 	tuiVoices  = voiceNames()
 	tuiLenses  = review.AllLenses()
 
+	// tuiMenu is the hub: the two sections the first screen offers. The menu is
+	// what makes the wizard a place to come back to instead of a one-shot run (0336).
+	tuiMenu = []string{"instalar y configurar", "perfil"}
+
 	// tuiScopes is the choice a folder that is not a project had to be given: a
 	// machine-only setup writes nothing here, init is what creates the project.
 	tuiScopes = []string{"machine", "project"}
 )
+
+// tuiSteps is every screen the wizard has, in the order the table walks them.
+var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile}
+
+// tuiRoute is where one screen goes: forward with enter, backward with esc, and
+// whether the screen exists for this run at all. The table is the only place
+// navigation is written, so a new screen is a row and a test can walk every row
+// instead of trusting two switches to stay in step (0336).
+type tuiRoute struct {
+	forward tuiStep
+	back    tuiStep
+	when    func(tuiModel) bool
+}
+
+var tuiRoutes = map[tuiStep]tuiRoute{
+	stepState: {forward: stepScope, back: stepState, when: always},
+	// A project already carries the block: there is nothing to decide about the
+	// scope, so the question is walked past in both directions.
+	stepScope:   {forward: stepClients, back: stepState, when: func(m tuiModel) bool { return !m.state.Project }},
+	stepClients: {forward: stepSkills, back: stepScope, when: always},
+	// The skills screen belongs to init: a machine-only setup installs the craft
+	// once per machine and has no project copy to choose.
+	stepSkills:  {forward: stepVoice, back: stepClients, when: func(m tuiModel) bool { return m.init }},
+	stepVoice:   {forward: stepReview, back: stepSkills, when: always},
+	stepReview:  {forward: stepSummary, back: stepVoice, when: always},
+	stepSummary: {forward: stepApply, back: stepReview, when: always},
+	stepApply:   {forward: stepApply, back: stepSummary, when: always},
+	// The profile section has one screen: esc is the way back to the menu.
+	stepProfile: {forward: stepProfile, back: stepState, when: always},
+}
+
+// always is the row of a screen that exists for every run.
+func always(tuiModel) bool { return true }
+
+// forwardStep walks the table from the screen the wizard is on to the first one
+// that exists for this run.
+func (m tuiModel) forwardStep() tuiStep {
+	next := tuiRoutes[m.step].forward
+	for steps := 0; next != m.step && steps < len(tuiSteps); steps++ {
+		if tuiRoutes[next].when(m) {
+			return next
+		}
+		next = tuiRoutes[next].forward
+	}
+	return m.step
+}
+
+// backStep is forwardStep in the other direction.
+func (m tuiModel) backStep() tuiStep {
+	prev := tuiRoutes[m.step].back
+	for steps := 0; prev != m.step && steps < len(tuiSteps); steps++ {
+		if tuiRoutes[prev].when(m) {
+			return prev
+		}
+		prev = tuiRoutes[prev].back
+	}
+	return m.step
+}
 
 // tuiModel is the wizard: the detected facts, the choices and where it stands.
 type tuiModel struct {
@@ -150,13 +219,26 @@ type tuiModel struct {
 	client       int
 	skills       int
 	voice        int
+	menu         int
 	reviewCursor int
-	editing      bool
-	buffer       string
-	editErr      string
-	run          configure.Runner
-	applied      bool
-	result       configure.Result
+	// The profile section: which row the cursor is on (the axes, then the apply
+	// row), the value picker it opened, the values the human chose but did not
+	// write yet, and the line the last apply left (0336).
+	profileCursor int
+	picking       bool
+	pickCursor    int
+	pending       map[string]string
+	fieldMsg      string
+	// edited is every axis the editor wrote in this run, by name: the voice op
+	// recomputes the whole profile from the builtin, so these are re-applied after
+	// it and an explicit edit is the last word (0336).
+	edited  map[string]string
+	editing bool
+	buffer  string
+	editErr string
+	run     configure.Runner
+	applied bool
+	result  configure.Result
 }
 
 // newTUIModel is the model a run starts with, positioned on what the project
@@ -165,12 +247,21 @@ func newTUIModel(state tuiState) tuiModel {
 	if state.Models == nil {
 		state.Models = map[string]string{}
 	}
+	// A caller that did not read the file -a test, and the first day- still sees the
+	// axes of the profile it named: the screen never renders an empty list (0336).
+	if len(state.Axes) == 0 && state.Voice != "" {
+		if resolved, err := profile.Resolve(profile.Builtin(), state.Voice); err == nil {
+			state.Axes = profile.Axes(resolved)
+		}
+	}
 	return tuiModel{
-		state:  state,
-		init:   state.Project,
-		client: indexOf(tuiClients, state.Clients),
-		skills: indexOf(tuiSkills, state.Skills),
-		voice:  indexOf(tuiVoices, state.Voice),
+		state:   state,
+		init:    state.Project,
+		client:  indexOf(tuiClients, state.Clients),
+		skills:  indexOf(tuiSkills, state.Skills),
+		voice:   indexOf(tuiVoices, state.Voice),
+		pending: map[string]string{},
+		edited:  map[string]string{},
 	}
 }
 
@@ -187,6 +278,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.editing {
 			return m.editKey(msg), nil
+		}
+		if m.step == stepProfile {
+			return m.profileKey(msg)
 		}
 		switch msg.String() {
 		case "q":
@@ -214,60 +308,49 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// next advances one screen, committing the choice the screen was showing.
+// next advances one screen, committing the choice the screen was showing. The
+// step it lands on is the table's answer, not a chain of ifs (0336).
 func (m tuiModel) next() (tea.Model, tea.Cmd) {
-	switch m.step {
-	case stepState:
-		if m.state.Project {
-			m.step = stepClients
-		} else {
-			m.step = stepScope
+	m = m.commit()
+	// The menu is the one screen whose enter picks its destination: that is what a
+	// menu is, and the table still says where each section starts (0336).
+	if m.step == stepState && m.menu == 1 {
+		m.step = stepProfile
+		// The hub applies the voice in one section and edits the profile in another:
+		// the rows are re-read on entry so they describe the file that stands (0336).
+		if m.run != nil {
+			if axes, err := m.run.Axes(); err == nil && len(axes) > 0 {
+				m.state.Axes = axes
+			}
 		}
-	case stepScope:
-		m.init = tuiScopes[m.scope] == "project"
-		m.step = stepClients
-	case stepClients:
-		m.state.Clients = tuiClients[m.client]
-		if m.init {
-			m.step = stepSkills
-		} else {
-			m.step = stepVoice
-		}
-	case stepSkills:
-		m.state.Skills = tuiSkills[m.skills]
-		m.step = stepVoice
-	case stepVoice:
-		m.state.Voice = tuiVoices[m.voice]
-		m.step = stepReview
+		return m, nil
 	}
+	m.step = m.forwardStep()
 	return m, nil
 }
 
-// back is one screen towards the first one. The scope and the skills screens are
-// conditional: a project skips the first, a machine-only setup skips the second.
-func (m tuiModel) back() tuiModel {
+// commit records the choice the screen is showing. Nothing here touches the disk.
+func (m tuiModel) commit() tuiModel {
 	switch m.step {
 	case stepScope:
-		m.step = stepState
+		m.init = tuiScopes[m.scope] == "project"
 	case stepClients:
-		if m.state.Project {
-			m.step = stepState
-		} else {
-			m.step = stepScope
-		}
+		m.state.Clients = tuiClients[m.client]
 	case stepSkills:
-		m.step = stepClients
+		m.state.Skills = tuiSkills[m.skills]
 	case stepVoice:
-		if m.init {
-			m.step = stepSkills
-		} else {
-			m.step = stepClients
-		}
-	case stepReview:
-		m.step = stepVoice
-	case stepSummary:
-		m.step = stepReview
+		m.state.Voice = tuiVoices[m.voice]
 	}
+	return m
+}
+
+// back is one screen towards the first one, skipping the screens this run does
+// not have.
+func (m tuiModel) back() tuiModel {
+	if m.step == stepState {
+		return m
+	}
+	m.step = m.backStep()
 	return m
 }
 
@@ -333,6 +416,8 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 // summary are not choices.
 func (m tuiModel) move(delta int) tuiModel {
 	switch m.step {
+	case stepState:
+		m.menu = clamp(m.menu+delta, len(tuiMenu))
 	case stepScope:
 		m.scope = clamp(m.scope+delta, len(tuiScopes))
 	case stepClients:
@@ -365,14 +450,165 @@ func (m tuiModel) View() string {
 		return m.viewSummary()
 	case stepApply:
 		return m.viewApply()
+	case stepProfile:
+		return m.viewProfile()
 	default:
 		return m.viewState()
 	}
 }
 
-// viewState is the first screen: where the project is before any choice.
+// viewState is the hub: where the project is, and the two sections a person can
+// open. It is the screen the wizard comes back to, which is what makes a change of
+// mind possible at all (0336).
 func (m tuiModel) viewState() string {
-	return m.header("instalación y configuración") + m.facts() + "\n  enter seguir · q salir\n"
+	var out strings.Builder
+	out.WriteString(m.header("instalación y configuración"))
+	out.WriteString(m.facts())
+	out.WriteString("\n")
+	for i, item := range tuiMenu {
+		marker := "  "
+		if i == m.menu {
+			marker = "> "
+		}
+		out.WriteString("  " + marker + item + "\n")
+	}
+	out.WriteString("\n  ↑↓ elegir · enter abrir · q salir\n")
+	return out.String()
+}
+
+// viewProfile renders the six axes of the profile in force: what each one says
+// today, the values it may take, and the row that writes them. The section is a
+// map of the file, never a second copy: an empty value means the profile inherits
+// it, and a value chosen here is a choice until it is applied (0336).
+func (m tuiModel) viewProfile() string {
+	var out strings.Builder
+	out.WriteString(m.header("perfil " + m.state.Voice))
+	for i, axis := range m.state.Axes {
+		marker := "  "
+		if i == m.profileCursor && !m.picking {
+			marker = "> "
+		}
+		out.WriteString("  " + marker + fmt.Sprintf("%-12s %-12s %s\n",
+			axis.Name, shownAxis(m.value(axis)), strings.Join(axis.Allowed, " ")))
+		if m.picking && i == m.profileCursor {
+			for j, allowed := range axis.Allowed {
+				pick := "   "
+				if j == m.pickCursor {
+					pick = " > "
+				}
+				out.WriteString("    " + pick + allowed + "\n")
+			}
+		}
+	}
+	marker := "  "
+	if m.profileCursor == len(m.state.Axes) {
+		marker = "> "
+	}
+	out.WriteString("  " + marker + "aplicar los cambios\n")
+	if m.fieldMsg != "" {
+		out.WriteString("\n  " + m.fieldMsg + "\n")
+	}
+	out.WriteString("\n  ↑↓ elegir · enter cambiar · esc volver · q salir\n")
+	return out.String()
+}
+
+// profileKey drives the editor: the rows, the value picker they open, and the row
+// that writes what the human chose. Esc leaves the section and the file alone, so
+// nothing reaches the disk before that last row (0336).
+func (m tuiModel) profileKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "q" {
+		return m, tea.Quit
+	}
+	if m.picking {
+		switch msg.String() {
+		case "esc":
+			m.picking = false
+		case "up", "k":
+			m.pickCursor = clamp(m.pickCursor-1, len(m.state.Axes[m.profileCursor].Allowed))
+		case "down", "j":
+			m.pickCursor = clamp(m.pickCursor+1, len(m.state.Axes[m.profileCursor].Allowed))
+		case "enter":
+			axis := m.state.Axes[m.profileCursor]
+			m.pending[axis.Name] = axis.Allowed[m.pickCursor]
+			m.picking = false
+		}
+		return m, nil
+	}
+
+	switch msg.String() {
+	case "esc":
+		m.step = m.backStep()
+	case "up", "k":
+		m.profileCursor = clamp(m.profileCursor-1, len(m.state.Axes)+1)
+	case "down", "j":
+		m.profileCursor = clamp(m.profileCursor+1, len(m.state.Axes)+1)
+	case "enter":
+		if m.profileCursor == len(m.state.Axes) {
+			return m.applyProfile()
+		}
+		m.picking = true
+		m.pickCursor = indexOf(m.state.Axes[m.profileCursor].Allowed, m.value(m.state.Axes[m.profileCursor]))
+	}
+	return m, nil
+}
+
+// value is what a row shows: the value chosen in this run, or what the file says.
+func (m tuiModel) value(axis profile.Axis) string {
+	if chosen, ok := m.pending[axis.Name]; ok {
+		return chosen
+	}
+	return axis.Value
+}
+
+// applyProfile writes the axes the human changed, one at a time, and stops at the
+// first failure: a half-written profile is reported, never hidden (0336).
+func (m tuiModel) applyProfile() (tea.Model, tea.Cmd) {
+	if len(m.pending) == 0 {
+		m.fieldMsg = "no hay cambios que aplicar"
+		return m, nil
+	}
+	if m.run == nil {
+		return m, nil
+	}
+
+	written := make([]string, 0, len(m.pending))
+	for _, axis := range m.state.Axes {
+		value, ok := m.pending[axis.Name]
+		if !ok {
+			continue
+		}
+		if err := m.run.Field(axis.Name, value); err != nil {
+			m.fieldMsg = "falló " + axis.Name + ": " + err.Error()
+			return m, nil
+		}
+		written = append(written, axis.Name+"="+value)
+		m.state.Axes = withAxisValue(m.state.Axes, axis.Name, value)
+		// Recorded per write, not after the loop: an axis that landed before a
+		// later failure is still on disk and has to be defended (0336).
+		m.edited[axis.Name] = value
+	}
+	m.pending = map[string]string{}
+	m.fieldMsg = "aplicado: " + strings.Join(written, ", ")
+	return m, nil
+}
+
+// withAxisValue records what was written, so the screen shows the file it just
+// produced instead of the one it read at the start.
+func withAxisValue(axes []profile.Axis, name, value string) []profile.Axis {
+	for i := range axes {
+		if axes[i].Name == name {
+			axes[i].Value = value
+		}
+	}
+	return axes
+}
+
+// shownAxis names an empty value the way the file means it: inherited.
+func shownAxis(value string) string {
+	if value == "" {
+		return "(hereda)"
+	}
+	return value
 }
 
 // viewSummary is the last screen before the apply: the choices as they will be.
@@ -435,6 +671,28 @@ func (m tuiModel) apply() (tea.Model, tea.Cmd) {
 		LensModels: m.state.Models,
 		Project:    m.init,
 	}, m.run)
+	// The voice op recomputes every field from the builtin, whatever order the run
+	// took, so the axes the human wrote here are re-applied after it: an explicit
+	// edit is the last word, and a write that landed before a failure is defended
+	// too (0336).
+	for _, axis := range m.state.Axes {
+		value, ok := m.edited[axis.Name]
+		if !ok {
+			continue
+		}
+		err := m.run.Field(axis.Name, value)
+		step := configure.Step{
+			Operation: configure.Operation{ID: "field:" + axis.Name, Label: "reafirmar " + axis.Name + "=" + value},
+			Status:    configure.Done,
+			Err:       err,
+		}
+		if err != nil {
+			step.Status = configure.Failed
+			m.result.Code = configure.CodeBlocked
+			m.result.Message = step.Label + ": " + err.Error()
+		}
+		m.result.Steps = append(m.result.Steps, step)
+	}
 	m.applied = true
 	m.step = stepApply
 	return m, nil

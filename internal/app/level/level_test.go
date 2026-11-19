@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/level"
+	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
@@ -607,5 +608,91 @@ func TestLevelDoesNotCountCraftAsVision(t *testing.T) {
 	}
 	if strings.Contains(block, "odachi level --to senior") {
 		t.Errorf("craft decisions bought a graduation:\n%s", block)
+	}
+}
+
+// TestSetWritesOneAxisAndBacksUpFirst: the editor changes one field, the file is
+// copied aside before it is replaced, and every other field is still there (0336).
+func TestSetWritesOneAxisAndBacksUpFirst(t *testing.T) {
+	path := filepath.Join("raiz", layout.Profile)
+	files := newFakeFiles(map[string]string{path: start.RenderProfile(builtin(t, "novato"))})
+
+	res := level.Set(level.SetOptions{Dir: "raiz", Current: builtin(t, "novato"), Field: "output", Value: "detail"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	got := files.content(t, path)
+	flat := strings.Join(strings.Fields(got), " ")
+	if !strings.Contains(flat, `output = "detail"`) {
+		t.Errorf("the file does not carry the new value:\n%s", got)
+	}
+	for _, want := range []string{`questions = "one-by-one"`, `proof = "command"`} {
+		if !strings.Contains(flat, want) {
+			t.Errorf("the file lost %s:\n%s", want, got)
+		}
+	}
+	if want := []string{"backup " + path, "write " + path}; !slices.Equal(files.events, want) {
+		t.Errorf("events = %v, want %v (backup before write)", files.events, want)
+	}
+}
+
+// TestSetWithTheValueAlreadyInForceWritesNothing: the second run of the same
+// choice is silent, the way level --to is (0336).
+func TestSetWithTheValueAlreadyInForceWritesNothing(t *testing.T) {
+	path := filepath.Join("raiz", layout.Profile)
+	files := newFakeFiles(map[string]string{path: start.RenderProfile(builtin(t, "novato"))})
+
+	res := level.Set(level.SetOptions{Dir: "raiz", Current: builtin(t, "novato"), Field: "output", Value: "line"}, files)
+
+	if res.Code != level.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, level.CodeOK, res.Message)
+	}
+	if len(files.events) != 0 {
+		t.Errorf("a value already in force wrote %v", files.events)
+	}
+}
+
+// TestSetRefusesAnAxisThatDoesNotExist: the screen cannot invent a field, and the
+// message names the ones the profile carries (0336).
+func TestSetRefusesAnAxisThatDoesNotExist(t *testing.T) {
+	path := filepath.Join("raiz", layout.Profile)
+	files := newFakeFiles(map[string]string{path: start.RenderProfile(builtin(t, "novato"))})
+
+	res := level.Set(level.SetOptions{Dir: "raiz", Current: builtin(t, "novato"), Field: "tone", Value: "loud"}, files)
+
+	if res.Code != level.CodeBlocked {
+		t.Fatalf("Code = %d, want %d", res.Code, level.CodeBlocked)
+	}
+	for _, want := range []string{"tone", "output"} {
+		if !strings.Contains(res.Message, want) {
+			t.Errorf("message %q does not name %s", res.Message, want)
+		}
+	}
+	if len(files.events) != 0 {
+		t.Errorf("a refused field wrote %v", files.events)
+	}
+}
+
+// TestSetLeavesTheVoiceAlone: the voice follows the profile's name, and the name
+// did not change, so a field write must not touch AGENTS.md (0336).
+func TestSetLeavesTheVoiceAlone(t *testing.T) {
+	path := filepath.Join("raiz", layout.Profile)
+	agents := filepath.Join("raiz", rules.File)
+	files := newFakeFiles(map[string]string{
+		path:   start.RenderProfile(builtin(t, "novato")),
+		agents: "# bloque del humano\n",
+	})
+
+	if res := level.Set(level.SetOptions{Dir: "raiz", Current: builtin(t, "novato"), Field: "proof", Value: "suite-or-ci"}, files); res.Code != level.CodeOK {
+		t.Fatalf("Code = %d (message: %s)", res.Code, res.Message)
+	}
+	if got := files.content(t, agents); got != "# bloque del humano\n" {
+		t.Errorf("AGENTS.md changed: %q", got)
+	}
+	for _, event := range files.events {
+		if strings.Contains(event, rules.File) {
+			t.Errorf("the write touched the rules block: %v", files.events)
+		}
 	}
 }
