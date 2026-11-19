@@ -3,6 +3,7 @@ package skills_test
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -139,6 +140,47 @@ func TestContainerCraftDeclaresItsTrigger(t *testing.T) {
 			t.Errorf("the trigger does not name %q, so a session in that situation never loads the skill:\n%s", want, front)
 		}
 	}
+}
+
+// TestEverySectionSourceCarriesItsDate: the pages that cite per section must put a
+// year in the `Source:` line itself, because a document with no date is a rule that
+// is already false and a sample of markers cannot notice the loss. The independent
+// verifier refuted this class twice before the guard measured it (0333).
+func TestEverySectionSourceCarriesItsDate(t *testing.T) {
+	year := regexp.MustCompile(`20\d\d`)
+	for _, path := range []string{
+		"references/docker-and-podman.md",
+		"references/hardening.md",
+		"references/supply-chain.md",
+	} {
+		sources := 0
+		for _, line := range containerLines(t, path) {
+			trimmed := strings.TrimSpace(line)
+			if !strings.HasPrefix(trimmed, "Source:") {
+				continue
+			}
+			sources++
+			if !year.MatchString(trimmed) {
+				t.Errorf("%s has a Source line with no year: %q", path, trimmed)
+			}
+		}
+		if sources == 0 {
+			t.Errorf("%s cites per section and carries no Source line", path)
+		}
+	}
+}
+
+// containerLines is one reference of container-craft, line by line: a property about
+// a line cannot be checked on the flattened text.
+func containerLines(t *testing.T, path string) []string {
+	t.Helper()
+	for _, file := range mustSkill(t, "container-craft").Files {
+		if file.Path == path {
+			return strings.Split(string(file.Content), "\n")
+		}
+	}
+	t.Fatalf("container-craft does not carry %s", path)
+	return nil
 }
 
 // containerPage is one reference of container-craft, flattened to a single line so a
