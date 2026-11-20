@@ -184,6 +184,30 @@ func TestTheSessionModelIsTheLastResort(t *testing.T) {
 	}
 }
 
+// TestTheDeclaredModelIsIgnoredByACommandThatCannotUseIt: the key is a default for
+// {model}, not a model every command must accept. A command without the
+// placeholder runs exactly as it did before the key existed, and the verb does not
+// blame the human for a value they never typed (the review's critical finding).
+func TestTheDeclaredModelIsIgnoredByACommandThatCannotUseIt(t *testing.T) {
+	t.Setenv(hostmodel.EnvModel, "")
+	t.Setenv(hostmodel.SessionEnv, "")
+
+	dir := verifyProject(t)
+	writeFile(t, dir, "odd/review.toml", "mode = \"off\"\nverify = \"project/model\"\n")
+
+	code, out, errOut := runDir(t, dir, []string{"verify", "--exec", "echo sin-placeholder && exit 1"}, "")
+
+	if strings.Contains(errOut, "no {model} placeholder") || strings.Contains(errOut, "--model only means") {
+		t.Fatalf("the declared model refused a command that never asked for one (stderr: %q)", errOut)
+	}
+	if strings.Contains(out, "project/model") {
+		t.Errorf("the declared model reached a command that cannot use it (stdout: %q)", out)
+	}
+	if code != 1 {
+		t.Fatalf("code = %d, want 1: an echo is not a record (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+}
+
 // TestVerifyRefusesAModelWithoutThePlaceholder: a model that replaces nothing
 // would be accepted and ignored, so the verb says which placeholder gives it a
 // meaning and runs nobody.

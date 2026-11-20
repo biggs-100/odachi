@@ -37,6 +37,9 @@ type tuiState struct {
 	// is not touched is never a write (0337).
 	Verify       string
 	ClientModels map[string]string
+	// ClientModelErrs is the reason a client's file could not be read, by client.
+	// The row says so instead of showing an empty value it cannot vouch for (0337).
+	ClientModelErrs map[string]string
 	// Axes is the profile in force, one configurable field per row: the editor
 	// renders what the file says today, never a second copy (0336).
 	Axes []profile.Axis
@@ -131,11 +134,15 @@ func detectTUIState(dir string) (tuiState, error) {
 	if err != nil {
 		return tuiState{}, fmt.Errorf("could not find the home to read the clients' models: %w", err)
 	}
-	clientModels, err := initapp.ReadClientModels(home, disk(dir))
+	clientModels, unreadable, err := initapp.ReadClientModels(home, disk(dir))
 	if err != nil {
 		return tuiState{}, err
 	}
 	state.ClientModels = clientModels
+	// A file this reader cannot parse is a row that says so, not a verb that
+	// refuses to open: the wizard configures three sections and only one of them
+	// depends on that file (0337).
+	state.ClientModelErrs = unreadable
 	return state, nil
 }
 
@@ -551,6 +558,20 @@ func shownModel(value string) string {
 	return value
 }
 
+// modelUnreadable is the reason a client's file could not be read, when the row
+// was not edited in this run. The row says it cannot vouch for the value instead
+// of showing an empty one, and the reason sits under the list (0337).
+func (m tuiModel) modelUnreadable(row string) string {
+	reason, bad := m.state.ClientModelErrs[row]
+	if !bad {
+		return ""
+	}
+	if _, edited := m.modelPending[row]; edited {
+		return ""
+	}
+	return reason
+}
+
 // modelLabel is the name a human reads for a row.
 func modelLabel(row string) string {
 	switch row {
@@ -578,6 +599,9 @@ func (m tuiModel) viewModels() string {
 			marker = "> "
 		}
 		value := shownModel(m.modelValue(row))
+		if m.modelUnreadable(row) != "" {
+			value = "(ilegible)"
+		}
 		if m.editing && i == cursor {
 			value = m.buffer + "_"
 		}
@@ -585,6 +609,9 @@ func (m tuiModel) viewModels() string {
 	}
 	if m.editErr != "" {
 		out.WriteString("\n  " + m.editErr + "\n")
+	}
+	if reason := m.modelUnreadable(rows[cursor]); reason != "" {
+		out.WriteString("\n  " + reason + "\n")
 	}
 	out.WriteString("\n  enter cambiar · esc volver · se aplican en el resumen\n")
 	return out.String()

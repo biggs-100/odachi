@@ -681,6 +681,40 @@ func TestTUIDetectsTheState(t *testing.T) {
 	}
 }
 
+// TestTUIDetectsAModelsRowItCannotRead: one unreadable client file is a row that
+// says so, not a verb that refuses to open -the wizard has three sections and the
+// other two have nothing to do with that file (0337, the review's warning).
+func TestTUIDetectsAModelsRowItCannotRead(t *testing.T) {
+	dir := t.TempDir()
+	seedTUIProject(t, dir)
+	home := withTempHome(t)
+	writeFile(t, home, filepath.FromSlash(".config/opencode/opencode.json"), `{"model": "opencode-go/x"}`)
+	writeFile(t, home, filepath.FromSlash(".claude/settings.json"), `{"model": `)
+
+	got, err := detectTUIState(dir)
+	if err != nil {
+		t.Fatalf("detectTUIState: %v, want the broken file named instead of the verb refused", err)
+	}
+	if got.ClientModels["opencode"] != "opencode-go/x" {
+		t.Errorf("opencode = %q, want the file that could be read", got.ClientModels["opencode"])
+	}
+	if !strings.Contains(got.ClientModelErrs["claude"], "settings.json") {
+		t.Errorf("errs = %v, want the broken file named", got.ClientModelErrs)
+	}
+
+	// The row that cannot be read says so instead of claiming there is no model.
+	got.Clients = persona.SelectionBoth
+	m := toModels(t, newTUIModel(got))
+	m, _ = press(t, m, downKey) // verifier -> opencode
+	m, _ = press(t, m, downKey) // opencode -> claude
+	if view := m.View(); !strings.Contains(view, "(ilegible)") {
+		t.Errorf("the row does not say it could not read the file:\n%s", view)
+	}
+	if view := m.View(); !strings.Contains(view, "settings.json") {
+		t.Errorf("the section does not name the file:\n%s", view)
+	}
+}
+
 // TestTUIDetectsAFreshFolder: a folder odachi never touched reads as not a
 // project, with the machine's defaults and the review off.
 func TestTUIDetectsAFreshFolder(t *testing.T) {

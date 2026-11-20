@@ -145,8 +145,10 @@ func normalize(s State) (State, []string) {
 	}
 	// The models section obeys the rule each writer already obeys: the verifier's
 	// value replaces {model} inside a command, and a client's value ends up in a
-	// file that client parses. An empty value is a real choice -"no model"- and
-	// is not a typo, so it is kept and never written (0337).
+	// file that client parses. An empty value means different things on the two
+	// rows and each writer decides it: the verifier's line is removed, because
+	// the review file's writer can, and a client's row writes nothing, because no
+	// verb removes that key (0337).
 	if s.Verify != nil {
 		choice := *s.Verify
 		choice.Chosen = strings.TrimSpace(choice.Chosen)

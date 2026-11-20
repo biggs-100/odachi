@@ -95,9 +95,14 @@ func runVerify(dir string, args []string, stdout, stderr io.Writer) int {
 // wins, the project's file comes next, and the session's model is the last resort.
 // The bare form asks nobody, so it pays no probe and reads no file; only a typed
 // --model is kept, because the verb refuses a model that would change nothing.
+//
+// A command that does not carry {model} cannot use any of them: reading the
+// project's key there would hand the verb a model it never had, and the verb
+// would refuse a run that worked yesterday and blame a value the human did not
+// type (the review's critical finding).
 func verifyModel(dir, execFlag, name string) (string, error) {
 	model := strings.TrimSpace(name)
-	if strings.TrimSpace(execFlag) == "" {
+	if strings.TrimSpace(execFlag) == "" || !strings.Contains(execFlag, verifyapp.ModelToken) {
 		return model, nil
 	}
 	if model == "" {
@@ -107,7 +112,7 @@ func verifyModel(dir, execFlag, name string) (string, error) {
 		}
 		model = strings.TrimSpace(config.Verify)
 	}
-	if model == "" && strings.Contains(execFlag, verifyapp.ModelToken) {
+	if model == "" {
 		model = hostModel{}.Model(dir)
 	}
 	return model, nil
