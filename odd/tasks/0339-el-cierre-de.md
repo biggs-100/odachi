@@ -12,7 +12,7 @@ R1 · "el cierre de cada paso nombra las lineas autoradas acumuladas desde la ba
 ## Steps
 - [x] T1 · cerrar un paso nombra el acumulado desde la base y el limite que el cierre de la feature aplica   R1 · route:delegated/odachi-worker · tree:c0e7aa70aa2ee141980c88278b14421e11b51848
 - [x] T2 · la ADR dice por que el paso deja constancia y el cierre de la feature se niega, con lo que hace gentle-shell   R1 · route:inline · tree:3b773685aefb6ed9b14cae30459b780457f3eda7
-- [ ] T3 · la skill de commits ensena el numero en el momento en que se puede partir, no solo al final   R1 · route:inline
+- [x] T3 · la skill de commits ensena el numero en el momento en que se puede partir, no solo al final   R1 · route:inline · tree:475b752349fe2876bdc860e267d627def1d693ac
 
 ## History
 L1 · "el cierre de cada paso nombra las lineas autoradas acumuladas desde la base y el limite que el gate aplica al cerrar, sin negarse a cerrar"
