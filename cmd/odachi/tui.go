@@ -911,12 +911,17 @@ func (m tuiModel) viewModels() string {
 			notice = false
 		}
 		var line strings.Builder
+		// One cursor at a time: while the picker is open under this row, the
+		// nested list is what the keys move, so the row itself drops its glyph
+		// (the profile editor already drew it this way) (0338).
+		nested := m.pickingModel && i == cursor
+		selected := i == cursor && !nested
 		if notice {
-			line.WriteString(tuiLook.rowNotice(i == cursor, modelLabel(row), value))
+			line.WriteString(tuiLook.rowNotice(selected, modelLabel(row), value))
 		} else {
-			line.WriteString(tuiLook.rowValues(i == cursor, modelLabel(row), value))
+			line.WriteString(tuiLook.rowValues(selected, modelLabel(row), value))
 		}
-		if m.pickingModel && i == cursor {
+		if nested {
 			line.WriteString(m.modelPicker(m.pickedValue()))
 		}
 		return line.String()
@@ -1294,13 +1299,21 @@ func (m tuiModel) viewReview() string {
 		if i > 0 {
 			lens := tuiLenses[i-1]
 			value = m.state.Models[lens]
+			// An unset lens is not a blank: it runs with the session's model, and
+			// the row says so instead of leaving a column empty (0338).
+			if value == "" {
+				value = "(la sesión)"
+			}
 			if m.editing && i == m.reviewCursor {
 				value = m.buffer + "_"
 			}
 		}
 		var row strings.Builder
-		row.WriteString(tuiLook.rowValues(i == m.reviewCursor, labels[i], value))
-		if m.pickingModel && i > 0 && i == m.reviewCursor {
+		// One cursor at a time, as in the models section: the picker under the row
+		// owns the keys while it is open (0338).
+		nested := m.pickingModel && i > 0 && i == m.reviewCursor
+		row.WriteString(tuiLook.rowValues(i == m.reviewCursor && !nested, labels[i], value))
+		if nested {
 			row.WriteString(m.modelPicker(m.pickedValue()))
 		}
 		return row.String()

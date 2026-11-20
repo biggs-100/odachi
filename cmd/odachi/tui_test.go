@@ -2199,10 +2199,10 @@ func TestTUILongModelListWindows(t *testing.T) {
 	if strings.Contains(view, "host/model-00") {
 		t.Errorf("the picker drew an entry hidden above its window:\n%s", view)
 	}
-	// The row that opened the list and the entry the cursor is on: two glyphs,
-	// no more, which is what a window that drew every row would break.
-	if got := strings.Count(view, cursorGlyph); got != 2 {
-		t.Errorf("the cursor glyph appears %d times, want the row and the entry:\n%s", got, view)
+	// One cursor, and it belongs to the list: the row that opened it drops its
+	// glyph so the keys have a single owner (0338).
+	if got := strings.Count(view, cursorGlyph); got != 1 {
+		t.Errorf("the cursor glyph appears %d times, want only the picker's entry:\n%s", got, view)
 	}
 }
 
