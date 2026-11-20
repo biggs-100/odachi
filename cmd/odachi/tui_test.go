@@ -314,17 +314,19 @@ func toSummary(t *testing.T, m tuiModel) tuiModel {
 
 // fakeRun records the operations the apply runs.
 type fakeRun struct {
-	calls   []string
-	failAt  string
-	clients string
-	skills  string
-	project bool
-	voice   string
-	review  string
-	models  map[string]string
-	fields  []string
-	axes    []profile.Axis
-	reRead  int
+	calls        []string
+	failAt       string
+	clients      string
+	skills       string
+	project      bool
+	voice        string
+	review       string
+	models       map[string]string
+	clientModels map[string]string
+	verify       string
+	fields       []string
+	axes         []profile.Axis
+	reRead       int
 }
 
 func (f *fakeRun) record(op string) error {
@@ -335,8 +337,8 @@ func (f *fakeRun) record(op string) error {
 	return nil
 }
 
-func (f *fakeRun) Install(project bool, clients, skills string) error {
-	f.project, f.clients, f.skills = project, clients, skills
+func (f *fakeRun) Install(project bool, clients, skills string, models map[string]string) error {
+	f.project, f.clients, f.skills, f.clientModels = project, clients, skills, models
 	return f.record("install")
 }
 
@@ -353,6 +355,11 @@ func (f *fakeRun) Review(mode string) error {
 func (f *fakeRun) Models(models map[string]string) error {
 	f.models = models
 	return f.record("models")
+}
+
+func (f *fakeRun) Verify(model string) error {
+	f.verify = model
+	return f.record("verify")
 }
 
 func (f *fakeRun) Field(field, value string) error {
@@ -463,14 +470,14 @@ func TestTUIRunnerInstallChoosesInitOrSetup(t *testing.T) {
 		return 0
 	}
 
-	if err := r.Install(true, persona.SelectionOpenCode, persona.SkillsProject); err != nil {
+	if err := r.Install(true, persona.SelectionOpenCode, persona.SkillsProject, nil); err != nil {
 		t.Fatalf("Install(project): %v", err)
 	}
 	if got := strings.Join(initArgs, " "); got != "--agents opencode --skills project" {
 		t.Fatalf("init args = %q", got)
 	}
 
-	if err := r.Install(false, persona.SelectionBoth, persona.SkillsHome); err != nil {
+	if err := r.Install(false, persona.SelectionBoth, persona.SkillsHome, nil); err != nil {
 		t.Fatalf("Install(machine): %v", err)
 	}
 	if got := strings.Join(setupArgs, " "); got != "--agents both" {
@@ -487,7 +494,7 @@ func TestTUIRunnerReportsTheVerbError(t *testing.T) {
 		return 1
 	}
 
-	err := r.Install(true, persona.SelectionBoth, persona.SkillsHome)
+	err := r.Install(true, persona.SelectionBoth, persona.SkillsHome, nil)
 	if err == nil || !strings.Contains(err.Error(), "the store is broken") {
 		t.Fatalf("err = %v, want the verb's line", err)
 	}
@@ -644,10 +651,14 @@ func TestTUIReviewScreenEscapesToVoice(t *testing.T) {
 }
 
 // TestTUIDetectsTheState: the first screen starts from what the project already
-// chose, not from the wizard's defaults.
+// chose, not from the wizard's defaults. The models section reads the verifier's
+// key and each client's own file (0337).
 func TestTUIDetectsTheState(t *testing.T) {
 	dir := t.TempDir()
 	seedTUIProject(t, dir)
+	home := withTempHome(t)
+	writeFile(t, home, filepath.FromSlash(".config/opencode/opencode.json"), `{"model": "opencode-go/x"}`)
+	writeFile(t, home, filepath.FromSlash(".claude/settings.json"), `{"model": "sonnet"}`)
 
 	got, err := detectTUIState(dir)
 	if err != nil {
@@ -655,14 +666,15 @@ func TestTUIDetectsTheState(t *testing.T) {
 	}
 
 	want := tuiState{
-		Version: version,
-		Project: true,
-		Clients: persona.SelectionOpenCode,
-		Skills:  persona.SkillsProject,
-		Voice:   "senior",
-		Review:  review.ModeOn,
-		Models:  map[string]string{"reliability": "opencode-go/deepseek-v4.1-flash"},
-		Axes:    profile.Axes(profile.Builtin()["senior"]),
+		Version:      version,
+		Project:      true,
+		Clients:      persona.SelectionOpenCode,
+		Skills:       persona.SkillsProject,
+		Voice:        "senior",
+		Review:       review.ModeOn,
+		Models:       map[string]string{"reliability": "opencode-go/deepseek-v4.1-flash"},
+		ClientModels: map[string]string{"opencode": "opencode-go/x", "claude": "sonnet"},
+		Axes:         profile.Axes(profile.Builtin()["senior"]),
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("state = %+v, want %+v", got, want)
@@ -674,6 +686,7 @@ func TestTUIDetectsTheState(t *testing.T) {
 func TestTUIDetectsAFreshFolder(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
+	withTempHome(t)
 
 	got, err := detectTUIState(dir)
 	if err != nil {
@@ -725,6 +738,7 @@ func TestTUIFirstScreenNamesTheState(t *testing.T) {
 func TestTUIDetectionWritesNothing(t *testing.T) {
 	dir := t.TempDir()
 	seedTUIProject(t, dir)
+	withTempHome(t)
 	before := manifest(t, dir)
 
 	if _, err := detectTUIState(dir); err != nil {
@@ -766,10 +780,10 @@ func TestTUIWithAFlagIsRefused(t *testing.T) {
 	}
 }
 
-// TestTUITheMenuHasTwoSectionsAndEscReturnsToIt: the wizard opens on a menu, enter
-// walks the section the cursor names, and esc comes back to the menu from either
-// one, so a person can change one thing and leave (0336).
-func TestTUITheMenuHasTwoSectionsAndEscReturnsToIt(t *testing.T) {
+// TestTUITheMenuOffersEachSectionAndEscReturnsToIt: the wizard opens on a menu,
+// enter walks the section the cursor names, and esc comes back to the menu from
+// any of them, so a person can change one thing and leave (0336).
+func TestTUITheMenuOffersEachSectionAndEscReturnsToIt(t *testing.T) {
 	m := newTUIModel(tuiState{Project: true, Clients: "both", Skills: "home", Voice: "novato"})
 
 	if m.step != stepState {
@@ -925,6 +939,363 @@ func TestTheExplicitEditsSurviveTheVoice(t *testing.T) {
 	}
 	if want := []string{"output=detail"}; !slices.Equal(run.fields, want) {
 		t.Errorf("fields = %v, want %v", run.fields, want)
+	}
+}
+
+// withTempHome points the home at a folder the test owns: the models section
+// reads the client configs there, and no test touches the real home (0337).
+func withTempHome(t *testing.T) string {
+	t.Helper()
+	home := t.TempDir()
+	previous := homeDir
+	homeDir = func() (string, error) { return home, nil }
+	t.Cleanup(func() { homeDir = previous })
+	return home
+}
+
+// toModels opens the models section from the hub.
+func toModels(t *testing.T, m tuiModel) tuiModel {
+	t.Helper()
+	m.menu = 2
+	m = advance(t, m)
+	if m.step != stepModels {
+		t.Fatalf("step = %d, want the models section", m.step)
+	}
+	return m
+}
+
+// typeModel types a whole value into the open editor.
+func typeModel(t *testing.T, m tuiModel, value string) tuiModel {
+	t.Helper()
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(value)})
+	return m
+}
+
+// TestTUITheMenuOffersTheModelsSection: the hub lists the third section, enter
+// opens it, esc comes back to the hub and q still quits (0337).
+func TestTUITheMenuOffersTheModelsSection(t *testing.T) {
+	m := newTUIModel(tuiState{Project: true, Clients: persona.SelectionBoth, Skills: persona.SkillsHome, Voice: "novato"})
+
+	if view := m.View(); !strings.Contains(view, "modelos") {
+		t.Fatalf("the hub does not offer the models section:\n%s", view)
+	}
+
+	opened := toModels(t, m)
+	if view := opened.View(); !strings.Contains(view, "verificador") {
+		t.Errorf("the section does not show the verifier:\n%s", view)
+	}
+
+	if back := opened.back(); back.step != stepState {
+		t.Errorf("esc landed on step %d, want the hub", back.step)
+	}
+
+	if _, cmd := press(t, opened, qKey); cmd == nil {
+		t.Error("q does not quit from the models section")
+	}
+}
+
+// TestTheModelsSectionShowsTheVerifierAndTheInstalledClients: the rows are the
+// verifier and the clients the hub detected, with the model each file carries
+// today and a word for the ones that carry none (0337).
+func TestTheModelsSectionShowsTheVerifierAndTheInstalledClients(t *testing.T) {
+	both := tuiState{
+		Project: true, Clients: persona.SelectionBoth, Skills: persona.SkillsHome, Voice: "novato",
+		Verify:       "cheap/model",
+		ClientModels: map[string]string{"opencode": "opencode-go/x"},
+	}
+	view := toModels(t, newTUIModel(both)).View()
+	for _, want := range []string{"verificador", "cheap/model", "OpenCode", "opencode-go/x", "Claude", "(ninguno)"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the section does not carry %q:\n%s", want, view)
+		}
+	}
+
+	one := both
+	one.Clients = persona.SelectionClaude
+	view = toModels(t, newTUIModel(one)).View()
+	if strings.Contains(view, "OpenCode") {
+		t.Errorf("a machine that runs Claude alone was asked about OpenCode:\n%s", view)
+	}
+	if !strings.Contains(view, "Claude") || !strings.Contains(view, "(ninguno)") {
+		t.Errorf("the Claude row is missing:\n%s", view)
+	}
+}
+
+// TestTheModelsSectionEditsTheVerifier: enter opens the buffer, enter keeps the
+// value in the model, and esc drops what was typed without dropping the choice
+// that was already there (0337).
+func TestTheModelsSectionEditsTheVerifier(t *testing.T) {
+	m := toModels(t, newTUIModel(wizard()))
+	m, _ = press(t, m, enterKey) // the verifier row
+	if !m.editing {
+		t.Fatal("editing = false, want the line editor open")
+	}
+
+	m = typeModel(t, m, "cheap/model")
+	m, _ = press(t, m, enterKey)
+	if m.editing {
+		t.Fatal("editing = true, want the editor closed")
+	}
+	if got := m.modelPending[modelVerifier]; got != "cheap/model" {
+		t.Fatalf("pending = %q, want the value kept", got)
+	}
+	if !strings.Contains(m.View(), "cheap/model") {
+		t.Errorf("the row does not show what was kept:\n%s", m.View())
+	}
+
+	m, _ = press(t, m, enterKey)
+	m = typeModel(t, m, "dropped")
+	m, _ = press(t, m, escKey)
+	if m.editing {
+		t.Fatal("editing = true, want esc to close the editor")
+	}
+	if got := m.modelPending[modelVerifier]; got != "cheap/model" {
+		t.Fatalf("pending = %q, want the value esc did not touch", got)
+	}
+	if strings.Contains(m.View(), "dropped") {
+		t.Errorf("the row kept what esc dropped:\n%s", m.View())
+	}
+}
+
+// TestTheModelsSectionRefusesAValueThatIsNotAnIdentifier: the section obeys the
+// lens screen's rule and gives its sentence, because a second rule is how two
+// screens start disagreeing (0337).
+func TestTheModelsSectionRefusesAValueThatIsNotAnIdentifier(t *testing.T) {
+	m := toModels(t, newTUIModel(wizard()))
+	m, _ = press(t, m, enterKey)
+	m = typeModel(t, m, "a b")
+	m, _ = press(t, m, enterKey)
+
+	if !m.editing {
+		t.Fatal("editing = false, want the editor still open")
+	}
+	if m.editErr == "" {
+		t.Fatal("editErr is empty, want the refusal on the screen")
+	}
+	if _, ok := m.modelPending[modelVerifier]; ok {
+		t.Fatalf("the refused value was kept: %q", m.modelPending[modelVerifier])
+	}
+
+	lens := toReview(t, newTUIModel(wizard()))
+	lens, _ = press(t, lens, downKey) // modo -> risk
+	lens, _ = press(t, lens, enterKey)
+	lens = typeModel(t, lens, "a b")
+	lens, _ = press(t, lens, enterKey)
+	if lens.editErr != m.editErr {
+		t.Errorf("the lens screen says %q and the models section %q: one rule, one sentence", lens.editErr, m.editErr)
+	}
+}
+
+// TestTheModelsSectionNamesNoModelWhenCleared: an empty value is the row going
+// back to none, and the plan will remove the verifier's line (0337).
+func TestTheModelsSectionNamesNoModelWhenCleared(t *testing.T) {
+	in := wizard()
+	in.Verify = "cheap/model"
+	m := toModels(t, newTUIModel(in))
+	m, _ = press(t, m, enterKey)
+	for i := 0; i < len("cheap/model"); i++ {
+		m, _ = press(t, m, backspaceKey)
+	}
+	m, _ = press(t, m, enterKey)
+
+	value, ok := m.modelPending[modelVerifier]
+	if !ok || value != "" {
+		t.Fatalf("pending = %q (present %v), want an explicit empty choice", value, ok)
+	}
+	if !strings.Contains(m.View(), "(ninguno)") {
+		t.Errorf("the row does not say there is no model:\n%s", m.View())
+	}
+}
+
+// TestTheModelsSectionRefusesToClearAClientRow: no verb removes a client's key,
+// so a row that showed itself empty while the file kept its model would be lying
+// about what the run wrote. The verifier's row is the one that can be cleared,
+// because its line is written by the review file's own writer (0337).
+func TestTheModelsSectionRefusesToClearAClientRow(t *testing.T) {
+	in := wizard()
+	in.ClientModels = map[string]string{persona.SelectionOpenCode: "opencode-go/x"}
+	m := toModels(t, newTUIModel(in))
+
+	m, _ = press(t, m, downKey) // verifier -> opencode
+	m, _ = press(t, m, enterKey)
+	for i := 0; i < len("opencode-go/x"); i++ {
+		m, _ = press(t, m, backspaceKey)
+	}
+	m, _ = press(t, m, enterKey)
+
+	if !m.editing {
+		t.Fatal("editing = false, want the editor still open")
+	}
+	if m.editErr == "" {
+		t.Fatal("editErr is empty, want the refusal on the screen")
+	}
+	if _, ok := m.modelPending[persona.SelectionOpenCode]; ok {
+		t.Fatalf("the refused empty value was kept: %q", m.modelPending[persona.SelectionOpenCode])
+	}
+	if !strings.Contains(m.View(), "borra la clave model") {
+		t.Errorf("the refusal does not say where the line lives:\n%s", m.View())
+	}
+}
+
+// TestTheModelsSectionReachesTheInstallOperation: a client's model is applied by
+// the verb that owns the client file, so the install receives --model instead of
+// the wizard writing opencode.json itself (0337).
+func TestTheModelsSectionReachesTheInstallOperation(t *testing.T) {
+	m := toModels(t, newTUIModel(wizard()))
+	run := &fakeRun{}
+	m.run = run
+
+	m, _ = press(t, m, downKey) // verifier -> opencode
+	m, _ = press(t, m, enterKey)
+	m = typeModel(t, m, "opencode-go/x")
+	m, _ = press(t, m, enterKey)
+
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+
+	if m.step != stepApply {
+		t.Fatalf("step = %d, want the apply screen", m.step)
+	}
+	if got := run.clientModels["opencode"]; got != "opencode-go/x" {
+		t.Fatalf("install models = %v, want opencode=opencode-go/x", run.clientModels)
+	}
+	if slices.Contains(run.calls, "verify") {
+		t.Errorf("calls = %v, want no verifier write", run.calls)
+	}
+}
+
+// TestAnUnchangedModelsSectionWritesNothing: a section the human never opened,
+// and a row that was opened and kept as it was, add no operation and no --model
+// (0337).
+func TestAnUnchangedModelsSectionWritesNothing(t *testing.T) {
+	never := toSummary(t, newTUIModel(wizard()))
+	run := &fakeRun{}
+	never.run = run
+	never, _ = press(t, never, enterKey)
+	if slices.Contains(run.calls, "verify") {
+		t.Errorf("calls = %v, want no verifier write from a section nobody opened", run.calls)
+	}
+	if run.clientModels != nil {
+		t.Errorf("install models = %v, want none", run.clientModels)
+	}
+
+	in := wizard()
+	in.Verify = "cheap/model"
+	in.ClientModels = map[string]string{"opencode": "opencode-go/x"}
+	m := toModels(t, newTUIModel(in))
+	run = &fakeRun{}
+	m.run = run
+	m, _ = press(t, m, enterKey) // open the verifier
+	m, _ = press(t, m, enterKey) // keep the value it shows
+
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+
+	if slices.Contains(run.calls, "verify") {
+		t.Errorf("calls = %v, want no verifier write for the value already there", run.calls)
+	}
+	if run.clientModels != nil {
+		t.Errorf("install models = %v, want none: the client row did not change", run.clientModels)
+	}
+}
+
+// TestTheModelsSectionKeepsTheCursorInsideItsRows: the client choice lives in
+// another section, and a row that is no longer shown cannot be the one enter
+// edits (0337).
+func TestTheModelsSectionKeepsTheCursorInsideItsRows(t *testing.T) {
+	m := toModels(t, newTUIModel(wizard()))
+	m, _ = press(t, m, downKey) // verifier -> opencode
+	m, _ = press(t, m, downKey) // opencode -> claude
+	m, _ = press(t, m, escKey)
+
+	m.state.Clients = persona.SelectionOpenCode
+	m = toModels(t, m)
+	if view := m.View(); strings.Contains(view, "Claude") {
+		t.Fatalf("the section still shows a client the hub no longer names:\n%s", view)
+	}
+
+	m, _ = press(t, m, enterKey)
+	if !m.editing {
+		t.Fatal("enter on the row that exists did not open the editor")
+	}
+	m = typeModel(t, m, "opencode-go/x")
+	m, _ = press(t, m, enterKey)
+	if got := m.modelPending[persona.SelectionOpenCode]; got != "opencode-go/x" {
+		t.Fatalf("pending = %v, want the OpenCode row", m.modelPending)
+	}
+}
+
+// TestTheVerifierRowReachesTheReviewWriter: a changed verifier is an operation of
+// the plan, and it reaches the app that owns odd/review.toml (0337).
+func TestTheVerifierRowReachesTheReviewWriter(t *testing.T) {
+	m := toModels(t, newTUIModel(wizard()))
+	run := &fakeRun{}
+	m.run = run
+
+	m, _ = press(t, m, enterKey) // the verifier row
+	m = typeModel(t, m, "cheap/model#fast")
+	m, _ = press(t, m, enterKey)
+
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+
+	if !slices.Contains(run.calls, "verify") {
+		t.Fatalf("calls = %v, want the verifier written", run.calls)
+	}
+	if run.verify != "cheap/model#fast" {
+		t.Fatalf("verify = %q, want the chosen model", run.verify)
+	}
+}
+
+// TestTheVerifierRowWritesTheReviewFile: the row reaches SetConfig over a real
+// project, and the lens table the section does not touch survives (0337).
+func TestTheVerifierRowWritesTheReviewFile(t *testing.T) {
+	dir := t.TempDir()
+	seedTUIProject(t, dir)
+	r := newTUIRunner(dir)
+
+	if err := r.Verify("cheap/model#fast"); err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+
+	stored, err := os.ReadFile(filepath.Join(dir, "odd", "review.toml"))
+	if err != nil {
+		t.Fatalf("read odd/review.toml: %v", err)
+	}
+	for _, want := range []string{`verify = "cheap/model#fast"`, `reliability = "opencode-go/deepseek-v4.1-flash"`} {
+		if !strings.Contains(string(stored), want) {
+			t.Errorf("the write lost %q:\n%s", want, stored)
+		}
+	}
+}
+
+// TestTUIRunnerInstallCarriesTheClientModels: the client's model travels as the
+// flag the verb already understands, in a stable order (0337).
+func TestTUIRunnerInstallCarriesTheClientModels(t *testing.T) {
+	var initArgs, setupArgs []string
+	r := newTUIRunner("proyecto")
+	r.initFn = func(_ string, args []string, _, _ io.Writer) int {
+		initArgs = args
+		return 0
+	}
+	r.setupFn = func(args []string, _, _ io.Writer) int {
+		setupArgs = args
+		return 0
+	}
+	models := map[string]string{"opencode": "opencode-go/x", "claude": "sonnet"}
+
+	if err := r.Install(true, persona.SelectionBoth, persona.SkillsHome, models); err != nil {
+		t.Fatalf("Install(project): %v", err)
+	}
+	if got := strings.Join(initArgs, " "); got != "--agents both --skills home --model claude=sonnet --model opencode=opencode-go/x" {
+		t.Errorf("init args = %q", got)
+	}
+
+	if err := r.Install(false, persona.SelectionBoth, persona.SkillsHome, models); err != nil {
+		t.Fatalf("Install(machine): %v", err)
+	}
+	if got := strings.Join(setupArgs, " "); got != "--agents both --model claude=sonnet --model opencode=opencode-go/x" {
+		t.Errorf("setup args = %q", got)
 	}
 }
 

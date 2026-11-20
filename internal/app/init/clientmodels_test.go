@@ -309,6 +309,97 @@ func TestRunRefusesAnUnknownModelClient(t *testing.T) {
 	}
 }
 
+// TestReadClientModelsAnswersWhatEachFileCarries: the section shows the model
+// each client reads today, and the value comes from the file the writer edits
+// (0337).
+func TestReadClientModelsAnswersWhatEachFileCarries(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{})
+	files.files[homeFile(home, opencodeConfig)] = []byte("{\n  // my config\n  \"model\": \"anthropic/claude#fast\"\n}\n")
+	files.files[homeFile(home, claudeSettings)] = []byte("{\n  \"model\": \"sonnet\",\n  \"permissions\": {\"allow\": [\"Bash\"]}\n}\n")
+
+	got, err := initapp.ReadClientModels(home, files)
+	if err != nil {
+		t.Fatalf("ReadClientModels: %v", err)
+	}
+	if got["opencode"] != "anthropic/claude#fast" || got["claude"] != "sonnet" {
+		t.Fatalf("models = %v, want the value each file carries", got)
+	}
+	if len(files.events) != 0 {
+		t.Errorf("reading wrote: %v", files.events)
+	}
+}
+
+// TestReadClientModelsNamesNoModelWhenTheKeyIsAbsent: a client whose config says
+// nothing about a model is a row with none, not an empty string in a map.
+func TestReadClientModelsNamesNoModelWhenTheKeyIsAbsent(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{})
+	files.files[homeFile(home, opencodeConfig)] = []byte("{\"$schema\": \"https://opencode.ai/config.json\"}\n")
+
+	got, err := initapp.ReadClientModels(home, files)
+	if err != nil {
+		t.Fatalf("ReadClientModels: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("models = %v, want none: neither file names one", got)
+	}
+}
+
+// TestReadClientModelsFindsTheConfigOpenCodeAlreadyHas: an existing .jsonc is the
+// human's choice, and the reader looks where the writer writes.
+func TestReadClientModelsFindsTheConfigOpenCodeAlreadyHas(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{})
+	jsonc := strings.TrimSuffix(opencodeConfig, ".json") + ".jsonc"
+	files.files[homeFile(home, jsonc)] = []byte("{\n  // mine\n  \"model\": \"cheap/model\"\n}\n")
+
+	got, err := initapp.ReadClientModels(home, files)
+	if err != nil {
+		t.Fatalf("ReadClientModels: %v", err)
+	}
+	if got["opencode"] != "cheap/model" {
+		t.Fatalf("models = %v, want the value from the .jsonc", got)
+	}
+}
+
+// TestReadClientModelsRefusesAFileItCannotRead: a broken config is named, not
+// read as "no model": the screen must not claim a fact it could not see.
+func TestReadClientModelsRefusesAFileItCannotRead(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{})
+	files.files[homeFile(home, claudeSettings)] = []byte(`{"model": `)
+
+	_, err := initapp.ReadClientModels(home, files)
+	if err == nil {
+		t.Fatal("ReadClientModels accepted a broken settings file")
+	}
+	if !strings.Contains(err.Error(), "settings.json") {
+		t.Errorf("error = %q, want the file named", err)
+	}
+}
+
+// TestTheWriterAndTheReaderAgreeOnTheFilePath: the value a run writes is the
+// value the screen reads back, because both halves use the same path (0337).
+func TestTheWriterAndTheReaderAgreeOnTheFilePath(t *testing.T) {
+	home := "hogar"
+	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
+
+	initapp.RunSetup(initapp.Options{
+		Home:   fakeHome{dir: home},
+		Agents: "both",
+		Models: map[string]string{"opencode": "anthropic/claude#fast", "claude": "sonnet"},
+	}, files, &fakeSkills{})
+
+	got, err := initapp.ReadClientModels(home, files)
+	if err != nil {
+		t.Fatalf("ReadClientModels: %v", err)
+	}
+	if got["opencode"] != "anthropic/claude#fast" || got["claude"] != "sonnet" {
+		t.Fatalf("models = %v, want what the run just wrote", got)
+	}
+}
+
 // slicesContains answers whether a slice names one destination. It is local to
 // this file so the assertions read the same way as the other init tests.
 func slicesContains(items []string, want string) bool {

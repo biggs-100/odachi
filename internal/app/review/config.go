@@ -3,16 +3,22 @@ package review
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	domain "github.com/biggs-100/odachi/internal/domain/review"
 )
 
-// ConfigOptions is one write of the review file from the wizard: the switch and
-// the model of each lens. A field left zero keeps what the file already has.
+// ConfigOptions is one write of the review file from the wizard: the switch, the
+// model of each lens and the model the verifier runs with. A field left zero
+// keeps what the file already has.
 type ConfigOptions struct {
 	Dir    string
 	Mode   string            // empty: keep the switch
 	Models map[string]string // nil: keep the lens table; non-nil: replace it
+	// Verify is the model `odachi verify` substitutes for {model}. Nil keeps the
+	// key; a value replaces it, and an empty value removes the line, because a
+	// project that names no verifier pays for the session's model (0337).
+	Verify *string
 }
 
 // SetConfig writes the switch and the lens table, preserving the fields the
@@ -43,6 +49,20 @@ func SetConfig(opts ConfigOptions, files ModeFiles, codec ModeCodec) Result {
 			return modeBlocked(err)
 		}
 		current.Lenses = models
+	}
+	// The verifier is one key of the same file: it follows the lens table's rule
+	// -the value replaces {model} inside a command- and an empty value is the
+	// project writing that it names no verifier, which Render omits (0337).
+	if opts.Verify != nil {
+		value := strings.TrimSpace(*opts.Verify)
+		if value != "" {
+			checked, err := domain.NormalizeModel(value)
+			if err != nil {
+				return modeBlocked(err)
+			}
+			value = checked
+		}
+		current.Verify = value
 	}
 
 	data, err := codec.Render(current)

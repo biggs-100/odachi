@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	initapp "github.com/biggs-100/odachi/internal/app/init"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
 	"github.com/biggs-100/odachi/internal/domain/review"
@@ -32,7 +33,23 @@ type State struct {
 	// LensModels is the table the review runs with. Nil means the caller did not
 	// touch it; an empty map means the human cleared it, and the operation runs.
 	LensModels map[string]string
-	Project    bool
+	// Verify is the verifier's row of the models section. Nil means the section
+	// was never opened: odd/review.toml keeps its line. The plan writes only a
+	// difference, so choosing the value the file already carries writes nothing.
+	Verify *ModelChoice
+	// ClientModels is the row of each client the section showed, by client. Only
+	// a client whose choice differs reaches the install operation, which is why
+	// an unchanged section never names one (0337).
+	ClientModels map[string]ModelChoice
+	Project      bool
+}
+
+// ModelChoice is one row of the models section: the value the human chose and
+// the value the file carried when the section read it. The two together are what
+// makes "nothing changed" a fact instead of a guess (0337).
+type ModelChoice struct {
+	Chosen   string
+	Detected string
 }
 
 // Operation is one step of the apply, in the plan's order.
@@ -66,10 +83,16 @@ type Result struct {
 
 // Runner applies one operation. The CLI wires it to the verbs that already exist.
 type Runner interface {
-	Install(project bool, clients, skills string) error
+	// Install runs init or setup. models is the model of each client whose row
+	// the human changed, and it travels as `--model client=model` so the verb
+	// that owns the file is still the only writer (0337).
+	Install(project bool, clients, skills string, models map[string]string) error
 	Voice(profile string) error
 	Review(mode string) error
 	Models(models map[string]string) error
+	// Verify writes the verifier's model into odd/review.toml, keeping the lens
+	// table and the numbers the section does not touch (0337).
+	Verify(model string) error
 	// Field writes one axis of the profile: the editor changes one row and this is
 	// the only write it makes (0336).
 	Field(field, value string) error
@@ -120,6 +143,51 @@ func normalize(s State) (State, []string) {
 			s.LensModels = models
 		}
 	}
+	// The models section obeys the rule each writer already obeys: the verifier's
+	// value replaces {model} inside a command, and a client's value ends up in a
+	// file that client parses. An empty value is a real choice -"no model"- and
+	// is not a typo, so it is kept and never written (0337).
+	if s.Verify != nil {
+		choice := *s.Verify
+		choice.Chosen = strings.TrimSpace(choice.Chosen)
+		choice.Detected = strings.TrimSpace(choice.Detected)
+		if choice.Chosen != "" {
+			checked, err := review.NormalizeModel(choice.Chosen)
+			if err != nil {
+				problems = append(problems, "el verificador: "+err.Error())
+			} else {
+				choice.Chosen = checked
+			}
+		}
+		s.Verify = &choice
+	}
+	if len(s.ClientModels) > 0 {
+		chosen := make(map[string]string, len(s.ClientModels))
+		for client, choice := range s.ClientModels {
+			value := strings.TrimSpace(choice.Chosen)
+			if value != "" {
+				chosen[client] = value
+			}
+		}
+		models, err := initapp.NormalizeModels(chosen)
+		if err != nil {
+			problems = append(problems, "los modelos de los clientes: "+err.Error())
+		} else {
+			checked := make(map[string]ModelChoice, len(s.ClientModels))
+			for client, choice := range s.ClientModels {
+				// The client table and the flag lowercase the name, so the row
+				// key is folded the same way: two spellings must not survive as
+				// two clients. A client's empty value is "write nothing",
+				// because no verb removes the line (0337).
+				name := strings.ToLower(strings.TrimSpace(client))
+				checked[name] = ModelChoice{
+					Chosen:   strings.TrimSpace(models[name]),
+					Detected: strings.TrimSpace(choice.Detected),
+				}
+			}
+			s.ClientModels = checked
+		}
+	}
 	return s, problems
 }
 
@@ -145,7 +213,29 @@ func Plan(s State) []Operation {
 	if strings.EqualFold(strings.TrimSpace(s.ReviewMode), review.ModeOn) && s.LensModels != nil {
 		ops = append(ops, Operation{ID: "models", Label: "fijar el modelo de cada lente"})
 	}
+	// The verifier's row is written only when it differs from the value the file
+	// showed: a section that was opened and left alone is not a write (0337).
+	if s.Verify != nil && s.Verify.Chosen != s.Verify.Detected {
+		ops = append(ops, Operation{ID: "verify", Label: "fijar el modelo del verificador"})
+	}
 	return ops
+}
+
+// clientModels is what the install operation is told: one entry per client whose
+// choice differs from the file, and none for a cleared row -there is no verb that
+// removes a client's line, so nothing is written for it- (0337).
+func clientModels(s State) map[string]string {
+	changed := map[string]string{}
+	for client, choice := range s.ClientModels {
+		if choice.Chosen == "" || choice.Chosen == choice.Detected {
+			continue
+		}
+		changed[client] = choice.Chosen
+	}
+	if len(changed) == 0 {
+		return nil
+	}
+	return changed
 }
 
 // Apply validates the state, then runs the plan and stops at the first failure.
@@ -162,7 +252,7 @@ func Apply(s State, run Runner) Result {
 	result := Result{Code: CodeOK, Steps: make([]Step, 0, len(plan))}
 
 	for i, op := range plan {
-		err := applyOne(s, s.LensModels, op.ID, run)
+		err := applyOne(s, op.ID, run)
 		step := Step{Operation: op, Status: Done, Err: err}
 		if err != nil {
 			step.Status = Failed
@@ -185,16 +275,18 @@ func Apply(s State, run Runner) Result {
 }
 
 // applyOne runs one operation through the runner.
-func applyOne(s State, models map[string]string, id string, run Runner) error {
+func applyOne(s State, id string, run Runner) error {
 	switch id {
 	case "install":
-		return run.Install(s.Project, s.Clients, s.Skills)
+		return run.Install(s.Project, s.Clients, s.Skills, clientModels(s))
 	case "voice":
 		return run.Voice(s.Voice)
 	case "review":
 		return run.Review(s.ReviewMode)
 	case "models":
-		return run.Models(models)
+		return run.Models(s.LensModels)
+	case "verify":
+		return run.Verify(s.Verify.Chosen)
 	}
 	return nil
 }

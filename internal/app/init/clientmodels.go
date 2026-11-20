@@ -92,7 +92,7 @@ func (r *runner) installClientModels(models map[string]string) {
 // .jsonc that already exists beside it. A different model is replaced in place;
 // the rest of the human's file is never re-encoded.
 func (r *runner) installOpenCodeModel(home, model string) {
-	target, display, exists, err := r.openCodeConfigFile(home)
+	target, display, exists, err := openCodeConfigPath(home, r.files)
 	if err != nil {
 		r.pendModel(display, model, err.Error())
 		return
@@ -119,9 +119,7 @@ func (r *runner) installOpenCodeModel(home, model string) {
 // exist yet is created as the smallest document that client reads, one line and
 // a trailing newline; there is no human layout to keep in a file nobody wrote.
 func (r *runner) installClaudeModel(home, model string) {
-	rel := ".claude/settings.json"
-	target := filepath.Join(home, filepath.FromSlash(rel))
-	display := "~/" + rel
+	target, display := claudeSettingsPath(home)
 
 	exists, err := r.files.Exists(target)
 	if err != nil {
@@ -145,10 +143,12 @@ func (r *runner) installClaudeModel(home, model string) {
 	r.writeModel(display, target, true, updated, outcome, model)
 }
 
-// openCodeConfigFile resolves the config OpenCode reads. The edit goes where the
+// openCodeConfigPath resolves the config OpenCode reads. The edit goes where the
 // file already lives: an existing .jsonc is the human's choice and is not
-// shadowed by a second .json.
-func (r *runner) openCodeConfigFile(home string) (target, display string, exists bool, err error) {
+// shadowed by a second .json. The writer and the reader call this one function,
+// so the value the screen shows and the value a run writes cannot name two
+// different files.
+func openCodeConfigPath(home string, files Files) (target, display string, exists bool, err error) {
 	rel := path.Join(".config", "opencode", "opencode.json")
 	if door, ok := persona.GlobalFilesFor("opencode"); ok {
 		// The config lives one level above the agents folder.
@@ -158,13 +158,13 @@ func (r *runner) openCodeConfigFile(home string) (target, display string, exists
 
 	target = filepath.Join(home, filepath.FromSlash(rel))
 	display = "~/" + rel
-	exists, err = r.files.Exists(target)
+	exists, err = files.Exists(target)
 	if err != nil || exists {
 		return target, display, exists, err
 	}
 
 	jsonc := filepath.Join(home, filepath.FromSlash(jsoncRel))
-	jsoncExists, err := r.files.Exists(jsonc)
+	jsoncExists, err := files.Exists(jsonc)
 	if err != nil {
 		return target, display, false, err
 	}
@@ -172,6 +172,72 @@ func (r *runner) openCodeConfigFile(home string) (target, display string, exists
 		return jsonc, "~/" + jsoncRel, true, nil
 	}
 	return target, display, false, nil
+}
+
+// claudeSettingsPath is the file Claude Code reads, and the label a human sees.
+// It is a function for the same reason as openCodeConfigPath: one path for the
+// writer and the reader (0337).
+func claudeSettingsPath(home string) (target, display string) {
+	rel := ".claude/settings.json"
+	return filepath.Join(home, filepath.FromSlash(rel)), "~/" + rel
+}
+
+// ReadClientModels answers the model each client reads from its own file today,
+// which is what the models section shows before anything is written. It is a
+// read: no file is created and nothing is changed. A client whose config or key
+// is absent simply has no entry; a file that cannot be read is an error naming
+// it, because "no model" is a fact about the file and "could not look" is not.
+func ReadClientModels(home string, files Files) (map[string]string, error) {
+	if strings.TrimSpace(home) == "" {
+		return nil, fmt.Errorf("there is no home to read the clients' config from")
+	}
+
+	out := map[string]string{}
+
+	target, display, exists, err := openCodeConfigPath(home, files)
+	if err != nil {
+		return nil, fmt.Errorf("could not look for %s: %w", display, err)
+	}
+	if exists {
+		if model, found, err := readModel(files, target, display); err != nil {
+			return nil, err
+		} else if found {
+			out["opencode"] = model
+		}
+	}
+
+	target, display = claudeSettingsPath(home)
+	exists, err = files.Exists(target)
+	if err != nil {
+		return nil, fmt.Errorf("could not look for %s: %w", display, err)
+	}
+	if exists {
+		if model, found, err := readModel(files, target, display); err != nil {
+			return nil, err
+		} else if found {
+			out["claude"] = model
+		}
+	}
+
+	if len(out) == 0 {
+		return nil, nil
+	}
+	return out, nil
+}
+
+// readModel is the read-only half the writer already owns: the same member the
+// editor replaces, read where it stands. Comments are stripped by the reader
+// itself, so an opencode.json with them is read without a second parser.
+func readModel(files Files, target, display string) (string, bool, error) {
+	data, err := files.Read(target)
+	if err != nil {
+		return "", false, fmt.Errorf("could not read %s: %w", display, err)
+	}
+	model, found, err := jsonmember.Read(data, "model")
+	if err != nil {
+		return "", false, fmt.Errorf("%s: %w", display, err)
+	}
+	return model, found, nil
 }
 
 // writeModel applies one editor outcome to the disk and the report. Only a real

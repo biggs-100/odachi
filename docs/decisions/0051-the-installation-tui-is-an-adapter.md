@@ -1,6 +1,6 @@
 # 0051 - The installation TUI is an adapter
 
-Status: accepted - Date: 2026-11 - Session: after v0.38.2
+Status: accepted - Date: 2026-11 - Session: after v0.38.2 - The per-client model pickers superseded by 0053 (the rest stands)
 
 ## Context
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/app/level"
@@ -37,16 +38,39 @@ func newTUIRunner(dir string) tuiRunner {
 // Install runs init when the human chose the project, setup when they chose the
 // machine alone. The clients and the skills scope are the two choices init
 // records; setup writes no store, which is why a folder without a repository is
-// asked which one it wants.
-func (r tuiRunner) Install(project bool, clients, skills string) error {
+// asked which one it wants. The client models travel as `--model client=model`,
+// so the verb that owns opencode.json and ~/.claude/settings.json stays the only
+// writer of them (0337).
+func (r tuiRunner) Install(project bool, clients, skills string, models map[string]string) error {
+	args := []string{"--agents", clients}
+	if project {
+		args = append(args, "--skills", skills)
+	}
+	args = appendModelArgs(args, models)
+
 	var out, errOut bytes.Buffer
 	code := 0
 	if project {
-		code = r.initFn(r.dir, []string{"--agents", clients, "--skills", skills}, &out, &errOut)
+		code = r.initFn(r.dir, args, &out, &errOut)
 	} else {
-		code = r.setupFn([]string{"--agents", clients}, &out, &errOut)
+		code = r.setupFn(args, &out, &errOut)
 	}
 	return runnerError(code, out.String(), errOut.String())
+}
+
+// appendModelArgs adds one --model client=model per client, in a stable order:
+// the map iterates in no fixed order, and a command a human reads should not
+// change between two runs (0337).
+func appendModelArgs(args []string, models map[string]string) []string {
+	clients := make([]string, 0, len(models))
+	for client := range models {
+		clients = append(clients, client)
+	}
+	sort.Strings(clients)
+	for _, client := range clients {
+		args = append(args, "--model", client+"="+models[client])
+	}
+	return args
 }
 
 // Voice applies the profile through the same path `odachi level --to` uses.
@@ -67,6 +91,17 @@ func (r tuiRunner) Review(mode string) error {
 // prompt limit and the retention the wizard does not touch.
 func (r tuiRunner) Models(models map[string]string) error {
 	result := appreview.SetConfig(appreview.ConfigOptions{Dir: r.dir, Models: models}, disk(r.dir), reviewModeCodec{})
+	if result.Code != 0 {
+		return errors.New(result.Message)
+	}
+	return nil
+}
+
+// Verify writes the verifier's model through the same review app: SetConfig
+// reads the file, changes the one key and renders the rest, so the lens table and
+// the numbers the section does not touch survive (0337).
+func (r tuiRunner) Verify(model string) error {
+	result := appreview.SetConfig(appreview.ConfigOptions{Dir: r.dir, Verify: &model}, disk(r.dir), reviewModeCodec{})
 	if result.Code != 0 {
 		return errors.New(result.Message)
 	}

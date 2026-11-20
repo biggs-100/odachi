@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/biggs-100/odachi/internal/app/configure"
+	initapp "github.com/biggs-100/odachi/internal/app/init"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
@@ -30,6 +31,12 @@ type tuiState struct {
 	Voice   string
 	Review  string
 	Models  map[string]string
+	// Verify is the model odd/review.toml declares for the verifier, and
+	// ClientModels the model each client's own file carries today. The models
+	// section shows them and remembers them as the detected value, so a row that
+	// is not touched is never a write (0337).
+	Verify       string
+	ClientModels map[string]string
 	// Axes is the profile in force, one configurable field per row: the editor
 	// renders what the file says today, never a second copy (0336).
 	Axes []profile.Axis
@@ -115,6 +122,20 @@ func detectTUIState(dir string) (tuiState, error) {
 	for lens, model := range config.Lenses {
 		state.Models[lens] = model
 	}
+	state.Verify = config.Verify
+
+	// The clients' models live in each client's own file, so the section reads
+	// them where the verbs write them: one reader beside the writers, never a
+	// second copy of the choice (0337).
+	home, err := osHome{}.Home()
+	if err != nil {
+		return tuiState{}, fmt.Errorf("could not find the home to read the clients' models: %w", err)
+	}
+	clientModels, err := initapp.ReadClientModels(home, disk(dir))
+	if err != nil {
+		return tuiState{}, err
+	}
+	state.ClientModels = clientModels
 	return state, nil
 }
 
@@ -134,6 +155,10 @@ const (
 	// stepProfile is the second section of the hub: the six axes of the profile in
 	// force, which is what a person comes back to change (0336).
 	stepProfile
+	// stepModels is the third section: the model the verifier runs with and the
+	// model each installed client reads, which is the choice that decides who
+	// answers (0337).
+	stepModels
 )
 
 // The options each single-choice screen offers, in the order a human reads them.
@@ -143,17 +168,39 @@ var (
 	tuiVoices  = voiceNames()
 	tuiLenses  = review.AllLenses()
 
-	// tuiMenu is the hub: the two sections the first screen offers. The menu is
-	// what makes the wizard a place to come back to instead of a one-shot run (0336).
-	tuiMenu = []string{"instalar y configurar", "perfil"}
+	// tuiMenu is the hub: the sections the first screen offers, each with the
+	// screen it opens. The install section opens on the hub itself and walks the
+	// table from there; the other two are screens whose route comes back here
+	// (0336, 0337).
+	tuiMenu = []tuiSection{
+		{label: "instalar y configurar", step: stepState},
+		{label: "perfil", step: stepProfile},
+		{label: "modelos", step: stepModels},
+	}
 
 	// tuiScopes is the choice a folder that is not a project had to be given: a
 	// machine-only setup writes nothing here, init is what creates the project.
 	tuiScopes = []string{"machine", "project"}
 )
 
+// tuiSection is one row of the hub: what a human reads and where enter goes.
+type tuiSection struct {
+	label string
+	step  tuiStep
+}
+
+// modelVerifier is the key of the verifier's row in the models section. The
+// clients' rows are keyed by the name the client table and --model use, so the
+// screen and the verb cannot spell a client two ways (0337).
+const modelVerifier = "verifier"
+
+// modelRefusal is the one sentence both editors give: the review screen and the
+// models section check the same rule, and a second sentence is how two screens
+// start disagreeing (0337).
+const modelRefusal = "el modelo no es un identificador: usa provider/name#variant"
+
 // tuiSteps is every screen the wizard has, in the order the table walks them.
-var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile}
+var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile, stepModels}
 
 // tuiRoute is where one screen goes: forward with enter, backward with esc, and
 // whether the screen exists for this run at all. The table is the only place
@@ -180,6 +227,8 @@ var tuiRoutes = map[tuiStep]tuiRoute{
 	stepApply:   {forward: stepApply, back: stepSummary, when: always},
 	// The profile section has one screen: esc is the way back to the menu.
 	stepProfile: {forward: stepProfile, back: stepState, when: always},
+	// The models section is the same shape: one screen, and esc is the menu.
+	stepModels: {forward: stepModels, back: stepState, when: always},
 }
 
 // always is the row of a screen that exists for every run.
@@ -229,6 +278,11 @@ type tuiModel struct {
 	pickCursor    int
 	pending       map[string]string
 	fieldMsg      string
+	// The models section: which row the cursor is on, and the value the human
+	// chose but did not write yet, keyed by row. A row that is not here was never
+	// changed, which is what keeps the plan (and the disk) empty (0337).
+	modelsCursor int
+	modelPending map[string]string
 	// edited is every axis the editor wrote in this run, by name: the voice op
 	// recomputes the whole profile from the builtin, so these are re-applied after
 	// it and an explicit edit is the last word (0336).
@@ -282,6 +336,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.step == stepProfile {
 			return m.profileKey(msg)
 		}
+		if m.step == stepModels {
+			return m.modelsKey(msg)
+		}
 		switch msg.String() {
 		case "q":
 			return m, tea.Quit
@@ -313,12 +370,15 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m tuiModel) next() (tea.Model, tea.Cmd) {
 	m = m.commit()
 	// The menu is the one screen whose enter picks its destination: that is what a
-	// menu is, and the table still says where each section starts (0336).
-	if m.step == stepState && m.menu == 1 {
-		m.step = stepProfile
+	// menu is, and the table still says where each section starts (0336). The
+	// row itself names the screen, so a third section is data and not a branch
+	// (0337).
+	if m.step == stepState && m.menu > 0 {
+		section := tuiMenu[m.menu]
+		m.step = section.step
 		// The hub applies the voice in one section and edits the profile in another:
 		// the rows are re-read on entry so they describe the file that stands (0336).
-		if m.run != nil {
+		if section.step == stepProfile && m.run != nil {
 			if axes, err := m.run.Axes(); err == nil && len(axes) > 0 {
 				m.state.Axes = axes
 			}
@@ -372,8 +432,9 @@ func (m tuiModel) enterReview() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// editKey edits the model of a lens. The value is an identifier, so it is
-// checked before it is saved; an empty value removes the lens from the table.
+// editKey edits the row the editor was opened on. The buffer keys are one for
+// both editors; what the value means belongs to the screen, so enter hands it to
+// the keeper of that screen (0336, 0337).
 func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 	switch msg.Type {
 	case tea.KeyEsc:
@@ -381,6 +442,9 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 		m.buffer = ""
 		m.editErr = ""
 	case tea.KeyEnter:
+		if m.step == stepModels {
+			return m.keepModel()
+		}
 		lens := tuiLenses[m.reviewCursor-1]
 		value := strings.TrimSpace(m.buffer)
 		if value == "" {
@@ -392,7 +456,7 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 		}
 		checked, err := review.NormalizeModel(value)
 		if err != nil {
-			m.editErr = "el modelo no es un identificador: usa provider/name#variant"
+			m.editErr = modelRefusal
 			return m
 		}
 		m.state.Models[lens] = checked
@@ -410,6 +474,142 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 		m.buffer += string(msg.Runes)
 	}
 	return m
+}
+
+// keepModel records the value of the models row the editor was opened on. It is
+// the lens screen's rule, checked by the same function and refused with the same
+// sentence; an empty value is the verifier's row meaning "no model", which the
+// plan reads as a line to remove.
+//
+// A client's row is not the verifier's: no verb removes that key, and a screen
+// that showed the row empty while the file kept its model would be lying about
+// what the run wrote. It refuses the empty value and names where the line lives.
+func (m tuiModel) keepModel() tuiModel {
+	row := m.modelRows()[m.modelsIndex()]
+	value := strings.TrimSpace(m.buffer)
+	if value == "" && row != modelVerifier {
+		m.editErr = "un cliente no se queda sin modelo desde aquí: escribe uno, o borra la clave model de su archivo"
+		return m
+	}
+	if value != "" {
+		checked, err := review.NormalizeModel(value)
+		if err != nil {
+			m.editErr = modelRefusal
+			return m
+		}
+		value = checked
+	}
+	if m.modelPending == nil {
+		m.modelPending = map[string]string{}
+	}
+	m.modelPending[row] = value
+	m.editing = false
+	m.buffer = ""
+	m.editErr = ""
+	return m
+}
+
+// modelRows is the section's rows: the verifier and each client the hub already
+// detected, in the client table's order. The rows are the detection, never a
+// second copy of which clients this machine runs (0337).
+func (m tuiModel) modelRows() []string {
+	rows := []string{modelVerifier}
+	_, clients, err := persona.ResolveSelection(m.state.Clients)
+	if err != nil {
+		return rows
+	}
+	for _, client := range clients {
+		rows = append(rows, client.Agent)
+	}
+	return rows
+}
+
+// modelsIndex is the row the cursor is on, clamped to the rows the section shows
+// now: the client choice lives in another section, and a row that is gone must
+// not be the one the next enter edits (0337).
+func (m tuiModel) modelsIndex() int {
+	return clamp(m.modelsCursor, len(m.modelRows()))
+}
+
+// modelValue is what a row shows: the value chosen in this run, or the one the
+// file carries today.
+func (m tuiModel) modelValue(row string) string {
+	if chosen, ok := m.modelPending[row]; ok {
+		return chosen
+	}
+	if row == modelVerifier {
+		return m.state.Verify
+	}
+	return m.state.ClientModels[row]
+}
+
+// shownModel names an empty row the way the file means it: no model at all.
+func shownModel(value string) string {
+	if value == "" {
+		return "(ninguno)"
+	}
+	return value
+}
+
+// modelLabel is the name a human reads for a row.
+func modelLabel(row string) string {
+	switch row {
+	case modelVerifier:
+		return "verificador"
+	case persona.SelectionOpenCode:
+		return "OpenCode"
+	case persona.SelectionClaude:
+		return "Claude"
+	}
+	return row
+}
+
+// viewModels renders the models section: who answers, and who answers each
+// client. The values are the file's, and a row that was edited shows the choice
+// until it is applied (0337).
+func (m tuiModel) viewModels() string {
+	var out strings.Builder
+	out.WriteString(m.header("modelos"))
+	rows := m.modelRows()
+	cursor := clamp(m.modelsCursor, len(rows))
+	for i, row := range rows {
+		marker := "  "
+		if i == cursor {
+			marker = "> "
+		}
+		value := shownModel(m.modelValue(row))
+		if m.editing && i == cursor {
+			value = m.buffer + "_"
+		}
+		out.WriteString("  " + marker + fmt.Sprintf("%-12s %s\n", modelLabel(row), value))
+	}
+	if m.editErr != "" {
+		out.WriteString("\n  " + m.editErr + "\n")
+	}
+	out.WriteString("\n  enter cambiar · esc volver · se aplican en el resumen\n")
+	return out.String()
+}
+
+// modelsKey drives the section: the rows, the editor they open, and nothing that
+// touches the disk. What is chosen here is written only by the apply, and only
+// when it differs from the file (0337).
+func (m tuiModel) modelsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "q" {
+		return m, tea.Quit
+	}
+	switch msg.String() {
+	case "esc":
+		m.step = m.backStep()
+	case "up", "k":
+		m.modelsCursor = clamp(m.modelsCursor-1, len(m.modelRows()))
+	case "down", "j":
+		m.modelsCursor = clamp(m.modelsCursor+1, len(m.modelRows()))
+	case "enter":
+		m.editing = true
+		m.buffer = m.modelValue(m.modelRows()[m.modelsIndex()])
+		m.editErr = ""
+	}
+	return m, nil
 }
 
 // move changes the cursor of the screen the wizard is on. The detection and the
@@ -452,12 +652,14 @@ func (m tuiModel) View() string {
 		return m.viewApply()
 	case stepProfile:
 		return m.viewProfile()
+	case stepModels:
+		return m.viewModels()
 	default:
 		return m.viewState()
 	}
 }
 
-// viewState is the hub: where the project is, and the two sections a person can
+// viewState is the hub: where the project is, and the sections a person can
 // open. It is the screen the wizard comes back to, which is what makes a change of
 // mind possible at all (0336).
 func (m tuiModel) viewState() string {
@@ -465,12 +667,12 @@ func (m tuiModel) viewState() string {
 	out.WriteString(m.header("instalación y configuración"))
 	out.WriteString(m.facts())
 	out.WriteString("\n")
-	for i, item := range tuiMenu {
+	for i, section := range tuiMenu {
 		marker := "  "
 		if i == m.menu {
 			marker = "> "
 		}
-		out.WriteString("  " + marker + item + "\n")
+		out.WriteString("  " + marker + section.label + "\n")
 	}
 	out.WriteString("\n  ↑↓ elegir · enter abrir · q salir\n")
 	return out.String()
@@ -664,12 +866,14 @@ func (m tuiModel) apply() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	m.result = configure.Apply(configure.State{
-		Clients:    m.state.Clients,
-		Skills:     m.state.Skills,
-		Voice:      m.state.Voice,
-		ReviewMode: m.state.Review,
-		LensModels: m.state.Models,
-		Project:    m.init,
+		Clients:      m.state.Clients,
+		Skills:       m.state.Skills,
+		Voice:        m.state.Voice,
+		ReviewMode:   m.state.Review,
+		LensModels:   m.state.Models,
+		Verify:       m.verifyChoice(),
+		ClientModels: m.clientModelChoices(),
+		Project:      m.init,
 	}, m.run)
 	// The voice op recomputes every field from the builtin, whatever order the run
 	// took, so the axes the human wrote here are re-applied after it: an explicit
@@ -696,6 +900,37 @@ func (m tuiModel) apply() (tea.Model, tea.Cmd) {
 	m.applied = true
 	m.step = stepApply
 	return m, nil
+}
+
+// verifyChoice is the verifier's row as the plan reads it: the value the human
+// chose and the one the file carried. nil means the row was never edited, and the
+// file keeps its line (0337).
+func (m tuiModel) verifyChoice() *configure.ModelChoice {
+	chosen, ok := m.modelPending[modelVerifier]
+	if !ok {
+		return nil
+	}
+	return &configure.ModelChoice{Chosen: chosen, Detected: m.state.Verify}
+}
+
+// clientModelChoices is the client rows the human edited, with the value each
+// file carried. A row that was not edited is not here at all (0337).
+func (m tuiModel) clientModelChoices() map[string]configure.ModelChoice {
+	choices := map[string]configure.ModelChoice{}
+	for _, row := range m.modelRows() {
+		if row == modelVerifier {
+			continue
+		}
+		chosen, ok := m.modelPending[row]
+		if !ok {
+			continue
+		}
+		choices[row] = configure.ModelChoice{Chosen: chosen, Detected: m.state.ClientModels[row]}
+	}
+	if len(choices) == 0 {
+		return nil
+	}
+	return choices
 }
 
 // viewReview renders the switch and the four lens models. The model being edited

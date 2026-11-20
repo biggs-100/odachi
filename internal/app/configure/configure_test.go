@@ -2,6 +2,7 @@ package configure_test
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -250,11 +251,157 @@ func TestApplyPassesTheDetectedProjectToInstall(t *testing.T) {
 	}
 }
 
+// TestPlanWritesTheVerifierOnlyWhenItDiffers: a row that still shows the value
+// the file carries is not a write, and a section nobody opened is not in the
+// plan at all (0337).
+func TestPlanWritesTheVerifierOnlyWhenItDiffers(t *testing.T) {
+	same := "cheap/model"
+	in := valid()
+	in.Verify = &configure.ModelChoice{Chosen: same, Detected: same}
+	if ids := planIDs(in); slices.Contains(ids, "verify") {
+		t.Errorf("plan = %v, want no verifier write for the value already there", ids)
+	}
+
+	changed := "other/model"
+	in.Verify = &configure.ModelChoice{Chosen: changed, Detected: same}
+	if ids := planIDs(in); !slices.Contains(ids, "verify") {
+		t.Errorf("plan = %v, want the verifier write", ids)
+	}
+}
+
+// TestApplyWritesTheVerifierThroughTheRunner: the chosen model reaches the verb
+// that owns odd/review.toml, and it is the last write of the plan (0337).
+func TestApplyWritesTheVerifierThroughTheRunner(t *testing.T) {
+	in := valid()
+	in.Verify = &configure.ModelChoice{Chosen: "cheap/model#fast", Detected: ""}
+	run := &fakeRunner{}
+
+	got := configure.Apply(in, run)
+
+	if got.Code != configure.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, configure.CodeOK, got.Message)
+	}
+	if run.verify != "cheap/model#fast" {
+		t.Fatalf("verify = %q, want the chosen model", run.verify)
+	}
+	if ids := run.ops(); ids[len(ids)-1] != "verify" {
+		t.Errorf("calls = %v, want the verifier written after the rest", ids)
+	}
+}
+
+// TestApplyLeavesTheVerifierAloneWhenTheSectionWasNeverOpened: nil is a caller
+// that never showed the section, and the file keeps its line.
+func TestApplyLeavesTheVerifierAloneWhenTheSectionWasNeverOpened(t *testing.T) {
+	run := &fakeRunner{}
+
+	got := configure.Apply(valid(), run)
+
+	if got.Code != configure.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, configure.CodeOK, got.Message)
+	}
+	if slices.Contains(run.ops(), "verify") {
+		t.Errorf("calls = %v, want no verifier operation", run.ops())
+	}
+	if run.verify != "" {
+		t.Errorf("verify = %q, want nothing written", run.verify)
+	}
+}
+
+// TestApplyClearsTheVerifierWhenTheRowIsEmpty: an empty row is the project
+// naming no verifier, and the operation runs with the empty value so Render
+// removes the line (0337).
+func TestApplyClearsTheVerifierWhenTheRowIsEmpty(t *testing.T) {
+	in := valid()
+	in.Verify = &configure.ModelChoice{Chosen: "", Detected: "cheap/model"}
+	run := &fakeRunner{}
+
+	got := configure.Apply(in, run)
+
+	if got.Code != configure.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, configure.CodeOK, got.Message)
+	}
+	if !slices.Contains(run.ops(), "verify") {
+		t.Fatalf("calls = %v, want the verifier operation", run.ops())
+	}
+	if run.verify != "" {
+		t.Errorf("verify = %q, want an empty value", run.verify)
+	}
+}
+
+// TestApplySendsOnlyTheChangedClientModelsToInstall: a client whose file already
+// carries the chosen model is not named in the install, which is what makes an
+// unchanged section write nothing (0337).
+func TestApplySendsOnlyTheChangedClientModelsToInstall(t *testing.T) {
+	in := valid()
+	in.ClientModels = map[string]configure.ModelChoice{
+		"opencode": {Chosen: "new/model", Detected: "old/model"},
+		"claude":   {Chosen: "sonnet", Detected: "sonnet"},
+	}
+	run := &fakeRunner{}
+
+	got := configure.Apply(in, run)
+
+	if got.Code != configure.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, configure.CodeOK, got.Message)
+	}
+	want := map[string]string{"opencode": "new/model"}
+	if !reflect.DeepEqual(run.clientModels, want) {
+		t.Fatalf("install models = %v, want %v", run.clientModels, want)
+	}
+}
+
+// TestApplyDropsAClearedClientModel: an empty row means "no model", and there is
+// no verb that removes a client's line, so the install is told nothing about it
+// rather than writing an empty identifier (0337).
+func TestApplyDropsAClearedClientModel(t *testing.T) {
+	in := valid()
+	in.ClientModels = map[string]configure.ModelChoice{
+		"claude": {Chosen: "", Detected: "sonnet"},
+	}
+	run := &fakeRunner{}
+
+	got := configure.Apply(in, run)
+
+	if got.Code != configure.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", got.Code, configure.CodeOK, got.Message)
+	}
+	if run.clientModels != nil {
+		t.Fatalf("install models = %v, want none", run.clientModels)
+	}
+}
+
+// TestValidateRefusesAModelThatIsNotAnIdentifierInTheModelsSection: the section
+// obeys the same rule the verb obeys, and the state is refused before a write.
+func TestValidateRefusesAModelThatIsNotAnIdentifierInTheModelsSection(t *testing.T) {
+	in := valid()
+	in.Verify = &configure.ModelChoice{Chosen: "a b"}
+	in.ClientModels = map[string]configure.ModelChoice{"claude": {Chosen: "x;rm"}}
+
+	problems := strings.Join(configure.Validate(in), " ")
+	for _, want := range []string{"verificador", "claude"} {
+		if !strings.Contains(problems, want) {
+			t.Errorf("Validate = %q, want it to name %q", problems, want)
+		}
+	}
+}
+
+// planIDs names the operations a state runs.
+func planIDs(s configure.State) []string {
+	ops := configure.Plan(s)
+	ids := make([]string, 0, len(ops))
+	for _, op := range ops {
+		ids = append(ids, op.ID)
+	}
+	return ids
+}
+
 // fakeRunner records the operations it ran and can fail one of them.
 type fakeRunner struct {
-	calls  []call
-	failAt string
-	models map[string]string
+	calls        []call
+	failAt       string
+	models       map[string]string
+	clientModels map[string]string
+	verify       string
 }
 
 type call struct {
@@ -271,7 +418,8 @@ func (f *fakeRunner) record(op, value string) error {
 	return nil
 }
 
-func (f *fakeRunner) Install(project bool, clients, skills string) error {
+func (f *fakeRunner) Install(project bool, clients, skills string, models map[string]string) error {
+	f.clientModels = models
 	f.calls = append(f.calls, call{op: "install", project: project, value: clients + "/" + skills})
 	if f.failAt == "install" {
 		return errFailed
@@ -286,6 +434,11 @@ func (f *fakeRunner) Review(mode string) error { return f.record("review", mode)
 func (f *fakeRunner) Models(models map[string]string) error {
 	f.models = models
 	return f.record("models", "")
+}
+
+func (f *fakeRunner) Verify(model string) error {
+	f.verify = model
+	return f.record("verify", model)
 }
 
 func (f *fakeRunner) Field(field, value string) error {
