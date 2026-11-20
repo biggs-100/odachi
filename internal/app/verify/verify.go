@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/verify"
 )
 
@@ -32,6 +33,12 @@ const (
 // verifier that runs a suite is slow on purpose, and a timeout shorter than the
 // work would report a slow machine as a failure of the tree.
 const DefaultTimeout = 1800
+
+// ModelToken is what a verifier command writes where the model goes. It is a
+// placeholder, not a flag: odachi has no business knowing how each CLI spells its
+// model, and the human keeps writing the command they know. The caller resolves
+// which identity replaces it, so the verb never asks where the answer came from.
+const ModelToken = "{model}"
 
 // Files is the disk this verb needs: the store is written, never listed.
 type Files interface {
@@ -77,7 +84,12 @@ type Options struct {
 	// Store is the clone's state, where the record lives.
 	Store string
 	// Exec is the command that answers. Empty prints the prompt and runs nobody.
+	// {model} in it is replaced by Model.
 	Exec string
+	// Model is the identity that replaces {model}. The caller resolves the
+	// sources -the flag, the project's file and the session- in that order; this
+	// verb only refuses a command it cannot fill.
+	Model string
 	// Requirement is R1 in the human's words, quoted and not rewritten.
 	Requirement string
 	// DoneWhen is what the feature promised, in the order the task document keeps.
@@ -131,13 +143,23 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 
 	prompt := Prompt(opts, tree)
+	// --model only exists for {model} in --exec. In any other form it would be
+	// accepted and silently ignored, which is the same lie as a missing answer.
+	if strings.TrimSpace(opts.Model) != "" && strings.TrimSpace(opts.Exec) == "" {
+		return blocked("--model only means something with --exec: it replaces " + ModelToken + " in the verifier command")
+	}
 	if strings.TrimSpace(opts.Exec) == "" {
 		lines := append([]string{"the prompt the verifier will read:"}, strings.Split(prompt, "\n")...)
 		lines = append(lines, `next: odachi verify --exec "<command>"`)
 		return Result{Code: CodeOK, Message: "printed the prompt and ran nobody: add --exec to verify", Lines: lines}
 	}
 
-	stdout, stderr, exit, stop, err := shell.RunInputStopped(opts.Dir, opts.Exec, prompt, opts.TimeoutSeconds, opts.FirstOutput, opts.Idle)
+	command, model, refusal := verifierCommand(opts.Exec, opts.Model)
+	if refusal != nil {
+		return *refusal
+	}
+
+	stdout, stderr, exit, stop, err := shell.RunInputStopped(opts.Dir, command, prompt, opts.TimeoutSeconds, opts.FirstOutput, opts.Idle)
 	if err != nil {
 		return blocked("the verifier could not run: " + oneLine(err.Error()))
 	}
@@ -187,11 +209,42 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 
 	message := fmt.Sprintf("the verifier answered %s: %s", record.Verdict, rel)
 	lines := []string{message, "by: " + record.By, "at: " + record.At}
+	if model != "" {
+		lines = append(lines, "model: "+model)
+	}
 	for _, note := range record.Notes {
 		lines = append(lines, "note: "+note)
 	}
 	lines = append(lines, `next: odachi check --run "<command>"`)
 	return Result{Code: CodeOK, Message: message, Lines: lines}
+}
+
+// verifierCommand is the command that actually runs: --exec with {model}
+// replaced by the identity its caller resolved. A command that asks for a model
+// odachi cannot name is refused instead of started, because an answer from another
+// model is a verification nobody asked for; and a model that would replace nothing
+// is refused for the same reason a flag nobody reads is a lie.
+func verifierCommand(exec, model string) (string, string, *Result) {
+	asks := strings.Contains(exec, ModelToken)
+
+	// The model replaces {model} inside a command line: an identifier that looks
+	// like shell code is refused instead of run.
+	checked, err := domainreview.NormalizeModel(model)
+	if err != nil {
+		res := blocked(oneLine(err.Error()) + "; the verifier was not started")
+		return "", "", &res
+	}
+
+	switch {
+	case asks && checked == "":
+		res := blocked("--exec asks for " + ModelToken + " and no model is known: pass --model <provider/model#variant>, name one in " + domainreview.ModePath + " or set ODACHI_MODEL; the verifier was not started")
+		return "", "", &res
+	case !asks && checked != "":
+		res := blocked("a model was given (" + checked + ") but --exec has no " + ModelToken + " placeholder, so it would change nothing: add it to the command or drop the assignment; the verifier was not started")
+		return "", "", &res
+	}
+
+	return strings.ReplaceAll(exec, ModelToken, checked), checked, nil
 }
 
 // Prompt is the question the verifier reads: the tree, the requirement in the

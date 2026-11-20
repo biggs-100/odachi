@@ -33,7 +33,9 @@ const (
 	// be counted.
 	// 10: a declared check names the repair its red asks for, and rulebook rows
 	// name what enforces them.
-	Current = 10
+	// 11: odd/review.toml names the model the verifier answers with, so the key is
+	// not a typo to the binary that shipped before it.
+	Current = 11
 )
 
 // Read answers which schema a file with this value was written with. A value this

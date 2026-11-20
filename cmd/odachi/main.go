@@ -1830,7 +1830,7 @@ usage:
   odachi review checks [status|approve]
   odachi review waive --because "<why>" [--row <fingerprint>]
   odachi review probe [--runs N] [--blind] [--exec "<command>"]
-  odachi verify [--exec "<command>"]
+  odachi verify [--exec "<command>"] [--model <id>]
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
   odachi init [--skills home|project] [--agents opencode|claude|both] [--json]
@@ -1901,6 +1901,8 @@ verify flags:
   --exec s        run this command with the prompt on stdin (and {prompt} as a path to it)
                   and store the record it answers under the tree this worktree is; without
                   it the verb prints the prompt and runs nobody
+  --model id      the model that replaces {model} in --exec (default: the verify key in
+                  odd/review.toml, then the model of the session odachi runs in)
   --timeout n     seconds the verifier may take (default 1800)
 
 plan flags:
