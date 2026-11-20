@@ -318,7 +318,7 @@ func TestReadClientModelsAnswersWhatEachFileCarries(t *testing.T) {
 	files.files[homeFile(home, opencodeConfig)] = []byte("{\n  // my config\n  \"model\": \"anthropic/claude#fast\"\n}\n")
 	files.files[homeFile(home, claudeSettings)] = []byte("{\n  \"model\": \"sonnet\",\n  \"permissions\": {\"allow\": [\"Bash\"]}\n}\n")
 
-	got, err := initapp.ReadClientModels(home, files)
+	got, _, err := initapp.ReadClientModels(home, files)
 	if err != nil {
 		t.Fatalf("ReadClientModels: %v", err)
 	}
@@ -337,7 +337,7 @@ func TestReadClientModelsNamesNoModelWhenTheKeyIsAbsent(t *testing.T) {
 	files := newFakeFiles(map[string]string{})
 	files.files[homeFile(home, opencodeConfig)] = []byte("{\"$schema\": \"https://opencode.ai/config.json\"}\n")
 
-	got, err := initapp.ReadClientModels(home, files)
+	got, _, err := initapp.ReadClientModels(home, files)
 	if err != nil {
 		t.Fatalf("ReadClientModels: %v", err)
 	}
@@ -354,7 +354,7 @@ func TestReadClientModelsFindsTheConfigOpenCodeAlreadyHas(t *testing.T) {
 	jsonc := strings.TrimSuffix(opencodeConfig, ".json") + ".jsonc"
 	files.files[homeFile(home, jsonc)] = []byte("{\n  // mine\n  \"model\": \"cheap/model\"\n}\n")
 
-	got, err := initapp.ReadClientModels(home, files)
+	got, _, err := initapp.ReadClientModels(home, files)
 	if err != nil {
 		t.Fatalf("ReadClientModels: %v", err)
 	}
@@ -363,19 +363,20 @@ func TestReadClientModelsFindsTheConfigOpenCodeAlreadyHas(t *testing.T) {
 	}
 }
 
-// TestReadClientModelsRefusesAFileItCannotRead: a broken config is named, not
-// read as "no model": the screen must not claim a fact it could not see.
-func TestReadClientModelsRefusesAFileItCannotRead(t *testing.T) {
+// TestReadClientModelsNamesAFileItCannotRead: a broken config is named where the
+// screen can show it, and does not fail the call: "no model" is a fact about the
+// file and "could not read it" is another, and neither is a broken project (0337).
+func TestReadClientModelsNamesAFileItCannotRead(t *testing.T) {
 	home := "hogar"
 	files := newFakeFiles(map[string]string{})
 	files.files[homeFile(home, claudeSettings)] = []byte(`{"model": `)
 
-	_, err := initapp.ReadClientModels(home, files)
-	if err == nil {
-		t.Fatal("ReadClientModels accepted a broken settings file")
+	_, unreadable, err := initapp.ReadClientModels(home, files)
+	if err != nil {
+		t.Fatalf("ReadClientModels: %v, want the broken file named in its own map", err)
 	}
-	if !strings.Contains(err.Error(), "settings.json") {
-		t.Errorf("error = %q, want the file named", err)
+	if !strings.Contains(unreadable["claude"], "settings.json") {
+		t.Errorf("unreadable = %v, want the file named", unreadable)
 	}
 }
 
@@ -391,7 +392,7 @@ func TestTheWriterAndTheReaderAgreeOnTheFilePath(t *testing.T) {
 		Models: map[string]string{"opencode": "anthropic/claude#fast", "claude": "sonnet"},
 	}, files, &fakeSkills{})
 
-	got, err := initapp.ReadClientModels(home, files)
+	got, _, err := initapp.ReadClientModels(home, files)
 	if err != nil {
 		t.Fatalf("ReadClientModels: %v", err)
 	}

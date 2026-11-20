@@ -185,22 +185,27 @@ func claudeSettingsPath(home string) (target, display string) {
 // ReadClientModels answers the model each client reads from its own file today,
 // which is what the models section shows before anything is written. It is a
 // read: no file is created and nothing is changed. A client whose config or key
-// is absent simply has no entry; a file that cannot be read is an error naming
-// it, because "no model" is a fact about the file and "could not look" is not.
-func ReadClientModels(home string, files Files) (map[string]string, error) {
+// is absent simply has no entry, and one whose file exists but cannot be read is
+// named in the second map instead of failing the call: "no model" is a fact about
+// the file, "could not read it" is another, and neither is a broken project.
+func ReadClientModels(home string, files Files) (map[string]string, map[string]string, error) {
 	if strings.TrimSpace(home) == "" {
-		return nil, fmt.Errorf("there is no home to read the clients' config from")
+		return nil, nil, fmt.Errorf("there is no home to read the clients' config from")
 	}
 
 	out := map[string]string{}
+	// One file that cannot be read is a row the wizard names, not a reason to
+	// refuse the whole verb: the section is a convenience over files the human
+	// owns, and a JSONC document this reader cannot parse is not a broken project
+	// (0337, the review's warning).
+	unreadable := map[string]string{}
 
 	target, display, exists, err := openCodeConfigPath(home, files)
 	if err != nil {
-		return nil, fmt.Errorf("could not look for %s: %w", display, err)
-	}
-	if exists {
+		unreadable["opencode"] = "no se pudo comprobar " + display + ": " + err.Error()
+	} else if exists {
 		if model, found, err := readModel(files, target, display); err != nil {
-			return nil, err
+			unreadable["opencode"] = err.Error()
 		} else if found {
 			out["opencode"] = model
 		}
@@ -209,20 +214,22 @@ func ReadClientModels(home string, files Files) (map[string]string, error) {
 	target, display = claudeSettingsPath(home)
 	exists, err = files.Exists(target)
 	if err != nil {
-		return nil, fmt.Errorf("could not look for %s: %w", display, err)
-	}
-	if exists {
+		unreadable["claude"] = "no se pudo comprobar " + display + ": " + err.Error()
+	} else if exists {
 		if model, found, err := readModel(files, target, display); err != nil {
-			return nil, err
+			unreadable["claude"] = err.Error()
 		} else if found {
 			out["claude"] = model
 		}
 	}
 
 	if len(out) == 0 {
-		return nil, nil
+		out = nil
 	}
-	return out, nil
+	if len(unreadable) == 0 {
+		unreadable = nil
+	}
+	return out, unreadable, nil
 }
 
 // readModel is the read-only half the writer already owns: the same member the
