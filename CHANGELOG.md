@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.56.0 - 2026-11-20
+
 - **The wizard looks like a tool, and its models are picked.** `odachi tui` drew everything in plain text with a `> ` marker: the cursor, a value, an error and the keys all read with the same voice. Every screen now draws from a layer with named pieces -a title in the accent colour, a muted line naming the folder, a cursor glyph that keeps the label column still, notices on their own line with their own tone, one help footer- and a cursor that is drawn once, by whatever owns the keys. Lists window instead of growing: `↑ más` and `↓ más` say what is hidden, and a list that fits renders the same bytes it did. Every model row opens the list the host answers -`opencode models`, once per run, off the UI thread- with the value in force marked and `escribir a mano` one row away for the full id; an OpenCode catalogue never appears on a Claude row, whose three aliases are declared in one place; a probe that could not be asked and a probe that answered nothing say so differently. Minor, because the whole surface looks different and the models section changed how it is driven (0338).
 
 ## v0.55.0 - 2026-11-19
