@@ -1292,3 +1292,26 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que un archivo ajeno se edita sin perder lo que ya tenia.
+
+## 0338 · visyalmente-la-tui
+
+## What must exist
+- visyalmente la tui se ve fea, cuando quiero cambiar un modelo o otra opciones, las tengo que escribir, seria mejor que detectara los modelos disponibles del agente para poder seleccionar y no tener que escribirlos, asi como en gentle-ai
+
+## Done when
+- elegir un modelo abre una lista navegable con el valor en vigor marcado, y enter lo deja sin escribir nada
+- una deteccion vacia o fallida se explica en la pantalla y deja la escritura como salida, sin bloquear el verbo
+- ninguna pantalla compone filas sueltas: cabecera, fila seleccionada, valor, aviso y pie de teclas salen de una capa con nombres
+- go test ./... is green and odachi check --run is green and odachi skills --check is green
+
+## Not included (first version)
+- no se copia el tema de gentle-ai: se toman sus convenciones -cabecera, glifo de cursor, pie de teclas, ventana con mas arriba y abajo- y la paleta es de odachi
+- no entra elegir un modelo por agente de cada cliente: hoy es uno por cliente
+- no entra un buscador de texto dentro de la lista: primera version
+- no cambian los flags de ningun verbo
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que una capa visual se escribe una vez y no pantalla a pantalla.
