@@ -2,6 +2,11 @@
 
 Written after 0339, the cycle that gave the limit a third moment.
 
+**Standing rule.** When a problem or a design question shows up, read
+`C:\Users\USER\Desktop\herramientas\gentle-shell` first, read-only: it may already
+answer it, and 0339 is the proof -the answer was the opposite of the assumption and it
+saved a day. Reading is evidence, not permission to edit that folder or run odachi there.
+
 ## Where the project is
 
 - **0339 closed, one PR.** `odachi plan --done T1` now reports the authored lines
