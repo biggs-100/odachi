@@ -9,6 +9,7 @@ package taskdoc
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -66,11 +67,16 @@ type TaskDoc struct {
 	// Light says the feature was opened as one line: a quoted requirement and one
 	// step with the same words, no brief. The artifact carries the shape, so no
 	// command line has to remember it (0166).
-	Light        bool
-	Requirements []Requirement
-	DoneWhen     []string
-	Steps        []Step
-	History      []string
+	Light bool
+	// SliceAccepted is how many authored lines the human accepts for a close that
+	// owes a verifier, and SliceReason is the sentence that pays for it. Zero means
+	// nobody accepted anything, which is the limit standing as written (0340).
+	SliceAccepted int
+	SliceReason   string
+	Requirements  []Requirement
+	DoneWhen      []string
+	Steps         []Step
+	History       []string
 }
 
 // The canonical English headers. The artifacts are English; the agent chat is
@@ -97,6 +103,13 @@ const (
 	// one step with the same words, no brief. It is a decision the artifact
 	// carries, read where the base and the waiver are read.
 	lightLine = "Light: yes"
+
+	// sliceAcceptedPrefix opens the human's decision that a close owing a verifier
+	// may carry more authored lines than the slice. It lives in the preamble with
+	// the base and the waivers for the same reason -a line in the history that
+	// carries it is prose- and it carries the number it accepts and the reason it
+	// accepts it: a waiver nobody can read is a silence with a number (0340).
+	sliceAcceptedPrefix = "Slice: "
 
 	headerRequirementsES = "## Requisitos (textual, del usuario)"
 	headerDoneWhenES     = "## Listo cuando"
@@ -215,6 +228,16 @@ func Parse(md string) TaskDoc {
 			continue
 		}
 
+		// The accepted overage is the last decision of that kind: a number the
+		// human accepts for a close that owes a verifier, with the reason that
+		// pays for it. Without both it accepts nothing and the slice stands (0340).
+		if preamble && strings.HasPrefix(line, sliceAcceptedPrefix) {
+			if lines, reason, ok := parseSliceAccepted(strings.TrimPrefix(line, sliceAcceptedPrefix)); ok {
+				d.SliceAccepted, d.SliceReason = lines, reason
+				continue
+			}
+		}
+
 		switch current {
 		case "requirements":
 			if r, ok := parseRequirement(line); ok {
@@ -236,6 +259,26 @@ func Parse(md string) TaskDoc {
 	}
 
 	return d
+}
+
+// parseSliceAccepted reads the tail of an acceptance line: the number of authored
+// lines the human accepts, then " - ", then the reason. Both halves are required:
+// a number without a reason is a decision nobody can weigh, and a reason without a
+// number accepts no size at all (0340).
+func parseSliceAccepted(rest string) (int, string, bool) {
+	number, reason, ok := strings.Cut(rest, " - ")
+	if !ok {
+		return 0, "", false
+	}
+	lines, err := strconv.Atoi(strings.TrimSpace(number))
+	if err != nil || lines <= 0 {
+		return 0, "", false
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return 0, "", false
+	}
+	return lines, reason, true
 }
 
 // Next returns the first step that is not done, in document order.
@@ -296,6 +339,11 @@ func (d TaskDoc) Render() string {
 	}
 	if d.Light {
 		b.WriteString(lightLine + "\n")
+	}
+	// The acceptance is the human's, and a render that drops it would delete a
+	// decision on the next step that closes: it is written where it was read (0340).
+	if d.SliceAccepted > 0 && d.SliceReason != "" {
+		fmt.Fprintf(&b, "%s%d - %s\n", sliceAcceptedPrefix, d.SliceAccepted, d.SliceReason)
 	}
 
 	b.WriteString("\n" + headerRequirements + "\n")

@@ -222,6 +222,35 @@ func TestACandidatePastTheSliceWithItsRecordCloses(t *testing.T) {
 	}
 }
 
+// TestAnAcceptedOverageAsksForTheRecordInsteadOfTheSlice: the human's acceptance
+// lives in the task document, so a close the size limit would have refused asks for
+// the record the verifier signs and names the reason the human wrote. The size is a
+// settled question; who writes still does not verify itself (0340).
+func TestAnAcceptedOverageAsksForTheRecordInsteadOfTheSlice(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.diff = sliceDiff(401)
+	doc := reviewableDoc("abc1234", true)
+	accepted := strings.Replace(doc, "Base: abc1234",
+		"Base: abc1234\nSlice: 401 - the tests and the ADR are the change", 1)
+	if accepted == doc {
+		t.Fatalf("the fixture has no base line to carry the acceptance: %s", doc)
+	}
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(accepted)
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("an accepted 401-line close answered %q, want %q: the size is settled and the record is owed (%s)",
+			result.Reason, gate.ReasonVerifyMissing, result.Message)
+	}
+	if !strings.Contains(result.Message, "the tests and the ADR are the change") {
+		t.Errorf("the row does not name the reason that paid for the overage: %s", result.Message)
+	}
+	if !strings.Contains(result.Next, "odachi verify") {
+		t.Errorf("next = %q, want the command that writes the record", result.Next)
+	}
+}
+
 // TestARefutedRecordPastTheSliceStillAnswersRefuted: the refutation leaves the
 // missing list empty, so the slice's guard cannot swallow it. A 401-line close
 // with a record that says the requirement does not hold keeps the sentence that

@@ -84,6 +84,13 @@ const (
 // sitting, and the rest of the work belongs to a feature of its own (0331).
 const SliceLines = 400
 
+// sliceAccepted reports whether the task document accepts this candidate's size:
+// the accepted number must reach what the tree authors and the reason must be
+// written, because an acceptance nobody can read accepts nothing (0340).
+func (s State) sliceAccepted() bool {
+	return s.SliceAccepted >= s.VerificationLines && strings.TrimSpace(s.SliceReason) != ""
+}
+
 // Reasons is every reason the gate can answer with, in the order the constants
 // declare them. It exists so the rulebook can point at one: a rule enforced by
 // "the gate refuses" names the refusal, and a name that is not in this list is a
@@ -194,6 +201,13 @@ type State struct {
 	// can finish, and the gate names the number it read -but only while the record
 	// is missing, because a tree already signed has no verdict left to spend (0331).
 	VerificationLines int
+	// SliceAccepted is how many authored lines the human accepts for this close and
+	// SliceReason is the sentence that pays for it, both read from the task
+	// document. An acceptance covers a candidate only when it reaches the measured
+	// number: accepting 420 while the tree authors 438 accepts nothing, and the
+	// gate says so instead of pretending the number moved (0340).
+	SliceAccepted int
+	SliceReason   string
 	// VerificationRefuted holds the notes of a record that answered refuted: the
 	// verifier ran, it read these bytes, and the requirement does not hold.
 	VerificationRefuted []string
@@ -279,19 +293,25 @@ func Evaluate(s State) Result {
 	// comes before the plain missing case on purpose -an over-limit close with no
 	// record earns the better diagnosis, the number and the slice, not the absence
 	// (0315).
-	case s.VerificationLines > SliceLines && len(s.VerificationMissing) > 0 && !s.VerificationRecordFound:
-		return Result{NeedsWork, ReasonVerifySlice,
-			fmt.Sprintf("the candidate is %d authored lines and the limit for a close that owes a verifier is %d: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own",
-				s.VerificationLines, SliceLines),
-			nextStart}
+	case s.VerificationLines > SliceLines && len(s.VerificationMissing) > 0 && !s.VerificationRecordFound && !s.sliceAccepted():
+		message := fmt.Sprintf("the candidate is %d authored lines and the limit for a close that owes a verifier is %d: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own, or the human accepts the overage with \"Slice: <lines> - <reason>\" in the task doc",
+			s.VerificationLines, SliceLines)
+		if s.SliceAccepted > 0 {
+			message += fmt.Sprintf("; the task doc accepts %d and this tree authors %d", s.SliceAccepted, s.VerificationLines)
+		}
+		return Result{NeedsWork, ReasonVerifySlice, message, nextStart}
 	// A close that declared a risk owes the record an independent verifier leaves,
 	// and the rule is the one the catalog already states: who writes does not verify
 	// itself. It is NeedsWork because the agent can run the verifier; the record,
-	// not a sentence in a task document, is what the gate reads (0315).
+	// not a sentence in a task document, is what the gate reads (0315). An oversize
+	// the human accepted is a settled question, and the row that asks for the record
+	// names the number and the reason instead of hiding them (0340).
 	case len(s.VerificationMissing) > 0:
-		return Result{NeedsWork, ReasonVerifyMissing,
-			"the commits declared a risk and this tree has no verification it can read: " + strings.Join(s.VerificationMissing, "; "),
-			nextVerify}
+		message := "the commits declared a risk and this tree has no verification it can read: " + strings.Join(s.VerificationMissing, "; ")
+		if s.VerificationLines > SliceLines && s.sliceAccepted() {
+			message += fmt.Sprintf(" (the task doc accepts %d authored lines: %s)", s.SliceAccepted, s.SliceReason)
+		}
+		return Result{NeedsWork, ReasonVerifyMissing, message, nextVerify}
 	// The record exists and says the requirement does not hold. The tree does not
 	// close on the words of the person who wrote it, and the notes say what showed
 	// it (0315).
