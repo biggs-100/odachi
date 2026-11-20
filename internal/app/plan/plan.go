@@ -66,8 +66,9 @@ type Git interface {
 	WorktreeTree(root string) (string, error)
 	TreeOf(root, commit string) (string, error)
 	// Diff is the text of the change between base and the tree that stands: the
-	// same bytes the close measures, so the two doors cannot disagree about what
-	// this feature already authored (0334).
+	// same bytes the plan weighs before a step opens and the close names after
+	// it, so no two doors can disagree about what this feature already authored
+	// (0334, 0339).
 	Diff(root, base string) (string, error)
 }
 
@@ -189,28 +190,73 @@ func add(current tasks.Document, files Files, opts Options) Result {
 	}
 }
 
+// Why a count was not taken. The first two are not failures -a document that
+// records no base has nothing to be measured against, and a caller that wired no
+// repository has no trees to compare- so the plan stays silent for them, which is
+// the sentence it always printed. Anything else is a repository that could not
+// answer, and both moments name it (0332, 0334, 0339).
+const (
+	noBase = "this task doc records no base"
+	noRepo = "no repository is wired"
+)
+
+// measurement is the one reading of what a feature has authored: the lines
+// between the base the document records and the tree that stands, and that base.
+// Why is empty when Lines is a number; when it is not, Lines carries no value and
+// Why is the clause that explains the absence.
+//
+// This package asks the question twice -the plan weighs a feature before another
+// step opens, the close records it once the work is paid- and both read measure,
+// which counts with the same authorship.Lines the gate counts with. A second
+// count would let the moments speak about different bytes (0331, 0334, 0339).
+type measurement struct {
+	lines int
+	base  string
+	why   string
+}
+
+// took reports whether the reading produced a number.
+func (m measurement) took() bool { return m.why == "" }
+
+// measure reads the feature's cost, or says why it could not be read.
+func measure(current tasks.Document, opts Options) measurement {
+	if opts.Git == nil {
+		return measurement{why: noRepo}
+	}
+	base := strings.TrimSpace(current.Doc.Base)
+	if base == "" {
+		return measurement{why: noBase}
+	}
+
+	m := measurement{base: base}
+	diff, err := opts.Git.Diff(opts.Dir, base)
+	if err != nil {
+		m.why = oneLine(err.Error())
+		return m
+	}
+	m.lines = authorship.Lines(diff)
+	return m
+}
+
 // sliceVerdict answers whether this feature may still grow a step. A refusal
 // carries the number it measured, the limit one task carries and the door that
 // starts the rest as a feature of its own; a note says the number could not be
 // taken, because a measurement nobody could read is not a candidate under it, and
 // a repository a caller did not wire -or a document with no base- has nothing to
-// weigh against (0334).
+// weigh against (0334). The reading itself is measure's, so the close cannot
+// disagree with this door about the same feature (0339).
 func sliceVerdict(current tasks.Document, opts Options) (refusal, note string) {
-	if opts.Git == nil {
+	m := measure(current, opts)
+	switch {
+	case m.why == noRepo || m.why == noBase:
+		// Nothing to weigh, and no note: the step opens with the sentence it
+		// always printed.
 		return "", ""
-	}
-	base := strings.TrimSpace(current.Doc.Base)
-	if base == "" {
-		return "", ""
-	}
-
-	diff, err := opts.Git.Diff(opts.Dir, base)
-	if err != nil {
-		return "", "the slice was not measured: " + oneLine(err.Error())
-	}
-	if lines := authorship.Lines(diff); lines > gate.SliceLines {
+	case !m.took():
+		return "", "the slice was not measured: " + m.why
+	case m.lines > gate.SliceLines:
 		return fmt.Sprintf("the candidate is %d authored lines and one feature authors at most %d: plan the rest with odachi start",
-			lines, gate.SliceLines), ""
+			m.lines, gate.SliceLines), ""
 	}
 	return "", ""
 }
@@ -218,6 +264,10 @@ func sliceVerdict(current tasks.Document, opts Options) (refusal, note string) {
 // markDone closes a step and records the commit that closed it. Closing a
 // closed step is a no-op that writes nothing: the document is the memory of the
 // work, and re-marking it would rewrite that memory for no reason.
+//
+// It also names what the feature has authored since its base. The number cannot
+// stop this work any more -it is paid- so the close reports it and the limit the
+// feature's own close applies, instead of refusing what is already written (0339).
 func markDone(current tasks.Document, files Files, opts Options) Result {
 	id := strings.ToUpper(strings.TrimSpace(opts.Done))
 
@@ -289,6 +339,11 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 		}
 	}
 
+	// The number is read before the document is written: the mark and the backup
+	// are the close's own paperwork, not authored work, and counting them would
+	// make the line a human reads depend on the act of printing it (0339).
+	cost := measure(current, opts)
+
 	grown, err := current.Doc.Record(id, mark)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + " (en " + current.Rel + ")")
@@ -304,12 +359,42 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 	if note != "" {
 		message += " · " + note
 	}
+	message += " · " + closingSentence(cost)
 	return Result{
 		Code:    CodeOK,
 		Message: message,
 		Task:    current.Rel,
 		Files:   []string{current.Rel},
 	}
+}
+
+// closingSentence is what a close adds to the one line a person reads: the
+// authored lines accumulated since the feature's base, that base, and the limit
+// the feature's own close applies to them. A step owes no verifier, so the number
+// is a record and never a refusal: past the limit the sentence only says what
+// follows, in the gate's words, and the step still closes (0339).
+//
+// A count nobody could take is named as such, with why and with no number: a
+// figure invented at the close would be a claim the diff never made.
+func closingSentence(m measurement) string {
+	if !m.took() {
+		return "the count was not taken: " + m.why
+	}
+	if m.lines > gate.SliceLines {
+		return fmt.Sprintf("%d authored lines since base %s, past the %d a close that owes a verifier may carry: this step owes no verifier and closes anyway, and the rest of the work belongs to a feature of its own",
+			m.lines, shortBase(m.base), gate.SliceLines)
+	}
+	return fmt.Sprintf("%d authored lines since base %s, of the %d a close that owes a verifier may carry",
+		m.lines, shortBase(m.base), gate.SliceLines)
+}
+
+// shortBase names the base in the seven characters a human reads, the way the
+// mark is already shortened; a base shorter than that keeps its spelling.
+func shortBase(base string) string {
+	if len(base) > 7 {
+		return base[:7]
+	}
+	return base
 }
 
 // canonicalMark names the bytes of a commit the repository can read: the same

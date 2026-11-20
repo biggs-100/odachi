@@ -1315,3 +1315,24 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que una capa visual se escribe una vez y no pantalla a pantalla.
+
+## 0339 · el-cierre-de
+
+## What must exist
+- el cierre de cada paso nombra las lineas autoradas acumuladas desde la base y el limite que el gate aplica al cerrar, sin negarse a cerrar
+
+## Done when
+- plan --done NOMBRE el acumulado y el limite, y no inventa un numero cuando el documento no tiene base o el repositorio no esta conectado
+- el unico cierre que se niega sigue siendo el de la feature, y la ADR dice por que el paso solo deja constancia
+- go test ./... is green and odachi check --run is green and odachi skills --check is green
+
+## Not included (first version)
+- no se niega el cierre de un paso: negarlo no quita el codigo, solo esconde el trabajo
+- no cambia el limite de 400 ni como se mide
+- no cambia la entrega: cortar en PRs sigue siendo decision del humano al publicar
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: que un numero visible a tiempo vale mas que un rechazo tardio.

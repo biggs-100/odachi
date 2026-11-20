@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/plan"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -253,7 +254,7 @@ func TestPlanDoneMarksAndRecordsTheCommit(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done · deadbee"; res.Message != want {
+	if want := "step T2 done · deadbee" + notCountedNoRepo; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 
@@ -428,6 +429,163 @@ func TestAPlanWithNoBaseIsNotMeasured(t *testing.T) {
 	}
 }
 
+// The clause a close prints when there is nothing to count: a document that
+// records no base, or a caller that wired no repository. Neither invents a
+// number, and neither stops the step from closing (0339).
+const (
+	notCountedNoBase = " · the count was not taken: this task doc records no base"
+	notCountedNoRepo = " · the count was not taken: no repository is wired"
+)
+
+// closeClause is what the close added to the one line a person reads. A test
+// reads it alone so it can say no digit was invented there.
+func closeClause(message string) string {
+	if i := strings.LastIndex(message, " · "); i >= 0 {
+		return message[i+len(" · "):]
+	}
+	return message
+}
+
+// TestAPlanCloseNamesTheCountTheBaseAndTheLimit: the third moment that weighs a
+// feature is the close of a step. It reads the base the document records -the
+// same diff the plan weighs before a step opens- and says the accumulated lines
+// and the limit the feature's own close applies to them (0339).
+func TestAPlanCloseNamesTheCountTheBaseAndTheLimit(t *testing.T) {
+	files := project()
+	files.files[taskPath] = []byte(seedWithBase("abc1234"))
+	asked := ""
+
+	res := plan.Run(plan.Options{
+		Dir: "raiz", Done: "T2",
+		Git: fakeGit{head: "aaa", worktree: "aaa", diff: authoredDiff("internal/app/thing.go", 128), asked: &asked},
+	}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if !strings.HasPrefix(res.Message, "step T2 done · tree:aaa") {
+		t.Errorf("Message = %q, want the mark first", res.Message)
+	}
+	for _, want := range []string{"128 authored lines", "since base abc1234", "400"} {
+		if !strings.Contains(res.Message, want) {
+			t.Errorf("Message = %q does not name %s", res.Message, want)
+		}
+	}
+	if strings.Contains(res.Message, "feature of its own") {
+		t.Errorf("Message = %q names the slice under the limit", res.Message)
+	}
+	if asked != "abc1234" {
+		t.Errorf("measured against %q, want the base the document records", asked)
+	}
+}
+
+// TestAPlanClosePastTheLimitSaysWhatFollows: past the limit the close is still a
+// close. It owes no verifier, so the sentence only says what follows -in the
+// gate's words- and the step is marked done (0339).
+func TestAPlanClosePastTheLimitSaysWhatFollows(t *testing.T) {
+	files := project()
+	files.files[taskPath] = []byte(seedWithBase("abc1234"))
+
+	res := plan.Run(plan.Options{
+		Dir: "raiz", Done: "T2",
+		Git: fakeGit{head: "aaa", worktree: "aaa", diff: authoredDiff("internal/app/thing.go", gate.SliceLines+1)},
+	}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("a close past the limit closes anyway: Code = %d (message: %s)", res.Code, res.Message)
+	}
+	if !strings.HasPrefix(res.Message, "step T2 done · tree:aaa") {
+		t.Errorf("Message = %q, want the mark first", res.Message)
+	}
+	for _, want := range []string{
+		strconv.Itoa(gate.SliceLines+1) + " authored lines",
+		strconv.Itoa(gate.SliceLines),
+		"owes no verifier",
+		"the rest of the work belongs to a feature of its own",
+	} {
+		if !strings.Contains(res.Message, want) {
+			t.Errorf("Message = %q does not name %s", res.Message, want)
+		}
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done {
+		t.Errorf("step = %+v, want it done", step)
+	}
+}
+
+// TestAPlanCloseWithNoBaseInventsNoCount: a document that records no base has
+// nothing to be measured against. The close says the count was not taken and
+// why, prints no number, and does not even ask the repository (0339).
+func TestAPlanCloseWithNoBaseInventsNoCount(t *testing.T) {
+	files := project()
+	asked := ""
+
+	res := plan.Run(plan.Options{
+		Dir: "raiz", Done: "T2",
+		Git: fakeGit{diff: authoredDiff("internal/app/thing.go", 900), asked: &asked},
+	}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if clause, want := closeClause(res.Message), "the count was not taken: this task doc records no base"; clause != want {
+		t.Errorf("clause = %q, want %q", clause, want)
+	}
+	if strings.ContainsAny(closeClause(res.Message), "0123456789") {
+		t.Errorf("the close invented a number: %q", res.Message)
+	}
+	if asked != "" {
+		t.Errorf("a document with no base was diffed against %q", asked)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done {
+		t.Errorf("step = %+v, want it done", step)
+	}
+}
+
+// TestAPlanCloseWithNoRepositoryInventsNoCount: a caller that wired no
+// repository has no trees to compare. The step closes, and the count is named as
+// not taken instead of passed in silence (0339).
+func TestAPlanCloseWithNoRepositoryInventsNoCount(t *testing.T) {
+	files := project()
+	files.files[taskPath] = []byte(seedWithBase("abc1234"))
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "t2"}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if clause, want := closeClause(res.Message), "the count was not taken: no repository is wired"; clause != want {
+		t.Errorf("clause = %q, want %q", clause, want)
+	}
+	if strings.ContainsAny(closeClause(res.Message), "0123456789") {
+		t.Errorf("the close invented a number: %q", res.Message)
+	}
+}
+
+// TestAPlanCloseThatCannotReadTheDiffSaysSo: a repository that cannot answer is
+// named the way the plan names it, and the close still stands (0332, 0339).
+func TestAPlanCloseThatCannotReadTheDiffSaysSo(t *testing.T) {
+	files := project()
+	files.files[taskPath] = []byte(seedWithBase("abc1234"))
+
+	res := plan.Run(plan.Options{
+		Dir: "raiz", Done: "T2",
+		Git: fakeGit{diffErr: errors.New("bad object abc1234")},
+	}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if clause, want := closeClause(res.Message), "the count was not taken: bad object abc1234"; clause != want {
+		t.Errorf("clause = %q, want %q", clause, want)
+	}
+	if strings.Contains(res.Message, "authored lines") {
+		t.Errorf("Message = %q names a count nobody took", res.Message)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done {
+		t.Errorf("step = %+v, want it done", step)
+	}
+}
+
 // TestPlanDoneDoesNotGuessAnOlderStep: marking a step after a later one is done
 // would read HEAD -a later commit- and record its bytes as this step's. The tool
 // refuses to guess and names --commit.
@@ -473,7 +631,7 @@ func TestPlanDoneCanonicalizesTheCommitItWasGiven(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done · tree:5055fcf"; res.Message != want {
+	if want := "step T2 done · tree:5055fcf" + notCountedNoBase; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "tree:"+tree {
@@ -492,7 +650,7 @@ func TestPlanDoneKeepsTheShaItCannotRead(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done · deadbee"; res.Message != want {
+	if want := "step T2 done · deadbee" + notCountedNoBase; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "deadbee" {
@@ -512,7 +670,7 @@ func TestPlanDoneRecordsTheTreeItProduced(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done · tree:7bc78db"; res.Message != want {
+	if want := "step T2 done · tree:7bc78db" + notCountedNoBase; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done || step.Commit != "tree:"+tree {
@@ -549,7 +707,7 @@ func TestPlanDoneInARepositoryWithNoCommitClosesTheStep(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done"; res.Message != want {
+	if want := "step T2 done" + notCountedNoBase; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "" {
@@ -583,7 +741,7 @@ func TestPlanDoneWithoutCommitStillClosesTheStep(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done"; res.Message != want {
+	if want := "step T2 done" + notCountedNoRepo; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done || step.Commit != "" {
