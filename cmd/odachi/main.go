@@ -1241,6 +1241,18 @@ func reportReview(result reviewapp.Result, asJSON bool, stdout, stderr io.Writer
 	return result.Code
 }
 
+// modelFlag collects the repeatable --model values. The flag names one client
+// per occurrence (`--model opencode=<id>`), and the app owns the grammar: this
+// type only remembers what was typed.
+type modelFlag []string
+
+func (m *modelFlag) String() string { return strings.Join(*m, ",") }
+
+func (m *modelFlag) Set(value string) error {
+	*m = append(*m, value)
+	return nil
+}
+
 // runInit parses the flags and wires the Files adapter.
 func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("odachi init", flag.ContinueOnError)
@@ -1250,11 +1262,13 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		asJSON      bool
 		skillsScope string
 		agents      string
+		models      modelFlag
 		global      bool
 	)
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 	flags.StringVar(&skillsScope, "skills", "", "where to install the skills: home | project (default: the stored choice, the copy already here, or home)")
 	flags.StringVar(&agents, "agents", "", "which clients receive the home door: opencode | claude | both")
+	flags.Var(&models, "model", "client=model (repeatable): the model opencode or claude reads")
 	// --global was the only way to install the door until 0242 and it is now what
 	// every run does. It stays accepted, and hidden from the help, so a script
 	// written for an older version keeps working; a flag that cannot change the
@@ -1285,6 +1299,11 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 			_, _ = fmt.Fprintf(stderr, "odachi: %s; use opencode, claude or both\n", oneLine(err.Error()))
 			return start.CodeBlocked
 		}
+	}
+	selectedModels, err := initapp.ParseModels(models)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		return start.CodeBlocked
 	}
 
 	created, err := ensureHistory(dir)
@@ -1319,6 +1338,7 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		PathMissing:    pathMissing(),
 		Profiles:       writtenProfile{},
 		Agents:         agents,
+		Models:         selectedModels,
 		AgentSelection: agentSelection{},
 		Home:           osHome{},
 		Global:         true,
@@ -1347,10 +1367,12 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 
 	var (
 		agents string
+		models modelFlag
 		asJSON bool
 		dryRun bool
 	)
 	flags.StringVar(&agents, "agents", "", "opencode | claude | both (default: the clients installed in the home)")
+	flags.Var(&models, "model", "client=model (repeatable): the model opencode or claude reads")
 	flags.BoolVar(&dryRun, "dry-run", false, "report every file this run would write, and write none")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
@@ -1366,6 +1388,11 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi setup only takes flags (run odachi setup -h)\n", flags.Arg(0))
 		return start.CodeBlocked
 	}
+	selectedModels, err := initapp.ParseModels(models)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		return start.CodeBlocked
+	}
 
 	if os.Getenv("ODACHI_NO_SETUP") != "" {
 		_, _ = fmt.Fprintln(stderr, "odachi: ODACHI_NO_SETUP=1 is set: this machine's home is not touched; unset it to run setup")
@@ -1375,6 +1402,7 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 	result := initapp.RunSetup(initapp.Options{
 		Profiles: writtenProfile{},
 		Agents:   agents,
+		Models:   selectedModels,
 		Home:     osHome{},
 		DryRun:   dryRun,
 	}, setupFiles(dryRun), &initSkills{dir: ".", verb: "odachi setup"})
@@ -1833,8 +1861,8 @@ usage:
   odachi verify [--exec "<command>"] [--model <id>]
   odachi doctor [--json]
   odachi bench [--journeys <names>] [--binary <path>] [--json]
-  odachi init [--skills home|project] [--agents opencode|claude|both] [--json]
-  odachi setup [--agents opencode|claude|both] [--dry-run] [--json]
+  odachi init [--skills home|project] [--agents opencode|claude|both] [--model <client>=<model>] [--json]
+  odachi setup [--agents opencode|claude|both] [--model <client>=<model>] [--dry-run] [--json]
   odachi tui
   odachi skills [--check | --write | --resolve <step>]
   odachi skills eval <skill> [--exec "<command>"] [--runs N] [--timeout N] [--move-home] [--recover]
@@ -1961,6 +1989,11 @@ init flags:
   --agents s      opencode | claude | both (default both): which clients receive the native
                   agent and the home door; the choice stays in the clone's store
                   and does not delete the files another client already has
+  --model s       <client>=<model>, repeatable: opencode and claude are the clients.
+                  The value goes where that client reads it -the root "model" of
+                  ~/.config/opencode/opencode.json (or an existing .jsonc) and
+                  ~/.claude/settings.json- which is the file the tui writes too.
+                  A different value is replaced in place; every other byte stays.
   --global        install the home door: the agent that shows up in any folder,
                   not only in this project, and make it OpenCode's default agent.
                   It is opt-in: without the flag nothing is written
@@ -1993,6 +2026,10 @@ setup flags:
                   After an upgrade it is the one command that refreshes the
                   machine: run it twice and the second run changes nothing.
   --agents s      opencode | claude | both (default: the clients installed in the home)
+  --model s       <client>=<model>, repeatable: opencode and claude are the clients.
+                  The value goes where that client reads it -the root "model" of
+                  ~/.config/opencode/opencode.json (or an existing .jsonc) and
+                  ~/.claude/settings.json, which is created when missing.
   --dry-run       report every file this run would write, and write none: the
                   rehearsal names each destination, says "would write", and leaves
                   the bytes exactly as they were
