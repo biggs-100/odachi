@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.55.0 - 2026-11-19
+
 - **The wizard names the models, and the files keep them.** `odachi tui` gained the third section the hub owed: one row for the verifier and one per installed client, each showing the model the file carries today and written only when the chosen value differs from it. The verifier's model is declared as `verify` in `odd/review.toml`, beside `[lenses]`, and `odachi verify` resolves it in three tiers -`--model`, the key, the session- so a command that writes `{model}` is filled instead of refused and the run names which model answered. `init` and `setup` gained `--model client=model`, which merges the key into `opencode.json` -or the `.jsonc` that already exists beside it- and `~/.claude/settings.json`: one member inserted or replaced, with comments, key order and line endings untouched, so a file another product owns is never re-encoded. The review file's schema moves to 11, which is what makes an older binary say upgrade instead of unknown key. ADR 0051's exclusion of per-client pickers is superseded by ADR 0053; the rest of it stands. Minor, because `odachi tui` gains a section and two verbs gain a flag (0337).
 
 ## v0.54.0 - 2026-11-19

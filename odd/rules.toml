@@ -1,5 +1,5 @@
 # odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken
-schema = 10
+schema = 11
 # odachi: one row per rule the catalog states. enforces is fence:<glob>, check:<name> or test:<TestName>;
 # a rule nothing enforces says so with enforces = "none" and its because, and doctor counts it as debt
 #
