@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -206,6 +207,11 @@ const modelVerifier = "verifier"
 // start disagreeing (0337).
 const modelRefusal = "el modelo no es un identificador: usa provider/name#variant"
 
+// clientModelRefusal answers the one empty value a client's row cannot keep while
+// its file names a model: no verb removes that key, so the row has to say where
+// the line lives (0337).
+const clientModelRefusal = "un cliente no se queda sin modelo desde aquí: escribe uno, o borra la clave model de su archivo"
+
 // tuiSteps is every screen the wizard has, in the order the table walks them.
 var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile, stepModels}
 
@@ -266,6 +272,45 @@ func (m tuiModel) backStep() tuiStep {
 	return m.step
 }
 
+// tuiRun is what the wizard calls: the operations it applies, plus the host's
+// model catalog the picker shows. It embeds configure.Runner instead of growing
+// that interface, because the app that applies operations must not gain a read it
+// never uses -a verb that only writes has no reason to spawn `opencode models`- and
+// the fake in a test implements the same two halves (0338).
+type tuiRun interface {
+	configure.Runner
+	// Catalog answers the models the host serves, and false when it cannot say.
+	Catalog() ([]string, bool)
+}
+
+// catalogState is what the wizard knows about the host's list: nothing yet, one
+// probe in flight, the answer, or the fact that the host could not answer. It is
+// a state and not a pair of flags because "still asking" and "asked and unable"
+// are the two a screen has to tell apart, and only one of them is worth a
+// sentence (0338).
+type catalogState int
+
+const (
+	catalogIdle catalogState = iota
+	catalogAsking
+	catalogReady
+	catalogFailed
+)
+
+// catalogMsg is the host's answer as the tea runtime delivers it, off the key
+// loop: the screen never blocks on a process (0338).
+type catalogMsg struct {
+	models []string
+	ok     bool
+}
+
+// The two sentences the picker adds to the host's entries: the row that opens the
+// line editor, and the state the screen shows while the probe runs (0338).
+const (
+	manualModelRow   = "escribir a mano"
+	detectingCatalog = "detectando…"
+)
+
 // tuiModel is the wizard: the detected facts, the choices and where it stands.
 type tuiModel struct {
 	state tuiState
@@ -294,6 +339,14 @@ type tuiModel struct {
 	// changed, which is what keeps the plan (and the disk) empty (0337).
 	modelsCursor int
 	modelPending map[string]string
+	// The host's catalog and the picker that shows it: the state of the one probe
+	// the run makes, the entries it answered, whether the list is open, and which
+	// entry its cursor is on. Both screens that edit a model -the review lens table
+	// and the models section- share this one picker (0338).
+	probe           catalogState
+	catalog         []string
+	pickingModel    bool
+	modelPickCursor int
 	// edited is every axis the editor wrote in this run, by name: the voice op
 	// recomputes the whole profile from the builtin, so these are re-applied after
 	// it and an explicit edit is the last word (0336).
@@ -301,7 +354,7 @@ type tuiModel struct {
 	editing bool
 	buffer  string
 	editErr string
-	run     configure.Runner
+	run     tuiRun
 	applied bool
 	result  configure.Result
 }
@@ -337,9 +390,22 @@ func (m tuiModel) Init() tea.Cmd { return nil }
 // choices are the model's until the apply screen runs them.
 func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case catalogMsg:
+		m.catalog = msg.models
+		if msg.ok && len(msg.models) > 0 {
+			m.probe = catalogReady
+		} else {
+			// Remembered as unable, not forgotten: a second visit finds the fact
+			// instead of spawning the same process on every key (0338).
+			m.probe = catalogFailed
+		}
+		return m, nil
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
+		}
+		if m.pickingModel {
+			return m.modelPickKey(msg)
 		}
 		if m.editing {
 			return m.editKey(msg), nil
@@ -394,10 +460,39 @@ func (m tuiModel) next() (tea.Model, tea.Cmd) {
 				m.state.Axes = axes
 			}
 		}
-		return m, nil
+		return m.withCatalog()
 	}
 	m.step = m.forwardStep()
-	return m, nil
+	return m.withCatalog()
+}
+
+// withCatalog fires the host's catalog probe when the wizard lands on a screen
+// that picks a model, and only once per run. The answer is a command, so the
+// screen is readable while the process runs; a second visit finds the state the
+// first one left instead of asking the host again (0338).
+func (m tuiModel) withCatalog() (tea.Model, tea.Cmd) {
+	if m.step != stepReview && m.step != stepModels {
+		return m, nil
+	}
+	cmd := m.detectModels()
+	if cmd != nil {
+		m.probe = catalogAsking
+	}
+	return m, cmd
+}
+
+// detectModels is the one place the wizard asks the host what it serves. It
+// returns nil when the question was already asked, which is what keeps a run to
+// one process: idle is the only state that asks (0338).
+func (m tuiModel) detectModels() tea.Cmd {
+	if m.probe != catalogIdle || m.run == nil {
+		return nil
+	}
+	run := m.run
+	return func() tea.Msg {
+		models, ok := run.Catalog()
+		return catalogMsg{models: models, ok: ok}
+	}
 }
 
 // commit records the choice the screen is showing. Nothing here touches the disk.
@@ -426,7 +521,8 @@ func (m tuiModel) back() tuiModel {
 }
 
 // enterReview toggles the switch on its row, or opens the model of the lens the
-// cursor is on.
+// cursor is on: the host's list when the probe answered one, the line editor
+// otherwise (0338).
 func (m tuiModel) enterReview() (tea.Model, tea.Cmd) {
 	if m.reviewCursor == 0 {
 		if m.state.Review == review.ModeOn {
@@ -436,11 +532,127 @@ func (m tuiModel) enterReview() (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
-	lens := tuiLenses[m.reviewCursor-1]
+	return m.openModelRow()
+}
+
+// openModelRow opens what a model row offers: the host's catalog when there is
+// one to pick from, and the line editor otherwise. Typing is not removed by the
+// picker, it is moved behind the list's last row (0338).
+func (m tuiModel) openModelRow() (tea.Model, tea.Cmd) {
+	if len(m.modelCatalog()) > 0 {
+		value := m.pickedValue()
+		m.pickingModel = true
+		m.modelPickCursor = indexOf(m.modelChoices(value), value)
+		m.editErr = ""
+		return m, nil
+	}
+	return m.openModelEditor(), nil
+}
+
+// openModelEditor is the door that stays: the buffer the screen has always had,
+// opened on the value in force, checked on enter by the rule of the row (0337).
+func (m tuiModel) openModelEditor() tuiModel {
 	m.editing = true
-	m.buffer = m.state.Models[lens]
+	m.buffer = m.pickedValue()
 	m.editErr = ""
+	return m
+}
+
+// modelCatalog is the host's list when there is one to pick from. An empty or
+// failed probe is no list: the picker is not offered and the row keeps the line
+// editor as its only door (0338).
+func (m tuiModel) modelCatalog() []string {
+	if m.probe != catalogReady || len(m.catalog) == 0 {
+		return nil
+	}
+	return m.catalog
+}
+
+// modelChoices is what the picker shows for the value in force: the host's
+// entries, the value first when the host does not list it -a project may name a
+// model that was renamed or retired, and hiding it would invite a change nobody
+// asked for-, and the manual door last (0338).
+func (m tuiModel) modelChoices(value string) []string {
+	catalog := m.modelCatalog()
+	choices := make([]string, 0, len(catalog)+2)
+	if !slices.Contains(catalog, value) {
+		choices = append(choices, value)
+	}
+	choices = append(choices, catalog...)
+	return append(choices, manualModelRow)
+}
+
+// pickedValue is the value in force of the row the picker was opened on. The two
+// screens share one picker, so the screen says which row it is and the picker only
+// reads it (0337, 0338).
+func (m tuiModel) pickedValue() string {
+	if m.step == stepModels {
+		return m.modelValue(m.modelRows()[m.modelsIndex()])
+	}
+	return m.state.Models[tuiLenses[m.reviewCursor-1]]
+}
+
+// modelPickKey drives the host's list: the cursor, enter keeping the entry, and
+// esc dropping the whole thing -nothing is written before the apply (0338).
+func (m tuiModel) modelPickKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "q" {
+		return m, tea.Quit
+	}
+	choices := m.modelChoices(m.pickedValue())
+	switch msg.String() {
+	case "esc":
+		m.pickingModel = false
+	case "up", "k":
+		m.modelPickCursor = clamp(m.modelPickCursor-1, len(choices))
+	case "down", "j":
+		m.modelPickCursor = clamp(m.modelPickCursor+1, len(choices))
+	case "enter":
+		choice := choices[clamp(m.modelPickCursor, len(choices))]
+		if choice == manualModelRow {
+			m.pickingModel = false
+			return m.openModelEditor(), nil
+		}
+		m = m.keepPickedModel(choice)
+		// A refused choice -a client's row kept empty- leaves the list open with
+		// the sentence on the screen, so the refusal is not swallowed (0338).
+		if m.editErr == "" {
+			m.pickingModel = false
+		}
+	}
 	return m, nil
+}
+
+// keepPickedModel records a value chosen from the host's list. The models
+// section ends in the rule its editor already applied; the review screen writes
+// the lens table directly, which is what the editor did before there was a list
+// (0337, 0338).
+func (m tuiModel) keepPickedModel(value string) tuiModel {
+	if m.step == stepModels {
+		return m.keepModelValue(m.modelRows()[m.modelsIndex()], value)
+	}
+	return m.keepLens(value)
+}
+
+// modelCount says how many entries the host answered, so a person knows the list
+// is the agent's and not the screen's invention (0338).
+func modelCount(n int) string {
+	if n == 1 {
+		return "1 modelo"
+	}
+	return fmt.Sprintf("%d modelos", n)
+}
+
+// modelPicker renders the list under the row that opened it: the window every
+// other list uses, the entries in the nested row shape, and the count in the
+// muted voice. The count is furniture, not a row: it is not selectable (0338).
+func (m tuiModel) modelPicker(value string) string {
+	choices := m.modelChoices(value)
+	var out strings.Builder
+	out.WriteString(tuiLook.windowLines(windowFor(m.modelPickCursor, len(choices), modelPickRows), func(i int) string {
+		return tuiLook.subRow(i == m.modelPickCursor, shownModel(choices[i]))
+	}))
+	out.WriteString(tuiLook.mutedLine(modelCount(len(m.catalog))))
+	return out.String()
 }
 
 // editKey edits the row the editor was opened on. The buffer keys are one for
@@ -456,24 +668,7 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 		if m.step == stepModels {
 			return m.keepModel()
 		}
-		lens := tuiLenses[m.reviewCursor-1]
-		value := strings.TrimSpace(m.buffer)
-		if value == "" {
-			delete(m.state.Models, lens)
-			m.editing = false
-			m.buffer = ""
-			m.editErr = ""
-			return m
-		}
-		checked, err := review.NormalizeModel(value)
-		if err != nil {
-			m.editErr = modelRefusal
-			return m
-		}
-		m.state.Models[lens] = checked
-		m.editing = false
-		m.buffer = ""
-		m.editErr = ""
+		return m.keepLens(m.buffer)
 	case tea.KeyBackspace:
 		runes := []rune(m.buffer)
 		if len(runes) > 0 {
@@ -496,10 +691,19 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 // that showed the row empty while the file kept its model would be lying about
 // what the run wrote. It refuses the empty value and names where the line lives.
 func (m tuiModel) keepModel() tuiModel {
-	row := m.modelRows()[m.modelsIndex()]
-	value := strings.TrimSpace(m.buffer)
-	if value == "" && row != modelVerifier {
-		m.editErr = "un cliente no se queda sin modelo desde aquí: escribe uno, o borra la clave model de su archivo"
+	return m.keepModelValue(m.modelRows()[m.modelsIndex()], strings.TrimSpace(m.buffer))
+}
+
+// keepModelValue is the one place a models row's choice is accepted: the editor
+// and the picker both end here, so a value typed by hand and a value chosen from
+// the host's list cannot disagree about what a row may keep (0338).
+func (m tuiModel) keepModelValue(row, value string) tuiModel {
+	value = strings.TrimSpace(value)
+	// Only a row whose file carries a model is refusing to lose it: a row that
+	// already has none has nothing to lie about, and keeping it empty is a no-op
+	// (0337).
+	if value == "" && row != modelVerifier && m.state.ClientModels[row] != "" {
+		m.editErr = clientModelRefusal
 		return m
 	}
 	if value != "" {
@@ -514,6 +718,31 @@ func (m tuiModel) keepModel() tuiModel {
 		m.modelPending = map[string]string{}
 	}
 	m.modelPending[row] = value
+	m.editing = false
+	m.buffer = ""
+	m.editErr = ""
+	return m
+}
+
+// keepLens records the review screen's model for the lens the editor or the
+// picker was opened on. An empty value removes the line, which is the only way a
+// lens goes back to the session's own model (0337).
+func (m tuiModel) keepLens(value string) tuiModel {
+	lens := tuiLenses[m.reviewCursor-1]
+	value = strings.TrimSpace(value)
+	if value == "" {
+		delete(m.state.Models, lens)
+		m.editing = false
+		m.buffer = ""
+		m.editErr = ""
+		return m
+	}
+	checked, err := review.NormalizeModel(value)
+	if err != nil {
+		m.editErr = modelRefusal
+		return m
+	}
+	m.state.Models[lens] = checked
 	m.editing = false
 	m.buffer = ""
 	m.editErr = ""
@@ -609,11 +838,20 @@ func (m tuiModel) viewModels() string {
 			value = m.buffer + "_"
 			notice = false
 		}
+		var line strings.Builder
 		if notice {
-			return tuiLook.rowNotice(i == cursor, modelLabel(row), value)
+			line.WriteString(tuiLook.rowNotice(i == cursor, modelLabel(row), value))
+		} else {
+			line.WriteString(tuiLook.rowValues(i == cursor, modelLabel(row), value))
 		}
-		return tuiLook.rowValues(i == cursor, modelLabel(row), value)
+		if m.pickingModel && i == cursor {
+			line.WriteString(m.modelPicker(m.pickedValue()))
+		}
+		return line.String()
 	}))
+	if m.probe == catalogAsking {
+		out.WriteString(tuiLook.mutedLine(detectingCatalog))
+	}
 	if m.editErr != "" {
 		out.WriteString("\n")
 		out.WriteString(tuiLook.failureLine(m.editErr))
@@ -626,9 +864,9 @@ func (m tuiModel) viewModels() string {
 	return out.String()
 }
 
-// modelsKey drives the section: the rows, the editor they open, and nothing that
-// touches the disk. What is chosen here is written only by the apply, and only
-// when it differs from the file (0337).
+// modelsKey drives the section: the rows, the picker or the editor they open, and
+// nothing that touches the disk. What is chosen here is written only by the apply,
+// and only when it differs from the file (0337, 0338).
 func (m tuiModel) modelsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.String() == "q" {
 		return m, tea.Quit
@@ -641,9 +879,7 @@ func (m tuiModel) modelsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		m.modelsCursor = clamp(m.modelsCursor+1, len(m.modelRows()))
 	case "enter":
-		m.editing = true
-		m.buffer = m.modelValue(m.modelRows()[m.modelsIndex()])
-		m.editErr = ""
+		return m.openModelRow()
 	}
 	return m, nil
 }
@@ -975,8 +1211,10 @@ func (m tuiModel) clientModelChoices() map[string]configure.ModelChoice {
 	return choices
 }
 
-// viewReview renders the switch and the four lens models. The model being edited
-// shows its buffer and a cursor; the error stays on the screen until it is fixed.
+// viewReview renders the switch and the four lens models. A model row opens the
+// host's picker or the editor, and either one shows its state in place: the
+// buffer with a cursor, the list with the entry the cursor is on. The error stays
+// on the screen until it is fixed (0337, 0338).
 func (m tuiModel) viewReview() string {
 	var out strings.Builder
 	out.WriteString(m.header("Review"))
@@ -990,8 +1228,16 @@ func (m tuiModel) viewReview() string {
 				value = m.buffer + "_"
 			}
 		}
-		return tuiLook.rowValues(i == m.reviewCursor, labels[i], value)
+		var row strings.Builder
+		row.WriteString(tuiLook.rowValues(i == m.reviewCursor, labels[i], value))
+		if m.pickingModel && i > 0 && i == m.reviewCursor {
+			row.WriteString(m.modelPicker(m.pickedValue()))
+		}
+		return row.String()
 	}))
+	if m.probe == catalogAsking {
+		out.WriteString(tuiLook.mutedLine(detectingCatalog))
+	}
 	if m.editErr != "" {
 		out.WriteString("\n")
 		out.WriteString(tuiLook.failureLine(m.editErr))

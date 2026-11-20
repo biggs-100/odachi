@@ -27,6 +27,10 @@ const (
 	// valueRows is smaller on purpose: the picker is nested under its axis row,
 	// so the axis window and the picker window share one screen.
 	valueRows = 5
+	// modelPickRows is the model picker's window, nested under the row that
+	// opened it for the same reason: the row list and the catalog share one
+	// screen, and the catalog can be dozens of entries long (0338).
+	modelPickRows = 5
 )
 
 // tuiWindow is the slice of a list a screen draws, and whether anything is
