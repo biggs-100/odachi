@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -382,5 +384,54 @@ func TestPlanRefusesAnUnknownSkill(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "nope-nope") {
 		t.Errorf("stderr %q does not name the refused skill", stderr)
+	}
+}
+
+// authoredAtTheClose reads the number a close named, or says there was none.
+func authoredAtTheClose(t *testing.T, message string) int {
+	t.Helper()
+	i := strings.Index(message, " authored lines since base ")
+	if i < 0 {
+		t.Fatalf("the close does not name the authored lines: %q", message)
+	}
+	start := strings.LastIndexByte(message[:i], ' ') + 1
+	n, err := strconv.Atoi(message[start:i])
+	if err != nil {
+		t.Fatalf("the close does not name a number before %q: %v", message[i:], err)
+	}
+	return n
+}
+
+// TestPlanDoneNamesTheCountAtTheCLI: closing a step reads the base the document
+// records -the same diff the plan weighs before a step opens- and says the
+// accumulated lines and the limit. Past the limit it says what follows in the
+// gate's words, and the close still succeeds (0339).
+func TestPlanDoneNamesTheCountAtTheCLI(t *testing.T) {
+	t.Parallel()
+	dir, base := featureAtBase(t)
+	writeFile(t, dir, "internal/app/thing.go", strings.Repeat("// linea\n", gate.SliceLines+1))
+
+	code, stdout, stderr := runDir(t, dir, []string{"plan", "--done", "T1"}, "")
+	if code != 0 {
+		t.Fatalf("plan --done: exit %d, stderr=%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "step T1 done") {
+		t.Fatalf("stdout %q does not report the closed step", stdout)
+	}
+	if want := "since base " + base[:7]; !strings.Contains(stdout, want) {
+		t.Errorf("stdout %q does not name %q", stdout, want)
+	}
+	if n := authoredAtTheClose(t, stdout); n <= gate.SliceLines {
+		t.Errorf("the close counted %d authored lines, want past the %d this test wrote", n, gate.SliceLines)
+	}
+	for _, want := range []string{strconv.Itoa(gate.SliceLines), "the rest of the work belongs to a feature of its own"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout %q does not name %q", stdout, want)
+		}
+	}
+
+	step := planDoc(t, dir, onlyTask(t, tree(t, dir))).Steps[0]
+	if !step.Done {
+		t.Errorf("step = %+v, want it done", step)
 	}
 }
