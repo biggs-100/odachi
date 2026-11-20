@@ -177,6 +177,14 @@ func (s tuiStyle) successLine(text string) string {
 	return "  " + s.value.Render(text) + "\n"
 }
 
+// mutedLine is the layer's quiet voice for furniture that is neither body nor a
+// problem: today the marks that say a list continues past its window. It keeps
+// the two-cell frame the notices and the help line share, which sits outside the
+// four-cell row gutter (0338).
+func (s tuiStyle) mutedLine(text string) string {
+	return "  " + s.subtitle.Render(text) + "\n"
+}
+
 // helpLine is the key footer every screen ends with. The leading newline is the
 // blank line the layout convention puts between the body and the keys, so a
 // screen appends it right after its last row.

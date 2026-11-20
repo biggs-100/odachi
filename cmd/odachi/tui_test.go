@@ -1564,3 +1564,197 @@ func TestTUIEveryScreenPutsItsKeysInTheSameHelpLine(t *testing.T) {
 		}
 	}
 }
+
+// TestTUIWindowMathAnswersEveryEdge: the window is arithmetic, not state, so it
+// answers every corner -an empty list, a cursor outside it, a maximum of zero, a
+// list exactly as long as the window- without panicking, and the cursor that
+// exists is always inside the slice it returns (0338).
+func TestTUIWindowMathAnswersEveryEdge(t *testing.T) {
+	cases := []struct {
+		name                    string
+		cursor, length, maxRows int
+		want                    tuiWindow
+	}{
+		{"empty list", 0, 0, 8, tuiWindow{}},
+		{"empty list, maximum zero", 0, 0, 0, tuiWindow{}},
+		{"maximum zero still shows one row", 3, 10, 0, tuiWindow{start: 3, end: 4, above: true, below: true}},
+		{"cursor before the list", -4, 10, 8, tuiWindow{start: 0, end: 8, below: true}},
+		{"cursor after the list", 99, 10, 8, tuiWindow{start: 2, end: 10, above: true}},
+		{"exactly as long as the window", 0, 8, 8, tuiWindow{start: 0, end: 8}},
+		{"exactly as long, cursor at the end", 7, 8, 8, tuiWindow{start: 0, end: 8}},
+		{"cursor at the top", 0, 12, 5, tuiWindow{start: 0, end: 5, below: true}},
+		{"cursor just past the window", 5, 12, 5, tuiWindow{start: 1, end: 6, above: true, below: true}},
+		{"cursor at the bottom", 11, 12, 5, tuiWindow{start: 7, end: 12, above: true}},
+	}
+
+	for _, c := range cases {
+		got := windowFor(c.cursor, c.length, c.maxRows)
+		if got != c.want {
+			t.Errorf("%s: windowFor(%d, %d, %d) = %+v, want %+v",
+				c.name, c.cursor, c.length, c.maxRows, got, c.want)
+		}
+		// The guarantee that matters to the screen: when there is a row at all,
+		// the cursor that exists is drawn.
+		if c.length > 0 {
+			cursor := clamp(c.cursor, c.length)
+			if cursor < got.start || cursor >= got.end {
+				t.Errorf("%s: cursor %d falls outside the window [%d,%d)", c.name, cursor, got.start, got.end)
+			}
+		}
+	}
+}
+
+// TestTUILongListSaysWhatIsHidden: a windowed list draws the rows it keeps and
+// says in the muted voice that more waits above or below, while the selected row
+// stays on screen (0338).
+func TestTUILongListSaysWhatIsHidden(t *testing.T) {
+	plainTUI(t)
+
+	const length, maxRows, cursor = 12, 5, 6
+	view := tuiLook.windowLines(windowFor(cursor, length, maxRows), func(i int) string {
+		return tuiLook.row(i == cursor, fmt.Sprintf("fila-%02d", i))
+	})
+
+	for _, want := range []string{"↑ más", "↓ más", "fila-06"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the clipped list does not show %q:\n%s", want, view)
+		}
+	}
+	for _, hidden := range []string{"fila-00", "fila-01", "fila-11"} {
+		if strings.Contains(view, hidden) {
+			t.Errorf("the clipped list draws the hidden row %q:\n%s", hidden, view)
+		}
+	}
+	if got := strings.Count(view, cursorGlyph); got != 1 {
+		t.Errorf("the cursor glyph appears %d times, want the selected row once:\n%s", got, view)
+	}
+}
+
+// TestTUIClippingMarksUseTheMutedTone: the marks are the layer's quiet voice,
+// not the plain body and not a notice, so they never compete with a row (0338).
+func TestTUIClippingMarksUseTheMutedTone(t *testing.T) {
+	colouredTUI(t)
+
+	view := tuiLook.windowLines(windowFor(6, 12, 5), func(i int) string {
+		return tuiLook.row(i == 6, fmt.Sprintf("fila-%02d", i))
+	})
+	for _, mark := range []string{clipAbove, clipBelow} {
+		if !strings.Contains(view, tuiLook.subtitle.Render(mark)) {
+			t.Errorf("the clipping mark %q does not carry the muted tone:\n%q", mark, view)
+		}
+	}
+}
+
+// TestTUIShortListIsUnchanged: the window is the one thing a person should not
+// notice. A list that fits draws exactly the bytes T1 drew, with no mark (0338).
+func TestTUIShortListIsUnchanged(t *testing.T) {
+	plainTUI(t)
+
+	m := newTUIModel(wizard())
+	m.step = stepClients
+	want := "odachi 9.9.9 · Clientes\n\n" +
+		"  › ambos (opencode y claude)\n" +
+		"    opencode\n" +
+		"    claude\n" +
+		"\n  ↑↓ elegir · enter seguir · esc volver · q salir\n"
+	if got := m.View(); got != want {
+		t.Errorf("the short list changed:\nwant %q\ngot  %q", want, got)
+	}
+	if strings.Contains(m.View(), "más") {
+		t.Errorf("a list that fits draws a clipping mark:\n%s", m.View())
+	}
+}
+
+// axesForTest is a profile long enough to scroll: the shipped profiles have six
+// axes, but the screen must not depend on that being short (0338).
+func axesForTest(count int) []profile.Axis {
+	axes := make([]profile.Axis, count)
+	for i := range axes {
+		axes[i] = profile.Axis{
+			Name:    fmt.Sprintf("eje-%02d", i),
+			Allowed: []string{"a", "b"},
+			Value:   "a",
+		}
+	}
+	return axes
+}
+
+// TestTUILongProfileKeepsTheCursorVisible: the profile axes go through the
+// window too, and the keys move the cursor exactly as before -only what is drawn
+// changes (0338).
+func TestTUILongProfileKeepsTheCursorVisible(t *testing.T) {
+	plainTUI(t)
+
+	in := wizard()
+	in.Axes = axesForTest(12)
+	m := newTUIModel(in)
+	m.step = stepProfile
+
+	for i := 0; i < 10; i++ {
+		m, _ = press(t, m, downKey)
+	}
+	if m.profileCursor != 10 {
+		t.Fatalf("profileCursor after 10 downs = %d, want 10", m.profileCursor)
+	}
+	view := m.View()
+	for _, want := range []string{"↑ más", "↓ más", "eje-10"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the scrolled profile does not show %q:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "eje-00") {
+		t.Errorf("the scrolled profile draws a row hidden above:\n%s", view)
+	}
+	if got := strings.Count(view, cursorGlyph); got != 1 {
+		t.Errorf("the cursor glyph appears %d times, want one:\n%s", got, view)
+	}
+
+	for i := 0; i < 5; i++ {
+		m, _ = press(t, m, upKey)
+	}
+	if m.profileCursor != 5 {
+		t.Fatalf("profileCursor after 5 ups = %d, want 5", m.profileCursor)
+	}
+	if view := m.View(); !strings.Contains(view, "eje-05") {
+		t.Errorf("the selected row after scrolling back is not drawn:\n%s", view)
+	}
+}
+
+// TestTUIValuePickerScrollsItsOwnWindow: the picker under an axis is a list of
+// its own, and its window follows the pick cursor without hiding it (0338).
+func TestTUIValuePickerScrollsItsOwnWindow(t *testing.T) {
+	plainTUI(t)
+
+	allowed := make([]string, 12)
+	for i := range allowed {
+		allowed[i] = fmt.Sprintf("valor-%02d", i)
+	}
+	in := wizard()
+	in.Axes = []profile.Axis{{Name: "matiz", Allowed: allowed, Value: allowed[0]}}
+	m := newTUIModel(in)
+	m.step = stepProfile
+
+	m, _ = press(t, m, enterKey) // open the picker
+	if !m.picking {
+		t.Fatal("enter on an axis did not open its picker")
+	}
+	for i := 0; i < 10; i++ {
+		m, _ = press(t, m, downKey)
+	}
+	if m.pickCursor != 10 {
+		t.Fatalf("pickCursor = %d, want 10", m.pickCursor)
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "    › valor-10\n") {
+		t.Errorf("the scrolled picker does not draw its selected value:\n%s", view)
+	}
+	for _, want := range []string{"↑ más", "↓ más"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the scrolled picker does not show %q:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "      valor-00\n") {
+		t.Errorf("the scrolled picker draws a value hidden above:\n%s", view)
+	}
+}

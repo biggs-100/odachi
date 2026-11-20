@@ -11,7 +11,7 @@ R1 · "visyalmente la tui se ve fea, cuando quiero cambiar un modelo o otra opci
 - go test ./... is green and odachi check --run is green and odachi skills --check is green
 
 ## Steps
-- [ ] T1 · la tui estrena una capa visual con nombres y cada pantalla la usa en vez de componer texto suelto   R1 · route:delegated/odachi-worker
+- [x] T1 · la tui estrena una capa visual con nombres y cada pantalla la usa en vez de componer texto suelto   R1 · route:delegated/odachi-worker · tree:93897538a9ec33a50d53788ff095906828995834
 - [ ] T2 · una lista larga se recorre con ventana y dice que hay mas arriba o abajo, en vez de crecer sin fin   R1 · route:delegated/odachi-worker
 - [ ] T3 · el modelo se elige de una lista que el host responde, con enter, y la escritura queda como salida   R1 · route:delegated/odachi-worker
 - [ ] T4 · la lista explica una deteccion vacia, fallida o ausente -claude- y ninguna de las tres bloquea   R1 · route:delegated/odachi-worker
