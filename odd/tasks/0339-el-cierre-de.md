@@ -10,7 +10,7 @@ R1 · "el cierre de cada paso nombra las lineas autoradas acumuladas desde la ba
 - go test ./... is green and odachi check --run is green and odachi skills --check is green
 
 ## Steps
-- [ ] T1 · cerrar un paso nombra el acumulado desde la base y el limite que el cierre de la feature aplica   R1 · route:delegated/odachi-worker
+- [x] T1 · cerrar un paso nombra el acumulado desde la base y el limite que el cierre de la feature aplica   R1 · route:delegated/odachi-worker · tree:c0e7aa70aa2ee141980c88278b14421e11b51848
 - [ ] T2 · la ADR dice por que el paso deja constancia y el cierre de la feature se niega, con lo que hace gentle-shell   R1 · route:inline
 - [ ] T3 · la skill de commits ensena el numero en el momento en que se puede partir, no solo al final   R1 · route:inline
 
