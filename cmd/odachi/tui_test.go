@@ -1959,6 +1959,164 @@ func TestTUIAFailedProbeLeavesTheEditorAsTheDoor(t *testing.T) {
 	}
 }
 
+// TestTUITheFailedProbeIsExplainedAndStillWrites: a host that cannot answer is a
+// warning sentence on the screen, not a silent empty picker; enter still opens the
+// editor, a value that is not an identifier is still refused, and a value that is
+// typed still reaches the apply -the failure explains a list, it does not block the
+// verb (0338).
+func TestTUITheFailedProbeIsExplainedAndStillWrites(t *testing.T) {
+	plainTUI(t)
+
+	run := &fakeRun{catalogOK: false}
+	m := newTUIModel(wizard())
+	m.run = run
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+
+	if m.probe != catalogFailed {
+		t.Fatalf("probe = %d, want the failed state", m.probe)
+	}
+	view := m.View()
+	if !strings.Contains(view, tuiLook.warningLine(catalogFailedNote)) {
+		t.Errorf("the screen does not explain the failed probe in the warning tone:\n%s", view)
+	}
+	if strings.Contains(view, catalogEmptyNote) {
+		t.Errorf("a failed probe reads as an empty answer:\n%s", view)
+	}
+	for _, claim := range []string{tuiLook.mutedLine("0 modelos"), tuiLook.mutedLine("1 modelo")} {
+		if strings.Contains(view, claim) {
+			t.Errorf("the failed screen claims a count %q:\n%s", claim, view)
+		}
+	}
+
+	m, _ = press(t, m, enterKey)
+	if m.pickingModel || !m.editing {
+		t.Fatalf("picking = %v editing = %v, want the editor as the door", m.pickingModel, m.editing)
+	}
+
+	m.buffer = "open code"
+	m, _ = press(t, m, enterKey)
+	if m.editErr != modelRefusal || !m.editing {
+		t.Fatalf("editErr = %q editing = %v, want the refusal to keep the editor open", m.editErr, m.editing)
+	}
+
+	m.buffer = "a/one"
+	m, _ = press(t, m, enterKey)
+	if m.editing {
+		t.Fatal("the editor stayed open after a valid value")
+	}
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+	if run.verify != "a/one" {
+		t.Fatalf("verify = %q, want the typed model written by the apply", run.verify)
+	}
+	if run.catalogCalls != 1 {
+		t.Errorf("catalogCalls = %d, want the probe to stay at one", run.catalogCalls)
+	}
+}
+
+// TestTUIAnEmptyCatalogIsAnAnswerAndNotAFailure: "the host named nothing" and
+// "the host could not be asked" are different facts, so they get different
+// sentences; either way the editor stays the door and the value the file carries
+// is still on its row (0338).
+func TestTUIAnEmptyCatalogIsAnAnswerAndNotAFailure(t *testing.T) {
+	plainTUI(t)
+
+	in := wizard()
+	in.Verify = "a/one" // a row may keep a model the host does not list
+	run := &fakeRun{catalogOK: true}
+	m := newTUIModel(in)
+	m.run = run
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+
+	if m.probe != catalogReady {
+		t.Fatalf("probe = %d, want the host's empty answer remembered as ready", m.probe)
+	}
+	if catalogEmptyNote == catalogFailedNote {
+		t.Fatal("the two probe questions share one sentence")
+	}
+	view := m.View()
+	if !strings.Contains(view, tuiLook.warningLine(catalogEmptyNote)) {
+		t.Errorf("the screen does not explain the empty answer in the warning tone:\n%s", view)
+	}
+	if strings.Contains(view, catalogFailedNote) {
+		t.Errorf("an empty answer reads as a failed probe:\n%s", view)
+	}
+	if !strings.Contains(view, "a/one") {
+		t.Errorf("the row lost the value the file carries:\n%s", view)
+	}
+
+	m, _ = press(t, m, enterKey)
+	if m.pickingModel || !m.editing {
+		t.Fatalf("picking = %v editing = %v, want the editor as the door", m.pickingModel, m.editing)
+	}
+}
+
+// TestTUIAClaudeRowShowsTheAliasesAndNeverTheOpenCodeCatalog: the probe answers
+// OpenCode's catalogue, and a Claude row would be naming models that client does
+// not serve. It opens Claude Code's declared aliases plus the manual door, and the
+// muted note says what those names are; the OpenCode row keeps the host's list
+// because that client is the host the probe asks (0338).
+func TestTUIAClaudeRowShowsTheAliasesAndNeverTheOpenCodeCatalog(t *testing.T) {
+	plainTUI(t)
+
+	run := &fakeRun{catalog: []string{"opencode-go/x", "b/two"}, catalogOK: true}
+	in := wizard()
+	in.ClientModels = map[string]string{persona.SelectionClaude: "claude-sonnet-4-5-20250929"}
+	m := newTUIModel(in)
+	m.run = run
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+
+	// The OpenCode row belongs to the host the probe asks, so it keeps its list.
+	m, _ = press(t, m, downKey)
+	m, _ = press(t, m, enterKey)
+	if !m.pickingModel || !strings.Contains(m.View(), "opencode-go/x") {
+		t.Fatalf("the OpenCode row did not show the host's list:\n%s", m.View())
+	}
+	m, _ = press(t, m, escKey)
+
+	// The Claude row is another client: its list is the three declared aliases.
+	m, _ = press(t, m, downKey)
+	m, _ = press(t, m, enterKey)
+	if !m.pickingModel {
+		t.Fatal("the Claude row did not open its declared list")
+	}
+	view := m.View()
+	for _, alias := range claudeModelAliases {
+		if !strings.Contains(view, alias) {
+			t.Errorf("the Claude list does not carry the alias %q:\n%s", alias, view)
+		}
+	}
+	if strings.Contains(view, "opencode-go/x") || strings.Contains(view, "b/two") {
+		t.Errorf("the Claude list shows the OpenCode catalogue:\n%s", view)
+	}
+	if !strings.Contains(view, tuiLook.mutedLine(claudeAliasNote)) {
+		t.Errorf("the Claude list does not say the names are aliases:\n%s", view)
+	}
+	if !strings.Contains(view, "escribir a mano") {
+		t.Errorf("the Claude list lost the manual door:\n%s", view)
+	}
+	if !strings.Contains(view, "    › claude-sonnet-4-5-20250929\n") {
+		t.Errorf("the value in force is not the selected row:\n%s", view)
+	}
+
+	// The last row is the way to type a full identifier, and it reaches the editor.
+	for i := 0; i < len(m.modelChoices(m.pickedValue()))-1; i++ {
+		m, _ = press(t, m, downKey)
+	}
+	m, _ = press(t, m, enterKey)
+	if m.pickingModel || !m.editing {
+		t.Fatalf("picking = %v editing = %v, want the manual door to open the editor", m.pickingModel, m.editing)
+	}
+	m.buffer = "sonnet"
+	m, _ = press(t, m, enterKey)
+	if got := m.modelPending[persona.SelectionClaude]; got != "sonnet" {
+		t.Fatalf("pending = %q, want the alias typed by hand", got)
+	}
+}
+
 // TestTUIAModelTheHostStoppedListingIsItsOwnRow: a project may name a model the
 // host no longer serves, so the picker shows it first and selects it instead of
 // hiding the value in force behind an entry nobody chose (0338).
@@ -2041,10 +2199,10 @@ func TestTUILongModelListWindows(t *testing.T) {
 	if strings.Contains(view, "host/model-00") {
 		t.Errorf("the picker drew an entry hidden above its window:\n%s", view)
 	}
-	// The row that opened the list and the entry the cursor is on: two glyphs,
-	// no more, which is what a window that drew every row would break.
-	if got := strings.Count(view, cursorGlyph); got != 2 {
-		t.Errorf("the cursor glyph appears %d times, want the row and the entry:\n%s", got, view)
+	// One cursor, and it belongs to the list: the row that opened it drops its
+	// glyph so the keys have a single owner (0338).
+	if got := strings.Count(view, cursorGlyph); got != 1 {
+		t.Errorf("the cursor glyph appears %d times, want only the picker's entry:\n%s", got, view)
 	}
 }
 

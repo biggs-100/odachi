@@ -311,6 +311,25 @@ const (
 	detectingCatalog = "detectando…"
 )
 
+// The sentences a probe that produced no list earns. They are two because they are
+// two facts: one host could not be asked, the other answered that there is nothing
+// here, and a screen that used one sentence for both would be guessing (0338).
+const (
+	catalogFailedNote = "no se pudo leer la lista de modelos del host: escribe el id a mano, o comprueba que el host responde"
+	catalogEmptyNote  = "el host no nombró ningún modelo aquí: escribe el id a mano"
+)
+
+// claudeModelAliases are the model aliases Claude Code documents for --model. The
+// probe answers OpenCode's catalogue, so offering that list on a Claude row would
+// name models this client does not serve. The three names Claude Code accepts were
+// checked against its CLI reference in 2026-11; a slice cannot be a constant in Go,
+// so this is the one declaration to update when the client renames one (0338).
+var claudeModelAliases = []string{"sonnet", "opus", "haiku"}
+
+// claudeAliasNote explains a list that is not the host's: these are short names,
+// and the last row of the picker is where the full identifier is written (0338).
+const claudeAliasNote = `son alias de Claude Code: el id completo está en "escribir a mano"`
+
 // tuiModel is the wizard: the detected facts, the choices and where it stands.
 type tuiModel struct {
 	state tuiState
@@ -392,7 +411,10 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case catalogMsg:
 		m.catalog = msg.models
-		if msg.ok && len(msg.models) > 0 {
+		if msg.ok {
+			// An answer with no entries is still an answer: the host looked and
+			// named nothing here, which is a different fact from not being asked
+			// and earns its own sentence (0338).
 			m.probe = catalogReady
 		} else {
 			// Remembered as unable, not forgotten: a second visit finds the fact
@@ -535,11 +557,11 @@ func (m tuiModel) enterReview() (tea.Model, tea.Cmd) {
 	return m.openModelRow()
 }
 
-// openModelRow opens what a model row offers: the host's catalog when there is
+// openModelRow opens what a model row offers: the list the row shows when there is
 // one to pick from, and the line editor otherwise. Typing is not removed by the
 // picker, it is moved behind the list's last row (0338).
 func (m tuiModel) openModelRow() (tea.Model, tea.Cmd) {
-	if len(m.modelCatalog()) > 0 {
+	if list, _ := m.modelList(m.pickerRow()); len(list) > 0 {
 		value := m.pickedValue()
 		m.pickingModel = true
 		m.modelPickCursor = indexOf(m.modelChoices(value), value)
@@ -568,17 +590,60 @@ func (m tuiModel) modelCatalog() []string {
 	return m.catalog
 }
 
-// modelChoices is what the picker shows for the value in force: the host's
-// entries, the value first when the host does not list it -a project may name a
-// model that was renamed or retired, and hiding it would invite a change nobody
-// asked for-, and the manual door last (0338).
+// pickerRow is the row the picker or the editor was opened on. The models section
+// names it by the cursor; the review screen's rows are lenses, which always show
+// the host's list, so the empty row says exactly that (0338).
+func (m tuiModel) pickerRow() string {
+	if m.step == stepModels {
+		return m.modelRows()[m.modelsIndex()]
+	}
+	return ""
+}
+
+// modelList answers which list a row shows: the host's catalogue for the verifier,
+// the review lenses and the OpenCode client -the host the probe asks is the one
+// that serves them-, and Claude Code's declared aliases for a Claude client, which
+// the host does not serve. The rule lives here and nowhere else, so a screen never
+// branches on which client a row belongs to (0338).
+//
+// The second answer is the sentence that explains a list that is not the host's; a
+// host list has none, and the picker's count line says how long it is.
+func (m tuiModel) modelList(row string) ([]string, string) {
+	if row == persona.SelectionClaude {
+		return claudeModelAliases, claudeAliasNote
+	}
+	return m.modelCatalog(), ""
+}
+
+// catalogNotice is what a model screen says about the probe under its rows: the
+// one process still running, the host that could not be asked, or the answer that
+// named nothing. A list with entries explains itself in the picker's count, so
+// there is nothing to say (0338).
+func (m tuiModel) catalogNotice() string {
+	switch m.probe {
+	case catalogAsking:
+		return tuiLook.mutedLine(detectingCatalog)
+	case catalogFailed:
+		return tuiLook.warningLine(catalogFailedNote)
+	case catalogReady:
+		if len(m.catalog) == 0 {
+			return tuiLook.warningLine(catalogEmptyNote)
+		}
+	}
+	return ""
+}
+
+// modelChoices is what the picker shows for the value in force: the row's entries,
+// the value first when the list does not carry it -a project may name a model that
+// was renamed or retired, and hiding it would invite a change nobody asked for-,
+// and the manual door last (0338).
 func (m tuiModel) modelChoices(value string) []string {
-	catalog := m.modelCatalog()
-	choices := make([]string, 0, len(catalog)+2)
-	if !slices.Contains(catalog, value) {
+	list, _ := m.modelList(m.pickerRow())
+	choices := make([]string, 0, len(list)+2)
+	if !slices.Contains(list, value) {
 		choices = append(choices, value)
 	}
-	choices = append(choices, catalog...)
+	choices = append(choices, list...)
 	return append(choices, manualModelRow)
 }
 
@@ -643,15 +708,22 @@ func modelCount(n int) string {
 }
 
 // modelPicker renders the list under the row that opened it: the window every
-// other list uses, the entries in the nested row shape, and the count in the
-// muted voice. The count is furniture, not a row: it is not selectable (0338).
+// other list uses, the entries in the nested row shape, and the line that explains
+// the list. A host list carries its count in the muted voice; a list that is not
+// the host's carries the sentence that says what it is. Either line is furniture,
+// not a row: it is not selectable (0338).
 func (m tuiModel) modelPicker(value string) string {
+	list, note := m.modelList(m.pickerRow())
 	choices := m.modelChoices(value)
 	var out strings.Builder
 	out.WriteString(tuiLook.windowLines(windowFor(m.modelPickCursor, len(choices), modelPickRows), func(i int) string {
 		return tuiLook.subRow(i == m.modelPickCursor, shownModel(choices[i]))
 	}))
-	out.WriteString(tuiLook.mutedLine(modelCount(len(m.catalog))))
+	if note != "" {
+		out.WriteString(tuiLook.mutedLine(note))
+	} else {
+		out.WriteString(tuiLook.mutedLine(modelCount(len(list))))
+	}
 	return out.String()
 }
 
@@ -839,19 +911,22 @@ func (m tuiModel) viewModels() string {
 			notice = false
 		}
 		var line strings.Builder
+		// One cursor at a time: while the picker is open under this row, the
+		// nested list is what the keys move, so the row itself drops its glyph
+		// (the profile editor already drew it this way) (0338).
+		nested := m.pickingModel && i == cursor
+		selected := i == cursor && !nested
 		if notice {
-			line.WriteString(tuiLook.rowNotice(i == cursor, modelLabel(row), value))
+			line.WriteString(tuiLook.rowNotice(selected, modelLabel(row), value))
 		} else {
-			line.WriteString(tuiLook.rowValues(i == cursor, modelLabel(row), value))
+			line.WriteString(tuiLook.rowValues(selected, modelLabel(row), value))
 		}
-		if m.pickingModel && i == cursor {
+		if nested {
 			line.WriteString(m.modelPicker(m.pickedValue()))
 		}
 		return line.String()
 	}))
-	if m.probe == catalogAsking {
-		out.WriteString(tuiLook.mutedLine(detectingCatalog))
-	}
+	out.WriteString(m.catalogNotice())
 	if m.editErr != "" {
 		out.WriteString("\n")
 		out.WriteString(tuiLook.failureLine(m.editErr))
@@ -1224,20 +1299,26 @@ func (m tuiModel) viewReview() string {
 		if i > 0 {
 			lens := tuiLenses[i-1]
 			value = m.state.Models[lens]
+			// An unset lens is not a blank: it runs with the session's model, and
+			// the row says so instead of leaving a column empty (0338).
+			if value == "" {
+				value = "(la sesión)"
+			}
 			if m.editing && i == m.reviewCursor {
 				value = m.buffer + "_"
 			}
 		}
 		var row strings.Builder
-		row.WriteString(tuiLook.rowValues(i == m.reviewCursor, labels[i], value))
-		if m.pickingModel && i > 0 && i == m.reviewCursor {
+		// One cursor at a time, as in the models section: the picker under the row
+		// owns the keys while it is open (0338).
+		nested := m.pickingModel && i > 0 && i == m.reviewCursor
+		row.WriteString(tuiLook.rowValues(i == m.reviewCursor && !nested, labels[i], value))
+		if nested {
 			row.WriteString(m.modelPicker(m.pickedValue()))
 		}
 		return row.String()
 	}))
-	if m.probe == catalogAsking {
-		out.WriteString(tuiLook.mutedLine(detectingCatalog))
-	}
+	out.WriteString(m.catalogNotice())
 	if m.editErr != "" {
 		out.WriteString("\n")
 		out.WriteString(tuiLook.failureLine(m.editErr))
