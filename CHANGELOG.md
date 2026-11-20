@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.57.0 - 2026-11-20
+
 - **A step's close names the number the limit measures.** `odachi plan --done T1` now prints the authored lines from the feature's base, the base it counted from and the 400 a close that owes a verifier may carry -and past the limit it repeats the gate's own sentence, that the rest of the work belongs to a feature of its own. It is a note, not a refusal: the step still closes, because the code is already written and blocking the record would hide it. The measurement is one function, shared with the plan's refusal, so the two moments cannot disagree about the same tree; a document with no base or a caller with no repository says the count was not taken instead of inventing one. The two skills that decide a split now say where the number appears, so a feature that crosses says so while splitting is still cheap. Minor, because a line a person or a script reads changed shape (0339).
 
 ## v0.56.0 - 2026-11-20
