@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 
 	"github.com/biggs-100/odachi/internal/adapters/agentstoml"
 	"github.com/biggs-100/odachi/internal/adapters/reviewtoml"
@@ -758,7 +760,7 @@ func TestTUIFirstScreenNamesTheState(t *testing.T) {
 
 	for _, want := range []string{
 		"odachi 9.9.9", "instalación y configuración",
-		"Proyecto", "sí", "Clientes", "both", "Skills", "home", "Voz", "novato", "Review", "on",
+		"Proyecto", "sí", "Clientes", "ambos (opencode y claude)", "Skills", "home", "Voz", "novato", "Review", "on",
 		"q salir",
 	} {
 		if !strings.Contains(view, want) {
@@ -1392,5 +1394,173 @@ func TestTUIWalksTheRouterTable(t *testing.T) {
 	}
 	if m.step != stepState {
 		t.Errorf("walking back ended on step %d, want the first screen", m.step)
+	}
+}
+
+// plainTUI makes the layer render without colour: a terminal that refuses
+// escape codes still has to read, and the assertions below are about the words
+// and the glyphs, not the bytes (0338).
+func plainTUI(t *testing.T) {
+	t.Helper()
+	previous := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.Ascii)
+	t.Cleanup(func() { lipgloss.SetColorProfile(previous) })
+}
+
+// colouredTUI forces the profile a modern terminal reports, so a test can prove
+// the layer actually styles a row instead of being a no-op (0338).
+func colouredTUI(t *testing.T) {
+	t.Helper()
+	previous := lipgloss.ColorProfile()
+	dark := lipgloss.HasDarkBackground()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	lipgloss.SetHasDarkBackground(true)
+	t.Cleanup(func() {
+		lipgloss.SetColorProfile(previous)
+		lipgloss.SetHasDarkBackground(dark)
+	})
+}
+
+// TestTUIEveryScreenDrawsTheCursorAsAGlyph: the hub, a choice screen and the
+// models section mark the cursor with the layer's glyph instead of composing a
+// raw "> " row, and exactly one row carries it (0338).
+func TestTUIEveryScreenDrawsTheCursorAsAGlyph(t *testing.T) {
+	plainTUI(t)
+
+	hub := newTUIModel(wizard()).View()
+	choice := newTUIModel(wizard())
+	choice.step = stepClients
+	models := toModels(t, newTUIModel(wizard())).View()
+
+	for name, view := range map[string]string{"hub": hub, "choice": choice.View(), "models": models} {
+		if !strings.Contains(view, cursorGlyph) {
+			t.Errorf("the %s does not draw the cursor glyph %q:\n%s", name, cursorGlyph, view)
+		}
+		if strings.Contains(view, "> ") {
+			t.Errorf("the %s still composes a raw \"> \" row:\n%s", name, view)
+		}
+		if got := strings.Count(view, cursorGlyph); got != 1 {
+			t.Errorf("the %s draws the cursor %d times, want one:\n%s", name, got, view)
+		}
+	}
+}
+
+// TestTUISelectedRowIsStyledNotJustMarked: under colour the selected row is
+// actually styled and the unselected one stays plain, so the layer cannot
+// silently become a no-op; with colour refused both keep the label column (0338).
+func TestTUISelectedRowIsStyledNotJustMarked(t *testing.T) {
+	colouredTUI(t)
+	selected := tuiLook.row(true, "opciones")
+	plain := tuiLook.row(false, "opciones")
+
+	if selected == plain {
+		t.Fatalf("the selected row renders like an unselected one: %q", selected)
+	}
+	if !strings.Contains(selected, "\x1b[") {
+		t.Errorf("the selected row carries no colour: %q", selected)
+	}
+	if strings.Contains(plain, "\x1b[") {
+		t.Errorf("the unselected row is styled: %q", plain)
+	}
+	selectedCol := lipgloss.Width(selected[:strings.Index(selected, "opciones")])
+	plainCol := lipgloss.Width(plain[:strings.Index(plain, "opciones")])
+	if selectedCol != plainCol {
+		t.Errorf("the label column moves: column %d vs %d", selectedCol, plainCol)
+	}
+}
+
+// TestTUINoticesCarryTheirMarkers: a file that could not be read is a warning
+// with a "!" and a refused value is a failure with a "×", each on its own line
+// and outside the plain body voice (0338).
+func TestTUINoticesCarryTheirMarkers(t *testing.T) {
+	plainTUI(t)
+
+	in := wizard()
+	in.ClientModelErrs = map[string]string{persona.SelectionClaude: "no se pudo leer ~/.claude/settings.json"}
+	m := toModels(t, newTUIModel(in))
+	m, _ = press(t, m, downKey) // verifier -> opencode
+	m, _ = press(t, m, downKey) // opencode -> claude
+	if view := m.View(); !strings.Contains(view, "! no se pudo leer") {
+		t.Errorf("the unreadable file is not a warning notice:\n%s", view)
+	}
+
+	lens := toReview(t, newTUIModel(wizard()))
+	lens, _ = press(t, lens, downKey) // modo -> risk
+	lens, _ = press(t, lens, enterKey)
+	lens = typeModel(t, lens, "a b")
+	lens, _ = press(t, lens, enterKey)
+	if view := lens.View(); !strings.Contains(view, "× "+modelRefusal) {
+		t.Errorf("the refusal is not a failure notice:\n%s", view)
+	}
+}
+
+// TestTUINoticeTonesAreDistinct: the warning and the failure are different
+// colours, so two states the eye must tell apart cannot collapse into one (0338).
+func TestTUINoticeTonesAreDistinct(t *testing.T) {
+	colouredTUI(t)
+
+	if got := tuiLook.warning.Render("x"); got == tuiLook.failure.Render("x") {
+		t.Errorf("warning and failure render the same: %q", got)
+	}
+	for name, line := range map[string]string{
+		"warning": tuiLook.warningLine("falta un modelo"),
+		"failure": tuiLook.failureLine("no se pudo leer"),
+	} {
+		if !strings.Contains(line, "\x1b[") {
+			t.Errorf("the %s notice carries no colour: %q", name, line)
+		}
+	}
+	if !strings.Contains(tuiLook.warningLine("falta un modelo"), "! falta un modelo") {
+		t.Error("the warning does not carry its marker")
+	}
+	if !strings.Contains(tuiLook.failureLine("no se pudo leer"), "× no se pudo leer") {
+		t.Error("the failure does not carry its marker")
+	}
+}
+
+// TestTUINoModelReadsAsAWarning: an empty model is a notice, not the same voice
+// as a value that exists (0338).
+func TestTUINoModelReadsAsAWarning(t *testing.T) {
+	colouredTUI(t)
+	view := toModels(t, newTUIModel(wizard())).View()
+	if !strings.Contains(view, tuiLook.warning.Render("(ninguno)")) {
+		t.Errorf("the missing model is not toned as a notice:\n%q", view)
+	}
+}
+
+// TestTUIEveryScreenPutsItsKeysInTheSameHelpLine: every screen ends with the
+// footer the layer renders, so the keys are one piece of the design and not a
+// sentence each screen invents (0338).
+func TestTUIEveryScreenPutsItsKeysInTheSameHelpLine(t *testing.T) {
+	plainTUI(t)
+
+	type screen struct {
+		name string
+		view string
+		keys string
+	}
+	screens := []screen{
+		{"hub", newTUIModel(wizard()).View(), "↑↓ elegir · enter abrir · q salir"},
+		{"summary", toSummary(t, newTUIModel(wizard())).View(), "enter aplicar · q salir"},
+	}
+	choice := newTUIModel(wizard())
+	choice.step = stepClients
+	screens = append(screens, screen{"choice", choice.View(), "↑↓ elegir · enter seguir · esc volver · q salir"})
+	screens = append(screens, screen{"review", toReview(t, newTUIModel(wizard())).View(), "enter elegir · tab seguir · esc volver · q salir"})
+	screens = append(screens, screen{"models", toModels(t, newTUIModel(wizard())).View(), "enter cambiar · esc volver · se aplican en el resumen"})
+
+	profile := newTUIModel(wizard())
+	profile.menu = 1
+	profile = advance(t, profile)
+	screens = append(screens, screen{"profile", profile.View(), "↑↓ elegir · enter cambiar · esc volver · q salir"})
+
+	apply := newTUIModel(wizard())
+	apply.step = stepApply
+	screens = append(screens, screen{"apply", apply.View(), "q salir"})
+
+	for _, s := range screens {
+		if want := tuiLook.helpLine(s.keys); !strings.HasSuffix(s.view, want) {
+			t.Errorf("the %s does not end with the layer's help line:\nwant suffix %q\ngot:\n%s", s.name, want, s.view)
+		}
 	}
 }
