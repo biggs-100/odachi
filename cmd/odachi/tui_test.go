@@ -61,6 +61,8 @@ var (
 	qKey         = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")}
 	tabKey       = tea.KeyMsg{Type: tea.KeyTab}
 	backspaceKey = tea.KeyMsg{Type: tea.KeyBackspace}
+	jKey         = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")}
+	kKey         = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")}
 )
 
 // toReview walks the wizard from the first screen to the review screen.
@@ -329,6 +331,12 @@ type fakeRun struct {
 	fields       []string
 	axes         []profile.Axis
 	reRead       int
+	// catalog is the answer the host gives the picker, and catalogCalls how many
+	// times the wizard asked. The probe is the one thing here that would spawn a
+	// process, so a test hands back a list instead (0338).
+	catalog      []string
+	catalogOK    bool
+	catalogCalls int
 }
 
 func (f *fakeRun) record(op string) error {
@@ -372,6 +380,12 @@ func (f *fakeRun) Field(field, value string) error {
 func (f *fakeRun) Axes() ([]profile.Axis, error) {
 	f.reRead++
 	return f.axes, nil
+}
+
+// Catalog answers what the host serves, without a process.
+func (f *fakeRun) Catalog() ([]string, bool) {
+	f.catalogCalls++
+	return f.catalog, f.catalogOK
 }
 
 // errTUI is the failure the fake operations return.
@@ -1756,5 +1770,334 @@ func TestTUIValuePickerScrollsItsOwnWindow(t *testing.T) {
 	}
 	if strings.Contains(view, "      valor-00\n") {
 		t.Errorf("the scrolled picker draws a value hidden above:\n%s", view)
+	}
+}
+
+// openModelsSection opens the models section the way a key does, so the test
+// receives the command the wizard returns: the probe is fired from the screen that
+// shows the rows, never from Init, and a test proves it by running that command
+// itself (0338).
+func openModelsSection(t *testing.T, m tuiModel) (tuiModel, tea.Cmd) {
+	t.Helper()
+	m.menu = 2
+	next, cmd := press(t, m, enterKey)
+	if next.step != stepModels {
+		t.Fatalf("step = %d, want the models section", next.step)
+	}
+	return next, cmd
+}
+
+// deliver runs a command and hands its message back to the model, which is the
+// step the tea runtime takes between a key and the next frame (0338).
+func deliver(t *testing.T, m tuiModel, cmd tea.Cmd) tuiModel {
+	t.Helper()
+	if cmd == nil {
+		t.Fatal("cmd = nil, want the probe's command")
+	}
+	next, _ := m.Update(cmd())
+	got, ok := next.(tuiModel)
+	if !ok {
+		t.Fatalf("Update returned %T, want tuiModel", next)
+	}
+	return got
+}
+
+// TestTUITheVerifierRowOffersTheHostsList: entering the verifier's row opens the
+// catalog the host answered with the value in force marked and selected, and the
+// count in the muted voice so the list reads as the host's and not the screen's
+// invention (0338).
+func TestTUITheVerifierRowOffersTheHostsList(t *testing.T) {
+	plainTUI(t)
+
+	in := wizard()
+	in.Verify = "b/two"
+	m := newTUIModel(in)
+	m.run = &fakeRun{catalog: []string{"a/one", "b/two", "c/three"}, catalogOK: true}
+	m, cmd := openModelsSection(t, m)
+
+	if view := m.View(); !strings.Contains(view, tuiLook.mutedLine("detectando…")) {
+		t.Errorf("the screen does not say the probe is in flight in the muted voice:\n%q", view)
+	}
+	if m.pickingModel || m.editing {
+		t.Fatalf("picking = %v editing = %v, want the rows readable while the probe runs", m.pickingModel, m.editing)
+	}
+
+	m = deliver(t, m, cmd)
+	m, _ = press(t, m, enterKey)
+
+	if !m.pickingModel {
+		t.Fatal("pickingModel = false, want the host's list open")
+	}
+	view := m.View()
+	for _, want := range []string{"    › b/two\n", "a/one", "c/three", "escribir a mano"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the picker does not carry %q:\n%s", want, view)
+		}
+	}
+	if !strings.Contains(view, tuiLook.mutedLine("3 modelos")) {
+		t.Errorf("the count is not in the muted voice:\n%q", view)
+	}
+}
+
+// TestTUIEnterKeepsThePickedModelWithoutTyping: j moves the picker, enter keeps
+// the entry in the section's pending map, and the apply writes it through the verb
+// that owns the file -no keystroke of the identifier ever happens (0337, 0338).
+func TestTUIEnterKeepsThePickedModelWithoutTyping(t *testing.T) {
+	in := wizard()
+	in.Verify = "a/one"
+	m := newTUIModel(in)
+	run := &fakeRun{catalog: []string{"a/one", "b/two"}, catalogOK: true}
+	m.run = run
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+
+	m, _ = press(t, m, enterKey)
+	if !m.pickingModel {
+		t.Fatal("the verifier's row did not open the list")
+	}
+	m, _ = press(t, m, jKey)
+	m, _ = press(t, m, enterKey)
+
+	if m.pickingModel || m.editing {
+		t.Fatalf("picking = %v editing = %v, want both closed", m.pickingModel, m.editing)
+	}
+	if got := m.modelPending[modelVerifier]; got != "b/two" {
+		t.Fatalf("pending = %q, want the picked entry", got)
+	}
+	if !strings.Contains(m.View(), "b/two") {
+		t.Errorf("the row does not show the picked entry:\n%s", m.View())
+	}
+
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+	if run.verify != "b/two" {
+		t.Fatalf("verify = %q, want the picked model", run.verify)
+	}
+}
+
+// TestTUIEscLeavesThePickerAsItWas: esc closes the list and leaves the row with
+// the value it had, with nothing pending -the picker writes nothing until enter
+// (0338).
+func TestTUIEscLeavesThePickerAsItWas(t *testing.T) {
+	plainTUI(t)
+
+	in := wizard()
+	in.Verify = "a/one"
+	m := newTUIModel(in)
+	m.run = &fakeRun{catalog: []string{"a/one", "b/two"}, catalogOK: true}
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+
+	m, _ = press(t, m, enterKey)
+	m, _ = press(t, m, kKey)
+	m, _ = press(t, m, downKey)
+	m, _ = press(t, m, escKey)
+
+	if m.pickingModel || m.editing {
+		t.Fatalf("picking = %v editing = %v, want both closed", m.pickingModel, m.editing)
+	}
+	if _, ok := m.modelPending[modelVerifier]; ok {
+		t.Fatalf("pending = %v, want nothing kept", m.modelPending)
+	}
+	view := m.View()
+	if !strings.Contains(view, "a/one") {
+		t.Errorf("the row lost the value in force:\n%s", view)
+	}
+	if strings.Contains(view, "escribir a mano") {
+		t.Errorf("esc left the list on the screen:\n%s", view)
+	}
+}
+
+// TestTUITheHostIsAskedOncePerRun: the catalog costs one process, so a second
+// visit finds the answer the first asked for instead of spawning again (0338).
+func TestTUITheHostIsAskedOncePerRun(t *testing.T) {
+	run := &fakeRun{catalog: []string{"a/one"}, catalogOK: true}
+	m := newTUIModel(wizard())
+	m.run = run
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+
+	m, _ = press(t, m, escKey)
+	m, again := openModelsSection(t, m)
+	if again != nil {
+		t.Fatal("the second visit fired the probe again")
+	}
+	if run.catalogCalls != 1 {
+		t.Fatalf("catalogCalls = %d, want one", run.catalogCalls)
+	}
+	m, _ = press(t, m, enterKey)
+	if !m.pickingModel {
+		t.Fatal("the second visit lost the list the first one asked for")
+	}
+}
+
+// TestTUIAFailedProbeLeavesTheEditorAsTheDoor: a host that cannot answer is
+// remembered as unable, the picker is not offered, and enter goes straight to the
+// line editor the section already had -without retrying on every keystroke (0338).
+func TestTUIAFailedProbeLeavesTheEditorAsTheDoor(t *testing.T) {
+	run := &fakeRun{catalogOK: false}
+	m := newTUIModel(wizard())
+	m.run = run
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+
+	m, _ = press(t, m, enterKey)
+	if m.pickingModel {
+		t.Fatal("the picker was offered without a catalog")
+	}
+	if !m.editing {
+		t.Fatal("editing = false, want the line editor")
+	}
+
+	m, _ = press(t, m, escKey) // the editor
+	m, _ = press(t, m, escKey) // the section
+	if _, again := openModelsSection(t, m); again != nil {
+		t.Error("the failed probe was retried")
+	}
+	if run.catalogCalls != 1 {
+		t.Errorf("catalogCalls = %d, want one", run.catalogCalls)
+	}
+}
+
+// TestTUIAModelTheHostStoppedListingIsItsOwnRow: a project may name a model the
+// host no longer serves, so the picker shows it first and selects it instead of
+// hiding the value in force behind an entry nobody chose (0338).
+func TestTUIAModelTheHostStoppedListingIsItsOwnRow(t *testing.T) {
+	in := wizard()
+	in.Verify = "gone/model"
+	m := newTUIModel(in)
+	m.run = &fakeRun{catalog: []string{"a/one"}, catalogOK: true}
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+	m, _ = press(t, m, enterKey)
+
+	view := m.View()
+	if !strings.Contains(view, "    › gone/model\n") {
+		t.Errorf("the value the host does not list is not the selected row:\n%s", view)
+	}
+	if !strings.Contains(view, tuiLook.mutedLine("1 modelo")) {
+		t.Errorf("the count does not read as one model:\n%q", view)
+	}
+}
+
+// TestTUIEscribirAManoOpensTheEditor: the picker's last row is the door out of the
+// list, and it opens the line editor with the value in force in it, refusal
+// included (0338).
+func TestTUIEscribirAManoOpensTheEditor(t *testing.T) {
+	in := wizard()
+	in.Verify = "a/one"
+	m := newTUIModel(in)
+	m.run = &fakeRun{catalog: []string{"a/one", "b/two"}, catalogOK: true}
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+
+	m, _ = press(t, m, enterKey) // the verifier row
+	for i := 0; i < len(m.modelChoices("a/one"))-1; i++ {
+		m, _ = press(t, m, downKey)
+	}
+	if !m.pickingModel {
+		t.Fatal("the walk through the list closed the picker")
+	}
+	m, _ = press(t, m, enterKey)
+
+	if m.pickingModel || !m.editing {
+		t.Fatalf("picking = %v editing = %v, want the line editor", m.pickingModel, m.editing)
+	}
+	if m.buffer != "a/one" {
+		t.Fatalf("buffer = %q, want the value in force", m.buffer)
+	}
+
+	m = typeModel(t, m, "#fast")
+	m, _ = press(t, m, enterKey)
+	if got := m.modelPending[modelVerifier]; got != "a/one#fast" {
+		t.Fatalf("pending = %q, want the typed value", got)
+	}
+}
+
+// TestTUILongModelListWindows: the picker is a list like every other one, so a
+// catalog of forty draws a window with its marks, not forty rows, and the selected
+// entry stays on screen (0338).
+func TestTUILongModelListWindows(t *testing.T) {
+	plainTUI(t)
+
+	catalog := make([]string, 40)
+	for i := range catalog {
+		catalog[i] = fmt.Sprintf("host/model-%02d", i)
+	}
+	in := wizard()
+	in.Verify = catalog[39]
+	m := newTUIModel(in)
+	m.run = &fakeRun{catalog: catalog, catalogOK: true}
+	m, cmd := openModelsSection(t, m)
+	m = deliver(t, m, cmd)
+	m, _ = press(t, m, enterKey)
+
+	view := m.View()
+	for _, want := range []string{"↑ más", "host/model-39", "40 modelos"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the windowed picker does not show %q:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "host/model-00") {
+		t.Errorf("the picker drew an entry hidden above its window:\n%s", view)
+	}
+	// The row that opened the list and the entry the cursor is on: two glyphs,
+	// no more, which is what a window that drew every row would break.
+	if got := strings.Count(view, cursorGlyph); got != 2 {
+		t.Errorf("the cursor glyph appears %d times, want the row and the entry:\n%s", got, view)
+	}
+}
+
+// TestTUITheLensRowOffersTheHostsList: the review screen's lens rows open the same
+// picker, and a chosen entry lands in the lens table the apply writes -the editor
+// stays as the door for a value nobody lists (0338).
+func TestTUITheLensRowOffersTheHostsList(t *testing.T) {
+	in := wizard()
+	in.Models = map[string]string{"risk": "a/one"}
+	m := newTUIModel(in)
+	m.run = &fakeRun{catalog: []string{"a/one", "b/two"}, catalogOK: true}
+
+	var cmd tea.Cmd
+	for i := 0; i < 4; i++ {
+		m, cmd = press(t, m, enterKey)
+	}
+	if m.step != stepReview {
+		t.Fatalf("step = %d, want the review screen", m.step)
+	}
+	m = deliver(t, m, cmd)
+
+	m, _ = press(t, m, downKey) // modo -> risk
+	m, _ = press(t, m, enterKey)
+	if !m.pickingModel {
+		t.Fatal("the lens row did not open the host's list")
+	}
+	m, _ = press(t, m, jKey) // a/one -> b/two
+	m, _ = press(t, m, enterKey)
+
+	if m.pickingModel || m.editing {
+		t.Fatalf("picking = %v editing = %v, want both closed", m.pickingModel, m.editing)
+	}
+	if got := m.state.Models["risk"]; got != "b/two" {
+		t.Fatalf("risk = %q, want the picked entry", got)
+	}
+}
+
+// TestTUIRunnerCatalogAsksTheProbeFromTheProject: the wizard's catalog is the same
+// bounded probe the review verb validates its lens table against, run from the
+// folder the wizard configures (0338).
+func TestTUIRunnerCatalogAsksTheProbeFromTheProject(t *testing.T) {
+	var dir string
+	r := newTUIRunner("proyecto")
+	r.catalogFn = func(want string) ([]string, bool) {
+		dir = want
+		return []string{"a/one"}, true
+	}
+
+	models, ok := r.Catalog()
+	if !ok || len(models) != 1 || models[0] != "a/one" {
+		t.Fatalf("Catalog = %v %v, want the probe's answer", models, ok)
+	}
+	if dir != "proyecto" {
+		t.Fatalf("probe dir = %q, want the folder the wizard configures", dir)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/adapters/hostmodel"
 	"github.com/biggs-100/odachi/internal/app/level"
 	appreview "github.com/biggs-100/odachi/internal/app/review"
 	"github.com/biggs-100/odachi/internal/app/start"
@@ -17,21 +18,23 @@ import (
 // owns it. The functions are fields so a test can drive the branch without
 // touching the home or the project.
 type tuiRunner struct {
-	dir     string
-	initFn  func(dir string, args []string, stdout, stderr io.Writer) int
-	setupFn func(args []string, stdout, stderr io.Writer) int
-	levelFn func(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer) int
-	modeFn  func(dir string, args []string, stdout, stderr io.Writer) int
+	dir       string
+	initFn    func(dir string, args []string, stdout, stderr io.Writer) int
+	setupFn   func(args []string, stdout, stderr io.Writer) int
+	levelFn   func(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer) int
+	modeFn    func(dir string, args []string, stdout, stderr io.Writer) int
+	catalogFn func(dir string) ([]string, bool)
 }
 
 // newTUIRunner wires the runner to the same functions the CLI dispatches.
 func newTUIRunner(dir string) tuiRunner {
 	return tuiRunner{
-		dir:     dir,
-		initFn:  runInit,
-		setupFn: runSetup,
-		levelFn: runLevel,
-		modeFn:  runReviewMode,
+		dir:       dir,
+		initFn:    runInit,
+		setupFn:   runSetup,
+		levelFn:   runLevel,
+		modeFn:    runReviewMode,
+		catalogFn: hostmodel.Models,
 	}
 }
 
@@ -138,6 +141,14 @@ func (r tuiRunner) Axes() ([]profile.Axis, error) {
 		return nil, errors.New("no hay perfil: run odachi start")
 	}
 	return profile.Axes(*current), nil
+}
+
+// Catalog answers the models the host serves through the same bounded probe the
+// review verb validates its lens table against, so the picker offers what the
+// verbs already accept. It runs from the home, outside the project, and it only
+// reads: opening the list writes nothing (0338).
+func (r tuiRunner) Catalog() ([]string, bool) {
+	return r.catalogFn(r.dir)
 }
 
 // runnerError turns a verb's exit code and output into the line the apply screen
