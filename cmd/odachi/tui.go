@@ -597,7 +597,8 @@ func (m tuiModel) viewModels() string {
 	out.WriteString(m.header("modelos"))
 	rows := m.modelRows()
 	cursor := clamp(m.modelsCursor, len(rows))
-	for i, row := range rows {
+	out.WriteString(tuiLook.windowLines(windowFor(cursor, len(rows), modelsRows), func(i int) string {
+		row := rows[i]
 		value := shownModel(m.modelValue(row))
 		notice := value == "(ninguno)"
 		if m.modelUnreadable(row) != "" {
@@ -609,11 +610,10 @@ func (m tuiModel) viewModels() string {
 			notice = false
 		}
 		if notice {
-			out.WriteString(tuiLook.rowNotice(i == cursor, modelLabel(row), value))
-			continue
+			return tuiLook.rowNotice(i == cursor, modelLabel(row), value)
 		}
-		out.WriteString(tuiLook.rowValues(i == cursor, modelLabel(row), value))
-	}
+		return tuiLook.rowValues(i == cursor, modelLabel(row), value)
+	}))
 	if m.editErr != "" {
 		out.WriteString("\n")
 		out.WriteString(tuiLook.failureLine(m.editErr))
@@ -703,9 +703,9 @@ func (m tuiModel) viewState() string {
 	out.WriteString(m.header("instalación y configuración"))
 	out.WriteString(m.facts())
 	out.WriteString("\n")
-	for i, section := range tuiMenu {
-		out.WriteString(tuiLook.row(i == m.menu, section.label))
-	}
+	out.WriteString(tuiLook.windowLines(windowFor(m.menu, len(tuiMenu), hubRows), func(i int) string {
+		return tuiLook.row(i == m.menu, tuiMenu[i].label)
+	}))
 	out.WriteString(tuiLook.helpLine("↑↓ elegir · enter abrir · q salir"))
 	return out.String()
 }
@@ -717,16 +717,22 @@ func (m tuiModel) viewState() string {
 func (m tuiModel) viewProfile() string {
 	var out strings.Builder
 	out.WriteString(m.header("perfil " + m.state.Voice))
-	for i, axis := range m.state.Axes {
-		out.WriteString(tuiLook.rowValues(i == m.profileCursor && !m.picking, axis.Name,
+	axes := len(m.state.Axes)
+	out.WriteString(tuiLook.windowLines(windowFor(m.profileCursor, axes+1, profileRows), func(i int) string {
+		if i == axes {
+			return tuiLook.row(m.profileCursor == axes, "aplicar los cambios")
+		}
+		var row strings.Builder
+		axis := m.state.Axes[i]
+		row.WriteString(tuiLook.rowValues(i == m.profileCursor && !m.picking, axis.Name,
 			fmt.Sprintf("%-12s", shownAxis(m.value(axis))), strings.Join(axis.Allowed, " ")))
 		if m.picking && i == m.profileCursor {
-			for j, allowed := range axis.Allowed {
-				out.WriteString(tuiLook.subRow(j == m.pickCursor, allowed))
-			}
+			row.WriteString(tuiLook.windowLines(windowFor(m.pickCursor, len(axis.Allowed), valueRows), func(j int) string {
+				return tuiLook.subRow(j == m.pickCursor, axis.Allowed[j])
+			}))
 		}
-	}
-	out.WriteString(tuiLook.row(m.profileCursor == len(m.state.Axes), "aplicar los cambios"))
+		return row.String()
+	}))
 	if m.fieldMsg != "" {
 		out.WriteString("\n")
 		switch {
@@ -887,9 +893,9 @@ func (m tuiModel) viewApply() string {
 func (m tuiModel) viewChoices(title string, options []string, cursor int) string {
 	var out strings.Builder
 	out.WriteString(m.header(title))
-	for i, option := range options {
-		out.WriteString(tuiLook.row(i == cursor, option))
-	}
+	out.WriteString(tuiLook.windowLines(windowFor(cursor, len(options), choiceRows), func(i int) string {
+		return tuiLook.row(i == cursor, options[i])
+	}))
 	out.WriteString(tuiLook.helpLine("↑↓ elegir · enter seguir · esc volver · q salir"))
 	return out.String()
 }
@@ -975,7 +981,7 @@ func (m tuiModel) viewReview() string {
 	var out strings.Builder
 	out.WriteString(m.header("Review"))
 	labels := append([]string{"modo"}, tuiLenses...)
-	for i, label := range labels {
+	out.WriteString(tuiLook.windowLines(windowFor(m.reviewCursor, len(labels), reviewRows), func(i int) string {
 		value := m.state.Review
 		if i > 0 {
 			lens := tuiLenses[i-1]
@@ -984,8 +990,8 @@ func (m tuiModel) viewReview() string {
 				value = m.buffer + "_"
 			}
 		}
-		out.WriteString(tuiLook.rowValues(i == m.reviewCursor, label, value))
-	}
+		return tuiLook.rowValues(i == m.reviewCursor, labels[i], value)
+	}))
 	if m.editErr != "" {
 		out.WriteString("\n")
 		out.WriteString(tuiLook.failureLine(m.editErr))
