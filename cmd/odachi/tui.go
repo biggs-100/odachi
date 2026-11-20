@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/biggs-100/odachi/internal/app/configure"
 	initapp "github.com/biggs-100/odachi/internal/app/init"
@@ -71,6 +70,7 @@ func runTUI(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer
 	}
 
 	model := newTUIModel(state)
+	model.dir = dir
 	model.run = newTUIRunner(dir)
 	if _, err := tea.NewProgram(model, tea.WithInput(stdin), tea.WithOutput(stdout)).Run(); err != nil {
 		_, _ = fmt.Fprintln(stderr, "odachi: la tui se cerró con un error: "+oneLine(err.Error()))
@@ -268,7 +268,11 @@ func (m tuiModel) backStep() tuiStep {
 
 // tuiModel is the wizard: the detected facts, the choices and where it stands.
 type tuiModel struct {
-	state        tuiState
+	state tuiState
+	// dir is the folder the wizard configures. It is the context the header
+	// names under the title; empty means nothing to name and the line is left
+	// out, which keeps the screens readable in a test (0338).
+	dir          string
 	step         tuiStep
 	init         bool // the chosen action: initialize the project, or the machine only
 	scope        int
@@ -594,26 +598,31 @@ func (m tuiModel) viewModels() string {
 	rows := m.modelRows()
 	cursor := clamp(m.modelsCursor, len(rows))
 	for i, row := range rows {
-		marker := "  "
-		if i == cursor {
-			marker = "> "
-		}
 		value := shownModel(m.modelValue(row))
+		notice := value == "(ninguno)"
 		if m.modelUnreadable(row) != "" {
 			value = "(ilegible)"
+			notice = true
 		}
 		if m.editing && i == cursor {
 			value = m.buffer + "_"
+			notice = false
 		}
-		out.WriteString("  " + marker + fmt.Sprintf("%-12s %s\n", modelLabel(row), value))
+		if notice {
+			out.WriteString(tuiLook.rowNotice(i == cursor, modelLabel(row), value))
+			continue
+		}
+		out.WriteString(tuiLook.rowValues(i == cursor, modelLabel(row), value))
 	}
 	if m.editErr != "" {
-		out.WriteString("\n  " + m.editErr + "\n")
+		out.WriteString("\n")
+		out.WriteString(tuiLook.failureLine(m.editErr))
 	}
 	if reason := m.modelUnreadable(rows[cursor]); reason != "" {
-		out.WriteString("\n  " + reason + "\n")
+		out.WriteString("\n")
+		out.WriteString(tuiLook.warningLine(reason))
 	}
-	out.WriteString("\n  enter cambiar · esc volver · se aplican en el resumen\n")
+	out.WriteString(tuiLook.helpLine("enter cambiar · esc volver · se aplican en el resumen"))
 	return out.String()
 }
 
@@ -695,13 +704,9 @@ func (m tuiModel) viewState() string {
 	out.WriteString(m.facts())
 	out.WriteString("\n")
 	for i, section := range tuiMenu {
-		marker := "  "
-		if i == m.menu {
-			marker = "> "
-		}
-		out.WriteString("  " + marker + section.label + "\n")
+		out.WriteString(tuiLook.row(i == m.menu, section.label))
 	}
-	out.WriteString("\n  ↑↓ elegir · enter abrir · q salir\n")
+	out.WriteString(tuiLook.helpLine("↑↓ elegir · enter abrir · q salir"))
 	return out.String()
 }
 
@@ -713,31 +718,27 @@ func (m tuiModel) viewProfile() string {
 	var out strings.Builder
 	out.WriteString(m.header("perfil " + m.state.Voice))
 	for i, axis := range m.state.Axes {
-		marker := "  "
-		if i == m.profileCursor && !m.picking {
-			marker = "> "
-		}
-		out.WriteString("  " + marker + fmt.Sprintf("%-12s %-12s %s\n",
-			axis.Name, shownAxis(m.value(axis)), strings.Join(axis.Allowed, " ")))
+		out.WriteString(tuiLook.rowValues(i == m.profileCursor && !m.picking, axis.Name,
+			fmt.Sprintf("%-12s", shownAxis(m.value(axis))), strings.Join(axis.Allowed, " ")))
 		if m.picking && i == m.profileCursor {
 			for j, allowed := range axis.Allowed {
-				pick := "   "
-				if j == m.pickCursor {
-					pick = " > "
-				}
-				out.WriteString("    " + pick + allowed + "\n")
+				out.WriteString(tuiLook.subRow(j == m.pickCursor, allowed))
 			}
 		}
 	}
-	marker := "  "
-	if m.profileCursor == len(m.state.Axes) {
-		marker = "> "
-	}
-	out.WriteString("  " + marker + "aplicar los cambios\n")
+	out.WriteString(tuiLook.row(m.profileCursor == len(m.state.Axes), "aplicar los cambios"))
 	if m.fieldMsg != "" {
-		out.WriteString("\n  " + m.fieldMsg + "\n")
+		out.WriteString("\n")
+		switch {
+		case strings.HasPrefix(m.fieldMsg, "falló"):
+			out.WriteString(tuiLook.failureLine(m.fieldMsg))
+		case strings.HasPrefix(m.fieldMsg, "aplicado:"):
+			out.WriteString(tuiLook.successLine(m.fieldMsg))
+		default:
+			out.WriteString(tuiLook.warningLine(m.fieldMsg))
+		}
 	}
-	out.WriteString("\n  ↑↓ elegir · enter cambiar · esc volver · q salir\n")
+	out.WriteString(tuiLook.helpLine("↑↓ elegir · enter cambiar · esc volver · q salir"))
 	return out.String()
 }
 
@@ -842,7 +843,7 @@ func shownAxis(value string) string {
 
 // viewSummary is the last screen before the apply: the choices as they will be.
 func (m tuiModel) viewSummary() string {
-	return m.header("resumen") + m.facts() + "\n  enter aplicar · q salir\n"
+	return m.header("resumen") + m.facts() + tuiLook.helpLine("enter aplicar · q salir")
 }
 
 // viewApply renders the outcome of every planned operation.
@@ -861,12 +862,24 @@ func (m tuiModel) viewApply() string {
 		if step.Err != nil {
 			line += ": " + step.Err.Error()
 		}
-		out.WriteString("  " + line + "\n")
+		switch step.Status {
+		case configure.Done:
+			out.WriteString(tuiLook.successLine(line))
+		case configure.Failed:
+			out.WriteString(tuiLook.failureLine(line))
+		default:
+			out.WriteString("  " + tuiLook.subtitle.Render(line) + "\n")
+		}
 	}
 	if m.applied {
-		out.WriteString("\n  " + m.result.Message + "\n")
+		out.WriteString("\n")
+		if m.result.Code == configure.CodeBlocked {
+			out.WriteString(tuiLook.failureLine(m.result.Message))
+		} else {
+			out.WriteString(tuiLook.successLine(m.result.Message))
+		}
 	}
-	out.WriteString("\n  q salir\n")
+	out.WriteString(tuiLook.helpLine("q salir"))
 	return out.String()
 }
 
@@ -875,13 +888,9 @@ func (m tuiModel) viewChoices(title string, options []string, cursor int) string
 	var out strings.Builder
 	out.WriteString(m.header(title))
 	for i, option := range options {
-		marker := "  "
-		if i == cursor {
-			marker = "> "
-		}
-		out.WriteString("  " + marker + option + "\n")
+		out.WriteString(tuiLook.row(i == cursor, option))
 	}
-	out.WriteString("\n  ↑↓ elegir · enter seguir · esc volver · q salir\n")
+	out.WriteString(tuiLook.helpLine("↑↓ elegir · enter seguir · esc volver · q salir"))
 	return out.String()
 }
 
@@ -967,10 +976,6 @@ func (m tuiModel) viewReview() string {
 	out.WriteString(m.header("Review"))
 	labels := append([]string{"modo"}, tuiLenses...)
 	for i, label := range labels {
-		marker := "  "
-		if i == m.reviewCursor {
-			marker = "> "
-		}
 		value := m.state.Review
 		if i > 0 {
 			lens := tuiLenses[i-1]
@@ -979,12 +984,13 @@ func (m tuiModel) viewReview() string {
 				value = m.buffer + "_"
 			}
 		}
-		out.WriteString("  " + marker + fmt.Sprintf("%-12s %s\n", label, value))
+		out.WriteString(tuiLook.rowValues(i == m.reviewCursor, label, value))
 	}
 	if m.editErr != "" {
-		out.WriteString("\n  " + m.editErr + "\n")
+		out.WriteString("\n")
+		out.WriteString(tuiLook.failureLine(m.editErr))
 	}
-	out.WriteString("\n  enter elegir · tab seguir · esc volver · q salir\n")
+	out.WriteString(tuiLook.helpLine("enter elegir · tab seguir · esc volver · q salir"))
 	return out.String()
 }
 
@@ -1005,9 +1011,29 @@ func modelsLine(models map[string]string) string {
 	return strings.Join(parts, ", ")
 }
 
-// header is the line every screen starts with.
+// header is the line every screen starts with: the name, the version and the
+// section, then the folder it configures when the wizard knows it. The layout
+// convention is title, blank line, body, blank line, keys (0338).
 func (m tuiModel) header(title string) string {
-	return lipgloss.NewStyle().Bold(true).Render("odachi "+m.state.Version) + " · " + title + "\n\n"
+	line := tuiLook.titleLine("odachi " + m.state.Version + " · " + title)
+	if m.dir != "" {
+		line += "\n" + tuiLook.subtitleLine(m.dir)
+	}
+	return line + "\n\n"
+}
+
+// factWidth is the label column of the hub's facts. It fits the longest label, so
+// the values never start a column late (0338).
+const factWidth = 12
+
+// clientFacts names the client selection the way the screen that chooses it does,
+// not as the word the store keeps: the hub is read by a person (0338).
+func clientFacts(clients string) string {
+	labels := clientLabels()
+	if at := indexOf(tuiClients, clients); at >= 0 && at < len(labels) {
+		return labels[at]
+	}
+	return clients
 }
 
 // facts renders the state as the rows a human reads.
@@ -1027,7 +1053,7 @@ func (m tuiModel) facts() string {
 	rows := [][2]string{
 		{"Proyecto", project},
 		{"Configurar", action},
-		{"Clientes", m.state.Clients},
+		{"Clientes", clientFacts(m.state.Clients)},
 		{"Skills", skills},
 		{"Voz", m.state.Voice},
 		{"Review", m.state.Review},
@@ -1036,7 +1062,10 @@ func (m tuiModel) facts() string {
 
 	var out strings.Builder
 	for _, row := range rows {
-		_, _ = fmt.Fprintf(&out, "  %-10s %s\n", row[0], row[1])
+		// The label column is wide enough for the longest one -"Configurar"- so
+		// the values line up; a column that one word breaks is what made the hub
+		// read as a dump (0338).
+		_, _ = fmt.Fprintf(&out, "  %s %s\n", tuiLook.factLabel.Render(fmt.Sprintf("%-*s", factWidth, row[0])), row[1])
 	}
 	return out.String()
 }
