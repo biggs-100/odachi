@@ -13,6 +13,9 @@ when understanding what to touch took more than three reads.
 
 - Each step leaves the repository green and is committed alone. If the step needs
   "and", they are two steps.
+- The step's close names the number: `odachi plan --done T1` reports the authored
+  lines from the feature's base and the limit. Past 400 the rest is a feature of its
+  own -split on that note, never by shrinking code or dropping a test.
 - Order by risk, not by comfort: first what can bring the design down (the
   contract, the data), then what is built on top.
 - Each step cites the requirement it satisfies (R1, R2). A step that cites none

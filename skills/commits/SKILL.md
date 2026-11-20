@@ -24,6 +24,7 @@ in one sitting, or when the history no longer reads in order.
 - Before committing, the gate: `odachi check`. The proof is owed by the feature's
   close, not by every step: run `odachi check --run "<command>"` on the tree that
   closes it, and let CI judge the pull request that carries it.
+- The step's close names the size: `odachi plan --done` reports the authored lines from the base and the limit; past 400, the rest is a feature of its own.
 - Close the body with `Risk: none` or
   `Risk: data|security|contract|concurrency|delivery|no-test`. A named risk asks
   for `odachi review` before the commit.
