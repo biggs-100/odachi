@@ -8,7 +8,7 @@ R1 · "cuando el cambio agrega un campo de struct, el undo nombra el campo y res
 ## Done when
 
 ## Steps
-- [ ] T1 · cuando el cambio agrega un campo de struct, el undo nombra el campo y responde noticed en vez de unknown   R1
+- [x] T1 · cuando el cambio agrega un campo de struct, el undo nombra el campo y responde noticed en vez de unknown   R1 · tree:19ade136c90a33a20fcdc976ff7958869d8b4b29
 
 ## History
 L1 · "cuando el cambio agrega un campo de struct, el undo nombra el campo y responde noticed en vez de unknown"
