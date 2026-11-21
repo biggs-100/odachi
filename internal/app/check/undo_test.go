@@ -185,6 +185,45 @@ func TestACloseWhoseCopyDoesNotBuildNamesWhatTheChangeAdded(t *testing.T) {
 	}
 }
 
+// TestACloseWhoseCopyDoesNotBuildNamesAnAddedField: a change whose only added
+// name is a struct field used to leave the row unknown, because the row read only
+// func, type, const and var from the diff. Git writes the enclosing struct in the
+// hunk header, so the row can name the field and say noticed (0341).
+func TestACloseWhoseCopyDoesNotBuildNamesAnAddedField(t *testing.T) {
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/domain/gate/gate.go", "internal/app/check/check_test.go"},
+		diff: "diff --git a/internal/domain/gate/gate.go b/internal/domain/gate/gate.go\n" +
+			"--- a/internal/domain/gate/gate.go\n" +
+			"+++ b/internal/domain/gate/gate.go\n" +
+			"@@ -194,6 +201,13 @@ type State struct {\n" +
+			"+\tSliceAccepted int\n" +
+			" \tVerificationLines int\n",
+	}
+	shell := &fakeShell{runs: []fakeRun{
+		{output: "ok\n"},
+		{exitCode: 1, output: "# github.com/x/y [build failed]\n\tinternal/app/check/check_test.go:42:19: undefined: SliceAccepted\n"},
+	}}
+
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc("abc1234", true))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.undone.txt"))
+
+	got := check.Run(check.Options{Dir: dir, Store: store, Run: "go test ./...", Base: "HEAD", TimeoutSeconds: 45},
+		files, git, shell)
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a build failure that names an added field blocked the close: %d %s %q", got.Code, got.Reason, got.Message)
+	}
+	stored := string(files.files[filepath.Join(dir, "proof", "0007-turnos.undone.txt")])
+	for _, want := range []string{"# verdict noticed", "SliceAccepted"} {
+		if !strings.Contains(stored, want) {
+			t.Fatalf("the evidence does not carry %q:\n%s", want, stored)
+		}
+	}
+}
+
 // TestACloseWhoseCopyDoesNotBuildForAnotherReasonStaysUnknown: a build failure the
 // change did not cause says nothing about the tests, and the row keeps saying so.
 func TestACloseWhoseCopyDoesNotBuildForAnotherReasonStaysUnknown(t *testing.T) {
