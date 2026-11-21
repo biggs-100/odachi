@@ -8,7 +8,7 @@ R1 · "el pie de la TUI nombra las teclas del picker o del editor abierto, y vue
 ## Done when
 
 ## Steps
-- [ ] T1 · el pie de la TUI nombra las teclas del picker o del editor abierto, y vuelve al pie de la seccion al cerrarse   R1
+- [x] T1 · el pie de la TUI nombra las teclas del picker o del editor abierto, y vuelve al pie de la seccion al cerrarse   R1 · tree:f4800ff57156e9fbeaf0b398f650b5873f749f74
 
 ## History
 L1 · "el pie de la TUI nombra las teclas del picker o del editor abierto, y vuelve al pie de la seccion al cerrarse"
