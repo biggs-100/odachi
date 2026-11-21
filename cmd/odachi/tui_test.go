@@ -328,6 +328,7 @@ type fakeRun struct {
 	models       map[string]string
 	clientModels map[string]string
 	verify       string
+	limits       limitChoice
 	fields       []string
 	axes         []profile.Axis
 	reRead       int
@@ -370,6 +371,11 @@ func (f *fakeRun) Models(models map[string]string) error {
 func (f *fakeRun) Verify(model string) error {
 	f.verify = model
 	return f.record("verify")
+}
+
+func (f *fakeRun) Limits(choice limitChoice) error {
+	f.limits = choice
+	return f.record("limits")
 }
 
 func (f *fakeRun) Field(field, value string) error {
@@ -668,7 +674,8 @@ func TestTUIReviewScreenEscapesToVoice(t *testing.T) {
 
 // TestTUIDetectsTheState: the first screen starts from what the project already
 // chose, not from the wizard's defaults. The models section reads the verifier's
-// key and each client's own file (0337).
+// key and each client's own file; the limits section reads the four scalars from
+// the same file, normalized the way the writer reads them (0337, 0342).
 func TestTUIDetectsTheState(t *testing.T) {
 	dir := t.TempDir()
 	seedTUIProject(t, dir)
@@ -691,6 +698,8 @@ func TestTUIDetectsTheState(t *testing.T) {
 		Models:       map[string]string{"reliability": "opencode-go/deepseek-v4.1-flash"},
 		ClientModels: map[string]string{"opencode": "opencode-go/x", "claude": "sonnet"},
 		Axes:         profile.Axes(profile.Builtin()["senior"]),
+		KeepVerdicts: 10,
+		CheckTimeout: 300,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("state = %+v, want %+v", got, want)
@@ -2257,5 +2266,130 @@ func TestTUIRunnerCatalogAsksTheProbeFromTheProject(t *testing.T) {
 	}
 	if dir != "proyecto" {
 		t.Fatalf("probe dir = %q, want the folder the wizard configures", dir)
+	}
+}
+
+// limitedState is a wizard state with the four scalars the new section shows, so
+// a row kept as it was compares equal to what the file carries (0342).
+func limitedState() tuiState {
+	in := wizard()
+	in.MaxPromptKB = 120
+	in.KeepVerdicts = 4
+	in.KeepPrompts = 2
+	in.CheckTimeout = 45
+	return in
+}
+
+// toLimits opens the limits section from the hub.
+func toLimits(t *testing.T, m tuiModel) tuiModel {
+	t.Helper()
+	m.menu = len(tuiMenu) - 1
+	m = advance(t, m)
+	if m.step != stepLimits {
+		t.Fatalf("step = %d, want the limits section", m.step)
+	}
+	return m
+}
+
+// TestTUILimitsSectionIsInTheMenuAndRoute: the fourth section is a row of the hub
+// and a row of the route table, reachable forward and back like the other two
+// (0336, 0342).
+func TestTUILimitsSectionIsInTheMenuAndRoute(t *testing.T) {
+	m := newTUIModel(limitedState())
+	if view := m.View(); !strings.Contains(view, "límites") {
+		t.Fatalf("the hub does not offer the limits section:\n%s", view)
+	}
+	if got := tuiMenu[len(tuiMenu)-1].step; got != stepLimits {
+		t.Errorf("the last menu row opens step %d, want the limits step", got)
+	}
+	route, ok := tuiRoutes[stepLimits]
+	if !ok || route.back != stepState {
+		t.Errorf("the limits route = %+v, want back to the menu", route)
+	}
+	opened := toLimits(t, m)
+	for _, want := range []string{"prompt KB", "veredictos", "prompts", "timeout s"} {
+		if view := opened.View(); !strings.Contains(view, want) {
+			t.Errorf("the section does not show %q:\n%s", want, view)
+		}
+	}
+	if back := opened.back(); back.step != stepState {
+		t.Errorf("esc from the limits section landed on step %d, want the menu", back.step)
+	}
+}
+
+// TestTheLimitsSectionEditsAndAppliesOnlyOnApply: a scalar chosen in the section
+// stays in the model, nothing is written before the summary, and only the scalar
+// that changed reaches the review writer on apply (0342).
+func TestTheLimitsSectionEditsAndAppliesOnlyOnApply(t *testing.T) {
+	run := &fakeRun{}
+	m := toLimits(t, newTUIModel(limitedState()))
+	m.run = run
+
+	m, _ = press(t, m, enterKey) // prompt KB opens the editor
+	if !m.editing {
+		t.Fatal("enter did not open the number editor")
+	}
+	m = typeModel(t, m, "200")
+	m, _ = press(t, m, enterKey)
+	if view := m.View(); !strings.Contains(view, "200") {
+		t.Errorf("the row does not show the chosen value:\n%s", view)
+	}
+	if len(run.calls) != 0 {
+		t.Fatalf("choosing a value wrote %v", run.calls)
+	}
+
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+	if m.step != stepApply {
+		t.Fatalf("step = %d, want the apply screen", m.step)
+	}
+	if want := []string{"install", "voice", "review", "models", "limits"}; !slices.Equal(run.calls, want) {
+		t.Fatalf("calls = %v, want %v", run.calls, want)
+	}
+	if run.limits.MaxPromptKB == nil || *run.limits.MaxPromptKB != 200 {
+		t.Errorf("MaxPromptKB = %v, want 200", run.limits.MaxPromptKB)
+	}
+	if run.limits.KeepVerdicts != nil || run.limits.KeepPrompts != nil || run.limits.CheckTimeout != nil {
+		t.Errorf("untouched scalars were written: %+v", run.limits)
+	}
+}
+
+// TestAnUnchangedLimitsSectionWritesNothing: a section nobody opened and a row
+// retyped with the value it already carried add no write at all (0342).
+func TestAnUnchangedLimitsSectionWritesNothing(t *testing.T) {
+	never := toSummary(t, newTUIModel(limitedState()))
+	never.run = &fakeRun{}
+	never, _ = press(t, never, enterKey)
+	if slices.Contains(never.run.(*fakeRun).calls, "limits") {
+		t.Errorf("calls = %v, want no limits write from a section nobody opened", never.run.(*fakeRun).calls)
+	}
+
+	m := toLimits(t, newTUIModel(limitedState()))
+	run := &fakeRun{}
+	m.run = run
+	m, _ = press(t, m, enterKey) // prompt KB
+	m = typeModel(t, m, "120")   // the value the file already carries
+	m, _ = press(t, m, enterKey)
+
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+	if slices.Contains(run.calls, "limits") {
+		t.Errorf("calls = %v, want no limits write for the value already there", run.calls)
+	}
+}
+
+// TestSetLimitsRefusesAnInvalidValue: a value the domain cannot accept keeps the
+// editor open with the refusal on the screen, and nothing is pending (0342).
+func TestSetLimitsRefusesAnInvalidValue(t *testing.T) {
+	m := toLimits(t, newTUIModel(limitedState()))
+	m, _ = press(t, m, downKey) // prompt KB -> veredictos
+	m, _ = press(t, m, enterKey)
+	m = typeModel(t, m, "not a number")
+	m, _ = press(t, m, enterKey)
+	if !m.editing || m.editErr == "" {
+		t.Fatalf("editing = %v editErr = %q, want the refusal on the screen", m.editing, m.editErr)
+	}
+	if _, ok := m.limitsPending[limitKeepVerdicts]; ok {
+		t.Fatalf("a refused value was kept: %v", m.limitsPending)
 	}
 }

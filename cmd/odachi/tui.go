@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -43,6 +44,14 @@ type tuiState struct {
 	// Axes is the profile in force, one configurable field per row: the editor
 	// renders what the file says today, never a second copy (0336).
 	Axes []profile.Axis
+	// The four scalars odd/review.toml carries, read where the file was read so
+	// the limits section shows the values in force and a row kept as it was is a
+	// no-op. Zero is a real value for three of them, so the section carries the
+	// numbers read, never a second copy of the decision (0342).
+	MaxPromptKB  int
+	KeepVerdicts int
+	KeepPrompts  int
+	CheckTimeout int
 }
 
 // runTUI opens the installation and configuration wizard. It refuses before the
@@ -127,6 +136,10 @@ func detectTUIState(dir string) (tuiState, error) {
 		state.Models[lens] = model
 	}
 	state.Verify = config.Verify
+	state.MaxPromptKB = config.MaxPromptKB
+	state.KeepVerdicts = config.KeepVerdicts
+	state.KeepPrompts = config.KeepPrompts
+	state.CheckTimeout = config.CheckTimeout
 
 	// The clients' models live in each client's own file, so the section reads
 	// them where the verbs write them: one reader beside the writers, never a
@@ -167,6 +180,11 @@ const (
 	// model each installed client reads, which is the choice that decides who
 	// answers (0337).
 	stepModels
+	// stepLimits is the fourth section: the four scalars of odd/review.toml that
+	// decide the prompt budget, the two retention lifetimes and the check
+	// ceiling. It never offers the [[check]] array, which is the gate's severity
+	// and stays the file's decision (0342).
+	stepLimits
 )
 
 // The options each single-choice screen offers, in the order a human reads them.
@@ -178,12 +196,13 @@ var (
 
 	// tuiMenu is the hub: the sections the first screen offers, each with the
 	// screen it opens. The install section opens on the hub itself and walks the
-	// table from there; the other two are screens whose route comes back here
-	// (0336, 0337).
+	// table from there; the others are screens whose route comes back here
+	// (0336, 0337, 0342).
 	tuiMenu = []tuiSection{
 		{label: "instalar y configurar", step: stepState},
 		{label: "perfil", step: stepProfile},
 		{label: "modelos", step: stepModels},
+		{label: "límites", step: stepLimits},
 	}
 
 	// tuiScopes is the choice a folder that is not a project had to be given: a
@@ -213,7 +232,7 @@ const modelRefusal = "el modelo no es un identificador: usa provider/name#varian
 const clientModelRefusal = "un cliente no se queda sin modelo desde aquí: escribe uno, o borra la clave model de su archivo"
 
 // tuiSteps is every screen the wizard has, in the order the table walks them.
-var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile, stepModels}
+var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile, stepModels, stepLimits}
 
 // tuiRoute is where one screen goes: forward with enter, backward with esc, and
 // whether the screen exists for this run at all. The table is the only place
@@ -242,6 +261,8 @@ var tuiRoutes = map[tuiStep]tuiRoute{
 	stepProfile: {forward: stepProfile, back: stepState, when: always},
 	// The models section is the same shape: one screen, and esc is the menu.
 	stepModels: {forward: stepModels, back: stepState, when: always},
+	// The limits section is the fourth screen of that shape (0342).
+	stepLimits: {forward: stepLimits, back: stepState, when: always},
 }
 
 // always is the row of a screen that exists for every run.
@@ -281,7 +302,34 @@ type tuiRun interface {
 	configure.Runner
 	// Catalog answers the models the host serves, and false when it cannot say.
 	Catalog() ([]string, bool)
+	// Limits writes the four scalars of the limits section. Only the fields the
+	// human changed are set; the checks array stays the file's decision (0342).
+	Limits(choice limitChoice) error
 }
+
+// limitChoice is one write of the limits section: a pointer per scalar, nil for
+// the three the human left alone. It travels to the review app unchanged so the
+// app decides how each value is normalized and what stays preserved (0342).
+type limitChoice struct {
+	MaxPromptKB  *int
+	KeepVerdicts *int
+	KeepPrompts  *int
+	CheckTimeout *int
+}
+
+// The four rows of the limits section, keyed by the TOML key they write. The
+// keys are the ones a person reads in odd/review.toml, so a row and the line it
+// edits cannot drift apart (0342).
+const (
+	limitMaxPromptKB  = "max_prompt_kb"
+	limitKeepVerdicts = "keep_verdicts"
+	limitKeepPrompts  = "keep_prompts"
+	limitCheckTimeout = "check_timeout_s"
+)
+
+// limitRefusal is the sentence a value the domain refuses earns. A number that
+// cannot be parsed is the other refusal, and both keep the editor open (0342).
+const limitNumberRefusal = "el valor tiene que ser un número entero"
 
 // catalogState is what the wizard knows about the host's list: nothing yet, one
 // probe in flight, the answer, or the fact that the host could not answer. It is
@@ -358,6 +406,11 @@ type tuiModel struct {
 	// changed, which is what keeps the plan (and the disk) empty (0337).
 	modelsCursor int
 	modelPending map[string]string
+	// The limits section: which row the cursor is on and the scalar the human
+	// chose but did not write yet, keyed by row. A row that is not here was never
+	// changed, which is what keeps the write (and the checks array) alone (0342).
+	limitsCursor  int
+	limitsPending map[string]int
 	// The host's catalog and the picker that shows it: the state of the one probe
 	// the run makes, the entries it answered, whether the list is open, and which
 	// entry its cursor is on. Both screens that edit a model -the review lens table
@@ -392,13 +445,14 @@ func newTUIModel(state tuiState) tuiModel {
 		}
 	}
 	return tuiModel{
-		state:   state,
-		init:    state.Project,
-		client:  indexOf(tuiClients, state.Clients),
-		skills:  indexOf(tuiSkills, state.Skills),
-		voice:   indexOf(tuiVoices, state.Voice),
-		pending: map[string]string{},
-		edited:  map[string]string{},
+		state:         state,
+		init:          state.Project,
+		client:        indexOf(tuiClients, state.Clients),
+		skills:        indexOf(tuiSkills, state.Skills),
+		voice:         indexOf(tuiVoices, state.Voice),
+		pending:       map[string]string{},
+		limitsPending: map[string]int{},
+		edited:        map[string]string{},
 	}
 }
 
@@ -438,6 +492,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.step == stepModels {
 			return m.modelsKey(msg)
 		}
+		if m.step == stepLimits {
+			return m.limitsKey(msg)
+		}
 		switch msg.String() {
 		case "q":
 			return m, tea.Quit
@@ -470,8 +527,8 @@ func (m tuiModel) next() (tea.Model, tea.Cmd) {
 	m = m.commit()
 	// The menu is the one screen whose enter picks its destination: that is what a
 	// menu is, and the table still says where each section starts (0336). The
-	// row itself names the screen, so a third section is data and not a branch
-	// (0337).
+	// row itself names the screen, so a fourth section is data and not a branch
+	// (0337, 0342).
 	if m.step == stepState && m.menu > 0 {
 		section := tuiMenu[m.menu]
 		m.step = section.step
@@ -740,6 +797,9 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 		if m.step == stepModels {
 			return m.keepModel()
 		}
+		if m.step == stepLimits {
+			return m.keepLimit()
+		}
 		return m.keepLens(m.buffer)
 	case tea.KeyBackspace:
 		runes := []rune(m.buffer)
@@ -959,6 +1019,171 @@ func (m tuiModel) modelsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// limitRows is the section's rows, in the order the file writes them: the prompt
+// budget, the two retention lifetimes and the check ceiling. The [[check]] array
+// is not among them -it fixes the gate's severity and belongs to the file (0342).
+func limitRows() []string {
+	return []string{limitMaxPromptKB, limitKeepVerdicts, limitKeepPrompts, limitCheckTimeout}
+}
+
+// limitLabel is the name a human reads for a row. It carries the unit so a value
+// is never an unlabelled number, and it fits the twelve-cell label column the
+// other sections use (0342).
+func limitLabel(row string) string {
+	switch row {
+	case limitMaxPromptKB:
+		return "prompt KB"
+	case limitKeepVerdicts:
+		return "veredictos"
+	case limitKeepPrompts:
+		return "prompts"
+	case limitCheckTimeout:
+		return "timeout s"
+	}
+	return row
+}
+
+// limitDetected is the value the file carried when the wizard read it.
+func (m tuiModel) limitDetected(row string) int {
+	switch row {
+	case limitMaxPromptKB:
+		return m.state.MaxPromptKB
+	case limitKeepVerdicts:
+		return m.state.KeepVerdicts
+	case limitKeepPrompts:
+		return m.state.KeepPrompts
+	case limitCheckTimeout:
+		return m.state.CheckTimeout
+	}
+	return 0
+}
+
+// limitValue is what a row shows: the value chosen in this run, or the one the
+// file carries today.
+func (m tuiModel) limitValue(row string) int {
+	if chosen, ok := m.limitsPending[row]; ok {
+		return chosen
+	}
+	return m.limitDetected(row)
+}
+
+// limitsIndex is the row the cursor is on, clamped to the four the section shows.
+func (m tuiModel) limitsIndex() int {
+	return clamp(m.limitsCursor, len(limitRows()))
+}
+
+// viewLimits renders the four scalars in the same dense, label-aligned shape as
+// the models section. The values are the file's until a row is edited, and a
+// refused value keeps its sentence on the screen (0342).
+func (m tuiModel) viewLimits() string {
+	var out strings.Builder
+	out.WriteString(m.header("límites"))
+	rows := limitRows()
+	cursor := clamp(m.limitsCursor, len(rows))
+	out.WriteString(tuiLook.windowLines(windowFor(cursor, len(rows), limitsRows), func(i int) string {
+		row := rows[i]
+		value := strconv.Itoa(m.limitValue(row))
+		if m.editing && i == cursor {
+			value = m.buffer + "_"
+		}
+		return tuiLook.rowValues(i == cursor, limitLabel(row), value)
+	}))
+	if m.editErr != "" {
+		out.WriteString("\n")
+		out.WriteString(tuiLook.failureLine(m.editErr))
+	}
+	out.WriteString(tuiLook.helpLine("enter cambiar · esc volver · se aplican en el resumen"))
+	return out.String()
+}
+
+// limitsKey drives the section: the four rows and the number editor they open.
+// Esc leaves with the file untouched; what is typed here is written only by the
+// apply (0342).
+func (m tuiModel) limitsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "q" {
+		return m, tea.Quit
+	}
+	switch msg.String() {
+	case "esc":
+		m.step = m.backStep()
+	case "up", "k":
+		m.limitsCursor = clamp(m.limitsCursor-1, len(limitRows()))
+	case "down", "j":
+		m.limitsCursor = clamp(m.limitsCursor+1, len(limitRows()))
+	case "enter":
+		// A number is replaced, not appended to: the row just showed the value in
+		// force, so a fresh buffer makes one short edit enough to change it.
+		m.editing = true
+		m.buffer = ""
+		m.editErr = ""
+	}
+	return m, nil
+}
+
+// keepLimit records the value typed into a limits row. The domain owns each
+// scalar's rule, so the same normalizer the writer uses decides here what a row
+// may keep; a refused value stays in the editor with its sentence (0342).
+func (m tuiModel) keepLimit() tuiModel {
+	row := limitRows()[m.limitsIndex()]
+	value, err := strconv.Atoi(strings.TrimSpace(m.buffer))
+	if err != nil {
+		m.editErr = limitNumberRefusal
+		return m
+	}
+	switch row {
+	case limitMaxPromptKB:
+		value, err = review.NormalizeMaxPromptKB(value)
+	case limitKeepVerdicts:
+		value, err = review.NormalizeKeepVerdicts(value)
+	case limitKeepPrompts:
+		value, err = review.NormalizeKeepPrompts(value)
+	case limitCheckTimeout:
+		value, err = review.NormalizeCheckTimeout(value)
+	}
+	if err != nil {
+		m.editErr = "no se puede fijar " + limitLabel(row) + ": " + err.Error()
+		return m
+	}
+	if m.limitsPending == nil {
+		m.limitsPending = map[string]int{}
+	}
+	m.limitsPending[row] = value
+	m.editing = false
+	m.buffer = ""
+	m.editErr = ""
+	return m
+}
+
+// limitsChoice is the write the apply sends: one pointer per scalar whose chosen
+// value differs from what the file carried. A section opened and left alone, or
+// a row retyped with its own value, sends nothing at all (0342).
+func (m tuiModel) limitsChoice() *limitChoice {
+	var choice limitChoice
+	changed := false
+	for _, row := range limitRows() {
+		chosen, ok := m.limitsPending[row]
+		if !ok || chosen == m.limitDetected(row) {
+			continue
+		}
+		value := chosen
+		switch row {
+		case limitMaxPromptKB:
+			choice.MaxPromptKB = &value
+		case limitKeepVerdicts:
+			choice.KeepVerdicts = &value
+		case limitKeepPrompts:
+			choice.KeepPrompts = &value
+		case limitCheckTimeout:
+			choice.CheckTimeout = &value
+		}
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	return &choice
+}
+
 // move changes the cursor of the screen the wizard is on. The detection and the
 // summary are not choices.
 func (m tuiModel) move(delta int) tuiModel {
@@ -1001,6 +1226,8 @@ func (m tuiModel) View() string {
 		return m.viewProfile()
 	case stepModels:
 		return m.viewModels()
+	case stepLimits:
+		return m.viewLimits()
 	default:
 		return m.viewState()
 	}
@@ -1249,6 +1476,27 @@ func (m tuiModel) apply() (tea.Model, tea.Cmd) {
 			m.result.Message = step.Label + ": " + err.Error()
 		}
 		m.result.Steps = append(m.result.Steps, step)
+	}
+	// The limits section writes through the same review app the models section
+	// uses: SetConfig changes only the named scalars and renders the rest, so the
+	// [[check]] array keeps the gate severity the project declared. A section
+	// opened and left alone sends no choice, so nothing is written; a plan that
+	// already failed writes nothing either (0342).
+	if m.result.Code == configure.CodeOK {
+		if choice := m.limitsChoice(); choice != nil {
+			err := m.run.Limits(*choice)
+			step := configure.Step{
+				Operation: configure.Operation{ID: "limits", Label: "fijar los límites de la revisión"},
+				Status:    configure.Done,
+				Err:       err,
+			}
+			if err != nil {
+				step.Status = configure.Failed
+				m.result.Code = configure.CodeBlocked
+				m.result.Message = step.Label + ": " + err.Error()
+			}
+			m.result.Steps = append(m.result.Steps, step)
+		}
 	}
 	m.applied = true
 	m.step = stepApply

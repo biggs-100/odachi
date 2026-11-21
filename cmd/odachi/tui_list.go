@@ -19,10 +19,11 @@ const (
 // the models rows and the profile's value picker are the lists that grow, and
 // they get a number instead of an unbounded loop (0338).
 const (
-	hubRows     = 8 // three sections today; the cap guards a fourth
+	hubRows     = 8 // four sections today; the cap guards a fifth
 	choiceRows  = 8 // the longest single-choice list is the voice table
 	reviewRows  = 8 // the switch and the four lenses
 	modelsRows  = 8 // the verifier plus one row per detected client
+	limitsRows  = 8 // the four scalars; the cap guards a fifth
 	profileRows = 8 // the six axes plus the apply row
 	// valueRows is smaller on purpose: the picker is nested under its axis row,
 	// so the axis window and the picker window share one screen.

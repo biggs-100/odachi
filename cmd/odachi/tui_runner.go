@@ -111,6 +111,24 @@ func (r tuiRunner) Verify(model string) error {
 	return nil
 }
 
+// Limits writes the four scalars through the same review app the models section
+// uses: SetConfig reads the file, changes only the named fields and renders the
+// rest, so the [[check]] array keeps the gate severity the project declared. A
+// pointer left nil keeps the value the file carried (0342).
+func (r tuiRunner) Limits(choice limitChoice) error {
+	result := appreview.SetConfig(appreview.ConfigOptions{
+		Dir:          r.dir,
+		MaxPromptKB:  choice.MaxPromptKB,
+		KeepVerdicts: choice.KeepVerdicts,
+		KeepPrompts:  choice.KeepPrompts,
+		CheckTimeout: choice.CheckTimeout,
+	}, disk(r.dir), reviewModeCodec{})
+	if result.Code != 0 {
+		return errors.New(result.Message)
+	}
+	return nil
+}
+
 // Field writes one axis of the profile through the app that owns the file, the
 // same way Models writes the lens table: the wizard is a caller of the use case,
 // never a second writer (0336).

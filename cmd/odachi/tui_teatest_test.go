@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +13,15 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/review"
 )
+
+// ansiPattern removes the renderer's cursor moves and attributes so a captured
+// transcript reads as the text a person saw. The frame is the evidence, and
+// escape codes are not part of what the eye reads (0342).
+var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;?]*[ -\/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)`)
+
+func stripANSI(s string) string {
+	return ansiPattern.ReplaceAllString(s, "")
+}
 
 // TestTUIWizardRunsInATerminal walks the program the way a person does: the
 // first screen, every choice, the summary and the apply, read from the terminal's
@@ -90,4 +101,67 @@ func waitFor(t *testing.T, tm *teatest.TestModel, want string) {
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
 		return bytes.Contains(b, []byte(want))
 	}, teatest.WithDuration(5*time.Second))
+}
+
+// limitsTerminalFrame walks from the hub into the limits section and returns the
+// last frame the terminal drew, at the width asked for. The capture goes through
+// the same teatest harness as the other terminal tests: keys in, output out, no
+// second rendering path (0342).
+func limitsTerminalFrame(t *testing.T, cols, rows int) string {
+	t.Helper()
+	model := newTUIModel(limitedState())
+	model.run = &fakeRun{}
+	tm := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(cols, rows))
+	waitFor(t, tm, "Proyecto")
+	for i := 0; i < 3; i++ {
+		tm.Send(downKey)
+	}
+	tm.Send(enterKey)
+
+	var captured []byte
+	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
+		if bytes.Contains(b, []byte("límites")) {
+			captured = append([]byte(nil), b...)
+			return true
+		}
+		return false
+	}, teatest.WithDuration(5*time.Second))
+
+	tm.Send(qKey)
+	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
+
+	text := stripANSI(string(captured))
+	if at := strings.LastIndex(text, "odachi "); at >= 0 {
+		text = text[at:]
+	}
+	return strings.TrimSpace(text)
+}
+
+// TestTUILimitsFrameAtTwoWidths captures the new section from the terminal at the
+// normal width and a narrow one: the four rows keep their label column, and no
+// line runs past the column budget (0342).
+func TestTUILimitsFrameAtTwoWidths(t *testing.T) {
+	for _, width := range []struct {
+		name string
+		cols int
+		rows int
+	}{
+		{"normal", 80, 24},
+		{"narrow", 60, 20},
+	} {
+		t.Run(width.name, func(t *testing.T) {
+			frame := limitsTerminalFrame(t, width.cols, width.rows)
+			for _, want := range []string{"límites", "prompt KB", "veredictos", "prompts", "timeout s"} {
+				if !strings.Contains(frame, want) {
+					t.Errorf("the frame does not show %q:\n%s", want, frame)
+				}
+			}
+			for _, line := range strings.Split(frame, "\n") {
+				if n := len([]rune(line)); n > width.cols {
+					t.Errorf("a line is %d cells, wider than %d: %q", n, width.cols, line)
+				}
+			}
+			t.Logf("frame %dx%d:\n%s", width.cols, width.rows, frame)
+		})
+	}
 }
