@@ -386,3 +386,141 @@ func TestSetConfigRefusesAnInvalidLimit(t *testing.T) {
 		t.Errorf("the file moved on a refused write:\n--- before ---\n%s\n--- after ---\n%s", canonical, stored)
 	}
 }
+
+// TestSetConfigEditsTheThreeFieldsOfOneCheckAndKeepsItsSeverity: the wizard can
+// rename a declared check, replace its command and reword its remedy in one write,
+// and the severity the file declared is copied unchanged because it fixes the
+// verdict (0346).
+func TestSetConfigEditsTheThreeFieldsOfOneCheckAndKeepsItsSeverity(t *testing.T) {
+	canonical := seededWithChecks(t)
+	files := newFakeFiles(map[string]string{domainreview.ModePath: canonical})
+
+	result := review.SetConfig(review.ConfigOptions{
+		Dir: dir,
+		Checks: []review.CheckEdit{{
+			Identity: "lint",
+			Name:     "vet",
+			Command:  "go vet ./...",
+			Remedy:   "fix the vet findings",
+		}},
+	}, files, modeCodec{})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	stored := string(files.files[fullPath(domainreview.ModePath)])
+	for _, want := range []string{
+		`name = "vet"`,
+		`command = "go vet ./..."`,
+		`remedy = "fix the vet findings"`,
+		`severity = "CRITICAL"`,
+	} {
+		if !strings.Contains(stored, want) {
+			t.Errorf("the write lost %q:\n%s", want, stored)
+		}
+	}
+	for _, gone := range []string{`name = "lint"`, `remedy = "fix it"`} {
+		if strings.Contains(stored, gone) {
+			t.Errorf("the old value %q survived:\n%s", gone, stored)
+		}
+	}
+	back, err := reviewtoml.Decode([]byte(stored))
+	if err != nil {
+		t.Fatalf("Decode of the edited file: %v", err)
+	}
+	if len(back.Checks) != 1 || back.Checks[0] != (domainreview.Check{
+		Name: "vet", Command: "go vet ./...", Severity: domainreview.Critical, Remedy: "fix the vet findings",
+	}) {
+		t.Fatalf("checks = %+v, want the three edits with CRITICAL kept", back.Checks)
+	}
+	// Nothing before the [[check]] table moved: the switch, the verifier, the
+	// lenses and the four scalars are byte for byte what the file carried.
+	before := strings.Split(canonical, "[[check]]")[0]
+	if got := strings.Split(stored, "[[check]]")[0]; got != before {
+		t.Errorf("a field outside the check moved:\n--- before ---\n%s\n--- after ---\n%s", before, got)
+	}
+}
+
+// TestSetConfigTakesSeverityFromTheFileNotFromTheEdit: the check option has no
+// severity field at all, so the only value the writer can carry is the one the
+// file declared. A check at WARNING stays WARNING while all three editable
+// fields change (0346).
+func TestSetConfigTakesSeverityFromTheFileNotFromTheEdit(t *testing.T) {
+	original, err := reviewtoml.Render(domainreview.ProjectConfig{
+		Mode:         domainreview.ModeOn,
+		KeepVerdicts: domainreview.DefaultKeepVerdicts,
+		Checks: []domainreview.Check{
+			{Name: "fmt", Command: "gofmt -l .", Severity: domainreview.Warning, Remedy: "run gofmt"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("reviewtoml.Render: %v", err)
+	}
+	files := newFakeFiles(map[string]string{domainreview.ModePath: string(original)})
+
+	result := review.SetConfig(review.ConfigOptions{
+		Dir: dir,
+		Checks: []review.CheckEdit{{
+			Identity: "fmt",
+			Name:     "format",
+			Command:  "gofmt -w .",
+			Remedy:   "commit the formatted files",
+		}},
+	}, files, modeCodec{})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	stored := string(files.files[fullPath(domainreview.ModePath)])
+	if !strings.Contains(stored, `severity = "WARNING"`) {
+		t.Errorf("the edit moved the severity off WARNING:\n%s", stored)
+	}
+	if strings.Contains(stored, "SEVERITY") {
+		t.Errorf("the edit wrote a severity field of its own:\n%s", stored)
+	}
+	back, err := reviewtoml.Decode([]byte(stored))
+	if err != nil {
+		t.Fatalf("Decode of the edited file: %v", err)
+	}
+	if len(back.Checks) != 1 || back.Checks[0].Severity != domainreview.Warning {
+		t.Fatalf("checks = %+v, want one WARNING check", back.Checks)
+	}
+}
+
+// TestSetConfigRefusesACheckEditTheDomainCannotAccept: a blank name or command,
+// or an identity that is not declared, blocks before any byte reaches the file -
+// the same rule a hand-written odd/review.toml obeys (0346).
+func TestSetConfigRefusesACheckEditTheDomainCannotAccept(t *testing.T) {
+	cases := []struct {
+		name string
+		edit review.CheckEdit
+		want string
+	}{
+		{"blank name", review.CheckEdit{Identity: "lint", Name: "  ", Command: "go vet ./...", Remedy: "fix it"}, "name"},
+		{"blank command", review.CheckEdit{Identity: "lint", Name: "vet", Command: "  ", Remedy: "fix it"}, "command"},
+		{"unknown identity", review.CheckEdit{Identity: "missing", Name: "vet", Command: "go vet ./...", Remedy: "fix it"}, "not declared"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			canonical := seededWithChecks(t)
+			files := newFakeFiles(map[string]string{domainreview.ModePath: canonical})
+
+			result := review.SetConfig(review.ConfigOptions{
+				Dir: dir, Checks: []review.CheckEdit{tc.edit},
+			}, files, modeCodec{})
+
+			if result.Code == 0 {
+				t.Fatal("code = 0, want blocked")
+			}
+			if !strings.Contains(result.Message, tc.want) {
+				t.Errorf("message = %q, want it to name %q", result.Message, tc.want)
+			}
+			if len(files.writes) != 0 || len(files.backups) != 0 {
+				t.Fatalf("writes = %v, backups = %v; want none", files.written(), files.backups)
+			}
+			if stored := string(files.files[fullPath(domainreview.ModePath)]); stored != canonical {
+				t.Errorf("the file moved on a refused edit:\n--- before ---\n%s\n--- after ---\n%s", canonical, stored)
+			}
+		})
+	}
+}

@@ -24,6 +24,7 @@ const (
 	reviewRows  = 8 // the switch and the four lenses
 	modelsRows  = 8 // the verifier plus one row per detected client
 	limitsRows  = 8 // the four scalars; the cap guards a fifth
+	checksRows  = 8 // one row per declared tool; the cap guards a long list
 	profileRows = 8 // the six axes plus the apply row
 	// valueRows is smaller on purpose: the picker is nested under its axis row,
 	// so the axis window and the picker window share one screen.

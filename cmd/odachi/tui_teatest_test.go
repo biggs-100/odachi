@@ -208,6 +208,8 @@ func TestTUIFooterFramesAcrossNestedStates(t *testing.T) {
 		sectionKeys = "enter cambiar · esc volver · se aplican en el resumen"
 		pickerKeys  = "↑↓ elegir · enter cambiar · esc volver"
 		editorKeys  = "escribir · enter cambiar · esc volver"
+		checksKeys  = "enter editar · esc volver · se aplican en el resumen"
+		fieldKeys   = "↑↓ campo · enter editar · esc cerrar"
 	)
 	cases := []struct {
 		name        string
@@ -218,10 +220,15 @@ func TestTUIFooterFramesAcrossNestedStates(t *testing.T) {
 		{"profile picker", 1, profileKeys, pickerKeys},
 		{"models editor", 2, sectionKeys, editorKeys},
 		{"limits editor", 3, sectionKeys, editorKeys},
+		{"checks fields", 4, checksKeys, fieldKeys},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			model := newTUIModel(limitedState())
+			state := limitedState()
+			if c.name == "checks fields" {
+				state = checkedState()
+			}
+			model := newTUIModel(state)
 			model.run = &fakeRun{}
 			tm := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(80, 24))
 
@@ -256,6 +263,64 @@ func TestTUIFooterFramesAcrossNestedStates(t *testing.T) {
 
 			tm.Send(qKey)
 			tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
+		})
+	}
+}
+
+// checksTerminalFrame walks from the hub into the checks section and returns the
+// last frame the terminal drew, at the width asked for. It uses the same teatest
+// harness as the limits frame: keys in, output out, no second rendering path (0346).
+func checksTerminalFrame(t *testing.T, cols, rows int) string {
+	t.Helper()
+	model := newTUIModel(checkedState())
+	model.run = &fakeRun{}
+	tm := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(cols, rows))
+	openSection(t, tm, 4) // checks is the fifth hub row
+
+	var captured []byte
+	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
+		if bytes.Contains(b, []byte("checks")) {
+			captured = append([]byte(nil), b...)
+			return true
+		}
+		return false
+	}, teatest.WithDuration(5*time.Second))
+
+	tm.Send(qKey)
+	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
+
+	text := stripANSI(string(captured))
+	if at := strings.LastIndex(text, "odachi "); at >= 0 {
+		text = text[at:]
+	}
+	return strings.TrimSpace(text)
+}
+
+// TestTUChecksFrameAtTwoWidths captures the new section from the terminal at the
+// normal width and a narrow one: the declared check and the severity it keeps
+// stay on the row, and no line runs past the column budget (0346).
+func TestTUChecksFrameAtTwoWidths(t *testing.T) {
+	for _, width := range []struct {
+		name string
+		cols int
+		rows int
+	}{
+		{"normal", 80, 24},
+		{"narrow", 60, 20},
+	} {
+		t.Run(width.name, func(t *testing.T) {
+			frame := checksTerminalFrame(t, width.cols, width.rows)
+			for _, want := range []string{"checks", "lint", "CRITICAL"} {
+				if !strings.Contains(frame, want) {
+					t.Errorf("the frame does not show %q:\n%s", want, frame)
+				}
+			}
+			for _, line := range strings.Split(frame, "\n") {
+				if n := len([]rune(line)); n > width.cols {
+					t.Errorf("a line is %d cells, wider than %d: %q", n, width.cols, line)
+				}
+			}
+			t.Logf("frame %dx%d:\n%s", width.cols, width.rows, frame)
 		})
 	}
 }
