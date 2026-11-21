@@ -129,10 +129,18 @@ func SetConfig(opts ConfigOptions, files ModeFiles, codec ModeCodec) Result {
 	// no severity field at all. The domain owns the rule for each edited value, so
 	// a blank name, command or remedy blocks before any byte reaches the disk
 	// (0346).
+	// Resolve every identity against the list as read, never against a list being
+	// mutated: two edits in one visit may rename a row onto another row's name, and
+	// an edit naming the original second row must still land on that row. Building
+	// the result apart keeps a failed normalization from half-writing the array
+	// (0346, reliability review).
+	original := current.Checks
+	edited := make([]domain.Check, len(original))
+	copy(edited, original)
 	for _, edit := range opts.Checks {
 		found := -1
-		for i := range current.Checks {
-			if current.Checks[i].Name == edit.Identity {
+		for i := range original {
+			if original[i].Name == edit.Identity {
 				found = i
 				break
 			}
@@ -143,15 +151,16 @@ func SetConfig(opts ConfigOptions, files ModeFiles, codec ModeCodec) Result {
 		next := domain.Check{
 			Name:     edit.Name,
 			Command:  edit.Command,
-			Severity: current.Checks[found].Severity, // the verdict's decision stays the file's
+			Severity: original[found].Severity, // the verdict's decision stays the file's
 			Remedy:   edit.Remedy,
 		}
 		normalized, err := domain.NormalizeChecks([]domain.Check{next})
 		if err != nil {
 			return modeBlocked(err)
 		}
-		current.Checks[found] = normalized[0]
+		edited[found] = normalized[0]
 	}
+	current.Checks = edited
 
 	data, err := codec.Render(current)
 	if err != nil {

@@ -391,6 +391,55 @@ func TestSetConfigRefusesAnInvalidLimit(t *testing.T) {
 // rename a declared check, replace its command and reword its remedy in one write,
 // and the severity the file declared is copied unchanged because it fixes the
 // verdict (0346).
+func TestSetConfigResolvesEveryCheckEditAgainstTheOriginalList(t *testing.T) {
+	canonical, err := reviewtoml.Render(domainreview.ProjectConfig{
+		Mode: domainreview.ModeOn,
+		Checks: []domainreview.Check{
+			{Name: "lint", Command: "golangci-lint run ./...", Severity: domainreview.Critical, Remedy: "fix lint"},
+			{Name: "fmt", Command: "gofmt -l ./...", Severity: domainreview.Warning, Remedy: "fix fmt"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("reviewtoml.Render: %v", err)
+	}
+	files := newFakeFiles(map[string]string{domainreview.ModePath: string(canonical)})
+
+	// Both edits name the original rows. The first renames lint onto fmt's name;
+	// the second must still land on the original fmt row, not the one just renamed.
+	result := review.SetConfig(review.ConfigOptions{
+		Dir: dir,
+		Checks: []review.CheckEdit{
+			{Identity: "lint", Name: "fmt", Command: "new lint command", Remedy: "new lint remedy"},
+			{Identity: "fmt", Name: "lint", Command: "new fmt command", Remedy: "new fmt remedy"},
+		},
+	}, files, modeCodec{})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	got, err := reviewtoml.Decode([]byte(files.files[fullPath(domainreview.ModePath)]))
+	if err != nil {
+		t.Fatalf("reviewtoml.Decode: %v", err)
+	}
+	if len(got.Checks) != 2 {
+		t.Fatalf("checks = %d, want 2", len(got.Checks))
+	}
+	for _, c := range got.Checks {
+		switch c.Name {
+		case "fmt": // the original lint row, renamed
+			if c.Command != "new lint command" || c.Remedy != "new lint remedy" || c.Severity != domainreview.Critical {
+				t.Errorf("original lint row after rename = %+v, want lint's values with CRITICAL", c)
+			}
+		case "lint": // the original fmt row, renamed
+			if c.Command != "new fmt command" || c.Remedy != "new fmt remedy" || c.Severity != domainreview.Warning {
+				t.Errorf("original fmt row after rename = %+v, want fmt's values with WARNING", c)
+			}
+		default:
+			t.Errorf("unexpected check name %q", c.Name)
+		}
+	}
+}
+
 func TestSetConfigEditsTheThreeFieldsOfOneCheckAndKeepsItsSeverity(t *testing.T) {
 	canonical := seededWithChecks(t)
 	files := newFakeFiles(map[string]string{domainreview.ModePath: canonical})
