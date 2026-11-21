@@ -8,7 +8,7 @@ R1 · "la TUI fija max_prompt_kb, keep_verdicts, keep_prompts y check_timeout_s 
 ## Done when
 
 ## Steps
-- [ ] T1 · la TUI fija max_prompt_kb, keep_verdicts, keep_prompts y check_timeout_s sin borrar checks   R1
+- [x] T1 · la TUI fija max_prompt_kb, keep_verdicts, keep_prompts y check_timeout_s sin borrar checks   R1 · tree:1f6a9ba61c0d3e7f9c64a8cebe910e5910859d3a
 
 ## History
 L1 · "la TUI fija max_prompt_kb, keep_verdicts, keep_prompts y check_timeout_s sin borrar checks"
