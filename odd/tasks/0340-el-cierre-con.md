@@ -8,7 +8,7 @@ R1 · "el cierre con verificador que supera las lineas autoradas acepta el exces
 ## Done when
 
 ## Steps
-- [ ] T1 · el cierre con verificador que supera las lineas autoradas acepta el exceso razonado en el task doc; sin razon se niega   R1
+- [x] T1 · el cierre con verificador que supera las lineas autoradas acepta el exceso razonado en el task doc; sin razon se niega   R1 · tree:8981f81254feeae717e6293b8aaae07f377f0b8b
 
 ## History
 L1 · "el cierre con verificador que supera las lineas autoradas acepta el exceso razonado en el task doc; sin razon se niega"
