@@ -438,6 +438,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	state.ProofTreeHash = recorded.Tree
 	state.ProofOutput = recorded.Output
 	state.ProofCommand = recorded.Command
+	r.recordedCommand = recorded.Command
 	// The model the evidence came from: the recorded proof's, or the one this
 	// run stamps when it writes a new one.
 	r.proofModel = recorded.Model
@@ -615,6 +616,10 @@ type runner struct {
 	// proofModel is the model the evidence came from: the recorded proof's, or
 	// the one this run stamps. Empty when no session could be named.
 	proofModel string
+	// recordedCommand is the command the proof on disk names. The hook checks a
+	// commit message without --run, so this is the source that tells a human how
+	// to regenerate a stale proof (0344).
+	recordedCommand string
 	// staleNote names the paths that differ between the proof's tree and this
 	// one, when the proof is stale. Empty means the diff could not be read.
 	staleNote string
@@ -2474,7 +2479,7 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 		if r.failedRel != "" {
 			result.Lines = append(result.Lines, "output: "+r.failedRel)
 		}
-		next := ProofNext(r.opts.Run, verdict.Next)
+		next := ProofNext(r.opts.Run, r.recordedCommand, verdict.Next)
 		if next != verdict.Next {
 			result.Next = next
 		}
@@ -2682,13 +2687,21 @@ func runCommand(command string) string {
 const proofHint = "odachi check --proof <file>"
 
 // ProofNext is the continuation a report prints when a proof does not stand.
-// A run that was asked to produce the proof must be told to run it again, not to
-// point at a file from a tree that no longer stands: reusing that file is the
-// dead end that made the close fail three times (0344). A caller that carried a
-// proof in keeps the domain's hint byte for byte, and every other next command
-// is never rewritten.
-func ProofNext(run, next string) string {
-	if run == "" || next != proofHint {
+// The command to run again comes from this invocation's --run, or from the proof
+// already on disk: the commit-msg hook calls check --message with no --run, and
+// the file it reads still names the command that produced it. Either way the
+// human is told to regenerate the proof, not to reuse one from a tree that no
+// longer stands -the dead end that made the close fail three times (0344). When
+// neither source names a command, the domain's hint stays byte for byte, and
+// every other next command is never rewritten.
+func ProofNext(run, recorded, next string) string {
+	if next != proofHint {
+		return next
+	}
+	if run == "" {
+		run = recorded
+	}
+	if run == "" {
 		return next
 	}
 	return runCommand(run)
