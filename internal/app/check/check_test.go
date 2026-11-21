@@ -1479,3 +1479,24 @@ func TestUnreadableFenceBlocksWithAHumanSentence(t *testing.T) {
 		t.Errorf("Message = %q, want it to name the file", got.Message)
 	}
 }
+
+// TestProofNextNamesTheRunWhenTheRunnerRan: a proof gate that would send the
+// human to a proof file names the command that regenerates it instead when the
+// check was invoked with --run. The recorded file is from a tree that no longer
+// stands, so reusing it is the dead end this closes. Without --run -an agent
+// carrying a proof- the old hint stays byte for byte, and any other next command
+// is never rewritten.
+func TestProofNextNamesTheRunWhenTheRunnerRan(t *testing.T) {
+	const proofHint = "odachi check --proof <file>"
+	const run = "go test ./..."
+
+	if got, want := check.ProofNext(run, proofHint), `odachi check --run "go test ./..."`; got != want {
+		t.Errorf("ProofNext with a run = %q, want %q", got, want)
+	}
+	if got := check.ProofNext(run, "odachi start"); got != "odachi start" {
+		t.Errorf("ProofNext rewrote an unrelated next: %q", got)
+	}
+	if got := check.ProofNext("", proofHint); got != proofHint {
+		t.Errorf("ProofNext without a run = %q, want %q", got, proofHint)
+	}
+}

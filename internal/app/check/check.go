@@ -2474,7 +2474,10 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 		if r.failedRel != "" {
 			result.Lines = append(result.Lines, "output: "+r.failedRel)
 		}
-		next := verdict.Next
+		next := ProofNext(r.opts.Run, verdict.Next)
+		if next != verdict.Next {
+			result.Next = next
+		}
 		if len(questions) > 0 {
 			next = fmt.Sprintf("odachi ask --answer \"<answer>\" --for %s", questions[0].ID)
 			result.Next = next
@@ -2673,6 +2676,22 @@ func baseProblem(base string, err error) string {
 // runCommand is the continuation that reruns the exact command.
 func runCommand(command string) string {
 	return `odachi check --run "` + strings.ReplaceAll(command, `"`, `\"`) + `"`
+}
+
+// proofHint is the domain's continuation for a proof that is missing or stale.
+const proofHint = "odachi check --proof <file>"
+
+// ProofNext is the continuation a report prints when a proof does not stand.
+// A run that was asked to produce the proof must be told to run it again, not to
+// point at a file from a tree that no longer stands: reusing that file is the
+// dead end that made the close fail three times (0344). A caller that carried a
+// proof in keeps the domain's hint byte for byte, and every other next command
+// is never rewritten.
+func ProofNext(run, next string) string {
+	if run == "" || next != proofHint {
+		return next
+	}
+	return runCommand(run)
 }
 
 // refused is the result for a proof file the tool will not guess about. The

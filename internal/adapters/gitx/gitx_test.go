@@ -409,3 +409,31 @@ func TestAncestorAnswersInOneDirection(t *testing.T) {
 		t.Error("an empty commit was accepted as an ancestry question")
 	}
 }
+
+// TestStageAddsOnlyTheNamedPath: the close stages the task doc it just wrote so
+// the tree the proof runs on is the tree the commit carries. It must not sweep
+// the rest of the worktree into the index - the other paths stay unstaged and
+// the human decides what travels with them.
+func TestStageAddsOnlyTheNamedPath(t *testing.T) {
+	root, _ := newRepo(t)
+	write(t, filepath.Join(root, "notes.txt"), "otra línea\n")
+	write(t, filepath.Join(root, "otro.txt"), "nuevo\n")
+	if got := git(t, root, "diff", "--cached", "--name-only"); got != "" {
+		t.Fatalf("staged before the call = %q, want nothing", got)
+	}
+
+	if err := gitx.Stage(root, "notes.txt"); err != nil {
+		t.Fatalf("Stage: %v", err)
+	}
+
+	if got := git(t, root, "diff", "--cached", "--name-only"); got != "notes.txt" {
+		t.Errorf("staged = %q, want only notes.txt", got)
+	}
+	status := git(t, root, "status", "--short")
+	if !strings.Contains(status, "M  notes.txt") {
+		t.Errorf("status = %q, want notes.txt staged", status)
+	}
+	if !strings.Contains(status, "?? otro.txt") {
+		t.Errorf("status = %q, want otro.txt still untracked", status)
+	}
+}

@@ -163,6 +163,19 @@ func TreeOf(root, commit string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// Stage adds one path to the real index. Unlike stageWorktree, this touches the
+// human's index: the close calls it for the task doc it just wrote, so the tree
+// a proof describes and the tree the commit carries are one tree. Only the named
+// path is added - sweeping the worktree in would stage work nobody chose.
+func Stage(root, path string) error {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return fmt.Errorf("git: no path to stage")
+	}
+	_, err := run(root, "add", "--", trimmed)
+	return err
+}
+
 // Has reports whether commit is reachable from HEAD: "this commit is on this
 // branch". Exit 1 is the answer "no", not an error; any other failure is an error.
 func Has(root, commit string) (bool, error) {

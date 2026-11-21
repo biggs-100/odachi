@@ -603,6 +603,10 @@ func (gitRepo) HeadTree(root string) (string, error) { return gitx.HeadTree(root
 // HEAD so a step is only marked with bytes a commit can back.
 func (gitRepo) WorktreeTree(root string) (string, error) { return gitx.TreeHash(root) }
 
+// Stage adds the task doc a close just wrote to the index, so one proof run on
+// the resulting tree is enough and no stale proof can be suggested instead.
+func (gitRepo) Stage(root, path string) error { return gitx.Stage(root, path) }
+
 // TreeOf, Has and CommitWithTree are how progress finds the commit a step landed
 // in: a rebase rewrites the commit and keeps the tree, so the tree is the search.
 func (gitRepo) TreeOf(root, commit string) (string, error) { return gitx.TreeOf(root, commit) }
