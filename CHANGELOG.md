@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+## v0.58.0 - 2026-11-20
+
 - **A close may carry an overage the human accepts.** The four-hundred line limit refuses a close that owes a verifier, and 0339 closed at 438 with its note blaming documentation and skills -the measurement said otherwise: 221 of those lines were the tests the method demands-. What counts does not change, because excluding paths is the code-golf the method forbids; a task document may now carry `Slice: <lines> - <reason>` in its preamble, where the base and the waivers already live, and the gate reads it with the same parser. The number must reach what the tree authors and the reason must be written, or the limit stands, and a line inside a section is prose -a waiver nobody can read is a silence with a number. An accepted overage settles the size and not the record: the close asks for the verifier's signature and prints the accepted number and the reason, so the decision is visible on every close that carries it. The refusal names the shape to write in the document, and the render writes the line back, because every verb that rewrites the document would otherwise delete the decision on the next step. Minor, because a document format and a refusal's sentence changed shape (0340).
 
 ## v0.57.0 - 2026-11-20
