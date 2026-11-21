@@ -99,3 +99,27 @@ func TestABuildFailureThatNamesTheChangeIsNoticed(t *testing.T) {
 		})
 	}
 }
+
+// TestABuildFailureThatNamesAnAddedFieldIsNoticed: a change whose only added
+// name is a struct field used to leave the undo row unknown, because the row
+// could not read the field from the diff. The compiler names the field, and the
+// row owes the name back (0341).
+func TestABuildFailureThatNamesAnAddedFieldIsNoticed(t *testing.T) {
+	const diff = "diff --git a/internal/domain/gate/gate.go b/internal/domain/gate/gate.go\n" +
+		"--- a/internal/domain/gate/gate.go\n" +
+		"+++ b/internal/domain/gate/gate.go\n" +
+		"@@ -194,6 +201,13 @@ type State struct {\n" +
+		"+\tSliceAccepted int\n" +
+		" \tVerificationLines int\n"
+	const build = "# github.com/biggs-100/odachi/internal/app/check [build failed]\n" +
+		"internal/app/check/check_test.go:42:19: undefined: SliceAccepted\n"
+
+	added := undone.AddedNames(diff)
+	got, name := undone.Classify(1, build, added)
+	if got != undone.Noticed {
+		t.Errorf("Classify = %q, want %q: the added names were %v", got, undone.Noticed, added)
+	}
+	if name != "SliceAccepted" {
+		t.Errorf("the verdict names %q, want %q", name, "SliceAccepted")
+	}
+}
