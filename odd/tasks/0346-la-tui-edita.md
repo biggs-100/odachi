@@ -8,7 +8,7 @@ R1 · "la TUI edita nombre, comando y remedio de un check declarado sin tocar su
 ## Done when
 
 ## Steps
-- [ ] T1 · la TUI edita nombre, comando y remedio de un check declarado sin tocar su severidad   R1
+- [x] T1 · la TUI edita nombre, comando y remedio de un check declarado sin tocar su severidad   R1 · tree:902e1f6739404f773c56e851f21ebd76184deaf5
 
 ## History
 L1 · "la TUI edita nombre, comando y remedio de un check declarado sin tocar su severidad"
