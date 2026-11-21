@@ -8,7 +8,7 @@ R1 · "odachi ask valida la respuesta contra las opciones de la pregunta cuando 
 ## Done when
 
 ## Steps
-- [ ] T1 · odachi ask valida la respuesta contra las opciones de la pregunta cuando la pregunta las declara   R1
+- [x] T1 · odachi ask valida la respuesta contra las opciones de la pregunta cuando la pregunta las declara   R1 · tree:525f73da6b20a87c5b61b5944f6440001647d593
 
 ## History
 L1 · "odachi ask valida la respuesta contra las opciones de la pregunta cuando la pregunta las declara"
