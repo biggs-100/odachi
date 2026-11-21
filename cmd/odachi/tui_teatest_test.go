@@ -165,3 +165,97 @@ func TestTUILimitsFrameAtTwoWidths(t *testing.T) {
 		})
 	}
 }
+
+// lastFrame is the final frame in a teatest transcript. The renderer writes a
+// full fresh frame each time, so the last block is what the eye read last (0343).
+func lastFrame(b []byte) string {
+	text := stripANSI(string(b))
+	if at := strings.LastIndex(text, "odachi "); at >= 0 {
+		text = text[at:]
+	}
+	return strings.TrimSpace(text)
+}
+
+// waitFooter reads until the last frame ends with the footer named and returns
+// that frame, so a state change is observed only after it was drawn (0343).
+func waitFooter(t *testing.T, tm *teatest.TestModel, want string) string {
+	t.Helper()
+	var frame string
+	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
+		frame = lastFrame(b)
+		return strings.HasSuffix(frame, want)
+	}, teatest.WithDuration(3*time.Second))
+	return frame
+}
+
+// openSection walks from the hub into the section `downs` rows below it (0343).
+func openSection(t *testing.T, tm *teatest.TestModel, downs int) {
+	t.Helper()
+	waitFor(t, tm, "Proyecto")
+	for i := 0; i < downs; i++ {
+		tm.Send(downKey)
+	}
+	tm.Send(enterKey)
+}
+
+// TestTUIFooterFramesAcrossNestedStates captures each section from the terminal
+// with its own footer, with the nested control open, and after it closes. The
+// frame is the evidence: the three states must read as three different footers,
+// and no line may run past the column budget (0343).
+func TestTUIFooterFramesAcrossNestedStates(t *testing.T) {
+	const (
+		profileKeys = "↑↓ elegir · enter cambiar · esc volver · q salir"
+		sectionKeys = "enter cambiar · esc volver · se aplican en el resumen"
+		pickerKeys  = "↑↓ elegir · enter cambiar · esc volver"
+		editorKeys  = "escribir · enter cambiar · esc volver"
+	)
+	cases := []struct {
+		name        string
+		downs       int
+		defaultKeys string
+		nestedKeys  string
+	}{
+		{"profile picker", 1, profileKeys, pickerKeys},
+		{"models editor", 2, sectionKeys, editorKeys},
+		{"limits editor", 3, sectionKeys, editorKeys},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			model := newTUIModel(limitedState())
+			model.run = &fakeRun{}
+			tm := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(80, 24))
+
+			openSection(t, tm, c.downs)
+			normal := waitFooter(t, tm, c.defaultKeys)
+			t.Logf("normal frame:\n%s", normal)
+			if !strings.HasSuffix(normal, c.defaultKeys) {
+				t.Fatalf("normal frame does not end with the section footer:\n%s", normal)
+			}
+
+			tm.Send(enterKey) // open the picker or editor on the first row
+			nested := waitFooter(t, tm, c.nestedKeys)
+			t.Logf("nested frame:\n%s", nested)
+			if !strings.HasSuffix(nested, c.nestedKeys) {
+				t.Fatalf("nested frame does not name the open control's keys:\n%s", nested)
+			}
+			if strings.HasSuffix(nested, c.defaultKeys) {
+				t.Errorf("nested frame still shows the section footer:\n%s", nested)
+			}
+
+			tm.Send(escKey) // close the control without leaving the section
+			restored := waitFooter(t, tm, c.defaultKeys)
+			t.Logf("restored frame:\n%s", restored)
+			if !strings.HasSuffix(restored, c.defaultKeys) {
+				t.Fatalf("closing the control did not restore the section footer:\n%s", restored)
+			}
+			for _, line := range strings.Split(restored, "\n") {
+				if n := len([]rune(line)); n > 80 {
+					t.Errorf("a line is %d cells, wider than 80: %q", n, line)
+				}
+			}
+
+			tm.Send(qKey)
+			tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
+		})
+	}
+}
