@@ -242,3 +242,147 @@ func TestSetConfigBacksUpBeforeReplacing(t *testing.T) {
 		t.Fatalf("backups = %v, want the file before the write", files.backups)
 	}
 }
+
+// seededWithChecks is a canonical file with every scalar the wizard edits and one
+// deterministic tool declared at CRITICAL. The check is the project's gate
+// severity: the new section sets four scalars, not the array that owns it (0342).
+func seededWithChecks(t *testing.T) string {
+	t.Helper()
+	canonical, err := reviewtoml.Render(domainreview.ProjectConfig{
+		Mode:         domainreview.ModeOn,
+		Verify:       "cheap/model#fast",
+		Lenses:       map[string]string{"risk": "old/model"},
+		MaxPromptKB:  120,
+		KeepVerdicts: 4,
+		KeepPrompts:  2,
+		CheckTimeout: 45,
+		Checks: []domainreview.Check{
+			{Name: "lint", Command: "go vet ./...", Severity: domainreview.Critical, Remedy: "fix it"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("reviewtoml.Render: %v", err)
+	}
+	return string(canonical)
+}
+
+// checkBlock is the [[check]] array of a file, from its header to the end. It is
+// the project's gate policy, so a write of the four scalars must not move a byte
+// of it (0342).
+func checkBlock(file string) string {
+	at := strings.Index(file, "[[check]]")
+	if at < 0 {
+		return ""
+	}
+	return file[at:]
+}
+
+// TestSetConfigSetsEachLimitAndKeepsTheRest: the wizard can set each of the four
+// scalars on its own, and the other three, the switch, the lens table, the
+// verifier and the whole check array survive the write byte for byte (0342).
+func TestSetConfigSetsEachLimitAndKeepsTheRest(t *testing.T) {
+	cases := []struct {
+		key  string
+		want string
+		set  func(*int) review.ConfigOptions
+	}{
+		{"max_prompt_kb", "max_prompt_kb = 200", func(v *int) review.ConfigOptions { return review.ConfigOptions{MaxPromptKB: v} }},
+		{"keep_verdicts", "keep_verdicts = 7", func(v *int) review.ConfigOptions { return review.ConfigOptions{KeepVerdicts: v} }},
+		{"keep_prompts", "keep_prompts = 3", func(v *int) review.ConfigOptions { return review.ConfigOptions{KeepPrompts: v} }},
+		{"check_timeout_s", "check_timeout_s = 90", func(v *int) review.ConfigOptions { return review.ConfigOptions{CheckTimeout: v} }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.key, func(t *testing.T) {
+			canonical := seededWithChecks(t)
+			files := newFakeFiles(map[string]string{domainreview.ModePath: canonical})
+			value := 200
+			switch tc.key {
+			case "keep_verdicts":
+				value = 7
+			case "keep_prompts":
+				value = 3
+			case "check_timeout_s":
+				value = 90
+			}
+			opts := tc.set(&value)
+			opts.Dir = dir
+
+			result := review.SetConfig(opts, files, modeCodec{})
+
+			if result.Code != 0 {
+				t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+			}
+			stored := string(files.files[fullPath(domainreview.ModePath)])
+			if !strings.Contains(stored, tc.want) {
+				t.Errorf("the write lost %q:\n%s", tc.want, stored)
+			}
+			for _, keep := range []string{
+				`mode = "on"`, `verify = "cheap/model#fast"`, `risk = "old/model"`,
+				"max_prompt_kb = 120", "keep_verdicts = 4", "keep_prompts = 2", "check_timeout_s = 45",
+			} {
+				if strings.HasPrefix(keep, tc.key) {
+					continue
+				}
+				if !strings.Contains(stored, keep) {
+					t.Errorf("the write lost %q:\n%s", keep, stored)
+				}
+			}
+			if got := checkBlock(stored); got != checkBlock(canonical) {
+				t.Errorf("the CRITICAL check moved:\n--- before ---\n%s\n--- after ---\n%s", checkBlock(canonical), got)
+			}
+		})
+	}
+}
+
+// TestSetConfigWritesAllFourLimitsWithoutTouchingChecks: setting every scalar in
+// one write still leaves the switch, the models, the verifier and the check array
+// exactly as the file had them (0342).
+func TestSetConfigWritesAllFourLimitsWithoutTouchingChecks(t *testing.T) {
+	canonical := seededWithChecks(t)
+	files := newFakeFiles(map[string]string{domainreview.ModePath: canonical})
+	limit, verdicts, prompts, timeout := 200, 7, 3, 90
+
+	result := review.SetConfig(review.ConfigOptions{
+		Dir:          dir,
+		MaxPromptKB:  &limit,
+		KeepVerdicts: &verdicts,
+		KeepPrompts:  &prompts,
+		CheckTimeout: &timeout,
+	}, files, modeCodec{})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	stored := string(files.files[fullPath(domainreview.ModePath)])
+	for _, want := range []string{
+		"max_prompt_kb = 200", "keep_verdicts = 7", "keep_prompts = 3", "check_timeout_s = 90",
+		`mode = "on"`, `verify = "cheap/model#fast"`, `risk = "old/model"`, `severity = "CRITICAL"`,
+	} {
+		if !strings.Contains(stored, want) {
+			t.Errorf("the write lost %q:\n%s", want, stored)
+		}
+	}
+	if got := checkBlock(stored); got != checkBlock(canonical) {
+		t.Errorf("the CRITICAL check moved:\n--- before ---\n%s\n--- after ---\n%s", checkBlock(canonical), got)
+	}
+}
+
+// TestSetConfigRefusesAnInvalidLimit: a scalar the domain cannot accept writes
+// nothing at all, not even a backup, so a typo cannot half-change the gate (0342).
+func TestSetConfigRefusesAnInvalidLimit(t *testing.T) {
+	canonical := seededWithChecks(t)
+	files := newFakeFiles(map[string]string{domainreview.ModePath: canonical})
+	bad := -5
+
+	result := review.SetConfig(review.ConfigOptions{Dir: dir, KeepVerdicts: &bad}, files, modeCodec{})
+
+	if result.Code == 0 {
+		t.Fatalf("code = 0, want blocked")
+	}
+	if len(files.writes) != 0 || len(files.backups) != 0 {
+		t.Fatalf("writes = %v, backups = %v; want none", files.written(), files.backups)
+	}
+	if stored := string(files.files[fullPath(domainreview.ModePath)]); stored != canonical {
+		t.Errorf("the file moved on a refused write:\n--- before ---\n%s\n--- after ---\n%s", canonical, stored)
+	}
+}

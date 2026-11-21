@@ -9,8 +9,8 @@ import (
 )
 
 // ConfigOptions is one write of the review file from the wizard: the switch, the
-// model of each lens and the model the verifier runs with. A field left zero
-// keeps what the file already has.
+// model of each lens, the model the verifier runs with and the four scalars the
+// limits section edits. A field left at its zero value keeps what the file has.
 type ConfigOptions struct {
 	Dir    string
 	Mode   string            // empty: keep the switch
@@ -19,10 +19,20 @@ type ConfigOptions struct {
 	// key; a value replaces it, and an empty value removes the line, because a
 	// project that names no verifier pays for the session's model (0337).
 	Verify *string
+	// The four scalars are pointers because three of them have a meaningful zero:
+	// no prompt limit, keep no prompts, and the shipped check timeout. Nil means
+	// the caller never named the field, so the file's value survives (0342).
+	MaxPromptKB  *int
+	KeepVerdicts *int
+	KeepPrompts  *int
+	CheckTimeout *int
 }
 
-// SetConfig writes the switch and the lens table, preserving the fields the
-// wizard does not touch: the prompt limit and the two retention lifetimes. The
+// SetConfig writes the switch, the lens table and any of the four scalars the
+// caller names, preserving the fields the wizard does not touch: the schema, the
+// mode, the lenses, the verifier and the whole [[check]] array. The array is not
+// an option here on purpose: it carries the project's gate severity, and a
+// picker that could lower it would change policy without a decision (0342). The
 // file is read once, changed in memory and rendered by the same codec the mode
 // command uses, so the two verbs cannot disagree about the format.
 func SetConfig(opts ConfigOptions, files ModeFiles, codec ModeCodec) Result {
@@ -63,6 +73,38 @@ func SetConfig(opts ConfigOptions, files ModeFiles, codec ModeCodec) Result {
 			value = checked
 		}
 		current.Verify = value
+	}
+	// The four scalars follow the rule the verifier set: a caller that names one
+	// has the domain check it before the codec writes it, and a caller that names
+	// none keeps the file's value. Nothing here offers the checks array -that is
+	// the project's gate severity, owned by the file (0342).
+	if opts.MaxPromptKB != nil {
+		limit, err := domain.NormalizeMaxPromptKB(*opts.MaxPromptKB)
+		if err != nil {
+			return modeBlocked(err)
+		}
+		current.MaxPromptKB = limit
+	}
+	if opts.KeepVerdicts != nil {
+		verdicts, err := domain.NormalizeKeepVerdicts(*opts.KeepVerdicts)
+		if err != nil {
+			return modeBlocked(err)
+		}
+		current.KeepVerdicts = verdicts
+	}
+	if opts.KeepPrompts != nil {
+		prompts, err := domain.NormalizeKeepPrompts(*opts.KeepPrompts)
+		if err != nil {
+			return modeBlocked(err)
+		}
+		current.KeepPrompts = prompts
+	}
+	if opts.CheckTimeout != nil {
+		timeout, err := domain.NormalizeCheckTimeout(*opts.CheckTimeout)
+		if err != nil {
+			return modeBlocked(err)
+		}
+		current.CheckTimeout = timeout
 	}
 
 	data, err := codec.Render(current)
