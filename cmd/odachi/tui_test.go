@@ -329,6 +329,7 @@ type fakeRun struct {
 	clientModels map[string]string
 	verify       string
 	limits       limitChoice
+	checks       []checkChoice
 	fields       []string
 	axes         []profile.Axis
 	reRead       int
@@ -376,6 +377,11 @@ func (f *fakeRun) Verify(model string) error {
 func (f *fakeRun) Limits(choice limitChoice) error {
 	f.limits = choice
 	return f.record("limits")
+}
+
+func (f *fakeRun) Checks(edits []checkChoice) error {
+	f.checks = edits
+	return f.record("checks")
 }
 
 func (f *fakeRun) Field(field, value string) error {
@@ -2336,14 +2342,58 @@ func limitedState() tuiState {
 	return in
 }
 
+// menuStep finds the hub row that opens a step. A new section is a new row, so a
+// helper that assumed "last" would silently open the wrong screen (0346).
+func menuStep(step tuiStep) int {
+	for i, section := range tuiMenu {
+		if section.step == step {
+			return i
+		}
+	}
+	return -1
+}
+
 // toLimits opens the limits section from the hub.
 func toLimits(t *testing.T, m tuiModel) tuiModel {
 	t.Helper()
-	m.menu = len(tuiMenu) - 1
+	m.menu = menuStep(stepLimits)
 	m = advance(t, m)
 	if m.step != stepLimits {
 		t.Fatalf("step = %d, want the limits section", m.step)
 	}
+	return m
+}
+
+// checkedState is a wizard state that carries one declared check, the kind the
+// checks section edits. The severity is the project's gate and stays in the file
+// (0346).
+func checkedState() tuiState {
+	in := limitedState()
+	in.Checks = []review.Check{
+		{Name: "lint", Command: "go vet ./...", Severity: review.Critical, Remedy: "fix it"},
+	}
+	return in
+}
+
+// toChecks opens the checks section from the hub.
+func toChecks(t *testing.T, m tuiModel) tuiModel {
+	t.Helper()
+	m.menu = menuStep(stepChecks)
+	m = advance(t, m)
+	if m.step != stepChecks {
+		t.Fatalf("step = %d, want the checks section", m.step)
+	}
+	return m
+}
+
+// editCheckField edits one of an open check's fields, by its index, and keeps the
+// value. The check must already be open with its cursor on the first field.
+func editCheckField(t *testing.T, m tuiModel, field int, value string) tuiModel {
+	t.Helper()
+	m.checkField = field
+	m, _ = press(t, m, enterKey)
+	m = typeModel(t, m, value)
+	m, _ = press(t, m, enterKey)
 	return m
 }
 
@@ -2355,8 +2405,8 @@ func TestTUILimitsSectionIsInTheMenuAndRoute(t *testing.T) {
 	if view := m.View(); !strings.Contains(view, "límites") {
 		t.Fatalf("the hub does not offer the limits section:\n%s", view)
 	}
-	if got := tuiMenu[len(tuiMenu)-1].step; got != stepLimits {
-		t.Errorf("the last menu row opens step %d, want the limits step", got)
+	if got := menuStep(stepLimits); got < 0 {
+		t.Errorf("the menu has no row opening the limits step")
 	}
 	route, ok := tuiRoutes[stepLimits]
 	if !ok || route.back != stepState {
@@ -2447,5 +2497,153 @@ func TestSetLimitsRefusesAnInvalidValue(t *testing.T) {
 	}
 	if _, ok := m.limitsPending[limitKeepVerdicts]; ok {
 		t.Fatalf("a refused value was kept: %v", m.limitsPending)
+	}
+}
+
+// TestTUITheMenuOffersTheChecksSection: the fifth section is a row of the hub and
+// a row of the route table, reachable and left like the other four (0346).
+func TestTUITheMenuOffersTheChecksSection(t *testing.T) {
+	m := newTUIModel(checkedState())
+	if view := m.View(); !strings.Contains(view, "checks") {
+		t.Fatalf("the hub does not offer the checks section:\n%s", view)
+	}
+	route, ok := tuiRoutes[stepChecks]
+	if !ok || route.back != stepState {
+		t.Errorf("the checks route = %+v, want back to the menu", route)
+	}
+	opened := toChecks(t, m)
+	if back := opened.back(); back.step != stepState {
+		t.Errorf("esc from the checks section landed on step %d, want the menu", back.step)
+	}
+}
+
+// TestTheChecksSectionListsEditsAndAppliesOnlyOnApply: the section lists the
+// declared check with the severity it keeps, opens the three editable fields,
+// writes nothing before the summary, and sends the identity with the three new
+// values on apply (0346).
+func TestTheChecksSectionListsEditsAndAppliesOnlyOnApply(t *testing.T) {
+	run := &fakeRun{}
+	m := toChecks(t, newTUIModel(checkedState()))
+	m.run = run
+
+	if view := m.View(); !strings.Contains(view, "lint") || !strings.Contains(view, "CRITICAL") {
+		t.Fatalf("the section does not list the check and its severity:\n%s", view)
+	}
+	m, _ = press(t, m, enterKey) // open the check's fields
+	if !m.checkOpen {
+		t.Fatal("enter did not open the check fields")
+	}
+	view := m.View()
+	for _, field := range []string{"nombre", "comando", "remedio"} {
+		if !strings.Contains(view, field) {
+			t.Errorf("the open check does not show %q:\n%s", field, view)
+		}
+	}
+
+	m = editCheckField(t, m, checkFieldName, "vet")
+	m = editCheckField(t, m, checkFieldCommand, "go vet ./...")
+	m = editCheckField(t, m, checkFieldRemedy, "fix the vet findings")
+	if len(run.calls) != 0 {
+		t.Fatalf("editing a check wrote %v", run.calls)
+	}
+
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+	if m.step != stepApply {
+		t.Fatalf("step = %d, want the apply screen", m.step)
+	}
+	if !slices.Contains(run.calls, "checks") {
+		t.Fatalf("calls = %v, want a checks write", run.calls)
+	}
+	if len(run.checks) != 1 {
+		t.Fatalf("checks = %+v, want one edit", run.checks)
+	}
+	edit := run.checks[0]
+	if edit.Identity != "lint" || edit.Name != "vet" || edit.Command != "go vet ./..." || edit.Remedy != "fix the vet findings" {
+		t.Errorf("check edit = %+v, want the identity and the three new fields", edit)
+	}
+}
+
+// TestAnUnchangedChecksSectionWritesNothing: a section nobody opened, and a field
+// retyped with the value it already carried, add no write at all (0346).
+func TestAnUnchangedChecksSectionWritesNothing(t *testing.T) {
+	never := toSummary(t, newTUIModel(checkedState()))
+	never.run = &fakeRun{}
+	never, _ = press(t, never, enterKey)
+	if slices.Contains(never.run.(*fakeRun).calls, "checks") {
+		t.Errorf("calls = %v, want no checks write from a section nobody opened", never.run.(*fakeRun).calls)
+	}
+
+	m := toChecks(t, newTUIModel(checkedState()))
+	run := &fakeRun{}
+	m.run = run
+	m, _ = press(t, m, enterKey)                     // open the check
+	m = editCheckField(t, m, checkFieldName, "lint") // the value the file already carries
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+	if slices.Contains(run.calls, "checks") {
+		t.Errorf("calls = %v, want no checks write for the value already there", run.calls)
+	}
+}
+
+// TestSetCheckRefusesAnEmptyNameOrCommand: a field the domain cannot accept stays
+// in the editor with its refusal, and nothing is kept as a pending edit (0346).
+func TestSetCheckRefusesAnEmptyNameOrCommand(t *testing.T) {
+	m := toChecks(t, newTUIModel(checkedState()))
+	m, _ = press(t, m, enterKey) // open the check
+
+	m = editCheckField(t, m, checkFieldName, "  ")
+	if !m.editing || m.editErr == "" {
+		t.Fatalf("editing = %v editErr = %q, want the blank name refused", m.editing, m.editErr)
+	}
+	if edit, ok := m.checksPending["lint"]; ok && edit.Name == "" {
+		t.Fatalf("a blank name was kept: %+v", m.checksPending)
+	}
+
+	m = typeModel(t, m, "vet")
+	m, _ = press(t, m, enterKey)
+	m = editCheckField(t, m, checkFieldCommand, "  ")
+	if !m.editing || m.editErr == "" {
+		t.Fatalf("editing = %v editErr = %q, want the blank command refused", m.editing, m.editErr)
+	}
+}
+
+// TestChecksApplyNoticeNamesApprovalWhenTheFingerprintChanges: a new name or a
+// new command is a new list, so the apply screen says the clone must approve it
+// again with the exact command that does (0346).
+func TestChecksApplyNoticeNamesApprovalWhenTheFingerprintChanges(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		field int
+		value string
+	}{
+		{"name", checkFieldName, "vet"},
+		{"command", checkFieldCommand, "go test ./..."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := toChecks(t, newTUIModel(checkedState()))
+			m.run = &fakeRun{}
+			m, _ = press(t, m, enterKey) // open the check
+			m = editCheckField(t, m, tc.field, tc.value)
+			m.step = stepSummary
+			m, _ = press(t, m, enterKey)
+			if view := m.View(); !strings.Contains(view, "odachi review checks approve") {
+				t.Errorf("the apply notice does not name the approval command:\n%s", view)
+			}
+		})
+	}
+}
+
+// TestChecksApplyNoticeIsQuietForARemedyOnlyEdit: the remedy is advice, not part
+// of the fingerprint, so rewording it alone asks nothing of the human (0346).
+func TestChecksApplyNoticeIsQuietForARemedyOnlyEdit(t *testing.T) {
+	m := toChecks(t, newTUIModel(checkedState()))
+	m.run = &fakeRun{}
+	m, _ = press(t, m, enterKey) // open the check
+	m = editCheckField(t, m, checkFieldRemedy, "run go vet and fix what it says")
+	m.step = stepSummary
+	m, _ = press(t, m, enterKey)
+	if view := m.View(); strings.Contains(view, "odachi review checks approve") {
+		t.Errorf("a remedy-only edit asked for a new approval:\n%s", view)
 	}
 }

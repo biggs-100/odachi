@@ -8,9 +8,22 @@ import (
 	domain "github.com/biggs-100/odachi/internal/domain/review"
 )
 
+// CheckEdit is one declared tool the wizard changed. Identity is the name read
+// from the file: it locates the entry even when the human renames it, because the
+// name is both the row and the key. Name, Command and Remedy are the new values.
+// There is deliberately no Severity field: severity fixes the verdict, it is not
+// editable from the wizard, and SetConfig copies it from the file it read (0346).
+type CheckEdit struct {
+	Identity string
+	Name     string
+	Command  string
+	Remedy   string
+}
+
 // ConfigOptions is one write of the review file from the wizard: the switch, the
-// model of each lens, the model the verifier runs with and the four scalars the
-// limits section edits. A field left at its zero value keeps what the file has.
+// model of each lens, the model the verifier runs with, the four scalars the
+// limits section edits and the declared checks the checks section edits. A field
+// left at its zero value keeps what the file has.
 type ConfigOptions struct {
 	Dir    string
 	Mode   string            // empty: keep the switch
@@ -26,15 +39,18 @@ type ConfigOptions struct {
 	KeepVerdicts *int
 	KeepPrompts  *int
 	CheckTimeout *int
+	// Checks are the entries the wizard edited, keyed by Identity. Empty keeps the
+	// whole [[check]] array byte for byte (0342, 0346).
+	Checks []CheckEdit
 }
 
-// SetConfig writes the switch, the lens table and any of the four scalars the
-// caller names, preserving the fields the wizard does not touch: the schema, the
-// mode, the lenses, the verifier and the whole [[check]] array. The array is not
-// an option here on purpose: it carries the project's gate severity, and a
-// picker that could lower it would change policy without a decision (0342). The
-// file is read once, changed in memory and rendered by the same codec the mode
-// command uses, so the two verbs cannot disagree about the format.
+// SetConfig writes the switch, the lens table, any of the four scalars and any
+// declared check the caller names, preserving the fields the wizard does not
+// touch: the schema, the mode, the lenses and the verifier. A check edit may
+// change its name, command or remedy, never its severity -that fixes the verdict
+// and stays the file's decision (0342, 0346)-. The file is read once, changed in
+// memory and rendered by the same codec the mode command uses, so the two verbs
+// cannot disagree about the format.
 func SetConfig(opts ConfigOptions, files ModeFiles, codec ModeCodec) Result {
 	if opts.Dir == "" {
 		opts.Dir = "."
@@ -106,6 +122,45 @@ func SetConfig(opts ConfigOptions, files ModeFiles, codec ModeCodec) Result {
 		}
 		current.CheckTimeout = timeout
 	}
+	// The checks section may rename a tool, fix its command or reword its remedy,
+	// but not change the severity that fixes the verdict. Each edit names the entry
+	// it replaces by the identity read from the file, so a rename still finds its
+	// row; the severity is copied from the file, never from the edit, which carries
+	// no severity field at all. The domain owns the rule for each edited value, so
+	// a blank name, command or remedy blocks before any byte reaches the disk
+	// (0346).
+	// Resolve every identity against the list as read, never against a list being
+	// mutated: two edits in one visit may rename a row onto another row's name, and
+	// an edit naming the original second row must still land on that row. Building
+	// the result apart keeps a failed normalization from half-writing the array
+	// (0346, reliability review).
+	original := current.Checks
+	edited := make([]domain.Check, len(original))
+	copy(edited, original)
+	for _, edit := range opts.Checks {
+		found := -1
+		for i := range original {
+			if original[i].Name == edit.Identity {
+				found = i
+				break
+			}
+		}
+		if found < 0 {
+			return modeBlocked(fmt.Errorf("the check %q the wizard edited is not declared in %s", edit.Identity, domain.ModePath))
+		}
+		next := domain.Check{
+			Name:     edit.Name,
+			Command:  edit.Command,
+			Severity: original[found].Severity, // the verdict's decision stays the file's
+			Remedy:   edit.Remedy,
+		}
+		normalized, err := domain.NormalizeChecks([]domain.Check{next})
+		if err != nil {
+			return modeBlocked(err)
+		}
+		edited[found] = normalized[0]
+	}
+	current.Checks = edited
 
 	data, err := codec.Render(current)
 	if err != nil {

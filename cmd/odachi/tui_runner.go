@@ -129,6 +129,32 @@ func (r tuiRunner) Limits(choice limitChoice) error {
 	return nil
 }
 
+// Checks writes the checks the wizard edited through the same review app the
+// other sections use. SetConfig locates each entry by the identity read from the
+// file, keeps the severity the project declared and refuses a value the domain
+// cannot accept, so the wizard is a caller of the use case, never a second
+// writer. A name or command change is a new fingerprint and needs a fresh
+// `odachi review checks approve`; a remedy-only edit does not (0346).
+func (r tuiRunner) Checks(edits []checkChoice) error {
+	checks := make([]appreview.CheckEdit, 0, len(edits))
+	for _, edit := range edits {
+		checks = append(checks, appreview.CheckEdit{
+			Identity: edit.Identity,
+			Name:     edit.Name,
+			Command:  edit.Command,
+			Remedy:   edit.Remedy,
+		})
+	}
+	result := appreview.SetConfig(appreview.ConfigOptions{
+		Dir:    r.dir,
+		Checks: checks,
+	}, disk(r.dir), reviewModeCodec{})
+	if result.Code != 0 {
+		return errors.New(result.Message)
+	}
+	return nil
+}
+
 // Field writes one axis of the profile through the app that owns the file, the
 // same way Models writes the lens table: the wizard is a caller of the use case,
 // never a second writer (0336).

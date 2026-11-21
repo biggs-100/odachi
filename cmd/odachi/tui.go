@@ -52,6 +52,11 @@ type tuiState struct {
 	KeepVerdicts int
 	KeepPrompts  int
 	CheckTimeout int
+	// Checks is the declared tools odd/review.toml carries, read where the file
+	// was read so the checks section edits the list the project owns. The severity
+	// each one carries is shown but never offered for edit: it fixes the verdict
+	// and stays the file's decision (0346).
+	Checks []review.Check
 }
 
 // runTUI opens the installation and configuration wizard. It refuses before the
@@ -140,6 +145,7 @@ func detectTUIState(dir string) (tuiState, error) {
 	state.KeepVerdicts = config.KeepVerdicts
 	state.KeepPrompts = config.KeepPrompts
 	state.CheckTimeout = config.CheckTimeout
+	state.Checks = config.Checks
 
 	// The clients' models live in each client's own file, so the section reads
 	// them where the verbs write them: one reader beside the writers, never a
@@ -182,9 +188,12 @@ const (
 	stepModels
 	// stepLimits is the fourth section: the four scalars of odd/review.toml that
 	// decide the prompt budget, the two retention lifetimes and the check
-	// ceiling. It never offers the [[check]] array, which is the gate's severity
-	// and stays the file's decision (0342).
+	// ceiling (0342).
 	stepLimits
+	// stepChecks is the fifth section: the declared tools of odd/review.toml. A
+	// person can edit each one's name, command and remedy, but not its severity,
+	// which fixes the verdict and stays the file's decision (0346).
+	stepChecks
 )
 
 // The options each single-choice screen offers, in the order a human reads them.
@@ -197,12 +206,13 @@ var (
 	// tuiMenu is the hub: the sections the first screen offers, each with the
 	// screen it opens. The install section opens on the hub itself and walks the
 	// table from there; the others are screens whose route comes back here
-	// (0336, 0337, 0342).
+	// (0336, 0337, 0342, 0346).
 	tuiMenu = []tuiSection{
 		{label: "instalar y configurar", step: stepState},
 		{label: "perfil", step: stepProfile},
 		{label: "modelos", step: stepModels},
 		{label: "límites", step: stepLimits},
+		{label: "checks", step: stepChecks},
 	}
 
 	// tuiScopes is the choice a folder that is not a project had to be given: a
@@ -232,7 +242,7 @@ const modelRefusal = "el modelo no es un identificador: usa provider/name#varian
 const clientModelRefusal = "un cliente no se queda sin modelo desde aquí: escribe uno, o borra la clave model de su archivo"
 
 // tuiSteps is every screen the wizard has, in the order the table walks them.
-var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile, stepModels, stepLimits}
+var tuiSteps = []tuiStep{stepState, stepScope, stepClients, stepSkills, stepVoice, stepReview, stepSummary, stepApply, stepProfile, stepModels, stepLimits, stepChecks}
 
 // tuiRoute is where one screen goes: forward with enter, backward with esc, and
 // whether the screen exists for this run at all. The table is the only place
@@ -263,6 +273,8 @@ var tuiRoutes = map[tuiStep]tuiRoute{
 	stepModels: {forward: stepModels, back: stepState, when: always},
 	// The limits section is the fourth screen of that shape (0342).
 	stepLimits: {forward: stepLimits, back: stepState, when: always},
+	// The checks section is the fifth, and esc is the menu (0346).
+	stepChecks: {forward: stepChecks, back: stepState, when: always},
 }
 
 // always is the row of a screen that exists for every run.
@@ -303,8 +315,12 @@ type tuiRun interface {
 	// Catalog answers the models the host serves, and false when it cannot say.
 	Catalog() ([]string, bool)
 	// Limits writes the four scalars of the limits section. Only the fields the
-	// human changed are set; the checks array stays the file's decision (0342).
+	// human changed are set (0342).
 	Limits(choice limitChoice) error
+	// Checks writes the declared checks the human edited. Each edit carries the
+	// identity read from the file and the three editable fields; severity is not
+	// among them and the app keeps the file's (0346).
+	Checks(edits []checkChoice) error
 }
 
 // limitChoice is one write of the limits section: a pointer per scalar, nil for
@@ -315,6 +331,41 @@ type limitChoice struct {
 	KeepVerdicts *int
 	KeepPrompts  *int
 	CheckTimeout *int
+}
+
+// checkChoice is one check the wizard edited. Identity is the name read from the
+// file, so a rename still locates its row; the other three are the new values.
+// There is no severity field on purpose: a person cannot change the verdict from
+// here (0346).
+type checkChoice struct {
+	Identity string
+	Name     string
+	Command  string
+	Remedy   string
+}
+
+// The three editable fields of a check, in the order the editor walks them. The
+// severity is deliberately absent from this list: it is shown on the row but no
+// key opens it (0346).
+const (
+	checkFieldName = iota
+	checkFieldCommand
+	checkFieldRemedy
+	checkFieldCount
+)
+
+// checkFieldLabel is the name a person reads for an editable field. The labels
+// fit the row's gutter the same way the other nested lists do (0346).
+func checkFieldLabel(field int) string {
+	switch field {
+	case checkFieldName:
+		return "nombre"
+	case checkFieldCommand:
+		return "comando"
+	case checkFieldRemedy:
+		return "remedio"
+	}
+	return ""
 }
 
 // The four rows of the limits section, keyed by the TOML key they write. The
@@ -411,6 +462,15 @@ type tuiModel struct {
 	// changed, which is what keeps the write (and the checks array) alone (0342).
 	limitsCursor  int
 	limitsPending map[string]int
+	// The checks section: which check row the cursor is on, whether its three
+	// fields are open, which field owns the buffer, and the edited values keyed
+	// by the identity read from the file. A check that was never opened has no
+	// pending entry, which is what keeps the write empty (0346).
+	checksCursor  int
+	checkOpen     bool
+	checkField    int
+	checksPending map[string]checkChoice
+	checkNotice   string
 	// The host's catalog and the picker that shows it: the state of the one probe
 	// the run makes, the entries it answered, whether the list is open, and which
 	// entry its cursor is on. Both screens that edit a model -the review lens table
@@ -452,6 +512,7 @@ func newTUIModel(state tuiState) tuiModel {
 		voice:         indexOf(tuiVoices, state.Voice),
 		pending:       map[string]string{},
 		limitsPending: map[string]int{},
+		checksPending: map[string]checkChoice{},
 		edited:        map[string]string{},
 	}
 }
@@ -494,6 +555,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.step == stepLimits {
 			return m.limitsKey(msg)
+		}
+		if m.step == stepChecks {
+			return m.checksKey(msg)
 		}
 		switch msg.String() {
 		case "q":
@@ -799,6 +863,9 @@ func (m tuiModel) editKey(msg tea.KeyMsg) tuiModel {
 		}
 		if m.step == stepLimits {
 			return m.keepLimit()
+		}
+		if m.step == stepChecks {
+			return m.keepCheckField()
 		}
 		return m.keepLens(m.buffer)
 	case tea.KeyBackspace:
@@ -1184,6 +1251,204 @@ func (m tuiModel) limitsChoice() *limitChoice {
 	return &choice
 }
 
+// detectedCheck is the check the cursor is on as the file declared it. The
+// identity is its name: it stays the key even after the human renames the row
+// (0346).
+func (m tuiModel) detectedCheck() review.Check {
+	return m.state.Checks[m.checksIndex()]
+}
+
+// checksIndex is the row the cursor is on, clamped to the declared checks.
+func (m tuiModel) checksIndex() int {
+	return clamp(m.checksCursor, len(m.state.Checks))
+}
+
+// checkEdit is the pending edit of a check. Until a field is kept, the values
+// shown are the file's; keeping one records all three in this entry so the next
+// field opens on the same edit. The identity never moves (0346).
+func (m tuiModel) checkEdit(detected review.Check) checkChoice {
+	edit, ok := m.checksPending[detected.Name]
+	if !ok {
+		edit = checkChoice{
+			Identity: detected.Name,
+			Name:     detected.Name,
+			Command:  detected.Command,
+			Remedy:   detected.Remedy,
+		}
+	}
+	return edit
+}
+
+// checkFieldValue is the value a field shows in the nested list: the pending
+// edit once one was kept, otherwise the value the file declared (0346).
+func (m tuiModel) checkFieldValue(field int) string {
+	edit := m.checkEdit(m.detectedCheck())
+	switch field {
+	case checkFieldName:
+		return edit.Name
+	case checkFieldCommand:
+		return edit.Command
+	case checkFieldRemedy:
+		return edit.Remedy
+	}
+	return ""
+}
+
+// keepCheckField records the value typed into an open check's field. The domain
+// owns the rule -the same NormalizeChecks a hand-written file obeys- so a blank
+// name, command or remedy stays in the editor with the reason and no pending
+// edit is written. Severity is copied from the file, never offered to the editor
+// (0346).
+func (m tuiModel) keepCheckField() tuiModel {
+	detected := m.detectedCheck()
+	edit := m.checkEdit(detected)
+	value := strings.TrimSpace(m.buffer)
+	switch m.checkField {
+	case checkFieldName:
+		edit.Name = value
+	case checkFieldCommand:
+		edit.Command = value
+	case checkFieldRemedy:
+		edit.Remedy = value
+	}
+	candidate := review.Check{
+		Name:     edit.Name,
+		Command:  edit.Command,
+		Severity: detected.Severity,
+		Remedy:   edit.Remedy,
+	}
+	if _, err := review.NormalizeChecks([]review.Check{candidate}); err != nil {
+		m.editErr = oneLine(err.Error())
+		return m
+	}
+	if m.checksPending == nil {
+		m.checksPending = map[string]checkChoice{}
+	}
+	m.checksPending[detected.Name] = edit
+	m.editing = false
+	m.buffer = ""
+	m.editErr = ""
+	return m
+}
+
+// viewChecks renders one row per declared check, with the severity it keeps as a
+// read-only value beside the name. Opening a row reveals its three editable
+// fields as a nested list; the help line follows whichever control owns the keys
+// (0346).
+func (m tuiModel) viewChecks() string {
+	var out strings.Builder
+	out.WriteString(m.header("checks"))
+	rows := m.state.Checks
+	if len(rows) == 0 {
+		out.WriteString(tuiLook.mutedLine("no hay checks declarados en odd/review.toml"))
+	} else {
+		cursor := m.checksIndex()
+		out.WriteString(tuiLook.windowLines(windowFor(cursor, len(rows), checksRows), func(i int) string {
+			check := rows[i]
+			name := check.Name
+			if edit, ok := m.checksPending[check.Name]; ok {
+				name = edit.Name
+			}
+			return tuiLook.rowValues(i == cursor && !m.checkOpen, name, "severity "+string(check.Severity))
+		}))
+	}
+	if m.checkOpen {
+		out.WriteString(tuiLook.windowLines(windowFor(m.checkField, checkFieldCount, checkFieldCount), func(i int) string {
+			value := m.checkFieldValue(i)
+			if m.editing && i == m.checkField {
+				value = m.buffer + "_"
+			}
+			return tuiLook.subRow(i == m.checkField && !m.editing, checkFieldLabel(i)+": "+value)
+		}))
+	}
+	if m.editErr != "" {
+		out.WriteString("\n")
+		out.WriteString(tuiLook.failureLine(m.editErr))
+	}
+	out.WriteString(tuiLook.helpLine(m.helpKeys("enter editar · esc volver · se aplican en el resumen")))
+	return out.String()
+}
+
+// checksKey drives the section: the check rows, the three fields of an open one
+// and the buffer of the field being edited. Esc closes the innermost control
+// first; only esc on the rows leaves the section, with the file untouched until
+// the apply (0346).
+func (m tuiModel) checksKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "q" {
+		return m, tea.Quit
+	}
+	if len(m.state.Checks) == 0 {
+		if msg.String() == "esc" {
+			m.step = m.backStep()
+		}
+		return m, nil
+	}
+	if m.checkOpen {
+		switch msg.String() {
+		case "esc":
+			m.checkOpen = false
+			m.checkField = 0
+			m.editErr = ""
+		case "up", "k":
+			m.checkField = clamp(m.checkField-1, checkFieldCount)
+		case "down", "j":
+			m.checkField = clamp(m.checkField+1, checkFieldCount)
+		case "enter":
+			// A field is replaced, not appended to: the row already showed its
+			// value, so a fresh buffer makes one short edit enough to change it.
+			m.editing = true
+			m.buffer = ""
+			m.editErr = ""
+		}
+		return m, nil
+	}
+	switch msg.String() {
+	case "esc":
+		m.step = m.backStep()
+	case "up", "k":
+		m.checksCursor = clamp(m.checksCursor-1, len(m.state.Checks))
+	case "down", "j":
+		m.checksCursor = clamp(m.checksCursor+1, len(m.state.Checks))
+	case "enter":
+		// The first field opens with the file's value; a pending entry appears
+		// only once a field is actually kept (0346).
+		m.checkOpen = true
+		m.checkField = 0
+		m.editErr = ""
+	}
+	return m, nil
+}
+
+// checksChoice is the write the apply sends: one edit per declared check whose
+// name, command or remedy differs from what the file carried. A section opened
+// and left alone, or a field retyped with its own value, sends nothing (0346).
+func (m tuiModel) checksChoice() []checkChoice {
+	var edits []checkChoice
+	for _, detected := range m.state.Checks {
+		edit, ok := m.checksPending[detected.Name]
+		if !ok || edit == (checkChoice{Identity: detected.Name, Name: detected.Name, Command: detected.Command, Remedy: detected.Remedy}) {
+			continue
+		}
+		edits = append(edits, edit)
+	}
+	return edits
+}
+
+// checksNeedApproval reports whether any edit changed a field inside the
+// fingerprint -the name or the command-. The remedy is advice and is left out of
+// the hash, so rewording it alone asks nothing of the human (0346).
+func (m tuiModel) checksNeedApproval(edits []checkChoice) bool {
+	for _, edit := range edits {
+		for _, detected := range m.state.Checks {
+			if detected.Name == edit.Identity &&
+				(edit.Name != detected.Name || edit.Command != detected.Command) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // move changes the cursor of the screen the wizard is on. The detection and the
 // summary are not choices.
 func (m tuiModel) move(delta int) tuiModel {
@@ -1216,6 +1481,8 @@ func (m tuiModel) helpKeys(section string) string {
 		return "↑↓ elegir · enter cambiar · esc volver"
 	case m.editing:
 		return "escribir · enter cambiar · esc volver"
+	case m.checkOpen:
+		return "↑↓ campo · enter editar · esc cerrar"
 	default:
 		return section
 	}
@@ -1245,6 +1512,8 @@ func (m tuiModel) View() string {
 		return m.viewModels()
 	case stepLimits:
 		return m.viewLimits()
+	case stepChecks:
+		return m.viewChecks()
 	default:
 		return m.viewState()
 	}
@@ -1440,6 +1709,9 @@ func (m tuiModel) viewApply() string {
 			out.WriteString(tuiLook.successLine(m.result.Message))
 		}
 	}
+	if m.checkNotice != "" {
+		out.WriteString(tuiLook.warningLine(m.checkNotice))
+	}
 	out.WriteString(tuiLook.helpLine("q salir"))
 	return out.String()
 }
@@ -1511,6 +1783,30 @@ func (m tuiModel) apply() (tea.Model, tea.Cmd) {
 				step.Status = configure.Failed
 				m.result.Code = configure.CodeBlocked
 				m.result.Message = step.Label + ": " + err.Error()
+			}
+			m.result.Steps = append(m.result.Steps, step)
+		}
+	}
+	// The checks section writes through the same review app the other sections
+	// use: SetConfig changes only the named entries and keeps each severity the
+	// file declared. A name or command is part of the approval fingerprint, so the
+	// apply says the clone must approve the list again; a remedy-only edit stays
+	// quiet (0346).
+	if m.result.Code == configure.CodeOK {
+		edits := m.checksChoice()
+		if len(edits) > 0 {
+			err := m.run.Checks(edits)
+			step := configure.Step{
+				Operation: configure.Operation{ID: "checks", Label: "editar los checks de la revisión"},
+				Status:    configure.Done,
+				Err:       err,
+			}
+			if err != nil {
+				step.Status = configure.Failed
+				m.result.Code = configure.CodeBlocked
+				m.result.Message = step.Label + ": " + err.Error()
+			} else if m.checksNeedApproval(edits) {
+				m.checkNotice = "nombre o comando cambiados: vuelve a ejecutar odachi review checks approve"
 			}
 			m.result.Steps = append(m.result.Steps, step)
 		}
