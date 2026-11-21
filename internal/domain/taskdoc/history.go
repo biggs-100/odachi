@@ -31,14 +31,31 @@ type Event struct {
 	Line              int
 	Kind              string
 	ID, Text, Because string
+	// Options is the closed answer domain a PREGUNTA declares. It is empty on
+	// every other record and on a question that declares no options: the suffix
+	// is optional so a line written before options existed still parses (0345).
+	Options []string
 }
 
 // Question is one open vision question: the agent asked it, the human has not
-// answered it yet.
-type Question struct{ ID, Text string }
+// answered it yet. Options is empty when the question accepts any answer.
+type Question struct {
+	ID, Text string
+	Options  []string
+}
 
 // The history grammar, in one place: a line number, the three record shapes,
 // and the optional reason a craft decision carries.
+//
+// A PREGUNTA may declare a closed answer domain as an optional suffix after the
+// quoted question text:
+//
+//	L7 · PREGUNTA P1 · "¿Los turnos se pueden cancelar?" · ["sí" | "no"]
+//
+// The suffix is a ` · `, then a bracketed, pipe-separated list of quoted
+// options. It is invisible when the question declares none, so a PREGUNTA
+// written before options existed keeps its exact bytes and Parse(Render(d))
+// stays the identity (0345).
 const (
 	recordQuestion = "PREGUNTA "
 	recordAnswer   = "VOS "
@@ -58,6 +75,12 @@ var (
 	// about a requirement, and anything else is prose the human wrote. A human
 	// typing `CAMBIO r1` by hand means R1, so the case does not matter.
 	requirementIDPattern = regexp.MustCompile(`(?i)^r\d+$`)
+
+	// questionOptionsPattern is the optional PREGUNTA suffix: a ` · ` then a
+	// bracketed list of quoted options at the very end of the line. Anchoring on
+	// the trailing bracket keeps a question whose text merely contains `·` or
+	// `[` parsing as text (0345).
+	questionOptionsPattern = regexp.MustCompile(`\s*·\s*\[(.*)\]$`)
 )
 
 // Events returns the history as records, in file order. A malformed line is a
@@ -129,7 +152,7 @@ func (d TaskDoc) OpenQuestions() []Question {
 		if event.Kind != KindQuestion || answered[event.ID] {
 			continue
 		}
-		open = append(open, Question{ID: event.ID, Text: event.Text})
+		open = append(open, Question{ID: event.ID, Text: event.Text, Options: event.Options})
 	}
 	return open
 }
@@ -145,6 +168,7 @@ func (d TaskDoc) CloseQuestion(id, answer string) (TaskDoc, error) {
 	}
 
 	asked := false
+	var options []string
 	for _, event := range d.Events() {
 		if event.ID != normalized || (event.Kind != KindQuestion && event.Kind != KindAnswer) {
 			continue
@@ -153,9 +177,16 @@ func (d TaskDoc) CloseQuestion(id, answer string) (TaskDoc, error) {
 			return d, fmt.Errorf("question %s is already answered; to open another one run odachi ask \"<question>\"", normalized)
 		}
 		asked = true
+		options = event.Options
 	}
 	if !asked {
 		return d, fmt.Errorf("this task doc has no question %s; open it with odachi ask \"<question>\"", normalized)
+	}
+	// A question that declares no options keeps the old verbatim behavior. One
+	// that does accepts only an option as a whole answer; a longer word merely
+	// containing an option ("así" for "sí") is refused, with no mutation (0345).
+	if len(options) > 0 && !answerAllowed(answer, options) {
+		return d, fmt.Errorf("question %s only accepts one of these answers: %s", normalized, strings.Join(options, ", "))
 	}
 
 	line := fmt.Sprintf("L%d · VOS %s · %s", d.NextLine(), normalized, quoted(answer))
@@ -205,13 +236,68 @@ func parseEvent(line string) Event {
 	return event
 }
 
-// parseQuestion reads "PREGUNTA P1 · "text"" and "VOS P1 · "text"".
+// parseQuestion reads `PREGUNTA P1 · "text"` and `VOS P1 · "text"`. A question
+// may carry the optional options suffix documented above; an answer never does.
 func parseQuestion(kind, body, record string) (Event, bool) {
-	id, text, ok := cut(strings.TrimSpace(strings.TrimPrefix(body, record)))
+	id, rest, ok := cut(strings.TrimSpace(strings.TrimPrefix(body, record)))
 	if !ok || !questionIDPattern.MatchString(id) {
 		return Event{}, false
 	}
-	return Event{Kind: kind, ID: id, Text: unquote(text)}, true
+
+	event := Event{Kind: kind, ID: id}
+	if kind == KindQuestion {
+		if loc := questionOptionsPattern.FindStringSubmatchIndex(rest); loc != nil {
+			event.Options = parseOptions(rest[loc[2]:loc[3]])
+			rest = strings.TrimSpace(rest[:loc[0]])
+		}
+	}
+	event.Text = unquote(rest)
+	return event, true
+}
+
+// parseOptions reads the bracketed, pipe-separated options of a PREGUNTA suffix
+// into their declared order. A blank item is dropped rather than becoming an
+// option nobody can answer with.
+func parseOptions(raw string) []string {
+	var options []string
+	for _, part := range strings.Split(raw, "|") {
+		if option := unquote(part); option != "" {
+			options = append(options, option)
+		}
+	}
+	return options
+}
+
+// RenderQuestionOptions writes the optional options suffix of a PREGUNTA line.
+// It returns the empty string when the question declares none, so a question
+// written without options renders byte for byte as it always did (0345).
+func RenderQuestionOptions(options []string) string {
+	if len(options) == 0 {
+		return ""
+	}
+	quotedOptions := make([]string, 0, len(options))
+	for _, option := range options {
+		quotedOptions = append(quotedOptions, quoted(option))
+	}
+	return sep + "[" + strings.Join(quotedOptions, " | ") + "]"
+}
+
+// answerAllowed reports whether the answer names one of the declared options as
+// a whole answer. A longer word that only contains an option ("así" for "sí")
+// is not a match, so a substring test would accept what must be refused (0345).
+func answerAllowed(answer string, options []string) bool {
+	normalized := normalizeOption(answer)
+	for _, option := range options {
+		if normalizeOption(option) == normalized {
+			return true
+		}
+	}
+	return false
+}
+
+// normalizeOption lowercases and collapses whitespace so " Sí " and "sí" agree.
+func normalizeOption(value string) string {
+	return strings.ToLower(strings.Join(strings.Fields(value), " "))
 }
 
 // parseCraft reads `"decisión" (porque razón)`. The reason is optional: a craft

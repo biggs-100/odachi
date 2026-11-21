@@ -345,3 +345,81 @@ func TestARecordKeepsTheWordsWhateverTheyCarry(t *testing.T) {
 		}
 	}
 }
+
+// TestQuestionOptionsSurviveTheRoundTrip: a declared option set is read back
+// from the PREGUNTA line into the open question, and the whole document renders
+// and parses to the same bytes. A line written before options existed still
+// parses and carries no options (0345).
+func TestQuestionOptionsSurviveTheRoundTrip(t *testing.T) {
+	line := `L1 · PREGUNTA P1 · "¿Los turnos se pueden cancelar?" · ["sí" | "no"]`
+	doc := withHistory(line)
+
+	open := doc.OpenQuestions()
+	if len(open) != 1 {
+		t.Fatalf("OpenQuestions() = %+v, want one question", open)
+	}
+	want := []string{"sí", "no"}
+	if !reflect.DeepEqual(open[0].Options, want) {
+		t.Errorf("Options = %q, want %q", open[0].Options, want)
+	}
+	if open[0].Text != "¿Los turnos se pueden cancelar?" {
+		t.Errorf("Text = %q, want the question text without the options suffix", open[0].Text)
+	}
+	if got := taskdoc.Parse(doc.Render()); !reflect.DeepEqual(got, doc) {
+		t.Errorf("Parse(Render(d)) != d for a question that declares options")
+	}
+
+	old := withHistory(`L1 · PREGUNTA P1 · "¿Los turnos se pueden cancelar?"`)
+	oldOpen := old.OpenQuestions()
+	if len(oldOpen) != 1 {
+		t.Fatalf("an old PREGUNTA line did not parse: %+v", oldOpen)
+	}
+	if len(oldOpen[0].Options) != 0 {
+		t.Errorf("old line Options = %q, want none", oldOpen[0].Options)
+	}
+}
+
+// TestCloseQuestionValidatesAgainstDeclaredOptions: an answer must be one of
+// the options as a whole word; a longer word that merely contains an option is
+// refused, and the refusal names every option without changing the log (0345).
+func TestCloseQuestionValidatesAgainstDeclaredOptions(t *testing.T) {
+	doc := withHistory(`L1 · PREGUNTA P1 · "¿Sí o no?" · ["sí" | "no"]`)
+
+	for _, outside := range []string{"quizá", "así"} {
+		refused, err := doc.CloseQuestion("P1", outside)
+		if err == nil {
+			t.Fatalf("CloseQuestion(%q) = nil error, want a refusal", outside)
+		}
+		for _, option := range []string{"sí", "no"} {
+			if !strings.Contains(err.Error(), option) {
+				t.Errorf("%q: error %q does not name option %q", outside, err, option)
+			}
+		}
+		if !reflect.DeepEqual(refused.History, doc.History) {
+			t.Errorf("%q: a refused answer changed the log: %v", outside, refused.History)
+		}
+	}
+
+	closed, err := doc.CloseQuestion("P1", "sí")
+	if err != nil {
+		t.Fatalf("a whole-word match was refused: %v", err)
+	}
+	if got := closed.History[len(closed.History)-1]; got != `L2 · VOS P1 · "sí"` {
+		t.Errorf("appended line = %q, want the verbatim option", got)
+	}
+}
+
+// TestCloseQuestionWithoutOptionsKeepsTheVerbatimAnswer: a question that
+// declares no options keeps the old behavior, so an old task doc still accepts
+// any answer as written (0345).
+func TestCloseQuestionWithoutOptionsKeepsTheVerbatimAnswer(t *testing.T) {
+	doc := withHistory(`L1 · PREGUNTA P1 · "¿Qué tal?"`)
+
+	closed, err := doc.CloseQuestion("P1", "cualquier respuesta libre")
+	if err != nil {
+		t.Fatalf("an option-less question refused a free answer: %v", err)
+	}
+	if got := closed.History[len(closed.History)-1]; got != `L2 · VOS P1 · "cualquier respuesta libre"` {
+		t.Errorf("appended line = %q, want the answer verbatim", got)
+	}
+}

@@ -165,3 +165,33 @@ func TestAskChangeReopensTheStepThatCitedTheRequirementEndToEnd(t *testing.T) {
 		t.Errorf("R1 = %q, want the vision untouched", doc.Requirements[0].Text)
 	}
 }
+
+// TestAskOptionFlagDeclaresOptionsAndRefusalNamesThem is the CLI contract for
+// 0345: a repeatable --option writes the bracketed suffix, and an answer
+// outside that set is blocked with every option in the message.
+func TestAskOptionFlagDeclaresOptionsAndRefusalNamesThem(t *testing.T) {
+	t.Parallel()
+	dir, taskPath := startedProject(t)
+
+	code, stdout, stderr := runDir(t, dir, []string{"ask", "¿Sí o no?", "--option", "sí", "--option", "no"}, "")
+	if code != 0 {
+		t.Fatalf("ask --option: exit %d, stdout=%s stderr=%s", code, stdout, stderr)
+	}
+	want := `L2 · PREGUNTA P1 · "¿Sí o no?" · ["sí" | "no"]`
+	if got := historyOf(t, dir, taskPath)[1]; got != want {
+		t.Fatalf("appended line = %q, want %q", got, want)
+	}
+
+	code, _, stderr = runDir(t, dir, []string{"ask", "--answer", "quizá"}, "")
+	if code != 1 {
+		t.Fatalf("an outside answer: exit %d, want 1 (stderr=%s)", code, stderr)
+	}
+	for _, option := range []string{"sí", "no"} {
+		if !strings.Contains(stderr, option) {
+			t.Errorf("stderr %q does not name option %q", stderr, option)
+		}
+	}
+	if got := len(historyOf(t, dir, taskPath)); got != 2 {
+		t.Errorf("a refused answer grew history to %d lines, want 2", got)
+	}
+}
