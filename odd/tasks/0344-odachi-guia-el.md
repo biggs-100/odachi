@@ -8,7 +8,7 @@ R1 · "odachi guia el cierre para que el proof se corra una sola vez y el check 
 ## Done when
 
 ## Steps
-- [ ] T1 · odachi guia el cierre para que el proof se corra una sola vez y el check no sugiera reutilizar uno viejo   R1
+- [x] T1 · odachi guia el cierre para que el proof se corra una sola vez y el check no sugiera reutilizar uno viejo   R1 · tree:2571169506316cf22eece1d84eb094b7a1832a2a
 
 ## History
 L1 · "odachi guia el cierre para que el proof se corra una sola vez y el check no sugiera reutilizar uno viejo"
