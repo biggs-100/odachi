@@ -62,6 +62,12 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
   feature, a close that stages its doc and names the next command, a stale hint that
   names `--run` when the hook saw no `--run`, and no worker rerunning packages the proof
   already covers.
+- **Answer a question before acting on it.** The human reported that sometimes a
+  question in their message was ignored and the agent went straight to writing code.
+  `AGENTS.md` now says it explicitly: when the message contains a question, answer it in
+  the chat before any tool call or file write, and treat the answer as information, not
+  as permission to act. The tool cannot enforce this -it never sees the chat message-
+  so it depends on the auditor checking that the answer came first.
 - **A reviewer's refusal can carry a real finding.** 0344's first review was refused
   because the declaration named four paths outside the candidate. Inside that refused
   file was the exact defect in the fix. Do not edit a verdict to pass a gate; fix the
