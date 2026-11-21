@@ -408,6 +408,10 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			// spent on a tree nobody can finish is a verdict that cannot land, and
 			// the close names the number it measured instead (0331).
 			state.VerificationLines = r.verifierLines(feature, owed)
+			// The human's accepted overage lives in the task document, next to the
+			// base and the waivers: read here, the slice stops refusing the size and
+			// the record the verifier signs is what the close still owes (0340).
+			state.SliceAccepted, state.SliceReason = feature.Doc.SliceAccepted, feature.Doc.SliceReason
 			state.VerificationMissing, state.VerificationRefuted, state.VerificationRecordFound = r.verification(asking, owed)
 		}
 	}

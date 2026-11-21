@@ -245,7 +245,7 @@ func buildEvaluationCases() []evaluationCase {
 			state:   verificationSlice,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonVerifySlice,
-			message: "the candidate is 401 authored lines and the limit for a close that owes a verifier is 400: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own",
+			message: "the candidate is 401 authored lines and the limit for a close that owes a verifier is 400: the verifier would be handed a tree it cannot finish; the rest of the work belongs to a feature of its own, or the human accepts the overage with \"Slice: <lines> - <reason>\" in the task doc",
 			next:    "odachi start",
 		},
 		{
@@ -604,6 +604,68 @@ func TestTheSliceIsInclusive(t *testing.T) {
 	}
 	if got.Next != "odachi start" {
 		t.Errorf("Next = %q, want the rest of the work started as a feature of its own", got.Next)
+	}
+}
+
+// TestAnAcceptedOverageNamesTheNumberTheDocumentAccepts: the human's decision to
+// let this close carry more than the slice is read from the task document, and the
+// gate stops answering with the size it refuses. What the close still owes is the
+// record the verifier signs, and the row that asks for it names the number the
+// human accepted and the sentence that pays for it (0340).
+func TestAnAcceptedOverageNamesTheNumberTheDocumentAccepts(t *testing.T) {
+	over := ready()
+	over.VerificationLines = gate.SliceLines + 38
+	over.VerificationMissing = []string{"contract"}
+	over.SliceAccepted = gate.SliceLines + 38
+	over.SliceReason = "the ADR and the tests are the change"
+
+	got := gate.Evaluate(over)
+
+	if got.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("an accepted overage answered %q, want %q: the size is settled and the record is what is owed (%s)", got.Reason, gate.ReasonVerifyMissing, got.Message)
+	}
+	if !strings.Contains(got.Message, strconv.Itoa(gate.SliceLines+38)) {
+		t.Errorf("the row does not name the number the human accepted: %s", got.Message)
+	}
+	if !strings.Contains(got.Message, "the ADR and the tests are the change") {
+		t.Errorf("the row does not name the reason that paid for it: %s", got.Message)
+	}
+}
+
+// TestAnAcceptanceBelowTheCandidateStillRefuses: an acceptance is a number, and a
+// number below what the tree authors accepts nothing. The refusal names both, so a
+// reader sees which one moved (0340).
+func TestAnAcceptanceBelowTheCandidateStillRefuses(t *testing.T) {
+	over := ready()
+	over.VerificationLines = gate.SliceLines + 38
+	over.VerificationMissing = []string{"contract"}
+	over.SliceAccepted = gate.SliceLines + 18
+	over.SliceReason = "the ADR and the tests are the change"
+
+	got := gate.Evaluate(over)
+
+	if got.Reason != gate.ReasonVerifySlice {
+		t.Fatalf("an acceptance below the candidate answered %q, want the slice: the decision does not reach this tree (%s)", got.Reason, got.Message)
+	}
+	for _, want := range []string{strconv.Itoa(gate.SliceLines + 38), strconv.Itoa(gate.SliceLines + 18)} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, got.Message)
+		}
+	}
+}
+
+// TestAnAcceptanceWithoutAReasonStillRefuses: the reason is what makes the decision
+// legible to the person who reads the close, so a covered number with no reason
+// leaves the slice standing. Otherwise the line would be written by whoever wanted
+// through, and the limit would die of a silent sentence (0340).
+func TestAnAcceptanceWithoutAReasonStillRefuses(t *testing.T) {
+	over := ready()
+	over.VerificationLines = gate.SliceLines + 38
+	over.VerificationMissing = []string{"contract"}
+	over.SliceAccepted = gate.SliceLines + 38
+
+	if got := gate.Evaluate(over); got.Reason != gate.ReasonVerifySlice {
+		t.Fatalf("an acceptance with no reason answered %q, want the slice (%s)", got.Reason, got.Message)
 	}
 }
 
