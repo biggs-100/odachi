@@ -275,6 +275,7 @@ func runAsk(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.Because, "because", "", "why the agent took that decision (required with --craft)")
 	flags.StringVar(&opts.Change, "change", "", "a requirement the human changed, in their words")
 	flags.StringVar(&opts.Requirement, "req", "", "R<n> the change names (required with --change)")
+	flags.Var((*stringList)(&opts.Options), "option", "an allowed answer for the question (repeatable)")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 
 	// The documented shape starts with the question, so a leading argument is

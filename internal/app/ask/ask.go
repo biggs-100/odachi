@@ -33,8 +33,10 @@ const (
 type Options struct {
 	Dir string
 
-	// Question is the text of a new open question.
+	// Question is the text of a new open question. Options is its closed answer
+	// domain: when set, the human may answer only with one of these words.
 	Question string
+	Options  []string
 	// Answer closes an open question; For names which one when several are
 	// open.
 	Answer string
@@ -99,7 +101,7 @@ func Run(opts Options, files Files) Result {
 
 	switch form {
 	case formQuestion:
-		return record(current, files, current.Doc.AppendHistory(questionLine(current.Doc, opts.Question)),
+		return record(current, files, current.Doc.AppendHistory(questionLine(current.Doc, opts.Question, opts.Options)),
 			fmt.Sprintf("opened question %s in %s; answer it with odachi ask --answer \"<answer>\" --for %s",
 				nextQuestionID(current.Doc), current.Rel, nextQuestionID(current.Doc)))
 	case formCraft:
@@ -230,9 +232,12 @@ func record(current tasks.Document, files Files, grown taskdoc.TaskDoc, message 
 	return Result{Code: CodeOK, Message: message, Task: current.Rel, Files: []string{current.Rel}}
 }
 
-// questionLine is the PREGUNTA shape of Contract IV.
-func questionLine(doc taskdoc.TaskDoc, text string) string {
-	return fmt.Sprintf("L%d · PREGUNTA %s · %s", doc.NextLine(), nextQuestionID(doc), quoted(text))
+// questionLine is the PREGUNTA shape of Contract IV. The options suffix is
+// rendered by the domain so the grammar, its parse and its render stay together;
+// it is empty for a question that declares none, which keeps that line as it was.
+func questionLine(doc taskdoc.TaskDoc, text string, options []string) string {
+	return fmt.Sprintf("L%d · PREGUNTA %s · %s%s",
+		doc.NextLine(), nextQuestionID(doc), quoted(text), taskdoc.RenderQuestionOptions(options))
 }
 
 // nextQuestionID is the P number this document has not used yet.

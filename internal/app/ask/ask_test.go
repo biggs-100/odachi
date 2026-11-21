@@ -530,3 +530,57 @@ func TestAChangeKeepsTheWordsWhateverTheyCarry(t *testing.T) {
 		}
 	}
 }
+
+// TestAskWritesOptionsIntoTheQuestionLine: --option values land in the PREGUNTA
+// line as the optional bracketed suffix, and a question without them renders
+// exactly as before (0345).
+func TestAskWritesOptionsIntoTheQuestionLine(t *testing.T) {
+	files := project()
+
+	res := ask.Run(ask.Options{Dir: "raiz", Question: "¿Sí o no?", Options: []string{"sí", "no"}}, files)
+	if res.Code != ask.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, ask.CodeOK, res.Message)
+	}
+
+	want := `L2 · PREGUNTA P1 · "¿Sí o no?" · ["sí" | "no"]`
+	history := historyOf(t, files)
+	if got := history[len(history)-1]; got != want {
+		t.Fatalf("appended line = %q, want %q", got, want)
+	}
+	open := taskdoc.Parse(files.content(t, taskPath)).OpenQuestions()
+	if len(open) != 1 || !slices.Equal(open[0].Options, []string{"sí", "no"}) {
+		t.Errorf("OpenQuestions = %+v, want the declared options", open)
+	}
+
+	bare := project()
+	if res := ask.Run(ask.Options{Dir: "raiz", Question: "¿Sí o no?"}, bare); res.Code != ask.CodeOK {
+		t.Fatalf("option-less ask: code %d (message: %s)", res.Code, res.Message)
+	}
+	if got := historyOf(t, bare)[1]; got != `L2 · PREGUNTA P1 · "¿Sí o no?"` {
+		t.Errorf("option-less line = %q, want no suffix", got)
+	}
+}
+
+// TestAskRefusesAnAnswerOutsideTheDeclaredOptions: the refusal names the
+// options and touches no file; a valid option still closes the question (0345).
+func TestAskRefusesAnAnswerOutsideTheDeclaredOptions(t *testing.T) {
+	line := `L2 · PREGUNTA P1 · "¿Sí o no?" · ["sí" | "no"]`
+	files := project(`L1 · "`+outcome+`"`, line)
+
+	message := assertBlocked(t, ask.Run(ask.Options{Dir: "raiz", Answer: "quizá"}, files))
+	for _, option := range []string{"sí", "no"} {
+		if !strings.Contains(message, option) {
+			t.Errorf("message %q does not name option %q", message, option)
+		}
+	}
+	if len(files.wrote) != 0 {
+		t.Errorf("a refused answer wrote %v", files.wrote)
+	}
+
+	if res := ask.Run(ask.Options{Dir: "raiz", Answer: "no"}, files); res.Code != ask.CodeOK {
+		t.Fatalf("a valid option was refused: code %d (message: %s)", res.Code, res.Message)
+	}
+	if got := historyOf(t, files)[2]; got != `L3 · VOS P1 · "no"` {
+		t.Errorf("closed line = %q, want the option verbatim", got)
+	}
+}
