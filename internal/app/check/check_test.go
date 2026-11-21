@@ -796,7 +796,7 @@ deps  = ["stripe"]
 			code:    int(gate.NeedsWork),
 			reason:  gate.ReasonProofStale,
 			message: "the proof is from another state of the code",
-			next:    "odachi check --proof <file>",
+			next:    `odachi check --run "go test ./..."`,
 		},
 		{
 			name:    "failed proof",
@@ -1477,5 +1477,46 @@ func TestUnreadableFenceBlocksWithAHumanSentence(t *testing.T) {
 	}
 	if !strings.Contains(got.Message, "fence.toml") {
 		t.Errorf("Message = %q, want it to name the file", got.Message)
+	}
+}
+
+// TestProofNextNamesTheRunWhenTheRunnerRan: a proof gate that would send the
+// human to a proof file names the command that regenerates it instead when the
+// check was invoked with --run. The recorded file is from a tree that no longer
+// stands, so reusing it is the dead end this closes. Without --run -an agent
+// carrying a proof- the old hint stays byte for byte, and any other next command
+// is never rewritten.
+func TestProofNextNamesTheRunWhenTheRunnerRan(t *testing.T) {
+	const proofHint = "odachi check --proof <file>"
+	const run = "go test ./..."
+
+	if got, want := check.ProofNext(run, "", proofHint), `odachi check --run "go test ./..."`; got != want {
+		t.Errorf("ProofNext with a run = %q, want %q", got, want)
+	}
+	if got := check.ProofNext(run, "", "odachi start"); got != "odachi start" {
+		t.Errorf("ProofNext rewrote an unrelated next: %q", got)
+	}
+	if got := check.ProofNext("", "", proofHint); got != proofHint {
+		t.Errorf("ProofNext without a run = %q, want %q", got, proofHint)
+	}
+}
+
+// TestProofNextNamesTheRecordedCommandForTheHook: the commit-msg hook calls
+// check --message with no --run, so the command this invocation ran is empty.
+// The proof on disk still names the command that produced it, and that is what
+// regenerates a stale proof. Naming --proof there sends the human back to the
+// file that no longer stands (0344).
+func TestProofNextNamesTheRecordedCommandForTheHook(t *testing.T) {
+	const proofHint = "odachi check --proof <file>"
+	const recorded = "go test ./..."
+
+	if got, want := check.ProofNext("", recorded, proofHint), `odachi check --run "go test ./..."`; got != want {
+		t.Errorf("ProofNext with a recorded command = %q, want %q", got, want)
+	}
+	if got := check.ProofNext("", recorded, "odachi start"); got != "odachi start" {
+		t.Errorf("ProofNext rewrote an unrelated next: %q", got)
+	}
+	if got := check.ProofNext("", "", proofHint); got != proofHint {
+		t.Errorf("ProofNext with no command = %q, want %q", got, proofHint)
 	}
 }

@@ -995,7 +995,7 @@ func (m tuiModel) viewModels() string {
 		out.WriteString("\n")
 		out.WriteString(tuiLook.warningLine(reason))
 	}
-	out.WriteString(tuiLook.helpLine("enter cambiar · esc volver · se aplican en el resumen"))
+	out.WriteString(tuiLook.helpLine(m.helpKeys("enter cambiar · esc volver · se aplican en el resumen")))
 	return out.String()
 }
 
@@ -1092,7 +1092,7 @@ func (m tuiModel) viewLimits() string {
 		out.WriteString("\n")
 		out.WriteString(tuiLook.failureLine(m.editErr))
 	}
-	out.WriteString(tuiLook.helpLine("enter cambiar · esc volver · se aplican en el resumen"))
+	out.WriteString(tuiLook.helpLine(m.helpKeys("enter cambiar · esc volver · se aplican en el resumen")))
 	return out.String()
 }
 
@@ -1204,6 +1204,23 @@ func (m tuiModel) move(delta int) tuiModel {
 	return m
 }
 
+// helpKeys is the one decision that names the keys in the footer. While a picker
+// or an editor owns the keyboard, its keys replace the section's: arrows move the
+// nested list, typing fills the buffer, enter keeps the value and esc closes the
+// control. With no control open, the section keeps its own keys. The open control
+// is state of the machine, not of the screen, so profile, models and limits share
+// this one helper instead of each repeating the conditional (0343).
+func (m tuiModel) helpKeys(section string) string {
+	switch {
+	case m.picking || m.pickingModel:
+		return "↑↓ elegir · enter cambiar · esc volver"
+	case m.editing:
+		return "escribir · enter cambiar · esc volver"
+	default:
+		return section
+	}
+}
+
 // View renders the screen the wizard is on. The copy is Spanish because the human
 // reads it; the identifiers and the code stay English.
 func (m tuiModel) View() string {
@@ -1282,7 +1299,7 @@ func (m tuiModel) viewProfile() string {
 			out.WriteString(tuiLook.warningLine(m.fieldMsg))
 		}
 	}
-	out.WriteString(tuiLook.helpLine("↑↓ elegir · enter cambiar · esc volver · q salir"))
+	out.WriteString(tuiLook.helpLine(m.helpKeys("↑↓ elegir · enter cambiar · esc volver · q salir")))
 	return out.String()
 }
 

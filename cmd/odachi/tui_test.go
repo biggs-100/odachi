@@ -1588,6 +1588,62 @@ func TestTUIEveryScreenPutsItsKeysInTheSameHelpLine(t *testing.T) {
 	}
 }
 
+// TestTUIFooterFollowsTheOpenControl: while a picker or an editor owns the keys,
+// the footer names that control's keys; closing it returns the section's own
+// footer. The three sections share one state-driven decision, so a given state
+// renders the same bytes wherever the control appears (0343).
+func TestTUIFooterFollowsTheOpenControl(t *testing.T) {
+	plainTUI(t)
+
+	const (
+		profileKeys = "↑↓ elegir · enter cambiar · esc volver · q salir"
+		sectionKeys = "enter cambiar · esc volver · se aplican en el resumen"
+		pickerKeys  = "↑↓ elegir · enter cambiar · esc volver"
+		editorKeys  = "escribir · enter cambiar · esc volver"
+	)
+
+	assertFooter := func(name, view, want string) {
+		t.Helper()
+		if got := tuiLook.helpLine(want); !strings.HasSuffix(view, got) {
+			t.Errorf("%s footer:\nwant suffix %q\ngot:\n%s", name, got, view)
+		}
+	}
+
+	// Profile: the value picker opens under a row and esc closes it.
+	profile := newTUIModel(wizard())
+	profile.menu = 1
+	profile = advance(t, profile)
+	assertFooter("profile default", profile.View(), profileKeys)
+	picking := profile
+	picking.picking = true
+	assertFooter("profile picker", picking.View(), pickerKeys)
+	picking.picking = false
+	assertFooter("profile restored", picking.View(), profileKeys)
+
+	// Models: the host list opens the picker; the manual entry opens the editor.
+	models := toModels(t, newTUIModel(wizard()))
+	assertFooter("models default", models.View(), sectionKeys)
+	modelPick := models
+	modelPick.pickingModel = true
+	assertFooter("models picker", modelPick.View(), pickerKeys)
+	modelPick.pickingModel = false
+	assertFooter("models picker restored", modelPick.View(), sectionKeys)
+	modelEdit := models
+	modelEdit.editing = true
+	assertFooter("models editor", modelEdit.View(), editorKeys)
+	modelEdit.editing = false
+	assertFooter("models editor restored", modelEdit.View(), sectionKeys)
+
+	// Limits: the number editor opens under a row and esc closes it.
+	limits := toLimits(t, newTUIModel(limitedState()))
+	assertFooter("limits default", limits.View(), sectionKeys)
+	editing := limits
+	editing.editing = true
+	assertFooter("limits editor", editing.View(), editorKeys)
+	editing.editing = false
+	assertFooter("limits restored", editing.View(), sectionKeys)
+}
+
 // TestTUIWindowMathAnswersEveryEdge: the window is arithmetic, not state, so it
 // answers every corner -an empty list, a cursor outside it, a maximum of zero, a
 // list exactly as long as the window- without panicking, and the cursor that

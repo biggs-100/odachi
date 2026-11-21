@@ -70,6 +70,11 @@ type Git interface {
 	// it, so no two doors can disagree about what this feature already authored
 	// (0334, 0339).
 	Diff(root, base string) (string, error)
+	// Stage adds one path to the real index. The close writes the task doc after
+	// the proof was taken, so it stages that one path itself: the tree the proof
+	// describes and the tree the commit carries become the same tree. It must
+	// never sweep the rest of the worktree in - that is the human's decision.
+	Stage(root, path string) error
 }
 
 // Files is the disk port: enough to find the document, read it, back it up and
@@ -309,9 +314,11 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 		if err := tasks.SaveWithBackup(files, current, grown); err != nil {
 			return blocked(err.Error())
 		}
+		message := fmt.Sprintf("step %s already done · recorded %s", id, shortMark(mark))
+		message += closeGuidance(current.Rel, opts)
 		return Result{
 			Code:    CodeOK,
-			Message: fmt.Sprintf("step %s already done · recorded %s", id, shortMark(mark)),
+			Message: message,
 			Task:    current.Rel,
 			Files:   []string{current.Rel},
 		}
@@ -360,12 +367,31 @@ func markDone(current tasks.Document, files Files, opts Options) Result {
 		message += " · " + note
 	}
 	message += " · " + closingSentence(cost)
+	message += closeGuidance(current.Rel, opts)
 	return Result{
 		Code:    CodeOK,
 		Message: message,
 		Task:    current.Rel,
 		Files:   []string{current.Rel},
 	}
+}
+
+// closeGuidance is the one line a close adds about the proof that follows it.
+// The doc it just wrote is staged, so a single run on this tree is the whole
+// evidence and the command is named instead of a proof file from a tree that no
+// longer stands. A staging that failed is named with the path and the hand step:
+// a close that claimed a stage it did not make would send the human to a proof
+// that does not match the tree the commit carries (0344).
+func closeGuidance(rel string, opts Options) string {
+	if opts.Git == nil {
+		return ""
+	}
+	const nextProof = `next: odachi check --run "<command>"`
+	if err := opts.Git.Stage(opts.Dir, rel); err != nil {
+		return " · could not stage " + rel + ": " + oneLine(err.Error()) +
+			"; stage it by hand, then run one proof · " + nextProof
+	}
+	return " · the task doc is staged, so one proof run on this tree suffices · " + nextProof
 }
 
 // closingSentence is what a close adds to the one line a person reads: the

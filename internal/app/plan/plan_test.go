@@ -296,6 +296,10 @@ func (g fakeGit) HeadTree(string) (string, error) {
 
 func (g fakeGit) WorktreeTree(string) (string, error) { return g.worktree, nil }
 
+// Stage is the close's stage port. Closes that do not assert on it just need a
+// healthy answer; the one that does overrides it on its own double.
+func (g fakeGit) Stage(string, string) error { return nil }
+
 func (g fakeGit) TreeOf(_, commit string) (string, error) {
 	tree, ok := g.trees[commit]
 	if !ok {
@@ -435,13 +439,19 @@ func TestAPlanWithNoBaseIsNotMeasured(t *testing.T) {
 const (
 	notCountedNoBase = " · the count was not taken: this task doc records no base"
 	notCountedNoRepo = " · the count was not taken: no repository is wired"
+	// stagedClose is the guidance a close with a repository appends: the doc is
+	// staged, so the one command it names is the proof that stands.
+	stagedClose = " · the task doc is staged, so one proof run on this tree suffices · next: odachi check --run \"<command>\""
 )
 
-// closeClause is what the close added to the one line a person reads. A test
-// reads it alone so it can say no digit was invented there.
+// closeClause reads the count clause of the one line a person reads, whatever
+// the close appended after it (0344). A test reads it alone so it can say no
+// digit was invented there.
 func closeClause(message string) string {
-	if i := strings.LastIndex(message, " · "); i >= 0 {
-		return message[i+len(" · "):]
+	for _, clause := range strings.Split(message, " · ") {
+		if strings.HasPrefix(clause, "the count was not taken:") || strings.Contains(clause, "authored lines since base") {
+			return clause
+		}
 	}
 	return message
 }
@@ -631,7 +641,7 @@ func TestPlanDoneCanonicalizesTheCommitItWasGiven(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done · tree:5055fcf" + notCountedNoBase; res.Message != want {
+	if want := "step T2 done · tree:5055fcf" + notCountedNoBase + stagedClose; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "tree:"+tree {
@@ -650,7 +660,7 @@ func TestPlanDoneKeepsTheShaItCannotRead(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done · deadbee" + notCountedNoBase; res.Message != want {
+	if want := "step T2 done · deadbee" + notCountedNoBase + stagedClose; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "deadbee" {
@@ -670,7 +680,7 @@ func TestPlanDoneRecordsTheTreeItProduced(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done · tree:7bc78db" + notCountedNoBase; res.Message != want {
+	if want := "step T2 done · tree:7bc78db" + notCountedNoBase + stagedClose; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done || step.Commit != "tree:"+tree {
@@ -707,7 +717,7 @@ func TestPlanDoneInARepositoryWithNoCommitClosesTheStep(t *testing.T) {
 	if res.Code != plan.CodeOK {
 		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
 	}
-	if want := "step T2 done" + notCountedNoBase; res.Message != want {
+	if want := "step T2 done" + notCountedNoBase + stagedClose; res.Message != want {
 		t.Errorf("Message = %q, want %q", res.Message, want)
 	}
 	if step := taskdoc.Parse(files.content(t)).Steps[1]; step.Commit != "" {
@@ -902,5 +912,77 @@ func TestPlanTouchesOnlyTheTaskDocument(t *testing.T) {
 	}
 	if len(files.backups) != 1 || files.backups[0] != taskPath {
 		t.Errorf("backups = %v, want only the task document", files.backups)
+	}
+}
+
+// stagingGit records the path and root the close hands to Stage. It builds on
+// fakeGit so the test still compiles before Stage is part of the port: an extra
+// method is a valid Git, and the RED is the behavior the close owes, not a
+// missing field in a double.
+type stagingGit struct {
+	fakeGit
+	stagedRoot string
+	staged     []string
+	stageErr   error
+}
+
+func (g *stagingGit) Stage(root, path string) error {
+	g.stagedRoot = root
+	g.staged = append(g.staged, path)
+	return g.stageErr
+}
+
+// TestPlanDoneStagesTheDocItWroteAndNamesTheProofCommand: the close writes the
+// task doc after the proof was taken, so it has to stage that doc itself. Then
+// the one command it names is the one that regenerates the proof, not a hint to
+// reuse a file from a tree that no longer stands.
+func TestPlanDoneStagesTheDocItWroteAndNamesTheProofCommand(t *testing.T) {
+	files := project()
+	git := &stagingGit{fakeGit: fakeGit{head: "aaa", worktree: "aaa"}}
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "T2", Git: git}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if git.stagedRoot != "raiz" {
+		t.Errorf("staged in %q, want raiz", git.stagedRoot)
+	}
+	if !slices.Equal(git.staged, []string{taskRel}) {
+		t.Errorf("staged %v, want [%s]", git.staged, taskRel)
+	}
+	if want := `next: odachi check --run "<command>"`; !strings.Contains(res.Message, want) {
+		t.Errorf("Message = %q, want it to name %q", res.Message, want)
+	}
+	if !strings.Contains(res.Message, "staged") {
+		t.Errorf("Message = %q, want it to say the task doc is staged", res.Message)
+	}
+}
+
+// TestPlanDoneNamesAStageFailureWithoutFailingTheClose: a repository that will
+// not take the path still closes the step, but the human has to be told which
+// path to stage by hand instead of believing one run will suffice.
+func TestPlanDoneNamesAStageFailureWithoutFailingTheClose(t *testing.T) {
+	files := project()
+	git := &stagingGit{
+		fakeGit:  fakeGit{head: "aaa", worktree: "aaa"},
+		stageErr: errors.New("permission denied"),
+	}
+
+	res := plan.Run(plan.Options{Dir: "raiz", Done: "T2", Git: git}, files)
+
+	if res.Code != plan.CodeOK {
+		t.Fatalf("Code = %d, want %d (message: %s)", res.Code, plan.CodeOK, res.Message)
+	}
+	if step := taskdoc.Parse(files.content(t)).Steps[1]; !step.Done {
+		t.Error("Done = false, want the step to close even when staging failed")
+	}
+	if !slices.Equal(git.staged, []string{taskRel}) {
+		t.Errorf("staged %v, want [%s]", git.staged, taskRel)
+	}
+	for _, want := range []string{"permission denied", taskRel, "by hand"} {
+		if !strings.Contains(res.Message, want) {
+			t.Errorf("Message = %q, want it to name %q", res.Message, want)
+		}
 	}
 }
