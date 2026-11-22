@@ -1,0 +1,14 @@
+# para-ci-se
+Base: bd50571f2b523eec5807b0630416022f87bc8579
+Light: yes
+
+## Requirements (verbatim, from the user)
+R1 · "para ci se usara macos latest"
+
+## Done when
+
+## Steps
+- [x] T1 · para ci se usara macos latest   R1 · tree:9d3298543a66312b2228d1a1ba107326099dccf4
+
+## History
+L1 · "para ci se usara macos latest"
