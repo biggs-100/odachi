@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.60.0 - 2026-11-22
 
 - **The wizard edits a declared check without touching its severity.** `odachi tui` showed the declared tools of `odd/review.toml` but offered no way to rename one, fix a broken command or reword its remedy: the fifth section of the hub now lists each check with the severity it keeps, opens the three editable fields of one, and writes only the values that changed when the summary is applied. `review.SetConfig` gained a checks option keyed by the identity read from the file, so a rename still finds its row; each value is normalized with the domain's own rule before rendering, and the severity is copied from the file because no edit can carry one -it fixes the verdict-. A new name or command changes the approval fingerprint, so the apply names `odachi review checks approve`; a remedy-only edit stays quiet, because advice is advice and is not executed. The switch, the lenses, the verifier, the four scalars and every check nobody touched survive byte for byte. The section was captured from the terminal at 80x24 and at 60x20, with the three nested field states read from the same harness. Patch (0346).
 
