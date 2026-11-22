@@ -78,6 +78,20 @@ x64 image, and the required check is `gate (macos-15-intel)`. The workflow and
 `.github/main-ruleset.json` were renamed together, which is the rule this decision
 already carried; the four checks and the pull request requirement did not change.
 
+## Amendment - the macOS gate returns to macos-latest (0347, 2026-11-22)
+
+The human decided that CI uses `macos-latest` again. This supersedes the 0192 amendment
+above; the rest of ADR 0024 stands, including the rule that the workflow job name and the
+required check in `.github/main-ruleset.json` are renamed together.
+
+The 0192 reason was not a preference for x64: GitHub's arm64 pool did not assign a runner,
+so the required check never reported and every pull request stayed blocked. A gate that
+never starts is not a gate, and the same test applies to this reversal. The macOS job and
+the required check move to `macos-latest` only after a pull request shows the job being
+assigned and passing; the ruleset is reapplied after that proof, not before. If no runner
+is assigned, this amendment is void, 0192 stands, and the change is reverted without
+touching main.
+
 ## Sources
 
 - Feature 0026 and ADR 0023: the single workflow, the base ref and the four jobs.
