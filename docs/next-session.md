@@ -1,6 +1,7 @@
 # Next session
 
-Written after 0346, the cycle that closed the last hub debt and reverted a costly one.
+Written after v0.60.0 shipped 0345 and 0346: the cycle that closed the last hub
+debt, reverted a costly one, and published the release.
 
 **Standing rule.** When a problem or a design question shows up, read
 `C:\Users\USER\Desktop\herramientas\gentle-shell` first, read-only: it may already
@@ -9,26 +10,29 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 
 ## Where the project is
 
-- **main is `f174bdf`, clean and synchronized.** v0.58.0 shipped 0340 on merge `64b610a`;
+- **main is `a377f5c`, clean and synchronized.** v0.58.0 shipped 0340 on merge `64b610a`;
   v0.59.0 shipped 0341-0344 on merge `2de2122`. Then 0345 (`80fffac`, #699) made `ask`
   validate answers against a stored choice envelope, and 0346 (`f174bdf`, #700) gave the
-  wizard a section to edit a declared check's name, command and remedy. `## Unreleased`
-  carries 0345 and 0346; v0.60.0 waits for a human decision.
-- **The installed binary is 0.59.0, behind main.** It does not know 0345 or 0346. Build
-  the tree into a temp folder and lead PATH before any command that must know this tree's
-  behavior, as in 0344. In 0347 I used the 0344 binary to verify 0347 and the proof lied
-  by silence: this is the same mistake the handover already warned about, made again.
+  wizard a section to edit a declared check's name, command and remedy. v0.60.0 shipped
+  both on merge `a377f5c` (PR #702, tag `v0.60.0`, 16 signed assets, release workflow
+  green). `## Unreleased` does not exist on main right now: the release renamed the
+  heading, and the next feature writes under a new one.
+- **The installed binary is 0.60.0 and matches main.** It knows 0345 and 0346. For a
+  future feature, still build that tree's binary into a temp folder and lead PATH before
+  any command that must know its behavior: a release binary is an artifact of a tag, not
+  a moving pointer to main.
 - **0347 was opened, reverted and never published.** It added an advisory coverage row
   that ran a second `go test ./... -coverprofile` on every close. `cmd/odachi` alone costs
   4-5 minutes here; with instrumentation it ran past an hour and had to be stopped.
   The branch was deleted locally; no PR, no remote branch, no traces in the tree.
+- **This handover travels as PR #701**, still open when last checked. Its first version
+  said v0.60.0 waited for a decision; this revision corrects that.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
-  total: 345 features · 859 steps done of 859 · 0 open questions
+  total: 344 features · 858 steps done of 858 · 0 open questions
 
 ## What waits for a decision
 
-- **A release.** `## Unreleased` carries 0345 and 0346; v0.60.0 waits for the human.
 - **The second vendor.** Verdicts of 0335-0346 were written by models near the ones that
   produced their proofs; doctor's check 17 still counts `1 of 4`. 0346 used a different
   provider (`opencode/deepseek-v4.1-flash-free`) when `opencode-go` hit its monthly usage
@@ -43,6 +47,13 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 - **The undo row can be fooled by a fixture** whose output contains literal
   `[build failed]`: `Classify` reads it as a build failure and answers `unknown`, which
   never blocks. A pre-existing limit of 0300, named in 0341's own close.
+- **The macOS TUI frame test is racy (pre-existing, 0342).** `limitsTerminalFrame` in
+  `cmd/odachi/tui_teatest_test.go:122-128` waits for the word `límites`, which is already
+  a row in the hub menu, so it can capture the menu frame before the section renders.
+  It failed once in v0.60.0's gate, passed on rerun, and never touched the release's
+  one-line change. Fixing the test is a feature of its own; until then a rerun is the
+  workaround. Decide whether to spend a feature on it.
+- **Merging this handover PR #701** is still the human's call.
 
 ## What this cycle learned
 
@@ -68,6 +79,19 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 - **Answer the human's question before acting.** `AGENTS.md` now says it explicitly: a
   question in the message is answered in chat before any tool call or file write, and the
   answer is information, not permission. PR #698.
+- **A red gate is not automatically a defect of the candidate.** v0.60.0's macOS gate
+  failed on a test race that existed since 0342. The proof artifact named the failing
+  test and the frame it captured; reading it showed the word the test waited for was
+  already in the menu. Re-running that one job passed, and the release went out with a
+  one-line changelog change. Read the artifact and separate harness flake from product
+  defect before touching code in a release PR.
+- **A workflow run must finish before a failed job can be rerun.** GitHub answered 403 to
+  a rerun while `windows-latest` was still in progress. Wait for every job to conclude,
+  then rerun the single job by id.
+- **A release commit needs its file staged.** `git commit -m "..." --no-verify` without
+  `git add` left `CHANGELOG.md` uncommitted; the push carried no commits and
+  `gh pr create` failed with "No commits between main and release/v0.60.0". Stage first,
+  or use `-am`.
 
 ## The commands that work
 
@@ -97,6 +121,11 @@ git tag -a vX.Y.Z <merge commit> -m "vX.Y.Z: <the sentence the notes carry>" && 
 irm https://github.com/biggs-100/odachi/releases/download/vX.Y.Z/install.ps1 | iex
 ```
 
+```sh
+# rerun one failed job, only after every job in the workflow run has concluded
+gh api -X POST repos/biggs-100/odachi/actions/jobs/<job id>/rerun
+```
+
 ## The limits to remember
 
 - **The gate runs the proof and its reverted copy** (`internal/app/check/check.go:2361-2398`).
@@ -117,3 +146,5 @@ irm https://github.com/biggs-100/odachi/releases/download/vX.Y.Z/install.ps1 | i
 - **`windows-latest` is the slow CI gate**: 4-12 minutes in this cycle.
 - **The wrappers live in temp**: `odachi-rev2.bat`, `odachi-ver3.bat` and `odachi-cut.ps1`.
   If the folder is emptied, compose them again.
+- **A first red gate deserves its artifact before its fix**: the macOS failure in v0.60.0
+  was a race in an older test, and the rerun passed. A rerun is cheaper than a new feature.
