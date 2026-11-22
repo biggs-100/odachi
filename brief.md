@@ -1336,3 +1336,23 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: que un numero visible a tiempo vale mas que un rechazo tardio.
+
+## 0347 · para-ci-se
+
+## What must exist
+- the macOS gate runs on a runner GitHub can assign, and the required check in the ruleset follows the job name
+- the fence permits this one change to the CI matrix after the human decides it, and keeps protecting the release workflow
+
+## Done when
+- the matrix names macos-latest and the required check names gate (macos-latest)
+- a pull request shows gate (macos-latest) assigned and green before the ruleset is reapplied
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no model call is added to CI or to the gate: N calls multiply the cost, and a cheap reviewer does not make a probe per change affordable
+- the release workflow stays behind the fence
+- no version is released for a CI-only change
+
+## Decisions taken
+- A fence rule protects a file, not its reason: the human authorizes touching it before the work.
+- The runner that cannot be assigned is not a gate; the same test applies to the runner that replaces it.
