@@ -8,7 +8,7 @@ R1 · "para ci se usara macos latest"
 ## Done when
 
 ## Steps
-- [ ] T1 · para ci se usara macos latest   R1
+- [x] T1 · para ci se usara macos latest   R1 · tree:9d3298543a66312b2228d1a1ba107326099dccf4
 
 ## History
 L1 · "para ci se usara macos latest"
