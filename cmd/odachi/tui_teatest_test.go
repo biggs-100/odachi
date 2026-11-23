@@ -103,6 +103,10 @@ func waitFor(t *testing.T, tm *teatest.TestModel, want string) {
 	}, teatest.WithDuration(5*time.Second))
 }
 
+// limitsFrameSentinel is the text the wait uses to know the limits section drew.
+// It must be text the section writes and the hub menu does not (0353).
+const limitsFrameSentinel = "prompt KB"
+
 // limitsTerminalFrame walks from the hub into the limits section and returns the
 // last frame the terminal drew, at the width asked for. The capture goes through
 // the same teatest harness as the other terminal tests: keys in, output out, no
@@ -120,7 +124,7 @@ func limitsTerminalFrame(t *testing.T, cols, rows int) string {
 
 	var captured []byte
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
-		if bytes.Contains(b, []byte("límites")) {
+		if bytes.Contains(b, []byte(limitsFrameSentinel)) {
 			captured = append([]byte(nil), b...)
 			return true
 		}
@@ -135,6 +139,23 @@ func limitsTerminalFrame(t *testing.T, cols, rows int) string {
 		text = text[at:]
 	}
 	return strings.TrimSpace(text)
+}
+
+// TestLimitsFrameSentinelIsSectionOnly: the hub menu already names the limits
+// section, so waiting for that word can capture the menu frame before the section
+// draws. The sentinel has to be text only the section writes (0353).
+func TestLimitsFrameSentinelIsSectionOnly(t *testing.T) {
+	hub := "instalar y configurar\n\n   › límites\n"
+	if !strings.Contains(hub, "límites") {
+		t.Fatal("the fixture must show the trap: the hub menu names the section")
+	}
+	if strings.Contains(hub, limitsFrameSentinel) {
+		t.Fatalf("the sentinel %q is already in the hub frame: the wait can capture the menu", limitsFrameSentinel)
+	}
+	section := "límites\nprompt KB\nveredictos\nprompts\ntimeout s\n"
+	if !strings.Contains(section, limitsFrameSentinel) {
+		t.Fatalf("the sentinel %q is not in the limits section", limitsFrameSentinel)
+	}
 }
 
 // TestTUILimitsFrameAtTwoWidths captures the new section from the terminal at the
