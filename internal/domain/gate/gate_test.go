@@ -32,6 +32,7 @@ type evaluationCase struct {
 	reason  string
 	message string
 	next    string
+	kind    gate.TransitionKind
 }
 
 // evaluationCases is the one list of the gate's answers: every reason it can return,
@@ -128,6 +129,7 @@ func buildEvaluationCases() []evaluationCase {
 	return []evaluationCase{
 		{
 			name:    "no brief",
+			kind:    gate.TransitionCollect,
 			state:   noBrief,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonNoBrief,
@@ -136,6 +138,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "brief incomplete",
+			kind:    gate.TransitionCollect,
 			state:   incompleteBrief,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonBriefIncomplete,
@@ -144,6 +147,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "out of scope",
+			kind:    gate.TransitionCollect,
 			state:   outOfScope,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonOutOfScope,
@@ -152,6 +156,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "fence loosened",
+			kind:    gate.TransitionCollect,
 			state:   loosened,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonFenceLoosened,
@@ -160,6 +165,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "open question",
+			kind:    gate.TransitionCollect,
 			state:   openQuestion,
 			code:    gate.NeedsDecision,
 			reason:  gate.ReasonOpenQuestion,
@@ -168,6 +174,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "a requirement no step names",
+			kind:    gate.TransitionExecute,
 			state:   unplanned,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonUnplanned,
@@ -176,6 +183,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "two requirements no step names",
+			kind:    gate.TransitionExecute,
 			state:   twoUnplanned,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonUnplanned,
@@ -184,6 +192,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:  "a requirement that is not the brief's words",
+			kind:  gate.TransitionExecute,
 			state: quoteMismatch,
 			code:  gate.NeedsWork,
 			// The two sentences travel with the row: the fix is a copy, and a
@@ -194,6 +203,7 @@ func buildEvaluationCases() []evaluationCase {
 			next:    `odachi ask --change "<the human's words>" --req R1`,
 		}, {
 			name:    "proof missing",
+			kind:    gate.TransitionExecute,
 			state:   missingProof,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofMissing,
@@ -202,6 +212,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "proof stale",
+			kind:    gate.TransitionExecute,
 			state:   staleProof,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofStale,
@@ -210,6 +221,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "proof failed",
+			kind:    gate.TransitionExecute,
 			state:   failedProof,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonProofFailed,
@@ -218,6 +230,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "the suite does not notice the undo",
+			kind:    gate.TransitionExecute,
 			state:   undoMissed,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonUndoMissed,
@@ -226,6 +239,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "the row was never taken",
+			kind:    gate.TransitionExecute,
 			state:   undoMissing,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonUndoMissing,
@@ -234,6 +248,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "the mutation row failed",
+			kind:    gate.TransitionExecute,
 			state:   mutationFailed,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonMutationFailed,
@@ -242,6 +257,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "a close that owes a verifier and passes the slice",
+			kind:    gate.TransitionExecute,
 			state:   verificationSlice,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonVerifySlice,
@@ -250,6 +266,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "a risk with no verification",
+			kind:    gate.TransitionExecute,
 			state:   verificationMissing,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonVerifyMissing,
@@ -258,6 +275,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "the verifier refuted the tree",
+			kind:    gate.TransitionExecute,
 			state:   verificationRefuted,
 			code:    gate.NeedsWork,
 			reason:  gate.ReasonVerifyRefuted,
@@ -266,6 +284,7 @@ func buildEvaluationCases() []evaluationCase {
 		},
 		{
 			name:    "ready",
+			kind:    gate.TransitionStop,
 			state:   ready(),
 			code:    gate.Ready,
 			reason:  gate.ReasonReady,
@@ -293,6 +312,25 @@ func TestEvaluationOrder(t *testing.T) {
 			}
 			if got.Next != tc.next {
 				t.Errorf("Next = %q, want %q", got.Next, tc.next)
+			}
+			// The typed transition is the source of the printed next: line. Its kind
+			// comes from the code and its command is the same continuation Next holds,
+			// so the two can never drift (0348).
+			if got.Transition.Kind != tc.kind {
+				t.Errorf("Transition.Kind = %q, want %q", got.Transition.Kind, tc.kind)
+			}
+			if got.Transition.Command != tc.next {
+				t.Errorf("Transition.Command = %q, want %q", got.Transition.Command, tc.next)
+			}
+			if tc.code == gate.Ready {
+				if got.Transition.Kind != gate.TransitionStop {
+					t.Errorf("Transition.Kind = %q, want %q for a ready result", got.Transition.Kind, gate.TransitionStop)
+				}
+				if got.Transition.Command != "" {
+					t.Errorf("Transition.Command = %q, want empty for a ready result", got.Transition.Command)
+				}
+			} else if got.Transition.Command == "" {
+				t.Errorf("Transition.Command is empty for blocked reason %q: every refusal names what resolves it", tc.reason)
 			}
 			// One property, judged for every reason the table holds: a block that
 			// leaves the reader nowhere to go is the defect the continuation exists
@@ -721,6 +759,21 @@ func TestARecordThatAnswersNothingKeepsItsOwnDoor(t *testing.T) {
 	}
 	if strings.Contains(got.Message, "authored lines") {
 		t.Errorf("the slice answered a close whose record exists: %s", got.Message)
+	}
+}
+
+// TestCaseTableCoversEveryReason pins the table to the gate's own public list:
+// a reason Reasons() names and no row produces would ship with no typed
+// transition ever being checked (0348).
+func TestCaseTableCoversEveryReason(t *testing.T) {
+	held := make(map[string]bool, len(evaluationCases))
+	for _, tc := range evaluationCases {
+		held[tc.reason] = true
+	}
+	for _, reason := range gate.Reasons() {
+		if !held[reason] {
+			t.Errorf("Reasons() names %q and no row in evaluationCases produces it: a reason without a row ships unjudged", reason)
+		}
 	}
 }
 

@@ -231,12 +231,53 @@ type State struct {
 	FenceLoosened []string
 }
 
+// TransitionKind says who can resolve a block. The kind is the gate's own answer
+// about the next actor, so a caller never has to infer it from the reason (0348).
+type TransitionKind string
+
+const (
+	// TransitionExecute is work the agent can do without asking anyone.
+	TransitionExecute TransitionKind = "execute"
+	// TransitionCollect is an answer only the human can give.
+	TransitionCollect TransitionKind = "collect"
+	// TransitionStop means there is nothing to do: the gate is ready.
+	TransitionStop TransitionKind = "stop"
+)
+
+// Transition is the typed continuation of a verdict: the kind says who acts and
+// the command is what they run. It travels beside Next, which stays a plain
+// string for output compatibility (0348).
+type Transition struct {
+	Kind    TransitionKind
+	Command string
+}
+
 // Result is the verdict plus what to do next.
 type Result struct {
 	Code    Code
 	Reason  string
 	Message string
 	Next    string
+	// Transition is the typed form of Next. Every refusal carries one, so a
+	// caller can branch on the kind instead of parsing the printed command.
+	Transition Transition
+}
+
+// withTransition derives the typed transition from a verdict the gate already
+// reached. The kind follows the code, which is the gate's own answer about who
+// acts; the command is the continuation Next already holds, so the printable
+// line and the typed field cannot disagree (0348).
+func withTransition(r Result) Result {
+	switch r.Code {
+	case NeedsDecision:
+		r.Transition.Kind = TransitionCollect
+	case NeedsWork:
+		r.Transition.Kind = TransitionExecute
+	default:
+		r.Transition.Kind = TransitionStop
+	}
+	r.Transition.Command = r.Next
+	return r
 }
 
 // Evaluate applies the documented order: no brief -> brief incomplete -> out of
@@ -245,20 +286,25 @@ type Result struct {
 // only the human can clear is NeedsDecision, a block the agent can clear is
 // NeedsWork.
 func Evaluate(s State) Result {
+	return withTransition(evaluate(s))
+}
+
+// evaluate is the verdict before its typed transition is attached.
+func evaluate(s State) Result {
 	switch {
 	case !s.HasBrief:
-		return Result{NeedsDecision, ReasonNoBrief, "there is no brief: we do not know yet what must exist", nextStart}
+		return Result{Code: NeedsDecision, Reason: ReasonNoBrief, Message: "there is no brief: we do not know yet what must exist", Next: nextStart}
 	case len(s.BriefMissing) > 0:
-		return Result{NeedsDecision, ReasonBriefIncomplete, "the brief is incomplete: missing " + strings.Join(s.BriefMissing, ", "), nextStart}
+		return Result{Code: NeedsDecision, Reason: ReasonBriefIncomplete, Message: "the brief is incomplete: missing " + strings.Join(s.BriefMissing, ", "), Next: nextStart}
 	case len(s.Violations) > 0:
-		return Result{NeedsDecision, ReasonOutOfScope, "out of scope: " + strings.Join(s.Violations, "; "), nextAsk}
+		return Result{Code: NeedsDecision, Reason: ReasonOutOfScope, Message: "out of scope: " + strings.Join(s.Violations, "; "), Next: nextAsk}
 	case len(s.FenceLoosened) > 0:
-		return Result{NeedsDecision, ReasonFenceLoosened,
-			"the fence was loosened without new non-goals in the brief: " + strings.Join(s.FenceLoosened, "; ") +
+		return Result{Code: NeedsDecision, Reason: ReasonFenceLoosened,
+			Message: "the fence was loosened without new non-goals in the brief: " + strings.Join(s.FenceLoosened, "; ") +
 				"; the fence may only change with the brief's non-goals. Restore it, or write the non-goals first",
-			nextAsk}
+			Next: nextAsk}
 	case s.OpenQuestions > 0:
-		return Result{NeedsDecision, ReasonOpenQuestion, openQuestions(s.OpenQuestions), nextAsk}
+		return Result{Code: NeedsDecision, Reason: ReasonOpenQuestion, Message: openQuestions(s.OpenQuestions), Next: nextAsk}
 	// The plan and the vision disagree: the feature declares a requirement and no
 	// step names it, so a close would ship a promise nobody worked on. It is
 	// NeedsWork and not a decision: the agent plans the step the human already
@@ -268,20 +314,20 @@ func Evaluate(s State) Result {
 		if len(s.Unplanned) > 1 {
 			verb = "names them"
 		}
-		return Result{NeedsWork, ReasonUnplanned,
-			"the feature declares " + strings.Join(s.Unplanned, ", ") + " and no step " + verb +
+		return Result{Code: NeedsWork, Reason: ReasonUnplanned,
+			Message: "the feature declares " + strings.Join(s.Unplanned, ", ") + " and no step " + verb +
 				": a requirement nobody planned is a requirement nobody built",
-			nextPlan(s.Unplanned[0])}
+			Next: nextPlan(s.Unplanned[0])}
 	// The plan is written in the agent's words: the tool wrote the sentence twice,
 	// only the human edits either, and a drift means the requirement was rewritten
 	// instead of quoted. It is NeedsWork because the fix is a copy, and the
 	// continuation names the other door: a human who changed their mind records it
 	// with `ask --change`, and the quote stops being the original's (0314).
 	case len(s.QuoteMismatch) > 0:
-		return Result{NeedsWork, ReasonQuoteMismatch,
-			"the plan does not quote the human: " + strings.Join(s.QuoteMismatch, "; ") +
+		return Result{Code: NeedsWork, Reason: ReasonQuoteMismatch,
+			Message: "the plan does not quote the human: " + strings.Join(s.QuoteMismatch, "; ") +
 				"; copy the brief's words into the requirement, or record the change with odachi ask --change",
-			`odachi ask --change "<the human's words>" --req R1`}
+			Next: `odachi ask --change "<the human's words>" --req R1`}
 	// A close that owes a verifier measures its candidate first: a verifier spent
 	// on a tree nobody can finish is a verdict that cannot land, and the rest of
 	// the work is a feature of its own, not the tail of this one (0331). The
@@ -299,7 +345,7 @@ func Evaluate(s State) Result {
 		if s.SliceAccepted > 0 {
 			message += fmt.Sprintf("; the task doc accepts %d and this tree authors %d", s.SliceAccepted, s.VerificationLines)
 		}
-		return Result{NeedsWork, ReasonVerifySlice, message, nextStart}
+		return Result{Code: NeedsWork, Reason: ReasonVerifySlice, Message: message, Next: nextStart}
 	// A close that declared a risk owes the record an independent verifier leaves,
 	// and the rule is the one the catalog already states: who writes does not verify
 	// itself. It is NeedsWork because the agent can run the verifier; the record,
@@ -311,50 +357,50 @@ func Evaluate(s State) Result {
 		if s.VerificationLines > SliceLines && s.sliceAccepted() {
 			message += fmt.Sprintf(" (the task doc accepts %d authored lines: %s)", s.SliceAccepted, s.SliceReason)
 		}
-		return Result{NeedsWork, ReasonVerifyMissing, message, nextVerify}
+		return Result{Code: NeedsWork, Reason: ReasonVerifyMissing, Message: message, Next: nextVerify}
 	// The record exists and says the requirement does not hold. The tree does not
 	// close on the words of the person who wrote it, and the notes say what showed
 	// it (0315).
 	case len(s.VerificationRefuted) > 0:
-		return Result{NeedsWork, ReasonVerifyRefuted,
-			"the verifier refuted this tree: " + strings.Join(s.VerificationRefuted, "; "),
-			nextVerify}
+		return Result{Code: NeedsWork, Reason: ReasonVerifyRefuted,
+			Message: "the verifier refuted this tree: " + strings.Join(s.VerificationRefuted, "; "),
+			Next:    nextVerify}
 	// A proof exists as soon as it names the tree it came from. An empty body is
 	// still a proof: `go vet`, `tsc --noEmit` and `gofmt -l` all succeed while
 	// printing nothing, and telling a human "the proof is missing" right after
 	// they ran one is a dead end that names a command which cannot resolve it.
 	case !s.ProofDeferred && s.ProofTreeHash == "":
-		return Result{NeedsWork, ReasonProofMissing, "the proof for this change is missing", nextCheckProof}
+		return Result{Code: NeedsWork, Reason: ReasonProofMissing, Message: "the proof for this change is missing", Next: nextCheckProof}
 	case !s.ProofDeferred && !s.ProofPaperwork && s.ProofTreeHash != s.TreeHash:
-		return Result{NeedsWork, ReasonProofStale, "the proof is from another state of the code", nextCheckProof}
+		return Result{Code: NeedsWork, Reason: ReasonProofStale, Message: "the proof is from another state of the code", Next: nextCheckProof}
 	case s.ProofTimedOut:
-		return Result{NeedsWork, ReasonProofFailed, "the proof did not finish in " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
+		return Result{Code: NeedsWork, Reason: ReasonProofFailed, Message: "the proof did not finish in " + strconv.Itoa(s.ProofTimeoutSeconds) + "s", Next: nextRunWithTimeout(s.ProofCommand, s.ProofTimeoutSeconds)}
 	case s.ProofFailed:
-		return Result{NeedsWork, ReasonProofFailed, "the proof failed: " + proofLastLine(s.ProofLastLine), nextRun(s.ProofCommand)}
+		return Result{Code: NeedsWork, Reason: ReasonProofFailed, Message: "the proof failed: " + proofLastLine(s.ProofLastLine), Next: nextRun(s.ProofCommand)}
 	// An undo that could not be judged is not a miss and not a pass: it is the
 	// caller's note, and it never blocks. Blocking on it would stop every change
 	// that adds a symbol its tests call, which is most of them (0052).
 	case s.UndoMissing:
-		return Result{NeedsWork, ReasonUndoMissing,
-			"the row that reverts the change was not taken for this tree, and the close owes it",
-			nextRun(s.ProofCommand)}
+		return Result{Code: NeedsWork, Reason: ReasonUndoMissing,
+			Message: "the row that reverts the change was not taken for this tree, and the close owes it",
+			Next:    nextRun(s.ProofCommand)}
 	case s.UndoMissed:
-		return Result{NeedsWork, ReasonUndoMissed,
-			"the tests do not notice the change being undone: the suite stayed green without it",
-			nextRun(s.UndoCommand)}
+		return Result{Code: NeedsWork, Reason: ReasonUndoMissed,
+			Message: "the tests do not notice the change being undone: the suite stayed green without it",
+			Next:    nextRun(s.UndoCommand)}
 	case s.MutationFailed:
-		return Result{NeedsWork, ReasonMutationFailed,
-			"the mutation row failed: " + s.MutationNote,
-			fmt.Sprintf("odachi check --run %q --mutate %q --remove %q --expect %q",
+		return Result{Code: NeedsWork, Reason: ReasonMutationFailed,
+			Message: "the mutation row failed: " + s.MutationNote,
+			Next: fmt.Sprintf("odachi check --run %q --mutate %q --remove %q --expect %q",
 				s.MutationCommand, s.MutationFile, s.MutationRemoved, s.MutationExpected)}
 	default:
 		if s.ProofDeferred && s.ProofTreeHash != s.TreeHash {
-			return Result{Ready, ReasonReady, "ready for a step: the proof is owed when this feature closes, and the tree that closes it is the one CI judges", ""}
+			return Result{Code: Ready, Reason: ReasonReady, Message: "ready for a step: the proof is owed when this feature closes, and the tree that closes it is the one CI judges"}
 		}
 		if s.ProofPaperwork && s.ProofTreeHash != s.TreeHash {
-			return Result{Ready, ReasonReady, "ready: the proof belongs to the code it ran on, and only documents moved since", ""}
+			return Result{Code: Ready, Reason: ReasonReady, Message: "ready: the proof belongs to the code it ran on, and only documents moved since"}
 		}
-		return Result{Ready, ReasonReady, "ready: there is proof for this tree", ""}
+		return Result{Code: Ready, Reason: ReasonReady, Message: "ready: there is proof for this tree"}
 	}
 }
 

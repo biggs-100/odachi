@@ -9,6 +9,7 @@
 package check
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -524,6 +525,9 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	// change (0332).
 	if r.storeNote != "" && verdict.Reason == gate.ReasonVerifyMissing {
 		verdict.Message, verdict.Next = r.storeNote, nextStore
+		// Keep the typed continuation in step with the words: the printed next:
+		// line is sourced from the transition, so both must name the same door.
+		verdict.Transition.Command = nextStore
 	}
 	// The verification is evidence from the clone, like the verdict: a clean
 	// checkout cannot carry the record, so a gate that refused it would make every
@@ -2479,7 +2483,10 @@ func (r *runner) report(verdict gate.Result, haveProof bool) Result {
 		if r.failedRel != "" {
 			result.Lines = append(result.Lines, "output: "+r.failedRel)
 		}
-		next := ProofNext(r.opts.Run, r.recordedCommand, verdict.Next)
+		// The printed continuation comes from the gate's typed transition, with
+		// the plain Next as the fallback for a verdict that carries none (0348).
+		verdictNext := cmp.Or(verdict.Transition.Command, verdict.Next)
+		next := ProofNext(r.opts.Run, r.recordedCommand, verdictNext)
 		if next != verdict.Next {
 			result.Next = next
 		}
