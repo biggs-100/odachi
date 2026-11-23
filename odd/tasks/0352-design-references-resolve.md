@@ -8,7 +8,7 @@ R1 · "design references resolve and the consent gate is explicit"
 ## Done when
 
 ## Steps
-- [ ] T1 · design references resolve and the consent gate is explicit   R1
+- [x] T1 · design references resolve and the consent gate is explicit   R1 · tree:7705eb7f90d16fc2c731d8fced4d7ee70efc6e87
 
 ## History
 L1 · "design references resolve and the consent gate is explicit"
