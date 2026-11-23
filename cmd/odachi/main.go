@@ -102,6 +102,8 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return runUndo(dir, args[1:], stdout, stderr)
 	case "store":
 		return runStore(dir, args[1:], stdout, stderr)
+	case "evidence":
+		return runEvidence(dir, args[1:], stdout, stderr)
 	case "clean":
 		return runClean(dir, args[1:], stdout, stderr)
 	case "check":
@@ -133,7 +135,7 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		_, _ = fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug> --scope project|home), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		_, _ = fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), evidence (odachi evidence export), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug> --scope project|home), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
 		return start.CodeBlocked
 	}
 }
@@ -1852,6 +1854,7 @@ usage:
   odachi undo [--list | --collect] [--file brief] [--artifact <path>]
   odachi clean [--apply] [--legacy] [--json]
   odachi store move [--dry-run]
+  odachi evidence export <tree> --out <path>
   odachi check [flags]
   odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
   odachi review [--lens <lens>]
@@ -2119,6 +2122,8 @@ after start:
   odachi undo --file brief                      only that one: brief | profile | fence | task
   odachi clean                                  what this clone accumulated, who owns it, and
                                                  what each class would do
+  odachi evidence export <tree> --out <path>    the verdict, verification and proof of that tree
+                                                  as one portable bundle, keyed by the tree
   odachi check                                  is it ready? brief, fence, questions, planned requirements and proof
   odachi check --run "<command>"                run the proof and save it with its tree
   odachi review                                 the review prompt for this candidate, also saved

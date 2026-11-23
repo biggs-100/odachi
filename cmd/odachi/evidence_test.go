@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -139,5 +140,116 @@ func TestWithoutInitTheFallbackKeepsTheProofValid(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".gitignore")); !os.IsNotExist(err) {
 		t.Errorf("check created a project .gitignore (err %v), want init to be the only writer of it", err)
+	}
+}
+
+const cliTree = "0123456789abcdef0123456789abcdef01234567"
+
+// TestEvidenceExportRejectsWrongArity pins the two words and the single tree.
+func TestEvidenceExportRejectsWrongArity(t *testing.T) {
+	dir := t.TempDir()
+	for _, args := range [][]string{
+		{"evidence"},
+		{"evidence", "import"},
+		{"evidence", "export"},
+		{"evidence", "export", cliTree, cliTree},
+	} {
+		code, _, stderr := runDir(t, dir, args, "")
+		if code == 0 {
+			t.Errorf("%v: exit 0, want a refusal", args)
+		}
+		if !strings.Contains(stderr, "usage: odachi evidence export") {
+			t.Errorf("%v: stderr %q does not carry the usage line", args, stderr)
+		}
+	}
+}
+
+// TestEvidenceExportNeedsOut refuses before touching disk when the human gave
+// no place for the bundle.
+func TestEvidenceExportNeedsOut(t *testing.T) {
+	dir := t.TempDir()
+	code, _, stderr := runDir(t, dir, []string{"evidence", "export", cliTree}, "")
+	if code == 0 {
+		t.Fatal("evidence export without --out = 0, want a refusal")
+	}
+	if !strings.Contains(stderr, "--out") {
+		t.Errorf("stderr %q does not name --out", stderr)
+	}
+}
+
+// TestEvidenceExportWritesAParseableBundle is the verb's acceptance: the tree
+// passed on the command line becomes a portable file with the three raw parts
+// and their hashes, readable without odachi.
+func TestEvidenceExportWritesAParseableBundle(t *testing.T) {
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	verdict := `{"findings":[],"passes":[],"reviewer":"test","tree":"` + cliTree + `"}` + "\n"
+	verification := `{"at":"2026-01-01T00:00:00Z","by":"test","notes":[],"schema":1,"tree":"` + cliTree + `","verdict":"verified"}` + "\n"
+	proofText := "# tree " + cliTree + "\n# command echo ok\n# output\nok\n"
+	writeFile(t, dir, ".git/odachi/reviews/"+cliTree+".json", verdict)
+	writeFile(t, dir, ".git/odachi/verifications/"+cliTree+".json", verification)
+	writeFile(t, dir, "proof/0001-close.txt", proofText)
+
+	out := filepath.Join(dir, "exports", "close.json")
+	code, stdout, stderr := runDir(t, dir, []string{"evidence", "export", cliTree, "--out", out}, "")
+	if code != 0 {
+		t.Fatalf("evidence export: exit %d (stdout: %q, stderr: %q)", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, cliTree) {
+		t.Errorf("stdout %q does not name the tree", stdout)
+	}
+
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("the bundle was not written: %v", err)
+	}
+	var b struct {
+		Schema       int               `json:"schema"`
+		Tree         string            `json:"tree"`
+		Verdict      *string           `json:"verdict"`
+		Verification *string           `json:"verification"`
+		Proof        *string           `json:"proof"`
+		SHA256       map[string]string `json:"sha256"`
+	}
+	if err := json.Unmarshal(data, &b); err != nil {
+		t.Fatalf("the bundle is not JSON: %v: %s", err, data)
+	}
+	if b.Schema != 1 || b.Tree != cliTree {
+		t.Errorf("schema/tree = %d/%q, want 1/%s", b.Schema, b.Tree, cliTree)
+	}
+	if b.Verdict == nil || *b.Verdict != verdict || b.Verification == nil || *b.Verification != verification || b.Proof == nil || *b.Proof != proofText {
+		t.Errorf("the raw parts did not survive the export: %+v", b)
+	}
+	for name, want := range map[string]string{
+		"verdict":      "eb98c8f8c638a2a94bde159065c8bbd68ec0c122b014d7c5488838d00b83e71a",
+		"verification": "cc2eec198efd4ca34a34fd8e9cd415269a56cbd8a82195b55b3496b15645a869",
+		"proof":        "3fa3ab272919d01a8d1c7451ebdeecbedcbd54c57474f1235dd0777b243c514b",
+	} {
+		if b.SHA256[name] != want {
+			t.Errorf("sha256[%s] = %q, want %s", name, b.SHA256[name], want)
+		}
+	}
+}
+
+// TestEvidenceExportRefusesOverwrite names the file it protected and leaves
+// its bytes alone.
+func TestEvidenceExportRefusesOverwrite(t *testing.T) {
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeFile(t, dir, "proof/0001-close.txt", "# tree "+cliTree+"\n# command echo ok\n# output\nok\n")
+
+	out := filepath.Join(dir, "close.json")
+	writeFile(t, dir, "close.json", "keep me")
+	code, _, stderr := runDir(t, dir, []string{"evidence", "export", cliTree, "--out", out}, "")
+	if code == 0 {
+		t.Fatal("evidence export over an existing file = 0, want a refusal")
+	}
+	if !strings.Contains(stderr, out) {
+		t.Errorf("stderr %q does not name the output %s", stderr, out)
+	}
+	got, err := os.ReadFile(out)
+	if err != nil || string(got) != "keep me" {
+		t.Errorf("the existing output was changed: %q (%v)", got, err)
 	}
 }
