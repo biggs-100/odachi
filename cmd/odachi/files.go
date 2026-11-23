@@ -452,7 +452,7 @@ func loadProfile(dir, verb string) (*profile.Profile, int, string) {
 	}
 	if strings.TrimSpace(loaded.Name) == "" {
 		return nil, start.CodeBlocked, fmt.Sprintf(
-			`the profile %s does not say name; add name = "novato" (or "senior", "ci") and run %s again`, rel, verb)
+			`the profile %s does not say name; add name = "novato" (or "senior", "ci", "office-peru") and run %s again`, rel, verb)
 	}
 	// A name nobody shipped and that inherits from nothing resolves to a profile
 	// with every field empty: it validates field by field and configures nothing.
@@ -460,7 +460,7 @@ func loadProfile(dir, verb string) (*profile.Profile, int, string) {
 	// one place that knows which profiles exist.
 	if _, shipped := profile.Builtin()[loaded.Name]; !shipped && strings.TrimSpace(loaded.Extends) == "" {
 		return nil, start.CodeBlocked, fmt.Sprintf(
-			`the profile %s says name = %q, which does not exist and inherits from nobody: use "novato", "senior" or "ci", or set extends to point at one of them, and run %s again`,
+			`the profile %s says name = %q, which does not exist and inherits from nobody: use "novato", "senior", "ci" or "office-peru", or set extends to point at one of them, and run %s again`,
 			rel, loaded.Name, verb)
 	}
 

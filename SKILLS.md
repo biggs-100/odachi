@@ -14,6 +14,7 @@
 | go-tests | when writing or reviewing Go tests, golden files or Bubbletea flows. Load `tests` for the discipline and this skill for the concrete pattern. | skills/go-tests/SKILL.md |
 | measure | when a number is about to be taken (a probe, a benchmark, a cost, an A/B run), or when a document claims one. Write the criterion before the run. | skills/measure/SKILL.md |
 | motion-graphics | a title card, a stat, a chart, a logo sting, kinetic type, or a short video for YouTube, Shorts or Reels where the movement carries the message. | skills/motion-graphics/SKILL.md |
+| office-peru | when a public servant in Peru writes a document, research or report with AI and needs the rule, the evidence and the version history to hold. | skills/office-peru/SKILL.md |
 | pull-request | when a change goes to a PR or the diff passes 400 lines. Split the delivery into reviewable work units and pick one chain strategy. | skills/pull-request/SKILL.md |
 | role-craft | when a project needs a professional odachi does not have, or an existing role answers like a costume. Interview, research, and end in odachi role new. | skills/role-craft/SKILL.md |
 | security | when the change reads input from outside, decides who may do what, holds a secret, adds a dependency, writes a log or handles a failure. Name the trust boundary before the code. | skills/security/SKILL.md |

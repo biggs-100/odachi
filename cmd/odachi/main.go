@@ -612,7 +612,13 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 		// the proof keeps every byte either way.
 		opts.Out = streamTarget(stderr)
 	}
-	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), opts.Quiet, asJSON, stdout, stderr)
+	// The profile is read here, at the boundary that prints, and nowhere inside
+	// the gate: a voice cannot change a reason, a code or a proof (0355).
+	profileName := ""
+	if loaded, code, _ := loadProfile(dir, "odachi check"); code == start.CodeOK && loaded != nil {
+		profileName = loaded.Name
+	}
+	return reportCheck(check.Run(opts, osFiles{}, gitRepo{}, osShell{}), profileName, opts.Quiet, asJSON, stdout, stderr)
 }
 
 // flagSet says whether the human typed this flag. The zero value cannot answer
@@ -1108,7 +1114,7 @@ func reportStoreMoveJSON(result storemove.Result, stdout, stderr io.Writer) int 
 // reportCheck prints the gate's verdict. A ready run is silent under --quiet,
 // because the commit-msg hook runs it on every commit; a blocked run always
 // says what blocks and which command unblocks it.
-func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writer) int {
+func reportCheck(result check.Result, profileName string, quiet, asJSON bool, stdout, stderr io.Writer) int {
 	if asJSON {
 		files := result.Files
 		if files == nil {
@@ -1144,7 +1150,11 @@ func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writ
 		// A ready run is silent for the hook, except for what the run has to say and
 		// did not stop: a reminder nobody reads is not a reminder.
 		if result.Note != "" {
-			_, _ = fmt.Fprintln(stderr, "odachi: "+result.Note)
+			note := result.Note
+			if profileName == "office-peru" {
+				note = officeCheckLine(note)
+			}
+			_, _ = fmt.Fprintln(stderr, "odachi: "+note)
 		}
 		return result.Code
 	}
@@ -1152,6 +1162,9 @@ func reportCheck(result check.Result, quiet, asJSON bool, stdout, stderr io.Writ
 	lines := result.Lines
 	if len(lines) == 0 {
 		lines = []string{result.Message}
+	}
+	if profileName == "office-peru" {
+		lines = officeCheckLines(lines)
 	}
 
 	out := stdout

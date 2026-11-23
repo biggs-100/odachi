@@ -112,7 +112,7 @@ func TestLevelToUnknownProfileListsTheAvailableOnes(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("exit = %d, want 1 (stdout=%s stderr=%s)", code, stdout, stderr)
 	}
-	for _, want := range []string{"novato", "senior", "ci"} {
+	for _, want := range []string{"novato", "senior", "ci", "office-peru"} {
 		if !strings.Contains(stderr, want) {
 			t.Errorf("stderr %q does not name the available profile %q", stderr, want)
 		}

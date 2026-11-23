@@ -186,9 +186,10 @@ func TestBuiltinChain(t *testing.T) {
 	builtin := profile.Builtin()
 
 	extends := map[string]string{
-		"novato": "",
-		"senior": "novato",
-		"ci":     "senior",
+		"novato":      "",
+		"senior":      "novato",
+		"ci":          "senior",
+		"office-peru": "novato",
 	}
 	for name, want := range extends {
 		p, ok := builtin[name]
@@ -201,6 +202,30 @@ func TestBuiltinChain(t *testing.T) {
 		if err := profile.Validate(p); err != nil {
 			t.Errorf("Builtin()[%q] does not validate: %v", name, err)
 		}
+	}
+}
+
+// TestOfficePeruKeepsTheCeremonyAndTheCommandProof: the office profile changes
+// how much the tool says and how it asks, never what counts as proof. The gate
+// reads a command's output; a profile that named another proof would promise a
+// mechanism the binary does not have (0354).
+func TestOfficePeruKeepsTheCeremonyAndTheCommandProof(t *testing.T) {
+	got, err := profile.Resolve(profile.Builtin(), "office-peru")
+	if err != nil {
+		t.Fatalf("Resolve(office-peru) = %v, want nil", err)
+	}
+	want := profile.Profile{
+		Name:        "office-peru",
+		Extends:     "novato",
+		BriefSource: "interview",
+		Questions:   "one-by-one",
+		Assumptions: "never",
+		Output:      "detail",
+		Proof:       "command",
+		Explain:     "why",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Resolve(office-peru) = %+v, want %+v", got, want)
 	}
 }
 
