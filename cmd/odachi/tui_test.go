@@ -259,6 +259,25 @@ func TestTUIVoiceScreenOffersOfficePeru(t *testing.T) {
 	}
 }
 
+// TestTUIVoiceScopeTogglesOnTab: the voice screen writes either the machine
+// default or the project file, and the header says which one before enter (0357).
+func TestTUIVoiceScopeTogglesOnTab(t *testing.T) {
+	m := newTUIModel(wizard())
+	m.step = stepVoice
+	before := m.voiceScope
+	m, _ = press(t, m, tabKey)
+	if m.voiceScope == before {
+		t.Fatalf("tab did not change the voice scope from %d", before)
+	}
+	if want := voiceScopeLabels[m.voiceScope]; !strings.Contains(m.View(), want) {
+		t.Errorf("the voice screen does not show %q:\n%s", want, m.View())
+	}
+	m, _ = press(t, m, enterKey)
+	if m.state.VoiceScope != tuiVoiceScopes[m.voiceScope] {
+		t.Errorf("VoiceScope = %q, want %q", m.state.VoiceScope, tuiVoiceScopes[m.voiceScope])
+	}
+}
+
 // TestTUIEscapeGoesBackOneScreen: back is one screen, and the first screen has no
 // back.
 func TestTUIEscapeGoesBackOneScreen(t *testing.T) {
@@ -372,6 +391,11 @@ func (f *fakeRun) Install(project bool, clients, skills string, models map[strin
 func (f *fakeRun) Voice(profile string) error {
 	f.voice = profile
 	return f.record("voice")
+}
+
+func (f *fakeRun) GlobalVoice(profile string) error {
+	f.voice = profile
+	return f.record("globalvoice")
 }
 
 func (f *fakeRun) Review(mode string) error {
@@ -715,6 +739,7 @@ func TestTUIDetectsTheState(t *testing.T) {
 		Clients:      persona.SelectionOpenCode,
 		Skills:       persona.SkillsProject,
 		Voice:        "senior",
+		VoiceScope:   "project",
 		Review:       review.ModeOn,
 		Models:       map[string]string{"reliability": "opencode-go/deepseek-v4.1-flash"},
 		ClientModels: map[string]string{"opencode": "opencode-go/x", "claude": "sonnet"},

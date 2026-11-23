@@ -92,6 +92,30 @@ func TestPlanOrdersInstallVoiceReviewAndModels(t *testing.T) {
 	}
 }
 
+// TestPlanWritesTheVoiceWhereTheHumanChose: the machine scope writes the
+// default outside the project, so the apply must call a different runner op
+// and never touch odd/profile.toml (0357).
+func TestPlanWritesTheVoiceWhereTheHumanChose(t *testing.T) {
+	in := valid()
+	in.VoiceScope = configure.VoiceMachine
+	ids := make([]string, 0)
+	for _, op := range configure.Plan(in) {
+		ids = append(ids, op.ID)
+	}
+	want := []string{"install", "globalvoice", "review", "models"}
+	if !reflect.DeepEqual(ids, want) {
+		t.Fatalf("Plan ids = %q, want %q", ids, want)
+	}
+
+	run := &fakeRunner{}
+	if result := configure.Apply(in, run); result.Code != configure.CodeOK {
+		t.Fatalf("Apply = %d, want OK: %s", result.Code, result.Message)
+	}
+	if !slices.Contains(run.ops(), "globalvoice") || slices.Contains(run.ops(), "voice") {
+		t.Fatalf("calls = %q, want globalvoice without voice", run.ops())
+	}
+}
+
 // TestPlanSkipsTheModelsWhenTheReviewIsOff: a model of a lens nobody runs is a
 // line nobody reads.
 func TestPlanSkipsTheModelsWhenTheReviewIsOff(t *testing.T) {
@@ -428,6 +452,8 @@ func (f *fakeRunner) Install(project bool, clients, skills string, models map[st
 }
 
 func (f *fakeRunner) Voice(profile string) error { return f.record("voice", profile) }
+
+func (f *fakeRunner) GlobalVoice(profile string) error { return f.record("globalvoice", profile) }
 
 func (f *fakeRunner) Review(mode string) error { return f.record("review", mode) }
 

@@ -83,6 +83,12 @@ func (r tuiRunner) Voice(profile string) error {
 	return runnerError(code, out.String(), errOut.String())
 }
 
+// GlobalVoice writes the machine's default. It is the TUI's caller of the one
+// store outside every repository, and it never touches odd/profile.toml (0357).
+func (r tuiRunner) GlobalVoice(profile string) error {
+	return saveGlobalProfile(profile)
+}
+
 // Review flips the switch through `odachi review mode`.
 func (r tuiRunner) Review(mode string) error {
 	var out, errOut bytes.Buffer

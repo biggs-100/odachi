@@ -29,6 +29,9 @@ type State struct {
 	Clients    string
 	Skills     string
 	Voice      string
+	// VoiceScope is where the chosen profile is written: machine for the
+	// default in the home, project for odd/profile.toml (0357).
+	VoiceScope string
 	ReviewMode string
 	// LensModels is the table the review runs with. Nil means the caller did not
 	// touch it; an empty map means the human cleared it, and the operation runs.
@@ -51,6 +54,13 @@ type ModelChoice struct {
 	Chosen   string
 	Detected string
 }
+
+// The two places a voice can be written. Project is the default so a caller
+// that never opened the new scope keeps the behavior it had before 0357.
+const (
+	VoiceMachine = "machine"
+	VoiceProject = "project"
+)
 
 // Operation is one step of the apply, in the plan's order.
 type Operation struct {
@@ -88,6 +98,8 @@ type Runner interface {
 	// that owns the file is still the only writer (0337).
 	Install(project bool, clients, skills string, models map[string]string) error
 	Voice(profile string) error
+	// GlobalVoice writes the machine's default profile without touching a project.
+	GlobalVoice(profile string) error
 	Review(mode string) error
 	Models(models map[string]string) error
 	// Verify writes the verifier's model into odd/review.toml, keeping the lens
@@ -124,6 +136,15 @@ func normalize(s State) (State, []string) {
 			s.Voice, strings.Join(profileNames(), ", ")))
 	} else {
 		s.Voice = voice
+	}
+	scope := strings.ToLower(strings.TrimSpace(s.VoiceScope))
+	if scope == "" {
+		scope = VoiceProject
+	}
+	if scope != VoiceMachine && scope != VoiceProject {
+		problems = append(problems, fmt.Sprintf("el destino de la voz %q no existe: usa machine o project", s.VoiceScope))
+	} else {
+		s.VoiceScope = scope
 	}
 	if mode, err := review.NormalizeMode(s.ReviewMode); err != nil {
 		problems = append(problems, "el review tiene que ser on u off")
@@ -203,9 +224,13 @@ func Validate(s State) []string {
 // the project and its store exist before anything is configured; the review's
 // model table is a line nobody reads when the review is off.
 func Plan(s State) []Operation {
+	voiceOp := Operation{ID: "voice", Label: "aplicar la voz"}
+	if strings.EqualFold(strings.TrimSpace(s.VoiceScope), VoiceMachine) {
+		voiceOp = Operation{ID: "globalvoice", Label: "fijar el perfil por defecto de la máquina"}
+	}
 	ops := []Operation{
 		{ID: "install", Label: "instalar y configurar los clientes"},
-		{ID: "voice", Label: "aplicar la voz"},
+		voiceOp,
 		{ID: "review", Label: "configurar el review"},
 	}
 	// The models operation runs whenever the review is on and the table is not
@@ -283,6 +308,8 @@ func applyOne(s State, id string, run Runner) error {
 		return run.Install(s.Project, s.Clients, s.Skills, clientModels(s))
 	case "voice":
 		return run.Voice(s.Voice)
+	case "globalvoice":
+		return run.GlobalVoice(s.Voice)
 	case "review":
 		return run.Review(s.ReviewMode)
 	case "models":

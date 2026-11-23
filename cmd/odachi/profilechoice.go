@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/adapters/profiletoml"
+	appconfigure "github.com/biggs-100/odachi/internal/app/configure"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/profile"
@@ -69,6 +70,18 @@ func saveGlobalProfile(name string) error {
 		return fmt.Errorf("global profile: could not write %s: %w", path, err)
 	}
 	return nil
+}
+
+// voiceScopeFor is where the TUI starts: a project that already chose keeps its
+// scope, and a machine with a default but no project file starts on machine.
+func voiceScopeFor(dir string) string {
+	if loaded, code, _ := loadProfile(dir, "odachi tui"); code == start.CodeOK && loaded != nil {
+		return appconfigure.VoiceProject
+	}
+	if _, found, _ := loadGlobalProfile(); found {
+		return appconfigure.VoiceMachine
+	}
+	return appconfigure.VoiceProject
 }
 
 // profileNameForVoice maps the text in AGENTS.md back to a shipped profile by

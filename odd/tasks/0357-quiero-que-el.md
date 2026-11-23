@@ -14,7 +14,7 @@ R1 · "quiero que el usuario en la tui interactiva pueda seleccionar que perfil 
 - the changelog names the feature and the proof is green
 
 ## Steps
-- [ ] T1 · guardar el default global y unificar la resolucion del perfil   R1 · route:inline
+- [x] T1 · guardar el default global y unificar la resolucion del perfil   R1 · route:inline · tree:d9323035d6f88ef4c28beeabac7f3add1cd8401a
 - [ ] T2 · la TUI elige maquina o proyecto al aplicar la voz   R1 · route:inline
 - [ ] T3 · el changelog y el handover nombran la feature   R1 · route:inline
 - [ ] T4 · go test ./... y check --run verdes en el arbol que cierra   R1 · route:inline
