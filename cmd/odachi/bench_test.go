@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	benchapp "github.com/biggs-100/odachi/internal/app/bench"
 )
 
 // sandboxes lists the bench's temporary directories on this machine. It is how a
@@ -108,6 +111,24 @@ func TestBenchJSONSaysTheSameThing(t *testing.T) {
 	}
 	if payload.DeadEnds == nil {
 		t.Fatalf("dead_ends must be a list, empty or not: %s", stdout)
+	}
+}
+
+// TestBenchJSONReportsTheInteractiveCount: a number the bench measured must not
+// disappear from the machine-readable report just because it is not assigned.
+func TestBenchJSONReportsTheInteractiveCount(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := reportBench(benchapp.Result{Interactive: 3}, true, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d, want 0: %s", code, stderr.String())
+	}
+	var payload struct {
+		Interactive int `json:"interactive"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+		t.Fatalf("--json must be valid JSON: %v\n%s", err, stdout.String())
+	}
+	if payload.Interactive != 3 {
+		t.Fatalf("interactive = %d, want 3: %s", payload.Interactive, stdout.String())
 	}
 }
 
