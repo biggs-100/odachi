@@ -1382,3 +1382,28 @@
 - There is no sensitive data in the first version.
 - First usable version: no rush.
 - Wants to learn: como la disciplina de evidencia sirve a quien no es desarrollador.
+
+## 0355 · traducir-esos-mensajes
+
+## What must exist
+- traducir esos mensajes al lenguaje del perfil
+
+## Done when
+- with the office-peru profile, odachi check prints the observed gate messages in plain Spanish without developer jargon
+- with novato, senior or ci the human output stays byte for byte as it is today
+- the --json payload keeps the same keys and values for every profile
+- tests pin both the office-peru rendering and the unchanged default rendering
+- the changelog names the feature and the proof is green on the closing tree
+
+## Not included (first version)
+- no gate logic, reason code or exit code change
+- no localization of init, start or the other verbs in this feature
+- no change to how a proof command is executed by the shell
+- no change to the English messages of the other profiles
+- no push, pull request or release
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: como un perfil cambia la salida sin cambiar la compuerta.
