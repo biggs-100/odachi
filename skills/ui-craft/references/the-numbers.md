@@ -26,7 +26,8 @@ from the names of devices.
 A ratio is not conformance: WCAG 2.2 asks for a 24x24 CSS px target size with its
 spacing exceptions, wants status not carried by colour alone, and wants text that
 survives 200% zoom. These numbers are the floor a screen starts from, not a
-certificate it earns.
+certificate it earns. Ratios and numbers are defaults, not proof of conformance:
+check the rendered interface, not the table.
 
 ## The colour space, and the one that muddies
 

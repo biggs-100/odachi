@@ -223,7 +223,7 @@ func TestDesignChecksEveryArtboard(t *testing.T) {
 
 	for _, want := range []string{
 		"the-read",
-		"adaptive-interfaces",
+		"accessible-and-adaptive",
 		"next `NN`",
 		"screenshot",
 		"transient state",

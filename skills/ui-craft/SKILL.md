@@ -62,4 +62,4 @@ The winner and why, the files changed, the five states covered, the contrast mea
 ## Never
 
 - Ship a screen you have not looked at, or use motion to decorate a layout that does not work.
-- Depend on a skill the project does not ship: this page and its references are complete on their own.
+- Depend on a skill the project does not ship, or install anything during a critique: this page is complete on its own and read-only means read-only.

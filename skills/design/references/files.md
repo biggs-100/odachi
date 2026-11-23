@@ -14,8 +14,8 @@ comments. A new brief is a new slug; a design that already exists is never overw
   "brief": "Pricing page for a note-taking app aimed at students",
   "feature": "odd/tasks/pricing-page.md",
   "artboards": [
-    { "file": "01-comparison-table.html", "title": "Comparison table", "tradeoff": "Dense and scannable; weaker emotional pull", "width": 1440, "height": 900, "screenshot": ".screenshots/01.png" },
-    { "file": "02-single-plan-hero.html", "title": "Single plan hero", "tradeoff": "Strong focus; hides plan differences", "width": 1440, "height": 900, "screenshot": ".screenshots/02.png" }
+    { "file": "01-comparison-table.html", "title": "Comparison table", "tradeoff": "Dense and scannable; weaker emotional pull", "width": 1440, "height": 900, "screenshot": "01.png" },
+    { "file": "02-single-plan-hero.html", "title": "Single plan hero", "tradeoff": "Strong focus; hides plan differences", "width": 1440, "height": 900, "screenshot": "02.png" }
   ]
 }
 ```

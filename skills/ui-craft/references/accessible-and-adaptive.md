@@ -23,6 +23,8 @@ the measurements in `the-numbers.md`; this page is what the markup has to be.
   keyboard.
 - Focus is visible, and it is not the same thing as selection: one says where the
   keyboard is, the other says what was chosen.
+- Selected, disabled, hover and focus are four distinct states: focus is not
+  selection, hover is neither, and a disabled control says why it is unavailable.
 - An overlay moves focus to a control inside it, and returns it to the trigger when
   it closes. Escape closes it, and never discards work without warning.
 - When the layout rearranges, the order of the DOM follows reading and keyboard
