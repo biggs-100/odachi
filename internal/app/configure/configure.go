@@ -26,9 +26,9 @@ const (
 // State is what the wizard collected. Project is the chosen action: true
 // initializes the project (init), false configures the machine alone (setup).
 type State struct {
-	Clients    string
-	Skills     string
-	Voice      string
+	Clients string
+	Skills  string
+	Voice   string
 	// VoiceScope is where the chosen profile is written: machine for the
 	// default in the home, project for odd/profile.toml (0357).
 	VoiceScope string

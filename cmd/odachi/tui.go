@@ -25,14 +25,14 @@ import (
 // tuiState is what the first screen reads: the facts the wizard starts from. It
 // is detected, never written: opening the TUI changes nothing.
 type tuiState struct {
-	Version string
-	Project bool
+	Version    string
+	Project    bool
 	Clients    string
 	Skills     string
 	Voice      string
 	VoiceScope string
 	Review     string
-	Models  map[string]string
+	Models     map[string]string
 	// Verify is the model odd/review.toml declares for the verifier, and
 	// ClientModels the model each client's own file carries today. The models
 	// section shows them and remembers them as the detected value, so a row that

@@ -1,8 +1,9 @@
 # Next session
 
-Written after v0.62.0 shipped the office-peru work and after 0356 cleaned the
-doctor. The project now serves a second audience: public office workers in Peru
-who write documents, research and reports, not software developers.
+Written after v0.62.0 shipped the office-peru work, 0356 cleaned the doctor, and
+0357 gave the profile a machine default plus a per-project override. The project
+now serves a second audience: public office workers in Peru who write documents,
+research and reports, not software developers.
 
 **Standing rule.** When a problem or a design question shows up, read
 `C:\Users\USER\Desktop\herramientas\gentle-shell` first, read-only: it may already
@@ -11,15 +12,21 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 
 ## Where the project is
 
-- **main is `3b10bce`, clean and synchronized.** v0.62.0 shipped on that merge (release
+- **main is `e8a05d5`, clean and synchronized.** 0356 was merged there after v0.62.0;
+  it removed a stale local binary that shadowed the installed one and made doctor
+  checks 2 and 6 fail. v0.62.0 shipped on `3b10bce` (release
   PR #715, tag `v0.62.0`, 2026-11-23, 16 signed assets). The release carried 0354 (the
   `office-peru` profile, its voice and a skill with three references) and 0355 (the
   gate's human lines in Spanish for that profile), both merged in #714 as `8d9dc58`.
-- **0356 is open on `fix/doctor-clean` at `efdd5fe`, not yet delivered.** It removed a
-  stale local `odachi.exe` that shadowed the installed binary and made doctor checks 2
-  and 6 fail, and it changed the measurement rule in `odd/rules.toml` to an honest
-  `enforces = "none"` with its reason. This file and a refreshed `AGENTS.md` block
-  travel with that branch.
+- **0356 was delivered in PR #716 and merged at `e8a05d5`.** It changed the measurement
+  rule in `odd/rules.toml` to an honest `enforces = "none"` with its reason and refreshed
+  the `AGENTS.md` block and this handover. `odachi doctor` reports all clear with 18
+  checks and 2 warnings.
+- **0357 is open on `feature/0357-perfil-global-tui`.** It stores a machine default in
+  `~/.odachi/profile.toml`, resolves the profile from project file → published block →
+  machine default → inference through one function, and lets the TUI's voice screen
+  switch between machine and project with `tab`. A per-project change is still a spoken
+  instruction followed by `odachi level --to <profile>`.
 - **The installed binary is 0.62.0 and knows the new profile.** Verified end to end in
   a temp project: `init`, `level --to office-peru`, a two-source report, a proof and a
   local commit; `odachi check` printed in Spanish with the installed binary.
@@ -27,7 +34,7 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
   feature writes under it.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
-  total: 354 features · 875 steps done of 875 · 0 open questions
+  total: 355 features · 879 steps done of 879 · 0 open questions
 
 ## What waits for a decision
 
@@ -49,6 +56,12 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 
 ## What this cycle learned
 
+- **One resolver, one answer.** Doctor and the verbs used to derive the profile in two
+  places; 0357 made them ask one function, so a machine default cannot disagree with
+  the block a project already published.
+- **A default must not rewrite a committed choice.** Resolution stops at the project's
+  `odd/profile.toml` and at a voice already in `AGENTS.md` before it ever reads the
+  machine's default.
 - **A profile changes ceremony, not knowledge.** It has eight axes plus a voice; the
   Peruvian legal map lives in a skill's references. A fifth axis for `source-check`
   would promise a proof mode the gate does not have.

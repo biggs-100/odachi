@@ -7,6 +7,10 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **The profile has a machine default and a project override.** The TUI's voice screen offers two destinations: the machine's `~/.odachi/profile.toml` as the default for projects without their own choice, or `odd/profile.toml` for this project alone. When neither exists, resolution still uses the voice published in `AGENTS.md` and then the old inference. Doctor and the verbs ask one resolver, so they cannot disagree about the profile in force. Minor (0357).
+
 ## v0.62.0 - 2026-11-23
 
 - **The gate speaks the profile's language.** In an `office-peru` project, `odachi check` renders its human lines in plain Spanish: proof, next step, added files, missing review, warnings and the store note. The gate's reasons, exit codes, commands and `--json` payload do not change, and the other profiles keep their output byte for byte. Minor (0355).

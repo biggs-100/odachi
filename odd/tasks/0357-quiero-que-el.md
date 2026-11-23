@@ -15,9 +15,9 @@ R1 · "quiero que el usuario en la tui interactiva pueda seleccionar que perfil 
 
 ## Steps
 - [x] T1 · guardar el default global y unificar la resolucion del perfil   R1 · route:inline · tree:d9323035d6f88ef4c28beeabac7f3add1cd8401a
-- [ ] T2 · la TUI elige maquina o proyecto al aplicar la voz   R1 · route:inline
-- [ ] T3 · el changelog y el handover nombran la feature   R1 · route:inline
-- [ ] T4 · go test ./... y check --run verdes en el arbol que cierra   R1 · route:inline
+- [x] T2 · la TUI elige maquina o proyecto al aplicar la voz   R1 · route:inline · tree:a95fe0f5e94a6a6aeb0fe594cbbab176302add82
+- [x] T3 · el changelog y el handover nombran la feature   R1 · route:inline
+- [x] T4 · go test ./... y check --run verdes en el arbol que cierra   R1 · route:inline
 
 ## History
 L1 · "quiero que el usuario en la tui interactiva pueda seleccionar que perfil por default usar en el global y que cuando quiera trabajar con un perfil deferente solo en un proyecto, le pueda decir al agente con que perfil trabajar solo para ese proyecto, entonces seria mas facil que el usuario solo facil sin tanto problema"
