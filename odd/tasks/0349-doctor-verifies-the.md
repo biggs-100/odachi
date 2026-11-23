@@ -8,7 +8,7 @@ R1 · "doctor verifies the evidence store is readable"
 ## Done when
 
 ## Steps
-- [ ] T1 · doctor verifies the evidence store is readable   R1
+- [x] T1 · doctor verifies the evidence store is readable   R1 · tree:7eba6dc41a06c6bc9a4cdbcce0bd5363b249166d
 
 ## History
 L1 · "doctor verifies the evidence store is readable"
