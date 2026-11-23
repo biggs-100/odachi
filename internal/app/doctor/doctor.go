@@ -111,10 +111,12 @@ type Plugin struct {
 	Content []byte
 }
 
-// Git is the repository port, one question wide. doctor reports; it never runs
-// anything that writes, and a repository it cannot read is check 2's business.
+// Git is the repository port. doctor reports; it never runs anything that
+// writes, and a repository it cannot read is check 2's business. CommonDir is
+// where the evidence store hangs; the store check reads it and writes nothing.
 type Git interface {
 	Head(dir string) (string, error)
+	CommonDir(dir string) (string, error)
 }
 
 // Agents is the selection port: which clients the project chose for the native
@@ -203,6 +205,7 @@ func Run(opts Options, files Files, lookup Lookup, profiles Profiles) Result {
 		r.environment(),
 		r.rulesLedger(),
 		r.quorum(),
+		r.store(),
 	}
 
 	lines := make([]string, 0, len(checks)+1)
