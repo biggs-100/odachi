@@ -12,8 +12,8 @@ R1 · "traducir esos mensajes al lenguaje del perfil"
 - the changelog names the feature and the proof is green on the closing tree
 
 ## Steps
-- [ ] T1 · el traductor de lineas de check con pruebas de ida y vuelta   R1 · route:inline
-- [ ] T2 · runCheck carga el perfil y pasa la voz sin tocar el JSON   R1 · route:inline
+- [x] T1 · el traductor de lineas de check con pruebas de ida y vuelta   R1 · route:inline · tree:566216a51569ccd608cd8ca63ec5e6f80728e8af
+- [x] T2 · runCheck carga el perfil y pasa la voz sin tocar el JSON   R1 · route:inline · tree:566216a51569ccd608cd8ca63ec5e6f80728e8af
 - [ ] T3 · el changelog nombra la feature y la investigacion su limite   R1 · route:inline
 - [ ] T4 · go test ./... y check --run verdes en el arbol que cierra   R1 · route:inline
 

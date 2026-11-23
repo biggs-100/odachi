@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+- **The gate speaks the profile's language.** In an `office-peru` project, `odachi check` renders its human lines in plain Spanish: proof, next step, added files, missing review, warnings and the store note. The gate's reasons, exit codes, commands and `--json` payload do not change, and the other profiles keep their output byte for byte. Minor (0355).
+
 - **A public office worker has a profile and a skill.** `office-peru` joins the built-in profiles with a voice that speaks in plain language about documents, primary sources and git as a local notebook of versions, without build commands or platform vocabulary. Its skill carries the Peruvian AI legal map verified in November 2026, the evidence workflow for a document, and the local version record; the proof axis stays `command` because the gate reads a command's output and a profile cannot change what counts as evidence. Minor (0354).
 
 ## v0.61.0 - 2026-11-23

@@ -109,6 +109,10 @@ The last row matters for the intended audience. These workers do not need GitHub
 - Web search was degraded during this research (bot challenges and truncated queries). Norms with a `busquedas.elperuano.pe` or `gob.pe` link above were read directly; the rest come from official listings.
 - This document does not design the `office peru` profile or its skill. It only establishes the evidence base for that decision.
 
+## Limit of the current translation
+
+Feature 0355 renders the human lines of `odachi check` in plain Spanish when the project's profile is `office-peru`. It does not translate the other verbs, does not change how a proof command is executed by the shell, and does not alter the `--json` contract. The English source messages stay in the domain; the translation lives at the printing boundary.
+
 ## Next step
 
 This research is the evidence base for feature **0354**, which adds the `office-peru` profile and its companion skill. The legal map is now also carried by `skills/office-peru/references/peru-ai-legal-map.md`, with the document workflow and the local-version record beside it. An odachi profile is only eight ceremony axes plus a voice; the legal knowledge lives in the skill's references, not in the profile.
