@@ -7,6 +7,10 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A public office worker has a profile and a skill.** `office-peru` joins the built-in profiles with a voice that speaks in plain language about documents, primary sources and git as a local notebook of versions, without build commands or platform vocabulary. Its skill carries the Peruvian AI legal map verified in November 2026, the evidence workflow for a document, and the local version record; the proof axis stays `command` because the gate reads a command's output and a profile cannot change what counts as evidence. Minor (0354).
+
 ## v0.61.0 - 2026-11-23
 
 - **A close's evidence can leave the clone.** `odachi evidence export <tree> --out <path>` gathers the verdict, the verification and the proof that names that tree into one deterministic JSON bundle, with a sha256 for each part and no timestamp, so exporting a tree twice writes the same bytes. The three parts live in different places and two of them outside the worktree; a tree with none of them is refused, and an output that already exists is never overwritten. Patch (0351).

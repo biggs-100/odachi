@@ -2,7 +2,7 @@
 
 This document maps the Peruvian legal and regulatory framework that governs how a public servant may use artificial intelligence to produce documents, research and reports. It is written for the person who drafts and signs the document, not for the person who builds the system. The conclusion is that Peru has a promotion law plus a binding regulation with real duties: an office worker cannot treat AI output as verified fact, cannot paste personal data into a public tool, and cannot let a system decide on people. The evidence habits odachi already teaches — written intent, observable acceptance, a proof tied to the exact tree, and a named reviewer — fit these duties directly.
 
-Status of this research: verified 2026-11-23 against primary texts on `busquedas.elperuano.pe`, `gob.pe` and the Congress site. Items marked **UNVERIFIED** in this document were confirmed only through official listings or secondary sources and must not be cited as settled law.
+Evidence for feature 0354 (`office-peru`). Status of this research: verified 2026-11-23 against primary texts on `busquedas.elperuano.pe`, `gob.pe` and the Congress site. Items marked **UNVERIFIED** in this document were confirmed only through official listings or secondary sources and must not be cited as settled law.
 
 ## Quick path
 
@@ -111,4 +111,4 @@ The last row matters for the intended audience. These workers do not need GitHub
 
 ## Next step
 
-Decide whether this research becomes a companion skill for an `office peru` profile, or stays a standalone reference. Remember that an odachi profile is only eight ceremony axes plus a voice; the legal knowledge lives in the skill's references, not in the profile.
+This research is the evidence base for feature **0354**, which adds the `office-peru` profile and its companion skill. The legal map is now also carried by `skills/office-peru/references/peru-ai-legal-map.md`, with the document workflow and the local-version record beside it. An odachi profile is only eight ceremony axes plus a voice; the legal knowledge lives in the skill's references, not in the profile.
