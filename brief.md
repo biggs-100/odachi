@@ -1356,3 +1356,29 @@
 ## Decisions taken
 - A fence rule protects a file, not its reason: the human authorizes touching it before the work.
 - The runner that cannot be assigned is not a gate; the same test applies to the runner that replaces it.
+
+## 0354 · un-perfil-en
+
+## What must exist
+- un perfil en odachi que se llamara office peru, este perfil no esta dirigido para desarrolladores, es para personas que trabajan en oficina, que no conocen la gera de desarrolladores de software, que no usan github pero que si deberian usar git hoy en la hera de agentes ia, teniendo en cuenta que estos trabajadores se dedican a hacer documentos, investigaciones, informes y entonces creo que nuestro sistema de desarrollo vasado en evidencia sirviria mucho para estos trabajadores que se quieren adaptar a la hera de los agentes de inteligencia artificial
+
+## Done when
+- odachi level --to office-peru writes office-peru in odd/profile.toml
+- odachi skills --check passes and the office-peru skill is listed with its trigger
+- the office-peru voice names the Peruvian public-office audience and carries no developer jargon
+- tests pin the eight profile axes, the new voice and the skill references
+- SKILLS.md, docs/impact-map.md and docs/office-peru-research.md name the feature
+- go test ./... is green and odachi check --run "go test ./..." is green
+
+## Not included (first version)
+- no change to the proof axis: it stays command because the gate reads command output
+- no gate, review or doctor behavior change
+- no legal advice in the skill: norms and dates only
+- no edits to gentle-shell or to the home copy of the skills
+- no second vendor, no remote calls and no new model spend
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: no rush.
+- Wants to learn: como la disciplina de evidencia sirve a quien no es desarrollador.
