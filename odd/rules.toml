@@ -26,7 +26,8 @@ because  = "0323 needed the exam to answer a question it could not ask, so the f
 [[rule]]
 rule     = "una medicion no corre en la gate: N veces un modelo multiplica el costo"
 skill    = "measure"
-enforces = "fence:.github/workflows/**"
+enforces = "none"
+because  = "el fence ya no cubre .github/workflows/**: la decision de no pagar un modelo en la gate la toma el humano al revisar el workflow, y el doctor solo nombra mecanismos que existen"
 
 [[rule]]
 rule     = "ningun cambio entra con el linter en rojo"
