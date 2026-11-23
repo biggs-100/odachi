@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.61.0 - 2026-11-23
 
 - **A close's evidence can leave the clone.** `odachi evidence export <tree> --out <path>` gathers the verdict, the verification and the proof that names that tree into one deterministic JSON bundle, with a sha256 for each part and no timestamp, so exporting a tree twice writes the same bytes. The three parts live in different places and two of them outside the worktree; a tree with none of them is refused, and an output that already exists is never overwritten. Patch (0351).
 
