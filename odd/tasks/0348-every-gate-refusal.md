@@ -8,7 +8,7 @@ R1 · "every gate refusal carries a typed transition with a kind and a command"
 ## Done when
 
 ## Steps
-- [ ] T1 · every gate refusal carries a typed transition with a kind and a command   R1
+- [x] T1 · every gate refusal carries a typed transition with a kind and a command   R1 · tree:d8a09aa3aee6cbf67a874974b0f3e0b6cde064c8
 
 ## History
 L1 · "every gate refusal carries a typed transition with a kind and a command"
