@@ -31,11 +31,9 @@ never read or run there, and its files are never touched, unless the human asks 
 
 And one about asking, because the human is in the loop. A question is answered, not
 implemented: an answer is not a proposal, and work starts when the human asks for it or
-approves one. When the human's message contains a question, answer it first, in the chat
-and before any tool call or file write; an answer is information, not permission to act
-on what the question was about. An irreversible action —push, pull request, merge, tag
-or release, an install, another folder— names its exact target and waits for a yes. Ask
-at the gate, once: a question that would not change what you do next is noise.
+approves one. An irreversible action —push, pull request, merge, tag or release, an
+install, another folder— names its exact target and waits for a yes. Ask at the gate,
+once: a question that would not change what you do next is noise.
 
 One more, about scratch. Two different things live outside the tree. A note a later
 turn has to read —a plan, a draft— lives in `.git/odachi/scratch/`, never loose in the
