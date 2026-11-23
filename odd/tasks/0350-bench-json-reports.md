@@ -8,7 +8,7 @@ R1 · "bench --json reports the interactive count it measures"
 ## Done when
 
 ## Steps
-- [ ] T1 · bench --json reports the interactive count it measures   R1
+- [x] T1 · bench --json reports the interactive count it measures   R1 · tree:cbb553d7f7f2ff42c6f49efb860021500cf3a501
 
 ## History
 L1 · "bench --json reports the interactive count it measures"
