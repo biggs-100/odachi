@@ -14,7 +14,7 @@ The human asks for a screen, mockup, landing page or visual directions, iterates
 - **A design is a folder.** `design/<slug>/` holds the artboards, their screenshots, `design.json` and, when the canvas collected them, `comments.json`; `references/files.md` has every format. Never overwrite another design: a new brief is a new slug.
 - **Every artboard is one self-contained HTML file**: inline CSS, JS and SVG, system font stacks only. Never an external URL, CDN, remote font, image or script; it has to open offline.
 - **Every artboard carries the screenshot it was read against**: a file named in the manifest's `screenshot`, taken after the last change. A screen nobody looked at is a screen nobody checked; `odachi design list` names the ones without it.
-- **Before designing, ask the folder**: `odachi design list` says whether `design/system.md` is missing, stale or fresh; when a source is stale, name it, offer a re-sync with `odachi design sync`, and wait for the human's yes — sync only after they agree, and never follow stale tokens silently.
+- **Before designing, ask the folder**: `odachi design list` says whether `design/system.md` is missing, stale or fresh. A stale source must be named and a re-sync offered; wait for the human's yes and never follow stale tokens silently.
 - **Open the canvas after changes**: `odachi design open <slug>` returns at once and leaves a detached canvas; a second call moves the open page. Report its URL unless the human said not to.
 - **Comments arrive as session messages when the OpenCode plugin is installed** (`odachi init --global` writes it); without it, or on Claude Code, read `design/<slug>/comments.json` and apply the `open` entries, saying which path you took.
 - **The handoff records what happened**: `odachi design handoff <slug>/<artboard>` marks the chosen artboard `sent` and logs it in the linked feature; `--status in_progress` and then `--status implemented --preview http://localhost:<port>` (loopback: the canvas frames it).
@@ -34,7 +34,7 @@ The human asks for a screen, mockup, landing page or visual directions, iterates
   plus a `Copy as prompt` button that copies the chosen values as a prompt. The
   button copies text; the artboard never calls a network.
 - **Design system first when it exists**: read `design/system.md` and use only its tokens and component rules; before finishing an artboard, compare its colours and families with it.
-- **Capture the system by reading, never by writing**: `odachi design sync` reads CSS custom properties, the Tailwind config, components, token files and fonts, and writes `design/system.md` and `design/system.html` with each entry's source; it reports one line saying what it wrote and that no source was edited. No sources: propose a starter, never invent.
+- **Capture the system by reading, never by writing**: `odachi design sync` reads CSS custom properties and fonts, writes `design/system.md` and `design/system.html` with each entry's source, and reports one line; it edits no source. With no source, propose a starter, never invent.
 - **Comments come from the folder, not a tool**: apply each open entry of `design/<slug>/comments.json` to its artboard with `selector` and `excerpt`, and resolve it with `odachi design comments <slug> --resolve <id...>`; never delete or reorder, leave the rest open.
 - **A comment's screenshot is read first**: when the entry carries `screenshot`, it shows the transient state the static artboard does not.
 
