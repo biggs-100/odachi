@@ -7,6 +7,16 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **A close's evidence can leave the clone.** `odachi evidence export <tree> --out <path>` gathers the verdict, the verification and the proof that names that tree into one deterministic JSON bundle, with a sha256 for each part and no timestamp, so exporting a tree twice writes the same bytes. The three parts live in different places and two of them outside the worktree; a tree with none of them is refused, and an output that already exists is never overwritten. Patch (0351).
+
+- **bench --json reports the count it measured.** The machine-readable report declared an `interactive` field and never assigned it, so every reader saw zero even when the bench had counted interactive blocks. The field now carries the measured value and a test pins a nonzero one. Patch (0350).
+
+- **The doctor checks the evidence store.** The clone keeps verdicts and verifications outside the worktree, and a folder it cannot read is not the same as an empty one. An eighteenth check lists the store root, `reviews/` and `verifications/`, and names the failing path with a repair; earlier check numbers did not move and `--json` needed no change. Patch (0349).
+
+- **Every gate refusal says who acts and what to run.** A verdict now carries a typed continuation -`execute`, `collect` or `stop`, with the command- derived in one place, so a future reason cannot forget it. The printed `next:` line comes from that field, and a guard test covers all seventeen reasons. Patch (0348).
+
 ## v0.60.0 - 2026-11-22
 
 - **The wizard edits a declared check without touching its severity.** `odachi tui` showed the declared tools of `odd/review.toml` but offered no way to rename one, fix a broken command or reword its remedy: the fifth section of the hub now lists each check with the severity it keeps, opens the three editable fields of one, and writes only the values that changed when the summary is applied. `review.SetConfig` gained a checks option keyed by the identity read from the file, so a rename still finds its row; each value is normalized with the domain's own rule before rendering, and the severity is copied from the file because no edit can carry one -it fixes the verdict-. A new name or command changes the approval fingerprint, so the apply names `odachi review checks approve`; a remedy-only edit stays quiet, because advice is advice and is not executed. The switch, the lenses, the verifier, the four scalars and every check nobody touched survive byte for byte. The section was captured from the terminal at 80x24 and at 60x20, with the three nested field states read from the same harness. Patch (0346).
