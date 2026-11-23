@@ -110,16 +110,17 @@ func reportBench(result benchapp.Result, asJSON bool, stdout, stderr io.Writer) 
 			DeadEnd     int           `json:"dead_end"`
 			DeadEnds    []jsonDeadEnd `json:"dead_ends"`
 		}{
-			Code:      result.Code,
-			Message:   result.Message,
-			Journeys:  journeys,
-			Steps:     result.Steps,
-			Blocks:    result.Blocks,
-			InBand:    result.InBand,
-			OutOfBand: result.OutOfBand,
-			Templated: result.Templated,
-			DeadEnd:   result.DeadEnd,
-			DeadEnds:  deadEnds,
+			Code:        result.Code,
+			Message:     result.Message,
+			Journeys:    journeys,
+			Steps:       result.Steps,
+			Blocks:      result.Blocks,
+			InBand:      result.InBand,
+			Interactive: result.Interactive,
+			OutOfBand:   result.OutOfBand,
+			Templated:   result.Templated,
+			DeadEnd:     result.DeadEnd,
+			DeadEnds:    deadEnds,
 		}
 
 		data, err := json.MarshalIndent(payload, "", "  ")
