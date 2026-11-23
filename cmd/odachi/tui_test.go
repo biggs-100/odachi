@@ -245,6 +245,20 @@ func TestTUIVoiceScreenChoosesTheBuiltIn(t *testing.T) {
 	}
 }
 
+// TestTUIVoiceScreenOffersOfficePeru: the built-in profile is a real choice in
+// the wizard, not only a name in a file (0354).
+func TestTUIVoiceScreenOffersOfficePeru(t *testing.T) {
+	m := newTUIModel(wizard())
+	m, _ = press(t, m, enterKey) // clients
+	m, _ = press(t, m, enterKey) // skills
+	m, _ = press(t, m, enterKey) // -> voice
+	m, _ = press(t, m, downKey)  // novato -> office-peru
+	m, _ = press(t, m, enterKey)
+	if m.state.Voice != "office-peru" {
+		t.Fatalf("Voice = %q, want office-peru", m.state.Voice)
+	}
+}
+
 // TestTUIEscapeGoesBackOneScreen: back is one screen, and the first screen has no
 // back.
 func TestTUIEscapeGoesBackOneScreen(t *testing.T) {
@@ -293,7 +307,8 @@ func TestTUITheChoicesAreShownInTheSummary(t *testing.T) {
 	m, _ = press(t, m, enterKey)
 	m, _ = press(t, m, downKey) // home -> project
 	m, _ = press(t, m, enterKey)
-	m, _ = press(t, m, downKey)  // novato -> senior
+	m, _ = press(t, m, downKey)  // novato -> office-peru
+	m, _ = press(t, m, downKey)  // office-peru -> senior
 	m, _ = press(t, m, enterKey) // -> review
 	m, _ = press(t, m, tabKey)   // review -> summary
 

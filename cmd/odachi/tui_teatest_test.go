@@ -41,7 +41,8 @@ func TestTUIWizardRunsInATerminal(t *testing.T) {
 	tm.Send(tea.KeyMsg{Type: tea.KeyEnter}) // clients -> skills
 	tm.Send(tea.KeyMsg{Type: tea.KeyDown})  // home -> project
 	tm.Send(tea.KeyMsg{Type: tea.KeyEnter}) // skills -> voice
-	tm.Send(tea.KeyMsg{Type: tea.KeyDown})  // novato -> senior
+	tm.Send(tea.KeyMsg{Type: tea.KeyDown})  // novato -> office-peru
+	tm.Send(tea.KeyMsg{Type: tea.KeyDown})  // office-peru -> senior
 	tm.Send(tea.KeyMsg{Type: tea.KeyEnter}) // voice -> review
 	tm.Send(tea.KeyMsg{Type: tea.KeyTab})   // review -> summary
 	tm.Send(tea.KeyMsg{Type: tea.KeyEnter}) // summary -> apply
