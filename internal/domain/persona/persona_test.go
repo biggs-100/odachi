@@ -41,6 +41,37 @@ func TestNovatoTeachesAndSeniorLeads(t *testing.T) {
 	}
 }
 
+// TestOfficePeruVoiceIsForAnOfficeWithoutDeveloperJargon: the profile is useless
+// if it answers a public servant in the vocabulary of a software team. The voice
+// names the audience and the evidence habit, and leaves the build commands out
+// (0354).
+func TestOfficePeruVoiceIsForAnOfficeWithoutDeveloperJargon(t *testing.T) {
+	name, err := persona.VoiceName("office-peru")
+	if err != nil {
+		t.Fatalf("VoiceName(office-peru) = %v, want nil", err)
+	}
+	if name != persona.OfficePeru {
+		t.Errorf("VoiceName(office-peru) = %q, want %q", name, persona.OfficePeru)
+	}
+	voice, err := persona.Voice("office-peru")
+	if err != nil {
+		t.Fatalf("Voice(office-peru) = %v, want nil", err)
+	}
+	for _, want := range []string{"public office", "Peru", "primary source", "git"} {
+		if !strings.Contains(voice, want) {
+			t.Errorf("the office-peru voice does not contain %q:\n%s", want, voice)
+		}
+	}
+	for _, forbidden := range []string{"go test", "odachi check --run", "pull request", "commit message"} {
+		if strings.Contains(voice, forbidden) {
+			t.Errorf("the office-peru voice carries developer jargon %q:\n%s", forbidden, voice)
+		}
+	}
+	if !slices.Contains(persona.Names(), persona.OfficePeru) {
+		t.Errorf("Names() = %v, want %q among them", persona.Names(), persona.OfficePeru)
+	}
+}
+
 // TestVoicesEndInExactlyOneNewline: the renderer puts the text straight after the
 // section's blank line and straight before the closing marker, so the newlines
 // are the renderer's to compose and the text's to get right.

@@ -13,7 +13,7 @@ R1 · "un perfil en odachi que se llamara office peru, este perfil no esta dirig
 - go test ./... is green and odachi check --run "go test ./..." is green
 
 ## Steps
-- [ ] T1 · el perfil entra en Builtin con los ocho ejes y proof = command   R1 · route:inline
+- [x] T1 · el perfil entra en Builtin con los ocho ejes y proof = command   R1 · route:inline · tree:0e539a0a98421f473f7707f5f339890d87061436
 - [ ] T2 · la voz de office-peru nombra la audiencia y no usa jerga   R1 · route:inline
 - [ ] T3 · la skill con tres references pasa skills --check   R1 · route:inline
 - [ ] T4 · changelog, investigacion y pin de bytes nombran la feature   R1 · route:inline
