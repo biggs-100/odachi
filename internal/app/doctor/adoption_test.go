@@ -10,9 +10,12 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/rules"
 )
 
-// fakeGit answers the one repository question: does this folder have a commit?
+// fakeGit answers the two repository questions doctor asks: does this folder
+// have a commit, and where is the clone's common directory (the store's parent).
 type fakeGit struct {
-	headErr error
+	headErr      error
+	commonDir    string
+	commonDirErr error
 }
 
 func (g fakeGit) Head(string) (string, error) {
@@ -20,6 +23,16 @@ func (g fakeGit) Head(string) (string, error) {
 		return "", g.headErr
 	}
 	return "0123456789abcdef0123456789abcdef01234567", nil
+}
+
+func (g fakeGit) CommonDir(string) (string, error) {
+	if g.commonDirErr != nil {
+		return "", g.commonDirErr
+	}
+	if g.commonDir != "" {
+		return g.commonDir, nil
+	}
+	return at(".git"), nil
 }
 
 // runInARepository is the doctor with the repository port wired: the fact the
