@@ -210,6 +210,20 @@ func Builtin() map[string]Profile {
 			Proof:       "suite-or-ci",
 			Explain:     "none",
 		},
+		// office-peru speaks to a public office worker who writes documents,
+		// research and reports, not to a developer. It talks more, asks one
+		// question at a time and keeps command proof because the gate reads a
+		// command's output; the Peruvian legal knowledge lives in its skill (0354).
+		"office-peru": {
+			Name:        "office-peru",
+			Extends:     "novato",
+			BriefSource: "interview",
+			Questions:   "one-by-one",
+			Assumptions: "never",
+			Output:      "detail",
+			Proof:       "command",
+			Explain:     "why",
+		},
 	}
 }
 
