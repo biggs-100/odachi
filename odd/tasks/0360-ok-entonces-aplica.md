@@ -12,6 +12,11 @@ R1 · "ok, entonces aplica todo eso"
 - the office-peru voice is data, not a branch in the reporter
 
 ## Steps
+- [ ] T1 · verify the installed binary carries the source skill bytes, in a clean directory with a proof   R1
+- [ ] T2 · pin contract artifacts by hash and regenerate them byte-identical instead of only by size   R1
+- [ ] T3 · check skills structurally: frontmatter, relative references and manifest completeness   R1
+- [ ] T4 · derive usage and unknown-command text from the dispatch table and give oneLine one home   R1
+- [ ] T5 · make the office-peru voice data in the reporter instead of a branch in reportCheck   R1
 
 ## History
 L1 · "ok, entonces aplica todo eso"

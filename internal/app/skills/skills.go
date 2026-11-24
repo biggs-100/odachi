@@ -12,6 +12,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/skill"
+	bundledskills "github.com/biggs-100/odachi/skills"
 )
 
 // Exit codes: the same two every verb uses.
@@ -40,6 +41,10 @@ type Options struct {
 	Check bool
 	Write bool
 	Slug  string
+	// Digest asks for the SHA-256 of the skills embedded in the binary. It is
+	// the one intent that needs no project: asking from an empty directory must
+	// still answer, because that is where an installed binary is judged (0360).
+	Digest bool
 	// Scope is where `skill new` writes a user skill: persona.SkillsProject puts
 	// it in .agents/skills of the project and persona.SkillsHome in
 	// ~/.agents/skills of Home. Empty is refused: the curriculum layout was never
@@ -132,6 +137,10 @@ type Result struct {
 // Run performs one `odachi skills`: list, --check or --write. It reads the
 // project's curriculum, the folder odachi ships, never the user's skill folder.
 func Run(opts Options, files Files) Result {
+	if opts.Digest {
+		return digestResult()
+	}
+
 	lay := curriculumLayout(opts)
 
 	loaded, err := load(lay, files)
@@ -150,6 +159,17 @@ func Run(opts Options, files Files) Result {
 	default:
 		return list(loaded)
 	}
+}
+
+// digestResult is the app's answer to `skills --digest`: one line of hex, from
+// the bytes in the binary. It never touches the Files port, so an installation
+// with no source checkout gets the same answer as the repository.
+func digestResult() Result {
+	digest, err := bundledskills.Digest()
+	if err != nil {
+		return failed("could not read the skills embedded in this binary: " + oneLine(err.Error()))
+	}
+	return Result{Code: CodeOK, Message: digest, Lines: []string{digest}}
 }
 
 // New performs one `odachi skill new <slug> --scope project|home`: it validates

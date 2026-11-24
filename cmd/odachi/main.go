@@ -23,6 +23,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/plan"
 	"github.com/biggs-100/odachi/internal/app/progress"
 	reviewapp "github.com/biggs-100/odachi/internal/app/review"
+	skillsapp "github.com/biggs-100/odachi/internal/app/skills"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/storemove"
 	"github.com/biggs-100/odachi/internal/app/summary"
@@ -115,6 +116,9 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 	case "tui":
 		return runTUI(dir, args[1:], stdin, stdout, stderr)
 	case "skills":
+		if isSkillsDigest(args[1:]) {
+			return reportSkills(skillsapp.Run(skillsapp.Options{Digest: true}, disk(dir)), false, stdout, stderr)
+		}
 		return runSkills(dir, args[1:], stdout, stderr)
 	case "skill":
 		return runSkill(dir, args[1:], stdout, stderr)
@@ -148,6 +152,14 @@ func isVersionAsk(args []string) bool {
 		return false
 	}
 	return args[0] == "--version" || args[0] == "version"
+}
+
+// isSkillsDigest catches the one skills ask that must not reach runSkills:
+// listing reads skills/ from the current directory, so a binary installed where
+// there is no checkout would fail instead of reporting its own payload. Only
+// the exact form is caught; every other flag stays with the skills command.
+func isSkillsDigest(args []string) bool {
+	return len(args) == 1 && args[0] == "--digest"
 }
 
 // runStart parses the flags, wires the two adapters and reports the result.
