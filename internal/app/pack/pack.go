@@ -35,6 +35,7 @@ import (
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/domain/agent"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 )
 
 // Exit codes: the same two every verb uses.
@@ -704,5 +705,5 @@ func plural(n int, one, many string) string {
 
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

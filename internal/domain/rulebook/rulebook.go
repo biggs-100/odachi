@@ -17,6 +17,8 @@ package rulebook
 import (
 	"fmt"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 )
 
 const (
@@ -218,6 +220,5 @@ func DebtLine(debt []Rule, max int) string {
 // oneLine folds a sentence onto one line: a newline in a doctor line breaks the
 // report, and the file's rule is one line anyway.
 func oneLine(text string) string {
-	fields := strings.Fields(text)
-	return strings.Join(fields, " ")
+	return oneline.Line(text)
 }

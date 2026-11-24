@@ -1434,3 +1434,48 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: como un default de maquina y un override por proyecto pueden convivir sin contradecirse.
+
+## 0360 · ok-entonces-aplica
+
+## What must exist
+- ok, entonces aplica todo eso
+
+## Done when
+- an installed binary is verified against the source bytes, with its proof in the tree
+- contract artifacts are pinned by hash and regenerate byte-identical
+- skills are checked structurally: frontmatter, relative references, manifest completeness
+- usage and unknown-command text derive from the dispatch table, and oneLine has one home
+- the office-peru voice is data, not a branch in the reporter
+
+## Not included (first version)
+- no edits to gentle-shell, release.yml, proof/**, lens files or the two measurement docs; no model call in CI; no push, pull request, tag or release
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: a byte pin cannot see a same-size rewrite; a hash can.
+
+## 0361 · obligatorio-review-y
+
+## What must exist
+- obligatorio, review y verificasion
+
+## Done when
+- with review mode on, a non-passive close without a valid verdict blocks instead of printing a note
+- with review mode on, a named risk without an independent verification blocks
+- a strict non-passive close declares a valid risk, and Risk none carries a written reason
+- the commit hook evaluates review and verification for the closing commit
+- a clean close reads lenses and coverage from the feature diff, not an empty worktree
+- executable and test files under docs or root design are not passive documentation
+- CI states its local-only review contract with no model call
+- the generated rules, skills, help, README and ADRs teach the same contract
+
+## Not included (first version)
+- no model call in CI; no second vendor; no edits to gentle-shell, release.yml, proof/**, lens files, docs/skill-evaluation.md or docs/review-research.md; no push, pull request, merge, tag or release
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: mode on must mean what it says: a warning is not a gate.

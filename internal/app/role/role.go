@@ -7,9 +7,9 @@ package role
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/biggs-100/odachi/internal/domain/layout"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/role"
 )
 
@@ -108,5 +108,5 @@ func blocked(message string) Result {
 // oneLine folds a message onto one line so a Result never prints a stack of
 // paths the human cannot read.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

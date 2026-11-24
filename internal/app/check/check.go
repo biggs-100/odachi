@@ -27,6 +27,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/gate"
 	"github.com/biggs-100/odachi/internal/domain/layout"
 	"github.com/biggs-100/odachi/internal/domain/mutated"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	"github.com/biggs-100/odachi/internal/domain/quote"
 	reviewdomain "github.com/biggs-100/odachi/internal/domain/review"
@@ -2751,7 +2752,7 @@ func explicitPath(dir, path string) string {
 
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }
 
 // mutationRow proves a guard by breaking it (0297). The run names a file and a

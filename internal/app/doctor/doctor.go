@@ -32,6 +32,7 @@ import (
 	"github.com/biggs-100/odachi/internal/domain/brief"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
 	"github.com/biggs-100/odachi/internal/domain/layout"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	domainopencode "github.com/biggs-100/odachi/internal/domain/opencode"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/rules"
@@ -1785,5 +1786,5 @@ func count(n int, one, many string) string {
 
 // oneLine keeps every message on one line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

@@ -3,7 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -28,6 +33,89 @@ func TestReportCheckUsesTheVoiceOnlyForOfficePeru(t *testing.T) {
 	if got, want := out.String(), "ready: there is proof for this tree\n"; got != want {
 		t.Errorf("novato output = %q, want %q", got, want)
 	}
+}
+
+// TestReportCheckUsesTheVoiceBoundaryForQuietNotes pins the one line a quiet
+// ready run writes to stderr for both translated and unchanged profiles.
+func TestReportCheckUsesTheVoiceBoundaryForQuietNotes(t *testing.T) {
+	result := check.Result{Code: start.CodeOK, Note: "ready: there is proof for this tree"}
+
+	for _, tc := range []struct {
+		profile string
+		want    string
+	}{
+		{profile: "office-peru", want: "listo: hay prueba para este árbol"},
+		{profile: "novato", want: "ready: there is proof for this tree"},
+	} {
+		t.Run(tc.profile, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			if got := reportCheck(result, tc.profile, true, false, &out, &errOut); got != start.CodeOK {
+				t.Errorf("exit code = %d, want %d", got, start.CodeOK)
+			}
+			if got := out.String(); got != "" {
+				t.Errorf("stdout = %q, want no output", got)
+			}
+			if got, want := errOut.String(), "odachi: "+tc.want+"\n"; got != want {
+				t.Errorf("stderr = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+// TestReportCheckDoesNotSpecialCaseAProfile keeps profile selection outside the
+// reporter so future voices do not require another reportCheck branch.
+func TestReportCheckDoesNotSpecialCaseAProfile(t *testing.T) {
+	source, err := os.ReadFile("main.go")
+	if err != nil {
+		t.Fatalf("read main.go: %v", err)
+	}
+	fileSet := token.NewFileSet()
+	file, err := parser.ParseFile(fileSet, "main.go", source, 0)
+	if err != nil {
+		t.Fatalf("parse main.go: %v", err)
+	}
+
+	var report *ast.FuncDecl
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "reportCheck" {
+			report = fn
+			break
+		}
+	}
+	if report == nil || report.Body == nil {
+		t.Fatal("main.go does not define reportCheck with a body")
+	}
+
+	isProfileName := func(expr ast.Expr) bool {
+		ident, ok := expr.(*ast.Ident)
+		return ok && ident.Name == "profileName"
+	}
+	isStringLiteral := func(expr ast.Expr) bool {
+		literal, ok := expr.(*ast.BasicLit)
+		return ok && literal.Kind == token.STRING
+	}
+
+	ast.Inspect(report.Body, func(node ast.Node) bool {
+		switch node := node.(type) {
+		case *ast.BinaryExpr:
+			if node.Op != token.EQL && node.Op != token.NEQ {
+				break
+			}
+			if (isProfileName(node.X) && isStringLiteral(node.Y)) ||
+				(isStringLiteral(node.X) && isProfileName(node.Y)) {
+				t.Errorf("reportCheck compares profileName with a string literal at %s", fileSet.Position(node.Pos()))
+			}
+		case *ast.BasicLit:
+			if node.Kind != token.STRING {
+				break
+			}
+			value, err := strconv.Unquote(node.Value)
+			if err == nil && value == "office-peru" {
+				t.Errorf("reportCheck mentions the office-peru literal at %s", fileSet.Position(node.Pos()))
+			}
+		}
+		return true
+	})
 }
 
 func TestReportCheckJSONKeepsItsKeysForEveryProfile(t *testing.T) {

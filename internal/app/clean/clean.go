@@ -20,6 +20,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/lock"
 	"github.com/biggs-100/odachi/internal/domain/layout"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/store"
 	"github.com/biggs-100/odachi/internal/domain/undo"
@@ -963,5 +964,5 @@ func blocked(message string) Result {
 
 // oneLine keeps every message on one line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

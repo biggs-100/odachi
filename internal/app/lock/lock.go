@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 )
 
 // File is the lock's name inside the store. One name, so every message that
@@ -185,5 +187,5 @@ func (h *Held) Release() error {
 
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

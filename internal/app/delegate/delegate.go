@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -221,5 +222,5 @@ func blocked(message string) Result {
 
 // oneLine keeps an error message on one line.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

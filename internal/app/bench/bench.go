@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	benchcore "github.com/biggs-100/odachi/internal/bench"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 )
 
 // Exit codes. A dead end and a bench that could not run share one code because
@@ -484,5 +485,5 @@ func firstLine(text string) string {
 
 // oneLine keeps every message on one line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

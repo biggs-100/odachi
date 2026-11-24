@@ -23,11 +23,13 @@ import (
 	"github.com/biggs-100/odachi/internal/app/plan"
 	"github.com/biggs-100/odachi/internal/app/progress"
 	reviewapp "github.com/biggs-100/odachi/internal/app/review"
+	skillsapp "github.com/biggs-100/odachi/internal/app/skills"
 	"github.com/biggs-100/odachi/internal/app/start"
 	"github.com/biggs-100/odachi/internal/app/storemove"
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
 	"github.com/biggs-100/odachi/internal/domain/agent"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/store"
@@ -115,6 +117,9 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 	case "tui":
 		return runTUI(dir, args[1:], stdin, stdout, stderr)
 	case "skills":
+		if isSkillsDigest(args[1:]) {
+			return reportSkills(skillsapp.Run(skillsapp.Options{Digest: true}, disk(dir)), false, stdout, stderr)
+		}
 		return runSkills(dir, args[1:], stdout, stderr)
 	case "skill":
 		return runSkill(dir, args[1:], stdout, stderr)
@@ -135,7 +140,9 @@ func runIn(dir string, args []string, stdin io.Reader, stdout, stderr io.Writer)
 		_, _ = fmt.Fprintf(stderr, "odachi: extra argument: %s; odachi version takes no arguments\n", args[1])
 		return start.CodeBlocked
 	default:
-		_, _ = fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: start (odachi start), ask (odachi ask \"<question>\"), plan (odachi plan \"<text>\" | odachi plan --done T2), level (odachi level), summary (odachi summary), progress (odachi progress), design (odachi design list | odachi design comments <slug>), undo (odachi undo), clean (odachi clean), evidence (odachi evidence export), check (odachi check), review (odachi review), doctor (odachi doctor), bench (odachi bench), init (odachi init), skills (odachi skills), skill (odachi skill new <slug> --scope project|home), role (odachi role new <slug>), pack (odachi pack), version (odachi --version)\n", args[0])
+		// The list comes from the catalog the help is built from, so a verb the
+		// switch answers can never be absent from the error (0360).
+		_, _ = fmt.Fprintf(stderr, "odachi: unknown command: %s; available commands: %s\n", args[0], availableCommands())
 		return start.CodeBlocked
 	}
 }
@@ -148,6 +155,14 @@ func isVersionAsk(args []string) bool {
 		return false
 	}
 	return args[0] == "--version" || args[0] == "version"
+}
+
+// isSkillsDigest catches the one skills ask that must not reach runSkills:
+// listing reads skills/ from the current directory, so a binary installed where
+// there is no checkout would fail instead of reporting its own payload. Only
+// the exact form is caught; every other flag stays with the skills command.
+func isSkillsDigest(args []string) bool {
+	return len(args) == 1 && args[0] == "--digest"
 }
 
 // runStart parses the flags, wires the two adapters and reports the result.
@@ -1162,10 +1177,7 @@ func reportCheck(result check.Result, profileName string, quiet, asJSON bool, st
 		// A ready run is silent for the hook, except for what the run has to say and
 		// did not stop: a reminder nobody reads is not a reminder.
 		if result.Note != "" {
-			note := result.Note
-			if profileName == "office-peru" {
-				note = officeCheckLine(note)
-			}
+			note := voiceLine(profileName, result.Note)
 			_, _ = fmt.Fprintln(stderr, "odachi: "+note)
 		}
 		return result.Code
@@ -1175,9 +1187,7 @@ func reportCheck(result check.Result, profileName string, quiet, asJSON bool, st
 	if len(lines) == 0 {
 		lines = []string{result.Message}
 	}
-	if profileName == "office-peru" {
-		lines = officeCheckLines(lines)
-	}
+	lines = voiceLines(profileName, lines)
 
 	out := stdout
 	if result.Code != start.CodeOK {
@@ -1885,45 +1895,15 @@ func usage(out io.Writer) {
 
 usage:
   odachi                      the same as odachi start
-  odachi start [flags]
-  odachi start --light "<requirement>"
-  odachi ask "<question>"
-  odachi ask --answer "<answer>" [--for P1]
-  odachi ask --craft "<decision>" --because "<reason>"
-  odachi ask --change "<words>" --req R1
-  odachi plan "<text>" [--req R1] [--route inline | delegated --agent <name> --skill <name>]
-  odachi plan --done T2 [--commit abc1234]
-  odachi delegate <taskdoc> --step T1 [--surface <path>] [--command <cmd>]
-  odachi level [--to <profile>]
-  odachi summary
-  odachi design <list|comments|open|stop|handoff|sync>
-  odachi progress
-  odachi undo [--list | --collect] [--file brief] [--artifact <path>]
-  odachi clean [--apply] [--legacy] [--json]
-  odachi store move [--dry-run]
-  odachi evidence export <tree> --out <path>
-  odachi check [flags]
-  odachi review [--exec "<command>" | --attach <file> | --show | --refute <verdict>]
-  odachi review [--lens <lens>]
-  odachi review mode [status|on|off]
-  odachi review checks [status|approve]
-  odachi review waive --because "<why>" [--row <fingerprint>]
-  odachi review probe [--runs N] [--blind] [--exec "<command>"]
-  odachi verify [--exec "<command>"] [--model <id>]
-  odachi doctor [--json]
-  odachi bench [--journeys <names>] [--binary <path>] [--json]
-  odachi init [--skills home|project] [--agents opencode|claude|both] [--model <client>=<model>] [--json]
-  odachi setup [--agents opencode|claude|both] [--model <client>=<model>] [--dry-run] [--json]
-  odachi tui
-  odachi skills [--check | --write | --resolve <step>]
-  odachi skills eval <skill> [--exec "<command>"] [--runs N] [--timeout N] [--move-home] [--recover]
-  odachi role new <slug>
-  odachi role [<slug>]
-  odachi skill new <slug> --scope project|home
-  odachi pack [--agents claude,codex|standard] [--scope project|home] [--dest <folder>] [--dry-run]
-  odachi --version
-  odachi version
-
+`)
+	// One table owns the list; the bare-invocation line above is a description,
+	// not a verb, and stays outside it (0360).
+	for _, v := range verbCatalog {
+		for _, line := range v.usage {
+			_, _ = fmt.Fprintln(out, line)
+		}
+	}
+	_, _ = fmt.Fprint(out, `
 the version:
   --version       prints "odachi <version>" and exits 0 (a build without ldflags says dev)
 
@@ -2261,7 +2241,7 @@ func (l *stringList) Set(value string) error {
 
 // oneLine keeps a CLI message on one line whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }
 
 // firstOf is the first non-empty value: two environment names for the same fact

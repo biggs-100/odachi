@@ -27,6 +27,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 )
 
 // The store: one file per tree, named by the tree it verified. It lives in the
@@ -211,5 +213,5 @@ func hashLike(value string) bool {
 
 // oneLine keeps a decoder's message inside the sentence that carries it.
 func oneLine(text string) string {
-	return strings.Join(strings.Fields(text), " ")
+	return oneline.Line(text)
 }

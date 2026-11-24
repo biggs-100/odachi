@@ -1,0 +1,17 @@
+name: artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  verify-installed-binary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Verify the installed binary carries the source skill bytes
+        run: go test ./internal/archtest -run TestTheInstalledBinary -count=1

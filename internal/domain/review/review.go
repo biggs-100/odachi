@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/schema"
 )
 
@@ -680,5 +681,5 @@ func declared(at string, now time.Time) string {
 
 // oneLine keeps a message on one line whatever a decoder said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
@@ -432,5 +433,5 @@ func questionCount(n int) string {
 
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }
