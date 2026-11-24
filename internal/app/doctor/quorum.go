@@ -45,7 +45,7 @@ func (r *runner) quorum() domaindoctor.Check {
 			"no lens table in "+layout.Review+": the reviewer runs with the session's model and no lens has its own")
 	case distinct == 1:
 		return domaindoctor.Warning(domaindoctor.CheckQuorum, fmt.Sprintf(
-			"%s: the quorum is 1 of %d, one opinion in %d costumes; a second model in a lens row of %s makes it a jury",
+			"%s: the quorum is 1 of %d, one opinion in %d costumes; one model is enough to review; a second is optional, put it in a lens row of %s to buy independence",
 			shared, lenses, lenses, layout.Review))
 	default:
 		return domaindoctor.OK(domaindoctor.CheckQuorum,

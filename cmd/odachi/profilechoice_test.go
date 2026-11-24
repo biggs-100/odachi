@@ -11,10 +11,7 @@ import (
 
 func isolatedHome(t *testing.T) string {
 	t.Helper()
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	return home
+	return withTempHome(t)
 }
 
 // TestGlobalProfileRoundTrip: the machine default is one file outside every

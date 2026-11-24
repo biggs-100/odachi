@@ -22,7 +22,7 @@ import (
 const globalProfileRel = ".odachi/profile.toml"
 
 func globalProfilePath() (string, error) {
-	home, err := os.UserHomeDir()
+	home, err := homeDir()
 	if err != nil || strings.TrimSpace(home) == "" {
 		return "", fmt.Errorf("could not find the home folder for %s: check the environment and run the command again", globalProfileRel)
 	}

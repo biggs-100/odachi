@@ -9,6 +9,8 @@ not a version.
 
 ## Unreleased
 
+- **One model is enough to review.** Doctor's quorum warning now says so plainly: a second model is optional and buys independence, not permission to review. The gate never required a second vendor, and the message no longer reads as if it did. Patch (0358).
+
 - **The profile has a machine default and a project override.** The TUI's voice screen offers two destinations: the machine's `~/.odachi/profile.toml` as the default for projects without their own choice, or `odd/profile.toml` for this project alone. When neither exists, resolution still uses the voice published in `AGENTS.md` and then the old inference. Doctor and the verbs ask one resolver, so they cannot disagree about the profile in force. Minor (0357).
 
 ## v0.62.0 - 2026-11-23
