@@ -562,6 +562,164 @@ func TestTheModeAsksEveryTreeWithoutABase(t *testing.T) {
 	}
 }
 
+// TestAModeOnCommitMessageChecksStagedCodeMissingFromTheWorktree: the hook judges
+// the index. An unstaged deletion must not turn staged code into a documentation-
+// only candidate and let an unreviewed commit through.
+func TestAModeOnCommitMessageChecksStagedCodeMissingFromTheWorktree(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("feat: reserve a slot\n\nRisk: none - the fixture declares no named risk\n")
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"README.md"},
+		stagedCandidate: &fakeCandidate{
+			tree:  currentTree,
+			paths: []string{"code.go"},
+			diff:  "diff --git a/code.go b/code.go\n--- /dev/null\n+++ b/code.go\n@@ -0,0 +1 @@\n+package code\n",
+		},
+	}
+
+	got := run(t, files, git, check.Options{ReviewMode: true, Message: "commit-msg"})
+
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("staged code without a verdict = %d/%q, want %d/%q (%s)",
+			got.Code, got.Reason, gate.NeedsDecision, check.ReasonReviewMissing, got.Message)
+	}
+	if git.candidateCalls != 0 || git.stagedCandidateCalls == 0 {
+		t.Errorf("candidate reads: worktree=%d staged=%d, want only the staged snapshot", git.candidateCalls, git.stagedCandidateCalls)
+	}
+}
+
+// TestCommitMessageReadsTheStagedClosingDocument: the hook must decide whether
+// the feature closes from the index. An unstaged copy that leaves the step open
+// must not hide the review owed by the closing commit.
+func TestCommitMessageReadsTheStagedClosingDocument(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	const codePath = "internal/app/check/check.go"
+
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc(base, false))
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("feat: close reservations\n\nRisk: none - the fixture declares no named risk\n")
+
+	staged := newFakeFiles(readyFiles())
+	staged.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc(base, true))
+	staged.files[filepath.Join(dir, filepath.FromSlash(codePath))] = []byte("package check\n")
+	git := &fakeGit{
+		tree:        currentTree,
+		changed:     []string{"README.md"},
+		stagedFiles: staged,
+		stagedCandidate: &fakeCandidate{
+			tree:  currentTree,
+			paths: []string{codePath, "odd/tasks/0007-turnos.md"},
+			diff:  "diff --git a/internal/app/check/check.go b/internal/app/check/check.go\n--- /dev/null\n+++ b/internal/app/check/check.go\n@@ -0,0 +1 @@\n+package check\n",
+		},
+		between: []string{codePath, "odd/tasks/0007-turnos.md"},
+	}
+
+	got := run(t, files, git, check.Options{ReviewMode: true, Message: "commit-msg"})
+
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("a staged close without a verdict = %d/%q, want %d/%q (%s)",
+			got.Code, got.Reason, gate.NeedsDecision, check.ReasonReviewMissing, got.Message)
+	}
+	if want := "odachi review --base " + base; !strings.Contains(got.Next, want) {
+		t.Errorf("the refusal does not name %q: %q", want, got.Next)
+	}
+}
+
+// TestCommitMessageKeepsTheStoreAndHookMessageOnDisk: project bytes come from
+// the index, but review evidence belongs to the clone and Git owns the hook file.
+// Neither path is part of the staged project tree.
+func TestCommitMessageKeepsTheStoreAndHookMessageOnDisk(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	const codePath = "internal/app/check/check.go"
+	cloneStore := filepath.Join(dir, "clone-store")
+	message, err := filepath.Abs(filepath.Join(dir, ".git", "COMMIT_EDITMSG"))
+	if err != nil {
+		t.Fatalf("resolve the commit-message path: %v", err)
+	}
+
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc(base, true))
+	files.files[message] = []byte("feat: close reservations\n\nRisk: none - the fixture declares no named risk\n")
+	verdictPath := filepath.Join(cloneStore, filepath.FromSlash(domainreview.Dir), currentTree+".json")
+	files.files[verdictPath] = []byte(verdictFileWithRowsAtBase(t, currentTree, base,
+		[]domainreview.Pass{{Path: codePath, Blob: checkBlob, Lens: domainreview.Reliability}}))
+
+	staged := newFakeFiles(readyFiles())
+	staged.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc(base, true))
+	staged.files[filepath.Join(dir, filepath.FromSlash(codePath))] = []byte("package check\n")
+	git := &fakeGit{
+		tree:        currentTree,
+		stagedFiles: staged,
+		stagedBlobs: map[string]string{codePath: checkBlob},
+		between:     []string{codePath, "odd/tasks/0007-turnos.md"},
+		stagedCandidate: &fakeCandidate{
+			tree:  currentTree,
+			paths: []string{codePath, "odd/tasks/0007-turnos.md"},
+			diff:  "diff --git a/internal/app/check/check.go b/internal/app/check/check.go\n--- /dev/null\n+++ b/internal/app/check/check.go\n@@ -0,0 +1 @@\n+package check\n",
+		},
+	}
+
+	got := check.Run(check.Options{
+		Dir: dir, Store: cloneStore, Base: "HEAD", TimeoutSeconds: 120,
+		ReviewMode: true, Message: message,
+	}, files, git, &fakeShell{})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the hook lost its real store verdict or message: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+	if len(files.writes) != 0 || len(files.removes) != 0 {
+		t.Errorf("the hook changed real files: writes=%v removes=%v", files.writes, files.removes)
+	}
+}
+
+// TestCommitMessageReadsAMessageOutsideTheProject: Git may place its message
+// file outside the worktree. The decorator must leave that real path alone.
+func TestCommitMessageReadsAMessageOutsideTheProject(t *testing.T) {
+	message := filepath.Clean(filepath.Join(dir, "..", "commit-msg"))
+	files := newFakeFiles(readyFiles())
+	files.files[message] = []byte("docs: explain reservations\n\nRisk: none - the fixture declares no named risk\n")
+	git := &fakeGit{
+		tree:        currentTree,
+		stagedFiles: newFakeFiles(readyFiles()),
+		stagedCandidate: &fakeCandidate{
+			tree: currentTree, paths: []string{"README.md"},
+		},
+	}
+
+	got := run(t, files, git, check.Options{Message: message})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("an external commit-message file was read from the index: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+}
+
+// TestCommitMessageDoesNotInventReviewWorkFromUnstagedCode: the other half of the
+// index boundary. Code left only in the worktree is not part of this commit and
+// cannot invent a review obligation for it.
+func TestCommitMessageDoesNotInventReviewWorkFromUnstagedCode(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("docs: explain reservations\n\nRisk: none - the fixture declares no named risk\n")
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"code.go"},
+		stagedCandidate: &fakeCandidate{
+			tree:  currentTree,
+			paths: []string{"README.md"},
+			diff:  "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-old\n+new\n",
+		},
+	}
+
+	got := run(t, files, git, check.Options{ReviewMode: true, Message: "commit-msg"})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("unstaged code blocked a documentation-only commit: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+	if git.candidateCalls != 0 || git.stagedCandidateCalls == 0 {
+		t.Errorf("candidate reads: worktree=%d staged=%d, want only the staged snapshot", git.candidateCalls, git.stagedCandidateCalls)
+	}
+}
+
 // TestNoReviewBeatsTheMode: --no-review turns the project mode off for one run,
 // including the closed feature's verdict.
 func TestNoReviewBeatsTheMode(t *testing.T) {
@@ -1462,6 +1620,62 @@ func TestACommittedReleaseNoteAfterTheCloseStaysPaperwork(t *testing.T) {
 
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("a release note after the close asked for a verdict: %s (%s)", got.Message, got.Next)
+	}
+}
+
+// featureDiffGit keeps the worktree candidate documentation-only while returning
+// the code path when review asks for the whole feature diff from its base.
+type featureDiffGit struct {
+	check.Git
+	base string
+}
+
+func (g featureDiffGit) Candidate(root, base string) (string, []string, string, error) {
+	if base != g.base {
+		return g.Git.Candidate(root, base)
+	}
+	tree, _, diff, err := g.Git.Candidate(root, "HEAD")
+	return tree, []string{"internal/app/check/check.go"}, diff, err
+}
+
+// TestInvalidVerdictForClosingTreeIsNotSkipped: an empty delta since the verdict
+// does not make a non-passive feature paperwork. The closing tree's stored verdict
+// still has to cover the feature diff, even when that verdict names this exact tree.
+func TestInvalidVerdictForClosingTreeIsNotSkipped(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+
+	files := readyFiles()
+	files["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
+	files[proofPath()] = proofFileByModel(currentTree, "provider/builder")
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "reviewer",
+		Model:    "provider/reviewer",
+		Lenses:   []string{domainreview.Risk},
+	}, currentTree, base, reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the incomplete verdict: %v", err)
+	}
+	files[filepath.ToSlash(reviewPath(currentTree))] = string(domainreview.Render(sealed))
+
+	git := featureDiffGit{
+		Git: &fakeGit{
+			tree:    currentTree,
+			changed: []string{"odd/tasks/0007-turnos.md"},
+			betweenByFrom: map[string][]string{
+				base:        {"internal/app/check/check.go"},
+				currentTree: {},
+			},
+		},
+		base: base,
+	}
+
+	got := check.Run(check.Options{
+		Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120, ReviewMode: true,
+	}, newFakeFiles(files), git, &fakeShell{})
+
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewLensMissing {
+		t.Fatalf("an incomplete verdict for the closing tree = %d/%q, want %d/%q (%s)",
+			got.Code, got.Reason, gate.NeedsDecision, check.ReasonReviewLensMissing, got.Message)
 	}
 }
 

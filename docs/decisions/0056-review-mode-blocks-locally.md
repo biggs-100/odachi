@@ -30,11 +30,18 @@ reproduction without the explicit review bypass that a clean runner needs.
 - **The feature diff is the candidate.** Review lenses and per-file coverage are
   read from the feature's `Base:` through the closing tree, not from an empty or
   documentation-only closing worktree.
-- **The commit hook enforces the close.** It evaluates review, verification and
-  the risk declaration for the commit being made.
+- **The commit hook enforces the close against the staged index.** It evaluates
+  review, verification and the risk declaration for the commit being made. The
+  hook reads project artifacts and the review policy from the same staged tree,
+  so unstaged worktree changes cannot hide or invent bytes the commit will carry.
+  Proof, review and verification evidence stays in the clone-local real
+  filesystem.
 - **The bypasses stay explicit and scoped.** Mode off makes review and
   verification optional. `--require-review` asks for a valid review of the
-  current tree, including a passive tree, and refuses self-review.
+  current tree and refuses self-review. When a closed feature supplies a base,
+  that includes a passive closing tree: the verdict still judges the feature
+  diff. A passive tree with no feature base, including a document-less change
+  before one is known, asks for no lens and no verdict.
   `--no-review` bypasses both review and required verification for one run
   without changing the file.
 - **CI uses `--no-review` explicitly.** A clean CI runner has no clone review

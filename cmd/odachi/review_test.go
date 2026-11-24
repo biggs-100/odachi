@@ -623,6 +623,53 @@ func TestStartWritesTheFeatureBaseEndToEnd(t *testing.T) {
 	}
 }
 
+// TestCommitMessageReadsTheStagedReviewMode: the policy Git will commit must
+// decide whether the hook asks for a verdict. An unstaged mode-off draft cannot
+// turn a staged mode-on code change into a ready commit.
+func TestCommitMessageReadsTheStagedReviewMode(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+	writeFile(t, dir, filepath.ToSlash(layout.Review), "mode = \"on\"\n")
+	stage := exec.Command("git", "-C", dir, "add", "--", filepath.ToSlash(layout.Review), "internal/app/turnos.go")
+	if out, err := stage.CombinedOutput(); err != nil {
+		t.Fatalf("stage the policy and code: %v: %s", err, out)
+	}
+	writeFile(t, dir, filepath.ToSlash(layout.Review), "mode = \"off\"\n")
+	message := filepath.Join(dir, ".git", "COMMIT_EDITMSG")
+	writeAt(t, message, "feat: reserve a slot\n\nRisk: none - the staged policy fixture declares no named risk\n")
+
+	code, out, errOut := runDir(t, dir, []string{"check", "--message", message, "--json"}, "")
+
+	if code != 2 {
+		t.Fatalf("staged mode on with unreviewed code = %d, want 2 (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	var payload struct {
+		Reason string `json:"reason"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("decode check JSON: %v: %s", err, out)
+	}
+	if payload.Reason != "review_missing" {
+		t.Errorf("reason = %q, want review_missing (stdout: %q, stderr: %q)", payload.Reason, out, errOut)
+	}
+}
+
+// TestStagedModeFilesRefusesWritesAndBackups: the commit hook only reads the
+// staged policy. A mode command must never mutate the index through this adapter.
+func TestStagedModeFilesRefusesWritesAndBackups(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	files := stagedModeFiles{root: dir}
+	path := filepath.Join(dir, filepath.FromSlash(layout.Review))
+
+	if err := files.Write(path, []byte("mode = \"off\"\n")); err == nil {
+		t.Error("staged mode files allowed a write")
+	}
+	if backup, err := files.Backup(path); err == nil || backup != "" {
+		t.Errorf("Backup = %q, %v; want an empty path and a refusal", backup, err)
+	}
+}
+
 // TestReviewModeRejectsAMangledSwitch: a typo in a human file blocks instead of
 // silently meaning off.
 func TestReviewModeRejectsAMangledSwitch(t *testing.T) {

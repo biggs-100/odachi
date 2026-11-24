@@ -211,6 +211,13 @@ type Git interface {
 	// reads the paths, the lens class reads the diff, and the proof is named
 	// after the tree; all three describe the same bytes.
 	Candidate(root, base string) (tree string, paths []string, diff string, err error)
+	// StagedCandidate is Candidate for the real index: the tree a commit will
+	// carry, independent of unstaged worktree changes.
+	StagedCandidate(root, base string) (tree string, paths []string, diff string, err error)
+	// StagedFile reads one project file from the tree the index will commit.
+	StagedFile(root, path string) ([]byte, bool, error)
+	// StagedList names the immediate entries of a staged project directory.
+	StagedList(root, dir string) ([]string, error)
 	// Between names the paths that differ between two trees. The proof gate knows
 	// the two hashes differ; this is what tells a human which file moved, because a
 	// stray backup, an editor and a real edit look identical in one line.
@@ -219,6 +226,8 @@ type Git interface {
 	// base branch the candidate cannot edit.
 	FileAt(root, rev, path string) ([]byte, bool, error)
 	AddedDeps(root, base string) ([]string, error)
+	// StagedAddedDeps is AddedDeps for the real index.
+	StagedAddedDeps(root, base string) ([]string, error)
 	// Messages answers the commit messages of a range: every commit reachable
 	// from HEAD and not from base, whole. The trailer lane reads them; nothing
 	// about what a trailer means belongs to the repository.
@@ -241,6 +250,8 @@ type Git interface {
 	// exactly this, so a measurement is load-bearing; it answers "" for a file
 	// that is not in the worktree, and a real git failure is an err.
 	BlobHash(root, path string) (string, error)
+	// StagedBlobHash is BlobHash for the real index; a staged deletion answers "".
+	StagedBlobHash(root, path string) (string, error)
 	// Resolve names the commit a ref points at, in full. The review gate compares
 	// bases by commit, not by spelling: `6aeb877` and its forty characters are the
 	// same diff, and a receipt that names either one answers it.
@@ -294,6 +305,9 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 	if opts.TimeoutSeconds <= 0 {
 		opts.TimeoutSeconds = DefaultTimeout
+	}
+	if opts.Message != "" {
+		files = newStagedFiles(opts, files, git)
 	}
 
 	r := &runner{opts: opts, files: files, git: git, shell: shell}
@@ -668,6 +682,32 @@ type worktree struct {
 	diff  string
 }
 
+// candidate reads one snapshot for every gate question. A commit-msg hook judges
+// the index that will become the commit; ordinary check and review keep reading
+// the worktree.
+func (r *runner) candidate(root, base string) (tree string, paths []string, diff string, err error) {
+	if r.opts.Message != "" {
+		return r.git.StagedCandidate(root, base)
+	}
+	return r.git.Candidate(root, base)
+}
+
+// blobHash measures coverage against the same snapshot candidate read.
+func (r *runner) blobHash(root, path string) (string, error) {
+	if r.opts.Message != "" {
+		return r.git.StagedBlobHash(root, path)
+	}
+	return r.git.BlobHash(root, path)
+}
+
+// addedDeps applies the dependency fence to the same snapshot candidate read.
+func (r *runner) addedDeps(root, base string) ([]string, error) {
+	if r.opts.Message != "" {
+		return r.git.StagedAddedDeps(root, base)
+	}
+	return r.git.AddedDeps(root, base)
+}
+
 // worktree reads the candidate once. A project with no commit yet has no HEAD,
 // so the comparison falls back to the empty tree: everything uncommitted is the
 // candidate. A base the human named is never silently replaced.
@@ -677,9 +717,9 @@ func (r *runner) worktree() (*worktree, *Result) {
 	}
 
 	base := baseRef(r.opts.Base)
-	tree, paths, diff, err := r.git.Candidate(r.opts.Dir, base)
+	tree, paths, diff, err := r.candidate(r.opts.Dir, base)
 	if err != nil && base == head {
-		if retryTree, retryPaths, retryDiff, retryErr := r.git.Candidate(r.opts.Dir, EmptyTree); retryErr == nil {
+		if retryTree, retryPaths, retryDiff, retryErr := r.candidate(r.opts.Dir, EmptyTree); retryErr == nil {
 			tree, paths, diff, err = retryTree, retryPaths, retryDiff, nil
 			base = EmptyTree
 		}
@@ -747,9 +787,9 @@ func (r *runner) fenceViolations() ([]string, *Result) {
 	}
 	changed := work.paths
 
-	deps, err := r.git.AddedDeps(r.opts.Dir, base)
+	deps, err := r.addedDeps(r.opts.Dir, base)
 	if err != nil && base == head {
-		deps, err = r.git.AddedDeps(r.opts.Dir, EmptyTree)
+		deps, err = r.addedDeps(r.opts.Dir, EmptyTree)
 	}
 	if err != nil {
 		problem := blocked(baseProblem(base, err))
@@ -1193,7 +1233,10 @@ func (r *runner) theCloseOwes(feature *tasks.Document) (bool, *Result) {
 				judged, oneLine(err.Error())))
 			return false, &problem
 		}
-		return reviewdomain.Classify(paths) != reviewdomain.Passive, nil
+		// An empty delta means the verdict names this exact tree, not that the
+		// feature became passive: validate that verdict against the feature diff.
+		// Only a non-empty documents-only delta after a reviewed close is paperwork.
+		return len(paths) == 0 || reviewdomain.Classify(paths) != reviewdomain.Passive, nil
 	}
 
 	// No verdict judged this feature's diff, and the diff carries code: this tree
@@ -1694,7 +1737,7 @@ func sameCommit(git Git, root, judged, start string) bool {
 // riskMessages is the one read of the declarations: every commit since the
 // feature's base, plus the current commit-msg message before that commit exists.
 // If the current file is unreadable, readable history is returned with the error
-// so a valid historical declaration is not erased by a missing hook file.
+// so lens discovery can use known declarations while declaration validation blocks.
 func (r *runner) riskMessages(base string) ([]string, error) {
 	var messages []string
 	if base != "" {
@@ -1767,17 +1810,12 @@ func (r *runner) riskProblem(feature *tasks.Document) []string {
 			problems = append(problems, fmt.Sprintf("unknown risk %q in the commits' %s line", name, change.RiskKey))
 		}
 	}
-	if readErr != nil && len(problems) == 1 {
-		// The readable history answered the question. The unreadable current file
-		// cannot invent another risk, so the valid declaration remains sufficient.
-		return nil
-	}
 	return problems
 }
 
 // reviewEvidence is the candidate a verdict has to judge. A closed feature reads
 // its whole diff from the document's base; a per-tree review keeps using the
-// worktree candidate. Lenses, missing rows and content receipts all share it.
+// current candidate. Lenses, missing rows and content receipts all share it.
 func (r *runner) reviewEvidence(base string) ([]string, []string, string, *Result) {
 	var paths []string
 	var diff string
@@ -1789,7 +1827,7 @@ func (r *runner) reviewEvidence(base string) ([]string, []string, string, *Resul
 		paths, diff = work.paths, work.diff
 	} else {
 		var err error
-		_, paths, diff, err = r.git.Candidate(r.opts.Dir, base)
+		_, paths, diff, err = r.candidate(r.opts.Dir, base)
 		if err != nil {
 			return nil, nil, "", r.candidateReadProblem(base, err)
 		}
@@ -1797,8 +1835,8 @@ func (r *runner) reviewEvidence(base string) ([]string, []string, string, *Resul
 	return reviewdomain.Lenses(reviewdomain.Assess(paths, diff)), paths, diff, nil
 }
 
-// requiredLenses is the lens set the current worktree candidate asks for, with
-// the paths and diff it was read from.
+// requiredLenses is the lens set the current candidate asks for, with the paths
+// and diff it was read from.
 func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
 	return r.reviewEvidence("")
 }
@@ -1842,7 +1880,7 @@ func (r *runner) verifierLines(feature *tasks.Document, owed bool) int {
 	if !known || base == "" {
 		return 0
 	}
-	_, _, diff, err := r.git.Candidate(r.opts.Dir, base)
+	_, _, diff, err := r.candidate(r.opts.Dir, base)
 	if err != nil {
 		// A diff git cannot read is not a measurement, and a number invented here
 		// would refuse a close for work nobody weighed: the rows that read the tree
@@ -1917,13 +1955,13 @@ func (r *runner) verification(asking []string, owed bool) (missing, refuted []st
 }
 
 // currentBlobs measures the receipt each changed path earns now. A path the
-// port answers "" for is not in the worktree — the candidate deleted it, and
-// absence owes no coverage. A real git failure is reported, never swallowed:
-// the measurement is what makes a receipt a receipt.
+// port answers "" for is not in the candidate — a deletion owes no coverage. A
+// real git failure is reported, never swallowed: the measurement is what makes a
+// receipt a receipt.
 func (r *runner) currentBlobs(paths []string) (map[string]string, *Result) {
 	blobs := make(map[string]string, len(paths))
 	for _, path := range paths {
-		blob, err := r.git.BlobHash(r.opts.Dir, path)
+		blob, err := r.blobHash(r.opts.Dir, path)
 		if err != nil {
 			problem := blocked(fmt.Sprintf("could not measure the blob of %s: %s; fix git and run odachi check again", path, oneLine(err.Error())))
 			return nil, &problem
@@ -2453,7 +2491,7 @@ func (r *runner) undoRow(state *gate.State, feature *tasks.Document, proofPath s
 		return
 	}
 
-	tree, paths, diff, err := r.git.Candidate(r.opts.Dir, base)
+	tree, paths, diff, err := r.candidate(r.opts.Dir, base)
 	if err != nil {
 		r.undoNote = "could not be prepared: " + oneLine(err.Error())
 		return

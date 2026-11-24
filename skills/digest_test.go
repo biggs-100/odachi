@@ -50,7 +50,7 @@ func TestDigestPinsTheEmbeddedSkillBytes(t *testing.T) {
 		t.Errorf("Digest() has %d characters, want 64 hex characters: %q", len(got), got)
 	}
 	for _, char := range got {
-		if !((char >= '0' && char <= '9') || (char >= 'a' && char <= 'f')) {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
 			t.Fatalf("Digest() is not lowercase hex: %q", got)
 		}
 	}

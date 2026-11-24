@@ -259,17 +259,17 @@ func TestAModeOnClosingMessageBlocksMissingVerification(t *testing.T) {
 	}
 }
 
-// TestAModeOnUnreadableMessageDoesNotInventAVerificationRisk: readable history
-// already declares a reasoned none, so an unreadable current hook file cannot
-// erase that answer or invent a verification risk; review_missing remains first.
-func TestAModeOnUnreadableMessageDoesNotInventAVerificationRisk(t *testing.T) {
+// TestAModeOnUnreadableMessageBlocksEvenWithValidHistory: readable history still
+// contributes its declared risk, but it cannot replace the current message's
+// unreadable risk evidence or erase the read error.
+func TestAModeOnUnreadableMessageBlocksEvenWithValidHistory(t *testing.T) {
 	files, git := closedRiskFixture()
 	git.messages = []string{"historical close\n\nRisk: none - the historical range declares no named risk\n"}
 
 	got := run(t, files, git, check.Options{ReviewMode: true, Message: commitMessage})
 
-	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
-		t.Fatalf("an unreadable message = %d/%q, want only the missing-review refusal", got.Code, got.Reason)
+	if got.Code != 1 || got.Reason != gate.ReasonRiskDeclaration {
+		t.Fatalf("an unreadable message = %d/%q, want the risk-declaration refusal", got.Code, got.Reason)
 	}
 }
 

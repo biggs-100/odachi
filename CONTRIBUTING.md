@@ -38,7 +38,7 @@ done. A contribution follows the same loop, by hand or with your agent.
    written reason on non-passive work.
 5. One step, one commit. The title says what changed for the person using
    odachi, in the imperative; the body says how and why; the last line is
-   `Risk: none` or one of `data`, `security`, `contract`, `concurrency`,
+   `Risk: none - <reason>` or one of `data`, `security`, `contract`, `concurrency`,
    `delivery`, `no-test`.
 6. Open the pull request with the template. It asks for the proof, the risk and
    the rollback because those are the three things a reviewer cannot guess.

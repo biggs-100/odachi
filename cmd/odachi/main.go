@@ -616,7 +616,11 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	// wrote `mode = "on"` must not get a gate that never opened.
 	opts.NoReview = noReview
 	if !opts.RequireReview && !noReview {
-		enabled, err := reviewapp.Enabled(dir, osFiles{}, reviewModeCodec{})
+		var modeFiles reviewapp.ModeFiles = osFiles{}
+		if opts.Message != "" {
+			modeFiles = stagedModeFiles{root: dir}
+		}
+		enabled, err := reviewapp.Enabled(dir, modeFiles, reviewModeCodec{})
 		if err != nil {
 			_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 			return start.CodeBlocked

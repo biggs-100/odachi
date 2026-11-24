@@ -554,25 +554,31 @@ Review is local evidence, and approval never authorises delivery. The project
 switch lives in `odd/review.toml` and is written with
 `odachi review mode status|on|off`. With mode on, a non-passive close without a
 valid verdict for its required lenses and changed-file coverage blocks; the
-commit hook runs `check --message` and enforces the same rule on the closing
-commit. A named risk also blocks until an independent `odachi verify` record
+commit hook runs `check --message`, reads project artifacts and the review
+policy from the staged index, and enforces the same rule on the closing commit.
+Proof, review and verification evidence still comes from the clone-local real
+filesystem. A named risk also blocks until an independent `odachi verify` record
 exists for that tree. Every strict non-passive close must carry a valid `Risk:`
-line, and `Risk: none` must include a written reason:
-`Risk: none - <reason>`.
+line, and `Risk: none` must include a written reason: `Risk: none - <reason>`.
 
 The verdict judges the diff the feature merges, not just the closing document.
 The task doc records the commit the feature started from (`Base:`), and the gate
 names `odachi review --base <sha>`. After the close, documents do not reopen it:
 a release note, or a note added to the task doc, is ready with its proof because
 the verdict already judged the same code. Code written after the close still
-owes a verdict. A document with no steps, or one written before the base line
-existed, keeps the older rule: with mode on, every tree asks. A passive change
--documents only- asks for no verdict because there is no lens to answer.
+owes a verdict. A document with no steps is still an open feature and owes no
+verdict yet. Without a `Base:` there is no feature-wide diff, so mode on asks
+per non-passive tree. A passive tree with no feature base asks for no verdict
+because there is no lens to answer.
 
 Mode off makes review and verification optional. `--require-review` requires a
-valid review for the current tree, even a passive one, and refuses self-review.
-`--no-review` is an explicit one-run bypass; neither flag changes the file. The
-file is versioned, so changing it moves the tree and the proof is retaken with
+valid review of the current tree and refuses self-review. When a closed feature
+supplies a `Base:`, that includes a passive closing tree: its verdict must judge
+the feature diff even though the closing commit carries only documents. A passive
+tree with no feature base, including a document-less change before one is known,
+still asks for no lens and no verdict. `--no-review` is an explicit one-run
+bypass; neither flag changes the file. The file is versioned, so changing it
+moves the tree and the proof is retaken with
 `odachi check --run "<command>"`. Commit, push, pull request, merge, tag and
 release remain separate human decisions.
 

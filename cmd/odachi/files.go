@@ -411,6 +411,52 @@ func (g storeGrowth) Measure(store string) (clean.Growth, error) {
 	}, disk(g.dir))
 }
 
+// stagedModeFiles reads the review switch from the index a commit will carry.
+// It implements the mode command's disk port without being able to mutate either
+// the worktree policy or the staged index.
+type stagedModeFiles struct {
+	root string
+}
+
+func (f stagedModeFiles) Exists(path string) (bool, error) {
+	if _, err := f.policyPath(path); err != nil {
+		return false, err
+	}
+	_, found, err := gitx.StagedFile(f.root, filepath.ToSlash(layout.Review))
+	return found, err
+}
+
+func (f stagedModeFiles) Read(path string) ([]byte, error) {
+	if _, err := f.policyPath(path); err != nil {
+		return nil, err
+	}
+	data, found, err := gitx.StagedFile(f.root, filepath.ToSlash(layout.Review))
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
+	}
+	return data, nil
+}
+
+func (stagedModeFiles) Write(path string, _ []byte) error {
+	return fmt.Errorf("cannot write the staged review policy %s during a commit-message check", path)
+}
+
+func (stagedModeFiles) Backup(path string) (string, error) {
+	return "", fmt.Errorf("cannot back up the staged review policy %s during a commit-message check", path)
+}
+
+func (f stagedModeFiles) policyPath(path string) (string, error) {
+	want := filepath.Join(f.root, filepath.FromSlash(layout.Review))
+	rel, err := filepath.Rel(want, path)
+	if err != nil || rel != "." {
+		return "", fmt.Errorf("staged mode files only read %s", layout.Review)
+	}
+	return filepath.ToSlash(layout.Review), nil
+}
+
 // reviewModeCodec is the format adapter for `odachi review mode`: the app owns
 // the actions and the disk port, this type owns TOML.
 type reviewModeCodec struct{}
@@ -615,6 +661,22 @@ func (gitRepo) Candidate(root, base string) (string, []string, string, error) {
 	return gitx.Candidate(root, base)
 }
 
+// StagedCandidate reads the index that will become the commit, independent of
+// unstaged worktree changes.
+func (gitRepo) StagedCandidate(root, base string) (string, []string, string, error) {
+	return gitx.StagedCandidate(root, base)
+}
+
+// StagedFile and StagedList read project artifacts from the index tree a commit
+// will carry, without changing the human's index.
+func (gitRepo) StagedFile(root, path string) ([]byte, bool, error) {
+	return gitx.StagedFile(root, path)
+}
+
+func (gitRepo) StagedList(root, dir string) ([]string, error) {
+	return gitx.StagedList(root, dir)
+}
+
 // Diff is Candidate's diff alone: what the plan weighs before a feature opens
 // another step, counted by the same port the close measures (0334).
 func (g gitRepo) Diff(root, base string) (string, error) {
@@ -632,6 +694,11 @@ func (gitRepo) AddedDeps(root, base string) ([]string, error) {
 	return gitx.AddedDeps(root, base)
 }
 
+// StagedAddedDeps applies the dependency fence to the staged go.mod.
+func (gitRepo) StagedAddedDeps(root, base string) ([]string, error) {
+	return gitx.StagedAddedDeps(root, base)
+}
+
 // FileAt reads a file from a git ref: the gate uses it to obey the fence of a
 // base branch the candidate cannot edit.
 func (gitRepo) FileAt(root, rev, path string) ([]byte, bool, error) {
@@ -641,6 +708,12 @@ func (gitRepo) FileAt(root, rev, path string) ([]byte, bool, error) {
 // BlobHash gives the review its content receipts: the blob id of the bytes each
 // finding judged, computed by git from the worktree file.
 func (gitRepo) BlobHash(root, path string) (string, error) { return gitx.BlobHash(root, path) }
+
+// StagedBlobHash gives coverage receipts for the staged entry; a staged deletion
+// answers an empty hash.
+func (gitRepo) StagedBlobHash(root, path string) (string, error) {
+	return gitx.StagedBlobHash(root, path)
+}
 
 // Ignored is how both verbs ask whether the project already keeps its own
 // evidence out of the tree: `odachi init` writes that rule into .gitignore, and
