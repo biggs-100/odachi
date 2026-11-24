@@ -1,11 +1,10 @@
 # Next session
 
-Written after v0.62.0 shipped the office-peru work, 0356 cleaned the doctor,
-0357 gave the profile a machine default plus a per-project override, 0358 made
-the quorum warning say that one model is enough to review, and 0359 made `init`,
-`start` and `level` speak the office-peru profile's language. The project
-now serves a second audience: public office workers in Peru who write documents,
-research and reports, not software developers.
+Written after v0.64.0 shipped the office-peru work. The project now serves a
+second audience: public office workers in Peru who write documents, research and
+reports, not software developers. Four features closed this cycle: 0356 cleaned
+the doctor, 0357 gave the profile a machine default, 0358 corrected the review
+message, and 0359 made the first-run verbs speak the chosen profile's language.
 
 **Standing rule.** When a problem or a design question shows up, read
 `C:\Users\USER\Desktop\herramientas\gentle-shell` first, read-only: it may already
@@ -14,31 +13,21 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 
 ## Where the project is
 
-- **main is `e8a05d5`, clean and synchronized.** 0356 was merged there after v0.62.0;
-  it removed a stale local binary that shadowed the installed one and made doctor
-  checks 2 and 6 fail. v0.62.0 shipped on `3b10bce` (release
-  PR #715, tag `v0.62.0`, 2026-11-23, 16 signed assets). The release carried 0354 (the
-  `office-peru` profile, its voice and a skill with three references) and 0355 (the
-  gate's human lines in Spanish for that profile), both merged in #714 as `8d9dc58`.
-- **0356 was merged in PR #716 at `e8a05d5`.** It changed the measurement rule in
-  `odd/rules.toml` to an honest `enforces = "none"` and refreshed the block and this
-  handover. Doctor reports all clear, 18 checks, 2 warnings.
-- **0357 was merged in PR #717 as `82a91dd`.** It stores a machine default in
-  `~/.odachi/profile.toml`, resolves the profile from project file → published block →
-  machine default → inference through one function, and lets the TUI's voice screen
-  switch between machine and project with `tab`. A per-project change is still a spoken
-  instruction followed by `odachi level --to <profile>`.
-- **0358 is on `fix/check17-one-model`, being rebased onto the new main.** It rewrites
-  the quorum warning to say that one model is enough to review and a second is optional.
-  The numbering was corrected to 0358 because local main predated PR #717.
-- **0359 is this step, not yet merged.** `odachi init`, `odachi start` and
-  `odachi level` render their human lines in plain Spanish when the profile in
-  force is `office-peru`, through the same printing boundary `odachi check` uses.
-  No domain message, reason code, exit code or `--json` byte changed, and novato,
-  senior and ci keep their output byte for byte.
-- **The installed binary is 0.63.0 and knows the new profile.** Verified end to end in
-  a temp project: `init`, `level --to office-peru`, a two-source report, a proof and a
-  local commit; `odachi check` printed in Spanish with the installed binary.
+- **main is `048d893`, clean and synchronized.** v0.64.0 shipped on the merge of
+  release PR #721, tag `v0.64.0`, 2026-11-24, 16 signed assets. The release carried
+  0359 (PR #720, `c6a3c56`): `init`, `start` and `level` render their human lines in
+  plain Spanish for `office-peru`, through the same boundary `check` uses.
+- **v0.63.0 shipped just before**, on `457ee74` (PR #719, tag `v0.63.0`, 16 assets).
+  It carried 0357 (PR #717, `82a91dd`), the machine default in
+  `~/.odachi/profile.toml` with one resolver for the profile in force and a TUI voice
+  screen that toggles machine/project with `tab`, and 0358 (PR #718, `35a2377`), the
+  quorum warning that says one model is enough to review.
+- **v0.62.0** shipped on `3b10bce` with 0354 and 0355: the `office-peru` profile,
+  its voice, a skill with three references, and the Spanish gate output. 0356 was
+  merged in PR #716 at `e8a05d5` and cleaned the doctor's rule ledger.
+- **The installed binary is 0.64.0 and matches main.** Verified in a project with
+  `office-peru`: `odachi level` printed the Spanish summary and the doctor printed
+  "one model is enough to review; a second is optional".
 - **`## Unreleased` exists again.** The release renamed the heading, so the next
   feature writes under it.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
@@ -48,47 +37,51 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 ## What waits for a decision
 
 - **The second vendor is optional.** All four lenses still name
-  `opencode-go/deepseek-v4.1-flash` and doctor's check 17 counts `1 of 4`, but one model
-  is enough to review: `--require-review` is opt-in and check 17 is a warning, not a
+  `opencode-go/deepseek-v4.1-flash` and check 17 counts `1 of 4`, but one model is
+  enough to review: `--require-review` is opt-in and the check is a warning, not a
   gate. A second vendor buys independence for people who want it and can pay for it;
   the human paused that purchase for budget reasons. A different model under the same
   prefix is not a second vendor, and using one needs explicit provider, operation and
-  credential consent (0358).
-- **The rest of the CLI still speaks developer language.** `odachi check`, `init`,
-  `start` and `level` are translated for `office-peru`; the other verbs, the
-  `cmd /c` execution of proof commands and the weak-evidence warning are untouched.
-- **Review and verification were not exercised on 0354-0356.** The features declared
-  `Risk: none`, no reviewer was paid, and the gate did not require either. The latest
-  verdict in the store predates them.
+  credential consent.
+- **Review and verification were not exercised on 0354-0359.** Those features
+  declared `Risk: none`, no reviewer was paid, and the gate did not require either.
+  The latest verdict in the store predates them. There is no review approval on the
+  merged PRs either.
+- **The rest of the CLI still speaks developer language.** `check`, `init`, `start`
+  and `level` are translated for `office-peru`; other verbs, the `cmd /c` execution
+  of proof commands and the weak-evidence warning are untouched.
 - **Test adequacy stays unresolved (debt 6)**, the design system needs a headless
   dependency, the `[[check]]` editor is narrow, and `.atl/skill-registry.md` is stale
   and generated by an extension in another project this one may not touch.
 - **Doctor's remaining warnings are deliberate**: the rule debt (16) and the quorum
-  (17). The stale handover warning (14) is resolved by this rewrite.
+  (17). Doctor is otherwise all clear, 18 checks, no problems.
 
 ## What this cycle learned
 
-- **One resolver, one answer.** Doctor and the verbs used to derive the profile in two
-  places; 0357 made them ask one function, so a machine default cannot disagree with
-  the block a project already published.
-- **A default must not rewrite a committed choice.** Resolution stops at the project's
-  `odd/profile.toml` and at a voice already in `AGENTS.md` before it ever reads the
-  machine's default.
-- **A profile changes ceremony, not knowledge.** It has eight axes plus a voice; the
-  Peruvian legal map lives in a skill's references. A fifth axis for `source-check`
-  would promise a proof mode the gate does not have.
-- **Compare code, not READMEs.** Primary sources beat summaries for the legal map;
-  the exact decree numbers and dates are the evidence.
-- **Translation belongs at the printing boundary.** The domain keeps its reasons and
-  codes, `--json` keeps its keys, and an unknown line passes through unchanged.
-- **A stale local binary corrupts doctor.** `exec.LookPath` finds an executable in the
-  current directory first and refuses to run it, so a gitignored `odachi.exe` hid the
+- **A profile changes ceremony, not knowledge.** Eight axes plus a voice; the legal
+  map lives in a skill's references. A fifth axis for `source-check` would promise a
+  proof mode the gate does not have.
+- **Translation belongs at the printing boundary.** Domain messages, reason codes,
+  exit codes and `--json` stay untouched; novato, senior and ci keep byte-identical
+  output, and a line with no known translation passes through.
+- **One resolver, one answer.** Doctor and the verbs ask the same function, so a
+  machine default cannot disagree with a voice already published in `AGENTS.md`.
+- **A default must not rewrite a committed choice.** Resolution stops at the project
+  file and the published block before reading the machine's default.
+- **A stale local binary corrupts doctor.** `exec.LookPath` refuses an executable
+  found relative to the current directory, so a gitignored `odachi.exe` hid the
   installed one and made checks 2 and 6 fail.
-- **A squash leaves local main ahead.** Merging a PR on GitHub does not move local
-  main; reset it to `origin/main` before the next branch, and keep the release tag on
-  the release PR's merge commit.
-- **A proof that prints nothing is weak evidence.** `findstr ... >nul` passed but drew
-  a warning; printing the matched lines removed it.
+- **A squash leaves local main ahead.** Reset it to `origin/main` before the next
+  branch, and take the release tag SHA programmatically from `gh pr view` so it lands
+  on the release PR's merge commit.
+- **A flaky CI job is rerun, not reimplemented.** A TUI subtest timed out once in the
+  v0.63.0 release run; rerunning that single job passed and published the release.
+- **Test ports must be used.** The global profile read `os.UserHomeDir()` directly
+  and skipped `homeDir`, so tests saw the real machine default; reading through the
+  port restored isolation.
+- **One bounded worker can write a multi-file slice.** Hand it exact edit surfaces,
+  verification commands and the task doc; the parent verifies the diff and reruns
+  the full proof before committing.
 
 ## The commands that work
 
@@ -113,8 +106,9 @@ $env:PATH = "$env:TEMP\odachi-next-bin;$env:PATH"
 
 ```sh
 # the release: a branch that renames Unreleased, a PR, then the tag on its merge
-git switch -c release/vX.Y.Z && git commit -am "release vX.Y.Z" --no-verify && gh pr create --base main
-git tag -a vX.Y.Z <merge commit> -m "release vX.Y.Z" && git push origin vX.Y.Z
+git switch -c release/vX.Y.Z && git commit -am "release vX.Y.Z" && gh pr create --base main
+$merge = gh pr view <pr> --repo biggs-100/odachi --json mergeCommit --jq '.mergeCommit.oid'
+git tag -a vX.Y.Z $merge -m "release vX.Y.Z" && git push origin vX.Y.Z
 irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 | iex
 ```
 
@@ -126,10 +120,11 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 - **The reviewer's clock is 600s and the verifier's is 1800s**; neither was paid for
   the office-peru work.
 - **A feature's base is a commit the remote has**, and a squash erases a branch-only
-  base: rebase before retargeting.
+  base: rebase before retargeting, and resolve changelog/handover conflicts by
+  combining both entries.
 - **The fence is read from the base**: a policy change lands first, in its own pull request.
 - **`## Unreleased` is re-created after every release**, and a version is never moved
   or reused: the tag lands on the merge of the release pull request.
-- **`windows-latest` is the slow CI gate**: about six minutes here. macOS is on
+- **`windows-latest` is the slow CI gate**: four to eleven minutes here. macOS is on
   `macos-latest` and has been assigned on every attempt since #704.
 - **The installed binary is an artifact of a tag**, not a moving pointer to main.
