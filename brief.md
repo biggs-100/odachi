@@ -1434,3 +1434,24 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: como un default de maquina y un override por proyecto pueden convivir sin contradecirse.
+
+## 0360 · ok-entonces-aplica
+
+## What must exist
+- ok, entonces aplica todo eso
+
+## Done when
+- an installed binary is verified against the source bytes, with its proof in the tree
+- contract artifacts are pinned by hash and regenerate byte-identical
+- skills are checked structurally: frontmatter, relative references, manifest completeness
+- usage and unknown-command text derive from the dispatch table, and oneLine has one home
+- the office-peru voice is data, not a branch in the reporter
+
+## Not included (first version)
+- no edits to gentle-shell, release.yml, proof/**, lens files or the two measurement docs; no model call in CI; no push, pull request, tag or release
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: a byte pin cannot see a same-size rewrite; a hash can.
