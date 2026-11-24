@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.64.0 - 2026-11-24
 
 - **Three more verbs speak the profile's language.** `odachi init`, `odachi start` and `odachi level` now render their human lines in plain Spanish when the profile in force is `office-peru`, through the same boundary translation `odachi check` already uses. Commands, flags, paths, reason codes, exit codes and the `--json` payload stay as they were; novato, senior and ci keep their output byte for byte, and a line with no known translation passes through unchanged. Minor (0359).
 
