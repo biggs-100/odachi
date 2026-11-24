@@ -13,7 +13,7 @@ R1 · "ok, entonces aplica todo eso"
 
 ## Steps
 - [x] T1 · verify the installed binary carries the source skill bytes, in a clean directory with a proof   R1 · tree:a36de4b223929c8fe1f9fa242608844c2b89b4ce
-- [ ] T2 · pin contract artifacts by hash and regenerate them byte-identical instead of only by size   R1
+- [x] T2 · pin contract artifacts by hash and regenerate them byte-identical instead of only by size   R1 · tree:2e72ddb83930c9b3ff8653d8d960ec577a372548
 - [ ] T3 · check skills structurally: frontmatter, relative references and manifest completeness   R1
 - [ ] T4 · derive usage and unknown-command text from the dispatch table and give oneLine one home   R1
 - [ ] T5 · make the office-peru voice data in the reporter instead of a branch in reportCheck   R1
