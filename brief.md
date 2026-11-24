@@ -1455,3 +1455,27 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: a byte pin cannot see a same-size rewrite; a hash can.
+
+## 0361 · obligatorio-review-y
+
+## What must exist
+- obligatorio, review y verificasion
+
+## Done when
+- with review mode on, a non-passive close without a valid verdict blocks instead of printing a note
+- with review mode on, a named risk without an independent verification blocks
+- a strict non-passive close declares a valid risk, and Risk none carries a written reason
+- the commit hook evaluates review and verification for the closing commit
+- a clean close reads lenses and coverage from the feature diff, not an empty worktree
+- executable and test files under docs or root design are not passive documentation
+- CI states its local-only review contract with no model call
+- the generated rules, skills, help, README and ADRs teach the same contract
+
+## Not included (first version)
+- no model call in CI; no second vendor; no edits to gentle-shell, release.yml, proof/**, lens files, docs/skill-evaluation.md or docs/review-research.md; no push, pull request, merge, tag or release
+
+## Decisions taken
+- It is used from the computer.
+- There is no sensitive data in the first version.
+- First usable version: this week.
+- Wants to learn: mode on must mean what it says: a warning is not a gate.
