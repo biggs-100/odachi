@@ -554,8 +554,9 @@ func TestAQuestionAnsweredAfterTheCloseDoesNotReopenTheGate(t *testing.T) {
 func TestTheModeAsksEveryTreeWithoutABase(t *testing.T) {
 	old := readyFiles()
 	old["odd/tasks/0007-turnos.md"] = reviewableDoc("", true)
+	old["commit-msg"] = "reserve a slot\n\nRisk: none - the per-tree fixture declares no named risk\n"
 
-	got := run(t, newFakeFiles(old), codeChange(), check.Options{ReviewMode: true})
+	got := run(t, newFakeFiles(old), codeChange(), check.Options{ReviewMode: true, Message: "commit-msg"})
 	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
 		t.Fatalf("a document with no base = %d/%q, want the per-tree review refusal", got.Code, got.Reason)
 	}

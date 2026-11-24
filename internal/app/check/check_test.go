@@ -176,6 +176,15 @@ func (f *fakeFiles) Backup(path string) (string, error) {
 	return path + ".bak-prueba", nil
 }
 
+// fakeCandidate is one candidate answer for a named base. An empty tree keeps
+// the fake's default tree, so a test only declares the paths and diff that differ.
+type fakeCandidate struct {
+	tree  string
+	paths []string
+	diff  string
+	err   error
+}
+
 // fakeGit is the Git port: it reports fixed facts and records which base the
 // fence asked about.
 type fakeGit struct {
@@ -206,6 +215,9 @@ type fakeGit struct {
 
 	// candidateCalls counts the one read of the worktree this run asked for.
 	candidateCalls int
+	// candidateByBase lets a clean close answer different paths and diff for the
+	// feature's base than for HEAD: the closing document is not the feature.
+	candidateByBase map[string]fakeCandidate
 
 	// filesAt answers FileAt, keyed by "rev:path"; fileAtErr is the ref failing.
 	filesAt   map[string]string
@@ -294,6 +306,13 @@ func (g *fakeGit) Resolve(root, ref string) (string, error) {
 func (g *fakeGit) Candidate(root, base string) (string, []string, string, error) {
 	g.candidateCalls++
 	g.bases = append(g.bases, base)
+	if candidate, ok := g.candidateByBase[base]; ok {
+		tree := candidate.tree
+		if tree == "" {
+			tree = g.tree
+		}
+		return tree, candidate.paths, candidate.diff, candidate.err
+	}
 	if g.changedErr != nil && base != check.EmptyTree {
 		return "", nil, "", g.changedErr
 	}
@@ -326,11 +345,15 @@ func (g *fakeGit) BlobHash(root, path string) (string, error) {
 
 func (g *fakeGit) AddedDeps(root, base string) ([]string, error) { return g.deps, nil }
 
-// Messages answers the commits the range carries. The trailer lane is the only
-// question; a test that seeds nothing gets the project it always had.
+// Messages answers the commits the range carries. An unset fixture carries a
+// valid reasoned none so strict tests start from a valid declaration; a test
+// about missing or malformed lines seeds those messages explicitly.
 func (g *fakeGit) Messages(root, base string) ([]string, error) {
 	if g.messagesErr != nil {
 		return nil, g.messagesErr
+	}
+	if g.messages == nil {
+		return []string{"fixture commit\n\nRisk: none - the fixture declares no named risk\n"}, nil
 	}
 	return g.messages, nil
 }

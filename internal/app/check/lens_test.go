@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/biggs-100/odachi/internal/app/check"
+	"github.com/biggs-100/odachi/internal/domain/gate"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 	domainverify "github.com/biggs-100/odachi/internal/domain/verify"
 )
@@ -269,4 +270,82 @@ func verdictAtBase(t *testing.T, tree, base string, lenses []string) string {
 		t.Fatalf("sealing the seeded verdict: %v", err)
 	}
 	return string(domainreview.Render(sealed))
+}
+
+// featureCloseCandidate is the clean-close shape: HEAD carries only the task
+// document, while the candidate read from the feature's base carries code.
+func featureCloseCandidate(base string, featurePaths []string, featureDiff string) *fakeGit {
+	const closingDoc = "odd/tasks/0007-turnos.md"
+	return &fakeGit{
+		tree:    currentTree,
+		changed: []string{closingDoc},
+		between: featurePaths,
+		diff: "diff --git a/odd/tasks/0007-turnos.md b/odd/tasks/0007-turnos.md\n" +
+			"--- a/odd/tasks/0007-turnos.md\n+++ b/odd/tasks/0007-turnos.md\n@@ -1 +1 @@\n-old\n+done\n",
+		messages: []string{"close the feature\n\nRisk: none - the closing commit only marks the task complete\n"},
+		blobs: map[string]string{
+			closingDoc:                    checkBlob,
+			"internal/app/check/check.go": checkBlob,
+		},
+		candidateByBase: map[string]fakeCandidate{
+			base: {paths: featurePaths, diff: featureDiff},
+		},
+	}
+}
+
+const ordinaryFeatureDiff = "diff --git a/internal/app/check/check.go b/internal/app/check/check.go\n" +
+	"--- a/internal/app/check/check.go\n+++ b/internal/app/check/check.go\n@@ -1 +1 @@\n-old\n+new\n"
+
+func TestCleanCloseReadsRequiredLensesFromTheFeatureDiff(t *testing.T) {
+	const base = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+	const closingDoc = "odd/tasks/0007-turnos.md"
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc(base, true))
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "claude",
+		Lenses:   []string{domainreview.Readability},
+		Passes:   []domainreview.Pass{{Path: closingDoc, Blob: checkBlob, Lens: domainreview.Readability}},
+	}, currentTree, base, reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the seeded verdict: %v", err)
+	}
+	files.files[reviewPath(currentTree)] = domainreview.Render(sealed)
+	git := featureCloseCandidate(base, []string{"internal/app/check/check.go"}, ordinaryFeatureDiff)
+
+	got := run(t, files, git, check.Options{ReviewMode: true})
+
+	if got.Code != 2 || got.Reason != check.ReasonReviewLensMissing {
+		t.Fatalf("clean close = %d/%q, want the feature's missing lens (%s)", got.Code, got.Reason, got.Message)
+	}
+	if !strings.Contains(got.Message, domainreview.Reliability) {
+		t.Errorf("message %q does not name the feature code's reliability lens", got.Message)
+	}
+}
+
+func TestCleanCloseReadsCoverageFromTheFeatureDiff(t *testing.T) {
+	const base = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+	const closingDoc = "odd/tasks/0007-turnos.md"
+	const featureCode = "internal/app/check/check.go"
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc(base, true))
+	files.files[reviewPath(currentTree)] = []byte(verdictFileWithRowsAtBase(t, currentTree, base, []domainreview.Pass{
+		{Path: closingDoc, Blob: checkBlob, Lens: domainreview.Reliability},
+	}))
+	git := featureCloseCandidate(base, []string{featureCode}, ordinaryFeatureDiff)
+
+	got := run(t, files, git, check.Options{ReviewMode: true})
+
+	if got.Code != 2 || got.Reason != check.ReasonReviewCoverage {
+		t.Fatalf("a verdict covering only the closing doc = %d/%q, want feature coverage refusal (%s)", got.Code, got.Reason, got.Message)
+	}
+	if !strings.Contains(got.Message, featureCode) {
+		t.Errorf("message %q does not name the uncovered feature path", got.Message)
+	}
+
+	files.files[reviewPath(currentTree)] = []byte(verdictFileWithRowsAtBase(t, currentTree, base, []domainreview.Pass{
+		{Path: featureCode, Blob: checkBlob, Lens: domainreview.Reliability},
+	}))
+	if got := run(t, files, git, check.Options{ReviewMode: true}); got.Code != int(gate.Ready) {
+		t.Fatalf("the feature path's current receipt did not close the tree: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
 }

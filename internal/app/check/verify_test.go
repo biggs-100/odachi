@@ -119,12 +119,12 @@ func TestACandidateUnderTheSliceStillOwesItsRecord(t *testing.T) {
 }
 
 // TestACandidatePastTheSliceWithoutAVerifierToOweIsNotRefused: the slice exists
-// only for a close that owes a verifier. A big change whose commits declared no
-// risk that asks for one passes exactly as it did (0331).
+// only for a close that owes a verifier. A big change with a valid reasoned-none
+// declaration asks for no verifier and passes exactly as it did (0331).
 func TestACandidatePastTheSliceWithoutAVerifierToOweIsNotRefused(t *testing.T) {
 	files, git := closedRiskFixture()
 	git.diff = sliceDiff(401)
-	git.messages = []string{"a change with no risk line\n"}
+	git.messages = []string{"a change with no named risk\n\nRisk: none - the fixture declares no named risk\n"}
 
 	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
 		t.Fatalf("a close that owes no verifier paid a slice: %s", result.Message)
@@ -495,16 +495,26 @@ func TestAPassiveFeatureAsksForNoVerification(t *testing.T) {
 	}
 }
 
-// TestARiskTheTableDoesNotCarryAsksForNothing: a word the table does not know is
-// already named by the ready note, and inventing a demand for it would make the
-// gate ask for a verifier nobody can name.
-func TestARiskTheTableDoesNotCarryAsksForNothing(t *testing.T) {
+// TestARiskTheTableDoesNotCarryIsInvalidInStrictMode: an unknown name asks for
+// no invented lens or verifier, but it also cannot answer the strict declaration
+// question. The commit must be amended before either independent gate runs.
+func TestARiskTheTableDoesNotCarryIsInvalidInStrictMode(t *testing.T) {
 	files, git := closedRiskFixture()
 	git.messages = []string{"a change\n\nRisk: whatever\n"}
 	git.between = []string{"internal/gastos/x.go"}
 
-	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
-		t.Fatalf("an unknown risk asked for a verification: %s", result.Message)
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 || result.Reason != gate.ReasonRiskDeclaration {
+		t.Fatalf("an unknown risk = %d/%q, want risk_declaration_invalid (%s)", result.Code, result.Reason, result.Message)
+	}
+	for _, want := range []string{"unknown risk", "whatever", "amend the commit", "Risk: none - <reason>"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("the refusal does not name %q: %s", want, result.Message)
+		}
+	}
+	if result.Next != "odachi check" {
+		t.Errorf("next = %q, want odachi check", result.Next)
 	}
 }
 

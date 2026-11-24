@@ -42,6 +42,18 @@ func commitAll(t *testing.T, dir, message string) {
 	}
 }
 
+// commitEmpty records a historical declaration without moving the candidate's
+// uncommitted paths into the range a verdict has to declare.
+func commitEmpty(t *testing.T, dir, message string) {
+	t.Helper()
+	cmd := exec.Command("git", "-C", dir,
+		"-c", "user.email=odachi@example.com", "-c", "user.name=odachi",
+		"commit", "--allow-empty", "-q", "-m", message)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git commit --allow-empty: %v: %s", err, out)
+	}
+}
+
 // reviewsIn lists the verdict files inside the clone's store.
 //
 // declared is the inspection a complete answer carries: every path the fixture's
@@ -484,8 +496,11 @@ func TestReviewModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
 
-	// The base the feature starts from is the commit the tree is on now.
+	// The base the feature starts from is the commit the tree is on now. The
+	// feature's first commit carries a valid declaration, so the close is refused
+	// for its missing verdict rather than for an unrelated risk line.
 	base := headOf(t, dir)
+	commitAll(t, dir, "cambiar el turno\n\nRisk: none - the fixture declares no named risk\n")
 	doc := taskdoc.TaskDoc{
 		Title:            "turnos",
 		Base:             base,
@@ -538,6 +553,7 @@ func TestCheckAcceptsAVerdictThatNamesTheBaseShort(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
 	base := headOf(t, dir)
+	commitEmpty(t, dir, "declarar el riesgo\n\nRisk: none - the fixture declares no named risk\n")
 
 	doc := taskdoc.TaskDoc{
 		Title:            "turnos",

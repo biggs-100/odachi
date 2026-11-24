@@ -259,11 +259,12 @@ func TestAModeOnClosingMessageBlocksMissingVerification(t *testing.T) {
 	}
 }
 
-// TestAModeOnUnreadableMessageDoesNotInventAVerificationRisk: a message this run
-// cannot read declares no risk; the independent review refusal remains the answer.
+// TestAModeOnUnreadableMessageDoesNotInventAVerificationRisk: readable history
+// already declares a reasoned none, so an unreadable current hook file cannot
+// erase that answer or invent a verification risk; review_missing remains first.
 func TestAModeOnUnreadableMessageDoesNotInventAVerificationRisk(t *testing.T) {
 	files, git := closedRiskFixture()
-	git.messages = nil
+	git.messages = []string{"historical close\n\nRisk: none - the historical range declares no named risk\n"}
 
 	got := run(t, files, git, check.Options{ReviewMode: true, Message: commitMessage})
 

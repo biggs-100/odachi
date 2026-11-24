@@ -68,7 +68,7 @@ func TestInitKeepsTheProofValidAcrossAReview(t *testing.T) {
 	writeFile(t, outside, "veredicto.json", `{"reviewer":"humano",`+declared(t, dir)+`"findings":[],"passes":[{"path":"internal/app/turnos.go","lens":"reliability"},{"path":".gitignore","lens":"reliability"},{"path":"odd/review.toml","lens":"reliability"}]}`)
 	attach := filepath.Join(outside, "veredicto.json")
 
-	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 {
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok", "--no-review"}, ""); code != 0 {
 		t.Fatalf("check --run: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 

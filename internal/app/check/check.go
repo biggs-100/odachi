@@ -402,6 +402,9 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 			// the same sentence, written by the tool, and only a human edits either.
 			// A drift is the agent's rewrite, and the fix is a copy (0314).
 			state.QuoteMismatch = r.quoteMismatches(feature)
+			// A strict close must say what the change can hurt before it spends an
+			// independent verifier or asks for the feature's verdict.
+			state.RiskProblem = r.riskProblem(feature)
 			// And it ships the record of somebody else reading the tree: a risk the
 			// commits declared asks for an independent verifier, and the gate reads
 			// the record instead of a sentence about one (0315).
@@ -682,16 +685,23 @@ func (r *runner) worktree() (*worktree, *Result) {
 		}
 	}
 	if err != nil {
-		message := "could not read the git tree: " + oneLine(err.Error()) + "; run odachi check inside a git repository and check that git is installed"
-		if base != head {
-			message = baseProblem(base, err)
-		}
-		problem := blocked(message)
-		return nil, &problem
+		return nil, r.candidateReadProblem(base, err)
 	}
 
 	r.work = &worktree{tree: tree, base: base, paths: paths, diff: diff}
 	return r.work, nil
+}
+
+// candidateReadProblem names a candidate git could not read. The worktree and a
+// clean close's feature diff share the refusal, so neither can drift or grow a
+// second unclassified dead end.
+func (r *runner) candidateReadProblem(base string, err error) *Result {
+	message := "could not read the git tree: " + oneLine(err.Error()) + "; run odachi check inside a git repository and check that git is installed"
+	if base != head {
+		message = baseProblem(base, err)
+	}
+	problem := blocked(message)
+	return &problem
 }
 
 // brief reads brief.md when it exists. A missing brief is a state, not an
@@ -1388,7 +1398,7 @@ func ReviewOwed(opts Options, files Files, git Git) (bool, string, error) {
 // It writes nothing. The store's ignore file is created by the verbs that produce
 // a verdict, so a tree with no verdict has no store to prepare either.
 func (r *runner) requireReview(base string) *Result {
-	required, changed, diff, problem := r.requiredLenses()
+	required, changed, diff, problem := r.reviewEvidence(base)
 	if problem != nil {
 		return problem
 	}
@@ -1681,30 +1691,34 @@ func sameCommit(git Git, root, judged, start string) bool {
 	return left == right
 }
 
-// declaredRisks is what the commits of the range and the current commit-msg
-// message declared about their blast radius. The current message uses the same
-// absolute-or-project-relative path as claimedMessage. A range or message this
-// binary cannot read declares nothing here: the existing note and error paths name
-// unreadable declarations, and a gate must not invent a risk (0301).
-func (r *runner) declaredRisks(base string) []string {
+// riskMessages is the one read of the declarations: every commit since the
+// feature's base, plus the current commit-msg message before that commit exists.
+// If the current file is unreadable, readable history is returned with the error
+// so a valid historical declaration is not erased by a missing hook file.
+func (r *runner) riskMessages(base string) ([]string, error) {
 	var messages []string
 	if base != "" {
 		var err error
 		messages, err = r.git.Messages(r.opts.Dir, base)
 		if err != nil {
-			return nil
+			return nil, fmt.Errorf("could not read commit messages since %s: %w", base, err)
 		}
 	}
 	if r.opts.Message != "" {
 		data, err := r.files.Read(explicitPath(r.opts.Dir, r.opts.Message))
 		if err != nil {
-			return nil
+			return messages, fmt.Errorf("could not read the commit message %s: %w", r.opts.Message, err)
 		}
 		messages = append(messages, string(data))
 	}
-	if len(messages) == 0 {
-		return nil
-	}
+	return messages, nil
+}
+
+// declaredRisks is what the commits of the range and the current commit-msg
+// message declared about their blast radius. Readable history still answers when
+// the current hook file is unreadable; malformed declarations ask for no lens.
+func (r *runner) declaredRisks(base string) []string {
+	messages, _ := r.riskMessages(base)
 	risk, err := change.ParseRisk(messages)
 	if err != nil {
 		return nil
@@ -1712,15 +1726,81 @@ func (r *runner) declaredRisks(base string) []string {
 	return risk.Named
 }
 
-// requiredLenses is the lens set the whole candidate asks for, with the paths and
-// diff it was read from: the same value the proof and the review prompt use.
-func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
-	work, problem := r.worktree()
-	if problem != nil {
-		return nil, nil, "", problem
+// riskProblem refuses every invalid declaration on a strict, closed,
+// non-passive feature. A passive feature asks no risk question; without a feature
+// base the current candidate is the unit, the same fallback per-tree review uses.
+func (r *runner) riskProblem(feature *tasks.Document) []string {
+	if feature == nil || !r.strictReview() || !documentClosed(feature) {
+		return nil
 	}
 
-	return reviewdomain.Lenses(reviewdomain.Assess(work.paths, work.diff)), work.paths, work.diff, nil
+	if _, _, _, known := featureReview(feature); known {
+		if passive, problem := r.featurePassive(feature); problem == nil && passive {
+			return nil
+		}
+	} else if work, problem := r.worktree(); problem == nil && reviewdomain.Classify(work.paths) == reviewdomain.Passive {
+		return nil
+	}
+
+	base := strings.TrimSpace(feature.Doc.Base)
+	messages, readErr := r.riskMessages(base)
+	risk, parseErr := change.ParseRisk(messages)
+	if readErr != nil && (parseErr != nil || !risk.Declared) {
+		return []string{oneLine(readErr.Error())}
+	}
+	if parseErr != nil {
+		return []string{"the commits' " + change.RiskKey + " line cannot be read: " + oneLine(parseErr.Error())}
+	}
+	if !risk.Declared {
+		return []string{"no commit declares a " + change.RiskKey + " line"}
+	}
+
+	var problems []string
+	if readErr != nil {
+		problems = append(problems, oneLine(readErr.Error()))
+	}
+	if risk.NoneWithoutReason || (len(risk.Named) == 0 && strings.TrimSpace(risk.NoneReason) == "") {
+		problems = append(problems, "Risk: none has no written reason: use Risk: none - <reason>")
+	}
+	for _, name := range risk.Named {
+		if _, known := reviewdomain.LensForRisk(name); !known {
+			problems = append(problems, fmt.Sprintf("unknown risk %q in the commits' %s line", name, change.RiskKey))
+		}
+	}
+	if readErr != nil && len(problems) == 1 {
+		// The readable history answered the question. The unreadable current file
+		// cannot invent another risk, so the valid declaration remains sufficient.
+		return nil
+	}
+	return problems
+}
+
+// reviewEvidence is the candidate a verdict has to judge. A closed feature reads
+// its whole diff from the document's base; a per-tree review keeps using the
+// worktree candidate. Lenses, missing rows and content receipts all share it.
+func (r *runner) reviewEvidence(base string) ([]string, []string, string, *Result) {
+	var paths []string
+	var diff string
+	if base == "" {
+		work, problem := r.worktree()
+		if problem != nil {
+			return nil, nil, "", problem
+		}
+		paths, diff = work.paths, work.diff
+	} else {
+		var err error
+		_, paths, diff, err = r.git.Candidate(r.opts.Dir, base)
+		if err != nil {
+			return nil, nil, "", r.candidateReadProblem(base, err)
+		}
+	}
+	return reviewdomain.Lenses(reviewdomain.Assess(paths, diff)), paths, diff, nil
+}
+
+// requiredLenses is the lens set the current worktree candidate asks for, with
+// the paths and diff it was read from.
+func (r *runner) requiredLenses() ([]string, []string, string, *Result) {
+	return r.reviewEvidence("")
 }
 
 // verifierOwed answers whether this close owes an independent verifier, and names
@@ -2144,10 +2224,8 @@ func (r *runner) verdictNote() string {
 }
 
 // riskNote contrasts what the review measures with what the commits declare: a
-// change the classifier calls full and no commit names a risk for is the silence a
-// reviewer must read. It is a note, never a block -the gate measures paths and
-// reads words, and a full change with a named risk is the reviewer's question- and
-// it asks nothing of a tree whose documents predate the base the note needs.
+// full change needs an explicit answer, and an unknown risk or bare none is not
+// one. A known named risk or a written none reason keeps the note silent.
 func (r *runner) riskNote() string {
 	if r.feature == nil {
 		return ""
@@ -2167,21 +2245,30 @@ func (r *runner) riskNote() string {
 		return ""
 	}
 
-	messages, err := r.git.Messages(r.opts.Dir, base)
+	messages, err := r.riskMessages(base)
 	if err != nil {
 		return ""
 	}
 	contrast := "the review classifies this change as full (it touches " + pathNote(paths) + ")"
 	risk, err := change.ParseRisk(messages)
 	switch {
-	// A declaration with no name answered nothing: silence about it would be the
-	// same quiet the note exists to break.
 	case err != nil:
 		return contrast + ", and the commits' " + change.RiskKey + " line cannot be read (" + oneLine(err.Error()) + ")"
-	case len(risk.Named) > 0:
+	case risk.Declared && (risk.NoneWithoutReason || (len(risk.Named) == 0 && strings.TrimSpace(risk.NoneReason) == "")):
+		return contrast + ", and the commits declare " + change.RiskKey + " none without a written reason: name the risk or use " + change.RiskKey + " none - <reason>"
+	}
+	var unknown []string
+	for _, name := range risk.Named {
+		if _, known := reviewdomain.LensForRisk(name); !known {
+			unknown = append(unknown, fmt.Sprintf("%q", name))
+		}
+	}
+	if len(unknown) > 0 {
+		return contrast + ", and the commits declare unknown risk " + strings.Join(unknown, ", ") +
+			": name a known risk or use " + change.RiskKey + " none - <reason>"
+	}
+	if len(risk.Named) > 0 || risk.Declared {
 		return ""
-	case risk.Declared:
-		return contrast + ", and the commits declare " + change.RiskKey + " none: name the risk or say why it is none"
 	}
 	return contrast + ", and no commit declares a " + change.RiskKey + " line: name the risk or say why it is none"
 }
