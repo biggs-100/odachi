@@ -16,7 +16,7 @@ R1 · "ok, entonces aplica todo eso"
 - [x] T2 · pin contract artifacts by hash and regenerate them byte-identical instead of only by size   R1 · tree:2e72ddb83930c9b3ff8653d8d960ec577a372548
 - [x] T3 · check skills structurally: frontmatter, relative references and manifest completeness   R1 · tree:a01c46c1828c10cb6114ca2d07a6b5694e1ebf0b
 - [x] T4 · derive usage and unknown-command text from the dispatch table and give oneLine one home   R1 · tree:5b0945f3896a6471e8efa8b83b5fc05d04fbebd9
-- [ ] T5 · make the office-peru voice data in the reporter instead of a branch in reportCheck   R1
+- [x] T5 · make the office-peru voice data in the reporter instead of a branch in reportCheck   R1 · tree:99ae6223278e2a5d5fb8d968f8083e4d9ff14e3c
 
 ## History
 L1 · "ok, entonces aplica todo eso"
