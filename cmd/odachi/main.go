@@ -29,6 +29,7 @@ import (
 	"github.com/biggs-100/odachi/internal/app/summary"
 	"github.com/biggs-100/odachi/internal/app/undo"
 	"github.com/biggs-100/odachi/internal/domain/agent"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/store"
@@ -2245,7 +2246,7 @@ func (l *stringList) Set(value string) error {
 
 // oneLine keeps a CLI message on one line whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }
 
 // firstOf is the first non-empty value: two environment names for the same fact

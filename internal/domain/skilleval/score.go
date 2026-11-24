@@ -3,6 +3,8 @@ package skilleval
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 )
 
 // Event is one tool call the transcript named, in the order it happened. Path is
@@ -132,5 +134,5 @@ func eventAt(events []Event, at int, verb string) string {
 }
 
 func oneLine(s string) string {
-	return strings.Join(strings.Fields(s), " ")
+	return oneline.Line(s)
 }

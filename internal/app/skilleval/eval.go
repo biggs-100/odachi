@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	domain "github.com/biggs-100/odachi/internal/domain/skilleval"
 	corpus "github.com/biggs-100/odachi/internal/skilleval"
 )
@@ -342,5 +343,5 @@ func blocked(message string) Result {
 }
 
 func oneLine(s string) string {
-	return strings.Join(strings.Fields(s), " ")
+	return oneline.Line(s)
 }

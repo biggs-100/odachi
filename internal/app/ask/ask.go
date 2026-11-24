@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/biggs-100/odachi/internal/app/tasks"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -271,5 +272,5 @@ func blocked(message string) Result {
 
 // oneLine keeps every message to a single line, whatever came in from a flag.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

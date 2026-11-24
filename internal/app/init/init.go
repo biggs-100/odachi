@@ -27,6 +27,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/adoption"
 	"github.com/biggs-100/odachi/internal/domain/layout"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 )
 
@@ -897,7 +898,7 @@ func relative(dir, path string) string {
 
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }
 
 // skipProjectPersonas is the clean mode: the project keeps the rules and the

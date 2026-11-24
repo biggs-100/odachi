@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -95,5 +96,5 @@ func firstDroppedLine(before, after string) string {
 
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/persona"
 	"github.com/biggs-100/odachi/internal/domain/skill"
 	bundledskills "github.com/biggs-100/odachi/skills"
@@ -579,5 +580,5 @@ func count(n int, singular, many string) string {
 
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

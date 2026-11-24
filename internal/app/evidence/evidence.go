@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	"github.com/biggs-100/odachi/internal/domain/store"
 	verifydomain "github.com/biggs-100/odachi/internal/domain/verify"
@@ -242,5 +243,5 @@ func blocked(message string) Result {
 }
 
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

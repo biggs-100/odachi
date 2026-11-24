@@ -17,6 +17,7 @@ import (
 	"time"
 
 	domain "github.com/biggs-100/odachi/internal/domain/design"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
@@ -367,7 +368,7 @@ func plural(n int, one, many string) string {
 }
 
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }
 
 // handoff turns a chosen artboard into the instruction to implement it: the file,

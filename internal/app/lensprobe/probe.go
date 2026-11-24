@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/probe"
 	"github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/scope"
@@ -588,5 +589,5 @@ func slash(root, name string) string {
 
 // oneLine collapses a message to one line: a broken fixture reports one reason.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }

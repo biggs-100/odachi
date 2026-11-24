@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	domainreview "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/verify"
 )
@@ -314,7 +315,7 @@ func refused(message string) Result {
 }
 
 // oneLine keeps a reason inside the sentence that carries it.
-func oneLine(text string) string { return strings.Join(strings.Fields(text), " ") }
+func oneLine(text string) string { return oneline.Line(text) }
 
 // firstLine is the part of a stream a one-line refusal can carry.
 func firstLine(text string) string {

@@ -24,6 +24,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/change"
+	"github.com/biggs-100/odachi/internal/domain/oneline"
 	domain "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/scope"
 )
@@ -4411,7 +4412,7 @@ func blocked(message string) Result {
 
 // oneLine keeps every message to a single line, whatever an adapter said.
 func oneLine(message string) string {
-	return strings.Join(strings.Fields(message), " ")
+	return oneline.Line(message)
 }
 
 // correctionRounds counts the corrections the chain already holds, from the verdict
