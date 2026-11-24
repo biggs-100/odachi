@@ -1,6 +1,6 @@
 # 0045 - The local run reads the base CI reads
 
-Status: accepted - Date: 2026-11 - Session: after v0.11.90
+Status: accepted in part; CI reproduction command superseded by [0056](0056-review-mode-blocks-locally.md) - Date: 2026-11 - Session: after v0.11.90
 
 ## Context
 

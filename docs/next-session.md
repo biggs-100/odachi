@@ -1,8 +1,10 @@
 # Next session
 
-Written after v0.64.0 shipped the office-peru work. The project now serves a
-second audience: public office workers in Peru who write documents, research and
-reports, not software developers. Four features closed this cycle: 0356 cleaned
+Feature 0361 is the newest work: review mode on now blocks a non-passive local
+close without valid review and required verification. This handover follows
+v0.64.0, which shipped the office-peru work. The project now serves a second
+audience: public office workers in Peru who write documents, research and
+reports, not software developers. Four features closed that cycle: 0356 cleaned
 the doctor, 0357 gave the profile a machine default, 0358 corrected the review
 message, and 0359 made the first-run verbs speak the chosen profile's language.
 
@@ -17,6 +19,9 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
   release PR #721, tag `v0.64.0`, 2026-11-24, 16 signed assets. The release carried
   0359 (PR #720, `c6a3c56`): `init`, `start` and `level` render their human lines in
   plain Spanish for `office-peru`, through the same boundary `check` uses.
+- **0361 is the newest work, on `feat/0361-review-required`.** It makes local
+  review and named-risk verification mandatory when review mode is on, reads
+  coverage from the feature diff, and gives CI an explicit model-free bypass.
 - **v0.63.0 shipped just before**, on `457ee74` (PR #719, tag `v0.63.0`, 16 assets).
   It carried 0357 (PR #717, `82a91dd`), the machine default in
   `~/.odachi/profile.toml` with one resolver for the profile in force and a TUI voice
@@ -38,15 +43,21 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 
 - **The second vendor is optional.** All four lenses still name
   `opencode-go/deepseek-v4.1-flash` and check 17 counts `1 of 4`, but one model is
-  enough to review: `--require-review` is opt-in and the check is a warning, not a
-  gate. A second vendor buys independence for people who want it and can pay for it;
+  enough to review: `--require-review` remains an extra per-tree requirement, and
+  doctor's quorum check is still a warning rather than the review gate. A second
+  vendor buys independence for people who want it and can pay for it;
   the human paused that purchase for budget reasons. A different model under the same
   prefix is not a second vendor, and using one needs explicit provider, operation and
   credential consent.
-- **Review and verification were not exercised on 0354-0359.** Those features
-  declared `Risk: none`, no reviewer was paid, and the gate did not require either.
-  The latest verdict in the store predates them. There is no review approval on the
-  merged PRs either.
+- **Review and verification are mandatory locally when mode is on (0361).** The
+  audit found that agents skipped both for 0354-0360 while the gate only reminded
+  them. A non-passive close now needs a valid verdict, a named risk needs an
+  independent verification record, and a strict non-passive commit needs a valid
+  `Risk:` line with a written reason for `none`. The hook enforces the closing
+  commit and coverage comes from the feature diff. Mode off makes both optional;
+  CI passes `--no-review` explicitly because it has no clone store and makes no
+  model calls. Existing unreviewed closed trees block if rechecked under the new
+  policy. Review approval still never authorises delivery.
 - **The rest of the CLI still speaks developer language.** `check`, `init`, `start`
   and `level` are translated for `office-peru`; other verbs, the `cmd /c` execution
   of proof commands and the weak-evidence warning are untouched.
@@ -86,22 +97,32 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 ## The commands that work
 
 ```sh
-# a close, then ONE proof on that tree, then the commit -in that order
-odachi plan --done T1 --commit <sha>
+# use the step commit and the task doc's Base:, then review and verify before ONE proof and the commit
+commit="<step-commit-sha>"
+base="<feature-base-sha>"
+odachi plan --done T1 --commit "$commit"
+odachi review --base "$base" --exec "opencode run --agent odachi-reviewer --model {model} --file {prompt} \"Answer the review prompt in the attached file.\""
+odachi verify --exec "opencode run --agent odachi-verify --model {model} --file {prompt} \"Answer the verification prompt in the attached file.\""
 odachi check --run "go test ./..." --timeout 2400
-git commit -m "..." -m "Risk: none"
+git commit -m "..." -m "Risk: contract"
+# with no named risk, use: -m "Risk: none - <written reason>"
 ```
 
 ```sh
 # the document-only lane, for a change whose diff is the whole record
 odachi start --light "<one requirement>"
-git commit -m "docs: ..." -m "Odachi-Change: <line>" -m "Risk: none"
+git commit -m "docs: ..." -m "Odachi-Change: <line>" -m "Risk: none - documentation-only change with no executable behavior"
 ```
 
 ```sh
 # build the tree binary per feature and lead PATH before anything that must know this tree
 go build -o "$env:TEMP\odachi-next-bin\odachi.exe" ./cmd/odachi
 $env:PATH = "$env:TEMP\odachi-next-bin;$env:PATH"
+```
+
+```sh
+# reproduce CI's base/fence gate with no clone review store and no model call
+odachi check --ci --no-review --run "go test ./..."
 ```
 
 ```sh
@@ -117,8 +138,9 @@ irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 
 - **The gate runs the proof and its reverted copy.** `cmd/odachi` alone costs 212-307s
   here; one `check --run` with the full suite takes about ten minutes. Never add a
   second suite. A documentation-only change uses `Odachi-Change` and owes no undo row.
-- **The reviewer's clock is 600s and the verifier's is 1800s**; neither was paid for
-  the office-peru work.
+- **Review and verification are real local work.** The reviewer's clock is 600s
+  and the verifier's is 1800s; a mode-on close pays for the evidence its risk and
+  diff require, while CI uses `--no-review` and makes no model call.
 - **A feature's base is a commit the remote has**, and a squash erases a branch-only
   base: rebase before retargeting, and resolve changelog/handover conflicts by
   combining both entries.

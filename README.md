@@ -6,7 +6,7 @@
 
 - [What it is](#what-it-is) - [What it is NOT](#what-it-is-not)
 - [The four artifacts](#the-four-artifacts) - [The skills, in your agent](#the-skills-in-your-agent)
-- [Ceremony and voice](#ceremony-and-voice) - [Review: four lenses, no ceremony](#review-four-lenses-no-ceremony)
+- [Ceremony and voice](#ceremony-and-voice) - [Review: mandatory when on](#review-mandatory-when-on)
 - [CI: the gate from the base ref](#ci-the-gate-from-the-base-ref)
 - [Installation](#installation) - [Contributing](#contributing) - [Status](#status) - [License](#license)
 
@@ -401,7 +401,7 @@ back in the project.
 per-profile personas from v0.10.0 remain as
 leftovers: `init` names them and does not delete them, they are yours.
 
-## Review: four lenses, no ceremony
+## Review: mandatory when on
 
 `odachi review` prints the review prompt for the candidate —brief, changed paths
 and diff— and chooses the lenses from the evidence of the change: none if only
@@ -467,10 +467,13 @@ of a request. Run the review with it:
 
 ```sh
 odachi review --exec "opencode run --agent odachi-reviewer --model {model} --file {prompt} \"Answer the review prompt in the attached file.\""
+odachi verify --exec "opencode run --agent odachi-verify --model {model} --file {prompt} \"Answer the verification prompt in the attached file.\""
 ```
 
-The agent answers the JSON from the prompt alone; `review.toml` still decides
-which model judges each lens.
+The reviewer answers the JSON from the prompt alone; `review.toml` still decides
+which model judges each lens. The verifier reads the whole task document and
+answers each requirement with probes; a named risk owes that independent record
+before a mode-on close.
 
 `{model}` is the model this session is using, so `--exec` can judge with the
 same one you are talking to. The order is `--model`, then `ODACHI_MODEL` —any
@@ -521,10 +524,10 @@ store under a name its own bytes decide, and the blockage names the file and
 `odachi review --attach <file>`. Repair it and attach it instead of paying for the
 same review twice.
 
-The verdict and the proof both name the model behind them. With the gate on, a
-verdict by the model that produced the proof is named as **a second reading, not
-a second opinion**: the close stays ready and says what it got. The refusal lives
-where somebody asks for it - `--require-review` refuses a self-review, and
+The verdict and the proof both name the model behind them. With mode on, a
+verdict by the model that produced the proof blocks as self-review. With mode
+off, it is named as **a second reading, not a second opinion**, and review stays
+optional. `--require-review` also refuses a self-review, and
 `odachi review waive --because "<why>"` records the human's decision that this
 feature lands without one. That is **disclosure, not identity**: a model name is
 a declaration, and a declaration can be lied about; a verdict with no model (a
@@ -547,27 +550,31 @@ that carries its rows, so every path stays answered and the run pays for the fix
 alone. `odachi review --show` names the tree to pass, and a correction with nothing
 to judge is refused instead of paying a reviewer for the same bytes twice.
 
-Review is a human decision, not the agent's. By default it is off; the project
+Review is local evidence, and approval never authorises delivery. The project
 switch lives in `odd/review.toml` and is written with
-`odachi review mode status|on|off`. With `on`, `odachi check` asks once per
-feature: while a step is still open the tree owes only its proof, and the tree
-that closes the feature names the verdict it did not get and commits anyway -
-the review does not authorise delivery, and only `--require-review` refuses
-(ADR 0043). The verdict has to judge the diff the
-feature merges, not the closing document, so the task doc records the commit the
-feature started from (`Base:`) and the gate names the command:
-`odachi review --base <sha>`. After the close, documents do not reopen it: a
-release note, or a note added to the task doc, is ready with its proof, because
-the verdict already judged the same code. Code written after the close does owe
-a verdict: the gate never goes blind. What the review *found* still stops a ship:
-a causal `BLOCKER` in the tree's verdict blocks until it is refuted, because that
-is the review saying no, not the review being absent. A document with no steps, or one written
-before the base line existed, keeps the older rule: with the mode on, every tree
-asks. A passive change —documents only— asks for no verdict: there is no lens to
-answer, so there is no review to fabricate. `--require-review` asks for one tree
-now, and `--no-review` turns the mode off for one run; neither changes the file.
-The file is versioned, so changing it moves the tree and the proof is retaken
-with `odachi check --run "<command>"`.
+`odachi review mode status|on|off`. With mode on, a non-passive close without a
+valid verdict for its required lenses and changed-file coverage blocks; the
+commit hook runs `check --message` and enforces the same rule on the closing
+commit. A named risk also blocks until an independent `odachi verify` record
+exists for that tree. Every strict non-passive close must carry a valid `Risk:`
+line, and `Risk: none` must include a written reason:
+`Risk: none - <reason>`.
+
+The verdict judges the diff the feature merges, not just the closing document.
+The task doc records the commit the feature started from (`Base:`), and the gate
+names `odachi review --base <sha>`. After the close, documents do not reopen it:
+a release note, or a note added to the task doc, is ready with its proof because
+the verdict already judged the same code. Code written after the close still
+owes a verdict. A document with no steps, or one written before the base line
+existed, keeps the older rule: with mode on, every tree asks. A passive change
+-documents only- asks for no verdict because there is no lens to answer.
+
+Mode off makes review and verification optional. `--require-review` requires a
+valid review for the current tree, even a passive one, and refuses self-review.
+`--no-review` is an explicit one-run bypass; neither flag changes the file. The
+file is versioned, so changing it moves the tree and the proof is retaken with
+`odachi check --run "<command>"`. Commit, push, pull request, merge, tag and
+release remain separate human decisions.
 
 A review can run the project's own deterministic tools before any lens reads the
 candidate. `odd/review.toml` declares them, one `[[check]]` table each:
@@ -635,25 +642,27 @@ A local hook can be skipped, and a change can edit the fence it must obey. In CI
 `check --fence-from <base>` reads the fence from that ref, not the worktree, and
 the proof names it.
 
-The review gate is not one of the things CI can enforce, and that is a fact about
-evidence rather than a promise left unkept: the verdict lives in the clone's store,
-the proof is not versioned, and evidence about a tree cannot live inside that tree
--committing it would change the tree it names-. The review is a discipline held at
-the close, where the store is. Making CI check it needs a trusted job that runs the
-review itself, or a receipt signed outside the tree; neither exists today, and
-`docs/decisions/0042-a-correction-is-the-delta.md` says why. `--base <base>` is the other half: it compares the changed
-paths against the base, so the fence meets the change instead of the checkout's
-own HEAD. Build the gate from the base ref, not the candidate:
+CI does not enforce local review evidence: the verdict and verification live in
+the clone's store, and evidence about a tree cannot live inside that tree
+-committing it would change the tree it names-. A clean CI runner has no clone
+store and makes no reviewer or verifier model calls, so every gate command passes
+`--no-review` explicitly. This one-run bypass leaves the base fence and proof in
+force and keeps CI deterministic; no second model vendor is mandated
+(`docs/decisions/0056-review-mode-blocks-locally.md`). `--base <base>` compares
+the changed paths against the base, so the fence meets the change instead of the
+checkout's own HEAD. Build the gate from the base ref, not the candidate:
 
 ```sh
 git worktree add ../gate "$base"
 (cd ../gate && go build -o /tmp/odachi ./cmd/odachi)
-/tmp/odachi check --fence-from "$base" --base "$base" --run "go test ./..."
+/tmp/odachi check --fence-from "$base" --base "$base" --no-review --run "go test ./..."
 ```
 
 The same judgement from the machine that pushes is `check --ci`: it resolves the base once
 -`origin/HEAD`, then `origin/main`, then `origin/master`- and reads both the fence and the
-compared paths from it, so the answer before the push is the answer the workflow will give.
+compared paths from it. Reproduce the gate with
+`odachi check --ci --no-review --run "go test ./..."`, so the answer before the
+push is the answer the workflow will give.
 It never fetches. The gate works offline on purpose, so the run and the proof name the ref
 they read: a stale `origin/main` is a green about an older base, and `git fetch origin` is
 what makes it current. It takes no `--base` or `--fence-from` beside it, and a clone with no
