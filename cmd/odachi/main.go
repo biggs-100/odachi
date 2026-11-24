@@ -1177,10 +1177,7 @@ func reportCheck(result check.Result, profileName string, quiet, asJSON bool, st
 		// A ready run is silent for the hook, except for what the run has to say and
 		// did not stop: a reminder nobody reads is not a reminder.
 		if result.Note != "" {
-			note := result.Note
-			if profileName == "office-peru" {
-				note = officeCheckLine(note)
-			}
+			note := voiceLine(profileName, result.Note)
 			_, _ = fmt.Fprintln(stderr, "odachi: "+note)
 		}
 		return result.Code
@@ -1190,9 +1187,7 @@ func reportCheck(result check.Result, profileName string, quiet, asJSON bool, st
 	if len(lines) == 0 {
 		lines = []string{result.Message}
 	}
-	if profileName == "office-peru" {
-		lines = officeCheckLines(lines)
-	}
+	lines = voiceLines(profileName, lines)
 
 	out := stdout
 	if result.Code != start.CodeOK {
