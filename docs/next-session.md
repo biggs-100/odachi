@@ -1,7 +1,8 @@
 # Next session
 
-Written after v0.62.0 shipped the office-peru work, 0356 cleaned the doctor, and
-0357 gave the profile a machine default plus a per-project override. The project
+Written after v0.62.0 shipped the office-peru work, 0356 cleaned the doctor,
+0357 gave the profile a machine default plus a per-project override, and 0358 made
+the quorum warning say that one model is enough to review. The project
 now serves a second audience: public office workers in Peru who write documents,
 research and reports, not software developers.
 
@@ -18,15 +19,17 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
   PR #715, tag `v0.62.0`, 2026-11-23, 16 signed assets). The release carried 0354 (the
   `office-peru` profile, its voice and a skill with three references) and 0355 (the
   gate's human lines in Spanish for that profile), both merged in #714 as `8d9dc58`.
-- **0356 was delivered in PR #716 and merged at `e8a05d5`.** It changed the measurement
-  rule in `odd/rules.toml` to an honest `enforces = "none"` with its reason and refreshed
-  the `AGENTS.md` block and this handover. `odachi doctor` reports all clear with 18
-  checks and 2 warnings.
-- **0357 is open on `feature/0357-perfil-global-tui`.** It stores a machine default in
+- **0356 was merged in PR #716 at `e8a05d5`.** It changed the measurement rule in
+  `odd/rules.toml` to an honest `enforces = "none"` and refreshed the block and this
+  handover. Doctor reports all clear, 18 checks, 2 warnings.
+- **0357 was merged in PR #717 as `82a91dd`.** It stores a machine default in
   `~/.odachi/profile.toml`, resolves the profile from project file → published block →
   machine default → inference through one function, and lets the TUI's voice screen
   switch between machine and project with `tab`. A per-project change is still a spoken
   instruction followed by `odachi level --to <profile>`.
+- **0358 is on `fix/check17-one-model`, being rebased onto the new main.** It rewrites
+  the quorum warning to say that one model is enough to review and a second is optional.
+  The numbering was corrected to 0358 because local main predated PR #717.
 - **The installed binary is 0.62.0 and knows the new profile.** Verified end to end in
   a temp project: `init`, `level --to office-peru`, a two-source report, a proof and a
   local commit; `odachi check` printed in Spanish with the installed binary.
@@ -34,14 +37,17 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
   feature writes under it.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
-  total: 355 features · 879 steps done of 879 · 0 open questions
+  total: 356 features · 880 steps done of 880 · 0 open questions
 
 ## What waits for a decision
 
-- **The second vendor.** All four lenses still name `opencode-go/deepseek-v4.1-flash`;
-  doctor's check 17 counts `1 of 4`. The human paused this because there is no budget
-  right now to test another model. A different model under the same prefix is not a
-  second vendor, and using one needs explicit provider, operation and credential consent.
+- **The second vendor is optional.** All four lenses still name
+  `opencode-go/deepseek-v4.1-flash` and doctor's check 17 counts `1 of 4`, but one model
+  is enough to review: `--require-review` is opt-in and check 17 is a warning, not a
+  gate. A second vendor buys independence for people who want it and can pay for it;
+  the human paused that purchase for budget reasons. A different model under the same
+  prefix is not a second vendor, and using one needs explicit provider, operation and
+  credential consent (0358).
 - **The rest of the CLI still speaks developer language.** Only `odachi check` is
   translated for `office-peru`; the other verbs, the `cmd /c` execution of proof
   commands and the weak-evidence warning are untouched.

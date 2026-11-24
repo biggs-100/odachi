@@ -44,6 +44,26 @@ func TestOneModelIsAWarningThatNamesItAndTheFix(t *testing.T) {
 	}
 }
 
+// TestTheWarningSaysOneModelIsEnough: the quorum is a warning about independence,
+// not a requirement to own a second vendor. A person with one model can still
+// review, and the line has to say so (0358).
+func TestTheWarningSaysOneModelIsEnough(t *testing.T) {
+	files := configured()
+	files.put("odd/review.toml", lensTable(map[string]string{
+		"risk":        "opencode-go/deepseek-v4.1-flash",
+		"readability": "opencode-go/deepseek-v4.1-flash",
+		"reliability": "opencode-go/deepseek-v4.1-flash",
+		"resilience":  "opencode-go/deepseek-v4.1-flash",
+	}))
+
+	check := checkOf(t, run(files, cleanLookup(), cleanProfiles(), "/home/ana/bin/odachi"), domaindoctor.CheckQuorum)
+	for _, want := range []string{"one model is enough to review", "a second is optional"} {
+		if !strings.Contains(check.Detail, want) {
+			t.Errorf("the warning does not say %q: %s", want, check.Detail)
+		}
+	}
+}
+
 // TestTwoModelsAreNoWarning: the day a second vendor judges one lens, the number
 // moves and the line stops warning.
 func TestTwoModelsAreNoWarning(t *testing.T) {

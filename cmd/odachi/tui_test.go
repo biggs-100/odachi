@@ -592,6 +592,7 @@ func TestTUIRunnerModelsWritesTheFile(t *testing.T) {
 func TestTUIRunnerFieldWritesTheProfile(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)
+	withTempHome(t)
 	r := newTUIRunner(dir)
 
 	if err := r.Field("output", "detail"); err != nil {
