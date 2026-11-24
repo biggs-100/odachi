@@ -25,13 +25,14 @@ import (
 // tuiState is what the first screen reads: the facts the wizard starts from. It
 // is detected, never written: opening the TUI changes nothing.
 type tuiState struct {
-	Version string
-	Project bool
-	Clients string
-	Skills  string
-	Voice   string
-	Review  string
-	Models  map[string]string
+	Version    string
+	Project    bool
+	Clients    string
+	Skills     string
+	Voice      string
+	VoiceScope string
+	Review     string
+	Models     map[string]string
 	// Verify is the model odd/review.toml declares for the verifier, and
 	// ClientModels the model each client's own file carries today. The models
 	// section shows them and remembers them as the detected value, so a row that
@@ -128,6 +129,7 @@ func detectTUIState(dir string) (tuiState, error) {
 		state.Voice = voice.Name
 		state.Axes = profile.Axes(*voice)
 	}
+	state.VoiceScope = voiceScopeFor(dir)
 
 	config, _, problem := cleanLimits(dir)
 	if problem != "" {
@@ -201,7 +203,11 @@ var (
 	tuiClients = []string{persona.SelectionBoth, persona.SelectionOpenCode, persona.SelectionClaude}
 	tuiSkills  = []string{persona.SkillsHome, persona.SkillsProject}
 	tuiVoices  = voiceNames()
-	tuiLenses  = review.AllLenses()
+	// tuiVoiceScopes is where the voice is written. Machine sets the default in
+	// the home; project keeps the old, local odd/profile.toml (0357).
+	tuiVoiceScopes   = []string{configure.VoiceMachine, configure.VoiceProject}
+	voiceScopeLabels = []string{"máquina (default)", "proyecto (solo aquí)"}
+	tuiLenses        = review.AllLenses()
 
 	// tuiMenu is the hub: the sections the first screen offers, each with the
 	// screen it opens. The install section opens on the hub itself and walks the
@@ -442,6 +448,7 @@ type tuiModel struct {
 	client       int
 	skills       int
 	voice        int
+	voiceScope   int
 	menu         int
 	reviewCursor int
 	// The profile section: which row the cursor is on (the axes, then the apply
@@ -504,12 +511,18 @@ func newTUIModel(state tuiState) tuiModel {
 			state.Axes = profile.Axes(resolved)
 		}
 	}
+	scopeName := state.VoiceScope
+	if scopeName == "" {
+		scopeName = configure.VoiceProject
+	}
+	state.VoiceScope = scopeName
 	return tuiModel{
 		state:         state,
 		init:          state.Project,
 		client:        indexOf(tuiClients, state.Clients),
 		skills:        indexOf(tuiSkills, state.Skills),
 		voice:         indexOf(tuiVoices, state.Voice),
+		voiceScope:    indexOf(tuiVoiceScopes, scopeName),
 		pending:       map[string]string{},
 		limitsPending: map[string]int{},
 		checksPending: map[string]checkChoice{},
@@ -575,6 +588,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "tab":
 			if m.step == stepReview {
 				m.step = stepSummary
+			}
+			if m.step == stepVoice {
+				m.voiceScope = (m.voiceScope + 1) % len(tuiVoiceScopes)
 			}
 		case "up", "k":
 			m = m.move(-1)
@@ -649,6 +665,7 @@ func (m tuiModel) commit() tuiModel {
 		m.state.Skills = tuiSkills[m.skills]
 	case stepVoice:
 		m.state.Voice = tuiVoices[m.voice]
+		m.state.VoiceScope = tuiVoiceScopes[m.voiceScope]
 	}
 	return m
 }
@@ -1499,7 +1516,7 @@ func (m tuiModel) View() string {
 	case stepSkills:
 		return m.viewChoices("Skills", tuiSkills, m.skills)
 	case stepVoice:
-		return m.viewChoices("Voz", tuiVoices, m.voice)
+		return m.viewChoices("Voz · "+voiceScopeLabels[m.voiceScope], tuiVoices, m.voice)
 	case stepReview:
 		return m.viewReview()
 	case stepSummary:
@@ -1738,6 +1755,7 @@ func (m tuiModel) apply() (tea.Model, tea.Cmd) {
 		Clients:      m.state.Clients,
 		Skills:       m.state.Skills,
 		Voice:        m.state.Voice,
+		VoiceScope:   m.state.VoiceScope,
 		ReviewMode:   m.state.Review,
 		LensModels:   m.state.Models,
 		Verify:       m.verifyChoice(),
@@ -1949,7 +1967,7 @@ func (m tuiModel) facts() string {
 		{"Configurar", action},
 		{"Clientes", clientFacts(m.state.Clients)},
 		{"Skills", skills},
-		{"Voz", m.state.Voice},
+		{"Voz", m.state.Voice + " · " + voiceScopeLabels[indexOf(tuiVoiceScopes, m.state.VoiceScope)]},
 		{"Review", m.state.Review},
 		{"Modelos", modelsLine(m.state.Models)},
 	}

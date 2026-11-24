@@ -146,19 +146,15 @@ type osProfiles struct{}
 
 func (osProfiles) Resolve(dir string) (string, bool, error) {
 	// One owner for the decision. Answering this twice is how the two answers
-	// drift apart, and doctor exists to report what the verbs would do.
-	loaded, code, message := loadProfile(dir, "odachi doctor")
-	if code != start.CodeOK {
-		return "", false, errors.New(message)
+	// drift apart, and doctor exists to report what the verbs would do (0357).
+	loaded, _, err := resolveProfile(dir, "odachi doctor", false)
+	if err != nil {
+		return "", false, err
 	}
-	if loaded == nil {
-		name, err := inferProfile(dir)
-		if err != nil {
-			return "", false, err
-		}
-		return name, true, nil
-	}
-	return loaded.Name, false, nil
+	// The name comes from the one resolver; this only answers the question
+	// check 11 asks: does odd/profile.toml exist to compare the block against?
+	project, code, _ := loadProfile(dir, "odachi doctor")
+	return loaded.Name, code == start.CodeOK && project == nil, nil
 }
 
 // inferProfile is what the profile would be with no file at all: the inference

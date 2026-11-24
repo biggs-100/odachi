@@ -499,23 +499,11 @@ func (writtenProfile) Written(dir string) (string, error) {
 // the human's file when there is one, otherwise what `odachi start` would have
 // inferred from what the tool can see.
 func currentProfile(dir, verb string, machine bool) (*profile.Profile, int, string) {
-	loaded, code, message := loadProfile(dir, verb)
-	if code != start.CodeOK || loaded != nil {
-		return loaded, code, message
-	}
-
-	files := osFiles{}
-	hasBrief, err := files.Exists(filepath.Join(dir, "brief.md"))
+	loaded, _, err := resolveProfile(dir, verb, machine)
 	if err != nil {
-		return nil, start.CodeBlocked, "could not check brief.md: " + oneLine(err.Error()) + "; check the permissions and run " + verb + " again"
+		return nil, start.CodeBlocked, oneLine(err.Error()) + "; run " + verb + " again"
 	}
-
-	name := profile.Infer(profile.Facts{HasBrief: hasBrief, Machine: machine})
-	resolved, err := profile.Resolve(profile.Builtin(), name)
-	if err != nil {
-		return nil, start.CodeBlocked, "could not resolve the " + name + " profile: " + oneLine(err.Error()) + "; run " + verb + " again"
-	}
-	return &resolved, start.CodeOK, ""
+	return loaded, start.CodeOK, ""
 }
 
 // withDefaults fills every field the human left empty from the built-in profile
