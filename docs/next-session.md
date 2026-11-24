@@ -1,8 +1,9 @@
 # Next session
 
 Written after v0.62.0 shipped the office-peru work, 0356 cleaned the doctor,
-0357 gave the profile a machine default plus a per-project override, and 0358 made
-the quorum warning say that one model is enough to review. The project
+0357 gave the profile a machine default plus a per-project override, 0358 made
+the quorum warning say that one model is enough to review, and 0359 made `init`,
+`start` and `level` speak the office-peru profile's language. The project
 now serves a second audience: public office workers in Peru who write documents,
 research and reports, not software developers.
 
@@ -30,14 +31,19 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 - **0358 is on `fix/check17-one-model`, being rebased onto the new main.** It rewrites
   the quorum warning to say that one model is enough to review and a second is optional.
   The numbering was corrected to 0358 because local main predated PR #717.
-- **The installed binary is 0.62.0 and knows the new profile.** Verified end to end in
+- **0359 is this step, not yet merged.** `odachi init`, `odachi start` and
+  `odachi level` render their human lines in plain Spanish when the profile in
+  force is `office-peru`, through the same printing boundary `odachi check` uses.
+  No domain message, reason code, exit code or `--json` byte changed, and novato,
+  senior and ci keep their output byte for byte.
+- **The installed binary is 0.63.0 and knows the new profile.** Verified end to end in
   a temp project: `init`, `level --to office-peru`, a two-source report, a proof and a
   local commit; `odachi check` printed in Spanish with the installed binary.
 - **`## Unreleased` exists again.** The release renamed the heading, so the next
   feature writes under it.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
-  total: 356 features · 880 steps done of 880 · 0 open questions
+  total: 357 features · 881 steps done of 881 · 0 open questions
 
 ## What waits for a decision
 
@@ -48,9 +54,9 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
   the human paused that purchase for budget reasons. A different model under the same
   prefix is not a second vendor, and using one needs explicit provider, operation and
   credential consent (0358).
-- **The rest of the CLI still speaks developer language.** Only `odachi check` is
-  translated for `office-peru`; the other verbs, the `cmd /c` execution of proof
-  commands and the weak-evidence warning are untouched.
+- **The rest of the CLI still speaks developer language.** `odachi check`, `init`,
+  `start` and `level` are translated for `office-peru`; the other verbs, the
+  `cmd /c` execution of proof commands and the weak-evidence warning are untouched.
 - **Review and verification were not exercised on 0354-0356.** The features declared
   `Risk: none`, no reviewer was paid, and the gate did not require either. The latest
   verdict in the store predates them.

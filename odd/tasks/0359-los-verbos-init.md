@@ -8,7 +8,7 @@ R1 · "los verbos init start y level hablan el idioma del perfil office-peru"
 ## Done when
 
 ## Steps
-- [ ] T1 · los verbos init start y level hablan el idioma del perfil office-peru   R1
+- [x] T1 · los verbos init start y level hablan el idioma del perfil office-peru   R1
 
 ## History
 L1 · "los verbos init start y level hablan el idioma del perfil office-peru"
