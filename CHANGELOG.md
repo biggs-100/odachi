@@ -7,7 +7,7 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
-## Unreleased
+## v0.65.0 - 2026-11-24
 
 - **Review mode is a local gate, not advice.** Feature 0361 makes review and
   named-risk verification mandatory for non-passive local closes, requires a
