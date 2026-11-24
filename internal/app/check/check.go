@@ -66,9 +66,8 @@ const (
 	noFeatureSlug   = "check"
 )
 
-// The three reasons the optional review gate can add. They are not gate reasons:
-// the gate is untouched, and a review only ever participates when the human asks
-// for it with --require-review.
+// The reasons the review gate can add. They are not domain gate reasons: the
+// explicit flag or the project's review mode decides whether they refuse the run.
 const (
 	// ReasonReviewMissing means this tree has no verdict yet.
 	ReasonReviewMissing = "review_missing"
@@ -156,16 +155,16 @@ type Options struct {
 	// It travels into the proof so a verdict by the same model can be refused as
 	// a self-review. Empty means there is no agent to name.
 	Model string
-	// RequireReview turns the optional design gate on for THIS tree: a stored
-	// verdict for this exact tree, and not a changes_requested one. It is the
-	// flag, and it is off by default because a beginner must not be blocked by a
-	// verb they have never heard of.
+	// RequireReview makes every review and required-verification refusal block
+	// for this run. On its own it asks for a verdict for this exact tree.
 	RequireReview bool
 	// ReviewMode is the project's switch. It asks once per feature: the tree that
 	// closes the feature owes the one verdict that judged its diff, and the trees
-	// inside an open feature owe only their proof.
+	// inside an open feature owe only their proof. A named risk also owes an
+	// independent verification at the close.
 	ReviewMode bool
-	// NoReview turns the gate off for one run, whatever the mode or the flag say.
+	// NoReview turns the project's review mode off for one run. An explicit
+	// RequireReview still applies.
 	NoReview bool
 	// FenceFrom is a git ref to read the fence from instead of the worktree. CI
 	// uses it to obey the policy of the base branch, which the candidate cannot
@@ -176,9 +175,10 @@ type Options struct {
 	// the run keeps the answer it always gave.
 	ChangeBase string
 	// Message is the path git handed a commit-msg hook. Non-empty opens the lane
-	// before the commit exists: the line is read from the message, the fence is
-	// measured against what is staged, and the proof is deferred to the tree the
-	// commit will carry. Empty keeps the answer a plain run always gave.
+	// before the commit exists: the line and its risk are read from the message,
+	// the fence and review are measured against what is staged, and the proof is
+	// deferred to the tree the commit will carry. Empty keeps the answer a plain
+	// run always gave.
 	Message string
 
 	// Growth measures the clone's store as a close names it. It is a port so the
@@ -419,8 +419,9 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 
 	// The message lane judges a commit that does not exist yet: the proof is owed
-	// by the tree that commit will carry, and the review with it. The close's own
-	// questions -unplanned requirements and paperwork- are asked after the commit.
+	// by the tree that commit will carry, while the review and the current message's
+	// verification are judged now. The close's own questions -unplanned requirements
+	// and paperwork- are asked after the commit.
 	if r.opts.Message != "" && feature != nil && feature.Number == 0 {
 		state.ProofDeferred = true
 		closedNow = false
@@ -530,14 +531,11 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		// line is sourced from the transition, so both must name the same door.
 		verdict.Transition.Command = nextStore
 	}
-	// The verification is evidence from the clone, like the verdict: a clean
-	// checkout cannot carry the record, so a gate that refused it would make every
-	// pull request red -the review learned the same in ADR 0043 (0317). A missing
-	// or refuted record is named, and `--require-review` is the human asking to be
-	// stopped; the second evaluation is the same gate without that one question.
-	// The slice rides the same door: a project that does not owe a verifier does not
-	// owe a slice, and the numbers stay readable as a note (0331).
-	if !r.opts.RequireReview && (verdict.Reason == gate.ReasonVerifyMissing || verdict.Reason == gate.ReasonVerifyRefuted || verdict.Reason == gate.ReasonVerifySlice) {
+	// Verification is evidence from the clone. Without the explicit flag or the
+	// project's review mode, a missing, refuted or oversized record is named and the
+	// run stays ready. Strict mode keeps the refusal; --no-review bypasses the mode
+	// for one run. The second evaluation is the same gate without that question.
+	if !r.strictReview() && (verdict.Reason == gate.ReasonVerifyMissing || verdict.Reason == gate.ReasonVerifyRefuted || verdict.Reason == gate.ReasonVerifySlice) {
 		note := verdict.Message
 		if next := strings.TrimSpace(verdict.Next); next != "" {
 			note += "; " + next
@@ -547,7 +545,7 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		state.VerificationLines = 0
 		verdict = gate.Evaluate(state)
 	}
-	if verdict.Code == gate.Ready && r.opts.Message == "" {
+	if verdict.Code == gate.Ready {
 		// The review gate is last on purpose: everything before it is something
 		// the agent can act on, and sending an agent to `odachi review` while the
 		// proof gate is still failing would be a dead end that resolves nothing.
@@ -635,8 +633,8 @@ type runner struct {
 	// the reminder the hook prints, and the line a ready report carries.
 	reviewNote string
 	// verifyNote is the same for an independent verifier: the record is missing,
-	// unreadable, unsigned or refuted, and only `--require-review` makes it stop
-	// the tree (0317).
+	// unreadable, unsigned or refuted. It is a note only when neither the explicit
+	// flag nor the project's review mode makes it stop the tree.
 	verifyNote string
 	// storeNote is what the close says when it could not look at the store at all:
 	// the sentence the verify row prints instead of claiming there is no record it
@@ -1116,14 +1114,18 @@ func pluralRows(n int) string {
 	return "rows"
 }
 
-// softened turns a review refusal into a note unless the human asked to be refused.
-// The review does not authorise delivery (ADR 0043): with the project's switch on,
-// a close names what the review says and the commit proceeds. The one refusal that
-// survives is a finding the review made -a causal BLOCKER is the reason not to ship,
-// not a requirement that a review exists- and `--require-review` is the human asking
-// to be stopped.
+// strictReview is the one predicate shared by review and verification: the
+// explicit flag always refuses, and the project's switch refuses unless this run
+// names --no-review.
+func (r *runner) strictReview() bool {
+	return r.opts.RequireReview || (r.opts.ReviewMode && !r.opts.NoReview)
+}
+
+// softened turns a review refusal into a note only when neither the explicit flag
+// nor the project's review mode asks for a refusal. A causal finding still blocks
+// whenever the review gate evaluates it; --no-review bypasses the mode for one run.
 func (r *runner) softened(result *Result) *Result {
-	if result == nil || r.opts.RequireReview {
+	if result == nil || r.strictReview() {
 		return result
 	}
 	if result.Reason == ReasonReviewChanges {
@@ -1372,9 +1374,9 @@ func ReviewOwed(opts Options, files Files, git Git) (bool, string, error) {
 	return len(required) > 0, "", nil
 }
 
-// requireReview is the optional design gate: a stored verdict for THIS tree, one
-// that covers every lens the candidate requires, and no causal BLOCKER or
-// CRITICAL finding left standing after the refutation is taken into account.
+// requireReview is the design gate: a stored verdict for THIS tree, one that
+// covers every lens the candidate requires, and no causal BLOCKER or CRITICAL
+// finding left standing after the refutation is taken into account.
 //
 // The lenses come first because they answer whether this candidate asks for a
 // review at all. A documentation-only candidate has nothing for a specialist lens
@@ -1679,22 +1681,28 @@ func sameCommit(git Git, root, judged, start string) bool {
 	return left == right
 }
 
-// requiredLenses is the lens selection the candidate asks for. It is the same
-// question the review verb answers before printing a prompt, asked from the same
-// changed paths and the same diff, so the two can never disagree about what this
-// tree needs. The changed paths and the diff are returned with it: coverage is
-// per file, and the same evidence that picks the lenses is the one whose rows
-// must answer.
-// declaredRisks is what the commits of the range declared about their blast radius,
-// read from their messages. A range with no base or a message this binary cannot
-// parse declares nothing here: the ready note is where an unreadable `Risk:` line is
-// named, and a gate that guessed would demand a lens nobody asked for (0301).
+// declaredRisks is what the commits of the range and the current commit-msg
+// message declared about their blast radius. The current message uses the same
+// absolute-or-project-relative path as claimedMessage. A range or message this
+// binary cannot read declares nothing here: the existing note and error paths name
+// unreadable declarations, and a gate must not invent a risk (0301).
 func (r *runner) declaredRisks(base string) []string {
-	if base == "" {
-		return nil
+	var messages []string
+	if base != "" {
+		var err error
+		messages, err = r.git.Messages(r.opts.Dir, base)
+		if err != nil {
+			return nil
+		}
 	}
-	messages, err := r.git.Messages(r.opts.Dir, base)
-	if err != nil {
+	if r.opts.Message != "" {
+		data, err := r.files.Read(explicitPath(r.opts.Dir, r.opts.Message))
+		if err != nil {
+			return nil
+		}
+		messages = append(messages, string(data))
+	}
+	if len(messages) == 0 {
 		return nil
 	}
 	risk, err := change.ParseRisk(messages)

@@ -2,6 +2,7 @@ package check_test
 
 import (
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -195,6 +196,79 @@ func TestAMessageThatNamesAChangeDefersItsProof(t *testing.T) {
 	}
 	if !strings.Contains(got.Message, "proof is owed") {
 		t.Errorf("Message = %q, want the proof named as owed after the commit", got.Message)
+	}
+}
+
+// TestAModeOnClosingMessageBlocksMissingReview: the commit-msg hook evaluates the
+// review before the commit exists; deferring the proof does not defer the verdict.
+func TestAModeOnClosingMessageBlocksMissingReview(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	files := withMessage(readyFiles(), "close the feature\n")
+	files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc(base, true))
+	git := &fakeGit{
+		tree:    currentTree,
+		changed: []string{"internal/app/check/check.go"},
+		blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+	}
+
+	got := run(t, files, git, check.Options{ReviewMode: true, Message: commitMessage})
+
+	if got.Code != 2 {
+		t.Fatalf("code = %d, want 2 (%s)", got.Code, got.Message)
+	}
+	if got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("reason = %q, want %q (%s)", got.Reason, check.ReasonReviewMissing, got.Message)
+	}
+	if !strings.Contains(got.Next, "odachi review --base "+base) {
+		t.Errorf("next = %q, want the feature review at %q", got.Next, base)
+	}
+}
+
+// TestAModeOnClosingMessageBlocksMissingVerification: a risk declared by the
+// current message asks for independent verification even before git has a commit.
+func TestAModeOnClosingMessageBlocksMissingVerification(t *testing.T) {
+	absolute, err := filepath.Abs(filepath.Join(dir, commitMessage))
+	if err != nil {
+		t.Fatalf("resolve the absolute message path: %v", err)
+	}
+	for _, tc := range []struct{ name, path string }{
+		{name: "relative", path: commitMessage},
+		{name: "absolute", path: absolute},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			files, git := closedRiskFixture()
+			git.messages = nil
+			messagePath := tc.path
+			if !filepath.IsAbs(messagePath) {
+				messagePath = filepath.Join(dir, messagePath)
+			}
+			files.files[messagePath] = []byte("close the feature\n\nRisk: contract\n")
+
+			got := run(t, files, git, check.Options{ReviewMode: true, Message: tc.path})
+
+			if got.Code != 1 {
+				t.Fatalf("code = %d, want 1 (%s)", got.Code, got.Message)
+			}
+			if got.Reason != gate.ReasonVerifyMissing {
+				t.Fatalf("reason = %q, want %q (%s)", got.Reason, gate.ReasonVerifyMissing, got.Message)
+			}
+			if !strings.Contains(got.Message, "contract") {
+				t.Errorf("the refusal does not name the current message's risk: %s", got.Message)
+			}
+		})
+	}
+}
+
+// TestAModeOnUnreadableMessageDoesNotInventAVerificationRisk: a message this run
+// cannot read declares no risk; the independent review refusal remains the answer.
+func TestAModeOnUnreadableMessageDoesNotInventAVerificationRisk(t *testing.T) {
+	files, git := closedRiskFixture()
+	git.messages = nil
+
+	got := run(t, files, git, check.Options{ReviewMode: true, Message: commitMessage})
+
+	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("an unreadable message = %d/%q, want only the missing-review refusal", got.Code, got.Reason)
 	}
 }
 

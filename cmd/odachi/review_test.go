@@ -451,11 +451,10 @@ func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 		t.Errorf("switch = %q, want mode = \"on\"", data)
 	}
 
-	// The switch is part of the tree, so the proof taken before it is stale. With the
-	// switch alone the close names the review and stays ready (ADR 0043); the flag is
-	// what refuses.
-	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 || !strings.Contains(out, "odachi review") {
-		t.Fatalf("check under mode on: code = %d, want 0 with the review named (stdout: %q, stderr: %q)", code, out, errOut)
+	// The switch is part of the tree, so the proof taken before it is stale. Mode on
+	// refuses the missing verdict even though --run has just written a fresh proof.
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 2 || !strings.Contains(errOut, "no review for this tree") || !strings.Contains(errOut, "odachi review") {
+		t.Fatalf("check under mode on: code = %d, want 2 with the missing review named (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 	if code, out, errOut := runDir(t, dir, []string{"check", "--no-review"}, ""); code != 0 {
 		t.Fatalf("check --no-review: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
@@ -471,6 +470,9 @@ func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 		t.Fatalf("mode status after off: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	} else if !strings.Contains(out, "review: off") {
 		t.Errorf("status = %q, want off", out)
+	}
+	if code, out, errOut := runDir(t, dir, []string{"check"}, ""); code != 0 {
+		t.Fatalf("check with mode off: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 }
 
@@ -505,27 +507,27 @@ func TestReviewModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	}
 
 	// The closed feature owes the verdict that judged its diff, not the commit
-	// that closes it: the proof is taken, and the run names the base. The commit is
-	// not refused: the review does not authorise delivery (ADR 0043).
+	// that closes it: the proof is taken, and the missing verdict refuses the run at
+	// the feature's base.
 	doc.Steps[0].Done = true
 	doc.Steps[0].Commit = base
 	writeFile(t, dir, "odd/tasks/0001-turnos.md", doc.Render())
 
-	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 || !strings.Contains(out, "odachi review --base "+base) {
-		t.Fatalf("check --run on a closed feature = %d, want 0 naming the review (stdout: %q, stderr: %q)", code, out, errOut)
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 2 || !strings.Contains(errOut, "odachi review --base "+base) {
+		t.Fatalf("check --run on a closed feature = %d, want 2 naming the review (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	code, out, errOut := runDir(t, dir, []string{"check"}, "")
-	if code != 0 {
-		t.Fatalf("check on a closed feature = %d, want 0 (stderr: %q)", code, errOut)
+	code, _, errOut := runDir(t, dir, []string{"check"}, "")
+	if code != 2 {
+		t.Fatalf("check on a closed feature = %d, want 2 (stderr: %q)", code, errOut)
 	}
-	if want := "odachi review --base " + base; !strings.Contains(out, want) {
-		t.Errorf("stdout %q does not name the runnable review %q", out, want)
+	if want := "odachi review --base " + base; !strings.Contains(errOut, want) {
+		t.Errorf("stderr %q does not name the runnable review %q", errOut, want)
 	}
 
-	// The hook runs `check --quiet`: silent when ready, except for the reminder, and
-	// never a refused commit (ADR 0043).
-	if code, quietOut, quietErr := runDir(t, dir, []string{"check", "--quiet"}, ""); code != 0 || quietOut != "" || !strings.Contains(quietErr, "odachi review --base "+base) {
-		t.Fatalf("the hook did not remind and let go: code = %d (stdout: %q, stderr: %q)", code, quietOut, quietErr)
+	// The hook runs `check --quiet`: a refusal still reaches stderr and keeps the
+	// commit blocked, while stdout stays empty.
+	if code, quietOut, quietErr := runDir(t, dir, []string{"check", "--quiet"}, ""); code != 2 || quietOut != "" || !strings.Contains(quietErr, "odachi review --base "+base) {
+		t.Fatalf("the hook did not refuse the missing review: code = %d (stdout: %q, stderr: %q)", code, quietOut, quietErr)
 	}
 }
 

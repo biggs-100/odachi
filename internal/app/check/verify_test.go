@@ -562,6 +562,66 @@ func TestTheRefutedRecordIsAlsoANoteUnlessTheHumanAsks(t *testing.T) {
 	}
 }
 
+// TestReviewModeBlocksRequiredVerification: the project's switch makes a missing,
+// refuted or oversized verification a block instead of an advisory note.
+func TestReviewModeBlocksRequiredVerification(t *testing.T) {
+	tests := []struct {
+		name    string
+		reason  string
+		prepare func(*testing.T, *fakeFiles, *fakeGit)
+	}{
+		{name: "missing", reason: gate.ReasonVerifyMissing},
+		{
+			name:   "refuted",
+			reason: gate.ReasonVerifyRefuted,
+			prepare: func(t *testing.T, files *fakeFiles, _ *fakeGit) {
+				files.files[verifyPath(currentTree)] = []byte(verificationFile(t, currentTree, "otro/modelo", domainverify.Refuted,
+					[]string{"the requirement does not hold"}))
+			},
+		},
+		{
+			name:   "oversize",
+			reason: gate.ReasonVerifySlice,
+			prepare: func(_ *testing.T, _ *fakeFiles, git *fakeGit) {
+				git.diff = sliceDiff(401)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			files, git := closedRiskFixture()
+			if tc.prepare != nil {
+				tc.prepare(t, files, git)
+			}
+
+			got := run(t, files, git, check.Options{ReviewMode: true})
+
+			if got.Code != 1 {
+				t.Fatalf("code = %d, want 1 (%s)", got.Code, got.Message)
+			}
+			if got.Reason != tc.reason {
+				t.Fatalf("reason = %q, want %q (%s)", got.Reason, tc.reason, got.Message)
+			}
+		})
+	}
+}
+
+// TestNoReviewBypassesModeVerification: the one-run bypass applies to required
+// verification as well as the review itself.
+func TestNoReviewBypassesModeVerification(t *testing.T) {
+	files, git := closedRiskFixture()
+
+	got := run(t, files, git, check.Options{ReviewMode: true, NoReview: true})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("--no-review did not bypass mode verification: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+	if !strings.Contains(strings.Join(got.Lines, "\n"), "verify:") {
+		t.Errorf("the ready run does not keep the verification note:\n%s", strings.Join(got.Lines, "\n"))
+	}
+}
+
 // TestACloseThatOnlyMovesDocumentsStillNamesTheRecord: the question is the
 // feature's, not the closing candidate's. A feature that wrote code and closed with
 // the mark and the note has a diff a lens would read, and its declared risk owes a

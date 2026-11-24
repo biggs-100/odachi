@@ -176,8 +176,11 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	docs := &fakeGit{tree: currentTree, changed: []string{"odd/tasks/0007-turnos.md"}, between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"}}
 
 	named := run(t, newFakeFiles(closing), docs, check.Options{ReviewMode: true})
-	if want := "odachi review --base " + base; !strings.Contains(reviewNote(named), want) {
-		t.Fatalf("the closing tree without a verdict = %d/%q, want the review named with %q", named.Code, named.Reason, want)
+	if named.Code != 2 || named.Reason != check.ReasonReviewMissing {
+		t.Fatalf("the closing tree without a verdict = %d/%q, want review_missing", named.Code, named.Reason)
+	}
+	if want := "odachi review --base " + base; !strings.Contains(named.Next, want) {
+		t.Fatalf("the refusal does not name %q: %q", want, named.Next)
 	}
 
 	// A verdict that judged the closing commit instead of the feature does not
@@ -186,7 +189,7 @@ func TestTheModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	wrong["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
 	wrong[filepath.ToSlash(reviewPath(currentTree))] = verdictFileAtBase(t, currentTree, "HEAD")
 	got = run(t, newFakeFiles(wrong), docs, check.Options{ReviewMode: true})
-	if note := reviewNote(got); !strings.Contains(note, "odachi review") {
+	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
 		t.Fatalf("a verdict for another diff passed: %d/%q (%s)", got.Code, got.Reason, got.Message)
 	}
 
@@ -230,8 +233,11 @@ func TestTheModeNamesAVerdictWhoseCloseCameFirst(t *testing.T) {
 
 	got := run(t, newFakeFiles(files), git, check.Options{ReviewMode: true})
 
-	if want := "odachi review --base " + base; !strings.Contains(reviewNote(got), want) {
-		t.Fatalf("a close committed before its verdict = %d/%q, want the review named with %q", got.Code, reviewNote(got), want)
+	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("a close committed before its verdict = %d/%q, want review_missing", got.Code, got.Reason)
+	}
+	if want := "odachi review --base " + base; !strings.Contains(got.Next, want) {
+		t.Fatalf("the refusal does not name %q: %q", want, got.Next)
 	}
 }
 
@@ -362,11 +368,10 @@ func TestReviewOwedAgreesWithTheGate(t *testing.T) {
 	if !owed || gotBase != base {
 		t.Errorf("ReviewOwed(close) = %v, %q; want owed at %q", owed, gotBase, base)
 	}
-	// The exported answer says a verdict is owed at the base; with the switch alone
-	// the gate names it and stays ready, and the two cannot disagree about WHICH
-	// review is missing.
-	if got := run(t, newFakeFiles(closing), atClose, check.Options{ReviewMode: true}); !strings.Contains(reviewNote(got), base) {
-		t.Fatalf("the gate named no review while the exported answer says one is owed: %d/%q", got.Code, got.Reason)
+	// The exported answer says a verdict is owed at the base; the gate refuses for
+	// the same missing review and names the same runnable command.
+	if got := run(t, newFakeFiles(closing), atClose, check.Options{ReviewMode: true}); got.Code != 2 || got.Reason != check.ReasonReviewMissing || !strings.Contains(got.Next, base) {
+		t.Fatalf("the gate disagreed with the exported answer: %d/%q (%s)", got.Code, got.Reason, got.Next)
 	}
 }
 
@@ -447,9 +452,9 @@ func TestThePlanCommitIsAFeatureThatHasNotStarted(t *testing.T) {
 	closing["odd/tasks/0007-turnos.md"] = reviewableDoc(base, true)
 	docs := &fakeGit{tree: currentTree, changed: []string{"odd/tasks/0007-turnos.md"}, between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"}}
 	named := run(t, newFakeFiles(closing), docs, check.Options{ReviewMode: true})
-	if !strings.Contains(reviewNote(named), "odachi review --base "+base) {
-		t.Fatalf("the close of the same feature = %d/%q (%q), want the review named at %q",
-			named.Code, named.Reason, reviewNote(named), base)
+	if named.Code != 2 || named.Reason != check.ReasonReviewMissing || !strings.Contains(named.Next, "odachi review --base "+base) {
+		t.Fatalf("the close of the same feature = %d/%q (%q), want the review refusal at %q",
+			named.Code, named.Reason, named.Next, base)
 	}
 }
 
@@ -489,11 +494,11 @@ func TestTheClosingCommitOwesTheFeatureVerdict(t *testing.T) {
 
 	got := run(t, newFakeFiles(files), closing, check.Options{ReviewMode: true})
 
-	if note := reviewNote(got); !strings.Contains(note, "odachi review") {
-		t.Fatalf("the close = %d/%q, want the feature's review owed", got.Code, got.Reason)
+	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("the close = %d/%q, want the feature's review refusal", got.Code, got.Reason)
 	}
-	if want := "odachi review --base " + base; !strings.Contains(reviewNote(got), want) {
-		t.Errorf("the note does not carry %q: %q", want, reviewNote(got))
+	if want := "odachi review --base " + base; !strings.Contains(got.Next, want) {
+		t.Errorf("the refusal does not carry %q: %q", want, got.Next)
 	}
 }
 
@@ -512,8 +517,8 @@ func TestCodeAfterTheCloseStillOwesAVerdict(t *testing.T) {
 
 	got := run(t, newFakeFiles(files), code, check.Options{ReviewMode: true})
 
-	if note := reviewNote(got); !strings.Contains(note, "odachi review") {
-		t.Fatalf("code after the close = %d/%q, want a review owed", got.Code, got.Reason)
+	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("code after the close = %d/%q, want a review refusal", got.Code, got.Reason)
 	}
 }
 
@@ -522,13 +527,18 @@ func TestCodeAfterTheCloseStillOwesAVerdict(t *testing.T) {
 // verdict again, or every note after a feature would cost a review.
 func TestAQuestionAnsweredAfterTheCloseDoesNotReopenTheGate(t *testing.T) {
 	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	const closeTree = "9e9a800f6d1578115dafb0b154ff34bfa4499bd8"
 	closed := reviewableDoc(base, true)
 	files := readyFiles()
 	files["odd/tasks/0007-turnos.md"] = strings.Replace(closed, "L1 · \"reservar turnos\"", "L1 · \"reservar turnos\"\nL2 · OFICIO · \"una respuesta\"", 1)
+	files[filepath.ToSlash(reviewPath(closeTree))] = verdictFileAtBase(t, closeTree, base)
 	tail := &fakeGit{
 		tree:    currentTree,
 		changed: []string{"odd/tasks/0007-turnos.md"},
-		between: []string{"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
+		betweenByFrom: map[string][]string{
+			base:      {"internal/app/check/check.go", "odd/tasks/0007-turnos.md"},
+			closeTree: {"odd/tasks/0007-turnos.md"},
+		},
 		filesAt: map[string]string{"HEAD:odd/tasks/0007-turnos.md": closed},
 	}
 
@@ -546,8 +556,8 @@ func TestTheModeAsksEveryTreeWithoutABase(t *testing.T) {
 	old["odd/tasks/0007-turnos.md"] = reviewableDoc("", true)
 
 	got := run(t, newFakeFiles(old), codeChange(), check.Options{ReviewMode: true})
-	if note := reviewNote(got); !strings.Contains(note, "odachi review") {
-		t.Fatalf("a document with no base = %d/%q, want the old per-tree rule", got.Code, got.Reason)
+	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("a document with no base = %d/%q, want the per-tree review refusal", got.Code, got.Reason)
 	}
 }
 
@@ -659,24 +669,129 @@ func TestAStaleProofWithoutAPathKeepsTheGenericMessage(t *testing.T) {
 	}
 }
 
-// TestASelfReviewIsNamedAndNotRefusedByDefault: with the project's mode on, the
-// gate says what the verdict is -the builder's own model, a second reading- and
-// lets the close through. Only --require-review turns that sentence into a wall.
-// A human who owns one model has a lane; a project that wants the guarantee asks
-// for it.
-func TestASelfReviewIsNamedAndNotRefusedByDefault(t *testing.T) {
+// TestASelfReviewDoesNotBlockWithoutReviewMode: with the mode off and no explicit
+// flag, the review stays optional even when the stored verdict is a self-review.
+func TestASelfReviewDoesNotBlockWithoutReviewMode(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[proofPath()] = []byte(proofFileByModel(currentTree, "provider/model#high"))
 	files.files[reviewPath(currentTree)] = []byte(verdictFileByModel(t, currentTree, "provider/model"))
 
-	got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120, ReviewMode: true},
+	got := check.Run(check.Options{Dir: dir, Store: store, Base: "HEAD", TimeoutSeconds: 120},
 		files, codeChange(), &fakeShell{})
 
-	if got.Code != 0 {
-		t.Fatalf("a self-review under the project's mode blocked the close: %d (%s)", got.Code, got.Message)
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a self-review without review mode blocked the close: %d (%s)", got.Code, got.Message)
 	}
-	if !strings.Contains(got.Note, "model that produced the proof") {
-		t.Errorf("the ready run does not name the self-review; Note = %q (lines: %v)", got.Note, got.Lines)
+}
+
+// TestReviewModeRefusesInvalidVerdicts: the project's switch makes every review
+// refusal a block, not only an explicit --require-review invocation.
+func TestReviewModeRefusesInvalidVerdicts(t *testing.T) {
+	const base = "8ee3e55f31ee50a088bb1f8aa8bca4afdbc40319"
+	tests := []struct {
+		name    string
+		reason  string
+		prepare func(*testing.T, *fakeFiles, *fakeGit)
+	}{
+		{name: "missing", reason: check.ReasonReviewMissing},
+		{
+			name:   "malformed",
+			reason: check.ReasonReviewMissing,
+			prepare: func(t *testing.T, files *fakeFiles, _ *fakeGit) {
+				files.files[reviewPath(currentTree)] = []byte("basura")
+			},
+		},
+		{
+			name:   "wrong base",
+			reason: check.ReasonReviewMissing,
+			prepare: func(t *testing.T, files *fakeFiles, _ *fakeGit) {
+				files.files[filepath.Join(dir, "odd", "tasks", "0007-turnos.md")] = []byte(reviewableDoc(base, true))
+				files.files[reviewPath(currentTree)] = []byte(verdictFileAtBase(t, currentTree, "HEAD"))
+			},
+		},
+		{
+			name:   "self reviewed",
+			reason: check.ReasonReviewSelf,
+			prepare: func(t *testing.T, files *fakeFiles, _ *fakeGit) {
+				files.files[proofPath()] = []byte(proofFileByModel(currentTree, "provider/model#high"))
+				files.files[reviewPath(currentTree)] = []byte(verdictFileByModel(t, currentTree, "provider/model"))
+			},
+		},
+		{
+			name:   "unattributed",
+			reason: check.ReasonReviewUnattributed,
+			prepare: func(t *testing.T, files *fakeFiles, _ *fakeGit) {
+				files.files[proofPath()] = []byte(proofFileByModel(currentTree, "provider/builder"))
+				files.files[reviewPath(currentTree)] = []byte(verdictFileByModel(t, currentTree, ""))
+			},
+		},
+		{
+			name:   "missing lens",
+			reason: check.ReasonReviewLensMissing,
+			prepare: func(t *testing.T, files *fakeFiles, _ *fakeGit) {
+				sealed, err := domainreview.Seal(domainreview.Verdict{
+					Reviewer: "reviewer",
+					Lenses:   []string{domainreview.Risk},
+				}, currentTree, "HEAD", reviewInstant)
+				if err != nil {
+					t.Fatalf("sealing the seeded verdict: %v", err)
+				}
+				files.files[reviewPath(currentTree)] = domainreview.Render(sealed)
+			},
+		},
+		{
+			name:   "stale coverage",
+			reason: check.ReasonReviewCoverage,
+			prepare: func(t *testing.T, files *fakeFiles, _ *fakeGit) {
+				files.files[reviewPath(currentTree)] = []byte(verdictFileWithRows(t, currentTree, nil, []domainreview.Pass{
+					{Path: "internal/app/check/check.go", Blob: otherBlob, Lens: domainreview.Reliability},
+				}))
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			files := newFakeFiles(readyFiles())
+			git := codeChange()
+			if tc.prepare != nil {
+				tc.prepare(t, files, git)
+			}
+
+			got := run(t, files, git, check.Options{ReviewMode: true})
+
+			if got.Code != 2 {
+				t.Fatalf("code = %d, want 2 (%s)", got.Code, got.Message)
+			}
+			if got.Reason != tc.reason {
+				t.Fatalf("reason = %q, want %q (%s)", got.Reason, tc.reason, got.Message)
+			}
+		})
+	}
+}
+
+// TestReviewModeAcceptsAValidIndependentVerdict: strict mode is a door, not a
+// wall; a current verdict from another model with complete coverage stays ready.
+func TestReviewModeAcceptsAValidIndependentVerdict(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[proofPath()] = []byte(proofFileByModel(currentTree, "provider/builder"))
+	sealed, err := domainreview.Seal(domainreview.Verdict{
+		Reviewer: "reviewer",
+		Model:    "provider/reviewer",
+		Lenses:   []string{domainreview.Reliability},
+		Passes: []domainreview.Pass{
+			{Path: "internal/app/check/check.go", Blob: checkBlob, Lens: domainreview.Reliability},
+		},
+	}, currentTree, "HEAD", reviewInstant)
+	if err != nil {
+		t.Fatalf("sealing the seeded verdict: %v", err)
+	}
+	files.files[reviewPath(currentTree)] = domainreview.Render(sealed)
+
+	got := run(t, files, codeChange(), check.Options{ReviewMode: true})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("a valid independent verdict was refused: %d/%q (%s)", got.Code, got.Reason, got.Message)
 	}
 }
 
@@ -1281,11 +1396,11 @@ func TestACodeFeatureStillOwesTheVerdictAtItsClose(t *testing.T) {
 
 	got := run(t, newFakeFiles(files), code, check.Options{ReviewMode: true})
 
-	if note := reviewNote(got); !strings.Contains(note, "odachi review") {
+	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
 		t.Fatalf("a code feature closed without a verdict: %d/%q", got.Code, got.Reason)
 	}
-	if want := "odachi review --base " + base; !strings.Contains(reviewNote(got), want) {
-		t.Errorf("the note does not carry %q: %q", want, reviewNote(got))
+	if want := "odachi review --base " + base; !strings.Contains(got.Next, want) {
+		t.Errorf("the refusal does not carry %q: %q", want, got.Next)
 	}
 }
 
@@ -1313,11 +1428,11 @@ func TestACommittedCodeChangeAfterTheCloseOwesTheVerdict(t *testing.T) {
 
 	got := run(t, newFakeFiles(files), after, check.Options{ReviewMode: true})
 
-	if note := reviewNote(got); !strings.Contains(note, "odachi review") {
-		t.Fatalf("a committed code change after the close = %d/%q, want the verdict owed", got.Code, got.Reason)
+	if got.Code != 2 || got.Reason != check.ReasonReviewMissing {
+		t.Fatalf("a committed code change after the close = %d/%q, want the verdict refusal", got.Code, got.Reason)
 	}
-	if want := "odachi review --base " + base; !strings.Contains(reviewNote(got), want) {
-		t.Errorf("the note does not carry %q: %q", want, reviewNote(got))
+	if want := "odachi review --base " + base; !strings.Contains(got.Next, want) {
+		t.Errorf("the refusal does not carry %q: %q", want, got.Next)
 	}
 }
 
@@ -1372,7 +1487,7 @@ func TestAVerdictWithAnEarlierBaseCoversTheFeature(t *testing.T) {
 		},
 	}
 
-	got := run(t, newFakeFiles(files), git, check.Options{ReviewMode: true, RequireReview: true})
+	got := run(t, newFakeFiles(files), git, check.Options{ReviewMode: true})
 
 	if got.Code != int(gate.Ready) {
 		t.Fatalf("a verdict with an earlier base was read as another diff: %s (%s)", got.Message, got.Next)
@@ -1450,9 +1565,9 @@ func TestADocumentsOnlyCloseAfterAWiderVerdictStaysPaperwork(t *testing.T) {
 	}
 }
 
-// reviewNote is what a ready run said about the review it did not make. With the
-// project's switch on, a close names the verdict and stays ready (ADR 0043); the
-// only thing that refuses is --require-review, and a finding the review made.
+// reviewNote is what a ready run said about the review it did not make. Strict
+// review mode returns a refusal instead, so this helper is for optional-review and
+// paperwork cases that stay ready.
 func reviewNote(result check.Result) string {
 	if result.Code != int(gate.Ready) {
 		return ""
