@@ -240,15 +240,20 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	// flags or exits 2 naming them.
 	opts.Machine = asJSON || !isTerminal(stdin)
 
+	// The voice is a printing decision: ask the one resolver which profile is in
+	// force (including the machine default), without touching the profile the
+	// domain runs under (0359).
+	voice := voiceProfileName(dir, "odachi start")
+
 	loaded, code, message := loadProfile(dir, "odachi start")
 	if code != start.CodeOK {
-		return report(start.Result{Code: code, Message: message}, asJSON, stdout, stderr)
+		return report(start.Result{Code: code, Message: message}, voice, asJSON, stdout, stderr)
 	}
 	opts.Profile = loaded
 
 	agents, agentsCode, agentsMessage := storedAgents(dir, "odachi start")
 	if agentsCode != start.CodeOK {
-		return report(start.Result{Code: agentsCode, Message: agentsMessage}, asJSON, stdout, stderr)
+		return report(start.Result{Code: agentsCode, Message: agentsMessage}, voice, asJSON, stdout, stderr)
 	}
 	opts.Agents = agents
 
@@ -257,7 +262,7 @@ func runStart(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 		interview = &terminalInterview{in: bufio.NewReader(stdin), out: stdout}
 	}
 
-	return report(start.Run(opts, interview, disk(dir), &osLock{}), asJSON, stdout, stderr)
+	return report(start.Run(opts, interview, disk(dir), &osLock{}), voice, asJSON, stdout, stderr)
 }
 
 // runAsk parses the flags, wires the Files adapter and reports the result.
@@ -395,16 +400,23 @@ func runLevel(dir string, args []string, stdin io.Reader, stdout, stderr io.Writ
 	}
 
 	current, code, message := currentProfile(dir, "odachi level", asJSON || !isTerminal(stdin))
+	// The profile the resolver already found is the voice of this run: --to may
+	// change the profile written, but the sentence the human reads is chosen
+	// here, at the printing boundary (0359).
+	voice := ""
+	if code == start.CodeOK && current != nil {
+		voice = current.Name
+	}
 	if code != start.CodeOK {
-		return reportLevel(level.Result{Code: code, Message: message}, asJSON, stdout, stderr)
+		return reportLevel(level.Result{Code: code, Message: message}, voice, asJSON, stdout, stderr)
 	}
 
 	agents, agentsCode, agentsMessage := storedAgents(dir, "odachi level")
 	if agentsCode != start.CodeOK {
-		return reportLevel(level.Result{Code: agentsCode, Message: agentsMessage}, asJSON, stdout, stderr)
+		return reportLevel(level.Result{Code: agentsCode, Message: agentsMessage}, voice, asJSON, stdout, stderr)
 	}
 
-	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to, Agents: agents}, disk(dir)), asJSON, stdout, stderr)
+	return reportLevel(level.Run(level.Options{Dir: dir, Current: *current, To: to, Agents: agents}, disk(dir)), voice, asJSON, stdout, stderr)
 }
 
 // runSummary parses the flags and prints the derived report.
@@ -1370,7 +1382,11 @@ func runInit(dir string, args []string, stdout, stderr io.Writer) int {
 		result.Files = append([]string{".git/"}, result.Files...)
 	}
 
-	return reportInit(result, asJSON, stdout, stderr)
+	// init prints its own block, so the voice is picked here rather than in
+	// reportOutcome. The profile in force decides the language, never the files
+	// this run wrote (0359).
+	voice := voiceProfileName(dir, "odachi init")
+	return reportInit(result, voice, asJSON, stdout, stderr)
 }
 
 // runSetup parses the flags and installs the global half. It takes no directory:
@@ -1422,7 +1438,8 @@ func runSetup(args []string, stdout, stderr io.Writer) int {
 		Home:     osHome{},
 		DryRun:   dryRun,
 	}, setupFiles(dryRun), &initSkills{dir: ".", verb: "odachi setup"})
-	return reportInit(result, asJSON, stdout, stderr)
+	// setup is a different verb; only init, start and level are translated (0359).
+	return reportInit(result, "", asJSON, stdout, stderr)
 }
 
 // setupFiles is the disk the machine refresh reads through. A rehearsal gets a
@@ -1609,10 +1626,21 @@ func payload(skills []bundledskills.Skill) []pack.Skill {
 	return out
 }
 
+// voiceProfileName asks the one resolver which profile is in force without
+// changing any domain input. A run that cannot resolve has no voice, and keeps
+// the English bytes it would have printed before this feature (0359).
+func voiceProfileName(dir, verb string) string {
+	loaded, code, _ := currentProfile(dir, verb, false)
+	if code != start.CodeOK || loaded == nil {
+		return ""
+	}
+	return loaded.Name
+}
+
 // reportInit prints what init did. Unlike the other verbs it always prints its
 // block on a block, because the block contains the three lines the human has to
 // paste into a hook odachi did not write.
-func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) int {
+func reportInit(result initapp.Result, profileName string, asJSON bool, stdout, stderr io.Writer) int {
 	if asJSON {
 		files := result.Files
 		if files == nil {
@@ -1684,7 +1712,7 @@ func reportInit(result initapp.Result, asJSON bool, stdout, stderr io.Writer) in
 	if result.Code != start.CodeOK {
 		out = stderr
 	}
-	for i, line := range lines {
+	for i, line := range voiceLines(profileName, lines) {
 		if i == 0 && result.Code != start.CodeOK {
 			line = "odachi: " + line
 		}
@@ -1725,10 +1753,14 @@ type outcome struct {
 	Profile string
 	Task    string
 	Files   []string
+	// Voice is the profile in force at the printing boundary. It has no JSON
+	// tag and never reaches the payload: it only picks the human language for
+	// start and level (0359).
+	Voice string
 }
 
 // report prints the result of `odachi start`.
-func report(result start.Result, asJSON bool, stdout, stderr io.Writer) int {
+func report(result start.Result, profileName string, asJSON bool, stdout, stderr io.Writer) int {
 	return reportOutcome(outcome{
 		Code:    result.Code,
 		Message: result.Message,
@@ -1736,6 +1768,7 @@ func report(result start.Result, asJSON bool, stdout, stderr io.Writer) int {
 		Profile: result.Profile,
 		Task:    result.Task,
 		Files:   result.Files,
+		Voice:   profileName,
 	}, asJSON, stdout, stderr)
 }
 
@@ -1761,7 +1794,7 @@ func reportPlan(result plan.Result, asJSON bool, stdout, stderr io.Writer) int {
 }
 
 // reportLevel prints the result of `odachi level`.
-func reportLevel(result level.Result, asJSON bool, stdout, stderr io.Writer) int {
+func reportLevel(result level.Result, profileName string, asJSON bool, stdout, stderr io.Writer) int {
 	return reportOutcome(outcome{
 		Code:    result.Code,
 		Message: result.Message,
@@ -1769,6 +1802,7 @@ func reportLevel(result level.Result, asJSON bool, stdout, stderr io.Writer) int
 		Profile: result.Profile,
 		Task:    result.Task,
 		Files:   result.Files,
+		Voice:   profileName,
 	}, asJSON, stdout, stderr)
 }
 
@@ -1827,12 +1861,12 @@ func reportOutcome(o outcome, asJSON bool, stdout, stderr io.Writer) int {
 	}
 
 	if o.Code == start.CodeOK {
-		for _, line := range humanLines(o) {
+		for _, line := range voiceLines(o.Voice, humanLines(o)) {
 			_, _ = fmt.Fprintln(stdout, line)
 		}
 		return o.Code
 	}
-	_, _ = fmt.Fprintln(stderr, "odachi: "+o.Message)
+	_, _ = fmt.Fprintln(stderr, "odachi: "+voiceLine(o.Voice, o.Message))
 	return o.Code
 }
 

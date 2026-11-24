@@ -7,6 +7,10 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **Three more verbs speak the profile's language.** `odachi init`, `odachi start` and `odachi level` now render their human lines in plain Spanish when the profile in force is `office-peru`, through the same boundary translation `odachi check` already uses. Commands, flags, paths, reason codes, exit codes and the `--json` payload stay as they were; novato, senior and ci keep their output byte for byte, and a line with no known translation passes through unchanged. Minor (0359).
+
 ## v0.63.0 - 2026-11-24
 
 - **One model is enough to review.** Doctor's quorum warning now says so plainly: a second model is optional and buys independence, not permission to review. The gate never required a second vendor, and the message no longer reads as if it did. Patch (0358).
