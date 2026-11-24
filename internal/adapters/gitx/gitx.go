@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -493,6 +494,38 @@ func BlobHash(root, path string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// StagedBlobHash returns the object id of one staged entry. A staged deletion
+// answers an empty hash; an unmerged path is not one blob and is an error.
+func StagedBlobHash(root, path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	out, err := run(root, "ls-files", "--stage", "-z", "--", ":(literal)"+filepath.ToSlash(path))
+	if err != nil {
+		return "", err
+	}
+
+	hash := ""
+	for entry := range strings.SplitSeq(out, "\x00") {
+		if entry == "" {
+			continue
+		}
+		metadata, _, ok := strings.Cut(entry, "\t")
+		if !ok {
+			return "", fmt.Errorf("gitx: could not read the staged entry for %s", path)
+		}
+		fields := strings.Fields(metadata)
+		if len(fields) != 3 || fields[2] != "0" {
+			return "", fmt.Errorf("gitx: staged path %s is not a single unmerged entry", path)
+		}
+		if hash != "" {
+			return "", fmt.Errorf("gitx: staged path %s names more than one entry", path)
+		}
+		hash = fields[1]
+	}
+	return hash, nil
+}
+
 // AddedDeps returns the module paths that go.mod requires now but did not
 // require at base. A missing go.mod on either side means no dependencies, not
 // an error: the first module in a project is not a failure.
@@ -505,7 +538,31 @@ func AddedDeps(root, base string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return addedDeps(before, after), nil
+}
 
+// StagedAddedDeps compares go.mod at base with :go.mod from the real index. A
+// staged deletion means the candidate has no go.mod, not a read failure.
+func StagedAddedDeps(root, base string) ([]string, error) {
+	before, err := goModAt(root, base)
+	if err != nil {
+		return nil, err
+	}
+	hash, err := StagedBlobHash(root, "go.mod")
+	if err != nil {
+		return nil, err
+	}
+	if hash == "" {
+		return addedDeps(before, nil), nil
+	}
+	out, err := run(root, "show", ":go.mod")
+	if err != nil {
+		return nil, err
+	}
+	return addedDeps(before, []byte(out)), nil
+}
+
+func addedDeps(before, after []byte) []string {
 	existing := map[string]bool{}
 	for _, path := range modulePaths(before) {
 		existing[path] = true
@@ -518,12 +575,7 @@ func AddedDeps(root, base string) ([]string, error) {
 		}
 	}
 
-	result := make([]string, 0, len(added))
-	for path := range added {
-		result = append(result, path)
-	}
-	slices.Sort(result)
-	return result, nil
+	return slices.Sorted(maps.Keys(added))
 }
 
 // goModAt returns the go.mod content at rev, or nil when the revision has none.
@@ -560,7 +612,7 @@ func modulePaths(gomod []byte) []string {
 	var paths []string
 	inBlock := false
 
-	for _, raw := range strings.Split(string(gomod), "\n") {
+	for raw := range strings.SplitSeq(string(gomod), "\n") {
 		line := strings.TrimSpace(strings.TrimSuffix(raw, "\r"))
 		if line == "" || strings.HasPrefix(line, "//") {
 			continue

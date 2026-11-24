@@ -72,6 +72,11 @@ skill    = "drive"
 enforces = "gate:requirement_not_the_human_words"
 
 [[rule]]
+rule     = "un cierre estricto no pasivo declara un riesgo valido, y none lleva una razon escrita"
+skill    = "commits"
+enforces = "gate:risk_declaration_invalid"
+
+[[rule]]
 rule     = "quien escribe no se verifica a si mismo: un riesgo nombrado pide su verifier"
 skill    = "commits"
 enforces = "gate:verification_missing"

@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 
 	doctorapp "github.com/biggs-100/odachi/internal/app/doctor"
@@ -16,7 +15,6 @@ import (
 	"github.com/biggs-100/odachi/internal/app/start"
 	assetsdesign "github.com/biggs-100/odachi/internal/assets/design"
 	domaindoctor "github.com/biggs-100/odachi/internal/domain/doctor"
-	"github.com/biggs-100/odachi/internal/domain/profile"
 )
 
 // runDoctor parses the flags and wires the three adapters. The command takes no
@@ -155,18 +153,6 @@ func (osProfiles) Resolve(dir string) (string, bool, error) {
 	// check 11 asks: does odd/profile.toml exist to compare the block against?
 	project, code, _ := loadProfile(dir, "odachi doctor")
 	return loaded.Name, code == start.CodeOK && project == nil, nil
-}
-
-// inferProfile is what the profile would be with no file at all: the inference
-// `start` and `level` already use.
-func inferProfile(dir string) (string, error) {
-	files := osFiles{}
-
-	hasBrief, err := files.Exists(filepath.Join(dir, "brief.md"))
-	if err != nil {
-		return "", fmt.Errorf("could not check brief.md: %w", err)
-	}
-	return profile.Infer(profile.Facts{HasBrief: hasBrief}), nil
 }
 
 // selfExe is the path of the binary that is running. `odachi doctor` uses it to

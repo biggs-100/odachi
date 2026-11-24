@@ -185,7 +185,7 @@ func TestProgressAndCheckAgreeAboutTheReview(t *testing.T) {
 	// 0102 gave the review, the twin of the proof's paperwork - and this test would be
 	// measuring the other branch.
 	writeFile(t, dir, "cmd/turnos/main.go", "package main\n")
-	commitAll(t, dir, "the work")
+	commitAll(t, dir, "the work\n\nRisk: none - the feature fixture declares no named risk\n")
 
 	// The close: the document that marks the last step done, not committed yet.
 	// Both verbs owe the verdict of the feature from here.
@@ -210,10 +210,10 @@ func TestProgressAndCheckAgreeAboutTheReview(t *testing.T) {
 	if !strings.Contains(out, "review: owed") || !strings.Contains(out, base) {
 		t.Fatalf("progress does not owe the verdict of the close:\n%s", out)
 	}
-	// The close names the review it did not make and stays ready (ADR 0043): the
-	// two verbs agree about WHICH review is missing, not about an exit code.
-	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 || !strings.Contains(out, "review") || !strings.Contains(out, base) {
-		t.Fatalf("check did not name the review progress owes: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
+	// Mode on makes the missing review a block. Both verbs must still name the
+	// same feature-base review, rather than disagreeing about what is owed.
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 2 || out != "" || !strings.Contains(errOut, "odachi review --base "+base) {
+		t.Fatalf("check did not block on the review progress owes: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 
 	// The close lands and the release tail follows: documents only, and still no
@@ -232,7 +232,7 @@ func TestProgressAndCheckAgreeAboutTheReview(t *testing.T) {
 	if !strings.Contains(out, "review: owed") || !strings.Contains(out, base) {
 		t.Fatalf("progress forgot the verdict a tail without one still owes:\n%s", out)
 	}
-	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 || !strings.Contains(out, "review") || !strings.Contains(out, base) {
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 2 || out != "" || !strings.Contains(errOut, "odachi review --base "+base) {
 		t.Fatalf("check dropped the review progress owes on the tail: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 }

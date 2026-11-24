@@ -144,6 +144,41 @@ func TestCheckWithoutProofIsBlocked(t *testing.T) {
 	}
 }
 
+// TestCheckRequireReviewRefusesMissingRiskDeclaration: strict mode repairs an
+// invalid declaration before it asks for a verdict, and the JSON continuation
+// names the command that asks the gate again after the commit is amended.
+func TestCheckRequireReviewRefusesMissingRiskDeclaration(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	initRepo(t, dir)
+	seedProject(t, dir)
+	closeFeature(t, dir)
+	writeFile(t, dir, "internal/app/check/check.go", "package check\n")
+
+	code, out, errOut := runDir(t, dir, []string{"check", "--require-review", "--json"}, "")
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1 (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	var payload struct {
+		Code    int    `json:"code"`
+		Reason  string `json:"reason"`
+		Message string `json:"message"`
+		Next    string `json:"next"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("stdout is not JSON: %v\n%s", err, out)
+	}
+	if payload.Reason != "risk_declaration_invalid" || payload.Next != "odachi check" {
+		t.Errorf("JSON reason/next = %q/%q, want risk_declaration_invalid/odachi check", payload.Reason, payload.Next)
+	}
+	for _, want := range []string{"no commit declares a Risk: line", "amend the commit", "Risk: none - <reason>"} {
+		if !strings.Contains(payload.Message, want) {
+			t.Errorf("message %q does not say %q", payload.Message, want)
+		}
+	}
+}
+
 // TestCheckRunWritesTheProof: --run captures the command and its output, with
 // the tree in the header, and the run is ready afterwards.
 // TestCheckRunRecordsTheModelOfThisSession is the wiring, not the app: the
@@ -442,6 +477,7 @@ func TestTheGateJSONContract(t *testing.T) {
 		"out_of_scope":                 gate.ReasonOutOfScope,
 		"fence_loosened":               gate.ReasonFenceLoosened,
 		"open_question":                gate.ReasonOpenQuestion,
+		"risk_declaration_invalid":     gate.ReasonRiskDeclaration,
 		"proof_missing":                gate.ReasonProofMissing,
 		"proof_stale":                  gate.ReasonProofStale,
 		"proof_failed":                 gate.ReasonProofFailed,

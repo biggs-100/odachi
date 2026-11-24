@@ -551,8 +551,8 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	flags.BoolVar(&ci, "ci", false, "judge the tree the way CI does: the fence and the base come from the remote's default branch")
 	flags.IntVar(&opts.TimeoutSeconds, "timeout", check.DefaultTimeout, "seconds --run may take")
 	flags.BoolVar(&opts.Quiet, "quiet", false, "prints nothing when ready (for the hook)")
-	flags.BoolVar(&opts.RequireReview, "require-review", false, "requires a review verdict and an independent verification for this tree (default: the project mode, which names them)")
-	flags.BoolVar(&noReview, "no-review", false, "does not require review even when the project has it on")
+	flags.BoolVar(&opts.RequireReview, "require-review", false, "requires a valid review verdict and, for a named Risk, independent verification (default: project mode at a non-passive close)")
+	flags.BoolVar(&noReview, "no-review", false, "bypasses this run's review and verification gate (CI: no clone store and no model calls)")
 	flags.BoolVar(&asJSON, "json", false, "machine output")
 	flags.IntVar(&opts.Feature, "feature", 0, "the feature number to judge (default: the highest)")
 
@@ -616,7 +616,11 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	// wrote `mode = "on"` must not get a gate that never opened.
 	opts.NoReview = noReview
 	if !opts.RequireReview && !noReview {
-		enabled, err := reviewapp.Enabled(dir, osFiles{}, reviewModeCodec{})
+		var modeFiles reviewapp.ModeFiles = osFiles{}
+		if opts.Message != "" {
+			modeFiles = stagedModeFiles{root: dir}
+		}
+		enabled, err := reviewapp.Enabled(dir, modeFiles, reviewModeCodec{})
 		if err != nil {
 			_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
 			return start.CodeBlocked
@@ -1919,10 +1923,10 @@ check flags:
                   verified before a push; it takes no --base or --fence-from beside it
   --timeout n     seconds --run may take (default 900)
   --quiet         prints nothing when ready except the reminder the hook must read
-  --require-review  refuses a commit without a verdict and a verification for this
-                  tree (default: the project mode, which names them and lets the
-                  commit through)
-  --no-review     does not require review even when the project has it on
+  --require-review  requires a valid verdict and, for a named Risk, independent
+                  verification at a non-passive close (default: the project mode)
+  --no-review     bypasses the review and verification gate for this one run
+                 (CI: no clone store and no model calls)
   --json          machine output
 
 review flags:
@@ -1945,10 +1949,10 @@ review flags:
   --json          machine output
 
 review mode:
-  odachi review mode status   whether the project requires review (default: off)
-  odachi review mode on       a close names the verdict it did not get, and does not refuse
-  odachi review mode off      check does not require it, even when the hook runs check
-  the mode lives in odd/review.toml; --require-review and --no-review override it for one run
+  odachi review mode status   whether the project requires review at a non-passive close
+  odachi review mode on       a non-passive close requires a valid verdict; a named Risk requires independent verification
+  odachi review mode off      review and verification are optional, even when the hook runs check
+  the mode lives in odd/review.toml; --require-review forces it and --no-review bypasses one run
 
 review checks:
   odachi review checks           what odd/review.toml declares, and whether this clone agreed
@@ -2166,7 +2170,8 @@ after start:
   odachi review --lens risk                     add a lens to the ones the evidence asks for
   odachi review --lens --show                   which lenses this tree asks for and which are missing
   odachi review --refute <verdict>              the refuter's prompt for that verdict
-  odachi check --require-review                 requires review for this tree and its lenses
+  odachi check --require-review                 requires a valid verdict and named-risk verification for this tree
+  odachi verify --exec "<command>"              run the independent verifier and store this tree's record
   odachi doctor                                 eighteen health checks, read-only
   odachi bench                                  measures how a person gets stuck (in-band / dead-end)
   odachi init                                   AGENTS.md (with the profile voice) + the hook

@@ -176,6 +176,15 @@ func (f *fakeFiles) Backup(path string) (string, error) {
 	return path + ".bak-prueba", nil
 }
 
+// fakeCandidate is one candidate answer for a named base. An empty tree keeps
+// the fake's default tree, so a test only declares the paths and diff that differ.
+type fakeCandidate struct {
+	tree  string
+	paths []string
+	diff  string
+	err   error
+}
+
 // fakeGit is the Git port: it reports fixed facts and records which base the
 // fence asked about.
 type fakeGit struct {
@@ -195,6 +204,10 @@ type fakeGit struct {
 	// blobs answers BlobHash per path, and blobErr is git failing for real.
 	blobs   map[string]string
 	blobErr error
+	// stagedBlobs answers StagedBlobHash. Nil defaults to the worktree answer;
+	// an explicitly empty map means every staged path is a deletion.
+	stagedBlobs   map[string]string
+	stagedBlobErr error
 
 	// diff is what the port answers for the candidate, and diffErr is the diff
 	// failing for real. diffErrByBase fails one base only: the worktree and the
@@ -204,8 +217,25 @@ type fakeGit struct {
 	diffErr       error
 	diffErrByBase map[string]error
 
+	// stagedDeps is the dependency fence answer for the index. Nil defaults to
+	// the worktree answer; an empty non-nil slice means no staged dependency.
+	stagedDeps    []string
+	stagedDepsErr error
+
 	// candidateCalls counts the one read of the worktree this run asked for.
 	candidateCalls int
+	// candidateByBase lets a clean close answer different paths and diff for the
+	// feature's base than for HEAD: the closing document is not the feature.
+	candidateByBase map[string]fakeCandidate
+
+	// stagedCandidate is the index snapshot a commit-msg hook must judge. Nil
+	// keeps the fake's default staged behavior identical to its worktree behavior.
+	stagedCandidate      *fakeCandidate
+	stagedCandidateCalls int
+	stagedBases          []string
+	// stagedFiles is the project tree behind that candidate. The run helper
+	// defaults it to the same fake files unless a test supplies another set.
+	stagedFiles *fakeFiles
 
 	// filesAt answers FileAt, keyed by "rev:path"; fileAtErr is the ref failing.
 	filesAt   map[string]string
@@ -294,6 +324,13 @@ func (g *fakeGit) Resolve(root, ref string) (string, error) {
 func (g *fakeGit) Candidate(root, base string) (string, []string, string, error) {
 	g.candidateCalls++
 	g.bases = append(g.bases, base)
+	if candidate, ok := g.candidateByBase[base]; ok {
+		tree := candidate.tree
+		if tree == "" {
+			tree = g.tree
+		}
+		return tree, candidate.paths, candidate.diff, candidate.err
+	}
 	if g.changedErr != nil && base != check.EmptyTree {
 		return "", nil, "", g.changedErr
 	}
@@ -304,6 +341,41 @@ func (g *fakeGit) Candidate(root, base string) (string, []string, string, error)
 		return "", nil, "", g.diffErr
 	}
 	return g.tree, g.changed, g.diff, nil
+}
+
+// StagedCandidate defaults to the worktree answer until a test declares a
+// different index snapshot.
+func (g *fakeGit) StagedCandidate(root, base string) (string, []string, string, error) {
+	g.stagedCandidateCalls++
+	g.stagedBases = append(g.stagedBases, base)
+	if g.stagedCandidate != nil {
+		tree := g.stagedCandidate.tree
+		if tree == "" {
+			tree = g.tree
+		}
+		return tree, g.stagedCandidate.paths, g.stagedCandidate.diff, g.stagedCandidate.err
+	}
+	return g.Candidate(root, base)
+}
+
+func (g *fakeGit) StagedFile(root, path string) ([]byte, bool, error) {
+	if g.stagedFiles == nil {
+		return nil, false, nil
+	}
+	key := filepath.Join(root, filepath.FromSlash(path))
+	exists, err := g.stagedFiles.Exists(key)
+	if err != nil || !exists {
+		return nil, false, err
+	}
+	data, err := g.stagedFiles.Read(key)
+	return data, true, err
+}
+
+func (g *fakeGit) StagedList(root, dir string) ([]string, error) {
+	if g.stagedFiles == nil {
+		return nil, nil
+	}
+	return g.stagedFiles.List(filepath.Join(root, filepath.FromSlash(dir)))
 }
 
 func (g *fakeGit) Between(root, from, to string) ([]string, error) {
@@ -324,13 +396,34 @@ func (g *fakeGit) BlobHash(root, path string) (string, error) {
 	return g.blobs[path], nil
 }
 
+func (g *fakeGit) StagedBlobHash(root, path string) (string, error) {
+	if g.stagedBlobs != nil || g.stagedBlobErr != nil {
+		if g.stagedBlobErr != nil {
+			return "", g.stagedBlobErr
+		}
+		return g.stagedBlobs[path], nil
+	}
+	return g.BlobHash(root, path)
+}
+
 func (g *fakeGit) AddedDeps(root, base string) ([]string, error) { return g.deps, nil }
 
-// Messages answers the commits the range carries. The trailer lane is the only
-// question; a test that seeds nothing gets the project it always had.
+func (g *fakeGit) StagedAddedDeps(root, base string) ([]string, error) {
+	if g.stagedDeps != nil || g.stagedDepsErr != nil {
+		return g.stagedDeps, g.stagedDepsErr
+	}
+	return g.AddedDeps(root, base)
+}
+
+// Messages answers the commits the range carries. An unset fixture carries a
+// valid reasoned none so strict tests start from a valid declaration; a test
+// about missing or malformed lines seeds those messages explicitly.
 func (g *fakeGit) Messages(root, base string) ([]string, error) {
 	if g.messagesErr != nil {
 		return nil, g.messagesErr
+	}
+	if g.messages == nil {
+		return []string{"fixture commit\n\nRisk: none - the fixture declares no named risk\n"}, nil
 	}
 	return g.messages, nil
 }
@@ -512,6 +605,9 @@ func run(t *testing.T, files *fakeFiles, git *fakeGit, opts check.Options) check
 	}
 	if opts.TimeoutSeconds == 0 {
 		opts.TimeoutSeconds = 120
+	}
+	if opts.Message != "" && git.stagedFiles == nil {
+		git.stagedFiles = files
 	}
 	return check.Run(opts, files, git, &fakeShell{})
 }
@@ -1477,6 +1573,143 @@ func TestUnreadableFenceBlocksWithAHumanSentence(t *testing.T) {
 	}
 	if !strings.Contains(got.Message, "fence.toml") {
 		t.Errorf("Message = %q, want it to name the file", got.Message)
+	}
+}
+
+// TestCommitMessageReadsTheStagedBrief: an unstaged incomplete draft must not
+// hide the complete brief the commit will carry.
+func TestCommitMessageReadsTheStagedBrief(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "brief.md")] = []byte("# unfinished draft\n")
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("docs: explain reservations\n\nRisk: none - the fixture declares no named risk\n")
+	staged := newFakeFiles(readyFiles())
+	git := &fakeGit{
+		tree:        currentTree,
+		stagedFiles: staged,
+		stagedCandidate: &fakeCandidate{
+			tree: currentTree, paths: []string{"README.md"},
+		},
+	}
+
+	got := run(t, files, git, check.Options{Message: "commit-msg"})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the staged brief was not read: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+}
+
+// TestCommitMessageReadsTheStagedFence: the policy Git will commit is the policy
+// the hook must enforce, not a stricter or looser unstaged draft.
+func TestCommitMessageReadsTheStagedFence(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "odd", "fence.toml")] = []byte("[[rule]]\nnot = \"Go\"\npaths = [\"**/*.go\"]\n")
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("feat: reserve a slot\n\nRisk: none - the fixture declares no named risk\n")
+	staged := newFakeFiles(readyFiles())
+	git := &fakeGit{
+		tree:        currentTree,
+		stagedFiles: staged,
+		stagedCandidate: &fakeCandidate{
+			tree: currentTree, paths: []string{"code.go"},
+			diff: "diff --git a/code.go b/code.go\n--- /dev/null\n+++ b/code.go\n@@ -0,0 +1 @@\n+package code\n",
+		},
+	}
+
+	got := run(t, files, git, check.Options{Message: "commit-msg"})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the hook enforced an unstaged fence: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+}
+
+// TestCommitMessageChecksTheStagedProfileEncoding: a policy file that is valid in
+// the worktree but undecodable in the commit must still block the hook.
+func TestCommitMessageChecksTheStagedProfileEncoding(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("docs: explain reservations\n\nRisk: none - the fixture declares no named risk\n")
+	staged := newFakeFiles(readyFiles())
+	staged.files[filepath.Join(dir, "odd", "profile.toml")] = append([]byte{0xEF, 0xBB, 0xBF}, []byte(`name = "novato"`)...)
+	git := &fakeGit{
+		tree:        currentTree,
+		stagedFiles: staged,
+		stagedCandidate: &fakeCandidate{
+			tree: currentTree, paths: []string{"README.md"},
+		},
+	}
+
+	got := run(t, files, git, check.Options{Message: "commit-msg"})
+
+	if got.Code != int(gate.NeedsWork) || !strings.Contains(got.Message, "odd/profile.toml") || !strings.Contains(got.Message, "BOM") {
+		t.Fatalf("the staged profile encoding was not checked: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+}
+
+// TestCommitMessageRefusesAnUnreadableStagedProject: a staged-tree read failure
+// must block the hook, never fall back to the worktree and approve other bytes.
+func TestCommitMessageRefusesAnUnreadableStagedProject(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("docs: explain reservations\n\nRisk: none - the fixture declares no named risk\n")
+	staged := newFakeFiles(nil)
+	staged.err = errors.New("staged index unreadable")
+	git := &fakeGit{
+		tree:        currentTree,
+		stagedFiles: staged,
+		stagedCandidate: &fakeCandidate{
+			tree: currentTree, paths: []string{"README.md"},
+		},
+	}
+
+	got := run(t, files, git, check.Options{Message: "commit-msg"})
+
+	if got.Code != int(gate.NeedsWork) || !strings.Contains(got.Message, "staged index unreadable") {
+		t.Fatalf("an unreadable staged project did not block: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+}
+
+// TestCommitMessageReadsRealProofOutsideTheStagedTree: proof/ is clone-local
+// evidence, not a project file Git will commit. An ignored proof absent from the
+// index must still answer the closing hook.
+func TestCommitMessageReadsRealProofOutsideTheStagedTree(t *testing.T) {
+	files := newFakeFiles(closedFiles())
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("docs: close reservations\n\nRisk: none - the fixture declares no named risk\n")
+	staged := newFakeFiles(closedFiles())
+	delete(staged.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	git := &fakeGit{
+		tree:        currentTree,
+		stagedFiles: staged,
+		stagedCandidate: &fakeCandidate{
+			tree: currentTree, paths: []string{"odd/tasks/0007-turnos.md"},
+		},
+	}
+
+	got := run(t, files, git, check.Options{Message: "commit-msg"})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the hook did not read its real proof: %d/%q (%s)", got.Code, got.Reason, got.Message)
+	}
+}
+
+// TestCommitMessageReadsExplicitRealProofOutsideTheStagedTree: --proof names
+// evidence already written on disk. An untracked in-project proof absent from
+// the index must stay readable during a commit-message check.
+func TestCommitMessageReadsExplicitRealProofOutsideTheStagedTree(t *testing.T) {
+	files := newFakeFiles(closedFiles())
+	delete(files.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	files.files[filepath.Join(dir, "commit-msg")] = []byte("docs: close reservations\n\nRisk: none - the fixture declares no named risk\n")
+	files.files[filepath.Join(dir, "manual.txt")] = []byte(proofFile(currentTree, "go test ./...", "ok\n"))
+	staged := newFakeFiles(closedFiles())
+	delete(staged.files, filepath.Join(dir, "proof", "0007-turnos.txt"))
+	git := &fakeGit{
+		tree:        currentTree,
+		stagedFiles: staged,
+		stagedCandidate: &fakeCandidate{
+			tree: currentTree, paths: []string{"odd/tasks/0007-turnos.md"},
+		},
+	}
+
+	got := run(t, files, git, check.Options{Message: "commit-msg", Proof: "manual.txt"})
+
+	if got.Code != int(gate.Ready) {
+		t.Fatalf("the hook did not read its explicit real proof: %d/%q (%s)", got.Code, got.Reason, got.Message)
 	}
 }
 

@@ -178,6 +178,41 @@ func TestClassifyDocumentationOnlyIsPassive(t *testing.T) {
 	}
 }
 
+// A docs or root design directory does not turn executable, test, configuration
+// or unknown files into passive assets. The exemption is an extension allowlist,
+// not a blanket promise about everything stored beside the documents.
+func TestADesignFolderDoesNotExemptCodeOrUnknownFiles(t *testing.T) {
+	paths := []string{
+		"docs/exploit_test.go",
+		"docs/generate.go",
+		"design/spec_test.go",
+		"design/generated.go",
+		"docs/script.js",
+		"docs/script.ts",
+		"docs/script.tsx",
+		"docs/script.jsx",
+		"docs/script.py",
+		"docs/script.rs",
+		"docs/script.sh",
+		"docs/script.ps1",
+		"docs/config.yml",
+		"docs/config.yaml",
+		"docs/config.toml",
+		"docs/README.go",
+		"design/README.go",
+		"docs/unknown.xyz",
+		"design/unknown.xyz",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			if tier := review.Classify([]string{path}); tier != review.Focused {
+				t.Errorf("Classify(%s) = %q, want %q", path, tier, review.Focused)
+			}
+		})
+	}
+}
+
 // TestClassifyVolumeDoesNotDecide: a thousand lines of documentation are still
 // documentation. A volume rule would turn a typo fix in a big README into a
 // four-lens review, and a five-line auth change into nothing.

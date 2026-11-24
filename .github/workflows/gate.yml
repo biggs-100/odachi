@@ -81,13 +81,12 @@ jobs:
           # changed paths against it. Without --base the worktree is compared to
           # its own HEAD, which on a clean checkout is nothing: the fence would be
           # applied to an empty list and the change would never meet it.
-          # The review is not checked here, and the run says so when a close owes
-          # one: a verdict is evidence about one tree and lives in
-          # .git/odachi/reviews/, inside the clone, so a clean checkout has none
-          # (ADR 0043). The base ref this gate is built from reads that rule since
-          # v0.11.85, so --no-review is gone: the old binary needed it, and the new
-          # one answers a note where it used to refuse.
-          "$ODACHI_GATE" check --fence-from "$BASE" --base "$BASE" --run "go test ./..." --timeout 900
+          # Review and verification are mandatory for a local close when review
+          # mode is on, but CI cannot read the clone-local .git/odachi store and
+          # standing policy forbids model calls in CI. --no-review bypasses only
+          # that local evidence gate; fence, proof, gofmt, vet, race and release
+          # checks remain mandatory.
+          "$ODACHI_GATE" check --fence-from "$BASE" --base "$BASE" --no-review --run "go test ./..." --timeout 900
 
       - name: keep the proof
         # always: a green run still has a proof to keep when the gate blocks on

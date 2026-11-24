@@ -9,6 +9,13 @@ not a version.
 
 ## Unreleased
 
+- **Review mode is a local gate, not advice.** Feature 0361 makes review and
+  named-risk verification mandatory for non-passive local closes, requires a
+  valid risk declaration with a written reason for `Risk: none`, reads lenses and
+  per-file coverage from the feature diff, and enforces the contract in the
+  commit hook. CI passes `--no-review` explicitly because a clean runner has no
+  clone evidence store and makes no model calls. Minor (0361).
+
 - **The installed binary is checked, not just the tree.** Feature 0360 adds a canonical SHA-256 digest of the embedded skill payload and a checkout-free `skills --digest` command; a clean-directory archtest compares the built binary with the source digest, and a dispatch workflow runs that test outside a developer tree. Model-facing contracts are now pinned by content hash beside their byte budgets, the embedded payload is checked with the skill grammar and a dead-reference control, the help and unknown-command error come from one verb catalog, `oneLine` has one implementation under the domain boundary, and `reportCheck` delegates voice selection to the existing profile boundary. Patch (0360).
 
 ## v0.64.0 - 2026-11-24

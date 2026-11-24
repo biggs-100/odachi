@@ -59,10 +59,14 @@ const noRisk = "none"
 
 // Risk is what the commits of a range declared about their blast radius. Declared
 // says the range answered the question; Named is what it answered with, lowercase
-// and without repeats, in the order the commits first said it.
+// and without repeats, in the order the commits first said it. NoneReason is the
+// first written explanation attached to none, and NoneWithoutReason records a
+// none declaration that did not carry one.
 type Risk struct {
-	Declared bool
-	Named    []string
+	Declared          bool
+	Named             []string
+	NoneReason        string
+	NoneWithoutReason bool
 }
 
 // ParseRisk reads the risk line from the commit messages of a range. It answers
@@ -86,7 +90,17 @@ func ParseRisk(messages []string) (Risk, error) {
 			}
 			risk.Declared = true
 
-			if name == noRisk || slices.Contains(risk.Named, name) {
+			if name == noRisk {
+				reason := noneReason(value)
+				if risk.NoneReason == "" {
+					risk.NoneReason = reason
+				}
+				if reason == "" {
+					risk.NoneWithoutReason = true
+				}
+				continue
+			}
+			if slices.Contains(risk.Named, name) {
 				continue
 			}
 			risk.Named = append(risk.Named, name)
@@ -105,4 +119,25 @@ func riskName(value string) string {
 		return ""
 	}
 	return strings.ToLower(strings.TrimRight(fields[0], ",;.:"))
+}
+
+// noneReason reads the prose after a none declaration. A colon attached to the
+// name and a separated hyphen, colon or em dash are punctuation, not part of the
+// reason. Anything else after none is not a written reason the gate can rely on.
+func noneReason(value string) string {
+	fields := strings.Fields(value)
+	if len(fields) < 2 {
+		return ""
+	}
+
+	rest := strings.TrimSpace(value[len(fields[0]):])
+	if strings.HasSuffix(fields[0], ":") {
+		return rest
+	}
+	for _, separator := range []string{"-", ":", "—"} {
+		if strings.HasPrefix(rest, separator) {
+			return strings.TrimSpace(strings.TrimPrefix(rest, separator))
+		}
+	}
+	return ""
 }

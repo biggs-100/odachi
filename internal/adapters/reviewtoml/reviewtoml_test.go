@@ -212,7 +212,7 @@ func TestRenderWithoutAVerifierModelKeepsTheSameBytes(t *testing.T) {
 	want := strings.Join([]string{
 		"# odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken",
 		"schema = " + strconv.Itoa(schema.Current),
-		"# odachi: the review is the human's decision; on asks for it at the close and check says so, off leaves it silent, and --require-review refuses",
+		"# odachi: the review is the human's decision; on requires review and named-risk verification at the local close, off leaves both optional, and --no-review bypasses one run",
 		`mode = "on"`,
 		"# odachi clean --apply keeps this many review records -the newest trees- and this many prompts",
 		"keep_verdicts = " + strconv.Itoa(review.DefaultKeepVerdicts),
@@ -311,7 +311,13 @@ func TestRenderWritesACanonicalSwitch(t *testing.T) {
 		t.Fatalf("Render(ON) = %v", err)
 	}
 	rendered := string(data)
-	for _, want := range []string{"the human's decision", `mode = "on"`} {
+	for _, want := range []string{
+		"the human's decision",
+		"on requires review and named-risk verification at the local close",
+		"off leaves both optional",
+		"--no-review bypasses one run",
+		`mode = "on"`,
+	} {
 		if !strings.Contains(rendered, want) {
 			t.Errorf("Render = %q, want %q", rendered, want)
 		}

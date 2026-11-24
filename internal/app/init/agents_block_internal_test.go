@@ -36,10 +36,10 @@ func TestInitWritesTheBlockFromTheRenderer(t *testing.T) {
 	}
 }
 
-// The block keeps the four hard rules and the six verbs, in the order a human
+// The block keeps the five hard rules and the six verbs, in the order a human
 // learns them. The bytes are pinned in the renderer's test; this reads the
 // written file the way an agent would.
-func TestTheWrittenBlockKeepsTheFourRulesAndTheSixVerbs(t *testing.T) {
+func TestTheWrittenBlockKeepsTheFiveRulesAndTheSixVerbs(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 	run(files)
 	content, _ := files.get("AGENTS.md")
@@ -62,10 +62,16 @@ func TestTheWrittenBlockKeepsTheFourRulesAndTheSixVerbs(t *testing.T) {
 	}
 
 	for _, want := range []string{
+		"Five hard rules",
 		"1. Brief before code",
 		"2. Nothing outside the fence",
 		"3. Do not say \"done\" without proof",
-		"4. Small pieces, one commit each",
+		"4. Review is not optional when on",
+		"A non-passive local close owes a valid verdict",
+		"a named `Risk:` owes independent verification",
+		"`Risk: none - <written reason>`",
+		"missing, unknown or bare `none` is invalid",
+		"5. Small pieces, one commit each",
 		rules.Section,
 	} {
 		if !strings.Contains(content, want) {

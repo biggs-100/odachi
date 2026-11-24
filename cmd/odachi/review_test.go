@@ -42,6 +42,18 @@ func commitAll(t *testing.T, dir, message string) {
 	}
 }
 
+// commitEmpty records a historical declaration without moving the candidate's
+// uncommitted paths into the range a verdict has to declare.
+func commitEmpty(t *testing.T, dir, message string) {
+	t.Helper()
+	cmd := exec.Command("git", "-C", dir,
+		"-c", "user.email=odachi@example.com", "-c", "user.name=odachi",
+		"commit", "--allow-empty", "-q", "-m", message)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git commit --allow-empty: %v: %s", err, out)
+	}
+}
+
 // reviewsIn lists the verdict files inside the clone's store.
 //
 // declared is the inspection a complete answer carries: every path the fixture's
@@ -451,11 +463,10 @@ func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 		t.Errorf("switch = %q, want mode = \"on\"", data)
 	}
 
-	// The switch is part of the tree, so the proof taken before it is stale. With the
-	// switch alone the close names the review and stays ready (ADR 0043); the flag is
-	// what refuses.
-	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 || !strings.Contains(out, "odachi review") {
-		t.Fatalf("check under mode on: code = %d, want 0 with the review named (stdout: %q, stderr: %q)", code, out, errOut)
+	// The switch is part of the tree, so the proof taken before it is stale. Mode on
+	// refuses the missing verdict even though --run has just written a fresh proof.
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 2 || !strings.Contains(errOut, "no review for this tree") || !strings.Contains(errOut, "odachi review") {
+		t.Fatalf("check under mode on: code = %d, want 2 with the missing review named (stdout: %q, stderr: %q)", code, out, errOut)
 	}
 	if code, out, errOut := runDir(t, dir, []string{"check", "--no-review"}, ""); code != 0 {
 		t.Fatalf("check --no-review: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
@@ -472,6 +483,9 @@ func TestReviewModeOnMakesCheckRequireTheVerdict(t *testing.T) {
 	} else if !strings.Contains(out, "review: off") {
 		t.Errorf("status = %q, want off", out)
 	}
+	if code, out, errOut := runDir(t, dir, []string{"check"}, ""); code != 0 {
+		t.Fatalf("check with mode off: code = %d, want 0 (stdout: %q, stderr: %q)", code, out, errOut)
+	}
 }
 
 // TestReviewModeAsksOnceWhenTheFeatureCloses: the CLI reads the switch into the
@@ -482,8 +496,11 @@ func TestReviewModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
 
-	// The base the feature starts from is the commit the tree is on now.
+	// The base the feature starts from is the commit the tree is on now. The
+	// feature's first commit carries a valid declaration, so the close is refused
+	// for its missing verdict rather than for an unrelated risk line.
 	base := headOf(t, dir)
+	commitAll(t, dir, "cambiar el turno\n\nRisk: none - the fixture declares no named risk\n")
 	doc := taskdoc.TaskDoc{
 		Title:            "turnos",
 		Base:             base,
@@ -505,27 +522,27 @@ func TestReviewModeAsksOnceWhenTheFeatureCloses(t *testing.T) {
 	}
 
 	// The closed feature owes the verdict that judged its diff, not the commit
-	// that closes it: the proof is taken, and the run names the base. The commit is
-	// not refused: the review does not authorise delivery (ADR 0043).
+	// that closes it: the proof is taken, and the missing verdict refuses the run at
+	// the feature's base.
 	doc.Steps[0].Done = true
 	doc.Steps[0].Commit = base
 	writeFile(t, dir, "odd/tasks/0001-turnos.md", doc.Render())
 
-	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 0 || !strings.Contains(out, "odachi review --base "+base) {
-		t.Fatalf("check --run on a closed feature = %d, want 0 naming the review (stdout: %q, stderr: %q)", code, out, errOut)
+	if code, out, errOut := runDir(t, dir, []string{"check", "--run", "echo ok"}, ""); code != 2 || !strings.Contains(errOut, "odachi review --base "+base) {
+		t.Fatalf("check --run on a closed feature = %d, want 2 naming the review (stdout: %q, stderr: %q)", code, out, errOut)
 	}
-	code, out, errOut := runDir(t, dir, []string{"check"}, "")
-	if code != 0 {
-		t.Fatalf("check on a closed feature = %d, want 0 (stderr: %q)", code, errOut)
+	code, _, errOut := runDir(t, dir, []string{"check"}, "")
+	if code != 2 {
+		t.Fatalf("check on a closed feature = %d, want 2 (stderr: %q)", code, errOut)
 	}
-	if want := "odachi review --base " + base; !strings.Contains(out, want) {
-		t.Errorf("stdout %q does not name the runnable review %q", out, want)
+	if want := "odachi review --base " + base; !strings.Contains(errOut, want) {
+		t.Errorf("stderr %q does not name the runnable review %q", errOut, want)
 	}
 
-	// The hook runs `check --quiet`: silent when ready, except for the reminder, and
-	// never a refused commit (ADR 0043).
-	if code, quietOut, quietErr := runDir(t, dir, []string{"check", "--quiet"}, ""); code != 0 || quietOut != "" || !strings.Contains(quietErr, "odachi review --base "+base) {
-		t.Fatalf("the hook did not remind and let go: code = %d (stdout: %q, stderr: %q)", code, quietOut, quietErr)
+	// The hook runs `check --quiet`: a refusal still reaches stderr and keeps the
+	// commit blocked, while stdout stays empty.
+	if code, quietOut, quietErr := runDir(t, dir, []string{"check", "--quiet"}, ""); code != 2 || quietOut != "" || !strings.Contains(quietErr, "odachi review --base "+base) {
+		t.Fatalf("the hook did not refuse the missing review: code = %d (stdout: %q, stderr: %q)", code, quietOut, quietErr)
 	}
 }
 
@@ -536,6 +553,7 @@ func TestCheckAcceptsAVerdictThatNamesTheBaseShort(t *testing.T) {
 	t.Parallel()
 	dir := changedProject(t)
 	base := headOf(t, dir)
+	commitEmpty(t, dir, "declarar el riesgo\n\nRisk: none - the fixture declares no named risk\n")
 
 	doc := taskdoc.TaskDoc{
 		Title:            "turnos",
@@ -602,6 +620,53 @@ func TestStartWritesTheFeatureBaseEndToEnd(t *testing.T) {
 	doc := taskdoc.Parse(string(data))
 	if doc.Base != base {
 		t.Errorf("Base = %q, want the commit the feature started from %q", doc.Base, base)
+	}
+}
+
+// TestCommitMessageReadsTheStagedReviewMode: the policy Git will commit must
+// decide whether the hook asks for a verdict. An unstaged mode-off draft cannot
+// turn a staged mode-on code change into a ready commit.
+func TestCommitMessageReadsTheStagedReviewMode(t *testing.T) {
+	t.Parallel()
+	dir := changedProject(t)
+	writeFile(t, dir, filepath.ToSlash(layout.Review), "mode = \"on\"\n")
+	stage := exec.Command("git", "-C", dir, "add", "--", filepath.ToSlash(layout.Review), "internal/app/turnos.go")
+	if out, err := stage.CombinedOutput(); err != nil {
+		t.Fatalf("stage the policy and code: %v: %s", err, out)
+	}
+	writeFile(t, dir, filepath.ToSlash(layout.Review), "mode = \"off\"\n")
+	message := filepath.Join(dir, ".git", "COMMIT_EDITMSG")
+	writeAt(t, message, "feat: reserve a slot\n\nRisk: none - the staged policy fixture declares no named risk\n")
+
+	code, out, errOut := runDir(t, dir, []string{"check", "--message", message, "--json"}, "")
+
+	if code != 2 {
+		t.Fatalf("staged mode on with unreviewed code = %d, want 2 (stdout: %q, stderr: %q)", code, out, errOut)
+	}
+	var payload struct {
+		Reason string `json:"reason"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("decode check JSON: %v: %s", err, out)
+	}
+	if payload.Reason != "review_missing" {
+		t.Errorf("reason = %q, want review_missing (stdout: %q, stderr: %q)", payload.Reason, out, errOut)
+	}
+}
+
+// TestStagedModeFilesRefusesWritesAndBackups: the commit hook only reads the
+// staged policy. A mode command must never mutate the index through this adapter.
+func TestStagedModeFilesRefusesWritesAndBackups(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	files := stagedModeFiles{root: dir}
+	path := filepath.Join(dir, filepath.FromSlash(layout.Review))
+
+	if err := files.Write(path, []byte("mode = \"off\"\n")); err == nil {
+		t.Error("staged mode files allowed a write")
+	}
+	if backup, err := files.Backup(path); err == nil || backup != "" {
+		t.Errorf("Backup = %q, %v; want an empty path and a refusal", backup, err)
 	}
 }
 

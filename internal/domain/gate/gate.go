@@ -39,6 +39,9 @@ const (
 	// wrote the sentence twice and only the human edits either, so a drift is an
 	// agent rewriting what it was asked for (0314).
 	ReasonQuoteMismatch = "requirement_not_the_human_words"
+	// ReasonRiskDeclaration is a strict close whose commits do not declare a
+	// readable, known risk, or whose none declaration carries no written reason.
+	ReasonRiskDeclaration = "risk_declaration_invalid"
 	// ReasonUndoMissed is a suite that stayed green with the change undone: the
 	// tests do not notice the code being reverted, so a green proof certifies
 	// nothing about this behavior (0052).
@@ -70,6 +73,7 @@ const (
 // Commands that resolve a block. Every blocked result names one.
 const (
 	nextStart = "odachi start"
+	nextCheck = "odachi check"
 	// nextAsk carries the shape of the answer. A bare `odachi ask` prints usage:
 	// naming it would be a dead end for a human too, and the bench measures exactly
 	// that.
@@ -105,6 +109,7 @@ func Reasons() []string {
 		ReasonOpenQuestion,
 		ReasonUnplanned,
 		ReasonQuoteMismatch,
+		ReasonRiskDeclaration,
 		ReasonProofMissing,
 		ReasonProofStale,
 		ReasonProofFailed,
@@ -183,6 +188,9 @@ type State struct {
 	// may still be waiting for a `ask --change`, and the quote is the human's
 	// decision, not a shape of the plan.
 	QuoteMismatch []string
+	// RiskProblem names every invalid risk declaration a strict, non-passive close
+	// found. The commit has to answer before a verifier or review can be spent.
+	RiskProblem []string
 	// VerificationMissing names the risks whose commits asked for a verifier and
 	// whose record this tree does not have, or the file it cannot read. It is
 	// gathered at the close, like the quote: mid-feature the record would name a
@@ -328,6 +336,14 @@ func evaluate(s State) Result {
 			Message: "the plan does not quote the human: " + strings.Join(s.QuoteMismatch, "; ") +
 				"; copy the brief's words into the requirement, or record the change with odachi ask --change",
 			Next: `odachi ask --change "<the human's words>" --req R1`}
+	// A declaration that cannot name a known risk asks the next gates to judge a
+	// question nobody answered. It is cheap agent work and comes before spending
+	// an independent verifier or looking for the feature's verdict.
+	case len(s.RiskProblem) > 0:
+		return Result{Code: NeedsWork, Reason: ReasonRiskDeclaration,
+			Message: "the commits do not declare a valid risk: " + strings.Join(s.RiskProblem, "; ") +
+				"; amend the commit with a valid Risk: line (Risk: none - <reason> is the none form)",
+			Next: nextCheck}
 	// A close that owes a verifier measures its candidate first: a verifier spent
 	// on a tree nobody can finish is a verdict that cannot land, and the rest of
 	// the work is a feature of its own, not the tail of this one (0331). The

@@ -1,6 +1,6 @@
 # 0043 - The review never authorises delivery
 
-Status: accepted — Date: 2026-10 — Session: after v0.11.84
+Status: accepted in part; enforcement superseded by [0056](0056-review-mode-blocks-locally.md) — Date: 2026-10 — Session: after v0.11.84
 
 ## Context
 

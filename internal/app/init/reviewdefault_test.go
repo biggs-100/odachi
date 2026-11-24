@@ -14,8 +14,8 @@ type fakeReview struct{ data string }
 func (f fakeReview) Default() ([]byte, error) { return []byte(f.data), nil }
 
 // TestInitLeavesTheReviewOnForANewProject: a project with no review policy is
-// born with the switch on, so its first close asks for a verdict instead of
-// discovering the review late.
+// born with the switch on, so a non-passive close requires a verdict and a named
+// risk requires independent verification instead of discovering the gate late.
 func TestInitLeavesTheReviewOnForANewProject(t *testing.T) {
 	files := newFakeFiles(map[string]string{".git/HEAD": "ref: refs/heads/main\n"})
 
@@ -27,8 +27,14 @@ func TestInitLeavesTheReviewOnForANewProject(t *testing.T) {
 	if content, ok := files.get("odd/review.toml"); !ok || content != "mode = \"on\"\n" {
 		t.Errorf("odd/review.toml = %q, present %v; want the policy the port renders", content, ok)
 	}
-	if !strings.Contains(strings.Join(got.Lines, "\n"), "on; a close asks for a verdict") {
-		t.Errorf("lines %q do not say the review is on", got.Lines)
+	lines := strings.Join(got.Lines, "\n")
+	for _, want := range []string{
+		"on; a non-passive close requires a verdict and a named risk requires verification",
+		"odachi review mode off makes both optional",
+	} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("lines %q do not say %q", got.Lines, want)
+		}
 	}
 }
 

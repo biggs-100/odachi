@@ -77,6 +77,13 @@ func buildEvaluationCases() []evaluationCase {
 	quoteMismatch := ready()
 	quoteMismatch.QuoteMismatch = []string{`R1: the brief says "un paso" and the task doc says "dos pasos"`}
 
+	// An invalid declaration is cheaper to repair before spending a verifier or
+	// looking for a verdict, so it outranks both questions.
+	riskInvalid := ready()
+	riskInvalid.RiskProblem = []string{"no commit declares a Risk: line", `unknown risk "mystery"`}
+	riskInvalid.VerificationMissing = []string{"security"}
+	riskInvalid.ProofTreeHash = ""
+
 	// A risk asked for a verifier and no record answers this tree; the answer that
 	// a record exists and says the requirement does not hold is its own row, because
 	// "there is no record" would be a lie about a file that is there (0315).
@@ -201,6 +208,15 @@ func buildEvaluationCases() []evaluationCase {
 			reason:  gate.ReasonQuoteMismatch,
 			message: `the plan does not quote the human: R1: the brief says "un paso" and the task doc says "dos pasos"; copy the brief's words into the requirement, or record the change with odachi ask --change`,
 			next:    `odachi ask --change "<the human's words>" --req R1`,
+		},
+		{
+			name:    "an invalid risk declaration",
+			kind:    gate.TransitionExecute,
+			state:   riskInvalid,
+			code:    gate.NeedsWork,
+			reason:  gate.ReasonRiskDeclaration,
+			message: `the commits do not declare a valid risk: no commit declares a Risk: line; unknown risk "mystery"; amend the commit with a valid Risk: line (Risk: none - <reason> is the none form)`,
+			next:    "odachi check",
 		}, {
 			name:    "proof missing",
 			kind:    gate.TransitionExecute,
@@ -346,6 +362,32 @@ func TestEvaluationOrder(t *testing.T) {
 				t.Errorf("Message must be one line, got %q", got.Message)
 			}
 		})
+	}
+}
+
+func TestRiskDeclarationPrecedesVerificationAndNamesEveryProblem(t *testing.T) {
+	state := ready()
+	state.RiskProblem = []string{"no commit declares a Risk: line", "Risk: none has no written reason"}
+	state.VerificationMissing = []string{"security"}
+	state.ProofTreeHash = ""
+
+	got := gate.Evaluate(state)
+
+	if got.Reason != gate.ReasonRiskDeclaration {
+		t.Fatalf("Reason = %q, want %q", got.Reason, gate.ReasonRiskDeclaration)
+	}
+	for _, problem := range state.RiskProblem {
+		if !strings.Contains(got.Message, problem) {
+			t.Errorf("message %q omits %q", got.Message, problem)
+		}
+	}
+	for _, want := range []string{"amend the commit", "valid Risk: line", "Risk: none - <reason>"} {
+		if !strings.Contains(got.Message, want) {
+			t.Errorf("message %q does not say %q", got.Message, want)
+		}
+	}
+	if got.Next != "odachi check" || got.Transition.Command != "odachi check" || got.Transition.Kind != gate.TransitionExecute {
+		t.Errorf("continuation = %q/%q/%q, want odachi check as executable work", got.Next, got.Transition.Command, got.Transition.Kind)
 	}
 }
 

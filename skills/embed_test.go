@@ -469,6 +469,7 @@ func TestVerificationIsProportional(t *testing.T) {
 		"A high change",
 		"writer's own",
 		"odachi-verify",
+		"record is mandatory before the close",
 		"on the base",
 		"already failed",
 		"comes from the machine",
@@ -634,9 +635,55 @@ func TestCommitsTeachesRiskByBlastRadius(t *testing.T) {
 			t.Errorf("la fila %q no pide verifier: %s", item, line)
 		}
 	}
-	for _, want := range []string{"odachi review --lens", "odachi-verify", "waiver"} {
+	for _, want := range []string{
+		"odachi review --lens",
+		"odachi review --show",
+		"odachi review --exec \"<command>\"",
+		"odachi verify --exec \"<command>\"",
+		"Risk: none - <written reason>",
+		"review mode on",
+		"--no-review",
+		"odachi-verify",
+		"waiver",
+	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("commits no dice %q: la ceremonia se perdio", want)
+		}
+	}
+}
+
+// TestTheGateTeachesTheMandatoryClose: showing a verdict, running a reviewer and
+// recording independent verification are different acts. The skill names each
+// real command, the mode that blocks, the one-run escape and the delivery fence.
+func TestTheGateTeachesTheMandatoryClose(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+	byName := map[string]string{}
+	for _, s := range all {
+		var folder strings.Builder
+		for _, file := range s.Files {
+			folder.Write(file.Content)
+		}
+		byName[s.Name] = folder.String()
+	}
+
+	for _, want := range []string{
+		"non-passive local close blocks",
+		"A named `Risk:` also blocks without independent verification",
+		"`Risk: none - <written reason>`",
+		"missing, unknown or bare `none` is invalid",
+		"`odachi review --show`",
+		"`odachi review --exec \"<command>\"`",
+		"`odachi verify --exec \"<command>\"`",
+		"Mode off leaves review and verification optional",
+		"`odachi check --no-review` bypasses one run",
+		"CI has no clone store and makes no model calls",
+		"Review approval never authorizes push, pull request, merge or release",
+	} {
+		if !strings.Contains(byName["drive"], want) {
+			t.Errorf("drive no dice %q: el cierre obligatorio se perdio", want)
 		}
 	}
 }
