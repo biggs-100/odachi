@@ -40,17 +40,26 @@ func TestTheTextAnAgentReadsKeepsItsBudget(t *testing.T) {
 	}
 }
 
-// measuredSurfaces renders every text a model is handed at the session's start and
-// returns its size in UTF-8 bytes. The values are measured, never typed: a pin
-// copied by hand from a document is the second list this project keeps removing.
-func measuredSurfaces() ([]budget.Pin, error) {
-	var pins []budget.Pin
+// namedSurface is one text a model is handed, with the name a person reads it by.
+// One list feeds the size pin and the content pin, so the two cannot drift into
+// describing different sets of artifacts.
+type namedSurface struct {
+	Artifact string
+	Bytes    []byte
+}
+
+// surfaces renders every text a model is handed at the session's start and yields
+// its exact bytes. Both pins measure this one list: the byte test counts it and the
+// hash test digests it. The values are measured, never typed: a pin copied by hand
+// from a document is the second list this project keeps removing.
+func surfaces() ([]namedSurface, error) {
+	var out []namedSurface
 	for _, voice := range []string{persona.Novato, persona.Senior} {
 		block, err := rules.BlockFor(voice, persona.SkillsHome)
 		if err != nil {
 			return nil, err
 		}
-		pins = append(pins, budget.Pin{Artifact: "block:" + voice, Bytes: len(block)})
+		out = append(out, namedSurface{Artifact: "block:" + voice, Bytes: []byte(block)})
 	}
 
 	for _, name := range assets.Names() {
@@ -58,13 +67,27 @@ func measuredSurfaces() ([]budget.Pin, error) {
 		if err != nil {
 			return nil, err
 		}
-		pins = append(pins, budget.Pin{Artifact: "lens:" + name, Bytes: len(lens)})
+		out = append(out, namedSurface{Artifact: "lens:" + name, Bytes: []byte(lens)})
 	}
 
 	index, err := os.ReadFile(filepath.Join("..", "..", "SKILLS.md"))
 	if err != nil {
 		return nil, err
 	}
-	pins = append(pins, budget.Pin{Artifact: "index:SKILLS.md", Bytes: len(index)})
+	out = append(out, namedSurface{Artifact: "index:SKILLS.md", Bytes: index})
+	return out, nil
+}
+
+// measuredSurfaces turns the one list of bytes into the size pins the byte test
+// compares. Its order and values are unchanged from the original measurement.
+func measuredSurfaces() ([]budget.Pin, error) {
+	named, err := surfaces()
+	if err != nil {
+		return nil, err
+	}
+	pins := make([]budget.Pin, 0, len(named))
+	for _, surface := range named {
+		pins = append(pins, budget.Pin{Artifact: surface.Artifact, Bytes: len(surface.Bytes)})
+	}
 	return pins, nil
 }

@@ -1,0 +1,13 @@
+# The content of every text odachi hands a model, frozen the day the pin was written (0360).
+#
+# This file moves on purpose. A hash that differs fails the suite until somebody reviews
+# the diff and raises the pin in a commit a reviewer sees. The rows are measured by the
+# test, never typed from a document: that would be the second list this project removes.
+block:novato	047946a2d4e2de6d4af78b7f4ac8601cc1444efa5d33095c0fb6a98c8599a0ad
+block:senior	c7e328df347594871028d1054bac0bd2d2ba6cf5ea79a1101040b49da0d20f2a
+index:SKILLS.md	c7b3356cff947fffd900534cc0558732dcaf490db2e0594f2fe5e39c646bb55f
+lens:readability	e0ceebacc2791f504425bb276cb47402e5d39c247ef489f442f483418ef59541
+lens:reliability	094576f520794a60ab133fa5a8f64684a9c7a5da3fb0fb4c9c752da9b178471e
+lens:resilience	6ffffa2a4699be9681a50b8c945510933602d7d7e562f7d27bb85672fc278e13
+lens:risk	712adb5545dbac9a65ad228cddaf5791d396ec42304d621723d2380c630801ca
+skills:payload	1b6af6ab1e56122c7dd5febc90d97c87b098d00ca737f26dac079e235ea9cfbe
