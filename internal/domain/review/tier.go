@@ -406,11 +406,21 @@ func isShippedText(path string) bool {
 	return false
 }
 
-// isDocumentation reports whether the path is a document: Markdown, plain text, a
-// README, or anything inside a docs directory. A `.go` file inside `docs/` is
-// code, so the extension decides before the directory does — and an agent file is
-// code even when it is Markdown, because it grants tools — and so is shipped text,
-// because the suite reads it.
+// passiveAssetExtensions is the closed set a docs or root design directory may
+// exempt. Code, tests, configuration and unknown formats stay in the candidate:
+// storing them beside a document does not make them passive.
+var passiveAssetExtensions = map[string]bool{
+	".md":   true,
+	".txt":  true,
+	".png":  true,
+	".json": true,
+	".html": true,
+}
+
+// isDocumentation reports whether the path is a document: Markdown, plain text,
+// a README, or an explicitly passive asset inside docs or root design. An agent
+// file is code even when it is Markdown, because it grants tools, and shipped text
+// is code because the suite reads it.
 func isDocumentation(path string) bool {
 	lower := normalizePath(path)
 	if agentDirs[dirOf(lower)] {
@@ -422,24 +432,34 @@ func isDocumentation(path string) bool {
 
 	segments := strings.Split(lower, "/")
 	base := segments[len(segments)-1]
+	ext := ""
+	if dot := strings.LastIndexByte(base, '.'); dot >= 0 {
+		ext = base[dot:]
+	}
+
+	// design/ is exempt only at the root: a package called design inside
+	// internal/ is code, and exempting it from every lens would be a hole in the
+	// gate rather than a mockup. A docs directory keeps its existing meaning at
+	// any depth, but its files must still be passive assets.
+	passiveDirectory := len(segments) > 1 && segments[0] == "design"
+	if !passiveDirectory {
+		for _, segment := range segments[:len(segments)-1] {
+			if segment == "docs" {
+				passiveDirectory = true
+				break
+			}
+		}
+	}
+	readme := strings.HasPrefix(base, "readme") && (ext == "" || passiveAssetExtensions[ext])
+	if passiveDirectory {
+		return passiveAssetExtensions[ext] || readme
+	}
 
 	switch {
 	case strings.HasSuffix(base, ".md"), strings.HasSuffix(base, ".txt"):
 		return true
-	case strings.HasPrefix(base, "readme"):
+	case readme:
 		return true
-	}
-
-	// design/ is a document too, but only at the root: a package called design
-	// inside internal/ is code, and exempting it from every lens would be a hole in
-	// the gate rather than a mockup.
-	if len(segments) > 1 && segments[0] == "design" {
-		return true
-	}
-	for _, segment := range segments[:len(segments)-1] {
-		if segment == "docs" {
-			return true
-		}
 	}
 	return false
 }
