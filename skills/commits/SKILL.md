@@ -5,37 +5,28 @@ description: Trigger: when deciding what goes into a commit, how to split the wo
 
 ## When
 
-When the change is ready and has to be committed, when a diff cannot be reviewed
-in one sitting, or when the history no longer reads in order.
+When a change is ready to commit, a diff cannot be reviewed in one sitting, or history no longer reads in order.
 
 ## Rules
 
-- A commit is one task-doc step and one thing that can be reverted alone. If the
-  message needs "and", they are two commits.
-- Every commit says what a revert would take with it: the files or the behavior
-  that cannot be removed alone. A commit nobody can revert alone is a slice of the
-  next one.
-- The message says what changed **for the person using the project**, in one
-  line, in the imperative. The how and why go in the body, not in the title.
-- The tests and documentation of the change travel in the same commit. There is
-  no later commit called "tests" or "docs".
-- A refactor and a behavior change do not share a commit: if something breaks,
-  you do not know which one it was.
-- Before committing, the gate: `odachi check`. The proof is owed by the feature's
-  close, not by every step: run `odachi check --run "<command>"` on the tree that
-  closes it, and let CI judge the pull request that carries it.
-- The step's close names the size: `odachi plan --done` reports the authored lines from the base and the limit; past 400, the rest is a feature of its own.
-- Close the body with `Risk: none` or
-  `Risk: data|security|contract|concurrency|delivery|no-test`. A named risk asks
-  for `odachi review` before the commit.
-- A PR is a set of commits that read **in order**. If it does not read in twenty
-  minutes, split it; if the commits step on each other, the order is wrong.
+- A commit is one task-doc step and one revertible thing; a message needing "and" names two commits.
+- Every commit says what a revert would take with it: files or behavior that cannot be removed alone; otherwise it cannot revert alone.
+- The title says what changed **for the person using the project**, imperatively; how and why belong in the body.
+- Tests and documentation travel in the same commit, never a later "tests" or "docs" commit.
+- A refactor and a behavior change do not share a commit: a break must identify which one caused it.
+- Before committing: `odachi review --show`, a real `odachi review --exec "<command>"`, any required
+  `odachi verify --exec "<command>"`, then `odachi check`; `odachi check --run "<command>"` writes the closing proof.
+- With review mode on, a non-passive close blocks without a valid verdict, and a named
+  risk blocks without independent verification. Mode off leaves both optional;
+  `odachi check --no-review` bypasses one run (CI has no clone store and makes no model calls).
+- Close the body with `Risk: none - <written reason>` or
+  `Risk: data|security|contract|concurrency|delivery|no-test`. On non-passive code, missing, unknown or bare `none` is invalid.
+- A PR's commits read **in order** and in twenty minutes; split it when they do not or step on each other.
 
 ## Risk by blast radius
 
-The `Risk:` line decides the ceremony. None of the six skips the fence or the
-proof, and none allows a waiver: that is for a change touching none, recorded by
-the human with `start --waive-review`.
+The `Risk:` line decides the ceremony. None of the six skips the fence or proof or buys a waiver;
+a waiver is the human's `start --waive-review` for a change touching none.
 
 | Risk | What it covers | Lens | Verifier |
 | --- | --- | --- | --- |
@@ -46,15 +37,15 @@ the human with `start --waive-review`.
 | delivery | the path a person installs or upgrades through | resilience | yes |
 | no-test | the change cannot produce a test | reliability | yes |
 
-The lens is asked with `odachi review --lens <lens>` and is added to the floor's,
-never instead. The verifier is `odachi-verify`, read-only: the whole task doc, a
-verdict per requirement with probes, never against your summary. Its record is what
-the close names, and `odachi verify --exec "<command>"` is what writes it; the gate
-refuses it only with `--require-review`, because a clean checkout cannot carry it.
+The lens uses `odachi review --lens <lens>` and adds to the floor, never replaces it.
+The verifier is `odachi-verify`, read-only: the whole task doc, a verdict per requirement with probes,
+never against your summary. `odachi verify --exec "<command>"` writes its record;
+with review mode on, a named risk cannot close without it.
+Review approval never authorizes push, pull request, merge or release.
 
 ## Output
 
-The commit and its message: what changed for the person using the project, why, and the `Risk:` line the change asks for. When the change does not fit one commit, the split that lets each one be reverted alone.
+The commit and message: user-facing change, why, `Risk:` line, and any split that lets each commit stand alone.
 
 ## Never
 

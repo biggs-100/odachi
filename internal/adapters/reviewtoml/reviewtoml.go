@@ -172,7 +172,7 @@ func Render(config review.ProjectConfig) ([]byte, error) {
 	var out strings.Builder
 	out.WriteString("# odachi: the schema that wrote this file; an older binary says upgrade instead of calling it broken\n")
 	out.WriteString("schema = " + strconv.Itoa(schema.Current) + "\n")
-	out.WriteString("# odachi: the review is the human's decision; on asks for it at the close and check says so, off leaves it silent, and --require-review refuses\n")
+	out.WriteString("# odachi: the review is the human's decision; on requires review and named-risk verification at the local close, off leaves both optional, and --no-review bypasses one run\n")
 	out.WriteString("mode = \"" + normalized + "\"\n")
 	// The verifier's model is written only when the project chose one: a file that
 	// never declared it keeps the bytes it always had.

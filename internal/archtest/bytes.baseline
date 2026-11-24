@@ -4,8 +4,8 @@
 # its pin in a commit a reviewer sees, and one that shrank fails until the pin
 # follows it down: a pin that stays above the text stops describing it, and the next
 # raise hides inside that gap. The numbers are measured by the test, never typed.
-block:novato	5583
-block:senior	5077
+block:novato	5984
+block:senior	5478
 index:SKILLS.md	5066
 lens:readability	2138
 lens:reliability	2375

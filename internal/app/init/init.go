@@ -513,7 +513,7 @@ func (r *runner) writeReview() *Result {
 		return &problem
 	}
 	r.changed = append(r.changed, name)
-	r.lines = append(r.lines, name+": on; a close asks for a verdict, and odachi review mode off turns it off")
+	r.lines = append(r.lines, name+": on; a non-passive close requires a verdict and a named risk requires verification; odachi review mode off makes both optional")
 	return nil
 }
 

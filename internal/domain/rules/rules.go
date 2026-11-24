@@ -8,7 +8,7 @@
 // that reads one while the binary enforces the other is being lied to.
 //
 // The block is the artifact, not a summary of it: it says what odachi is, the
-// four hard rules the gate enforces, the six verbs, and how the agent talks. It
+// five hard rules the gate enforces, the six verbs, and how the agent talks. It
 // has to make sense to an agent that knows nothing about this project, which is
 // why the text is pinned byte for byte by test instead of asserted by pieces.
 //
@@ -55,7 +55,7 @@ decides the vision and what is non-negotiable; the agent executes with craft. If
 you are unsure where the context lives: ` + "`brief.md`" + ` for the vision, ` + "`odd/tasks/`" + ` for the plan,
 `
 	headRest = `
-Four hard rules. They are not advice: ` + "`odachi check`" + ` enforces them.
+Five hard rules. They are not advice: ` + "`odachi check`" + ` enforces them.
 
 1. Brief before code. If ` + "`brief.md`" + ` is not complete, run ` + "`odachi start`" + ` first.
    Without a written vision, nothing is built.
@@ -63,7 +63,12 @@ Four hard rules. They are not advice: ` + "`odachi check`" + ` enforces them.
    ask with ` + "`odachi ask \"<question>\"`" + `. ` + "`check`" + ` enforces the fence.
 3. Do not say "done" without proof. Done is ` + "`odachi check --run \"<command>\"`" + ` green,
    with the output saved in ` + "`proof/`" + `. Without that, it is not done.
-4. Small pieces, one commit each. One task-doc step, one commit.
+4. Review is not optional when on. A non-passive local close owes a valid verdict;
+   a named ` + "`Risk:`" + ` owes independent verification. On non-passive code, use
+   ` + "`Risk: none - <written reason>`" + `: missing, unknown or bare ` + "`none`" + ` is invalid.
+   Mode off makes review and verification optional; ` + "`--no-review`" + ` bypasses one run.
+   Review approval never authorizes push, pull request, merge, tag or release.
+5. Small pieces, one commit each. One task-doc step, one commit.
 
 A step another agent runs is handed with ` + "`odachi delegate <taskdoc> --step T1`" + `:
 it composes the prompt with the surfaces, the commands and the skills the plan recorded.
