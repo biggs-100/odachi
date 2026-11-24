@@ -49,9 +49,18 @@ func TestTheContributorSurfaceExists(t *testing.T) {
 	}
 
 	contributing := reading("CONTRIBUTING.md")
-	for _, want := range []string{"odachi check --fence-from", "--base origin/main", "--run", "--timeout 900"} {
+	for _, want := range []string{"odachi check --fence-from", "--base origin/main", "--no-review", "--run", "--timeout 900"} {
 		if !strings.Contains(contributing, want) {
 			t.Errorf("CONTRIBUTING does not say how to reproduce the gate locally (%q)", want)
+		}
+	}
+	contributingProse := strings.Join(strings.Fields(contributing), " ")
+	for _, want := range []string{
+		"A real local close with review mode on must run review and any required verification",
+		"`Risk: none` still needs a written reason on non-passive work",
+	} {
+		if !strings.Contains(contributingProse, want) {
+			t.Errorf("CONTRIBUTING does not preserve the local close contract (%q)", want)
 		}
 	}
 
@@ -74,6 +83,45 @@ func TestTheContributorSurfaceExists(t *testing.T) {
 	for _, name := range []string{"CONTRIBUTING.md", "AI_POLICY.md", "SECURITY.md"} {
 		if !strings.Contains(readme, "]("+name+")") {
 			t.Errorf("README does not link %s", name)
+		}
+	}
+}
+
+// TestCILocalOnlyReviewContract keeps CI deterministic: it may bypass the
+// clone-local review evidence gate, but it must never execute a reviewer or
+// verifier. Local closes still owe that evidence when review mode is on.
+func TestCILocalOnlyReviewContract(t *testing.T) {
+	root := moduleRoot(t)
+	data, err := os.ReadFile(filepath.Join(root, ".github", "workflows", "gate.yml"))
+	if err != nil {
+		t.Fatalf("read CI gate workflow: %v", err)
+	}
+	gate := string(data)
+	var gateCommand, executableLines string
+	for _, line := range strings.Split(gate, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if strings.Contains(trimmed, `"$ODACHI_GATE" check`) {
+			gateCommand = trimmed
+		}
+		executableLines += trimmed + "\n"
+	}
+
+	if !strings.Contains(gateCommand, "--no-review") {
+		t.Error("CI gate command does not explicitly bypass the clone-local review evidence gate")
+	}
+	for _, forbidden := range []string{
+		"odachi review",
+		"odachi verify",
+		`"$ODACHI_GATE" review`,
+		`"$ODACHI_GATE" verify`,
+		"opencode run",
+		"odachi-verify",
+	} {
+		if strings.Contains(executableLines, forbidden) {
+			t.Errorf("CI gate executes a reviewer or verifier (%q)", forbidden)
 		}
 	}
 }

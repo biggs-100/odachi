@@ -17,7 +17,7 @@ R1 · "obligatorio, review y verificasion"
 ## Steps
 - [x] T1 · parse a written reason for Risk none and classify code under docs or design as code   R1 · route:delegated/odachi-worker · skills:tests · tree:d6e013a4c10634420055f204452a282be35067a6
 - [x] T2 · make review mode block missing review and required verification, including the commit hook   R1 · route:delegated/odachi-worker · skills:tests · tree:eed6c39be3fd600ef07c374412a5fe85796edb71
-- [ ] T3 · read lenses and coverage from the feature diff and refuse invalid risk declarations   R1 · route:delegated/odachi-worker · skills:tests
+- [x] T3 · read lenses and coverage from the feature diff and refuse invalid risk declarations   R1 · route:delegated/odachi-worker · skills:tests · tree:8c76c3e76c4c5230ed6e08c589506faee0cabbaa
 - [ ] T4 · make CI local-only review contract explicit without running a model   R1 · route:delegated/odachi-worker · skills:tests
 - [ ] T5 · teach the mandatory contract in generated rules, skills, help, docs and ADRs   R1 · route:delegated/odachi-worker · skills:writing
 
