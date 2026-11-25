@@ -789,8 +789,9 @@ func (r *runner) refute() Result {
 		return *problem
 	}
 
-	existing, _ := r.storedRefutations(tree)
-	if _, blocking := domain.BlockingAfter(verdict.Findings, existing); !blocking {
+	evidence := domain.CitationEvidence{Tree: tree, Diff: cand.diff}
+	existing, _ := r.storedRefutations(tree, verdict.Findings, evidence)
+	if _, blocking := domain.BlockingAfter(verdict.Findings, existing, evidence); !blocking {
 		return nothingToRefute(tree)
 	}
 	witness, refusal := r.nextRefutationRound(tree)
@@ -1953,9 +1954,10 @@ func (r *runner) show() Result {
 		Files:   []string{rel},
 	}
 
-	if answers, refFiles := r.storedRefutations(tree); len(refFiles) > 0 {
+	evidence := domain.CitationEvidence{Tree: tree, Diff: work.diff}
+	if answers, refFiles := r.storedRefutations(tree, parsed.Findings, evidence); len(refFiles) > 0 {
 		result.Files = append(result.Files, refFiles...)
-		result.Lines = append(result.Lines, refutationLines(answers, refFiles, parsed.Findings)...)
+		result.Lines = append(result.Lines, refutationLines(answers, refFiles, parsed.Findings, evidence)...)
 	}
 	return result
 }
@@ -2338,14 +2340,15 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 		answer.Refuter = refuter
 	}
 
-	sealed, err := domain.SealRefutation(answer, verdict.Findings, tree, r.opts.Now)
+	evidence := domain.CitationEvidence{Tree: tree, Diff: work.diff}
+	sealed, err := domain.SealRefutation(answer, verdict.Findings, evidence, r.opts.Now)
 	if err != nil {
 		return blocked(oneLine(err.Error()) + "; I wrote nothing")
 	}
 
 	// The name is the only identity a refuter has, and the quorum counts accounts:
 	// a second answer from one that already answered is one opinion written twice.
-	if filed, _ := r.storedRefutations(tree); sameRefuter(filed, sealed.Refuter) {
+	if filed, _ := r.storedRefutations(tree, verdict.Findings, evidence); sameRefuter(filed, sealed.Refuter) {
 		return blocked(fmt.Sprintf("the refuter %q already answered this tree: a second answer from the same account is not a second witness",
 			sealed.Refuter))
 	}
@@ -2380,7 +2383,7 @@ func (r *runner) storeRefutation(answer domain.Refutation, refuter string) Resul
 	stands, refuted := counts(sealed)
 	message := "refutation saved in " + r.storeLabel(rel) + " (" + witnessWhen(sealed) + ") · " +
 		domain.Stands + ": " + fmt.Sprint(stands) + " · " + domain.Refuted + ": " + fmt.Sprint(refuted)
-	if still := r.stillBlockingLine(tree, verdict.Findings); still != "" {
+	if still := r.stillBlockingLine(tree, verdict.Findings, evidence); still != "" {
 		message += "\n" + still
 	}
 	return Result{
@@ -2409,9 +2412,9 @@ func sameRefuter(answers domain.Answers, name string) bool {
 // stillBlockingLine says what the witnesses have not settled yet, so the human
 // knows whether the block is decided or how many answers it still needs. An empty
 // line means nothing blocks.
-func (r *runner) stillBlockingLine(tree string, findings []domain.Finding) string {
-	answers, _ := r.storedRefutations(tree)
-	finding, blocking := domain.BlockingAfter(findings, answers)
+func (r *runner) stillBlockingLine(tree string, findings []domain.Finding, evidence domain.CitationEvidence) string {
+	answers, _ := r.storedRefutations(tree, findings, evidence)
+	finding, blocking := domain.BlockingAfter(findings, answers, evidence)
 	if !blocking {
 		return ""
 	}
@@ -2420,7 +2423,7 @@ func (r *runner) stillBlockingLine(tree string, findings []domain.Finding) strin
 		id = domain.FindingIDs(findings)[index]
 	}
 	return fmt.Sprintf("%s still blocks: %d of %d cited refutations (%s finding)",
-		id, answers.RefutedBy(id), domain.RequiredWitnesses(finding), finding.EvidenceClass())
+		id, answers.RefutedBy(id, finding, evidence), domain.RequiredWitnesses(finding), finding.EvidenceClass())
 }
 
 // stampLenses records the lenses this candidate's class asks for, plus the ones
@@ -2967,10 +2970,11 @@ func (r *runner) potentRows(verdictTree string, paths []string) (findings []doma
 			continue
 		}
 
-		killed, note := r.refutedFindings(tree, origin.Findings)
+		killed, note := r.refutedFindings(tree, origin.Findings, names)
 		if note != "" {
+			// Ambiguous evidence lends no votes, but it cannot erase the
+			// predecessor's findings: doubt keeps the blocker standing.
 			notes = append(notes, note)
-			continue
 		}
 
 		retired, note := r.dismissedRows(tree)
@@ -2979,7 +2983,9 @@ func (r *runner) potentRows(verdictTree string, paths []string) (findings []doma
 		}
 
 		for i, finding := range origin.Findings {
-			if reason, killed := killed[domain.FindingIDs(origin.Findings)[i]]; killed {
+			id := domain.FindingIDs(origin.Findings)[i]
+			reason, wasKilled := killed[id]
+			if wasKilled {
 				finding = domain.Dismiss(finding, reason)
 			}
 			// The human's judgment outranks a re-report and the reviewer's own
@@ -2991,10 +2997,10 @@ func (r *runner) potentRows(verdictTree string, paths []string) (findings []doma
 			if !domain.IsLens(finding.Lens) || strings.TrimSpace(finding.Blob) == "" {
 				continue
 			}
-			// A finding travels when this candidate judged its path, or when it
-			// still blocks: a standing blocker is the reason not to ship, not an
-			// answer about bytes somebody already read.
-			if !acts(finding.Path) && !finding.Blocks() {
+			// A finding travels when this candidate judged its path, when it
+			// still blocks, or when a refutation dismissed it: the evidence has
+			// to outlive the verdict that first carried the row.
+			if !acts(finding.Path) && !finding.Blocks() && !wasKilled {
 				continue
 			}
 			if domain.IsDismissed(finding) {
@@ -3089,8 +3095,8 @@ func (r *runner) storedNeighbor(tree string) (domain.Verdict, string) {
 // they cited. A finding with no answer has nothing killed, which is the normal
 // case, not an error. A finding whose class needs two witnesses and got one is not
 // killed: the default is always that the finding stands.
-func (r *runner) refutedFindings(tree string, findings []domain.Finding) (map[string]string, string) {
-	answers, note := r.answersOf(tree)
+func (r *runner) refutedFindings(tree string, findings []domain.Finding, names []string) (map[string]string, string) {
+	answers, evidence, note := r.answersOf(tree, findings, names)
 	if note != "" || len(answers) == 0 {
 		return nil, note
 	}
@@ -3099,12 +3105,12 @@ func (r *runner) refutedFindings(tree string, findings []domain.Finding) (map[st
 	ids := domain.FindingIDs(findings)
 	for i, finding := range findings {
 		id := ids[i]
-		if !answers.Lifts(id, finding) {
+		if !answers.Lifts(id, finding, evidence) {
 			continue
 		}
 		for _, answer := range answers {
 			for _, judgment := range answer.Refutations {
-				if judgment.ID == id && judgment.Verdict == domain.Refuted && strings.TrimSpace(judgment.Why) != "" {
+				if judgment.ID == id && answer.Refutes(id, finding, evidence) {
 					killed[id] = strings.TrimSpace(judgment.Why)
 				}
 			}
@@ -3113,35 +3119,89 @@ func (r *runner) refutedFindings(tree string, findings []domain.Finding) (map[st
 	return killed, ""
 }
 
+// predecessorEvidence reads the diff from every prompt filed for one tree. A
+// successor diff cannot validate a predecessor's quotation, and missing evidence
+// lends no quoted votes.
+func (r *runner) predecessorEvidence(tree string, names []string) (domain.CitationEvidence, string) {
+	const header = "## The diff (the whole candidate, against the base)\n"
+	const treePrefix = "# odachi review · tree "
+	evidence := domain.CitationEvidence{Tree: tree}
+	var diffs []string
+	for _, name := range names {
+		if !domain.IsPrompt(name) || domain.TreeOf(name) != tree {
+			continue
+		}
+		data, err := r.files.Read(r.storePath(domain.Dir + "/" + name))
+		if err != nil {
+			return evidence, fmt.Sprintf("the predecessor prompt %s could not be read: %s", name, oneLine(err.Error()))
+		}
+		line, _, _ := strings.Cut(string(data), "\n")
+		rest, ok := strings.CutPrefix(line, treePrefix)
+		if !ok {
+			return evidence, fmt.Sprintf("the predecessor prompt %s declares no tree", name)
+		}
+		declared, _, _ := strings.Cut(rest, " ·")
+		if declared != tree {
+			return evidence, fmt.Sprintf("the predecessor prompt %s declares tree %s, not %s", name, declared, tree)
+		}
+		_, body, ok := strings.Cut(string(data), header)
+		if !ok {
+			return evidence, fmt.Sprintf("the predecessor prompt %s cannot be read", name)
+		}
+		diff, _, ok := strings.Cut(body, "\n## The six rules")
+		if !ok || strings.TrimSpace(diff) == "" {
+			return evidence, fmt.Sprintf("the predecessor prompt %s has no readable diff evidence", name)
+		}
+		diffs = append(diffs, diff)
+	}
+	if len(diffs) == 0 {
+		return evidence, fmt.Sprintf("no predecessor prompt for tree %s can be read", tree)
+	}
+	evidence.Diff = strings.Join(diffs, "\n")
+	return evidence, ""
+}
+
 // answersOf reads every witness of one tree and names the file it could not read,
 // the way storedRefutations does not: a correction that inherits rows must not
 // treat a broken artifact as an empty one, and a read failure names the file the
 // human has to look at.
-func (r *runner) answersOf(tree string) (domain.Answers, string) {
+func (r *runner) answersOf(tree string, findings []domain.Finding, names []string) (domain.Answers, domain.CitationEvidence, string) {
+	evidence, evidenceNote := r.predecessorEvidence(tree, names)
 	var answers domain.Answers
 	for _, round := range domain.Rounds() {
 		rel, err := domain.RefutationPath(tree, round)
 		if err != nil {
-			return nil, fmt.Sprintf("the refutation path of %s cannot be built: %s", tree, oneLine(err.Error()))
+			return nil, evidence, fmt.Sprintf("the refutation path of %s cannot be built: %s", tree, oneLine(err.Error()))
 		}
 		exists, err := r.files.Exists(r.storePath(rel))
 		if err != nil {
-			return nil, fmt.Sprintf("could not ask whether %s exists: %s", rel, oneLine(err.Error()))
+			return nil, evidence, fmt.Sprintf("could not ask whether %s exists: %s; no refutation votes are counted for tree %s", rel, oneLine(err.Error()), tree)
 		}
 		if !exists {
 			continue
 		}
 		data, err := r.files.Read(r.storePath(rel))
 		if err != nil {
-			return nil, fmt.Sprintf("the refutation %s cannot be read: %s; its verdict's rows are not carried", rel, oneLine(err.Error()))
+			return nil, evidence, fmt.Sprintf("the refutation %s cannot be read: %s; no refutation votes are counted for tree %s", rel, oneLine(err.Error()), tree)
 		}
 		parsed, err := domain.ParseRefutation(data)
 		if err != nil {
-			return nil, fmt.Sprintf("the refutation %s cannot be read; its verdict's rows are not carried", rel)
+			return nil, evidence, fmt.Sprintf("the refutation %s cannot be read: %s; no refutation votes are counted for tree %s", rel, oneLine(err.Error()), tree)
+		}
+		if strings.TrimSpace(parsed.Tree) != tree {
+			return nil, evidence, fmt.Sprintf("the refutation %s names tree %s, not %s; no refutation votes are counted", rel, parsed.Tree, tree)
+		}
+		if evidenceNote != "" {
+			return nil, evidence, fmt.Sprintf("the refutation %s cannot be read: %s; no refutation votes are counted for tree %s", rel, evidenceNote, tree)
+		}
+		for _, result := range parsed.CitationResults(findings, evidence) {
+			if result.Status != domain.CitationValid {
+				return nil, evidence, fmt.Sprintf("the refutation %s cannot be read: %s; no refutation votes are counted for tree %s", rel, oneLine(result.Reason), tree)
+			}
 		}
 		answers = append(answers, parsed)
 	}
-	return answers, ""
+	return answers, evidence, ""
 }
 
 // findingKey is the identity a finding is filed under: the same file, bytes,
@@ -3388,7 +3448,7 @@ func (r *runner) namedVerdict(path, tree string) (domain.Verdict, *Result) {
 // and names the files it found. An absent answer is not an error: it is the normal
 // state of a reviewed tree. A file that cannot be parsed keeps its name and lends
 // no answer, so a broken artifact never turns into a lifted block here.
-func (r *runner) storedRefutations(tree string) (domain.Answers, []string) {
+func (r *runner) storedRefutations(tree string, findings []domain.Finding, evidence domain.CitationEvidence) (domain.Answers, []string) {
 	var answers domain.Answers
 	var files []string
 	for _, round := range domain.Rounds() {
@@ -3403,6 +3463,19 @@ func (r *runner) storedRefutations(tree string) (domain.Answers, []string) {
 		files = append(files, rel)
 		parsed, err := domain.ParseRefutation(data)
 		if err != nil {
+			continue
+		}
+		if strings.TrimSpace(parsed.Tree) != tree {
+			continue
+		}
+		valid := true
+		for _, result := range parsed.CitationResults(findings, evidence) {
+			if result.Status != domain.CitationValid {
+				valid = false
+				break
+			}
+		}
+		if !valid {
 			continue
 		}
 		answers = append(answers, parsed)
@@ -4141,7 +4214,7 @@ func drawCount(n int) string {
 // line per answer that says when this clone sealed it -with the refuter's own hour
 // beside the stamp when it disagrees (0291)-. The count alone was a record of what
 // the refutation said and never of who wrote it or when.
-func refutationLines(answers domain.Answers, files []string, findings []domain.Finding) []string {
+func refutationLines(answers domain.Answers, files []string, findings []domain.Finding, evidence domain.CitationEvidence) []string {
 	stands := 0
 	refuted := 0
 	for _, answer := range answers {
@@ -4155,7 +4228,7 @@ func refutationLines(answers domain.Answers, files []string, findings []domain.F
 	}
 
 	line := fmt.Sprintf("refutation: %s · stands: %d · refuted: %d", strings.Join(files, ", "), stands, refuted)
-	if _, blocking := domain.BlockingAfter(findings, answers); !blocking {
+	if _, blocking := domain.BlockingAfter(findings, answers, evidence); !blocking {
 		line += " · no longer blocks anything"
 	} else {
 		line += " · still blocking"

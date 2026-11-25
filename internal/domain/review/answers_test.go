@@ -24,7 +24,7 @@ func refutedBy(why string) review.Refutation {
 // refutedByAccount is the same answer signed by a named refuter: the quorum counts
 // accounts, so a test that wants two witnesses needs two names.
 func refutedByAccount(refuter, why string) review.Refutation {
-	return review.Refutation{Refuter: refuter, Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: why}}}
+	return review.Refutation{Tree: tree, Refuter: refuter, Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 " + why}}}
 }
 
 // TestIndexOfNamesTheRowAndNotThePlace: two findings on the same line are two
@@ -58,20 +58,20 @@ func TestOneAccountIsOneWitness(t *testing.T) {
 	findings := []review.Finding{argued}
 
 	twice := review.Answers{refutedByAccount("claude", "first"), refutedByAccount(" CLAUDE ", "second")}
-	if got := review.DeriveAfter(findings, twice); got != review.ChangesRequested {
+	if got := review.DeriveAfter(findings, twice, citationEvidence()); got != review.ChangesRequested {
 		t.Errorf("one account lifted an argued block by answering twice: DeriveAfter = %q", got)
 	}
 
 	unnamed := review.Answers{
-		{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "first"}}},
-		{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "second"}}},
+		{Tree: tree, Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 first"}}},
+		{Tree: tree, Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 second"}}},
 	}
-	if got := review.DeriveAfter(findings, unnamed); got != review.ChangesRequested {
+	if got := review.DeriveAfter(findings, unnamed, citationEvidence()); got != review.ChangesRequested {
 		t.Errorf("two unnamed answers were counted as two accounts: DeriveAfter = %q", got)
 	}
 
 	two := review.Answers{refutedByAccount("claude", "x"), refutedByAccount("mimo", "y")}
-	if got := two.RefutedBy("F1"); got != 2 {
+	if got := two.RefutedBy("F1", argued, citationEvidence()); got != 2 {
 		t.Errorf("RefutedBy = %d, want two different accounts", got)
 	}
 }
@@ -85,24 +85,24 @@ func TestAnArguedBlockNeedsTwoCitedRefutations(t *testing.T) {
 	findings := []review.Finding{argued}
 
 	one := review.Answers{refutedBy("line 12 already verifies the signature")}
-	if got := review.DeriveAfter(findings, one); got != review.ChangesRequested {
+	if got := review.DeriveAfter(findings, one, citationEvidence()); got != review.ChangesRequested {
 		t.Errorf("one citation lifted an argued block: DeriveAfter = %q", got)
 	}
 
-	stand := review.Refutation{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Stands, Why: "I could not cite it"}}}
-	if got := review.DeriveAfter(findings, review.Answers{refutedByAccount("claude", "x"), stand}); got != review.ChangesRequested {
+	stand := review.Refutation{Tree: tree, Refutations: []review.Judgment{{ID: "F1", Verdict: review.Stands, Why: "I could not cite it"}}}
+	if got := review.DeriveAfter(findings, review.Answers{refutedByAccount("claude", "x"), stand}, citationEvidence()); got != review.ChangesRequested {
 		t.Errorf("a second answer that stands lifted the block: DeriveAfter = %q", got)
 	}
 
 	two := review.Answers{refutedByAccount("claude", "line 12 already verifies the signature"), refutedByAccount("mimo", "the call site passes a signed token")}
-	if got := review.DeriveAfter(findings, two); got != review.Approved {
+	if got := review.DeriveAfter(findings, two, citationEvidence()); got != review.Approved {
 		t.Errorf("two citations did not lift an argued block: DeriveAfter = %q", got)
 	}
 
-	if _, blocking := review.BlockingAfter(findings, two); blocking {
+	if _, blocking := review.BlockingAfter(findings, two, citationEvidence()); blocking {
 		t.Error("BlockingAfter still names a finding two witnesses refuted")
 	}
-	if _, blocking := review.BlockingAfter(findings, one); !blocking {
+	if _, blocking := review.BlockingAfter(findings, one, citationEvidence()); !blocking {
 		t.Error("BlockingAfter let a finding fall with one witness")
 	}
 }
@@ -115,7 +115,7 @@ func TestACitedBlockFallsWithOneRefutation(t *testing.T) {
 	findings := []review.Finding{cited}
 
 	one := review.Answers{refutedBy("line 12 is inside a helper the diff also adds")}
-	if got := review.DeriveAfter(findings, one); got != review.Approved {
+	if got := review.DeriveAfter(findings, one, citationEvidence()); got != review.Approved {
 		t.Errorf("a cited block survived one citation: DeriveAfter = %q", got)
 	}
 }
@@ -129,11 +129,11 @@ func TestAnswersCountPerFinding(t *testing.T) {
 	findings := []review.Finding{argued, second}
 
 	answers := review.Answers{
-		{Refuter: "claude", Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "line 12"}}},
-		{Refuter: "mimo", Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "call site"}}},
+		{Tree: tree, Refuter: "claude", Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 line 12"}}},
+		{Tree: tree, Refuter: "mimo", Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 call site"}}},
 	}
 
-	finding, blocking := review.BlockingAfter(findings, answers)
+	finding, blocking := review.BlockingAfter(findings, answers, citationEvidence())
 	if !blocking {
 		t.Fatal("BlockingAfter found nothing: F2 has no witness")
 	}

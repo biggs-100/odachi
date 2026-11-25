@@ -1609,7 +1609,8 @@ func (r *runner) requireReview(base string) *Result {
 		problem := lensMissing(missing, r.storeFile(rel))
 		return &problem
 	}
-	answers, problem := r.refutations(verdict)
+	evidence := reviewdomain.CitationEvidence{Tree: r.tree, Diff: diff}
+	answers, problem := r.refutations(verdict, evidence)
 	if problem != nil {
 		return problem
 	}
@@ -1617,7 +1618,7 @@ func (r *runner) requireReview(base string) *Result {
 	// Every row the review stands behind has to be answered: a verdict can carry
 	// more than one, and a waiver answers exactly one. Answering the first row and
 	// stopping would hide the rest behind it.
-	blockingRows := reviewdomain.BlockingAllAfter(verdict.Findings, answers)
+	blockingRows := reviewdomain.BlockingAllAfter(verdict.Findings, answers, evidence)
 	if len(blockingRows) > 0 {
 		open := make([]reviewdomain.Finding, 0, len(blockingRows))
 		waived := make([]string, 0, len(blockingRows))
@@ -1660,7 +1661,7 @@ func (r *runner) requireReview(base string) *Result {
 				"why: a row the review stands behind is a decision, and the decision is the human's to write down",
 			},
 		}
-		if votes := blockVote(verdict.Findings, answers, finding); votes != "" {
+		if votes := blockVote(verdict.Findings, answers, finding, evidence); votes != "" {
 			problem.Lines = append([]string{message, votes}, problem.Lines[1:]...)
 		}
 		return &problem
@@ -2043,7 +2044,7 @@ func coverageMissing(verdict reviewdomain.Verdict, gaps []reviewdomain.Gap, rel 
 // refutations reads every refuter's answer filed beside this tree's verdict. A
 // tree with none is the normal case and is not an error; a file that cannot be
 // read is, because silence would let a broken artifact look like an approval.
-func (r *runner) refutations(verdict reviewdomain.Verdict) (reviewdomain.Answers, *Result) {
+func (r *runner) refutations(verdict reviewdomain.Verdict, evidence reviewdomain.CitationEvidence) (reviewdomain.Answers, *Result) {
 	var answers reviewdomain.Answers
 
 	for _, round := range reviewdomain.Rounds() {
@@ -2071,6 +2072,14 @@ func (r *runner) refutations(verdict reviewdomain.Verdict) (reviewdomain.Answers
 		parsed, err := reviewdomain.ParseRefutation(data)
 		if err != nil {
 			return nil, unreadableRefutation(verdict, rel, oneLine(err.Error()))
+		}
+		if strings.TrimSpace(parsed.Tree) != r.tree {
+			return nil, unreadableRefutation(verdict, rel, fmt.Sprintf("it names tree %s, not %s", parsed.Tree, r.tree))
+		}
+		for _, result := range parsed.CitationResults(verdict.Findings, evidence) {
+			if result.Status != reviewdomain.CitationValid {
+				return nil, unreadableRefutation(verdict, rel, oneLine(result.Reason))
+			}
 		}
 		answers = append(answers, parsed)
 	}
@@ -2100,13 +2109,13 @@ func unreadableRefutation(verdict reviewdomain.Verdict, rel, detail string) *Res
 // blockVote says how many witnesses the blocking finding has and how many its
 // class needs. Empty when nobody answered: a block nobody voted on has nothing to
 // count, and saying "0 of 1" would read like a decision that was taken.
-func blockVote(findings []reviewdomain.Finding, answers reviewdomain.Answers, finding reviewdomain.Finding) string {
+func blockVote(findings []reviewdomain.Finding, answers reviewdomain.Answers, finding reviewdomain.Finding, evidence reviewdomain.CitationEvidence) string {
 	index := reviewdomain.IndexOf(findings, finding)
 	if index < 0 {
 		return ""
 	}
 	id := reviewdomain.FindingIDs(findings)[index]
-	votes := answers.RefutedBy(id)
+	votes := answers.RefutedBy(id, finding, evidence)
 	if votes == 0 {
 		return ""
 	}

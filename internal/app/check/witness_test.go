@@ -36,7 +36,7 @@ func arguedFinding() domainreview.Finding {
 func TestAWitnessThatCannotBeReadIsNotAnEmptyOne(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{arguedFinding()}))
-	files.files[refutationFileFor(t, currentTree, 1)] = []byte(refutedFile(t, currentTree, "el diff de la línea 12 muestra que la firma ya se validaba"))
+	files.files[refutationFileFor(t, currentTree, 1)] = []byte(refutedFile(t, currentTree, "internal/auth/session.go:12 el diff de la línea 12 muestra que la firma ya se validaba"))
 	files.denyRead = func(path string) error {
 		if strings.Contains(filepath.ToSlash(path), ".refuted") {
 			return errors.New("permission denied")
@@ -44,7 +44,7 @@ func TestAWitnessThatCannotBeReadIsNotAnEmptyOne(t *testing.T) {
 		return nil
 	}
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 	result := run(t, files, git, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
@@ -56,6 +56,24 @@ func TestAWitnessThatCannotBeReadIsNotAnEmptyOne(t *testing.T) {
 	}
 }
 
+// TestARefutationStoredUnderThisTreeButNamingAnotherIsIgnored: the filename is
+// not authority when the document itself names a different candidate.
+func TestARefutationStoredUnderThisTreeButNamingAnotherIsIgnored(t *testing.T) {
+	files := newFakeFiles(readyFiles())
+	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{blockingFinding()}))
+	files.files[refutationPath(currentTree)] = []byte(refutedFile(t, otherTree, "internal/auth/session.go:12 the signature was already verified"))
+
+	git := citationGit()
+	result := run(t, files, git, check.Options{RequireReview: true})
+
+	if result.Code != 2 {
+		t.Fatalf("code = %d, want 2: a foreign-tree refutation must not lift the block (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, otherTree) || !strings.Contains(result.Message, currentTree) {
+		t.Errorf("the refusal does not name both trees: %s", result.Message)
+	}
+}
+
 // TestAnArguedBlockerNeedsTwoWitnesses is the rule this feature exists for. One
 // refuter is one opinion about a claim nobody can point at; two citations are the
 // quorum. The gate says how many it has, so the human knows whether to ask for
@@ -63,9 +81,9 @@ func TestAWitnessThatCannotBeReadIsNotAnEmptyOne(t *testing.T) {
 func TestAnArguedBlockerNeedsTwoWitnesses(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{arguedFinding()}))
-	files.files[refutationFileFor(t, currentTree, 1)] = []byte(refutedFile(t, currentTree, "el diff de la línea 12 muestra que la firma ya se validaba"))
+	files.files[refutationFileFor(t, currentTree, 1)] = []byte(refutedFile(t, currentTree, "internal/auth/session.go:12 el diff de la línea 12 muestra que la firma ya se validaba"))
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 
 	one := run(t, files, git, check.Options{RequireReview: true})
 	if one.Code != 2 {
@@ -75,7 +93,7 @@ func TestAnArguedBlockerNeedsTwoWitnesses(t *testing.T) {
 		t.Errorf("the block does not say how many witnesses it has:\n%s", strings.Join(one.Lines, "\n"))
 	}
 
-	files.files[refutationFileFor(t, currentTree, 2)] = []byte(refutedFileBy(t, "mimo", currentTree, "el call site ya pasa un token firmado"))
+	files.files[refutationFileFor(t, currentTree, 2)] = []byte(refutedFileBy(t, "mimo", currentTree, "internal/auth/session.go:12 el call site ya pasa un token firmado"))
 
 	two := run(t, files, git, check.Options{RequireReview: true})
 	if two.Code != 0 {
@@ -86,11 +104,63 @@ func TestAnArguedBlockerNeedsTwoWitnesses(t *testing.T) {
 // witnessFile is one refuter's answer, sealed the way the store does it.
 func witnessFile(t *testing.T, refuter, tree string, findings []domainreview.Finding, judgments ...domainreview.Judgment) string {
 	t.Helper()
-	sealed, err := domainreview.SealRefutation(domainreview.Refutation{Refuter: refuter, Refutations: judgments}, findings, tree, reviewInstant)
+	sealed, err := domainreview.SealRefutation(domainreview.Refutation{Refuter: refuter, Refutations: judgments}, findings, domainreview.CitationEvidence{Tree: tree, Diff: citationDiff}, reviewInstant)
 	if err != nil {
 		t.Fatalf("sealing the witness: %v", err)
 	}
 	return string(domainreview.RenderRefutation(sealed))
+}
+
+// TestCitationContractAtTheGate exercises the same domain decision through the
+// close path: only a checkable citation can lift the blocker.
+func TestCitationContractAtTheGate(t *testing.T) {
+	const spacedPath = "internal/auth/session store.go"
+	spacedDiff := "diff --git a/internal/auth/session store.go b/internal/auth/session store.go\n--- a/internal/auth/session store.go\n+++ b/internal/auth/session store.go\n@@ -12 +12 @@\n-viejo\n+verified signature\n"
+	for _, tc := range []struct {
+		name    string
+		path    string
+		diff    string
+		why     string
+		refTree string
+		want    int
+	}{
+		{name: "valid line", diff: citationDiff, why: "internal/auth/session.go:12 verifies the signature", want: 0},
+		{name: "valid quote", diff: citationDiff, why: `internal/auth/session.go "verified signature"`, want: 0},
+		{name: "absent quote", diff: citationDiff, why: `internal/auth/session.go "invented signature"`, want: 2},
+		{name: "wrong tree", diff: citationDiff, why: "internal/auth/session.go:12 verifies the signature", refTree: otherTree, want: 2},
+		{name: "missing evidence", why: "internal/auth/session.go:12 verifies the signature", want: 2},
+		{name: "empty diff", diff: " \n", why: "internal/auth/session.go:12 verifies the signature", want: 2},
+		{name: "spaced path", path: spacedPath, diff: spacedDiff, why: spacedPath + ":12 verifies the signature", want: 0},
+		{name: "repeated spaced path mention", path: spacedPath, diff: spacedDiff, why: spacedPath + " is the file; " + spacedPath + ":12 verifies the signature", want: 0},
+		{name: "free prose", diff: citationDiff, why: "the signature was already verified", want: 2},
+		{name: "malformed locator", diff: citationDiff, why: "internal/auth/session.go:twelve", want: 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			finding := blockingFinding()
+			if tc.path != "" {
+				finding.Path = tc.path
+			}
+			refTree := tc.refTree
+			if refTree == "" {
+				refTree = currentTree
+			}
+			files := newFakeFiles(readyFiles())
+			files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{finding}))
+			files.files[refutationPath(currentTree)] = domainreview.RenderRefutation(domainreview.Refutation{
+				Tree:        refTree,
+				Refuter:     "claude",
+				Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: tc.why}},
+			})
+			git := citationGit()
+			git.changed = []string{finding.Path}
+			git.diff = tc.diff
+
+			result := run(t, files, git, check.Options{RequireReview: true})
+			if result.Code != tc.want {
+				t.Fatalf("code = %d, want %d (%s)", result.Code, tc.want, result.Message)
+			}
+		})
+	}
 }
 
 // TestTwoFindingsOnOneLineNameTheRightOne is the row the review of this feature
@@ -107,14 +177,14 @@ func TestTwoFindingsOnOneLineNameTheRightOne(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), findings))
 	files.files[refutationFileFor(t, currentTree, 1)] = []byte(witnessFile(t, "claude", currentTree, findings,
-		domainreview.Judgment{ID: "F1", Verdict: domainreview.Refuted, Why: "line 12 shows it was already there"},
-		domainreview.Judgment{ID: "F2", Verdict: domainreview.Refuted, Why: "the log line is new but names no token"},
+		domainreview.Judgment{ID: "F1", Verdict: domainreview.Refuted, Why: "internal/auth/session.go:12 line 12 shows it was already there"},
+		domainreview.Judgment{ID: "F2", Verdict: domainreview.Refuted, Why: "internal/auth/session.go:12 the log line is new but names no token"},
 	))
 	files.files[refutationFileFor(t, currentTree, 2)] = []byte(witnessFile(t, "mimo", currentTree, findings,
-		domainreview.Judgment{ID: "F1", Verdict: domainreview.Refuted, Why: "the call site passes a signed token"},
+		domainreview.Judgment{ID: "F1", Verdict: domainreview.Refuted, Why: "internal/auth/session.go:12 the call site passes a signed token"},
 	))
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 	result := run(t, files, git, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
@@ -135,9 +205,9 @@ func TestTwoFindingsOnOneLineNameTheRightOne(t *testing.T) {
 func TestACitedBlockerFallsWithOneWitness(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{blockingFinding()}))
-	files.files[refutationFileFor(t, currentTree, 1)] = []byte(refutedFile(t, currentTree, "la línea 12 está dentro de un helper que el diff también agrega"))
+	files.files[refutationFileFor(t, currentTree, 1)] = []byte(refutedFile(t, currentTree, "internal/auth/session.go:12 la línea 12 está dentro de un helper que el diff también agrega"))
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 	result := run(t, files, git, check.Options{RequireReview: true})
 
 	if result.Code != 0 {

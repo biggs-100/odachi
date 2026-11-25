@@ -21,6 +21,12 @@ func blockingFindings() []review.Finding {
 	}
 }
 
+const citationDiff = "diff --git a/internal/auth/session.go b/internal/auth/session.go\n--- a/internal/auth/session.go\n+++ b/internal/auth/session.go\n@@ -12 +12 @@\n-viejo\n+return verify(signature)\n"
+
+func citationEvidence() review.CitationEvidence {
+	return review.CitationEvidence{Tree: tree, Diff: citationDiff}
+}
+
 // TestFindingIDsAreStable: the refuter answers about ids, so the ids have to be
 // the position of each finding in the verdict the reviewer said to read.
 func TestFindingIDsAreStable(t *testing.T) {
@@ -38,7 +44,7 @@ func TestFindingIDsAreStable(t *testing.T) {
 // TestRefutationParsesTheAnswerShape: the refuter returns exactly the JSON the
 // prompt asks for, and the domain reads it without guessing.
 func TestRefutationParsesTheAnswerShape(t *testing.T) {
-	text := `{"refutations":[{"id":"F1","verdict":"refuted","why":"el diff ya validaba la firma en la línea 12"}]}`
+	text := `{"refutations":[{"id":"F1","verdict":"refuted","why":"internal/auth/session.go:12 el diff ya validaba la firma en la línea 12"}]}`
 
 	parsed, err := review.ParseRefutation([]byte(text))
 	if err != nil {
@@ -62,6 +68,7 @@ func TestParseRefutationRefusesWhatItCannotUse(t *testing.T) {
 		"unknown field":      `{"refutations":[],"resumen":"todo bien"}`,
 		"invented verdict":   `{"refutations":[{"id":"F1","verdict":"quizas","why":"no sé"}]}`,
 		"no id":              `{"refutations":[{"verdict":"refuted","why":"porque sí"}]}`,
+		"no locator":         `{"refutations":[{"id":"F1","verdict":"refuted","why":"porque sí"}]}`,
 		"two objects":        `{"refutations":[]}{"refutations":[]}`,
 		"a verdict instead":  `{"reviewer":"claude","findings":[]}`,
 		"refutations as map": `{"refutations":{"F1":"refuted"}}`,
@@ -76,6 +83,175 @@ func TestParseRefutationRefusesWhatItCannotUse(t *testing.T) {
 	}
 }
 
+// TestSealRefutationRefusesAnotherTree: finding ids are positions in one verdict.
+// Re-stamping another tree's answer would make matching ids look like evidence
+// about this candidate.
+func TestSealRefutationRefusesAnotherTree(t *testing.T) {
+	_, err := review.SealRefutation(review.Refutation{Tree: otherTree}, blockingFindings(), citationEvidence(), now)
+	if err == nil || !strings.Contains(err.Error(), otherTree) || !strings.Contains(err.Error(), tree) {
+		t.Fatalf("SealRefutation = %v, want a refusal naming both trees", err)
+	}
+}
+
+// TestSealRefutationRequiresACheckableCitation: prose can explain a refutation,
+// but it cannot locate the evidence. The existing why field must carry either
+// the finding's path and line or its path and a quoted candidate fragment.
+func TestSealRefutationRequiresACheckableCitation(t *testing.T) {
+	cases := map[string]struct {
+		why     string
+		wantErr bool
+	}{
+		"path and line":        {why: "internal/auth/session.go:12 already verified the signature"},
+		"path and quoted code": {why: `internal/auth/session.go "return verify(signature)" already checked it`},
+		"free prose":           {why: "cita de otro", wantErr: true},
+		"line without path":    {why: "la línea 12 ya validaba la firma", wantErr: true},
+		"another path":         {why: "internal/auth/token.go:12 already verified the signature", wantErr: true},
+		"empty quote":          {why: `internal/auth/session.go "   " already checked it`, wantErr: true},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := review.SealRefutation(review.Refutation{
+				Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: tc.why}},
+			}, blockingFindings(), citationEvidence(), now)
+			if tc.wantErr && err == nil {
+				t.Fatalf("SealRefutation(%q) = nil error, want a refusal", tc.why)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("SealRefutation(%q) = %v", tc.why, err)
+			}
+		})
+	}
+}
+
+// TestValidateCitationMatrix pins the shared decision used by every consumer.
+// Only valid lends a vote; invalid contradicts the evidence and ambiguous means
+// the evidence cannot answer.
+func TestValidateCitationMatrix(t *testing.T) {
+	spacedPath := "internal/auth/session store.go"
+	spacedDiff := "diff --git a/internal/auth/session store.go b/internal/auth/session store.go\n--- a/internal/auth/session store.go\n+++ b/internal/auth/session store.go\n@@ -12 +12 @@\n-viejo\n+nuevo\n"
+	source := strings.Repeat("context\n", 11) + "return verify(signature)\n"
+	base := review.CitationInput{
+		FindingID:    "F1",
+		Finding:      blockingFindings()[0],
+		Locator:      "internal/auth/session.go:12 verifies the signature",
+		DeclaredTree: tree,
+		Evidence:     citationEvidence(),
+	}
+	cases := []struct {
+		name   string
+		change func(*review.CitationInput)
+		want   review.CitationStatus
+	}{
+		{name: "valid line", want: review.CitationValid},
+		{name: "valid quote", change: func(in *review.CitationInput) { in.Locator = `internal/auth/session.go "return verify(signature)"` }, want: review.CitationValid},
+		{name: "absent quote", change: func(in *review.CitationInput) { in.Locator = `internal/auth/session.go "+inventado"` }, want: review.CitationInvalid},
+		{name: "later valid line after absent quote", change: func(in *review.CitationInput) {
+			in.Locator = `internal/auth/session.go "invented"; internal/auth/session.go:12 verifies the signature`
+		}, want: review.CitationValid},
+		{name: "multiple locators without evidence", change: func(in *review.CitationInput) {
+			in.Locator = `internal/auth/session.go "invented"; internal/auth/session.go:12 verifies the signature`
+			in.Evidence.Diff = ""
+		}, want: review.CitationAmbiguous},
+		{name: "wrong tree", change: func(in *review.CitationInput) { in.Evidence.Tree = otherTree }, want: review.CitationInvalid},
+		{name: "missing declared tree", change: func(in *review.CitationInput) { in.DeclaredTree = "" }, want: review.CitationAmbiguous},
+		{name: "missing evidence tree", change: func(in *review.CitationInput) { in.Evidence.Tree = "" }, want: review.CitationAmbiguous},
+		{name: "empty diff", change: func(in *review.CitationInput) { in.Evidence.Diff = "" }, want: review.CitationAmbiguous},
+		{name: "unreadable diff", change: func(in *review.CitationInput) { in.Evidence.Diff = "not a diff" }, want: review.CitationAmbiguous},
+		{name: "diff without a readable hunk", change: func(in *review.CitationInput) {
+			in.Evidence.Diff = "diff --git a/internal/auth/session.go b/internal/auth/session.go\n--- a/internal/auth/session.go\n+++ b/internal/auth/session.go\n"
+		}, want: review.CitationAmbiguous},
+		{name: "spaced path", change: func(in *review.CitationInput) {
+			in.Finding.Path = spacedPath
+			in.Locator = spacedPath + ":12 verifies the signature"
+			in.Evidence.Diff = spacedDiff
+		}, want: review.CitationValid},
+		{name: "repeated spaced path mention", change: func(in *review.CitationInput) {
+			in.Finding.Path = spacedPath
+			in.Locator = spacedPath + " is the file; " + spacedPath + ":12 verifies the signature"
+			in.Evidence.Diff = spacedDiff
+		}, want: review.CitationValid},
+		{name: "later valid line after repeated spaced quote", change: func(in *review.CitationInput) {
+			in.Finding.Path = spacedPath
+			in.Locator = spacedPath + ` "invented"; ` + spacedPath + ":12 verifies the signature"
+			in.Evidence.Diff = spacedDiff
+		}, want: review.CitationValid},
+		{name: "free prose", change: func(in *review.CitationInput) { in.Locator = "the signature was already verified" }, want: review.CitationInvalid},
+		{name: "malformed locator", change: func(in *review.CitationInput) { in.Locator = "internal/auth/session.go:twelve" }, want: review.CitationInvalid},
+		{name: "wrong path", change: func(in *review.CitationInput) { in.Locator = "internal/auth/token.go:12 verifies the signature" }, want: review.CitationInvalid},
+		{name: "missing finding identity", change: func(in *review.CitationInput) { in.FindingID = "" }, want: review.CitationAmbiguous},
+		{name: "valid source line", change: func(in *review.CitationInput) {
+			in.Evidence.Diff = ""
+			in.Evidence.Source = source
+		}, want: review.CitationValid},
+		{name: "valid source quote", change: func(in *review.CitationInput) {
+			in.Locator = `internal/auth/session.go "return verify(signature)"`
+			in.Evidence.Diff = ""
+			in.Evidence.Source = source
+		}, want: review.CitationValid},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := base
+			if tc.change != nil {
+				tc.change(&in)
+			}
+			result := review.ValidateCitation(in)
+			if result.Status != tc.want {
+				t.Fatalf("ValidateCitation(%s) = %q, want %q: %s", tc.name, result.Status, tc.want, result.Reason)
+			}
+		})
+	}
+}
+
+// TestRefutesRejectsFreeProse: the predicate that every quorum rule relies on
+// cannot treat a non-empty sentence as a citation.
+func TestRefutesRejectsFreeProse(t *testing.T) {
+	free := review.Refutation{Tree: tree, Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "cita de otro"}}}
+	if free.Refutes("F1", blockingFindings()[0], citationEvidence()) {
+		t.Error("free prose refuted a finding")
+	}
+}
+
+// TestRefutesWithoutEvidenceLendsNoVotes: a locator alone is not proof. Without
+// the candidate diff or source, even the finding's own line is ambiguous and the
+// quorum must keep the blocker standing.
+func TestRefutesWithoutEvidenceLendsNoVotes(t *testing.T) {
+	finding := blockingFindings()[0]
+	for name, why := range map[string]string{
+		"line":  "internal/auth/session.go:12 already verified the signature",
+		"quote": `internal/auth/session.go "return verify(signature)" already checked it`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			refutation := review.Refutation{Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: why}}}
+			if refutation.Refutes("F1", finding, review.CitationEvidence{}) {
+				t.Fatal("a citation with no available evidence lent a vote")
+			}
+		})
+	}
+}
+
+// TestCitationParsesPathsWithSpaces: a real repository path is not truncated at
+// its first space, and the full locator still has to match the finding.
+func TestCitationParsesPathsWithSpaces(t *testing.T) {
+	finding := blockingFindings()[0]
+	finding.Path = "internal/auth/session store.go"
+	evidence := review.CitationEvidence{Tree: tree, Diff: "diff --git a/internal/auth/session store.go b/internal/auth/session store.go\n--- a/internal/auth/session store.go\n+++ b/internal/auth/session store.go\n@@ -12 +12 @@\n-viejo\n+nuevo\n"}
+	sealed, err := review.SealRefutation(review.Refutation{Refutations: []review.Judgment{{
+		ID: "F1", Verdict: review.Refuted, Why: finding.Path + ":12 already verified the signature",
+	}}}, []review.Finding{finding}, evidence, now)
+	if err != nil {
+		t.Fatalf("SealRefutation = %v", err)
+	}
+	answers := review.Answers{sealed}
+	if !answers.Lifts("F1", finding, evidence) {
+		t.Fatal("a citation with the full spaced path did not lift its finding")
+	}
+	if _, err := review.ParseRefutation(review.RenderRefutation(sealed)); err != nil {
+		t.Fatalf("ParseRefutation with a spaced path = %v", err)
+	}
+}
+
 // TestRefutationWithoutEvidenceDefaultsToStands is the rule that decides the
 // whole verb: a finding that the refuter could not back with evidence is NOT
 // refuted. Doubt always votes for keeping the finding.
@@ -87,7 +263,7 @@ func TestRefutationWithoutEvidenceDefaultsToStands(t *testing.T) {
 			{ID: "F1", Verdict: review.Refuted, Why: "   "},
 			{ID: "F3", Verdict: review.Refuted, Why: ""},
 		},
-	}, findings, tree, now)
+	}, findings, review.CitationEvidence{Tree: tree}, now)
 	if err != nil {
 		t.Fatalf("SealRefutation = %v", err)
 	}
@@ -97,7 +273,7 @@ func TestRefutationWithoutEvidenceDefaultsToStands(t *testing.T) {
 			t.Errorf("judgment %s = %q, want %q: no evidence means the finding stands", judgment.ID, judgment.Verdict, review.Stands)
 		}
 	}
-	if _, blocking := review.BlockingAfter(findings, review.Answers{sealed}); !blocking {
+	if _, blocking := review.BlockingAfter(findings, review.Answers{sealed}, review.CitationEvidence{Tree: tree}); !blocking {
 		t.Fatal("a refutation with no evidence lifted the block")
 	}
 }
@@ -110,8 +286,8 @@ func TestSealRefutationCompletesTheRecord(t *testing.T) {
 
 	sealed, err := review.SealRefutation(review.Refutation{
 		Refuter:     "claude",
-		Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "el diff no toca la validación, ya estaba en la línea 12"}},
-	}, findings, tree, now)
+		Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 el diff no toca la validación, ya estaba en la línea 12"}},
+	}, findings, citationEvidence(), now)
 	if err != nil {
 		t.Fatalf("SealRefutation = %v", err)
 	}
@@ -150,7 +326,7 @@ func TestSealRefutationRefusesAnOffListFinding(t *testing.T) {
 
 	for name, judgment := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := review.SealRefutation(review.Refutation{Refutations: []review.Judgment{judgment}}, withNonCausal, tree, now)
+			_, err := review.SealRefutation(review.Refutation{Refutations: []review.Judgment{judgment}}, withNonCausal, citationEvidence(), now)
 			if err == nil {
 				t.Fatalf("SealRefutation(%+v) = nil error, want a refusal", judgment)
 			}
@@ -164,32 +340,33 @@ func TestSealRefutationRefusesAnOffListFinding(t *testing.T) {
 // TestSealRefutationNeedsATree: a refutation is about one tree, exactly like a
 // verdict. Without the hash it cannot be stored anywhere.
 func TestSealRefutationNeedsATree(t *testing.T) {
-	if _, err := review.SealRefutation(review.Refutation{}, blockingFindings(), "", now); err == nil {
+	if _, err := review.SealRefutation(review.Refutation{}, blockingFindings(), review.CitationEvidence{}, now); err == nil {
 		t.Fatal("SealRefutation without a tree = nil error, want a refusal")
 	}
 }
 
 // TestRefutesNeedsAReason: the single predicate every other rule is built on.
 func TestRefutesNeedsAReason(t *testing.T) {
-	refutation := review.Refutation{Refutations: []review.Judgment{
-		{ID: "F1", Verdict: review.Refuted, Why: "el diff de la línea 12 ya validaba la firma"},
+	findings := blockingFindings()
+	refutation := review.Refutation{Tree: tree, Refutations: []review.Judgment{
+		{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 el diff de la línea 12 ya validaba la firma"},
 		{ID: "F2", Verdict: review.Refuted, Why: "  "},
 		{ID: "F3", Verdict: review.Stands, Why: "no pude citar la línea"},
 	}}
 
-	if !refutation.Refutes("F1") {
+	if !refutation.Refutes("F1", findings[0], citationEvidence()) {
 		t.Error("F1 with evidence does not refute")
 	}
-	if refutation.Refutes("F2") {
+	if refutation.Refutes("F2", findings[1], citationEvidence()) {
 		t.Error("F2 without evidence refutes: no evidence must mean stands")
 	}
-	if refutation.Refutes("F3") {
+	if refutation.Refutes("F3", findings[2], citationEvidence()) {
 		t.Error("F3 says stands and refutes")
 	}
-	if refutation.Refutes("F9") {
+	if refutation.Refutes("F9", findings[0], citationEvidence()) {
 		t.Error("a finding with no judgment refutes: the default is stands")
 	}
-	if (review.Refutation{}).Refutes("F1") {
+	if (review.Refutation{}).Refutes("F1", findings[0], citationEvidence()) {
 		t.Error("an empty refutation refutes something")
 	}
 }
@@ -198,7 +375,7 @@ func TestRefutesNeedsAReason(t *testing.T) {
 // a standing one keeps blocking, and everything else approves as before.
 func TestDeriveAfterTakesRefutationsIntoAccount(t *testing.T) {
 	blockerOnly := []review.Finding{
-		{Path: "internal/auth/session.go", Severity: review.Blocker, Causal: true, Why: "sin verificar la firma", Evidence: review.EvidenceCited},
+		{Path: "internal/auth/session.go", Line: 12, Severity: review.Blocker, Causal: true, Why: "sin verificar la firma", Evidence: review.EvidenceCited},
 	}
 
 	cases := map[string]struct {
@@ -214,16 +391,16 @@ func TestDeriveAfterTakesRefutationsIntoAccount(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			refutation := review.Refutation{}
+			refutation := review.Refutation{Tree: tree}
 			if tc.refuted {
-				refutation.Refutations = []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "está en el diff, ya estaba"}}
+				refutation.Refutations = []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 está en el diff, ya estaba"}}
 			}
 
-			if got := review.DeriveAfter(tc.findings, review.Answers{refutation}); got != tc.want {
+			if got := review.DeriveAfter(tc.findings, review.Answers{refutation}, citationEvidence()); got != tc.want {
 				t.Errorf("DeriveAfter = %q, want %q", got, tc.want)
 			}
-			if got := review.Derive(tc.findings); got != review.DeriveAfter(tc.findings, review.Answers{}) {
-				t.Errorf("Derive = %q and DeriveAfter with no refutation = %q: they must agree", got, review.DeriveAfter(tc.findings, review.Answers{}))
+			if got := review.Derive(tc.findings); got != review.DeriveAfter(tc.findings, review.Answers{}, review.CitationEvidence{}) {
+				t.Errorf("Derive = %q and DeriveAfter with no refutation = %q: they must agree", got, review.DeriveAfter(tc.findings, review.Answers{}, review.CitationEvidence{}))
 			}
 		})
 	}
@@ -233,11 +410,11 @@ func TestDeriveAfterTakesRefutationsIntoAccount(t *testing.T) {
 // still blocks, in file order, so the message is the same on every run.
 func TestBlockingAfterSkipsRefutedFindings(t *testing.T) {
 	findings := blockingFindings()
-	refutation := review.Refutation{Refutations: []review.Judgment{
-		{ID: "F1", Verdict: review.Refuted, Why: "el diff la línea 12 muestra que ya estaba"},
+	refutation := review.Refutation{Tree: tree, Refutations: []review.Judgment{
+		{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 el diff la línea 12 muestra que ya estaba"},
 	}}
 
-	finding, blocking := review.BlockingAfter(findings, review.Answers{refutation})
+	finding, blocking := review.BlockingAfter(findings, review.Answers{refutation}, citationEvidence())
 	if !blocking {
 		t.Fatal("the critical finding F3 stopped blocking")
 	}
@@ -278,7 +455,7 @@ func TestRenderRefutationIsStable(t *testing.T) {
 		Refutations: []review.Judgment{
 			{ID: "F1", Verdict: review.Stands, Why: "la línea 12 no alcanza para defenderlo"},
 		},
-	}, blockingFindings(), tree, now)
+	}, blockingFindings(), citationEvidence(), now)
 	if err != nil {
 		t.Fatalf("SealRefutation = %v", err)
 	}
@@ -394,8 +571,8 @@ func TestSealRefutationStampsTheClockAndKeepsTheClaim(t *testing.T) {
 	sealed, err := review.SealRefutation(review.Refutation{
 		Refuter:     "agent",
 		At:          "2026-11-13T00:00:00Z",
-		Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "el diff no toca la validacion, ya estaba"}},
-	}, blockingFindings(), tree, stamp)
+		Refutations: []review.Judgment{{ID: "F1", Verdict: review.Refuted, Why: "internal/auth/session.go:12 el diff no toca la validacion, ya estaba"}},
+	}, blockingFindings(), citationEvidence(), stamp)
 	if err != nil {
 		t.Fatalf("SealRefutation: %v", err)
 	}
@@ -418,7 +595,7 @@ func TestSealRefutationKeepsNoClaimWhenThereIsNothingToDisagreeWith(t *testing.T
 		"none":  "",
 		"equal": "2026-11-13T21:30:12Z",
 	} {
-		sealed, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: at}, blockingFindings(), tree, stamp)
+		sealed, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: at}, blockingFindings(), citationEvidence(), stamp)
 		if err != nil {
 			t.Fatalf("%s: SealRefutation: %v", name, err)
 		}
@@ -438,7 +615,7 @@ func TestARefutationWithAClaimRendersAndParses(t *testing.T) {
 	t.Parallel()
 
 	sealed, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: "2026-11-13T00:00:00Z"},
-		blockingFindings(), tree, time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC))
+		blockingFindings(), citationEvidence(), time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("SealRefutation: %v", err)
 	}
@@ -459,7 +636,7 @@ func TestARefutationWithAClaimRendersAndParses(t *testing.T) {
 // one, the next field it gains reads as an unknown key in every older binary, and
 // the words send the human to fix a file that is not broken (0291).
 func TestARefutationWrittenTodayCarriesItsSchema(t *testing.T) {
-	sealed, err := review.SealRefutation(review.Refutation{Refuter: "agent"}, blockingFindings(), tree, now)
+	sealed, err := review.SealRefutation(review.Refutation{Refuter: "agent"}, blockingFindings(), citationEvidence(), now)
 	if err != nil {
 		t.Fatalf("SealRefutation: %v", err)
 	}
@@ -501,12 +678,43 @@ func TestARefutationFromANewerOdachiAsksForAnUpgrade(t *testing.T) {
 	}
 }
 
+// TestANewerRefutationSchemaWinsOverAnInvalidLocator: compatibility is decided
+// before the record's citations, so a newer sidecar always asks for an upgrade
+// rather than sending the human to repair evidence this binary cannot interpret.
+func TestANewerRefutationSchemaWinsOverAnInvalidLocator(t *testing.T) {
+	future := schema.Current + 1
+	for name, why := range map[string]string{
+		"missing locator": "",
+		"invalid locator": "free prose is not a citation",
+	} {
+		t.Run(name, func(t *testing.T) {
+			text := `{"schema":` + strconv.Itoa(future) + `,"tree":"` + tree +
+				`","refutations":[{"id":"F1","verdict":"refuted","why":` + strconv.Quote(why) + `}]}`
+			_, err := review.ParseRefutation([]byte(text))
+			if err == nil {
+				t.Fatalf("ParseRefutation(schema %d) = no error, want an upgrade refusal", future)
+			}
+			message := err.Error()
+			for _, want := range []string{"newer odachi", "upgrade", "schema " + strconv.Itoa(future), "schema " + strconv.Itoa(schema.Current)} {
+				if !strings.Contains(message, want) {
+					t.Errorf("the refusal %q does not name %q", message, want)
+				}
+			}
+			for _, unwanted := range []string{"needs a citation", "the refutation of F1"} {
+				if strings.Contains(message, unwanted) {
+					t.Errorf("the compatibility refusal %q names the invalid locator instead", message)
+				}
+			}
+		})
+	}
+}
+
 // TestARefutationStoredBeforeTheNumberStillReadsAndStillLifts: the oldest files
 // carry no schema and no claim, and an absent number is the first schema forever.
 // A refutation written before 0291 keeps the power it had (0291).
 func TestARefutationStoredBeforeTheNumberStillReadsAndStillLifts(t *testing.T) {
 	text := `{"tree":"` + tree + `","refuter":"agent","at":"2026-11-13T00:00:00Z","refutations":[` +
-		`{"id":"F1","verdict":"refuted","why":"el diff no toca la validacion, ya estaba en la linea 12"}]}`
+		`{"id":"F1","verdict":"refuted","why":"internal/auth/session.go:12 el diff no toca la validacion, ya estaba en la linea 12"}]}`
 
 	parsed, err := review.ParseRefutation([]byte(text))
 	if err != nil {
@@ -518,7 +726,8 @@ func TestARefutationStoredBeforeTheNumberStillReadsAndStillLifts(t *testing.T) {
 	if parsed.DeclaredAt != "" {
 		t.Errorf("DeclaredAt = %q, want nothing: the file never had the field", parsed.DeclaredAt)
 	}
-	if _, blocking := review.BlockingAfter(blockingFindings(), review.Answers{parsed}); !blocking {
+	answers := review.Answers{parsed}
+	if !answers.Lifts("F1", blockingFindings()[0], citationEvidence()) {
 		t.Error("a refutation stored before the number stopped lifting its finding")
 	}
 }
@@ -531,12 +740,12 @@ func TestASecondSealKeepsTheClaimItsFirstSealRead(t *testing.T) {
 	t.Parallel()
 
 	stored, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: "2026-11-13T00:00:00Z"},
-		blockingFindings(), tree, time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC))
+		blockingFindings(), citationEvidence(), time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("SealRefutation: %v", err)
 	}
 
-	again, err := review.SealRefutation(stored, blockingFindings(), tree, time.Date(2026, 11, 13, 22, 0, 0, 0, time.UTC))
+	again, err := review.SealRefutation(stored, blockingFindings(), citationEvidence(), time.Date(2026, 11, 13, 22, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("SealRefutation of a stored refutation: %v", err)
 	}
@@ -556,12 +765,12 @@ func TestASecondSealInTheSameSecondIsTheSameRecord(t *testing.T) {
 
 	stamp := time.Date(2026, 11, 13, 21, 30, 12, 0, time.UTC)
 	stored, err := review.SealRefutation(review.Refutation{Refuter: "agent", At: "2026-11-13T00:00:00Z"},
-		blockingFindings(), tree, stamp)
+		blockingFindings(), citationEvidence(), stamp)
 	if err != nil {
 		t.Fatalf("SealRefutation: %v", err)
 	}
 
-	again, err := review.SealRefutation(stored, blockingFindings(), tree, stamp)
+	again, err := review.SealRefutation(stored, blockingFindings(), citationEvidence(), stamp)
 	if err != nil {
 		t.Fatalf("SealRefutation of a stored refutation: %v", err)
 	}
