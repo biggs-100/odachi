@@ -1,12 +1,21 @@
 package check_test
 
 import (
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/biggs-100/odachi/internal/adapters/gitx"
+	"github.com/biggs-100/odachi/internal/adapters/shellcmd"
 	"github.com/biggs-100/odachi/internal/app/check"
+	"github.com/biggs-100/odachi/internal/domain/brief"
 	"github.com/biggs-100/odachi/internal/domain/gate"
+	"github.com/biggs-100/odachi/internal/domain/proof"
+	"github.com/biggs-100/odachi/internal/domain/taskdoc"
 )
 
 // closeWithMutation builds a closed feature whose proof and mutation row this run
@@ -156,4 +165,275 @@ func TestAStoredMutationAnswersOnlyItsOwnQuestion(t *testing.T) {
 	if got.Reason == gate.ReasonMutationFailed {
 		t.Fatalf("the run asked the new question and still blocked: %q", got.Message)
 	}
+}
+
+// TestAProofCommandThatChangesTheTreeWritesNoGreenProof runs a real command that
+// edits a tracked candidate file. The command's success is not evidence about the
+// bytes it left behind, so check must refuse instead of stamping the old tree.
+func TestAProofCommandThatChangesTheTreeWritesNoGreenProof(t *testing.T) {
+	root := newProofRepo(t)
+	before, _, _, err := gitx.Candidate(root, "HEAD")
+	if err != nil {
+		t.Fatalf("measure the candidate before the command: %v", err)
+	}
+
+	const command = "echo changed> candidate.txt"
+	git := &proofGit{fakeGit: &fakeGit{}}
+	got := check.Run(check.Options{
+		Dir: root, Run: command, Base: "HEAD", TimeoutSeconds: 30,
+	}, proofDiskFiles{}, git, proofShell{})
+
+	after, _, _, err := gitx.Candidate(root, "HEAD")
+	if err != nil {
+		t.Fatalf("measure the candidate after the command: %v", err)
+	}
+	if after == before {
+		t.Fatalf("the proof command did not change the tracked candidate: %s", before)
+	}
+
+	proofPath := filepath.Join(root, "proof", "0001-proof-identity.txt")
+	if data, err := os.ReadFile(proofPath); err == nil {
+		recorded, parseErr := proof.Parse(string(data))
+		if parseErr != nil {
+			t.Fatalf("the command wrote an unreadable green proof: %v\n%s", parseErr, data)
+		}
+		t.Errorf("a mutating command wrote a green proof for tree %s (before %s, after %s)", recorded.Tree, before, after)
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("read the proof path: %v", err)
+	}
+	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofFailed {
+		t.Errorf("Code/Reason = %d/%q, want %d/%q: a changed candidate has no proof", got.Code, got.Reason, gate.NeedsWork, gate.ReasonProofFailed)
+	}
+	if !strings.Contains(got.Message, "changed the candidate tree") {
+		t.Errorf("Message = %q, want the candidate mutation named", got.Message)
+	}
+	if !strings.Contains(got.Message, "candidate.txt") {
+		t.Errorf("Message = %q, want the changed path named", got.Message)
+	}
+	if want := `odachi check --run "echo changed> candidate.txt"`; got.Next != want {
+		t.Errorf("Next = %q, want %q", got.Next, want)
+	}
+	if git.candidateCalls != 2 {
+		t.Errorf("candidate reads = %d, want the pre-command and post-command snapshots", git.candidateCalls)
+	}
+}
+
+// TestAProofCommandThatLeavesTheCandidateUnchangedWritesGreenProof covers both
+// ordinary no-op commands and commands whose only writes are ignored evidence.
+func TestAProofCommandThatLeavesTheCandidateUnchangedWritesGreenProof(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		command     string
+		hasEvidence bool
+	}{
+		{name: "unchanged tracked bytes", command: "echo ok"},
+		{name: "ignored evidence only", command: "echo ignored> proof/evidence.txt", hasEvidence: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := newProofRepo(t)
+			before, _, _, err := gitx.Candidate(root, "HEAD")
+			if err != nil {
+				t.Fatalf("measure the candidate before the command: %v", err)
+			}
+
+			git := &proofGit{fakeGit: &fakeGit{}}
+			got := check.Run(check.Options{
+				Dir: root, Run: tc.command, Base: "HEAD", TimeoutSeconds: 30,
+			}, proofDiskFiles{}, git, proofShell{})
+
+			after, _, _, err := gitx.Candidate(root, "HEAD")
+			if err != nil {
+				t.Fatalf("measure the candidate after the command: %v", err)
+			}
+			if after != before {
+				t.Fatalf("candidate changed: %s -> %s", before, after)
+			}
+			if got.Code != int(gate.Ready) {
+				t.Fatalf("Code = %d, want %d: %s", got.Code, gate.Ready, got.Message)
+			}
+			if git.candidateCalls != 2 {
+				t.Errorf("candidate reads = %d, want the pre-command and post-command snapshots", git.candidateCalls)
+			}
+
+			proofPath := filepath.Join(root, "proof", "0001-proof-identity.txt")
+			data, err := os.ReadFile(proofPath)
+			if err != nil {
+				t.Fatalf("read the green proof: %v", err)
+			}
+			recorded, err := proof.Parse(string(data))
+			if err != nil {
+				t.Fatalf("parse the green proof: %v", err)
+			}
+			if recorded.Tree != before || recorded.Command != tc.command {
+				t.Errorf("proof tree/command = %q/%q, want %q/%q", recorded.Tree, recorded.Command, before, tc.command)
+			}
+			if tc.hasEvidence {
+				evidence, err := os.ReadFile(filepath.Join(root, "proof", "evidence.txt"))
+				if err != nil || strings.TrimSpace(string(evidence)) != "ignored" {
+					t.Errorf("ignored evidence = %q, %v; want the command's write", evidence, err)
+				}
+			}
+		})
+	}
+}
+
+// TestAProofCommandWhoseTreeCannotBeRemeasuredWritesNoGreenProof fails closed on
+// an unreadable post-command snapshot instead of publishing the pre-command hash.
+func TestAProofCommandWhoseTreeCannotBeRemeasuredWritesNoGreenProof(t *testing.T) {
+	root := newProofRepo(t)
+	git := &proofGit{fakeGit: &fakeGit{}, afterErr: os.ErrPermission}
+	got := check.Run(check.Options{
+		Dir: root, Run: "echo ok", Base: "HEAD", TimeoutSeconds: 30,
+	}, proofDiskFiles{}, git, proofShell{})
+
+	if got.Code != int(gate.NeedsWork) || got.Reason != gate.ReasonProofFailed {
+		t.Fatalf("Code/Reason = %d/%q, want %d/%q", got.Code, got.Reason, gate.NeedsWork, gate.ReasonProofFailed)
+	}
+	if !strings.Contains(got.Message, "could not measure the candidate tree after the proof command") {
+		t.Errorf("Message = %q, want the unreadable post-command tree named", got.Message)
+	}
+	if want := `odachi check --run "echo ok"`; got.Next != want {
+		t.Errorf("Next = %q, want %q", got.Next, want)
+	}
+	if _, err := os.Stat(filepath.Join(root, "proof", "0001-proof-identity.txt")); !os.IsNotExist(err) {
+		t.Errorf("an unreadable post-command tree left a green proof: %v", err)
+	}
+}
+
+// proofGit keeps the fake port's unrelated answers but uses real Git for the
+// candidate, ignore rules and tree delta this regression depends on.
+type proofGit struct {
+	*fakeGit
+	afterErr error
+}
+
+func (g *proofGit) Candidate(root, base string) (string, []string, string, error) {
+	g.candidateCalls++
+	g.bases = append(g.bases, base)
+	if g.candidateCalls == 2 && g.afterErr != nil {
+		return "", nil, "", g.afterErr
+	}
+	return gitx.Candidate(root, base)
+}
+
+func (g *proofGit) Between(root, from, to string) ([]string, error) {
+	g.betweenCalls++
+	return gitx.Between(root, from, to)
+}
+
+func (g *proofGit) Ignored(root, path string) (bool, error) {
+	g.ignoredAs = append(g.ignoredAs, path)
+	return gitx.Ignored(root, path)
+}
+
+// proofShell executes the command through the same platform adapter as the CLI.
+type proofShell struct{}
+
+func (proofShell) Run(dir, command string, timeoutSeconds int) (string, string, int, bool, error) {
+	return shellcmd.Run(dir, command, timeoutSeconds)
+}
+
+func (proofShell) RunStream(dir, command string, timeoutSeconds int, w io.Writer) (string, string, int, bool, error) {
+	return shellcmd.RunStream(dir, command, timeoutSeconds, w)
+}
+
+// proofDiskFiles is the disk port for the real-repository regressions.
+type proofDiskFiles struct{}
+
+func (proofDiskFiles) Exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func (proofDiskFiles) Read(path string) ([]byte, error) { return os.ReadFile(path) }
+
+func (proofDiskFiles) List(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	return names, nil
+}
+
+func (proofDiskFiles) Write(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
+func (proofDiskFiles) ModTime(path string) (time.Time, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return info.ModTime(), nil
+}
+
+func (proofDiskFiles) Remove(path string) error { return os.Remove(path) }
+
+// newProofRepo creates one committed candidate with an open feature and ignored
+// evidence directory, so a real check reaches the proof command without owing a
+// review or a close-only row.
+func newProofRepo(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	proofGitCommand(t, root, "init")
+	proofGitCommand(t, root, "config", "user.name", "odachi test")
+	proofGitCommand(t, root, "config", "user.email", "test@odachi.local")
+
+	writeProofFile(t, filepath.Join(root, ".gitignore"), "proof/\n")
+	writeProofFile(t, filepath.Join(root, "candidate.txt"), "before\n")
+	writeProofFile(t, filepath.Join(root, "brief.md"), brief.Render(brief.Brief{
+		Name:     "proof identity",
+		Outcome:  []string{"proofs name the bytes the command left behind"},
+		DoneWhen: []string{"a mutating proof command is refused"},
+		NonGoals: []string{"new proof formats"},
+	}))
+	writeProofFile(t, filepath.Join(root, "odd", "tasks", "0001-proof-identity.md"), taskdoc.TaskDoc{
+		Title:        "proof identity",
+		Requirements: []taskdoc.Requirement{{ID: "R1", Text: "proofs name the post-command candidate"}},
+		DoneWhen:     []string{"candidate mutation refuses the proof"},
+		Steps:        []taskdoc.Step{{ID: "T1", Text: "bind proof to the post-command tree", Requirement: "R1"}},
+	}.Render())
+	proofGitCommand(t, root, "add", "-A")
+	proofGitCommand(t, root, "commit", "-m", "initial candidate")
+	if err := os.MkdirAll(filepath.Join(root, "proof"), 0o755); err != nil {
+		t.Fatalf("create the ignored evidence directory: %v", err)
+	}
+	return root
+}
+
+func writeProofFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("create %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func proofGitCommand(t *testing.T, root string, args ...string) string {
+	t.Helper()
+	cmd := exec.CommandContext(t.Context(), "git", args...)
+	cmd.Dir = root
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+	return strings.TrimSpace(string(out))
 }

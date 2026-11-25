@@ -1043,6 +1043,13 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 		return ranProof{output: output, failed: true}, nil
 	}
 
+	// A green command is evidence only for the candidate bytes it left behind.
+	// Measure the same snapshot mode again before publishing: a formatter, generator
+	// or test that rewrites a tracked file must not inherit the pre-command tree.
+	if problem := r.proofTreeUnchanged(); problem != nil {
+		return ranProof{}, problem
+	}
+
 	// A green run removes the failed evidence of an earlier run of the same
 	// feature: proof/ must never show a failure beside the proof of the tree that
 	// just passed. Best effort: the green proof is the truth either way.
@@ -1056,6 +1063,44 @@ func (r *runner) runProof(proofPath string) (ranProof, *Result) {
 	}
 	r.proofEmpty = strings.TrimSpace(output) == ""
 	return ranProof{output: output}, nil
+}
+
+// proofTreeUnchanged is the one pre/post comparison for a successful proof run.
+// It reuses the candidate mode and resolved base from the pre-command snapshot,
+// so ignored evidence stays ignored and the real index keeps its staged meaning.
+// A changed or unreadable post-command candidate is not publishable evidence.
+func (r *runner) proofTreeUnchanged() *Result {
+	work, problem := r.worktree()
+	if problem != nil {
+		return problem
+	}
+
+	refuse := func(message string) *Result {
+		next := runCommand(r.opts.Run)
+		return new(Result{
+			Code:    int(gate.NeedsWork),
+			Reason:  gate.ReasonProofFailed,
+			Message: message,
+			Next:    next,
+			Lines:   []string{message, "next: " + next},
+		})
+	}
+
+	after, _, _, err := r.candidate(r.opts.Dir, work.base)
+	if err != nil {
+		return refuse(fmt.Sprintf("could not measure the candidate tree after the proof command: %s; no green proof was written; run odachi check --run %q again",
+			oneLine(err.Error()), r.opts.Run))
+	}
+	if after == work.tree {
+		return nil
+	}
+
+	changed := ""
+	if paths, err := r.git.Between(r.opts.Dir, work.tree, after); err == nil && len(paths) > 0 {
+		changed = ": " + pathNote(paths)
+	}
+	return refuse(fmt.Sprintf("the proof command changed the candidate tree%s (%s -> %s); no green proof was written; make the command leave those bytes unchanged and run odachi check --run %q again",
+		changed, work.tree, after, r.opts.Run))
 }
 
 // keepFailed writes the whole output of a run that did not pass, next to where
