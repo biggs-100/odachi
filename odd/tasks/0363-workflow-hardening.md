@@ -37,7 +37,7 @@ R1 · "odachi's workflow fails closed when evidence is ambiguous, judges one con
 - [x] T1 · resolve one candidate base before check and review snapshot   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:35846d704aceae6e169df9c0c938c942f086eccc
 - [x] T2 · bind proof to the post-command tree or refuse candidate mutation   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:b669bff99e499edc9dd614e78bd495f4944cfd4b
 - [x] T3 · return one atomic correction snapshot   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:46db5e42907ba469f1272eb95ba4b4f10ca1e680
-- [ ] T4 · fail closed on unreadable inherited evidence and bind refutations   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
+- [x] T4 · fail closed on unreadable inherited evidence and bind refutations   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow · tree:10ec98ce11513c94e08ce9778e4bc2d8f68f8856
 - [ ] T5 · require declared checks to run or produce blocking rows   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
 - [ ] T6 · scope waivers and validate verdicts before paperwork exemption   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
 - [ ] T7 · seal and enforce verifier executor identity   R1 · route:delegated/odachi-worker · skills:tests,security
@@ -81,3 +81,4 @@ L14 · OFICIO · "Update the T4 size exception to 592 authored lines" (porque Th
 L15 · OFICIO · "Redesign T4 around one shared citation validator" (porque Independent verification found citation checks duplicated across domain refute, review inheritance and the check gate; each layer trusted another and an absent quoted fragment still lifted a blocker.)
 L16 · OFICIO · "Update the T4 size exception to 1189 authored lines for the shared citation validator" (porque The validator and its domain, review and check consumers must land atomically; splitting them would create mixed citation semantics or a compatibility shim.)
 L17 · OFICIO · "Update the T4 size exception to 1282 authored lines after citation parsing correction" (porque The final correction adds multi-locator evaluation and schema-order regressions required to resolve review warnings; T29 repeated-path work is subsumed.)
+L18 · OFICIO · "Track the ParseRefutation round-trip warning as a separate follow-up" (porque The reviewer approved T4 with a non-blocking warning: ParseRefutation lacks Finding context and can reject special-character or multi-locator citations that SealRefutation renders.)
