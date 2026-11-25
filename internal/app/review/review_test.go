@@ -280,6 +280,9 @@ type fakeGit struct {
 
 	// corrections records the trees a correction measured its delta against.
 	corrections []string
+	// onCorrection changes the fake worktree after the correction delta is read,
+	// exposing any caller that asks for the tree in a second read.
+	onCorrection func()
 
 	// run is the directory this run owns for the reviewer: the candidate inside it
 	// and the rule that confines the model beside it. archived is the tree it
@@ -316,12 +319,16 @@ func (g *fakeGit) Candidate(root, base string) (string, []string, string, error)
 // Correction answers the delta against the tree a correction names: the fake has
 // one candidate, so it reports the same bytes and records the tree it was asked
 // about, which is what a test asserts.
-func (g *fakeGit) Correction(root, tree string) ([]string, string, error) {
+func (g *fakeGit) Correction(root, tree string) (string, []string, string, error) {
 	g.corrections = append(g.corrections, tree)
 	if g.err != nil {
-		return nil, "", g.err
+		return "", nil, "", g.err
 	}
-	return g.changed, g.diff, nil
+	candidateTree := g.tree
+	if g.onCorrection != nil {
+		g.onCorrection()
+	}
+	return candidateTree, g.changed, g.diff, nil
 }
 
 func (g *fakeGit) Ignored(root, path string) (bool, error) {
@@ -3116,7 +3123,7 @@ func (g *flakyGit) Candidate(root, base string) (string, []string, string, error
 	return g.inner.tree, g.inner.changed, g.inner.diff, nil
 }
 
-func (g *flakyGit) Correction(root, tree string) ([]string, string, error) {
+func (g *flakyGit) Correction(root, tree string) (string, []string, string, error) {
 	return g.inner.Correction(root, tree)
 }
 
