@@ -1479,3 +1479,28 @@
 - There is no sensitive data in the first version.
 - First usable version: this week.
 - Wants to learn: mode on must mean what it says: a warning is not a gate.
+
+## 0362 · artifact-evidence-and-provenance
+
+## What must exist
+- odachi's existing writing and ui-craft skills require evidence for delivered artifacts and provenance for content and assets, without adding a new skill or a second delivery authority
+
+## Done when
+- `skills/writing/references/the-doc.md` defines a stack-neutral verification ladder from source correctness through the rendered artifact, real destination behavior and readback
+- an unavailable check is reported as `not verified`, never silently passed
+- `skills/ui-craft/references/task-and-content.md` requires creator or source, usage rights, version or date, and generated or demo status for external content and assets
+- `skills/ui-craft/references/the-read.md` verifies the exported artifact at its destination, including link response and actual media dimensions, and leaves aesthetic judgment to a human decision
+- `TestArtifactDeliveryRequiresEvidenceAndProvenance` fails before the content change for the missing contracts and passes after it
+- `odachi skills --check`, the focused skill tests, `go test ./internal/archtest`, and `go test ./...` are green
+- only the `skills:payload` pin changes deliberately, and `## Unreleased` names the feature
+
+## Not included (first version)
+- no new skill, `DESIGN.md`, global mode, CLI, plugin, MCP, review lens or delivery gate - back when a separate artifact-quality authority is proposed
+- no em-dash, palette, CTA or buzzword bans, and no other taste-based delivery blocker - back when a rule can be tied to an observable defect
+- no changes to `proof/**`, review lens files, the release workflow, published measurement documents, agent destinations, skill grammar or the commit hook - back when the workflow contract itself is the feature
+- no push, pull request, merge, tag or release - back when the human authorizes delivery
+
+## Decisions taken
+- Reuse `writing` and `ui-craft` instead of importing anti-slop as a fourth owner of the same concerns.
+- Evidence belongs in odachi's existing proof and declared-check mechanisms; purpose and aesthetic direction remain advisory and human-owned.
+- Adapt ideas rather than copy upstream prose; retain the MIT notice if any upstream wording is copied.
