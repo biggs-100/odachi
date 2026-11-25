@@ -11,8 +11,10 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 
 ## Where the project is
 
-- **`origin/main` and local `main` are both `44a6d84`**, the merge of release PR #726.
-  The worktree is clean on `main`.
+- **`main` is the merge of the pull request that carried this handover**, sitting on top of
+  the v0.65.0 release merge `44a6d84` from release PR #726. The worktree is clean on
+  `main`, and `git log --oneline -1` is the only honest way to name the tip: a document
+  cannot record the commit that will contain it.
 - **v0.65.0 is published.** Annotated tag `v0.65.0` sits on `44a6d84`; workflow
   `45512936717` passed and published 16 assets. Installed binary is
   `C:\Users\USER\AppData\Local\odachi\bin\odachi.exe`, and `odachi --version` reports
