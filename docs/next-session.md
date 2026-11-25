@@ -1,11 +1,8 @@
 # Next session
 
-Feature 0361 is closing on `feat/0361-review-required`: the mandatory local review
-contract is implemented through T5, and the human accepted `Slice: 3200` after
-independent review found mixed staged/worktree reads. The hook now reads project
-artifacts and policy from the index while evidence stays on disk. The corrected
-delta still needs review and verification, followed by the final proof. This
-handover follows v0.64.0, which shipped the office-peru work.
+The project is released at v0.65.0. Features 0360 and 0361 are merged into `main`,
+the tag is published, and the machine is running the installed 0.65.0 binary.
+No decision is open for those features.
 
 **Standing rule.** When a problem or a design question shows up, read
 `C:\Users\USER\Desktop\herramientas\gentle-shell` first, read-only: it may already
@@ -14,149 +11,83 @@ saved a day. Reading is evidence, not permission to edit that folder or run odac
 
 ## Where the project is
 
-- **`origin/main` is `048d893`.** Local `main` is `7cad566`, one commit ahead with
-  the 0360 opening artifacts. Do not reset it without the human's permission.
-- **0361 is stacked on 0360**, with feature base
-  `7f930d163ee12560aa95960005bec32af6b782d2`. Neither branch is pushed or merged.
-  It makes local review and named-risk verification mandatory when review mode is
-  on, reads coverage from the feature diff, and gives CI a model-free bypass.
-- **v0.63.0 shipped just before**, on `457ee74` (PR #719, tag `v0.63.0`, 16 assets).
-  It carried 0357 (PR #717, `82a91dd`), the machine default in
-  `~/.odachi/profile.toml` with one resolver for the profile in force and a TUI voice
-  screen that toggles machine/project with `tab`, and 0358 (PR #718, `35a2377`), the
-  quorum warning that says one model is enough to review.
-- **v0.62.0** shipped on `3b10bce` with 0354 and 0355: the `office-peru` profile,
-  its voice, a skill with three references, and the Spanish gate output. 0356 was
-  merged in PR #716 at `e8a05d5` and cleaned the doctor's rule ledger.
-- **The installed binary is 0.64.0 and matches main.** Verified in a project with
-  `office-peru`: `odachi level` printed the Spanish summary and the doctor printed
-  "one model is enough to review; a second is optional".
-- **`## Unreleased` contains 0360 and 0361.** No push, pull request, merge, tag or
-  release was made for either branch.
+- **`origin/main` and local `main` are both `44a6d84`**, the merge of release PR #726.
+  The worktree is clean on `main`.
+- **v0.65.0 is published.** Annotated tag `v0.65.0` sits on `44a6d84`; workflow
+  `45512936717` passed and published 16 assets. Installed binary is
+  `C:\Users\USER\AppData\Local\odachi\bin\odachi.exe`, and `odachi --version` reports
+  `0.65.0`.
+- **0360 shipped in PR #724**, merged as `4f3d5e0`. It applies the five code-level
+  improvements found by comparing odachi's source with another shell harness:
+  installed-binary skill digest, one whitespace helper, doctor check 17, help verb
+  catalog, and TUI voice delegation.
+- **0361 shipped in PR #725**, retargeted to `main` after #724 and merged as `2df0e43`.
+  With review mode on, a non-passive close needs a valid verdict, a named risk needs
+  independent verification, strict commits need a valid `Risk:` line, and the hook
+  judges staged project bytes while evidence stays on disk.
+- The closing proof is `proof/0361-obligatorio-review-y.txt`. The approved verdict and
+  verified record both name tree `016866ea536832475f3798e84b5f00cbf8a83b5a`.
 - The tool counts this line for the tree it describes, copied from `odachi summary`:
 
   total: 359 features · 891 steps done of 891 · 0 open questions
 
-## What waits for a decision
+## Decisions already taken
 
-- **P1-P4 accepted: `Slice: 3200`.** The human accepted the cohesive policy change
-  and raised the slice for each verifier-found bypass: review validation, staged
-  candidate bytes, and staged project artifacts/policy with real-disk evidence.
+- **P1-P4 accepted: `Slice: 3200`.** The human accepted one cohesive policy change and
+  raised the limit each time review or verification found a real bypass: review
+  validation, staged candidate bytes, and staged project artifacts/policy with
+  real-disk evidence.
+- **The second vendor is optional.** One model is enough to review; a second buys
+  independence and needs explicit provider, operation and credential consent.
+- **Review approval never authorises delivery.** Push, PR, merge, tag, release and
+  install were each separate human decisions.
 
-- **The second vendor is optional.** All four lenses still name
-  `opencode-go/deepseek-v4.1-flash` and check 17 counts `1 of 4`, but one model is
-  enough to review: `--require-review` remains an extra per-tree requirement, and
-  doctor's quorum check is still a warning rather than the review gate. A second
-  vendor buys independence for people who want it and can pay for it;
-  the human paused that purchase for budget reasons. A different model under the same
-  prefix is not a second vendor, and using one needs explicit provider, operation and
-  credential consent.
-- **Review and verification are mandatory locally when mode is on (0361).** The
-  audit found that agents skipped both for 0354-0360 while the gate only reminded
-  them. A non-passive close now needs a valid verdict, a named risk needs an
-  independent verification record, and a strict non-passive commit needs a valid
-  `Risk:` line with a written reason for `none`. The hook enforces the closing
-  commit and coverage comes from the feature diff. Mode off makes both optional;
-  CI passes `--no-review` explicitly because it has no clone store and makes no
-  model calls. Existing unreviewed closed trees block if rechecked under the new
-  policy. Review approval still never authorises delivery.
-- **The rest of the CLI still speaks developer language.** `check`, `init`, `start`
-  and `level` are translated for `office-peru`; other verbs, the `cmd /c` execution
-  of proof commands and the weak-evidence warning are untouched.
-- **Test adequacy stays unresolved (debt 6)**, the design system needs a headless
-  dependency, the `[[check]]` editor is narrow, and `.atl/skill-registry.md` is stale
-  and generated by an extension in another project this one may not touch.
-- **Doctor's remaining warnings are deliberate**: the rule debt (16) and the quorum
-  (17). Doctor is otherwise all clear, 18 checks, no problems.
+## What was measured
 
-- **The deterministic floor still catches what lenses miss.** The closing review's
-  lint row found QF1001 and an unused profile helper; both were fixed, and the
-  focused packages and full linter are green.
-- **Independent verification found a second fail-open.** An unchanged non-passive
-  closing tree could skip review validation when its stored verdict lacked the
-  feature's lens or coverage. A regression now makes the empty delta validate the
-  verdict instead of treating the feature as passive.
+- PR #724 and #725 each passed four CI checks. PR #726 passed four checks, merged, and
+  its release workflow ran `go test ./...` before goreleaser.
+- Windows amd64 zip checksum: `e2aacd9bcfc60725a53b2c4bdb52f9f4d1bc9b0e9619938655ac0c9ce3cfae06`.
+- The executable inside that zip and the installed executable both hash to
+  `92b0e8dcadaf5ed24e57932868ee0297c70a6c79324e602b2921f1f12bfe3d30`.
+- Only Windows amd64 was installed on this machine. macOS, Linux and arm64 assets
+  were published but not installed here.
 
 ## What this cycle learned
 
-- **A profile changes ceremony, not knowledge.** Eight axes plus a voice; the legal
-  map lives in a skill's references. A fifth axis for `source-check` would promise a
-  proof mode the gate does not have.
-- **Translation belongs at the printing boundary.** Domain messages, reason codes,
-  exit codes and `--json` stay untouched; novato, senior and ci keep byte-identical
-  output, and a line with no known translation passes through.
-- **One resolver, one answer.** Doctor and the verbs ask the same function, so a
-  machine default cannot disagree with a voice already published in `AGENTS.md`.
-- **A default must not rewrite a committed choice.** Resolution stops at the project
-  file and the published block before reading the machine's default.
-- **A stale local binary corrupts doctor.** `exec.LookPath` refuses an executable
-  found relative to the current directory, so a gitignored `odachi.exe` hid the
-  installed one and made checks 2 and 6 fail.
-- **A squash leaves local main ahead.** Reset it to `origin/main` before the next
-  branch, and take the release tag SHA programmatically from `gh pr view` so it lands
-  on the release PR's merge commit.
-- **A flaky CI job is rerun, not reimplemented.** A TUI subtest timed out once in the
-  v0.63.0 release run; rerunning that single job passed and published the release.
-- **Test ports must be used.** The global profile read `os.UserHomeDir()` directly
-  and skipped `homeDir`, so tests saw the real machine default; reading through the
-  port restored isolation.
-- **One bounded worker can write a multi-file slice.** Hand it exact edit surfaces,
-  verification commands and the task doc; the parent verifies the diff and reruns
-  the full proof before committing.
+- **Mode on used to ask, not require.** ADR 0056 makes review and named-risk
+  verification blocking locally; CI uses `--no-review` explicitly because a clean
+  runner has no clone store and makes no model calls.
+- **A clean close can hide the feature.** Required lenses and coverage come from the
+  feature diff, not an empty closing worktree.
+- **The hook must judge the commit, not the worktree.** Project artifacts and the
+  review switch come from a staged-index snapshot; proof, verdict, verification and
+  the explicit `--proof` file stay on real disk.
+- **An empty delta still owes validation.** It means the verdict names this exact
+  tree, not that the feature became passive.
+- **A subagent can pay the review.** The active model produced malformed JSON and
+  repeated timeouts; `odachi-reviewer` and `odachi-verify` returned strict JSON that
+  Odachi admitted.
+- **A release tag names the release merge, not the feature tree.** The verdict names
+  the feature's closing tree; the tag names the release PR merge commit.
 
-## The commands that work
+## Commands that work
 
 ```sh
-# use the step commit and the task doc's Base:, then review and verify before ONE proof and the commit
-commit="<step-commit-sha>"
-base="<feature-base-sha>"
-odachi plan --done T1 --commit "$commit"
-odachi review --base "$base" --exec "opencode run --agent odachi-reviewer --model {model} --file {prompt} \"Answer the review prompt in the attached file.\""
-odachi verify --exec "opencode run --agent odachi-verify --model {model} --file {prompt} \"Answer the verification prompt in the attached file.\""
-odachi check --run "go test ./..." --timeout 2400
-git commit -m "..." -m "Risk: contract"
-# with no named risk, use: -m "Risk: none - <written reason>"
-```
+# the installed binary is the release bytes; check it in a project
+odachi --version
+odachi check
 
-```sh
-# the document-only lane, for a change whose diff is the whole record
-odachi start --light "<one requirement>"
+# reproduce CI's base/fence gate with no clone review store and no model call
+odachi check --ci --no-review --run "go test ./..."
+
+# document-only change after a release
 git commit -m "docs: ..." -m "Odachi-Change: <line>" -m "Risk: none - documentation-only change with no executable behavior"
 ```
 
-```sh
-# build the tree binary per feature and lead PATH before anything that must know this tree
-go build -o "$env:TEMP\odachi-next-bin\odachi.exe" ./cmd/odachi
-$env:PATH = "$env:TEMP\odachi-next-bin;$env:PATH"
-```
+## Limits
 
-```sh
-# reproduce CI's base/fence gate with no clone review store and no model call
-odachi check --ci --no-review --run "go test ./..."
-```
-
-```sh
-# the release: a branch that renames Unreleased, a PR, then the tag on its merge
-git switch -c release/vX.Y.Z && git commit -am "release vX.Y.Z" && gh pr create --base main
-$merge = gh pr view <pr> --repo biggs-100/odachi --json mergeCommit --jq '.mergeCommit.oid'
-git tag -a vX.Y.Z $merge -m "release vX.Y.Z" && git push origin vX.Y.Z
-irm https://raw.githubusercontent.com/biggs-100/odachi/main/scripts/install.ps1 | iex
-```
-
-## The limits to remember
-
-- **The gate runs the proof and its reverted copy.** `cmd/odachi` alone costs 212-307s
-  here; one `check --run` with the full suite takes about ten minutes. Never add a
-  second suite. A documentation-only change uses `Odachi-Change` and owes no undo row.
-- **Review and verification are real local work.** The reviewer's clock is 600s
-  and the verifier's is 1800s; a mode-on close pays for the evidence its risk and
-  diff require, while CI uses `--no-review` and makes no model call.
-- **A feature's base is a commit the remote has**, and a squash erases a branch-only
-  base: rebase before retargeting, and resolve changelog/handover conflicts by
-  combining both entries.
-- **The fence is read from the base**: a policy change lands first, in its own pull request.
-- **`## Unreleased` is re-created after every release**, and a version is never moved
-  or reused: the tag lands on the merge of the release pull request.
-- **`windows-latest` is the slow CI gate**: four to eleven minutes here. macOS is on
-  `macos-latest` and has been assigned on every attempt since #704.
-- **The installed binary is an artifact of a tag**, not a moving pointer to main.
+- A tag is never moved. A bad version is marked `[YANKED]` and fixed by the next one.
+- `.atl/skill-registry.md` is stale and generated by an extension in another project
+  this one may not touch.
+- Test adequacy, the headless design-system dependency and the narrow `[[check]]`
+  editor remain known debt; none blocks v0.65.0.
