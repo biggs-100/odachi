@@ -2,8 +2,12 @@ package gitx_test
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -377,9 +381,14 @@ func TestCorrectionIsTheDeltaAgainstOneTree(t *testing.T) {
 	write(t, filepath.Join(root, "notes.txt"), "segunda línea\n")
 	write(t, filepath.Join(root, "nuevo.txt"), "algo\n")
 
-	paths, diff, err := gitx.Correction(root, judged)
+	tree, paths, diff, err := gitx.Correction(root, judged)
 	if err != nil {
 		t.Fatalf("Correction: %v", err)
+	}
+	if want, err := gitx.TreeHash(root); err != nil {
+		t.Fatalf("TreeHash: %v", err)
+	} else if tree != want {
+		t.Errorf("Correction tree = %q, want the worktree tree %q", tree, want)
 	}
 
 	want := []string{"notes.txt", "nuevo.txt"}
@@ -396,9 +405,12 @@ func TestCorrectionIsTheDeltaAgainstOneTree(t *testing.T) {
 	// verdict does not change what the correction measures: the tree is the truth.
 	git(t, root, "add", "-A")
 	git(t, root, "commit", "-m", "after the verdict")
-	paths, _, err = gitx.Correction(root, judged)
+	committedTree, paths, _, err := gitx.Correction(root, judged)
 	if err != nil {
 		t.Fatalf("Correction after a commit: %v", err)
+	}
+	if committedTree != tree {
+		t.Errorf("tree after a commit = %q, want the same worktree tree %q", committedTree, tree)
 	}
 	if !slices.Equal(paths, want) {
 		t.Errorf("paths after a commit = %v, want the same delta %v", paths, want)
@@ -406,4 +418,119 @@ func TestCorrectionIsTheDeltaAgainstOneTree(t *testing.T) {
 	if base == "" {
 		t.Error("newRepo returned no base commit")
 	}
+}
+
+// TestCorrectionReturnsOneAtomicSnapshot: the tree, paths and diff must describe
+// the same worktree. A Git wrapper changes a file after Correction reads its diff;
+// re-reading TreeHash then names different bytes, while the snapshot Correction
+// already built must remain the identity of the delta it returns.
+func TestCorrectionReturnsOneAtomicSnapshot(t *testing.T) {
+	root, base := newRepo(t)
+	judged, err := gitx.TreeHash(root)
+	if err != nil {
+		t.Fatalf("TreeHash: %v", err)
+	}
+
+	notes := filepath.Join(root, "notes.txt")
+	write(t, notes, "before the correction\n")
+	wantTree, wantPaths, wantDiff, err := gitx.Candidate(root, base)
+	if err != nil {
+		t.Fatalf("Candidate: %v", err)
+	}
+
+	realGit, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatalf("find git: %v", err)
+	}
+	testBinary, err := os.Executable()
+	if err != nil {
+		t.Fatalf("find the test binary: %v", err)
+	}
+	wrapperDir := t.TempDir()
+	wrapper := filepath.Join(wrapperDir, "git")
+	if runtime.GOOS == "windows" {
+		wrapper += ".bat"
+		write(t, wrapper, "@echo off\r\n\"%ODACHI_TEST_BINARY%\" %*\r\n")
+	} else {
+		write(t, wrapper, "#!/bin/sh\nexec \"$ODACHI_TEST_BINARY\" \"$@\"\n")
+		if err := os.Chmod(wrapper, 0o755); err != nil {
+			t.Fatalf("make the Git wrapper executable: %v", err)
+		}
+	}
+
+	marker := filepath.Join(wrapperDir, "mutated")
+	t.Setenv("PATH", wrapperDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("ODACHI_GIT_HELPER", "1")
+	t.Setenv("ODACHI_TEST_BINARY", testBinary)
+	t.Setenv("ODACHI_REAL_GIT", realGit)
+	t.Setenv("ODACHI_MUTATE_FILE", notes)
+	t.Setenv("ODACHI_MUTATE_CONTENT", "after the correction\n")
+	t.Setenv("ODACHI_MUTATE_MARKER", marker)
+
+	tree, paths, diff, err := gitx.Correction(root, judged)
+	if err != nil {
+		t.Fatalf("Correction: %v", err)
+	}
+
+	if tree != wantTree {
+		t.Errorf("tree = %q, want the correction snapshot %q; the worktree changed after its delta was read", tree, wantTree)
+	}
+	if !slices.Equal(paths, wantPaths) {
+		t.Errorf("paths = %v, want the snapshot paths %v", paths, wantPaths)
+	}
+	if diff != wantDiff {
+		t.Errorf("diff changed after the snapshot:\n%s", diff)
+	}
+	if got, err := os.ReadFile(notes); err != nil || string(got) != "after the correction\n" {
+		t.Errorf("the deterministic mutation did not run: content = %q, err = %v", got, err)
+	}
+}
+
+// TestMain also acts as the Git subprocess used by the atomic-snapshot test. It
+// delegates to the real Git binary and mutates the worktree once, immediately
+// after the correction's final diff command succeeds.
+func TestMain(m *testing.M) {
+	if os.Getenv("ODACHI_GIT_HELPER") != "1" {
+		os.Exit(m.Run())
+	}
+	os.Exit(runGitHelper(os.Args[1:]))
+}
+
+func runGitHelper(args []string) int {
+	cmd := exec.Command(os.Getenv("ODACHI_REAL_GIT"), args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), "ODACHI_GIT_HELPER=")
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
+			return exitErr.ExitCode()
+		}
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+
+	if len(args) > 0 && args[0] == "-C" {
+		args = args[2:]
+	}
+	if len(args) != 6 || args[0] != "diff" || args[1] != "--cached" ||
+		args[2] != "--no-color" || args[3] != "--no-ext-diff" || args[4] != "--no-textconv" {
+		return 0
+	}
+	marker := os.Getenv("ODACHI_MUTATE_MARKER")
+	if _, err := os.Stat(marker); err == nil {
+		return 0
+	} else if !os.IsNotExist(err) {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	if err := os.WriteFile(os.Getenv("ODACHI_MUTATE_FILE"), []byte(os.Getenv("ODACHI_MUTATE_CONTENT")), 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	if err := os.WriteFile(marker, []byte("mutated\n"), 0o600); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	return 0
 }

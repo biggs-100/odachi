@@ -224,18 +224,18 @@ func stagedTreeEntries(root, tree, name string) ([]stagedTreeEntry, error) {
 
 // Correction is the worktree compared against one exact tree, without asking git
 // for a fork point: the tree is the bytes a verdict judged, and a correction
-// reviews what moved since those bytes. The paths and the diff are the delta; the
-// tree the caller already knows is not re-read here.
+// reviews what moved since those bytes. It returns the candidate tree, the paths
+// that differ and their diff from the same throwaway index, so a caller never has
+// to re-read a worktree that may have moved.
 //
 // It reuses the one throwaway index Candidate builds, so the real index, the
 // worktree and the human's git are never touched.
-func Correction(root, tree string) (paths []string, diff string, err error) {
+func Correction(root, tree string) (candidateTree string, paths []string, diff string, err error) {
 	target := strings.TrimSpace(tree)
 	if target == "" {
-		return nil, "", fmt.Errorf("no tree to correct against")
+		return "", nil, "", fmt.Errorf("no tree to correct against")
 	}
-	_, paths, diff, err = snapshot(root, target)
-	return paths, diff, err
+	return snapshot(root, target)
 }
 
 // snapshot writes the worktree into a throwaway index and answers the content

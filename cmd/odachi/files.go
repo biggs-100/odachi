@@ -684,7 +684,7 @@ func (g gitRepo) Diff(root, base string) (string, error) {
 	return diff, err
 }
 
-func (gitRepo) Correction(root, tree string) ([]string, string, error) {
+func (gitRepo) Correction(root, tree string) (string, []string, string, error) {
 	return gitx.Correction(root, tree)
 }
 

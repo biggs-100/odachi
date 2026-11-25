@@ -182,9 +182,9 @@ type Git interface {
 	// index. The three answers describe the same bytes.
 	Candidate(root, base string) (tree string, paths []string, diff string, err error)
 	// Correction is the worktree compared against one exact tree, without asking
-	// git for a fork point: the delta between the bytes a verdict judged and the
-	// bytes that stand. It is what a correction reviews.
-	Correction(root, tree string) (paths []string, diff string, err error)
+	// git for a fork point: the candidate tree, changed paths and diff between the
+	// bytes a verdict judged and the bytes that stand, from one snapshot.
+	Correction(root, tree string) (candidateTree string, paths []string, diff string, err error)
 	// BlobHash is the content hash of one worktree file - the blob id git
 	// already owns. It is how a finding earns its content receipt without
 	// anybody declaring it: a hash is measured, not word of mouth.
@@ -3662,15 +3662,10 @@ func (r *runner) worktree() (*worktree, *Result) {
 		if _, problem := r.resolveChange(base, base); problem != nil {
 			return nil, problem
 		}
-		paths, diff, err := r.git.Correction(r.opts.Dir, predecessor.Tree)
+		tree, paths, diff, err := r.git.Correction(r.opts.Dir, predecessor.Tree)
 		if err != nil {
 			p := blocked(fmt.Sprintf("could not read what changed since the verdict for %s: %s; run odachi review --show or drop --since",
 				predecessor.Tree, oneLine(err.Error())))
-			return nil, &p
-		}
-		tree, err := r.git.TreeHash(r.opts.Dir)
-		if err != nil {
-			p := blocked(oneLine(err.Error()) + "; check the git tree and run odachi review again")
 			return nil, &p
 		}
 		r.work = &worktree{tree: tree, base: base, paths: paths, diff: diff}

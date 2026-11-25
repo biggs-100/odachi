@@ -145,6 +145,29 @@ func TestACorrectionReviewsOnlyWhatMoved(t *testing.T) {
 	}
 }
 
+// TestACorrectionUsesTheTreeReturnedWithItsDelta: a correction names the bytes its
+// own snapshot measured. A worktree that changes immediately afterward cannot
+// replace that identity through a second tree read.
+func TestACorrectionUsesTheTreeReturnedWithItsDelta(t *testing.T) {
+	const laterTree = "9999999999999999999999999999999999999999"
+	p := correctionProject(t, correctedTree)
+	p.git.tree = currentTree
+	p.git.onCorrection = func() { p.git.tree = laterTree }
+	p.files.files[storePath(currentTree)] = []byte(verdictFor(t, currentTree, "abc1234", []string{"reliability"}))
+
+	result := p.run(review.Options{Since: correctedTree, Show: true})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want the verdict for the correction snapshot (%s)", result.Code, result.Message)
+	}
+	if said := result.Message + "\n" + strings.Join(result.Lines, "\n"); !strings.Contains(said, currentTree) {
+		t.Errorf("the correction does not name its snapshot tree:\n%s", said)
+	}
+	if said := result.Message + "\n" + strings.Join(result.Lines, "\n"); strings.Contains(said, laterTree) {
+		t.Errorf("the correction adopted a tree read after its delta:\n%s", said)
+	}
+}
+
 // TestACorrectionWithNothingToCorrectRefuses: the bytes the verdict judged are the
 // bytes that stand, and paying a reviewer for the same tree twice is the cost this
 // flag exists to remove. The refusal says so and names the read that already has

@@ -36,7 +36,7 @@ R1 · "odachi's workflow fails closed when evidence is ambiguous, judges one con
 ## Steps
 - [x] T1 · resolve one candidate base before check and review snapshot   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:35846d704aceae6e169df9c0c938c942f086eccc
 - [x] T2 · bind proof to the post-command tree or refuse candidate mutation   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:b669bff99e499edc9dd614e78bd495f4944cfd4b
-- [ ] T3 · return one atomic correction snapshot   R1 · route:delegated/odachi-worker · skills:tests,commits
+- [x] T3 · return one atomic correction snapshot   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:46db5e42907ba469f1272eb95ba4b4f10ca1e680
 - [ ] T4 · fail closed on unreadable inherited evidence and bind refutations   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
 - [ ] T5 · require declared checks to run or produce blocking rows   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
 - [ ] T6 · scope waivers and validate verdicts before paperwork exemption   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
@@ -70,3 +70,5 @@ L3 · VOS P1 · "Bloquear: si origin existe pero su default ref no está fetchea
 L4 · OFICIO · "Authorize internal/app/review/review_test.go and internal/app/review/refusals.baseline as T1 surfaces" (porque The shared candidate context requires review tests to exercise merge-base and branch boundaries, and the retired raw-base refusal must leave the pinned baseline.)
 L5 · OFICIO · "Accept a size exception for T1 at 796 authored lines" (porque The shared candidate resolver and its real-Git regressions form one cohesive contract fix; splitting tests from behavior would weaken review, and later slices return to the 400-line budget.)
 L6 · OFICIO · "Deliver workflow hardening slice 1 in PR #730 and start slice 2 from c80049c" (porque Stacked-to-main keeps each work unit independently reviewable; T2 proof identity depends on the shared candidate context merged in T1.)
+L7 · OFICIO · "Deliver workflow hardening slice 2 in PR #731 and start slice 3 from 79774d5" (porque Stacked-to-main keeps proof identity independent; T3 atomic correction snapshots build on the merged candidate context and proof behavior.)
+L8 · OFICIO · "Authorize cmd/odachi/files.go as a T3 surface" (porque The atomic Correction signature must be wired through the real Git adapter without breaking the review port boundary.)
