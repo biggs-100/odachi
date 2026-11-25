@@ -43,7 +43,7 @@ const brief = `# turnos
 `
 
 // diff is a real-shaped diff: two lines that changed.
-const diff = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -1 +1 @@\n-viejo\n+nuevo\n"
+const diff = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -3 +3 @@\n-viejo\n+nuevo\n"
 
 // fakeFiles is the Files port in memory. It records every write, because "nothing
 // outside the store's reviews/ is written" is the property a test has to be able to
@@ -1876,7 +1876,7 @@ func TestThePromptCarriesTheCandidateSFloor(t *testing.T) {
 	if result.Code != review.CodeOK {
 		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
 	}
-	for _, want := range []string{"## The floor", "- a.go: added lines 1"} {
+	for _, want := range []string{"## The floor", "- a.go: added lines 3"} {
 		if !strings.Contains(result.Prompt, want) {
 			t.Errorf("the prompt does not carry the floor: missing %q", want)
 		}
@@ -2229,12 +2229,13 @@ func refutedProject(t *testing.T) *project {
 		t.Fatalf("sealing the previous verdict: %v", err)
 	}
 	p.files.files[storePath(otherTree)] = domainreview.Render(sealed)
+	p.files.files[storeFile(domainreview.Dir+"/"+otherTree+".prompt.md")] = []byte(domainreview.Prompt(domainreview.PromptInput{Tree: otherTree, Base: "HEAD", Paths: []string{"a.go"}, Diff: diff}))
 
 	answer := domainreview.Refutation{
 		Refuter:     "refuter",
-		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "la transaccion guarda el turno, la cita lo prueba"}},
+		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "a.go:3 la transaccion guarda el turno"}},
 	}
-	sealedRefutation, err := domainreview.SealRefutation(answer, blocking.Findings, otherTree, now)
+	sealedRefutation, err := domainreview.SealRefutation(answer, blocking.Findings, domainreview.CitationEvidence{Tree: otherTree, Diff: diff}, now)
 	if err != nil {
 		t.Fatalf("sealing the refutation: %v", err)
 	}
@@ -2244,6 +2245,125 @@ func refutedProject(t *testing.T) *project {
 	}
 	p.files.files[storeFile(refRel)] = domainreview.RenderRefutation(sealedRefutation)
 	return p
+}
+
+// TestAnUnreadableNeighborRefutationBlocksInheritance: a refutation sidecar that
+// cannot be trusted lends zero votes. Its predecessor's findings still travel,
+// because silently dropping the verdict would erase the blocker the sidecar was
+// meant to answer.
+func TestAnUnreadableNeighborRefutationBlocksInheritance(t *testing.T) {
+	for _, mode := range []string{"malformed", "unreadable"} {
+		t.Run(mode, func(t *testing.T) {
+			p := refutedProject(t)
+			refRel := domainreview.Dir + "/" + otherTree + ".refuted.json"
+			refPath := storeFile(refRel)
+
+			switch mode {
+			case "malformed":
+				p.files.files[refPath] = []byte(`{"refutations":[`)
+			case "unreadable":
+				p.files.failRead = func(path string) error {
+					if path == refPath {
+						return errors.New("permission denied")
+					}
+					return nil
+				}
+			}
+
+			p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`
+			result := p.run(review.Options{Exec: "claude -p"})
+			if result.Code != review.CodeOK {
+				t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+			}
+
+			parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+			if err != nil {
+				t.Fatalf("the stored verdict does not parse: %v", err)
+			}
+			if len(parsed.Findings) != 1 || domainreview.IsDismissed(parsed.Findings[0]) {
+				t.Fatalf("findings = %+v, want the predecessor's blocker preserved", parsed.Findings)
+			}
+			if parsed.Verdict != domainreview.ChangesRequested {
+				t.Errorf("verdict = %q, want %q with zero valid refutation votes", parsed.Verdict, domainreview.ChangesRequested)
+			}
+
+			said := result.Message + "\n" + strings.Join(result.Lines, "\n")
+			for _, want := range []string{refRel, "cannot be read", "no refutation votes"} {
+				if !strings.Contains(said, want) {
+					t.Errorf("the run does not surface %q:\n%s", want, said)
+				}
+			}
+		})
+	}
+}
+
+// TestMissingPredecessorEvidenceKeepsAnInheritedBlocker: even a same-line
+// citation cannot be checked when the predecessor prompt/diff is gone.
+func TestMissingPredecessorEvidenceKeepsAnInheritedBlocker(t *testing.T) {
+	p := refutedProject(t)
+	delete(p.files.files, storeFile(domainreview.Dir+"/"+otherTree+".prompt.md"))
+	p.shell.output = `{"findings":[],"passes":[{"path":"a.go","lens":"reliability"}],"inspection":{"status":"completed","paths":["a.go"]}}`
+
+	result := p.run(review.Options{Exec: "claude -p"})
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+	if err != nil {
+		t.Fatalf("parse successor: %v", err)
+	}
+	if parsed.Verdict != domainreview.ChangesRequested || len(parsed.Findings) != 1 || domainreview.IsDismissed(parsed.Findings[0]) {
+		t.Fatalf("missing predecessor evidence lifted the blocker: %+v", parsed.Findings)
+	}
+	if said := strings.Join(result.Lines, "\n"); !strings.Contains(said, "no predecessor prompt") {
+		t.Errorf("the run does not surface the missing evidence:\n%s", said)
+	}
+}
+
+// TestInheritedRefutationUsesPredecessorEvidence: a quotation belongs to the
+// predecessor diff that produced the finding, never to unrelated successor bytes.
+func TestInheritedRefutationUsesPredecessorEvidence(t *testing.T) {
+	const predecessorDiff = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -3 +3 @@\n-old\n+predecessor\n"
+	for _, tc := range []struct {
+		name, quote, verdict, successorPath, promptTree string
+	}{
+		{name: "predecessor quote survives untouched path", quote: `a.go "+predecessor"`, verdict: domainreview.Approved, successorPath: "b.go", promptTree: otherTree},
+		{name: "successor bytes cannot validate predecessor quote", quote: `a.go "+successor"`, verdict: domainreview.ChangesRequested, successorPath: "a.go", promptTree: otherTree},
+		{name: "mislabeled prompt body lends no votes", quote: `a.go "+predecessor"`, verdict: domainreview.ChangesRequested, successorPath: "b.go", promptTree: currentTree},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := newProject()
+			p.git.changed = []string{tc.successorPath}
+			p.git.diff = fmt.Sprintf("diff --git a/%[1]s b/%[1]s\n--- a/%[1]s\n+++ b/%[1]s\n@@ -1 +1 @@\n-old\n+successor\n", tc.successorPath)
+			p.git.blobs = map[string]string{"a.go": gitBlob, "b.go": gitBlob}
+			findings := []domainreview.Finding{{Path: "a.go", Line: 3, Severity: domainreview.Critical, Causal: true, Why: "pierde el turno", Blob: gitBlob, Lens: "reliability", Evidence: domainreview.EvidenceCited}}
+			verdict, err := domainreview.Seal(domainreview.Verdict{Reviewer: "claude", Findings: findings}, otherTree, "HEAD", now)
+			if err != nil {
+				t.Fatalf("seal predecessor: %v", err)
+			}
+			p.files.files[storePath(otherTree)] = domainreview.Render(verdict)
+			answer := domainreview.Refutation{Tree: otherTree, Refuter: "refuter", Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: tc.quote}}}
+			refRel, _ := domainreview.RefutationPath(otherTree, 1)
+			p.files.files[storeFile(refRel)] = domainreview.RenderRefutation(answer)
+			p.files.files[storeFile(domainreview.Dir+"/"+otherTree+".prompt.md")] = []byte(domainreview.Prompt(domainreview.PromptInput{Tree: tc.promptTree, Base: "HEAD", Paths: []string{"a.go"}, Diff: predecessorDiff}))
+			p.shell.output = fmt.Sprintf(`{"findings":[],"passes":[{"path":%q,"lens":"reliability"}],"inspection":{"status":"completed","paths":[%q]}}`, tc.successorPath, tc.successorPath)
+
+			result := p.run(review.Options{Exec: "claude -p"})
+			if result.Code != review.CodeOK {
+				t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+			}
+			parsed, err := domainreview.Parse(p.files.files[storePath(currentTree)])
+			if err != nil {
+				t.Fatalf("parse successor: %v", err)
+			}
+			if parsed.Verdict != tc.verdict || len(parsed.Findings) != 1 {
+				t.Fatalf("verdict = %q, findings = %+v; want %q with the predecessor row; lines:\n%s", parsed.Verdict, parsed.Findings, tc.verdict, strings.Join(result.Lines, "\n"))
+			}
+			if domainreview.IsDismissed(parsed.Findings[0]) != (tc.verdict == domainreview.Approved) {
+				t.Errorf("the predecessor row's dismissal does not match %q: %+v", tc.verdict, parsed.Findings)
+			}
+		})
+	}
 }
 
 // TestARefutedFindingTravelsDismissed: a finding the refuter killed with
@@ -2270,7 +2390,7 @@ func TestARefutedFindingTravelsDismissed(t *testing.T) {
 	if !domainreview.IsDismissed(dismissed) {
 		t.Errorf("status = %q, want dismissed", dismissed.Status)
 	}
-	if dismissed.Reason != "la transaccion guarda el turno, la cita lo prueba" {
+	if dismissed.Reason != "a.go:3 la transaccion guarda el turno" {
 		t.Errorf("reason = %q, want the refuter's evidence", dismissed.Reason)
 	}
 	if dismissed.Fingerprint == "" {
@@ -3207,8 +3327,8 @@ func TestShowNamesWhenTheCloneSealedEachRefutation(t *testing.T) {
 	sealed, err := domainreview.SealRefutation(domainreview.Refutation{
 		Refuter:     "agente",
 		At:          "2026-11-13T00:00:00Z",
-		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "la linea 3 ya validaba la firma"}},
-	}, findings, currentTree, now)
+		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "a.go:3 ya validaba la firma"}},
+	}, findings, domainreview.CitationEvidence{Tree: currentTree, Diff: diff}, now)
 	if err != nil {
 		t.Fatalf("sealing the refutation: %v", err)
 	}
@@ -3239,8 +3359,8 @@ func TestShowKeepsOnlyTheSealWhenTheRefuterDidNotDisagree(t *testing.T) {
 
 	sealed, err := domainreview.SealRefutation(domainreview.Refutation{
 		Refuter:     "agente",
-		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "la linea 3 ya validaba la firma"}},
-	}, findings, currentTree, now)
+		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "a.go:3 ya validaba la firma"}},
+	}, findings, domainreview.CitationEvidence{Tree: currentTree, Diff: diff}, now)
 	if err != nil {
 		t.Fatalf("sealing the refutation: %v", err)
 	}
@@ -3266,7 +3386,7 @@ func TestShowKeepsOnlyTheSealWhenTheRefuterDidNotDisagree(t *testing.T) {
 func TestTheSavedRefutationNamesTheSealAndTheClaim(t *testing.T) {
 	p, _ := refutableProject(t)
 	p.files.files[fullPath("refutacion.json")] = []byte(`{"tree":"` + currentTree +
-		`","refuter":"agente","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"la linea 3 ya validaba la firma"}]}`)
+		`","refuter":"agente","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"a.go:3 ya validaba la firma"}]}`)
 
 	result := p.run(review.Options{Base: "HEAD", Attach: "refutacion.json"})
 	if result.Code != review.CodeOK {
@@ -3293,7 +3413,7 @@ func TestShowNamesAnUnattributableHourForARefutationStoredBeforeTheNumber(t *tes
 		t.Fatalf("the refutation path: %v", err)
 	}
 	p.files.files[storeFile(rel)] = []byte(`{"tree":"` + currentTree +
-		`","refuter":"agente","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"la linea 3 ya validaba la firma"}]}`)
+		`","refuter":"agente","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"a.go:3 ya validaba la firma"}]}`)
 
 	result := p.run(review.Options{Show: true})
 	if result.Code != review.CodeOK {
@@ -3318,7 +3438,7 @@ func TestShowNamesARefutationThatNeverSaidWhoAnswered(t *testing.T) {
 		t.Fatalf("the refutation path: %v", err)
 	}
 	p.files.files[storeFile(rel)] = []byte(`{"tree":"` + currentTree +
-		`","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"la linea 3 ya validaba la firma"}]}`)
+		`","at":"2026-11-13T00:00:00Z","refutations":[{"id":"F1","verdict":"refuted","why":"a.go:3 ya validaba la firma"}]}`)
 
 	result := p.run(review.Options{Show: true})
 	lines := strings.Join(result.Lines, "\n")

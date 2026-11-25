@@ -260,7 +260,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	}
 
 	refutation := filepath.Join(t.TempDir(), "refutacion.json")
-	writeAt(t, refutation, `{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"el diff solo cambia el literal devuelto; el turno nunca se guardaba tampoco antes"}]}`)
+	writeAt(t, refutation, `{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"internal/app/turnos.go:3 el diff solo cambia el literal devuelto; el turno nunca se guardaba tampoco antes"}]}`)
 	if code, out, errOut := runDir(t, dir, []string{"review", "--attach", refutation}, ""); code != 0 {
 		t.Fatalf("attach refutation: code = %d (stdout: %q, stderr: %q)", code, out, errOut)
 	}
@@ -284,7 +284,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	// A second refuter is a second witness, in its own file: the first answer is
 	// never rewritten, and the same account answering again is refused by name.
 	second := filepath.Join(t.TempDir(), "refutacion2.json")
-	writeAt(t, second, `{"refuter":"otro","refutations":[{"id":"F1","verdict":"refuted","why":"el call site ya pasa un token firmado"}]}`)
+	writeAt(t, second, `{"refuter":"otro","refutations":[{"id":"F1","verdict":"refuted","why":"internal/app/turnos.go:3 el call site ya pasa un token firmado"}]}`)
 	code, out, _ = runDir(t, dir, []string{"review", "--attach", second}, "")
 	if code != 0 {
 		t.Fatalf("second attach: code = %d (stdout: %q)", code, out)
@@ -295,7 +295,7 @@ func TestRefutedBlockerStopsBlockingEndToEnd(t *testing.T) {
 	}
 
 	same := filepath.Join(t.TempDir(), "refutacion1-otra-vez.json")
-	writeAt(t, same, `{"refuter":"otro","refutations":[{"id":"F1","verdict":"refuted","why":"otra cita"}]}`)
+	writeAt(t, same, `{"refuter":"otro","refutations":[{"id":"F1","verdict":"refuted","why":"internal/app/turnos.go:3 otra cita"}]}`)
 	if code, _, errOut := runDir(t, dir, []string{"review", "--attach", same}, ""); code != 1 {
 		t.Fatalf("the same account again: code = %d, want 1", code)
 	} else if !strings.Contains(errOut, "already answered") {

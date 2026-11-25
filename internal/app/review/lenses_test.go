@@ -35,6 +35,15 @@ func newLensProject() *project {
 	return p
 }
 
+const authCitationDiff = "diff --git a/internal/auth/session.go b/internal/auth/session.go\n--- a/internal/auth/session.go\n+++ b/internal/auth/session.go\n@@ -12 +12 @@\n-viejo\n+nuevo\n"
+
+func refutationProject() *project {
+	p := newLensProject()
+	p.git.changed = []string{"internal/auth/session.go"}
+	p.git.diff = authCitationDiff
+	return p
+}
+
 // TestNoFlagsUsesTheLensesTheEvidenceAsksFor: the bare verb is unchanged except
 // for this — a code change is reviewed with the reliability lens, and the human
 // does not have to know that.
@@ -400,9 +409,9 @@ func TestRefuteOnlyWorksOnThisTree(t *testing.T) {
 // TestAttachStoresARefutationBesideTheVerdict: --attach stores either document,
 // and the refutation is named after the same tree, once.
 func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
-	p := newLensProject()
+	p := refutationProject()
 	p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
-	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
+	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"internal/auth/session.go:12 el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
 
 	result := p.run(review.Options{Attach: "refutacion.json"})
 
@@ -436,7 +445,7 @@ func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
 	// ceiling: a fourth distinct account has no file to live in.
 	for _, name := range []string{"otro", "tercero"} {
 		file := "refutacion-" + name + ".json"
-		p.files.files[fullPath(file)] = []byte(`{"refuter":"` + name + `","refutations":[{"id":"F1","verdict":"refuted","why":"cita de ` + name + `"}]}`)
+		p.files.files[fullPath(file)] = []byte(`{"refuter":"` + name + `","refutations":[{"id":"F1","verdict":"refuted","why":"internal/auth/session.go:12 cita de ` + name + `"}]}`)
 		if r := p.run(review.Options{Attach: file}); r.Code != review.CodeOK {
 			t.Fatalf("attach %s: code = %d (%s)", name, r.Code, r.Message)
 		}
@@ -446,7 +455,7 @@ func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
 		t.Fatalf("the second witness was not stored as round 2; writes = %v", p.files.written())
 	}
 
-	p.files.files[fullPath("refutacion-cuarto.json")] = []byte(`{"refuter":"cuarto","refutations":[{"id":"F1","verdict":"refuted","why":"cuarta cita"}]}`)
+	p.files.files[fullPath("refutacion-cuarto.json")] = []byte(`{"refuter":"cuarto","refutations":[{"id":"F1","verdict":"refuted","why":"internal/auth/session.go:12 cuarta cita"}]}`)
 	fourth := p.run(review.Options{Attach: "refutacion-cuarto.json"})
 	if fourth.Code != review.CodeBlocked {
 		t.Fatalf("fourth attach code = %d, want 1: three is the ceiling", fourth.Code)
@@ -456,13 +465,70 @@ func TestAttachStoresARefutationBesideTheVerdict(t *testing.T) {
 	}
 }
 
+// TestAttachChecksAQuotedCitationAgainstTheCandidate: a quoted fragment is a
+// locator only when the candidate contains it. Invented code is still prose.
+func TestAttachChecksAQuotedCitationAgainstTheCandidate(t *testing.T) {
+	for _, tc := range []struct {
+		quote string
+		code  int
+	}{
+		{quote: "+nuevo", code: review.CodeOK},
+		{quote: "+inventado", code: review.CodeBlocked},
+	} {
+		t.Run(tc.quote, func(t *testing.T) {
+			p := newLensProject()
+			p.git.changed = []string{"internal/auth/session.go"}
+			p.git.diff = "diff --git a/internal/auth/session.go b/internal/auth/session.go\n--- a/internal/auth/session.go\n+++ b/internal/auth/session.go\n@@ -12 +12 @@\n-viejo\n+nuevo\n"
+			p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
+			draft := domainreview.Refutation{Refuter: "humano", Refutations: []domainreview.Judgment{{
+				ID: "F1", Verdict: domainreview.Refuted,
+				Why: `internal/auth/session.go "` + tc.quote + `" already verified the signature`,
+			}}}
+			data, err := json.Marshal(draft)
+			if err != nil {
+				t.Fatalf("marshal the draft: %v", err)
+			}
+			p.files.files[fullPath("refutacion.json")] = data
+
+			result := p.run(review.Options{Attach: "refutacion.json"})
+			if result.Code != tc.code {
+				t.Fatalf("code = %d, want %d (%s)", result.Code, tc.code, result.Message)
+			}
+			if tc.code != review.CodeOK && len(p.files.written()) != 0 {
+				t.Fatalf("writes = %v, want none", p.files.written())
+			}
+		})
+	}
+}
+
+// TestAttachRefusesAQuoteWhenTheDiffCannotBeRead: an empty candidate diff is not
+// proof that an invented fragment exists. The citation is ambiguous, so the
+// refutation is refused and the finding keeps standing.
+func TestAttachRefusesAQuoteWhenTheDiffCannotBeRead(t *testing.T) {
+	p := refutationProject()
+	p.git.diff = ""
+	p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
+	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"internal/auth/session.go \"+inventado\" already verified the signature"}]}`)
+
+	result := p.run(review.Options{Attach: "refutacion.json"})
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want 1: an uncheckable quote must not be stored (%s)", result.Code, result.Message)
+	}
+	if len(p.files.written()) != 0 {
+		t.Fatalf("writes = %v, want none", p.files.written())
+	}
+	if !strings.Contains(result.Message, "ambiguous") {
+		t.Errorf("message = %q, want the missing evidence named as ambiguous", result.Message)
+	}
+}
+
 // TestAttachSaysWhatTheBlockStillNeeds is the row the review of this feature
 // found: the attach message promised to name the votes a surviving block still
 // needs, and nothing pinned it. One witness on an argued finding leaves one.
 func TestAttachSaysWhatTheBlockStillNeeds(t *testing.T) {
-	p := newLensProject()
+	p := refutationProject()
 	p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
-	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
+	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"internal/auth/session.go:12 el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
 
 	result := p.run(review.Options{Attach: "refutacion.json"})
 
@@ -480,9 +546,9 @@ func TestAttachSaysWhatTheBlockStillNeeds(t *testing.T) {
 // read as "that round is taken". A permissions problem then reached the human as
 // "three refutations is the ceiling", with the real error swallowed.
 func TestAnUnreadableStoreIsNotAFullOne(t *testing.T) {
-	p := newLensProject()
+	p := refutationProject()
 	p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
-	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
+	p.files.files[fullPath("refutacion.json")] = []byte(`{"refuter":"humano","refutations":[{"id":"F1","verdict":"refuted","why":"internal/auth/session.go:12 el diff +nuevo muestra que la firma ya se validaba en la línea 12"}]}`)
 	p.files.failExists = func(path string) error {
 		if strings.Contains(path, ".refuted.") {
 			return errors.New("permission denied")
@@ -570,14 +636,14 @@ func TestExecStoresARefutationAnswer(t *testing.T) {
 // TestShowListsTheRefutation: a refutation is part of what happened to this
 // tree, so --show mentions it.
 func TestShowListsTheRefutation(t *testing.T) {
-	p := newLensProject()
+	p := refutationProject()
 	p.files.files[storePath(currentTree)] = []byte(blockedVerdict(t))
 	refutation, err := domainreview.SealRefutation(domainreview.Refutation{
-		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "el diff +nuevo muestra que ya estaba"}},
+		Refutations: []domainreview.Judgment{{ID: "F1", Verdict: domainreview.Refuted, Why: "internal/auth/session.go:12 el diff +nuevo muestra que ya estaba"}},
 	}, []domainreview.Finding{{
 		Path: "internal/auth/session.go", Line: 12, Severity: domainreview.Blocker, Causal: true,
 		Why: "la sesión se acepta sin verificar la firma",
-	}}, currentTree, now)
+	}}, domainreview.CitationEvidence{Tree: currentTree, Diff: p.git.diff}, now)
 	if err != nil {
 		t.Fatalf("SealRefutation = %v", err)
 	}

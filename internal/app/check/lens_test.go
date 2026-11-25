@@ -25,6 +25,13 @@ func verdictWithLenses(t *testing.T, tree string, lenses []string, findings []do
 	return string(domainreview.Render(sealed))
 }
 
+// citationDiff is the candidate evidence shared by the refutation fixtures.
+const citationDiff = "diff --git a/internal/auth/session.go b/internal/auth/session.go\n--- a/internal/auth/session.go\n+++ b/internal/auth/session.go\n@@ -12 +12 @@\n-viejo\n+verified signature\n"
+
+func citationGit() *fakeGit {
+	return &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}, diff: citationDiff}
+}
+
 // refutationPath is where a refutation for tree lives, in the fake's spelling.
 func refutationPath(tree string) string {
 	return filepath.Join(store, filepath.FromSlash(domainreview.Dir), tree+".refuted.json")
@@ -58,7 +65,7 @@ func refutedFileBy(t *testing.T, refuter, tree string, reasons ...string) string
 	}
 
 	sealed, err := domainreview.SealRefutation(domainreview.Refutation{Refuter: refuter, Refutations: judgments},
-		[]domainreview.Finding{blockingFinding()}, tree, reviewInstant)
+		[]domainreview.Finding{blockingFinding()}, domainreview.CitationEvidence{Tree: tree, Diff: citationDiff}, reviewInstant)
 	if err != nil {
 		t.Fatalf("sealing the seeded refutation: %v", err)
 	}
@@ -110,7 +117,7 @@ func TestRequireReviewNamesTheFirstMissingLensOfFour(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte(verdictAtBase(t, currentTree, "abc1234", []string{domainreview.Reliability}))
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 	result := run(t, files, git, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
@@ -158,9 +165,9 @@ func TestRequireReviewDoesNotRequireAVerdictOnADocsChange(t *testing.T) {
 func TestARefutedBlockerStopsBlocking(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{blockingFinding()}))
-	files.files[refutationPath(currentTree)] = []byte(refutedFile(t, currentTree, "el diff de la línea 12 muestra que la firma ya se validaba"))
+	files.files[refutationPath(currentTree)] = []byte(refutedFile(t, currentTree, "internal/auth/session.go:12 el diff de la línea 12 muestra que la firma ya se validaba"))
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 	result := run(t, files, git, check.Options{RequireReview: true})
 
 	if result.Code != 0 {
@@ -175,7 +182,7 @@ func TestAStandingBlockerStillBlocks(t *testing.T) {
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{blockingFinding()}))
 	files.files[refutationPath(currentTree)] = []byte(refutedFile(t, currentTree, "   "))
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 	result := run(t, files, git, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
@@ -191,9 +198,9 @@ func TestAStandingBlockerStillBlocks(t *testing.T) {
 func TestARefutationForAnotherTreeIsIgnored(t *testing.T) {
 	files := newFakeFiles(readyFiles())
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{blockingFinding()}))
-	files.files[refutationPath(otherTree)] = []byte(refutedFile(t, otherTree, "el diff de la línea 12 muestra que ya estaba"))
+	files.files[refutationPath(otherTree)] = []byte(refutedFile(t, otherTree, "internal/auth/session.go:12 el diff de la línea 12 muestra que ya estaba"))
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 	result := run(t, files, git, check.Options{RequireReview: true})
 
 	if result.Code != 2 {
@@ -209,7 +216,7 @@ func TestAMangledRefutationIsNotAnApproval(t *testing.T) {
 	files.files[reviewPath(currentTree)] = []byte(verdictWithLenses(t, currentTree, domainreview.Lenses(domainreview.Full), []domainreview.Finding{blockingFinding()}))
 	files.files[refutationPath(currentTree)] = []byte("basura")
 
-	git := &fakeGit{tree: currentTree, changed: []string{"internal/auth/session.go"}}
+	git := citationGit()
 	result := run(t, files, git, check.Options{RequireReview: true})
 
 	if result.Code != 2 {

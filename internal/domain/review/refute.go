@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +32,47 @@ type Judgment struct {
 	Verdict string `json:"verdict"`
 	Why     string `json:"why"`
 }
+
+// CitationStatus is the one decision every refutation consumer shares. Valid is
+// the only status that lends a vote; invalid and ambiguous both keep the finding
+// standing.
+type CitationStatus string
+
+const (
+	CitationValid     CitationStatus = "valid"
+	CitationInvalid   CitationStatus = "invalid"
+	CitationAmbiguous CitationStatus = "ambiguous"
+)
+
+// CitationEvidence is the candidate evidence available to check a locator. Diff
+// is authoritative when present; Source is the cited file's contents when no
+// diff is available. Tree binds both to the candidate the refutation names.
+type CitationEvidence struct {
+	Tree   string
+	Diff   string
+	Source string
+}
+
+// CitationInput is one refutation judgment bound to the finding it answers.
+type CitationInput struct {
+	FindingID    string
+	Finding      Finding
+	Locator      string
+	DeclaredTree string
+	Evidence     CitationEvidence
+}
+
+// CitationResult explains the shared decision without turning ambiguity into a
+// vote. Reason is empty only for CitationValid.
+type CitationResult struct {
+	Status CitationStatus
+	Reason string
+}
+
+var (
+	lineCitation  = regexp.MustCompile(`(?:^|[\s"'` + "`" + `(\[{])([^\r\n"'` + "`" + `()\[\]{}]+?):([1-9][0-9]*)\b`)
+	quoteCitation = regexp.MustCompile(`(?:^|[\s"'` + "`" + `(\[{])([^\r\n"'` + "`" + `()\[\]{}]+?)(?:\s*:\s*|\s+)(?:"([^"\n]+)"|'([^'\n]+)'|` + "`([^`\n]+)`" + `)`)
+)
 
 // SealedFrom is the schema from which a refutation's `at` is the instant this
 // clone sealed the file and the refuter's own hour, when it disagrees, is kept in
@@ -96,21 +138,22 @@ func findingID(i int) string {
 // Decoding is strict for the same reason a verdict's is: a refutation the tool
 // half-understands could lift a block on evidence nobody can point at.
 func ParseRefutation(data []byte) (Refutation, error) {
-	text := strings.TrimSpace(string(data))
-	if text == "" {
-		return Refutation{}, errors.New("the refutation is empty: there is nothing to save")
-	}
-
-	// The number is read before the strict pass, for the reason a verdict reads it
-	// that way: a strict decoder cannot tell a typo from a writer that is ahead of
-	// it, and a file from a newer odachi is not a broken file (0291).
+	// Compatibility is the first decision: a record from a newer odachi must
+	// receive the upgrade instruction before its citations or unknown fields can
+	// be mistaken for damage. Non-JSON input still falls through to the decoder's
+	// existing refusal below.
 	var head struct {
 		Schema int `json:"schema"`
 	}
-	if json.Unmarshal([]byte(text), &head) == nil {
+	if json.Unmarshal(data, &head) == nil {
 		if _, err := schema.Read(head.Schema); err != nil {
 			return Refutation{}, fmt.Errorf("the refutation cannot be read: %w", err)
 		}
+	}
+
+	text := strings.TrimSpace(string(data))
+	if text == "" {
+		return Refutation{}, errors.New("the refutation is empty: there is nothing to save")
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(text))
@@ -135,6 +178,12 @@ func ParseRefutation(data []byte) (Refutation, error) {
 		default:
 			return Refutation{}, fmt.Errorf("the refutation of %s says verdict %q; the only values are %q and %q",
 				judgment.ID, judgment.Verdict, Stands, Refuted)
+		}
+		if judgment.Verdict == Refuted {
+			result := ValidateCitation(CitationInput{FindingID: judgment.ID, Locator: judgment.Why})
+			if result.Status == CitationInvalid {
+				return Refutation{}, fmt.Errorf("the refutation of %s: %s", judgment.ID, result.Reason)
+			}
 		}
 	}
 
@@ -172,9 +221,22 @@ func RenderRefutation(r Refutation) []byte {
 //
 // A blocking finding the refuter did not answer stands. A refutation with no
 // evidence is not a refutation. Doubt always votes for keeping the finding.
-func SealRefutation(r Refutation, findings []Finding, tree string, now time.Time) (Refutation, error) {
-	if strings.TrimSpace(tree) == "" {
+func SealRefutation(r Refutation, findings []Finding, evidence CitationEvidence, now time.Time) (Refutation, error) {
+	tree := strings.TrimSpace(evidence.Tree)
+	if tree == "" {
 		return Refutation{}, errors.New("there is no tree: I cannot save a refutation that does not say what it refuted")
+	}
+	if declared := strings.TrimSpace(r.Tree); declared != "" && declared != tree {
+		return Refutation{}, fmt.Errorf("the refutation is from tree %s and this tree is %s: matching finding ids do not bind evidence to another candidate", declared, tree)
+	}
+	if strings.TrimSpace(r.Tree) == "" {
+		r.Tree = tree
+	}
+	for i := range r.Refutations {
+		r.Refutations[i] = normalized(r.Refutations[i], strings.TrimSpace(r.Refutations[i].ID))
+	}
+	if err := r.validateCitationResults(findings, evidence); err != nil {
+		return Refutation{}, err
 	}
 
 	blocking := blockingIDs(findings)
@@ -232,6 +294,335 @@ func SealRefutation(r Refutation, findings []Finding, tree string, now time.Time
 	return sealed, nil
 }
 
+// ValidateCitation is the single decision used by parsing, sealing, inheritance
+// and the check gate. Every locator in the prose is considered: the first
+// evidence-valid candidate wins, ambiguity survives when no candidate can be
+// decided, and invalid is returned only when every candidate contradicts the
+// available evidence.
+func ValidateCitation(in CitationInput) CitationResult {
+	candidates := parseCitationsForFinding(in.Locator, in.Finding.Path)
+	if len(candidates) == 0 {
+		if located, ok := parseCitation(in.Locator); ok {
+			candidates = append(candidates, located)
+		}
+	}
+	if len(candidates) == 0 {
+		if path := strings.TrimSpace(in.Finding.Path); path != "" {
+			return CitationResult{CitationInvalid, fmt.Sprintf("needs a citation: use %s:%d or %s plus a quoted fragment from the candidate", path, max(in.Finding.Line, 1), path)}
+		}
+		return CitationResult{CitationInvalid, "needs a citation: use path:line or a path plus a quoted candidate fragment"}
+	}
+
+	invalid := CitationResult{Status: CitationInvalid}
+	ambiguous := CitationResult{}
+	for _, located := range candidates {
+		result := validateLocatedCitation(in, located)
+		switch result.Status {
+		case CitationValid:
+			return result
+		case CitationAmbiguous:
+			if ambiguous.Status == "" {
+				ambiguous = result
+			}
+		default:
+			if invalid.Reason == "" {
+				invalid = result
+			}
+		}
+	}
+	if ambiguous.Status != "" {
+		return ambiguous
+	}
+	return invalid
+}
+
+func validateLocatedCitation(in CitationInput, located citation) CitationResult {
+	if path := strings.TrimSpace(in.Finding.Path); path != "" && RowPath(located.path) != RowPath(path) {
+		return CitationResult{CitationInvalid, fmt.Sprintf("cites %s, but the finding is about %s", located.path, path)}
+	}
+	if strings.TrimSpace(in.FindingID) == "" || strings.TrimSpace(in.Finding.Path) == "" {
+		return CitationResult{CitationAmbiguous, "ambiguous: the finding identity or path is missing"}
+	}
+	declared := strings.TrimSpace(in.DeclaredTree)
+	available := strings.TrimSpace(in.Evidence.Tree)
+	if declared == "" || available == "" {
+		return CitationResult{CitationAmbiguous, "ambiguous: the declared or available evidence tree is missing"}
+	}
+	if declared != available {
+		return CitationResult{CitationInvalid, fmt.Sprintf("the refutation names tree %s, but the available evidence is tree %s", declared, available)}
+	}
+
+	diff := in.Evidence.Diff
+	source := in.Evidence.Source
+	if strings.TrimSpace(diff) == "" && strings.TrimSpace(source) == "" {
+		return CitationResult{CitationAmbiguous, "ambiguous: the candidate diff and source evidence are missing or empty"}
+	}
+
+	if located.line > 0 {
+		if strings.TrimSpace(diff) != "" {
+			file, known, checkable := citationDiffFile(diff, located.path)
+			if !checkable {
+				return CitationResult{CitationAmbiguous, "ambiguous: the candidate diff cannot be read"}
+			}
+			if !known {
+				return CitationResult{CitationInvalid, fmt.Sprintf("cites %s, which is not in the available candidate diff", located.path)}
+			}
+			if !diffHasLine(file.text, located.line) {
+				return CitationResult{CitationInvalid, fmt.Sprintf("cites %s:%d, which is not a checkable line in the candidate", located.path, located.line)}
+			}
+		} else if !sourceHasLine(source, located.line) {
+			return CitationResult{CitationInvalid, fmt.Sprintf("cites %s:%d, which is not a line in the available source", located.path, located.line)}
+		}
+		return CitationResult{Status: CitationValid}
+	}
+
+	quote := strings.TrimSpace(located.quote)
+	if strings.TrimSpace(diff) != "" {
+		file, known, checkable := citationDiffFile(diff, located.path)
+		if !checkable {
+			return CitationResult{CitationAmbiguous, "ambiguous: the candidate diff cannot be read"}
+		}
+		if !known {
+			return CitationResult{CitationInvalid, fmt.Sprintf("cites %s, which is not in the available candidate diff", located.path)}
+		}
+		if !strings.Contains(candidateDiffText(file.text), quote) {
+			return CitationResult{CitationInvalid, fmt.Sprintf("quotes %q, which is not a fragment in the candidate's %s", quote, located.path)}
+		}
+	} else if !strings.Contains(source, quote) {
+		return CitationResult{CitationInvalid, fmt.Sprintf("quotes %q, which is not a fragment in the available source for %s", quote, located.path)}
+	}
+	return CitationResult{Status: CitationValid}
+}
+
+// CitationResults applies ValidateCitation to every refuted judgment. Stands and
+// unanswered rows lend no votes and need no locator.
+func (r Refutation) CitationResults(findings []Finding, evidence CitationEvidence) []CitationResult {
+	blocking := make(map[string]Finding, len(findings))
+	for _, entry := range blockingFindings(findings) {
+		blocking[entry.id] = entry.finding
+	}
+	var results []CitationResult
+	for _, judgment := range r.Refutations {
+		if judgment.Verdict != Refuted {
+			continue
+		}
+		id := strings.TrimSpace(judgment.ID)
+		finding, ok := blocking[id]
+		if !ok {
+			results = append(results, CitationResult{CitationInvalid, fmt.Sprintf("the refutation talks about %s, which is not a causal BLOCKER or CRITICAL of this verdict", id)})
+			continue
+		}
+		result := ValidateCitation(CitationInput{
+			FindingID:    id,
+			Finding:      finding,
+			Locator:      judgment.Why,
+			DeclaredTree: r.Tree,
+			Evidence:     evidence,
+		})
+		if result.Reason != "" {
+			result.Reason = "the refutation of " + id + ": " + result.Reason
+		}
+		results = append(results, result)
+	}
+	return results
+}
+
+func (r Refutation) validateCitationResults(findings []Finding, evidence CitationEvidence) error {
+	for _, result := range r.CitationResults(findings, evidence) {
+		if result.Status != CitationValid {
+			return errors.New(result.Reason)
+		}
+	}
+	return nil
+}
+
+// citation is the concrete locator carried inside why. The persisted shape stays
+// unchanged: a path and line, or a path and a quoted candidate fragment.
+type citation struct {
+	path  string
+	line  int
+	quote string
+}
+
+// parseCitation reads path:line or path "quoted fragment" from why without
+// changing the persisted shape.
+func parseCitation(why string) (citation, bool) {
+	if match := lineCitation.FindStringSubmatch(why); len(match) == 3 {
+		if line, err := strconv.Atoi(match[2]); err == nil && line > 0 {
+			return citation{path: strings.TrimSpace(match[1]), line: line}, true
+		}
+	}
+	match := quoteCitation.FindStringSubmatch(why)
+	if len(match) != 5 {
+		return citation{}, false
+	}
+	for _, quote := range match[2:] {
+		if strings.TrimSpace(quote) != "" {
+			return citation{path: strings.TrimSpace(match[1]), quote: quote}, true
+		}
+	}
+	return citation{}, false
+}
+
+// parseCitationsForFinding captures every locator anchored to the exact finding
+// path, including paths with spaces. Evaluation decides which mention is useful;
+// parsing never lets an earlier quoted mention hide a later valid line.
+func parseCitationsForFinding(why, path string) []citation {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil
+	}
+	var candidates []citation
+	for at := 0; at < len(why); {
+		rel := strings.Index(why[at:], path)
+		if rel < 0 {
+			break
+		}
+		start := at + rel
+		at = start + len(path)
+		if start > 0 && !citationBoundary(why[start-1]) {
+			continue
+		}
+		if located, ok := parseCitationTail(path, why[at:]); ok {
+			candidates = append(candidates, located)
+		}
+	}
+	return candidates
+}
+
+func parseCitationTail(path, tail string) (citation, bool) {
+	tail = strings.TrimLeftFunc(tail, func(r rune) bool { return r == ' ' || r == '\t' || r == '\r' || r == '\n' })
+	if rest, ok := strings.CutPrefix(tail, ":"); ok {
+		tail = strings.TrimSpace(rest)
+		end := 0
+		for end < len(tail) && tail[end] >= '0' && tail[end] <= '9' {
+			end++
+		}
+		if end > 0 && (end == len(tail) || !citationWord(tail[end])) {
+			if line, err := strconv.Atoi(tail[:end]); err == nil && line > 0 {
+				return citation{path: path, line: line}, true
+			}
+		}
+	}
+	if tail == "" {
+		return citation{}, false
+	}
+	close := tail[0]
+	if close != '"' && close != '\'' && close != '`' {
+		return citation{}, false
+	}
+	if end := strings.IndexByte(tail[1:], close); end >= 0 && strings.TrimSpace(tail[1:end+1]) != "" {
+		return citation{path: path, quote: tail[1 : end+1]}, true
+	}
+	return citation{}, false
+}
+
+func citationBoundary(b byte) bool {
+	switch b {
+	case ' ', '\t', '\r', '\n', '"', '\'', '`', '(', '[', '{':
+		return true
+	default:
+		return false
+	}
+}
+
+func citationWord(b byte) bool {
+	return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b == '_'
+}
+
+// citationDiffFile answers whether the diff is readable and whether it carries
+// the cited path. An unreadable diff is insufficient evidence, not a contradiction.
+func citationDiffFile(diff, path string) (diffFile, bool, bool) {
+	files, err := diffFiles(diff)
+	if err != nil {
+		return diffFile{}, false, false
+	}
+	for _, file := range files {
+		if RowPath(file.path) == RowPath(path) {
+			if !hasReadableHunk(file.text) {
+				return file, true, false
+			}
+			return file, true, true
+		}
+	}
+	return diffFile{}, false, true
+}
+
+func hasReadableHunk(text string) bool {
+	for line := range strings.SplitSeq(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		if _, ok := strings.CutPrefix(line, "@@ "); ok {
+			if _, ok := hunkStart(line); ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// candidateDiffText keeps candidate-side hunk lines, including their diff prefix
+// so both `+code` and `code` quotations remain checkable. Removed lines and file
+// headers are not candidate evidence.
+func candidateDiffText(text string) string {
+	var candidate strings.Builder
+	inHunk := false
+	for line := range strings.SplitSeq(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		if strings.HasPrefix(line, "@@ ") {
+			inHunk = true
+			continue
+		}
+		if !inHunk {
+			continue
+		}
+		if strings.HasPrefix(line, "+") || strings.HasPrefix(line, " ") {
+			candidate.WriteString(line)
+			candidate.WriteByte('\n')
+		}
+	}
+	return candidate.String()
+}
+
+// diffHasLine reports whether a new-file line is present as added or context
+// evidence in one file's diff. Removed lines have no new-file number.
+func diffHasLine(text string, line int) bool {
+	current := 0
+	inHunk := false
+	for raw := range strings.SplitSeq(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		if strings.HasPrefix(raw, "@@ ") {
+			start, ok := hunkStart(raw)
+			if !ok {
+				inHunk = false
+				continue
+			}
+			current, inHunk = start, true
+			continue
+		}
+		if !inHunk {
+			continue
+		}
+		if raw == "" {
+			continue
+		}
+		switch raw[0] {
+		case '+', ' ':
+			if current == line {
+				return true
+			}
+			current++
+		case '-', '\\':
+			// A deletion or the no-newline marker contributes no new-file line.
+		}
+	}
+	return false
+}
+
+func sourceHasLine(source string, line int) bool {
+	if line <= 0 || strings.TrimSpace(source) == "" {
+		return false
+	}
+	lines := strings.Split(strings.TrimSuffix(strings.ReplaceAll(source, "\r\n", "\n"), "\n"), "\n")
+	return line <= len(lines)
+}
+
 // normalized applies the evidence rule to one judgment: a refutation without a
 // citation is not a refutation.
 func normalized(judgment Judgment, id string) Judgment {
@@ -256,13 +647,22 @@ func blockingIDs(findings []Finding) map[string]struct{} {
 
 // Refutes reports whether this refutation lifts the finding with that id. It is
 // false for anything else — an unanswered finding, a `stands`, or a "refuted"
-// with no evidence — because the default is always that the finding stands.
-func (r Refutation) Refutes(id string) bool {
+// without a citation — because the default is always that the finding stands.
+func (r Refutation) Refutes(id string, finding Finding, evidence CitationEvidence) bool {
 	for _, judgment := range r.Refutations {
-		if judgment.ID != id {
+		if strings.TrimSpace(judgment.ID) != strings.TrimSpace(id) {
 			continue
 		}
-		return judgment.Verdict == Refuted && strings.TrimSpace(judgment.Why) != ""
+		if judgment.Verdict != Refuted {
+			return false
+		}
+		return ValidateCitation(CitationInput{
+			FindingID:    id,
+			Finding:      finding,
+			Locator:      judgment.Why,
+			DeclaredTree: r.Tree,
+			Evidence:     evidence,
+		}).Status == CitationValid
 	}
 	return false
 }
@@ -288,14 +688,14 @@ func RequiredWitnesses(f Finding) int {
 type Answers []Refutation
 
 // RefutedBy is how many different accounts refute the finding with a citation. A
-// `stands`, or a `refuted` without evidence, is not one: the default never lifts.
+// `stands`, or a `refuted` without one, is not one: the default never lifts.
 // Counting accounts and not files is the whole promise -two answers from the same
 // refuter are one opinion written twice, and a retry would buy a quorum nobody
 // paid for.
-func (a Answers) RefutedBy(id string) int {
+func (a Answers) RefutedBy(id string, finding Finding, evidence CitationEvidence) int {
 	seen := make(map[string]bool, len(a))
 	for _, answer := range a {
-		if !answer.Refutes(id) {
+		if !answer.Refutes(id, finding, evidence) {
 			continue
 		}
 		seen[strings.ToLower(strings.TrimSpace(answer.Refuter))] = true
@@ -305,8 +705,8 @@ func (a Answers) RefutedBy(id string) int {
 
 // Lifts reports whether the answers are enough to lift this finding, which is the
 // whole rule: the class decides how many, and a witness that stands is no witness.
-func (a Answers) Lifts(id string, f Finding) bool {
-	return a.RefutedBy(id) >= RequiredWitnesses(f)
+func (a Answers) Lifts(id string, f Finding, evidence CitationEvidence) bool {
+	return a.RefutedBy(id, f, evidence) >= RequiredWitnesses(f)
 }
 
 // IndexOf names the position of one finding inside its verdict, which is the id a
@@ -325,8 +725,8 @@ func IndexOf(findings []Finding, finding Finding) int {
 // BlockingAfter returns the first finding that still blocks, in the verdict's
 // file order: causal, BLOCKER or CRITICAL, not dismissed with evidence, and not
 // lifted by the refutations filed for this tree.
-func BlockingAfter(findings []Finding, answers Answers) (Finding, bool) {
-	for _, finding := range BlockingAllAfter(findings, answers) {
+func BlockingAfter(findings []Finding, answers Answers, evidence CitationEvidence) (Finding, bool) {
+	for _, finding := range BlockingAllAfter(findings, answers, evidence) {
 		return finding, true
 	}
 	return Finding{}, false
@@ -336,7 +736,7 @@ func BlockingAfter(findings []Finding, answers Answers) (Finding, bool) {
 // same rule. A verdict can stand behind more than one row, so a gate that answers
 // them has to see all of them: answering the first and stopping is how the second
 // one disappears.
-func BlockingAllAfter(findings []Finding, answers Answers) []Finding {
+func BlockingAllAfter(findings []Finding, answers Answers, evidence CitationEvidence) []Finding {
 	var blocking []Finding
 	for i, finding := range findings {
 		if IsDismissed(finding) {
@@ -345,7 +745,7 @@ func BlockingAllAfter(findings []Finding, answers Answers) []Finding {
 		if !finding.Causal || !finding.Severity.Blocks() {
 			continue
 		}
-		if answers.Lifts(findingID(i), finding) {
+		if answers.Lifts(findingID(i), finding, evidence) {
 			continue
 		}
 		blocking = append(blocking, finding)
@@ -356,8 +756,8 @@ func BlockingAllAfter(findings []Finding, answers Answers) []Finding {
 // DeriveAfter is the whole rule with refutations taken into account: a causal
 // finding at BLOCKER or CRITICAL that nobody lifted requests changes, everything
 // else approves.
-func DeriveAfter(findings []Finding, answers Answers) string {
-	if _, blocking := BlockingAfter(findings, answers); blocking {
+func DeriveAfter(findings []Finding, answers Answers, evidence CitationEvidence) string {
+	if _, blocking := BlockingAfter(findings, answers, evidence); blocking {
 		return ChangesRequested
 	}
 	return Approved
@@ -477,6 +877,7 @@ func RefutePrompt(in RefuteInput) string {
 	out.WriteString("3. Is the evidence enough to defend it before the author?\n\n")
 
 	out.WriteString("## How it is decided\n")
+	out.WriteString("- A citation names the finding's path and either `path:line` or a quoted fragment from the diff.\n")
 	out.WriteString("- Without a citation from the diff, the finding is not refuted: it stays in `" + Stands + "`. Doubt does not refute.\n")
 	out.WriteString("- `" + Refuted + "` only when the three answers hold with the citation.\n")
 	out.WriteString("- When in doubt: `" + Stands + "`. Over-refuting is worse than under-refuting.\n")
@@ -485,7 +886,7 @@ func RefutePrompt(in RefuteInput) string {
 	out.WriteString("  and causal of this candidate. What was already there is a follow-up.\n\n")
 
 	out.WriteString("## What to return\n")
-	out.WriteString(`{"refutations":[{"id":"` + firstID(blocking) + `","verdict":"` + Stands + `|` + Refuted + `","why":"<the three answers and the citation from the diff>"}]}` + "\n\n")
+	out.WriteString(`{"refutations":[{"id":"` + firstID(blocking) + `","verdict":"` + Stands + `|` + Refuted + `","why":"<the three answers and the citation: path:line or path \"quoted diff fragment\">"}]}` + "\n\n")
 	out.WriteString("One object per finding in the list above, with its id, in the same order.\n")
 	out.WriteString("Answer with the JSON only, without text around it.\n")
 
