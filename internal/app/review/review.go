@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/biggs-100/odachi/internal/app/check/changecontext"
 	"github.com/biggs-100/odachi/internal/app/tasks"
-	"github.com/biggs-100/odachi/internal/domain/change"
 	"github.com/biggs-100/odachi/internal/domain/oneline"
 	domain "github.com/biggs-100/odachi/internal/domain/review"
 	"github.com/biggs-100/odachi/internal/domain/scope"
@@ -87,6 +87,10 @@ type Options struct {
 	// Base is what the candidate is compared against. Empty means the empty
 	// tree: everything counts as new.
 	Base string
+	// ChangeBase is the ref whose commits name a document-less change. The CLI
+	// selects the same remote default or explicit --base that check uses; empty
+	// keeps the trailer lane closed.
+	ChangeBase string
 	// Exec is the reviewer command: it is run with the review prompt as its
 	// input, and its answer is the verdict. {model} in it is replaced by the
 	// model the session is using, so the reviewer judges with the same one the
@@ -192,6 +196,11 @@ type Git interface {
 	// from HEAD and not from base. A change with no document names itself there,
 	// and that line is the vision the prompt carries.
 	Messages(root, base string) ([]string, error)
+	// MergeBase and OnDefaultBranch resolve a trailer's fork point and refuse
+	// a document-less change committed on the default branch. They are asked
+	// before Candidate, so review cannot snapshot a different range than check.
+	MergeBase(root, ref string) (string, error)
+	OnDefaultBranch(root, base string) (branch string, on bool, err error)
 	// ArchiveRun exports one tree into a directory the reviewer may read, and
 	// answers the root of the run with the candidate inside it: the root is where
 	// the rule that confines the reviewer is written, and Discard removes it.
@@ -328,6 +337,9 @@ type runner struct {
 	// may move the worktree, so afterReviewer drops it and the file is read
 	// again; a review's own groups keep the value the prompt named.
 	work *worktree
+	// change is the range resolved before work: its trailer line and fork point
+	// are shared by the snapshot and the vision, never rediscovered from raw HEAD.
+	change *changecontext.Context
 	// hostModel is the session's model, asked once: grouping lenses by model must
 	// not pay a probe per lens, and two lenses that resolve to the same model must
 	// run as one group.
@@ -843,7 +855,11 @@ func (r *runner) attach() Result {
 		return refused(r.opts.Attach, err.Error())
 	}
 
-	return r.store(parsed, r.base(), nil)
+	change, problem := r.resolveChange(r.base(), r.opts.ChangeBase)
+	if problem != nil {
+		return *problem
+	}
+	return r.store(parsed, change.Base, nil)
 }
 
 // reviewerCommand is the command that actually runs for one model group: --exec
@@ -3424,6 +3440,42 @@ func (r *runner) base() string {
 	return EmptyTree
 }
 
+// resolveChange reads the trailer range before any candidate snapshot. Review
+// asks the same open-document question as check; an open document keeps the raw
+// base, while a document-less trailer moves the candidate to its merge-base.
+func (r *runner) resolveChange(base, changeBase string) (*changecontext.Context, *Result) {
+	if r.change != nil {
+		return r.change, nil
+	}
+
+	base = strings.TrimSpace(base)
+	changeBase = strings.TrimSpace(changeBase)
+	// Direct app callers historically supplied the range through --base alone.
+	// The CLI now supplies ChangeBase explicitly; this fallback preserves that
+	// contract without giving bare HEAD a second remote-base path.
+	if changeBase == "" && base != "" && base != DefaultBase && base != EmptyTree {
+		changeBase = base
+	}
+	context := changecontext.Context{Base: base, ChangeBase: changeBase}
+	if changeBase != "" && base != "" && base != EmptyTree {
+		open, problem := r.openDocumentAt(base)
+		if problem != nil {
+			return nil, problem
+		}
+		if !open {
+			resolved, err := changecontext.Resolve(r.git, r.opts.Dir, base, changeBase)
+			if err != nil {
+				problem := blocked(oneLine(err.Error()))
+				return nil, &problem
+			}
+			context = resolved
+		}
+	}
+
+	r.change = &context
+	return &context, nil
+}
+
 // sinceTree resolves the spelling --since takes into the tree the store names: the
 // full hash, or the prefix of one verdict this clone holds. The listing is the one
 // `--all` prints, so a correction costs a copy-paste from what the command showed
@@ -3604,6 +3656,12 @@ func (r *runner) worktree() (*worktree, *Result) {
 		if problem != nil {
 			return nil, problem
 		}
+		base := r.correctionBase(predecessor)
+		// A correction keeps the predecessor's feature base, but its trailer and
+		// branch boundary are still validated before the delta is read.
+		if _, problem := r.resolveChange(base, base); problem != nil {
+			return nil, problem
+		}
 		paths, diff, err := r.git.Correction(r.opts.Dir, predecessor.Tree)
 		if err != nil {
 			p := blocked(fmt.Sprintf("could not read what changed since the verdict for %s: %s; run odachi review --show or drop --since",
@@ -3615,11 +3673,15 @@ func (r *runner) worktree() (*worktree, *Result) {
 			p := blocked(oneLine(err.Error()) + "; check the git tree and run odachi review again")
 			return nil, &p
 		}
-		r.work = &worktree{tree: tree, base: r.correctionBase(predecessor), paths: paths, diff: diff}
+		r.work = &worktree{tree: tree, base: base, paths: paths, diff: diff}
 		return r.work, nil
 	}
 
-	base := r.base()
+	change, problem := r.resolveChange(r.base(), r.opts.ChangeBase)
+	if problem != nil {
+		return nil, problem
+	}
+	base := change.Base
 	tree, paths, diff, err := r.git.Candidate(r.opts.Dir, base)
 	if err != nil && base == DefaultBase {
 		// A project with no commit yet has no HEAD: everything uncommitted is
@@ -3632,7 +3694,7 @@ func (r *runner) worktree() (*worktree, *Result) {
 	}
 	if err != nil {
 		problem := blocked(fmt.Sprintf("could not read what changed against %q: %s; fix --base %q or drop the flag to compare against HEAD",
-			r.base(), oneLine(err.Error()), r.base()))
+			base, oneLine(err.Error()), base))
 		return nil, &problem
 	}
 
@@ -3711,7 +3773,7 @@ func (r *runner) candidateForReview() (candidate, *Result) {
 // gate would take and carries the requirement it quotes, naming the file it came
 // from. Everything else reads brief.md, as it always has.
 func (r *runner) vision(base string) (string, *Result) {
-	claimed, problem := r.trailerVision(base)
+	claimed, problem := r.trailerVision()
 	if problem != nil {
 		return "", problem
 	}
@@ -3730,42 +3792,14 @@ func (r *runner) vision(base string) (string, *Result) {
 		"requirement " + rel + " carries)\n\n" + text, nil
 }
 
-// trailerVision reads the line a document-less change declared in its own
-// commits. The range is the candidate's: from the base it is judged against. A
-// trailer is the vision, and the prompt says the diff is the record; a trailer
-// that is empty or names two different changes is refused, never guessed.
-func (r *runner) trailerVision(base string) (string, *Result) {
-	if strings.TrimSpace(base) == "" {
+// trailerVision carries the line resolved before the candidate snapshot. It
+// never rereads commits from a raw base: the range, branch boundary and fork
+// point were decided together by resolveChange.
+func (r *runner) trailerVision() (string, *Result) {
+	if r.change == nil || r.change.Line == "" {
 		return "", nil
 	}
-
-	// The lane is check's rule: a trailer names the change only when no document
-	// is open. An open document is the vision, and a review judged against the
-	// trailer would disagree with the gate that asked for it. The document is the
-	// one the gate takes, asked through the same function (0182).
-	open, problem := r.openDocumentAt(base)
-	if problem != nil {
-		return "", problem
-	}
-	if open {
-		return "", nil
-	}
-
-	messages, err := r.git.Messages(r.opts.Dir, base)
-	if err != nil {
-		p := blocked("could not read the commits since " + base + ": " + oneLine(err.Error()))
-		return "", &p
-	}
-	declared, ok, err := change.Parse(messages)
-	if err != nil {
-		p := blocked(oneLine(err.Error()))
-		return "", &p
-	}
-	if !ok {
-		return "", nil
-	}
-
-	return "(this change has no document: its line is the requirement below, and the diff is the record)\n\n" + declared.Line, nil
+	return "(this change has no document: its line is the requirement below, and the diff is the record)\n\n" + r.change.Line, nil
 }
 
 // openDocumentAt reports whether the document this run asks about still has steps

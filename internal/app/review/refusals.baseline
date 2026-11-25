@@ -37,7 +37,6 @@ sentence	review.go	could not hash %s to stamp %s: %s; I wrote nothing
 sentence	review.go	could not hash %s to weigh the store's potent rows: %s; I wrote nothing
 sentence	review.go	could not hash %s to weigh the store's potent rows: %s; I wrote nothing
 sentence	review.go	could not prepare  for the reviewer's answer: ; the reviewer was not started
-sentence	review.go	could not read the commits since :
 sentence	review.go	could not read the review store to weigh the potent rows: %s; I wrote nothing
 sentence	review.go	could not read the verdict %s: %s; check the path
 sentence	review.go	could not read the verdict %s: %s; check the path

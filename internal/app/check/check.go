@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/biggs-100/odachi/internal/app/check/changecontext"
 	"github.com/biggs-100/odachi/internal/app/clean"
 	"github.com/biggs-100/odachi/internal/app/tasks"
 	"github.com/biggs-100/odachi/internal/domain/authorship"
@@ -325,6 +326,36 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 		}
 	}
 
+	// The feature and its claimed range are resolved before the candidate is
+	// read. Otherwise a clean feature branch is measured from HEAD, the fence sees
+	// no paths, and only afterwards does the trailer reveal the base that should
+	// have described those same bytes.
+	feature, problem := r.currentFeature()
+	if problem != nil {
+		return *problem
+	}
+	// A change that names itself in a commit trailer needs no document. When the
+	// newest document is closed -or there is none-, the trailer is the feature:
+	// its line is the vision, the merge-base is where it started, and the proof is
+	// named after the line. An explicit --feature is a selector, not a default, so
+	// it is never replaced. A project that never writes a trailer reaches the same
+	// answer it always did (0181).
+	if r.opts.Feature == 0 && (feature == nil || documentClosed(feature)) {
+		var claimed *tasks.Document
+		if r.opts.Message != "" {
+			claimed, problem = r.claimedMessage()
+		} else {
+			claimed, problem = r.claimedChange()
+		}
+		if problem != nil {
+			return *problem
+		}
+		if claimed != nil {
+			feature = claimed
+		}
+	}
+	r.feature = feature
+
 	work, problem := r.worktree()
 	if problem != nil {
 		return *problem
@@ -352,31 +383,6 @@ func Run(opts Options, files Files, git Git, shell Shell) Result {
 	}
 	state.FenceLoosened = loosened
 
-	feature, problem := r.currentFeature()
-	if problem != nil {
-		return *problem
-	}
-	// A change that names itself in a commit trailer needs no document. When the
-	// newest document is closed -or there is none-, the trailer is the feature:
-	// its line is the vision, the merge-base is where it started, and the proof is
-	// named after the line. An explicit --feature is a selector, not a default, so
-	// it is never replaced. A project that never writes a trailer reaches the same
-	// answer it always did (0181).
-	if r.opts.Feature == 0 && (feature == nil || documentClosed(feature)) {
-		var claimed *tasks.Document
-		if r.opts.Message != "" {
-			claimed, problem = r.claimedMessage()
-		} else {
-			claimed, problem = r.claimedChange()
-		}
-		if problem != nil {
-			return *problem
-		}
-		if claimed != nil {
-			feature = claimed
-		}
-	}
-	r.feature = feature
 	// A light feature has no brief by design: its one line is the vision, and the
 	// artifact says so. The brief question is the only one the lane skips -the
 	// fence, the questions and the proof are asked exactly as before- and the
@@ -822,39 +828,18 @@ func (r *runner) claimedChange() (*tasks.Document, *Result) {
 		return nil, nil
 	}
 
-	messages, err := r.git.Messages(r.opts.Dir, base)
-	if err != nil {
-		problem := blocked("could not read the commits since " + base + ": " + oneLine(err.Error()))
-		return nil, &problem
-	}
-	declared, ok, err := change.Parse(messages)
+	context, err := changecontext.Resolve(r.git, r.opts.Dir, baseRef(r.opts.Base), base)
 	if err != nil {
 		problem := blocked(oneLine(err.Error()))
 		return nil, &problem
 	}
-	if !ok {
+	// The fork point is now the candidate's base. Every later fence, diff and
+	// review question reads it instead of the HEAD snapshot that hid the change.
+	r.opts.Base = context.Base
+	if context.Line == "" {
 		return nil, nil
 	}
-
-	branch, onDefault, err := r.git.OnDefaultBranch(r.opts.Dir, base)
-	if err != nil {
-		problem := blocked("could not tell whether this change sits on the default branch: " +
-			oneLine(err.Error()) + "; fix the repository and run odachi check again")
-		return nil, &problem
-	}
-	if onDefault {
-		problem := blocked("a change that names itself in a trailer lives on a branch, not on " + branch + ": move the commits to a branch and run again")
-		return nil, &problem
-	}
-
-	start, err := r.git.MergeBase(r.opts.Dir, base)
-	if err != nil {
-		problem := blocked("could not find the merge-base with " + base + ": " + oneLine(err.Error()))
-		return nil, &problem
-	}
-
-	line := declared.Line
-	return changeDocument(line, start), nil
+	return changeDocument(context.Line, context.Base), nil
 }
 
 // claimedMessage reads the trailer from the message git handed a commit-msg

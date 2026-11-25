@@ -1504,3 +1504,49 @@
 - Reuse `writing` and `ui-craft` instead of importing anti-slop as a fourth owner of the same concerns.
 - Evidence belongs in odachi's existing proof and declared-check mechanisms; purpose and aesthetic direction remain advisory and human-owned.
 - Adapt ideas rather than copy upstream prose; retain the MIT notice if any upstream wording is copied.
+
+## 0363 · workflow-hardening
+
+## What must exist
+- odachi's workflow fails closed when evidence is ambiguous, judges one consistent candidate snapshot, enforces the delegation and state boundaries it claims, and publishes only verified artifacts
+
+## Done when
+- `check` and `review` resolve one candidate base before reading tree, paths and diff, and distinguish no remote from an unresolved remote default
+- a successful `--run` proof names the post-command tree or refuses when candidate bytes changed
+- correction tree, paths and diff come from one atomic snapshot
+- unreadable inherited evidence blocks inheritance; refutations are tree-bound and carry validated citations
+- every declared check is approved and run or represented by a blocking row, and reviewer JSON cannot suppress deterministic rows
+- waivers cannot cover later trees or override `--require-review`; paperwork cannot hide an unresolved or incomplete verdict
+- verification seals the executor that actually ran and independence follows an explicit policy
+- changing cited bytes cannot silently resolve a predecessor blocker
+- `delegate` rejects foreign or escaping task documents and empty, escaping or repository-wide surfaces and commands
+- skill slugs are safe and authoritative source skill bytes win over stale installed copies
+- every step has a valid requirement and route, and delegated prompts name the agent
+- `plan --done --commit` accepts only a readable commit in feature ancestry and not already claimed by another step
+- branch and hook documentation matches actual enforcement, and linked worktrees receive the hook through the common Git directory
+- `ask`, `plan` and review waivers serialize read-modify-write and back up before replacement
+- stale-lock handling can never delete a replacement lock
+- backups are worktree-scoped and preserve A-to-B-to-A history
+- installed-skill comparison reports missing source skills, changed files and obsolete extra files
+- unknown fence keys, incomplete briefs and contradictory `--light` inputs are refused
+- requirements use sequential unique quoted `R<n>` IDs, every outcome is mapped, and voice and execution use one profile resolver
+- `--since` resolves only verdict stems and floor parsing is hunk-aware
+- continuations are executable and platform-correct, and JSON preserves typed transitions
+- release notes and tag shape are validated before publishing, and release notes advertise only supported installer paths
+- installed-binary verification tests the published artifact rather than a fresh local build
+- `docs/next-session.md` names the current feature and measured state
+- every fixed bypass has a regression that fails on the pre-fix tree and passes after the fix
+- `go test ./...` and `odachi check --run "go test ./..."` are green
+
+## Not included (first version)
+- no new model vendor, remote execution, secret, dependency or global install without separate human authorization - back when a provider or destination is proposed
+- no weakening of proof, verdict, fence, staged-index or review obligations to make a regression pass - back when a gate is inconvenient
+- no new state, flag or verb when deleting or tightening an existing mechanism removes the defect - back when a deletion-shaped alternative is unavailable
+- no push, pull request, merge, tag or release during implementation - back when the human authorizes delivery
+- no edits to gentle-shell or another repository - back when the human explicitly asks
+
+## Decisions taken
+- Slice: 4000 - workflow hardening spans candidate identity, fail-open evidence, delegation, state, validation and release; each task remains independently reviewable
+- Delivery strategy: stacked-to-main, approximately ten pull requests near 400 changed lines
+- Tests and documentation travel with the behavior they verify; no mixed refactor and behavior commit
+- Static audit findings are hypotheses until a failing regression reproduces them on the pre-fix tree

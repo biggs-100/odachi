@@ -266,6 +266,15 @@ type fakeGit struct {
 	messages    []string
 	messagesErr error
 
+	// mergeBase is the trailer's fork point; empty keeps the ref it was asked
+	// about. onDefault is the branch-boundary answer and its error is ambiguous
+	// evidence, never permission to review.
+	mergeBase     string
+	mergeBaseErr  error
+	onDefault     bool
+	defaultBranch string
+	onDefaultErr  error
+
 	// candidateCalls counts the one read of the worktree this run asked for.
 	candidateCalls int
 
@@ -339,6 +348,23 @@ func (g *fakeGit) Messages(root, base string) ([]string, error) {
 		return nil, g.messagesErr
 	}
 	return g.messages, nil
+}
+
+func (g *fakeGit) MergeBase(root, ref string) (string, error) {
+	if g.mergeBaseErr != nil {
+		return "", g.mergeBaseErr
+	}
+	if g.mergeBase != "" {
+		return g.mergeBase, nil
+	}
+	return ref, nil
+}
+
+func (g *fakeGit) OnDefaultBranch(root, base string) (string, bool, error) {
+	if g.onDefaultErr != nil {
+		return "", false, g.onDefaultErr
+	}
+	return g.defaultBranch, g.onDefault, nil
 }
 
 // ArchiveRun freezes the tree the verdict will name into a directory this run
@@ -3099,6 +3125,12 @@ func (g *flakyGit) Ignored(root, path string) (bool, error) { return g.inner.Ign
 func (g *flakyGit) BlobHash(root, path string) (string, error) { return g.inner.BlobHash(root, path) }
 
 func (g *flakyGit) Messages(root, base string) ([]string, error) { return g.inner.Messages(root, base) }
+
+func (g *flakyGit) MergeBase(root, ref string) (string, error) { return g.inner.MergeBase(root, ref) }
+
+func (g *flakyGit) OnDefaultBranch(root, base string) (string, bool, error) {
+	return g.inner.OnDefaultBranch(root, base)
+}
 
 func (g *flakyGit) ArchiveRun(root, tree string) (string, string, error) {
 	return g.inner.ArchiveRun(root, tree)

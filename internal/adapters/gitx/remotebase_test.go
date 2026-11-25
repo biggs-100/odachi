@@ -1,6 +1,7 @@
 package gitx_test
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -75,6 +76,9 @@ func TestRemoteBaseNamesTheFetchThatWouldCreateIt(t *testing.T) {
 	if err == nil {
 		t.Fatal("a repository with no origin answered a base")
 	}
+	if !errors.Is(err, gitx.ErrNoOrigin) {
+		t.Errorf("error = %v, want ErrNoOrigin for a genuinely absent remote", err)
+	}
 	for _, want := range []string{"origin", "git fetch"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error = %q, want %q named", err, want)
@@ -95,6 +99,30 @@ func TestRemoteBaseRefusesARemoteWithNoKnownBase(t *testing.T) {
 		t.Fatal("a remote with no main and no symref answered a base")
 	}
 	for _, want := range []string{"origin/main", "origin/master"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, want %q named", err, want)
+		}
+	}
+	for _, want := range []string{"git fetch origin", "--base"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, want the runnable disambiguation %q", err, want)
+		}
+	}
+}
+
+// TestRemoteBaseRefusesAnUnfetchedDefaultRef: origin/HEAD can survive while the
+// branch it names is missing. That is unresolved evidence, not a reason to fall
+// back to main and judge a different range.
+func TestRemoteBaseRefusesAnUnfetchedDefaultRef(t *testing.T) {
+	t.Parallel()
+	root := newClone(t, "trunk")
+	git(t, root, "update-ref", "-d", "refs/remotes/origin/trunk")
+
+	_, err := gitx.RemoteBase(root)
+	if err == nil {
+		t.Fatal("a dangling origin/HEAD answered a base")
+	}
+	for _, want := range []string{"origin/trunk", "git fetch origin", "--base"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error = %q, want %q named", err, want)
 		}

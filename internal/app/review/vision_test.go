@@ -117,6 +117,50 @@ func TestAnAmbiguousTrailerIsRefusedByTheReview(t *testing.T) {
 			t.Errorf("the refusal does not name %q: %s", want, result.Message)
 		}
 	}
+	if p.git.candidateCalls != 0 {
+		t.Errorf("the candidate was read %d times before the ambiguous trailer was refused", p.git.candidateCalls)
+	}
+}
+
+// TestATrailerMovesReviewToItsMergeBaseBeforeTheCandidate: the fork point is
+// resolved first, and the one snapshot uses it for both the diff and prompt base.
+func TestATrailerMovesReviewToItsMergeBaseBeforeTheCandidate(t *testing.T) {
+	p := newProject()
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+	p.git.mergeBase = otherTree
+
+	result := p.run(review.Options{Base: "origin/main", ChangeBase: "origin/main"})
+
+	if result.Code != review.CodeOK {
+		t.Fatalf("code = %d, want 0 (%s)", result.Code, result.Message)
+	}
+	if len(p.git.bases) != 1 || p.git.bases[0] != otherTree {
+		t.Errorf("candidate bases = %v, want only the merge-base %s", p.git.bases, otherTree)
+	}
+	if !strings.Contains(result.Prompt, "base "+otherTree) {
+		t.Errorf("the prompt does not name the resolved base:\n%s", result.Prompt)
+	}
+}
+
+// TestATrailerOnTheDefaultBranchIsRefusedBeforeTheCandidate: review shares
+// check's branch boundary and refuses before Git can produce a misleading diff.
+func TestATrailerOnTheDefaultBranchIsRefusedBeforeTheCandidate(t *testing.T) {
+	p := newProject()
+	p.git.messages = []string{"the wait state\n\nOdachi-Change: bring back the wait state on the pay button\n"}
+	p.git.onDefault = true
+	p.git.defaultBranch = "main"
+
+	result := p.run(review.Options{Base: "origin/main", ChangeBase: "origin/main"})
+
+	if result.Code != review.CodeBlocked {
+		t.Fatalf("code = %d, want %d (%s)", result.Code, review.CodeBlocked, result.Message)
+	}
+	if !strings.Contains(result.Message, "branch") || !strings.Contains(result.Message, "main") {
+		t.Errorf("the refusal does not name the default branch: %q", result.Message)
+	}
+	if p.git.candidateCalls != 0 {
+		t.Errorf("the candidate was read %d times before the branch refusal", p.git.candidateCalls)
+	}
 }
 
 // A trailer never stands in for a document that is still open: `check` judges the

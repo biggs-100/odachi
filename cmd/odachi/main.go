@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/adapters/gitx"
 	"github.com/biggs-100/odachi/internal/app/ask"
 	"github.com/biggs-100/odachi/internal/app/check"
 	"github.com/biggs-100/odachi/internal/app/clean"
@@ -602,14 +603,15 @@ func runCheck(dir string, args []string, stdout, stderr io.Writer) int {
 	}
 
 	// The trailer lane reads the same default branch --ci reads, or the base the
-	// human named. A clone with no remote and no --base keeps the lane closed:
-	// there is no range to read, and a change nobody can measure is not one this
-	// gate can judge.
-	if b := strings.TrimSpace(opts.Base); b != "" && b != "HEAD" {
-		opts.ChangeBase = b
-	} else if b, err := (gitRepo{}).RemoteBase(dir); err == nil {
-		opts.ChangeBase = b
+	// human named. A clone with no remote and no --base keeps the lane closed.
+	// An existing remote whose default ref is unresolved blocks: silently judging
+	// HEAD would omit committed evidence, so the refusal names fetch or --base.
+	changeBase, err := selectedChangeBase(dir, opts.Base, flagSet(flags, "base") || ci)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+		return start.CodeBlocked
 	}
+	opts.ChangeBase = changeBase
 
 	// The project owns the default; the flags are the exception for one run.
 	// A malformed switch blocks instead of quietly reading as off: a human who
@@ -662,6 +664,23 @@ func flagSet(flags *flag.FlagSet, name string) bool {
 		}
 	})
 	return set
+}
+
+// selectedChangeBase chooses the commit range shared by check and review. An
+// explicit --base is authoritative, including an empty base. Otherwise the
+// remote's default branch supplies the range; only a genuinely absent origin
+// closes the trailer lane. Every other remote failure is ambiguous evidence and
+// blocks before either verb reads a candidate. A folder with no repository is
+// deferred to each verb's existing no-repository refusal.
+func selectedChangeBase(dir, base string, explicit bool) (string, error) {
+	if explicit {
+		return strings.TrimSpace(base), nil
+	}
+	remote, err := (gitRepo{}).RemoteBase(dir)
+	if errors.Is(err, gitx.ErrNoOrigin) || errors.Is(err, gitx.ErrNoRepository) {
+		return "", nil
+	}
+	return remote, err
 }
 
 // runReview parses the flags, wires the four adapters and reports the verdict.
@@ -747,6 +766,18 @@ func runReview(dir string, args []string, stdout, stderr io.Writer) int {
 	if opts.Since != "" && hasFlag(args, "base") {
 		_, _ = fmt.Fprintln(stderr, "odachi: --since keeps the base of the verdict it corrects; drop --base (the stored verdict names it)")
 		return start.CodeBlocked
+	}
+
+	// A candidate-bearing review asks the same change-range question as check.
+	// --all only lists stored verdicts, so an unresolved remote cannot change its
+	// answer and must not block it.
+	if !opts.All {
+		changeBase, err := selectedChangeBase(dir, opts.Base, flagSet(flags, "base"))
+		if err != nil {
+			_, _ = fmt.Fprintln(stderr, "odachi: "+oneLine(err.Error()))
+			return start.CodeBlocked
+		}
+		opts.ChangeBase = changeBase
 	}
 
 	opts.Dir = dir
