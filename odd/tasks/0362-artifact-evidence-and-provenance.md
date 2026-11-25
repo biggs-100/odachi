@@ -14,7 +14,7 @@ R1 · "odachi's existing writing and ui-craft skills require evidence for delive
 - only the `skills:payload` pin changes deliberately, and `## Unreleased` names the feature
 
 ## Steps
-- [ ] T1 · add artifact evidence and provenance to the existing writing and ui-craft skills   R1 · route:delegated/odachi-worker · skills:tests,writing,skill-craft
+- [x] T1 · add artifact evidence and provenance to the existing writing and ui-craft skills   R1 · route:delegated/odachi-worker · skills:tests,writing,skill-craft · tree:d8dd91b2b0fb2f41e0a9fa6a397c0a98f8e6072a
 
 ## History
 L1 · "odachi's existing writing and ui-craft skills require evidence for delivered artifacts and provenance for content and assets, without adding a new skill or a second delivery authority"
