@@ -35,7 +35,7 @@ R1 · "odachi's workflow fails closed when evidence is ambiguous, judges one con
 
 ## Steps
 - [x] T1 · resolve one candidate base before check and review snapshot   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:35846d704aceae6e169df9c0c938c942f086eccc
-- [ ] T2 · bind proof to the post-command tree or refuse candidate mutation   R1 · route:delegated/odachi-worker · skills:tests,commits
+- [x] T2 · bind proof to the post-command tree or refuse candidate mutation   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:b669bff99e499edc9dd614e78bd495f4944cfd4b
 - [ ] T3 · return one atomic correction snapshot   R1 · route:delegated/odachi-worker · skills:tests,commits
 - [ ] T4 · fail closed on unreadable inherited evidence and bind refutations   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
 - [ ] T5 · require declared checks to run or produce blocking rows   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
@@ -69,3 +69,4 @@ L2 · PREGUNTA P1 · "When origin exists but its default ref is not fetched, mus
 L3 · VOS P1 · "Bloquear: si origin existe pero su default ref no está fetcheado, check y review fallan y piden fetch o --base; un clone sin remote conserva el comportamiento actual."
 L4 · OFICIO · "Authorize internal/app/review/review_test.go and internal/app/review/refusals.baseline as T1 surfaces" (porque The shared candidate context requires review tests to exercise merge-base and branch boundaries, and the retired raw-base refusal must leave the pinned baseline.)
 L5 · OFICIO · "Accept a size exception for T1 at 796 authored lines" (porque The shared candidate resolver and its real-Git regressions form one cohesive contract fix; splitting tests from behavior would weaken review, and later slices return to the 400-line budget.)
+L6 · OFICIO · "Deliver workflow hardening slice 1 in PR #730 and start slice 2 from c80049c" (porque Stacked-to-main keeps each work unit independently reviewable; T2 proof identity depends on the shared candidate context merged in T1.)
