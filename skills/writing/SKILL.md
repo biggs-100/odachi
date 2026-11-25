@@ -24,6 +24,8 @@ long, dense or hard to scan.
 - A text that was sent is not a text that arrived: read the published copy back and
   compare it with the file you wrote, not with your memory. For a PR, the command
   and the fields are `pull-request`'s.
+- Verify a delivered artifact at its real destination and record its provenance;
+  an unavailable check is `not verified`, never a silent pass.
 - For a long document: answer first, then the happy path, then details and edge
   cases. Use small sections, tables and checklists so the reader can scan.
 - Copy `assets/doc.md` for a long document: the skeleton carries the shape, and

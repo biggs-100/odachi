@@ -293,6 +293,65 @@ func TestWritingCoversTheReviewPath(t *testing.T) {
 	}
 }
 
+// TestArtifactDeliveryRequiresEvidenceAndProvenance: the artifact is checked where
+// it is delivered, and every external claim or asset keeps the record that makes
+// it traceable. The assertions name the exact embedded file so moving a rule
+// cannot silently remove it from the path the skill loads.
+func TestArtifactDeliveryRequiresEvidenceAndProvenance(t *testing.T) {
+	all, err := skills.All()
+	if err != nil {
+		t.Fatalf("All(): %v", err)
+	}
+
+	files := make(map[string]map[string]string, len(all))
+	for _, s := range all {
+		files[s.Name] = make(map[string]string, len(s.Files))
+		for _, file := range s.Files {
+			files[s.Name][file.Path] = string(file.Content)
+		}
+	}
+
+	cases := []struct {
+		name  string
+		skill string
+		path  string
+		wants []string
+	}{
+		{
+			name:  "writing verifies the delivered document",
+			skill: "writing",
+			path:  "references/the-doc.md",
+			wants: []string{"## Verify the artifact", "real destination", "provenance", "not verified"},
+		},
+		{
+			name:  "ui content records provenance",
+			skill: "ui-craft",
+			path:  "references/task-and-content.md",
+			wants: []string{"intrinsic", "license", "generated"},
+		},
+		{
+			name:  "ui delivery checks the final export",
+			skill: "ui-craft",
+			path:  "references/the-read.md",
+			wants: []string{"exported", "dimensions", "human decision"},
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			text, ok := files[tt.skill][tt.path]
+			if !ok {
+				t.Fatalf("%s carries no %s", tt.skill, tt.path)
+			}
+			for _, want := range tt.wants {
+				if !strings.Contains(text, want) {
+					t.Errorf("%s does not contain %q", tt.path, want)
+				}
+			}
+		})
+	}
+}
+
 // TestPullRequestMeasuresTheBudget: the 400-line budget is measured with a
 // command, not estimated by eye.
 func TestPullRequestMeasuresTheBudget(t *testing.T) {

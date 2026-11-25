@@ -36,6 +36,35 @@ When the document goes to a reviewer:
 - Link the previous and the next PR when the work is chained.
 - One decision per section, and a checklist for the acceptance criteria.
 
+## Verify the artifact
+
+A source file is not the delivered artifact. Walk the ladder and record each result:
+
+1. **Source correctness:** spelling, links, commands, code samples and claims match the
+   reviewed source.
+2. **Rendered or exported artifact:** open the actual render or export; check formatting,
+   navigation and embedded media.
+3. **Real destination:** open the published URL, delivered file or installed copy; confirm
+   the intended version and real destination behavior.
+4. **Applicable behavior:** exercise the states, controls and keyboard paths the artifact
+   exposes; measure contrast and zoom for a screen.
+5. **Readback:** compare the delivered result with the source and record what was observed,
+   not what the build printed.
+
+If a rung cannot be run, report `not verified` and why; never turn it into a pass.
+
+## Provenance
+
+For quoted, external or generated content and assets, record provenance with these fields:
+
+| field | record |
+| --- | --- |
+| creator or source | person, organization or tool that made it |
+| URL or local path | exact source locator and the retrieved or generated copy |
+| usage rights | license, permission or restriction for this use |
+| version or date | version, revision or retrieval date |
+| status | original, generated or demonstration/demo |
+
 ## Commands
 
 ```sh

@@ -7,6 +7,10 @@ tomorrow. Every `## vX.Y.Z` heading here names a tag: a version with no tag is
 not a release (`docs/releases.md`). `## Unreleased` is the worklog, and it is
 not a version.
 
+## Unreleased
+
+- **Delivered artifacts are checked where they arrive.** Feature 0362 makes the existing `writing` and `ui-craft` skills verify source correctness, the rendered or exported artifact and its behavior at the real destination, with unavailable checks reported as `not verified`. External copy, metrics and media now carry creator/source, usage rights, version/date and generated or demo status; UI readback checks actual link responses and media dimensions, while aesthetic direction stays a human decision. Patch (0362).
+
 ## v0.65.0 - 2026-11-24
 
 - **Review mode is a local gate, not advice.** Feature 0361 makes review and

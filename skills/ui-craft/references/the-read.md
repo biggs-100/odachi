@@ -17,7 +17,13 @@ is a screen nobody checked.
 - The tokens: one radius per level, one shadow per elevation, one icon family.
 - The motion: every animation answers feedback, continuity, hierarchy or story.
 - The screenshot: taken after the last change, and looked at.
+- The final export: open the exported build at its real destination, not only the source or
+  preview, and confirm the intended version is there.
+- The links: request each actionable link and record the actual response; an href alone
+  proves nothing.
+- The media: compare rendered dimensions, aspect ratio and crop with the asset's intrinsic
+  dimensions; confirm no essential content is cut off.
 
-If a row fails, the screen is not done: fix it and read it again. A screen that
-passes every row but still feels generic is a decision nobody made; go back to the
-order and find it.
+If a row fails, fix it and read the export again. When every row passes, the remaining
+aesthetic choice is a human decision: name it and ask for direction instead of
+treating taste as an automatic blocker.
