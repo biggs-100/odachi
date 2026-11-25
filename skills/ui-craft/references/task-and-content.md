@@ -25,7 +25,11 @@ leading one for this surface and build that one first.
 
 - Design with the worst content: the longest name, the biggest number, an unbreakable email, zero items.
 - Never invent a customer, a quote, a metric or a chart. An invented testimonial is a lie with a layout.
-- Demonstration data is labelled as such, in the interface, not only in the handoff.
+- Keep provenance for external copy, metrics and media: creator/source, usage rights such
+  as a license or permission, version/date, and whether the material is generated or demo.
+- Demonstration or generated content is labelled as such, in the interface, not only in the handoff.
+- Record an external image's intrinsic pixel dimensions before layout, and write alt text for
+  the information it contributes; a decorative image uses empty alt text.
 - If there is no evidence, say the capability plainly. "Used by 10,000 teams" with no number behind it is
   the fastest way to lose the reader who checks.
 
