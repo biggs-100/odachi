@@ -162,33 +162,6 @@ type ManagedVerify struct {
 	Prompt   string
 }
 
-// Outcome is the terminal fact a sealed runtime receipt carries. A run that did
-// not complete seals nothing, so the only sealed outcome is completed.
-type Outcome string
-
-// OutcomeCompleted says the verifier ran to a zero exit over a stable snapshot
-// under one bound grant and session.
-const OutcomeCompleted Outcome = "completed"
-
-// SealedRuntimeReceipt is the tool-derived runtime fact of one completed
-// verifier run. Every field is observed or issued by Go; none of them is read
-// from the verifier's answer. It is not exported or persisted yet: validation
-// and export belong to the next slice.
-type SealedRuntimeReceipt struct {
-	Grant        domaingrant.ID
-	Session      domaingrant.SessionID
-	Runtime      string
-	Model        string
-	SessionModel string
-	Role         string
-	Tree         string
-	Base         string
-	Snapshot     string
-	StartedAt    string
-	FinishedAt   string
-	Outcome      Outcome
-}
-
 // ManagedVerifyResult is what a managed verifier caller reads. Managed, Fresh
 // and Sealed are set only when one run issued, claimed and bound its own
 // authority, executed over an unchanged snapshot and completed its grant; every
@@ -411,10 +384,19 @@ func RunManagedVerify(ctx context.Context, request ManagedVerify, deps ManagedVe
 		Role:         VerifierRole,
 		Tree:         request.Tree,
 		Base:         request.Base,
+		OutputTree:   request.Tree,
 		Snapshot:     before,
 		StartedAt:    started.UTC().Format(time.RFC3339),
 		FinishedAt:   finished.UTC().Format(time.RFC3339),
 		Outcome:      OutcomeCompleted,
+	}
+	// The grant completed and the candidate did not move; the only fact left to
+	// prove is that the receipt is one the tool can stand behind. A receipt that
+	// cannot be validated is not returned as sealed evidence.
+	if err := sealed.Validate(); err != nil {
+		result.Output = execution.Output
+		result.ExitCode = execution.ExitCode
+		return blockedManagedVerify(result, "the tool could not seal a canonical runtime receipt: "+oneLine(err.Error())+"; nothing was stored")
 	}
 	result.Code = CodeOK
 	result.Message = fmt.Sprintf("verified %s over snapshot %s", request.Tree, before)

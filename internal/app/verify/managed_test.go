@@ -19,7 +19,7 @@ const verifierBase = "b4c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9"
 
 // snapshotBefore is the stable digest a frozen candidate answers before and
 // after a verifier that changes nothing.
-const snapshotBefore = "a1a2a3a4a5a6a7a8a9a0b1b2b3b4b5b6b7b8b9b0b1b2b3b4b5b6b7b8b9b0"
+const snapshotBefore = "a1a2a3a4a5a6a7a8a9a0b1b2b3b4b5b6b7b8b9b0b1b2b3b4b5b6b7b8b9b0c1c2"
 
 var (
 	startedAt  = time.Date(2026, 11, 16, 12, 0, 0, 0, time.UTC)
@@ -380,7 +380,7 @@ func TestManagedVerifyFailsClosedWhenTheSnapshotMoves(t *testing.T) {
 		},
 		"after changed": {
 			configure: func(s *fakeSnapshotter) {
-				s.digests = []string{snapshotBefore, "b2b3b4b5b6b7b8b9b0b1b2b3b4b5b6b7b8b9b0b1b2b3b4b5b6b7b8b9b0b1"}
+				s.digests = []string{snapshotBefore, "b2b3b4b5b6b7b8b9b0b1b2b3b4b5b6b7b8b9b0b1b2b3b4b5b6b7b8b9b0b1d1d2"}
 			},
 			executions: 1,
 			issues:     1,
@@ -730,6 +730,61 @@ func TestManagedVerifyRefusesANonZeroVerifierExit(t *testing.T) {
 	}
 	if fixture.grants.completes != 0 || fixture.grants.failures != 1 {
 		t.Fatalf("completions/failures = %d/%d, want 0/1", fixture.grants.completes, fixture.grants.failures)
+	}
+}
+
+// TestManagedVerifyRefusesAReceiptItCannotSealAfterExecution: the verifier ran and
+// its grant moved, but the receipt the tool built is not one it can stand behind.
+// A planned model or base that is not canonical, or an observed session model from
+// another provider, blocks the result: no sealed receipt, no managed or fresh
+// claim, and nothing stored.
+func TestManagedVerifyRefusesAReceiptItCannotSealAfterExecution(t *testing.T) {
+	cases := map[string]struct {
+		configure func(*verify.ManagedVerify, *managedFixture)
+	}{
+		"non-canonical planned model": {
+			configure: func(request *verify.ManagedVerify, _ *managedFixture) {
+				request.Model = "opencode/model;rm -rf ~"
+			},
+		},
+		"non-canonical base": {
+			configure: func(request *verify.ManagedVerify, _ *managedFixture) {
+				request.Base = "not-a-hash"
+			},
+		},
+		"cross-provider session model": {
+			configure: func(_ *verify.ManagedVerify, fixture *managedFixture) {
+				fixture.sessions.responses = []verify.VerifierSession{{
+					ID:    domaingrant.SessionID("ses_verify_cross"),
+					Model: "anthropic/claude",
+				}}
+			},
+		},
+	}
+	for name, testCase := range cases {
+		t.Run(name, func(t *testing.T) {
+			log := &managedEvents{}
+			fixture := newManagedFixture(log)
+			request := managedRequest()
+			testCase.configure(&request, fixture)
+
+			result := verify.RunManagedVerify(t.Context(), request, fixture.deps)
+			if result.Code != verify.CodeBlocked {
+				t.Fatalf("a receipt the tool cannot seal produced %+v", result)
+			}
+			if result.Sealed != nil || result.Managed || result.Fresh {
+				t.Fatal("an unsealable receipt was reported as sealed evidence")
+			}
+			if !strings.Contains(strings.ToLower(result.Message), "seal") {
+				t.Errorf("message %q does not name the failed seal", result.Message)
+			}
+			if fixture.executor.calls != 1 {
+				t.Errorf("executions = %d, want 1: the run must reach the final seal", fixture.executor.calls)
+			}
+			if fixture.grants.completes != 1 {
+				t.Errorf("completions = %d, want 1: the grant moved before the seal failed", fixture.grants.completes)
+			}
+		})
 	}
 }
 
