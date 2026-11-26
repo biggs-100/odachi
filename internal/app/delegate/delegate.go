@@ -8,6 +8,7 @@
 package delegate
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -60,14 +61,32 @@ type Result struct {
 	Task    string
 }
 
+// prepared is the delegation both the prompt and the managed grant use: the
+// composed prompt, the step it names, and the canonical task path and digest a
+// grant binds.
+type prepared struct {
+	prompt     string
+	step       taskdoc.Step
+	taskPath   string
+	taskDigest [sha256.Size]byte
+}
+
 // Run composes the prompt for one delegated step.
 func Run(opts Options, files Files) Result {
+	_, result := prepare(opts, files)
+	return result
+}
+
+// prepare validates the delegation once and returns both the prompt and the
+// canonical facts a managed grant is bound to. A refusal returns no prepared
+// delegation.
+func prepare(opts Options, files Files) (prepared, Result) {
 	if strings.TrimSpace(opts.TaskDoc) == "" {
-		return blocked(`missing the task doc: write odachi delegate odd/tasks/<file>.md --step T1`)
+		return prepared{}, blocked(`missing the task doc: write odachi delegate odd/tasks/<file>.md --step T1`)
 	}
 	stepID := strings.ToUpper(strings.TrimSpace(opts.Step))
 	if stepID == "" {
-		return blocked(`missing the step: write odachi delegate odd/tasks/<file>.md --step T1`)
+		return prepared{}, blocked(`missing the step: write odachi delegate odd/tasks/<file>.md --step T1`)
 	}
 
 	path := opts.TaskDoc
@@ -81,27 +100,32 @@ func Run(opts Options, files Files) Result {
 
 	data, err := files.Read(abs)
 	if err != nil {
-		return blocked("could not read " + opts.TaskDoc + ": " + oneLine(err.Error()))
+		return prepared{}, blocked("could not read " + opts.TaskDoc + ": " + oneLine(err.Error()))
 	}
 	doc := taskdoc.Parse(string(data))
 
 	step, ok := stepByID(doc, stepID)
 	if !ok {
-		return blocked(fmt.Sprintf("the task doc has no step %s; its steps are %s", stepID, stepIDs(doc)))
+		return prepared{}, blocked(fmt.Sprintf("the task doc has no step %s; its steps are %s", stepID, stepIDs(doc)))
 	}
 	if step.Route != taskdoc.RouteDelegated {
-		return blocked(fmt.Sprintf("step %s runs %s, not delegated: a step the parent runs needs no prompt", stepID, routeOf(step)))
+		return prepared{}, blocked(fmt.Sprintf("step %s runs %s, not delegated: a step the parent runs needs no prompt", stepID, routeOf(step)))
 	}
 
 	skills, problem := resolve(opts.Resolver, step.Skills)
 	if problem != "" {
-		return blocked(problem)
+		return prepared{}, blocked(problem)
 	}
 
 	requirement, hasRequirement := requirementOf(doc, step.Requirement)
 
 	prompt := compose(abs, step, requirement, hasRequirement, opts.Surfaces, opts.Commands, skills)
-	return Result{Code: CodeOK, Prompt: prompt, Task: opts.TaskDoc}
+	return prepared{
+		prompt:     prompt,
+		step:       step,
+		taskPath:   abs,
+		taskDigest: sha256.Sum256(data),
+	}, Result{Code: CodeOK, Prompt: prompt, Task: opts.TaskDoc}
 }
 
 // skill is one resolved path, in the order the step declared it.
