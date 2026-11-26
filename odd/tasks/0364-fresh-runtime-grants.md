@@ -26,7 +26,7 @@ R1 · "odachi issues one-shot runtime grants for managed delegation, review and 
 - [x] T5 · bind one session and linearize terminal races   R1 · route:delegated/odachi-worker · skills:tests,security · tree:5398fdeb95ffc5685f2fcf7c6fd9c9198fc02a3b
 - [x] T6 · add a fresh-only OpenCode runtime adapter   R1 · route:delegated/odachi-worker · skills:tests,security,use-modern-go · tree:7e43667ad826d6a3e801d89807261c347e118ba5
 - [x] T7 · bind managed delegation to one fresh worker session   R1 · route:delegated/odachi-worker · skills:tests,security,slices · tree:465ead7dc737e43f9c06d2f671c975a649b7fa9e
-- [ ] T8 · give every managed review unit and draw a fresh session on one frozen tree   R1 · route:delegated/odachi-worker · skills:tests,security,rdd-defect-workflow
+- [x] T8 · give every managed review unit and draw a fresh session on one frozen tree   R1 · route:delegated/odachi-worker · skills:tests,security,rdd-defect-workflow · tree:00cce6d0df9d3cb47ae81f4b9e259793b3f71f39
 - [ ] T9 · freeze and seal the managed verifier executor   R1 · route:delegated/odachi-worker · skills:tests,security,rdd-defect-workflow
 - [ ] T10 · validate and export tool-sealed runtime receipts   R1 · route:delegated/odachi-worker · skills:tests,security
 - [ ] T11 · prove OpenCode freshness with opt-in runtime controls   R1 · route:delegated/odachi-worker · skills:tests,ship,security
