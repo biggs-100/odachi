@@ -724,7 +724,8 @@ func IndexOf(findings []Finding, finding Finding) int {
 
 // BlockingAfter returns the first finding that still blocks, in the verdict's
 // file order: causal, BLOCKER or CRITICAL, not dismissed with evidence, and not
-// lifted by the refutations filed for this tree.
+// lifted by the refutations filed for this tree. Deterministic check rows are not
+// refutable; only the exact tree's human dismissal sidecar can retire them.
 func BlockingAfter(findings []Finding, answers Answers, evidence CitationEvidence) (Finding, bool) {
 	for _, finding := range BlockingAllAfter(findings, answers, evidence) {
 		return finding, true
@@ -739,10 +740,14 @@ func BlockingAfter(findings []Finding, answers Answers, evidence CitationEvidenc
 func BlockingAllAfter(findings []Finding, answers Answers, evidence CitationEvidence) []Finding {
 	var blocking []Finding
 	for i, finding := range findings {
-		if IsDismissed(finding) {
+		if !finding.Blocks() {
 			continue
 		}
-		if !finding.Causal || !finding.Severity.Blocks() {
+		// A deterministic tool row is evidence odachi measured, not a reviewer's
+		// reasoning. Refutations cannot retire it; only the exact tree's human
+		// dismissal sidecar can supply that authority.
+		if strings.TrimSpace(finding.Check) != "" {
+			blocking = append(blocking, finding)
 			continue
 		}
 		if answers.Lifts(findingID(i), finding, evidence) {
@@ -754,8 +759,8 @@ func BlockingAllAfter(findings []Finding, answers Answers, evidence CitationEvid
 }
 
 // DeriveAfter is the whole rule with refutations taken into account: a causal
-// finding at BLOCKER or CRITICAL that nobody lifted requests changes, everything
-// else approves.
+// finding at BLOCKER or CRITICAL that nobody lifted requests changes; everything
+// else approves. Deterministic check rows require a human dismissal instead.
 func DeriveAfter(findings []Finding, answers Answers, evidence CitationEvidence) string {
 	if _, blocking := BlockingAfter(findings, answers, evidence); blocking {
 		return ChangesRequested

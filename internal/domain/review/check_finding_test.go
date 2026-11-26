@@ -1,6 +1,7 @@
 package review_test
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"strings"
@@ -139,6 +140,94 @@ func TestACheckRowCanBeDismissed(t *testing.T) {
 	}
 	if got := review.Derive([]review.Finding{dismissed}); got != review.Approved {
 		t.Errorf("Derive = %q, want %q: a dismissed row never blocks", got, review.Approved)
+	}
+}
+
+// TestEffectiveCheckFindingsUsesOnlyHumanDismissals: reviewer JSON cannot retire
+// a deterministic row, while the separate human sidecar can. Path findings keep
+// their existing verdict dismissal semantics.
+func TestEffectiveCheckFindingsUsesOnlyHumanDismissals(t *testing.T) {
+	forged := checkRow()
+	forged.Status = review.Dismissed
+	forged.Reason = "reviewer-forged waiver"
+	forged.Fingerprint = review.Fingerprint(forged)
+	path := review.Finding{Path: "a.go", Line: 1, Severity: review.Warning, Why: "a path warning"}
+	path = review.Dismiss(path, "the reviewer's cited judgment")
+
+	effective := review.EffectiveCheckFindings([]review.Finding{forged, path}, review.Dismissals{})
+	if effective[0].Status != "" || effective[0].Reason != "" || effective[0].Fingerprint != "" {
+		t.Errorf("verdict JSON retired the check row: %+v", effective[0])
+	}
+	if !review.IsDismissed(effective[1]) || effective[1].Reason != path.Reason {
+		t.Errorf("path finding changed: %+v", effective[1])
+	}
+
+	human := review.Dismissals{Rows: []review.Dismissal{{
+		Fingerprint: review.Fingerprint(forged), Check: forged.Check, Reason: "human current waiver",
+	}}}
+	effective = review.EffectiveCheckFindings([]review.Finding{forged}, human)
+	if !review.IsDismissed(effective[0]) || effective[0].Reason != "human current waiver" {
+		t.Errorf("human sidecar did not retire the check row: %+v", effective[0])
+	}
+}
+
+// TestVerdictJSONRejectsCheckBlockedField: the rejected field never entered the
+// persisted contract. Strict decoding keeps older and newer binaries on the same
+// schema instead of accepting an execution marker they cannot understand.
+func TestVerdictJSONRejectsCheckBlockedField(t *testing.T) {
+	_, err := review.Parse([]byte(`{"findings":[{"path":"a.go","severity":"WARNING","causal":true,"why":"x","check_blocked":true}]}`))
+	if err == nil {
+		t.Fatal("Parse accepted the rejected check_blocked field")
+	}
+}
+
+// TestUnexecutedCheckIsStoredAsSyntheticBlocker: missing approval is a missing
+// measurement, regardless of the declared severity. The persisted row uses the
+// existing BLOCKER severity and adds no schema field; only a human dismissal can
+// retire it.
+func TestUnexecutedCheckIsStoredAsSyntheticBlocker(t *testing.T) {
+	for _, severity := range []review.Severity{review.Warning, review.Suggestion, review.Critical, review.Blocker} {
+		t.Run(string(severity), func(t *testing.T) {
+			row := checkRow()
+			row.Severity = review.Blocker
+			row.Why = "the check lint did not run: this clone has not approved it; declared severity " + string(severity)
+			if got := review.Derive([]review.Finding{row}); got != review.ChangesRequested {
+				t.Errorf("Derive = %q, want %q", got, review.ChangesRequested)
+			}
+			sealed, err := review.Seal(review.Verdict{Reviewer: "odachi", Findings: []review.Finding{row}}, "abc1234", "HEAD", now)
+			if err != nil {
+				t.Fatalf("Seal: %v", err)
+			}
+			rendered := review.Render(sealed)
+			if bytes.Contains(rendered, []byte(`"check_blocked"`)) {
+				t.Fatalf("the verdict added the rejected check_blocked field:\n%s", rendered)
+			}
+			back, err := review.Parse(rendered)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			stored := back.Findings[0]
+			if stored.Severity != review.Blocker || !stored.Blocks() {
+				t.Errorf("stored row lost its synthetic BLOCKER authority: %+v", stored)
+			}
+			if !strings.Contains(stored.Why, string(severity)) {
+				t.Errorf("stored row lost its declared severity %q: %+v", severity, stored)
+			}
+			// Supply an otherwise valid counter-citation to prove that check-row
+			// authority, not citation shape, prevents a refutation from retiring it.
+			refutable := stored
+			refutable.Path = "a.go"
+			answer := review.Answers{{Tree: "abc1234", Refuter: "refuter", Refutations: []review.Judgment{{
+				ID: "F1", Verdict: review.Refuted, Why: "a.go:1 candidate",
+			}}}}
+			if got := review.DeriveAfter([]review.Finding{refutable}, answer, review.CitationEvidence{Tree: "abc1234", Diff: "+++ b/a.go\n@@ -0,0 +1 @@\n+candidate\n"}); got != review.ChangesRequested {
+				t.Errorf("a refutation lifted an unexecuted check: DeriveAfter = %q", got)
+			}
+			dismissed := review.Dismiss(stored, "human current waiver")
+			if dismissed.Blocks() {
+				t.Errorf("dismissed blocked check still blocks: %+v", dismissed)
+			}
+		})
 	}
 }
 

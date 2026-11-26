@@ -4,7 +4,7 @@
 // Two ideas hold the whole design together.
 //
 // The verdict is DERIVED, never administered. There is no correction budget and
-// no lifecycle: a causal BLOCKER or CRITICAL requests changes, everything else
+// no lifecycle: a causal BLOCKER or CRITICAL requests changes; everything else
 // approves. A reviewer supplies findings; the tool does the arithmetic.
 //
 // A verdict is CONTENT-ADDRESSED. It is stored in the clone's store as
@@ -250,14 +250,13 @@ func (v Verdict) Missing(required []string) []string {
 	return missing
 }
 
-// Derive is the whole rule: a causal finding at BLOCKER or CRITICAL requests
-// changes, everything else approves. Style findings, non-causal findings and
-// suggestions are recorded, and never block.
+// Derive is the whole rule: a causal BLOCKER or CRITICAL requests changes;
+// everything else approves. Other findings are recorded and never block.
 func Derive(findings []Finding) string {
 	return DeriveAfter(findings, Answers{}, CitationEvidence{})
 }
 
-// Blocking returns the first finding that blocks: causal, and BLOCKER or
+// Blocking returns the first finding that blocks: causal and at BLOCKER or
 // CRITICAL. "First" is the file order, so the message a human reads is the same
 // on every run of the same verdict.
 func Blocking(findings []Finding) (Finding, bool) {
@@ -409,7 +408,7 @@ func (v Verdict) Validate() error {
 	if declared := strings.TrimSpace(v.Verdict); declared != "" {
 		if derived := Derive(v.Findings); declared != derived {
 			return fmt.Errorf(
-				"the verdict says %q but the rule derives %q: a causal BLOCKER or CRITICAL finding requests changes, and without them there is no block",
+				"the verdict says %q but the rule derives %q: a causal BLOCKER or CRITICAL finding requests changes; without one there is no block",
 				declared, derived)
 		}
 	}
