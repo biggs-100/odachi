@@ -38,7 +38,7 @@ R1 · "odachi's workflow fails closed when evidence is ambiguous, judges one con
 - [x] T2 · bind proof to the post-command tree or refuse candidate mutation   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:b669bff99e499edc9dd614e78bd495f4944cfd4b
 - [x] T3 · return one atomic correction snapshot   R1 · route:delegated/odachi-worker · skills:tests,commits · tree:46db5e42907ba469f1272eb95ba4b4f10ca1e680
 - [x] T4 · fail closed on unreadable inherited evidence and bind refutations   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow · tree:10ec98ce11513c94e08ce9778e4bc2d8f68f8856
-- [ ] T5 · require declared checks to run or produce blocking rows   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
+- [x] T5 · require declared checks to run or produce blocking rows   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow · tree:a1082d82093cb80e5e869f2c565ef65033fa4e42
 - [ ] T6 · scope waivers and validate verdicts before paperwork exemption   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
 - [ ] T7 · seal and enforce verifier executor identity   R1 · route:delegated/odachi-worker · skills:tests,security
 - [ ] T8 · keep moved blockers causal until re-reviewed or waived   R1 · route:delegated/odachi-worker · skills:tests,rdd-defect-workflow
@@ -92,3 +92,4 @@ L25 · OFICIO · "Accept a size exception for T5 at 1188 authored lines" (porque
 L26 · OFICIO · "Update the T5 size exception to 1415 authored lines" (porque The final correction adds blocking coverage for every unmeasured state and gate-side authority regressions required by independent review.)
 L27 · OFICIO · "Reopen T5 to centralize every stored-verdict reader" (porque Fresh verification found review --all --json bypasses effective check authority; all verdict readers must share one interpretation.)
 L28 · OFICIO · "Update the T5 size exception to 1491 authored lines" (porque EffectiveVerdict and every stored-verdict reader must land together so no consumer can interpret check dismissal authority differently.)
+L29 · OFICIO · "Complete T5 with fresh worker reviewer and verifier sessions" (porque After detecting context contamination, the final T5 candidate used new sessions for implementation, review and verification; the fresh verifier found the last omitted reader.)
