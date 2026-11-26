@@ -29,7 +29,7 @@ R1 · "odachi issues one-shot runtime grants for managed delegation, review and 
 - [x] T8 · give every managed review unit and draw a fresh session on one frozen tree   R1 · route:delegated/odachi-worker · skills:tests,security,rdd-defect-workflow · tree:00cce6d0df9d3cb47ae81f4b9e259793b3f71f39
 - [x] T9 · freeze and seal the managed verifier executor   R1 · route:delegated/odachi-worker · skills:tests,security,rdd-defect-workflow · tree:ef5fcd7c1f4de5a1d8f3d4d8e2d1498ffbc97417
 - [x] T10 · validate and export tool-sealed runtime receipts   R1 · route:delegated/odachi-worker · skills:tests,security · tree:b4a6511b3630c7394c54abdd4bb5fc4cf8b61e72
-- [ ] T11 · prove OpenCode freshness with opt-in runtime controls   R1 · route:delegated/odachi-worker · skills:tests,ship,security
+- [ ] T11 · prove schema 2/check and deterministic OpenCode runtime controls   R1 · route:delegated/odachi-worker · skills:tests,ship,security,use-modern-go
 
 ## History
 L1 · "odachi issues one-shot runtime grants for managed delegation, review and verification, binds each grant to one task or immutable candidate and one fresh runtime session, and refuses replay or resume in code"
@@ -45,3 +45,5 @@ L10 · OFICIO · "Use C:\Users\USER\odachi-worktrees\0364-grant-slices on feat/0
 L11 · OFICIO · "Map old T1 to T1-T5 and old T2-T7 to T6-T11" (porque The re-slice separates domain, publication, claim, lifecycle and session-race review boundaries.)
 L12 · OFICIO · "Forecast T1 403, T2 600, T3 500, T4 340, T5 470, T6 340, T7 320, T8 400, T9 380, T10 280 and T11 300 authored lines" (porque The realistic feature total is 4400-4600 authored lines.)
 L13 · OFICIO · "Close T1 at commit 9eba382 after approved risk and reliability review plus independent verification" (porque The corrected candidate tree 7625e2f3d11c754cee9230daccffc749bd1306e3 has green proof and fixes both refutation gaps.)
+L14 · PREGUNTA P1 · "T11 necesita decisiones de producto antes de implementarse: ¿lo rebaneamos en T11a (schema 2/check y harness runtime opt-in determinista) y T11b (transporte real, binding de modelo y politica de mutacion), o lo pausamos para decidir primero el diseno completo?"
+L15 · VOS P1 · "Rebanear T11: T11 closes schema 2/check and a deterministic opt-in runtime harness; T12 defers production actor transport, model binding and mutation policy."
