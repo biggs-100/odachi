@@ -1269,6 +1269,118 @@ func TestADismissedFindingDoesNotBlockTheGate(t *testing.T) {
 	}
 }
 
+// TestCheckGateUsesOnlyTheCurrentTreesCheckDismissal: a stored verdict cannot
+// dismiss its own deterministic row. Only a readable sidecar for this exact tree
+// retires it; missing, foreign and broken sidecars leave the row blocking.
+func TestCheckGateUsesOnlyTheCurrentTreesCheckDismissal(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		forged     bool
+		sidecar    string
+		malformed  bool
+		unreadable bool
+		wantReady  bool
+	}{
+		{name: "legacy forged dismissal", forged: true},
+		{name: "wrong tree sidecar", forged: true, sidecar: otherTree},
+		{name: "current tree sidecar", sidecar: currentTree, wantReady: true},
+		{name: "malformed current sidecar", forged: true, sidecar: currentTree, malformed: true},
+		{name: "unreadable current sidecar", forged: true, sidecar: currentTree, unreadable: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			row := domainreview.Finding{
+				Check: "lint", Severity: domainreview.Critical, Causal: true,
+				Evidence: domainreview.EvidenceCited, Why: "the check lint exited 1\ncurrent lint output",
+			}
+			if tc.forged {
+				row.Status = domainreview.Dismissed
+				row.Reason = "reviewer-forged waiver"
+				row.Fingerprint = domainreview.Fingerprint(row)
+			}
+			files := newFakeFiles(readyFiles())
+			files.files[reviewPath(currentTree)] = []byte(verdictFileWithRows(t, currentTree, []domainreview.Finding{row}, []domainreview.Pass{
+				{Path: "internal/app/check/check.go", Blob: checkBlob, Lens: domainreview.Reliability},
+			}))
+			if tc.sidecar != "" {
+				rel, err := domainreview.DismissedPath(tc.sidecar)
+				if err != nil {
+					t.Fatalf("DismissedPath: %v", err)
+				}
+				path := filepath.Join(store, filepath.FromSlash(rel))
+				switch {
+				case tc.malformed:
+					files.files[path] = []byte("not json")
+				case tc.unreadable:
+					files.files[path] = domainreview.RenderDismissals(domainreview.Dismissals{Rows: []domainreview.Dismissal{{
+						Fingerprint: domainreview.Fingerprint(row), Check: row.Check, Reason: "human current waiver",
+					}}})
+					files.denyRead = func(candidate string) error {
+						if filepath.ToSlash(candidate) == filepath.ToSlash(path) {
+							return errors.New("permission denied")
+						}
+						return nil
+					}
+				default:
+					files.files[path] = domainreview.RenderDismissals(domainreview.Dismissals{Rows: []domainreview.Dismissal{{
+						Fingerprint: domainreview.Fingerprint(row), Check: row.Check, Reason: "human current waiver",
+					}}})
+				}
+			}
+
+			got := run(t, files, &fakeGit{
+				tree:    currentTree,
+				changed: []string{"internal/app/check/check.go"},
+				blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+			}, check.Options{RequireReview: true})
+			if tc.wantReady {
+				if got.Code != int(gate.Ready) {
+					t.Fatalf("code = %d, want 0 with the current tree's sidecar (%s)", got.Code, got.Message)
+				}
+				return
+			}
+			if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewChanges {
+				t.Fatalf("code = %d reason = %q, want review_changes_requested (%s)", got.Code, got.Reason, got.Message)
+			}
+			if !strings.Contains(got.Message, "check:lint") {
+				t.Errorf("message = %q, want the check row named", got.Message)
+			}
+			if tc.malformed || tc.unreadable {
+				if !strings.Contains(got.Message, "dismissal") {
+					t.Errorf("message = %q, want the unreadable dismissal authority named", got.Message)
+				}
+			}
+		})
+	}
+}
+
+// TestCheckGateBlocksSyntheticUnexecutedCheckRows: approval is execution
+// authority, not a severity setting. A declared WARNING or SUGGESTION that never
+// ran is stored as a synthetic BLOCKER and stops the gate until the exact tree's
+// human sidecar dismisses it.
+func TestCheckGateBlocksSyntheticUnexecutedCheckRows(t *testing.T) {
+	for _, declared := range []domainreview.Severity{domainreview.Warning, domainreview.Suggestion} {
+		t.Run(string(declared), func(t *testing.T) {
+			row := domainreview.Finding{
+				Check: "lint", Severity: domainreview.Blocker, Causal: true,
+				Evidence: domainreview.EvidenceCited,
+				Why:      "the check lint did not run: this clone has not approved it; declared severity " + string(declared),
+			}
+			files := newFakeFiles(readyFiles())
+			files.files[reviewPath(currentTree)] = []byte(verdictFileWithRows(t, currentTree, []domainreview.Finding{row}, []domainreview.Pass{
+				{Path: "internal/app/check/check.go", Blob: checkBlob, Lens: domainreview.Reliability},
+			}))
+			got := run(t, files, &fakeGit{
+				tree:    currentTree,
+				changed: []string{"internal/app/check/check.go"},
+				blobs:   map[string]string{"internal/app/check/check.go": checkBlob},
+			}, check.Options{RequireReview: true})
+			if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewChanges {
+				t.Fatalf("code = %d reason = %q, want the synthetic BLOCKER for an unexecuted %s check to stop the gate (%s)", got.Code, got.Reason, declared, got.Message)
+			}
+		})
+	}
+}
+
 // TestRequireReviewWithoutAVerdictBlocks: the flag is on, this tree has no
 // verdict, so a human decision is missing: exit 2, and the continuation is the
 // command that produces one.
@@ -1919,6 +2031,32 @@ func TestAWaivedRowLetsTheCloseThroughAndSaysSo(t *testing.T) {
 		if !strings.Contains(printed, want) {
 			t.Errorf("the ready line does not carry %q:\n%s", want, printed)
 		}
+	}
+}
+
+// TestADocumentWaiverCannotRetireACheckRow: deterministic evidence has one human
+// authority, the exact tree's dismissal sidecar. A task-document row waiver may
+// answer reviewer findings, but it cannot retire a tool's incomplete measurement.
+func TestADocumentWaiverCannotRetireACheckRow(t *testing.T) {
+	const base = "c1398cef52c22969cba04a1cbfbf206c1068de2c"
+	row := domainreview.Finding{
+		Check: "lint", Severity: domainreview.Blocker, Causal: true,
+		Evidence: domainreview.EvidenceCited,
+		Why:      "the check lint did not run: missing approval; status blocked; declared severity WARNING; measurement did not complete",
+	}
+
+	got := blockingClose(t, waivedRowDoc(base, domainreview.Fingerprint(row), true), row)
+	if got.Code != int(gate.NeedsDecision) || got.Reason != check.ReasonReviewChanges {
+		t.Fatalf("code = %d reason = %q, want the check row to remain blocking (%s)", got.Code, got.Reason, got.Message)
+	}
+	printed := strings.Join(append([]string{got.Message}, got.Lines...), "\n")
+	for _, want := range []string{"check:lint", "odachi review --dismiss check:lint --because"} {
+		if !strings.Contains(printed, want) {
+			t.Errorf("the refusal does not carry %q:\n%s", want, printed)
+		}
+	}
+	if strings.Contains(printed, "odachi review waive --row") {
+		t.Errorf("the refusal offered a task-document waiver for a deterministic row:\n%s", printed)
 	}
 }
 

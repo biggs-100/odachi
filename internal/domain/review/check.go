@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -149,9 +150,9 @@ func NormalizeCheckTimeout(value int) (int, error) {
 	return value, nil
 }
 
-// CheckStatus is what one declared tool answered when the review ran it. Three of
-// the four are a failure the verdict has to carry: a tool that could not start is
-// not a tool that passed.
+// CheckStatus is what one declared tool answered when the review ran it. Only
+// passed and failed are complete measurements. Every other state is missing
+// evidence the verdict must carry, including a state this binary does not know.
 type CheckStatus string
 
 const (
@@ -164,6 +165,9 @@ const (
 	// CheckBroken is the tool could not start at all: the command does not exist,
 	// or the operating system refused it.
 	CheckBroken CheckStatus = "could not run"
+	// CheckBlocked is the tool was declared but this clone has not approved the
+	// exact list. It did not execute, and the verdict must carry why.
+	CheckBlocked CheckStatus = "blocked"
 )
 
 // CheckResult is one declared tool's answer about one candidate: which tool, what
@@ -172,8 +176,9 @@ const (
 type CheckResult struct {
 	Name    string
 	Command string
-	// Severity is the severity the project declared: what a failure is worth is
-	// its decision, and the row the verdict files carries it.
+	// Severity is the severity the project declared. A completed failure files
+	// its row at this severity; an incomplete measurement is promoted to
+	// BLOCKER and keeps the declared value in its explanation.
 	Severity Severity
 	// Remedy is the project's own words for the repair: the prompt prints it
 	// beside a red so the reviewer knows what the tool's failure is asking for,
@@ -188,10 +193,57 @@ type CheckResult struct {
 	Note string
 }
 
+// Measured reports whether the tool completed a measurement of the candidate.
+// A future status is incomplete evidence until this binary explicitly learns
+// that it represents a finished run.
+func (s CheckStatus) Measured() bool {
+	return s == CheckPassed || s == CheckFailed
+}
+
 // Failed reports whether this answer is a failure the verdict must carry. Only a
 // check that ran and exited zero is a pass.
 func (c CheckResult) Failed() bool {
 	return c.Status != CheckPassed
+}
+
+// EffectiveCheckFindings applies the only dismissal authority a deterministic
+// check row has: the human sidecar for the candidate being read. Verdict JSON can
+// record what a reviewer said, but its status, reason and fingerprint cannot retire
+// a tool row. A missing sidecar is an empty judgment; callers decide how an
+// unreadable sidecar is reported before passing it here.
+func EffectiveCheckFindings(findings []Finding, human Dismissals) []Finding {
+	effective := slices.Clone(findings)
+	for i := range effective {
+		finding := &effective[i]
+		if strings.TrimSpace(finding.Check) == "" {
+			continue
+		}
+		finding.Status, finding.Reason, finding.Fingerprint = "", "", ""
+		if row, ok := human.Retires(*finding); ok {
+			*finding = Dismiss(*finding, row.Reason)
+		}
+	}
+	return effective
+}
+
+// EffectiveVerdict is the shared interpretation of stored verdict bytes. The
+// caller supplies the human sidecar belonging to the verdict's exact tree; verdict
+// JSON alone cannot dismiss a deterministic check. When check rows are present,
+// the derived verdict follows their effective state rather than the stored summary;
+// verdicts without checks keep their existing non-check judgment.
+func EffectiveVerdict(verdict Verdict, human Dismissals) Verdict {
+	hasCheck := false
+	for _, finding := range verdict.Findings {
+		if strings.TrimSpace(finding.Check) != "" {
+			hasCheck = true
+			break
+		}
+	}
+	verdict.Findings = EffectiveCheckFindings(verdict.Findings, human)
+	if hasCheck {
+		verdict.Verdict = Derive(verdict.Findings)
+	}
+	return verdict
 }
 
 const (

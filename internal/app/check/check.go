@@ -1457,9 +1457,72 @@ func ReviewOwed(opts Options, files Files, git Git) (bool, string, error) {
 	return len(required) > 0, "", nil
 }
 
+// effectiveReviewVerdict is the gate's read-side authority for stored verdicts.
+// Verdict-embedded dismissals are always stripped; only a readable sidecar for
+// this exact tree can retire a check. A missing sidecar is no judgment, while an
+// unreadable one blocks instead of being mistaken for absence.
+func (r *runner) effectiveReviewVerdict(tree string, verdict reviewdomain.Verdict) (reviewdomain.Verdict, *Result) {
+	hasCheck := false
+	for _, finding := range verdict.Findings {
+		if strings.TrimSpace(finding.Check) != "" {
+			hasCheck = true
+			break
+		}
+	}
+
+	var human reviewdomain.Dismissals
+	if hasCheck {
+		rel, err := reviewdomain.DismissedPath(tree)
+		if err != nil {
+			problem := unreadableCheckDismissals(verdict.Findings, rel, oneLine(err.Error()))
+			return reviewdomain.Verdict{}, &problem
+		}
+		path := filepath.Join(r.opts.Store, filepath.FromSlash(rel))
+		exists, err := r.files.Exists(path)
+		if err != nil {
+			problem := unreadableCheckDismissals(verdict.Findings, rel, "could not ask whether it exists: "+oneLine(err.Error()))
+			return reviewdomain.Verdict{}, &problem
+		}
+		if exists {
+			data, err := r.files.Read(path)
+			if err != nil {
+				problem := unreadableCheckDismissals(verdict.Findings, rel, oneLine(err.Error()))
+				return reviewdomain.Verdict{}, &problem
+			}
+			human, err = reviewdomain.ParseDismissals(data)
+			if err != nil {
+				problem := unreadableCheckDismissals(verdict.Findings, rel, oneLine(err.Error()))
+				return reviewdomain.Verdict{}, &problem
+			}
+		}
+	}
+	return reviewdomain.EffectiveVerdict(verdict, human), nil
+}
+
+// unreadableCheckDismissals keeps the gate closed when the only human authority
+// for a deterministic row cannot be read. It uses the existing changes-requested
+// reason: the rows remain standing, and the sidecar is the artifact to repair.
+func unreadableCheckDismissals(findings []reviewdomain.Finding, rel, detail string) Result {
+	message := fmt.Sprintf("this tree's check dismissals cannot be read (%s): %s; deterministic check rows remain blocking", rel, detail)
+	for _, finding := range findings {
+		if check := strings.TrimSpace(finding.Check); check != "" {
+			message += ": check:" + check
+			break
+		}
+	}
+	return Result{
+		Code:    int(gate.NeedsDecision),
+		Reason:  ReasonReviewChanges,
+		Message: message,
+		Next:    "odachi review --show",
+		Lines:   []string{message, "next: odachi review --show"},
+	}
+}
+
 // requireReview is the design gate: a stored verdict for THIS tree, one that
-// covers every lens the candidate requires, and no causal BLOCKER or CRITICAL
-// finding left standing after the refutation is taken into account.
+// covers every lens the candidate requires, and no causal BLOCKER, CRITICAL or
+// incomplete declared check left standing after the exact-tree human sidecar for
+// check rows and refutations for reviewer rows are taken into account.
 //
 // The lenses come first because they answer whether this candidate asks for a
 // review at all. A documentation-only candidate has nothing for a specialist lens
@@ -1536,6 +1599,10 @@ func (r *runner) requireReview(base string) *Result {
 		}
 		problem.Lines = []string{problem.Message, "next: odachi review --attach <file>"}
 		return &problem
+	}
+	verdict, problem = r.effectiveReviewVerdict(r.tree, verdict)
+	if problem != nil {
+		return problem
 	}
 
 	// A closed feature owes the verdict of its own diff. A base earlier than the
@@ -1624,7 +1691,10 @@ func (r *runner) requireReview(base string) *Result {
 		waived := make([]string, 0, len(blockingRows))
 		for _, row := range blockingRows {
 			fingerprint := reviewdomain.Fingerprint(row)
-			if r.waivedRow(fingerprint) {
+			// A task-document waiver answers reviewer findings. Deterministic
+			// check rows have one human authority: this exact tree's sidecar,
+			// already applied by effectiveReviewVerdict above.
+			if strings.TrimSpace(row.Check) == "" && r.waivedRow(fingerprint) {
 				waived = append(waived, fingerprint)
 				continue
 			}
@@ -1649,6 +1719,9 @@ func (r *runner) requireReview(base string) *Result {
 			message += "; waived: " + strings.Join(waived, ", ")
 		}
 		next := "odachi review waive --row " + reviewdomain.Fingerprint(finding) + ` --because "<why the tree ships with this row open>"`
+		if check := strings.TrimSpace(finding.Check); check != "" {
+			next = "odachi review --dismiss check:" + check + ` --because "<why this tool row is a false positive>"`
+		}
 		problem := Result{
 			Code:    int(gate.NeedsDecision),
 			Reason:  ReasonReviewChanges,
@@ -2223,7 +2296,9 @@ func answered(lenses []string, name string) bool {
 // it is, how bad it is, and the evidence.
 func reviewFinding(finding reviewdomain.Finding) string {
 	where := finding.Path
-	if finding.Line > 0 {
+	if check := strings.TrimSpace(finding.Check); check != "" {
+		where = "check:" + check
+	} else if finding.Line > 0 {
 		where = fmt.Sprintf("%s:%d", finding.Path, finding.Line)
 	}
 	return where + " " + string(finding.Severity) + " " + finding.Why

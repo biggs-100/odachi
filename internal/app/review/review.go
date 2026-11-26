@@ -562,6 +562,11 @@ func (r *runner) storedVerdict(tree string) (*domain.Verdict, *Result) {
 			rel, oneLine(err.Error())))
 		return nil, &problem
 	}
+	verdict, _, note := r.effectiveStoredVerdict(tree, verdict)
+	if note != "" {
+		problem := blocked(note + "; no check dismissal was applied; fix or remove the sidecar and run odachi review again")
+		return nil, &problem
+	}
 	return &verdict, nil
 }
 
@@ -1374,6 +1379,10 @@ func (r *runner) exec() Result {
 			// own declaration, and the gate compares it with the proof's. It comes from
 			// the resolution of THIS group, not from a field the last one wrote.
 			parsed.Model = unit.model
+			// Check rows belong to the deterministic tools, never to reviewer JSON.
+			// Dropping a forged row here keeps its name, severity, causal status and
+			// dismissal from competing with the evidence odachi measured itself.
+			parsed.Findings = withoutReviewerCheckRows(parsed.Findings)
 			if err := parsed.Validate(); err != nil {
 				return r.unreadable(lost(command+" did not give a verdict: "+err.Error()), diagnosis, []byte(answer), rel, len(settled), selected, todo, landed)
 			}
@@ -1915,6 +1924,7 @@ func (r *runner) show() Result {
 		return blocked(fmt.Sprintf("the review of this tree cannot be read (%s): %s; write it again with odachi review --attach <file>",
 			rel, oneLine(err.Error())))
 	}
+	parsed, retired, authorityNote := r.effectiveStoredVerdict(tree, parsed)
 
 	// What this tree requires decides whether the stored file is a review or half
 	// of one: a verdict that answered some lenses is not a review, and saying it
@@ -1931,12 +1941,20 @@ func (r *runner) show() Result {
 		lines = append(lines, r.modelPlan(required)...)
 	}
 	// The human's judgments are part of what this tree's review says: a row they
-	// retired is not a row to act on, and a reader of --show must see why.
-	if retired, note := r.dismissedRows(tree); note != "" {
-		lines = append(lines, note)
+	// retired is not a row to act on, and a reader of --show must see why. An
+	// unreadable sidecar supplies no authority, so the effective check rows above
+	// stay open and the failure is named here.
+	if authorityNote != "" {
+		lines = append(lines, authorityNote)
 	} else {
 		for _, row := range retired.Rows {
-			lines = append(lines, "dismissed by a person: "+row.Path+":"+strconv.Itoa(row.Line)+" - "+row.Reason)
+			where := row.Path
+			if check := strings.TrimSpace(row.Check); check != "" {
+				where = "check:" + check
+			} else if row.Line > 0 {
+				where = fmt.Sprintf("%s:%d", row.Path, row.Line)
+			}
+			lines = append(lines, "dismissed by a person: "+where+" - "+row.Reason)
 		}
 	}
 	// So is the decision that widened the scope: a reader who sees more lenses than
@@ -2137,17 +2155,30 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 	stamped.Findings, downgraded = domain.Earned(stamped.Findings, floor)
 
 	// The tools the project declared ran before the prompt, and what they said is
-	// the verdict's own row: appended after Earned, because a tool cites its
+	// the verdict's own row: reconciled after Earned, because a tool cites its
 	// output and not a line of the diff, and the floor has nothing to judge there.
+	checkResults, _, problem := r.ranChecks()
+	if problem != nil {
+		return *problem
+	}
 	checkRows, problem := r.checkFindings()
 	if problem != nil {
 		return *problem
 	}
-	stamped.Findings = appendMissing(stamped.Findings, checkRows)
+	// Check rows in this answer are never tool evidence. Predecessor rows are
+	// inherited after this filtering, then reconciled with the current measurement.
+	stamped.Findings = withoutReviewerCheckRows(stamped.Findings)
 
 	stamped, carried, notes, problem := r.inherit(stamped, tree, work.paths)
 	if problem != nil {
 		return *problem
+	}
+	// A measured pass or failure replaces inherited tool evidence. A blocked,
+	// broken, timed-out or unknown result preserves it and adds its own row.
+	var authorityNote string
+	stamped.Findings, checkRows, authorityNote = r.reconcileCheckFindings(tree, stamped.Findings, checkRows, r.opts.Checks, checkResults)
+	if authorityNote != "" {
+		return blocked(authorityNote + "; no check dismissal was applied; fix or remove the sidecar and run odachi review again; I wrote nothing")
 	}
 
 	sealed, err := domain.Seal(stamped, tree, base, r.opts.Now)
@@ -2182,6 +2213,12 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 			return refusal
 		}
 		sealed = mergeVerdicts(existing, sealed)
+		// A measured pass or failure owns the current tool state. An unmeasured
+		// result keeps the existing evidence and may add its own blocking row.
+		sealed.Findings, checkRows, authorityNote = r.reconcileCheckFindings(tree, sealed.Findings, checkRows, r.opts.Checks, checkResults)
+		if authorityNote != "" {
+			return blocked(authorityNote + "; no check dismissal was applied; fix or remove the sidecar and run odachi review again; I wrote nothing")
+		}
 		// The union has to be sealed again: the merge derives nothing, and a verdict
 		// without its derived field is a file that says nothing about itself.
 		resealed, err := domain.Seal(sealed, tree, base, r.opts.Now)
@@ -2220,6 +2257,13 @@ func (r *runner) storeIn(parsed domain.Verdict, work *worktree, base string, jud
 		predecessor.Findings = findings
 		predecessor.Passes = passes
 		sealed = mergeVerdicts(predecessor, sealed)
+		// A correction's measured pass or failure replaces predecessor tool
+		// evidence. An unmeasured result preserves that evidence and adds its own
+		// row, so approval drift cannot launder a measured blocker.
+		sealed.Findings, _, authorityNote = r.reconcileCheckFindings(tree, sealed.Findings, checkRows, r.opts.Checks, checkResults)
+		if authorityNote != "" {
+			return blocked(authorityNote + "; no check dismissal was applied; fix or remove the sidecar and run odachi review again; I wrote nothing")
+		}
 		sealed.Tree = tree
 		// The chain is the direct link: this verdict completes the predecessor,
 		// not the verdict the predecessor itself completed, so a reader can walk
@@ -2825,9 +2869,9 @@ type carriedRows struct {
 }
 
 // inherit adds the rows the store already holds potent about these exact
-// bytes: findings that stood in their verdict and still describe what git
-// measures now, and passes about unchanged bytes. The reviewer's own answer
-// goes first, so a re-report of the same defect is filed once.
+// bytes: findings that still describe what git measures, passes about unchanged
+// bytes, and pathless tool rows for reconciliation. Only a current measurement
+// may clear or replace tool evidence. The reviewer's own answer goes first.
 //
 // Potency is per blob: a receipt for other bytes is a file that changed since
 // that verdict, and the answer is dead. A finding refuted with evidence dies
@@ -2865,13 +2909,14 @@ func (r *runner) inherit(verdict domain.Verdict, tree string, paths []string) (d
 
 	seen := make(map[string]bool, len(merged.Findings)+len(knowFindings))
 	for _, finding := range merged.Findings {
-		seen[findingKey(finding)] = true
+		seen[inheritanceKey(finding)] = true
 	}
 	for _, finding := range knowFindings {
-		if seen[findingKey(finding)] {
+		key := inheritanceKey(finding)
+		if seen[key] {
 			continue
 		}
-		seen[findingKey(finding)] = true
+		seen[key] = true
 		merged.Findings = append(merged.Findings, finding)
 		carried.findings++
 	}
@@ -2901,7 +2946,10 @@ func (r *runner) dismissedRows(tree string) (domain.Dismissals, string) {
 	}
 	path := r.storePath(rel)
 	exists, err := r.files.Exists(path)
-	if err != nil || !exists {
+	if err != nil {
+		return domain.Dismissals{}, "could not ask whether the dismissals beside " + r.storeLabel(rel) + " exist: " + oneLine(err.Error())
+	}
+	if !exists {
 		return domain.Dismissals{}, ""
 	}
 	data, err := r.files.Read(path)
@@ -2967,7 +3015,6 @@ func (r *runner) potentRows(verdictTree string, paths []string) (findings []doma
 		origin, note := r.storedNeighbor(tree)
 		if note != "" {
 			notes = append(notes, note)
-			continue
 		}
 
 		killed, note := r.refutedFindings(tree, origin.Findings, names)
@@ -2985,14 +3032,32 @@ func (r *runner) potentRows(verdictTree string, paths []string) (findings []doma
 		for i, finding := range origin.Findings {
 			id := domain.FindingIDs(origin.Findings)[i]
 			reason, wasKilled := killed[id]
-			if wasKilled {
+			checkRow := strings.TrimSpace(finding.Check) != ""
+			if checkRow {
+				finding = sanitizeCheckFinding(finding)
+			}
+			if wasKilled && !checkRow {
 				finding = domain.Dismiss(finding, reason)
 			}
 			// The human's judgment outranks a re-report and the reviewer's own
-			// dismissal: it is the later word, and the one with the evidence a
-			// person was asked for.
-			if row, wasRetired := retired.Retires(finding); wasRetired {
+			// dismissal for path findings. Check authority is applied later using
+			// only the current tree's sidecar, never this predecessor's.
+			if row, wasRetired := retired.Retires(finding); wasRetired && !checkRow {
 				finding = domain.Dismiss(finding, row.Reason)
+			}
+			if domain.IsDismissed(finding) {
+				if strings.TrimSpace(finding.Reason) == "" {
+					continue
+				}
+				if strings.TrimSpace(finding.Fingerprint) == "" {
+					finding.Fingerprint = domain.Fingerprint(finding)
+				}
+			}
+			// A tool judged the candidate, not a path: no blob can stale-check its
+			// row, so it always reaches reconciliation with predecessor evidence.
+			if checkRow {
+				findings = append(findings, finding)
+				continue
 			}
 			if !domain.IsLens(finding.Lens) || strings.TrimSpace(finding.Blob) == "" {
 				continue
@@ -3002,14 +3067,6 @@ func (r *runner) potentRows(verdictTree string, paths []string) (findings []doma
 			// to outlive the verdict that first carried the row.
 			if !acts(finding.Path) && !finding.Blocks() && !wasKilled {
 				continue
-			}
-			if domain.IsDismissed(finding) {
-				if strings.TrimSpace(finding.Reason) == "" {
-					continue
-				}
-				if strings.TrimSpace(finding.Fingerprint) == "" {
-					finding.Fingerprint = domain.Fingerprint(finding)
-				}
 			}
 			blob, err := measure(finding.Path)
 			if err != nil {
@@ -3087,6 +3144,10 @@ func (r *runner) storedNeighbor(tree string) (domain.Verdict, string) {
 	parsed, err := domain.Parse(data)
 	if err != nil {
 		return domain.Verdict{}, fmt.Sprintf("the stored verdict %s cannot be parsed; its potent rows are not carried", tree+".json")
+	}
+	parsed, _, authorityNote := r.effectiveStoredVerdict(tree, parsed)
+	if authorityNote != "" {
+		return parsed, authorityNote + "; its check rows remain blocking"
 	}
 	return parsed, ""
 }
@@ -3215,6 +3276,15 @@ func findingKey(finding domain.Finding) string {
 		key += "|" + check
 	}
 	return key
+}
+
+// inheritanceKey keeps distinct tool evidence distinct until reconciliation.
+func inheritanceKey(finding domain.Finding) string {
+	if strings.TrimSpace(finding.Check) == "" {
+		return findingKey(finding)
+	}
+	return findingKey(finding) + "|" + strconv.Quote(finding.Why) + "|" + strconv.FormatBool(finding.Causal) +
+		"|" + finding.Evidence + "|" + finding.Status + "|" + strconv.Quote(finding.Reason)
 }
 
 // passKey is the identity of one clean row: the same file, bytes and lens.
@@ -3402,6 +3472,11 @@ func (r *runner) storedVerdictFor(tree string) (domain.Verdict, *Result) {
 			rel, oneLine(err.Error())))
 		return domain.Verdict{}, &problem
 	}
+	parsed, _, note := r.effectiveStoredVerdict(tree, parsed)
+	if note != "" {
+		problem := blocked(note + "; no check dismissal was applied; fix or remove the sidecar and run odachi review --show")
+		return domain.Verdict{}, &problem
+	}
 	return parsed, nil
 }
 
@@ -3439,6 +3514,11 @@ func (r *runner) namedVerdict(path, tree string) (domain.Verdict, *Result) {
 	if parsed.Tree != "" && parsed.Tree != tree {
 		problem := blocked(fmt.Sprintf("the verdict %s is from tree %s and this tree is %s: a verdict is refuted with the diff that saw it born",
 			path, parsed.Tree, tree))
+		return domain.Verdict{}, &problem
+	}
+	parsed, _, note := r.effectiveStoredVerdict(tree, parsed)
+	if note != "" {
+		problem := blocked(note + "; no check dismissal was applied; fix or remove the sidecar and run odachi review --show")
 		return domain.Verdict{}, &problem
 	}
 	return parsed, nil
@@ -3568,10 +3648,10 @@ func (r *runner) sinceTree(spelling string) (string, *Result) {
 	lower := strings.ToLower(tree)
 	matches := make([]string, 0, 1)
 	for _, name := range names {
-		if !strings.HasSuffix(name, ".json") || strings.HasSuffix(name, ".scope.json") {
+		stem, ok := verdictName(name)
+		if !ok {
 			continue
 		}
-		stem := strings.TrimSuffix(name, ".json")
 		if strings.HasPrefix(strings.ToLower(stem), lower) {
 			matches = append(matches, stem)
 		}
@@ -3646,6 +3726,11 @@ func (r *runner) sinceVerdict() (domain.Verdict, *Result) {
 		problem := blocked("the verdict for " + tree + " cannot be read: " + oneLine(err.Error()) + "; review the whole candidate with odachi review --base <ref>")
 		return domain.Verdict{}, &problem
 	}
+	parsed, _, note := r.effectiveStoredVerdict(tree, parsed)
+	if note != "" {
+		problem := blocked(note + "; no check dismissal was applied; fix or remove the sidecar and run odachi review --show")
+		return domain.Verdict{}, &problem
+	}
 	r.correction = &parsed
 	return parsed, nil
 }
@@ -3673,6 +3758,12 @@ func (r *runner) carriedRows(predecessor domain.Verdict) ([]domain.Finding, []do
 
 	var findings []domain.Finding
 	for _, finding := range predecessor.Findings {
+		// A deterministic check judged the candidate, not a file's bytes. Its
+		// predecessor waiver does not travel; only the current tree may waive it.
+		if strings.TrimSpace(finding.Check) != "" {
+			findings = append(findings, sanitizeCheckFinding(finding))
+			continue
+		}
 		blob, problem := measure(finding.Path)
 		if problem != nil {
 			return nil, nil, problem
@@ -4050,7 +4141,7 @@ func findingLine(finding domain.Finding) string {
 	line := where + " · " + string(finding.Severity) + " · " + causal + " · " + finding.Why
 	if domain.IsDismissed(finding) {
 		line += " · dismissed: " + finding.Reason
-	} else if finding.Causal && finding.Severity.Blocks() {
+	} else if finding.Blocks() {
 		// A row that stops the close prints the identity a waiver answers, so the
 		// human copies it instead of provoking the gate to learn it.
 		line += " · row " + domain.Fingerprint(finding)
@@ -4308,6 +4399,10 @@ func (r *runner) list() Result {
 		if err != nil {
 			notes = append(notes, name+" is not a verdict: "+oneLine(err.Error()))
 			continue
+		}
+		parsed, _, authorityNote := r.effectiveStoredVerdict(tree, parsed)
+		if authorityNote != "" {
+			notes = append(notes, authorityNote+"; its check rows remain blocking")
 		}
 		rows = append(rows, row{tree: tree, v: parsed})
 	}

@@ -3,6 +3,7 @@ package review
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -200,9 +201,20 @@ func (r *runner) ranChecks() ([]domain.CheckResult, string, *Result) {
 			return nil, "", problem
 		}
 		if !exists || !approval.Covers(r.opts.Checks) {
-			// Nothing runs, and the prompt says so: a review that silently skipped
-			// the tools would report on a tree nobody measured.
+			// Nothing runs, and every declaration becomes a blocked result. The
+			// prompt explains the skip and the verdict carries one causal row per
+			// tool, so a clean reviewer answer cannot erase missing evidence.
 			r.off = offReason(len(r.opts.Checks), exists)
+			for _, check := range r.opts.Checks {
+				results = append(results, domain.CheckResult{
+					Name:     check.Name,
+					Command:  check.Command,
+					Severity: check.Severity,
+					Remedy:   check.Remedy,
+					Status:   domain.CheckBlocked,
+					Note:     r.off,
+				})
+			}
 			r.ran = &results
 			return results, r.off, nil
 		}
@@ -219,10 +231,10 @@ func (r *runner) ranChecks() ([]domain.CheckResult, string, *Result) {
 // to them, or it agreed to a list the project has changed since.
 func offReason(declared int, approved bool) string {
 	if approved {
-		return fmt.Sprintf("the project declares %d %s and this clone approved a different list: run `odachi review checks approve` to run them",
+		return fmt.Sprintf("changed approval: the project declares %d %s and this clone approved a different list: run `odachi review checks approve` to run them",
 			declared, plural(declared, "check", "checks"))
 	}
-	return fmt.Sprintf("the project declares %d %s and this clone has not approved them: run `odachi review checks approve` to run them",
+	return fmt.Sprintf("missing approval: the project declares %d %s and this clone has not approved them: run `odachi review checks approve` to run them",
 		declared, plural(declared, "check", "checks"))
 }
 
@@ -271,19 +283,17 @@ func joinOutput(stdout, stderr string) string {
 }
 
 // checkFindings is what the tools said, as the rows the verdict carries: one per
-// failing check, at the severity the project declared, with the tool's own words
-// as the evidence. A tool that answered clean filed nothing, and no tool filed
-// anything when this clone has not approved the list.
+// failing check. A completed measurement keeps the severity the project declared.
+// A blocked, broken, timed-out, unknown or future incomplete state files a
+// synthetic BLOCKER instead of disappearing or asking a low severity to approve
+// missing evidence.
 //
 // The row is the reviewer's peer, not its pupil: it blocks by the same rule, and a
 // person dismisses it with a reason like any other.
 func (r *runner) checkFindings() ([]domain.Finding, *Result) {
-	results, off, problem := r.ranChecks()
+	results, _, problem := r.ranChecks()
 	if problem != nil {
 		return nil, problem
-	}
-	if off != "" {
-		return nil, nil
 	}
 
 	rows := make([]domain.Finding, 0, len(results))
@@ -291,11 +301,18 @@ func (r *runner) checkFindings() ([]domain.Finding, *Result) {
 		if !result.Failed() {
 			continue
 		}
+		severity := result.Severity
+		if !result.Status.Measured() {
+			// Incomplete evidence is not a low-severity tool result. Use the
+			// existing BLOCKER row instead of extending verdict JSON with an
+			// execution marker older binaries cannot read.
+			severity = domain.Blocker
+		}
 		rows = append(rows, domain.Finding{
 			Check:    result.Name,
-			Severity: result.Severity,
-			// The tool measured these bytes, and causal is what makes it able to
-			// block: what a linter reports on the candidate is the candidate's.
+			Severity: severity,
+			// A deterministic row is causal: a measured failure describes this
+			// candidate, and incomplete evidence is missing knowledge about it.
 			Causal:   true,
 			Evidence: domain.EvidenceCited,
 			Why:      checkWhy(result),
@@ -306,7 +323,8 @@ func (r *runner) checkFindings() ([]domain.Finding, *Result) {
 
 // checkWhy is the row's evidence: how the tool ended and what it said. The first
 // line stands alone so a person reading the verdict sees the reason before the
-// noise.
+// noise. An incomplete measurement names the tool, status and declared severity,
+// and says why no complete result exists.
 func checkWhy(result domain.CheckResult) string {
 	var out strings.Builder
 	switch result.Status {
@@ -317,11 +335,28 @@ func checkWhy(result domain.CheckResult) string {
 		if result.Note != "" {
 			out.WriteString(" (" + result.Note + ")")
 		}
-	default:
+	case domain.CheckBlocked:
+		out.WriteString("the check " + result.Name + " did not run")
+		if result.Note != "" {
+			out.WriteString(": " + result.Note)
+		}
+	case domain.CheckBroken:
 		out.WriteString("the check " + result.Name + " could not run")
 		if result.Note != "" {
 			out.WriteString(": " + result.Note)
 		}
+	default:
+		out.WriteString("the check " + result.Name + " reported an unknown state")
+		if result.Note != "" {
+			out.WriteString(": " + result.Note)
+		}
+	}
+	if !result.Status.Measured() {
+		status := oneLine(string(result.Status))
+		if strings.TrimSpace(status) == "" {
+			status = "unknown"
+		}
+		fmt.Fprintf(&out, "; status %s; declared severity %s; measurement did not complete", status, result.Severity)
 	}
 	if output := strings.TrimSpace(result.Output); output != "" {
 		out.WriteString("\n" + output)
@@ -329,19 +364,85 @@ func checkWhy(result domain.CheckResult) string {
 	return out.String()
 }
 
-// appendMissing adds the rows a verdict does not already carry, by the same
-// identity the store files every finding under: a second part of one run, or a
-// draw that paid again, cannot file the same check twice.
-func appendMissing(findings, extra []domain.Finding) []domain.Finding {
-	seen := make(map[string]bool, len(findings))
-	for _, finding := range findings {
-		seen[findingKey(finding)] = true
+// withoutReviewerCheckRows reserves check rows for deterministic tool evidence.
+// A reviewer may describe a tool's failure in prose, but it cannot forge the
+// tool's identity, severity, causal status or dismissal in reviewer JSON.
+func withoutReviewerCheckRows(findings []domain.Finding) []domain.Finding {
+	return slices.DeleteFunc(slices.Clone(findings), func(finding domain.Finding) bool { return strings.TrimSpace(finding.Check) != "" })
+}
+
+// sanitizeCheckFinding removes dismissal authority from verdict bytes. Only the
+// current tree's human sidecar, applied by authoritativeCheckRows, may retire it.
+func sanitizeCheckFinding(finding domain.Finding) domain.Finding {
+	finding.Status, finding.Reason, finding.Fingerprint = "", "", ""
+	return finding
+}
+
+// authoritativeCheckRows is the single dismissal authority for deterministic
+// checks. It strips verdict-sourced dismissals from every ingress, then applies
+// only the sidecar belonging to tree. Predecessor sidecars never travel with a row.
+func (r *runner) authoritativeCheckRows(tree string, findings, rows []domain.Finding) ([]domain.Finding, []domain.Finding, string) {
+	retired, note := r.dismissedRows(tree)
+	return domain.EffectiveCheckFindings(findings, retired), domain.EffectiveCheckFindings(rows, retired), note
+}
+
+// effectiveStoredVerdict is the read-side authority for every stored verdict. The
+// caller supplies the tree whose sidecar may judge its rows; an unreadable sidecar
+// returns no dismissals and a note, so every check row fails closed: it remains
+// blocking unless a readable sidecar for that exact tree retires it.
+func (r *runner) effectiveStoredVerdict(tree string, verdict domain.Verdict) (domain.Verdict, domain.Dismissals, string) {
+	retired, note := r.dismissedRows(tree)
+	return domain.EffectiveVerdict(verdict, retired), retired, note
+}
+
+// reconcileCheckFindings applies the current measurement to predecessor evidence.
+// A measured pass retires a stale failure and a measured failure replaces it with
+// the tool's current row. Blocked, broken, timed-out and unknown states did not
+// produce a complete measurement: they may add their own row, but they preserve
+// every predecessor row for that tool. Dismissal authority is tree-scoped above.
+func (r *runner) reconcileCheckFindings(tree string, findings, rows []domain.Finding, declared []domain.Check, results []domain.CheckResult) ([]domain.Finding, []domain.Finding, string) {
+	findings, rows, note := r.authoritativeCheckRows(tree, findings, rows)
+	if len(declared) == 0 {
+		return findings, rows, note
 	}
-	for _, row := range extra {
-		if seen[findingKey(row)] {
+
+	names := make(map[string]bool, len(declared))
+	for _, check := range declared {
+		names[strings.ToLower(strings.TrimSpace(check.Name))] = true
+	}
+	states := make(map[string]domain.CheckStatus, len(results))
+	for _, result := range results {
+		states[strings.ToLower(strings.TrimSpace(result.Name))] = result.Status
+	}
+
+	kept := make([]domain.Finding, 0, len(findings)+len(rows))
+	for _, finding := range findings {
+		name := strings.ToLower(strings.TrimSpace(finding.Check))
+		if !names[name] {
+			kept = append(kept, finding)
 			continue
 		}
-		findings = append(findings, row)
+		status, measured := states[name]
+		if !measured || !status.Measured() {
+			kept = append(kept, finding)
+		}
 	}
-	return findings
+	for _, row := range rows {
+		if slices.ContainsFunc(kept, func(existing domain.Finding) bool {
+			return sameCheckRow(existing, row)
+		}) {
+			continue
+		}
+		kept = append(kept, row)
+	}
+	return kept, rows, note
+}
+
+// sameCheckRow compares the complete deterministic evidence, including severity
+// and causal status. An unmeasured WARNING must not deduplicate a synthetic
+// BLOCKER for missing approval merely because both name the same tool.
+func sameCheckRow(left, right domain.Finding) bool {
+	return findingKey(left) == findingKey(right) && left.Why == right.Why &&
+		left.Causal == right.Causal && left.Evidence == right.Evidence &&
+		left.Status == right.Status && left.Reason == right.Reason
 }
