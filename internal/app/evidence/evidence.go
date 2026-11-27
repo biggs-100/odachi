@@ -4,9 +4,12 @@
 // The three parts -the verdict, the verification and the proof- live in three
 // different places and two of them are outside the worktree. A bundle gathers
 // the raw bytes of whichever parts exist, hashes each one, and names the tree
-// they all answer for. It carries no timestamp and writes no path other than
-// the output the human chose, so exporting the same tree twice gives the same
-// bytes and cannot surprise a commit.
+// they all answer for. A managed verification also carries the tool's validated
+// runtime receipt, and the export refuses a verification whose receipt is
+// missing or invalid instead of shipping evidence nobody sealed. The bundle
+// carries no timestamp and writes no path other than the output the human chose,
+// so exporting the same tree twice gives the same bytes and cannot surprise a
+// commit.
 package evidence
 
 import (
@@ -19,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/biggs-100/odachi/internal/app/verify"
 	"github.com/biggs-100/odachi/internal/domain/oneline"
 	"github.com/biggs-100/odachi/internal/domain/proof"
 	"github.com/biggs-100/odachi/internal/domain/store"
@@ -31,8 +35,14 @@ const (
 	CodeBlocked = 1
 )
 
-// Schema is the version of the bundle this binary writes.
-const Schema = 1
+// Schema is the bundle a tree with no runtime receipt exports: the three parts
+// and their hashes. SchemaRuntime is the bundle that also carries the validated
+// runtime receipt of a managed verification; the receipt's hash is over its
+// canonical bytes, not over the escaped string the verification carries.
+const (
+	Schema        = 1
+	SchemaRuntime = 2
+)
 
 // proofDir is where check --run leaves the proof of a tree, inside the project.
 const proofDir = "proof"
@@ -71,20 +81,23 @@ type Result struct {
 type hashes struct {
 	Verdict      *string `json:"verdict,omitempty"`
 	Verification *string `json:"verification,omitempty"`
+	Runtime      *string `json:"runtime,omitempty"`
 	Proof        *string `json:"proof,omitempty"`
 }
 
 // bundle is the canonical file. Pointer strings emit null for a missing part:
-// an empty string would say the part was there and held nothing. Struct fields
-// fix the key order, and there is no clock, so two exports of one tree are the
-// same bytes.
+// an empty string would say the part was there and held nothing. The runtime key
+// is absent from a bundle without a receipt, so a legacy export keeps its exact
+// bytes. Struct fields fix the key order, and there is no clock, so two exports
+// of one tree are the same bytes.
 type bundle struct {
-	Schema       int     `json:"schema"`
-	Tree         string  `json:"tree"`
-	Verdict      *string `json:"verdict"`
-	Verification *string `json:"verification"`
-	Proof        *string `json:"proof"`
-	SHA256       hashes  `json:"sha256"`
+	Schema       int             `json:"schema"`
+	Tree         string          `json:"tree"`
+	Verdict      *string         `json:"verdict"`
+	Verification *string         `json:"verification"`
+	Runtime      json.RawMessage `json:"runtime,omitempty"`
+	Proof        *string         `json:"proof"`
+	SHA256       hashes          `json:"sha256"`
 }
 
 // Run performs one export.
@@ -126,6 +139,26 @@ func Run(opts Options, files Files, git store.Git) Result {
 	if err != nil {
 		return blocked(err.Error())
 	}
+	// The verification is the part that may carry the runtime receipt, so it is
+	// parsed before the bundle is written. A record this binary cannot validate -
+	// an unsealed receipt, a receipt for another tree, a newer schema - is a
+	// refusal: exporting it would hand the reader evidence nobody sealed.
+	var runtimeReceipt []byte
+	if verification != nil {
+		record, err := verify.ParseVerificationRecord(verification)
+		if err != nil {
+			return blocked(fmt.Sprintf("the verification of tree %s cannot be exported: %s", opts.Tree, oneLine(err.Error())))
+		}
+		if !record.Covers(opts.Tree) {
+			return blocked(fmt.Sprintf("the verification stored for tree %s names the tree %s: a record for another tree covers nothing", opts.Tree, record.Tree))
+		}
+		if record.Runtime != nil {
+			runtimeReceipt, err = verify.RenderRuntimeReceipt(*record.Runtime)
+			if err != nil {
+				return blocked(fmt.Sprintf("the runtime receipt of tree %s cannot be exported: %s", opts.Tree, oneLine(err.Error())))
+			}
+		}
+	}
 	proofText, err := findProof(files, opts.Dir, opts.Tree)
 	if err != nil {
 		return blocked(err.Error())
@@ -134,7 +167,7 @@ func Run(opts Options, files Files, git store.Git) Result {
 		return blocked(fmt.Sprintf("tree %s has no evidence to export: no verdict, verification or proof found", opts.Tree))
 	}
 
-	data, err := render(opts.Tree, verdict, verification, proofText)
+	data, err := render(opts.Tree, verdict, verification, runtimeReceipt, proofText)
 	if err != nil {
 		return blocked(err.Error())
 	}
@@ -210,8 +243,9 @@ func findProof(files Files, dir, tree string) ([]byte, error) {
 
 // render builds the canonical bytes. Each pointer is set only when its part
 // exists, and each hash is over that part's raw bytes -not over the escaped
-// string the JSON file carries.
-func render(tree string, verdict, verification, proofText []byte) ([]byte, error) {
+// string the JSON file carries. A bundle with a receipt is schema 2 and carries
+// the canonical receipt as its own object.
+func render(tree string, verdict, verification, runtimeReceipt, proofText []byte) ([]byte, error) {
 	out := bundle{Schema: Schema, Tree: tree}
 	if verdict != nil {
 		out.Verdict = new(string(verdict))
@@ -221,13 +255,19 @@ func render(tree string, verdict, verification, proofText []byte) ([]byte, error
 		out.Verification = new(string(verification))
 		out.SHA256.Verification = new(hash(verification))
 	}
+	if runtimeReceipt != nil {
+		out.Schema = SchemaRuntime
+		out.Runtime = json.RawMessage(runtimeReceipt)
+		out.SHA256.Runtime = new(hash(runtimeReceipt))
+	}
 	if proofText != nil {
 		out.Proof = new(string(proofText))
 		out.SHA256.Proof = new(hash(proofText))
 	}
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
-		// Unreachable: every field is a string, an int or a struct of strings.
+		// Unreachable: every field is a string, an int, a struct of strings or the
+		// already-encoded receipt.
 		return nil, errors.New("could not encode the evidence bundle")
 	}
 	return append(data, '\n'), nil
