@@ -1,6 +1,7 @@
 package check_test
 
 import (
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/biggs-100/odachi/internal/app/check"
 	"github.com/biggs-100/odachi/internal/domain/gate"
+	domaingrant "github.com/biggs-100/odachi/internal/domain/grant"
 	domainverify "github.com/biggs-100/odachi/internal/domain/verify"
 )
 
@@ -670,5 +672,170 @@ func TestAPassiveFeatureAsksForNothing(t *testing.T) {
 
 	if result := run(t, files, git, check.Options{NoReview: true, RequireReview: true}); result.Code != 0 {
 		t.Fatalf("a document-only feature asked for a verification: %s", result.Message)
+	}
+}
+
+// managedVerificationFile renders one schema-2 record whose runtime receipt is a
+// complete tool-sealed fact. It is raw JSON because the point is what the gate
+// reads off the disk, not how the writer built it.
+func managedVerificationFile(t *testing.T, tree, by, verdict string, notes []string) string {
+	t.Helper()
+	var grant domaingrant.ID
+	for i := range grant {
+		grant[i] = byte(i + 1)
+	}
+	model := "model"
+	if provider, _, found := strings.Cut(by, "/"); found && provider != "" {
+		model = provider + "/planned"
+	}
+	record := map[string]any{
+		"schema":  2,
+		"tree":    tree,
+		"by":      by,
+		"at":      verifyInstant.Format(time.RFC3339),
+		"verdict": verdict,
+		"notes":   notes,
+		"runtime": map[string]any{
+			"grant":         grant.String(),
+			"session":       "ses_check_1",
+			"runtime":       "opencode",
+			"model":         model,
+			"session_model": by,
+			"role":          "verifier",
+			"tree":          tree,
+			"base":          "b4c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9",
+			"output_tree":   tree,
+			"snapshot":      "a1a2a3a4a5a6a7a8a9a0b1b2b3b4b5b6b7b8b9b0b1b2b3b4b5b6b7b8b9b0c1c2",
+			"started_at":    "2026-11-16T12:00:00Z",
+			"finished_at":   "2026-11-16T12:00:05Z",
+			"outcome":       "completed",
+		},
+	}
+	data, err := json.Marshal(record)
+	if err != nil {
+		t.Fatalf("marshal the schema-2 verification: %v", err)
+	}
+	return string(data)
+}
+
+// mutateManagedVerification changes one field inside a rendered schema-2 record.
+func mutateManagedVerification(t *testing.T, data string, mutate func(map[string]any)) string {
+	t.Helper()
+	var record map[string]any
+	if err := json.Unmarshal([]byte(data), &record); err != nil {
+		t.Fatalf("read the schema-2 verification: %v", err)
+	}
+	mutate(record)
+	mutated, err := json.Marshal(record)
+	if err != nil {
+		t.Fatalf("marshal the mutated schema-2 verification: %v", err)
+	}
+	return string(mutated)
+}
+
+// TestASchemaTwoRecordForThisTreeCloses: a managed verification written by the
+// current writer is evidence the close can read. The gate must not call it a
+// newer schema or an unreadable file.
+func TestASchemaTwoRecordForThisTreeCloses(t *testing.T) {
+	files, git := closedRiskFixture()
+	files.files[verifyPath(currentTree)] = []byte(managedVerificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 0 {
+		t.Fatalf("code = %d, want 0: a schema-2 record for this tree did not close it (%s / next %s)", result.Code, result.Message, result.Next)
+	}
+}
+
+// TestASchemaTwoRecordForAnotherTreeCoversNothing: the receipt validates, but it
+// speaks for other bytes and the close still owes this tree's record.
+func TestASchemaTwoRecordForAnotherTreeCoversNothing(t *testing.T) {
+	files, git := closedRiskFixture()
+	other := "fedcba9876543210fedcba9876543210fedcba98"
+	files.files[verifyPath(currentTree)] = []byte(managedVerificationFile(t, other, "otro/modelo", domainverify.Verified, nil))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 || result.Reason != gate.ReasonVerifyMissing {
+		t.Fatalf("a schema-2 record for another tree answered %d/%q, want %q (%s)", result.Code, result.Reason, gate.ReasonVerifyMissing, result.Message)
+	}
+}
+
+// TestASchemaTwoRefutedRecordBlocksNamingWhatShowedIt: a managed refutation is
+// read exactly like the unmanaged one, notes included.
+func TestASchemaTwoRefutedRecordBlocksNamingWhatShowedIt(t *testing.T) {
+	files, git := closedRiskFixture()
+	files.files[verifyPath(currentTree)] = []byte(managedVerificationFile(t, currentTree, "otro/modelo", domainverify.Refuted,
+		[]string{"the managed verifier ran the probe and it failed"}))
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 || result.Reason != gate.ReasonVerifyRefuted {
+		t.Fatalf("a schema-2 refutation answered %d/%q, want %q (%s)", result.Code, result.Reason, gate.ReasonVerifyRefuted, result.Message)
+	}
+	if !strings.Contains(result.Message, "the managed verifier ran the probe") {
+		t.Errorf("the refusal does not carry the note that showed it: %s", result.Message)
+	}
+}
+
+// TestASchemaTwoRecordWithAForgedReceiptCannotBeRead: a receipt the tool cannot
+// stand behind is not evidence, so the gate names the file instead of trusting it.
+func TestASchemaTwoRecordWithAForgedReceiptCannotBeRead(t *testing.T) {
+	files, git := closedRiskFixture()
+	valid := managedVerificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil)
+	forged := mutateManagedVerification(t, valid, func(record map[string]any) {
+		runtime, ok := record["runtime"].(map[string]any)
+		if !ok {
+			t.Fatalf("the fixture carries no runtime object: %s", valid)
+		}
+		runtime["snapshot"] = "abc"
+	})
+	files.files[verifyPath(currentTree)] = []byte(forged)
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: a schema-2 record with a forged receipt closed the tree (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "cannot be read") {
+		t.Errorf("the refusal does not name the record it could not read: %s", result.Message)
+	}
+}
+
+// TestASchemaTwoRecordWithAForgedAuthorCannotBeRead: the author is the model the
+// tool observed. An answer that names another model is refused whole.
+func TestASchemaTwoRecordWithAForgedAuthorCannotBeRead(t *testing.T) {
+	files, git := closedRiskFixture()
+	valid := managedVerificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil)
+	forged := mutateManagedVerification(t, valid, func(record map[string]any) {
+		record["by"] = "anthropic/claude-forged"
+	})
+	files.files[verifyPath(currentTree)] = []byte(forged)
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: a schema-2 record with a forged author closed the tree (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "cannot be read") {
+		t.Errorf("the refusal does not name the record it could not read: %s", result.Message)
+	}
+}
+
+// TestASchemaOneRecordCarryingAReceiptIsRefused: the unmanaged file claims no
+// runtime, so a receipt key beside it is a record nobody sealed.
+func TestASchemaOneRecordCarryingAReceiptIsRefused(t *testing.T) {
+	files, git := closedRiskFixture()
+	valid := managedVerificationFile(t, currentTree, "otro/modelo", domainverify.Verified, nil)
+	legacyWithClaim := strings.Replace(valid, `"schema":2`, `"schema":1`, 1)
+	files.files[verifyPath(currentTree)] = []byte(legacyWithClaim)
+
+	result := run(t, files, git, check.Options{NoReview: true, RequireReview: true})
+
+	if result.Code != 1 {
+		t.Fatalf("code = %d, want 1: a schema-1 record carrying a receipt closed the tree (%s)", result.Code, result.Message)
+	}
+	if !strings.Contains(result.Message, "cannot be read") {
+		t.Errorf("the refusal does not name the record it could not read: %s", result.Message)
 	}
 }
