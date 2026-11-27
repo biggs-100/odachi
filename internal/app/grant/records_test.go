@@ -369,6 +369,63 @@ func TestPublishRecordRemovesTheStagingCopyWhenDurabilityFails(t *testing.T) {
 	})
 }
 
+// TestPublishRecordKeepsAnotherAttemptsStagingFileDuringCleanup forces the
+// interleaving a concurrent terminal publication exposed: the winner removes its
+// own staging file, a second attempt creates a fresh staging file at the same
+// shared name, and only then does the winner's deferred cleanup run. The winner
+// must remove only the file it created. Deleting the second attempt's staging
+// file would turn that attempt's no-replace refusal into an ENOENT storage
+// failure instead of the typed conflict the service maps to ErrTerminal.
+func TestPublishRecordKeepsAnotherAttemptsStagingFileDuringCleanup(t *testing.T) {
+	dir, root := newRecordRoot(t)
+	name := filepath.Join(namespaceName, "grant.json")
+	staging := name + stagingSuffix
+	published := []byte(`{"version":1}`)
+	foreign := []byte("a concurrent attempt owns this staging file")
+
+	err := publishRecordWith(t.Context(), root, name, published, publisher{
+		syncFile: (*os.File).Sync,
+		syncParent: func(ctx context.Context, opened *os.Root, synced string) error {
+			// This is the window after this call removed its own staging file and
+			// before its deferred cleanup runs: another attempt now owns a new
+			// staging file at the same shared name.
+			if writeErr := opened.WriteFile(staging, foreign, 0o600); writeErr != nil {
+				return writeErr
+			}
+			return syncParentDirectory(ctx, opened, synced)
+		},
+	})
+	if err != nil {
+		t.Fatalf("publishRecordWith() error = %v", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(dir, staging))
+	if err != nil {
+		t.Fatalf("a later attempt's staging file was removed by the winner's deferred cleanup: %v", err)
+	}
+	if !bytes.Equal(got, foreign) {
+		t.Fatalf("later attempt's staging = %q, want %q", got, foreign)
+	}
+	winner, err := os.ReadFile(filepath.Join(dir, name))
+	if err != nil {
+		t.Fatalf("ReadFile(published) error = %v", err)
+	}
+	if !bytes.Equal(winner, published) {
+		t.Fatalf("published record = %q, want the winner %q", winner, published)
+	}
+
+	// The surviving staging file belongs to a later attempt: that attempt's own
+	// no-replace create refuses with a typed conflict, never an ENOENT caused by
+	// another contender's cleanup.
+	err = publishRecord(t.Context(), root, name, []byte(`{"version":2}`))
+	if !errors.Is(err, ErrStorageFailure) || !errors.Is(err, fs.ErrExist) {
+		t.Fatalf("later publication error = %v, want ErrStorageFailure wrapping fs.ErrExist", err)
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("later publication error = %v, must not be an ENOENT storage failure", err)
+	}
+}
+
 func TestPublishRecordRefusesEmptyAndOversizedPayloads(t *testing.T) {
 	dir, root := newRecordRoot(t)
 	name := filepath.Join(namespaceName, "grant.json")
