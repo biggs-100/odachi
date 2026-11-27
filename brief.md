@@ -1550,3 +1550,37 @@
 - Delivery strategy: stacked-to-main, approximately ten pull requests near 400 changed lines
 - Tests and documentation travel with the behavior they verify; no mixed refactor and behavior commit
 - Static audit findings are hypotheses until a failing regression reproduces them on the pre-fix tree
+
+## 0364 · fresh-runtime-grants
+
+## What must exist
+- odachi issues one-shot runtime grants for managed delegation, review and verification, binds each grant to one task or immutable candidate and one fresh runtime session, and refuses replay or resume in code
+
+## Done when
+- a managed invocation receives an opaque Go-issued grant claimed atomically once, and replay after success, failure, timeout or crash is refused
+- each grant binds canonical worktree, role, runtime, model, task-document path/digest/step/requirement/agent/surfaces/commands or review candidate tree/base/lenses/draw
+- the OpenCode managed adapter returns a fresh session identity and observed model, and Go binds both to the grant
+- missing, malformed, duplicate or foreign session identities fail closed before evidence is stored
+- managed adapters expose no resume operation and never pass session, continue or fork flags
+- every worker attempt, reviewer process/unit/draw and verifier run uses a distinct grant and session; corrections use new sessions
+- a tool-derived runtime receipt records grant, session, runtime, model, role, candidate/output trees, snapshot digest, timestamps and outcome
+- verification schema 2 stamps the runtime receipt and ignores model-supplied executor claims
+- review reuses its frozen archive and verify freezes the same candidate tree; snapshot mismatch before or after execution stores no evidence
+- legacy `--exec` remains explicitly unmanaged and receives no freshness claim
+- opt-in OpenCode runtime tests prove one spawn per grant, replay refusal without a second spawn, rejected resume input, distinct actor sessions and candidate-mutation refusal
+
+## Not included (first version)
+- Claude and Codex managed adapters - back when each runtime has a verified session contract and negative controls
+- a new grant verb, global freshness mode, session daemon, SDK or general sandbox - back when the thin OpenCode adapter cannot enforce the boundary
+- model-independence or quorum policy - feature 0363 T7 owns that decision
+- live model E2E in the ordinary gate - back when the human authorizes model spend and write-attempt controls
+- session state in task documents or reusable delivery authority - back when a human explicitly changes the workflow contract
+- push, pull request, merge, tag or release during implementation - back when the human authorizes delivery
+
+## Decisions taken
+- Slice: 2400 - grant authority, one thin OpenCode adapter, managed delegate/review/verify, receipt readers and runtime controls are independently reviewable
+- Delivery strategy: stacked-to-main, one pull request per task in dependency order
+- OpenCode is the first managed runtime; legacy `--exec` remains unmanaged
+- Freshness is per worker attempt and per reviewer/verifier process, unit and draw, not per candidate
+- Go owns grant and receipt authority; adapters only execute and report runtime facts
+- Claim tombstones are permanent and never stale-taken-over

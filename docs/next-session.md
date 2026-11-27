@@ -1,95 +1,115 @@
 # Next session
 
-The project is released at v0.65.0. Features 0360 and 0361 are merged into `main`,
-the tag is published, and the machine is running the installed 0.65.0 binary.
-No decision is open for those features.
+Session closed on 2026-11-26. The repository is between delivered workflow-hardening
+slices and the first re-sliced runtime-grant slice. Nothing in this handover authorizes
+push, pull request, merge, tag, release or install.
 
-**Standing rule.** When a problem or a design question shows up, read
-`C:\Users\USER\Desktop\herramientas\gentle-shell` first, read-only: it may already
-answer it, and 0339 is the proof -the answer was the opposite of the assumption and it
-saved a day. Reading is evidence, not permission to edit that folder or run odachi there.
+## Current locations
 
-## Where the project is
+- Authorized worktree: `C:\Users\USER\odachi-worktrees\0364-grant-slices`.
+- Worktree branch: `feat/0364-grant-domain` at `a00f70ca8c276ddea41d21a917ea214123fab0ff`.
+- Original checkout: `C:\Users\USER\Desktop\dev-biggz\odachi`, branch
+  `feat/0364-fresh-runtime-grants`, with the preserved aggregate grant diff still
+  uncommitted.
+- Local `main` is `e41645cc74cba5403d30bd4fa64283a8b4fe9a99`; `origin/main` is
+  `aa5c5f6c7ed366193ab162c80e7f436f4ec520ea`. The difference is the unpushed 0364
+  opening commit.
+- Full aggregate T1 snapshot, including SHA-256 hashes:
+  `C:\Users\USER\AppData\Local\Temp\opencode\0364-t1-snapshot`.
+- Current development binary used for odachi commands:
+  `C:\Users\USER\AppData\Local\Temp\opencode\odachi-dev.exe`.
 
-- **`main` is the merge of the pull request that carried this handover**, sitting on top of
-  the v0.65.0 release merge `44a6d84` from release PR #726. The worktree is clean on
-  `main`, and `git log --oneline -1` is the only honest way to name the tip: a document
-  cannot record the commit that will contain it.
-- **v0.65.0 is published.** Annotated tag `v0.65.0` sits on `44a6d84`; workflow
-  `45512936717` passed and published 16 assets. Installed binary is
-  `C:\Users\USER\AppData\Local\odachi\bin\odachi.exe`, and `odachi --version` reports
-  `0.65.0`.
-- **0360 shipped in PR #724**, merged as `4f3d5e0`. It applies the five code-level
-  improvements found by comparing odachi's source with another shell harness:
-  installed-binary skill digest, one whitespace helper, doctor check 17, help verb
-  catalog, and TUI voice delegation.
-- **0361 shipped in PR #725**, retargeted to `main` after #724 and merged as `2df0e43`.
-  With review mode on, a non-passive close needs a valid verdict, a named risk needs
-  independent verification, strict commits need a valid `Risk:` line, and the hook
-  judges staged project bytes while evidence stays on disk.
-- The closing proof is `proof/0361-obligatorio-review-y.txt`. The approved verdict and
-  verified record both name tree `016866ea536832475f3798e84b5f00cbf8a83b5a`.
-- The tool counts this line for the tree it describes, copied from `odachi summary`:
+## Delivered this session
 
-  total: 359 features · 891 steps done of 891 · 0 open questions
+- v0.65.0 remains the latest published release; its tag and installed binary were not
+  changed.
+- Workflow-hardening feature 0363 delivered T1-T5:
+  - PR #730 / `c80049c`: one candidate base before check/review snapshot.
+  - PR #731 / `79774d5`: post-command proof tree identity.
+  - PR #732 / `0847c5d`: atomic correction snapshot.
+  - PR #733 / `2a0a3c4`: fail-closed refutation evidence and shared citation validator.
+  - PR #734 / `aa5c5f6`: measured declared-check evidence and `EffectiveVerdict` for
+    every stored-verdict reader.
+- `main` is clean at the delivered 0363 boundary before the 0364 opening commit.
+- A read-only study of `gentle-ai` at `50151955a82926fc62c95190cd5c5a7fb4b855f6`
+  confirmed the direction: Go owns authority, adapters are thin, runtime freshness is
+  enforced in code, and real-runtime negative controls are separate from mocks.
 
-## Decisions already taken
+## Open features
 
-- **P1-P4 accepted: `Slice: 3200`.** The human accepted one cohesive policy change and
-  raised the limit each time review or verification found a real bypass: review
-  validation, staged candidate bytes, and staged project artifacts/policy with
-  real-disk evidence.
-- **The second vendor is optional.** One model is enough to review; a second buys
-  independence and needs explicit provider, operation and credential consent.
-- **Review approval never authorises delivery.** Push, PR, merge, tag, release and
-  install were each separate human decisions.
+### 0363 workflow-hardening
 
-## What was measured
+- T1-T5 are merged. T6-T28 remain open.
+- Next unfinished task is T6: scope waivers and validate verdicts before paperwork
+  exemption.
+- Do not resume 0363 until the fresh-runtime-grant lifecycle work is delivered.
 
-- PR #724 and #725 each passed four CI checks. PR #726 passed four checks, merged, and
-  its release workflow ran `go test ./...` before goreleaser.
-- Windows amd64 zip checksum: `e2aacd9bcfc60725a53b2c4bdb52f9f4d1bc9b0e9619938655ac0c9ce3cfae06`.
-- The executable inside that zip and the installed executable both hash to
-  `92b0e8dcadaf5ed24e57932868ee0297c70a6c79324e602b2921f1f12bfe3d30`.
-- Only Windows amd64 was installed on this machine. macOS, Linux and arm64 assets
-  were published but not installed here.
+### 0364 fresh-runtime-grants
 
-## What this cycle learned
+- Opened on local `main` as `e41645c`; task doc is
+  `odd/tasks/0364-fresh-runtime-grants.md`.
+- Human accepted `Slice: 4800` and re-sliced aggregate T1 into five steps.
+- Current steps are T1-T11:
+  - T1 domain grant contract.
+  - T2 durable atomic publication primitives.
+  - T3 issued grants and one-time claim.
+  - T4 durable lifecycle reconstruction.
+  - T5 session binding and terminal races.
+  - T6 fresh-only OpenCode adapter.
+  - T7 managed delegation.
+  - T8 managed review.
+  - T9 managed verifier.
+  - T10 runtime receipts.
+  - T11 opt-in runtime controls.
+- Legacy `--exec` remains unmanaged. Claude/Codex are deferred. Live model E2E needs
+  separate authorization.
 
-- **Mode on used to ask, not require.** ADR 0056 makes review and named-risk
-  verification blocking locally; CI uses `--no-review` explicitly because a clean
-  runner has no clone store and makes no model calls.
-- **A clean close can hide the feature.** Required lenses and coverage come from the
-  feature diff, not an empty closing worktree.
-- **The hook must judge the commit, not the worktree.** Project artifacts and the
-  review switch come from a staged-index snapshot; proof, verdict, verification and
-  the explicit `--proof` file stay on real disk.
-- **An empty delta still owes validation.** It means the verdict names this exact
-  tree, not that the feature became passive.
-- **A subagent can pay the review.** The active model produced malformed JSON and
-  repeated timeouts; `odachi-reviewer` and `odachi-verify` returned strict JSON that
-  Odachi admitted.
-- **A release tag names the release merge, not the feature tree.** The verdict names
-  the feature's closing tree; the tag names the release PR merge commit.
+## Exact stopping point
 
-## Commands that work
+The first re-sliced candidate is T1, domain-only:
 
-```sh
-# the installed binary is the release bytes; check it in a project
-odachi --version
-odachi check
+- Files are present but uncommitted in the authorized worktree:
+  `internal/domain/grant/grant.go` and `grant_test.go`.
+- They are byte-identical to the preserved snapshot.
+- Review tree `d3a100a43302a33ac0ce575fb7c8cf041ebf66fd` is `approved` with lenses
+  `risk` and `reliability`, zero findings.
+- Independent verification is `refuted` and stored under the shared clone store.
+- Full `go test ./...` passed on this candidate.
 
-# reproduce CI's base/fence gate with no clone review store and no model call
-odachi check --ci --no-review --run "go test ./..."
+The refutation found two concrete gaps:
 
-# document-only change after a release
-git commit -m "docs: ..." -m "Odachi-Change: <line>" -m "Risk: none - documentation-only change with no executable behavior"
-```
+1. `BindSession` accepts Unicode Cf format controls U+200B, U+202E, U+2066 and U+FEFF.
+   Restrict session identity to a strict safe ASCII grammar or explicitly reject Cf.
+2. `Claim` checks only `StateIssued`; an invalid grant can transition and remain
+   invalid. Validate before/after transitions and add direct tests for `Validate` and
+   `State.String`.
+
+No correction worker was started before session close.
+
+## Next actions
+
+1. Stay in `C:\Users\USER\odachi-worktrees\0364-grant-slices`.
+2. Start a fresh `odachi-worker` for the T1 correction; do not reuse any previous
+   worker, reviewer or verifier session.
+3. Add RED tests for Unicode Cf/session grammar and invalid-grant Claim, implement the
+   smallest domain fix, then run focused tests, lint and diff checks.
+4. Use fresh reviewer and verifier sessions for the corrected candidate. One correction
+   per immutable candidate; another blocker means a new candidate and human decision.
+5. Commit T1 only after review, independent verification and full suite are green.
+6. Deliver T1 before starting T2. Continue T2-T5, then T6-T11, then resume 0363 T6.
+
+## Process rule learned the hard way
+
+Subagents are fresh per task and per immutable candidate. Reusing a worker/reviewer/
+verifier session across corrections contaminated context and produced repeated missed
+readers and race paths. The final T5 candidate used fresh sessions and the fresh
+verifier found the last omitted reader. Do not regress to session reuse.
 
 ## Limits
 
-- A tag is never moved. A bad version is marked `[YANKED]` and fixed by the next one.
-- `.atl/skill-registry.md` is stale and generated by an extension in another project
-  this one may not touch.
-- Test adequacy, the headless design-system dependency and the narrow `[[check]]`
-  editor remain known debt; none blocks v0.65.0.
+- The aggregate grant diff in the original checkout is preserved, not authoritative.
+  Use the snapshot and the re-sliced worktree.
+- Real power-loss behavior was not injected; durability relies on OS/filesystem
+  guarantees and platform-specific tests.
+- `.atl/skill-registry.md` remains stale and belongs to another tool.
+- No push, PR, merge, tag, release or install is authorized for 0364.
