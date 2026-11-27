@@ -44,6 +44,10 @@ const (
 	// moves none of them, and a binary that never heard of this file never reads
 	// it.
 	Schema = 1
+	// SchemaRuntime is the managed record: the same answer, sealed by the tool,
+	// with the runtime receipt the tool observed stamped beside it. Schema 1 is
+	// the unmanaged answer and keeps its exact bytes.
+	SchemaRuntime = 2
 )
 
 // The two answers a verifier gives. They are a closed vocabulary: a third word is
@@ -75,6 +79,9 @@ type Record struct {
 	// Notes are what the verifier wants read beside the answer. A refutation that
 	// says nothing is not a refusal of anything, and this is where it says why.
 	Notes []string `json:"notes"`
+	// Runtime is the tool's receipt of the managed run. It is absent from a
+	// schema-1 record, which claims no runtime.
+	Runtime *Receipt `json:"runtime,omitempty"`
 }
 
 // Parse reads a record. Decoding is strict -an unknown field is refused, a second
@@ -92,8 +99,8 @@ func Parse(data []byte) (Record, error) {
 	var head struct {
 		Schema int `json:"schema"`
 	}
-	if json.Unmarshal([]byte(text), &head) == nil && head.Schema > Schema {
-		return Record{}, fmt.Errorf("the verification declares schema %d and this binary writes %d: upgrade odachi", head.Schema, Schema)
+	if json.Unmarshal([]byte(text), &head) == nil && head.Schema > SchemaRuntime {
+		return Record{}, fmt.Errorf("the verification declares schema %d and this binary writes 1 and %d: upgrade odachi", head.Schema, SchemaRuntime)
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(text))
@@ -153,6 +160,34 @@ func (r Record) Validate() error {
 	case Verified, Refuted:
 	default:
 		return fmt.Errorf(`the verification says %q; the only answers are %q and %q`, r.Verdict, Verified, Refuted)
+	}
+
+	switch r.Schema {
+	case 0, Schema:
+		if r.Runtime != nil {
+			return errors.New("the verification declares schema 1 and carries a runtime receipt: schema 1 is the unmanaged answer, and it claims no runtime")
+		}
+	case SchemaRuntime:
+		if r.Runtime == nil {
+			return errors.New("the verification declares schema 2 and carries no runtime receipt: a managed verification stamps the tool's receipt beside the answer")
+		}
+		if err := r.Runtime.Validate(); err != nil {
+			return fmt.Errorf("the verification's runtime receipt is not sealed: %w", err)
+		}
+		if r.Runtime.Role != RoleVerifier {
+			return fmt.Errorf("the verification carries a %q receipt; a verification carries the %q receipt", r.Runtime.Role, RoleVerifier)
+		}
+		if !strings.EqualFold(r.Runtime.Tree, r.Tree) {
+			return fmt.Errorf("the verification names the tree %s and its runtime receipt names %s: they must be the same bytes", r.Tree, r.Runtime.Tree)
+		}
+		// The author of a managed verification is the model the tool observed.
+		// A record whose author differs from the receipt is a claim the receipt
+		// does not back, so it is refused whole.
+		if r.By != r.Runtime.SessionModel {
+			return fmt.Errorf("the verification names %q as its author and its runtime receipt observed %q: a managed verification is authored by the model the tool observed", r.By, r.Runtime.SessionModel)
+		}
+	default:
+		return fmt.Errorf("the verification declares schema %d; this binary writes schema 1 or %d", r.Schema, SchemaRuntime)
 	}
 	return nil
 }

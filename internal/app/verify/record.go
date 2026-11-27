@@ -14,8 +14,9 @@ import (
 // RecordSchema is the verification record this binary writes when the run was
 // managed: the answer the verifier gave, sealed by the tool, with the runtime
 // receipt the tool observed stamped beside it. Schema 1 is the unmanaged answer
-// and keeps its exact bytes.
-const RecordSchema = 2
+// and keeps its exact bytes. The domain owns the number so the writer and the
+// reader cannot drift.
+const RecordSchema = verifydomain.SchemaRuntime
 
 // VerificationRecord is one verification file: the schema-1 answer with the
 // tool's seal, and, for a managed run, the validated runtime receipt.
@@ -76,11 +77,11 @@ func SealManagedRecord(answer verifydomain.Record, receipt SealedRuntimeReceipt,
 	return record, nil
 }
 
-// Validate refuses a record the tool cannot stand behind. The schema-1 facts are
-// validated by the domain that owns them; schema 2 must carry one validated
+// Validate refuses a record the tool cannot stand behind. The domain owns both
+// schemas: schema 1 is the unmanaged answer and schema 2 must carry one validated
 // verifier receipt for the same tree.
 func (record VerificationRecord) Validate() error {
-	answer := verifydomain.Record{
+	return verifydomain.Record{
 		Schema:     record.Schema,
 		Tree:       record.Tree,
 		By:         record.By,
@@ -88,39 +89,8 @@ func (record VerificationRecord) Validate() error {
 		DeclaredAt: record.DeclaredAt,
 		Verdict:    record.Verdict,
 		Notes:      record.Notes,
-	}
-	if err := answer.Validate(); err != nil {
-		return err
-	}
-
-	switch record.Schema {
-	case 1:
-		if record.Runtime != nil {
-			return errors.New("the verification declares schema 1 and carries a runtime receipt: schema 1 is the unmanaged answer, and it claims no runtime")
-		}
-	case RecordSchema:
-		if record.Runtime == nil {
-			return errors.New("the verification declares schema 2 and carries no runtime receipt: a managed verification stamps the tool's receipt beside the answer")
-		}
-		if err := record.Runtime.Validate(); err != nil {
-			return fmt.Errorf("the verification's runtime receipt is not sealed: %w", err)
-		}
-		if record.Runtime.Role != VerifierRole {
-			return fmt.Errorf("the verification carries a %q receipt; a verification carries the %q receipt", record.Runtime.Role, VerifierRole)
-		}
-		if !strings.EqualFold(record.Runtime.Tree, record.Tree) {
-			return fmt.Errorf("the verification names the tree %s and its runtime receipt names %s: they must be the same bytes", record.Tree, record.Runtime.Tree)
-		}
-		// The author of a managed verification is the model the tool observed.
-		// A record whose author differs from the receipt is a claim the receipt
-		// does not back, so it is refused whole.
-		if record.By != record.Runtime.SessionModel {
-			return fmt.Errorf("the verification names %q as its author and its runtime receipt observed %q: a managed verification is authored by the model the tool observed", record.By, record.Runtime.SessionModel)
-		}
-	default:
-		return fmt.Errorf("the verification declares schema %d; this binary writes schema 1 or %d", record.Schema, RecordSchema)
-	}
-	return nil
+		Runtime:    record.Runtime,
+	}.Validate()
 }
 
 // Covers reports whether this record speaks for the given tree.
@@ -177,6 +147,7 @@ func ParseVerificationRecord(data []byte) (VerificationRecord, error) {
 		DeclaredAt: legacy.DeclaredAt,
 		Verdict:    legacy.Verdict,
 		Notes:      legacy.Notes,
+		Runtime:    legacy.Runtime,
 	}
 	if err := record.Validate(); err != nil {
 		return VerificationRecord{}, err
