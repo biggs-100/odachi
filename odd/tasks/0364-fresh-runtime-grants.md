@@ -1,6 +1,6 @@
 # fresh-runtime-grants
 Base: aa5c5f6c7ed366193ab162c80e7f436f4ec520ea
-Slice: 4800 - five independently reviewable grant slices plus six OpenCode runtime tasks; the aggregate T1 exception is superseded by the re-sliced plan
+Slice: 12000 - eleven independently reviewed grant/runtime slices; the corrected aggregate reached 11495 authored lines after T7/T10 corrections and the T11 re-slice
 
 ## Requirements (verbatim, from the user)
 R1 · "odachi issues one-shot runtime grants for managed delegation, review and verification, binds each grant to one task or immutable candidate and one fresh runtime session, and refuses replay or resume in code"
@@ -29,7 +29,7 @@ R1 · "odachi issues one-shot runtime grants for managed delegation, review and 
 - [x] T8 · give every managed review unit and draw a fresh session on one frozen tree   R1 · route:delegated/odachi-worker · skills:tests,security,rdd-defect-workflow · tree:00cce6d0df9d3cb47ae81f4b9e259793b3f71f39
 - [x] T9 · freeze and seal the managed verifier executor   R1 · route:delegated/odachi-worker · skills:tests,security,rdd-defect-workflow · tree:ef5fcd7c1f4de5a1d8f3d4d8e2d1498ffbc97417
 - [x] T10 · validate and export tool-sealed runtime receipts   R1 · route:delegated/odachi-worker · skills:tests,security · tree:b4a6511b3630c7394c54abdd4bb5fc4cf8b61e72
-- [ ] T11 · prove schema 2/check and deterministic OpenCode runtime controls   R1 · route:delegated/odachi-worker · skills:tests,ship,security,use-modern-go
+- [x] T11 · prove schema 2/check and deterministic OpenCode runtime controls   R1 · route:delegated/odachi-worker · skills:tests,ship,security,use-modern-go · tree:312baba2132bfd3dcd65f213a9801a93d2513ece
 
 ## History
 L1 · "odachi issues one-shot runtime grants for managed delegation, review and verification, binds each grant to one task or immutable candidate and one fresh runtime session, and refuses replay or resume in code"
@@ -47,3 +47,5 @@ L12 · OFICIO · "Forecast T1 403, T2 600, T3 500, T4 340, T5 470, T6 340, T7 32
 L13 · OFICIO · "Close T1 at commit 9eba382 after approved risk and reliability review plus independent verification" (porque The corrected candidate tree 7625e2f3d11c754cee9230daccffc749bd1306e3 has green proof and fixes both refutation gaps.)
 L14 · PREGUNTA P1 · "T11 necesita decisiones de producto antes de implementarse: ¿lo rebaneamos en T11a (schema 2/check y harness runtime opt-in determinista) y T11b (transporte real, binding de modelo y politica de mutacion), o lo pausamos para decidir primero el diseno completo?"
 L15 · VOS P1 · "Rebanear T11: T11 closes schema 2/check and a deterministic opt-in runtime harness; T12 defers production actor transport, model binding and mutation policy."
+L16 · PREGUNTA P2 · "El cierre de 0364 tiene 11495 lineas autoradas y el task doc acepta 4800: ¿aceptas subir Slice a 12000 con la razon de que T1-T11 fueron rebanadas independientes con review y verificacion, o prefieres reescribir el trabajo en features nuevas?"
+L17 · VOS P2 · "Accept Slice 12000: T1-T11 remain independently reviewed and verified; the corrected aggregate is 11495 authored lines."
