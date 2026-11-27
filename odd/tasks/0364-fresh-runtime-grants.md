@@ -20,7 +20,7 @@ R1 · "odachi issues one-shot runtime grants for managed delegation, review and 
 
 ## Steps
 - [x] T1 · define the one-shot grant domain contract   R1 · route:delegated/odachi-worker · skills:tests,security · tree:7625e2f3d11c754cee9230daccffc749bd1306e3
-- [ ] T2 · make grant storage durable and publish complete records atomically   R1 · route:delegated/odachi-worker · skills:tests,security,use-modern-go
+- [x] T2 · make grant storage durable and publish complete records atomically   R1 · route:delegated/odachi-worker · skills:tests,security,use-modern-go · tree:f50b91bff24e84fbd6878231d1ff8cb15b3e93c0
 - [ ] T3 · persist issued grants and claim each one once   R1 · route:delegated/odachi-worker · skills:tests,security
 - [ ] T4 · reconstruct durable lifecycle with terminal dominance   R1 · route:delegated/odachi-worker · skills:tests,security
 - [ ] T5 · bind one session and linearize terminal races   R1 · route:delegated/odachi-worker · skills:tests,security
