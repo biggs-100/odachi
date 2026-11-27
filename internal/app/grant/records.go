@@ -50,6 +50,12 @@ type publisher struct {
 // file behind silently. A failure after the record is visible (the directory
 // sync) reports ErrStorageFailure and keeps the complete record, because deleting
 // something a reader may already have seen would be a second unproven mutation.
+//
+// The staging name is shared by every attempt to publish the same record, so a
+// call must remove only the file it created. Once this call removes its staging
+// file, another attempt may create a fresh file at the same name; a second
+// removal would delete that attempt's file and turn its no-replace refusal into
+// an ENOENT storage failure. The deferred cleanup therefore runs at most once.
 func publishRecord(ctx context.Context, root *os.Root, name string, payload []byte) error {
 	return publishRecordWith(ctx, root, name, payload, publisher{
 		syncFile:   (*os.File).Sync,
@@ -78,10 +84,15 @@ func publishRecordWith(ctx context.Context, root *os.Root, name string, payload 
 		return fmt.Errorf("%w: create staging record: %w", ErrStorageFailure, err)
 	}
 	// The staging file is never a record: whatever path this call takes, the name
-	// is removed. On success the removal is made durable by the directory sync.
+	// is removed exactly once. The success path removes it before the directory
+	// sync, so the deferred cleanup must not remove it again: by then a concurrent
+	// attempt may own a new file at the same shared name.
+	stagingRemoved := false
 	defer func() {
 		_ = file.Close()
-		_ = root.Remove(staging)
+		if !stagingRemoved {
+			_ = root.Remove(staging)
+		}
 	}()
 
 	written, err := file.Write(payload)
@@ -109,6 +120,7 @@ func publishRecordWith(ctx context.Context, root *os.Root, name string, payload 
 	if err := root.Remove(staging); err != nil {
 		return fmt.Errorf("%w: remove staging record after publication: %w", ErrStorageFailure, err)
 	}
+	stagingRemoved = true
 	if err := syncs.syncParent(ctx, root, name); err != nil {
 		return fmt.Errorf("%w: sync published record directory: %w", ErrStorageFailure, err)
 	}
