@@ -80,9 +80,10 @@ func (store *FileStore) createRecord(ctx context.Context, issued domain.Grant) e
 	return nil
 }
 
-// loadIssued reconstructs only the issued state. Lifecycle reconstruction is a
-// later step and is deliberately absent here: an issued record that has a claim
-// marker still reconstructs as issued, and the marker alone decides the claim.
+// loadIssued reconstructs only the issued state. Claim deliberately uses it so
+// the marker alone decides the claim: an issued record that already has a claim
+// marker still reconstructs as issued. The full lifecycle, including terminal
+// dominance, is reconstructed by Load.
 func (store *FileStore) loadIssued(ctx context.Context, id domain.ID) (domain.Grant, error) {
 	if err := id.Validate(); err != nil {
 		return domain.Grant{}, err
@@ -92,6 +93,14 @@ func (store *FileStore) loadIssued(ctx context.Context, id domain.ID) (domain.Gr
 		return domain.Grant{}, err
 	}
 	defer func() { _ = root.Close() }()
+	return store.readIssuedRecord(ctx, root, id)
+}
+
+// readIssuedRecord decodes the immutable issued record inside an already opened
+// root, so a full lifecycle reconstruction reads every record through one root.
+// It shares the missing, staging, corrupt, foreign and version refusals with
+// loadIssued.
+func (store *FileStore) readIssuedRecord(ctx context.Context, root *os.Root, id domain.ID) (domain.Grant, error) {
 	name, err := store.recordPath(id, issuedSuffix)
 	if err != nil {
 		return domain.Grant{}, err

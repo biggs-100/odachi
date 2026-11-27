@@ -16,6 +16,13 @@ func NewService(store *FileStore) *Service {
 	return &Service{store: store}
 }
 
+// Load reconstructs the full lifecycle of a persisted grant from its durable
+// records with terminal dominance. It reads only; session binding, Complete and
+// Fail are performed by their own operations.
+func (service *Service) Load(ctx context.Context, id domain.ID) (domain.Grant, error) {
+	return service.store.Load(ctx, id)
+}
+
 // Issue creates a fresh unclaimed grant and persists its complete issued record.
 // A persistence failure returns no grant, so a caller never holds authority the
 // store could not durably record.
