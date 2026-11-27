@@ -33,6 +33,18 @@ const (
 // select a path.
 type FileStore struct {
 	root string
+	// hooks are nil in production. A test sets one to pause a lifecycle
+	// publication between the caller's validation and the marker's creation,
+	// which makes a session-versus-terminal race deterministic without a sleep.
+	hooks lifecycleHooks
+}
+
+// lifecycleHooks are the optional observation points a test may install on a
+// FileStore. They run before the named lifecycle marker is created and never
+// change what the operation writes.
+type lifecycleHooks struct {
+	beforeSession  func()
+	beforeTerminal func()
 }
 
 // NewFileStore prepares a durable <runtime-store-root>/grants namespace. The

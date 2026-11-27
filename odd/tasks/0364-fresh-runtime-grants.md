@@ -23,7 +23,7 @@ R1 · "odachi issues one-shot runtime grants for managed delegation, review and 
 - [x] T2 · make grant storage durable and publish complete records atomically   R1 · route:delegated/odachi-worker · skills:tests,security,use-modern-go · tree:f50b91bff24e84fbd6878231d1ff8cb15b3e93c0
 - [x] T3 · persist issued grants and claim each one once   R1 · route:delegated/odachi-worker · skills:tests,security · tree:bf1dd443817cd1ee572fc088e3d69fb4b4955fb8
 - [x] T4 · reconstruct durable lifecycle with terminal dominance   R1 · route:delegated/odachi-worker · skills:tests,security · tree:0ee2021831526f3b7c3b8cf2e4ea1a9ba2572eb7
-- [ ] T5 · bind one session and linearize terminal races   R1 · route:delegated/odachi-worker · skills:tests,security
+- [x] T5 · bind one session and linearize terminal races   R1 · route:delegated/odachi-worker · skills:tests,security · tree:5398fdeb95ffc5685f2fcf7c6fd9c9198fc02a3b
 - [ ] T6 · add a fresh-only OpenCode runtime adapter   R1 · route:delegated/odachi-worker · skills:tests,security,use-modern-go
 - [ ] T7 · bind managed delegation to one fresh worker session   R1 · route:delegated/odachi-worker · skills:tests,security,slices
 - [ ] T8 · give every managed review unit and draw a fresh session on one frozen tree   R1 · route:delegated/odachi-worker · skills:tests,security,rdd-defect-workflow
